@@ -389,14 +389,14 @@ body {
 }
 
 .slider-line {
-  grid-template-columns: 90px minmax(0, 1fr) 60px;
-  column-gap: 0.75rem;
+  grid-template-columns: 90px 1fr auto;
+  column-gap: 0.35rem;
 }
 
 .slider-line span:first-child {
   grid-column: 1;
   align-self: center;
-  text-align: right;
+  text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-size: 0.72rem;
@@ -406,6 +406,7 @@ body {
 .slider-line input[type='range'] {
   grid-column: 2;
   align-self: center;
+  justify-self: stretch;
   width: 100%;
 }
 
@@ -416,6 +417,7 @@ body {
   font-size: 0.8rem;
   align-self: center;
   text-align: right;
+  min-width: 48px;
 }
 
 .color-line .color-chip {
