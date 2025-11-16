@@ -52,6 +52,9 @@ export class UIManager {
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
       hdriBackground: q('#hdriBackground'),
+      clayColor: q('#clayColor'),
+      clayRoughness: q('#clayRoughness'),
+      claySpecular: q('#claySpecular'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
       groundSolidColor: q('#groundSolidColor'),
@@ -280,6 +283,23 @@ export class UIManager {
           this.eventBus.emit('mesh:auto-rotate', speed);
         }
       });
+    });
+    this.inputs.clayColor.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('clay.color', value);
+      this.eventBus.emit('mesh:clay-color', value);
+    });
+    this.inputs.clayRoughness.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.stateStore.set('clay.roughness', value);
+      this.updateValueLabel('clayRoughness', value.toFixed(2));
+      this.eventBus.emit('mesh:clay-roughness', value);
+    });
+    this.inputs.claySpecular.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.stateStore.set('clay.specular', value);
+      this.updateValueLabel('claySpecular', value.toFixed(2));
+      this.eventBus.emit('mesh:clay-specular', value);
     });
     this.inputs.showNormals?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -819,6 +839,11 @@ export class UIManager {
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;
     this.inputs.backgroundColor.value = state.background;
+    this.inputs.clayColor.value = state.clay.color;
+    this.inputs.clayRoughness.value = state.clay.roughness;
+    this.updateValueLabel('clayRoughness', state.clay.roughness.toFixed(2));
+    this.inputs.claySpecular.value = state.clay.specular;
+    this.updateValueLabel('claySpecular', state.clay.specular.toFixed(2));
     this.inputs.groundSolid.checked = state.groundSolid;
     this.inputs.groundWire.checked = state.groundWire;
     this.inputs.groundSolidColor.value = state.groundSolidColor;
