@@ -194,6 +194,8 @@ export class SceneManager {
     this.groundSolidColor = initialState.groundSolidColor ?? '#31363f';
     this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
     this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
+    this.groundY = initialState.groundY ?? 0;
+    this.groundHeight = initialState.groundHeight ?? 1;
     this.currentExposure = initialState.exposure ?? 1;
     this.hdriStrength = Math.min(
       3 * HDRI_STRENGTH_UNIT,
@@ -321,64 +323,16 @@ export class SceneManager {
   }
 
   setupGround() {
-    const baseRadius = 2;
-    const height = 0.15;
-    const topRadius = baseRadius - 0.08;
-    const segments = 96;
-
-    const podiumGeo = new THREE.CylinderGeometry(
-      topRadius,
-      baseRadius,
-      height,
-      segments,
-      1,
-      false,
-    );
-    podiumGeo.translate(0, -height / 2, 0);
-
-    const solidMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(this.groundSolidColor),
-      roughness: 0.85,
-      metalness: 0.08,
-    });
-
-    this.podium = new THREE.Mesh(podiumGeo, solidMat);
-    this.podium.receiveShadow = true;
-    this.scene.add(this.podium);
-
-    const shadowMat = new THREE.ShadowMaterial({
-      opacity: 0.4,
-    });
-    this.podiumShadow = new THREE.Mesh(
-      new THREE.CircleGeometry(baseRadius * 1.05, segments),
-      shadowMat,
-    );
-    this.podiumShadow.rotation.x = -Math.PI / 2;
-    this.podiumShadow.position.y = -height;
-    this.podiumShadow.receiveShadow = true;
-    this.scene.add(this.podiumShadow);
-    this.grid = new THREE.GridHelper(
-      baseRadius * 2,
-      32,
-      this.groundWireColor,
-      this.groundWireColor,
-    );
-    this.gridMaterials = Array.isArray(this.grid.material)
-      ? this.grid.material
-      : [this.grid.material];
-    this.gridMaterials.forEach((mat) => {
-      if (!mat) return;
-      mat.transparent = true;
-      mat.opacity = this.groundWireOpacity;
-      mat.depthWrite = false;
-      mat.toneMapped = false;
-      if (mat.color) mat.color.set(this.groundWireColor);
-    });
-    this.scene.add(this.grid);
+    this.buildGroundMeshes();
     const groundState = this.stateStore.getState();
     this.setGroundSolid(groundState.groundSolid);
     this.setGroundWire(groundState.groundWire);
-    this.setGroundWireOpacity(groundState.groundWireOpacity ?? this.groundWireOpacity);
+    this.setGroundSolidColor(groundState.groundSolidColor);
+    this.setGroundWireColor(groundState.groundWireColor);
+    this.setGroundWireOpacity(
+      groundState.groundWireOpacity ?? this.groundWireOpacity,
+    );
+    this.setGroundY(this.groundY);
   }
 
   setupComposer() {
@@ -468,6 +422,10 @@ export class SceneManager {
     );
     this.eventBus.on('studio:ground-wire-opacity', (value) =>
       this.setGroundWireOpacity(value),
+    );
+    this.eventBus.on('studio:ground-y', (value) => this.setGroundY(value));
+    this.eventBus.on('studio:ground-height', (value) =>
+      this.setGroundHeight(value),
     );
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
@@ -710,6 +668,111 @@ export class SceneManager {
         }
       });
     }
+  }
+
+  setGroundY(value) {
+    this.groundY = value;
+    if (this.podium) this.podium.position.y = value;
+    if (this.podiumShadow) this.podiumShadow.position.y = value - this.groundHeight;
+    if (this.grid) this.grid.position.y = value;
+  }
+
+  setGroundHeight(value) {
+    const clamped = Math.max(0.1, value);
+    if (Math.abs(clamped - this.groundHeight) < 0.0001) return;
+    this.groundHeight = clamped;
+    const state = this.stateStore.getState();
+    this.buildGroundMeshes();
+    this.setGroundSolid(state.groundSolid);
+    this.setGroundWire(state.groundWire);
+    this.setGroundSolidColor(state.groundSolidColor);
+    this.setGroundWireColor(state.groundWireColor);
+    this.setGroundWireOpacity(state.groundWireOpacity ?? this.groundWireOpacity);
+  }
+
+  disposeGroundMeshes() {
+    if (this.podium) {
+      this.scene.remove(this.podium);
+      this.podium.geometry.dispose();
+      this.podium.material.dispose?.();
+      this.podium = null;
+    }
+    if (this.podiumShadow) {
+      this.scene.remove(this.podiumShadow);
+      this.podiumShadow.geometry.dispose();
+      this.podiumShadow.material.dispose?.();
+      this.podiumShadow = null;
+    }
+    if (this.grid) {
+      this.scene.remove(this.grid);
+      if (Array.isArray(this.grid.material)) {
+        this.grid.material.forEach((mat) => mat?.dispose?.());
+      } else {
+        this.grid.material?.dispose?.();
+      }
+      this.grid = null;
+      this.gridMaterials = null;
+    }
+  }
+
+  buildGroundMeshes() {
+    this.disposeGroundMeshes();
+    const baseRadius = 2;
+    const height = this.groundHeight;
+    const topRadius = baseRadius - 0.08;
+    const segments = 96;
+
+    const podiumGeo = new THREE.CylinderGeometry(
+      topRadius,
+      baseRadius,
+      height,
+      segments,
+      1,
+      false,
+    );
+    podiumGeo.translate(0, -height / 2, 0);
+
+    const solidMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(this.groundSolidColor),
+      roughness: 0.85,
+      metalness: 0.08,
+    });
+
+    this.podium = new THREE.Mesh(podiumGeo, solidMat);
+    this.podium.receiveShadow = true;
+    this.scene.add(this.podium);
+
+    const shadowMat = new THREE.ShadowMaterial({
+      opacity: 0.4,
+    });
+    this.podiumShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(baseRadius * 1.05, segments),
+      shadowMat,
+    );
+    this.podiumShadow.rotation.x = -Math.PI / 2;
+    this.podiumShadow.receiveShadow = true;
+    this.scene.add(this.podiumShadow);
+
+    this.grid = new THREE.GridHelper(
+      baseRadius * 2,
+      32,
+      this.groundWireColor,
+      this.groundWireColor,
+    );
+    this.gridMaterials = Array.isArray(this.grid.material)
+      ? this.grid.material
+      : [this.grid.material];
+    this.gridMaterials.forEach((mat) => {
+      if (!mat) return;
+      mat.transparent = true;
+      mat.opacity = this.groundWireOpacity;
+      mat.depthWrite = false;
+      mat.toneMapped = false;
+      if (mat.color) mat.color.set(this.groundWireColor);
+    });
+    this.scene.add(this.grid);
+
+    this.setGroundY(this.groundY);
   }
 
   applyLightSettings(lightsState) {
