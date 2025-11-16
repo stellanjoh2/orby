@@ -140,6 +140,12 @@ body {
   height: 100%;
   display: block;
   background: #04060c;
+  outline: none;
+}
+
+#webgl:focus,
+#webgl:focus-visible {
+  outline: none;
 }
 
 .dropzone {
@@ -731,9 +737,12 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
 }
 
 body.ui-hidden .top-bar,
-body.ui-hidden .shelf,
 body.ui-hidden #dropzone {
   pointer-events: none;
   opacity: 0;
+}
+
+body.ui-hidden .shelf {
+  pointer-events: none;
 }
 

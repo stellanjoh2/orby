@@ -12,6 +12,7 @@ export class UIManager {
     this.currentAnimationDuration = 0;
     this.animationPlaying = false;
     this.shelfRevealed = false;
+    this.dropzoneVisible = true;
   }
 
   init() {
@@ -606,7 +607,7 @@ export class UIManager {
     this.dom.toggleUi?.addEventListener('click', () => this.toggleUi());
     document.addEventListener('keydown', (event) => {
       const key = event.key.toLowerCase();
-      if (key === 'h' && this.dom.toggleUi) {
+      if (key === 'v') {
         event.preventDefault();
         this.toggleUi();
       }
@@ -684,34 +685,28 @@ export class UIManager {
     this.buttons.copyRender?.addEventListener('click', copyRender);
   }
 
-  toggleUi() {
-    this.uiHidden = !this.uiHidden;
+  toggleUi(forceState) {
+    const nextState =
+      typeof forceState === 'boolean' ? forceState : !this.uiHidden;
+    this.uiHidden = nextState;
     document.body.classList.toggle('ui-hidden', this.uiHidden);
-    if (this.dom.topBar) {
-      gsap.to(this.dom.topBar, {
-        y: this.uiHidden ? -90 : 0,
-        autoAlpha: this.uiHidden ? 0 : 1,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
-    }
     if (this.shelfRevealed && this.dom.shelf) {
-      gsap.to(this.dom.shelf, {
-        x: this.uiHidden ? 420 : 0,
-        autoAlpha: this.uiHidden ? 0 : 1,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
+      if (this.uiHidden) {
+        this.dom.shelf.classList.add('is-shelf-hidden');
+      } else {
+        requestAnimationFrame(() =>
+          this.dom.shelf.classList.remove('is-shelf-hidden'),
+        );
+      }
     }
-    if (this.dom.dropzone) {
-      gsap.to(this.dom.dropzone, {
-        autoAlpha: this.uiHidden ? 0 : 1,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
+    this.setDropzoneVisible(this.dropzoneVisible);
+    if (this.uiHidden) {
+      document.activeElement?.blur?.();
     }
-    this.dom.toggleUi.textContent = this.uiHidden ? 'H Show UI' : 'H Hide UI';
-    this.dom.toggleUi.blur?.();
+    if (this.dom.toggleUi) {
+      this.dom.toggleUi.textContent = this.uiHidden ? 'V Show UI' : 'V Hide UI';
+      this.dom.toggleUi.blur?.();
+    }
   }
 
   updateValueLabel(key, text) {
@@ -738,15 +733,20 @@ export class UIManager {
   }
 
   setDropzoneVisible(visible) {
-    this.dom.dropzone.style.pointerEvents = visible ? 'auto' : 'none';
-    this.dom.dropzone.style.opacity = visible ? '1' : '0';
+    if (!this.dom.dropzone) return;
+    this.dropzoneVisible = visible;
+    const shouldShow = visible && !this.uiHidden;
+    this.dom.dropzone.style.pointerEvents = shouldShow ? 'auto' : 'none';
+    this.dom.dropzone.style.opacity = shouldShow ? '1' : '0';
   }
 
   revealShelf() {
     if (this.shelfRevealed || !this.dom.shelf) return;
     this.shelfRevealed = true;
     requestAnimationFrame(() => {
-      this.dom.shelf.classList.remove('is-shelf-hidden');
+      if (!this.uiHidden) {
+        this.dom.shelf.classList.remove('is-shelf-hidden');
+      }
     });
   }
 
