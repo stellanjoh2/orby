@@ -164,10 +164,13 @@ const BackgroundCompositeShader = {
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
       if (mixBackground > 0.5) {
-        gl_FragColor = vec4(backgroundColor, 1.0);
-      } else {
-        gl_FragColor = color;
+        if (color.a < 0.0001) {
+          color = vec4(backgroundColor, 1.0);
+        } else {
+          color.a = 1.0;
+        }
       }
+      gl_FragColor = color;
     }
   `,
 };
