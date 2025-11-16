@@ -47,6 +47,7 @@ export class StateStore {
       fog: { type: 'linear', color: '#10121a', near: 85.8, density: 0.462 },
       camera: { fov: 60 },
       exposure: 0.32,
+      background: '#000000',
     };
     this.state = clone(this.defaults);
     this.subscribers = new Set();
