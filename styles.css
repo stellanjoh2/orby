@@ -558,20 +558,11 @@ body {
 }
 
 .lights .light-color-row {
-  grid-template-columns: 130px auto;
-}
-
-.lights .light-strength-row {
-  grid-template-columns: 130px 1fr auto;
-}
-
-.lights .light-strength-row .value {
-  justify-self: end;
-  font-size: 0.8rem;
+  grid-template-columns: 140px auto;
 }
 
 .light-chip {
-  width: 90px;
+  width: 110px;
   height: 14px;
 }
 
