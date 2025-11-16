@@ -71,7 +71,6 @@ export class UIManager {
       bloomThreshold: q('#bloomThreshold'),
       bloomStrength: q('#bloomStrength'),
       bloomRadius: q('#bloomRadius'),
-      bloomColor: q('#bloomColor'),
       toggleBloom: q('#toggleBloom'),
       grainIntensity: q('#grainIntensity'),
       grainColor: q('#grainColor'),
@@ -428,7 +427,7 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('bloom.enabled', enabled);
       this.setEffectControlsDisabled(
-        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
+        ['bloomThreshold', 'bloomStrength', 'bloomRadius'],
         !enabled,
       );
       emitBloom();
@@ -444,10 +443,6 @@ export class UIManager {
         this.stateStore.set(`bloom.${property}`, value);
         emitBloom();
       });
-    });
-    this.inputs.bloomColor.addEventListener('input', (event) => {
-      this.stateStore.set('bloom.color', event.target.value);
-      emitBloom();
     });
 
     const emitGrain = () =>
@@ -899,7 +894,6 @@ export class UIManager {
     this.updateValueLabel('bloomStrength', state.bloom.strength.toFixed(2));
     this.inputs.bloomRadius.value = state.bloom.radius;
     this.updateValueLabel('bloomRadius', state.bloom.radius.toFixed(2));
-    this.inputs.bloomColor.value = state.bloom.color;
     this.inputs.grainIntensity.value = state.grain.intensity;
     this.updateValueLabel('grainIntensity', state.grain.intensity.toFixed(2));
     this.inputs.grainColor.value = state.grain.color;
