@@ -411,7 +411,6 @@ export class SceneManager {
     this.eventBus.on('mesh:yOffset', (value) => this.setYOffset(value));
     this.eventBus.on('mesh:shading', (mode) => this.setShading(mode));
     this.eventBus.on('mesh:normals', (enabled) => this.toggleNormals(enabled));
-    this.eventBus.on('mesh:bones', (enabled) => this.setBonesVisible(enabled));
     this.eventBus.on('mesh:auto-rotate', (speed) => {
       this.autoRotateSpeed = speed;
     });
@@ -1165,6 +1164,8 @@ export class SceneManager {
     this.refreshBoneHelpers();
     this.applyFresnelToModel(this.currentModel);
     this.setupAnimations(animations);
+    this.ui.setDropzoneVisible(false);
+    this.ui.revealShelf?.();
   }
 
   prepareMesh(object) {
