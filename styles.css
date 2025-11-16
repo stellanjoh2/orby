@@ -440,9 +440,9 @@ body {
 }
 
 .color-chip {
-  width: 32px;
-  height: 20px;
-  border-radius: 4px;
+  width: 44px;
+  height: 14px;
+  border-radius: 3px;
   border: none;
   background: transparent;
   appearance: none;
@@ -453,18 +453,18 @@ body {
 
 .color-chip::-webkit-color-swatch {
   border: none;
-  border-radius: 4px;
+  border-radius: 3px;
   padding: 0;
 }
 
 .color-chip::-webkit-color-swatch-wrapper {
   padding: 0;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .color-chip::-moz-color-swatch {
   border: none;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .toggle-line {
