@@ -229,7 +229,29 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 1rem 0 3rem;
+  padding-right: 12px;
   min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-gutter: stable;
+}
+
+.panels::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panels::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 10px 0;
+}
+
+.panels::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+}
+
+.panels::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .panel {
