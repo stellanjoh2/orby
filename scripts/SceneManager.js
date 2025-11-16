@@ -204,6 +204,7 @@ export class SceneManager {
     this.currentAction = null;
     this.currentClipIndex = 0;
     this.animations = [];
+    this.unlitMode = false;
 
     this.hdriCache = new Map();
     this.hdriBackgroundEnabled = initialState.hdriBackground;
@@ -1065,6 +1066,7 @@ export class SceneManager {
         }
       }
     });
+    this.unlitMode = mode === 'textures';
   }
 
   toggleNormals(enabled) {
@@ -1121,6 +1123,13 @@ export class SceneManager {
   }
 
   render() {
+    if (this.unlitMode) {
+      const previousExposure = this.renderer.toneMappingExposure;
+      this.renderer.toneMappingExposure = 1;
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.toneMappingExposure = previousExposure;
+      return;
+    }
     if (this.composer) {
       this.composer.render();
     } else {
