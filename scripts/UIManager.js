@@ -1,5 +1,7 @@
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
+const HDRI_STRENGTH_UNIT = 0.15;
+
 export class UIManager {
   constructor(eventBus, stateStore) {
     this.eventBus = eventBus;
@@ -326,10 +328,11 @@ export class UIManager {
       this.toggleHdriControls(enabled);
     });
     this.inputs.hdriStrength.addEventListener('input', (event) => {
-      const value = Math.min(3, Math.max(0, parseFloat(event.target.value)));
-      this.updateValueLabel('hdriStrength', value.toFixed(2));
-      this.stateStore.set('hdriStrength', value);
-      this.eventBus.emit('studio:hdri-strength', value);
+      const normalized = Math.min(3, Math.max(0, parseFloat(event.target.value)));
+      const actual = normalized * HDRI_STRENGTH_UNIT;
+      this.updateValueLabel('hdriStrength', normalized.toFixed(2));
+      this.stateStore.set('hdriStrength', actual);
+      this.eventBus.emit('studio:hdri-strength', actual);
     });
     this.inputs.hdriBackground.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -854,8 +857,12 @@ export class UIManager {
     }
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
-    this.inputs.hdriStrength.value = state.hdriStrength;
-    this.updateValueLabel('hdriStrength', state.hdriStrength.toFixed(2));
+    const normalizedStrength = Math.min(
+      3,
+      Math.max(0, state.hdriStrength / HDRI_STRENGTH_UNIT),
+    );
+    this.inputs.hdriStrength.value = normalizedStrength;
+    this.updateValueLabel('hdriStrength', normalizedStrength.toFixed(2));
     this.inputs.hdriBackground.checked = state.hdriBackground;
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;
