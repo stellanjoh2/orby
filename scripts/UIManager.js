@@ -749,7 +749,7 @@ export class UIManager {
     gsap.fromTo(
       this.dom.shelf,
       { autoAlpha: 0, x: 64 },
-      { autoAlpha: 1, x: 0, duration: 0.45, ease: 'power3.out' },
+      { autoAlpha: 1, x: 0, duration: 0.75, ease: 'power3.out' },
     );
   }
 

@@ -202,7 +202,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.04);
   opacity: 1;
   transform: translate3d(0, 0, 0);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
 .shelf.is-shelf-hidden {
@@ -388,14 +388,28 @@ body {
   font-size: 0.85rem;
 }
 
+.slider-line {
+  grid-template-columns: auto 1fr auto;
+  column-gap: 0.75rem;
+}
+
+.slider-line span:first-child {
+  grid-column: 1;
+  align-self: center;
+}
+
 .slider-line input[type='range'] {
-  grid-column: span 1;
+  grid-column: 2;
+  align-self: center;
+  width: 100%;
 }
 
 .slider-line .value {
+  grid-column: 3;
   justify-self: end;
   color: var(--text-dim);
   font-size: 0.8rem;
+  align-self: center;
 }
 
 .color-line .color-chip {
