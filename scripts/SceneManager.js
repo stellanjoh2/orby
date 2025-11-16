@@ -207,6 +207,8 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     const initialState = this.stateStore.getState();
     this.backgroundColor = initialState.background ?? '#05070b';
+    this.groundSolidColor = initialState.groundSolidColor ?? '#05070b';
+    this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
     this.currentExposure = initialState.exposure ?? 1;
     this.hdriStrength = initialState.hdriStrength ?? 1;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -318,7 +320,7 @@ export class SceneManager {
     const groundGeo = new THREE.PlaneGeometry(4, 4);
     const groundMat = new THREE.ShadowMaterial({
       opacity: 0.2,
-      color: new THREE.Color('#000000'),
+      color: new THREE.Color(this.groundSolidColor),
     });
     this.ground = new THREE.Mesh(groundGeo, groundMat);
     this.ground.rotation.x = -Math.PI / 2;
@@ -327,7 +329,7 @@ export class SceneManager {
     this.scene.add(this.ground);
 
     const solidMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(this.backgroundColor),
+      color: new THREE.Color(this.groundSolidColor),
       roughness: 1,
       metalness: 0,
     });
@@ -336,18 +338,21 @@ export class SceneManager {
     this.groundSurface.receiveShadow = true;
     this.scene.add(this.groundSurface);
 
-    this.grid = new THREE.GridHelper(4, 16, '#f0f4ff', '#c6cadd');
-    const gridMaterials = Array.isArray(this.grid.material)
+    this.grid = new THREE.GridHelper(4, 16, this.groundWireColor, this.groundWireColor);
+    this.gridMaterials = Array.isArray(this.grid.material)
       ? this.grid.material
       : [this.grid.material];
-    gridMaterials.forEach((mat) => {
+    this.gridMaterials.forEach((mat) => {
       if (!mat) return;
       mat.transparent = true;
       mat.opacity = 0.45;
       mat.depthWrite = false;
       mat.toneMapped = false;
+      if (mat.color) mat.color.set(this.groundWireColor);
     });
     this.scene.add(this.grid);
+    this.setGroundSolid(this.stateStore.getState().groundSolid);
+    this.setGroundWire(this.stateStore.getState().groundWire);
   }
 
   setupComposer() {
@@ -428,6 +433,12 @@ export class SceneManager {
     this.eventBus.on('studio:ground-wire', (enabled) => {
       this.setGroundWire(enabled);
     });
+    this.eventBus.on('studio:ground-solid-color', (color) =>
+      this.setGroundSolidColor(color),
+    );
+    this.eventBus.on('studio:ground-wire-color', (color) =>
+      this.setGroundWireColor(color),
+    );
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
       const light = this.lights[lightId];
@@ -435,7 +446,8 @@ export class SceneManager {
       if (property === 'color') {
         light.color = new THREE.Color(value);
       } else if (property === 'intensity') {
-        light.intensity = value * 2;
+        const multiplier = light.isAmbientLight ? 4 : 2;
+        light.intensity = value * multiplier;
       }
     });
 
@@ -485,6 +497,8 @@ export class SceneManager {
     this.autoRotateSpeed = state.autoRotate;
     this.setGroundSolid(state.groundSolid);
     this.setGroundWire(state.groundWire);
+    this.setGroundSolidColor(state.groundSolidColor);
+    this.setGroundWireColor(state.groundWireColor);
     this.currentExposure = state.exposure;
     if (this.exposurePass) {
       this.exposurePass.uniforms.exposure.value = state.exposure;
@@ -492,9 +506,11 @@ export class SceneManager {
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
     Object.entries(state.lights).forEach(([id, config]) => {
-      if (!this.lights[id]) return;
-      this.lights[id].color = new THREE.Color(config.color);
-      this.lights[id].intensity = config.intensity * 2;
+      const light = this.lights[id];
+      if (!light) return;
+      light.color = new THREE.Color(config.color);
+      const multiplier = light.isAmbientLight ? 4 : 2;
+      light.intensity = config.intensity * multiplier;
     });
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
@@ -574,6 +590,27 @@ export class SceneManager {
 
   setGroundWire(enabled) {
     if (this.grid) this.grid.visible = enabled;
+  }
+
+  setGroundSolidColor(color) {
+    this.groundSolidColor = color;
+    if (this.ground?.material?.color) {
+      this.ground.material.color.set(color);
+    }
+    if (this.groundSurface?.material?.color) {
+      this.groundSurface.material.color.set(color);
+    }
+  }
+
+  setGroundWireColor(color) {
+    this.groundWireColor = color;
+    if (this.gridMaterials) {
+      this.gridMaterials.forEach((mat) => {
+        if (mat?.color) {
+          mat.color.set(color);
+        }
+      });
+    }
   }
 
   updateDof(settings) {
@@ -675,12 +712,6 @@ export class SceneManager {
 
   updateBackgroundColor(color) {
     this.backgroundColor = color;
-    if (this.ground?.material?.color) {
-      this.ground.material.color.set(color);
-    }
-    if (this.groundSurface?.material?.color) {
-      this.groundSurface.material.color.set(color);
-    }
     if (this.backgroundPass?.uniforms?.backgroundColor) {
       this.backgroundPass.uniforms.backgroundColor.value.set(color);
     }

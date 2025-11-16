@@ -50,10 +50,12 @@ export class UIManager {
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
-      hdriBackground: q('#hdriBackground'),
       hdriStrength: q('#hdriStrength'),
+      hdriBackground: q('#hdriBackground'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
+      groundSolidColor: q('#groundSolidColor'),
+      groundWireColor: q('#groundWireColor'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-control'),
       dofFocus: q('#dofFocus'),
@@ -319,6 +321,16 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('groundWire', enabled);
       this.eventBus.emit('studio:ground-wire', enabled);
+    });
+    this.inputs.groundSolidColor.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('groundSolidColor', value);
+      this.eventBus.emit('studio:ground-solid-color', value);
+    });
+    this.inputs.groundWireColor.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('groundWireColor', value);
+      this.eventBus.emit('studio:ground-wire-color', value);
     });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
@@ -588,6 +600,8 @@ export class UIManager {
         hdriBackground: state.hdriBackground,
         groundSolid: state.groundSolid,
         groundWire: state.groundWire,
+        groundSolidColor: state.groundSolidColor,
+        groundWireColor: state.groundWireColor,
         lights: state.lights,
       };
       this.copySettingsToClipboard('Studio settings copied', payload);
@@ -788,6 +802,8 @@ export class UIManager {
     this.inputs.backgroundColor.value = state.background;
     this.inputs.groundSolid.checked = state.groundSolid;
     this.inputs.groundWire.checked = state.groundWire;
+    this.inputs.groundSolidColor.value = state.groundSolidColor;
+    this.inputs.groundWireColor.value = state.groundWireColor;
     this.inputs.dofFocus.value = state.dof.focus;
     this.updateValueLabel('dofFocus', `${state.dof.focus.toFixed(1)}m`);
     this.inputs.dofAperture.value = state.dof.aperture;

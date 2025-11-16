@@ -19,6 +19,8 @@ export class StateStore {
       hdriBackground: false,
       groundSolid: false,
       groundWire: false,
+      groundSolidColor: '#05070b',
+      groundWireColor: '#c4cadd',
       lights: {
         key: { color: '#ffdfc9', intensity: 4 },
         fill: { color: '#b0c7ff', intensity: 2.5 },
