@@ -23,6 +23,8 @@ const HDRI_PRESETS = {
   cyberpunk: './assets/hdris/ghost-luxe.hdr',
 };
 
+const HDRI_STRENGTH_UNIT = 0.15;
+
 const HDRI_MOODS = {
   cyberpunk: {
     bloomTint: '#ff4df9',
@@ -194,8 +196,8 @@ export class SceneManager {
     this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
     this.currentExposure = initialState.exposure ?? 1;
     this.hdriStrength = Math.min(
-      3,
-      Math.max(0, initialState.hdriStrength ?? 1),
+      3 * HDRI_STRENGTH_UNIT,
+      Math.max(0, initialState.hdriStrength ?? HDRI_STRENGTH_UNIT),
     );
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -597,7 +599,8 @@ export class SceneManager {
   }
 
   setHdriStrength(value) {
-    this.hdriStrength = Math.min(3, Math.max(0, value));
+    const maxStrength = 3 * HDRI_STRENGTH_UNIT;
+    this.hdriStrength = Math.min(maxStrength, Math.max(0, value));
     this.applyEnvironment(this.currentEnvironmentTexture);
   }
 
