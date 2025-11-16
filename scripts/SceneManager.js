@@ -20,7 +20,7 @@ const HDRI_PRESETS = {
   'luminous-sky': './assets/hdris/luminous-sky.hdr',
   'sunset-cove': './assets/hdris/sunset-cove.hdr',
   'steel-lab': './assets/hdris/steel-lab.hdr',
-  'ghost-luxe': './assets/hdris/ghost-luxe.hdr',
+  cyberpunk: './assets/hdris/cyberpunk-neon.hdr',
 };
 
 const BloomTintShader = {
@@ -206,9 +206,10 @@ export class SceneManager {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     const initialState = this.stateStore.getState();
-    this.backgroundColor = initialState.background ?? '#05070b';
+    this.backgroundColor = initialState.background ?? '#000000';
     this.groundSolidColor = initialState.groundSolidColor ?? '#05070b';
     this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
+    this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
     this.currentExposure = initialState.exposure ?? 1;
     this.hdriStrength = initialState.hdriStrength ?? 1;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -317,42 +318,70 @@ export class SceneManager {
   }
 
   setupGround() {
-    const groundGeo = new THREE.PlaneGeometry(4, 4);
-    const groundMat = new THREE.ShadowMaterial({
-      opacity: 0.2,
-      color: new THREE.Color(this.groundSolidColor),
-    });
-    this.ground = new THREE.Mesh(groundGeo, groundMat);
-    this.ground.rotation.x = -Math.PI / 2;
-    this.ground.position.y = 0.001;
-    this.ground.receiveShadow = true;
-    this.scene.add(this.ground);
+    const baseRadius = 2;
+    const height = 0.3;
+    const bevel = 0.12;
+    const segments = 64;
+
+    const cylinderGeo = new THREE.CylinderGeometry(
+      baseRadius,
+      baseRadius,
+      height,
+      segments,
+      1,
+      true,
+    );
+    const topGeo = new THREE.CircleGeometry(baseRadius - bevel, segments);
+    topGeo.rotateX(-Math.PI / 2);
 
     const solidMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(this.groundSolidColor),
-      roughness: 1,
-      metalness: 0,
+      roughness: 0.9,
+      metalness: 0.05,
     });
-    this.groundSurface = new THREE.Mesh(groundGeo.clone(), solidMat);
-    this.groundSurface.rotation.x = -Math.PI / 2;
-    this.groundSurface.receiveShadow = true;
-    this.scene.add(this.groundSurface);
 
-    this.grid = new THREE.GridHelper(4, 16, this.groundWireColor, this.groundWireColor);
+    this.podium = new THREE.Mesh(cylinderGeo, solidMat);
+    this.podium.position.y = height / 2 - 0.001;
+    this.podium.receiveShadow = true;
+    this.scene.add(this.podium);
+
+    this.podiumTop = new THREE.Mesh(topGeo, solidMat.clone());
+    this.podiumTop.position.y = height - 0.001;
+    this.scene.add(this.podiumTop);
+
+    const shadowMat = new THREE.ShadowMaterial({
+      opacity: 0.35,
+    });
+    this.podiumShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(baseRadius * 1.05, segments),
+      shadowMat,
+    );
+    this.podiumShadow.rotation.x = -Math.PI / 2;
+    this.podiumShadow.receiveShadow = true;
+    this.scene.add(this.podiumShadow);
+
+    this.grid = new THREE.GridHelper(
+      baseRadius * 2,
+      32,
+      this.groundWireColor,
+      this.groundWireColor,
+    );
     this.gridMaterials = Array.isArray(this.grid.material)
       ? this.grid.material
       : [this.grid.material];
     this.gridMaterials.forEach((mat) => {
       if (!mat) return;
       mat.transparent = true;
-      mat.opacity = 0.45;
+      mat.opacity = this.groundWireOpacity;
       mat.depthWrite = false;
       mat.toneMapped = false;
       if (mat.color) mat.color.set(this.groundWireColor);
     });
     this.scene.add(this.grid);
-    this.setGroundSolid(this.stateStore.getState().groundSolid);
-    this.setGroundWire(this.stateStore.getState().groundWire);
+    const groundState = this.stateStore.getState();
+    this.setGroundSolid(groundState.groundSolid);
+    this.setGroundWire(groundState.groundWire);
+    this.setGroundWireOpacity(groundState.groundWireOpacity ?? this.groundWireOpacity);
   }
 
   setupComposer() {
@@ -439,6 +468,9 @@ export class SceneManager {
     this.eventBus.on('studio:ground-wire-color', (color) =>
       this.setGroundWireColor(color),
     );
+    this.eventBus.on('studio:ground-wire-opacity', (value) =>
+      this.setGroundWireOpacity(value),
+    );
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
       const light = this.lights[lightId];
@@ -499,6 +531,7 @@ export class SceneManager {
     this.setGroundWire(state.groundWire);
     this.setGroundSolidColor(state.groundSolidColor);
     this.setGroundWireColor(state.groundWireColor);
+    this.setGroundWireOpacity(state.groundWireOpacity);
     this.currentExposure = state.exposure;
     if (this.exposurePass) {
       this.exposurePass.uniforms.exposure.value = state.exposure;
@@ -584,8 +617,9 @@ export class SceneManager {
   }
 
   setGroundSolid(enabled) {
-    if (this.ground) this.ground.visible = enabled;
-    if (this.groundSurface) this.groundSurface.visible = enabled;
+    if (this.podium) this.podium.visible = enabled;
+    if (this.podiumTop) this.podiumTop.visible = enabled;
+    if (this.podiumShadow) this.podiumShadow.visible = enabled;
   }
 
   setGroundWire(enabled) {
@@ -594,11 +628,11 @@ export class SceneManager {
 
   setGroundSolidColor(color) {
     this.groundSolidColor = color;
-    if (this.ground?.material?.color) {
-      this.ground.material.color.set(color);
+    if (this.podium?.material?.color) {
+      this.podium.material.color.set(color);
     }
-    if (this.groundSurface?.material?.color) {
-      this.groundSurface.material.color.set(color);
+    if (this.podiumTop?.material?.color) {
+      this.podiumTop.material.color.set(color);
     }
   }
 
@@ -608,6 +642,17 @@ export class SceneManager {
       this.gridMaterials.forEach((mat) => {
         if (mat?.color) {
           mat.color.set(color);
+        }
+      });
+    }
+  }
+
+  setGroundWireOpacity(value) {
+    this.groundWireOpacity = value;
+    if (this.gridMaterials) {
+      this.gridMaterials.forEach((mat) => {
+        if (mat) {
+          mat.opacity = value;
         }
       });
     }

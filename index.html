@@ -232,8 +232,8 @@
                   <button data-hdri="steel-lab" class="hdri-card">
                     Steel Lab
                   </button>
-                  <button data-hdri="ghost-luxe" class="hdri-card">
-                    Ghost Luxe
+                  <button data-hdri="cyberpunk" class="hdri-card">
+                    Cyberpunk
                   </button>
                 </div>
                 <label class="toggle-line">
@@ -246,39 +246,44 @@
                 <div class="block-title">3-Point Lighting</div>
                 <div class="light-control" data-light="key">
                   <div class="light-label">Key</div>
-                  <input type="color" value="#ffdfc9" />
+                  <input type="color" class="color-chip" value="#ffdfc9" />
                   <input type="range" min="0" max="10" step="0.1" value="1" />
                   <span class="value">1.0</span>
                 </div>
                 <div class="light-control" data-light="fill">
                   <div class="light-label">Fill</div>
-                  <input type="color" value="#b0c7ff" />
+                  <input type="color" class="color-chip" value="#b0c7ff" />
                   <input type="range" min="0" max="10" step="0.1" value="1" />
                   <span class="value">1.0</span>
                 </div>
                 <div class="light-control" data-light="rim">
                   <div class="light-label">Rim</div>
-                  <input type="color" value="#a0eaf9" />
+                  <input type="color" class="color-chip" value="#a0eaf9" />
                   <input type="range" min="0" max="10" step="0.1" value="1" />
                   <span class="value">1.0</span>
                 </div>
                 <div class="light-control" data-light="ambient">
                   <div class="light-label">Ambient</div>
-                  <input type="color" value="#7c8ca6" />
+                  <input type="color" class="color-chip" value="#7c8ca6" />
                   <input type="range" min="0" max="5" step="0.1" value="1" />
                   <span class="value">1.0</span>
                 </div>
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Ground</div>
+                <div class="block-title">Podium</div>
                 <label class="toggle-line">
                   <input type="checkbox" id="groundSolid" />
                   <span>Solid Plane (shadow catcher)</span>
                 </label>
                 <label class="color-line">
                   <span>Solid Color</span>
-                  <input type="color" id="groundSolidColor" value="#05070b" />
+                  <input
+                    type="color"
+                    id="groundSolidColor"
+                    class="color-chip"
+                    value="#05070b"
+                  />
                 </label>
                 <label class="toggle-line">
                   <input type="checkbox" id="groundWire" />
@@ -286,7 +291,33 @@
                 </label>
                 <label class="color-line">
                   <span>Wireframe Color</span>
-                  <input type="color" id="groundWireColor" value="#c4cadd" />
+                  <input
+                    type="color"
+                    id="groundWireColor"
+                    class="color-chip"
+                    value="#c4cadd"
+                  />
+                </label>
+                <label class="slider-line">
+                  <span>Wireframe Opacity</span>
+                  <input
+                    id="groundWireOpacity"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.45"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="groundWireOpacity">0.45</span>
+                </label>
+                <label class="color-line">
+                  <span>Background</span>
+                  <input
+                    type="color"
+                    id="backgroundColor"
+                    class="color-chip"
+                    value="#000000"
+                  />
                 </label>
               </div>
 
@@ -397,7 +428,12 @@
                 </label>
                 <label class="color-line">
                   <span>Color</span>
-                  <input type="color" id="bloomColor" value="#ffe9cc" />
+                  <input
+                    type="color"
+                    id="bloomColor"
+                    class="color-chip"
+                    value="#ffe9cc"
+                  />
                 </label>
               </div>
 
@@ -424,7 +460,12 @@
                 </label>
                 <label class="color-line">
                   <span>Color</span>
-                  <input type="color" id="grainColor" value="#ffffff" />
+                  <input
+                    type="color"
+                    id="grainColor"
+                    class="color-chip"
+                    value="#ffffff"
+                  />
                 </label>
               </div>
 
@@ -478,7 +519,12 @@
                 </div>
                 <label class="color-line">
                   <span>Color</span>
-                  <input type="color" id="fogColor" value="#10121a" />
+                  <input
+                    type="color"
+                    id="fogColor"
+                    class="color-chip"
+                    value="#10121a"
+                  />
                 </label>
                 <label class="slider-line">
                   <span>Near</span>
@@ -531,10 +577,6 @@
                     step="0.01"
                   />
                   <span class="value" data-output="exposure">0.32</span>
-                </label>
-                <label class="color-line">
-                  <span>Background</span>
-                  <input type="color" id="backgroundColor" value="#000000" />
                 </label>
               </div>
 

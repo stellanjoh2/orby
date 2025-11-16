@@ -56,6 +56,9 @@ export class UIManager {
       groundWire: q('#groundWire'),
       groundSolidColor: q('#groundSolidColor'),
       groundWireColor: q('#groundWireColor'),
+      groundWireOpacity: q('#groundWireOpacity'),
+      groundSolidColor: q('#groundSolidColor'),
+      groundWireColor: q('#groundWireColor'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-control'),
       dofFocus: q('#dofFocus'),
@@ -332,6 +335,12 @@ export class UIManager {
       this.stateStore.set('groundWireColor', value);
       this.eventBus.emit('studio:ground-wire-color', value);
     });
+    this.inputs.groundWireOpacity.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('groundWireOpacity', value.toFixed(2));
+      this.stateStore.set('groundWireOpacity', value);
+      this.eventBus.emit('studio:ground-wire-opacity', value);
+    });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
       const colorInput = control.querySelector('input[type="color"]');
@@ -602,6 +611,7 @@ export class UIManager {
         groundWire: state.groundWire,
         groundSolidColor: state.groundSolidColor,
         groundWireColor: state.groundWireColor,
+        groundWireOpacity: state.groundWireOpacity,
         lights: state.lights,
       };
       this.copySettingsToClipboard('Studio settings copied', payload);
@@ -804,6 +814,11 @@ export class UIManager {
     this.inputs.groundWire.checked = state.groundWire;
     this.inputs.groundSolidColor.value = state.groundSolidColor;
     this.inputs.groundWireColor.value = state.groundWireColor;
+    this.inputs.groundWireOpacity.value = state.groundWireOpacity;
+    this.updateValueLabel(
+      'groundWireOpacity',
+      state.groundWireOpacity.toFixed(2),
+    );
     this.inputs.dofFocus.value = state.dof.focus;
     this.updateValueLabel('dofFocus', `${state.dof.focus.toFixed(1)}m`);
     this.inputs.dofAperture.value = state.dof.aperture;
