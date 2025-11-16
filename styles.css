@@ -558,12 +558,16 @@ body {
 }
 
 .lights .light-color-row {
-  grid-template-columns: 140px auto;
+  grid-template-columns: 160px auto;
 }
 
 .light-chip {
-  width: 110px;
+  width: 120px;
   height: 14px;
+}
+
+.rotate-lights .slider-line {
+  grid-template-columns: 140px 1fr auto;
 }
 
 .export-block {
