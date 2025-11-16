@@ -558,7 +558,7 @@ body {
 }
 
 .lights .light-row {
-  grid-template-columns: 70px 1fr 60px 80px;
+  grid-template-columns: 70px 80px 1fr 60px;
   column-gap: 0.6rem;
   align-items: center;
 }
@@ -569,8 +569,15 @@ body {
 }
 
 .light-chip {
-  width: 60px;
+  width: 80px;
   height: 14px;
+}
+
+.light-chip.placeholder {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .export-block {

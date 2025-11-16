@@ -992,7 +992,7 @@ export class UIManager {
       const colorInput = control.querySelector('input[type="color"]');
       const rangeInput = control.querySelector('input[type="range"]');
       const valueLabel = control.querySelector('.value');
-      colorInput.value = state.lights[lightId].color;
+      if (colorInput) colorInput.value = state.lights[lightId].color;
       rangeInput.value = state.lights[lightId].intensity;
       valueLabel.textContent = state.lights[lightId].intensity.toFixed(1);
     });
