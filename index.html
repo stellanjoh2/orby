@@ -284,33 +284,44 @@
 
               <div class="panel-block lights">
                 <div class="block-title">3-Point Lighting</div>
-                <label class="slider-line light-row" data-light="key">
-                  <span>Key</span>
+                <label class="color-line light-color-row" data-light="key">
+                  <span>Key Color</span>
                   <input type="color" class="color-chip light-chip" value="#ffdfc9" />
+                </label>
+                <label class="slider-line light-strength-row" data-light="key">
+                  <span>Key Strength</span>
                   <input type="range" min="0" max="5" step="0.1" value="1.28" />
                   <span class="value">1.28</span>
                 </label>
-                <label class="slider-line light-row" data-light="fill">
-                  <span>Fill</span>
+                <label class="color-line light-color-row" data-light="fill">
+                  <span>Fill Color</span>
                   <input type="color" class="color-chip light-chip" value="#b0c7ff" />
+                </label>
+                <label class="slider-line light-strength-row" data-light="fill">
+                  <span>Fill Strength</span>
                   <input type="range" min="0" max="5" step="0.1" value="0.8" />
                   <span class="value">0.8</span>
                 </label>
-                <label class="slider-line light-row" data-light="rim">
-                  <span>Rim</span>
+                <label class="color-line light-color-row" data-light="rim">
+                  <span>Rim Color</span>
                   <input type="color" class="color-chip light-chip" value="#a0eaf9" />
+                </label>
+                <label class="slider-line light-strength-row" data-light="rim">
+                  <span>Rim Strength</span>
                   <input type="range" min="0" max="5" step="0.1" value="0.96" />
                   <span class="value">0.96</span>
                 </label>
-                <label class="slider-line light-row" data-light="ambient">
-                  <span>Ambient</span>
+                <label class="color-line light-color-row" data-light="ambient">
+                  <span>Ambient Color</span>
                   <input type="color" class="color-chip light-chip" value="#7c8ca6" />
+                </label>
+                <label class="slider-line light-strength-row" data-light="ambient">
+                  <span>Ambient Strength</span>
                   <input type="range" min="0" max="2" step="0.1" value="0.48" />
                   <span class="value">0.48</span>
                 </label>
-                <label class="slider-line light-row">
+                <label class="slider-line light-strength-row">
                   <span>Rotate</span>
-                  <span class="light-chip placeholder"></span>
                   <input
                     id="lightsRotation"
                     type="range"

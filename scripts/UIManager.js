@@ -378,30 +378,35 @@ export class UIManager {
     });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
-      const colorInput = control.querySelector('input[type="color"]');
-      const rangeInput = control.querySelector('input[type="range"]');
+      const type = control.dataset.type;
+      const input = control.querySelector('input');
       const valueLabel = control.querySelector('.value');
-      if (colorInput) {
-        colorInput.value = state.lights[lightId].color;
+      if (type === 'color') {
+        input.value = state.lights[lightId].color;
+        input.addEventListener('input', () => {
+          this.stateStore.set(`lights.${lightId}.color`, input.value);
+          this.eventBus.emit('lights:update', {
+            lightId,
+            property: 'color',
+            value: input.value,
+          });
+        });
+      } else if (type === 'intensity') {
+        input.value = state.lights[lightId].intensity;
+        if (valueLabel) {
+          valueLabel.textContent = state.lights[lightId].intensity.toFixed(1);
+        }
+        input.addEventListener('input', () => {
+          const value = parseFloat(input.value);
+          if (valueLabel) valueLabel.textContent = value.toFixed(1);
+          this.stateStore.set(`lights.${lightId}.intensity`, value);
+          this.eventBus.emit('lights:update', {
+            lightId,
+            property: 'intensity',
+            value,
+          });
+        });
       }
-      colorInput?.addEventListener('input', () => {
-        this.stateStore.set(`lights.${lightId}.color`, colorInput.value);
-        this.eventBus.emit('lights:update', {
-          lightId,
-          property: 'color',
-          value: colorInput.value,
-        });
-      });
-      rangeInput?.addEventListener('input', () => {
-        const value = parseFloat(rangeInput.value);
-        valueLabel.textContent = value.toFixed(1);
-        this.stateStore.set(`lights.${lightId}.intensity`, value);
-        this.eventBus.emit('lights:update', {
-          lightId,
-          property: 'intensity',
-          value,
-        });
-      });
     });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
