@@ -20,7 +20,7 @@ export class StateStore {
       groundSolid: false,
       groundWire: false,
       groundWireOpacity: 0.45,
-      groundSolidColor: '#05070b',
+      groundSolidColor: '#31363f',
       groundWireColor: '#c4cadd',
       clay: {
         color: '#d8d9e0',
