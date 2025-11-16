@@ -20,7 +20,7 @@ const HDRI_PRESETS = {
   'luminous-sky': './assets/hdris/luminous-sky.hdr',
   'sunset-cove': './assets/hdris/sunset-cove.hdr',
   'steel-lab': './assets/hdris/steel-lab.hdr',
-  cyberpunk: './assets/hdris/cyberpunk-neon.hdr',
+  cyberpunk: './assets/hdris/ghost-luxe.hdr',
 };
 
 const BloomTintShader = {
@@ -319,47 +319,41 @@ export class SceneManager {
 
   setupGround() {
     const baseRadius = 2;
-    const height = 0.3;
-    const bevel = 0.12;
-    const segments = 64;
+    const height = 0.15;
+    const topRadius = baseRadius - 0.08;
+    const segments = 96;
 
-    const cylinderGeo = new THREE.CylinderGeometry(
-      baseRadius,
+    const podiumGeo = new THREE.CylinderGeometry(
+      topRadius,
       baseRadius,
       height,
       segments,
       1,
-      true,
+      false,
     );
-    const topGeo = new THREE.CircleGeometry(baseRadius - bevel, segments);
-    topGeo.rotateX(-Math.PI / 2);
+    podiumGeo.translate(0, -height / 2, 0);
 
     const solidMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(this.groundSolidColor),
-      roughness: 0.9,
-      metalness: 0.05,
+      roughness: 0.85,
+      metalness: 0.08,
     });
 
-    this.podium = new THREE.Mesh(cylinderGeo, solidMat);
-    this.podium.position.y = height / 2 - 0.001;
+    this.podium = new THREE.Mesh(podiumGeo, solidMat);
     this.podium.receiveShadow = true;
     this.scene.add(this.podium);
 
-    this.podiumTop = new THREE.Mesh(topGeo, solidMat.clone());
-    this.podiumTop.position.y = height - 0.001;
-    this.scene.add(this.podiumTop);
-
     const shadowMat = new THREE.ShadowMaterial({
-      opacity: 0.35,
+      opacity: 0.4,
     });
     this.podiumShadow = new THREE.Mesh(
       new THREE.CircleGeometry(baseRadius * 1.05, segments),
       shadowMat,
     );
     this.podiumShadow.rotation.x = -Math.PI / 2;
+    this.podiumShadow.position.y = -height;
     this.podiumShadow.receiveShadow = true;
     this.scene.add(this.podiumShadow);
-
     this.grid = new THREE.GridHelper(
       baseRadius * 2,
       32,
@@ -618,7 +612,6 @@ export class SceneManager {
 
   setGroundSolid(enabled) {
     if (this.podium) this.podium.visible = enabled;
-    if (this.podiumTop) this.podiumTop.visible = enabled;
     if (this.podiumShadow) this.podiumShadow.visible = enabled;
   }
 
@@ -630,9 +623,6 @@ export class SceneManager {
     this.groundSolidColor = color;
     if (this.podium?.material?.color) {
       this.podium.material.color.set(color);
-    }
-    if (this.podiumTop?.material?.color) {
-      this.podiumTop.material.color.set(color);
     }
   }
 
@@ -760,7 +750,7 @@ export class SceneManager {
     if (this.backgroundPass?.uniforms?.backgroundColor) {
       this.backgroundPass.uniforms.backgroundColor.value.set(color);
     }
-    if (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture) {
+    if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
       this.scene.background = null;
     }
   }
