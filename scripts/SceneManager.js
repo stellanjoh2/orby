@@ -221,7 +221,8 @@ export class SceneManager {
 
     this.normalsHelpers = [];
     this.boneHelpers = [];
-    this.showBonesEnabled = initialState.showBones ?? false;
+    this.currentShading = initialState.shading;
+    this.lastBoneToastTime = 0;
     this.autoRotateSpeed = 0;
     this.currentFile = null;
     this.currentModel = null;
@@ -514,7 +515,6 @@ export class SceneManager {
   async applyStateSnapshot(state) {
     this.setScale(state.scale);
     this.setYOffset(state.yOffset);
-    this.showBonesEnabled = state.showBones;
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
@@ -1160,7 +1160,6 @@ export class SceneManager {
     const state = this.stateStore.getState();
     this.setScale(state.scale);
     this.setYOffset(state.yOffset);
-    this.showBonesEnabled = state.showBones;
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.refreshBoneHelpers();
@@ -1313,6 +1312,7 @@ export class SceneManager {
 
   setShading(mode) {
     if (!this.currentModel) return;
+    this.currentShading = mode;
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
       const original = this.originalMaterials.get(child);
@@ -1363,15 +1363,24 @@ export class SceneManager {
         applyMaterial(buildArray(createClay));
       } else if (mode === 'textures') {
         const createTextureMaterial = (mat) => {
-          const basic = new THREE.MeshBasicMaterial({
+          const standard = new THREE.MeshStandardMaterial({
             map: mat?.map ?? null,
             color: mat?.color ? mat.color.clone() : new THREE.Color('#ffffff'),
-            side: mat?.side ?? THREE.FrontSide,
+            roughness: mat?.roughness ?? 0.8,
+            metalness: mat?.metalness ?? 0,
+            normalMap: mat?.normalMap ?? null,
+            aoMap: mat?.aoMap ?? null,
+            emissive: mat?.emissive ? mat.emissive.clone() : new THREE.Color(0x000000),
+            emissiveIntensity: mat?.emissiveIntensity ?? 1,
             transparent: mat?.transparent ?? false,
             opacity: mat?.opacity ?? 1,
+            side: mat?.side ?? THREE.FrontSide,
           });
-          basic.wireframe = false;
-          return basic;
+          if (mat?.aoMap) {
+            standard.aoMapIntensity = mat.aoMapIntensity ?? 1;
+          }
+          standard.wireframe = false;
+          return standard;
         };
         applyMaterial(buildArray(createTextureMaterial));
       } else {
@@ -1404,11 +1413,6 @@ export class SceneManager {
     });
   }
 
-  setBonesVisible(enabled) {
-    this.showBonesEnabled = enabled;
-    this.refreshBoneHelpers();
-  }
-
   clearBoneHelpers() {
     this.boneHelpers.forEach((helper) => {
       this.scene.remove(helper);
@@ -1419,11 +1423,7 @@ export class SceneManager {
 
   refreshBoneHelpers() {
     this.clearBoneHelpers();
-    if (
-      !this.currentModel ||
-      !this.showBonesEnabled ||
-      this.stateStore.getState().shading !== 'wireframe'
-    ) {
+    if (!this.currentModel || this.currentShading !== 'wireframe') {
       return;
     }
     let found = false;
@@ -1438,7 +1438,11 @@ export class SceneManager {
       }
     });
     if (!found) {
-      this.ui.showToast('No bones/skeleton detected in this mesh');
+      const now = performance.now();
+      if (now - this.lastBoneToastTime > 2000) {
+        this.ui.showToast('No bones/skeleton detected in this mesh');
+        this.lastBoneToastTime = now;
+      }
     }
   }
 

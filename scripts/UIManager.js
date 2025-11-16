@@ -44,7 +44,6 @@ export class UIManager {
     this.dom.animationScrub = q('#animationScrub');
     this.dom.animationTime = q('#animationTime');
     this.dom.reloadMesh = q('#reloadMesh');
-    this.dom.bonesRow = q('#bonesToggleRow');
 
     this.inputs = {
       shading: document.querySelectorAll('input[name="shading"]'),
@@ -52,7 +51,6 @@ export class UIManager {
       yOffset: q('#yOffsetControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       showNormals: q('#showNormals'),
-      showBones: q('#showBones'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
       hdriBackground: q('#hdriBackground'),
@@ -255,7 +253,6 @@ export class UIManager {
         if (input.checked) {
           this.stateStore.set('shading', input.value);
           this.eventBus.emit('mesh:shading', input.value);
-          this.setBonesToggleVisibility(input.value === 'wireframe');
         }
       });
     });
@@ -312,11 +309,6 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('showNormals', enabled);
       this.eventBus.emit('mesh:normals', enabled);
-    });
-    this.inputs.showBones?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('showBones', enabled);
-      this.eventBus.emit('mesh:bones', enabled);
     });
   }
 
@@ -651,7 +643,6 @@ export class UIManager {
         transform: { scale: state.scale, yOffset: state.yOffset },
         autoRotate: state.autoRotate,
         showNormals: state.showNormals,
-        showBones: state.showBones,
       };
       this.copySettingsToClipboard('Mesh settings copied', payload);
     };
@@ -865,8 +856,7 @@ export class UIManager {
     this.inputs.yOffset.value = state.yOffset;
     this.updateValueLabel('yOffset', `${state.yOffset.toFixed(2)}m`);
     if (this.inputs.showNormals) {
-      this.inputs.showNormals.checked = state.showNormals;
-    this.inputs.showBones.checked = state.showBones;
+    this.inputs.showNormals.checked = state.showNormals;
     }
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
@@ -981,7 +971,6 @@ export class UIManager {
       ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
       !state.fresnel.enabled,
     );
-    this.setBonesToggleVisibility(state.shading === 'wireframe');
   }
 
   setEffectControlsDisabled(ids, disabled) {
@@ -991,12 +980,6 @@ export class UIManager {
       input.disabled = disabled;
       input.classList.toggle('is-disabled-handle', disabled);
     });
-  }
-
-  setBonesToggleVisibility(isWireframe) {
-    if (!this.dom.bonesRow || !this.inputs.showBones) return;
-    this.dom.bonesRow.hidden = !isWireframe;
-    this.inputs.showBones.disabled = !isWireframe;
   }
 }
 
