@@ -1426,6 +1426,7 @@ export class SceneManager {
     ) {
       return;
     }
+    let found = false;
     this.currentModel.traverse((child) => {
       if (child.isSkinnedMesh && child.skeleton) {
         const helper = new THREE.SkeletonHelper(child);
@@ -1433,8 +1434,12 @@ export class SceneManager {
         helper.material.color.set('#66ccff');
         this.scene.add(helper);
         this.boneHelpers.push(helper);
+        found = true;
       }
     });
+    if (!found) {
+      this.ui.showToast('No bones/skeleton detected in this mesh');
+    }
   }
 
   applyCameraPreset(preset) {
