@@ -655,7 +655,7 @@ export class SceneManager {
   }
 
   setHdriStrength(value) {
-    const maxStrength = 3 * HDRI_STRENGTH_UNIT;
+    const maxStrength = 10 * HDRI_STRENGTH_UNIT;
     this.hdriStrength = Math.min(maxStrength, Math.max(0, value));
     this.applyEnvironment(this.currentEnvironmentTexture);
   }

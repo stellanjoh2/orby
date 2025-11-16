@@ -336,8 +336,8 @@ export class UIManager {
     });
     this.inputs.hdriStrength.addEventListener('input', (event) => {
       const normalized = Math.min(
-        3,
-        Math.max(-1, parseFloat(event.target.value)),
+        10,
+        Math.max(0, parseFloat(event.target.value)),
       );
       const actual = normalized * HDRI_STRENGTH_UNIT;
       this.updateValueLabel('hdriStrength', normalized.toFixed(2));
@@ -895,7 +895,7 @@ export class UIManager {
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
     const normalizedStrength = Math.min(
-      3,
+      10,
       Math.max(0, state.hdriStrength / HDRI_STRENGTH_UNIT),
     );
     this.inputs.hdriStrength.value = normalizedStrength;
