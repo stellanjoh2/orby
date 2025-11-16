@@ -219,6 +219,7 @@ export class SceneManager {
     this.currentEnvironment = null;
     this.currentEnvironmentTexture = null;
     this.claySettings = { ...(initialState.clay || {}) };
+    this.fresnelSettings = { ...(initialState.fresnel || {}) };
 
     this.originalMaterials = new WeakMap();
 
@@ -456,6 +457,9 @@ export class SceneManager {
     this.eventBus.on('render:aberration', (settings) =>
       this.updateAberration(settings),
     );
+    this.eventBus.on('render:fresnel', (settings) =>
+      this.setFresnelSettings(settings),
+    );
 
     this.eventBus.on('scene:fog', (fog) => this.updateFog(fog));
     this.eventBus.on('scene:background', (color) =>
@@ -513,6 +517,7 @@ export class SceneManager {
       light.intensity = config.intensity * multiplier;
     });
     this.claySettings = { ...(state.clay || this.claySettings) };
+    this.fresnelSettings = { ...(state.fresnel || this.fresnelSettings) };
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.updateGrain(state.grain);
@@ -585,6 +590,13 @@ export class SceneManager {
     }
   }
 
+  setClaySettings(patch) {
+    this.claySettings = { ...this.claySettings, ...patch };
+    if (this.stateStore.getState().shading === 'clay') {
+      this.setShading('clay');
+    }
+  }
+
   setGroundSolid(enabled) {
     if (this.podium) this.podium.visible = enabled;
     if (this.podiumShadow) this.podiumShadow.visible = enabled;
@@ -621,6 +633,89 @@ export class SceneManager {
         }
       });
     }
+  }
+
+  setFresnelSettings(settings = {}) {
+    this.fresnelSettings = { ...this.fresnelSettings, ...settings };
+    this.applyFresnelToModel(this.currentModel);
+  }
+
+  applyFresnelToModel(root) {
+    if (!root) return;
+    root.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      materials.forEach((mat) => this.applyFresnelToMaterial(mat));
+    });
+  }
+
+  applyFresnelToMaterial(material) {
+    const needsFresnel =
+      this.fresnelSettings?.enabled &&
+      this.fresnelSettings.strength > 0.0001 &&
+      material &&
+      material.onBeforeCompile !== undefined &&
+      (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial);
+
+    if (!needsFresnel) {
+      if (material?.userData?.fresnelPatched) {
+        material.onBeforeCompile =
+          material.userData.originalOnBeforeCompile || (() => {});
+        delete material.userData.originalOnBeforeCompile;
+        delete material.userData.fresnelPatched;
+        delete material.userData.fresnelUniforms;
+        material.needsUpdate = true;
+      }
+      return;
+    }
+
+    if (material.userData.fresnelPatched) {
+      const uniforms = material.userData.fresnelUniforms;
+      uniforms.color.value.set(this.fresnelSettings.color);
+      uniforms.strength.value = this.fresnelSettings.strength;
+      uniforms.power.value = Math.max(0.1, this.fresnelSettings.radius);
+      return;
+    }
+
+    const original = material.onBeforeCompile;
+    material.userData.originalOnBeforeCompile = original;
+    material.onBeforeCompile = (shader) => {
+      original?.(shader);
+      const uniforms = {
+        color: { value: new THREE.Color(this.fresnelSettings.color) },
+        strength: { value: this.fresnelSettings.strength },
+        power: {
+          value: Math.max(0.1, this.fresnelSettings.radius),
+        },
+      };
+      shader.uniforms.fresnelColor = uniforms.color;
+      shader.uniforms.fresnelStrength = uniforms.strength;
+      shader.uniforms.fresnelPower = uniforms.power;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `
+        #include <common>
+        uniform vec3 fresnelColor;
+        uniform float fresnelStrength;
+        uniform float fresnelPower;
+      `,
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <lights_fragment_end>',
+        `
+        #include <lights_fragment_end>
+        vec3 fresnelNormal = normalize( normal );
+        vec3 fresnelViewDir = normalize( vViewPosition );
+        float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
+        reflectedLight.directDiffuse += fresnelColor * fresnelTerm * fresnelStrength;
+      `,
+      );
+      material.userData.fresnelUniforms = uniforms;
+    };
+    material.userData.fresnelPatched = true;
+    material.needsUpdate = true;
   }
 
   updateDof(settings) {
@@ -986,6 +1081,7 @@ export class SceneManager {
     this.setYOffset(this.stateStore.getState().yOffset);
     this.setShading(this.stateStore.getState().shading);
     this.toggleNormals(this.stateStore.getState().showNormals);
+    this.applyFresnelToModel(this.currentModel);
     this.setupAnimations(animations);
   }
 
@@ -1208,6 +1304,7 @@ export class SceneManager {
       }
     });
     this.unlitMode = mode === 'textures';
+    this.applyFresnelToModel(this.currentModel);
   }
 
   toggleNormals(enabled) {
