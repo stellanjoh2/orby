@@ -2,10 +2,15 @@
   grid-template-columns: auto 1fr;
 }
 
+.toggle-line {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+}
+
 .toggle-line input {
+  justify-self: end;
   width: 18px;
   height: 18px;
-  margin-right: 0.4rem;
 }
 :root {
   color-scheme: dark;
