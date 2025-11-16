@@ -193,21 +193,6 @@
                 </div>
               </div>
 
-              <div class="panel-block">
-                <div class="block-title">Camera Presets</div>
-                <div class="control-row">
-                  <button data-camera="front" class="ghost-btn small">
-                    Front
-                  </button>
-                  <button data-camera="three-quarter" class="ghost-btn small">
-                    3/4
-                  </button>
-                  <button data-camera="top" class="ghost-btn small">
-                    Top
-                  </button>
-                </div>
-              </div>
-
             </section>
 
             <section class="panel" data-panel="studio">
@@ -218,6 +203,10 @@
 
               <div class="panel-block">
                 <div class="block-title">HDRI Presets</div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="hdriEnabled" checked />
+                  <span>Enable HDRI Lighting</span>
+                </label>
                 <div class="hdri-grid" id="hdriGrid">
                   <button data-hdri="noir-studio" class="hdri-card active">
                     Noir Studio
@@ -240,8 +229,12 @@
                   <span>Show in Background</span>
                 </label>
                 <label class="toggle-line">
-                  <input type="checkbox" id="groundPlane" />
-                  <span>Ground Plane (shadow catcher)</span>
+                  <input type="checkbox" id="groundSolid" />
+                  <span>Solid Ground Plane</span>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" id="groundWire" />
+                  <span>Wireframe Ground</span>
                 </label>
               </div>
 
@@ -337,7 +330,7 @@
                 <div class="block-title has-toggle">
                   <span>Unreal Bloom</span>
                   <label class="effect-toggle">
-                    <input type="checkbox" id="toggleBloom" />
+                    <input type="checkbox" id="toggleBloom" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable Bloom</span>
                   </label>
@@ -349,10 +342,10 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0.92"
+                    value="1"
                     step="0.01"
                   />
-                  <span class="value" data-output="bloomThreshold">0.92</span>
+                  <span class="value" data-output="bloomThreshold">1.00</span>
                 </label>
                 <label class="slider-line">
                   <span>Strength</span>
@@ -361,10 +354,10 @@
                     type="range"
                     min="0"
                     max="5"
-                    value="0"
+                    value="0.49"
                     step="0.01"
                   />
-                  <span class="value" data-output="bloomStrength">0.00</span>
+                  <span class="value" data-output="bloomStrength">0.49</span>
                 </label>
                 <label class="slider-line">
                   <span>Radius</span>
@@ -373,10 +366,10 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0.2"
+                    value="0.94"
                     step="0.01"
                   />
-                  <span class="value" data-output="bloomRadius">0.20</span>
+                  <span class="value" data-output="bloomRadius">0.94</span>
                 </label>
                 <label class="color-line">
                   <span>Color</span>
@@ -388,7 +381,7 @@
                 <div class="block-title has-toggle">
                   <span>Film Grain</span>
                   <label class="effect-toggle">
-                    <input type="checkbox" id="toggleGrain" />
+                    <input type="checkbox" id="toggleGrain" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable Film Grain</span>
                   </label>
@@ -400,10 +393,10 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0"
+                    value="0.1"
                     step="0.01"
                   />
-                  <span class="value" data-output="grainIntensity">0.00</span>
+                  <span class="value" data-output="grainIntensity">0.10</span>
                 </label>
                 <label class="color-line">
                   <span>Color</span>
@@ -415,7 +408,7 @@
                 <div class="block-title has-toggle">
                   <span>Chromatic Aberration</span>
                   <label class="effect-toggle">
-                    <input type="checkbox" id="toggleAberration" />
+                    <input type="checkbox" id="toggleAberration" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable Chromatic Aberration</span>
                   </label>
@@ -427,10 +420,10 @@
                     type="range"
                     min="0"
                     max="0.02"
-                    value="0"
-                    step="0.0005"
+                    value="0.0025"
+                    step="0.0001"
                   />
-                  <span class="value" data-output="aberrationOffset">0.000</span>
+                  <span class="value" data-output="aberrationOffset">0.003</span>
                 </label>
                 <label class="slider-line">
                   <span>Strength</span>
@@ -439,11 +432,11 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0"
+                    value="0.24"
                     step="0.01"
                   />
                   <span class="value" data-output="aberrationStrength">
-                    0.00
+                    0.24
                   </span>
                 </label>
               </div>
@@ -454,7 +447,7 @@
                   <label for="fogType">Type</label>
                   <select id="fogType">
                     <option value="none">None</option>
-                    <option value="linear">Linear</option>
+                    <option value="linear" selected>Linear</option>
                     <option value="exp">Exp</option>
                     <option value="exp2">Exp²</option>
                   </select>
@@ -470,10 +463,10 @@
                     type="range"
                     min="0.1"
                     max="200"
-                    value="10"
+                    value="85.8"
                     step="0.1"
                   />
-                  <span class="value" data-output="fogNear">10.0m</span>
+                  <span class="value" data-output="fogNear">85.8m</span>
                 </label>
                 <label class="slider-line">
                   <span>Density</span>
@@ -482,10 +475,10 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0.02"
+                    value="0.462"
                     step="0.001"
                   />
-                  <span class="value" data-output="fogDensity">0.020</span>
+                  <span class="value" data-output="fogDensity">0.462</span>
                 </label>
               </div>
 
@@ -510,14 +503,14 @@
                     type="range"
                     min="0"
                     max="3"
-                    value="0.85"
+                    value="0.32"
                     step="0.01"
                   />
-                  <span class="value" data-output="exposure">0.85</span>
+                  <span class="value" data-output="exposure">0.32</span>
                 </label>
                 <label class="color-line">
                   <span>Background</span>
-                  <input type="color" id="backgroundColor" value="#05070b" />
+                  <input type="color" id="backgroundColor" value="#000000" />
                 </label>
               </div>
 

@@ -49,8 +49,10 @@ export class UIManager {
       yOffset: q('#yOffsetControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       showNormals: q('#showNormals'),
+      hdriEnabled: q('#hdriEnabled'),
       hdriBackground: q('#hdriBackground'),
-      groundPlane: q('#groundPlane'),
+      groundSolid: q('#groundSolid'),
+      groundWire: q('#groundWire'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-control'),
       dofFocus: q('#dofFocus'),
@@ -79,7 +81,6 @@ export class UIManager {
 
     this.buttons = {
       transformReset: q('#transformReset'),
-      cameraPresets: document.querySelectorAll('[data-camera]'),
       export: q('#exportPng'),
       copyStudio: q('#copyStudioSettings'),
       copyRender: q('#copyRenderSettings'),
@@ -279,11 +280,6 @@ export class UIManager {
       this.stateStore.set('showNormals', enabled);
       this.eventBus.emit('mesh:normals', enabled);
     });
-    this.buttons.cameraPresets.forEach((button) => {
-      button.addEventListener('click', () => {
-        this.eventBus.emit('camera:preset', button.dataset.camera);
-      });
-    });
   }
 
   bindStudioControls() {
@@ -295,16 +291,27 @@ export class UIManager {
         this.eventBus.emit('studio:hdri', preset);
       });
     });
+    this.inputs.hdriEnabled.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('hdriEnabled', enabled);
+      this.eventBus.emit('studio:hdri-enabled', enabled);
+      this.toggleHdriControls(enabled);
+    });
     this.inputs.hdriBackground.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
       this.inputs.backgroundColor.disabled = enabled;
     });
-    this.inputs.groundPlane.addEventListener('change', (event) => {
+    this.inputs.groundSolid.addEventListener('change', (event) => {
       const enabled = event.target.checked;
-      this.stateStore.set('groundPlane', enabled);
-      this.eventBus.emit('studio:ground', enabled);
+      this.stateStore.set('groundSolid', enabled);
+      this.eventBus.emit('studio:ground-solid', enabled);
+    });
+    this.inputs.groundWire.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('groundWire', enabled);
+      this.eventBus.emit('studio:ground-wire', enabled);
     });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
@@ -569,8 +576,10 @@ export class UIManager {
       const state = this.stateStore.getState();
       const payload = {
         hdri: state.hdri,
+        hdriEnabled: state.hdriEnabled,
         hdriBackground: state.hdriBackground,
-        groundPlane: state.groundPlane,
+        groundSolid: state.groundSolid,
+        groundWire: state.groundWire,
         lights: state.lights,
       };
       this.copySettingsToClipboard('Studio settings copied', payload);
@@ -620,6 +629,17 @@ export class UIManager {
     this.inputs.hdriButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.hdri === preset);
     });
+  }
+
+  toggleHdriControls(enabled) {
+    this.inputs.hdriButtons.forEach((button) => {
+      button.disabled = !enabled;
+      button.classList.toggle('is-disabled', !enabled);
+    });
+    this.inputs.hdriBackground.disabled = !enabled;
+    if (!enabled) {
+      this.inputs.backgroundColor.disabled = false;
+    }
   }
 
   setDropzoneVisible(visible) {
@@ -749,10 +769,14 @@ export class UIManager {
     if (this.inputs.showNormals) {
       this.inputs.showNormals.checked = state.showNormals;
     }
+    this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
+    this.toggleHdriControls(state.hdriEnabled);
     this.inputs.hdriBackground.checked = state.hdriBackground;
-    this.inputs.backgroundColor.disabled = state.hdriBackground;
+    this.inputs.backgroundColor.disabled =
+      state.hdriBackground && state.hdriEnabled;
     this.inputs.backgroundColor.value = state.background;
-    this.inputs.groundPlane.checked = state.groundPlane;
+    this.inputs.groundSolid.checked = state.groundSolid;
+    this.inputs.groundWire.checked = state.groundWire;
     this.inputs.dofFocus.value = state.dof.focus;
     this.updateValueLabel('dofFocus', `${state.dof.focus.toFixed(1)}m`);
     this.inputs.dofAperture.value = state.dof.aperture;

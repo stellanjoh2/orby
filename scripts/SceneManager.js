@@ -142,6 +142,35 @@ const ExposureShader = {
   `,
 };
 
+const BackgroundCompositeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    backgroundColor: { value: new THREE.Color('#05070b') },
+    mixBackground: { value: 1 },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    varying vec2 vUv;
+    uniform sampler2D tDiffuse;
+    uniform vec3 backgroundColor;
+    uniform float mixBackground;
+
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      if (mixBackground > 0.5 && color.a < 0.0001) {
+        color = vec4(backgroundColor, 1.0);
+      }
+      gl_FragColor = color;
+    }
+  `,
+};
+
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
     .toString()
@@ -170,7 +199,7 @@ export class SceneManager {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
-      alpha: false,
+      alpha: true,
       preserveDrawingBuffer: true,
     });
     this.renderer.shadowMap.enabled = true;
@@ -180,9 +209,11 @@ export class SceneManager {
     this.backgroundColor = initialState.background ?? '#05070b';
     this.currentExposure = initialState.exposure ?? 1;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.setClearColor(0x05070b, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.clearColor = new THREE.Color('#000000');
+    this.clearAlpha = 0;
+    this.renderer.setClearColor(this.clearColor, this.clearAlpha);
     this.renderer.toneMappingExposure = 1;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -207,6 +238,7 @@ export class SceneManager {
     this.unlitMode = false;
 
     this.hdriCache = new Map();
+    this.hdriEnabled = initialState.hdriEnabled ?? true;
     this.hdriBackgroundEnabled = initialState.hdriBackground;
     this.currentEnvironment = null;
     this.currentEnvironmentTexture = null;
@@ -281,25 +313,35 @@ export class SceneManager {
   }
 
   setupGround() {
-    const groundGeo = new THREE.PlaneGeometry(200, 200);
+    const groundGeo = new THREE.PlaneGeometry(4, 4);
     const groundMat = new THREE.ShadowMaterial({
-      opacity: 0.3,
-      color: new THREE.Color(this.backgroundColor),
+      opacity: 0.2,
+      color: new THREE.Color('#000000'),
     });
     this.ground = new THREE.Mesh(groundGeo, groundMat);
     this.ground.rotation.x = -Math.PI / 2;
-    this.ground.position.y = 0;
+    this.ground.position.y = 0.001;
     this.ground.receiveShadow = true;
     this.scene.add(this.ground);
 
-    this.grid = new THREE.GridHelper(100, 80, '#3a4155', '#191f2d');
+    const solidMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(this.backgroundColor),
+      roughness: 1,
+      metalness: 0,
+    });
+    this.groundSurface = new THREE.Mesh(groundGeo.clone(), solidMat);
+    this.groundSurface.rotation.x = -Math.PI / 2;
+    this.groundSurface.receiveShadow = true;
+    this.scene.add(this.groundSurface);
+
+    this.grid = new THREE.GridHelper(4, 16, '#f0f4ff', '#c6cadd');
     const gridMaterials = Array.isArray(this.grid.material)
       ? this.grid.material
       : [this.grid.material];
     gridMaterials.forEach((mat) => {
       if (!mat) return;
       mat.transparent = true;
-      mat.opacity = 0.35;
+      mat.opacity = 0.45;
       mat.depthWrite = false;
       mat.toneMapped = false;
     });
@@ -311,6 +353,7 @@ export class SceneManager {
     this.renderer.getSize(size);
     this.composer = new EffectComposer(this.renderer);
     this.renderPass = new RenderPass(this.scene, this.camera);
+    this.renderPass.clearAlpha = 0;
     this.bokehPass = new BokehPass(this.scene, this.camera, {
       focus: 10,
       aperture: 0.003,
@@ -328,8 +371,15 @@ export class SceneManager {
     this.aberrationPass = new ShaderPass(AberrationShader);
     this.exposurePass = new ShaderPass(ExposureShader);
     this.exposurePass.uniforms.exposure.value = this.currentExposure;
+    this.backgroundPass = new ShaderPass(BackgroundCompositeShader);
+    this.backgroundPass.uniforms.backgroundColor.value = new THREE.Color(
+      this.backgroundColor,
+    );
+    this.backgroundPass.uniforms.mixBackground.value =
+      this.hdriBackgroundEnabled && this.hdriEnabled ? 0 : 1;
     this.aberrationPass.renderToScreen = false;
-    this.exposurePass.renderToScreen = true;
+    this.exposurePass.renderToScreen = false;
+    this.backgroundPass.renderToScreen = true;
 
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.bokehPass);
@@ -339,6 +389,7 @@ export class SceneManager {
     this.composer.addPass(this.grainTintPass);
     this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.exposurePass);
+    this.composer.addPass(this.backgroundPass);
   }
 
   registerEvents() {
@@ -360,12 +411,17 @@ export class SceneManager {
     });
 
     this.eventBus.on('studio:hdri', (preset) => this.setHdriPreset(preset));
+    this.eventBus.on('studio:hdri-enabled', (enabled) =>
+      this.setHdriEnabled(enabled),
+    );
     this.eventBus.on('studio:hdri-background', (enabled) =>
       this.setHdriBackground(enabled),
     );
-    this.eventBus.on('studio:ground', (enabled) => {
-      this.ground.visible = enabled;
-      this.grid.visible = enabled;
+    this.eventBus.on('studio:ground-solid', (enabled) => {
+      this.setGroundSolid(enabled);
+    });
+    this.eventBus.on('studio:ground-wire', (enabled) => {
+      this.setGroundWire(enabled);
     });
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
@@ -422,8 +478,8 @@ export class SceneManager {
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
-    this.ground.visible = state.groundPlane;
-    this.grid.visible = state.groundPlane;
+    this.setGroundSolid(state.groundSolid);
+    this.setGroundWire(state.groundWire);
     this.currentExposure = state.exposure;
     if (this.exposurePass) {
       this.exposurePass.uniforms.exposure.value = state.exposure;
@@ -441,6 +497,7 @@ export class SceneManager {
     this.updateAberration(state.aberration);
     this.updateFog(state.fog);
     this.updateBackgroundColor(state.background);
+    this.setHdriEnabled(state.hdriEnabled);
     this.setHdriBackground(state.hdriBackground);
     await this.setHdriPreset(state.hdri);
   }
@@ -470,17 +527,41 @@ export class SceneManager {
 
   applyEnvironment(texture) {
     this.currentEnvironmentTexture = texture || null;
-    this.scene.environment = this.currentEnvironmentTexture;
-    if (this.hdriBackgroundEnabled && this.currentEnvironmentTexture) {
-      this.scene.background = this.currentEnvironmentTexture;
-    } else {
-      this.scene.background = new THREE.Color(this.backgroundColor);
+    const hdriActive = this.hdriEnabled && this.currentEnvironmentTexture;
+    this.scene.environment = hdriActive ? this.currentEnvironmentTexture : null;
+    const backgroundIsHdri = hdriActive && this.hdriBackgroundEnabled;
+    this.scene.background = backgroundIsHdri ? this.currentEnvironmentTexture : null;
+    if (this.backgroundPass) {
+      this.backgroundPass.uniforms.mixBackground.value = backgroundIsHdri ? 0 : 1;
+      if (!backgroundIsHdri) {
+        this.backgroundPass.uniforms.backgroundColor.value.set(
+          this.backgroundColor,
+        );
+      }
     }
+    this.renderer.setClearColor(
+      backgroundIsHdri ? this.clearColor : this.clearColor,
+      backgroundIsHdri ? 1 : this.clearAlpha,
+    );
   }
 
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
+  }
+
+  setHdriEnabled(enabled) {
+    this.hdriEnabled = enabled;
+    this.applyEnvironment(this.currentEnvironmentTexture);
+  }
+
+  setGroundSolid(enabled) {
+    if (this.ground) this.ground.visible = enabled;
+    if (this.groundSurface) this.groundSurface.visible = enabled;
+  }
+
+  setGroundWire(enabled) {
+    if (this.grid) this.grid.visible = enabled;
   }
 
   updateDof(settings) {
@@ -585,8 +666,15 @@ export class SceneManager {
     if (this.ground?.material?.color) {
       this.ground.material.color.set(color);
     }
-    if (this.hdriBackgroundEnabled && this.currentEnvironmentTexture) return;
-    this.scene.background = new THREE.Color(color);
+    if (this.groundSurface?.material?.color) {
+      this.groundSurface.material.color.set(color);
+    }
+    if (this.backgroundPass?.uniforms?.backgroundColor) {
+      this.backgroundPass.uniforms.backgroundColor.value.set(color);
+    }
+    if (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture) {
+      this.scene.background = null;
+    }
   }
 
   async loadFile(file, options = {}) {
@@ -1125,8 +1213,12 @@ export class SceneManager {
   render() {
     if (this.unlitMode) {
       const previousExposure = this.renderer.toneMappingExposure;
+      const previousColor = this.renderer.getClearColor(new THREE.Color()).clone();
+      const previousAlpha = this.renderer.getClearAlpha();
       this.renderer.toneMappingExposure = 1;
+      this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
       this.renderer.render(this.scene, this.camera);
+      this.renderer.setClearColor(previousColor, previousAlpha);
       this.renderer.toneMappingExposure = previousExposure;
       return;
     }
