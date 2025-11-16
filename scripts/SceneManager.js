@@ -23,7 +23,7 @@ const HDRI_PRESETS = {
   cyberpunk: './assets/hdris/ghost-luxe.hdr',
 };
 
-const HDRI_STRENGTH_UNIT = 0.15;
+const HDRI_STRENGTH_UNIT = 0.4;
 
 const HDRI_MOODS = {
   cyberpunk: {
