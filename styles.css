@@ -90,7 +90,7 @@ body {
 
 .ghost-btn,
 .primary-btn {
-  border-radius: 4px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
   color: var(--text);
@@ -213,7 +213,7 @@ body {
   position: absolute;
   top: 12px;
   right: 12px;
-  border-radius: 4px;
+  border-radius: 12px;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.04);
   opacity: 1;
@@ -305,7 +305,7 @@ body {
 
 .panel-block {
   border: 1px solid var(--stroke);
-  border-radius: 4px;
+  border-radius: 12px;
   padding: 1rem;
   margin-bottom: 1rem;
   background: rgba(0, 0, 0, 0.675);
