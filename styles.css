@@ -676,7 +676,9 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
 }
 
 body.ui-hidden .top-bar,
-body.ui-hidden .shelf {
+body.ui-hidden .shelf,
+body.ui-hidden #dropzone {
   pointer-events: none;
+  opacity: 0;
 }
 
