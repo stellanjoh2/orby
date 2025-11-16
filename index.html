@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <title>MeshGL — model.glb</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="./assets/icons/favicon.svg"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top-bar">
+        <div class="brand">
+          <img
+            src="./assets/icons/meshgl-logo.svg"
+            alt="MeshGL logo"
+            width="26"
+            height="26"
+          />
+          <div class="brand-copy">
+            <span class="brand-name">MeshGL</span>
+            <span class="brand-tagline">Cinematic meshes in your browser.</span>
+          </div>
+        </div>
+        <div class="top-bar__cluster">
+          <button id="resetAll" class="ghost-btn">Reset All</button>
+          <button id="helpButton" class="ghost-btn">? Help</button>
+        </div>
+        <div class="top-bar__status" aria-live="polite">
+          <span id="topBarTitle" class="status-title">model.glb</span>
+          <span id="topBarAnimation" class="status-detail">— Idle</span>
+        </div>
+        <button id="toggleUi" class="ghost-btn">H Hide UI</button>
+      </header>
+
+      <main class="workspace">
+        <section class="viewport">
+          <canvas id="webgl" tabindex="0"></canvas>
+          <div class="dropzone" id="dropzone">
+            <img
+              src="./assets/icons/meshgl-logo.svg"
+              alt="MeshGL mark"
+              width="60"
+              height="60"
+            />
+            <p class="drop-primary">Drop your model into MeshGL</p>
+            <p class="drop-secondary">Supports .glb, .gltf, .obj, .fbx</p>
+            <button id="browseButton" class="primary-btn">
+              Browse Files
+            </button>
+          </div>
+          <input
+            type="file"
+            id="fileInput"
+            class="sr-only"
+            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
+          />
+        </section>
+
+        <aside class="shelf" id="shelf">
+          <nav class="tabs" role="tablist" aria-label="MeshGL Panels">
+            <button class="tab active" data-tab="mesh" aria-selected="true">
+              Mesh
+            </button>
+            <button class="tab" data-tab="studio" aria-selected="false">
+              Studio
+            </button>
+            <button class="tab" data-tab="render" aria-selected="false">
+              Render
+            </button>
+          </nav>
+
+          <div class="panels">
+            <section class="panel visible" data-panel="mesh">
+              <div class="panel-header">
+                <h2>MESH</h2>
+                <p>Model · Stats · Animation · Camera</p>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Display</div>
+                <div class="segmented" role="group">
+                  <label>
+                    <input
+                      type="radio"
+                      name="shading"
+                      value="shaded"
+                      checked
+                    />
+                    Shaded
+                  </label>
+                  <label>
+                    <input type="radio" name="shading" value="wireframe" />
+                    Wireframe
+                  </label>
+                  <label>
+                    <input type="radio" name="shading" value="clay" />
+                    Clay
+                  </label>
+                  <label>
+                    <input type="radio" name="shading" value="textures" />
+                    Textures
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Transform</div>
+                <label class="slider-line">
+                  <span>Scale</span>
+                  <input
+                    id="scaleControl"
+                    type="range"
+                    min="0.1"
+                    max="4"
+                    value="1"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="scale">1.00×</span>
+                </label>
+                <label class="slider-line">
+                  <span>Y Offset</span>
+                  <input
+                    id="yOffsetControl"
+                    type="range"
+                    min="-2"
+                    max="2"
+                    value="0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="yOffset">0.00m</span>
+                </label>
+                <div class="control-row">
+                  <button id="transformReset" class="ghost-btn small">
+                    Reset
+                  </button>
+                  <button id="reloadMesh" class="ghost-btn small">
+                    Reload Mesh
+                  </button>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Auto-Rotate</div>
+                <div class="segmented compact">
+                  <label>
+                    <input type="radio" name="autorotate" value="0" checked />
+                    Off
+                  </label>
+                  <label>
+                    <input type="radio" name="autorotate" value="0.2" />
+                    Slow
+                  </label>
+                  <label>
+                    <input type="radio" name="autorotate" value="0.5" />
+                    Normal
+                  </label>
+                  <label>
+                    <input type="radio" name="autorotate" value="1" />
+                    Fast
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel-block stats-block">
+                <div class="block-title">Mesh Info (Live)</div>
+                <dl id="meshStats">
+                  <div><dt>Triangles</dt><dd>—</dd></div>
+                  <div><dt>Vertices</dt><dd>—</dd></div>
+                  <div><dt>Materials</dt><dd>—</dd></div>
+                  <div><dt>Textures</dt><dd>—</dd></div>
+                  <div><dt>File Size</dt><dd>—</dd></div>
+                  <div><dt>Bounds</dt><dd>—</dd></div>
+                </dl>
+                <label class="toggle-line">
+                  <input type="checkbox" id="showNormals" />
+                  <span>Show Normals</span>
+                </label>
+              </div>
+
+              <div class="panel-block" id="animationBlock">
+                <div class="block-title">Animation</div>
+                <div class="animation-controls">
+                  <button id="playPause" class="primary-btn small" disabled>
+                    Play
+                  </button>
+                  <input
+                    type="range"
+                    id="animationScrub"
+                    min="0"
+                    max="1"
+                    step="0.001"
+                    value="0"
+                    disabled
+                  />
+                </div>
+                <div class="select-line">
+                  <label for="animationSelect">Clip</label>
+                  <select id="animationSelect" disabled></select>
+                  <span id="animationTime">0:00</span>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Camera Presets</div>
+                <div class="control-row">
+                  <button data-camera="front" class="ghost-btn small">
+                    Front
+                  </button>
+                  <button data-camera="three-quarter" class="ghost-btn small">
+                    3/4
+                  </button>
+                  <button data-camera="top" class="ghost-btn small">
+                    Top
+                  </button>
+                </div>
+              </div>
+
+              <div class="panel-block copy-block">
+                <button id="copyMeshSettings" class="ghost-btn">
+                  Copy Mesh Settings
+                </button>
+              </div>
+            </section>
+
+            <section class="panel" data-panel="studio">
+              <div class="panel-header">
+                <h2>STUDIO</h2>
+                <p>HDRI · Lighting · Ground</p>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">HDRI Presets</div>
+                <div class="hdri-grid" id="hdriGrid">
+                  <button data-hdri="noir-studio" class="hdri-card active">
+                    Noir Studio
+                  </button>
+                  <button data-hdri="luminous-sky" class="hdri-card">
+                    Luminous Sky
+                  </button>
+                  <button data-hdri="sunset-cove" class="hdri-card">
+                    Sunset Cove
+                  </button>
+                  <button data-hdri="steel-lab" class="hdri-card">
+                    Steel Lab
+                  </button>
+                  <button data-hdri="ghost-luxe" class="hdri-card">
+                    Ghost Luxe
+                  </button>
+                </div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="hdriBackground" />
+                  <span>Show in Background</span>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" id="groundPlane" />
+                  <span>Ground Plane (shadow catcher)</span>
+                </label>
+              </div>
+
+              <div class="panel-block lights">
+                <div class="block-title">3-Point Lighting</div>
+                <div class="light-control" data-light="key">
+                  <div class="light-label">Key</div>
+                  <input type="color" value="#ffdfc9" />
+                  <input type="range" min="0" max="10" step="0.1" value="1" />
+                  <span class="value">1.0</span>
+                </div>
+                <div class="light-control" data-light="fill">
+                  <div class="light-label">Fill</div>
+                  <input type="color" value="#b0c7ff" />
+                  <input type="range" min="0" max="10" step="0.1" value="1" />
+                  <span class="value">1.0</span>
+                </div>
+                <div class="light-control" data-light="rim">
+                  <div class="light-label">Rim</div>
+                  <input type="color" value="#a0eaf9" />
+                  <input type="range" min="0" max="10" step="0.1" value="1" />
+                  <span class="value">1.0</span>
+                </div>
+                <div class="light-control" data-light="ambient">
+                  <div class="light-label">Ambient</div>
+                  <input type="color" value="#7c8ca6" />
+                  <input type="range" min="0" max="5" step="0.1" value="1" />
+                  <span class="value">1.0</span>
+                </div>
+              </div>
+
+              <div class="panel-block copy-block">
+                <button id="copyStudioSettings" class="ghost-btn">
+                  Copy Studio Settings
+                </button>
+              </div>
+            </section>
+
+            <section class="panel" data-panel="render">
+              <div class="panel-header">
+                <h2>RENDER</h2>
+                <p>Post · Fog · Export</p>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Depth of Field</div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="toggleDof" />
+                  <span>Enable Depth of Field</span>
+                </label>
+                <label class="slider-line">
+                  <span>Focus</span>
+                  <input
+                    id="dofFocus"
+                    type="range"
+                    min="0.1"
+                    max="100"
+                    value="10"
+                    step="0.1"
+                  />
+                  <span class="value" data-output="dofFocus">10.0m</span>
+                </label>
+                <label class="slider-line">
+                  <span>Aperture</span>
+                  <input
+                    id="dofAperture"
+                    type="range"
+                    min="0.0001"
+                    max="0.02"
+                    value="0.003"
+                    step="0.0001"
+                  />
+                  <span class="value" data-output="dofAperture">0.003</span>
+                </label>
+                <label class="slider-line">
+                  <span>Strength</span>
+                  <input
+                    id="dofStrength"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="dofStrength">0.00</span>
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Unreal Bloom</div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="toggleBloom" />
+                  <span>Enable Bloom</span>
+                </label>
+                <label class="slider-line">
+                  <span>Threshold</span>
+                  <input
+                    id="bloomThreshold"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.92"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="bloomThreshold">0.92</span>
+                </label>
+                <label class="slider-line">
+                  <span>Strength</span>
+                  <input
+                    id="bloomStrength"
+                    type="range"
+                    min="0"
+                    max="5"
+                    value="0.45"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="bloomStrength">0.45</span>
+                </label>
+                <label class="slider-line">
+                  <span>Radius</span>
+                  <input
+                    id="bloomRadius"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.2"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="bloomRadius">0.20</span>
+                </label>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input type="color" id="bloomColor" value="#ffe9cc" />
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Film Grain</div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="toggleGrain" />
+                  <span>Enable Film Grain</span>
+                </label>
+                <label class="slider-line">
+                  <span>Intensity</span>
+                  <input
+                    id="grainIntensity"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.05"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="grainIntensity">0.05</span>
+                </label>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input type="color" id="grainColor" value="#ffffff" />
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Chromatic Aberration</div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="toggleAberration" />
+                  <span>Enable Chromatic Aberration</span>
+                </label>
+                <label class="slider-line">
+                  <span>Offset</span>
+                  <input
+                    id="aberrationOffset"
+                    type="range"
+                    min="0"
+                    max="0.02"
+                    value="0.001"
+                    step="0.0005"
+                  />
+                  <span class="value" data-output="aberrationOffset">
+                    0.001
+                  </span>
+                </label>
+                <label class="slider-line">
+                  <span>Strength</span>
+                  <input
+                    id="aberrationStrength"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.15"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="aberrationStrength">
+                    0.15
+                  </span>
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Fog</div>
+                <div class="select-line">
+                  <label for="fogType">Type</label>
+                  <select id="fogType">
+                    <option value="none">None</option>
+                    <option value="linear">Linear</option>
+                    <option value="exp">Exp</option>
+                    <option value="exp2">Exp²</option>
+                  </select>
+                </div>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input type="color" id="fogColor" value="#10121a" />
+                </label>
+                <label class="slider-line">
+                  <span>Near</span>
+                  <input
+                    id="fogNear"
+                    type="range"
+                    min="0.1"
+                    max="200"
+                    value="10"
+                    step="0.1"
+                  />
+                  <span class="value" data-output="fogNear">10.0m</span>
+                </label>
+                <label class="slider-line">
+                  <span>Density</span>
+                  <input
+                    id="fogDensity"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.02"
+                    step="0.001"
+                  />
+                  <span class="value" data-output="fogDensity">0.020</span>
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Camera & Exposure</div>
+                <label class="slider-line">
+                  <span>FOV</span>
+                  <input
+                    id="cameraFov"
+                    type="range"
+                    min="45"
+                    max="120"
+                    value="60"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraFov">60°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Exposure</span>
+                  <input
+                    id="exposure"
+                    type="range"
+                    min="0"
+                    max="3"
+                    value="0.85"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="exposure">0.85</span>
+                </label>
+                <label class="color-line">
+                  <span>Background</span>
+                  <input type="color" id="backgroundColor" value="#05070b" />
+                </label>
+              </div>
+
+              <div class="panel-block export-block">
+                <button id="exportPng" class="primary-btn">
+                  Export 2× PNG
+                </button>
+                <p>No watermark. Instant download.</p>
+              </div>
+
+              <div class="panel-block copy-block">
+                <button id="copyRenderSettings" class="ghost-btn">
+                  Copy Render Settings
+                </button>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <template id="toastTemplate">
+      <div class="toast">
+        <span class="toast-message"></span>
+      </div>
+    </template>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="./scripts/main.js"></script>
+  </body>
+</html>
+
