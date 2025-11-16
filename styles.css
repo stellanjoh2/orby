@@ -389,7 +389,7 @@ body {
 }
 
 .slider-line {
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 120px minmax(0, 1fr) 70px;
   column-gap: 0.75rem;
 }
 
