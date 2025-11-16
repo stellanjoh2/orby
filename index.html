@@ -300,8 +300,12 @@
                   <span>Ambient Color</span>
                   <input type="color" class="color-chip light-chip" value="#7c8ca6" />
                 </label>
+              </div>
+
+              <div class="panel-block rotate-lights">
+                <div class="block-title">Rotate Lights</div>
                 <label class="slider-line">
-                  <span>Rotate</span>
+                  <span>Manual</span>
                   <input
                     id="lightsRotation"
                     type="range"
@@ -312,9 +316,14 @@
                   />
                   <span class="value" data-output="lightsRotation">0°</span>
                 </label>
-                <label class="toggle-line">
-                  <input type="checkbox" id="lightsAutoRotate" />
-                  <span>Auto Rotate Lights</span>
+                <label class="slider-line">
+                  <span>Automatic</span>
+                  <span></span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="lightsAutoRotate" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Auto rotate lights</span>
+                  </label>
                 </label>
               </div>
 
