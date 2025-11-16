@@ -21,29 +21,14 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #0d1323, #05060a 55%);
+  background: #000;
   color: var(--text);
   min-height: 100vh;
   overflow: hidden;
 }
 
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
 .top-bar {
-  display: grid;
-  grid-template-columns: auto auto 1fr auto;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid transparent;
-  background: rgba(3, 5, 12, 0.35);
-  backdrop-filter: blur(18px);
-  position: relative;
-  z-index: 10;
+  display: none;
 }
 
 .brand {
@@ -134,12 +119,16 @@ body {
   display: flex;
   min-height: 0;
   min-width: 0;
+  height: 100vh;
+  background: #000;
+  position: relative;
+  overflow: hidden;
 }
 
 .viewport {
   position: relative;
   flex: 1;
-  background: var(--bg);
+  background: #000;
   min-height: 0;
   min-width: 0;
 }
@@ -161,11 +150,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  background: radial-gradient(circle at top, rgba(12, 16, 28, 0.9), rgba(2, 4, 9, 0.95));
-  border: 2px dashed rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at top, rgba(12, 16, 28, 0.85), rgba(2, 4, 9, 0.92));
+  border: 0;
   text-align: center;
   pointer-events: auto;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, box-shadow 0.3s;
 }
 
 .sr-only {
@@ -182,8 +171,7 @@ body {
 }
 
 .dropzone.drag-active {
-  border-color: rgba(99, 169, 255, 0.9);
-  box-shadow: inset 0 0 50px rgba(99, 169, 255, 0.15);
+  box-shadow: inset 0 0 50px rgba(99, 169, 255, 0.25), 0 0 25px rgba(99, 169, 255, 0.35);
 }
 
 .drop-primary {
@@ -200,11 +188,18 @@ body {
 
 .shelf {
   width: clamp(320px, 23vw, 380px);
-  background: rgba(5, 7, 14, 0.92);
-  border-left: 1px solid var(--stroke);
+  background: rgba(5, 7, 14, 0.9);
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(22px);
+  height: calc(100vh - 24px);
+  padding: 1.1rem 1rem 1rem;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border-radius: 4px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .tabs {
@@ -233,7 +228,7 @@ body {
 .panels {
   flex: 1;
   overflow-y: auto;
-  padding: 1.2rem 1.3rem 4rem;
+  padding: 1rem 0 3rem;
   min-height: 0;
 }
 
@@ -274,6 +269,44 @@ body {
   letter-spacing: 0.2em;
   color: var(--text-dim);
   margin-bottom: 0.75rem;
+}
+
+.block-title.has-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.effect-toggle {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.effect-toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.effect-toggle .effect-indicator {
+  position: absolute;
+  inset: 4px;
+  border-radius: 3px;
+  background: transparent;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.effect-toggle input:checked + .effect-indicator {
+  background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 0 12px rgba(99, 169, 255, 0.45);
 }
 
 .segmented {

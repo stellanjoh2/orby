@@ -29,30 +29,6 @@
   </head>
   <body>
     <div id="app">
-      <header class="top-bar">
-        <div class="brand">
-          <img
-            src="./assets/icons/meshgl-logo.svg"
-            alt="MeshGL logo"
-            width="26"
-            height="26"
-          />
-          <div class="brand-copy">
-            <span class="brand-name">MeshGL</span>
-            <span class="brand-tagline">Cinematic meshes in your browser.</span>
-          </div>
-        </div>
-        <div class="top-bar__cluster">
-          <button id="resetAll" class="ghost-btn">Reset All</button>
-          <button id="helpButton" class="ghost-btn">? Help</button>
-        </div>
-        <div class="top-bar__status" aria-live="polite">
-          <span id="topBarTitle" class="status-title">model.glb</span>
-          <span id="topBarAnimation" class="status-detail">— Idle</span>
-        </div>
-        <button id="toggleUi" class="ghost-btn">H Hide UI</button>
-      </header>
-
       <main class="workspace">
         <section class="viewport">
           <canvas id="webgl" tabindex="0"></canvas>
@@ -320,11 +296,14 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Depth of Field</div>
-                <label class="toggle-line">
-                  <input type="checkbox" id="toggleDof" />
-                  <span>Enable Depth of Field</span>
-                </label>
+                <div class="block-title has-toggle">
+                  <span>Depth of Field</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="toggleDof" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable Depth of Field</span>
+                  </label>
+                </div>
                 <label class="slider-line">
                   <span>Focus</span>
                   <input
@@ -364,11 +343,14 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Unreal Bloom</div>
-                <label class="toggle-line">
-                  <input type="checkbox" id="toggleBloom" />
-                  <span>Enable Bloom</span>
-                </label>
+                <div class="block-title has-toggle">
+                  <span>Unreal Bloom</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="toggleBloom" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable Bloom</span>
+                  </label>
+                </div>
                 <label class="slider-line">
                   <span>Threshold</span>
                   <input
@@ -412,11 +394,14 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Film Grain</div>
-                <label class="toggle-line">
-                  <input type="checkbox" id="toggleGrain" />
-                  <span>Enable Film Grain</span>
-                </label>
+                <div class="block-title has-toggle">
+                  <span>Film Grain</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="toggleGrain" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable Film Grain</span>
+                  </label>
+                </div>
                 <label class="slider-line">
                   <span>Intensity</span>
                   <input
@@ -436,11 +421,14 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Chromatic Aberration</div>
-                <label class="toggle-line">
-                  <input type="checkbox" id="toggleAberration" />
-                  <span>Enable Chromatic Aberration</span>
-                </label>
+                <div class="block-title has-toggle">
+                  <span>Chromatic Aberration</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="toggleAberration" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable Chromatic Aberration</span>
+                  </label>
+                </div>
                 <label class="slider-line">
                   <span>Offset</span>
                   <input
