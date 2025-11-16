@@ -684,9 +684,11 @@ export class SceneManager {
       this.renderer.setClearColor(new THREE.Color(style.background), 1);
     }
     if (style.bloomTint && this.bloomTintPass) {
-      const bloomState = { ...state.bloom };
-      bloomState.enabled = true;
-      bloomState.color = style.bloomTint;
+      const bloomState = {
+        ...state.bloom,
+        enabled: true,
+        color: style.bloomTint,
+      };
       bloomState.strength = Math.max(
         style.bloomStrengthMin ?? 0,
         bloomState.strength,
@@ -697,10 +699,11 @@ export class SceneManager {
       );
       this.updateBloom(bloomState);
     }
-    if (style.grainTint && this.grainTintPass) {
-      const grainState = { ...state.grain };
-      grainState.enabled = true;
-      grainState.color = style.grainTint;
+    if (this.grainTintPass) {
+      const grainState = {
+        ...state.grain,
+        color: style.grainTint ?? state.grain.color,
+      };
       this.updateGrain(grainState);
     }
   }
