@@ -714,7 +714,9 @@ export class SceneManager {
         vec3 fresnelNormal = normalize( normal );
         vec3 fresnelViewDir = normalize( vViewPosition );
         float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
-        emissiveRadiance += fresnelColor * fresnelTerm * fresnelStrength;
+        vec3 fresnelContribution = fresnelColor * fresnelTerm * fresnelStrength;
+        reflectedLight.directDiffuse += fresnelContribution;
+        totalEmissiveRadiance += fresnelContribution;
       `,
       );
       material.userData.fresnelUniforms = uniforms;
