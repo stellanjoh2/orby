@@ -11,6 +11,7 @@ export class UIManager {
     this.uiHidden = false;
     this.currentAnimationDuration = 0;
     this.animationPlaying = false;
+    this.shelfRevealed = false;
   }
 
   init() {
@@ -31,6 +32,7 @@ export class UIManager {
     this.dom.closeHelp = q('#closeHelp');
     this.dom.toggleUi = q('#toggleUi');
     this.dom.shelf = q('#shelf');
+    this.dom.shelf?.classList.add('is-shelf-hidden');
     this.dom.topBar = document.querySelector('.top-bar');
     this.dom.fileInput = q('#fileInput');
     this.dom.browseButton = q('#browseButton');
@@ -685,18 +687,22 @@ export class UIManager {
   toggleUi() {
     this.uiHidden = !this.uiHidden;
     document.body.classList.toggle('ui-hidden', this.uiHidden);
-    gsap.to(this.dom.topBar, {
-      y: this.uiHidden ? -90 : 0,
-      autoAlpha: this.uiHidden ? 0 : 1,
-      duration: 0.3,
-      ease: 'power2.out',
-    });
-    gsap.to(this.dom.shelf, {
-      x: this.uiHidden ? 420 : 0,
-      autoAlpha: this.uiHidden ? 0 : 1,
-      duration: 0.3,
-      ease: 'power2.out',
-    });
+    if (this.dom.topBar) {
+      gsap.to(this.dom.topBar, {
+        y: this.uiHidden ? -90 : 0,
+        autoAlpha: this.uiHidden ? 0 : 1,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    }
+    if (this.shelfRevealed && this.dom.shelf) {
+      gsap.to(this.dom.shelf, {
+        x: this.uiHidden ? 420 : 0,
+        autoAlpha: this.uiHidden ? 0 : 1,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    }
     if (this.dom.dropzone) {
       gsap.to(this.dom.dropzone, {
         autoAlpha: this.uiHidden ? 0 : 1,
@@ -734,6 +740,17 @@ export class UIManager {
   setDropzoneVisible(visible) {
     this.dom.dropzone.style.pointerEvents = visible ? 'auto' : 'none';
     this.dom.dropzone.style.opacity = visible ? '1' : '0';
+  }
+
+  revealShelf() {
+    if (this.shelfRevealed || !this.dom.shelf) return;
+    this.shelfRevealed = true;
+    this.dom.shelf.classList.remove('is-shelf-hidden');
+    gsap.fromTo(
+      this.dom.shelf,
+      { autoAlpha: 0, x: 64 },
+      { autoAlpha: 1, x: 0, duration: 0.45, ease: 'power3.out' },
+    );
   }
 
   showToast(message) {

@@ -53,7 +53,7 @@
           />
         </section>
 
-        <aside class="shelf" id="shelf">
+        <aside class="shelf is-shelf-hidden" id="shelf">
           <nav class="tabs" role="tablist" aria-label="MeshGL Panels">
             <button class="tab active" data-tab="mesh" aria-selected="true">
               Mesh
@@ -574,8 +574,8 @@
                 <div class="select-line">
                   <label for="fogType">Type</label>
                   <select id="fogType">
-                    <option value="none">None</option>
-                    <option value="linear" selected>Linear</option>
+                    <option value="none" selected>None</option>
+                    <option value="linear">Linear</option>
                     <option value="exp">Exp</option>
                     <option value="exp2">Exp²</option>
                   </select>
