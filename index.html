@@ -101,6 +101,43 @@
               </div>
 
               <div class="panel-block">
+                <div class="block-title">Clay Settings</div>
+                <label class="color-line">
+                  <span>Clay Color</span>
+                  <input
+                    type="color"
+                    id="clayColor"
+                    class="color-chip"
+                    value="#d8d9e0"
+                  />
+                </label>
+                <label class="slider-line">
+                  <span>Roughness</span>
+                  <input
+                    id="clayRoughness"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.6"
+                  />
+                  <span class="value" data-output="clayRoughness">0.60</span>
+                </label>
+                <label class="slider-line">
+                  <span>Specular</span>
+                  <input
+                    id="claySpecular"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.08"
+                  />
+                  <span class="value" data-output="claySpecular">0.08</span>
+                </label>
+              </div>
+
+              <div class="panel-block">
                 <div class="block-title">Transform</div>
                 <label class="slider-line">
                   <span>Scale</span>

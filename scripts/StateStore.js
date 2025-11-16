@@ -22,6 +22,11 @@ export class StateStore {
       groundWireOpacity: 0.45,
       groundSolidColor: '#05070b',
       groundWireColor: '#c4cadd',
+      clay: {
+        color: '#d8d9e0',
+        roughness: 0.6,
+        specular: 0.08,
+      },
       background: '#000000',
       lights: {
         key: { color: '#ffdfc9', intensity: 4 },

@@ -142,39 +142,6 @@ const ExposureShader = {
   `,
 };
 
-const BackgroundCompositeShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    backgroundColor: { value: new THREE.Color('#05070b') },
-    mixBackground: { value: 1 },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-    uniform vec3 backgroundColor;
-    uniform float mixBackground;
-
-    void main() {
-      vec4 color = texture2D(tDiffuse, vUv);
-      if (mixBackground > 0.5) {
-        if (color.a < 0.0001) {
-          color = vec4(backgroundColor, 1.0);
-        } else {
-          color.a = 1.0;
-        }
-      }
-      gl_FragColor = color;
-    }
-  `,
-};
-
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
     .toString()
@@ -220,8 +187,8 @@ export class SceneManager {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.clearColor = new THREE.Color('#000000');
-    this.clearAlpha = 0;
-    this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 0);
+    this.clearAlpha = 1;
+    this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     this.renderer.toneMappingExposure = 1;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -251,6 +218,7 @@ export class SceneManager {
     this.hdriBackgroundEnabled = initialState.hdriBackground;
     this.currentEnvironment = null;
     this.currentEnvironmentTexture = null;
+    this.claySettings = { ...(initialState.clay || {}) };
 
     this.originalMaterials = new WeakMap();
 
@@ -405,14 +373,8 @@ export class SceneManager {
     this.aberrationPass = new ShaderPass(AberrationShader);
     this.exposurePass = new ShaderPass(ExposureShader);
     this.exposurePass.uniforms.exposure.value = this.currentExposure;
-    this.backgroundPass = new ShaderPass(BackgroundCompositeShader);
-    this.backgroundPass.uniforms.backgroundColor.value = new THREE.Color(
-      this.backgroundColor,
-    );
-    this.backgroundPass.uniforms.mixBackground.value = 1;
     this.aberrationPass.renderToScreen = false;
-    this.exposurePass.renderToScreen = false;
-    this.backgroundPass.renderToScreen = true;
+    this.exposurePass.renderToScreen = true;
 
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.bokehPass);
@@ -422,7 +384,6 @@ export class SceneManager {
     this.composer.addPass(this.grainTintPass);
     this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.exposurePass);
-    this.composer.addPass(this.backgroundPass);
   }
 
   registerEvents() {
@@ -432,6 +393,15 @@ export class SceneManager {
     this.eventBus.on('mesh:normals', (enabled) => this.toggleNormals(enabled));
     this.eventBus.on('mesh:auto-rotate', (speed) => {
       this.autoRotateSpeed = speed;
+    });
+    this.eventBus.on('mesh:clay-color', (value) => {
+      this.setClaySettings({ color: value });
+    });
+    this.eventBus.on('mesh:clay-roughness', (value) => {
+      this.setClaySettings({ roughness: value });
+    });
+    this.eventBus.on('mesh:clay-specular', (value) => {
+      this.setClaySettings({ specular: value });
     });
     this.eventBus.on('mesh:reset-transform', () => {
       this.modelRoot.rotation.y = 0;
@@ -542,6 +512,7 @@ export class SceneManager {
       const multiplier = light.isAmbientLight ? 4 : 2;
       light.intensity = config.intensity * multiplier;
     });
+    this.claySettings = { ...(state.clay || this.claySettings) };
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.updateGrain(state.grain);
@@ -585,20 +556,10 @@ export class SceneManager {
     const backgroundIsHdri = hdriActive && this.hdriBackgroundEnabled;
     if (backgroundIsHdri) {
       this.scene.background = this.currentEnvironmentTexture;
-      if (this.backgroundPass) {
-        this.backgroundPass.enabled = false;
-      }
       this.renderer.setClearColor(this.clearColor, 1);
     } else {
       this.scene.background = null;
-      if (this.backgroundPass) {
-        this.backgroundPass.enabled = true;
-        this.backgroundPass.uniforms.mixBackground.value = 1;
-        this.backgroundPass.uniforms.backgroundColor.value.set(
-          this.backgroundColor,
-        );
-      }
-      this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 0);
+      this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     }
   }
 
@@ -615,6 +576,13 @@ export class SceneManager {
   setHdriStrength(value) {
     this.hdriStrength = value;
     this.applyEnvironment(this.currentEnvironmentTexture);
+  }
+
+  setClaySettings(patch) {
+    this.claySettings = { ...this.claySettings, ...patch };
+    if (this.stateStore.getState().shading === 'clay') {
+      this.setShading('clay');
+    }
   }
 
   setGroundSolid(enabled) {
@@ -754,13 +722,10 @@ export class SceneManager {
 
   updateBackgroundColor(color) {
     this.backgroundColor = color;
-    if (this.backgroundPass?.uniforms?.backgroundColor) {
-      this.backgroundPass.uniforms.backgroundColor.value.set(color);
-    }
     if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
       const background = new THREE.Color(color);
       this.scene.background = null;
-      this.renderer.setClearColor(background, 0);
+      this.renderer.setClearColor(background, 1);
     }
   }
 
@@ -1208,11 +1173,12 @@ export class SceneManager {
         };
         applyMaterial(buildArray(createWire));
       } else if (mode === 'clay') {
+        const { color, roughness, specular } = this.claySettings;
         const createClay = () =>
           new THREE.MeshStandardMaterial({
-            color: '#d8d9e0',
-            roughness: 0.6,
-            metalness: 0.1,
+            color: new THREE.Color(color),
+            roughness,
+            metalness: specular,
             side: THREE.DoubleSide,
           });
         applyMaterial(buildArray(createClay));
