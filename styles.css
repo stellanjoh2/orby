@@ -237,7 +237,7 @@ body {
 }
 
 .panels::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .panels::-webkit-scrollbar-track {
@@ -246,12 +246,12 @@ body {
 }
 
 .panels::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.45);
   border-radius: 999px;
 }
 
 .panels::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .panel {
