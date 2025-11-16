@@ -575,7 +575,8 @@ export class SceneManager {
     this.currentEnvironmentTexture = texture || null;
     const hdriActive = this.hdriEnabled && this.currentEnvironmentTexture;
     this.scene.environment = hdriActive ? this.currentEnvironmentTexture : null;
-    this.scene.environmentIntensity = hdriActive ? this.hdriStrength : 0;
+    const intensity = Math.max(0, this.hdriStrength);
+    this.scene.environmentIntensity = hdriActive ? intensity : 0;
     const backgroundIsHdri = hdriActive && this.hdriBackgroundEnabled;
     if (backgroundIsHdri) {
       this.scene.background = this.currentEnvironmentTexture;
