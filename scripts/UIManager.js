@@ -51,6 +51,7 @@ export class UIManager {
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
       hdriBackground: q('#hdriBackground'),
+      hdriStrength: q('#hdriStrength'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
@@ -296,6 +297,12 @@ export class UIManager {
       this.stateStore.set('hdriEnabled', enabled);
       this.eventBus.emit('studio:hdri-enabled', enabled);
       this.toggleHdriControls(enabled);
+    });
+    this.inputs.hdriStrength.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('hdriStrength', value.toFixed(1));
+      this.stateStore.set('hdriStrength', value);
+      this.eventBus.emit('studio:hdri-strength', value);
     });
     this.inputs.hdriBackground.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -577,6 +584,7 @@ export class UIManager {
       const payload = {
         hdri: state.hdri,
         hdriEnabled: state.hdriEnabled,
+        hdriStrength: state.hdriStrength,
         hdriBackground: state.hdriBackground,
         groundSolid: state.groundSolid,
         groundWire: state.groundWire,
@@ -637,6 +645,7 @@ export class UIManager {
       button.classList.toggle('is-disabled', !enabled);
     });
     this.inputs.hdriBackground.disabled = !enabled;
+    this.inputs.hdriStrength.disabled = !enabled;
     if (!enabled) {
       this.inputs.backgroundColor.disabled = false;
     }
@@ -771,6 +780,8 @@ export class UIManager {
     }
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
+    this.inputs.hdriStrength.value = state.hdriStrength;
+    this.updateValueLabel('hdriStrength', state.hdriStrength.toFixed(1));
     this.inputs.hdriBackground.checked = state.hdriBackground;
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;

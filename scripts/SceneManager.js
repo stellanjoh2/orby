@@ -208,6 +208,7 @@ export class SceneManager {
     const initialState = this.stateStore.getState();
     this.backgroundColor = initialState.background ?? '#05070b';
     this.currentExposure = initialState.exposure ?? 1;
+    this.hdriStrength = initialState.hdriStrength ?? 1;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -226,6 +227,7 @@ export class SceneManager {
 
     this.modelRoot = new THREE.Group();
     this.scene.add(this.modelRoot);
+    this.scene.environmentIntensity = this.hdriStrength;
 
     this.normalsHelpers = [];
     this.autoRotateSpeed = 0;
@@ -414,6 +416,9 @@ export class SceneManager {
     this.eventBus.on('studio:hdri-enabled', (enabled) =>
       this.setHdriEnabled(enabled),
     );
+    this.eventBus.on('studio:hdri-strength', (value) =>
+      this.setHdriStrength(value),
+    );
     this.eventBus.on('studio:hdri-background', (enabled) =>
       this.setHdriBackground(enabled),
     );
@@ -430,7 +435,7 @@ export class SceneManager {
       if (property === 'color') {
         light.color = new THREE.Color(value);
       } else if (property === 'intensity') {
-        light.intensity = value;
+        light.intensity = value * 2;
       }
     });
 
@@ -489,7 +494,7 @@ export class SceneManager {
     Object.entries(state.lights).forEach(([id, config]) => {
       if (!this.lights[id]) return;
       this.lights[id].color = new THREE.Color(config.color);
-      this.lights[id].intensity = config.intensity;
+      this.lights[id].intensity = config.intensity * 2;
     });
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
@@ -497,6 +502,7 @@ export class SceneManager {
     this.updateAberration(state.aberration);
     this.updateFog(state.fog);
     this.updateBackgroundColor(state.background);
+    this.setHdriStrength(state.hdriStrength ?? 1);
     this.setHdriEnabled(state.hdriEnabled);
     this.setHdriBackground(state.hdriBackground);
     await this.setHdriPreset(state.hdri);
@@ -529,6 +535,7 @@ export class SceneManager {
     this.currentEnvironmentTexture = texture || null;
     const hdriActive = this.hdriEnabled && this.currentEnvironmentTexture;
     this.scene.environment = hdriActive ? this.currentEnvironmentTexture : null;
+    this.scene.environmentIntensity = hdriActive ? this.hdriStrength : 0;
     const backgroundIsHdri = hdriActive && this.hdriBackgroundEnabled;
     this.scene.background = backgroundIsHdri ? this.currentEnvironmentTexture : null;
     if (this.backgroundPass) {
@@ -552,6 +559,11 @@ export class SceneManager {
 
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
+    this.applyEnvironment(this.currentEnvironmentTexture);
+  }
+
+  setHdriStrength(value) {
+    this.hdriStrength = value;
     this.applyEnvironment(this.currentEnvironmentTexture);
   }
 
