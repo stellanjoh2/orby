@@ -650,7 +650,15 @@ export class UIManager {
       duration: 0.3,
       ease: 'power2.out',
     });
+    if (this.dom.dropzone) {
+      gsap.to(this.dom.dropzone, {
+        autoAlpha: this.uiHidden ? 0 : 1,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    }
     this.dom.toggleUi.textContent = this.uiHidden ? 'H Show UI' : 'H Hide UI';
+    this.dom.toggleUi.blur?.();
   }
 
   updateValueLabel(key, text) {

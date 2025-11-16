@@ -163,10 +163,11 @@ const BackgroundCompositeShader = {
 
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
-      if (mixBackground > 0.5 && color.a < 0.0001) {
-        color = vec4(backgroundColor, 1.0);
+      if (mixBackground > 0.5) {
+        gl_FragColor = vec4(backgroundColor, 1.0);
+      } else {
+        gl_FragColor = color;
       }
-      gl_FragColor = color;
     }
   `,
 };
@@ -217,7 +218,7 @@ export class SceneManager {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.clearColor = new THREE.Color('#000000');
     this.clearAlpha = 0;
-    this.renderer.setClearColor(this.clearColor, this.clearAlpha);
+    this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     this.renderer.toneMappingExposure = 1;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -580,19 +581,19 @@ export class SceneManager {
     this.scene.environment = hdriActive ? this.currentEnvironmentTexture : null;
     this.scene.environmentIntensity = hdriActive ? this.hdriStrength : 0;
     const backgroundIsHdri = hdriActive && this.hdriBackgroundEnabled;
-    this.scene.background = backgroundIsHdri ? this.currentEnvironmentTexture : null;
+    this.scene.background = backgroundIsHdri
+      ? this.currentEnvironmentTexture
+      : new THREE.Color(this.backgroundColor);
     if (this.backgroundPass) {
       this.backgroundPass.uniforms.mixBackground.value = backgroundIsHdri ? 0 : 1;
-      if (!backgroundIsHdri) {
-        this.backgroundPass.uniforms.backgroundColor.value.set(
-          this.backgroundColor,
-        );
-      }
+      this.backgroundPass.uniforms.backgroundColor.value.set(
+        this.backgroundColor,
+      );
     }
-    this.renderer.setClearColor(
-      backgroundIsHdri ? this.clearColor : this.clearColor,
-      backgroundIsHdri ? 1 : this.clearAlpha,
-    );
+    const clearColor = backgroundIsHdri
+      ? this.clearColor
+      : new THREE.Color(this.backgroundColor);
+    this.renderer.setClearColor(clearColor, 1);
   }
 
   setHdriBackground(enabled) {
@@ -751,7 +752,9 @@ export class SceneManager {
       this.backgroundPass.uniforms.backgroundColor.value.set(color);
     }
     if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
-      this.scene.background = null;
+      const background = new THREE.Color(color);
+      this.scene.background = background;
+      this.renderer.setClearColor(background, 1);
     }
   }
 
