@@ -155,6 +155,8 @@ export class SceneManager {
     this.renderer.setClearColor(0x05070b, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.currentExposure = this.stateStore.getState().exposure ?? 1;
+    this.renderer.toneMappingExposure = this.currentExposure;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
@@ -342,6 +344,7 @@ export class SceneManager {
       this.updateBackgroundColor(color),
     );
     this.eventBus.on('scene:exposure', (value) => {
+      this.currentExposure = value;
       this.renderer.toneMappingExposure = value;
     });
 
@@ -439,10 +442,13 @@ export class SceneManager {
 
   updateDof(settings) {
     if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active = wants && settings.strength > 0.0001;
     if (this.bokehPass) {
-      this.bokehPass.enabled = !!settings.enabled;
+      this.bokehPass.enabled = active;
     }
-    if (!settings.enabled) return;
+    if (!active) return;
     this.bokehPass.uniforms.focus.value = settings.focus;
     this.bokehPass.uniforms.aperture.value = settings.aperture;
     this.bokehPass.uniforms.maxblur.value = settings.strength;
@@ -450,13 +456,16 @@ export class SceneManager {
 
   updateBloom(settings) {
     if (!settings) return;
-     if (this.bloomPass) {
-       this.bloomPass.enabled = !!settings.enabled;
-     }
-     if (this.bloomTintPass) {
-       this.bloomTintPass.enabled = !!settings.enabled;
-     }
-     if (!settings.enabled) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active = wants && settings.strength > 0.0001;
+    if (this.bloomPass) {
+      this.bloomPass.enabled = active;
+    }
+    if (this.bloomTintPass) {
+      this.bloomTintPass.enabled = active;
+    }
+    if (!active) return;
     this.bloomPass.threshold = settings.threshold;
     this.bloomPass.strength = settings.strength;
     this.bloomPass.radius = settings.radius;
@@ -470,13 +479,16 @@ export class SceneManager {
 
   updateGrain(settings) {
     if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active = wants && settings.intensity > 0.0001;
     if (this.filmPass) {
-      this.filmPass.enabled = !!settings.enabled;
+      this.filmPass.enabled = active;
     }
     if (this.grainTintPass) {
-      this.grainTintPass.enabled = !!settings.enabled;
+      this.grainTintPass.enabled = active;
     }
-    if (!settings.enabled) return;
+    if (!active) return;
     if (this.filmPass?.uniforms?.nIntensity) {
       this.filmPass.uniforms.nIntensity.value = settings.intensity;
     }
@@ -492,10 +504,16 @@ export class SceneManager {
 
   updateAberration(settings) {
     if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active =
+      wants &&
+      settings.strength > 0.0001 &&
+      Math.abs(settings.offset) > 0.0001;
     if (this.aberrationPass) {
-      this.aberrationPass.enabled = !!settings.enabled;
+      this.aberrationPass.enabled = active;
     }
-    if (!settings.enabled) return;
+    if (!active) return;
     this.aberrationPass.uniforms.offset.value = settings.offset;
     this.aberrationPass.uniforms.strength.value = settings.strength;
   }
@@ -1072,6 +1090,9 @@ export class SceneManager {
   }
 
   render() {
+    if (this.currentExposure !== undefined) {
+      this.renderer.toneMappingExposure = this.currentExposure;
+    }
     if (this.composer) {
       this.composer.render();
     } else {
