@@ -557,29 +557,20 @@ body {
   box-shadow: 0 8px 20px rgba(99, 169, 255, 0.25);
 }
 
-.lights .light-control {
-  display: grid;
-  grid-template-columns: 60px 70px 1fr auto;
-  gap: 0.6rem;
+.lights .light-row {
+  grid-template-columns: 70px 1fr 60px 80px;
+  column-gap: 0.6rem;
   align-items: center;
-  margin-bottom: 0.6rem;
 }
 
-.light-label {
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  font-size: 0.7rem;
-  color: var(--text-dim);
-}
-
-.light-control input[type='range'] {
-  width: 100%;
-}
-
-.light-control .value {
+.lights .light-row .value {
   justify-self: end;
   font-size: 0.8rem;
-  color: var(--text-dim);
+}
+
+.light-chip {
+  width: 60px;
+  height: 14px;
 }
 
 .export-block {

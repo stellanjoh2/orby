@@ -381,7 +381,10 @@ export class UIManager {
       const colorInput = control.querySelector('input[type="color"]');
       const rangeInput = control.querySelector('input[type="range"]');
       const valueLabel = control.querySelector('.value');
-      colorInput.addEventListener('input', () => {
+      if (colorInput) {
+        colorInput.value = state.lights[lightId].color;
+      }
+      colorInput?.addEventListener('input', () => {
         this.stateStore.set(`lights.${lightId}.color`, colorInput.value);
         this.eventBus.emit('lights:update', {
           lightId,
@@ -389,7 +392,7 @@ export class UIManager {
           value: colorInput.value,
         });
       });
-      rangeInput.addEventListener('input', () => {
+      rangeInput?.addEventListener('input', () => {
         const value = parseFloat(rangeInput.value);
         valueLabel.textContent = value.toFixed(1);
         this.stateStore.set(`lights.${lightId}.intensity`, value);
