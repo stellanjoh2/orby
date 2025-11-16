@@ -487,7 +487,7 @@ export class UIManager {
   }
 
   bindGlobalControls() {
-    this.dom.resetAll.addEventListener('click', () => {
+    this.dom.resetAll?.addEventListener('click', () => {
       const snapshot = this.stateStore.reset();
       this.syncControls(snapshot);
       this.eventBus.emit('app:reset');
@@ -521,10 +521,10 @@ export class UIManager {
         });
       }
     }
-    this.dom.toggleUi.addEventListener('click', () => this.toggleUi());
+    this.dom.toggleUi?.addEventListener('click', () => this.toggleUi());
     document.addEventListener('keydown', (event) => {
       const key = event.key.toLowerCase();
-      if (key === 'h') {
+      if (key === 'h' && this.dom.toggleUi) {
         event.preventDefault();
         this.toggleUi();
       }
@@ -532,6 +532,7 @@ export class UIManager {
         key === 'escape' &&
         hasHelpOverlay &&
         hideHelp &&
+        this.dom.helpOverlay &&
         !this.dom.helpOverlay.hidden
       ) {
         hideHelp();
@@ -689,11 +690,15 @@ export class UIManager {
 
   updateTitle(filename) {
     document.title = `MeshGL — ${filename}`;
-    this.dom.topBarTitle.textContent = filename;
+    if (this.dom.topBarTitle) {
+      this.dom.topBarTitle.textContent = filename;
+    }
   }
 
   updateTopBarDetail(detail) {
-    this.dom.topBarAnimation.textContent = detail;
+    if (this.dom.topBarAnimation) {
+      this.dom.topBarAnimation.textContent = detail;
+    }
   }
 
   setAnimationClips(clips) {
