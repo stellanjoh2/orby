@@ -239,11 +239,14 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">HDRI Presets</div>
-                <label class="toggle-line">
-                  <input type="checkbox" id="hdriEnabled" checked />
-                  <span>Enable HDRI Lighting</span>
-                </label>
+                <div class="block-title has-toggle">
+                  <span>HDRI Presets</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="hdriEnabled" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable HDRI Lighting</span>
+                  </label>
+                </div>
                 <label class="slider-line">
                   <span>HDRI Strength</span>
                   <input
