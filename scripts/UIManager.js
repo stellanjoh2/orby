@@ -241,9 +241,11 @@ export class UIManager {
           if (visible) {
             gsap.fromTo(
               panel,
-              { autoAlpha: 0, x: 16 },
-              { autoAlpha: 1, x: 0, duration: 0.3, ease: 'power2.out' },
+              { autoAlpha: 0 },
+              { autoAlpha: 1, duration: 0.25, ease: 'power2.out' },
             );
+          } else {
+            gsap.set(panel, { clearProps: 'opacity' });
           }
         });
       });

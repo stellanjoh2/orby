@@ -273,7 +273,6 @@ body {
 
 .panel {
   display: none;
-  animation: fadeIn 0.3s ease;
 }
 
 .panel.visible {
