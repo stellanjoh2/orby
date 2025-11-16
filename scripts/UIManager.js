@@ -459,8 +459,8 @@ export class UIManager {
       emitGrain();
     });
     this.inputs.grainIntensity.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) * 0.3;
-      this.updateValueLabel('grainIntensity', (value / 0.3).toFixed(2));
+      const value = parseFloat(event.target.value) * 0.15;
+      this.updateValueLabel('grainIntensity', (value / 0.15).toFixed(2));
       this.stateStore.set('grain.intensity', value);
       emitGrain();
     });
@@ -896,10 +896,10 @@ export class UIManager {
     this.updateValueLabel('bloomStrength', state.bloom.strength.toFixed(2));
     this.inputs.bloomRadius.value = state.bloom.radius;
     this.updateValueLabel('bloomRadius', state.bloom.radius.toFixed(2));
-    this.inputs.grainIntensity.value = (state.grain.intensity / 0.3).toFixed(2);
+    this.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
     this.updateValueLabel(
       'grainIntensity',
-      (state.grain.intensity / 0.3).toFixed(2),
+      (state.grain.intensity / 0.15).toFixed(2),
     );
     this.inputs.aberrationOffset.value = state.aberration.offset;
     this.updateValueLabel(
