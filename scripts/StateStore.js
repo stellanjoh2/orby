@@ -39,6 +39,7 @@ export class StateStore {
         rim: { color: '#a0eaf9', intensity: 0.96 },
         ambient: { color: '#7c8ca6', intensity: 0.48 },
       },
+      lightsEnabled: true,
       lightsRotation: 0,
       lightsAutoRotate: false,
       dof: {

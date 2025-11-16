@@ -277,13 +277,20 @@
                   </button>
                 </div>
                 <label class="toggle-line">
-                  <input type="checkbox" id="hdriBackground" />
                   <span>Show in Background</span>
+                  <input type="checkbox" id="hdriBackground" />
                 </label>
               </div>
 
               <div class="panel-block lights">
-                <div class="block-title">3-Point Lighting</div>
+                <div class="block-title has-toggle">
+                  <span>3-Point Lighting</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="lightsEnabled" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable 3-Point Lighting</span>
+                  </label>
+                </div>
                 <label class="color-line light-color-row" data-light="key">
                   <span>Key Color</span>
                   <input type="color" class="color-chip light-chip" value="#ffdfc9" />
@@ -303,7 +310,14 @@
               </div>
 
               <div class="panel-block rotate-lights">
-                <div class="block-title">Rotate Lights</div>
+                <div class="block-title has-toggle">
+                  <span>Rotate Lights</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="lightsAutoRotate" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Auto rotate lights</span>
+                  </label>
+                </div>
                 <label class="slider-line">
                   <span>Manual</span>
                   <input
@@ -316,25 +330,16 @@
                   />
                   <span class="value" data-output="lightsRotation">0°</span>
                 </label>
-                <label class="slider-line">
-                  <span>Automatic</span>
-                  <span></span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="lightsAutoRotate" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Auto rotate lights</span>
-                  </label>
-                </label>
               </div>
 
               <div class="panel-block">
                 <div class="block-title">Podium</div>
                 <label class="toggle-line">
-                  <span>Solid Plane (Shadow Catcher)</span>
+                  <span>Podium Enabled</span>
                   <input type="checkbox" id="groundSolid" />
                 </label>
                 <label class="color-line">
-                  <span>Solid Color</span>
+                  <span>Podium Color</span>
                   <input
                     type="color"
                     id="groundSolidColor"
@@ -342,6 +347,19 @@
                     value="#31363f"
                   />
                 </label>
+                <label class="color-line">
+                  <span>Background</span>
+                  <input
+                    type="color"
+                    id="backgroundColor"
+                    class="color-chip"
+                    value="#000000"
+                  />
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Wireframe</div>
                 <label class="toggle-line">
                   <span>Wireframe Grid</span>
                   <input type="checkbox" id="groundWire" />
@@ -367,11 +385,7 @@
                   />
                   <span class="value" data-output="groundWireOpacity">0.45</span>
                 </label>
-                <label class="color-line">
-                  <span>Background</span>
-                  <input
-                    type="color"
-                    id="backgroundColor"
+              </div>
                     class="color-chip"
                     value="#000000"
                   />

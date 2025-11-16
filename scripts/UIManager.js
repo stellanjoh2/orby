@@ -71,6 +71,7 @@ export class UIManager {
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsRotation: q('#lightsRotation'),
       lightsAutoRotate: q('#lightsAutoRotate'),
+      lightsEnabled: q('#lightsEnabled'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
       dofStrength: q('#dofStrength'),
@@ -388,6 +389,12 @@ export class UIManager {
         });
       });
     });
+    this.inputs.lightsEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lightsEnabled', enabled);
+      this.eventBus.emit('lights:enabled', enabled);
+      this.setLightColorControlsDisabled(!enabled);
+    });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
       this.updateValueLabel('lightsRotation', `${value.toFixed(0)}°`);
@@ -667,6 +674,7 @@ export class UIManager {
         groundWireOpacity: state.groundWireOpacity,
         background: state.background,
         lights: state.lights,
+        lightsEnabled: state.lightsEnabled,
         lightsRotation: state.lightsRotation,
         lightsAutoRotate: state.lightsAutoRotate,
       };
@@ -915,6 +923,10 @@ export class UIManager {
       this.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;
       this.setLightsRotationDisabled(!!state.lightsAutoRotate);
     }
+    if (this.inputs.lightsEnabled) {
+      this.inputs.lightsEnabled.checked = !!state.lightsEnabled;
+      this.setLightColorControlsDisabled(!state.lightsEnabled);
+    }
     this.inputs.dofFocus.value = state.dof.focus;
     this.updateValueLabel('dofFocus', `${state.dof.focus.toFixed(1)}m`);
     this.inputs.dofAperture.value = state.dof.aperture;
@@ -1022,6 +1034,15 @@ export class UIManager {
     const normalized = ((value % 360) + 360) % 360;
     this.inputs.lightsRotation.value = normalized;
     this.updateValueLabel('lightsRotation', `${normalized.toFixed(0)}°`);
+  }
+
+  setLightColorControlsDisabled(disabled) {
+    this.inputs.lightControls.forEach((control) => {
+      const input = control.querySelector('input[type="color"]');
+      if (!input) return;
+      input.disabled = disabled;
+      input.classList.toggle('is-disabled-handle', disabled);
+    });
   }
 }
 

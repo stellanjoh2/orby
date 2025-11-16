@@ -224,6 +224,7 @@ export class SceneManager {
     this.currentShading = initialState.shading;
     this.lastBoneToastTime = 0;
     this.autoRotateSpeed = 0;
+    this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
     this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
     this.lightsAutoRotateSpeed = 30; // degrees per second
@@ -477,6 +478,9 @@ export class SceneManager {
         light.intensity = value * multiplier;
       }
     });
+    this.eventBus.on('lights:enabled', (enabled) =>
+      this.setLightsEnabled(enabled),
+    );
     this.eventBus.on('lights:rotate', (value) => this.setLightsRotation(value));
     this.eventBus.on('lights:auto-rotate', (enabled) =>
       this.setLightsAutoRotate(enabled),
@@ -540,13 +544,14 @@ export class SceneManager {
     }
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
-    Object.entries(state.lights).forEach(([id, config]) => {
-      const light = this.lights[id];
-      if (!light) return;
-      light.color = new THREE.Color(config.color);
-      const multiplier = light.isAmbientLight ? 4 : 2;
-      light.intensity = config.intensity * multiplier;
-    });
+    this.lightsEnabled = state.lightsEnabled ?? true;
+    this.applyLightSettings(state.lights);
+    if (!this.lightsEnabled) {
+      Object.values(this.lights).forEach((light) => {
+        if (!light) return;
+        light.intensity = 0;
+      });
+    }
     this.setLightsRotation(state.lightsRotation ?? 0);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
     this.claySettings = { ...(state.clay || this.claySettings) };
@@ -670,6 +675,32 @@ export class SceneManager {
         if (mat) {
           mat.opacity = value;
         }
+      });
+    }
+  }
+
+  applyLightSettings(lightsState) {
+    if (!lightsState) return;
+    Object.entries(lightsState).forEach(([id, config]) => {
+      const light = this.lights[id];
+      if (!light) return;
+      if (config.color) {
+        light.color = new THREE.Color(config.color);
+      }
+      const multiplier = light.isAmbientLight ? 4 : 2;
+      const targetIntensity = (config.intensity ?? 0) * multiplier;
+      light.intensity = this.lightsEnabled ? targetIntensity : 0;
+    });
+  }
+
+  setLightsEnabled(enabled) {
+    this.lightsEnabled = enabled;
+    if (enabled) {
+      this.applyLightSettings(this.stateStore.getState().lights);
+    } else {
+      Object.values(this.lights).forEach((light) => {
+        if (!light) return;
+        light.intensity = 0;
       });
     }
   }

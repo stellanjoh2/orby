@@ -1,9 +1,5 @@
 .toggle-line {
   grid-template-columns: auto 1fr;
-}
-
-.toggle-line {
-  grid-template-columns: auto 1fr;
   column-gap: 0.5rem;
 }
 
@@ -432,6 +428,12 @@ body {
   color: var(--text-dim);
 }
 
+.toggle-line input[type='checkbox'] {
+  justify-self: end;
+  width: 18px;
+  height: 18px;
+}
+
 .slider-line input[type='range'] {
   grid-column: 2;
   align-self: center;
@@ -571,8 +573,10 @@ body {
   height: 14px;
 }
 
-.rotate-lights .slider-line {
-  grid-template-columns: 140px 1fr auto;
+.color-chip.is-disabled-handle {
+  opacity: 0.4;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 .export-block {
