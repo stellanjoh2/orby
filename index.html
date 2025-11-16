@@ -354,7 +354,7 @@
                   </label>
                 </div>
                 <label class="color-line">
-                  <span>Podium Color</span>
+                  <span>Color</span>
                   <input
                     type="color"
                     id="groundSolidColor"
@@ -362,8 +362,36 @@
                     value="#31363f"
                   />
                 </label>
+                <label class="slider-line">
+                  <span>Y Position</span>
+                  <input
+                    id="groundY"
+                    type="range"
+                    min="-2"
+                    max="2"
+                    step="0.01"
+                    value="0"
+                  />
+                  <span class="value" data-output="groundY">0.00m</span>
+                </label>
+                <label class="slider-line">
+                  <span>Height</span>
+                  <input
+                    id="groundHeight"
+                    type="range"
+                    min="0.1"
+                    max="2"
+                    step="0.01"
+                    value="1"
+                  />
+                  <span class="value" data-output="groundHeight">1.00m</span>
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Background</div>
                 <label class="color-line">
-                  <span>Background</span>
+                  <span>Color</span>
                   <input
                     type="color"
                     id="backgroundColor"
@@ -383,7 +411,7 @@
                   </label>
                 </div>
                 <label class="color-line">
-                  <span>Grid Color</span>
+                  <span>Color</span>
                   <input
                     type="color"
                     id="groundWireColor"
@@ -392,7 +420,7 @@
                   />
                 </label>
                 <label class="slider-line">
-                  <span>Grid Opacity</span>
+                  <span>Opacity</span>
                   <input
                     id="groundWireOpacity"
                     type="range"

@@ -65,6 +65,8 @@ export class UIManager {
       groundSolidColor: q('#groundSolidColor'),
       groundWireColor: q('#groundWireColor'),
       groundWireOpacity: q('#groundWireOpacity'),
+      groundY: q('#groundY'),
+      groundHeight: q('#groundHeight'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
@@ -376,6 +378,18 @@ export class UIManager {
       this.stateStore.set('groundWireOpacity', value);
       this.eventBus.emit('studio:ground-wire-opacity', value);
     });
+    this.inputs.groundY.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('groundY', `${value.toFixed(2)}m`);
+      this.stateStore.set('groundY', value);
+      this.eventBus.emit('studio:ground-y', value);
+    });
+    this.inputs.groundHeight.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('groundHeight', `${value.toFixed(2)}m`);
+      this.stateStore.set('groundHeight', value);
+      this.eventBus.emit('studio:ground-height', value);
+    });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
       const colorInput = control.querySelector('input[type="color"]');
@@ -677,6 +691,8 @@ export class UIManager {
         groundSolidColor: state.groundSolidColor,
         groundWireColor: state.groundWireColor,
         groundWireOpacity: state.groundWireOpacity,
+        groundY: state.groundY,
+        groundHeight: state.groundHeight,
         background: state.background,
         lights: state.lights,
         lightsEnabled: state.lightsEnabled,
@@ -918,6 +934,10 @@ export class UIManager {
       'groundWireOpacity',
       state.groundWireOpacity.toFixed(2),
     );
+    this.inputs.groundY.value = state.groundY;
+    this.updateValueLabel('groundY', `${state.groundY.toFixed(2)}m`);
+    this.inputs.groundHeight.value = state.groundHeight;
+    this.updateValueLabel('groundHeight', `${state.groundHeight.toFixed(2)}m`);
     if (this.inputs.lightsRotation) {
       this.inputs.lightsRotation.value = state.lightsRotation ?? 0;
       this.updateValueLabel(
