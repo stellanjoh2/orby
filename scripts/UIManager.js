@@ -68,9 +68,9 @@ export class UIManager {
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
+      lightsMaster: q('#lightsMaster'),
       lightsRotation: q('#lightsRotation'),
       lightsAutoRotate: q('#lightsAutoRotate'),
-      lightsEnabled: q('#lightsEnabled'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
       dofStrength: q('#dofStrength'),
@@ -388,6 +388,12 @@ export class UIManager {
         });
       });
     });
+    this.inputs.lightsMaster?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('lightsMaster', value.toFixed(2));
+      this.stateStore.set('lightsMaster', value);
+      this.eventBus.emit('lights:master', value);
+    });
     this.inputs.lightsEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('lightsEnabled', enabled);
@@ -674,6 +680,7 @@ export class UIManager {
         background: state.background,
         lights: state.lights,
         lightsEnabled: state.lightsEnabled,
+        lightsMaster: state.lightsMaster,
         lightsRotation: state.lightsRotation,
         lightsAutoRotate: state.lightsAutoRotate,
       };
@@ -918,6 +925,11 @@ export class UIManager {
         `${(state.lightsRotation ?? 0).toFixed(0)}°`,
       );
     }
+    if (this.inputs.lightsMaster) {
+      const masterValue = state.lightsMaster ?? 1;
+      this.inputs.lightsMaster.value = masterValue;
+      this.updateValueLabel('lightsMaster', masterValue.toFixed(2));
+    }
     if (this.inputs.lightsAutoRotate) {
       this.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;
       this.setLightsRotationDisabled(!!state.lightsAutoRotate);
@@ -1042,6 +1054,10 @@ export class UIManager {
       input.disabled = disabled;
       input.classList.toggle('is-disabled-handle', disabled);
     });
+    if (this.inputs.lightsMaster) {
+      this.inputs.lightsMaster.disabled = disabled;
+      this.inputs.lightsMaster.classList.toggle('is-disabled-handle', disabled);
+    }
   }
 }
 

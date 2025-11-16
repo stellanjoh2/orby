@@ -568,6 +568,14 @@ body {
   grid-template-columns: 160px auto;
 }
 
+.lights .slider-line {
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+}
+
+.rotate-slider {
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+}
+
 .light-chip {
   width: 120px;
   height: 14px;

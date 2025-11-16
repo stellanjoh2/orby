@@ -307,6 +307,18 @@
                   <span>Ambient Color</span>
                   <input type="color" class="color-chip light-chip" value="#7c8ca6" />
                 </label>
+                <label class="slider-line">
+                  <span>Master Exposure</span>
+                  <input
+                    id="lightsMaster"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.01"
+                    value="1"
+                  />
+                  <span class="value" data-output="lightsMaster">1.00</span>
+                </label>
               </div>
 
               <div class="panel-block rotate-lights">
@@ -363,15 +375,15 @@
 
               <div class="panel-block">
                 <div class="block-title has-toggle">
-                  <span>Wireframe</span>
+                  <span>Grid</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="groundWire" />
                     <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable wireframe grid</span>
+                    <span class="sr-only">Enable grid</span>
                   </label>
                 </div>
                 <label class="color-line">
-                  <span>Wireframe Color</span>
+                  <span>Grid Color</span>
                   <input
                     type="color"
                     id="groundWireColor"
@@ -380,7 +392,7 @@
                   />
                 </label>
                 <label class="slider-line">
-                  <span>Wireframe Opacity</span>
+                  <span>Grid Opacity</span>
                   <input
                     id="groundWireOpacity"
                     type="range"

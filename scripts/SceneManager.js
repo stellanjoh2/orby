@@ -19,7 +19,7 @@ const HDRI_PRESETS = {
   'noir-studio': './assets/hdris/noir-studio.hdr',
   'luminous-sky': './assets/hdris/luminous-sky.hdr',
   'sunset-cove': './assets/hdris/sunset-cove.hdr',
-  'steel-lab': './assets/hdris/steel-lab.hdr',
+  'steel-lab': { url: './assets/hdris/hdri_sky_782.jpg', type: 'ldr' },
   cyberpunk: './assets/hdris/ghost-luxe.hdr',
 };
 
@@ -224,6 +224,7 @@ export class SceneManager {
     this.currentShading = initialState.shading;
     this.lastBoneToastTime = 0;
     this.autoRotateSpeed = 0;
+    this.lightsMaster = initialState.lightsMaster ?? 1;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
     this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
@@ -288,6 +289,7 @@ export class SceneManager {
     this.stlLoader = new STLLoader();
     this.usdLoader = new USDZLoader();
     this.hdriLoader = new RGBELoader();
+    this.textureLoader = new THREE.TextureLoader();
   }
 
   setupLights() {
@@ -478,6 +480,7 @@ export class SceneManager {
         light.intensity = value * multiplier;
       }
     });
+    this.eventBus.on('lights:master', (value) => this.setLightsMaster(value));
     this.eventBus.on('lights:enabled', (enabled) =>
       this.setLightsEnabled(enabled),
     );
@@ -545,6 +548,7 @@ export class SceneManager {
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
     this.lightsEnabled = state.lightsEnabled ?? true;
+    this.lightsMaster = state.lightsMaster ?? 1;
     this.applyLightSettings(state.lights);
     if (!this.lightsEnabled) {
       Object.values(this.lights).forEach((light) => {
@@ -569,20 +573,23 @@ export class SceneManager {
   }
 
   async setHdriPreset(preset) {
-    if (!preset || !HDRI_PRESETS[preset]) return;
-    if (this.currentHdri === preset) {
+    const config = HDRI_PRESETS[preset];
+    if (!preset || !config) return;
+    if (this.currentHdri === preset && this.hdriCache.has(preset)) {
       this.applyEnvironment(this.hdriCache.get(preset));
+      this.applyHdriMood(preset);
       return;
     }
     try {
       if (this.hdriCache.has(preset)) {
-      this.applyEnvironment(this.hdriCache.get(preset));
-      this.currentHdri = preset;
-      this.applyHdriMood(preset);
+        const cached = this.hdriCache.get(preset);
+        this.applyEnvironment(cached);
+        this.currentHdri = preset;
+        this.applyHdriMood(preset);
         return;
       }
-      const texture = await this.hdriLoader.loadAsync(HDRI_PRESETS[preset]);
-      texture.mapping = THREE.EquirectangularReflectionMapping;
+      const texture = await this.loadHdriTexture(config);
+      if (!texture) throw new Error('Texture failed to load');
       this.hdriCache.set(preset, texture);
       this.applyEnvironment(texture);
       this.currentHdri = preset;
@@ -591,6 +598,32 @@ export class SceneManager {
       console.error('Failed to load HDRI', error);
       this.ui.showToast('Failed to load HDRI');
     }
+  }
+
+  loadHdriTexture(config) {
+    const source = typeof config === 'string' ? config : config?.url;
+    const type = typeof config === 'object' ? config.type : 'hdr';
+    if (!source) {
+      return Promise.reject(new Error('Missing HDRI source'));
+    }
+    if (type === 'ldr') {
+      return new Promise((resolve, reject) => {
+        this.textureLoader.load(
+          source,
+          (texture) => {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.encoding = THREE.sRGBEncoding;
+            resolve(texture);
+          },
+          undefined,
+          (err) => reject(err),
+        );
+      });
+    }
+    return this.hdriLoader.loadAsync(source).then((texture) => {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      return texture;
+    });
   }
 
   applyEnvironment(texture) {
@@ -688,7 +721,8 @@ export class SceneManager {
         light.color = new THREE.Color(config.color);
       }
       const multiplier = light.isAmbientLight ? 4 : 2;
-      const targetIntensity = (config.intensity ?? 0) * multiplier;
+      const baseIntensity = (config.intensity ?? 0) * multiplier;
+      const targetIntensity = baseIntensity * (this.lightsMaster ?? 1);
       light.intensity = this.lightsEnabled ? targetIntensity : 0;
     });
   }
@@ -702,6 +736,13 @@ export class SceneManager {
         if (!light) return;
         light.intensity = 0;
       });
+    }
+  }
+
+  setLightsMaster(value) {
+    this.lightsMaster = value;
+    if (this.lightsEnabled) {
+      this.applyLightSettings(this.stateStore.getState().lights);
     }
   }
 

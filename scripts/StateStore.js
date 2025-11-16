@@ -40,6 +40,7 @@ export class StateStore {
         ambient: { color: '#7c8ca6', intensity: 0.48 },
       },
       lightsEnabled: true,
+      lightsMaster: 1,
       lightsRotation: 0,
       lightsAutoRotate: false,
       dof: {
