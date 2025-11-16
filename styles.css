@@ -358,13 +358,14 @@ body {
 .effect-toggle .effect-indicator::before {
   content: '';
   position: absolute;
-  top: 1px;
+  top: 50%;
   left: 1px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(0, -50%);
   transition: transform 0.25s ease, background 0.25s ease;
 }
 
@@ -375,7 +376,7 @@ body {
 }
 
 .effect-toggle input:checked + .effect-indicator::before {
-  transform: translateX(22px);
+  transform: translate(22px, -50%);
   background: #041115;
 }
 
