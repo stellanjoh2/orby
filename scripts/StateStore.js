@@ -14,7 +14,7 @@ export class StateStore {
       autoRotate: 0,
       showNormals: false,
       hdri: 'noir-studio',
-      hdriBackground: true,
+      hdriBackground: false,
       groundPlane: false,
       lights: {
         key: { color: '#ffdfc9', intensity: 4 },

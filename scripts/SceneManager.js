@@ -151,11 +151,12 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const initialState = this.stateStore.getState();
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.setClearColor(0x05070b, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.currentExposure = this.stateStore.getState().exposure ?? 1;
+    this.currentExposure = initialState.exposure ?? 1;
     this.renderer.toneMappingExposure = this.currentExposure;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -179,8 +180,10 @@ export class SceneManager {
     this.animations = [];
 
     this.hdriCache = new Map();
-    this.hdriBackgroundEnabled = true;
+    this.hdriBackgroundEnabled = initialState.hdriBackground;
     this.currentEnvironment = null;
+    this.currentEnvironmentTexture = null;
+    this.backgroundColor = initialState.background ?? '#05070b';
 
     this.originalMaterials = new WeakMap();
 
@@ -418,26 +421,18 @@ export class SceneManager {
   }
 
   applyEnvironment(texture) {
-    if (!texture) return;
-    this.scene.environment = texture;
-    if (this.hdriBackgroundEnabled) {
-      this.scene.background = texture;
+    this.currentEnvironmentTexture = texture || null;
+    this.scene.environment = this.currentEnvironmentTexture;
+    if (this.hdriBackgroundEnabled && this.currentEnvironmentTexture) {
+      this.scene.background = this.currentEnvironmentTexture;
+    } else {
+      this.scene.background = new THREE.Color(this.backgroundColor);
     }
   }
 
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
-    if (!enabled) {
-      this.scene.background = new THREE.Color(
-        this.stateStore.getState().background,
-      );
-    } else if (this.currentHdri && this.hdriCache.has(this.currentHdri)) {
-      this.scene.background = this.hdriCache.get(this.currentHdri);
-    } else {
-      this.scene.background = new THREE.Color(
-        this.stateStore.getState().background,
-      );
-    }
+    this.applyEnvironment(this.currentEnvironmentTexture);
   }
 
   updateDof(settings) {
@@ -490,7 +485,7 @@ export class SceneManager {
     }
     if (!active) return;
     if (this.filmPass?.uniforms?.nIntensity) {
-      this.filmPass.uniforms.nIntensity.value = settings.intensity;
+      this.filmPass.uniforms.nIntensity.value = settings.intensity * 0.5;
     }
     if (this.grainTintPass?.uniforms?.intensity) {
       this.grainTintPass.uniforms.intensity.value = settings.intensity;
@@ -538,7 +533,8 @@ export class SceneManager {
   }
 
   updateBackgroundColor(color) {
-    if (this.hdriBackgroundEnabled && this.currentHdri) return;
+    this.backgroundColor = color;
+    if (this.hdriBackgroundEnabled && this.currentEnvironmentTexture) return;
     this.scene.background = new THREE.Color(color);
   }
 
@@ -569,17 +565,10 @@ export class SceneManager {
     switch (ext) {
       case 'glb':
         return this.loadGlb(file);
-      case 'gltf':
-        return this.loadGltf(file);
       case 'fbx':
         return this.loadFbx(file);
-      case 'obj':
-        return this.loadObj(file);
       case 'stl':
         return this.loadStl(file);
-      case 'usd':
-      case 'usdz':
-        return this.loadUsd(file);
       default:
         throw new Error(`Unsupported format: .${ext}`);
     }
@@ -598,16 +587,8 @@ export class SceneManager {
   }
 
   async loadGltf(file) {
-    const directoryUrl = this.createObjectUrlDirectory(file);
-    const text = await this.fileReaders.text(file);
-    return new Promise((resolve, reject) => {
-      this.gltfLoader.parse(
-        text,
-        directoryUrl,
-        (gltf) => resolve({ object: gltf.scene, animations: gltf.animations }),
-        reject,
-      );
-    });
+    this.ui.showToast('Please convert GLTF to GLB before loading');
+    throw new Error('GLTF not supported');
   }
 
   async loadFileBundle(files) {

@@ -81,7 +81,6 @@ export class UIManager {
       transformReset: q('#transformReset'),
       cameraPresets: document.querySelectorAll('[data-camera]'),
       export: q('#exportPng'),
-      copyMesh: q('#copyMeshSettings'),
       copyStudio: q('#copyStudioSettings'),
       copyRender: q('#copyRenderSettings'),
     };
@@ -275,7 +274,7 @@ export class UIManager {
         }
       });
     });
-    this.inputs.showNormals.addEventListener('change', (event) => {
+    this.inputs.showNormals?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('showNormals', enabled);
       this.eventBus.emit('mesh:normals', enabled);
@@ -747,7 +746,9 @@ export class UIManager {
     this.updateValueLabel('scale', `${state.scale.toFixed(2)}×`);
     this.inputs.yOffset.value = state.yOffset;
     this.updateValueLabel('yOffset', `${state.yOffset.toFixed(2)}m`);
-    this.inputs.showNormals.checked = state.showNormals;
+    if (this.inputs.showNormals) {
+      this.inputs.showNormals.checked = state.showNormals;
+    }
     this.inputs.hdriBackground.checked = state.hdriBackground;
     this.inputs.backgroundColor.disabled = state.hdriBackground;
     this.inputs.backgroundColor.value = state.background;
@@ -834,6 +835,7 @@ export class UIManager {
       const input = this.inputs[id];
       if (!input) return;
       input.disabled = disabled;
+      input.classList.toggle('is-disabled-handle', disabled);
     });
   }
 }
