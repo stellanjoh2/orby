@@ -13,6 +13,7 @@ export class StateStore {
       yOffset: 0,
       autoRotate: 0,
       showNormals: false,
+      showBones: false,
       hdri: 'noir-studio',
       hdriEnabled: true,
       hdriStrength: 0.15,
