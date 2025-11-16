@@ -15,7 +15,7 @@ export class StateStore {
       showNormals: false,
       hdri: 'noir-studio',
       hdriEnabled: true,
-      hdriStrength: 0.15,
+      hdriStrength: 0.4,
       hdriBackground: false,
       groundSolid: false,
       groundWire: false,
