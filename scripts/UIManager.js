@@ -612,6 +612,7 @@ export class UIManager {
         groundSolidColor: state.groundSolidColor,
         groundWireColor: state.groundWireColor,
         groundWireOpacity: state.groundWireOpacity,
+        background: state.background,
         lights: state.lights,
       };
       this.copySettingsToClipboard('Studio settings copied', payload);
