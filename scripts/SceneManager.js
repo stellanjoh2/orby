@@ -220,6 +220,8 @@ export class SceneManager {
     this.scene.environmentIntensity = this.hdriStrength;
 
     this.normalsHelpers = [];
+    this.boneHelpers = [];
+    this.showBonesEnabled = initialState.showBones ?? false;
     this.autoRotateSpeed = 0;
     this.currentFile = null;
     this.currentModel = null;
@@ -408,6 +410,7 @@ export class SceneManager {
     this.eventBus.on('mesh:yOffset', (value) => this.setYOffset(value));
     this.eventBus.on('mesh:shading', (mode) => this.setShading(mode));
     this.eventBus.on('mesh:normals', (enabled) => this.toggleNormals(enabled));
+    this.eventBus.on('mesh:bones', (enabled) => this.setBonesVisible(enabled));
     this.eventBus.on('mesh:auto-rotate', (speed) => {
       this.autoRotateSpeed = speed;
     });
@@ -511,6 +514,7 @@ export class SceneManager {
   async applyStateSnapshot(state) {
     this.setScale(state.scale);
     this.setYOffset(state.yOffset);
+    this.showBonesEnabled = state.showBones;
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
@@ -1111,6 +1115,7 @@ export class SceneManager {
   clearModel() {
     this.normalsHelpers.forEach((helper) => this.modelRoot.remove(helper));
     this.normalsHelpers = [];
+    this.clearBoneHelpers();
     this.disposePendingObjectUrls();
     while (this.modelRoot.children.length) {
       const child = this.modelRoot.children[0];
@@ -1152,10 +1157,13 @@ export class SceneManager {
     this.modelRoot.add(object);
     this.prepareMesh(object);
     this.fitCameraToObject(object);
-    this.setScale(this.stateStore.getState().scale);
-    this.setYOffset(this.stateStore.getState().yOffset);
-    this.setShading(this.stateStore.getState().shading);
-    this.toggleNormals(this.stateStore.getState().showNormals);
+    const state = this.stateStore.getState();
+    this.setScale(state.scale);
+    this.setYOffset(state.yOffset);
+    this.showBonesEnabled = state.showBones;
+    this.setShading(state.shading);
+    this.toggleNormals(state.showNormals);
+    this.refreshBoneHelpers();
     this.applyFresnelToModel(this.currentModel);
     this.setupAnimations(animations);
   }
@@ -1379,6 +1387,7 @@ export class SceneManager {
       }
     });
     this.unlitMode = mode === 'textures';
+    this.refreshBoneHelpers();
     this.applyFresnelToModel(this.currentModel);
   }
 
@@ -1391,6 +1400,39 @@ export class SceneManager {
         const helper = new VertexNormalsHelper(child, 0.08, '#4db3ff');
         this.modelRoot.add(helper);
         this.normalsHelpers.push(helper);
+      }
+    });
+  }
+
+  setBonesVisible(enabled) {
+    this.showBonesEnabled = enabled;
+    this.refreshBoneHelpers();
+  }
+
+  clearBoneHelpers() {
+    this.boneHelpers.forEach((helper) => {
+      this.scene.remove(helper);
+      helper.dispose?.();
+    });
+    this.boneHelpers = [];
+  }
+
+  refreshBoneHelpers() {
+    this.clearBoneHelpers();
+    if (
+      !this.currentModel ||
+      !this.showBonesEnabled ||
+      this.stateStore.getState().shading !== 'wireframe'
+    ) {
+      return;
+    }
+    this.currentModel.traverse((child) => {
+      if (child.isSkinnedMesh && child.skeleton) {
+        const helper = new THREE.SkeletonHelper(child);
+        helper.material.depthTest = false;
+        helper.material.color.set('#66ccff');
+        this.scene.add(helper);
+        this.boneHelpers.push(helper);
       }
     });
   }
@@ -1431,6 +1473,7 @@ export class SceneManager {
       this.modelRoot.rotation.y += delta * this.autoRotateSpeed;
     }
     this.controls.update();
+    this.boneHelpers.forEach((helper) => helper.update?.());
     this.grainTintPass.uniforms.time.value += delta * 60;
     this.render();
   }
