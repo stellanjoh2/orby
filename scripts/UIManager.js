@@ -73,7 +73,6 @@ export class UIManager {
       bloomRadius: q('#bloomRadius'),
       toggleBloom: q('#toggleBloom'),
       grainIntensity: q('#grainIntensity'),
-      grainColor: q('#grainColor'),
       toggleGrain: q('#toggleGrain'),
       aberrationOffset: q('#aberrationOffset'),
       aberrationStrength: q('#aberrationStrength'),
@@ -450,20 +449,13 @@ export class UIManager {
     this.inputs.toggleGrain.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('grain.enabled', enabled);
-      this.setEffectControlsDisabled(
-        ['grainIntensity', 'grainColor'],
-        !enabled,
-      );
+      this.setEffectControlsDisabled(['grainIntensity'], !enabled);
       emitGrain();
     });
     this.inputs.grainIntensity.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('grainIntensity', value.toFixed(2));
+      const value = parseFloat(event.target.value) * 0.3;
+      this.updateValueLabel('grainIntensity', (value / 0.3).toFixed(2));
       this.stateStore.set('grain.intensity', value);
-      emitGrain();
-    });
-    this.inputs.grainColor.addEventListener('input', (event) => {
-      this.stateStore.set('grain.color', event.target.value);
       emitGrain();
     });
 
@@ -894,9 +886,11 @@ export class UIManager {
     this.updateValueLabel('bloomStrength', state.bloom.strength.toFixed(2));
     this.inputs.bloomRadius.value = state.bloom.radius;
     this.updateValueLabel('bloomRadius', state.bloom.radius.toFixed(2));
-    this.inputs.grainIntensity.value = state.grain.intensity;
-    this.updateValueLabel('grainIntensity', state.grain.intensity.toFixed(2));
-    this.inputs.grainColor.value = state.grain.color;
+    this.inputs.grainIntensity.value = (state.grain.intensity / 0.3).toFixed(2);
+    this.updateValueLabel(
+      'grainIntensity',
+      (state.grain.intensity / 0.3).toFixed(2),
+    );
     this.inputs.aberrationOffset.value = state.aberration.offset;
     this.updateValueLabel(
       'aberrationOffset',
@@ -957,10 +951,7 @@ export class UIManager {
       !state.bloom.enabled,
     );
     this.inputs.toggleGrain.checked = !!state.grain.enabled;
-    this.setEffectControlsDisabled(
-      ['grainIntensity', 'grainColor'],
-      !state.grain.enabled,
-    );
+    this.setEffectControlsDisabled(['grainIntensity'], !state.grain.enabled);
     this.inputs.toggleAberration.checked = !!state.aberration.enabled;
     this.setEffectControlsDisabled(
       ['aberrationOffset', 'aberrationStrength'],
