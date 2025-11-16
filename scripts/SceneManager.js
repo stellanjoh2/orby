@@ -224,6 +224,9 @@ export class SceneManager {
     this.currentShading = initialState.shading;
     this.lastBoneToastTime = 0;
     this.autoRotateSpeed = 0;
+    this.lightsRotation = initialState.lightsRotation ?? 0;
+    this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
+    this.lightsAutoRotateSpeed = 30; // degrees per second
     this.currentFile = null;
     this.currentModel = null;
     this.mixer = null;
@@ -296,6 +299,11 @@ export class SceneManager {
     this.lights.key.position.set(5, 5, 5);
     this.lights.fill.position.set(-4, 3, 3);
     this.lights.rim.position.set(-2, 4, -4);
+    this.lightBasePositions = {
+      key: this.lights.key.position.clone(),
+      fill: this.lights.fill.position.clone(),
+      rim: this.lights.rim.position.clone(),
+    };
     Object.values(this.lights).forEach((light) => {
       if ('castShadow' in light && light.shadow) {
         light.castShadow = true;
@@ -469,6 +477,10 @@ export class SceneManager {
         light.intensity = value * multiplier;
       }
     });
+    this.eventBus.on('lights:rotate', (value) => this.setLightsRotation(value));
+    this.eventBus.on('lights:auto-rotate', (enabled) =>
+      this.setLightsAutoRotate(enabled),
+    );
 
     this.eventBus.on('render:dof', (settings) => this.updateDof(settings));
     this.eventBus.on('render:bloom', (settings) => this.updateBloom(settings));
@@ -535,6 +547,8 @@ export class SceneManager {
       const multiplier = light.isAmbientLight ? 4 : 2;
       light.intensity = config.intensity * multiplier;
     });
+    this.setLightsRotation(state.lightsRotation ?? 0);
+    this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
     this.claySettings = { ...(state.clay || this.claySettings) };
     this.fresnelSettings = { ...(state.fresnel || this.fresnelSettings) };
     this.updateDof(state.dof);
@@ -658,6 +672,29 @@ export class SceneManager {
         }
       });
     }
+  }
+
+  setLightsRotation(value, { updateUi = true } = {}) {
+    this.lightsRotation = ((value % 360) + 360) % 360;
+    if (!this.lightBasePositions) return;
+    const radians = THREE.MathUtils.degToRad(this.lightsRotation);
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    ['key', 'fill', 'rim'].forEach((id) => {
+      const base = this.lightBasePositions[id];
+      const light = this.lights[id];
+      if (!base || !light) return;
+      const rotatedX = base.x * cos + base.z * sin;
+      const rotatedZ = -base.x * sin + base.z * cos;
+      light.position.set(rotatedX, base.y, rotatedZ);
+    });
+    if (updateUi) {
+      this.ui?.setLightsRotation?.(this.lightsRotation);
+    }
+  }
+
+  setLightsAutoRotate(enabled) {
+    this.lightsAutoRotate = enabled;
   }
 
   setFresnelSettings(settings = {}) {
@@ -1481,6 +1518,10 @@ export class SceneManager {
     }
     if (this.autoRotateSpeed && this.currentModel) {
       this.modelRoot.rotation.y += delta * this.autoRotateSpeed;
+    }
+    if (this.lightsAutoRotate) {
+      const deltaDegrees = this.lightsAutoRotateSpeed * delta;
+      this.setLightsRotation(this.lightsRotation + deltaDegrees);
     }
     this.controls.update();
     this.boneHelpers.forEach((helper) => helper.update?.());

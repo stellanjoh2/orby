@@ -69,6 +69,8 @@ export class UIManager {
       groundWireColor: q('#groundWireColor'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-control'),
+      lightsRotation: q('#lightsRotation'),
+      lightsAutoRotate: q('#lightsAutoRotate'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
       dofStrength: q('#dofStrength'),
@@ -398,6 +400,18 @@ export class UIManager {
         });
       });
     });
+    this.inputs.lightsRotation?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('lightsRotation', `${value.toFixed(0)}°`);
+      this.stateStore.set('lightsRotation', value);
+      this.eventBus.emit('lights:rotate', value);
+    });
+    this.inputs.lightsAutoRotate?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lightsAutoRotate', enabled);
+      this.eventBus.emit('lights:auto-rotate', enabled);
+      this.setLightsRotationDisabled(enabled);
+    });
   }
 
   bindRenderControls() {
@@ -665,6 +679,8 @@ export class UIManager {
         groundWireOpacity: state.groundWireOpacity,
         background: state.background,
         lights: state.lights,
+        lightsRotation: state.lightsRotation,
+        lightsAutoRotate: state.lightsAutoRotate,
       };
       this.copySettingsToClipboard('Studio settings copied', payload);
     };
@@ -900,6 +916,17 @@ export class UIManager {
       'groundWireOpacity',
       state.groundWireOpacity.toFixed(2),
     );
+    if (this.inputs.lightsRotation) {
+      this.inputs.lightsRotation.value = state.lightsRotation ?? 0;
+      this.updateValueLabel(
+        'lightsRotation',
+        `${(state.lightsRotation ?? 0).toFixed(0)}°`,
+      );
+    }
+    if (this.inputs.lightsAutoRotate) {
+      this.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;
+      this.setLightsRotationDisabled(!!state.lightsAutoRotate);
+    }
     this.inputs.dofFocus.value = state.dof.focus;
     this.updateValueLabel('dofFocus', `${state.dof.focus.toFixed(1)}m`);
     this.inputs.dofAperture.value = state.dof.aperture;
@@ -996,6 +1023,19 @@ export class UIManager {
       input.disabled = disabled;
       input.classList.toggle('is-disabled-handle', disabled);
     });
+  }
+
+  setLightsRotationDisabled(disabled) {
+    if (!this.inputs.lightsRotation) return;
+    this.inputs.lightsRotation.disabled = disabled;
+    this.inputs.lightsRotation.classList.toggle('is-disabled-handle', disabled);
+  }
+
+  setLightsRotation(value) {
+    if (!this.inputs.lightsRotation) return;
+    const normalized = ((value % 360) + 360) % 360;
+    this.inputs.lightsRotation.value = normalized;
+    this.updateValueLabel('lightsRotation', `${normalized.toFixed(0)}°`);
   }
 }
 
