@@ -359,7 +359,7 @@ body {
   content: '';
   position: absolute;
   top: 50%;
-  left: 1px;
+  left: 0.5px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -376,7 +376,7 @@ body {
 }
 
 .effect-toggle input:checked + .effect-indicator::before {
-  transform: translate(22px, -50%);
+  transform: translate(22.5px, -50%);
   background: #041115;
 }
 
