@@ -27,7 +27,12 @@ export class StateStore {
         roughness: 0.6,
         specular: 0.08,
       },
-      background: '#000000',
+      fresnel: {
+        enabled: false,
+        color: '#ffffff',
+        radius: 2,
+        strength: 0.3,
+      },
       lights: {
         key: { color: '#ffdfc9', intensity: 4 },
         fill: { color: '#b0c7ff', intensity: 2.5 },

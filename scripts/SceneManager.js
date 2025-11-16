@@ -636,7 +636,11 @@ export class SceneManager {
   }
 
   setFresnelSettings(settings = {}) {
-    this.fresnelSettings = { ...this.fresnelSettings, ...settings };
+    this.fresnelSettings = {
+      ...this.fresnelSettings,
+      ...settings,
+    };
+    this.fresnelSettings.radius = Math.max(0.1, this.fresnelSettings.radius || 1);
     this.applyFresnelToModel(this.currentModel);
   }
 
@@ -652,9 +656,10 @@ export class SceneManager {
   }
 
   applyFresnelToMaterial(material) {
+    const settings = this.fresnelSettings || {};
     const needsFresnel =
-      this.fresnelSettings?.enabled &&
-      this.fresnelSettings.strength > 0.0001 &&
+      settings.enabled &&
+      settings.strength > 0.0001 &&
       material &&
       material.onBeforeCompile !== undefined &&
       (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial);
@@ -673,9 +678,9 @@ export class SceneManager {
 
     if (material.userData.fresnelPatched) {
       const uniforms = material.userData.fresnelUniforms;
-      uniforms.color.value.set(this.fresnelSettings.color);
-      uniforms.strength.value = this.fresnelSettings.strength;
-      uniforms.power.value = Math.max(0.1, this.fresnelSettings.radius);
+      uniforms.color.value.set(settings.color);
+      uniforms.strength.value = settings.strength;
+      uniforms.power.value = Math.max(0.1, settings.radius);
       return;
     }
 
@@ -684,10 +689,10 @@ export class SceneManager {
     material.onBeforeCompile = (shader) => {
       original?.(shader);
       const uniforms = {
-        color: { value: new THREE.Color(this.fresnelSettings.color) },
-        strength: { value: this.fresnelSettings.strength },
+        color: { value: new THREE.Color(settings.color) },
+        strength: { value: settings.strength },
         power: {
-          value: Math.max(0.1, this.fresnelSettings.radius),
+          value: Math.max(0.1, settings.radius),
         },
       };
       shader.uniforms.fresnelColor = uniforms.color;
@@ -709,7 +714,7 @@ export class SceneManager {
         vec3 fresnelNormal = normalize( normal );
         vec3 fresnelViewDir = normalize( vViewPosition );
         float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
-        reflectedLight.directDiffuse += fresnelColor * fresnelTerm * fresnelStrength;
+        emissiveRadiance += fresnelColor * fresnelTerm * fresnelStrength;
       `,
       );
       material.userData.fresnelUniforms = uniforms;

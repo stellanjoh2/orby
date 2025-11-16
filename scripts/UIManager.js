@@ -79,6 +79,10 @@ export class UIManager {
       aberrationOffset: q('#aberrationOffset'),
       aberrationStrength: q('#aberrationStrength'),
       toggleAberration: q('#toggleAberration'),
+      toggleFresnel: q('#toggleFresnel'),
+      fresnelColor: q('#fresnelColor'),
+      fresnelRadius: q('#fresnelRadius'),
+      fresnelStrength: q('#fresnelStrength'),
       fogType: q('#fogType'),
       fogColor: q('#fogColor'),
       fogNear: q('#fogNear'),
@@ -495,6 +499,35 @@ export class UIManager {
       emitAberration();
     });
 
+    const emitFresnel = () =>
+      this.eventBus.emit('render:fresnel', this.stateStore.getState().fresnel);
+    this.inputs.toggleFresnel.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('fresnel.enabled', enabled);
+      this.setEffectControlsDisabled(
+        ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+        !enabled,
+      );
+      emitFresnel();
+    });
+    this.inputs.fresnelColor.addEventListener('input', (event) => {
+      this.stateStore.set('fresnel.color', event.target.value);
+      emitFresnel();
+    });
+    this.inputs.fresnelRadius.addEventListener('input', (event) => {
+      const sliderValue = parseFloat(event.target.value);
+      const mapped = parseFloat((6 - sliderValue).toFixed(2));
+      this.updateValueLabel('fresnelRadius', mapped.toFixed(2));
+      this.stateStore.set('fresnel.radius', mapped);
+      emitFresnel();
+    });
+    this.inputs.fresnelStrength.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('fresnelStrength', value.toFixed(2));
+      this.stateStore.set('fresnel.strength', value);
+      emitFresnel();
+    });
+
     const emitFog = () =>
       this.eventBus.emit('scene:fog', this.stateStore.getState().fog);
     this.inputs.fogType.addEventListener('change', (event) => {
@@ -644,6 +677,7 @@ export class UIManager {
         bloom: state.bloom,
         grain: state.grain,
         aberration: state.aberration,
+        fresnel: state.fresnel,
         fog: state.fog,
         exposure: state.exposure,
         background: state.background,
@@ -879,6 +913,16 @@ export class UIManager {
       'aberrationStrength',
       state.aberration.strength.toFixed(2),
     );
+    this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
+    this.inputs.fresnelColor.value = state.fresnel.color;
+    const sliderRadius = 6 - state.fresnel.radius;
+    this.inputs.fresnelRadius.value = sliderRadius;
+    this.updateValueLabel('fresnelRadius', state.fresnel.radius.toFixed(2));
+    this.inputs.fresnelStrength.value = state.fresnel.strength;
+    this.updateValueLabel(
+      'fresnelStrength',
+      state.fresnel.strength.toFixed(2),
+    );
     this.inputs.fogType.value = state.fog.type;
     this.inputs.fogColor.value = state.fog.color;
     this.inputs.fogNear.value = state.fog.near;
@@ -927,6 +971,10 @@ export class UIManager {
     this.setEffectControlsDisabled(
       ['aberrationOffset', 'aberrationStrength'],
       !state.aberration.enabled,
+    );
+    this.setEffectControlsDisabled(
+      ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+      !state.fresnel.enabled,
     );
   }
 
