@@ -745,12 +745,9 @@ export class UIManager {
   revealShelf() {
     if (this.shelfRevealed || !this.dom.shelf) return;
     this.shelfRevealed = true;
-    this.dom.shelf.classList.remove('is-shelf-hidden');
-    gsap.fromTo(
-      this.dom.shelf,
-      { autoAlpha: 0, x: 64 },
-      { autoAlpha: 1, x: 0, duration: 0.75, ease: 'power3.out' },
-    );
+    requestAnimationFrame(() => {
+      this.dom.shelf.classList.remove('is-shelf-hidden');
+    });
   }
 
   showToast(message) {
