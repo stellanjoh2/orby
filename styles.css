@@ -409,6 +409,15 @@ body {
   color: var(--text-dim);
 }
 
+.color-line span:first-child,
+.select-line span:first-child,
+.toggle-line span {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
 .slider-line input[type='range'] {
   grid-column: 2;
   align-self: center;
