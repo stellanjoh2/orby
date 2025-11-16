@@ -440,9 +440,9 @@ body {
 }
 
 .color-chip {
-  width: 48px;
-  height: 32px;
-  border-radius: 8px;
+  width: 40px;
+  height: 28px;
+  border-radius: 6px;
   border: none;
   background: transparent;
   appearance: none;
@@ -453,18 +453,18 @@ body {
 
 .color-chip::-webkit-color-swatch {
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 0;
 }
 
 .color-chip::-webkit-color-swatch-wrapper {
   padding: 0;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .color-chip::-moz-color-swatch {
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .toggle-line {
@@ -474,6 +474,7 @@ body {
 .toggle-line input {
   width: 18px;
   height: 18px;
+  margin-right: 0.4rem;
 }
 
 .control-row {
