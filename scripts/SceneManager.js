@@ -23,6 +23,17 @@ const HDRI_PRESETS = {
   cyberpunk: './assets/hdris/ghost-luxe.hdr',
 };
 
+const HDRI_MOODS = {
+  cyberpunk: {
+    bloomTint: '#ff4df9',
+    bloomStrengthMin: 0.7,
+    bloomRadiusMin: 0.8,
+    grainTint: '#00e8ff',
+    podiumColor: '#1f233f',
+    background: '#050014',
+  },
+};
+
 const BloomTintShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -178,7 +189,7 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     const initialState = this.stateStore.getState();
     this.backgroundColor = initialState.background ?? '#000000';
-    this.groundSolidColor = initialState.groundSolidColor ?? '#05070b';
+    this.groundSolidColor = initialState.groundSolidColor ?? '#31363f';
     this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
     this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
     this.currentExposure = initialState.exposure ?? 1;
@@ -541,8 +552,9 @@ export class SceneManager {
     }
     try {
       if (this.hdriCache.has(preset)) {
-        this.applyEnvironment(this.hdriCache.get(preset));
-        this.currentHdri = preset;
+      this.applyEnvironment(this.hdriCache.get(preset));
+      this.currentHdri = preset;
+      this.applyHdriMood(preset);
         return;
       }
       const texture = await this.hdriLoader.loadAsync(HDRI_PRESETS[preset]);
@@ -550,6 +562,7 @@ export class SceneManager {
       this.hdriCache.set(preset, texture);
       this.applyEnvironment(texture);
       this.currentHdri = preset;
+      this.applyHdriMood(preset);
     } catch (error) {
       console.error('Failed to load HDRI', error);
       this.ui.showToast('Failed to load HDRI');
@@ -574,11 +587,13 @@ export class SceneManager {
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
+    this.applyHdriMood(this.currentHdri);
   }
 
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
+    this.applyHdriMood(this.currentHdri);
   }
 
   setHdriStrength(value) {
@@ -645,6 +660,49 @@ export class SceneManager {
     };
     this.fresnelSettings.radius = Math.max(0.1, this.fresnelSettings.radius || 1);
     this.applyFresnelToModel(this.currentModel);
+  }
+
+  applyHdriMood(preset) {
+    const style = HDRI_MOODS[preset];
+    const state = this.stateStore.getState();
+    if (!style) {
+      if (this.podium) this.podium.material.color.set(this.groundSolidColor);
+      if (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture) {
+        this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
+      }
+      this.updateBloom(state.bloom);
+      this.updateGrain(state.grain);
+      return;
+    }
+    if (style.podiumColor && this.podium) {
+      this.podium.material.color.set(style.podiumColor);
+    }
+    if (
+      style.background &&
+      (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture)
+    ) {
+      this.renderer.setClearColor(new THREE.Color(style.background), 1);
+    }
+    if (style.bloomTint && this.bloomTintPass) {
+      const bloomState = { ...state.bloom };
+      bloomState.enabled = true;
+      bloomState.color = style.bloomTint;
+      bloomState.strength = Math.max(
+        style.bloomStrengthMin ?? 0,
+        bloomState.strength,
+      );
+      bloomState.radius = Math.max(
+        style.bloomRadiusMin ?? 0,
+        bloomState.radius,
+      );
+      this.updateBloom(bloomState);
+    }
+    if (style.grainTint && this.grainTintPass) {
+      const grainState = { ...state.grain };
+      grainState.enabled = true;
+      grainState.color = style.grainTint;
+      this.updateGrain(grainState);
+    }
   }
 
   applyFresnelToModel(root) {
