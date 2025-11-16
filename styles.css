@@ -396,6 +396,11 @@ body {
 .slider-line span:first-child {
   grid-column: 1;
   align-self: center;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: var(--text-dim);
 }
 
 .slider-line input[type='range'] {
@@ -410,6 +415,7 @@ body {
   color: var(--text-dim);
   font-size: 0.8rem;
   align-self: center;
+  text-align: right;
 }
 
 .color-line .color-chip {
