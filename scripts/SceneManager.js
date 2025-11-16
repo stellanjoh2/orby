@@ -182,7 +182,10 @@ export class SceneManager {
     this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
     this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
     this.currentExposure = initialState.exposure ?? 1;
-    this.hdriStrength = initialState.hdriStrength ?? 1;
+    this.hdriStrength = Math.min(
+      3,
+      Math.max(0, initialState.hdriStrength ?? 1),
+    );
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -579,7 +582,7 @@ export class SceneManager {
   }
 
   setHdriStrength(value) {
-    this.hdriStrength = value;
+    this.hdriStrength = Math.min(3, Math.max(0, value));
     this.applyEnvironment(this.currentEnvironmentTexture);
   }
 

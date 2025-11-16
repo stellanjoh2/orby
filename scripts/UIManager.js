@@ -328,8 +328,8 @@ export class UIManager {
       this.toggleHdriControls(enabled);
     });
     this.inputs.hdriStrength.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('hdriStrength', value.toFixed(1));
+      const value = Math.min(3, Math.max(0, parseFloat(event.target.value)));
+      this.updateValueLabel('hdriStrength', value.toFixed(2));
       this.stateStore.set('hdriStrength', value);
       this.eventBus.emit('studio:hdri-strength', value);
     });
@@ -868,7 +868,7 @@ export class UIManager {
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
     this.inputs.hdriStrength.value = state.hdriStrength;
-    this.updateValueLabel('hdriStrength', state.hdriStrength.toFixed(1));
+    this.updateValueLabel('hdriStrength', state.hdriStrength.toFixed(2));
     this.inputs.hdriBackground.checked = state.hdriBackground;
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;

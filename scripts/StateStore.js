@@ -15,7 +15,7 @@ export class StateStore {
       showNormals: false,
       hdri: 'noir-studio',
       hdriEnabled: true,
-      hdriStrength: 1,
+      hdriStrength: 0.35,
       hdriBackground: false,
       groundSolid: false,
       groundWire: false,
@@ -34,10 +34,10 @@ export class StateStore {
         strength: 0.3,
       },
       lights: {
-        key: { color: '#ffdfc9', intensity: 4 },
-        fill: { color: '#b0c7ff', intensity: 2.5 },
-        rim: { color: '#a0eaf9', intensity: 3 },
-        ambient: { color: '#7c8ca6', intensity: 1.5 },
+        key: { color: '#ffdfc9', intensity: 1.28 },
+        fill: { color: '#b0c7ff', intensity: 0.8 },
+        rim: { color: '#a0eaf9', intensity: 0.96 },
+        ambient: { color: '#7c8ca6', intensity: 0.48 },
       },
       dof: {
         enabled: false,
@@ -56,7 +56,7 @@ export class StateStore {
       aberration: { enabled: true, offset: 0.0025, strength: 0.24 },
       fog: { type: 'linear', color: '#10121a', near: 85.8, density: 0.462 },
       camera: { fov: 60 },
-      exposure: 0.32,
+      exposure: 1,
       background: '#000000',
     };
     this.state = clone(this.defaults);
