@@ -240,14 +240,6 @@
                   <input type="checkbox" id="hdriBackground" />
                   <span>Show in Background</span>
                 </label>
-                <label class="toggle-line">
-                  <input type="checkbox" id="groundSolid" />
-                  <span>Solid Ground Plane</span>
-                </label>
-                <label class="toggle-line">
-                  <input type="checkbox" id="groundWire" />
-                  <span>Wireframe Ground</span>
-                </label>
               </div>
 
               <div class="panel-block lights">
@@ -276,6 +268,26 @@
                   <input type="range" min="0" max="5" step="0.1" value="1" />
                   <span class="value">1.0</span>
                 </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Ground</div>
+                <label class="toggle-line">
+                  <input type="checkbox" id="groundSolid" />
+                  <span>Solid Plane (shadow catcher)</span>
+                </label>
+                <label class="color-line">
+                  <span>Solid Color</span>
+                  <input type="color" id="groundSolidColor" value="#05070b" />
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" id="groundWire" />
+                  <span>Wireframe Grid</span>
+                </label>
+                <label class="color-line">
+                  <span>Wireframe Color</span>
+                  <input type="color" id="groundWireColor" value="#c4cadd" />
+                </label>
               </div>
 
               <div class="panel-block copy-block">
