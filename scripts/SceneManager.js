@@ -18,7 +18,7 @@ import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/
 
 const HDRI_PRESETS = {
   'noir-studio': './assets/hdris/noir-studio.hdr',
-  'luminous-sky': './assets/hdris/luminous-sky.hdr',
+  'luminous-sky': { url: './assets/hdris/free hdr_map_811.jpg', type: 'ldr' },
   'sunset-cove': './assets/hdris/sunset-cove.hdr',
   'steel-lab': { url: './assets/hdris/hdri_sky_782.jpg', type: 'ldr' },
   cyberpunk: './assets/hdris/ghost-luxe.hdr',
@@ -87,15 +87,40 @@ const GrainTintShader = {
     uniform float intensity;
     uniform vec3 tint;
 
+    // Better noise function - smoother and less glitchy
     float rand(vec2 co) {
-      return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+      return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
     }
 
+    // Improved grain calculation - prevents exposure pop and glitchiness
     void main() {
       vec4 base = texture2D(tDiffuse, vUv);
-      float noise = rand(vUv * time) * 2.0 - 1.0;
-      vec3 grain = tint * noise * intensity;
-      gl_FragColor = vec4(base.rgb + grain, base.a);
+      
+      // Early exit if intensity is effectively zero
+      if (intensity < 0.0001) {
+        gl_FragColor = base;
+        return;
+      }
+      
+      // Use screen-space UV for better grain distribution
+      // Scale UV to create fine grain pattern
+      vec2 grainUv = vUv * 800.0 + time * 0.05;
+      float noise = rand(grainUv) * 2.0 - 1.0;
+      
+      // Calculate luminance for adaptive grain
+      float luminance = dot(base.rgb, vec3(0.299, 0.587, 0.114));
+      
+      // Scale grain amount - make it more visible
+      // intensity is typically 0.03-0.15 range, so multiply by larger factor
+      float grainAmount = noise * intensity * 0.5;
+      
+      // Apply grain - blend based on luminance but make it more visible
+      // Use a smoother curve that doesn't completely hide grain in dark areas
+      float grainBlend = mix(0.3, 1.0, smoothstep(0.0, 0.5, luminance));
+      vec3 grain = tint * grainAmount * grainBlend;
+      vec3 result = base.rgb + grain;
+      
+      gl_FragColor = vec4(result, base.a);
     }
   `,
 };
@@ -152,6 +177,60 @@ const ExposureShader = {
       vec4 color = texture2D(tDiffuse, vUv);
       color.rgb *= exposure;
       gl_FragColor = color;
+    }
+  `,
+};
+
+const ToneMappingShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    toneMappingType: { value: 4 }, // 0=none, 1=linear, 2=reinhard, 4=aces-filmic
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    varying vec2 vUv;
+    uniform sampler2D tDiffuse;
+    uniform float toneMappingType;
+
+    // ACES Filmic approximation
+    vec3 ACESFilmicToneMapping(vec3 color) {
+      color *= 0.6;
+      float a = 2.51;
+      float b = 0.03;
+      float c = 2.43;
+      float d = 0.59;
+      float e = 0.14;
+      return clamp((color * (a * color + b)) / (color * (c * color + d) + e), 0.0, 1.0);
+    }
+
+    // Reinhard tone mapping
+    vec3 ReinhardToneMapping(vec3 color) {
+      return color / (1.0 + color);
+    }
+
+
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      
+      if (toneMappingType < 0.5) {
+        // None - no tone mapping
+        gl_FragColor = color;
+      } else if (toneMappingType < 1.5) {
+        // Linear - no tone mapping (same as none)
+        gl_FragColor = color;
+      } else if (toneMappingType < 2.5) {
+        // Reinhard
+        gl_FragColor = vec4(ReinhardToneMapping(color.rgb), color.a);
+      } else {
+        // ACES Filmic (default)
+        gl_FragColor = vec4(ACESFilmicToneMapping(color.rgb), color.a);
+      }
     }
   `,
 };
@@ -271,7 +350,8 @@ export class SceneManager {
       3 * HDRI_STRENGTH_UNIT,
       Math.max(0, initialState.hdriStrength ?? HDRI_STRENGTH_UNIT),
     );
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // Disable tone mapping on renderer - we'll apply it as a post-processing pass instead
+    this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.clearColor = new THREE.Color('#000000');
@@ -439,9 +519,13 @@ export class SceneManager {
       0.35,
       0.85,
     );
-    this.filmPass = new FilmPass(0.2, 0.025, 648, false);
+    // FilmPass: noiseIntensity, scanlineIntensity, scanlineCount, grayscale
+    // Initialize with 0 intensity so it's off by default
+    this.filmPass = new FilmPass(0.0, 0.0, 648, false);
     this.bloomTintPass = new ShaderPass(BloomTintShader);
     this.grainTintPass = new ShaderPass(GrainTintShader);
+    // Initialize time uniform for grain animation
+    this.grainTintPass.uniforms.time.value = 0;
     this.aberrationPass = new ShaderPass(AberrationShader);
     this.exposurePass = new ShaderPass(ExposureShader);
     this.exposurePass.uniforms.exposure.value = this.currentExposure;
@@ -455,7 +539,12 @@ export class SceneManager {
     
     this.aberrationPass.renderToScreen = false;
     this.fxaaPass.renderToScreen = false;
-    this.exposurePass.renderToScreen = true;
+    this.exposurePass.renderToScreen = false;
+    
+    // Tone mapping pass - applied at the END after all other effects
+    this.toneMappingPass = new ShaderPass(ToneMappingShader);
+    this.toneMappingPass.uniforms.toneMappingType.value = 4; // Default to ACES Filmic
+    this.toneMappingPass.renderToScreen = true;
 
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.bokehPass);
@@ -466,6 +555,7 @@ export class SceneManager {
     this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.fxaaPass);
     this.composer.addPass(this.exposurePass);
+    this.composer.addPass(this.toneMappingPass); // Last pass - applies tone mapping
   }
 
   setupCustomMouseControls() {
@@ -669,10 +759,13 @@ export class SceneManager {
     this.eventBus.on('render:fresnel', (settings) =>
       this.setFresnelSettings(settings),
     );
-    this.eventBus.on('render:fxaa', (enabled) => {
+    this.eventBus.on('render:anti-aliasing', (value) => {
       if (this.fxaaPass) {
-        this.fxaaPass.enabled = enabled;
+        this.fxaaPass.enabled = value === 'fxaa';
       }
+    });
+    this.eventBus.on('render:tone-mapping', (value) => {
+      this.setToneMapping(value);
     });
 
     this.eventBus.on('scene:fog', (fog) => this.updateFog(fog));
@@ -743,8 +836,9 @@ export class SceneManager {
     this.updateFog(state.fog);
     this.updateBackgroundColor(state.background);
     if (this.fxaaPass) {
-      this.fxaaPass.enabled = state.fxaaEnabled ?? false;
+      this.fxaaPass.enabled = (state.antiAliasing ?? 'none') === 'fxaa';
     }
+    this.setToneMapping(state.toneMapping ?? 'aces-filmic');
     this.setHdriStrength(state.hdriStrength ?? 1);
     this.setHdriBlurriness(state.hdriBlurriness ?? 0);
     this.setHdriRotation(state.hdriRotation ?? 0);
@@ -1005,6 +1099,34 @@ export class SceneManager {
     this.hdriEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
     this.applyHdriMood(this.currentHdri);
+  }
+
+  setToneMapping(value) {
+    // Map UI values to shader pass values (0=none, 1=linear, 2=reinhard, 4=aces-filmic)
+    const toneMappingMap = {
+      'none': 0,
+      'linear': 1,
+      'reinhard': 2,
+      'aces-filmic': 4,
+    };
+    
+    const toneMappingValue = toneMappingMap[value] ?? 4; // Default to ACES Filmic
+    
+    // Update the tone mapping shader pass
+    if (this.toneMappingPass) {
+      this.toneMappingPass.uniforms.toneMappingType.value = toneMappingValue;
+    }
+    
+    // Keep renderer tone mapping disabled (we apply it in post-processing)
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    
+    const constantNames = {
+      0: 'None',
+      1: 'Linear',
+      2: 'Reinhard',
+      4: 'ACES Filmic',
+    };
+    console.log(`✓ Tone mapping: "${value}" → ${constantNames[toneMappingValue]} (applied as post-processing)`);
   }
 
   setHdriStrength(value) {
@@ -1557,24 +1679,37 @@ export class SceneManager {
     if (!settings) return;
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
-    const active = wants && settings.intensity > 0.0001;
+    
+    // Always keep passes enabled to prevent exposure pop
+    // Instead, set intensity to 0 when disabled
+    const intensity = wants ? (settings.intensity || 0) : 0;
+    
     if (this.filmPass) {
-      this.filmPass.enabled = active;
+      // FilmPass uses material.uniforms, not direct uniforms
+      const material = this.filmPass.material;
+      if (material && material.uniforms) {
+        // Keep FilmPass enabled but set intensity to 0 when disabled
+        this.filmPass.enabled = true;
+        if (material.uniforms.nIntensity) {
+          material.uniforms.nIntensity.value = intensity * 0.5;
+        }
+        // Also set sIntensity (scanline intensity) to 0 to fully disable FilmPass grain
+        if (material.uniforms.sIntensity) {
+          material.uniforms.sIntensity.value = intensity * 0.5;
+        }
+      }
     }
     if (this.grainTintPass) {
-      this.grainTintPass.enabled = active;
-    }
-    if (!active) return;
-    if (this.filmPass?.uniforms?.nIntensity) {
-      this.filmPass.uniforms.nIntensity.value = settings.intensity * 0.5;
-    }
-    if (this.grainTintPass?.uniforms?.intensity) {
-      this.grainTintPass.uniforms.intensity.value = settings.intensity;
-    }
-    if (this.grainTintPass?.uniforms?.tint) {
-      this.grainTintPass.uniforms.tint.value = new THREE.Color(
-        settings.color,
-      );
+      // Keep GrainTintPass enabled but set intensity to 0 when disabled
+      this.grainTintPass.enabled = true;
+      if (this.grainTintPass.uniforms?.intensity) {
+        this.grainTintPass.uniforms.intensity.value = intensity;
+      }
+      if (this.grainTintPass.uniforms?.tint) {
+        this.grainTintPass.uniforms.tint.value = new THREE.Color(
+          settings.color || '#ffffff',
+        );
+      }
     }
   }
 

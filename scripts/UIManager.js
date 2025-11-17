@@ -98,7 +98,8 @@ export class UIManager {
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
       exposure: q('#exposure'),
-      fxaaEnabled: q('#fxaaEnabled'),
+      antiAliasing: q('#antiAliasing'),
+      toneMapping: q('#toneMapping'),
     };
 
     this.buttons = {
@@ -603,10 +604,15 @@ export class UIManager {
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
     });
-    this.inputs.fxaaEnabled.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('fxaaEnabled', enabled);
-      this.eventBus.emit('render:fxaa', enabled);
+    this.inputs.antiAliasing.addEventListener('change', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('antiAliasing', value);
+      this.eventBus.emit('render:anti-aliasing', value);
+    });
+    this.inputs.toneMapping.addEventListener('change', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('toneMapping', value);
+      this.eventBus.emit('render:tone-mapping', value);
     });
 
     this.buttons.export.addEventListener('click', () => {
@@ -1058,7 +1064,8 @@ export class UIManager {
       this.stateStore.set('fog', defaults.fog);
       this.stateStore.set('camera', defaults.camera);
       this.stateStore.set('exposure', defaults.exposure);
-      this.stateStore.set('fxaaEnabled', defaults.fxaaEnabled);
+      this.stateStore.set('antiAliasing', defaults.antiAliasing);
+      this.stateStore.set('toneMapping', defaults.toneMapping);
       
       // Emit events to update scene
       this.eventBus.emit('render:dof', defaults.dof);
@@ -1086,7 +1093,8 @@ export class UIManager {
       this.eventBus.emit('scene:fog', defaults.fog);
       this.eventBus.emit('camera:fov', defaults.camera.fov);
       this.eventBus.emit('scene:exposure', defaults.exposure);
-      this.eventBus.emit('render:fxaa', defaults.fxaaEnabled);
+      this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
+      this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
       
       this.syncUIFromState();
       this.showToast('FX settings reset');
@@ -1232,10 +1240,12 @@ export class UIManager {
           case 'camera':
             this.stateStore.set('camera', defaults.camera);
             this.stateStore.set('exposure', defaults.exposure);
-            this.stateStore.set('fxaaEnabled', defaults.fxaaEnabled);
+            this.stateStore.set('antiAliasing', defaults.antiAliasing);
+            this.stateStore.set('toneMapping', defaults.toneMapping);
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('scene:exposure', defaults.exposure);
-            this.eventBus.emit('render:fxaa', defaults.fxaaEnabled);
+            this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
+            this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
             this.syncUIFromState();
             break;
             
@@ -1575,8 +1585,11 @@ export class UIManager {
     this.updateValueLabel('cameraFov', `${state.camera.fov.toFixed(0)}°`);
     this.inputs.exposure.value = state.exposure;
     this.updateValueLabel('exposure', state.exposure.toFixed(2));
-    if (this.inputs.fxaaEnabled) {
-      this.inputs.fxaaEnabled.checked = state.fxaaEnabled ?? false;
+    if (this.inputs.antiAliasing) {
+      this.inputs.antiAliasing.value = state.antiAliasing ?? 'none';
+    }
+    if (this.inputs.toneMapping) {
+      this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
     }
 
     this.inputs.hdriButtons.forEach((button) => {

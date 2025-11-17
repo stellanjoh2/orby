@@ -127,7 +127,7 @@
                   <span class="value" data-output="clayRoughness">0.60</span>
                 </label>
                 <label class="slider-line">
-                  <span>Specular</span>
+                  <span>Metallic</span>
                   <input
                     id="claySpecular"
                     type="range"
@@ -783,14 +783,25 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title has-toggle">
-                  <span>FXAA</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="fxaaEnabled" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable FXAA</span>
-                  </label>
+                <div class="block-title">
+                  <span>Quality</span>
                 </div>
+                <label class="select-line">
+                  <span>Anti-Aliasing</span>
+                  <select id="antiAliasing">
+                    <option value="none" selected>None</option>
+                    <option value="fxaa">FXAA</option>
+                  </select>
+                </label>
+                <label class="select-line">
+                  <span>Tone Mapping</span>
+                  <select id="toneMapping">
+                    <option value="aces-filmic" selected>ACES Filmic</option>
+                    <option value="reinhard">Reinhard</option>
+                    <option value="linear">Linear</option>
+                    <option value="none">None</option>
+                  </select>
+                </label>
               </div>
 
               <div class="panel-block export-block" style="display: none;">
