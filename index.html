@@ -97,7 +97,10 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Clay Settings</div>
+                <div class="block-title has-reset">
+                  <span>Clay Settings</span>
+                  <button class="block-reset-btn" data-reset="clay">Reset</button>
+                </div>
                 <label class="color-line">
                   <span>Clay Color</span>
                   <input
@@ -134,7 +137,10 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Transform</div>
+                <div class="block-title has-reset">
+                  <span>Transform</span>
+                  <button class="block-reset-btn" data-reset="transform">Reset</button>
+                </div>
                 <label class="slider-line">
                   <span>Scale</span>
                   <input
@@ -159,14 +165,6 @@
                   />
                   <span class="value" data-output="yOffset">0.00m</span>
                 </label>
-                <div class="control-row">
-                  <button id="transformReset" class="ghost-btn small">
-                    Reset
-                  </button>
-                  <button id="reloadMesh" class="ghost-btn small">
-                    Reload Mesh
-                  </button>
-                </div>
               </div>
 
               <div class="panel-block">
@@ -226,8 +224,11 @@
                 </div>
               </div>
 
+              <button id="loadMeshButton" class="action-btn">
+                Import New
+              </button>
               <button id="resetMeshSettings" class="action-btn">
-                Reset Mesh
+                Reset Mesh Settings
               </button>
             </section>
 
@@ -236,11 +237,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>HDRI</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="hdriEnabled" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable HDRI Lighting</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="hdri">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="hdriEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable HDRI Lighting</span>
+                    </label>
+                  </div>
                 </div>
                 <div class="hdri-grid" id="hdriGrid">
                   <button data-hdri="noir-studio" class="hdri-card active">
@@ -280,11 +284,14 @@
               <div class="panel-block lights">
                 <div class="block-title has-toggle">
                   <span>3-Point Lighting</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="lightsEnabled" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable 3-Point Lighting</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="lights">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lightsEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable 3-Point Lighting</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="color-line light-color-row" data-light="key">
                   <span>Key Color</span>
@@ -342,11 +349,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Podium</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="groundSolid" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable podium</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="podium">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="groundSolid" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable podium</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="color-line">
                   <span>Color</span>
@@ -384,7 +394,10 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Background</div>
+                <div class="block-title has-reset">
+                  <span>Background</span>
+                  <button class="block-reset-btn" data-reset="background">Reset</button>
+                </div>
                 <label class="color-line">
                   <span>Color</span>
                   <input
@@ -399,11 +412,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Grid</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="groundWire" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable grid</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="grid">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="groundWire" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable grid</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="color-line">
                   <span>Color</span>
@@ -432,7 +448,7 @@
                 Copy Studio Settings
               </button>
               <button id="resetStudioSettings" class="action-btn">
-                Reset Studio
+                Reset Studio Settings
               </button>
             </section>
 
@@ -441,11 +457,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Depth of Field</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="toggleDof" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable Depth of Field</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="dof">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="toggleDof" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Depth of Field</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="slider-line">
                   <span>Focus</span>
@@ -488,11 +507,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Bloom</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="toggleBloom" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable Bloom</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="bloom">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="toggleBloom" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Bloom</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="slider-line">
                   <span>Threshold</span>
@@ -535,11 +557,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Film Grain</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="toggleGrain" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable Film Grain</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="grain">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="toggleGrain" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Film Grain</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="slider-line">
                   <span>Strength</span>
@@ -558,11 +583,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Chromatic Aberration</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="toggleAberration" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable Chromatic Aberration</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="aberration">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="toggleAberration" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Chromatic Aberration</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="slider-line">
                   <span>Offset</span>
@@ -595,11 +623,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Fresnel</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="toggleFresnel" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable Fresnel</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="fresnel">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="toggleFresnel" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Fresnel</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="color-line">
                   <span>Color</span>
@@ -639,11 +670,14 @@
               <div class="panel-block">
                 <div class="block-title has-toggle">
                   <span>Fog</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="toggleFog" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable Fog</span>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="fog">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="toggleFog" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Fog</span>
+                    </label>
+                  </div>
                 </div>
                 <label class="select-line">
                   <span>Type</span>
@@ -690,7 +724,10 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Camera & Exposure</div>
+                <div class="block-title has-reset">
+                  <span>Camera & Exposure</span>
+                  <button class="block-reset-btn" data-reset="camera">Reset</button>
+                </div>
                 <label class="slider-line">
                   <span>FOV</span>
                   <input
@@ -727,7 +764,7 @@
                 Copy FX Settings
               </button>
               <button id="resetRenderSettings" class="action-btn">
-                Reset FX
+                Reset FX Settings
               </button>
             </section>
           </div>

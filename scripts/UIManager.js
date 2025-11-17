@@ -46,7 +46,6 @@ export class UIManager {
     this.dom.playPause = q('#playPause');
     this.dom.animationScrub = q('#animationScrub');
     this.dom.animationTime = q('#animationTime');
-    this.dom.reloadMesh = q('#reloadMesh');
 
     this.inputs = {
       shading: document.querySelectorAll('input[name="shading"]'),
@@ -107,6 +106,7 @@ export class UIManager {
       resetStudio: q('#resetStudioSettings'),
       resetMesh: q('#resetMeshSettings'),
       resetRender: q('#resetRenderSettings'),
+      loadMesh: q('#loadMeshButton'),
     };
   }
 
@@ -119,6 +119,7 @@ export class UIManager {
     this.bindGlobalControls();
     this.bindAnimationControls();
     this.bindCopyButtons();
+    this.bindLocalResetButtons();
   }
 
   bindDragAndDrop() {
@@ -151,8 +152,9 @@ export class UIManager {
       emitFile(file);
       this.dom.fileInput.value = '';
     });
-    this.dom.reloadMesh.addEventListener('click', () => {
-      this.eventBus.emit('file:reload');
+    
+    this.buttons.loadMesh?.addEventListener('click', () => {
+      this.dom.fileInput.click();
     });
 
     window.addEventListener(
@@ -280,17 +282,7 @@ export class UIManager {
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
     });
-    this.buttons.transformReset.addEventListener('click', () => {
-      this.inputs.scale.value = 1;
-      this.inputs.yOffset.value = 0;
-      this.updateValueLabel('scale', '1.00×');
-      this.updateValueLabel('yOffset', '0.00m');
-      this.stateStore.set('scale', 1);
-      this.stateStore.set('yOffset', 0);
-      this.eventBus.emit('mesh:scale', 1);
-      this.eventBus.emit('mesh:yOffset', 0);
-      this.eventBus.emit('mesh:reset-transform');
-    });
+    // Transform reset is now handled by bindLocalResetButtons
     this.inputs.autoRotate.forEach((input) => {
       input.addEventListener('change', () => {
         if (input.checked) {
@@ -857,6 +849,155 @@ export class UIManager {
     this.buttons.resetMesh?.addEventListener('click', resetMesh);
     this.buttons.resetStudio?.addEventListener('click', resetStudio);
     this.buttons.resetRender?.addEventListener('click', resetRender);
+  }
+
+  bindLocalResetButtons() {
+    const defaults = this.stateStore.getDefaults();
+    
+    document.querySelectorAll('[data-reset]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const resetType = button.dataset.reset;
+        
+        switch (resetType) {
+          case 'clay':
+            this.stateStore.set('clay', defaults.clay);
+            this.eventBus.emit('mesh:clay-color', defaults.clay.color);
+            this.eventBus.emit('mesh:clay-roughness', defaults.clay.roughness);
+            this.eventBus.emit('mesh:clay-specular', defaults.clay.specular);
+            this.syncUIFromState();
+            break;
+            
+          case 'hdri':
+            this.stateStore.set('hdri', defaults.hdri);
+            this.stateStore.set('hdriStrength', defaults.hdriStrength);
+            this.stateStore.set('hdriBackground', defaults.hdriBackground);
+            this.setHdriActive(defaults.hdri);
+            this.eventBus.emit('studio:hdri', defaults.hdri);
+            const normalizedStrength = defaults.hdriStrength / HDRI_STRENGTH_UNIT;
+            this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
+            this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+            if (this.inputs.backgroundColor) {
+              this.inputs.backgroundColor.disabled = defaults.hdriBackground;
+            }
+            this.syncUIFromState();
+            break;
+            
+          case 'lights':
+            this.stateStore.set('lights', defaults.lights);
+            this.stateStore.set('lightsMaster', defaults.lightsMaster);
+            Object.keys(defaults.lights).forEach((lightId) => {
+              const light = defaults.lights[lightId];
+              this.eventBus.emit('lights:update', {
+                lightId,
+                property: 'color',
+                value: light.color,
+              });
+              this.eventBus.emit('lights:update', {
+                lightId,
+                property: 'intensity',
+                value: light.intensity,
+              });
+            });
+            this.eventBus.emit('lights:master', defaults.lightsMaster);
+            this.syncUIFromState();
+            break;
+            
+          case 'podium':
+            this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
+            this.stateStore.set('groundY', defaults.groundY);
+            this.stateStore.set('groundHeight', defaults.groundHeight);
+            this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
+            this.eventBus.emit('studio:ground-y', defaults.groundY);
+            this.eventBus.emit('studio:ground-height', defaults.groundHeight);
+            this.syncUIFromState();
+            break;
+            
+          case 'background':
+            this.stateStore.set('background', defaults.background);
+            this.eventBus.emit('scene:background', defaults.background);
+            this.syncUIFromState();
+            break;
+            
+          case 'grid':
+            this.stateStore.set('groundWireColor', defaults.groundWireColor);
+            this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
+            this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
+            this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
+            this.syncUIFromState();
+            break;
+            
+          case 'dof':
+            this.stateStore.set('dof', defaults.dof);
+            this.eventBus.emit('render:dof', defaults.dof);
+            this.setEffectControlsDisabled(
+              ['dofFocus', 'dofAperture', 'dofStrength'],
+              !defaults.dof.enabled,
+            );
+            this.syncUIFromState();
+            break;
+            
+          case 'bloom':
+            this.stateStore.set('bloom', defaults.bloom);
+            this.eventBus.emit('render:bloom', defaults.bloom);
+            this.setEffectControlsDisabled(
+              ['bloomThreshold', 'bloomStrength', 'bloomRadius'],
+              !defaults.bloom.enabled,
+            );
+            this.syncUIFromState();
+            break;
+            
+          case 'grain':
+            this.stateStore.set('grain', defaults.grain);
+            this.eventBus.emit('render:grain', defaults.grain);
+            this.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
+            this.syncUIFromState();
+            break;
+            
+          case 'aberration':
+            this.stateStore.set('aberration', defaults.aberration);
+            this.eventBus.emit('render:aberration', defaults.aberration);
+            this.setEffectControlsDisabled(
+              ['aberrationOffset', 'aberrationStrength'],
+              !defaults.aberration.enabled,
+            );
+            this.syncUIFromState();
+            break;
+            
+          case 'fresnel':
+            this.stateStore.set('fresnel', defaults.fresnel);
+            this.eventBus.emit('render:fresnel', defaults.fresnel);
+            this.setEffectControlsDisabled(
+              ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+              !defaults.fresnel.enabled,
+            );
+            this.syncUIFromState();
+            break;
+            
+          case 'fog':
+            this.stateStore.set('fog', defaults.fog);
+            this.eventBus.emit('scene:fog', defaults.fog);
+            this.syncUIFromState();
+            break;
+            
+          case 'camera':
+            this.stateStore.set('camera', defaults.camera);
+            this.stateStore.set('exposure', defaults.exposure);
+            this.eventBus.emit('camera:fov', defaults.camera.fov);
+            this.eventBus.emit('scene:exposure', defaults.exposure);
+            this.syncUIFromState();
+            break;
+            
+          case 'transform':
+            this.stateStore.set('scale', defaults.scale);
+            this.stateStore.set('yOffset', defaults.yOffset);
+            this.eventBus.emit('mesh:scale', defaults.scale);
+            this.eventBus.emit('mesh:yOffset', defaults.yOffset);
+            this.eventBus.emit('mesh:reset-transform');
+            this.syncUIFromState();
+            break;
+        }
+      });
+    });
   }
 
   toggleUi(forceState) {
