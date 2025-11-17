@@ -1,0 +1,7 @@
+# Test assets - keep locally only
+TEMP/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
