@@ -73,6 +73,10 @@ export class StateStore {
     return clone(this.state);
   }
 
+  getDefaults() {
+    return clone(this.defaults);
+  }
+
   subscribe(callback) {
     this.subscribers.add(callback);
     return () => this.subscribers.delete(callback);

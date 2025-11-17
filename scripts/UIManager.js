@@ -104,6 +104,9 @@ export class UIManager {
       export: q('#exportPng'),
       copyStudio: q('#copyStudioSettings'),
       copyRender: q('#copyRenderSettings'),
+      resetStudio: q('#resetStudioSettings'),
+      resetMesh: q('#resetMeshSettings'),
+      resetRender: q('#resetRenderSettings'),
     };
   }
 
@@ -719,6 +722,141 @@ export class UIManager {
     this.buttons.copyMesh?.addEventListener('click', copyMesh);
     this.buttons.copyStudio?.addEventListener('click', copyStudio);
     this.buttons.copyRender?.addEventListener('click', copyRender);
+
+    // Reset buttons
+    const resetMesh = () => {
+      const defaults = this.stateStore.getDefaults();
+      this.stateStore.set('shading', defaults.shading);
+      this.stateStore.set('scale', defaults.scale);
+      this.stateStore.set('yOffset', defaults.yOffset);
+      this.stateStore.set('autoRotate', defaults.autoRotate);
+      this.stateStore.set('showNormals', defaults.showNormals);
+      this.stateStore.set('clay', defaults.clay);
+      
+      // Emit events to update scene
+      this.eventBus.emit('mesh:shading', defaults.shading);
+      this.eventBus.emit('mesh:scale', defaults.scale);
+      this.eventBus.emit('mesh:yOffset', defaults.yOffset);
+      this.eventBus.emit('mesh:auto-rotate', defaults.autoRotate);
+      this.eventBus.emit('mesh:normals', defaults.showNormals);
+      this.eventBus.emit('mesh:clay-color', defaults.clay.color);
+      this.eventBus.emit('mesh:clay-roughness', defaults.clay.roughness);
+      this.eventBus.emit('mesh:clay-specular', defaults.clay.specular);
+      
+      this.syncUIFromState();
+      this.showToast('Mesh settings reset');
+    };
+
+    const resetStudio = () => {
+      const defaults = this.stateStore.getDefaults();
+      this.stateStore.set('hdri', defaults.hdri);
+      this.stateStore.set('hdriEnabled', defaults.hdriEnabled);
+      this.stateStore.set('hdriStrength', defaults.hdriStrength);
+      this.stateStore.set('hdriBackground', defaults.hdriBackground);
+      this.stateStore.set('groundSolid', defaults.groundSolid);
+      this.stateStore.set('groundWire', defaults.groundWire);
+      this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
+      this.stateStore.set('groundY', defaults.groundY);
+      this.stateStore.set('groundHeight', defaults.groundHeight);
+      this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
+      this.stateStore.set('groundWireColor', defaults.groundWireColor);
+      this.stateStore.set('background', defaults.background);
+      this.stateStore.set('lights', defaults.lights);
+      this.stateStore.set('lightsEnabled', defaults.lightsEnabled);
+      this.stateStore.set('lightsMaster', defaults.lightsMaster);
+      this.stateStore.set('lightsRotation', defaults.lightsRotation);
+      this.stateStore.set('lightsAutoRotate', defaults.lightsAutoRotate);
+      
+      // Emit events to update scene
+      this.setHdriActive(defaults.hdri);
+      this.eventBus.emit('studio:hdri', defaults.hdri);
+      this.eventBus.emit('studio:hdri-enabled', defaults.hdriEnabled);
+      this.toggleHdriControls(defaults.hdriEnabled);
+      const normalizedStrength = defaults.hdriStrength / HDRI_STRENGTH_UNIT;
+      this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
+      this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+      if (this.inputs.backgroundColor) {
+        this.inputs.backgroundColor.disabled = defaults.hdriBackground;
+      }
+      this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
+      this.eventBus.emit('studio:ground-wire', defaults.groundWire);
+      this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
+      this.eventBus.emit('studio:ground-y', defaults.groundY);
+      this.eventBus.emit('studio:ground-height', defaults.groundHeight);
+      this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
+      this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
+      this.eventBus.emit('scene:background', defaults.background);
+      
+      // Reset lights
+      Object.keys(defaults.lights).forEach((lightId) => {
+        const light = defaults.lights[lightId];
+        this.eventBus.emit('lights:update', {
+          lightId,
+          property: 'color',
+          value: light.color,
+        });
+        this.eventBus.emit('lights:update', {
+          lightId,
+          property: 'intensity',
+          value: light.intensity,
+        });
+      });
+      this.eventBus.emit('lights:master', defaults.lightsMaster);
+      this.eventBus.emit('lights:enabled', defaults.lightsEnabled);
+      this.setLightColorControlsDisabled(!defaults.lightsEnabled);
+      this.eventBus.emit('lights:rotate', defaults.lightsRotation);
+      this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
+      this.setLightsRotationDisabled(defaults.lightsAutoRotate);
+      
+      this.syncUIFromState();
+      this.showToast('Studio settings reset');
+    };
+
+    const resetRender = () => {
+      const defaults = this.stateStore.getDefaults();
+      this.stateStore.set('dof', defaults.dof);
+      this.stateStore.set('bloom', defaults.bloom);
+      this.stateStore.set('grain', defaults.grain);
+      this.stateStore.set('aberration', defaults.aberration);
+      this.stateStore.set('fresnel', defaults.fresnel);
+      this.stateStore.set('fog', defaults.fog);
+      this.stateStore.set('camera', defaults.camera);
+      this.stateStore.set('exposure', defaults.exposure);
+      
+      // Emit events to update scene
+      this.eventBus.emit('render:dof', defaults.dof);
+      this.setEffectControlsDisabled(
+        ['dofFocus', 'dofAperture', 'dofStrength'],
+        !defaults.dof.enabled,
+      );
+      this.eventBus.emit('render:bloom', defaults.bloom);
+      this.setEffectControlsDisabled(
+        ['bloomThreshold', 'bloomStrength', 'bloomRadius'],
+        !defaults.bloom.enabled,
+      );
+      this.eventBus.emit('render:grain', defaults.grain);
+      this.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
+      this.eventBus.emit('render:aberration', defaults.aberration);
+      this.setEffectControlsDisabled(
+        ['aberrationOffset', 'aberrationStrength'],
+        !defaults.aberration.enabled,
+      );
+      this.eventBus.emit('render:fresnel', defaults.fresnel);
+      this.setEffectControlsDisabled(
+        ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+        !defaults.fresnel.enabled,
+      );
+      this.eventBus.emit('scene:fog', defaults.fog);
+      this.eventBus.emit('camera:fov', defaults.camera.fov);
+      this.eventBus.emit('scene:exposure', defaults.exposure);
+      
+      this.syncUIFromState();
+      this.showToast('FX settings reset');
+    };
+
+    this.buttons.resetMesh?.addEventListener('click', resetMesh);
+    this.buttons.resetStudio?.addEventListener('click', resetStudio);
+    this.buttons.resetRender?.addEventListener('click', resetRender);
   }
 
   toggleUi(forceState) {
