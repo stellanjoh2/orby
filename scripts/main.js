@@ -12,6 +12,10 @@ ui.init();
 scene
   .init()
   .then(() => {
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
     console.info('MeshGL ready');
   })
   .catch((error) => {

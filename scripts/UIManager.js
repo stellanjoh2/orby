@@ -55,6 +55,8 @@ export class UIManager {
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
+      hdriBlurriness: q('#hdriBlurriness'),
+      hdriRotation: q('#hdriRotation'),
       hdriBackground: q('#hdriBackground'),
       clayColor: q('#clayColor'),
       clayRoughness: q('#clayRoughness'),
@@ -340,6 +342,18 @@ export class UIManager {
       this.updateValueLabel('hdriStrength', normalized.toFixed(2));
       this.stateStore.set('hdriStrength', actual);
       this.eventBus.emit('studio:hdri-strength', actual);
+    });
+    this.inputs.hdriBlurriness.addEventListener('input', (event) => {
+      const value = Math.min(1, Math.max(0, parseFloat(event.target.value)));
+      this.updateValueLabel('hdriBlurriness', value.toFixed(2));
+      this.stateStore.set('hdriBlurriness', value);
+      this.eventBus.emit('studio:hdri-blurriness', value);
+    });
+    this.inputs.hdriRotation.addEventListener('input', (event) => {
+      const value = Math.min(360, Math.max(0, parseFloat(event.target.value)));
+      this.updateValueLabel('hdriRotation', `${Math.round(value)}°`);
+      this.stateStore.set('hdriRotation', value);
+      this.eventBus.emit('studio:hdri-rotation', value);
     });
     this.inputs.hdriBackground.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -672,12 +686,6 @@ export class UIManager {
         }
       }
 
-      if (key === 'r') {
-        event.preventDefault();
-        if (this.eventBus) {
-          this.eventBus.emit('camera:reset');
-        }
-      }
 
       // Display modes: 1/2/3/4
       if (key === '1' || key === '2' || key === '3' || key === '4') {
@@ -755,7 +763,7 @@ export class UIManager {
       // Tab - Cycle through tabs
       if (key === 'tab' && !isCtrl) {
         event.preventDefault();
-        const tabs = ['mesh', 'studio', 'render'];
+        const tabs = ['mesh', 'studio', 'render', 'info'];
         const currentIndex = tabs.indexOf(this.activeTab);
         const nextIndex = isShift
           ? (currentIndex - 1 + tabs.length) % tabs.length
@@ -1100,11 +1108,15 @@ export class UIManager {
           case 'hdri':
             this.stateStore.set('hdri', defaults.hdri);
             this.stateStore.set('hdriStrength', defaults.hdriStrength);
+            this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
+            this.stateStore.set('hdriRotation', defaults.hdriRotation);
             this.stateStore.set('hdriBackground', defaults.hdriBackground);
             this.setHdriActive(defaults.hdri);
             this.eventBus.emit('studio:hdri', defaults.hdri);
             const normalizedStrength = defaults.hdriStrength / HDRI_STRENGTH_UNIT;
             this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
+            this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
+            this.eventBus.emit('studio:hdri-rotation', defaults.hdriRotation);
             this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
             if (this.inputs.backgroundColor) {
               this.inputs.backgroundColor.disabled = defaults.hdriBackground;
@@ -1271,7 +1283,11 @@ export class UIManager {
       button.classList.toggle('is-disabled', !enabled);
     });
     this.inputs.hdriBackground.disabled = !enabled;
-    this.inputs.hdriStrength.disabled = !enabled;
+      this.inputs.hdriStrength.disabled = !enabled;
+      this.inputs.hdriBlurriness.disabled = !enabled;
+      if (this.inputs.hdriRotation) {
+        this.inputs.hdriRotation.disabled = !enabled;
+      }
     if (!enabled) {
       this.inputs.backgroundColor.disabled = false;
     }
@@ -1450,6 +1466,16 @@ export class UIManager {
     );
     this.inputs.hdriStrength.value = normalizedStrength;
     this.updateValueLabel('hdriStrength', normalizedStrength.toFixed(2));
+    if (this.inputs.hdriBlurriness) {
+      const blurriness = state.hdriBlurriness ?? 0;
+      this.inputs.hdriBlurriness.value = blurriness;
+      this.updateValueLabel('hdriBlurriness', blurriness.toFixed(2));
+    }
+    if (this.inputs.hdriRotation) {
+      const rotation = state.hdriRotation ?? 0;
+      this.inputs.hdriRotation.value = rotation;
+      this.updateValueLabel('hdriRotation', `${Math.round(rotation)}°`);
+    }
     this.inputs.hdriBackground.checked = state.hdriBackground;
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;

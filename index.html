@@ -25,6 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -55,14 +56,17 @@
 
         <aside class="shelf is-shelf-hidden" id="shelf">
           <nav class="tabs" role="tablist" aria-label="MeshGL Panels">
-            <button class="tab active" data-tab="mesh" aria-selected="true">
-              Mesh
+            <button class="tab active" data-tab="mesh" aria-selected="true" title="Mesh">
+              <i data-lucide="box"></i>
             </button>
-            <button class="tab" data-tab="studio" aria-selected="false">
-              Studio
+            <button class="tab" data-tab="studio" aria-selected="false" title="Studio">
+              <i data-lucide="lightbulb"></i>
             </button>
-            <button class="tab" data-tab="render" aria-selected="false">
-              FX
+            <button class="tab" data-tab="render" aria-selected="false" title="FX">
+              <i data-lucide="camera"></i>
+            </button>
+            <button class="tab" data-tab="info" aria-selected="false" title="Information">
+              <i data-lucide="info"></i>
             </button>
           </nav>
 
@@ -264,7 +268,7 @@
                   </button>
                 </div>
                 <label class="slider-line">
-                  <span>Strength</span>
+                  <span>Intensity</span>
                   <input
                     id="hdriStrength"
                     type="range"
@@ -274,6 +278,30 @@
                     step="0.1"
                   />
                   <span class="value" data-output="hdriStrength">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Blurriness</span>
+                  <input
+                    id="hdriBlurriness"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="hdriBlurriness">0.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Rotate</span>
+                  <input
+                    id="hdriRotation"
+                    type="range"
+                    min="0"
+                    max="360"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="hdriRotation">0°</span>
                 </label>
                 <label class="toggle-line">
                   <span>Show in Background</span>
@@ -766,6 +794,127 @@
               <button id="resetRenderSettings" class="action-btn">
                 Reset FX Settings
               </button>
+            </section>
+
+            <section class="panel" data-panel="info">
+              <div class="panel-block">
+                <div class="block-title">Keyboard Shortcuts</div>
+                <div class="shortcuts-grid">
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Focus camera on mesh</span>
+                    <span class="shortcut-keys"><kbd>F</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Quick switch display modes</span>
+                    <span class="shortcut-keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Play / Pause animation</span>
+                    <span class="shortcut-keys"><kbd>Space</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Scrub animation frame-by-frame</span>
+                    <span class="shortcut-keys"><kbd>←</kbd> <kbd>→</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle grid on/off</span>
+                    <span class="shortcut-keys"><kbd>G</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle 3-point lighting on/off</span>
+                    <span class="shortcut-keys"><kbd>L</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle UI visibility</span>
+                    <span class="shortcut-keys"><kbd>H</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Cycle through tabs</span>
+                    <span class="shortcut-keys"><kbd>Tab</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Close any open modals/overlays</span>
+                    <span class="shortcut-keys"><kbd>Esc</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Reset scale to 1</span>
+                    <span class="shortcut-keys"><kbd>S</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Reset Y offset to 0</span>
+                    <span class="shortcut-keys"><kbd>Y</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Reset transform</span>
+                    <span class="shortcut-keys"><kbd>0</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle auto-rotate on/off</span>
+                    <span class="shortcut-keys"><kbd>A</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle podium on/off</span>
+                    <span class="shortcut-keys"><kbd>P</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Toggle HDRI background visibility</span>
+                    <span class="shortcut-keys"><kbd>B</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Cycle through HDRI presets</span>
+                    <span class="shortcut-keys"><kbd>[</kbd> <kbd>]</kbd></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Mouse Controls</div>
+                <div class="shortcuts-grid">
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Orbit camera</span>
+                    <span class="shortcut-keys"><kbd>Left Click</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Pan camera</span>
+                    <span class="shortcut-keys"><kbd>Right Click</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Rotate lighting setup / HDRI</span>
+                    <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Right Click</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Orbit around focus point</span>
+                    <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Left Click</kbd></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">About</div>
+                <div class="about-content">
+                  <p><strong>MeshGL</strong> is a cinematic, browser-native 3D model viewer for professional 3D artists.</p>
+                  <p>Built with Three.js, MeshGL supports <code>.glb</code>, <code>.gltf</code>, and <code>.fbx</code> formats with instant, beautiful, and precise control.</p>
+                  <p>Features include real-time lighting, post-processing effects, HDRI environments, and 4K-ready PNG export—all running entirely in your browser with zero server requirements.</p>
+                </div>
+              </div>
             </section>
           </div>
         </aside>
