@@ -859,6 +859,30 @@ export class UIManager {
     }
   }
 
+  extractAnimationName(fullName) {
+    if (!fullName) return 'Animation';
+    
+    // Split by pipe if present
+    const parts = fullName.split('|');
+    
+    // Find the most meaningful part (usually the last or middle part that's not common prefixes)
+    let namePart = fullName;
+    if (parts.length > 1) {
+      // Skip common prefixes like "Armature", "baselayer", etc.
+      const meaningfulParts = parts.filter(part => {
+        const lower = part.toLowerCase();
+        return !['armature', 'baselayer', 'mixamo', 'root'].includes(lower);
+      });
+      namePart = meaningfulParts.length > 0 ? meaningfulParts[meaningfulParts.length - 1] : parts[parts.length - 1];
+    }
+    
+    // Convert underscores to spaces and title case
+    return namePart
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase())
+      .trim();
+  }
+
   setAnimationClips(clips) {
     this.dom.animationSelect.innerHTML = '';
     if (!clips?.length) {
@@ -871,7 +895,8 @@ export class UIManager {
     clips.forEach((clip, index) => {
       const option = document.createElement('option');
       option.value = index;
-      option.textContent = `${clip.name} (${clip.duration})`;
+      const displayName = this.extractAnimationName(clip.name);
+      option.textContent = displayName;
       this.dom.animationSelect.appendChild(option);
     });
     this.dom.animationBlock.hidden = false;

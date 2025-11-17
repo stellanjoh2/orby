@@ -21,7 +21,7 @@ export class StateStore {
       groundWire: false,
       groundWireOpacity: 0.45,
       groundY: 0,
-      groundHeight: 1,
+      groundHeight: 0.1,
       groundSolidColor: '#31363f',
       groundWireColor: '#c4cadd',
       clay: {
@@ -58,11 +58,11 @@ export class StateStore {
         radius: 0.94,
         color: '#ffe9cc',
       },
-      grain: { enabled: true, intensity: 0.1, color: '#ffffff' },
+      grain: { enabled: true, intensity: 0.03, color: '#ffffff' },
       aberration: { enabled: true, offset: 0.0025, strength: 0.24 },
-      fog: { type: 'none', color: '#10121a', near: 85.8, density: 0.462 },
-      camera: { fov: 60 },
-      exposure: 1,
+      fog: { enabled: false, type: 'none', color: '#10121a', near: 85.8, density: 0.462 },
+      camera: { fov: 50 },
+      exposure: 0.75,
       background: '#000000',
     };
     this.state = clone(this.defaults);

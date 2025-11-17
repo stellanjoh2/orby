@@ -62,16 +62,12 @@
               Studio
             </button>
             <button class="tab" data-tab="render" aria-selected="false">
-              Render
+              FX
             </button>
           </nav>
 
           <div class="panels">
             <section class="panel visible" data-panel="mesh">
-              <div class="panel-header">
-                <h2>MESH</h2>
-                <p>Model · Stats · Animation · Camera</p>
-              </div>
 
               <div class="panel-block">
                 <div class="block-title">Display</div>
@@ -233,32 +229,16 @@
             </section>
 
             <section class="panel" data-panel="studio">
-              <div class="panel-header">
-                <h2>STUDIO</h2>
-                <p>HDRI · Lighting · Ground</p>
-              </div>
 
               <div class="panel-block">
                 <div class="block-title has-toggle">
-                  <span>HDRI Presets</span>
+                  <span>HDRI</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriEnabled" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable HDRI Lighting</span>
                   </label>
                 </div>
-                <label class="slider-line">
-                  <span>HDRI Strength</span>
-                  <input
-                    id="hdriStrength"
-                    type="range"
-                    min="0"
-                    max="10"
-                    value="1"
-                    step="0.1"
-                  />
-                  <span class="value" data-output="hdriStrength">1.00</span>
-                </label>
                 <div class="hdri-grid" id="hdriGrid">
                   <button data-hdri="noir-studio" class="hdri-card active">
                     Noir Studio
@@ -276,6 +256,18 @@
                     Cyberpunk
                   </button>
                 </div>
+                <label class="slider-line">
+                  <span>Strength</span>
+                  <input
+                    id="hdriStrength"
+                    type="range"
+                    min="0"
+                    max="10"
+                    value="1"
+                    step="0.1"
+                  />
+                  <span class="value" data-output="hdriStrength">1.00</span>
+                </label>
                 <label class="toggle-line">
                   <span>Show in Background</span>
                   <input type="checkbox" id="hdriBackground" />
@@ -308,7 +300,7 @@
                   <input type="color" class="color-chip light-chip" value="#7c8ca6" />
                 </label>
                 <label class="slider-line">
-                  <span>Master Exposure</span>
+                  <span>Strength</span>
                   <input
                     id="lightsMaster"
                     type="range"
@@ -382,9 +374,9 @@
                     min="0.1"
                     max="2"
                     step="0.01"
-                    value="1"
+                    value="0.1"
                   />
-                  <span class="value" data-output="groundHeight">1.00m</span>
+                  <span class="value" data-output="groundHeight">0.10m</span>
                 </label>
               </div>
 
@@ -441,10 +433,6 @@
             </section>
 
             <section class="panel" data-panel="render">
-              <div class="panel-header">
-                <h2>RENDER</h2>
-                <p>Post · Fog · Export</p>
-              </div>
 
               <div class="panel-block">
                 <div class="block-title has-toggle">
@@ -495,7 +483,7 @@
 
               <div class="panel-block">
                 <div class="block-title has-toggle">
-                  <span>Unreal Bloom</span>
+                  <span>Bloom</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="toggleBloom" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -556,10 +544,10 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0.33"
+                    value="0.20"
                     step="0.02"
                   />
-                  <span class="value" data-output="grainIntensity">0.33</span>
+                  <span class="value" data-output="grainIntensity">0.20</span>
                 </label>
               </div>
 
@@ -645,16 +633,23 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title">Fog</div>
-                <div class="select-line">
-                  <label for="fogType">Type</label>
+                <div class="block-title has-toggle">
+                  <span>Fog</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="toggleFog" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable Fog</span>
+                  </label>
+                </div>
+                <label class="select-line">
+                  <span>Type</span>
                   <select id="fogType">
                     <option value="none" selected>None</option>
                     <option value="linear">Linear</option>
                     <option value="exp">Exp</option>
                     <option value="exp2">Exp²</option>
                   </select>
-                </div>
+                </label>
                 <label class="color-line">
                   <span>Color</span>
                   <input
@@ -699,10 +694,10 @@
                     type="range"
                     min="45"
                     max="120"
-                    value="60"
+                    value="50"
                     step="1"
                   />
-                  <span class="value" data-output="cameraFov">60°</span>
+                  <span class="value" data-output="cameraFov">50°</span>
                 </label>
                 <label class="slider-line">
                   <span>Exposure</span>
@@ -711,10 +706,10 @@
                     type="range"
                     min="0"
                     max="3"
-                    value="1"
+                    value="0.75"
                     step="0.01"
                   />
-                  <span class="value" data-output="exposure">1.00</span>
+                  <span class="value" data-output="exposure">0.75</span>
                 </label>
               </div>
 
