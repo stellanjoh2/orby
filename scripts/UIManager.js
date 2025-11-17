@@ -98,6 +98,7 @@ export class UIManager {
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
       exposure: q('#exposure'),
+      fxaaEnabled: q('#fxaaEnabled'),
     };
 
     this.buttons = {
@@ -602,6 +603,11 @@ export class UIManager {
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
     });
+    this.inputs.fxaaEnabled.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('fxaaEnabled', enabled);
+      this.eventBus.emit('render:fxaa', enabled);
+    });
 
     this.buttons.export.addEventListener('click', () => {
       this.eventBus.emit('export:png');
@@ -1052,6 +1058,7 @@ export class UIManager {
       this.stateStore.set('fog', defaults.fog);
       this.stateStore.set('camera', defaults.camera);
       this.stateStore.set('exposure', defaults.exposure);
+      this.stateStore.set('fxaaEnabled', defaults.fxaaEnabled);
       
       // Emit events to update scene
       this.eventBus.emit('render:dof', defaults.dof);
@@ -1079,6 +1086,7 @@ export class UIManager {
       this.eventBus.emit('scene:fog', defaults.fog);
       this.eventBus.emit('camera:fov', defaults.camera.fov);
       this.eventBus.emit('scene:exposure', defaults.exposure);
+      this.eventBus.emit('render:fxaa', defaults.fxaaEnabled);
       
       this.syncUIFromState();
       this.showToast('FX settings reset');
@@ -1224,8 +1232,10 @@ export class UIManager {
           case 'camera':
             this.stateStore.set('camera', defaults.camera);
             this.stateStore.set('exposure', defaults.exposure);
+            this.stateStore.set('fxaaEnabled', defaults.fxaaEnabled);
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('scene:exposure', defaults.exposure);
+            this.eventBus.emit('render:fxaa', defaults.fxaaEnabled);
             this.syncUIFromState();
             break;
             
@@ -1565,6 +1575,9 @@ export class UIManager {
     this.updateValueLabel('cameraFov', `${state.camera.fov.toFixed(0)}°`);
     this.inputs.exposure.value = state.exposure;
     this.updateValueLabel('exposure', state.exposure.toFixed(2));
+    if (this.inputs.fxaaEnabled) {
+      this.inputs.fxaaEnabled.checked = state.fxaaEnabled ?? false;
+    }
 
     this.inputs.hdriButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.hdri === state.hdri);

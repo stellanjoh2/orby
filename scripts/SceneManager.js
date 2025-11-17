@@ -13,6 +13,7 @@ import { BokehPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/FilmPass.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js';
 import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
 
 const HDRI_PRESETS = {
@@ -444,7 +445,16 @@ export class SceneManager {
     this.aberrationPass = new ShaderPass(AberrationShader);
     this.exposurePass = new ShaderPass(ExposureShader);
     this.exposurePass.uniforms.exposure.value = this.currentExposure;
+    
+    // FXAA pass - added before exposure pass
+    this.fxaaPass = new ShaderPass(FXAAShader);
+    const pixelRatio = this.renderer.getPixelRatio();
+    this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (size.x * pixelRatio);
+    this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (size.y * pixelRatio);
+    this.fxaaPass.enabled = false; // Off by default
+    
     this.aberrationPass.renderToScreen = false;
+    this.fxaaPass.renderToScreen = false;
     this.exposurePass.renderToScreen = true;
 
     this.composer.addPass(this.renderPass);
@@ -454,6 +464,7 @@ export class SceneManager {
     this.composer.addPass(this.filmPass);
     this.composer.addPass(this.grainTintPass);
     this.composer.addPass(this.aberrationPass);
+    this.composer.addPass(this.fxaaPass);
     this.composer.addPass(this.exposurePass);
   }
 
@@ -658,6 +669,11 @@ export class SceneManager {
     this.eventBus.on('render:fresnel', (settings) =>
       this.setFresnelSettings(settings),
     );
+    this.eventBus.on('render:fxaa', (enabled) => {
+      if (this.fxaaPass) {
+        this.fxaaPass.enabled = enabled;
+      }
+    });
 
     this.eventBus.on('scene:fog', (fog) => this.updateFog(fog));
     this.eventBus.on('scene:background', (color) =>
@@ -726,6 +742,9 @@ export class SceneManager {
     this.updateAberration(state.aberration);
     this.updateFog(state.fog);
     this.updateBackgroundColor(state.background);
+    if (this.fxaaPass) {
+      this.fxaaPass.enabled = state.fxaaEnabled ?? false;
+    }
     this.setHdriStrength(state.hdriStrength ?? 1);
     this.setHdriBlurriness(state.hdriBlurriness ?? 0);
     this.setHdriRotation(state.hdriRotation ?? 0);
@@ -2229,6 +2248,13 @@ export class SceneManager {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.composer?.setSize(width, height);
+    
+    // Update FXAA resolution on resize
+    if (this.fxaaPass) {
+      const pixelRatio = this.renderer.getPixelRatio();
+      this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (width * pixelRatio);
+      this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (height * pixelRatio);
+    }
   }
 
   async exportPng() {
