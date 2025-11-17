@@ -226,6 +226,9 @@
                 </div>
               </div>
 
+              <button id="resetMeshSettings" class="action-btn">
+                Reset Mesh
+              </button>
             </section>
 
             <section class="panel" data-panel="studio">
@@ -425,11 +428,12 @@
                 </label>
               </div>
 
-              <div class="panel-block copy-block">
-                <button id="copyStudioSettings" class="ghost-btn">
-                  Copy Studio Settings
-                </button>
-              </div>
+              <button id="copyStudioSettings" class="action-btn">
+                Copy Studio Settings
+              </button>
+              <button id="resetStudioSettings" class="action-btn">
+                Reset Studio
+              </button>
             </section>
 
             <section class="panel" data-panel="render">
@@ -713,17 +717,18 @@
                 </label>
               </div>
 
-              <div class="panel-block export-block">
+              <div class="panel-block export-block" style="display: none;">
                 <button id="exportPng" class="primary-btn">
                   Export 2× PNG
                 </button>
               </div>
 
-              <div class="panel-block copy-block">
-                <button id="copyRenderSettings" class="ghost-btn">
-                  Copy Render Settings
-                </button>
-              </div>
+              <button id="copyRenderSettings" class="action-btn">
+                Copy FX Settings
+              </button>
+              <button id="resetRenderSettings" class="action-btn">
+                Reset FX
+              </button>
             </section>
           </div>
         </aside>
