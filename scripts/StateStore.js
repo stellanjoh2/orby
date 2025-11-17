@@ -65,6 +65,7 @@ export class StateStore {
       fog: { enabled: false, type: 'none', color: '#10121a', near: 85.8, density: 0.462 },
       camera: { fov: 50 },
       exposure: 0.75,
+      fxaaEnabled: false,
       background: '#000000',
     };
     this.state = clone(this.defaults);
