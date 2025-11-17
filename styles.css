@@ -800,8 +800,11 @@ body {
 }
 
 .light-chip {
-  width: 120px;
+  width: 88px;
+  max-width: 100%;
   height: 14px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .color-chip.is-disabled-handle {
