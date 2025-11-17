@@ -630,20 +630,250 @@ export class UIManager {
       }
     }
     this.dom.toggleUi?.addEventListener('click', () => this.toggleUi());
+    this.bindKeyboardShortcuts(hasHelpOverlay, hideHelp);
+  }
+
+  bindKeyboardShortcuts(hasHelpOverlay, hideHelp) {
+    const HDRI_PRESETS = ['noir-studio', 'luminous-sky', 'sunset-cove', 'steel-lab', 'cyberpunk'];
+
     document.addEventListener('keydown', (event) => {
+      // Don't trigger shortcuts when typing in inputs
+      const target = event.target;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        // Allow Escape to close modals even when in inputs
+        if (event.key === 'Escape') {
+          if (
+            hasHelpOverlay &&
+            hideHelp &&
+            this.dom.helpOverlay &&
+            !this.dom.helpOverlay.hidden
+          ) {
+            event.preventDefault();
+            hideHelp();
+          }
+        }
+        return;
+      }
+
       const key = event.key.toLowerCase();
-      if (key === 'v') {
+      const isShift = event.shiftKey;
+      const isCtrl = event.ctrlKey || event.metaKey;
+
+      // Essential shortcuts
+      if (key === 'f') {
+        event.preventDefault();
+        if (this.eventBus) {
+          this.eventBus.emit('camera:focus');
+        }
+      }
+
+      if (key === 'r') {
+        event.preventDefault();
+        if (this.eventBus) {
+          this.eventBus.emit('camera:reset');
+        }
+      }
+
+      // Display modes: 1/2/3/4
+      if (key === '1' || key === '2' || key === '3' || key === '4') {
+        event.preventDefault();
+        const modes = ['shaded', 'wireframe', 'clay', 'textures'];
+        const modeIndex = parseInt(key) - 1;
+        if (modes[modeIndex]) {
+          this.stateStore.set('shading', modes[modeIndex]);
+          this.eventBus.emit('mesh:shading', modes[modeIndex]);
+          // Update radio buttons
+          const radio = document.querySelector(`input[name="shading"][value="${modes[modeIndex]}"]`);
+          if (radio) radio.checked = true;
+        }
+      }
+
+      // Space - Play/Pause animation
+      if (key === ' ') {
+        event.preventDefault();
+        if (this.dom.playPause && !this.dom.playPause.disabled) {
+          this.eventBus.emit('animation:toggle');
+        }
+      }
+
+      // Arrow keys - Scrub animation
+      if (key === 'arrowleft') {
+        event.preventDefault();
+        if (this.dom.animationScrub && !this.dom.animationScrub.disabled) {
+          const current = parseFloat(this.dom.animationScrub.value) || 0;
+          const step = 0.01;
+          const newValue = Math.max(0, current - step);
+          this.dom.animationScrub.value = newValue;
+          this.eventBus.emit('animation:scrub', newValue);
+        }
+      }
+
+      if (key === 'arrowright') {
+        event.preventDefault();
+        if (this.dom.animationScrub && !this.dom.animationScrub.disabled) {
+          const current = parseFloat(this.dom.animationScrub.value) || 0;
+          const step = 0.01;
+          const newValue = Math.min(1, current + step);
+          this.dom.animationScrub.value = newValue;
+          this.eventBus.emit('animation:scrub', newValue);
+        }
+      }
+
+      // G - Toggle grid
+      if (key === 'g') {
+        event.preventDefault();
+        const current = this.stateStore.getState().groundWire;
+        this.stateStore.set('groundWire', !current);
+        this.eventBus.emit('studio:ground-wire', !current);
+        if (this.inputs.groundWire) {
+          this.inputs.groundWire.checked = !current;
+        }
+      }
+
+      // L - Toggle 3-point lighting
+      if (key === 'l') {
+        event.preventDefault();
+        const current = this.stateStore.getState().lightsEnabled;
+        this.stateStore.set('lightsEnabled', !current);
+        this.eventBus.emit('lights:enabled', !current);
+        if (this.inputs.lightsEnabled) {
+          this.inputs.lightsEnabled.checked = !current;
+        }
+      }
+
+      // H - Toggle UI visibility
+      if (key === 'h' || key === 'v') {
         event.preventDefault();
         this.toggleUi();
       }
-      if (
-        key === 'escape' &&
-        hasHelpOverlay &&
-        hideHelp &&
-        this.dom.helpOverlay &&
-        !this.dom.helpOverlay.hidden
-      ) {
-        hideHelp();
+
+      // Tab - Cycle through tabs
+      if (key === 'tab' && !isCtrl) {
+        event.preventDefault();
+        const tabs = ['mesh', 'studio', 'render'];
+        const currentIndex = tabs.indexOf(this.activeTab);
+        const nextIndex = isShift
+          ? (currentIndex - 1 + tabs.length) % tabs.length
+          : (currentIndex + 1) % tabs.length;
+        const nextTab = tabs[nextIndex];
+        this.activeTab = nextTab;
+        const tabButton = document.querySelector(`[data-tab="${nextTab}"]`);
+        if (tabButton) {
+          tabButton.click();
+        }
+      }
+
+      // Esc - Close modals/overlays
+      if (key === 'escape') {
+        if (
+          hasHelpOverlay &&
+          hideHelp &&
+          this.dom.helpOverlay &&
+          !this.dom.helpOverlay.hidden
+        ) {
+          event.preventDefault();
+          hideHelp();
+        }
+      }
+
+      // Useful shortcuts
+      // S - Focus on Scale slider (reset scale to 1)
+      if (key === 's') {
+        event.preventDefault();
+        this.stateStore.set('scale', 1);
+        this.eventBus.emit('mesh:scale', 1);
+        if (this.inputs.scale) {
+          this.inputs.scale.value = 1;
+          this.updateValueLabel('scale', '1.00×');
+        }
+      }
+
+      // Y - Focus on Y Offset slider (reset to 0)
+      if (key === 'y') {
+        event.preventDefault();
+        this.stateStore.set('yOffset', 0);
+        this.eventBus.emit('mesh:yOffset', 0);
+        if (this.inputs.yOffset) {
+          this.inputs.yOffset.value = 0;
+          this.updateValueLabel('yOffset', '0.00m');
+        }
+      }
+
+      // 0 - Reset transform (scale + Y offset)
+      if (key === '0') {
+        event.preventDefault();
+        this.stateStore.set('scale', 1);
+        this.stateStore.set('yOffset', 0);
+        this.eventBus.emit('mesh:scale', 1);
+        this.eventBus.emit('mesh:yOffset', 0);
+        if (this.inputs.scale) {
+          this.inputs.scale.value = 1;
+          this.updateValueLabel('scale', '1.00×');
+        }
+        if (this.inputs.yOffset) {
+          this.inputs.yOffset.value = 0;
+          this.updateValueLabel('yOffset', '0.00m');
+        }
+      }
+
+      // A - Toggle auto-rotate (cycles: off -> slow -> normal -> fast -> off)
+      if (key === 'a') {
+        event.preventDefault();
+        const current = this.stateStore.getState().autoRotate;
+        const speeds = [0, 0.2, 0.5, 1];
+        const currentIndex = speeds.indexOf(current);
+        const nextIndex = (currentIndex + 1) % speeds.length;
+        const newSpeed = speeds[nextIndex];
+        this.stateStore.set('autoRotate', newSpeed);
+        this.eventBus.emit('mesh:auto-rotate', newSpeed);
+        // Update radio buttons
+        const radio = document.querySelector(`input[name="autorotate"][value="${newSpeed}"]`);
+        if (radio) radio.checked = true;
+      }
+
+      // P - Toggle podium
+      if (key === 'p') {
+        event.preventDefault();
+        const current = this.stateStore.getState().groundSolid;
+        this.stateStore.set('groundSolid', !current);
+        this.eventBus.emit('studio:ground-solid', !current);
+        if (this.inputs.groundSolid) {
+          this.inputs.groundSolid.checked = !current;
+        }
+      }
+
+      // B - Toggle HDRI background visibility
+      if (key === 'b') {
+        event.preventDefault();
+        const current = this.stateStore.getState().hdriBackground;
+        this.stateStore.set('hdriBackground', !current);
+        this.eventBus.emit('studio:hdri-background', !current);
+        if (this.inputs.hdriBackground) {
+          this.inputs.hdriBackground.checked = !current;
+        }
+      }
+
+      // [ / ] - Cycle through HDRI presets
+      if (key === '[' || key === ']') {
+        event.preventDefault();
+        const state = this.stateStore.getState();
+        const currentPreset = state.hdri || 'noir-studio';
+        let currentIndex = HDRI_PRESETS.indexOf(currentPreset);
+        if (currentIndex === -1) {
+          currentIndex = 0; // Fallback to first preset
+        }
+        const direction = key === '[' ? -1 : 1;
+        const nextIndex = (currentIndex + direction + HDRI_PRESETS.length) % HDRI_PRESETS.length;
+        const nextPreset = HDRI_PRESETS[nextIndex];
+        this.stateStore.set('hdri', nextPreset);
+        this.eventBus.emit('studio:hdri', nextPreset);
+        // Update active button
+        this.setHdriActive(nextPreset);
       }
     });
   }
