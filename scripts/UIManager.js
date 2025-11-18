@@ -51,6 +51,9 @@ export class UIManager {
       shading: document.querySelectorAll('input[name="shading"]'),
       scale: q('#scaleControl'),
       yOffset: q('#yOffsetControl'),
+      rotationX: q('#rotationXControl'),
+      rotationY: q('#rotationYControl'),
+      rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
@@ -281,6 +284,24 @@ export class UIManager {
       this.updateValueLabel('yOffset', `${value.toFixed(2)}m`);
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
+    });
+    this.inputs.rotationX.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('rotationX', `${Math.round(value)}°`);
+      this.stateStore.set('rotationX', value);
+      this.eventBus.emit('mesh:rotationX', value);
+    });
+    this.inputs.rotationY.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('rotationY', `${Math.round(value)}°`);
+      this.stateStore.set('rotationY', value);
+      this.eventBus.emit('mesh:rotationY', value);
+    });
+    this.inputs.rotationZ.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('rotationZ', `${Math.round(value)}°`);
+      this.stateStore.set('rotationZ', value);
+      this.eventBus.emit('mesh:rotationZ', value);
     });
     // Transform reset is now handled by bindLocalResetButtons
     this.inputs.autoRotate.forEach((input) => {
@@ -796,13 +817,19 @@ export class UIManager {
         }
       }
 
-      // 0 - Reset transform (scale + Y offset)
+      // 0 - Reset transform (scale + Y offset + rotations)
       if (key === '0') {
         event.preventDefault();
         this.stateStore.set('scale', 1);
         this.stateStore.set('yOffset', 0);
+        this.stateStore.set('rotationX', 0);
+        this.stateStore.set('rotationY', 0);
+        this.stateStore.set('rotationZ', 0);
         this.eventBus.emit('mesh:scale', 1);
         this.eventBus.emit('mesh:yOffset', 0);
+        this.eventBus.emit('mesh:rotationX', 0);
+        this.eventBus.emit('mesh:rotationY', 0);
+        this.eventBus.emit('mesh:rotationZ', 0);
         if (this.inputs.scale) {
           this.inputs.scale.value = 1;
           this.updateValueLabel('scale', '1.00×');
@@ -810,6 +837,18 @@ export class UIManager {
         if (this.inputs.yOffset) {
           this.inputs.yOffset.value = 0;
           this.updateValueLabel('yOffset', '0.00m');
+        }
+        if (this.inputs.rotationX) {
+          this.inputs.rotationX.value = 0;
+          this.updateValueLabel('rotationX', '0°');
+        }
+        if (this.inputs.rotationY) {
+          this.inputs.rotationY.value = 0;
+          this.updateValueLabel('rotationY', '0°');
+        }
+        if (this.inputs.rotationZ) {
+          this.inputs.rotationZ.value = 0;
+          this.updateValueLabel('rotationZ', '0°');
         }
       }
 
@@ -1211,8 +1250,14 @@ export class UIManager {
           case 'transform':
             this.stateStore.set('scale', defaults.scale);
             this.stateStore.set('yOffset', defaults.yOffset);
+            this.stateStore.set('rotationX', defaults.rotationX);
+            this.stateStore.set('rotationY', defaults.rotationY);
+            this.stateStore.set('rotationZ', defaults.rotationZ);
             this.eventBus.emit('mesh:scale', defaults.scale);
             this.eventBus.emit('mesh:yOffset', defaults.yOffset);
+            this.eventBus.emit('mesh:rotationX', defaults.rotationX);
+            this.eventBus.emit('mesh:rotationY', defaults.rotationY);
+            this.eventBus.emit('mesh:rotationZ', defaults.rotationZ);
             this.eventBus.emit('mesh:reset-transform');
             this.syncUIFromState();
             break;
@@ -1434,6 +1479,18 @@ export class UIManager {
     this.updateValueLabel('scale', `${state.scale.toFixed(2)}×`);
     this.inputs.yOffset.value = state.yOffset;
     this.updateValueLabel('yOffset', `${state.yOffset.toFixed(2)}m`);
+    if (this.inputs.rotationX) {
+      this.inputs.rotationX.value = state.rotationX ?? 0;
+      this.updateValueLabel('rotationX', `${Math.round(state.rotationX ?? 0)}°`);
+    }
+    if (this.inputs.rotationY) {
+      this.inputs.rotationY.value = state.rotationY ?? 0;
+      this.updateValueLabel('rotationY', `${Math.round(state.rotationY ?? 0)}°`);
+    }
+    if (this.inputs.rotationZ) {
+      this.inputs.rotationZ.value = state.rotationZ ?? 0;
+      this.updateValueLabel('rotationZ', `${Math.round(state.rotationZ ?? 0)}°`);
+    }
     if (this.inputs.showNormals) {
     this.inputs.showNormals.checked = state.showNormals;
     }

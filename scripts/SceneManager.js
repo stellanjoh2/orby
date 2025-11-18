@@ -702,6 +702,9 @@ export class SceneManager {
   registerEvents() {
     this.eventBus.on('mesh:scale', (value) => this.setScale(value));
     this.eventBus.on('mesh:yOffset', (value) => this.setYOffset(value));
+    this.eventBus.on('mesh:rotationX', (value) => this.setRotationX(value));
+    this.eventBus.on('mesh:rotationY', (value) => this.setRotationY(value));
+    this.eventBus.on('mesh:rotationZ', (value) => this.setRotationZ(value));
     this.eventBus.on('mesh:shading', (mode) => this.setShading(mode));
     this.eventBus.on('mesh:normals', (enabled) => this.toggleNormals(enabled));
     this.eventBus.on('mesh:auto-rotate', (speed) => {
@@ -839,6 +842,9 @@ export class SceneManager {
   async applyStateSnapshot(state) {
     this.setScale(state.scale);
     this.setYOffset(state.yOffset);
+    this.setRotationX(state.rotationX ?? 0);
+    this.setRotationY(state.rotationY ?? 0);
+    this.setRotationZ(state.rotationZ ?? 0);
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
@@ -2038,6 +2044,9 @@ export class SceneManager {
     const state = this.stateStore.getState();
     this.setScale(state.scale);
     this.setYOffset(state.yOffset);
+    this.setRotationX(state.rotationX ?? 0);
+    this.setRotationY(state.rotationY ?? 0);
+    this.setRotationZ(state.rotationZ ?? 0);
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.refreshBoneHelpers();
@@ -2193,6 +2202,21 @@ export class SceneManager {
   setYOffset(value) {
     if (!this.modelRoot) return;
     this.modelRoot.position.y = value;
+  }
+
+  setRotationX(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.rotation.x = THREE.MathUtils.degToRad(value);
+  }
+
+  setRotationY(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.rotation.y = THREE.MathUtils.degToRad(value);
+  }
+
+  setRotationZ(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.rotation.z = THREE.MathUtils.degToRad(value);
   }
 
   setShading(mode) {
