@@ -46,6 +46,9 @@ export class UIManager {
     this.dom.playPause = q('#playPause');
     this.dom.animationScrub = q('#animationScrub');
     this.dom.animationTime = q('#animationTime');
+    this.dom.rotationNotches = document.querySelectorAll(
+      '[data-rotation-axis]',
+    );
 
     this.inputs = {
       shading: document.querySelectorAll('input[name="shading"]'),
