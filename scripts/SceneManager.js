@@ -385,7 +385,7 @@ export class SceneManager {
     this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
     this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
     this.groundY = initialState.groundY ?? 0;
-    this.groundHeight = initialState.groundHeight ?? 1;
+    this.groundHeight = 0.1; // Fixed height for podium
     this.currentExposure = initialState.exposure ?? 1;
     this.hdriStrength = Math.min(
       3 * HDRI_STRENGTH_UNIT,
@@ -768,9 +768,6 @@ export class SceneManager {
       this.setGroundWireOpacity(value),
     );
     this.eventBus.on('studio:ground-y', (value) => this.setGroundY(value));
-    this.eventBus.on('studio:ground-height', (value) =>
-      this.setGroundHeight(value),
-    );
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
       const light = this.lights[lightId];
@@ -1376,18 +1373,6 @@ export class SceneManager {
     if (this.grid) this.grid.position.y = value;
   }
 
-  setGroundHeight(value) {
-    const clamped = Math.max(0.1, value);
-    if (Math.abs(clamped - this.groundHeight) < 0.0001) return;
-    this.groundHeight = clamped;
-    const state = this.stateStore.getState();
-    this.buildGroundMeshes();
-    this.setGroundSolid(state.groundSolid);
-    this.setGroundWire(state.groundWire);
-    this.setGroundSolidColor(state.groundSolidColor);
-    this.setGroundWireColor(state.groundWireColor);
-    this.setGroundWireOpacity(state.groundWireOpacity ?? this.groundWireOpacity);
-  }
 
   disposeGroundMeshes() {
     if (this.podium) {

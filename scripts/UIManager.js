@@ -67,7 +67,6 @@ export class UIManager {
       groundWireColor: q('#groundWireColor'),
       groundWireOpacity: q('#groundWireOpacity'),
       groundY: q('#groundY'),
-      groundHeight: q('#groundHeight'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
@@ -391,12 +390,6 @@ export class UIManager {
       this.updateValueLabel('groundY', `${value.toFixed(2)}m`);
       this.stateStore.set('groundY', value);
       this.eventBus.emit('studio:ground-y', value);
-    });
-    this.inputs.groundHeight.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('groundHeight', `${value.toFixed(2)}m`);
-      this.stateStore.set('groundHeight', value);
-      this.eventBus.emit('studio:ground-height', value);
     });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
@@ -916,7 +909,6 @@ export class UIManager {
         groundWireColor: state.groundWireColor,
         groundWireOpacity: state.groundWireOpacity,
         groundY: state.groundY,
-        groundHeight: state.groundHeight,
         background: state.background,
         lights: state.lights,
         lightsEnabled: state.lightsEnabled,
@@ -977,7 +969,6 @@ export class UIManager {
       this.stateStore.set('groundWire', defaults.groundWire);
       this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
       this.stateStore.set('groundY', defaults.groundY);
-      this.stateStore.set('groundHeight', defaults.groundHeight);
       this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
       this.stateStore.set('groundWireColor', defaults.groundWireColor);
       this.stateStore.set('background', defaults.background);
@@ -1002,7 +993,6 @@ export class UIManager {
       this.eventBus.emit('studio:ground-wire', defaults.groundWire);
       this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
       this.eventBus.emit('studio:ground-y', defaults.groundY);
-      this.eventBus.emit('studio:ground-height', defaults.groundHeight);
       this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
       this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
       this.eventBus.emit('scene:background', defaults.background);
@@ -1139,10 +1129,8 @@ export class UIManager {
           case 'podium':
             this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
             this.stateStore.set('groundY', defaults.groundY);
-            this.stateStore.set('groundHeight', defaults.groundHeight);
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
-            this.eventBus.emit('studio:ground-height', defaults.groundHeight);
             this.syncUIFromState();
             break;
             
@@ -1487,8 +1475,6 @@ export class UIManager {
     );
     this.inputs.groundY.value = state.groundY;
     this.updateValueLabel('groundY', `${state.groundY.toFixed(2)}m`);
-    this.inputs.groundHeight.value = state.groundHeight;
-    this.updateValueLabel('groundHeight', `${state.groundHeight.toFixed(2)}m`);
     if (this.inputs.lightsRotation) {
       this.inputs.lightsRotation.value = state.lightsRotation ?? 0;
       this.updateValueLabel(
