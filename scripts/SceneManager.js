@@ -17,23 +17,64 @@ import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/
 import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
 
 const HDRI_PRESETS = {
-  'noir-studio': './assets/hdris/noir-studio.hdr',
-  'luminous-sky': { url: './assets/hdris/free hdr_map_811.jpg', type: 'ldr' },
-  'sunset-cove': './assets/hdris/sunset-cove.hdr',
-  'steel-lab': { url: './assets/hdris/hdri_sky_782.jpg', type: 'ldr' },
-  cyberpunk: './assets/hdris/ghost-luxe.hdr',
+  'congress': { url: './assets/hdris/MR_INT-009_NeonsLines_PalaisCongres_4k.jpg', type: 'ldr' },
+  'luminous-sky': { url: './assets/hdris/MR_EXT-003_Forest_MontRoyal_4k.jpg', type: 'ldr' },
+  'meadow': { url: './assets/hdris/MR_EXT-007_SunMeadow_LungernSwitzerland_4k.jpg', type: 'ldr' },
+  'abandoned': { url: './assets/hdris/MR_INT-022_RefugeWindowHighContrast_Aorai_4k.jpg', type: 'ldr' },
+  beach: { url: './assets/hdris/MR_EXT-010_BlueEndDayPinkClouds_Moorea_4k.jpg', type: 'ldr' },
+  sunset: { url: './assets/hdris/MR_EXT-014_SunsetTropicalMountains_4k.jpg', type: 'ldr' },
 };
 
 const HDRI_STRENGTH_UNIT = 0.4;
 
 const HDRI_MOODS = {
-  cyberpunk: {
-    bloomTint: '#ff4df9',
-    bloomStrengthMin: 0.7,
-    bloomRadiusMin: 0.8,
-    grainTint: '#00e8ff',
-    podiumColor: '#1f233f',
-    background: '#050014',
+  congress: {
+    bloomTint: '#f0f4f8',
+    bloomStrengthMin: 0.3,
+    bloomRadiusMin: 0.75,
+    grainTint: '#ffffff',
+    podiumColor: '#e8e8e8',
+    background: '#f5f5f5',
+  },
+  'luminous-sky': {
+    bloomTint: '#a8d5a3',
+    bloomStrengthMin: 0.4,
+    bloomRadiusMin: 0.75,
+    grainTint: '#d4e8d0',
+    podiumColor: '#3a4a2f',
+    background: '#2d3a24',
+  },
+  sunset: {
+    bloomTint: '#ff8c5a',
+    bloomStrengthMin: 0.4,
+    bloomRadiusMin: 0.75,
+    grainTint: '#ffd4a8',
+    podiumColor: '#4a3a2a',
+    background: '#2a1f15',
+  },
+  meadow: {
+    bloomTint: '#fff4a8',
+    bloomStrengthMin: 0.4,
+    bloomRadiusMin: 0.75,
+    grainTint: '#fff8d4',
+    podiumColor: '#6b7a4a',
+    background: '#4a5a35',
+  },
+  beach: {
+    bloomTint: '#ffb3d9',
+    bloomStrengthMin: 0.4,
+    bloomRadiusMin: 0.75,
+    grainTint: '#ffe5cc',
+    podiumColor: '#d4c5a9',
+    background: '#5a7fb5',
+  },
+  abandoned: {
+    bloomTint: '#8b6f47',
+    bloomStrengthMin: 0.35,
+    bloomRadiusMin: 0.75,
+    grainTint: '#a68b6b',
+    podiumColor: '#4a3a2a',
+    background: '#2a1f15',
   },
 };
 
@@ -768,7 +809,6 @@ export class SceneManager {
       this.setToneMapping(value);
     });
 
-    this.eventBus.on('scene:fog', (fog) => this.updateFog(fog));
     this.eventBus.on('scene:background', (color) =>
       this.updateBackgroundColor(color),
     );
@@ -833,7 +873,6 @@ export class SceneManager {
     this.updateBloom(state.bloom);
     this.updateGrain(state.grain);
     this.updateAberration(state.aberration);
-    this.updateFog(state.fog);
     this.updateBackgroundColor(state.background);
     if (this.fxaaPass) {
       this.fxaaPass.enabled = (state.antiAliasing ?? 'none') === 'fxaa';
@@ -1536,6 +1575,8 @@ export class SceneManager {
         style.bloomRadiusMin ?? 0,
         bloomState.radius,
       );
+      // Update state store so UI reflects the mood's color
+      this.stateStore.set('bloom', bloomState);
       this.updateBloom(bloomState);
     }
     if (this.grainTintPass) {
@@ -1543,6 +1584,10 @@ export class SceneManager {
         ...state.grain,
         color: style.grainTint ?? state.grain.color,
       };
+      // Update state store so UI reflects the mood's color
+      if (style.grainTint) {
+        this.stateStore.set('grain', grainState);
+      }
       this.updateGrain(grainState);
     }
   }
@@ -1579,38 +1624,48 @@ export class SceneManager {
       return;
     }
 
+    // Always re-patch if material was replaced or uniforms are missing
+    // This ensures Fresnel works even after material updates/recompilations
     if (material.userData.fresnelPatched) {
       const uniforms = material.userData.fresnelUniforms;
-      // If uniforms don't exist, the material was likely replaced/recreated
-      // Re-patch it instead of trying to update non-existent uniforms
-      if (!uniforms || !uniforms.color) {
-        // Clear the flag and re-patch
-        delete material.userData.fresnelPatched;
-        delete material.userData.originalOnBeforeCompile;
-        // Fall through to re-patch below
-      } else {
-        // Update existing uniforms
+      // If uniforms exist and are valid, just update values
+      if (uniforms && uniforms.color && uniforms.color.value) {
         uniforms.color.value.set(settings.color);
         uniforms.strength.value = settings.strength;
         uniforms.power.value = Math.max(0.1, settings.radius);
+        // Force shader recompilation to ensure uniforms are applied
+        material.needsUpdate = true;
         return;
       }
+      // If uniforms are missing, clear flag and re-patch
+      delete material.userData.fresnelPatched;
+      delete material.userData.originalOnBeforeCompile;
     }
 
+    // Create new patch - this handles both new materials and re-patching
     const original = material.onBeforeCompile;
     material.userData.originalOnBeforeCompile = original;
+    
+    // Create uniforms that will be stored and reused
+    const uniforms = {
+      color: { value: new THREE.Color(settings.color) },
+      strength: { value: settings.strength },
+      power: { value: Math.max(0.1, settings.radius) },
+    };
+    
+    // Store uniforms before patching so they're available even if shader recompiles
+    material.userData.fresnelUniforms = uniforms;
+    
     material.onBeforeCompile = (shader) => {
       original?.(shader);
-      const uniforms = {
-        color: { value: new THREE.Color(settings.color) },
-        strength: { value: settings.strength },
-        power: {
-          value: Math.max(0.1, settings.radius),
-        },
-      };
-      shader.uniforms.fresnelColor = uniforms.color;
-      shader.uniforms.fresnelStrength = uniforms.strength;
-      shader.uniforms.fresnelPower = uniforms.power;
+      
+      // Use stored uniforms or create new ones if missing (defensive)
+      const fresnelUniforms = material.userData.fresnelUniforms || uniforms;
+      
+      shader.uniforms.fresnelColor = fresnelUniforms.color;
+      shader.uniforms.fresnelStrength = fresnelUniforms.strength;
+      shader.uniforms.fresnelPower = fresnelUniforms.power;
+      
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <common>',
         `
@@ -1632,7 +1687,9 @@ export class SceneManager {
         totalEmissiveRadiance += fresnelContribution;
       `,
       );
-      material.userData.fresnelUniforms = uniforms;
+      
+      // Ensure uniforms are stored after shader compilation
+      material.userData.fresnelUniforms = fresnelUniforms;
     };
     material.userData.fresnelPatched = true;
     material.needsUpdate = true;
@@ -1729,24 +1786,6 @@ export class SceneManager {
     this.aberrationPass.uniforms.strength.value = settings.strength;
   }
 
-  updateFog(fog) {
-    if (!fog) {
-      this.scene.fog = null;
-      return;
-    }
-    if (fog.type === 'none') {
-      this.scene.fog = null;
-      return;
-    }
-    const color = new THREE.Color(fog.color);
-    if (fog.type === 'linear') {
-      this.scene.fog = new THREE.Fog(color, fog.near, fog.near + 200);
-    } else if (fog.type === 'exp') {
-      this.scene.fog = new THREE.FogExp2(color, fog.density);
-    } else if (fog.type === 'exp2') {
-      this.scene.fog = new THREE.FogExp2(color, fog.density);
-    }
-  }
 
   updateBackgroundColor(color) {
     this.backgroundColor = color;
@@ -2258,12 +2297,13 @@ export class SceneManager {
     });
     this.unlitMode = mode === 'textures';
     this.refreshBoneHelpers();
-    this.applyFresnelToModel(this.currentModel);
     // Apply current HDRI environment settings after shading change
     if (this.scene.environment) {
       const intensity = Math.max(0, this.hdriStrength);
       this.updateMaterialsEnvironment(this.scene.environment, intensity);
     }
+    // Re-apply Fresnel after material updates (important: do this AFTER environment update)
+    this.applyFresnelToModel(this.currentModel);
   }
 
   toggleNormals(enabled) {
