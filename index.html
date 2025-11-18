@@ -251,20 +251,23 @@
                   </div>
                 </div>
                 <div class="hdri-grid" id="hdriGrid">
-                  <button data-hdri="noir-studio" class="hdri-card active">
-                    Noir Studio
+                  <button data-hdri="congress" class="hdri-card active">
+                    Congress
                   </button>
                   <button data-hdri="luminous-sky" class="hdri-card">
-                    Luminous Sky
+                    Forest
                   </button>
-                  <button data-hdri="sunset-cove" class="hdri-card">
-                    Sunset Cove
+                  <button data-hdri="sunset" class="hdri-card">
+                    Sunset
                   </button>
-                  <button data-hdri="steel-lab" class="hdri-card">
-                    Steel Lab
+                  <button data-hdri="meadow" class="hdri-card">
+                    Meadow
                   </button>
-                  <button data-hdri="cyberpunk" class="hdri-card">
-                    Cyberpunk
+                  <button data-hdri="abandoned" class="hdri-card">
+                    Abandoned
+                  </button>
+                  <button data-hdri="beach" class="hdri-card">
+                    Beach
                   </button>
                 </div>
                 <label class="slider-line">
@@ -563,10 +566,10 @@
                     type="range"
                     min="0"
                     max="2"
-                    value="0.49"
+                    value="0.4"
                     step="0.01"
                   />
-                  <span class="value" data-output="bloomStrength">0.49</span>
+                  <span class="value" data-output="bloomStrength">0.40</span>
                 </label>
                 <label class="slider-line">
                   <span>Radius</span>
@@ -575,10 +578,14 @@
                     type="range"
                     min="0"
                     max="1"
-                    value="0.94"
+                    value="0.75"
                     step="0.01"
                   />
-                  <span class="value" data-output="bloomRadius">0.94</span>
+                  <span class="value" data-output="bloomRadius">0.75</span>
+                </label>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
                 </label>
               </div>
 
@@ -696,62 +703,6 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title has-toggle">
-                  <span>Fog</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="fog">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="toggleFog" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Fog</span>
-                    </label>
-                  </div>
-                </div>
-                <label class="select-line">
-                  <span>Type</span>
-                  <select id="fogType">
-                    <option value="none" selected>None</option>
-                    <option value="linear">Linear</option>
-                    <option value="exp">Exp</option>
-                    <option value="exp2">Exp²</option>
-                  </select>
-                </label>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="fogColor"
-                    class="color-chip"
-                    value="#10121a"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Near</span>
-                  <input
-                    id="fogNear"
-                    type="range"
-                    min="0.1"
-                    max="200"
-                    value="85.8"
-                    step="0.1"
-                  />
-                  <span class="value" data-output="fogNear">85.8m</span>
-                </label>
-                <label class="slider-line">
-                  <span>Density</span>
-                  <input
-                    id="fogDensity"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0.462"
-                    step="0.001"
-                  />
-                  <span class="value" data-output="fogDensity">0.462</span>
-                </label>
-              </div>
-
-              <div class="panel-block">
                 <div class="block-title has-reset">
                   <span>Camera & Exposure</span>
                   <button class="block-reset-btn" data-reset="camera">Reset</button>
@@ -775,10 +726,10 @@
                     type="range"
                     min="0"
                     max="3"
-                    value="0.75"
+                    value="1.0"
                     step="0.01"
                   />
-                  <span class="value" data-output="exposure">0.75</span>
+                  <span class="value" data-output="exposure">1.00</span>
                 </label>
               </div>
 

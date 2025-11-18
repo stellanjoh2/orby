@@ -81,6 +81,7 @@ export class UIManager {
       bloomThreshold: q('#bloomThreshold'),
       bloomStrength: q('#bloomStrength'),
       bloomRadius: q('#bloomRadius'),
+      bloomColor: q('#bloomColor'),
       toggleBloom: q('#toggleBloom'),
       grainIntensity: q('#grainIntensity'),
       toggleGrain: q('#toggleGrain'),
@@ -91,10 +92,6 @@ export class UIManager {
       fresnelColor: q('#fresnelColor'),
       fresnelRadius: q('#fresnelRadius'),
       fresnelStrength: q('#fresnelStrength'),
-      fogType: q('#fogType'),
-      fogColor: q('#fogColor'),
-      fogNear: q('#fogNear'),
-      fogDensity: q('#fogDensity'),
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
       exposure: q('#exposure'),
@@ -476,7 +473,7 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('bloom.enabled', enabled);
       this.setEffectControlsDisabled(
-        ['bloomThreshold', 'bloomStrength', 'bloomRadius'],
+        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
         !enabled,
       );
       emitBloom();
@@ -492,6 +489,11 @@ export class UIManager {
         this.stateStore.set(`bloom.${property}`, value);
         emitBloom();
       });
+    });
+    this.inputs.bloomColor.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('bloom.color', value);
+      emitBloom();
     });
 
     const emitGrain = () =>
@@ -563,29 +565,6 @@ export class UIManager {
       this.updateValueLabel('fresnelStrength', value.toFixed(2));
       this.stateStore.set('fresnel.strength', value);
       emitFresnel();
-    });
-
-    const emitFog = () =>
-      this.eventBus.emit('scene:fog', this.stateStore.getState().fog);
-    this.inputs.fogType.addEventListener('change', (event) => {
-      this.stateStore.set('fog.type', event.target.value);
-      emitFog();
-    });
-    this.inputs.fogColor.addEventListener('input', (event) => {
-      this.stateStore.set('fog.color', event.target.value);
-      emitFog();
-    });
-    this.inputs.fogNear.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('fogNear', `${value.toFixed(1)}m`);
-      this.stateStore.set('fog.near', value);
-      emitFog();
-    });
-    this.inputs.fogDensity.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('fogDensity', value.toFixed(3));
-      this.stateStore.set('fog.density', value);
-      emitFog();
     });
 
     this.inputs.backgroundColor.addEventListener('input', (event) => {
@@ -955,7 +934,6 @@ export class UIManager {
         grain: state.grain,
         aberration: state.aberration,
         fresnel: state.fresnel,
-        fog: state.fog,
         exposure: state.exposure,
         background: state.background,
       };
@@ -1061,7 +1039,6 @@ export class UIManager {
       this.stateStore.set('grain', defaults.grain);
       this.stateStore.set('aberration', defaults.aberration);
       this.stateStore.set('fresnel', defaults.fresnel);
-      this.stateStore.set('fog', defaults.fog);
       this.stateStore.set('camera', defaults.camera);
       this.stateStore.set('exposure', defaults.exposure);
       this.stateStore.set('antiAliasing', defaults.antiAliasing);
@@ -1075,7 +1052,7 @@ export class UIManager {
       );
       this.eventBus.emit('render:bloom', defaults.bloom);
       this.setEffectControlsDisabled(
-        ['bloomThreshold', 'bloomStrength', 'bloomRadius'],
+        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
         !defaults.bloom.enabled,
       );
       this.eventBus.emit('render:grain', defaults.grain);
@@ -1090,7 +1067,6 @@ export class UIManager {
         ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
         !defaults.fresnel.enabled,
       );
-      this.eventBus.emit('scene:fog', defaults.fog);
       this.eventBus.emit('camera:fov', defaults.camera.fov);
       this.eventBus.emit('scene:exposure', defaults.exposure);
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
@@ -1198,7 +1174,7 @@ export class UIManager {
             this.stateStore.set('bloom', defaults.bloom);
             this.eventBus.emit('render:bloom', defaults.bloom);
             this.setEffectControlsDisabled(
-              ['bloomThreshold', 'bloomStrength', 'bloomRadius'],
+              ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
               !defaults.bloom.enabled,
             );
             this.syncUIFromState();
@@ -1231,11 +1207,6 @@ export class UIManager {
             this.syncUIFromState();
             break;
             
-          case 'fog':
-            this.stateStore.set('fog', defaults.fog);
-            this.eventBus.emit('scene:fog', defaults.fog);
-            this.syncUIFromState();
-            break;
             
           case 'camera':
             this.stateStore.set('camera', defaults.camera);
@@ -1550,6 +1521,9 @@ export class UIManager {
     this.updateValueLabel('bloomStrength', state.bloom.strength.toFixed(2));
     this.inputs.bloomRadius.value = state.bloom.radius;
     this.updateValueLabel('bloomRadius', state.bloom.radius.toFixed(2));
+    if (this.inputs.bloomColor && state.bloom.color) {
+      this.inputs.bloomColor.value = state.bloom.color;
+    }
     this.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
     this.updateValueLabel(
       'grainIntensity',
@@ -1575,12 +1549,6 @@ export class UIManager {
       'fresnelStrength',
       state.fresnel.strength.toFixed(2),
     );
-    this.inputs.fogType.value = state.fog.type;
-    this.inputs.fogColor.value = state.fog.color;
-    this.inputs.fogNear.value = state.fog.near;
-    this.updateValueLabel('fogNear', `${state.fog.near.toFixed(1)}m`);
-    this.inputs.fogDensity.value = state.fog.density;
-    this.updateValueLabel('fogDensity', state.fog.density.toFixed(3));
     this.inputs.cameraFov.value = state.camera.fov;
     this.updateValueLabel('cameraFov', `${state.camera.fov.toFixed(0)}°`);
     this.inputs.exposure.value = state.exposure;
