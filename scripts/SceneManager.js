@@ -15,6 +15,7 @@ import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/js
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js';
 import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
+import { LensFlareEffect } from './LensFlareEffect.js';
 
 const HDRI_PRESETS = {
   'congress': { url: './assets/hdris/MR_INT-009_NeonsLines_PalaisCongres_4k.jpg', type: 'ldr' },
@@ -370,6 +371,7 @@ export class SceneManager {
       0.1,
       5000,
     );
+    this.scene.add(this.camera);
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
@@ -439,6 +441,12 @@ export class SceneManager {
     this.currentClipIndex = 0;
     this.animations = [];
     this.unlitMode = false;
+    const defaults = this.stateStore.getDefaults();
+    this.lensFlareState = {
+      ...defaults.lensFlare,
+      ...(initialState.lensFlare ?? {}),
+    };
+    this.lensFlareEnabled = this.lensFlareState.enabled ?? false;
 
     this.hdriCache = new Map();
     this.hdriEnabled = initialState.hdriEnabled ?? true;
@@ -479,6 +487,7 @@ export class SceneManager {
     this.setupLights();
     this.setupGround();
     this.setupComposer();
+    this.setupLensFlare(this.lensFlareState);
     this.registerEvents();
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
@@ -597,6 +606,20 @@ export class SceneManager {
     this.composer.addPass(this.fxaaPass);
     this.composer.addPass(this.exposurePass);
     this.composer.addPass(this.toneMappingPass); // Last pass - applies tone mapping
+  }
+
+  setupLensFlare(initialLensFlare) {
+    const state = initialLensFlare ?? this.stateStore.getDefaults().lensFlare;
+    this.lensFlare = new LensFlareEffect({
+      enabled: (state.enabled ?? false) && this.hdriEnabled,
+      rotation: state.rotation ?? 0,
+      height: state.height ?? 2,
+      color: state.color ?? '#da541b',
+      quality: state.quality ?? 'maximum',
+    });
+    this.camera.add(this.lensFlare);
+    this.lensFlare.position.set(0, 0, -1);
+    this.lensFlare.userData.lensflare = 'no-occlusion';
   }
 
   setupCustomMouseControls() {
@@ -755,6 +778,21 @@ export class SceneManager {
     this.eventBus.on('studio:hdri-background', (enabled) =>
       this.setHdriBackground(enabled),
     );
+    this.eventBus.on('studio:lens-flare-enabled', (enabled) =>
+      this.setLensFlareEnabled(enabled),
+    );
+    this.eventBus.on('studio:lens-flare-rotation', (value) =>
+      this.setLensFlareRotation(value),
+    );
+    this.eventBus.on('studio:lens-flare-height', (value) =>
+      this.setLensFlareHeight(value),
+    );
+    this.eventBus.on('studio:lens-flare-color', (value) =>
+      this.setLensFlareColor(value),
+    );
+    this.eventBus.on('studio:lens-flare-quality', (value) =>
+      this.setLensFlareQuality(value),
+    );
     this.eventBus.on('studio:ground-solid', (enabled) => {
       this.setGroundSolid(enabled);
     });
@@ -886,6 +924,16 @@ export class SceneManager {
     this.setHdriRotation(state.hdriRotation ?? 0);
     this.setHdriEnabled(state.hdriEnabled);
     this.setHdriBackground(state.hdriBackground);
+    const lensDefaults = this.stateStore.getDefaults().lensFlare;
+    const lensState = {
+      ...lensDefaults,
+      ...(state.lensFlare ?? {}),
+    };
+    this.setLensFlareHeight(lensState.height ?? 0);
+    this.setLensFlareColor(lensState.color ?? '#da541b');
+    this.setLensFlareQuality(lensState.quality ?? 'maximum');
+    this.setLensFlareRotation(lensState.rotation ?? 0);
+    this.setLensFlareEnabled(lensState.enabled ?? false);
     await this.setHdriPreset(state.hdri);
   }
 
@@ -1137,10 +1185,44 @@ export class SceneManager {
     this.applyHdriMood(this.currentHdri);
   }
 
+  setLensFlareEnabled(enabled) {
+    this.lensFlareEnabled = !!enabled;
+    if (this.lensFlare) {
+      this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
+    }
+  }
+
+  setLensFlareRotation(value) {
+    if (this.lensFlare) {
+      this.lensFlare.setRotation(value ?? 0);
+    }
+  }
+
+  setLensFlareHeight(value) {
+    if (this.lensFlare) {
+      this.lensFlare.setHeight(value ?? 0);
+    }
+  }
+
+  setLensFlareColor(value) {
+    if (this.lensFlare && value) {
+      this.lensFlare.setColor(value);
+    }
+  }
+
+  setLensFlareQuality(mode) {
+    if (this.lensFlare && mode) {
+      this.lensFlare.setQuality(mode);
+    }
+  }
+
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
     this.applyHdriMood(this.currentHdri);
+    if (this.lensFlare) {
+      this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
+    }
   }
 
   setToneMapping(value) {

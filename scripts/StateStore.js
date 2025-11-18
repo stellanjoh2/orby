@@ -49,6 +49,13 @@ export class StateStore {
       lightsMaster: 1,
       lightsRotation: 0,
       lightsAutoRotate: false,
+      lensFlare: {
+        enabled: false,
+        rotation: 0,
+        height: 15,
+        color: '#da541b',
+        quality: 'maximum',
+      },
       dof: {
         enabled: false,
         focus: 10,
