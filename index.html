@@ -179,7 +179,17 @@
                     value="0"
                     step="1"
                   />
-                  <span class="value" data-output="rotationX">0°</span>
+                  <div class="slider-value-group">
+                    <span class="value" data-output="rotationX">0°</span>
+                    <button
+                      type="button"
+                      class="rotation-notch"
+                      data-rotation-axis="x"
+                      aria-label="Rotate X by 90°"
+                    >
+                      <i data-lucide="rotate-ccw"></i>
+                    </button>
+                  </div>
                 </label>
                 <label class="slider-line">
                   <span>Rotate Y</span>
@@ -191,7 +201,17 @@
                     value="0"
                     step="1"
                   />
-                  <span class="value" data-output="rotationY">0°</span>
+                  <div class="slider-value-group">
+                    <span class="value" data-output="rotationY">0°</span>
+                    <button
+                      type="button"
+                      class="rotation-notch"
+                      data-rotation-axis="y"
+                      aria-label="Rotate Y by 90°"
+                    >
+                      <i data-lucide="rotate-ccw"></i>
+                    </button>
+                  </div>
                 </label>
                 <label class="slider-line">
                   <span>Rotate Z</span>
@@ -203,7 +223,17 @@
                     value="0"
                     step="1"
                   />
-                  <span class="value" data-output="rotationZ">0°</span>
+                  <div class="slider-value-group">
+                    <span class="value" data-output="rotationZ">0°</span>
+                    <button
+                      type="button"
+                      class="rotation-notch"
+                      data-rotation-axis="z"
+                      aria-label="Rotate Z by 90°"
+                    >
+                      <i data-lucide="rotate-ccw"></i>
+                    </button>
+                  </div>
                 </label>
               </div>
 
@@ -331,7 +361,7 @@
                   <span class="value" data-output="hdriBlurriness">0.00</span>
                 </label>
                 <label class="slider-line">
-                  <span>Rotate</span>
+                    <span>Location</span>
                   <input
                     id="hdriRotation"
                     type="range"
@@ -345,6 +375,60 @@
                 <label class="toggle-line">
                   <span>Show in Background</span>
                   <input type="checkbox" id="hdriBackground" />
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title has-toggle">
+                  <span>Lens Flare</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="lens-flare">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lensFlareEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable lens flare</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Location</span>
+                  <input
+                    id="lensFlareRotation"
+                    type="range"
+                    min="0"
+                    max="360"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="lensFlareRotation">0°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Height</span>
+                  <input
+                    id="lensFlareHeight"
+                    type="range"
+                    min="-30"
+                    max="90"
+                    value="15"
+                    step="1"
+                  />
+                  <span class="value" data-output="lensFlareHeight">15°</span>
+                </label>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    id="lensFlareColor"
+                    class="color-chip"
+                    value="#da541b"
+                  />
+                </label>
+                <label class="select-line">
+                  <span>Quality</span>
+                  <select id="lensFlareQuality">
+                    <option value="maximum" selected>Maximum</option>
+                    <option value="optimized">Optimized</option>
+                  </select>
                 </label>
               </div>
 

@@ -671,6 +671,41 @@ body {
   min-width: 48px;
 }
 
+.slider-line .slider-value-group {
+  grid-column: 3;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.slider-line .slider-value-group .value {
+  grid-column: auto;
+}
+
+.rotation-notch {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  width: 26px;
+  height: 22px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.rotation-notch:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.rotation-notch i {
+  width: 16px;
+  height: 16px;
+}
+
 .color-line .color-chip {
   justify-self: end;
   min-width: 0;

@@ -61,6 +61,11 @@ export class UIManager {
       hdriBlurriness: q('#hdriBlurriness'),
       hdriRotation: q('#hdriRotation'),
       hdriBackground: q('#hdriBackground'),
+      lensFlareEnabled: q('#lensFlareEnabled'),
+      lensFlareRotation: q('#lensFlareRotation'),
+      lensFlareHeight: q('#lensFlareHeight'),
+      lensFlareColor: q('#lensFlareColor'),
+      lensFlareQuality: q('#lensFlareQuality'),
       clayColor: q('#clayColor'),
       clayRoughness: q('#clayRoughness'),
       claySpecular: q('#claySpecular'),
@@ -123,6 +128,7 @@ export class UIManager {
     this.bindAnimationControls();
     this.bindCopyButtons();
     this.bindLocalResetButtons();
+    this.bindRotationNotches();
   }
 
   bindDragAndDrop() {
@@ -279,25 +285,25 @@ export class UIManager {
       this.stateStore.set('scale', value);
       this.eventBus.emit('mesh:scale', value);
     });
-    this.inputs.yOffset.addEventListener('input', (event) => {
+    this.inputs.yOffset?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('yOffset', `${value.toFixed(2)}m`);
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
     });
-    this.inputs.rotationX.addEventListener('input', (event) => {
+    this.inputs.rotationX?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationX', `${Math.round(value)}°`);
       this.stateStore.set('rotationX', value);
       this.eventBus.emit('mesh:rotationX', value);
     });
-    this.inputs.rotationY.addEventListener('input', (event) => {
+    this.inputs.rotationY?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationY', `${Math.round(value)}°`);
       this.stateStore.set('rotationY', value);
       this.eventBus.emit('mesh:rotationY', value);
     });
-    this.inputs.rotationZ.addEventListener('input', (event) => {
+    this.inputs.rotationZ?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationZ', `${Math.round(value)}°`);
       this.stateStore.set('rotationZ', value);
@@ -379,6 +385,37 @@ export class UIManager {
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
       this.inputs.backgroundColor.disabled = enabled;
+    });
+    this.inputs.lensFlareEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lensFlare.enabled', enabled);
+      this.eventBus.emit('studio:lens-flare-enabled', enabled);
+      if (enabled) {
+        this.showToast('WARNING: LENS FLARES IS AN EXPERIMENTAL (UNOPTIMIZED) FEATURE');
+      }
+      this.updateLensFlareControlsDisabled();
+    });
+    this.inputs.lensFlareRotation?.addEventListener('input', (event) => {
+      const value = Math.min(360, Math.max(0, parseFloat(event.target.value)));
+      this.updateValueLabel('lensFlareRotation', `${Math.round(value)}°`);
+      this.stateStore.set('lensFlare.rotation', value);
+      this.eventBus.emit('studio:lens-flare-rotation', value);
+    });
+    this.inputs.lensFlareHeight?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('lensFlareHeight', `${Math.round(value)}°`);
+      this.stateStore.set('lensFlare.height', value);
+      this.eventBus.emit('studio:lens-flare-height', value);
+    });
+    this.inputs.lensFlareColor?.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('lensFlare.color', value);
+      this.eventBus.emit('studio:lens-flare-color', value);
+    });
+    this.inputs.lensFlareQuality?.addEventListener('change', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('lensFlare.quality', value);
+      this.eventBus.emit('studio:lens-flare-quality', value);
     });
     this.inputs.groundSolid.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -942,6 +979,7 @@ export class UIManager {
         hdriEnabled: state.hdriEnabled,
         hdriStrength: state.hdriStrength,
         hdriBackground: state.hdriBackground,
+        lensFlare: state.lensFlare,
         groundSolid: state.groundSolid,
         groundWire: state.groundWire,
         groundSolidColor: state.groundSolidColor,
@@ -1016,6 +1054,7 @@ export class UIManager {
       this.stateStore.set('lightsMaster', defaults.lightsMaster);
       this.stateStore.set('lightsRotation', defaults.lightsRotation);
       this.stateStore.set('lightsAutoRotate', defaults.lightsAutoRotate);
+      this.stateStore.set('lensFlare', defaults.lensFlare);
       
       // Emit events to update scene
       this.setHdriActive(defaults.hdri);
@@ -1025,6 +1064,11 @@ export class UIManager {
       const normalizedStrength = defaults.hdriStrength / HDRI_STRENGTH_UNIT;
       this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
       this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+      this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
+      this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
+      this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
+      this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
+      this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
       if (this.inputs.backgroundColor) {
         this.inputs.backgroundColor.disabled = defaults.hdriBackground;
       }
@@ -1056,6 +1100,8 @@ export class UIManager {
       this.eventBus.emit('lights:rotate', defaults.lightsRotation);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.setLightsRotationDisabled(defaults.lightsAutoRotate);
+      this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
+      this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
       
       this.syncUIFromState();
       this.showToast('Studio settings reset');
@@ -1132,6 +1178,7 @@ export class UIManager {
             this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
             this.stateStore.set('hdriRotation', defaults.hdriRotation);
             this.stateStore.set('hdriBackground', defaults.hdriBackground);
+            this.stateStore.set('lensFlare', defaults.lensFlare);
             this.setHdriActive(defaults.hdri);
             this.eventBus.emit('studio:hdri', defaults.hdri);
             const normalizedStrength = defaults.hdriStrength / HDRI_STRENGTH_UNIT;
@@ -1139,9 +1186,23 @@ export class UIManager {
             this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
             this.eventBus.emit('studio:hdri-rotation', defaults.hdriRotation);
             this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+            this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
+            this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
+            this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
+            this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             if (this.inputs.backgroundColor) {
               this.inputs.backgroundColor.disabled = defaults.hdriBackground;
             }
+            this.syncUIFromState();
+            break;
+          
+          case 'lens-flare':
+            this.stateStore.set('lensFlare', defaults.lensFlare);
+            this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
+            this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
+            this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
+            this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
+            this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
             this.syncUIFromState();
             break;
             
@@ -1266,6 +1327,27 @@ export class UIManager {
     });
   }
 
+  bindRotationNotches() {
+    if (!this.dom.rotationNotches) return;
+    this.dom.rotationNotches.forEach((button) => {
+      button.addEventListener('click', () => {
+        const axis = button.dataset.rotationAxis?.toUpperCase();
+        if (!axis) return;
+        const input = this.inputs[`rotation${axis}`];
+        if (!input) return;
+        const min = parseFloat(input.min ?? '-180');
+        const max = parseFloat(input.max ?? '180');
+        const range = max - min || 360;
+        let value = parseFloat(input.value) || 0;
+        value += 90;
+        if (value > max) value -= range;
+        if (value < min) value += range;
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+  }
+
   toggleUi(forceState) {
     const nextState =
       typeof forceState === 'boolean' ? forceState : !this.uiHidden;
@@ -1314,6 +1396,33 @@ export class UIManager {
       }
     if (!enabled) {
       this.inputs.backgroundColor.disabled = false;
+    }
+    this.updateLensFlareControlsDisabled();
+  }
+
+  updateLensFlareControlsDisabled() {
+    if (!this.inputs.lensFlareEnabled) return;
+    const hdriActive = !!this.inputs.hdriEnabled?.checked;
+    const enabled = hdriActive && !!this.inputs.lensFlareEnabled.checked;
+    this.inputs.lensFlareEnabled.disabled = !hdriActive;
+    this.inputs.lensFlareEnabled.classList.toggle('is-disabled-handle', !hdriActive);
+    const sliderIds = ['lensFlareRotation', 'lensFlareHeight'];
+    sliderIds.forEach((id) => {
+      const input = this.inputs[id];
+      if (!input) return;
+      input.disabled = !enabled;
+      input.classList.toggle('is-disabled-handle', !enabled);
+    });
+    if (this.inputs.lensFlareColor) {
+      this.inputs.lensFlareColor.disabled = !enabled;
+      this.inputs.lensFlareColor.classList.toggle('is-disabled-handle', !enabled);
+    }
+    if (this.inputs.lensFlareQuality) {
+      this.inputs.lensFlareQuality.disabled = !enabled;
+      this.inputs.lensFlareQuality.classList.toggle(
+        'is-disabled-handle',
+        !enabled,
+      );
     }
   }
 
@@ -1516,6 +1625,26 @@ export class UIManager {
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;
     this.inputs.backgroundColor.value = state.background;
+    if (this.inputs.lensFlareEnabled) {
+      this.inputs.lensFlareEnabled.checked = !!state.lensFlare?.enabled;
+    }
+    if (this.inputs.lensFlareRotation) {
+      const rotation = state.lensFlare?.rotation ?? 0;
+      this.inputs.lensFlareRotation.value = rotation;
+      this.updateValueLabel('lensFlareRotation', `${Math.round(rotation)}°`);
+    }
+    if (this.inputs.lensFlareHeight) {
+      const height = state.lensFlare?.height ?? 0;
+      this.inputs.lensFlareHeight.value = height;
+      this.updateValueLabel('lensFlareHeight', `${Math.round(height)}°`);
+    }
+    if (this.inputs.lensFlareColor && state.lensFlare?.color) {
+      this.inputs.lensFlareColor.value = state.lensFlare.color;
+    }
+    if (this.inputs.lensFlareQuality) {
+      this.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'maximum';
+    }
+    this.updateLensFlareControlsDisabled();
     this.inputs.clayColor.value = state.clay.color;
     this.inputs.clayRoughness.value = state.clay.roughness;
     this.updateValueLabel('clayRoughness', state.clay.roughness.toFixed(2));
