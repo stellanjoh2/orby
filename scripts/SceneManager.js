@@ -462,8 +462,10 @@ export class SceneManager {
     this.pmremGenerator.compileEquirectangularShader();
     this.claySettings = { ...(initialState.clay || {}) };
     this.fresnelSettings = { ...(initialState.fresnel || {}) };
+    this.wireframeSettings = { ...(initialState.wireframe || { alwaysOn: false, color: '#9fb7ff' }) };
 
     this.originalMaterials = new WeakMap();
+    this.wireframeOverlay = null; // Group for wireframe overlay when "always on"
 
     this.fileReaders = {
       text: (file) =>
@@ -747,6 +749,12 @@ export class SceneManager {
     this.eventBus.on('mesh:clay-specular', (value) => {
       this.setClaySettings({ specular: value });
     });
+    this.eventBus.on('mesh:wireframe-always-on', (value) => {
+      this.setWireframeSettings({ alwaysOn: value });
+    });
+    this.eventBus.on('mesh:wireframe-color', (value) => {
+      this.setWireframeSettings({ color: value });
+    });
     this.eventBus.on('mesh:reset-transform', () => {
       this.modelRoot.rotation.y = 0;
     });
@@ -915,6 +923,8 @@ export class SceneManager {
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
     this.claySettings = { ...(state.clay || this.claySettings) };
     this.fresnelSettings = { ...(state.fresnel || this.fresnelSettings) };
+    this.wireframeSettings = { ...(state.wireframe || this.wireframeSettings) };
+    this.updateWireframeOverlay();
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.updateGrain(state.grain);
@@ -1420,6 +1430,97 @@ export class SceneManager {
     if (this.stateStore.getState().shading === 'clay') {
       this.setShading('clay');
     }
+  }
+
+  setWireframeSettings(patch) {
+    this.wireframeSettings = { ...this.wireframeSettings, ...patch };
+    this.stateStore.set('wireframe', this.wireframeSettings);
+    this.updateWireframeOverlay();
+    if (this.currentShading === 'wireframe') {
+      this.setShading('wireframe');
+    }
+  }
+
+  clearWireframeOverlay() {
+    if (this.wireframeOverlay) {
+      this.wireframeOverlay.traverse((child) => {
+        if (child.isMesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((mat) => mat?.dispose?.());
+            } else {
+              child.material.dispose();
+            }
+          }
+        }
+      });
+      this.modelRoot.remove(this.wireframeOverlay);
+      this.wireframeOverlay = null;
+    }
+  }
+
+  updateWireframeOverlay() {
+    if (!this.currentModel) return;
+
+    // Update existing overlay material if it exists
+    if (this.wireframeOverlay) {
+      this.wireframeOverlay.traverse((wireMesh) => {
+        if (wireMesh.isMesh && wireMesh.material) {
+          const { color } = this.wireframeSettings;
+          wireMesh.material.color.set(color);
+        }
+      });
+      
+      // If "always on" is disabled, clear the overlay
+      if (!this.wireframeSettings.alwaysOn) {
+        this.clearWireframeOverlay();
+      }
+      return;
+    }
+
+    // Create overlay if "always on" is enabled
+    if (this.wireframeSettings.alwaysOn) {
+      this.wireframeOverlay = new THREE.Group();
+      this.wireframeOverlay.name = 'wireframeOverlay';
+
+      const { color } = this.wireframeSettings;
+      const wireMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(color),
+        wireframe: true,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.8,
+      });
+
+      // Create wireframe meshes that follow the model
+      this.currentModel.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          // Use the same geometry reference (don't clone) so it stays in sync
+          const wireMesh = new THREE.Mesh(child.geometry, wireMaterial);
+          // Link to original mesh for matrix updates
+          wireMesh.userData.originalMesh = child;
+          wireMesh.renderOrder = 999; // Render on top
+          this.wireframeOverlay.add(wireMesh);
+        }
+      });
+
+      this.modelRoot.add(this.wireframeOverlay);
+    }
+  }
+
+  updateWireframeOverlayTransforms() {
+    if (!this.wireframeOverlay || !this.currentModel) return;
+    
+    // Update wireframe overlay matrices to match the model
+    this.wireframeOverlay.traverse((wireMesh) => {
+      if (wireMesh.isMesh && wireMesh.userData.originalMesh) {
+        const original = wireMesh.userData.originalMesh;
+        wireMesh.matrix.copy(original.matrixWorld);
+        wireMesh.matrixAutoUpdate = false;
+      }
+    });
   }
 
   setGroundSolid(enabled) {
@@ -2116,6 +2217,7 @@ export class SceneManager {
     this.normalsHelpers.forEach((helper) => this.modelRoot.remove(helper));
     this.normalsHelpers = [];
     this.clearBoneHelpers();
+    this.clearWireframeOverlay();
     this.disposePendingObjectUrls();
     while (this.modelRoot.children.length) {
       const child = this.modelRoot.children[0];
@@ -2173,6 +2275,7 @@ export class SceneManager {
       this.updateMaterialsEnvironment(this.scene.environment, intensity);
     }
     this.setupAnimations(animations);
+    this.updateWireframeOverlay();
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.();
   }
@@ -2373,10 +2476,11 @@ export class SceneManager {
       };
 
       if (mode === 'wireframe') {
+        const { color } = this.wireframeSettings;
         const createWire = (mat) => {
           const base = mat?.clone ? mat.clone() : new THREE.MeshStandardMaterial();
           base.wireframe = true;
-          base.color = new THREE.Color('#9fb7ff');
+          base.color = new THREE.Color(color);
           return base;
         };
         applyMaterial(buildArray(createWire));
@@ -2423,11 +2527,15 @@ export class SceneManager {
         };
         applyMaterial(buildArray(createTextureMaterial));
       } else {
+        // Restore original materials when switching away from wireframe/clay/textures
         disposeIfTransient();
         child.material = original;
+        // Ensure wireframe is off
         if (Array.isArray(child.material)) {
           child.material.forEach((mat) => {
-            if (mat) mat.wireframe = false;
+            if (mat) {
+              mat.wireframe = false;
+            }
           });
         } else if (child.material) {
           child.material.wireframe = false;
@@ -2533,6 +2641,7 @@ export class SceneManager {
     this.controls.update();
     this.boneHelpers.forEach((helper) => helper.update?.());
     this.grainTintPass.uniforms.time.value += delta * 60;
+    this.updateWireframeOverlayTransforms();
     this.render();
   }
 

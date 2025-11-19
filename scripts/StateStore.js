@@ -33,6 +33,10 @@ export class StateStore {
         roughness: 0.6,
         specular: 0.08,
       },
+      wireframe: {
+        alwaysOn: false,
+        color: '#9fb7ff',
+      },
       fresnel: {
         enabled: false,
         color: '#ffffff',
