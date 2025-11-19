@@ -534,7 +534,7 @@ body {
 .panel-block {
   border: none;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 1.2rem;
   margin-bottom: 0.5rem;
   background: rgba(0, 0, 0, 0.675);
 }
@@ -785,6 +785,7 @@ body {
 
 .slider-line .slider-value-group .value {
   grid-column: auto;
+  margin-left: 4px;
 }
 
 .info-version-tag {

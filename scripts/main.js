@@ -16,12 +16,12 @@ scene
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }
-    console.info('MeshGL ready');
+    console.info('Orby ready');
   })
   .catch((error) => {
-    console.error('MeshGL failed to initialize', error);
+    console.error('Orby failed to initialize', error);
     ui.showToast('Scene init failed');
   });
 
-window.meshgl = { eventBus, stateStore, ui, scene };
+window.orby = { eventBus, stateStore, ui, scene };
 

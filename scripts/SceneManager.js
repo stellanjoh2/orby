@@ -384,8 +384,8 @@ export class SceneManager {
     const initialState = this.stateStore.getState();
     this.backgroundColor = initialState.background ?? '#000000';
     this.groundSolidColor = initialState.groundSolidColor ?? '#31363f';
-    this.groundWireColor = initialState.groundWireColor ?? '#c4cadd';
-    this.groundWireOpacity = initialState.groundWireOpacity ?? 0.45;
+    this.groundWireColor = initialState.groundWireColor ?? '#e1e1e1';
+    this.groundWireOpacity = initialState.groundWireOpacity ?? 1.0;
     this.groundY = initialState.groundY ?? 0;
     this.groundHeight = 0.1; // Fixed height for podium
     this.currentExposure = initialState.exposure ?? 1;
@@ -1881,7 +1881,7 @@ export class SceneManager {
     try {
       const asset = await this.parseFileByExtension(file, extension);
       this.setModel(asset.object, asset.animations ?? []);
-      this.updateStatsUI(file, asset.object);
+      this.updateStatsUI(file, asset.object, asset.gltfMetadata);
       this.ui.updateTopBarDetail(`${file.name} — Idle`);
       if (!options.silent) {
         this.ui.showToast('Model loaded');
@@ -1912,7 +1912,30 @@ export class SceneManager {
       this.gltfLoader.parse(
         buffer,
         '',
-        (gltf) => resolve({ object: gltf.scene, animations: gltf.animations }),
+        (gltf) => {
+          // Extract asset metadata from the parsed GLTF
+          // The parser.json contains the original GLTF JSON structure
+          const json = gltf.parser?.json || {};
+          const asset = json.asset || {};
+          // Try to get asset name from scene name, first node name, or filename
+          let assetName = gltf.scene?.name;
+          if (!assetName && gltf.scene?.children?.length > 0) {
+            assetName = gltf.scene.children[0]?.name;
+          }
+          if (!assetName) {
+            assetName = file.name.replace(/\.[^/.]+$/, '');
+          }
+          resolve({
+            object: gltf.scene,
+            animations: gltf.animations,
+            gltfMetadata: {
+              assetName,
+              generator: asset.generator || null,
+              version: asset.version || null,
+              copyright: asset.copyright || null,
+            },
+          });
+        },
         reject,
       );
     });
@@ -1978,7 +2001,17 @@ export class SceneManager {
       text,
       '/',
       (gltf) => {
+        // Extract asset metadata from the parsed GLTF
+        const asset = gltf.parser?.json?.asset || {};
+        const assetName = gltf.scene?.name || primaryFile.name.replace(/\.[^/.]+$/, '');
+        const gltfMetadata = {
+          assetName,
+          generator: asset.generator || null,
+          version: asset.version || null,
+          copyright: asset.copyright || null,
+        };
         this.setModel(gltf.scene, gltf.animations ?? []);
+        this.updateStatsUI(primaryFile, gltf.scene, gltfMetadata);
         this.ui.updateTitle(primaryFile.name);
         this.ui.showToast('Folder loaded');
       },
@@ -2223,7 +2256,7 @@ export class SceneManager {
     this.playClip(index);
   }
 
-  updateStatsUI(file, object) {
+  updateStatsUI(file, object, gltfMetadata = null) {
     const stats = {
       triangles: 0,
       vertices: 0,
@@ -2274,6 +2307,10 @@ export class SceneManager {
       textures: stats.textures.size,
       fileSize,
       bounds: boundsText,
+      assetName: gltfMetadata?.assetName || file?.name?.replace(/\.[^/.]+$/, '') || '—',
+      generator: gltfMetadata?.generator || '—',
+      version: gltfMetadata?.version || '—',
+      copyright: gltfMetadata?.copyright || '—',
     });
   }
 
@@ -2345,13 +2382,23 @@ export class SceneManager {
         applyMaterial(buildArray(createWire));
       } else if (mode === 'clay') {
         const { color, roughness, specular } = this.claySettings;
-        const createClay = () =>
-          new THREE.MeshStandardMaterial({
+        const createClay = (originalMat) => {
+          const clay = new THREE.MeshStandardMaterial({
             color: new THREE.Color(color),
             roughness,
             metalness: specular,
             side: THREE.DoubleSide,
           });
+          // Preserve normal map from original material
+          if (originalMat?.normalMap) {
+            clay.normalMap = originalMat.normalMap;
+            clay.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
+            if (originalMat.normalScale) {
+              clay.normalScale = originalMat.normalScale.clone();
+            }
+          }
+          return clay;
+        };
         applyMaterial(buildArray(createClay));
       } else if (mode === 'textures') {
         const createTextureMaterial = (mat) => {
@@ -2538,9 +2585,9 @@ export class SceneManager {
     const dataUrl = this.renderer.domElement.toDataURL('image/png');
 
     const link = document.createElement('a');
-    const name = this.currentFile?.name ?? 'meshgl';
+    const name = this.currentFile?.name ?? 'orby';
     link.href = dataUrl;
-    link.download = `${name.replace(/\.[a-z0-9]+$/i, '')}-meshgl.png`;
+    link.download = `${name.replace(/\.[a-z0-9]+$/i, '')}-orby.png`;
     link.click();
 
     this.renderer.setPixelRatio(originalPixelRatio);

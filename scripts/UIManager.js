@@ -483,6 +483,11 @@ export class UIManager {
       this.stateStore.set('lightsEnabled', enabled);
       this.eventBus.emit('lights:enabled', enabled);
       this.setLightColorControlsDisabled(!enabled);
+      // Update title based on enabled state
+      const lightsTitle = document.getElementById('lightsTitle');
+      if (lightsTitle) {
+        lightsTitle.textContent = enabled ? 'Lights' : '3-Point Lighting';
+      }
       // Block muting handled by applyBlockStates via syncControls
     });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
@@ -1576,11 +1581,15 @@ export class UIManager {
   updateStats(stats) {
     if (!stats) return;
     const mapping = {
+      assetname: stats.assetName ?? '—',
+      generator: stats.generator ?? '—',
+      version: stats.version ?? '—',
+      copyright: stats.copyright ?? '—',
       triangles: stats.triangles?.toLocaleString() ?? '—',
       vertices: stats.vertices?.toLocaleString() ?? '—',
       materials: stats.materials?.toString() ?? '—',
       textures: stats.textures?.toString() ?? '—',
-      fileSize: stats.fileSize ?? '—',
+      filesize: stats.fileSize ?? '—',
       bounds: stats.bounds ?? '—',
     };
     Array.from(this.dom.stats.querySelectorAll('div')).forEach((row) => {
@@ -1588,11 +1597,15 @@ export class UIManager {
       const key = label?.replace(/\s/g, '');
       const targetKey =
         {
+          assetname: 'assetname',
+          generator: 'generator',
+          version: 'version',
+          copyright: 'copyright',
           triangles: 'triangles',
           vertices: 'vertices',
           materials: 'materials',
           textures: 'textures',
-          filesize: 'fileSize',
+          filesize: 'filesize',
           bounds: 'bounds',
         }[key] ?? key;
       const dd = row.querySelector('dd');
@@ -1603,7 +1616,7 @@ export class UIManager {
   }
 
   updateTitle(filename) {
-    document.title = `MeshGL — ${filename}`;
+    document.title = `Orby — ${filename}`;
     if (this.dom.topBarTitle) {
       this.dom.topBarTitle.textContent = filename;
     }
@@ -1792,6 +1805,11 @@ export class UIManager {
     if (this.inputs.lightsEnabled) {
       this.inputs.lightsEnabled.checked = !!state.lightsEnabled;
       this.setLightColorControlsDisabled(!state.lightsEnabled);
+      // Update title based on enabled state
+      const lightsTitle = document.getElementById('lightsTitle');
+      if (lightsTitle) {
+        lightsTitle.textContent = state.lightsEnabled ? 'Lights' : '3-Point Lighting';
+      }
     }
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;

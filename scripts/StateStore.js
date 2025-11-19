@@ -24,10 +24,10 @@ export class StateStore {
       hdriBackground: false,
       groundSolid: false,
       groundWire: false,
-      groundWireOpacity: 0.45,
+      groundWireOpacity: 1.0,
       groundY: 0,
       groundSolidColor: '#31363f',
-      groundWireColor: '#c4cadd',
+      groundWireColor: '#e1e1e1',
       clay: {
         color: '#808080',
         roughness: 0.6,
