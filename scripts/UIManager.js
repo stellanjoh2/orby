@@ -20,6 +20,11 @@ export class UIManager {
     this.bindEvents();
     this.stateStore.subscribe((state) => this.syncControls(state));
     this.syncControls(this.stateStore.getState());
+    // Initialize panel header visibility
+    const initialTab = this.activeTab || 'mesh';
+    document.querySelectorAll('.panel-header-title').forEach((header) => {
+      header.classList.toggle('visible', header.dataset.header === initialTab);
+    });
   }
 
   cacheDom() {
@@ -276,6 +281,10 @@ export class UIManager {
           } else {
             gsap.set(panel, { clearProps: 'opacity' });
           }
+        });
+        // Show/hide panel headers
+        document.querySelectorAll('.panel-header-title').forEach((header) => {
+          header.classList.toggle('visible', header.dataset.header === target);
         });
       });
     });

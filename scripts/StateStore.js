@@ -65,7 +65,7 @@ export class StateStore {
       bloom: {
         enabled: true,
         threshold: 1,
-        strength: 0.4,
+        strength: 0.2,
         radius: 0.75,
         color: '#ffe9cc',
       },

@@ -332,6 +332,11 @@ body {
   justify-content: center;
 }
 
+.tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.10);
+  transition: color 0s, background 0s, border-radius 0s;
+}
+
 .tab i {
   width: 20px;
   height: 20px;
@@ -497,6 +502,20 @@ body {
   position: relative;
 }
 
+.panel-header-title {
+  display: none;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  color: var(--text);
+  margin: 1rem 0 1rem 0;
+  padding: 0;
+}
+
+.panel-header-title.visible {
+  display: block;
+}
+
 .panel-header h2 {
   margin: 0;
   font-size: 1rem;
@@ -512,7 +531,7 @@ body {
 }
 
 .panel-block {
-  border: 1px solid var(--stroke);
+  border: none;
   border-radius: 12px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -682,6 +701,11 @@ body {
   letter-spacing: -0.01em;
   color: var(--text-dim);
   transition: border 0.2s, color 0.2s, background 0.2s;
+}
+
+.segmented label:hover:not(:has(input:checked)) {
+  background: rgba(255, 255, 255, 0.10);
+  transition: border 0s, color 0s, background 0s;
 }
 
 .segmented input {
@@ -902,7 +926,12 @@ body {
   color: var(--text-dim);
   background: rgba(8, 10, 18, 0.8);
   cursor: pointer;
-  transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s;
+  transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
+}
+
+.hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.10);
+  transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
 }
 
 .hdri-card:disabled,
@@ -1006,6 +1035,7 @@ body {
   border-radius: 999px;
   letter-spacing: -0.01em;
   font-size: 0.8rem;
+  text-transform: none;
   animation: toast 3s ease forwards;
   pointer-events: none;
   z-index: 15;

@@ -1645,16 +1645,11 @@ export class SceneManager {
         ...state.bloom,
         enabled: true,
         color: style.bloomTint,
+        // Preserve user's bloom strength - don't change it based on HDRI mood
+        strength: state.bloom.strength,
+        radius: state.bloom.radius,
       };
-      bloomState.strength = Math.max(
-        style.bloomStrengthMin ?? 0,
-        bloomState.strength,
-      );
-      bloomState.radius = Math.max(
-        style.bloomRadiusMin ?? 0,
-        bloomState.radius,
-      );
-      // Update state store so UI reflects the mood's color
+      // Update state store so UI reflects the mood's color (but not strength)
       this.stateStore.set('bloom', bloomState);
       this.updateBloom(bloomState);
     }
