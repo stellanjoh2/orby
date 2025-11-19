@@ -462,7 +462,7 @@ export class SceneManager {
     this.pmremGenerator.compileEquirectangularShader();
     this.claySettings = { ...(initialState.clay || {}) };
     this.fresnelSettings = { ...(initialState.fresnel || {}) };
-    this.wireframeSettings = { ...(initialState.wireframe || { alwaysOn: false, color: '#9fb7ff' }) };
+    this.wireframeSettings = { ...(initialState.wireframe || { alwaysOn: false, color: '#9fb7ff', onlyVisibleFaces: false }) };
 
     this.originalMaterials = new WeakMap();
     this.wireframeOverlay = null; // Group for wireframe overlay when "always on"
@@ -754,6 +754,9 @@ export class SceneManager {
     });
     this.eventBus.on('mesh:wireframe-color', (value) => {
       this.setWireframeSettings({ color: value });
+    });
+    this.eventBus.on('mesh:wireframe-only-visible-faces', (value) => {
+      this.setWireframeSettings({ onlyVisibleFaces: value });
     });
     this.eventBus.on('mesh:reset-transform', () => {
       this.modelRoot.rotation.y = 0;
@@ -1445,7 +1448,10 @@ export class SceneManager {
     if (this.wireframeOverlay) {
       this.wireframeOverlay.traverse((child) => {
         if (child.isMesh) {
-          if (child.geometry) child.geometry.dispose();
+          // Only dispose geometry if it was cloned (has userData.isCloned)
+          if (child.geometry && child.userData.isCloned) {
+            child.geometry.dispose();
+          }
           if (child.material) {
             if (Array.isArray(child.material)) {
               child.material.forEach((mat) => mat?.dispose?.());
@@ -1467,8 +1473,18 @@ export class SceneManager {
     if (this.wireframeOverlay) {
       this.wireframeOverlay.traverse((wireMesh) => {
         if (wireMesh.isMesh && wireMesh.material) {
-          const { color } = this.wireframeSettings;
+          const { color, onlyVisibleFaces } = this.wireframeSettings;
           wireMesh.material.color.set(color);
+          wireMesh.material.depthTest = onlyVisibleFaces;
+          wireMesh.material.transparent = !onlyVisibleFaces;
+          wireMesh.material.opacity = onlyVisibleFaces ? 1.0 : 0.8;
+          if (onlyVisibleFaces) {
+            wireMesh.material.polygonOffset = true;
+            wireMesh.material.polygonOffsetFactor = 1;
+            wireMesh.material.polygonOffsetUnits = 1;
+          } else {
+            wireMesh.material.polygonOffset = false;
+          }
         }
       });
       
@@ -1484,23 +1500,58 @@ export class SceneManager {
       this.wireframeOverlay = new THREE.Group();
       this.wireframeOverlay.name = 'wireframeOverlay';
 
-      const { color } = this.wireframeSettings;
+      const { color, onlyVisibleFaces } = this.wireframeSettings;
       const wireMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color(color),
         wireframe: true,
-        depthTest: false,
+        depthTest: onlyVisibleFaces, // Enable depth test when only showing visible faces
         depthWrite: false,
-        transparent: true,
-        opacity: 0.8,
+        transparent: !onlyVisibleFaces, // No transparency when showing only visible faces
+        opacity: onlyVisibleFaces ? 1.0 : 0.8,
       });
+      
+      // Add small depth offset to prevent z-fighting when showing only visible faces
+      if (onlyVisibleFaces) {
+        wireMaterial.polygonOffset = true;
+        wireMaterial.polygonOffsetFactor = 1;
+        wireMaterial.polygonOffsetUnits = 1;
+      }
 
       // Create wireframe meshes that follow the model
       this.currentModel.traverse((child) => {
         if (child.isMesh && child.geometry) {
-          // Use the same geometry reference (don't clone) so it stays in sync
-          const wireMesh = new THREE.Mesh(child.geometry, wireMaterial);
+          let geometry = child.geometry;
+          let isCloned = false;
+          
+          // If onlyVisibleFaces is enabled, push vertices along normals
+          if (onlyVisibleFaces) {
+            // Clone geometry so we don't modify the original
+            geometry = child.geometry.clone();
+            isCloned = true;
+            const positions = geometry.attributes.position;
+            
+            // Compute normals if they don't exist
+            if (!geometry.attributes.normal) {
+              geometry.computeVertexNormals();
+            }
+            
+            // Push vertices along their normals by a small amount (0.002 units)
+            const offset = 0.002;
+            for (let i = 0; i < positions.count; i++) {
+              const normal = new THREE.Vector3();
+              normal.fromBufferAttribute(geometry.attributes.normal, i);
+              const position = new THREE.Vector3();
+              position.fromBufferAttribute(positions, i);
+              position.addScaledVector(normal, offset);
+              positions.setXYZ(i, position.x, position.y, position.z);
+            }
+            positions.needsUpdate = true;
+          }
+          
+          const wireMesh = new THREE.Mesh(geometry, wireMaterial);
           // Link to original mesh for matrix updates
           wireMesh.userData.originalMesh = child;
+          wireMesh.userData.isCloned = isCloned;
           wireMesh.renderOrder = 999; // Render on top
           this.wireframeOverlay.add(wireMesh);
         }
@@ -1513,11 +1564,20 @@ export class SceneManager {
   updateWireframeOverlayTransforms() {
     if (!this.wireframeOverlay || !this.currentModel) return;
     
-    // Update wireframe overlay matrices to match the model
+    // Update wireframe overlay transforms to match the model
     this.wireframeOverlay.traverse((wireMesh) => {
       if (wireMesh.isMesh && wireMesh.userData.originalMesh) {
         const original = wireMesh.userData.originalMesh;
-        wireMesh.matrix.copy(original.matrixWorld);
+        // Copy world position and rotation from original
+        wireMesh.position.setFromMatrixPosition(original.matrixWorld);
+        wireMesh.rotation.setFromRotationMatrix(original.matrixWorld);
+        // Copy scale from original (no additional scaling needed - vertices are pushed along normals)
+        const originalScale = new THREE.Vector3();
+        originalScale.setFromMatrixScale(original.matrixWorld);
+        wireMesh.scale.copy(originalScale);
+        // Let Three.js update the matrix automatically
+        wireMesh.matrixAutoUpdate = true;
+        wireMesh.updateMatrix();
         wireMesh.matrixAutoUpdate = false;
       }
     });
