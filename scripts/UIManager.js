@@ -77,6 +77,8 @@ export class UIManager {
       clayColor: q('#clayColor'),
       clayRoughness: q('#clayRoughness'),
       claySpecular: q('#claySpecular'),
+      wireframeAlwaysOn: q('#wireframeAlwaysOn'),
+      wireframeColor: q('#wireframeColor'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
       groundSolidColor: q('#groundSolidColor'),
@@ -352,6 +354,12 @@ export class UIManager {
       this.updateValueLabel('claySpecular', value, 'decimal');
       this.eventBus.emit('mesh:clay-specular', value);
     });
+    this.inputs.wireframeAlwaysOn?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('wireframe.alwaysOn', enabled);
+      this.eventBus.emit('mesh:wireframe-always-on', enabled);
+    });
+    this.bindColorInput('wireframeColor', 'wireframe.color', 'mesh:wireframe-color');
     this.inputs.showNormals?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('showNormals', enabled);
@@ -1192,6 +1200,21 @@ export class UIManager {
             this.syncUIFromState();
             break;
             
+          case 'wireframe':
+            this.stateStore.set('wireframe', defaults.wireframe);
+            // Explicitly update UI controls first to ensure they reflect the reset
+            if (this.inputs.wireframeColor) {
+              this.inputs.wireframeColor.value = defaults.wireframe.color;
+            }
+            if (this.inputs.wireframeAlwaysOn) {
+              this.inputs.wireframeAlwaysOn.checked = defaults.wireframe.alwaysOn;
+            }
+            // Then emit events to update the scene
+            this.eventBus.emit('mesh:wireframe-always-on', defaults.wireframe.alwaysOn);
+            this.eventBus.emit('mesh:wireframe-color', defaults.wireframe.color);
+            this.syncUIFromState();
+            break;
+            
           case 'hdri':
             this.stateStore.set('hdri', defaults.hdri);
             this.stateStore.set('hdriStrength', defaults.hdriStrength);
@@ -1718,6 +1741,14 @@ export class UIManager {
     this.updateValueLabel('clayRoughness', state.clay.roughness, 'decimal');
     this.inputs.claySpecular.value = state.clay.specular;
     this.updateValueLabel('claySpecular', state.clay.specular, 'decimal');
+    if (state.wireframe) {
+      if (this.inputs.wireframeColor) {
+        this.inputs.wireframeColor.value = state.wireframe.color;
+      }
+      if (this.inputs.wireframeAlwaysOn) {
+        this.inputs.wireframeAlwaysOn.checked = !!state.wireframe.alwaysOn;
+      }
+    }
     
     // Radio buttons
     this.inputs.autoRotate.forEach((input) => {
