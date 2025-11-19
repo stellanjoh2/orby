@@ -36,6 +36,7 @@ export class StateStore {
       wireframe: {
         alwaysOn: false,
         color: '#9fb7ff',
+        onlyVisibleFaces: false,
       },
       fresnel: {
         enabled: false,

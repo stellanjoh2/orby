@@ -79,6 +79,7 @@ export class UIManager {
       claySpecular: q('#claySpecular'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
       wireframeColor: q('#wireframeColor'),
+      wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
       groundSolidColor: q('#groundSolidColor'),
@@ -360,6 +361,11 @@ export class UIManager {
       this.eventBus.emit('mesh:wireframe-always-on', enabled);
     });
     this.bindColorInput('wireframeColor', 'wireframe.color', 'mesh:wireframe-color');
+    this.inputs.wireframeOnlyVisibleFaces?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('wireframe.onlyVisibleFaces', enabled);
+      this.eventBus.emit('mesh:wireframe-only-visible-faces', enabled);
+    });
     this.inputs.showNormals?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('showNormals', enabled);
@@ -1209,9 +1215,13 @@ export class UIManager {
             if (this.inputs.wireframeAlwaysOn) {
               this.inputs.wireframeAlwaysOn.checked = defaults.wireframe.alwaysOn;
             }
+            if (this.inputs.wireframeOnlyVisibleFaces) {
+              this.inputs.wireframeOnlyVisibleFaces.checked = defaults.wireframe.onlyVisibleFaces;
+            }
             // Then emit events to update the scene
             this.eventBus.emit('mesh:wireframe-always-on', defaults.wireframe.alwaysOn);
             this.eventBus.emit('mesh:wireframe-color', defaults.wireframe.color);
+            this.eventBus.emit('mesh:wireframe-only-visible-faces', defaults.wireframe.onlyVisibleFaces);
             this.syncUIFromState();
             break;
             
@@ -1747,6 +1757,9 @@ export class UIManager {
       }
       if (this.inputs.wireframeAlwaysOn) {
         this.inputs.wireframeAlwaysOn.checked = !!state.wireframe.alwaysOn;
+      }
+      if (this.inputs.wireframeOnlyVisibleFaces) {
+        this.inputs.wireframeOnlyVisibleFaces.checked = !!state.wireframe.onlyVisibleFaces;
       }
     }
     
