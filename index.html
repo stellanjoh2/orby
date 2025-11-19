@@ -28,7 +28,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body data-theme="violet">
     <div id="app">
       <main class="workspace">
         <section class="viewport">
@@ -304,7 +304,7 @@
 
             <section class="panel" data-panel="studio">
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="hdri">
                 <div class="block-title has-toggle">
                   <span>HDRI</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -378,7 +378,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="lens-flare">
                 <div class="block-title has-toggle">
                   <span>Lens Flare</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -432,7 +432,7 @@
                 </label>
               </div>
 
-              <div class="panel-block lights">
+              <div class="panel-block lights" data-block="lights">
                 <div class="block-title has-toggle">
                   <span>3-Point Lighting</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -497,7 +497,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="podium">
                 <div class="block-title has-toggle">
                   <span>Podium</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -532,7 +532,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="grid">
                 <div class="block-title has-reset">
                   <span>Background</span>
                   <button class="block-reset-btn" data-reset="background">Reset</button>
@@ -548,7 +548,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="dof">
                 <div class="block-title has-toggle">
                   <span>Grid</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -593,7 +593,7 @@
 
             <section class="panel" data-panel="render">
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="bloom">
                 <div class="block-title has-toggle">
                   <span>Depth of Field</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -646,7 +646,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="grain">
                 <div class="block-title has-toggle">
                   <span>Bloom</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -700,7 +700,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="aberration">
                 <div class="block-title has-toggle">
                   <span>Film Grain</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -726,7 +726,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="fresnel">
                 <div class="block-title has-toggle">
                   <span>Chromatic Aberration</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">

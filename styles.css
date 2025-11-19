@@ -12,15 +12,56 @@
   color-scheme: dark;
   font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
+  --danger: #ff7b7b;
+}
+
+:root,
+body[data-theme='violet'] {
+  --bg: #050112;
+  --panel: #0d081f;
+  --panel-alt: #160c2f;
+  --shelf-bg: rgba(7, 2, 20, 0.78);
+  --stroke: rgba(255, 255, 255, 0.08);
+  --stroke-strong: rgba(255, 255, 255, 0.15);
+  --text: #f5f1ff;
+  --text-dim: rgba(245, 241, 255, 0.65);
+  --accent: #b46cff;
+  --accent-strong: #ff6bd6;
+  --accent-border: rgba(180, 108, 255, 0.5);
+  --accent-shadow: rgba(180, 108, 255, 0.35);
+  --accent-muted: rgba(180, 108, 255, 0.18);
+  --accent-glow: rgba(255, 107, 214, 0.45);
+  --brand-glow: rgba(210, 139, 255, 0.65);
+  --drop-gradient-start: rgba(59, 13, 120, 0.9);
+  --drop-gradient-end: rgba(7, 2, 18, 0.96);
+  --drop-outline: rgba(204, 132, 255, 0.55);
+  --drop-outline-active: rgba(255, 120, 230, 0.85);
+  --drop-fill: rgba(180, 108, 255, 0.12);
+  --drop-fill-active: rgba(255, 107, 214, 0.2);
+}
+
+body[data-theme='aqua'] {
   --bg: #04060c;
   --panel: #0d111c;
   --panel-alt: #121726;
+  --shelf-bg: rgba(0, 0, 0, 0.675);
   --stroke: rgba(255, 255, 255, 0.08);
+  --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
   --accent: #63a9ff;
   --accent-strong: #4be0c6;
-  --danger: #ff7b7b;
+  --accent-border: rgba(99, 169, 255, 0.5);
+  --accent-shadow: rgba(99, 169, 255, 0.35);
+  --accent-muted: rgba(99, 169, 255, 0.18);
+  --accent-glow: rgba(75, 224, 198, 0.35);
+  --brand-glow: rgba(111, 198, 255, 0.55);
+  --drop-gradient-start: rgba(12, 16, 28, 0.85);
+  --drop-gradient-end: rgba(2, 4, 9, 0.92);
+  --drop-outline: rgba(99, 169, 255, 0.4);
+  --drop-outline-active: rgba(99, 169, 255, 0.8);
+  --drop-fill: rgba(99, 169, 255, 0.08);
+  --drop-fill-active: rgba(75, 224, 198, 0.15);
 }
 
 *,
@@ -31,7 +72,7 @@
 
 body {
   margin: 0;
-  background: #000;
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   overflow: hidden;
@@ -48,7 +89,7 @@ body {
 }
 
 .brand img {
-  filter: drop-shadow(0 0 12px rgba(111, 198, 255, 0.55));
+  filter: drop-shadow(0 0 16px var(--brand-glow));
 }
 
 .brand-copy {
@@ -142,7 +183,7 @@ body {
   background: linear-gradient(120deg, var(--accent), var(--accent-strong));
   color: #02030a;
   font-weight: 600;
-  box-shadow: 0 8px 16px rgba(94, 209, 255, 0.35);
+  box-shadow: 0 8px 16px var(--accent-shadow);
 }
 
 .primary-btn:hover {
@@ -155,7 +196,7 @@ body {
   min-height: 0;
   min-width: 0;
   height: 100vh;
-  background: #000;
+  background: var(--bg);
   position: relative;
   overflow: hidden;
 }
@@ -174,7 +215,7 @@ body {
   width: 100%;
   height: 100%;
   display: block;
-  background: #04060c;
+  background: var(--bg);
   outline: none;
 }
 
@@ -191,7 +232,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  background: radial-gradient(circle at top, rgba(12, 16, 28, 0.85), rgba(2, 4, 9, 0.92));
+  background: radial-gradient(
+    circle at top,
+    var(--drop-gradient-start),
+    var(--drop-gradient-end)
+  );
   border: 0;
   text-align: center;
   pointer-events: auto;
@@ -203,9 +248,9 @@ body {
   position: absolute;
   width: min(80vw, 1200px);
   aspect-ratio: 16 / 9;
-  border: 2px dashed rgba(99, 169, 255, 0.4);
+  border: 2px dashed var(--drop-outline);
   border-radius: 24px;
-  background: linear-gradient(120deg, rgba(99, 169, 255, 0.08), rgba(75, 224, 198, 0.08));
+  background: linear-gradient(120deg, var(--drop-fill), transparent);
   pointer-events: none;
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
 }
@@ -229,13 +274,13 @@ body {
 }
 
 .dropzone.drag-active {
-  box-shadow: inset 0 0 50px rgba(99, 169, 255, 0.25), 0 0 25px rgba(99, 169, 255, 0.35);
+  box-shadow: inset 0 0 50px var(--accent-muted), 0 0 25px var(--accent-glow);
 }
 
 .dropzone.drag-active::before {
-  border-color: rgba(99, 169, 255, 0.8);
-  background: linear-gradient(120deg, rgba(99, 169, 255, 0.15), rgba(75, 224, 198, 0.15));
-  box-shadow: 0 0 40px rgba(99, 169, 255, 0.4), inset 0 0 30px rgba(99, 169, 255, 0.1);
+  border-color: var(--drop-outline-active);
+  background: linear-gradient(120deg, var(--drop-fill-active), transparent);
+  box-shadow: 0 0 40px var(--accent-glow), inset 0 0 30px var(--accent-muted);
 }
 
 .drop-primary {
@@ -252,7 +297,7 @@ body {
 
 .shelf {
   width: clamp(320px, 23vw, 380px);
-  background: rgba(0, 0, 0, 0.675);
+  background: var(--shelf-bg);
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(22px);
@@ -317,8 +362,13 @@ body {
 }
 
 .tab.active {
-  color: #000000;
-  background: #ffffff;
+  color: var(--text);
+  background: var(--accent);
+  box-shadow: 0 8px 18px var(--accent-shadow);
+}
+
+.tab.active i {
+  stroke: var(--text);
 }
 
 .shortcuts-grid {
@@ -484,6 +534,13 @@ body {
   background: rgba(0, 0, 0, 0.675);
 }
 
+.panel-block.is-muted > :not(.block-title) {
+  opacity: 0.3;
+  pointer-events: none;
+  filter: saturate(0.35);
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
 .block-title {
   font-size: 0.95rem;
   text-transform: none;
@@ -573,9 +630,9 @@ body {
 }
 
 .effect-toggle input:checked + .effect-indicator {
-  background: linear-gradient(120deg, var(--accent), #7fc5ff);
-  border-color: rgba(99, 169, 255, 0.5);
-  box-shadow: 0 8px 18px rgba(99, 169, 255, 0.35);
+  background: var(--accent);
+  border-color: var(--accent-border);
+  box-shadow: 0 8px 18px var(--accent-shadow);
 }
 
 .effect-toggle input:checked + .effect-indicator::before {
@@ -618,7 +675,7 @@ body {
 .segmented label:has(input:checked) {
   border-color: var(--accent);
   color: var(--text);
-  background: rgba(99, 169, 255, 0.15);
+  background: var(--accent-muted);
 }
 
 .slider-line,
@@ -848,7 +905,7 @@ body {
 .hdri-card.active {
   border-color: var(--accent);
   color: var(--text);
-  box-shadow: 0 8px 20px rgba(99, 169, 255, 0.25);
+  box-shadow: 0 8px 20px var(--accent-shadow);
 }
 
 .lights .light-color-row {
@@ -986,7 +1043,7 @@ input[type='range']::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(99, 169, 255, 0.5);
+  box-shadow: 0 0 10px var(--accent-glow);
   transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 
@@ -997,7 +1054,7 @@ input[type='range']::-moz-range-thumb {
   background: var(--accent);
   border: none;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(99, 169, 255, 0.5);
+  box-shadow: 0 0 10px var(--accent-glow);
   transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 

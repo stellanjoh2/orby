@@ -119,6 +119,14 @@ export class UIManager {
       resetRender: q('#resetRenderSettings'),
       loadMesh: q('#loadMeshButton'),
     };
+
+    this.dom.blocks = {};
+    document.querySelectorAll('.panel-block[data-block]').forEach((block) => {
+      const key = block.dataset.block;
+      if (key) {
+        this.dom.blocks[key] = block;
+      }
+    });
   }
 
   bindEvents() {
@@ -360,6 +368,7 @@ export class UIManager {
       this.stateStore.set('hdriEnabled', enabled);
       this.eventBus.emit('studio:hdri-enabled', enabled);
       this.toggleHdriControls(enabled);
+      this.setBlockMuted('hdri', !enabled);
     });
     this.inputs.hdriStrength.addEventListener('input', (event) => {
       const normalized = Math.min(
@@ -428,11 +437,13 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('groundSolid', enabled);
       this.eventBus.emit('studio:ground-solid', enabled);
+      this.setBlockMuted('podium', !enabled);
     });
     this.inputs.groundWire.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('groundWire', enabled);
       this.eventBus.emit('studio:ground-wire', enabled);
+      this.setBlockMuted('grid', !enabled);
     });
     this.inputs.groundSolidColor.addEventListener('input', (event) => {
       const value = event.target.value;
@@ -479,6 +490,7 @@ export class UIManager {
       this.stateStore.set('lightsEnabled', enabled);
       this.eventBus.emit('lights:enabled', enabled);
       this.setLightColorControlsDisabled(!enabled);
+      this.setBlockMuted('lights', !enabled);
     });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
@@ -504,6 +516,7 @@ export class UIManager {
         ['dofFocus', 'dofAperture', 'dofStrength'],
         !enabled,
       );
+      this.setBlockMuted('dof', !enabled);
       emitDof();
     });
     this.inputs.dofFocus.addEventListener('input', (event) => {
@@ -534,6 +547,7 @@ export class UIManager {
         ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
         !enabled,
       );
+      this.setBlockMuted('bloom', !enabled);
       emitBloom();
     });
     [
@@ -560,6 +574,7 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('grain.enabled', enabled);
       this.setEffectControlsDisabled(['grainIntensity'], !enabled);
+      this.setBlockMuted('grain', !enabled);
       emitGrain();
     });
     this.inputs.grainIntensity.addEventListener('input', (event) => {
@@ -581,6 +596,7 @@ export class UIManager {
         ['aberrationOffset', 'aberrationStrength'],
         !enabled,
       );
+      this.setBlockMuted('aberration', !enabled);
       emitAberration();
     });
     this.inputs.aberrationOffset.addEventListener('input', (event) => {
@@ -605,6 +621,7 @@ export class UIManager {
         ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
         !enabled,
       );
+      this.setBlockMuted('fresnel', !enabled);
       emitFresnel();
     });
     this.inputs.fresnelColor.addEventListener('input', (event) => {
@@ -1395,6 +1412,7 @@ export class UIManager {
       button.disabled = !enabled;
       button.classList.toggle('is-disabled', !enabled);
     });
+    this.setBlockMuted('hdri', !enabled);
     this.inputs.hdriBackground.disabled = !enabled;
       this.inputs.hdriStrength.disabled = !enabled;
       this.inputs.hdriBlurriness.disabled = !enabled;
@@ -1431,6 +1449,7 @@ export class UIManager {
         !enabled,
       );
     }
+    this.setBlockMuted('lens-flare', !enabled);
   }
 
   setDropzoneVisible(visible) {
@@ -1779,6 +1798,7 @@ export class UIManager {
       ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
       !state.fresnel.enabled,
     );
+    this.applyBlockStates(state);
   }
 
   setEffectControlsDisabled(ids, disabled) {
@@ -1801,6 +1821,26 @@ export class UIManager {
     const normalized = ((value % 360) + 360) % 360;
     this.inputs.lightsRotation.value = normalized;
     this.updateValueLabel('lightsRotation', `${normalized.toFixed(0)}°`);
+  }
+
+  setBlockMuted(blockKey, muted) {
+    const block = this.dom?.blocks?.[blockKey];
+    if (!block) return;
+    block.classList.toggle('is-muted', muted);
+  }
+
+  applyBlockStates(state) {
+    this.setBlockMuted('hdri', !state.hdriEnabled);
+    const lensEnabled = !!state.hdriEnabled && !!state.lensFlare?.enabled;
+    this.setBlockMuted('lens-flare', !lensEnabled);
+    this.setBlockMuted('lights', !state.lightsEnabled);
+    this.setBlockMuted('podium', !state.groundSolid);
+    this.setBlockMuted('grid', !state.groundWire);
+    this.setBlockMuted('dof', !state.dof?.enabled);
+    this.setBlockMuted('bloom', !state.bloom?.enabled);
+    this.setBlockMuted('grain', !state.grain?.enabled);
+    this.setBlockMuted('aberration', !state.aberration?.enabled);
+    this.setBlockMuted('fresnel', !state.fresnel?.enabled);
   }
 
   setLightColorControlsDisabled(disabled) {
