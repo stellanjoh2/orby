@@ -405,7 +405,11 @@ export class UIManager {
       this.eventBus.emit('studio:lens-flare-rotation', value);
     });
     this.inputs.lensFlareHeight?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
+      const value = Math.min(
+        90,
+        Math.max(0, parseFloat(event.target.value) || 0),
+      );
+      event.target.value = value;
       this.updateValueLabel('lensFlareHeight', `${Math.round(value)}°`);
       this.stateStore.set('lensFlare.height', value);
       this.eventBus.emit('studio:lens-flare-height', value);
@@ -1637,7 +1641,10 @@ export class UIManager {
       this.updateValueLabel('lensFlareRotation', `${Math.round(rotation)}°`);
     }
     if (this.inputs.lensFlareHeight) {
-      const height = state.lensFlare?.height ?? 0;
+      const height = Math.min(
+        90,
+        Math.max(0, state.lensFlare?.height ?? 0),
+      );
       this.inputs.lensFlareHeight.value = height;
       this.updateValueLabel('lensFlareHeight', `${Math.round(height)}°`);
     }

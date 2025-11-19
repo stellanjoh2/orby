@@ -53,7 +53,7 @@ export class StateStore {
         enabled: false,
         rotation: 0,
         height: 15,
-        color: '#da541b',
+        color: '#d28756',
         quality: 'maximum',
       },
       dof: {

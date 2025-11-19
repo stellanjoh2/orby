@@ -3,7 +3,7 @@ import * as THREE from 'three';
 const yAxis = new THREE.Vector3(0, 1, 0);
 const DEFAULT_DIRT_TEXTURE =
   'https://i.ibb.co/c3x4dBy/lens-Dirt-Texture.jpg';
-const DEFAULT_COLOR = '#da541b';
+const DEFAULT_COLOR = '#d28756';
 
 const fragmentShader = `
     uniform float iTime;
@@ -614,7 +614,7 @@ export class LensFlareEffect extends THREE.Mesh {
 
   setHeight(value) {
     if (!Number.isFinite(value)) return;
-    this.elevationDeg = THREE.MathUtils.clamp(value, -30, 90);
+    this.elevationDeg = THREE.MathUtils.clamp(value, 0, 90);
     this.updateAnchorPosition();
   }
 

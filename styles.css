@@ -527,9 +527,10 @@ body {
 }
 
 .effect-toggle {
+  --toggle-track-height: calc(0.65rem + 0.5rem);
   position: relative;
-  width: 48px;
-  height: 26px;
+  width: calc(var(--toggle-track-height) * 2);
+  height: var(--toggle-track-height);
   border-radius: 999px;
   flex-shrink: 0;
   margin-left: auto;
@@ -551,34 +552,38 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: background 0.25s ease, border 0.25s ease, box-shadow 0.25s ease;
+  transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
 }
 
 .effect-toggle .effect-indicator::before {
   content: '';
   position: absolute;
   top: 50%;
-  left: 0.5px;
-  width: 24px;
-  height: 24px;
+  left: 4px;
+  width: calc(var(--toggle-track-height) - 0.4rem);
+  height: calc(var(--toggle-track-height) - 0.4rem);
   border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  background: #f9fafb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   transform: translate(0, -50%);
-  transition: transform 0.25s ease, background 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
 }
 
 .effect-toggle input:checked + .effect-indicator {
-  background: linear-gradient(120deg, #0fe3a4, #4be0c6);
-  border: 1px solid rgba(79, 224, 198, 0.5);
-  box-shadow: 0 8px 18px rgba(79, 224, 198, 0.35);
+  background: linear-gradient(120deg, var(--accent), #7fc5ff);
+  border-color: rgba(99, 169, 255, 0.5);
+  box-shadow: 0 8px 18px rgba(99, 169, 255, 0.35);
 }
 
 .effect-toggle input:checked + .effect-indicator::before {
-  transform: translate(20.5px, -50%);
-  background: #041115;
+  transform: translate(
+      calc(var(--toggle-track-height) * 0.95),
+      -50%
+    );
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .segmented {

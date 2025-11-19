@@ -609,12 +609,17 @@ export class SceneManager {
   }
 
   setupLensFlare(initialLensFlare) {
-    const state = initialLensFlare ?? this.stateStore.getDefaults().lensFlare;
+    const defaults = this.stateStore.getDefaults().lensFlare;
+    const state = initialLensFlare ?? defaults;
+    const safeHeight = Math.min(
+      90,
+      Math.max(0, state?.height ?? defaults?.height ?? 15),
+    );
     this.lensFlare = new LensFlareEffect({
       enabled: (state.enabled ?? false) && this.hdriEnabled,
       rotation: state.rotation ?? 0,
-      height: state.height ?? 2,
-      color: state.color ?? '#da541b',
+      height: safeHeight,
+      color: state.color ?? defaults?.color ?? '#d28756',
       quality: state.quality ?? 'maximum',
     });
     this.camera.add(this.lensFlare);
@@ -930,7 +935,7 @@ export class SceneManager {
       ...(state.lensFlare ?? {}),
     };
     this.setLensFlareHeight(lensState.height ?? 0);
-    this.setLensFlareColor(lensState.color ?? '#da541b');
+    this.setLensFlareColor(lensState.color ?? '#d28756');
     this.setLensFlareQuality(lensState.quality ?? 'maximum');
     this.setLensFlareRotation(lensState.rotation ?? 0);
     this.setLensFlareEnabled(lensState.enabled ?? false);
@@ -1200,7 +1205,8 @@ export class SceneManager {
 
   setLensFlareHeight(value) {
     if (this.lensFlare) {
-      this.lensFlare.setHeight(value ?? 0);
+      const clamped = Math.max(0, Math.min(90, value ?? 0));
+      this.lensFlare.setHeight(clamped);
     }
   }
 
