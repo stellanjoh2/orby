@@ -458,6 +458,10 @@ body {
   display: block;
 }
 
+.panel[data-panel='info'] {
+  position: relative;
+}
+
 .panel-header h2 {
   margin: 0;
   font-size: 1rem;
@@ -681,6 +685,26 @@ body {
 
 .slider-line .slider-value-group .value {
   grid-column: auto;
+}
+
+.info-version-tag {
+  display: block;
+  margin-top: 2rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  text-align: right;
+  color: var(--text-dim);
+  opacity: 0.65;
+  position: sticky;
+  bottom: 0.5rem;
+  padding-top: 0.5rem;
+  background: linear-gradient(
+    180deg,
+    rgba(13, 17, 28, 0) 0%,
+    rgba(13, 17, 28, 0.85) 65%,
+    rgba(13, 17, 28, 1) 100%
+  );
 }
 
 .rotation-notch {
