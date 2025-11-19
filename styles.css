@@ -11,7 +11,7 @@ body[data-theme='violet'] {
   --bg: #050112;
   --panel: #0d081f;
   --panel-alt: #160c2f;
-  --shelf-bg: rgba(7, 2, 20, 0.78);
+  --shelf-bg: rgba(7, 2, 20, 0.50);
   --stroke: rgba(255, 255, 255, 0.08);
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
@@ -288,7 +288,7 @@ body {
   flex-direction: column;
   backdrop-filter: blur(22px);
   height: calc(100vh - 48px);
-  padding: 1.1rem 1.1rem 1.1rem 1.1rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.6rem;
   position: absolute;
   top: 24px;
   right: 28px;
@@ -313,8 +313,8 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   border-bottom: 1px solid var(--stroke);
-  margin: 0 -1.1rem;
-  padding: 0 1.1rem;
+  margin: 0 -0.6rem;
+  padding: 0 0.6rem;
 }
 
 .tab {
@@ -464,12 +464,13 @@ body {
 .panels {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0 3rem;
-  margin-right: -1.1rem;
-  padding-right: calc(1.1rem + 4px);
+  padding: 0.6rem 0.6rem 3rem 0.6rem;
   min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  /* Create space for scrollbar on the right, outside the window */
+  margin-right: calc(-1.2rem + 6px);
+  padding-right: calc(0.6rem + 1.2rem - 6px);
 }
 
 .panels::-webkit-scrollbar {
@@ -506,9 +507,9 @@ body {
   display: none;
   font-size: 1.5rem;
   letter-spacing: -0.01em;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--text);
-  margin: 1rem 0 1rem 0;
+  margin: 0.6rem 0 0.6rem 0;
   padding: 0;
 }
 
@@ -520,7 +521,7 @@ body {
   margin: 0;
   font-size: 1rem;
   letter-spacing: -0.01em;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .panel-header p {
@@ -532,9 +533,9 @@ body {
 
 .panel-block {
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   background: rgba(0, 0, 0, 0.675);
 }
 
@@ -580,7 +581,7 @@ body {
   letter-spacing: -0.01em;
   color: var(--text);
   margin-bottom: 0.75rem;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .block-title.has-toggle {
@@ -1014,7 +1015,7 @@ body {
 .help-card h3 {
   margin: 0;
   letter-spacing: -0.01em;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .help-card ol {
