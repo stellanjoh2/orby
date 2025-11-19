@@ -1,13 +1,4 @@
-.toggle-line {
-  grid-template-columns: auto 1fr;
-  column-gap: 0.5rem;
-}
-
-.toggle-line input {
-  justify-self: end;
-  width: 18px;
-  height: 18px;
-}
+/* Removed .toggle-line - all toggles now use .effect-toggle system */
 :root {
   color-scheme: dark;
   font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont,
@@ -534,11 +525,41 @@ body {
   background: rgba(0, 0, 0, 0.675);
 }
 
-.panel-block.is-muted > :not(.block-title) {
-  opacity: 0.3;
+/* Apply muted state to all content except block title and its children */
+.panel-block.is-muted > :not(.block-title, .block-title *) {
+  opacity: 0.5;
   pointer-events: none;
   filter: saturate(0.35);
   transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+/* Apply muted state to nested elements (HDRI grid, sliders, etc.) */
+.panel-block.is-muted .hdri-grid,
+.panel-block.is-muted .hdri-grid *,
+.panel-block.is-muted .slider-line,
+.panel-block.is-muted .slider-line *,
+.panel-block.is-muted .color-line,
+.panel-block.is-muted .color-line *,
+.panel-block.is-muted .select-line,
+.panel-block.is-muted .select-line *,
+.panel-block.is-muted label:not(.block-title):not(.block-title *):not(.effect-toggle),
+.panel-block.is-muted button:not(.block-reset-btn):not(.block-title *):not(.block-title button):not(.effect-toggle):not(.effect-toggle *),
+.panel-block.is-muted input:not(.block-title *):not(.effect-toggle *),
+.panel-block.is-muted select:not(.block-title *),
+.panel-block.is-muted span:not(.block-title *):not(.block-title span) {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: saturate(0.35);
+}
+
+/* Ensure block-title and toggle are never affected by muted state */
+.panel-block.is-muted .block-title,
+.panel-block.is-muted .block-title *,
+.panel-block.is-muted .effect-toggle,
+.panel-block.is-muted .effect-toggle * {
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto;
 }
 
 .block-title {
@@ -585,62 +606,67 @@ body {
 
 .effect-toggle {
   --toggle-track-height: calc(0.65rem + 0.5rem);
+  --toggle-thumb-size: calc(var(--toggle-track-height) - 0.3rem);
+  --toggle-thumb-offset: 0.15rem;
   position: relative;
+  display: inline-block;
   width: calc(var(--toggle-track-height) * 2);
   height: var(--toggle-track-height);
-  border-radius: 999px;
   flex-shrink: 0;
   margin-left: auto;
   cursor: pointer;
-  transition: opacity 0.2s ease;
   justify-self: end;
 }
 
 .effect-toggle input {
   position: absolute;
-  inset: 0;
-  margin: 0;
   opacity: 0;
+  width: 0;
+  height: 0;
   cursor: pointer;
   z-index: 2;
 }
 
 .effect-toggle .effect-indicator {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
 }
 
 .effect-toggle .effect-indicator::before {
-  content: '';
   position: absolute;
-  top: 50%;
-  left: 4px;
-  width: calc(var(--toggle-track-height) - 0.4rem);
-  height: calc(var(--toggle-track-height) - 0.4rem);
+  content: '';
+  height: var(--toggle-thumb-size);
+  width: var(--toggle-thumb-size);
+  left: var(--toggle-thumb-offset);
+  bottom: var(--toggle-thumb-offset);
+  background-color: #ffffff;
   border-radius: 50%;
-  background: #f9fafb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  transform: translate(0, -50%);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  will-change: transform;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .effect-toggle input:checked + .effect-indicator {
-  background: var(--accent);
-  border-color: var(--accent-border);
-  box-shadow: 0 8px 18px var(--accent-shadow);
+  background-color: var(--accent);
 }
 
 .effect-toggle input:checked + .effect-indicator::before {
-  transform: translate(
-      calc(var(--toggle-track-height) * 0.95),
-      -50%
-    );
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transform: translateX(calc(var(--toggle-track-height) * 2 - var(--toggle-thumb-size) - var(--toggle-thumb-offset) * 2));
+}
+
+.effect-toggle:hover .effect-indicator {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.effect-toggle input:focus-visible + .effect-indicator {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .segmented {
@@ -714,11 +740,7 @@ body {
   color: var(--text-dim);
 }
 
-.toggle-line input[type='checkbox'] {
-  justify-self: end;
-  width: 18px;
-  height: 18px;
-}
+/* Removed - all toggles now use .effect-toggle system */
 
 .slider-line input[type='range'] {
   grid-column: 2;
@@ -901,6 +923,7 @@ body {
   cursor: not-allowed;
   border-color: rgba(255, 255, 255, 0.05);
 }
+
 
 .hdri-card.active {
   border-color: var(--accent);

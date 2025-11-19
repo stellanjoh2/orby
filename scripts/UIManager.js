@@ -292,31 +292,31 @@ export class UIManager {
     });
     this.inputs.scale.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('scale', `${value.toFixed(2)}×`);
+      this.updateValueLabel('scale', value, 'multiplier');
       this.stateStore.set('scale', value);
       this.eventBus.emit('mesh:scale', value);
     });
     this.inputs.yOffset?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('yOffset', `${value.toFixed(2)}m`);
+      this.updateValueLabel('yOffset', value, 'distance');
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
     });
     this.inputs.rotationX?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('rotationX', `${Math.round(value)}°`);
+      this.updateValueLabel('rotationX', value, 'angle');
       this.stateStore.set('rotationX', value);
       this.eventBus.emit('mesh:rotationX', value);
     });
     this.inputs.rotationY?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('rotationY', `${Math.round(value)}°`);
+      this.updateValueLabel('rotationY', value, 'angle');
       this.stateStore.set('rotationY', value);
       this.eventBus.emit('mesh:rotationY', value);
     });
     this.inputs.rotationZ?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('rotationZ', `${Math.round(value)}°`);
+      this.updateValueLabel('rotationZ', value, 'angle');
       this.stateStore.set('rotationZ', value);
       this.eventBus.emit('mesh:rotationZ', value);
     });
@@ -330,21 +330,17 @@ export class UIManager {
         }
       });
     });
-    this.inputs.clayColor.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('clay.color', value);
-      this.eventBus.emit('mesh:clay-color', value);
-    });
+    this.bindColorInput('clayColor', 'clay.color', 'mesh:clay-color');
     this.inputs.clayRoughness.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.stateStore.set('clay.roughness', value);
-      this.updateValueLabel('clayRoughness', value.toFixed(2));
+      this.updateValueLabel('clayRoughness', value, 'decimal');
       this.eventBus.emit('mesh:clay-roughness', value);
     });
     this.inputs.claySpecular.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.stateStore.set('clay.specular', value);
-      this.updateValueLabel('claySpecular', value.toFixed(2));
+      this.updateValueLabel('claySpecular', value, 'decimal');
       this.eventBus.emit('mesh:clay-specular', value);
     });
     this.inputs.showNormals?.addEventListener('change', (event) => {
@@ -368,7 +364,7 @@ export class UIManager {
       this.stateStore.set('hdriEnabled', enabled);
       this.eventBus.emit('studio:hdri-enabled', enabled);
       this.toggleHdriControls(enabled);
-      this.setBlockMuted('hdri', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
     });
     this.inputs.hdriStrength.addEventListener('input', (event) => {
       const normalized = Math.min(
@@ -376,19 +372,19 @@ export class UIManager {
         Math.max(0, parseFloat(event.target.value)),
       );
       const actual = normalized * HDRI_STRENGTH_UNIT;
-      this.updateValueLabel('hdriStrength', normalized.toFixed(2));
+      this.updateValueLabel('hdriStrength', normalized, 'decimal');
       this.stateStore.set('hdriStrength', actual);
       this.eventBus.emit('studio:hdri-strength', actual);
     });
     this.inputs.hdriBlurriness.addEventListener('input', (event) => {
       const value = Math.min(1, Math.max(0, parseFloat(event.target.value)));
-      this.updateValueLabel('hdriBlurriness', value.toFixed(2));
+      this.updateValueLabel('hdriBlurriness', value, 'decimal');
       this.stateStore.set('hdriBlurriness', value);
       this.eventBus.emit('studio:hdri-blurriness', value);
     });
     this.inputs.hdriRotation.addEventListener('input', (event) => {
       const value = Math.min(360, Math.max(0, parseFloat(event.target.value)));
-      this.updateValueLabel('hdriRotation', `${Math.round(value)}°`);
+      this.updateValueLabel('hdriRotation', value, 'angle');
       this.stateStore.set('hdriRotation', value);
       this.eventBus.emit('studio:hdri-rotation', value);
     });
@@ -409,7 +405,7 @@ export class UIManager {
     });
     this.inputs.lensFlareRotation?.addEventListener('input', (event) => {
       const value = Math.min(360, Math.max(0, parseFloat(event.target.value)));
-      this.updateValueLabel('lensFlareRotation', `${Math.round(value)}°`);
+      this.updateValueLabel('lensFlareRotation', value, 'angle');
       this.stateStore.set('lensFlare.rotation', value);
       this.eventBus.emit('studio:lens-flare-rotation', value);
     });
@@ -419,15 +415,11 @@ export class UIManager {
         Math.max(0, parseFloat(event.target.value) || 0),
       );
       event.target.value = value;
-      this.updateValueLabel('lensFlareHeight', `${Math.round(value)}°`);
+      this.updateValueLabel('lensFlareHeight', value, 'angle');
       this.stateStore.set('lensFlare.height', value);
       this.eventBus.emit('studio:lens-flare-height', value);
     });
-    this.inputs.lensFlareColor?.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('lensFlare.color', value);
-      this.eventBus.emit('studio:lens-flare-color', value);
-    });
+    this.bindColorInput('lensFlareColor', 'lensFlare.color', 'studio:lens-flare-color');
     this.inputs.lensFlareQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
       this.stateStore.set('lensFlare.quality', value);
@@ -437,33 +429,25 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('groundSolid', enabled);
       this.eventBus.emit('studio:ground-solid', enabled);
-      this.setBlockMuted('podium', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
     });
     this.inputs.groundWire.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('groundWire', enabled);
       this.eventBus.emit('studio:ground-wire', enabled);
-      this.setBlockMuted('grid', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
     });
-    this.inputs.groundSolidColor.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('groundSolidColor', value);
-      this.eventBus.emit('studio:ground-solid-color', value);
-    });
-    this.inputs.groundWireColor.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('groundWireColor', value);
-      this.eventBus.emit('studio:ground-wire-color', value);
-    });
+    this.bindColorInput('groundSolidColor', 'groundSolidColor', 'studio:ground-solid-color');
+    this.bindColorInput('groundWireColor', 'groundWireColor', 'studio:ground-wire-color');
     this.inputs.groundWireOpacity.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('groundWireOpacity', value.toFixed(2));
+      this.updateValueLabel('groundWireOpacity', value, 'decimal');
       this.stateStore.set('groundWireOpacity', value);
       this.eventBus.emit('studio:ground-wire-opacity', value);
     });
     this.inputs.groundY.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('groundY', `${value.toFixed(2)}m`);
+      this.updateValueLabel('groundY', value, 'distance');
       this.stateStore.set('groundY', value);
       this.eventBus.emit('studio:ground-y', value);
     });
@@ -481,7 +465,7 @@ export class UIManager {
     });
     this.inputs.lightsMaster?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
-      this.updateValueLabel('lightsMaster', value.toFixed(2));
+      this.updateValueLabel('lightsMaster', value, 'decimal');
       this.stateStore.set('lightsMaster', value);
       this.eventBus.emit('lights:master', value);
     });
@@ -490,11 +474,11 @@ export class UIManager {
       this.stateStore.set('lightsEnabled', enabled);
       this.eventBus.emit('lights:enabled', enabled);
       this.setLightColorControlsDisabled(!enabled);
-      this.setBlockMuted('lights', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
     });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
-      this.updateValueLabel('lightsRotation', `${value.toFixed(0)}°`);
+      this.updateValueLabel('lightsRotation', value, 'angle');
       this.stateStore.set('lightsRotation', value);
       this.eventBus.emit('lights:rotate', value);
     });
@@ -516,24 +500,24 @@ export class UIManager {
         ['dofFocus', 'dofAperture', 'dofStrength'],
         !enabled,
       );
-      this.setBlockMuted('dof', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
       emitDof();
     });
     this.inputs.dofFocus.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('dofFocus', `${value.toFixed(1)}m`);
+      this.updateValueLabel('dofFocus', value, 'distance');
       this.stateStore.set('dof.focus', value);
       emitDof();
     });
     this.inputs.dofAperture.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('dofAperture', value.toFixed(3));
+      this.updateValueLabel('dofAperture', value, 'decimal', 3);
       this.stateStore.set('dof.aperture', value);
       emitDof();
     });
     this.inputs.dofStrength.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('dofStrength', value.toFixed(2));
+      this.updateValueLabel('dofStrength', value, 'decimal');
       this.stateStore.set('dof.strength', value);
       emitDof();
     });
@@ -547,7 +531,7 @@ export class UIManager {
         ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
         !enabled,
       );
-      this.setBlockMuted('bloom', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
       emitBloom();
     });
     [
@@ -557,7 +541,7 @@ export class UIManager {
     ].forEach(([inputKey, property]) => {
       this.inputs[inputKey].addEventListener('input', (event) => {
         const value = parseFloat(event.target.value);
-        this.updateValueLabel(inputKey, value.toFixed(2));
+        this.updateValueLabel(inputKey, value, 'decimal');
         this.stateStore.set(`bloom.${property}`, value);
         emitBloom();
       });
@@ -574,12 +558,12 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('grain.enabled', enabled);
       this.setEffectControlsDisabled(['grainIntensity'], !enabled);
-      this.setBlockMuted('grain', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
       emitGrain();
     });
     this.inputs.grainIntensity.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) * 0.15;
-      this.updateValueLabel('grainIntensity', (value / 0.15).toFixed(2));
+      this.updateValueLabel('grainIntensity', value / 0.15, 'decimal');
       this.stateStore.set('grain.intensity', value);
       emitGrain();
     });
@@ -596,18 +580,18 @@ export class UIManager {
         ['aberrationOffset', 'aberrationStrength'],
         !enabled,
       );
-      this.setBlockMuted('aberration', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
       emitAberration();
     });
     this.inputs.aberrationOffset.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('aberrationOffset', value.toFixed(3));
+      this.updateValueLabel('aberrationOffset', value, 'decimal', 3);
       this.stateStore.set('aberration.offset', value);
       emitAberration();
     });
     this.inputs.aberrationStrength.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('aberrationStrength', value.toFixed(2));
+      this.updateValueLabel('aberrationStrength', value, 'decimal');
       this.stateStore.set('aberration.strength', value);
       emitAberration();
     });
@@ -621,40 +605,38 @@ export class UIManager {
         ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
         !enabled,
       );
-      this.setBlockMuted('fresnel', !enabled);
+      // Block muting handled by applyBlockStates via syncControls
       emitFresnel();
     });
     this.inputs.fresnelColor.addEventListener('input', (event) => {
-      this.stateStore.set('fresnel.color', event.target.value);
+      const value = event.target.value;
+      this.stateStore.set('fresnel.color', value);
       emitFresnel();
     });
     this.inputs.fresnelRadius.addEventListener('input', (event) => {
       const sliderValue = parseFloat(event.target.value);
       const mapped = parseFloat((6 - sliderValue).toFixed(2));
-      this.updateValueLabel('fresnelRadius', mapped.toFixed(2));
+      this.updateValueLabel('fresnelRadius', mapped, 'decimal');
       this.stateStore.set('fresnel.radius', mapped);
       emitFresnel();
     });
     this.inputs.fresnelStrength.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('fresnelStrength', value.toFixed(2));
+      this.updateValueLabel('fresnelStrength', value, 'decimal');
       this.stateStore.set('fresnel.strength', value);
       emitFresnel();
     });
 
-    this.inputs.backgroundColor.addEventListener('input', (event) => {
-      this.stateStore.set('background', event.target.value);
-      this.eventBus.emit('scene:background', event.target.value);
-    });
+    this.bindColorInput('backgroundColor', 'background', 'scene:background');
     this.inputs.cameraFov.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('cameraFov', `${value.toFixed(0)}°`);
+      this.updateValueLabel('cameraFov', value, 'angle');
       this.stateStore.set('camera.fov', value);
       this.eventBus.emit('camera:fov', value);
     });
     this.inputs.exposure.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.updateValueLabel('exposure', value.toFixed(2));
+      this.updateValueLabel('exposure', value, 'decimal');
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
     });
@@ -863,7 +845,7 @@ export class UIManager {
         this.eventBus.emit('mesh:scale', 1);
         if (this.inputs.scale) {
           this.inputs.scale.value = 1;
-          this.updateValueLabel('scale', '1.00×');
+          this.updateValueLabel('scale', 1, 'multiplier');
         }
       }
 
@@ -874,7 +856,7 @@ export class UIManager {
         this.eventBus.emit('mesh:yOffset', 0);
         if (this.inputs.yOffset) {
           this.inputs.yOffset.value = 0;
-          this.updateValueLabel('yOffset', '0.00m');
+          this.updateValueLabel('yOffset', 0, 'distance');
         }
       }
 
@@ -893,23 +875,23 @@ export class UIManager {
         this.eventBus.emit('mesh:rotationZ', 0);
         if (this.inputs.scale) {
           this.inputs.scale.value = 1;
-          this.updateValueLabel('scale', '1.00×');
+          this.updateValueLabel('scale', 1, 'multiplier');
         }
         if (this.inputs.yOffset) {
           this.inputs.yOffset.value = 0;
-          this.updateValueLabel('yOffset', '0.00m');
+          this.updateValueLabel('yOffset', 0, 'distance');
         }
         if (this.inputs.rotationX) {
           this.inputs.rotationX.value = 0;
-          this.updateValueLabel('rotationX', '0°');
+          this.updateValueLabel('rotationX', 0, 'angle');
         }
         if (this.inputs.rotationY) {
           this.inputs.rotationY.value = 0;
-          this.updateValueLabel('rotationY', '0°');
+          this.updateValueLabel('rotationY', 0, 'angle');
         }
         if (this.inputs.rotationZ) {
           this.inputs.rotationZ.value = 0;
-          this.updateValueLabel('rotationZ', '0°');
+          this.updateValueLabel('rotationZ', 0, 'angle');
         }
       }
 
@@ -1396,9 +1378,100 @@ export class UIManager {
     }
   }
 
-  updateValueLabel(key, text) {
+  // ============================================
+  // Unified Utility Methods
+  // ============================================
+
+  /**
+   * Format slider value with appropriate unit and decimals
+   * @param {number} value - The numeric value
+   * @param {string} type - Format type: 'angle', 'distance', 'multiplier', 'decimal', 'integer'
+   * @param {number} decimals - Optional override for decimal places
+   * @returns {string} Formatted string
+   */
+  formatSliderValue(value, type = 'decimal', decimals = null) {
+    if (!Number.isFinite(value)) return '—';
+    
+    const formatMap = {
+      angle: { decimals: 0, unit: '°' },
+      distance: { decimals: 2, unit: 'm' },
+      multiplier: { decimals: 2, unit: '×' },
+      decimal: { decimals: 2, unit: '' },
+      integer: { decimals: 0, unit: '' },
+    };
+    
+    const config = formatMap[type] || formatMap.decimal;
+    const dec = decimals !== null ? decimals : config.decimals;
+    const formatted = dec === 0 ? Math.round(value).toString() : value.toFixed(dec);
+    return config.unit ? `${formatted}${config.unit}` : formatted;
+  }
+
+  /**
+   * Update value label for a slider
+   * @param {string} key - The data-output key
+   * @param {string|number} value - The value to display (or formatted string)
+   * @param {string} type - Format type if value is number
+   * @param {number} decimals - Optional override for decimal places
+   */
+  updateValueLabel(key, value, type = null, decimals = null) {
     const label = document.querySelector(`[data-output="${key}"]`);
-    if (label) label.textContent = text;
+    if (!label) return;
+    
+    if (typeof value === 'number' && type) {
+      label.textContent = this.formatSliderValue(value, type, decimals);
+    } else {
+      label.textContent = String(value);
+    }
+  }
+
+  /**
+   * Unified method to set control disabled state
+   * @param {string|string[]} inputIds - Single ID or array of IDs
+   * @param {boolean} disabled - Whether to disable
+   * @param {object} options - Additional options
+   */
+  setControlDisabled(inputIds, disabled, options = {}) {
+    const ids = Array.isArray(inputIds) ? inputIds : [inputIds];
+    const { applyBlockMute = false, blockKey = null } = options;
+    
+    ids.forEach((id) => {
+      const input = this.inputs[id];
+      if (!input) return;
+      
+      input.disabled = disabled;
+      // Use consistent class name
+      input.classList.toggle('is-disabled-handle', disabled);
+    });
+    
+    // Optionally apply block muting
+    if (applyBlockMute && blockKey) {
+      this.setBlockMuted(blockKey, disabled);
+    }
+  }
+
+  /**
+   * Unified color input handler
+   * @param {string} inputId - The color input ID
+   * @param {string} statePath - StateStore path (e.g., 'clay.color', 'lensFlare.color')
+   * @param {string} eventName - Event bus event name
+   */
+  bindColorInput(inputId, statePath, eventName) {
+    const input = this.inputs[inputId];
+    if (!input) return;
+    
+    input.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set(statePath, value);
+      this.eventBus.emit(eventName, value);
+    });
+  }
+
+  /**
+   * Sync UI from current state (alias for syncControls)
+   */
+  syncUIFromState() {
+    const state = this.stateStore.getState();
+    this.syncControls(state);
   }
 
   setHdriActive(preset) {
@@ -1412,7 +1485,7 @@ export class UIManager {
       button.disabled = !enabled;
       button.classList.toggle('is-disabled', !enabled);
     });
-    this.setBlockMuted('hdri', !enabled);
+    // Block muting handled by applyBlockStates via syncControls
     this.inputs.hdriBackground.disabled = !enabled;
       this.inputs.hdriStrength.disabled = !enabled;
       this.inputs.hdriBlurriness.disabled = !enabled;
@@ -1429,27 +1502,17 @@ export class UIManager {
     if (!this.inputs.lensFlareEnabled) return;
     const hdriActive = !!this.inputs.hdriEnabled?.checked;
     const enabled = hdriActive && !!this.inputs.lensFlareEnabled.checked;
-    this.inputs.lensFlareEnabled.disabled = !hdriActive;
-    this.inputs.lensFlareEnabled.classList.toggle('is-disabled-handle', !hdriActive);
-    const sliderIds = ['lensFlareRotation', 'lensFlareHeight'];
-    sliderIds.forEach((id) => {
-      const input = this.inputs[id];
-      if (!input) return;
-      input.disabled = !enabled;
-      input.classList.toggle('is-disabled-handle', !enabled);
-    });
-    if (this.inputs.lensFlareColor) {
-      this.inputs.lensFlareColor.disabled = !enabled;
-      this.inputs.lensFlareColor.classList.toggle('is-disabled-handle', !enabled);
-    }
-    if (this.inputs.lensFlareQuality) {
-      this.inputs.lensFlareQuality.disabled = !enabled;
-      this.inputs.lensFlareQuality.classList.toggle(
-        'is-disabled-handle',
-        !enabled,
-      );
-    }
-    this.setBlockMuted('lens-flare', !enabled);
+    
+    // Disable lens flare toggle if HDRI is off
+    this.setControlDisabled('lensFlareEnabled', !hdriActive);
+    
+    // Disable lens flare controls if not enabled
+    this.setControlDisabled(
+      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareColor', 'lensFlareQuality'],
+      !enabled,
+    );
+    
+    // Block muting handled by applyBlockStates via syncControls
   }
 
   setDropzoneVisible(visible) {
@@ -1608,27 +1671,43 @@ export class UIManager {
     this.dom.animationScrub.value = progress;
   }
 
-  syncControls(state) {
-    this.setHdriActive(state.hdri);
+  syncMeshControls(state) {
     this.inputs.scale.value = state.scale;
-    this.updateValueLabel('scale', `${state.scale.toFixed(2)}×`);
+    this.updateValueLabel('scale', state.scale, 'multiplier');
     this.inputs.yOffset.value = state.yOffset;
-    this.updateValueLabel('yOffset', `${state.yOffset.toFixed(2)}m`);
+    this.updateValueLabel('yOffset', state.yOffset, 'distance');
     if (this.inputs.rotationX) {
       this.inputs.rotationX.value = state.rotationX ?? 0;
-      this.updateValueLabel('rotationX', `${Math.round(state.rotationX ?? 0)}°`);
+      this.updateValueLabel('rotationX', state.rotationX ?? 0, 'angle');
     }
     if (this.inputs.rotationY) {
       this.inputs.rotationY.value = state.rotationY ?? 0;
-      this.updateValueLabel('rotationY', `${Math.round(state.rotationY ?? 0)}°`);
+      this.updateValueLabel('rotationY', state.rotationY ?? 0, 'angle');
     }
     if (this.inputs.rotationZ) {
       this.inputs.rotationZ.value = state.rotationZ ?? 0;
-      this.updateValueLabel('rotationZ', `${Math.round(state.rotationZ ?? 0)}°`);
+      this.updateValueLabel('rotationZ', state.rotationZ ?? 0, 'angle');
     }
     if (this.inputs.showNormals) {
-    this.inputs.showNormals.checked = state.showNormals;
+      this.inputs.showNormals.checked = state.showNormals;
     }
+    this.inputs.clayColor.value = state.clay.color;
+    this.inputs.clayRoughness.value = state.clay.roughness;
+    this.updateValueLabel('clayRoughness', state.clay.roughness, 'decimal');
+    this.inputs.claySpecular.value = state.clay.specular;
+    this.updateValueLabel('claySpecular', state.clay.specular, 'decimal');
+    
+    // Radio buttons
+    this.inputs.autoRotate.forEach((input) => {
+      input.checked = parseFloat(input.value) === state.autoRotate;
+    });
+    this.inputs.shading.forEach((input) => {
+      input.checked = input.value === state.shading;
+    });
+  }
+
+  syncStudioControls(state) {
+    this.setHdriActive(state.hdri);
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
     const normalizedStrength = Math.min(
@@ -1636,28 +1715,30 @@ export class UIManager {
       Math.max(0, state.hdriStrength / HDRI_STRENGTH_UNIT),
     );
     this.inputs.hdriStrength.value = normalizedStrength;
-    this.updateValueLabel('hdriStrength', normalizedStrength.toFixed(2));
+    this.updateValueLabel('hdriStrength', normalizedStrength, 'decimal');
     if (this.inputs.hdriBlurriness) {
       const blurriness = state.hdriBlurriness ?? 0;
       this.inputs.hdriBlurriness.value = blurriness;
-      this.updateValueLabel('hdriBlurriness', blurriness.toFixed(2));
+      this.updateValueLabel('hdriBlurriness', blurriness, 'decimal');
     }
     if (this.inputs.hdriRotation) {
       const rotation = state.hdriRotation ?? 0;
       this.inputs.hdriRotation.value = rotation;
-      this.updateValueLabel('hdriRotation', `${Math.round(rotation)}°`);
+      this.updateValueLabel('hdriRotation', rotation, 'angle');
     }
     this.inputs.hdriBackground.checked = state.hdriBackground;
     this.inputs.backgroundColor.disabled =
       state.hdriBackground && state.hdriEnabled;
     this.inputs.backgroundColor.value = state.background;
+    
+    // Lens Flare
     if (this.inputs.lensFlareEnabled) {
       this.inputs.lensFlareEnabled.checked = !!state.lensFlare?.enabled;
     }
     if (this.inputs.lensFlareRotation) {
       const rotation = state.lensFlare?.rotation ?? 0;
       this.inputs.lensFlareRotation.value = rotation;
-      this.updateValueLabel('lensFlareRotation', `${Math.round(rotation)}°`);
+      this.updateValueLabel('lensFlareRotation', rotation, 'angle');
     }
     if (this.inputs.lensFlareHeight) {
       const height = Math.min(
@@ -1665,7 +1746,7 @@ export class UIManager {
         Math.max(0, state.lensFlare?.height ?? 0),
       );
       this.inputs.lensFlareHeight.value = height;
-      this.updateValueLabel('lensFlareHeight', `${Math.round(height)}°`);
+      this.updateValueLabel('lensFlareHeight', height, 'angle');
     }
     if (this.inputs.lensFlareColor && state.lensFlare?.color) {
       this.inputs.lensFlareColor.value = state.lensFlare.color;
@@ -1674,33 +1755,26 @@ export class UIManager {
       this.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'maximum';
     }
     this.updateLensFlareControlsDisabled();
-    this.inputs.clayColor.value = state.clay.color;
-    this.inputs.clayRoughness.value = state.clay.roughness;
-    this.updateValueLabel('clayRoughness', state.clay.roughness.toFixed(2));
-    this.inputs.claySpecular.value = state.clay.specular;
-    this.updateValueLabel('claySpecular', state.clay.specular.toFixed(2));
+    
+    // Ground/Podium
     this.inputs.groundSolid.checked = state.groundSolid;
     this.inputs.groundWire.checked = state.groundWire;
     this.inputs.groundSolidColor.value = state.groundSolidColor;
     this.inputs.groundWireColor.value = state.groundWireColor;
     this.inputs.groundWireOpacity.value = state.groundWireOpacity;
-    this.updateValueLabel(
-      'groundWireOpacity',
-      state.groundWireOpacity.toFixed(2),
-    );
+    this.updateValueLabel('groundWireOpacity', state.groundWireOpacity, 'decimal');
     this.inputs.groundY.value = state.groundY;
-    this.updateValueLabel('groundY', `${state.groundY.toFixed(2)}m`);
+    this.updateValueLabel('groundY', state.groundY, 'distance');
+    
+    // Lights
     if (this.inputs.lightsRotation) {
       this.inputs.lightsRotation.value = state.lightsRotation ?? 0;
-      this.updateValueLabel(
-        'lightsRotation',
-        `${(state.lightsRotation ?? 0).toFixed(0)}°`,
-      );
+      this.updateValueLabel('lightsRotation', state.lightsRotation ?? 0, 'angle');
     }
     if (this.inputs.lightsMaster) {
       const masterValue = state.lightsMaster ?? 1;
       this.inputs.lightsMaster.value = masterValue;
-      this.updateValueLabel('lightsMaster', masterValue.toFixed(2));
+      this.updateValueLabel('lightsMaster', masterValue, 'decimal');
     }
     if (this.inputs.lightsAutoRotate) {
       this.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;
@@ -1710,66 +1784,6 @@ export class UIManager {
       this.inputs.lightsEnabled.checked = !!state.lightsEnabled;
       this.setLightColorControlsDisabled(!state.lightsEnabled);
     }
-    this.inputs.dofFocus.value = state.dof.focus;
-    this.updateValueLabel('dofFocus', `${state.dof.focus.toFixed(1)}m`);
-    this.inputs.dofAperture.value = state.dof.aperture;
-    this.updateValueLabel('dofAperture', state.dof.aperture.toFixed(3));
-    this.inputs.dofStrength.value = state.dof.strength;
-    this.updateValueLabel('dofStrength', state.dof.strength.toFixed(2));
-    this.inputs.bloomThreshold.value = state.bloom.threshold;
-    this.updateValueLabel('bloomThreshold', state.bloom.threshold.toFixed(2));
-    this.inputs.bloomStrength.value = state.bloom.strength;
-    this.updateValueLabel('bloomStrength', state.bloom.strength.toFixed(2));
-    this.inputs.bloomRadius.value = state.bloom.radius;
-    this.updateValueLabel('bloomRadius', state.bloom.radius.toFixed(2));
-    if (this.inputs.bloomColor && state.bloom.color) {
-      this.inputs.bloomColor.value = state.bloom.color;
-    }
-    this.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
-    this.updateValueLabel(
-      'grainIntensity',
-      (state.grain.intensity / 0.15).toFixed(2),
-    );
-    this.inputs.aberrationOffset.value = state.aberration.offset;
-    this.updateValueLabel(
-      'aberrationOffset',
-      state.aberration.offset.toFixed(3),
-    );
-    this.inputs.aberrationStrength.value = state.aberration.strength;
-    this.updateValueLabel(
-      'aberrationStrength',
-      state.aberration.strength.toFixed(2),
-    );
-    this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
-    this.inputs.fresnelColor.value = state.fresnel.color;
-    const sliderRadius = 6 - state.fresnel.radius;
-    this.inputs.fresnelRadius.value = sliderRadius;
-    this.updateValueLabel('fresnelRadius', state.fresnel.radius.toFixed(2));
-    this.inputs.fresnelStrength.value = state.fresnel.strength;
-    this.updateValueLabel(
-      'fresnelStrength',
-      state.fresnel.strength.toFixed(2),
-    );
-    this.inputs.cameraFov.value = state.camera.fov;
-    this.updateValueLabel('cameraFov', `${state.camera.fov.toFixed(0)}°`);
-    this.inputs.exposure.value = state.exposure;
-    this.updateValueLabel('exposure', state.exposure.toFixed(2));
-    if (this.inputs.antiAliasing) {
-      this.inputs.antiAliasing.value = state.antiAliasing ?? 'none';
-    }
-    if (this.inputs.toneMapping) {
-      this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
-    }
-
-    this.inputs.hdriButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.hdri === state.hdri);
-    });
-    this.inputs.autoRotate.forEach((input) => {
-      input.checked = parseFloat(input.value) === state.autoRotate;
-    });
-    this.inputs.shading.forEach((input) => {
-      input.checked = input.value === state.shading;
-    });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
       const colorInput = control.querySelector('input[type="color"]');
@@ -1777,70 +1791,156 @@ export class UIManager {
         colorInput.value = state.lights[lightId].color;
       }
     });
+    
+    // HDRI buttons
+    this.inputs.hdriButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.hdri === state.hdri);
+    });
+  }
+
+  syncRenderControls(state) {
+    // DOF
+    this.inputs.dofFocus.value = state.dof.focus;
+    this.updateValueLabel('dofFocus', state.dof.focus, 'distance');
+    this.inputs.dofAperture.value = state.dof.aperture;
+    this.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
+    this.inputs.dofStrength.value = state.dof.strength;
+    this.updateValueLabel('dofStrength', state.dof.strength, 'decimal');
     this.inputs.toggleDof.checked = !!state.dof.enabled;
     this.setEffectControlsDisabled(
       ['dofFocus', 'dofAperture', 'dofStrength'],
       !state.dof.enabled,
     );
+    
+    // Bloom
+    this.inputs.bloomThreshold.value = state.bloom.threshold;
+    this.updateValueLabel('bloomThreshold', state.bloom.threshold, 'decimal');
+    this.inputs.bloomStrength.value = state.bloom.strength;
+    this.updateValueLabel('bloomStrength', state.bloom.strength, 'decimal');
+    this.inputs.bloomRadius.value = state.bloom.radius;
+    this.updateValueLabel('bloomRadius', state.bloom.radius, 'decimal');
+    if (this.inputs.bloomColor && state.bloom.color) {
+      this.inputs.bloomColor.value = state.bloom.color;
+    }
     this.inputs.toggleBloom.checked = !!state.bloom.enabled;
     this.setEffectControlsDisabled(
       ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
       !state.bloom.enabled,
     );
+    
+    // Grain
+    this.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
+    this.updateValueLabel('grainIntensity', state.grain.intensity / 0.15, 'decimal');
     this.inputs.toggleGrain.checked = !!state.grain.enabled;
     this.setEffectControlsDisabled(['grainIntensity'], !state.grain.enabled);
+    
+    // Aberration
+    this.inputs.aberrationOffset.value = state.aberration.offset;
+    this.updateValueLabel('aberrationOffset', state.aberration.offset, 'decimal', 3);
+    this.inputs.aberrationStrength.value = state.aberration.strength;
+    this.updateValueLabel('aberrationStrength', state.aberration.strength, 'decimal');
     this.inputs.toggleAberration.checked = !!state.aberration.enabled;
     this.setEffectControlsDisabled(
       ['aberrationOffset', 'aberrationStrength'],
       !state.aberration.enabled,
     );
+    
+    // Fresnel
+    this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
+    this.inputs.fresnelColor.value = state.fresnel.color;
+    const sliderRadius = 6 - state.fresnel.radius;
+    this.inputs.fresnelRadius.value = sliderRadius;
+    this.updateValueLabel('fresnelRadius', state.fresnel.radius, 'decimal');
+    this.inputs.fresnelStrength.value = state.fresnel.strength;
+    this.updateValueLabel('fresnelStrength', state.fresnel.strength, 'decimal');
     this.setEffectControlsDisabled(
       ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
       !state.fresnel.enabled,
     );
+    
+    // Camera & Exposure
+    this.inputs.cameraFov.value = state.camera.fov;
+    this.updateValueLabel('cameraFov', state.camera.fov, 'angle');
+    this.inputs.exposure.value = state.exposure;
+    this.updateValueLabel('exposure', state.exposure, 'decimal');
+    if (this.inputs.antiAliasing) {
+      this.inputs.antiAliasing.value = state.antiAliasing ?? 'none';
+    }
+    if (this.inputs.toneMapping) {
+      this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
+    }
+  }
+
+  syncControls(state) {
+    this.syncMeshControls(state);
+    this.syncStudioControls(state);
+    this.syncRenderControls(state);
     this.applyBlockStates(state);
   }
 
   setEffectControlsDisabled(ids, disabled) {
-    ids.forEach((id) => {
-      const input = this.inputs[id];
-      if (!input) return;
-      input.disabled = disabled;
-      input.classList.toggle('is-disabled-handle', disabled);
-    });
+    this.setControlDisabled(ids, disabled);
   }
 
   setLightsRotationDisabled(disabled) {
-    if (!this.inputs.lightsRotation) return;
-    this.inputs.lightsRotation.disabled = disabled;
-    this.inputs.lightsRotation.classList.toggle('is-disabled-handle', disabled);
+    this.setControlDisabled('lightsRotation', disabled);
   }
 
   setLightsRotation(value) {
     if (!this.inputs.lightsRotation) return;
     const normalized = ((value % 360) + 360) % 360;
     this.inputs.lightsRotation.value = normalized;
-    this.updateValueLabel('lightsRotation', `${normalized.toFixed(0)}°`);
+    this.updateValueLabel('lightsRotation', normalized, 'angle');
   }
 
   setBlockMuted(blockKey, muted) {
     const block = this.dom?.blocks?.[blockKey];
-    if (!block) return;
+    if (!block) {
+      // Silently fail - block might not exist yet or key might be wrong
+      return;
+    }
+    // Only toggle the class - don't affect other blocks
     block.classList.toggle('is-muted', muted);
   }
 
   applyBlockStates(state) {
-    this.setBlockMuted('hdri', !state.hdriEnabled);
-    const lensEnabled = !!state.hdriEnabled && !!state.lensFlare?.enabled;
+    // Use the latest state to ensure accuracy
+    const currentState = state || this.stateStore.getState();
+    
+    // Apply muting based on current state - each block is independent
+    // Each block is evaluated independently based on its own state property
+    // This ensures only the correct block is muted when its toggle is changed
+    
+    // HDRI block - only muted if hdriEnabled is false
+    this.setBlockMuted('hdri', !currentState.hdriEnabled);
+    
+    // Lens flare block - requires both HDRI and lens flare to be enabled
+    const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
     this.setBlockMuted('lens-flare', !lensEnabled);
-    this.setBlockMuted('lights', !state.lightsEnabled);
-    this.setBlockMuted('podium', !state.groundSolid);
-    this.setBlockMuted('grid', !state.groundWire);
-    this.setBlockMuted('dof', !state.dof?.enabled);
-    this.setBlockMuted('bloom', !state.bloom?.enabled);
-    this.setBlockMuted('grain', !state.grain?.enabled);
-    this.setBlockMuted('aberration', !state.aberration?.enabled);
-    this.setBlockMuted('fresnel', !state.fresnel?.enabled);
+    
+    // Lights block - only muted if lightsEnabled is false
+    this.setBlockMuted('lights', !currentState.lightsEnabled);
+    
+    // Podium block - only muted if groundSolid is false
+    this.setBlockMuted('podium', !currentState.groundSolid);
+    
+    // Grid block - only muted if groundWire is false
+    this.setBlockMuted('grid', !currentState.groundWire);
+    
+    // DOF block - only muted if dof.enabled is false
+    this.setBlockMuted('dof', !currentState.dof?.enabled);
+    
+    // Bloom block - only muted if bloom.enabled is false
+    this.setBlockMuted('bloom', !currentState.bloom?.enabled);
+    
+    // Grain block - only muted if grain.enabled is false
+    this.setBlockMuted('grain', !currentState.grain?.enabled);
+    
+    // Aberration block - only muted if aberration.enabled is false
+    this.setBlockMuted('aberration', !currentState.aberration?.enabled);
+    
+    // Fresnel block - only muted if fresnel.enabled is false
+    this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
   }
 
   setLightColorControlsDisabled(disabled) {
@@ -1850,10 +1950,7 @@ export class UIManager {
       input.disabled = disabled;
       input.classList.toggle('is-disabled-handle', disabled);
     });
-    if (this.inputs.lightsMaster) {
-      this.inputs.lightsMaster.disabled = disabled;
-      this.inputs.lightsMaster.classList.toggle('is-disabled-handle', disabled);
-    }
+    this.setControlDisabled('lightsMaster', disabled);
   }
 }
 

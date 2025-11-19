@@ -372,9 +372,13 @@
                   />
                   <span class="value" data-output="hdriRotation">0°</span>
                 </label>
-                <label class="toggle-line">
+                <label class="slider-line">
                   <span>Show in Background</span>
-                  <input type="checkbox" id="hdriBackground" />
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="hdriBackground" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show HDRI in background</span>
+                  </label>
                 </label>
               </div>
 
@@ -532,7 +536,7 @@
                 </label>
               </div>
 
-              <div class="panel-block" data-block="grid">
+              <div class="panel-block">
                 <div class="block-title has-reset">
                   <span>Background</span>
                   <button class="block-reset-btn" data-reset="background">Reset</button>
@@ -548,7 +552,7 @@
                 </label>
               </div>
 
-              <div class="panel-block" data-block="dof">
+              <div class="panel-block" data-block="grid">
                 <div class="block-title has-toggle">
                   <span>Grid</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -593,7 +597,7 @@
 
             <section class="panel" data-panel="render">
 
-              <div class="panel-block" data-block="bloom">
+              <div class="panel-block" data-block="dof">
                 <div class="block-title has-toggle">
                   <span>Depth of Field</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -646,7 +650,7 @@
                 </label>
               </div>
 
-              <div class="panel-block" data-block="grain">
+              <div class="panel-block" data-block="bloom">
                 <div class="block-title has-toggle">
                   <span>Bloom</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -700,7 +704,7 @@
                 </label>
               </div>
 
-              <div class="panel-block" data-block="aberration">
+              <div class="panel-block" data-block="grain">
                 <div class="block-title has-toggle">
                   <span>Film Grain</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -726,7 +730,7 @@
                 </label>
               </div>
 
-              <div class="panel-block" data-block="fresnel">
+              <div class="panel-block" data-block="aberration">
                 <div class="block-title has-toggle">
                   <span>Chromatic Aberration</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -766,7 +770,7 @@
                 </label>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" data-block="fresnel">
                 <div class="block-title has-toggle">
                   <span>Fresnel</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
