@@ -1424,14 +1424,50 @@ export class SceneManager {
   setClaySettings(patch) {
     this.claySettings = { ...this.claySettings, ...patch };
     if (this.stateStore.getState().shading === 'clay') {
-      this.setShading('clay');
-    }
-  }
-
-  setClaySettings(patch) {
-    this.claySettings = { ...this.claySettings, ...patch };
-    if (this.stateStore.getState().shading === 'clay') {
-      this.setShading('clay');
+      // Update existing clay materials directly instead of recreating them
+      if (this.currentModel) {
+        this.currentModel.traverse((child) => {
+          if (!child.isMesh) return;
+          const material = child.material;
+          // Check if this is a clay material (not an original material)
+          const original = this.originalMaterials.get(child);
+          const isClayMaterial = material && original && material !== original && 
+            (!Array.isArray(material) || !Array.isArray(original) || material.length !== original.length || 
+             !material.every((mat, idx) => mat === original[idx]));
+          
+          if (isClayMaterial) {
+            // This is a clay material, update it directly
+            if (Array.isArray(material)) {
+              material.forEach((mat) => {
+                if (mat && mat.isMeshStandardMaterial) {
+                  if (patch.color !== undefined) {
+                    mat.color.set(patch.color);
+                  }
+                  if (patch.roughness !== undefined) {
+                    mat.roughness = patch.roughness;
+                  }
+                  if (patch.specular !== undefined) {
+                    mat.metalness = patch.specular;
+                  }
+                }
+              });
+            } else if (material.isMeshStandardMaterial) {
+              if (patch.color !== undefined) {
+                material.color.set(patch.color);
+              }
+              if (patch.roughness !== undefined) {
+                material.roughness = patch.roughness;
+              }
+              if (patch.specular !== undefined) {
+                material.metalness = patch.specular;
+              }
+            }
+          }
+        });
+      } else {
+        // Fallback to recreating materials if no model loaded
+        this.setShading('clay');
+      }
     }
   }
 
