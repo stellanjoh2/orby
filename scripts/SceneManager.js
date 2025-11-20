@@ -16,345 +16,34 @@ import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/
 import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js';
 import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
 import { LensFlareEffect } from './LensFlareEffect.js';
+import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
+import {
+  BloomTintShader,
+  GrainTintShader,
+  AberrationShader,
+  ExposureShader,
+  ToneMappingShader,
+  BackgroundShader,
+  RotateEquirectShader,
+} from './shaders/index.js';
+import {
+  WIREFRAME_OFFSET,
+  WIREFRAME_POLYGON_OFFSET_FACTOR,
+  WIREFRAME_POLYGON_OFFSET_UNITS,
+  WIREFRAME_OPACITY_VISIBLE,
+  WIREFRAME_OPACITY_OVERLAY,
+  CLAY_DEFAULT_ROUGHNESS,
+  CLAY_DEFAULT_METALNESS,
+  PODIUM_TOP_RADIUS_OFFSET,
+  PODIUM_SEGMENTS,
+  PODIUM_RADIUS_MULTIPLIER,
+  NORMALS_HELPER_SIZE,
+  NORMALS_HELPER_COLOR,
+  DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_METALNESS,
+} from './constants.js';
+import { formatTime } from './utils/timeFormatter.js';
 
-const HDRI_PRESETS = {
-  'congress': { url: './assets/hdris/MR_INT-009_NeonsLines_PalaisCongres_4k.jpg', type: 'ldr' },
-  'luminous-sky': { url: './assets/hdris/MR_EXT-003_Forest_MontRoyal_4k.jpg', type: 'ldr' },
-  'meadow': { url: './assets/hdris/MR_EXT-007_SunMeadow_LungernSwitzerland_4k.jpg', type: 'ldr' },
-  'abandoned': { url: './assets/hdris/MR_INT-022_RefugeWindowHighContrast_Aorai_4k.jpg', type: 'ldr' },
-  beach: { url: './assets/hdris/MR_EXT-010_BlueEndDayPinkClouds_Moorea_4k.jpg', type: 'ldr' },
-  sunset: { url: './assets/hdris/MR_EXT-014_SunsetTropicalMountains_4k.jpg', type: 'ldr' },
-};
-
-const HDRI_STRENGTH_UNIT = 0.4;
-
-const HDRI_MOODS = {
-  congress: {
-    bloomTint: '#f0f4f8',
-    bloomStrengthMin: 0.3,
-    bloomRadiusMin: 0.75,
-    grainTint: '#ffffff',
-    podiumColor: '#e8e8e8',
-    background: '#f5f5f5',
-  },
-  'luminous-sky': {
-    bloomTint: '#a8d5a3',
-    bloomStrengthMin: 0.4,
-    bloomRadiusMin: 0.75,
-    grainTint: '#d4e8d0',
-    podiumColor: '#3a4a2f',
-    background: '#2d3a24',
-  },
-  sunset: {
-    bloomTint: '#ff8c5a',
-    bloomStrengthMin: 0.4,
-    bloomRadiusMin: 0.75,
-    grainTint: '#ffd4a8',
-    podiumColor: '#4a3a2a',
-    background: '#2a1f15',
-  },
-  meadow: {
-    bloomTint: '#fff4a8',
-    bloomStrengthMin: 0.4,
-    bloomRadiusMin: 0.75,
-    grainTint: '#fff8d4',
-    podiumColor: '#6b7a4a',
-    background: '#4a5a35',
-  },
-  beach: {
-    bloomTint: '#ffb3d9',
-    bloomStrengthMin: 0.4,
-    bloomRadiusMin: 0.75,
-    grainTint: '#ffe5cc',
-    podiumColor: '#d4c5a9',
-    background: '#5a7fb5',
-  },
-  abandoned: {
-    bloomTint: '#8b6f47',
-    bloomStrengthMin: 0.35,
-    bloomRadiusMin: 0.75,
-    grainTint: '#a68b6b',
-    podiumColor: '#4a3a2a',
-    background: '#2a1f15',
-  },
-};
-
-const BloomTintShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    tint: { value: new THREE.Color('#ffe9cc') },
-    strength: { value: 0.25 },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-    uniform vec3 tint;
-    uniform float strength;
-
-    void main() {
-      vec4 base = texture2D(tDiffuse, vUv);
-      float luminance = dot(base.rgb, vec3(0.299, 0.587, 0.114));
-      float mask = smoothstep(0.6, 1.2, luminance);
-      vec3 colorized = base.rgb + tint * mask * strength;
-      gl_FragColor = vec4(colorized, base.a);
-    }
-  `,
-};
-
-const GrainTintShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    time: { value: 0 },
-    intensity: { value: 0.2 },
-    tint: { value: new THREE.Color('#ffffff') },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-    uniform float time;
-    uniform float intensity;
-    uniform vec3 tint;
-
-    // Better noise function - smoother and less glitchy
-    float rand(vec2 co) {
-      return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
-    }
-
-    // Improved grain calculation - prevents exposure pop and glitchiness
-    void main() {
-      vec4 base = texture2D(tDiffuse, vUv);
-      
-      // Early exit if intensity is effectively zero
-      if (intensity < 0.0001) {
-        gl_FragColor = base;
-        return;
-      }
-      
-      // Use screen-space UV for better grain distribution
-      // Scale UV to create fine grain pattern
-      vec2 grainUv = vUv * 800.0 + time * 0.05;
-      float noise = rand(grainUv) * 2.0 - 1.0;
-      
-      // Calculate luminance for adaptive grain
-      float luminance = dot(base.rgb, vec3(0.299, 0.587, 0.114));
-      
-      // Scale grain amount - make it more visible
-      // intensity is typically 0.03-0.15 range, so multiply by larger factor
-      float grainAmount = noise * intensity * 0.5;
-      
-      // Apply grain - blend based on luminance but make it more visible
-      // Use a smoother curve that doesn't completely hide grain in dark areas
-      float grainBlend = mix(0.3, 1.0, smoothstep(0.0, 0.5, luminance));
-      vec3 grain = tint * grainAmount * grainBlend;
-      vec3 result = base.rgb + grain;
-      
-      gl_FragColor = vec4(result, base.a);
-    }
-  `,
-};
-
-const AberrationShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    offset: { value: 0.003 },
-    strength: { value: 0.4 },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-    uniform float offset;
-    uniform float strength;
-
-    void main() {
-      vec2 center = vec2(0.5);
-      vec2 dir = normalize(vUv - center);
-      vec2 shift = dir * offset * strength;
-      float r = texture2D(tDiffuse, vUv + shift).r;
-      float g = texture2D(tDiffuse, vUv).g;
-      float b = texture2D(tDiffuse, vUv - shift).b;
-      gl_FragColor = vec4(r, g, b, 1.0);
-    }
-  `,
-};
-
-const ExposureShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    exposure: { value: 1 },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-    uniform float exposure;
-
-    void main() {
-      vec4 color = texture2D(tDiffuse, vUv);
-      color.rgb *= exposure;
-      gl_FragColor = color;
-    }
-  `,
-};
-
-const ToneMappingShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    toneMappingType: { value: 4 }, // 0=none, 1=linear, 2=reinhard, 4=aces-filmic
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-    uniform float toneMappingType;
-
-    // ACES Filmic approximation
-    vec3 ACESFilmicToneMapping(vec3 color) {
-      color *= 0.6;
-      float a = 2.51;
-      float b = 0.03;
-      float c = 2.43;
-      float d = 0.59;
-      float e = 0.14;
-      return clamp((color * (a * color + b)) / (color * (c * color + d) + e), 0.0, 1.0);
-    }
-
-    // Reinhard tone mapping
-    vec3 ReinhardToneMapping(vec3 color) {
-      return color / (1.0 + color);
-    }
-
-
-    void main() {
-      vec4 color = texture2D(tDiffuse, vUv);
-      
-      if (toneMappingType < 0.5) {
-        // None - no tone mapping
-        gl_FragColor = color;
-      } else if (toneMappingType < 1.5) {
-        // Linear - no tone mapping (same as none)
-        gl_FragColor = color;
-      } else if (toneMappingType < 2.5) {
-        // Reinhard
-        gl_FragColor = vec4(ReinhardToneMapping(color.rgb), color.a);
-      } else {
-        // ACES Filmic (default)
-        gl_FragColor = vec4(ACESFilmicToneMapping(color.rgb), color.a);
-      }
-    }
-  `,
-};
-
-const BackgroundShader = {
-  uniforms: {
-    tBackground: { value: null },
-    intensity: { value: 1.0 },
-    blurriness: { value: 0.0 },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tBackground;
-    uniform float intensity;
-    uniform float blurriness;
-
-    void main() {
-      vec2 uv = vUv;
-      
-      // Simple blur effect using multiple samples
-      vec4 color = vec4(0.0);
-      if (blurriness > 0.0) {
-        float blurAmount = blurriness * 0.02;
-        color += texture2D(tBackground, uv + vec2(-blurAmount, -blurAmount)) * 0.25;
-        color += texture2D(tBackground, uv + vec2(blurAmount, -blurAmount)) * 0.25;
-        color += texture2D(tBackground, uv + vec2(-blurAmount, blurAmount)) * 0.25;
-        color += texture2D(tBackground, uv + vec2(blurAmount, blurAmount)) * 0.25;
-      } else {
-        color = texture2D(tBackground, uv);
-      }
-      
-      // Apply intensity (darkens when < 1, brightens when > 1)
-      color.rgb *= intensity;
-      
-      gl_FragColor = color;
-    }
-  `,
-};
-
-const RotateEquirectShader = {
-  uniforms: {
-    tEquirect: { value: null },
-    rotation: { value: 0.0 },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */ `
-    varying vec2 vUv;
-    uniform sampler2D tEquirect;
-    uniform float rotation;
-
-    void main() {
-      // For equirectangular maps, rotation is horizontal (around Y axis)
-      // This means we shift the U coordinate
-      vec2 uv = vUv;
-      uv.x = mod(uv.x + rotation, 1.0);
-      gl_FragColor = texture2D(tEquirect, uv);
-    }
-  `,
-};
-
-const formatTime = (seconds) => {
-  const mins = Math.floor(seconds / 60)
-    .toString()
-    .padStart(1, '0');
-  const secs = Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${mins}:${secs}`;
-};
 
 export class SceneManager {
   constructor(eventBus, stateStore, uiManager) {
@@ -1157,8 +846,8 @@ export class SceneManager {
     
     // If we're in clay mode, handle clay materials separately and skip the rest
     if (this.currentShading === 'clay') {
-      const targetRoughness = this.claySettings?.roughness ?? 0.6;
-      const targetMetalness = this.claySettings?.specular ?? 0.08;
+      const targetRoughness = this.claySettings?.roughness ?? CLAY_DEFAULT_ROUGHNESS;
+      const targetMetalness = this.claySettings?.specular ?? CLAY_DEFAULT_METALNESS;
       
       this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;
@@ -1631,15 +1320,15 @@ export class SceneManager {
         depthTest: onlyVisibleFaces, // Enable depth test when only showing visible faces
         depthWrite: false,
         transparent: !onlyVisibleFaces, // No transparency when showing only visible faces
-        opacity: onlyVisibleFaces ? 1.0 : 0.8,
+        opacity: onlyVisibleFaces ? WIREFRAME_OPACITY_VISIBLE : WIREFRAME_OPACITY_OVERLAY,
       });
       
       // Add depth offset to prevent z-fighting when showing only visible faces
       // Increased values help with darker colors where z-fighting is more visible
       if (onlyVisibleFaces) {
         wireMaterial.polygonOffset = true;
-        wireMaterial.polygonOffsetFactor = 2;
-        wireMaterial.polygonOffsetUnits = 2;
+        wireMaterial.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
+        wireMaterial.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
       }
 
       // Create wireframe meshes that follow the model
@@ -1661,7 +1350,7 @@ export class SceneManager {
             }
             
             // Push vertices along their normals by a small amount (0.002 units)
-            const offset = 0.002;
+            const offset = WIREFRAME_OFFSET;
             for (let i = 0; i < positions.count; i++) {
               const normal = new THREE.Vector3();
               normal.fromBufferAttribute(geometry.attributes.normal, i);
@@ -1789,8 +1478,8 @@ export class SceneManager {
     this.disposeGroundMeshes();
     const baseRadius = 2;
     const height = this.groundHeight;
-    const topRadius = baseRadius - 0.08;
-    const segments = 96;
+    const topRadius = baseRadius - PODIUM_TOP_RADIUS_OFFSET;
+    const segments = PODIUM_SEGMENTS;
 
     const podiumGeo = new THREE.CylinderGeometry(
       topRadius,
@@ -1804,8 +1493,8 @@ export class SceneManager {
 
     const solidMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(this.groundSolidColor),
-      roughness: 0.85,
-      metalness: 0.08,
+      roughness: DEFAULT_MATERIAL_ROUGHNESS,
+      metalness: DEFAULT_MATERIAL_METALNESS,
     });
 
     this.podium = new THREE.Mesh(podiumGeo, solidMat);
@@ -1816,7 +1505,7 @@ export class SceneManager {
       opacity: 0.4,
     });
     this.podiumShadow = new THREE.Mesh(
-      new THREE.CircleGeometry(baseRadius * 1.05, segments),
+      new THREE.CircleGeometry(baseRadius * PODIUM_RADIUS_MULTIPLIER, segments),
       shadowMat,
     );
     this.podiumShadow.rotation.x = -Math.PI / 2;
@@ -2750,7 +2439,7 @@ export class SceneManager {
     if (!enabled || !this.currentModel) return;
     this.currentModel.traverse((child) => {
       if (child.isMesh) {
-        const helper = new VertexNormalsHelper(child, 0.08, '#4db3ff');
+        const helper = new VertexNormalsHelper(child, NORMALS_HELPER_SIZE, NORMALS_HELPER_COLOR);
         this.modelRoot.add(helper);
         this.normalsHelpers.push(helper);
       }

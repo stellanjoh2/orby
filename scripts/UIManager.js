@@ -1,6 +1,6 @@
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
-const HDRI_STRENGTH_UNIT = 0.4;
+import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
 
 export class UIManager {
   constructor(eventBus, stateStore) {
