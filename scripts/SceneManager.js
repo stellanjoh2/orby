@@ -1461,7 +1461,10 @@ export class SceneManager {
           }
         }
       });
-      this.modelRoot.remove(this.wireframeOverlay);
+      // Remove from parent (could be currentModel or modelRoot)
+      if (this.wireframeOverlay.parent) {
+        this.wireframeOverlay.parent.remove(this.wireframeOverlay);
+      }
       this.wireframeOverlay = null;
     }
   }
@@ -1469,31 +1472,8 @@ export class SceneManager {
   updateWireframeOverlay() {
     if (!this.currentModel) return;
 
-    // Update existing overlay material if it exists
-    if (this.wireframeOverlay) {
-      this.wireframeOverlay.traverse((wireMesh) => {
-        if (wireMesh.isMesh && wireMesh.material) {
-          const { color, onlyVisibleFaces } = this.wireframeSettings;
-          wireMesh.material.color.set(color);
-          wireMesh.material.depthTest = onlyVisibleFaces;
-          wireMesh.material.transparent = !onlyVisibleFaces;
-          wireMesh.material.opacity = onlyVisibleFaces ? 1.0 : 0.8;
-          if (onlyVisibleFaces) {
-            wireMesh.material.polygonOffset = true;
-            wireMesh.material.polygonOffsetFactor = 1;
-            wireMesh.material.polygonOffsetUnits = 1;
-          } else {
-            wireMesh.material.polygonOffset = false;
-          }
-        }
-      });
-      
-      // If "always on" is disabled, clear the overlay
-      if (!this.wireframeSettings.alwaysOn) {
-        this.clearWireframeOverlay();
-      }
-      return;
-    }
+    // Always clear existing overlay first to prevent duplicates
+    this.clearWireframeOverlay();
 
     // Create overlay if "always on" is enabled
     if (this.wireframeSettings.alwaysOn) {
@@ -1510,11 +1490,12 @@ export class SceneManager {
         opacity: onlyVisibleFaces ? 1.0 : 0.8,
       });
       
-      // Add small depth offset to prevent z-fighting when showing only visible faces
+      // Add depth offset to prevent z-fighting when showing only visible faces
+      // Increased values help with darker colors where z-fighting is more visible
       if (onlyVisibleFaces) {
         wireMaterial.polygonOffset = true;
-        wireMaterial.polygonOffsetFactor = 1;
-        wireMaterial.polygonOffsetUnits = 1;
+        wireMaterial.polygonOffsetFactor = 2;
+        wireMaterial.polygonOffsetUnits = 2;
       }
 
       // Create wireframe meshes that follow the model
