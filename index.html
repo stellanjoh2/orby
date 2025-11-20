@@ -270,6 +270,44 @@
                 </label>
               </div>
 
+              <div class="panel-block" data-block="podium">
+                <div class="block-title has-toggle">
+                  <span>Podium</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="podium">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="groundSolid" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable podium</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    id="groundSolidColor"
+                    class="color-chip"
+                    value="#31363f"
+                  />
+                </label>
+                <label class="slider-line">
+                  <span>Y Position</span>
+                  <input
+                    id="groundY"
+                    type="range"
+                    min="-2"
+                    max="2"
+                    step="0.01"
+                    value="0"
+                  />
+                  <span class="value" data-output="groundY">0.00m</span>
+                </label>
+                <button id="podiumSnap" class="ghost-btn small" type="button">
+                  Snap to bottom
+                </button>
+              </div>
+
               <div class="panel-block">
                 <div class="block-title">Auto-Rotate</div>
                 <div class="segmented compact">
@@ -536,41 +574,6 @@
                     step="1"
                   />
                   <span class="value" data-output="lightsRotation">0°</span>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="podium">
-                <div class="block-title has-toggle">
-                  <span>Podium</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="podium">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="groundSolid" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable podium</span>
-                    </label>
-                  </div>
-                </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="groundSolidColor"
-                    class="color-chip"
-                    value="#31363f"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Y Position</span>
-                  <input
-                    id="groundY"
-                    type="range"
-                    min="-2"
-                    max="2"
-                    step="0.01"
-                    value="0"
-                  />
-                  <span class="value" data-output="groundY">0.00m</span>
                 </label>
               </div>
 

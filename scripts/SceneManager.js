@@ -514,6 +514,7 @@ export class SceneManager {
       this.setGroundWireOpacity(value),
     );
     this.eventBus.on('studio:ground-y', (value) => this.setGroundY(value));
+    this.eventBus.on('studio:podium-snap', () => this.snapPodiumToBottom());
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
       const light = this.lights[lightId];
@@ -1446,6 +1447,31 @@ export class SceneManager {
     if (this.podium) this.podium.position.y = value;
     if (this.podiumShadow) this.podiumShadow.position.y = value - this.groundHeight;
     if (this.grid) this.grid.position.y = value;
+  }
+
+  snapPodiumToBottom() {
+    if (!this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before snapping the podium');
+      return;
+    }
+
+    const bounds = new THREE.Box3().setFromObject(this.currentModel);
+    if (!bounds || !isFinite(bounds.min.y)) {
+      this.ui?.showToast?.('Unable to determine mesh bottom');
+      return;
+    }
+
+    const bottomY = bounds.min.y;
+    this.setGroundY(bottomY);
+    this.stateStore.set('groundY', bottomY);
+
+    const currentState = this.stateStore.getState();
+    if (!currentState.groundSolid) {
+      this.setGroundSolid(true);
+      this.stateStore.set('groundSolid', true);
+    }
+
+    this.ui?.showToast?.('Podium snapped to mesh bottom');
   }
 
 

@@ -86,6 +86,7 @@ export class UIManager {
       groundWireColor: q('#groundWireColor'),
       groundWireOpacity: q('#groundWireOpacity'),
       groundY: q('#groundY'),
+      podiumSnap: q('#podiumSnap'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
@@ -473,6 +474,9 @@ export class UIManager {
       this.updateValueLabel('groundY', value, 'distance');
       this.stateStore.set('groundY', value);
       this.eventBus.emit('studio:ground-y', value);
+    });
+    this.inputs.podiumSnap?.addEventListener('click', () => {
+      this.eventBus.emit('studio:podium-snap');
     });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
