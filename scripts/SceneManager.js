@@ -1557,25 +1557,31 @@ export class SceneManager {
         }
       });
 
-      this.modelRoot.add(this.wireframeOverlay);
+      // Add wireframe overlay as a child of currentModel so it inherits the same transforms
+      // This ensures both the original meshes and wireframe meshes rotate together through modelRoot
+      if (this.currentModel) {
+        this.currentModel.add(this.wireframeOverlay);
+      } else {
+        this.modelRoot.add(this.wireframeOverlay);
+      }
     }
   }
 
   updateWireframeOverlayTransforms() {
     if (!this.wireframeOverlay || !this.currentModel) return;
     
-    // Update wireframe overlay transforms to match the model
+    // Update wireframe overlay transforms to match the model perfectly
+    // Since wireframeOverlay is now a child of currentModel (same as original meshes),
+    // we just need to copy local transforms and they'll inherit modelRoot rotations together
     this.wireframeOverlay.traverse((wireMesh) => {
       if (wireMesh.isMesh && wireMesh.userData.originalMesh) {
         const original = wireMesh.userData.originalMesh;
-        // Copy world position and rotation from original
-        wireMesh.position.setFromMatrixPosition(original.matrixWorld);
-        wireMesh.rotation.setFromRotationMatrix(original.matrixWorld);
-        // Copy scale from original (no additional scaling needed - vertices are pushed along normals)
-        const originalScale = new THREE.Vector3();
-        originalScale.setFromMatrixScale(original.matrixWorld);
-        wireMesh.scale.copy(originalScale);
-        // Let Three.js update the matrix automatically
+        // Copy local position, rotation, and scale from original
+        // This ensures they transform together through modelRoot
+        wireMesh.position.copy(original.position);
+        wireMesh.rotation.copy(original.rotation);
+        wireMesh.scale.copy(original.scale);
+        // Let Three.js handle matrix updates through the parent hierarchy
         wireMesh.matrixAutoUpdate = true;
         wireMesh.updateMatrix();
         wireMesh.matrixAutoUpdate = false;
