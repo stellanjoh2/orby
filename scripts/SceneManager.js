@@ -968,6 +968,8 @@ export class SceneManager {
     if (this.currentHdri === preset && this.hdriCache.has(preset)) {
       this.applyEnvironment(this.hdriCache.get(preset));
       this.applyHdriMood(preset);
+      // Force restore clay settings after HDRI change
+      this.forceRestoreClaySettings();
       return;
     }
     try {
@@ -976,6 +978,8 @@ export class SceneManager {
         this.applyEnvironment(cached);
         this.currentHdri = preset;
         this.applyHdriMood(preset);
+        // Force restore clay settings after HDRI change
+        this.forceRestoreClaySettings();
         return;
       }
       const texture = await this.loadHdriTexture(config);
@@ -984,6 +988,8 @@ export class SceneManager {
       this.applyEnvironment(texture);
       this.currentHdri = preset;
       this.applyHdriMood(preset);
+      // Force restore clay settings after HDRI change
+      this.forceRestoreClaySettings();
     } catch (error) {
       console.error('Failed to load HDRI', error);
       this.ui.showToast('Failed to load HDRI');
@@ -1088,7 +1094,13 @@ export class SceneManager {
     this.scene.environmentIntensity = intensity;
     
     // Also update materials directly to ensure intensity is applied
+    // Note: Clay materials are completely skipped in updateMaterialsEnvironment
+    // They only get envMap and intensity set, nothing else
     this.updateMaterialsEnvironment(envTexture, intensity);
+    
+    // IMMEDIATELY restore clay settings after environment update
+    // Use the dedicated method to ensure consistency
+    this.forceRestoreClaySettings();
 
     // Handle background with blurriness and intensity (like Three.js example)
     const backgroundIsHdri = this.hdriBackgroundEnabled;
@@ -1144,6 +1156,44 @@ export class SceneManager {
   updateMaterialsEnvironment(envTexture, intensity) {
     if (!this.currentModel) return;
     
+    // If we're in clay mode, handle clay materials separately and skip the rest
+    if (this.currentShading === 'clay') {
+      const targetRoughness = this.claySettings?.roughness ?? 0.6;
+      const targetMetalness = this.claySettings?.specular ?? 0.08;
+      
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const isClayMaterial = !this.originalMaterials.has(child);
+        
+        if (isClayMaterial) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+          
+          materials.forEach((material) => {
+            if (!material || !material.isMeshStandardMaterial) return;
+            
+            // ONLY set envMap and intensity - NEVER touch roughness/metalness
+            material.envMap = envTexture;
+            if (material.envMapIntensity !== undefined) {
+              material.envMapIntensity = intensity;
+            }
+            
+            // CRITICAL: Always restore roughness and metalness immediately after setting envMap
+            // Setting envMap might trigger Three.js internal updates that reset these values
+            material.roughness = targetRoughness;
+            material.metalness = targetMetalness;
+            
+            material.needsUpdate = true;
+          });
+        }
+      });
+      
+      // Don't process non-clay materials when in clay mode
+      return;
+    }
+    
+    // For non-clay materials, apply environment and blurriness as normal
     this.currentModel.traverse((child) => {
       if (child.isMesh && child.material) {
         const materials = Array.isArray(child.material)
@@ -1153,7 +1203,6 @@ export class SceneManager {
         materials.forEach((material) => {
           if (!material) return;
           
-          // Only apply to materials that support environment maps
           if (material.isMeshStandardMaterial || 
               material.isMeshPhysicalMaterial || 
               material.isMeshLambertMaterial ||
@@ -1163,12 +1212,9 @@ export class SceneManager {
               material.envMapIntensity = intensity;
             }
             
-            // Apply blurriness by adjusting material roughness
-            // Higher blurriness = higher roughness = more blurred reflections from environment
-            // This makes the environment map appear more blurred in reflections
-            if (material.roughness !== undefined && this.hdriBlurriness > 0) {
+            // Apply blurriness to roughness for non-clay materials only
+            if (material.roughness !== undefined) {
               // Store original roughness if not already stored
-              // Check if we have the original material to get true original roughness
               if (material.userData.originalRoughness === undefined) {
                 const originalMaterial = this.originalMaterials.get(child);
                 if (originalMaterial) {
@@ -1181,19 +1227,18 @@ export class SceneManager {
                     material.userData.originalRoughness = material.roughness;
                   }
                 } else {
-                  // For materials created fresh (like clay), use current roughness as original
                   material.userData.originalRoughness = material.roughness;
                 }
               }
+              const baseRoughness = material.userData.originalRoughness ?? material.roughness;
               
               // Apply blurriness by increasing roughness (which uses higher mipmap levels)
-              const originalRoughness = material.userData.originalRoughness ?? material.roughness;
-              const blurRoughness = originalRoughness + (1.0 - originalRoughness) * this.hdriBlurriness;
-              material.roughness = Math.min(1.0, blurRoughness);
-            } else if (material.roughness !== undefined && this.hdriBlurriness === 0) {
-              // Reset to original roughness when blurriness is 0
-              if (material.userData.originalRoughness !== undefined) {
-                material.roughness = material.userData.originalRoughness;
+              if (this.hdriBlurriness > 0) {
+                const blurRoughness = baseRoughness + (1.0 - baseRoughness) * this.hdriBlurriness;
+                material.roughness = Math.min(1.0, blurRoughness);
+              } else {
+                // Reset to base roughness when blurriness is 0
+                material.roughness = baseRoughness;
               }
             }
             
@@ -1204,10 +1249,44 @@ export class SceneManager {
     });
   }
 
+  forceRestoreClaySettings() {
+    // Simple restoration - just set the values directly from claySettings
+    if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
+      const targetRoughness = this.claySettings.roughness ?? 0.6;
+      const targetMetalness = this.claySettings.specular ?? 0.08;
+      
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const isClayMaterial = !this.originalMaterials.has(child);
+        
+        if (isClayMaterial) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+          
+          materials.forEach((material) => {
+            if (!material || !material.isMeshStandardMaterial) return;
+            
+            // Simply restore the values - no complex checks needed
+            if (material.roughness !== undefined) {
+              material.roughness = targetRoughness;
+            }
+            if (material.metalness !== undefined) {
+              material.metalness = targetMetalness;
+            }
+            material.needsUpdate = true;
+          });
+        }
+      });
+    }
+  }
+
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
     this.applyHdriMood(this.currentHdri);
+    // Force restore clay settings after any HDRI change
+    this.forceRestoreClaySettings();
   }
 
   setLensFlareEnabled(enabled) {
@@ -1249,6 +1328,8 @@ export class SceneManager {
     if (this.lensFlare) {
       this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
     }
+    // Force restore clay settings after any HDRI change
+    this.forceRestoreClaySettings();
   }
 
   setToneMapping(value) {
@@ -1284,18 +1365,24 @@ export class SceneManager {
     this.hdriStrength = Math.min(maxStrength, Math.max(0, value));
     // Regenerate environment to update both lighting and background
     this.applyEnvironment(this.currentEnvironmentTexture);
+    // Force restore clay settings after any HDRI change
+    this.forceRestoreClaySettings();
   }
 
   setHdriBlurriness(value) {
     this.hdriBlurriness = Math.min(1, Math.max(0, value));
     // Regenerate environment map with new blurriness
     this.applyEnvironment(this.currentEnvironmentTexture);
+    // Force restore clay settings after blurriness change
+    this.forceRestoreClaySettings();
   }
 
   setHdriRotation(value) {
     this.hdriRotation = Math.min(360, Math.max(0, value));
     // Regenerate environment map with new rotation
     this.applyEnvironment(this.currentEnvironmentTexture);
+    // Force restore clay settings after any HDRI change
+    this.forceRestoreClaySettings();
   }
 
   createRotatedTexture(sourceTexture, rotationDegrees) {
@@ -1456,6 +1543,15 @@ export class SceneManager {
                   if (patch.specular !== undefined) {
                     mat.metalness = patch.specular;
                   }
+                  // Always ensure values are set from claySettings, even if patch doesn't include them
+                  // This prevents values from being 0 or undefined
+                  if (mat.roughness === undefined || mat.roughness === 0) {
+                    mat.roughness = this.claySettings.roughness ?? 0.6;
+                  }
+                  if (mat.metalness === undefined || mat.metalness === 0) {
+                    mat.metalness = this.claySettings.specular ?? 0.08;
+                  }
+                  mat.needsUpdate = true;
                 }
               });
             } else if (material.isMeshStandardMaterial) {
@@ -1468,6 +1564,14 @@ export class SceneManager {
               if (patch.specular !== undefined) {
                 material.metalness = patch.specular;
               }
+              // Always ensure values are set from claySettings, even if patch doesn't include them
+              if (material.roughness === undefined || material.roughness === 0) {
+                material.roughness = this.claySettings.roughness ?? 0.6;
+              }
+              if (material.metalness === undefined || material.metalness === 0) {
+                material.metalness = this.claySettings.specular ?? 0.08;
+              }
+              material.needsUpdate = true;
             }
           }
         });
@@ -2736,6 +2840,38 @@ export class SceneManager {
   }
 
   render() {
+    // Continuously protect clay settings during render to prevent any resets
+    // This runs every frame to ensure values NEVER go to 0
+    if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
+      const targetRoughness = this.claySettings.roughness ?? 0.6;
+      const targetMetalness = this.claySettings.specular ?? 0.08;
+      
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const isClayMaterial = !this.originalMaterials.has(child);
+        
+        if (isClayMaterial) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+          
+          materials.forEach((material) => {
+            if (!material || !material.isMeshStandardMaterial) return;
+            
+            // Continuously check and restore - if values are 0 or wrong, fix immediately
+            if (material.roughness !== undefined && 
+                (material.roughness === 0 || Math.abs(material.roughness - targetRoughness) > 0.001)) {
+              material.roughness = targetRoughness;
+            }
+            if (material.metalness !== undefined && 
+                (material.metalness === 0 || Math.abs(material.metalness - targetMetalness) > 0.001)) {
+              material.metalness = targetMetalness;
+            }
+          });
+        }
+      });
+    }
+    
     if (this.unlitMode) {
       const previousExposure = this.renderer.toneMappingExposure;
       const previousColor = this.renderer.getClearColor(new THREE.Color()).clone();
