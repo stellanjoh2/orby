@@ -924,7 +924,14 @@ export class SceneManager {
     }
     this.setLightsRotation(state.lightsRotation ?? 0);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
-    this.claySettings = { ...(state.clay || this.claySettings) };
+    // Preserve existing clay settings - don't reset them when applying state snapshot
+    // Only update if state has clay settings and we don't have any yet
+    if (state.clay && !this.claySettings) {
+      this.claySettings = { ...state.clay };
+    } else if (state.clay) {
+      // Merge with existing, preserving current values
+      this.claySettings = { ...this.claySettings, ...state.clay };
+    }
     this.fresnelSettings = { ...(state.fresnel || this.fresnelSettings) };
     this.wireframeSettings = { ...(state.wireframe || this.wireframeSettings) };
     this.updateWireframeOverlay();
