@@ -1024,7 +1024,6 @@ export class SceneManager {
       const pixels = typeof width === 'number' && typeof height === 'number' 
         ? `${(width * height / 1000000).toFixed(2)}M pixels` 
         : 'unknown';
-      console.log(`Loaded HDRI: ${width}x${height} (${pixels}), Format: ${texture.format}, Type: ${texture.type}, Encoding: ${texture.encoding}`);
       return texture;
     });
   }
@@ -1357,7 +1356,6 @@ export class SceneManager {
       2: 'Reinhard',
       4: 'ACES Filmic',
     };
-    console.log(`✓ Tone mapping: "${value}" → ${constantNames[toneMappingValue]} (applied as post-processing)`);
   }
 
   setHdriStrength(value) {
@@ -1428,7 +1426,6 @@ export class SceneManager {
     }
     
     // Log texture size for debugging
-    console.log(`HDRI Rotation - Source: ${sourceTexture.image?.width || 'unknown'}x${sourceTexture.image?.height || 'unknown'}, Render Target: ${width}x${height} (${(width * height / 1000000).toFixed(2)}M pixels)`);
     
     // Detect HDR texture properties
     // HDR textures typically use RGBE encoding or HalfFloat/Float types
