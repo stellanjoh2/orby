@@ -521,7 +521,7 @@
                 <label class="slider-line">
                   <span>Show in Background</span>
                   <label class="effect-toggle">
-                    <input type="checkbox" id="hdriBackground" />
+                    <input type="checkbox" id="hdriBackground" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Show HDRI in background</span>
                   </label>
@@ -771,18 +771,6 @@
                   />
                   <span class="value" data-output="lensFlareHeight">15°</span>
                 </label>
-                <label class="slider-line">
-                  <span>Ray Length</span>
-                  <input
-                    id="lensFlareDistance"
-                    type="range"
-                    min="1"
-                    max="200"
-                    value="40"
-                    step="1"
-                  />
-                  <span class="value" data-output="lensFlareDistance">40</span>
-                </label>
                 <label class="color-line">
                   <span>Color</span>
                   <input
@@ -803,7 +791,7 @@
 
               <div class="panel-block" data-block="lens-dirt">
                 <div class="block-title has-toggle">
-                  <span>Lens Dirt (Experimental)</span>
+                  <span>Lens Dirt</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <button class="block-reset-btn" data-reset="lens-dirt">Reset</button>
                     <label class="effect-toggle">
@@ -968,6 +956,14 @@
                     step="0.01"
                   />
                   <span class="value" data-output="exposure">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Auto Exposure</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="autoExposure" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable auto exposure</span>
+                  </label>
                 </label>
                 <label class="slider-line">
                   <span>Contrast</span>
