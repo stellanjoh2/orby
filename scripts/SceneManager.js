@@ -35,6 +35,7 @@ import {
 } from './constants.js';
 import { formatTime } from './utils/timeFormatter.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
+import { LightsController } from './render/LightsController.js';
 
 
 export class SceneManager {
@@ -195,8 +196,6 @@ export class SceneManager {
     };
     this.pendingObjectUrls = [];
 
-    this.lightIndicators = null; // Group for light indicator cones
-
     this.setupLoaders();
     this.setupLights();
     this.setupGround();
@@ -228,31 +227,13 @@ export class SceneManager {
   }
 
   setupLights() {
-    this.lights = {
-      key: new THREE.DirectionalLight('#ffffff', 4),
-      fill: new THREE.DirectionalLight('#ffffff', 2.5),
-      rim: new THREE.DirectionalLight('#ffffff', 3),
-      ambient: new THREE.AmbientLight('#7c8ca6', 1.5),
-    };
-    this.lights.key.position.set(5, 5, 5);
-    this.lights.fill.position.set(-4, 3, 3);
-    this.lights.rim.position.set(-2, 4, -4);
-    this.lightBasePositions = {
-      key: this.lights.key.position.clone(),
-      fill: this.lights.fill.position.clone(),
-      rim: this.lights.rim.position.clone(),
-    };
-    Object.values(this.lights).forEach((light) => {
-      if ('castShadow' in light && light.shadow) {
-        light.castShadow = true;
-        light.shadow.radius = 4;
-        light.shadow.mapSize.set(2048, 2048);
-        light.shadow.bias = -0.0001;
-      } else {
-        light.castShadow = false;
-      }
-      this.scene.add(light);
+    this.lightsController = new LightsController(this.scene, {
+      enabled: this.lightsEnabled,
+      master: this.lightsMaster,
+      rotation: this.lightsRotation,
+      autoRotateSpeed: this.lightsAutoRotateSpeed,
     });
+    this.lights = this.lightsController.getLights();
   }
 
   setupGround() {
@@ -650,18 +631,7 @@ export class SceneManager {
     this.eventBus.on('studio:grid-snap', () => this.snapGridToBottom());
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
-      const light = this.lights[lightId];
-      if (!light) return;
-      if (property === 'color') {
-        light.color = new THREE.Color(value);
-        // Update light indicators in real-time when color changes
-        this.updateLightIndicators();
-      } else if (property === 'intensity') {
-        const multiplier = light.isAmbientLight ? 4 : 2;
-        light.intensity = value * multiplier;
-        // Update light indicators when intensity changes
-        this.updateLightIndicators();
-      }
+      this.lightsController?.updateLightProperty(lightId, property, value);
     });
     this.eventBus.on('lights:master', (value) => this.setLightsMaster(value));
     this.eventBus.on('lights:enabled', (enabled) =>
@@ -1879,177 +1849,34 @@ export class SceneManager {
 
   applyLightSettings(lightsState) {
     if (!lightsState) return;
-    Object.entries(lightsState).forEach(([id, config]) => {
-      const light = this.lights[id];
-      if (!light) return;
-      if (config.color) {
-        light.color = new THREE.Color(config.color);
-      }
-      const multiplier = light.isAmbientLight ? 4 : 2;
-      const baseIntensity = (config.intensity ?? 0) * multiplier;
-      const targetIntensity = baseIntensity * (this.lightsMaster ?? 1);
-      light.intensity = this.lightsEnabled ? targetIntensity : 0;
-    });
-    // Update light indicators if visible
-    this.updateLightIndicators();
+    this.lightsController?.applySettings(lightsState);
   }
 
   setLightsEnabled(enabled) {
-    this.lightsEnabled = enabled;
-    if (enabled) {
-      this.applyLightSettings(this.stateStore.getState().lights);
-    } else {
-      Object.values(this.lights).forEach((light) => {
-        if (!light) return;
-        light.intensity = 0;
-      });
-    }
+    this.lightsEnabled = !!enabled;
+    const lightsState = this.stateStore.getState().lights;
+    this.lightsController?.setEnabled(this.lightsEnabled, lightsState);
   }
 
   setLightsMaster(value) {
-    this.lightsMaster = value;
-    if (this.lightsEnabled) {
-      this.applyLightSettings(this.stateStore.getState().lights);
-    }
-    // Update light indicators if visible
-    this.updateLightIndicators();
+    this.lightsMaster = value ?? 1;
+    const lightsState = this.stateStore.getState().lights;
+    this.lightsController?.setMaster(this.lightsMaster, lightsState);
   }
 
   setShowLightIndicators(enabled) {
-    if (enabled) {
-      this.createLightIndicators();
-    } else {
-      this.clearLightIndicators();
+    this.lightsController?.setIndicatorsVisible(enabled);
+    if (enabled && this.modelBounds) {
+      this.lightsController?.setModelBounds(this.modelBounds);
     }
-  }
-
-  clearLightIndicators() {
-    if (this.lightIndicators) {
-      this.scene.remove(this.lightIndicators);
-      this.lightIndicators.traverse((child) => {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) child.material.dispose();
-      });
-      this.lightIndicators = null;
-    }
-  }
-
-  createLightIndicators() {
-    this.clearLightIndicators();
-    if (!this.modelBounds || !this.lightBasePositions) return;
-
-    const group = new THREE.Group();
-    const { center, radius } = this.modelBounds;
-    const baseDistance = radius * 2.5; // Position lights further out from mesh
-
-    ['key', 'fill', 'rim'].forEach((id) => {
-      const light = this.lights[id];
-      if (!light) return;
-
-      // Get current light position (already rotated)
-      const lightPos = light.position.clone();
-      
-      // Calculate direction from mesh center to light
-      const direction = lightPos.clone().sub(center).normalize();
-      
-      // Position indicator at a fixed distance from mesh center, in the same direction as the light
-      const position = center.clone().add(direction.multiplyScalar(baseDistance));
-
-      // Create cone geometry (simplified spotlight)
-      const coneHeight = 0.3;
-      const coneRadius = 0.15;
-      const geometry = new THREE.ConeGeometry(coneRadius, coneHeight, 8);
-      const material = new THREE.MeshBasicMaterial({
-        color: light.color,
-        transparent: true,
-        opacity: 0.8,
-        side: THREE.DoubleSide,
-      });
-
-      const cone = new THREE.Mesh(geometry, material);
-      
-      // Position cone at calculated position
-      cone.position.copy(position);
-      
-      // Orient cone so wide end (base) points at mesh center (like a real spotlight)
-      // ConeGeometry has tip at +Y and base at -Y in local space
-      // We want the base (-Y) to point at the mesh center
-      // Calculate direction from light to center
-      const dirToCenter = center.clone().sub(position).normalize();
-      // Create a quaternion that rotates -Y (base) to point in dirToCenter direction
-      const up = new THREE.Vector3(0, 1, 0);
-      const quaternion = new THREE.Quaternion();
-      quaternion.setFromUnitVectors(up.clone().negate(), dirToCenter); // negate up to get -Y
-      cone.quaternion.copy(quaternion);
-      
-      // Store light ID for updates
-      cone.userData.lightId = id;
-      group.add(cone);
-    });
-
-    this.lightIndicators = group;
-    this.scene.add(group);
-    this.updateLightIndicators();
   }
 
   updateLightIndicators() {
-    if (!this.lightIndicators || !this.modelBounds || !this.lightBasePositions) return;
-
-    const { center, radius } = this.modelBounds;
-    const baseDistance = radius * 2.5;
-
-    this.lightIndicators.traverse((child) => {
-      if (!child.isMesh || !child.userData.lightId) return;
-      
-      const lightId = child.userData.lightId;
-      const light = this.lights[lightId];
-      if (!light) return;
-
-      // Get current light position (already rotated)
-      const lightPos = light.position.clone();
-      
-      // Calculate direction from mesh center to light
-      const direction = lightPos.clone().sub(center).normalize();
-      
-      // Position indicator at a fixed distance from mesh center, in the same direction as the light
-      const newPosition = center.clone().add(direction.multiplyScalar(baseDistance));
-      child.position.copy(newPosition);
-
-      // Update color
-      child.material.color.copy(light.color);
-
-      // Update size based on intensity (scale from 0.5 to 2.5 based on intensity 0-5)
-      // lightsMaster can go up to 5, and individual intensities are multiplied by 2 (non-ambient)
-      // So max intensity = baseIntensity * 2 * 5 = up to 10 for non-ambient lights
-      // We want to scale from 0.5 to 2.5 based on lightsMaster 0-5
-      const maxIntensity = 10; // Max intensity when lightsMaster is 5
-      const normalizedIntensity = Math.min(light.intensity / maxIntensity, 1);
-      const scale = 0.5 + normalizedIntensity * 2.0; // Scale from 0.5 to 2.5
-      child.scale.set(scale, scale, scale);
-
-      // Re-orient to point at mesh center (wide end pointing at mesh, like a real spotlight)
-      const dirToCenter = center.clone().sub(newPosition).normalize();
-      const up = new THREE.Vector3(0, 1, 0);
-      const quaternion = new THREE.Quaternion();
-      quaternion.setFromUnitVectors(up.clone().negate(), dirToCenter); // negate up to get -Y
-      child.quaternion.copy(quaternion);
-    });
+    this.lightsController?.updateIndicators();
   }
 
   setLightsRotation(value, { updateUi = true, updateHdri = false } = {}) {
-    this.lightsRotation = ((value % 360) + 360) % 360;
-    if (!this.lightBasePositions) return;
-    const radians = THREE.MathUtils.degToRad(this.lightsRotation);
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
-    ['key', 'fill', 'rim'].forEach((id) => {
-      const base = this.lightBasePositions[id];
-      const light = this.lights[id];
-      if (!base || !light) return;
-      const rotatedX = base.x * cos + base.z * sin;
-      const rotatedZ = -base.x * sin + base.z * cos;
-      light.position.set(rotatedX, base.y, rotatedZ);
-    });
+    this.lightsRotation = this.lightsController?.setRotation(value) ?? value;
     // Also rotate HDRI with lights (unless we're being called from setHdriRotation to avoid loop)
     if (updateHdri) {
       this.hdriRotation = this.lightsRotation;
@@ -2670,6 +2497,7 @@ export class SceneManager {
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       this.modelBounds = { box, size, center, radius: size.length() / 2 };
+      this.lightsController?.setModelBounds(this.modelBounds);
       this.controls.target.copy(center);
       const distance = this.modelBounds.radius * 2.2 || 5;
       const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
