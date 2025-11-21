@@ -346,3 +346,48 @@ export const ColorAdjustShader = {
   fragmentShader: colorAdjustFragment,
 };
 
+const lensDirtVertex = `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const lensDirtFragment = `
+varying vec2 vUv;
+uniform sampler2D tDiffuse;
+uniform sampler2D tDirt;
+uniform float strength;
+uniform float minLuminance;
+uniform float maxLuminance;
+uniform float sensitivity;
+uniform float exposureFactor;
+
+void main() {
+  vec4 base = texture2D(tDiffuse, vUv);
+  vec4 dirt = texture2D(tDirt, vUv);
+  float ramp = smoothstep(minLuminance, maxLuminance, exposureFactor);
+  float amount = pow(ramp, sensitivity) * strength;
+  vec3 result = base.rgb + dirt.rgb * amount;
+  gl_FragColor = vec4(result, base.a);
+}
+`;
+
+const emptyTexture = new THREE.Texture();
+
+export const LensDirtShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    tDirt: { value: emptyTexture },
+    strength: { value: 0.35 },
+    minLuminance: { value: 0.1 },
+    maxLuminance: { value: 0.5 },
+    sensitivity: { value: 1.0 },
+    exposureFactor: { value: 1.0 },
+  },
+  vertexShader: lensDirtVertex,
+  fragmentShader: lensDirtFragment,
+};
+
+

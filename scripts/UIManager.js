@@ -109,6 +109,8 @@ export class UIManager {
       bloomRadius: q('#bloomRadius'),
       bloomColor: q('#bloomColor'),
       toggleBloom: q('#toggleBloom'),
+      lensDirtEnabled: q('#lensDirtEnabled'),
+      lensDirtStrength: q('#lensDirtStrength'),
       grainIntensity: q('#grainIntensity'),
       toggleGrain: q('#toggleGrain'),
       aberrationOffset: q('#aberrationOffset'),
@@ -629,6 +631,25 @@ export class UIManager {
       this.stateStore.set('bloom.color', value);
       emitBloom();
     });
+
+    const emitLensDirt = () =>
+      this.eventBus.emit('render:lens-dirt', this.stateStore.getState().lensDirt);
+    if (this.inputs.lensDirtEnabled) {
+      this.inputs.lensDirtEnabled.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('lensDirt.enabled', enabled);
+        this.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
+        emitLensDirt();
+      });
+    }
+    if (this.inputs.lensDirtStrength) {
+      this.inputs.lensDirtStrength.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        this.updateValueLabel('lensDirtStrength', value, 'decimal');
+        this.stateStore.set('lensDirt.strength', value);
+        emitLensDirt();
+      });
+    }
 
     const emitGrain = () =>
       this.eventBus.emit('render:grain', this.stateStore.getState().grain);
@@ -1452,6 +1473,16 @@ export class UIManager {
             );
             this.syncUIFromState();
             break;
+
+          case 'lens-dirt':
+            this.stateStore.set('lensDirt', defaults.lensDirt);
+            this.eventBus.emit('render:lens-dirt', defaults.lensDirt);
+            this.setEffectControlsDisabled(
+              ['lensDirtStrength'],
+              !defaults.lensDirt.enabled,
+            );
+            this.syncUIFromState();
+            break;
             
           case 'grain':
             this.stateStore.set('grain', defaults.grain);
@@ -2059,6 +2090,16 @@ export class UIManager {
       ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
       !state.bloom.enabled,
     );
+
+    if (this.inputs.lensDirtStrength && state.lensDirt) {
+      this.inputs.lensDirtStrength.value = state.lensDirt.strength;
+      this.updateValueLabel('lensDirtStrength', state.lensDirt.strength, 'decimal');
+    }
+    if (this.inputs.lensDirtEnabled) {
+      const enabled = !!state.lensDirt?.enabled;
+      this.inputs.lensDirtEnabled.checked = enabled;
+      this.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
+    }
     
     // Grain
     this.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
@@ -2179,6 +2220,9 @@ export class UIManager {
     
     // Bloom block - only muted if bloom.enabled is false
     this.setBlockMuted('bloom', !currentState.bloom?.enabled);
+
+    // Lens dirt block - only muted if lens dirt disabled
+    this.setBlockMuted('lens-dirt', !currentState.lensDirt?.enabled);
     
     // Grain block - only muted if grain.enabled is false
     this.setBlockMuted('grain', !currentState.grain?.enabled);

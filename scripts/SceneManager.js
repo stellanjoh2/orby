@@ -26,6 +26,7 @@ import {
   BackgroundShader,
   RotateEquirectShader,
   ColorAdjustShader,
+  LensDirtShader,
 } from './shaders/index.js';
 import {
   WIREFRAME_OFFSET,
@@ -156,6 +157,25 @@ export class SceneManager {
     this.claySettings = { ...(initialState.clay || {}) };
     this.fresnelSettings = { ...(initialState.fresnel || {}) };
     this.wireframeSettings = { ...(initialState.wireframe || { alwaysOn: false, color: '#9fb7ff', onlyVisibleFaces: false }) };
+    this.lensDirtSettings = {
+      ...(initialState.lensDirt ?? defaults.lensDirt),
+    };
+    this.lensDirtTexture = null;
+    this.lensDirtTexturePath =
+      './assets/images/free_texture_friday_566-1024x682.jpg';
+    this.luminanceSampleSize = 8;
+    this.luminanceRenderTarget = new THREE.WebGLRenderTarget(
+      this.luminanceSampleSize,
+      this.luminanceSampleSize,
+      {
+        depthBuffer: false,
+        stencilBuffer: false,
+      },
+    );
+    this.luminanceBuffer = new Uint8Array(
+      this.luminanceSampleSize * this.luminanceSampleSize * 4,
+    );
+    this.averageLuminance = 0.5;
 
     this.originalMaterials = new WeakMap();
     this.wireframeOverlay = null; // Group for wireframe overlay when "always on"
@@ -184,6 +204,8 @@ export class SceneManager {
     this.setupLights();
     this.setupGround();
     this.setupComposer();
+    this.updateLensDirt(this.lensDirtSettings);
+    this.loadLensDirtTexture();
     this.setupLensFlare(this.lensFlareState);
     this.registerEvents();
     this.handleResize();
@@ -273,6 +295,8 @@ export class SceneManager {
     this.grainTintPass = new ShaderPass(GrainTintShader);
     // Initialize time uniform for grain animation
     this.grainTintPass.uniforms.time.value = 0;
+    this.lensDirtPass = new ShaderPass(LensDirtShader);
+    this.lensDirtPass.enabled = false;
     this.aberrationPass = new ShaderPass(AberrationShader);
     this.exposurePass = new ShaderPass(ExposureShader);
     this.exposurePass.uniforms.exposure.value = this.currentExposure;
@@ -305,6 +329,7 @@ export class SceneManager {
     this.composer.addPass(this.bokehPass);
     this.composer.addPass(this.bloomPass);
     this.composer.addPass(this.bloomTintPass);
+    this.composer.addPass(this.lensDirtPass);
     this.composer.addPass(this.filmPass);
     this.composer.addPass(this.grainTintPass);
     this.composer.addPass(this.aberrationPass);
@@ -312,6 +337,93 @@ export class SceneManager {
     this.composer.addPass(this.exposurePass);
     this.composer.addPass(this.colorAdjustPass);
     this.composer.addPass(this.toneMappingPass); // Last pass - applies tone mapping
+  }
+
+  loadLensDirtTexture() {
+    if (!this.textureLoader || !this.lensDirtTexturePath) return;
+    this.textureLoader.load(
+      this.lensDirtTexturePath,
+      (texture) => {
+        if ('colorSpace' in texture && THREE.SRGBColorSpace) {
+          texture.colorSpace = THREE.SRGBColorSpace;
+        }
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        this.lensDirtTexture = texture;
+        if (this.lensDirtPass) {
+          this.lensDirtPass.uniforms.tDirt.value = texture;
+          this.updateLensDirt();
+        }
+      },
+      undefined,
+      (error) => {
+        console.warn('Failed to load lens dirt texture', error);
+      },
+    );
+  }
+
+  updateLensDirt(settings) {
+    if (!this.lensDirtPass) return;
+    if (settings) {
+      this.lensDirtSettings = {
+        ...(this.lensDirtSettings ?? this.stateStore.getDefaults().lensDirt),
+        ...settings,
+      };
+    }
+    const defaults = this.stateStore.getDefaults().lensDirt;
+    const current = this.lensDirtSettings ?? defaults;
+    const enabled = !!current.enabled && !!this.lensDirtTexture;
+    this.lensDirtPass.enabled = enabled;
+    this.lensDirtPass.uniforms.strength.value = current.strength ?? defaults.strength;
+    this.lensDirtPass.uniforms.minLuminance.value =
+      current.minLuminance ?? defaults.minLuminance;
+    this.lensDirtPass.uniforms.maxLuminance.value =
+      current.maxLuminance ?? defaults.maxLuminance;
+    this.lensDirtPass.uniforms.sensitivity.value =
+      current.sensitivity ?? defaults.sensitivity ?? 1.0;
+    const globalBrightness = THREE.MathUtils.clamp(
+      this.averageLuminance ?? 0,
+      0,
+      1,
+    );
+    this.lensDirtPass.uniforms.exposureFactor.value = globalBrightness;
+  }
+
+  sampleSceneLuminance() {
+    if (!this.luminanceRenderTarget || !this.renderer || this.unlitMode) return;
+    const previousTarget = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(this.luminanceRenderTarget);
+    this.renderer.render(this.scene, this.camera);
+    this.renderer.setRenderTarget(previousTarget);
+    try {
+      this.renderer.readRenderTargetPixels(
+        this.luminanceRenderTarget,
+        0,
+        0,
+        this.luminanceSampleSize,
+        this.luminanceSampleSize,
+        this.luminanceBuffer,
+      );
+      let sum = 0;
+      for (let i = 0; i < this.luminanceBuffer.length; i += 4) {
+        const r = this.luminanceBuffer[i] / 255;
+        const g = this.luminanceBuffer[i + 1] / 255;
+        const b = this.luminanceBuffer[i + 2] / 255;
+        const value = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        sum += value;
+      }
+      const avg = sum / (this.luminanceBuffer.length / 4);
+      this.averageLuminance = THREE.MathUtils.clamp(
+        THREE.MathUtils.lerp(this.averageLuminance ?? avg, avg, 0.35),
+        0,
+        1,
+      );
+      if (this.lensDirtPass) {
+        this.lensDirtPass.uniforms.exposureFactor.value = this.averageLuminance;
+      }
+    } catch (error) {
+      // Ignore read errors (e.g., if readPixels is unavailable)
+    }
   }
 
   setupLensFlare(initialLensFlare) {
@@ -578,6 +690,9 @@ export class SceneManager {
     this.eventBus.on('render:fresnel', (settings) =>
       this.setFresnelSettings(settings),
     );
+    this.eventBus.on('render:lens-dirt', (settings) =>
+      this.updateLensDirt(settings),
+    );
     this.eventBus.on('render:anti-aliasing', (value) => {
       if (this.fxaaPass) {
         this.fxaaPass.enabled = value === 'fxaa';
@@ -595,6 +710,7 @@ export class SceneManager {
       if (this.exposurePass) {
         this.exposurePass.uniforms.exposure.value = value;
       }
+      this.updateLensDirt();
       // Exposure now works independently without auto-balancing HDRI
     });
 
@@ -670,6 +786,7 @@ export class SceneManager {
     this.updateWireframeOverlay();
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
+    this.updateLensDirt(state.lensDirt);
     this.updateGrain(state.grain);
     this.updateAberration(state.aberration);
     this.updateBackgroundColor(state.background);
@@ -2939,6 +3056,7 @@ export class SceneManager {
       this.renderer.toneMappingExposure = previousExposure;
       return;
     }
+    this.sampleSceneLuminance();
     if (this.composer) {
       this.composer.render();
     } else {
