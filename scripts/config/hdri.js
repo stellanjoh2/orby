@@ -9,7 +9,7 @@ export const HDRI_PRESETS = {
   sunset: { url: './assets/hdris/MR_EXT-014_SunsetTropicalMountains_4k.jpg', type: 'ldr' },
 };
 
-export const HDRI_STRENGTH_UNIT = 0.4;
+export const HDRI_STRENGTH_UNIT = 1.0;
 
 export const HDRI_MOODS = {
   congress: {

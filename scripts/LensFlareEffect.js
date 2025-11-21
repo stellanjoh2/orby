@@ -466,6 +466,9 @@ export class LensFlareEffect extends THREE.Mesh {
     this.worldTarget = new THREE.Vector3();
     this.direction = new THREE.Vector3();
     this.intersections = [];
+    this.occlusionCheckObjects = null; // Will be set to only check relevant objects
+    this.lastOcclusionCheck = 0;
+    this.occlusionCheckInterval = 0.05; // Check every 50ms instead of every frame (20 checks/sec)
 
     this.distance = options.distance ?? 40;
     this.azimuthDeg = options.rotation ?? 0;
@@ -577,11 +580,22 @@ export class LensFlareEffect extends THREE.Mesh {
       return;
     }
 
+    // Throttle occlusion checks to avoid performance issues
+    const now = this.timeClock.getElapsedTime();
+    if (now - this.lastOcclusionCheck < this.occlusionCheckInterval) {
+      return; // Use cached opacity, don't check again yet
+    }
+    this.lastOcclusionCheck = now;
+
     this.direction.copy(this.worldTarget).sub(camera.position).normalize();
     this.raycaster.set(camera.position, this.direction);
     this.raycaster.far = distance;
     this.intersections.length = 0;
-    this.raycaster.intersectObjects(scene.children, true, this.intersections);
+    
+    // Only check specific objects instead of all scene children
+    // This is much more performant, especially when occluded
+    const objectsToCheck = this.occlusionCheckObjects || scene.children;
+    this.raycaster.intersectObjects(objectsToCheck, true, this.intersections);
 
     const occluder = this.intersections.find(
       (hit) =>
