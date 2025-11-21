@@ -332,8 +332,6 @@ export class SceneManager {
     adjustUniforms.tint.value = 0.0;
     adjustUniforms.highlights.value = 0.0;
     adjustUniforms.shadows.value = 0.0;
-    adjustUniforms.whites.value = 0.0;
-    adjustUniforms.blacks.value = 0.0;
     adjustUniforms.bypass.value = 1.0;
     this.colorAdjustPass.renderToScreen = false;
     this.colorAdjustPass.enabled = true;
@@ -694,8 +692,6 @@ export class SceneManager {
       this.setHighlights(value),
     );
     this.eventBus.on('render:shadows', (value) => this.setShadows(value));
-    this.eventBus.on('render:whites', (value) => this.setWhites(value));
-    this.eventBus.on('render:blacks', (value) => this.setBlacks(value));
     this.eventBus.on('studio:ground-solid', (enabled) => {
       this.setGroundSolid(enabled);
     });
@@ -867,9 +863,7 @@ export class SceneManager {
     this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
-    this.setShadows((state.camera?.shadows ?? 0) / 100);
-    this.setWhites((state.camera?.whites ?? 0) / 100);
-    this.setBlacks((state.camera?.blacks ?? 0) / 100);
+    this.setShadows((state.camera?.shadows ?? 0) / 50);
     // Initialize clay normal map setting
     if (state.clay?.normalMap !== undefined) {
       this.setClayNormalMap(state.clay.normalMap);
@@ -1350,20 +1344,6 @@ export class SceneManager {
     }
   }
 
-  setWhites(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.whites.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
-    }
-  }
-
-  setBlacks(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.blacks.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
-    }
-  }
-
   updateColorAdjustPassEnabled() {
     if (!this.colorAdjustPass) return;
     const contrast = this.colorAdjustPass.uniforms.contrast.value;
@@ -1373,8 +1353,6 @@ export class SceneManager {
     const tint = this.colorAdjustPass.uniforms.tint.value;
     const highlights = this.colorAdjustPass.uniforms.highlights.value;
     const shadows = this.colorAdjustPass.uniforms.shadows.value;
-    const whites = this.colorAdjustPass.uniforms.whites.value;
-    const blacks = this.colorAdjustPass.uniforms.blacks.value;
     // Only enable the pass if any value is not at default
     const isDefault =
       Math.abs(contrast - 1.0) < 0.001 &&
@@ -1383,9 +1361,7 @@ export class SceneManager {
       Math.abs(temperature) < 0.001 &&
       Math.abs(tint) < 0.001 &&
       Math.abs(highlights) < 0.001 &&
-      Math.abs(shadows) < 0.001 &&
-      Math.abs(whites) < 0.001 &&
-      Math.abs(blacks) < 0.001;
+      Math.abs(shadows) < 0.001;
     if (this.colorAdjustPass.uniforms.bypass) {
       this.colorAdjustPass.uniforms.bypass.value = isDefault ? 1.0 : 0.0;
     }

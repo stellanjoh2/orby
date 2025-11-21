@@ -97,8 +97,6 @@ export class StateStore {
         tint: 0,
         highlights: 0,
         shadows: 0,
-        whites: 0,
-        blacks: 0,
         saturation: 1.0,
       },
       exposure: 1.0,
