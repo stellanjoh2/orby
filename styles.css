@@ -68,6 +68,11 @@ body {
   overflow: hidden;
 }
 
+body.dropzone-visible #webgl {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .top-bar {
   display: none;
 }

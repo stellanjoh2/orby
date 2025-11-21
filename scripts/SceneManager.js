@@ -82,7 +82,14 @@ export class SceneManager {
     this.podiumScale = initialState.podiumScale ?? 1;
     this.gridScale = initialState.gridScale ?? 1;
     this.groundHeight = 0.1; // Fixed height for podium
-    this.currentExposure = initialState.exposure ?? 1;
+    this.manualExposure = initialState.exposure ?? 1;
+    this.currentExposure = this.manualExposure;
+    this.autoExposureEnabled = initialState.autoExposure ?? false;
+    this.autoExposureValue = this.manualExposure;
+    this.autoExposureTarget = 0.6;
+    this.autoExposureMin = 0.25;
+    this.autoExposureMax = 2.5;
+    this.autoExposureSmooth = 0.08;
     this.hdriStrength = Math.min(
       5 * HDRI_STRENGTH_UNIT,
       Math.max(0, initialState.hdriStrength ?? 0.6),
@@ -426,6 +433,43 @@ export class SceneManager {
     }
   }
 
+  applyAutoExposure() {
+    if (!this.autoExposureEnabled) return;
+    const luminance = THREE.MathUtils.clamp(
+      this.averageLuminance ?? this.autoExposureTarget,
+      0.05,
+      1.2,
+    );
+    const target = THREE.MathUtils.clamp(
+      this.autoExposureTarget / luminance,
+      this.autoExposureMin,
+      this.autoExposureMax,
+    );
+    this.autoExposureValue = THREE.MathUtils.lerp(
+      this.autoExposureValue ?? target,
+      target,
+      this.autoExposureSmooth,
+    );
+    this.updateExposureUniform(this.autoExposureValue);
+  }
+
+  setAutoExposureEnabled(enabled) {
+    this.autoExposureEnabled = !!enabled;
+    if (this.autoExposureEnabled) {
+      this.autoExposureValue = this.currentExposure ?? this.manualExposure ?? 1;
+    } else {
+      this.updateExposureUniform(this.manualExposure ?? 1);
+    }
+  }
+
+  updateExposureUniform(value) {
+    this.currentExposure = value;
+    if (this.exposurePass) {
+      this.exposurePass.uniforms.exposure.value = value;
+    }
+    this.ui?.updateExposureDisplay?.(value);
+  }
+
   setupLensFlare(initialLensFlare) {
     const defaults = this.stateStore.getDefaults().lensFlare;
     const state = initialLensFlare ?? defaults;
@@ -706,13 +750,15 @@ export class SceneManager {
       this.updateBackgroundColor(color),
     );
     this.eventBus.on('scene:exposure', (value) => {
-      this.currentExposure = value;
-      if (this.exposurePass) {
-        this.exposurePass.uniforms.exposure.value = value;
+      this.manualExposure = value;
+      if (!this.autoExposureEnabled) {
+        this.updateExposureUniform(value);
       }
       this.updateLensDirt();
-      // Exposure now works independently without auto-balancing HDRI
     });
+    this.eventBus.on('camera:auto-exposure', (enabled) =>
+      this.setAutoExposureEnabled(enabled),
+    );
 
     this.eventBus.on('file:selected', (file) => this.loadFile(file));
     this.eventBus.on('file:bundle', (bundle) => this.loadFileBundle(bundle));
@@ -751,10 +797,11 @@ export class SceneManager {
     this.setGridY(state.gridY ?? 0);
     this.setPodiumScale(state.podiumScale ?? 1);
     this.setGridScale(state.gridScale ?? 1);
-    this.currentExposure = state.exposure;
-    if (this.exposurePass) {
-      this.exposurePass.uniforms.exposure.value = state.exposure;
-    }
+    this.manualExposure = state.exposure ?? 1;
+    this.autoExposureEnabled = state.autoExposure ?? false;
+    this.autoExposureValue = this.manualExposure;
+    this.updateExposureUniform(this.manualExposure);
+    this.setAutoExposureEnabled(this.autoExposureEnabled);
     // Initialize base HDRI strength if not already set
     if (this.baseHdriStrength === undefined) {
       this.baseHdriStrength = (state.hdriStrength ?? 1.0) * state.exposure;
@@ -3057,6 +3104,7 @@ export class SceneManager {
       return;
     }
     this.sampleSceneLuminance();
+    this.applyAutoExposure();
     if (this.composer) {
       this.composer.render();
     } else {

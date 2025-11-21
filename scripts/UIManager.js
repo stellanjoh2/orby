@@ -72,7 +72,6 @@ export class UIManager {
       lensFlareEnabled: q('#lensFlareEnabled'),
       lensFlareRotation: q('#lensFlareRotation'),
       lensFlareHeight: q('#lensFlareHeight'),
-      lensFlareDistance: q('#lensFlareDistance'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
       clayColor: q('#clayColor'),
@@ -123,6 +122,7 @@ export class UIManager {
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
       exposure: q('#exposure'),
+      autoExposure: q('#autoExposure'),
       cameraContrast: q('#cameraContrast'),
       cameraHue: q('#cameraHue'),
       cameraSaturation: q('#cameraSaturation'),
@@ -148,6 +148,7 @@ export class UIManager {
         this.dom.blocks[key] = block;
       }
     });
+    this.setDropzoneVisible(this.dropzoneVisible);
   }
 
   bindEvents() {
@@ -460,16 +461,6 @@ export class UIManager {
       this.stateStore.set('lensFlare.height', value);
       this.eventBus.emit('studio:lens-flare-height', value);
     });
-    this.inputs.lensFlareDistance?.addEventListener('input', (event) => {
-      const value = Math.min(
-        200,
-        Math.max(1, parseFloat(event.target.value) || 40),
-      );
-      event.target.value = value;
-      this.updateValueLabel('lensFlareDistance', value, 'decimal');
-      this.stateStore.set('lensFlare.distance', value);
-      this.eventBus.emit('studio:lens-flare-distance', value);
-    });
     this.bindColorInput('lensFlareColor', 'lensFlare.color', 'studio:lens-flare-color');
     this.inputs.lensFlareQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
@@ -739,6 +730,14 @@ export class UIManager {
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
     });
+    if (this.inputs.autoExposure) {
+      this.inputs.autoExposure.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('autoExposure', enabled);
+        this.setEffectControlsDisabled(['exposure'], enabled);
+        this.eventBus.emit('camera:auto-exposure', enabled);
+      });
+    }
     this.inputs.cameraContrast?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.stateStore.set('camera.contrast', value);
@@ -1516,12 +1515,14 @@ export class UIManager {
             // Reset all camera & color settings
             this.stateStore.set('camera', { ...defaults.camera });
             this.stateStore.set('exposure', defaults.exposure);
+            this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
             // Also reset antiAliasing and toneMapping (in Quality block, but reset together)
             this.stateStore.set('antiAliasing', defaults.antiAliasing);
             this.stateStore.set('toneMapping', defaults.toneMapping);
             // Emit all events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('scene:exposure', defaults.exposure);
+            this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
             this.eventBus.emit('render:hue', defaults.camera.hue);
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
@@ -1738,6 +1739,7 @@ export class UIManager {
     const shouldShow = visible && !this.uiHidden;
     this.dom.dropzone.style.pointerEvents = shouldShow ? 'auto' : 'none';
     this.dom.dropzone.style.opacity = shouldShow ? '1' : '0';
+    document.body.classList.toggle('dropzone-visible', shouldShow);
   }
 
   revealShelf() {
@@ -1987,14 +1989,6 @@ export class UIManager {
       this.inputs.lensFlareHeight.value = height;
       this.updateValueLabel('lensFlareHeight', height, 'angle');
     }
-    if (this.inputs.lensFlareDistance) {
-      const distance = Math.min(
-        200,
-        Math.max(1, state.lensFlare?.distance ?? 40),
-      );
-      this.inputs.lensFlareDistance.value = distance;
-      this.updateValueLabel('lensFlareDistance', distance, 'decimal');
-    }
     if (this.inputs.lensFlareColor && state.lensFlare?.color) {
       this.inputs.lensFlareColor.value = state.lensFlare.color;
     }
@@ -2099,6 +2093,11 @@ export class UIManager {
       const enabled = !!state.lensDirt?.enabled;
       this.inputs.lensDirtEnabled.checked = enabled;
       this.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
+    }
+    if (this.inputs.autoExposure) {
+      const enabled = !!state.autoExposure;
+      this.inputs.autoExposure.checked = enabled;
+      this.setEffectControlsDisabled(['exposure'], enabled);
     }
     
     // Grain
@@ -2242,6 +2241,12 @@ export class UIManager {
       input.classList.toggle('is-disabled-handle', disabled);
     });
     this.setControlDisabled('lightsMaster', disabled);
+  }
+
+  updateExposureDisplay(value) {
+    if (!this.inputs.exposure) return;
+    this.inputs.exposure.value = value.toFixed(2);
+    this.updateValueLabel('exposure', parseFloat(value), 'decimal');
   }
 }
 
