@@ -129,8 +129,6 @@ export class UIManager {
       cameraTint: q('#cameraTint'),
       cameraHighlights: q('#cameraHighlights'),
       cameraShadows: q('#cameraShadows'),
-      cameraWhites: q('#cameraWhites'),
-      cameraBlacks: q('#cameraBlacks'),
       cameraSaturation: q('#cameraSaturation'),
       antiAliasing: q('#antiAliasing'),
       toneMapping: q('#toneMapping'),
@@ -773,19 +771,7 @@ export class UIManager {
       const value = parseFloat(event.target.value) || 0;
       this.stateStore.set('camera.shadows', value);
       this.updateValueLabel('cameraShadows', value, 'integer');
-      this.eventBus.emit('render:shadows', value / 100);
-    });
-    this.inputs.cameraWhites?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
-      this.stateStore.set('camera.whites', value);
-      this.updateValueLabel('cameraWhites', value, 'integer');
-      this.eventBus.emit('render:whites', value / 100);
-    });
-    this.inputs.cameraBlacks?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
-      this.stateStore.set('camera.blacks', value);
-      this.updateValueLabel('cameraBlacks', value, 'integer');
-      this.eventBus.emit('render:blacks', value / 100);
+      this.eventBus.emit('render:shadows', value / 50);
     });
     this.inputs.cameraSaturation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -1575,14 +1561,6 @@ export class UIManager {
               'render:shadows',
               (defaults.camera.shadows ?? 0) / 100,
             );
-            this.eventBus.emit(
-              'render:whites',
-              (defaults.camera.whites ?? 0) / 100,
-            );
-            this.eventBus.emit(
-              'render:blacks',
-              (defaults.camera.blacks ?? 0) / 100,
-            );
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
             this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
             this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
@@ -2222,16 +2200,6 @@ export class UIManager {
       const shadows = state.camera?.shadows ?? 0;
       this.inputs.cameraShadows.value = shadows;
       this.updateValueLabel('cameraShadows', shadows, 'integer');
-    }
-    if (this.inputs.cameraWhites) {
-      const whites = state.camera?.whites ?? 0;
-      this.inputs.cameraWhites.value = whites;
-      this.updateValueLabel('cameraWhites', whites, 'integer');
-    }
-    if (this.inputs.cameraBlacks) {
-      const blacks = state.camera?.blacks ?? 0;
-      this.inputs.cameraBlacks.value = blacks;
-      this.updateValueLabel('cameraBlacks', blacks, 'integer');
     }
     if (this.inputs.cameraSaturation) {
       const saturation = state.camera?.saturation ?? 1.0;

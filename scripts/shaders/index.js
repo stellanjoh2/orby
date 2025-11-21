@@ -298,8 +298,6 @@ uniform float temperature;
 uniform float tint;
 uniform float highlights;
 uniform float shadows;
-uniform float whites;
-uniform float blacks;
 uniform float bypass;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
@@ -371,30 +369,19 @@ vec3 applyHue(vec3 color, float hueDegrees) {
 vec3 applyTonalRanges(
   vec3 color,
   float highlights,
-  float shadows,
-  float whites,
-  float blacks
+  float shadows
 ) {
-  if (
-    abs(highlights) < 0.0001 &&
-    abs(shadows) < 0.0001 &&
-    abs(whites) < 0.0001 &&
-    abs(blacks) < 0.0001
-  ) {
+  if (abs(highlights) < 0.0001 && abs(shadows) < 0.0001) {
     return color;
   }
   float luma = dot(color, LUMA);
   float highlightMask = smoothstep(0.45, 1.0, luma);
-  float whiteMask = smoothstep(0.75, 1.0, luma);
   float shadowMask = 1.0 - smoothstep(0.1, 0.8, luma);
-  float blackMask = 1.0 - smoothstep(0.0, 0.2, luma);
 
   float highlightDelta = highlights * 0.25 * highlightMask;
-  float whiteDelta = whites * 0.35 * whiteMask;
   float shadowDelta = shadows * 0.25 * shadowMask;
-  float blackDelta = blacks * 0.35 * blackMask;
 
-  float totalDelta = highlightDelta + whiteDelta + shadowDelta + blackDelta;
+  float totalDelta = highlightDelta + shadowDelta;
   float targetLuma = luma + totalDelta;
   float adjustment = targetLuma - luma;
   return color + vec3(adjustment);
@@ -412,7 +399,7 @@ void main() {
   adjusted = applySaturation(adjusted, saturation);
   adjusted = applyHue(adjusted, hue);
   adjusted = applyWhiteBalance(adjusted, temperature, tint);
-  adjusted = applyTonalRanges(adjusted, highlights, shadows, whites, blacks);
+  adjusted = applyTonalRanges(adjusted, highlights, shadows);
 
   gl_FragColor = vec4(max(adjusted, vec3(0.0)), color.a);
 }
@@ -428,8 +415,6 @@ export const ColorAdjustShader = {
     tint: { value: 0.0 },
     highlights: { value: 0.0 },
     shadows: { value: 0.0 },
-    whites: { value: 0.0 },
-    blacks: { value: 0.0 },
     bypass: { value: 1.0 },
   },
   vertexShader: colorAdjustVertex,
