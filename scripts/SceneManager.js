@@ -36,6 +36,7 @@ import {
 import { formatTime } from './utils/timeFormatter.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
+import { GroundController } from './render/GroundController.js';
 
 
 export class SceneManager {
@@ -65,14 +66,6 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     const initialState = this.stateStore.getState();
     this.backgroundColor = initialState.background ?? '#000000';
-    this.groundSolidColor = initialState.groundSolidColor ?? '#31363f';
-    this.groundWireColor = initialState.groundWireColor ?? '#e1e1e1';
-    this.groundWireOpacity = initialState.groundWireOpacity ?? 1.0;
-    this.groundY = initialState.groundY ?? 0;
-    this.gridY = initialState.gridY ?? 0;
-    this.podiumScale = initialState.podiumScale ?? 1;
-    this.gridScale = initialState.gridScale ?? 1;
-    this.groundHeight = 0.1; // Fixed height for podium
     this.manualExposure = initialState.exposure ?? 1;
     this.currentExposure = this.manualExposure;
     this.autoExposureEnabled = initialState.autoExposure ?? false;
@@ -237,16 +230,18 @@ export class SceneManager {
   }
 
   setupGround() {
-    this.buildGroundMeshes();
-    const groundState = this.stateStore.getState();
-    this.setGroundSolid(groundState.groundSolid);
-    this.setGroundWire(groundState.groundWire);
-    this.setGroundSolidColor(groundState.groundSolidColor);
-    this.setGroundWireColor(groundState.groundWireColor);
-    this.setGroundWireOpacity(
-      groundState.groundWireOpacity ?? this.groundWireOpacity,
-    );
-    this.setGroundY(this.groundY);
+    const state = this.stateStore.getState();
+    this.groundController = new GroundController(this.scene, {
+      solidEnabled: state.groundSolid,
+      wireEnabled: state.groundWire,
+      solidColor: state.groundSolidColor,
+      wireColor: state.groundWireColor,
+      wireOpacity: state.groundWireOpacity,
+      groundY: state.groundY,
+      gridY: state.gridY,
+      podiumScale: state.podiumScale,
+      gridScale: state.gridScale,
+    });
   }
 
   setupComposer() {
@@ -715,7 +710,7 @@ export class SceneManager {
     this.setGroundWireColor(state.groundWireColor);
     this.setGroundWireOpacity(state.groundWireOpacity);
     this.setGridY(state.gridY ?? 0);
-    this.setPodiumScale(state.podiumScale ?? 1);
+    this.setPodiumScale(state.podiumScale ?? 1, { updateState: false });
     this.setGridScale(state.gridScale ?? 1);
     this.manualExposure = state.exposure ?? 1;
     this.autoExposureEnabled = state.autoExposure ?? false;
@@ -1624,57 +1619,36 @@ export class SceneManager {
         wireMesh.matrixAutoUpdate = true;
         wireMesh.updateMatrix();
         wireMesh.matrixAutoUpdate = false;
-      }
-    });
-  }
+        }
+      });
+    }
 
   setGroundSolid(enabled) {
-    if (this.podium) this.podium.visible = enabled;
-    if (this.podiumShadow) this.podiumShadow.visible = enabled;
+    this.groundController?.setSolidEnabled(enabled);
   }
 
   setGroundWire(enabled) {
-    if (this.grid) this.grid.visible = enabled;
+    this.groundController?.setWireEnabled(enabled);
   }
 
   setGroundSolidColor(color) {
-    this.groundSolidColor = color;
-    if (this.podium?.material?.color) {
-      this.podium.material.color.set(color);
-    }
+    this.groundController?.setSolidColor(color);
   }
 
   setGroundWireColor(color) {
-    this.groundWireColor = color;
-    if (this.gridMaterials) {
-      this.gridMaterials.forEach((mat) => {
-        if (mat?.color) {
-          mat.color.set(color);
-        }
-      });
-    }
+    this.groundController?.setWireColor(color);
   }
 
   setGroundWireOpacity(value) {
-    this.groundWireOpacity = value;
-    if (this.gridMaterials) {
-      this.gridMaterials.forEach((mat) => {
-        if (mat) {
-          mat.opacity = value;
-        }
-      });
-    }
+    this.groundController?.setWireOpacity(value);
   }
 
   setGroundY(value) {
-    this.groundY = value;
-    if (this.podium) this.podium.position.y = value;
-    if (this.podiumShadow) this.podiumShadow.position.y = value - this.groundHeight;
+    this.groundController?.setGroundY(value);
   }
 
   setGridY(value) {
-    this.gridY = value;
-    if (this.grid) this.grid.position.y = value;
+    this.groundController?.setGridY(value);
   }
 
   snapPodiumToBottom() {
@@ -1689,8 +1663,11 @@ export class SceneManager {
       return;
     }
 
-    const bottomY = bounds.min.y;
-    this.setGroundY(bottomY);
+    const bottomY = this.groundController?.snapPodiumToBounds(bounds);
+    if (bottomY === null || bottomY === undefined) {
+      this.ui?.showToast?.('Unable to determine mesh bottom');
+      return;
+    }
     this.stateStore.set('groundY', bottomY);
 
     const currentState = this.stateStore.getState();
@@ -1714,137 +1691,24 @@ export class SceneManager {
       return;
     }
 
-    const bottomY = bounds.min.y;
-    this.setGridY(bottomY);
+    const bottomY = this.groundController?.snapGridToBounds(bounds);
+    if (bottomY === null || bottomY === undefined) {
+      this.ui?.showToast?.('Unable to determine mesh bottom');
+      return;
+    }
     this.stateStore.set('gridY', bottomY);
     this.ui?.showToast?.('Grid snapped to mesh bottom');
   }
 
-  disposeGroundMeshes() {
-    if (this.podium) {
-      this.scene.remove(this.podium);
-      this.podium.geometry.dispose();
-      this.podium.material.dispose?.();
-      this.podium = null;
+  setPodiumScale(value, { updateState = true } = {}) {
+    const newGroundY = this.groundController?.setPodiumScale(value);
+    if (updateState && typeof newGroundY === 'number') {
+      this.stateStore.set('groundY', newGroundY);
     }
-    if (this.podiumShadow) {
-      this.scene.remove(this.podiumShadow);
-      this.podiumShadow.geometry.dispose();
-      this.podiumShadow.material.dispose?.();
-      this.podiumShadow = null;
-    }
-    if (this.grid) {
-      this.scene.remove(this.grid);
-      if (Array.isArray(this.grid.material)) {
-        this.grid.material.forEach((mat) => mat?.dispose?.());
-      } else {
-        this.grid.material?.dispose?.();
-      }
-      this.grid = null;
-      this.gridMaterials = null;
-    }
-  }
-
-  buildGroundMeshes() {
-    this.disposeGroundMeshes();
-    this.podiumBaseRadius = 2; // Store base radius for scaling
-    const baseRadius = this.podiumBaseRadius * this.podiumScale;
-    const height = this.groundHeight;
-    const topRadius = (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
-    const segments = PODIUM_SEGMENTS;
-
-    const podiumGeo = new THREE.CylinderGeometry(
-      topRadius,
-      baseRadius,
-      height,
-      segments,
-      1,
-      false,
-    );
-    podiumGeo.translate(0, -height / 2, 0);
-
-    const solidMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(this.groundSolidColor),
-      roughness: DEFAULT_MATERIAL_ROUGHNESS,
-      metalness: DEFAULT_MATERIAL_METALNESS,
-    });
-
-    this.podium = new THREE.Mesh(podiumGeo, solidMat);
-    this.podium.receiveShadow = true;
-    this.podium.visible = false; // Hidden by default until enabled
-    this.scene.add(this.podium);
-
-    const shadowMat = new THREE.ShadowMaterial({
-      opacity: 0.4,
-    });
-    this.podiumShadow = new THREE.Mesh(
-      new THREE.CircleGeometry(baseRadius * PODIUM_RADIUS_MULTIPLIER, segments),
-      shadowMat,
-    );
-    this.podiumShadow.rotation.x = -Math.PI / 2;
-    this.podiumShadow.receiveShadow = true;
-    this.podiumShadow.visible = false; // Hidden by default until enabled
-    this.scene.add(this.podiumShadow);
-
-    this.grid = new THREE.GridHelper(
-      baseRadius * 2 * this.gridScale,
-      32,
-      this.groundWireColor,
-      this.groundWireColor,
-    );
-    this.gridMaterials = Array.isArray(this.grid.material)
-      ? this.grid.material
-      : [this.grid.material];
-    this.gridMaterials.forEach((mat) => {
-      if (!mat) return;
-      mat.transparent = true;
-      mat.opacity = this.groundWireOpacity;
-      mat.depthWrite = false;
-      mat.toneMapped = false;
-      if (mat.color) mat.color.set(this.groundWireColor);
-    });
-    this.grid.visible = false; // Hidden by default until enabled
-    this.scene.add(this.grid);
-
-    this.setGroundY(this.groundY);
-    this.setGridY(this.gridY);
-  }
-
-  setPodiumScale(value) {
-    this.podiumScale = Math.min(3, Math.max(0.5, value));
-    // Store visibility state and current color before rebuilding
-    const wasVisible = this.podium?.visible ?? false;
-    const currentColor = this.podium?.material?.color 
-      ? `#${this.podium.material.color.getHexString()}`
-      : this.groundSolidColor;
-    // Store the current top face position (where it meets the mesh)
-    // Top face is at: groundY + height/2 (because geometry is translated by -height/2)
-    const topFaceY = this.groundY + this.groundHeight / 2;
-    // Rebuild the podium with new scale (this will reset position to current groundY)
-    this.buildGroundMeshes();
-    // Restore visibility state and color
-    if (this.podium) {
-      this.podium.visible = wasVisible;
-      this.podium.material.color.set(currentColor);
-    }
-    if (this.podiumShadow) this.podiumShadow.visible = wasVisible;
-    // Adjust Y position so top face stays at the same absolute position
-    // After rebuild, top face would be at: groundY + height/2
-    // We want it to stay at: topFaceY
-    // So: groundY + height/2 = topFaceY
-    // Therefore: groundY = topFaceY - height/2
-    this.groundY = topFaceY - this.groundHeight / 2;
-    this.setGroundY(this.groundY);
   }
 
   setGridScale(value) {
-    this.gridScale = Math.min(3, Math.max(0.5, value));
-    // Store visibility state before rebuilding
-    const wasVisible = this.grid?.visible ?? false;
-    // Rebuild the ground meshes to update grid size
-    this.buildGroundMeshes();
-    // Restore visibility state
-    if (this.grid) this.grid.visible = wasVisible;
+    this.groundController?.setGridScale(value);
   }
 
   applyLightSettings(lightsState) {
@@ -1913,7 +1777,7 @@ export class SceneManager {
     const style = HDRI_MOODS[preset];
     const state = this.stateStore.getState();
     if (!style) {
-      if (this.podium) this.podium.material.color.set(this.groundSolidColor);
+      this.groundController?.setSolidColor(state.groundSolidColor);
       if (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture) {
         this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
       }
@@ -1921,8 +1785,8 @@ export class SceneManager {
       this.updateGrain(state.grain);
       return;
     }
-    if (style.podiumColor && this.podium) {
-      this.podium.material.color.set(style.podiumColor);
+    if (style.podiumColor) {
+      this.groundController?.setSolidColor(style.podiumColor);
     }
     if (
       style.background &&
