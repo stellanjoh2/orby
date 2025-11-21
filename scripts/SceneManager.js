@@ -25,6 +25,7 @@ import {
   ToneMappingShader,
   BackgroundShader,
   RotateEquirectShader,
+  ColorAdjustShader,
 } from './shaders/index.js';
 import {
   WIREFRAME_OFFSET,
@@ -76,11 +77,14 @@ export class SceneManager {
     this.groundWireColor = initialState.groundWireColor ?? '#e1e1e1';
     this.groundWireOpacity = initialState.groundWireOpacity ?? 1.0;
     this.groundY = initialState.groundY ?? 0;
+    this.gridY = initialState.gridY ?? 0;
+    this.podiumScale = initialState.podiumScale ?? 1;
+    this.gridScale = initialState.gridScale ?? 1;
     this.groundHeight = 0.1; // Fixed height for podium
     this.currentExposure = initialState.exposure ?? 1;
     this.hdriStrength = Math.min(
-      3 * HDRI_STRENGTH_UNIT,
-      Math.max(0, initialState.hdriStrength ?? HDRI_STRENGTH_UNIT),
+      5 * HDRI_STRENGTH_UNIT,
+      Math.max(0, initialState.hdriStrength ?? 0.6),
     );
     // Disable tone mapping on renderer - we'll apply it as a post-processing pass instead
     this.renderer.toneMapping = THREE.NoToneMapping;
@@ -173,6 +177,8 @@ export class SceneManager {
         }),
     };
     this.pendingObjectUrls = [];
+
+    this.lightIndicators = null; // Group for light indicator cones
 
     this.setupLoaders();
     this.setupLights();
@@ -282,6 +288,14 @@ export class SceneManager {
     this.fxaaPass.renderToScreen = false;
     this.exposurePass.renderToScreen = false;
     
+    // Color adjustment pass (contrast, hue, saturation)
+    this.colorAdjustPass = new ShaderPass(ColorAdjustShader);
+    this.colorAdjustPass.uniforms.contrast.value = 1.0;
+    this.colorAdjustPass.uniforms.hue.value = 0.0;
+    this.colorAdjustPass.uniforms.saturation.value = 1.0;
+    this.colorAdjustPass.renderToScreen = false;
+    this.colorAdjustPass.enabled = false; // Disabled by default (only enable when values change)
+    
     // Tone mapping pass - applied at the END after all other effects
     this.toneMappingPass = new ShaderPass(ToneMappingShader);
     this.toneMappingPass.uniforms.toneMappingType.value = 4; // Default to ACES Filmic
@@ -296,6 +310,7 @@ export class SceneManager {
     this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.fxaaPass);
     this.composer.addPass(this.exposurePass);
+    this.composer.addPass(this.colorAdjustPass);
     this.composer.addPass(this.toneMappingPass); // Last pass - applies tone mapping
   }
 
@@ -492,12 +507,21 @@ export class SceneManager {
     this.eventBus.on('studio:lens-flare-height', (value) =>
       this.setLensFlareHeight(value),
     );
+    this.eventBus.on('studio:lens-flare-distance', (value) =>
+      this.setLensFlareDistance(value),
+    );
     this.eventBus.on('studio:lens-flare-color', (value) =>
       this.setLensFlareColor(value),
     );
     this.eventBus.on('studio:lens-flare-quality', (value) =>
       this.setLensFlareQuality(value),
     );
+    this.eventBus.on('mesh:clay-normal-map', (enabled) =>
+      this.setClayNormalMap(enabled),
+    );
+    this.eventBus.on('render:contrast', (value) => this.setContrast(value));
+    this.eventBus.on('render:hue', (value) => this.setHue(value));
+    this.eventBus.on('render:saturation', (value) => this.setSaturation(value));
     this.eventBus.on('studio:ground-solid', (enabled) => {
       this.setGroundSolid(enabled);
     });
@@ -514,16 +538,23 @@ export class SceneManager {
       this.setGroundWireOpacity(value),
     );
     this.eventBus.on('studio:ground-y', (value) => this.setGroundY(value));
+    this.eventBus.on('studio:podium-scale', (value) => this.setPodiumScale(value));
+    this.eventBus.on('studio:grid-scale', (value) => this.setGridScale(value));
     this.eventBus.on('studio:podium-snap', () => this.snapPodiumToBottom());
+    this.eventBus.on('studio:grid-snap', () => this.snapGridToBottom());
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
       const light = this.lights[lightId];
       if (!light) return;
       if (property === 'color') {
         light.color = new THREE.Color(value);
+        // Update light indicators in real-time when color changes
+        this.updateLightIndicators();
       } else if (property === 'intensity') {
         const multiplier = light.isAmbientLight ? 4 : 2;
         light.intensity = value * multiplier;
+        // Update light indicators when intensity changes
+        this.updateLightIndicators();
       }
     });
     this.eventBus.on('lights:master', (value) => this.setLightsMaster(value));
@@ -533,6 +564,9 @@ export class SceneManager {
     this.eventBus.on('lights:rotate', (value) => this.setLightsRotation(value));
     this.eventBus.on('lights:auto-rotate', (enabled) =>
       this.setLightsAutoRotate(enabled),
+    );
+    this.eventBus.on('lights:show-indicators', (enabled) =>
+      this.setShowLightIndicators(enabled),
     );
 
     this.eventBus.on('render:dof', (settings) => this.updateDof(settings));
@@ -561,6 +595,7 @@ export class SceneManager {
       if (this.exposurePass) {
         this.exposurePass.uniforms.exposure.value = value;
       }
+      // Exposure now works independently without auto-balancing HDRI
     });
 
     this.eventBus.on('file:selected', (file) => this.loadFile(file));
@@ -597,9 +632,16 @@ export class SceneManager {
     this.setGroundSolidColor(state.groundSolidColor);
     this.setGroundWireColor(state.groundWireColor);
     this.setGroundWireOpacity(state.groundWireOpacity);
+    this.setGridY(state.gridY ?? 0);
+    this.setPodiumScale(state.podiumScale ?? 1);
+    this.setGridScale(state.gridScale ?? 1);
     this.currentExposure = state.exposure;
     if (this.exposurePass) {
       this.exposurePass.uniforms.exposure.value = state.exposure;
+    }
+    // Initialize base HDRI strength if not already set
+    if (this.baseHdriStrength === undefined) {
+      this.baseHdriStrength = (state.hdriStrength ?? 1.0) * state.exposure;
     }
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
@@ -613,6 +655,7 @@ export class SceneManager {
       });
     }
     this.setLightsRotation(state.lightsRotation ?? 0);
+    this.setShowLightIndicators(state.showLightIndicators ?? false);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
     // Preserve existing clay settings - don't reset them when applying state snapshot
     // Only update if state has clay settings and we don't have any yet
@@ -635,6 +678,14 @@ export class SceneManager {
     }
     this.setToneMapping(state.toneMapping ?? 'aces-filmic');
     this.setHdriStrength(state.hdriStrength ?? 1);
+    // Initialize color adjustment settings
+    this.setContrast(state.camera?.contrast ?? 1.0);
+    this.setHue(state.camera?.hue ?? 0.0);
+    this.setSaturation(state.camera?.saturation ?? 1.0);
+    // Initialize clay normal map setting
+    if (state.clay?.normalMap !== undefined) {
+      this.setClayNormalMap(state.clay.normalMap);
+    }
     this.setHdriBlurriness(state.hdriBlurriness ?? 0);
     this.setHdriRotation(state.hdriRotation ?? 0);
     this.setHdriEnabled(state.hdriEnabled);
@@ -645,6 +696,7 @@ export class SceneManager {
       ...(state.lensFlare ?? {}),
     };
     this.setLensFlareHeight(lensState.height ?? 0);
+    this.setLensFlareDistance(lensState.distance ?? 40);
     this.setLensFlareColor(lensState.color ?? '#d28756');
     this.setLensFlareQuality(lensState.quality ?? 'maximum');
     this.setLensFlareRotation(lensState.rotation ?? 0);
@@ -924,7 +976,7 @@ export class SceneManager {
               // Apply blurriness by increasing roughness (which uses higher mipmap levels)
               if (this.hdriBlurriness > 0) {
                 const blurRoughness = baseRoughness + (1.0 - baseRoughness) * this.hdriBlurriness;
-                material.roughness = Math.min(1.0, blurRoughness);
+              material.roughness = Math.min(1.0, blurRoughness);
               } else {
                 // Reset to base roughness when blurriness is 0
                 material.roughness = baseRoughness;
@@ -1010,6 +1062,82 @@ export class SceneManager {
     }
   }
 
+  setLensFlareDistance(value) {
+    if (this.lensFlare) {
+      this.lensFlare.setDistance(value ?? 40);
+    }
+  }
+
+  setClayNormalMap(enabled) {
+    if (this.currentShading === 'clay' && this.currentModel) {
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const isClayMaterial = !this.originalMaterials.has(child);
+        if (isClayMaterial) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+          materials.forEach((material) => {
+            if (!material || !material.isMeshStandardMaterial) return;
+            if (enabled) {
+              // Restore normal map from original material
+              const originalMaterial = this.originalMaterials.get(child);
+              if (originalMaterial) {
+                const originalMat = Array.isArray(originalMaterial)
+                  ? originalMaterial[0]
+                  : originalMaterial;
+                if (originalMat?.normalMap) {
+                  material.normalMap = originalMat.normalMap;
+                  material.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
+                  if (originalMat.normalScale) {
+                    material.normalScale = originalMat.normalScale.clone();
+                  }
+                }
+              }
+            } else {
+              // Remove normal map
+              material.normalMap = null;
+            }
+            material.needsUpdate = true;
+          });
+        }
+      });
+    }
+  }
+
+  setContrast(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.contrast.value = value ?? 1.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setHue(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.hue.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setSaturation(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.saturation.value = value ?? 1.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  updateColorAdjustPassEnabled() {
+    if (!this.colorAdjustPass) return;
+    const contrast = this.colorAdjustPass.uniforms.contrast.value;
+    const hue = this.colorAdjustPass.uniforms.hue.value;
+    const saturation = this.colorAdjustPass.uniforms.saturation.value;
+    // Only enable the pass if any value is not at default
+    const isDefault = Math.abs(contrast - 1.0) < 0.001 && 
+                      Math.abs(hue - 0.0) < 0.001 && 
+                      Math.abs(saturation - 1.0) < 0.001;
+    this.colorAdjustPass.enabled = !isDefault;
+  }
+
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
     this.applyEnvironment(this.currentEnvironmentTexture);
@@ -1049,7 +1177,7 @@ export class SceneManager {
   }
 
   setHdriStrength(value) {
-    const maxStrength = 10 * HDRI_STRENGTH_UNIT;
+    const maxStrength = 5 * HDRI_STRENGTH_UNIT;
     this.hdriStrength = Math.min(maxStrength, Math.max(0, value));
     // Regenerate environment to update both lighting and background
     this.applyEnvironment(this.currentEnvironmentTexture);
@@ -1067,6 +1195,9 @@ export class SceneManager {
 
   setHdriRotation(value) {
     this.hdriRotation = Math.min(360, Math.max(0, value));
+    this.stateStore.set('hdriRotation', this.hdriRotation);
+    // Also rotate lights to stay in sync (without updating HDRI again to avoid loop)
+    this.setLightsRotation(this.hdriRotation, { updateUi: true, updateHdri: false });
     // Regenerate environment map with new rotation
     this.applyEnvironment(this.currentEnvironmentTexture);
     // Force restore clay settings after any HDRI change
@@ -1264,7 +1395,7 @@ export class SceneManager {
         });
       } else {
         // Fallback to recreating materials if no model loaded
-        this.setShading('clay');
+      this.setShading('clay');
       }
     }
   }
@@ -1446,6 +1577,10 @@ export class SceneManager {
     this.groundY = value;
     if (this.podium) this.podium.position.y = value;
     if (this.podiumShadow) this.podiumShadow.position.y = value - this.groundHeight;
+  }
+
+  setGridY(value) {
+    this.gridY = value;
     if (this.grid) this.grid.position.y = value;
   }
 
@@ -1474,6 +1609,23 @@ export class SceneManager {
     this.ui?.showToast?.('Podium snapped to mesh bottom');
   }
 
+  snapGridToBottom() {
+    if (!this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before snapping the grid');
+      return;
+    }
+
+    const bounds = new THREE.Box3().setFromObject(this.currentModel);
+    if (!bounds || !isFinite(bounds.min.y)) {
+      this.ui?.showToast?.('Unable to determine mesh bottom');
+      return;
+    }
+
+    const bottomY = bounds.min.y;
+    this.setGridY(bottomY);
+    this.stateStore.set('gridY', bottomY);
+    this.ui?.showToast?.('Grid snapped to mesh bottom');
+  }
 
   disposeGroundMeshes() {
     if (this.podium) {
@@ -1502,9 +1654,10 @@ export class SceneManager {
 
   buildGroundMeshes() {
     this.disposeGroundMeshes();
-    const baseRadius = 2;
+    this.podiumBaseRadius = 2; // Store base radius for scaling
+    const baseRadius = this.podiumBaseRadius * this.podiumScale;
     const height = this.groundHeight;
-    const topRadius = baseRadius - PODIUM_TOP_RADIUS_OFFSET;
+    const topRadius = (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
     const segments = PODIUM_SEGMENTS;
 
     const podiumGeo = new THREE.CylinderGeometry(
@@ -1525,6 +1678,7 @@ export class SceneManager {
 
     this.podium = new THREE.Mesh(podiumGeo, solidMat);
     this.podium.receiveShadow = true;
+    this.podium.visible = false; // Hidden by default until enabled
     this.scene.add(this.podium);
 
     const shadowMat = new THREE.ShadowMaterial({
@@ -1536,10 +1690,11 @@ export class SceneManager {
     );
     this.podiumShadow.rotation.x = -Math.PI / 2;
     this.podiumShadow.receiveShadow = true;
+    this.podiumShadow.visible = false; // Hidden by default until enabled
     this.scene.add(this.podiumShadow);
 
     this.grid = new THREE.GridHelper(
-      baseRadius * 2,
+      baseRadius * 2 * this.gridScale,
       32,
       this.groundWireColor,
       this.groundWireColor,
@@ -1555,9 +1710,48 @@ export class SceneManager {
       mat.toneMapped = false;
       if (mat.color) mat.color.set(this.groundWireColor);
     });
+    this.grid.visible = false; // Hidden by default until enabled
     this.scene.add(this.grid);
 
     this.setGroundY(this.groundY);
+    this.setGridY(this.gridY);
+  }
+
+  setPodiumScale(value) {
+    this.podiumScale = Math.min(3, Math.max(0.5, value));
+    // Store visibility state and current color before rebuilding
+    const wasVisible = this.podium?.visible ?? false;
+    const currentColor = this.podium?.material?.color 
+      ? `#${this.podium.material.color.getHexString()}`
+      : this.groundSolidColor;
+    // Store the current top face position (where it meets the mesh)
+    // Top face is at: groundY + height/2 (because geometry is translated by -height/2)
+    const topFaceY = this.groundY + this.groundHeight / 2;
+    // Rebuild the podium with new scale (this will reset position to current groundY)
+    this.buildGroundMeshes();
+    // Restore visibility state and color
+    if (this.podium) {
+      this.podium.visible = wasVisible;
+      this.podium.material.color.set(currentColor);
+    }
+    if (this.podiumShadow) this.podiumShadow.visible = wasVisible;
+    // Adjust Y position so top face stays at the same absolute position
+    // After rebuild, top face would be at: groundY + height/2
+    // We want it to stay at: topFaceY
+    // So: groundY + height/2 = topFaceY
+    // Therefore: groundY = topFaceY - height/2
+    this.groundY = topFaceY - this.groundHeight / 2;
+    this.setGroundY(this.groundY);
+  }
+
+  setGridScale(value) {
+    this.gridScale = Math.min(3, Math.max(0.5, value));
+    // Store visibility state before rebuilding
+    const wasVisible = this.grid?.visible ?? false;
+    // Rebuild the ground meshes to update grid size
+    this.buildGroundMeshes();
+    // Restore visibility state
+    if (this.grid) this.grid.visible = wasVisible;
   }
 
   applyLightSettings(lightsState) {
@@ -1573,6 +1767,8 @@ export class SceneManager {
       const targetIntensity = baseIntensity * (this.lightsMaster ?? 1);
       light.intensity = this.lightsEnabled ? targetIntensity : 0;
     });
+    // Update light indicators if visible
+    this.updateLightIndicators();
   }
 
   setLightsEnabled(enabled) {
@@ -1592,9 +1788,132 @@ export class SceneManager {
     if (this.lightsEnabled) {
       this.applyLightSettings(this.stateStore.getState().lights);
     }
+    // Update light indicators if visible
+    this.updateLightIndicators();
   }
 
-  setLightsRotation(value, { updateUi = true } = {}) {
+  setShowLightIndicators(enabled) {
+    if (enabled) {
+      this.createLightIndicators();
+    } else {
+      this.clearLightIndicators();
+    }
+  }
+
+  clearLightIndicators() {
+    if (this.lightIndicators) {
+      this.scene.remove(this.lightIndicators);
+      this.lightIndicators.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      });
+      this.lightIndicators = null;
+    }
+  }
+
+  createLightIndicators() {
+    this.clearLightIndicators();
+    if (!this.modelBounds || !this.lightBasePositions) return;
+
+    const group = new THREE.Group();
+    const { center, radius } = this.modelBounds;
+    const baseDistance = radius * 2.5; // Position lights further out from mesh
+
+    ['key', 'fill', 'rim'].forEach((id) => {
+      const light = this.lights[id];
+      if (!light) return;
+
+      // Get current light position (already rotated)
+      const lightPos = light.position.clone();
+      
+      // Calculate direction from mesh center to light
+      const direction = lightPos.clone().sub(center).normalize();
+      
+      // Position indicator at a fixed distance from mesh center, in the same direction as the light
+      const position = center.clone().add(direction.multiplyScalar(baseDistance));
+
+      // Create cone geometry (simplified spotlight)
+      const coneHeight = 0.3;
+      const coneRadius = 0.15;
+      const geometry = new THREE.ConeGeometry(coneRadius, coneHeight, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: light.color,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide,
+      });
+
+      const cone = new THREE.Mesh(geometry, material);
+      
+      // Position cone at calculated position
+      cone.position.copy(position);
+      
+      // Orient cone so wide end (base) points at mesh center (like a real spotlight)
+      // ConeGeometry has tip at +Y and base at -Y in local space
+      // We want the base (-Y) to point at the mesh center
+      // Calculate direction from light to center
+      const dirToCenter = center.clone().sub(position).normalize();
+      // Create a quaternion that rotates -Y (base) to point in dirToCenter direction
+      const up = new THREE.Vector3(0, 1, 0);
+      const quaternion = new THREE.Quaternion();
+      quaternion.setFromUnitVectors(up.clone().negate(), dirToCenter); // negate up to get -Y
+      cone.quaternion.copy(quaternion);
+      
+      // Store light ID for updates
+      cone.userData.lightId = id;
+      group.add(cone);
+    });
+
+    this.lightIndicators = group;
+    this.scene.add(group);
+    this.updateLightIndicators();
+  }
+
+  updateLightIndicators() {
+    if (!this.lightIndicators || !this.modelBounds || !this.lightBasePositions) return;
+
+    const { center, radius } = this.modelBounds;
+    const baseDistance = radius * 2.5;
+
+    this.lightIndicators.traverse((child) => {
+      if (!child.isMesh || !child.userData.lightId) return;
+      
+      const lightId = child.userData.lightId;
+      const light = this.lights[lightId];
+      if (!light) return;
+
+      // Get current light position (already rotated)
+      const lightPos = light.position.clone();
+      
+      // Calculate direction from mesh center to light
+      const direction = lightPos.clone().sub(center).normalize();
+      
+      // Position indicator at a fixed distance from mesh center, in the same direction as the light
+      const newPosition = center.clone().add(direction.multiplyScalar(baseDistance));
+      child.position.copy(newPosition);
+
+      // Update color
+      child.material.color.copy(light.color);
+
+      // Update size based on intensity (scale from 0.5 to 2.5 based on intensity 0-5)
+      // lightsMaster can go up to 5, and individual intensities are multiplied by 2 (non-ambient)
+      // So max intensity = baseIntensity * 2 * 5 = up to 10 for non-ambient lights
+      // We want to scale from 0.5 to 2.5 based on lightsMaster 0-5
+      const maxIntensity = 10; // Max intensity when lightsMaster is 5
+      const normalizedIntensity = Math.min(light.intensity / maxIntensity, 1);
+      const scale = 0.5 + normalizedIntensity * 2.0; // Scale from 0.5 to 2.5
+      child.scale.set(scale, scale, scale);
+
+      // Re-orient to point at mesh center (wide end pointing at mesh, like a real spotlight)
+      const dirToCenter = center.clone().sub(newPosition).normalize();
+      const up = new THREE.Vector3(0, 1, 0);
+      const quaternion = new THREE.Quaternion();
+      quaternion.setFromUnitVectors(up.clone().negate(), dirToCenter); // negate up to get -Y
+      child.quaternion.copy(quaternion);
+    });
+  }
+
+  setLightsRotation(value, { updateUi = true, updateHdri = false } = {}) {
     this.lightsRotation = ((value % 360) + 360) % 360;
     if (!this.lightBasePositions) return;
     const radians = THREE.MathUtils.degToRad(this.lightsRotation);
@@ -1608,9 +1927,23 @@ export class SceneManager {
       const rotatedZ = -base.x * sin + base.z * cos;
       light.position.set(rotatedX, base.y, rotatedZ);
     });
+    // Also rotate HDRI with lights (unless we're being called from setHdriRotation to avoid loop)
+    if (updateHdri) {
+      this.hdriRotation = this.lightsRotation;
+      this.stateStore.set('hdriRotation', this.hdriRotation);
+      this.applyEnvironment(this.currentEnvironmentTexture);
+      this.forceRestoreClaySettings();
+      // Update HDRI rotation slider in UI
+      if (this.ui?.inputs?.hdriRotation) {
+        this.ui.inputs.hdriRotation.value = this.hdriRotation;
+        this.ui.updateValueLabel('hdriRotation', this.hdriRotation, 'angle');
+      }
+    }
     if (updateUi) {
       this.ui?.setLightsRotation?.(this.lightsRotation);
     }
+    // Update light indicators if visible
+    this.updateLightIndicators();
   }
 
   setLightsAutoRotate(enabled) {
@@ -2399,8 +2732,9 @@ export class SceneManager {
             metalness: specular,
             side: THREE.DoubleSide,
           });
-          // Preserve normal map from original material
-          if (originalMat?.normalMap) {
+          // Preserve normal map from original material only if enabled
+          const normalMapEnabled = this.stateStore.getState().clay?.normalMap !== false;
+          if (normalMapEnabled && originalMat?.normalMap) {
             clay.normalMap = originalMat.normalMap;
             clay.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
             if (originalMat.normalScale) {

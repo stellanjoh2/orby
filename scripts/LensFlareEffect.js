@@ -656,6 +656,12 @@ export class LensFlareEffect extends THREE.Mesh {
     uniforms.aditionalStreaks.value = !optimized;
   }
 
+  setDistance(value) {
+    if (!Number.isFinite(value)) return;
+    this.distance = Math.max(1, Math.min(200, value));
+    this.updateAnchorPosition();
+  }
+
   dispose() {
     if (typeof window !== 'undefined') {
       window.removeEventListener('pointermove', this.handlePointerMove);

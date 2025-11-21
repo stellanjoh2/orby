@@ -72,11 +72,13 @@ export class UIManager {
       lensFlareEnabled: q('#lensFlareEnabled'),
       lensFlareRotation: q('#lensFlareRotation'),
       lensFlareHeight: q('#lensFlareHeight'),
+      lensFlareDistance: q('#lensFlareDistance'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
       clayColor: q('#clayColor'),
       clayRoughness: q('#clayRoughness'),
       claySpecular: q('#claySpecular'),
+      clayNormalMap: q('#clayNormalMap'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
       wireframeColor: q('#wireframeColor'),
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
@@ -87,12 +89,17 @@ export class UIManager {
       groundWireOpacity: q('#groundWireOpacity'),
       groundY: q('#groundY'),
       podiumSnap: q('#podiumSnap'),
+      gridSnap: q('#gridSnap'),
+      gridScale: q('#gridScale'),
+      podiumScale: q('#podiumScale'),
+      gridScale: q('#gridScale'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
       lightsMaster: q('#lightsMaster'),
       lightsRotation: q('#lightsRotation'),
       lightsAutoRotate: q('#lightsAutoRotate'),
+      showLightIndicators: q('#showLightIndicators'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
       dofStrength: q('#dofStrength'),
@@ -114,6 +121,9 @@ export class UIManager {
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
       exposure: q('#exposure'),
+      cameraContrast: q('#cameraContrast'),
+      cameraHue: q('#cameraHue'),
+      cameraSaturation: q('#cameraSaturation'),
       antiAliasing: q('#antiAliasing'),
       toneMapping: q('#toneMapping'),
     };
@@ -356,6 +366,11 @@ export class UIManager {
       this.updateValueLabel('claySpecular', value, 'decimal');
       this.eventBus.emit('mesh:clay-specular', value);
     });
+    this.inputs.clayNormalMap?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('clay.normalMap', enabled);
+      this.eventBus.emit('mesh:clay-normal-map', enabled);
+    });
     this.inputs.wireframeAlwaysOn?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('wireframe.alwaysOn', enabled);
@@ -392,7 +407,7 @@ export class UIManager {
     });
     this.inputs.hdriStrength.addEventListener('input', (event) => {
       const normalized = Math.min(
-        10,
+        5,
         Math.max(0, parseFloat(event.target.value)),
       );
       const actual = normalized * HDRI_STRENGTH_UNIT;
@@ -443,6 +458,16 @@ export class UIManager {
       this.stateStore.set('lensFlare.height', value);
       this.eventBus.emit('studio:lens-flare-height', value);
     });
+    this.inputs.lensFlareDistance?.addEventListener('input', (event) => {
+      const value = Math.min(
+        200,
+        Math.max(1, parseFloat(event.target.value) || 40),
+      );
+      event.target.value = value;
+      this.updateValueLabel('lensFlareDistance', value, 'decimal');
+      this.stateStore.set('lensFlare.distance', value);
+      this.eventBus.emit('studio:lens-flare-distance', value);
+    });
     this.bindColorInput('lensFlareColor', 'lensFlare.color', 'studio:lens-flare-color');
     this.inputs.lensFlareQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
@@ -475,8 +500,23 @@ export class UIManager {
       this.stateStore.set('groundY', value);
       this.eventBus.emit('studio:ground-y', value);
     });
+    this.inputs.podiumScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('podiumScale', value, 'decimal');
+      this.stateStore.set('podiumScale', value);
+      this.eventBus.emit('studio:podium-scale', value);
+    });
+    this.inputs.gridScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('gridScale', value, 'decimal');
+      this.stateStore.set('gridScale', value);
+      this.eventBus.emit('studio:grid-scale', value);
+    });
     this.inputs.podiumSnap?.addEventListener('click', () => {
       this.eventBus.emit('studio:podium-snap');
+    });
+    this.inputs.gridSnap?.addEventListener('click', () => {
+      this.eventBus.emit('studio:grid-snap');
     });
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
@@ -490,6 +530,12 @@ export class UIManager {
         });
       });
     });
+    this.inputs.showLightIndicators?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('showLightIndicators', enabled);
+      this.eventBus.emit('lights:show-indicators', enabled);
+    });
+
     this.inputs.lightsMaster?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
       this.updateValueLabel('lightsMaster', value, 'decimal');
@@ -671,6 +717,24 @@ export class UIManager {
       this.updateValueLabel('exposure', value, 'decimal');
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
+    });
+    this.inputs.cameraContrast?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.stateStore.set('camera.contrast', value);
+      this.updateValueLabel('cameraContrast', value, 'decimal');
+      this.eventBus.emit('render:contrast', value);
+    });
+    this.inputs.cameraHue?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.stateStore.set('camera.hue', value);
+      this.updateValueLabel('cameraHue', value, 'angle');
+      this.eventBus.emit('render:hue', value);
+    });
+    this.inputs.cameraSaturation?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.stateStore.set('camera.saturation', value);
+      this.updateValueLabel('cameraSaturation', value, 'decimal');
+      this.eventBus.emit('render:saturation', value);
     });
     this.inputs.antiAliasing.addEventListener('change', (event) => {
       const value = event.target.value;
@@ -964,6 +1028,62 @@ export class UIManager {
         }
       }
 
+      // X - Apply preset: HDRI background on, lights off, chroma/grain off, exposure 3, AA on
+      if (key === 'x') {
+        event.preventDefault();
+        // Set HDRI preset to "Meadow"
+        this.stateStore.set('hdri', 'meadow');
+        this.setHdriActive('meadow');
+        this.eventBus.emit('studio:hdri', 'meadow');
+        // HDRI background on
+        this.stateStore.set('hdriBackground', true);
+        this.eventBus.emit('studio:hdri-background', true);
+        if (this.inputs.hdriBackground) {
+          this.inputs.hdriBackground.checked = true;
+        }
+        // Set exposure to 2 FIRST (before HDRI intensity)
+        // This ensures auto-balance calculates correctly
+        this.stateStore.set('exposure', 2);
+        this.eventBus.emit('scene:exposure', 2);
+        if (this.inputs.exposure) {
+          this.inputs.exposure.value = 2;
+          this.updateValueLabel('exposure', 2, 'decimal');
+        }
+        // HDRI intensity to 2.50 (slider value)
+        const hdriSliderValue = 2.50;
+        const hdriIntensity = hdriSliderValue * HDRI_STRENGTH_UNIT;
+        this.stateStore.set('hdriStrength', hdriIntensity);
+        this.eventBus.emit('studio:hdri-strength', hdriIntensity);
+        if (this.inputs.hdriStrength) {
+          this.inputs.hdriStrength.value = hdriSliderValue;
+          this.updateValueLabel('hdriStrength', hdriSliderValue, 'decimal');
+        }
+        // Lights off
+        this.stateStore.set('lightsEnabled', false);
+        this.eventBus.emit('lights:enabled', false);
+        if (this.inputs.lightsEnabled) {
+          this.inputs.lightsEnabled.checked = false;
+        }
+        // Chromatic aberration off
+        this.stateStore.set('aberration.enabled', false);
+        this.eventBus.emit('render:aberration', { enabled: false, offset: this.stateStore.getState().aberration.offset, strength: this.stateStore.getState().aberration.strength });
+        if (this.inputs.toggleAberration) {
+          this.inputs.toggleAberration.checked = false;
+        }
+        // Film grain off
+        this.stateStore.set('grain.enabled', false);
+        this.eventBus.emit('render:grain', { enabled: false, intensity: this.stateStore.getState().grain.intensity, color: this.stateStore.getState().grain.color });
+        if (this.inputs.toggleGrain) {
+          this.inputs.toggleGrain.checked = false;
+        }
+        // AA on (FXAA)
+        this.stateStore.set('antiAliasing', 'fxaa');
+        this.eventBus.emit('render:anti-aliasing', 'fxaa');
+        if (this.inputs.antiAliasing) {
+          this.inputs.antiAliasing.value = 'fxaa';
+        }
+      }
+
       // [ / ] - Cycle through HDRI presets
       if (key === '[' || key === ']') {
         event.preventDefault();
@@ -1246,6 +1366,7 @@ export class UIManager {
             this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
+            this.eventBus.emit('studio:lens-flare-distance', defaults.lensFlare.distance);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             if (this.inputs.backgroundColor) {
               this.inputs.backgroundColor.disabled = defaults.hdriBackground;
@@ -1258,6 +1379,7 @@ export class UIManager {
             this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
+            this.eventBus.emit('studio:lens-flare-distance', defaults.lensFlare.distance);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
             this.syncUIFromState();
@@ -1284,11 +1406,15 @@ export class UIManager {
             break;
             
           case 'podium':
+            this.stateStore.set('groundSolid', defaults.groundSolid);
             this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
             this.stateStore.set('groundY', defaults.groundY);
+            this.stateStore.set('podiumScale', defaults.podiumScale);
+            this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
-            this.syncUIFromState();
+            this.eventBus.emit('studio:podium-scale', defaults.podiumScale);
+            this.syncControls(this.stateStore.getState());
             break;
             
           case 'background':
@@ -1300,9 +1426,11 @@ export class UIManager {
           case 'grid':
             this.stateStore.set('groundWireColor', defaults.groundWireColor);
             this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
+            this.stateStore.set('gridScale', defaults.gridScale);
             this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
             this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
-            this.syncUIFromState();
+            this.eventBus.emit('studio:grid-scale', defaults.gridScale);
+            this.syncControls(this.stateStore.getState());
             break;
             
           case 'dof':
@@ -1354,15 +1482,22 @@ export class UIManager {
             
             
           case 'camera':
-            this.stateStore.set('camera', defaults.camera);
+            // Reset all camera & color settings
+            this.stateStore.set('camera', { ...defaults.camera });
             this.stateStore.set('exposure', defaults.exposure);
+            // Also reset antiAliasing and toneMapping (in Quality block, but reset together)
             this.stateStore.set('antiAliasing', defaults.antiAliasing);
             this.stateStore.set('toneMapping', defaults.toneMapping);
+            // Emit all events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('scene:exposure', defaults.exposure);
+            this.eventBus.emit('render:contrast', defaults.camera.contrast);
+            this.eventBus.emit('render:hue', defaults.camera.hue);
+            this.eventBus.emit('render:saturation', defaults.camera.saturation);
             this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
             this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
-            this.syncUIFromState();
+            // Sync UI to reflect the reset values
+            this.syncControls(this.stateStore.getState());
             break;
             
           case 'transform':
@@ -1755,6 +1890,9 @@ export class UIManager {
     this.updateValueLabel('clayRoughness', state.clay.roughness, 'decimal');
     this.inputs.claySpecular.value = state.clay.specular;
     this.updateValueLabel('claySpecular', state.clay.specular, 'decimal');
+    if (this.inputs.clayNormalMap) {
+      this.inputs.clayNormalMap.checked = state.clay.normalMap !== false;
+    }
     if (state.wireframe) {
       if (this.inputs.wireframeColor) {
         this.inputs.wireframeColor.value = state.wireframe.color;
@@ -1781,7 +1919,7 @@ export class UIManager {
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
     const normalizedStrength = Math.min(
-      10,
+      5,
       Math.max(0, state.hdriStrength / HDRI_STRENGTH_UNIT),
     );
     this.inputs.hdriStrength.value = normalizedStrength;
@@ -1818,6 +1956,14 @@ export class UIManager {
       this.inputs.lensFlareHeight.value = height;
       this.updateValueLabel('lensFlareHeight', height, 'angle');
     }
+    if (this.inputs.lensFlareDistance) {
+      const distance = Math.min(
+        200,
+        Math.max(1, state.lensFlare?.distance ?? 40),
+      );
+      this.inputs.lensFlareDistance.value = distance;
+      this.updateValueLabel('lensFlareDistance', distance, 'decimal');
+    }
     if (this.inputs.lensFlareColor && state.lensFlare?.color) {
       this.inputs.lensFlareColor.value = state.lensFlare.color;
     }
@@ -1835,6 +1981,14 @@ export class UIManager {
     this.updateValueLabel('groundWireOpacity', state.groundWireOpacity, 'decimal');
     this.inputs.groundY.value = state.groundY;
     this.updateValueLabel('groundY', state.groundY, 'distance');
+    if (this.inputs.podiumScale) {
+      this.inputs.podiumScale.value = state.podiumScale ?? 1;
+      this.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
+    }
+    if (this.inputs.gridScale) {
+      this.inputs.gridScale.value = state.gridScale ?? 1;
+      this.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');
+    }
     
     // Lights
     if (this.inputs.lightsRotation) {
@@ -1845,6 +1999,9 @@ export class UIManager {
       const masterValue = state.lightsMaster ?? 1;
       this.inputs.lightsMaster.value = masterValue;
       this.updateValueLabel('lightsMaster', masterValue, 'decimal');
+    }
+    if (this.inputs.showLightIndicators) {
+      this.inputs.showLightIndicators.checked = !!state.showLightIndicators;
     }
     if (this.inputs.lightsAutoRotate) {
       this.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;
@@ -1938,6 +2095,21 @@ export class UIManager {
     this.updateValueLabel('cameraFov', state.camera.fov, 'angle');
     this.inputs.exposure.value = state.exposure;
     this.updateValueLabel('exposure', state.exposure, 'decimal');
+    if (this.inputs.cameraContrast) {
+      const contrast = state.camera?.contrast ?? 1.0;
+      this.inputs.cameraContrast.value = contrast;
+      this.updateValueLabel('cameraContrast', contrast, 'decimal');
+    }
+    if (this.inputs.cameraHue) {
+      const hue = state.camera?.hue ?? 0;
+      this.inputs.cameraHue.value = hue;
+      this.updateValueLabel('cameraHue', hue, 'angle');
+    }
+    if (this.inputs.cameraSaturation) {
+      const saturation = state.camera?.saturation ?? 1.0;
+      this.inputs.cameraSaturation.value = saturation;
+      this.updateValueLabel('cameraSaturation', saturation, 'decimal');
+    }
     if (this.inputs.antiAliasing) {
       this.inputs.antiAliasing.value = state.antiAliasing ?? 'none';
     }
