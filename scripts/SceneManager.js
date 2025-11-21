@@ -86,10 +86,10 @@ export class SceneManager {
     this.currentExposure = this.manualExposure;
     this.autoExposureEnabled = initialState.autoExposure ?? false;
     this.autoExposureValue = this.manualExposure;
-    this.autoExposureTarget = 0.6;
-    this.autoExposureMin = 0.25;
+    this.autoExposureTarget = 0.45;
+    this.autoExposureMin = 0.15;
     this.autoExposureMax = 2.5;
-    this.autoExposureSmooth = 0.08;
+    this.autoExposureSmooth = 0.12;
     this.hdriStrength = Math.min(
       5 * HDRI_STRENGTH_UNIT,
       Math.max(0, initialState.hdriStrength ?? 0.6),
