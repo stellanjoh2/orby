@@ -2464,6 +2464,10 @@ export class SceneManager {
       this.modelRoot.remove(child);
     }
     this.currentModel = null;
+    // Clear occlusion check objects when model is removed
+    if (this.lensFlare) {
+      this.lensFlare.occlusionCheckObjects = null;
+    }
     if (this.mixer) {
       this.mixer.stopAllAction();
       this.mixer = null;
@@ -2496,6 +2500,12 @@ export class SceneManager {
     this.modelRoot.position.set(0, 0, 0);
     this.modelRoot.scale.setScalar(1);
     this.modelRoot.add(object);
+    
+    // Update lens flare occlusion check to only check the model (much more performant)
+    if (this.lensFlare) {
+      this.lensFlare.occlusionCheckObjects = [this.modelRoot];
+    }
+    
     this.prepareMesh(object);
     this.fitCameraToObject(object);
     const state = this.stateStore.getState();
