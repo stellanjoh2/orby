@@ -463,7 +463,7 @@
                   </div>
                 </div>
                 <div class="hdri-grid" id="hdriGrid">
-                  <button data-hdri="congress" class="hdri-card active">
+                  <button data-hdri="congress" class="hdri-card">
                     Congress
                   </button>
                   <button data-hdri="luminous-sky" class="hdri-card">
@@ -472,7 +472,7 @@
                   <button data-hdri="sunset" class="hdri-card">
                     Sunset
                   </button>
-                  <button data-hdri="meadow" class="hdri-card">
+                  <button data-hdri="meadow" class="hdri-card active">
                     Meadow
                   </button>
                   <button data-hdri="abandoned" class="hdri-card">
@@ -525,72 +525,6 @@
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Show HDRI in background</span>
                   </label>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="lens-flare">
-                <div class="block-title has-toggle">
-                  <span>Lens Flare</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="lens-flare">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="lensFlareEnabled" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable lens flare</span>
-                    </label>
-                  </div>
-                </div>
-                <label class="slider-line">
-                  <span>Rotation</span>
-                  <input
-                    id="lensFlareRotation"
-                    type="range"
-                    min="0"
-                    max="360"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="lensFlareRotation">0°</span>
-                </label>
-                <label class="slider-line">
-                  <span>Height</span>
-                  <input
-                    id="lensFlareHeight"
-                    type="range"
-                    min="0"
-                    max="90"
-                    value="15"
-                    step="1"
-                  />
-                  <span class="value" data-output="lensFlareHeight">15°</span>
-                </label>
-                <label class="slider-line">
-                  <span>Ray Length</span>
-                  <input
-                    id="lensFlareDistance"
-                    type="range"
-                    min="1"
-                    max="200"
-                    value="40"
-                    step="1"
-                  />
-                  <span class="value" data-output="lensFlareDistance">40</span>
-                </label>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="lensFlareColor"
-                    class="color-chip"
-                    value="#d28756"
-                  />
-                </label>
-                <label class="select-line">
-                  <span>Quality</span>
-                  <select id="lensFlareQuality">
-                    <option value="maximum" selected>Maximum</option>
-                    <option value="optimized">Optimized</option>
-                  </select>
                 </label>
               </div>
 
@@ -798,6 +732,98 @@
                 <label class="color-line">
                   <span>Color</span>
                   <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
+                </label>
+              </div>
+
+              <div class="panel-block" data-block="lens-flare">
+                <div class="block-title has-toggle">
+                  <span>Lens Flare</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="lens-flare">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lensFlareEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable lens flare</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Rotation</span>
+                  <input
+                    id="lensFlareRotation"
+                    type="range"
+                    min="0"
+                    max="360"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="lensFlareRotation">0°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Height</span>
+                  <input
+                    id="lensFlareHeight"
+                    type="range"
+                    min="0"
+                    max="90"
+                    value="15"
+                    step="1"
+                  />
+                  <span class="value" data-output="lensFlareHeight">15°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Ray Length</span>
+                  <input
+                    id="lensFlareDistance"
+                    type="range"
+                    min="1"
+                    max="200"
+                    value="40"
+                    step="1"
+                  />
+                  <span class="value" data-output="lensFlareDistance">40</span>
+                </label>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    id="lensFlareColor"
+                    class="color-chip"
+                    value="#d28756"
+                  />
+                </label>
+                <label class="select-line">
+                  <span>Quality</span>
+                  <select id="lensFlareQuality">
+                    <option value="maximum" selected>Maximum</option>
+                    <option value="optimized">Optimized</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="panel-block" data-block="lens-dirt">
+                <div class="block-title has-toggle">
+                  <span>Lens Dirt (Experimental)</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="lens-dirt">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lensDirtEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable Lens Dirt</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Strength</span>
+                  <input
+                    id="lensDirtStrength"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.8"
+                  />
+                  <span class="value" data-output="lensDirtStrength">0.80</span>
                 </label>
               </div>
 
@@ -1132,8 +1158,39 @@
               <div class="panel-block">
                 <div class="block-title">About Orby</div>
                 <div class="about-content">
-                  <p>Orby is a free, instant, zero-install 3D model viewer that turns any .glb into a cinematic masterpiece with a single drag-and-drop.</p>
-                  <p>No accounts, no waiting, no uploads—just drop your file and get a full artist-grade studio: HDR environments, real depth of field, selective bloom, film grain, tonemapping, 3-point lighting, and pro controls that react instantly. Built for everyone creating AI-generated 3D in 2025 (Meshy, Tripo, Luma, etc.), but works with any .glb, .gltf, .obj, or .fbx.</p>
+                  <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It’s perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
+                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Key Features</div>
+                <div class="about-content">
+                  <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Instant drag-and-drop loading</span> for your local files</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Full cinematic post-processing</span>: selective bloom, depth of field, film grain, chromatic aberration, professional tonemapping</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDR environments</span> with blur, rotation, and intensity controls</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Custom 3-point studio lighting</span> that blends seamlessly with image-based lighting</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Real-time sliders</span> for exposure, FOV, color grading, and more</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Supports</span> .glb, .gltf, .obj, .fbx, .stl, .usd, and .usdz files (including Meshy/Tripo/Luma exports)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title">Credits</div>
+                <div class="about-content">
+                  <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="margin-bottom: 0.5rem;">
+                      • <span class="about-highlight">Hendrik Mans</span> — Lens Dirt shader inspiration (<a href="https://gist.github.com/hmans/550390e62cd1a9678bfd2cda7b612985" target="_blank" rel="noreferrer">gist</a>)
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      • <span class="about-highlight">Anderson Mancini (ektogamat)</span> — Lens flare implementation (<a href="https://github.com/ektogamat/lensflare-threejs-vanilla" target="_blank" rel="noreferrer">repo</a>)
+                    </li>
+                    <li>
+                      • <span class="about-highlight">Three.js contributors</span> — Core rendering, loaders, post-processing utilities
+                    </li>
+                  </ul>
                 </div>
               </div>
 
@@ -1141,17 +1198,16 @@
                 <div class="block-title">Privacy</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="margin-bottom: 0.5rem;">• 100% client-side: everything runs in your browser</li>
-                    <li style="margin-bottom: 0.5rem;">• No uploads, no servers, no cloud storage, no login</li>
-                    <li style="margin-bottom: 0.5rem;">• No analytics, no tracking, no cookies</li>
-                    <li style="margin-bottom: 0.5rem;">• Close the tab and your model is instantly and permanently gone</li>
-                    <li style="margin-bottom: 0.5rem;">• Nothing is ever stored, shared, or seen by anyone else</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">100% client-side</span> – runs completely in your browser</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Zero uploads, zero servers</span>, zero cloud storage</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">No accounts</span>, no login, no cookies, no analytics, no tracking</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Close the tab</span> and your model is instantly and permanently gone</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">No one can ever access your files</span></li>
                   </ul>
-                  <p style="margin-top: 1rem; margin-bottom: 0;">Your work stays completely private and under your control at all times. Orby is safe by design.</p>
+                  <p style="margin-top: 1rem; margin-bottom: 0;">Orby is fast, beautiful, private, and free forever. Just drop a model and go.</p>
+                  <div class="info-version-tag">v0.93.0 · 2025-11-21 19:42 UTC</div>
                 </div>
               </div>
-
-              <div class="info-version-tag">v0.92.4 · 2025-11-19 18:27 UTC</div>
             </section>
           </div>
         </aside>
