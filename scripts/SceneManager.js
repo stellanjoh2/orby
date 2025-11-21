@@ -48,6 +48,7 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
 } from './constants.js';
 import { formatTime } from './utils/timeFormatter.js';
+import { ColorAdjustController } from './render/ColorAdjustController.js';
 
 
 export class SceneManager {
@@ -322,19 +323,9 @@ export class SceneManager {
     this.fxaaPass.renderToScreen = false;
     this.exposurePass.renderToScreen = false;
     
-    // Color adjustment pass (contrast, hue, saturation, WB, tonals)
-    this.colorAdjustPass = new ShaderPass(ColorAdjustShader);
-    const adjustUniforms = this.colorAdjustPass.uniforms;
-    adjustUniforms.contrast.value = 1.0;
-    adjustUniforms.hue.value = 0.0;
-    adjustUniforms.saturation.value = 1.0;
-    adjustUniforms.temperature.value = 0.0;
-    adjustUniforms.tint.value = 0.0;
-    adjustUniforms.highlights.value = 0.0;
-    adjustUniforms.shadows.value = 0.0;
-    adjustUniforms.bypass.value = 1.0;
-    this.colorAdjustPass.renderToScreen = false;
-    this.colorAdjustPass.enabled = true;
+    // Color adjustment controller/shader pass
+    this.colorAdjust = new ColorAdjustController();
+    this.colorAdjustPass = this.colorAdjust.getPass();
     
     // Tone mapping pass - applied at the END after all other effects
     this.toneMappingPass = new ShaderPass(ToneMappingShader);
@@ -1281,28 +1272,19 @@ export class SceneManager {
   }
 
   setContrast(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.contrast.value = value ?? 1.0;
-      this.updateColorAdjustPassEnabled();
-    }
+    this.colorAdjust?.setContrast(value);
   }
 
   setHue(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.hue.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
-    }
+    this.colorAdjust?.setHue(value);
   }
 
   setSaturation(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.saturation.value = value ?? 1.0;
-      this.updateColorAdjustPassEnabled();
-    }
+    this.colorAdjust?.setSaturation(value);
   }
 
   setTemperature(kelvin) {
-    if (!this.colorAdjustPass) return;
+    if (!this.colorAdjust) return;
     const neutral = CAMERA_TEMPERATURE_NEUTRAL_K;
     const minK = CAMERA_TEMPERATURE_MIN_K;
     const maxK = CAMERA_TEMPERATURE_MAX_K;
@@ -1319,52 +1301,19 @@ export class SceneManager {
       normalized =
         (clamped - neutral) / (neutral - minK);
     }
-    this.colorAdjustPass.uniforms.temperature.value = normalized;
-    this.updateColorAdjustPassEnabled();
+    this.colorAdjust.setTemperature(normalized);
   }
 
   setTint(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.tint.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
-    }
+    this.colorAdjust?.setTint(value);
   }
 
   setHighlights(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.highlights.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
-    }
+    this.colorAdjust?.setHighlights(value);
   }
 
   setShadows(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.shadows.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
-    }
-  }
-
-  updateColorAdjustPassEnabled() {
-    if (!this.colorAdjustPass) return;
-    const contrast = this.colorAdjustPass.uniforms.contrast.value;
-    const hue = this.colorAdjustPass.uniforms.hue.value;
-    const saturation = this.colorAdjustPass.uniforms.saturation.value;
-    const temperature = this.colorAdjustPass.uniforms.temperature.value;
-    const tint = this.colorAdjustPass.uniforms.tint.value;
-    const highlights = this.colorAdjustPass.uniforms.highlights.value;
-    const shadows = this.colorAdjustPass.uniforms.shadows.value;
-    // Only enable the pass if any value is not at default
-    const isDefault =
-      Math.abs(contrast - 1.0) < 0.001 &&
-      Math.abs(hue - 0.0) < 0.001 &&
-      Math.abs(saturation - 1.0) < 0.001 &&
-      Math.abs(temperature) < 0.001 &&
-      Math.abs(tint) < 0.001 &&
-      Math.abs(highlights) < 0.001 &&
-      Math.abs(shadows) < 0.001;
-    if (this.colorAdjustPass.uniforms.bypass) {
-      this.colorAdjustPass.uniforms.bypass.value = isDefault ? 1.0 : 0.0;
-    }
+    this.colorAdjust?.setShadows(value);
   }
 
   setHdriEnabled(enabled) {
