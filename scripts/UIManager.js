@@ -1,6 +1,7 @@
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
 import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
+import { CAMERA_TEMPERATURE_NEUTRAL_K } from './constants.js';
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -750,10 +751,11 @@ export class UIManager {
       this.eventBus.emit('render:contrast', value);
     });
     this.inputs.cameraTemperature?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
-      this.stateStore.set('camera.temperature', value);
-      this.updateValueLabel('cameraTemperature', value, 'integer');
-      this.eventBus.emit('render:temperature', value / 100);
+      const parsed = parseFloat(event.target.value);
+      const kelvin = Number.isFinite(parsed) ? parsed : CAMERA_TEMPERATURE_NEUTRAL_K;
+      this.stateStore.set('camera.temperature', kelvin);
+      this.updateValueLabel('cameraTemperature', kelvin, 'kelvin');
+      this.eventBus.emit('render:temperature', kelvin);
     });
     this.inputs.cameraTint?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
@@ -1559,7 +1561,7 @@ export class UIManager {
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
             this.eventBus.emit(
               'render:temperature',
-              (defaults.camera.temperature ?? 0) / 100,
+              defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K,
             );
             this.eventBus.emit(
               'render:tint',
@@ -1666,6 +1668,11 @@ export class UIManager {
   formatSliderValue(value, type = 'decimal', decimals = null) {
     if (!Number.isFinite(value)) return '—';
     
+    if (type === 'kelvin') {
+      const rounded = Math.round(value);
+      return `${rounded.toLocaleString()}K`;
+    }
+
     const formatMap = {
       angle: { decimals: 0, unit: '°' },
       distance: { decimals: 2, unit: 'm' },
@@ -2197,9 +2204,9 @@ export class UIManager {
       this.updateValueLabel('cameraContrast', contrast, 'decimal');
     }
     if (this.inputs.cameraTemperature) {
-      const temp = state.camera?.temperature ?? 0;
+      const temp = state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K;
       this.inputs.cameraTemperature.value = temp;
-      this.updateValueLabel('cameraTemperature', temp, 'integer');
+      this.updateValueLabel('cameraTemperature', temp, 'kelvin');
     }
     if (this.inputs.cameraTint) {
       const tint = state.camera?.tint ?? 0;

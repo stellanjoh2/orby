@@ -1,3 +1,5 @@
+import { CAMERA_TEMPERATURE_NEUTRAL_K } from './constants.js';
+
 const clone = (value) => {
   if (typeof structuredClone === 'function') {
     return structuredClone(value);
@@ -91,7 +93,7 @@ export class StateStore {
       camera: {
         fov: 50,
         contrast: 1.0,
-        temperature: 0,
+        temperature: CAMERA_TEMPERATURE_NEUTRAL_K,
         tint: 0,
         highlights: 0,
         shadows: 0,
