@@ -300,66 +300,115 @@ uniform float highlights;
 uniform float shadows;
 uniform float whites;
 uniform float blacks;
+uniform float bypass;
 
-vec3 rgb2hsv(vec3 c) {
-  vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-  float d = q.x - min(q.w, q.y);
-  float e = 1.0e-10;
-  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float CONTRAST_PIVOT = 0.18;
+const float EPSILON = 1e-5;
+
+vec3 applyContrast(vec3 color, float amount) {
+  if (abs(amount - 1.0) < 0.0001) {
+    return color;
+  }
+  return (color - vec3(CONTRAST_PIVOT)) * amount + vec3(CONTRAST_PIVOT);
 }
 
-vec3 hsv2rgb(vec3 c) {
-  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+vec3 applySaturation(vec3 color, float amount) {
+  if (abs(amount - 1.0) < 0.0001) {
+    return color;
+  }
+  float luma = dot(color, LUMA);
+  return mix(vec3(luma), color, amount);
+}
+
+vec3 applyWhiteBalance(vec3 color, float temperature, float tint) {
+  if (abs(temperature) < 0.0001 && abs(tint) < 0.0001) {
+    return color;
+  }
+  float tempOffset = temperature * 0.35;
+  float tintOffset = tint * 0.25;
+  vec3 balance = vec3(
+    1.0 + tempOffset - tintOffset * 0.5,
+    1.0 + tintOffset,
+    1.0 - tempOffset - tintOffset * 0.5
+  );
+  vec3 balanced = color * balance;
+  float srcLuma = dot(color, LUMA);
+  float balancedLuma = max(dot(balanced, LUMA), EPSILON);
+  float scale = srcLuma / balancedLuma;
+  return balanced * scale;
+}
+
+vec3 applyHue(vec3 color, float hueDegrees) {
+  if (abs(hueDegrees) < 0.0001) {
+    return color;
+  }
+  const mat3 RGB_TO_YIQ = mat3(
+    0.299, 0.587, 0.114,
+    0.596, -0.274, -0.322,
+    0.211, -0.523, 0.312
+  );
+  const mat3 YIQ_TO_RGB = mat3(
+    1.0, 0.956, 0.621,
+    1.0, -0.272, -0.647,
+    1.0, -1.106, 1.703
+  );
+  vec3 yiq = RGB_TO_YIQ * color;
+  float angle = radians(hueDegrees);
+  float cosA = cos(angle);
+  float sinA = sin(angle);
+  mat2 rot = mat2(cosA, -sinA, sinA, cosA);
+  yiq.yz = rot * yiq.yz;
+  return clamp(YIQ_TO_RGB * yiq, 0.0, 4.0);
+}
+
+vec3 applyTonalRanges(
+  vec3 color,
+  float highlights,
+  float shadows,
+  float whites,
+  float blacks
+) {
+  if (
+    abs(highlights) < 0.0001 &&
+    abs(shadows) < 0.0001 &&
+    abs(whites) < 0.0001 &&
+    abs(blacks) < 0.0001
+  ) {
+    return color;
+  }
+  float luma = dot(color, LUMA);
+  float highlightMask = smoothstep(0.45, 1.0, luma);
+  float whiteMask = smoothstep(0.75, 1.0, luma);
+  float shadowMask = 1.0 - smoothstep(0.1, 0.8, luma);
+  float blackMask = 1.0 - smoothstep(0.0, 0.2, luma);
+
+  float highlightDelta = highlights * 0.25 * highlightMask;
+  float whiteDelta = whites * 0.35 * whiteMask;
+  float shadowDelta = shadows * 0.25 * shadowMask;
+  float blackDelta = blacks * 0.35 * blackMask;
+
+  float totalDelta = highlightDelta + whiteDelta + shadowDelta + blackDelta;
+  float targetLuma = luma + totalDelta;
+  float adjustment = targetLuma - luma;
+  return color + vec3(adjustment);
 }
 
 void main() {
   vec4 color = texture2D(tDiffuse, vUv);
-  
-  // Apply contrast
-  vec3 rgb = color.rgb;
-  rgb = (rgb - 0.5) * contrast + 0.5;
-  rgb = clamp(rgb, 0.0, 1.0);
-  
-  // Convert to HSV for hue and saturation adjustment
-  vec3 hsv = rgb2hsv(rgb);
-  
-  // Apply hue shift
-  hsv.x = mod(hsv.x + hue / 360.0, 1.0);
-  
-  // Apply saturation
-  hsv.y *= saturation;
-  hsv.y = clamp(hsv.y, 0.0, 1.0);
-  
-  // Convert back to RGB
-  rgb = hsv2rgb(hsv);
+  if (bypass > 0.5) {
+    gl_FragColor = color;
+    return;
+  }
 
-  // Temperature adjustment (warm/cool)
-  vec3 tempWeights = vec3(1.0 + temperature, 1.0, 1.0 - temperature);
-  rgb = clamp(rgb * tempWeights, 0.0, 1.0);
+  vec3 adjusted = max(color.rgb, vec3(0.0));
+  adjusted = applyContrast(adjusted, contrast);
+  adjusted = applySaturation(adjusted, saturation);
+  adjusted = applyHue(adjusted, hue);
+  adjusted = applyWhiteBalance(adjusted, temperature, tint);
+  adjusted = applyTonalRanges(adjusted, highlights, shadows, whites, blacks);
 
-  // Tint adjustment (green/magenta)
-  float tintStrength = tint * 0.1;
-  rgb.r = clamp(rgb.r + tintStrength, 0.0, 1.0);
-  rgb.b = clamp(rgb.b + tintStrength, 0.0, 1.0);
-  rgb.g = clamp(rgb.g - tintStrength, 0.0, 1.0);
-
-  float luminance = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
-  float highlightMask = smoothstep(0.45, 1.0, luminance);
-  float whiteMask = smoothstep(0.7, 1.0, luminance);
-  float shadowMask = 1.0 - smoothstep(0.2, 0.8, luminance);
-  float blackMask = 1.0 - smoothstep(0.0, 0.3, luminance);
-
-  rgb += highlights * 0.35 * highlightMask;
-  rgb += whites * 0.45 * whiteMask;
-  rgb += shadows * 0.35 * shadowMask;
-  rgb += blacks * 0.45 * blackMask;
-  rgb = clamp(rgb, 0.0, 1.0);
-  
-  gl_FragColor = vec4(rgb, color.a);
+  gl_FragColor = vec4(max(adjusted, vec3(0.0)), color.a);
 }
 `;
 
@@ -375,6 +424,7 @@ export const ColorAdjustShader = {
     shadows: { value: 0.0 },
     whites: { value: 0.0 },
     blacks: { value: 0.0 },
+    bypass: { value: 1.0 },
   },
   vertexShader: colorAdjustVertex,
   fragmentShader: colorAdjustFragment,

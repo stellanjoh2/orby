@@ -319,13 +319,21 @@ export class SceneManager {
     this.fxaaPass.renderToScreen = false;
     this.exposurePass.renderToScreen = false;
     
-    // Color adjustment pass (contrast, hue, saturation)
+    // Color adjustment pass (contrast, hue, saturation, WB, tonals)
     this.colorAdjustPass = new ShaderPass(ColorAdjustShader);
-    this.colorAdjustPass.uniforms.contrast.value = 1.0;
-    this.colorAdjustPass.uniforms.hue.value = 0.0;
-    this.colorAdjustPass.uniforms.saturation.value = 1.0;
+    const adjustUniforms = this.colorAdjustPass.uniforms;
+    adjustUniforms.contrast.value = 1.0;
+    adjustUniforms.hue.value = 0.0;
+    adjustUniforms.saturation.value = 1.0;
+    adjustUniforms.temperature.value = 0.0;
+    adjustUniforms.tint.value = 0.0;
+    adjustUniforms.highlights.value = 0.0;
+    adjustUniforms.shadows.value = 0.0;
+    adjustUniforms.whites.value = 0.0;
+    adjustUniforms.blacks.value = 0.0;
+    adjustUniforms.bypass.value = 1.0;
     this.colorAdjustPass.renderToScreen = false;
-    this.colorAdjustPass.enabled = false; // Disabled by default (only enable when values change)
+    this.colorAdjustPass.enabled = true;
     
     // Tone mapping pass - applied at the END after all other effects
     this.toneMappingPass = new ShaderPass(ToneMappingShader);
@@ -1360,7 +1368,9 @@ export class SceneManager {
       Math.abs(shadows) < 0.001 &&
       Math.abs(whites) < 0.001 &&
       Math.abs(blacks) < 0.001;
-    this.colorAdjustPass.enabled = !isDefault;
+    if (this.colorAdjustPass.uniforms.bypass) {
+      this.colorAdjustPass.uniforms.bypass.value = isDefault ? 1.0 : 0.0;
+    }
   }
 
   setHdriEnabled(enabled) {
