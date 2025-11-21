@@ -139,6 +139,14 @@
                   />
                   <span class="value" data-output="claySpecular">0.08</span>
                 </label>
+                <label class="slider-line">
+                  <span>Normal Map</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="clayNormalMap" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable normal map in clay mode</span>
+                  </label>
+                </label>
               </div>
 
               <div class="panel-block">
@@ -325,7 +333,69 @@
                   />
                   <span class="value" data-output="groundY">0.00m</span>
                 </label>
+                <label class="slider-line">
+                  <span>Scale</span>
+                  <input
+                    id="podiumScale"
+                    type="range"
+                    min="0.5"
+                    max="3"
+                    step="0.01"
+                    value="1"
+                  />
+                  <span class="value" data-output="podiumScale">1.00</span>
+                </label>
                 <button id="podiumSnap" class="ghost-btn small" type="button">
+                  Snap to bottom
+                </button>
+              </div>
+
+              <div class="panel-block" data-block="grid">
+                <div class="block-title has-toggle">
+                  <span>Grid</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="block-reset-btn" data-reset="grid">Reset</button>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="groundWire" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable grid</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    id="groundWireColor"
+                    class="color-chip"
+                    value="#c4cadd"
+                  />
+                </label>
+                <label class="slider-line">
+                  <span>Opacity</span>
+                  <input
+                    id="groundWireOpacity"
+                    type="range"
+                    min="0"
+                    max="1"
+                    value="0.45"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="groundWireOpacity">0.45</span>
+                </label>
+                <label class="slider-line">
+                  <span>Scale</span>
+                  <input
+                    id="gridScale"
+                    type="range"
+                    min="0.5"
+                    max="3"
+                    step="0.01"
+                    value="1"
+                  />
+                  <span class="value" data-output="gridScale">1.00</span>
+                </label>
+                <button id="gridSnap" class="ghost-btn small" type="button">
                   Snap to bottom
                 </button>
               </div>
@@ -418,11 +488,11 @@
                     id="hdriStrength"
                     type="range"
                     min="0"
-                    max="10"
-                    value="1"
+                    max="5"
+                    value="1.5"
                     step="0.1"
                   />
-                  <span class="value" data-output="hdriStrength">1.00</span>
+                  <span class="value" data-output="hdriStrength">1.50</span>
                 </label>
                 <label class="slider-line">
                   <span>Blurriness</span>
@@ -437,7 +507,7 @@
                   <span class="value" data-output="hdriBlurriness">0.00</span>
                 </label>
                 <label class="slider-line">
-                    <span>Location</span>
+                    <span>Rotation</span>
                   <input
                     id="hdriRotation"
                     type="range"
@@ -471,7 +541,7 @@
                   </div>
                 </div>
                 <label class="slider-line">
-                  <span>Location</span>
+                  <span>Rotation</span>
                   <input
                     id="lensFlareRotation"
                     type="range"
@@ -493,6 +563,18 @@
                     step="1"
                   />
                   <span class="value" data-output="lensFlareHeight">15°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Ray Length</span>
+                  <input
+                    id="lensFlareDistance"
+                    type="range"
+                    min="1"
+                    max="200"
+                    value="40"
+                    step="1"
+                  />
+                  <span class="value" data-output="lensFlareDistance">40</span>
                 </label>
                 <label class="color-line">
                   <span>Color</span>
@@ -552,6 +634,14 @@
                   />
                   <span class="value" data-output="lightsMaster">1.00</span>
                 </label>
+                <label class="slider-line">
+                  <span>Show Light Indicators</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="showLightIndicators" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show light indicators</span>
+                  </label>
+                </label>
               </div>
 
               <div class="panel-block rotate-lights">
@@ -574,41 +664,6 @@
                     step="1"
                   />
                   <span class="value" data-output="lightsRotation">0°</span>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="grid">
-                <div class="block-title has-toggle">
-                  <span>Grid</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="grid">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="groundWire" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable grid</span>
-                    </label>
-                  </div>
-                </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="groundWireColor"
-                    class="color-chip"
-                    value="#c4cadd"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Opacity</span>
-                  <input
-                    id="groundWireOpacity"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0.45"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="groundWireOpacity">0.45</span>
                 </label>
               </div>
 
@@ -861,7 +916,7 @@
 
               <div class="panel-block">
                 <div class="block-title has-reset">
-                  <span>Camera & Exposure</span>
+                  <span>Camera & Color</span>
                   <button class="block-reset-btn" data-reset="camera">Reset</button>
                 </div>
                 <label class="slider-line">
@@ -882,11 +937,47 @@
                     id="exposure"
                     type="range"
                     min="0"
-                    max="3"
+                    max="2"
                     value="1.0"
                     step="0.01"
                   />
                   <span class="value" data-output="exposure">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Contrast</span>
+                  <input
+                    id="cameraContrast"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraContrast">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Hue</span>
+                  <input
+                    id="cameraHue"
+                    type="range"
+                    min="-180"
+                    max="180"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraHue">0°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Saturation</span>
+                  <input
+                    id="cameraSaturation"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraSaturation">1.00</span>
                 </label>
               </div>
 
