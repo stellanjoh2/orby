@@ -327,11 +327,17 @@ vec3 applyWhiteBalance(vec3 color, float temperature, float tint) {
   }
   float tempOffset = temperature * 0.35;
   float tintOffset = tint * 0.25;
-  vec3 balance = vec3(
-    1.0 + tempOffset - tintOffset * 0.5,
-    1.0 + tintOffset,
-    1.0 - tempOffset - tintOffset * 0.5
+  vec3 tempScale = vec3(
+    1.0 + tempOffset,
+    1.0,
+    1.0 - tempOffset
   );
+  vec3 tintScale = vec3(
+    1.0 + tintOffset,
+    1.0 - tintOffset * 2.0,
+    1.0 + tintOffset
+  );
+  vec3 balance = max(tempScale * tintScale, vec3(0.05));
   vec3 balanced = color * balance;
   float srcLuma = dot(color, LUMA);
   float balancedLuma = max(dot(balanced, LUMA), EPSILON);

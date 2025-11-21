@@ -43,6 +43,9 @@ import {
   NORMALS_HELPER_COLOR,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  CAMERA_TEMPERATURE_MIN_K,
+  CAMERA_TEMPERATURE_MAX_K,
+  CAMERA_TEMPERATURE_NEUTRAL_K,
 } from './constants.js';
 import { formatTime } from './utils/timeFormatter.js';
 
@@ -861,7 +864,7 @@ export class SceneManager {
     this.setContrast(state.camera?.contrast ?? 1.0);
     this.setHue(state.camera?.hue ?? 0.0);
     this.setSaturation(state.camera?.saturation ?? 1.0);
-    this.setTemperature((state.camera?.temperature ?? 0) / 100);
+    this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
     this.setShadows((state.camera?.shadows ?? 0) / 100);
@@ -1304,11 +1307,26 @@ export class SceneManager {
     }
   }
 
-  setTemperature(value) {
-    if (this.colorAdjustPass) {
-      this.colorAdjustPass.uniforms.temperature.value = value ?? 0.0;
-      this.updateColorAdjustPassEnabled();
+  setTemperature(kelvin) {
+    if (!this.colorAdjustPass) return;
+    const neutral = CAMERA_TEMPERATURE_NEUTRAL_K;
+    const minK = CAMERA_TEMPERATURE_MIN_K;
+    const maxK = CAMERA_TEMPERATURE_MAX_K;
+    const clamped = THREE.MathUtils.clamp(
+      kelvin ?? neutral,
+      minK,
+      maxK,
+    );
+    let normalized;
+    if (clamped >= neutral) {
+      normalized =
+        (clamped - neutral) / (maxK - neutral);
+    } else {
+      normalized =
+        (clamped - neutral) / (neutral - minK);
     }
+    this.colorAdjustPass.uniforms.temperature.value = normalized;
+    this.updateColorAdjustPassEnabled();
   }
 
   setTint(value) {

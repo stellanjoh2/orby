@@ -38,3 +38,7 @@ export const ACES_FILMIC_E = 0.14;
 
 export const BLUR_SAMPLE_OFFSET = 0.02;
 
+export const CAMERA_TEMPERATURE_MIN_K = 2000;
+export const CAMERA_TEMPERATURE_MAX_K = 10000;
+export const CAMERA_TEMPERATURE_NEUTRAL_K = 6500;
+
