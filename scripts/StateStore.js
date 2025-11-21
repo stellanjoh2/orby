@@ -18,7 +18,7 @@ export class StateStore {
       showNormals: false,
       hdri: 'congress',
       hdriEnabled: true,
-      hdriStrength: 0.6,
+      hdriStrength: 1.0,
       hdriBlurriness: 0,
       hdriRotation: 0,
       hdriBackground: false,
