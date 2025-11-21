@@ -7,26 +7,12 @@ import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
 import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js';
-import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js';
-import { BokehPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js';
-import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/FilmPass.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js';
 import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
 import { LensFlareEffect } from './LensFlareEffect.js';
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
 import {
-  BloomTintShader,
-  GrainTintShader,
-  AberrationShader,
-  ExposureShader,
-  ToneMappingShader,
   BackgroundShader,
   RotateEquirectShader,
-  ColorAdjustShader,
-  LensDirtShader,
 } from './shaders/index.js';
 import {
   WIREFRAME_OFFSET,
@@ -48,7 +34,7 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
 } from './constants.js';
 import { formatTime } from './utils/timeFormatter.js';
-import { ColorAdjustController } from './render/ColorAdjustController.js';
+import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 
 
 export class SceneManager {
@@ -283,67 +269,26 @@ export class SceneManager {
   }
 
   setupComposer() {
-    const size = new THREE.Vector2();
-    this.renderer.getSize(size);
-    this.composer = new EffectComposer(this.renderer);
-    this.renderPass = new RenderPass(this.scene, this.camera);
-    this.renderPass.clearAlpha = 0;
-    this.bokehPass = new BokehPass(this.scene, this.camera, {
-      focus: 10,
-      aperture: 0.003,
-      maxblur: 0.01,
-    });
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(size.x, size.y),
-      1.2,
-      0.35,
-      0.85,
+    this.postPipeline = new PostProcessingPipeline(
+      this.renderer,
+      this.scene,
+      this.camera,
     );
-    // FilmPass: noiseIntensity, scanlineIntensity, scanlineCount, grayscale
-    // Initialize with 0 intensity so it's off by default
-    this.filmPass = new FilmPass(0.0, 0.0, 648, false);
-    this.bloomTintPass = new ShaderPass(BloomTintShader);
-    this.grainTintPass = new ShaderPass(GrainTintShader);
-    // Initialize time uniform for grain animation
-    this.grainTintPass.uniforms.time.value = 0;
-    this.lensDirtPass = new ShaderPass(LensDirtShader);
-    this.lensDirtPass.enabled = false;
-    this.aberrationPass = new ShaderPass(AberrationShader);
-    this.exposurePass = new ShaderPass(ExposureShader);
+    this.composer = this.postPipeline.composer;
+    this.renderPass = this.postPipeline.renderPass;
+    this.bokehPass = this.postPipeline.bokehPass;
+    this.bloomPass = this.postPipeline.bloomPass;
+    this.filmPass = this.postPipeline.filmPass;
+    this.bloomTintPass = this.postPipeline.bloomTintPass;
+    this.grainTintPass = this.postPipeline.grainTintPass;
+    this.lensDirtPass = this.postPipeline.lensDirtPass;
+    this.aberrationPass = this.postPipeline.aberrationPass;
+    this.fxaaPass = this.postPipeline.fxaaPass;
+    this.exposurePass = this.postPipeline.exposurePass;
+    this.colorAdjust = this.postPipeline.colorAdjust;
+    this.colorAdjustPass = this.postPipeline.colorAdjustPass;
+    this.toneMappingPass = this.postPipeline.toneMappingPass;
     this.exposurePass.uniforms.exposure.value = this.currentExposure;
-    
-    // FXAA pass - added before exposure pass
-    this.fxaaPass = new ShaderPass(FXAAShader);
-    const pixelRatio = this.renderer.getPixelRatio();
-    this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (size.x * pixelRatio);
-    this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (size.y * pixelRatio);
-    this.fxaaPass.enabled = false; // Off by default
-    
-    this.aberrationPass.renderToScreen = false;
-    this.fxaaPass.renderToScreen = false;
-    this.exposurePass.renderToScreen = false;
-    
-    // Color adjustment controller/shader pass
-    this.colorAdjust = new ColorAdjustController();
-    this.colorAdjustPass = this.colorAdjust.getPass();
-    
-    // Tone mapping pass - applied at the END after all other effects
-    this.toneMappingPass = new ShaderPass(ToneMappingShader);
-    this.toneMappingPass.uniforms.toneMappingType.value = 4; // Default to ACES Filmic
-    this.toneMappingPass.renderToScreen = true;
-
-    this.composer.addPass(this.renderPass);
-    this.composer.addPass(this.bokehPass);
-    this.composer.addPass(this.bloomPass);
-    this.composer.addPass(this.bloomTintPass);
-    this.composer.addPass(this.lensDirtPass);
-    this.composer.addPass(this.filmPass);
-    this.composer.addPass(this.grainTintPass);
-    this.composer.addPass(this.aberrationPass);
-    this.composer.addPass(this.fxaaPass);
-    this.composer.addPass(this.exposurePass);
-    this.composer.addPass(this.colorAdjustPass);
-    this.composer.addPass(this.toneMappingPass); // Last pass - applies tone mapping
   }
 
   loadLensDirtTexture() {
