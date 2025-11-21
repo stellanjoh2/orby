@@ -294,6 +294,12 @@ uniform sampler2D tDiffuse;
 uniform float contrast;
 uniform float hue;
 uniform float saturation;
+uniform float temperature;
+uniform float tint;
+uniform float highlights;
+uniform float shadows;
+uniform float whites;
+uniform float blacks;
 
 vec3 rgb2hsv(vec3 c) {
   vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -330,6 +336,28 @@ void main() {
   
   // Convert back to RGB
   rgb = hsv2rgb(hsv);
+
+  // Temperature adjustment (warm/cool)
+  vec3 tempWeights = vec3(1.0 + temperature, 1.0, 1.0 - temperature);
+  rgb = clamp(rgb * tempWeights, 0.0, 1.0);
+
+  // Tint adjustment (green/magenta)
+  float tintStrength = tint * 0.1;
+  rgb.r = clamp(rgb.r + tintStrength, 0.0, 1.0);
+  rgb.b = clamp(rgb.b + tintStrength, 0.0, 1.0);
+  rgb.g = clamp(rgb.g - tintStrength, 0.0, 1.0);
+
+  float luminance = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+  float highlightMask = smoothstep(0.45, 1.0, luminance);
+  float whiteMask = smoothstep(0.7, 1.0, luminance);
+  float shadowMask = 1.0 - smoothstep(0.2, 0.8, luminance);
+  float blackMask = 1.0 - smoothstep(0.0, 0.3, luminance);
+
+  rgb += highlights * 0.35 * highlightMask;
+  rgb += whites * 0.45 * whiteMask;
+  rgb += shadows * 0.35 * shadowMask;
+  rgb += blacks * 0.45 * blackMask;
+  rgb = clamp(rgb, 0.0, 1.0);
   
   gl_FragColor = vec4(rgb, color.a);
 }
@@ -341,6 +369,12 @@ export const ColorAdjustShader = {
     contrast: { value: 1.0 },
     hue: { value: 0.0 },
     saturation: { value: 1.0 },
+    temperature: { value: 0.0 },
+    tint: { value: 0.0 },
+    highlights: { value: 0.0 },
+    shadows: { value: 0.0 },
+    whites: { value: 0.0 },
+    blacks: { value: 0.0 },
   },
   vertexShader: colorAdjustVertex,
   fragmentShader: colorAdjustFragment,

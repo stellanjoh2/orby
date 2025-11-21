@@ -124,7 +124,12 @@ export class UIManager {
       exposure: q('#exposure'),
       autoExposure: q('#autoExposure'),
       cameraContrast: q('#cameraContrast'),
-      cameraHue: q('#cameraHue'),
+      cameraTemperature: q('#cameraTemperature'),
+      cameraTint: q('#cameraTint'),
+      cameraHighlights: q('#cameraHighlights'),
+      cameraShadows: q('#cameraShadows'),
+      cameraWhites: q('#cameraWhites'),
+      cameraBlacks: q('#cameraBlacks'),
       cameraSaturation: q('#cameraSaturation'),
       antiAliasing: q('#antiAliasing'),
       toneMapping: q('#toneMapping'),
@@ -744,11 +749,41 @@ export class UIManager {
       this.updateValueLabel('cameraContrast', value, 'decimal');
       this.eventBus.emit('render:contrast', value);
     });
-    this.inputs.cameraHue?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.stateStore.set('camera.hue', value);
-      this.updateValueLabel('cameraHue', value, 'angle');
-      this.eventBus.emit('render:hue', value);
+    this.inputs.cameraTemperature?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.temperature', value);
+      this.updateValueLabel('cameraTemperature', value, 'integer');
+      this.eventBus.emit('render:temperature', value / 100);
+    });
+    this.inputs.cameraTint?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.tint', value);
+      this.updateValueLabel('cameraTint', value, 'integer');
+      this.eventBus.emit('render:tint', value / 100);
+    });
+    this.inputs.cameraHighlights?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.highlights', value);
+      this.updateValueLabel('cameraHighlights', value, 'integer');
+      this.eventBus.emit('render:highlights', value / 100);
+    });
+    this.inputs.cameraShadows?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.shadows', value);
+      this.updateValueLabel('cameraShadows', value, 'integer');
+      this.eventBus.emit('render:shadows', value / 100);
+    });
+    this.inputs.cameraWhites?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.whites', value);
+      this.updateValueLabel('cameraWhites', value, 'integer');
+      this.eventBus.emit('render:whites', value / 100);
+    });
+    this.inputs.cameraBlacks?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.blacks', value);
+      this.updateValueLabel('cameraBlacks', value, 'integer');
+      this.eventBus.emit('render:blacks', value / 100);
     });
     this.inputs.cameraSaturation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -1386,7 +1421,6 @@ export class UIManager {
             this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
-            this.eventBus.emit('studio:lens-flare-distance', defaults.lensFlare.distance);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             if (this.inputs.backgroundColor) {
               this.inputs.backgroundColor.disabled = defaults.hdriBackground;
@@ -1399,7 +1433,6 @@ export class UIManager {
             this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
-            this.eventBus.emit('studio:lens-flare-distance', defaults.lensFlare.distance);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
             this.syncUIFromState();
@@ -1524,7 +1557,30 @@ export class UIManager {
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
-            this.eventBus.emit('render:hue', defaults.camera.hue);
+            this.eventBus.emit(
+              'render:temperature',
+              (defaults.camera.temperature ?? 0) / 100,
+            );
+            this.eventBus.emit(
+              'render:tint',
+              (defaults.camera.tint ?? 0) / 100,
+            );
+            this.eventBus.emit(
+              'render:highlights',
+              (defaults.camera.highlights ?? 0) / 100,
+            );
+            this.eventBus.emit(
+              'render:shadows',
+              (defaults.camera.shadows ?? 0) / 100,
+            );
+            this.eventBus.emit(
+              'render:whites',
+              (defaults.camera.whites ?? 0) / 100,
+            );
+            this.eventBus.emit(
+              'render:blacks',
+              (defaults.camera.blacks ?? 0) / 100,
+            );
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
             this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
             this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
@@ -2140,10 +2196,35 @@ export class UIManager {
       this.inputs.cameraContrast.value = contrast;
       this.updateValueLabel('cameraContrast', contrast, 'decimal');
     }
-    if (this.inputs.cameraHue) {
-      const hue = state.camera?.hue ?? 0;
-      this.inputs.cameraHue.value = hue;
-      this.updateValueLabel('cameraHue', hue, 'angle');
+    if (this.inputs.cameraTemperature) {
+      const temp = state.camera?.temperature ?? 0;
+      this.inputs.cameraTemperature.value = temp;
+      this.updateValueLabel('cameraTemperature', temp, 'integer');
+    }
+    if (this.inputs.cameraTint) {
+      const tint = state.camera?.tint ?? 0;
+      this.inputs.cameraTint.value = tint;
+      this.updateValueLabel('cameraTint', tint, 'integer');
+    }
+    if (this.inputs.cameraHighlights) {
+      const highlights = state.camera?.highlights ?? 0;
+      this.inputs.cameraHighlights.value = highlights;
+      this.updateValueLabel('cameraHighlights', highlights, 'integer');
+    }
+    if (this.inputs.cameraShadows) {
+      const shadows = state.camera?.shadows ?? 0;
+      this.inputs.cameraShadows.value = shadows;
+      this.updateValueLabel('cameraShadows', shadows, 'integer');
+    }
+    if (this.inputs.cameraWhites) {
+      const whites = state.camera?.whites ?? 0;
+      this.inputs.cameraWhites.value = whites;
+      this.updateValueLabel('cameraWhites', whites, 'integer');
+    }
+    if (this.inputs.cameraBlacks) {
+      const blacks = state.camera?.blacks ?? 0;
+      this.inputs.cameraBlacks.value = blacks;
+      this.updateValueLabel('cameraBlacks', blacks, 'integer');
     }
     if (this.inputs.cameraSaturation) {
       const saturation = state.camera?.saturation ?? 1.0;

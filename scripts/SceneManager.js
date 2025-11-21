@@ -663,9 +663,6 @@ export class SceneManager {
     this.eventBus.on('studio:lens-flare-height', (value) =>
       this.setLensFlareHeight(value),
     );
-    this.eventBus.on('studio:lens-flare-distance', (value) =>
-      this.setLensFlareDistance(value),
-    );
     this.eventBus.on('studio:lens-flare-color', (value) =>
       this.setLensFlareColor(value),
     );
@@ -678,6 +675,16 @@ export class SceneManager {
     this.eventBus.on('render:contrast', (value) => this.setContrast(value));
     this.eventBus.on('render:hue', (value) => this.setHue(value));
     this.eventBus.on('render:saturation', (value) => this.setSaturation(value));
+    this.eventBus.on('render:temperature', (value) =>
+      this.setTemperature(value),
+    );
+    this.eventBus.on('render:tint', (value) => this.setTint(value));
+    this.eventBus.on('render:highlights', (value) =>
+      this.setHighlights(value),
+    );
+    this.eventBus.on('render:shadows', (value) => this.setShadows(value));
+    this.eventBus.on('render:whites', (value) => this.setWhites(value));
+    this.eventBus.on('render:blacks', (value) => this.setBlacks(value));
     this.eventBus.on('studio:ground-solid', (enabled) => {
       this.setGroundSolid(enabled);
     });
@@ -846,6 +853,12 @@ export class SceneManager {
     this.setContrast(state.camera?.contrast ?? 1.0);
     this.setHue(state.camera?.hue ?? 0.0);
     this.setSaturation(state.camera?.saturation ?? 1.0);
+    this.setTemperature((state.camera?.temperature ?? 0) / 100);
+    this.setTint((state.camera?.tint ?? 0) / 100);
+    this.setHighlights((state.camera?.highlights ?? 0) / 100);
+    this.setShadows((state.camera?.shadows ?? 0) / 100);
+    this.setWhites((state.camera?.whites ?? 0) / 100);
+    this.setBlacks((state.camera?.blacks ?? 0) / 100);
     // Initialize clay normal map setting
     if (state.clay?.normalMap !== undefined) {
       this.setClayNormalMap(state.clay.normalMap);
@@ -860,7 +873,6 @@ export class SceneManager {
       ...(state.lensFlare ?? {}),
     };
     this.setLensFlareHeight(lensState.height ?? 0);
-    this.setLensFlareDistance(lensState.distance ?? 40);
     this.setLensFlareColor(lensState.color ?? '#d28756');
     this.setLensFlareQuality(lensState.quality ?? 'maximum');
     this.setLensFlareRotation(lensState.rotation ?? 0);
@@ -1226,12 +1238,6 @@ export class SceneManager {
     }
   }
 
-  setLensFlareDistance(value) {
-    if (this.lensFlare) {
-      this.lensFlare.setDistance(value ?? 40);
-    }
-  }
-
   setClayNormalMap(enabled) {
     if (this.currentShading === 'clay' && this.currentModel) {
       this.currentModel.traverse((child) => {
@@ -1290,15 +1296,70 @@ export class SceneManager {
     }
   }
 
+  setTemperature(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.temperature.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setTint(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.tint.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setHighlights(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.highlights.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setShadows(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.shadows.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setWhites(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.whites.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
+  setBlacks(value) {
+    if (this.colorAdjustPass) {
+      this.colorAdjustPass.uniforms.blacks.value = value ?? 0.0;
+      this.updateColorAdjustPassEnabled();
+    }
+  }
+
   updateColorAdjustPassEnabled() {
     if (!this.colorAdjustPass) return;
     const contrast = this.colorAdjustPass.uniforms.contrast.value;
     const hue = this.colorAdjustPass.uniforms.hue.value;
     const saturation = this.colorAdjustPass.uniforms.saturation.value;
+    const temperature = this.colorAdjustPass.uniforms.temperature.value;
+    const tint = this.colorAdjustPass.uniforms.tint.value;
+    const highlights = this.colorAdjustPass.uniforms.highlights.value;
+    const shadows = this.colorAdjustPass.uniforms.shadows.value;
+    const whites = this.colorAdjustPass.uniforms.whites.value;
+    const blacks = this.colorAdjustPass.uniforms.blacks.value;
     // Only enable the pass if any value is not at default
-    const isDefault = Math.abs(contrast - 1.0) < 0.001 && 
-                      Math.abs(hue - 0.0) < 0.001 && 
-                      Math.abs(saturation - 1.0) < 0.001;
+    const isDefault =
+      Math.abs(contrast - 1.0) < 0.001 &&
+      Math.abs(hue - 0.0) < 0.001 &&
+      Math.abs(saturation - 1.0) < 0.001 &&
+      Math.abs(temperature) < 0.001 &&
+      Math.abs(tint) < 0.001 &&
+      Math.abs(highlights) < 0.001 &&
+      Math.abs(shadows) < 0.001 &&
+      Math.abs(whites) < 0.001 &&
+      Math.abs(blacks) < 0.001;
     this.colorAdjustPass.enabled = !isDefault;
   }
 

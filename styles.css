@@ -777,6 +777,14 @@ body.dropzone-visible #webgl {
   width: 100%;
 }
 
+.slider-line--temperature input[type='range'] {
+  background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
+}
+
+.slider-line--tint input[type='range'] {
+  background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
+}
+
 .slider-line .value {
   grid-column: 3;
   justify-self: end;
