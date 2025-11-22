@@ -20,7 +20,7 @@ export class StateStore {
       showNormals: false,
       hdri: 'meadow',
       hdriEnabled: true,
-      hdriStrength: 1.25,
+      hdriStrength: 1.50,
       hdriBlurriness: 0,
       hdriRotation: 0,
       hdriBackground: true,
@@ -92,6 +92,7 @@ export class StateStore {
       aberration: { enabled: true, offset: 0.0025, strength: 0.24 },
       camera: {
         fov: 50,
+        tilt: 0,
         contrast: 1.0,
         temperature: CAMERA_TEMPERATURE_NEUTRAL_K,
         tint: 0,

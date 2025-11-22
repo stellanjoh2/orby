@@ -44,6 +44,10 @@ export class CameraController {
     this.camera.fov = initialFov;
     this.camera.updateProjectionMatrix();
     this.controls.update();
+    
+    // Store base camera rotation for tilt calculation
+    this.baseCameraQuaternion = this.camera.quaternion.clone();
+    this.currentTilt = 0;
 
     this.altRightDragging = false;
     this.altLeftDragging = false;
@@ -59,6 +63,67 @@ export class CameraController {
 
   getControls() {
     return this.controls;
+  }
+
+  /**
+   * Set camera tilt (rotation around view direction - roll effect)
+   * @param {number} degrees - Tilt angle in degrees (-45 to 45)
+   */
+  setTilt(degrees) {
+    this.currentTilt = degrees;
+    this._applyTilt();
+  }
+
+  /**
+   * Apply tilt rotation to camera (called after OrbitControls updates)
+   * This rotates the camera around the view direction (forward axis) for left/right roll
+   */
+  _applyTilt() {
+    // Clamp tilt to -45 to +45 degrees
+    const clampedTilt = THREE.MathUtils.clamp(this.currentTilt, -45, 45);
+    
+    if (Math.abs(clampedTilt) < 0.01) {
+      // No tilt - ensure camera up is aligned with world up
+      this.camera.up.set(0, 1, 0);
+      this.controls.update();
+      return;
+    }
+
+    const radians = THREE.MathUtils.degToRad(clampedTilt);
+    
+    // Get the camera's view direction (from camera to target) - this is the forward axis
+    const forward = new THREE.Vector3();
+    forward.subVectors(this.controls.target, this.camera.position).normalize();
+    
+    // Get the camera's right vector (perpendicular to forward and world up)
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, worldUp).normalize();
+    
+    // If right vector is zero (camera looking straight up/down), use a fallback
+    if (right.length() < 0.1) {
+      right.set(1, 0, 0);
+      right.crossVectors(right, forward).normalize();
+    }
+    
+    // Calculate the base up vector (perpendicular to forward and right)
+    // This is what the up vector would be with no tilt
+    const baseUp = new THREE.Vector3();
+    baseUp.crossVectors(right, forward).normalize();
+    
+    // Rotate the base up vector around the forward axis by the tilt angle
+    // Using Rodrigues' rotation formula: v' = v*cos(θ) + (k×v)*sin(θ) + k*(k·v)*(1-cos(θ))
+    // For rotation around forward axis: up' = up*cos(θ) + right*sin(θ)
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const tiltedUp = new THREE.Vector3();
+    tiltedUp.copy(baseUp).multiplyScalar(cos);
+    tiltedUp.addScaledVector(right, sin);
+    tiltedUp.normalize();
+    
+    // Set the camera's up vector
+    this.camera.up.copy(tiltedUp);
+    this.controls.update();
   }
 
   getTargetDistance() {
@@ -152,6 +217,9 @@ export class CameraController {
 
   update() {
     this.controls.update();
+    // Always apply tilt after controls update to ensure it's maintained
+    // This ensures smooth transitions and prevents OrbitControls from overriding it
+    this._applyTilt();
   }
 
   /**
@@ -176,10 +244,15 @@ export class CameraController {
       // Notify other systems that model bounds have changed
       this.callbacks.onModelBoundsChanged?.(this.modelBounds);
       
-      this.controls.target.copy(center);
+      // Adjust target point downward so mesh appears higher in frame (less bottom-heavy)
+      // Moving target DOWN makes the mesh appear HIGHER in the frame
+      const adjustedCenter = center.clone();
+      adjustedCenter.y -= size.y * 0.05; // Negative Y = down, which makes mesh appear higher
+      
+      this.controls.target.copy(adjustedCenter);
       const distance = this.modelBounds.radius * 2.2 || 5;
       const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
-      this.camera.position.copy(center.clone().add(direction.multiplyScalar(distance)));
+      this.camera.position.copy(adjustedCenter.clone().add(direction.multiplyScalar(distance)));
       this.camera.near = Math.max(0.01, distance / 200);
       this.camera.far = distance * 50;
       this.camera.updateProjectionMatrix();
@@ -203,10 +276,15 @@ export class CameraController {
       this.callbacks.onModelBoundsChanged?.(this.modelBounds);
       
       // Calculate target position and target point
+      // Adjust target point downward so mesh appears higher in frame (less bottom-heavy)
+      // Moving target DOWN makes the mesh appear HIGHER in the frame
+      const adjustedCenter = center.clone();
+      adjustedCenter.y -= size.y * 0.05; // Negative Y = down, which makes mesh appear higher
+      
       const distance = this.modelBounds.radius * 2.2 || 5;
       const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
-      const targetPosition = center.clone().add(direction.multiplyScalar(distance));
-      const targetPoint = center.clone();
+      const targetPosition = adjustedCenter.clone().add(direction.multiplyScalar(distance));
+      const targetPoint = adjustedCenter.clone();
       
       // Store current values for animation
       const startPosition = this.camera.position.clone();

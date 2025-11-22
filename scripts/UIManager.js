@@ -122,6 +122,7 @@ export class UIManager {
       fresnelStrength: q('#fresnelStrength'),
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
+      cameraTilt: q('#cameraTilt'),
       exposure: q('#exposure'),
       autoExposure: q('#autoExposure'),
       cameraContrast: q('#cameraContrast'),
@@ -726,6 +727,12 @@ export class UIManager {
       this.updateValueLabel('cameraFov', value, 'angle');
       this.stateStore.set('camera.fov', value);
       this.eventBus.emit('camera:fov', value);
+    });
+    this.inputs.cameraTilt?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('cameraTilt', value, 'angle');
+      this.stateStore.set('camera.tilt', value);
+      this.eventBus.emit('camera:tilt', value);
     });
     this.inputs.exposure.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -1551,6 +1558,7 @@ export class UIManager {
             this.stateStore.set('toneMapping', defaults.toneMapping);
             // Emit all events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
+            this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
@@ -2183,6 +2191,10 @@ export class UIManager {
     // Camera & Exposure
     this.inputs.cameraFov.value = state.camera.fov;
     this.updateValueLabel('cameraFov', state.camera.fov, 'angle');
+    if (this.inputs.cameraTilt) {
+      this.inputs.cameraTilt.value = state.camera.tilt ?? 0;
+      this.updateValueLabel('cameraTilt', state.camera.tilt ?? 0, 'angle');
+    }
     this.inputs.exposure.value = state.exposure;
     this.updateValueLabel('exposure', state.exposure, 'decimal');
     if (this.inputs.cameraContrast) {

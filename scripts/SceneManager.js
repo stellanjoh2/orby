@@ -58,7 +58,7 @@ export class SceneManager {
     // Auto-exposure will be initialized after setupComposer
     this.hdriStrength = Math.min(
       5 * HDRI_STRENGTH_UNIT,
-      Math.max(0, initialState.hdriStrength ?? 0.6),
+      Math.max(0, initialState.hdriStrength ?? 1.50),
     );
     // Disable tone mapping on renderer - we'll apply it as a post-processing pass instead
     this.renderer.toneMapping = THREE.NoToneMapping;
@@ -119,6 +119,7 @@ export class SceneManager {
     this.lightsAutoRotateSpeed = 30; // degrees per second
     this.currentFile = null;
     this.currentModel = null;
+    this.isFirstModelLoad = true; // Track if this is the first model load
     this.animationController = new AnimationController({
       onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
       onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
@@ -305,6 +306,9 @@ export class SceneManager {
       this.camera.fov = value;
       this.camera.updateProjectionMatrix();
     });
+    this.eventBus.on('camera:tilt', (value) => {
+      this.cameraController?.setTilt(value);
+    });
     this.eventBus.on('camera:focus', () => {
       if (this.currentModel) {
         this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
@@ -471,6 +475,7 @@ export class SceneManager {
     }
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
+    this.cameraController?.setTilt(state.camera.tilt ?? 0);
     this.lightsEnabled = state.lightsEnabled ?? true;
     this.lightsMaster = state.lightsMaster ?? 0.30;
     this.applyLightSettings(state.lights);
@@ -884,6 +889,17 @@ export class SceneManager {
     this.ui.updateTopBarDetail(`${file.name} — Loading…`);
     this.ui.setDropzoneVisible(false);
 
+    // On first load, start with low exposure and fade in
+    const isFirstLoad = this.isFirstModelLoad;
+    const targetExposure = this.stateStore.getState().exposure ?? 1.0;
+    
+    if (isFirstLoad) {
+      // Set exposure to very low value initially
+      const startExposure = 0.1;
+      this.autoExposureController?.setExposure(startExposure);
+      this.eventBus.emit('scene:exposure', startExposure);
+    }
+
     try {
       const asset = await this.modelLoader.loadFile(file);
       this.setModel(asset.object, asset.animations ?? []);
@@ -961,7 +977,16 @@ export class SceneManager {
     this.lensFlareController?.setModelRoot(this.modelRoot);
     
     this.prepareMesh(object);
+    
+    // Only fit camera if this is NOT the first model load
+    // This prevents jarring camera jump on initial model load
+    const wasFirstLoad = this.isFirstModelLoad;
+    if (!this.isFirstModelLoad) {
     this.fitCameraToObject(object);
+    } else {
+      // Mark that we've loaded the first model
+      this.isFirstModelLoad = false;
+    }
     const state = this.stateStore.getState();
     // Apply transform state from StateStore
     this.transformController?.applyState(state);
@@ -986,10 +1011,110 @@ export class SceneManager {
     this.animationController.setModel(this.currentModel, animations);
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.();
+    
+    // Fade in mesh opacity from 0 to 1 over 2 seconds
+    this._fadeInMeshOpacity(object);
+    
+    // After first model load, smoothly zoom in to focus on it
+    // Use a small delay to ensure everything is set up
+    if (wasFirstLoad) {
+      // Fade in exposure from low to target over 2 seconds
+      const targetExposure = this.stateStore.getState().exposure ?? 1.0;
+      const startExposure = 0.1;
+      const duration = 2000; // 2 seconds
+      const startTime = performance.now();
+      
+      const fadeExposure = () => {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        // Use ease-out curve for smooth fade
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const currentExposure = startExposure + (targetExposure - startExposure) * easedProgress;
+        
+        this.autoExposureController?.setExposure(currentExposure);
+        this.eventBus.emit('scene:exposure', currentExposure);
+        
+        if (progress < 1) {
+          requestAnimationFrame(fadeExposure);
+        } else {
+          // Ensure we end at exact target value
+          this.autoExposureController?.setExposure(targetExposure);
+          this.eventBus.emit('scene:exposure', targetExposure);
+        }
+      };
+      
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Double RAF ensures model is fully rendered before animating
+          if (this.currentModel) {
+            // Start exposure fade-in
+            fadeExposure();
+            // Start camera focus animation
+            this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
+          }
+        });
+      });
+    }
   }
 
   prepareMesh(object) {
     this.materialController.prepareMesh(object);
+  }
+
+  _fadeInMeshOpacity(object) {
+    // Collect all materials from the mesh
+    const materials = [];
+    object.traverse((child) => {
+      if (child.isMesh && child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach((mat) => {
+          if (mat && !materials.includes(mat)) {
+            materials.push(mat);
+          }
+        });
+      }
+    });
+
+    if (materials.length === 0) return;
+
+    // Set initial opacity to 0 and enable transparency
+    materials.forEach((mat) => {
+      if (mat) {
+        mat.transparent = true;
+        mat.opacity = 0;
+      }
+    });
+
+    // Animate opacity from 0 to 1 over 2 seconds
+    const duration = 2000; // 2 seconds
+    const startTime = performance.now();
+
+    const fadeIn = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // Use ease-out curve for smooth fade
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const opacity = easedProgress;
+
+      materials.forEach((mat) => {
+        if (mat) {
+          mat.opacity = opacity;
+        }
+      });
+
+      if (progress < 1) {
+        requestAnimationFrame(fadeIn);
+      } else {
+        // Ensure we end at exact opacity 1
+        materials.forEach((mat) => {
+          if (mat) {
+            mat.opacity = 1;
+          }
+        });
+      }
+    };
+
+    requestAnimationFrame(fadeIn);
   }
 
   fitCameraToObject(object) {
