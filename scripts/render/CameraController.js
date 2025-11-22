@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js';
+import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
 export class CameraController {
   constructor(
@@ -11,6 +12,7 @@ export class CameraController {
       onAltLightRotate = null,
       onAltLightRotateEnd = null,
       altLightRotateSensitivity = 0.5,
+      onModelBoundsChanged = null,
     } = {},
   ) {
     this.camera = camera;
@@ -19,8 +21,10 @@ export class CameraController {
       getFocusPoint,
       onAltLightRotate,
       onAltLightRotateEnd,
+      onModelBoundsChanged,
     };
     this.altLightRotateSensitivity = altLightRotateSensitivity;
+    this.modelBounds = null;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
@@ -150,6 +154,140 @@ export class CameraController {
     this.controls.update();
   }
 
+  /**
+   * Get the current model bounds
+   * @returns {Object|null} Model bounds object with box, size, center, radius
+   */
+  getModelBounds() {
+    return this.modelBounds;
+  }
+
+  /**
+   * Fit camera to an object, calculating bounds and positioning camera
+   * @param {THREE.Object3D} object - The object to fit the camera to
+   */
+  fitCameraToObject(object) {
+    const box = new THREE.Box3().setFromObject(object);
+    if (!box.isEmpty()) {
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      this.modelBounds = { box, size, center, radius: size.length() / 2 };
+      
+      // Notify other systems that model bounds have changed
+      this.callbacks.onModelBoundsChanged?.(this.modelBounds);
+      
+      this.controls.target.copy(center);
+      const distance = this.modelBounds.radius * 2.2 || 5;
+      const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
+      this.camera.position.copy(center.clone().add(direction.multiplyScalar(distance)));
+      this.camera.near = Math.max(0.01, distance / 200);
+      this.camera.far = distance * 50;
+      this.camera.updateProjectionMatrix();
+      this.controls.update();
+    }
+  }
+
+  /**
+   * Smoothly animate camera to focus on an object
+   * @param {THREE.Object3D} object - The object to focus on
+   * @param {number} duration - Animation duration in seconds (default: 1.0)
+   */
+  focusOnObjectAnimated(object, duration = 1.0) {
+    const box = new THREE.Box3().setFromObject(object);
+    if (!box.isEmpty()) {
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      this.modelBounds = { box, size, center, radius: size.length() / 2 };
+      
+      // Notify other systems that model bounds have changed
+      this.callbacks.onModelBoundsChanged?.(this.modelBounds);
+      
+      // Calculate target position and target point
+      const distance = this.modelBounds.radius * 2.2 || 5;
+      const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
+      const targetPosition = center.clone().add(direction.multiplyScalar(distance));
+      const targetPoint = center.clone();
+      
+      // Store current values for animation
+      const startPosition = this.camera.position.clone();
+      const startTarget = this.controls.target.clone();
+      
+      // Temporarily disable controls during animation
+      const wasPanEnabled = this.controls.enablePan;
+      const wasRotateEnabled = this.controls.enableRotate;
+      this.controls.enablePan = false;
+      this.controls.enableRotate = false;
+      
+      // Create temporary objects for GSAP animation
+      const positionObj = { x: startPosition.x, y: startPosition.y, z: startPosition.z };
+      const targetObj = { x: startTarget.x, y: startTarget.y, z: startTarget.z };
+      
+      // Animate camera position and target together
+      gsap.to(positionObj, {
+        x: targetPosition.x,
+        y: targetPosition.y,
+        z: targetPosition.z,
+        duration: duration,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          this.camera.position.set(positionObj.x, positionObj.y, positionObj.z);
+        },
+      });
+      
+      // Animate controls target
+      gsap.to(targetObj, {
+        x: targetPoint.x,
+        y: targetPoint.y,
+        z: targetPoint.z,
+        duration: duration,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          this.controls.target.set(targetObj.x, targetObj.y, targetObj.z);
+          // Use lookAt for smooth camera orientation during animation
+          this.camera.lookAt(this.controls.target);
+          this.controls.update();
+        },
+        onComplete: () => {
+          // Update camera near/far planes and restore controls
+          this.camera.near = Math.max(0.01, distance / 200);
+          this.camera.far = distance * 50;
+          this.camera.updateProjectionMatrix();
+          this.controls.enablePan = wasPanEnabled;
+          this.controls.enableRotate = wasRotateEnabled;
+          this.controls.update();
+        },
+      });
+    }
+  }
+
+  /**
+   * Apply a camera preset (front, three-quarter, top)
+   * @param {string} preset - Preset name ('front', 'three-quarter', 'top')
+   */
+  applyCameraPreset(preset) {
+    if (!this.modelBounds) return;
+    const { center, radius } = this.modelBounds;
+    const distance = radius * 2.4 || 5;
+    const target = center.clone();
+    let position;
+    
+    if (preset === 'front') {
+      position = target.clone().add(new THREE.Vector3(0, radius * 0.2, distance));
+    } else if (preset === 'three-quarter') {
+      position = target
+        .clone()
+        .add(new THREE.Vector3(distance, radius * 0.4, distance));
+    } else if (preset === 'top') {
+      position = target.clone().add(new THREE.Vector3(0, distance, 0.0001));
+    }
+    
+    if (position) {
+      this.camera.position.copy(position);
+      this.controls.target.copy(target);
+      this.controls.update();
+    }
+  }
+
   dispose() {
     this.controls.dispose();
     this._unbindAltInteractions();
@@ -248,10 +386,16 @@ export class CameraController {
   }
 
   _focusOnModelCenter(forceUpdate = false) {
-    if (!this.callbacks.getFocusPoint) return;
     if (!forceUpdate && this.altLeftTargetSet) return;
 
-    const point = this.callbacks.getFocusPoint();
+    // Prefer modelBounds center if available, otherwise use callback
+    let point = null;
+    if (this.modelBounds?.center) {
+      point = this.modelBounds.center;
+    } else if (this.callbacks.getFocusPoint) {
+      point = this.callbacks.getFocusPoint();
+    }
+    
     if (!point) return;
 
     this.controls.target.copy(point);
