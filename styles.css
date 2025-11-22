@@ -358,7 +358,7 @@ body.dropzone-visible #webgl {
   flex-direction: column;
   backdrop-filter: blur(22px);
   height: calc(100vh - 48px);
-  padding: 0.6rem 0.6rem 0.6rem 0.6rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.4rem;
   position: absolute;
   top: 24px;
   right: 28px;
