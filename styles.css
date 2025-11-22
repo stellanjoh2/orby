@@ -664,9 +664,20 @@ a:hover {
   filter: saturate(0.35);
 }
 
-/* Ensure block-title and toggle are never affected by muted state */
+/* Block-title opacity: 0.95 when muted, 1.0 when active */
 .panel-block.is-muted .block-title,
-.panel-block.is-muted .block-title *,
+.panel-block.is-muted .block-title * {
+  opacity: 0.95;
+  filter: none !important;
+  pointer-events: auto;
+}
+
+.panel-block:not(.is-muted) .block-title,
+.panel-block:not(.is-muted) .block-title * {
+  opacity: 1.0;
+}
+
+/* Ensure toggle is never affected by muted state */
 .panel-block.is-muted .effect-toggle,
 .panel-block.is-muted .effect-toggle * {
   opacity: 1 !important;
