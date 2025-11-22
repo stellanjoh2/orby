@@ -1,3 +1,17 @@
+/*
+ * Brand Color System
+ * 
+ * To change the main brand color, simply update:
+ * - --brand-primary: The main brand color (currently purple #b46cff)
+ * - --brand-secondary: The secondary accent color (currently pink #ff6bd6)
+ * 
+ * All accent-related colors (--accent, --accent-strong, --accent-border, etc.)
+ * will automatically derive from these two base colors using CSS color-mix().
+ * 
+ * Note: color-mix() requires modern browsers (Chrome 111+, Firefox 113+, Safari 16.2+)
+ * For older browser support, you may need to manually set the derived colors.
+ */
+
 :root {
   color-scheme: dark;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
@@ -7,6 +21,11 @@
 
 :root,
 body[data-theme='violet'] {
+  /* Brand Colors - Change these to swap the main brand color */
+  --brand-primary: #b46cff;
+  --brand-secondary: #ff6bd6;
+  
+  /* Base Colors */
   --bg: #050112;
   --panel: #0d081f;
   --panel-alt: #160c2f;
@@ -15,22 +34,31 @@ body[data-theme='violet'] {
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.65);
-  --accent: #b46cff;
-  --accent-strong: #ff6bd6;
-  --accent-border: rgba(180, 108, 255, 0.5);
-  --accent-shadow: rgba(180, 108, 255, 0.35);
-  --accent-muted: rgba(180, 108, 255, 0.18);
-  --accent-glow: rgba(255, 107, 214, 0.45);
-  --brand-glow: rgba(210, 139, 255, 0.65);
+  
+  /* Accent Colors - Derived from brand-primary */
+  --accent: var(--brand-primary);
+  --accent-strong: var(--brand-secondary);
+  --accent-border: color-mix(in srgb, var(--brand-primary) 50%, transparent);
+  --accent-shadow: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+  --accent-muted: color-mix(in srgb, var(--brand-primary) 18%, transparent);
+  --accent-glow: color-mix(in srgb, var(--brand-secondary) 45%, transparent);
+  --brand-glow: color-mix(in srgb, var(--brand-primary) 65%, transparent);
+  
+  /* Drop Zone Colors - Theme-specific, may need manual adjustment */
   --drop-gradient-start: rgba(59, 13, 120, 0.9);
   --drop-gradient-end: rgba(7, 2, 18, 0.96);
-  --drop-outline: rgba(204, 132, 255, 0.55);
-  --drop-outline-active: rgba(255, 120, 230, 0.85);
-  --drop-fill: rgba(180, 108, 255, 0.12);
-  --drop-fill-active: rgba(255, 107, 214, 0.2);
+  --drop-outline: color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  --drop-outline-active: color-mix(in srgb, var(--brand-secondary) 85%, transparent);
+  --drop-fill: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+  --drop-fill-active: color-mix(in srgb, var(--brand-secondary) 20%, transparent);
 }
 
 body[data-theme='aqua'] {
+  /* Brand Colors - Change these to swap the main brand color */
+  --brand-primary: #63a9ff;
+  --brand-secondary: #4be0c6;
+  
+  /* Base Colors */
   --bg: #04060c;
   --panel: #0d111c;
   --panel-alt: #121726;
@@ -39,19 +67,23 @@ body[data-theme='aqua'] {
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
-  --accent: #63a9ff;
-  --accent-strong: #4be0c6;
-  --accent-border: rgba(99, 169, 255, 0.5);
-  --accent-shadow: rgba(99, 169, 255, 0.35);
-  --accent-muted: rgba(99, 169, 255, 0.18);
-  --accent-glow: rgba(75, 224, 198, 0.35);
-  --brand-glow: rgba(111, 198, 255, 0.55);
+  
+  /* Accent Colors - Derived from brand-primary */
+  --accent: var(--brand-primary);
+  --accent-strong: var(--brand-secondary);
+  --accent-border: color-mix(in srgb, var(--brand-primary) 50%, transparent);
+  --accent-shadow: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+  --accent-muted: color-mix(in srgb, var(--brand-primary) 18%, transparent);
+  --accent-glow: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
+  --brand-glow: color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  
+  /* Drop Zone Colors - Theme-specific, may need manual adjustment */
   --drop-gradient-start: rgba(12, 16, 28, 0.85);
   --drop-gradient-end: rgba(2, 4, 9, 0.92);
-  --drop-outline: rgba(99, 169, 255, 0.4);
-  --drop-outline-active: rgba(99, 169, 255, 0.8);
-  --drop-fill: rgba(99, 169, 255, 0.08);
-  --drop-fill-active: rgba(75, 224, 198, 0.15);
+  --drop-outline: color-mix(in srgb, var(--brand-primary) 40%, transparent);
+  --drop-outline-active: color-mix(in srgb, var(--brand-primary) 80%, transparent);
+  --drop-fill: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+  --drop-fill-active: color-mix(in srgb, var(--brand-secondary) 15%, transparent);
 }
 
 *,
