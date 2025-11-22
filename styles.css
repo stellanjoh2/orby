@@ -637,6 +637,49 @@ a:hover {
   background: rgba(0, 0, 0, 0.675);
 }
 
+/* Subtle divider line within panel blocks */
+.panel-block-divider {
+  margin: 1rem -1.2rem;
+  border-top: 1px solid var(--stroke);
+  border-bottom: none;
+}
+
+/* Subsection within merged panel blocks - can be muted individually */
+.subsection {
+  position: relative;
+}
+
+.subsection.is-muted > :not(.block-title, .block-title *) {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: saturate(0.35);
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.subsection.is-muted .slider-line,
+.subsection.is-muted .slider-line *,
+.subsection.is-muted .color-line,
+.subsection.is-muted .color-line *,
+.subsection.is-muted .select-line,
+.subsection.is-muted .select-line *,
+.subsection.is-muted label:not(.block-title):not(.block-title *):not(.effect-toggle),
+.subsection.is-muted button:not(.block-reset-btn):not(.block-title *):not(.block-title button):not(.effect-toggle):not(.effect-toggle *),
+.subsection.is-muted input:not(.block-title *):not(.effect-toggle *),
+.subsection.is-muted select:not(.block-title *),
+.subsection.is-muted span:not(.block-title *):not(.block-title span) {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: saturate(0.35);
+}
+
+
+.subsection.is-muted .effect-toggle,
+.subsection.is-muted .effect-toggle * {
+  opacity: 1;
+  pointer-events: auto;
+  filter: none !important;
+}
+
 /* Apply muted state to all content except block title and its children */
 .panel-block.is-muted > :not(.block-title, .block-title *) {
   opacity: 0.5;
@@ -666,14 +709,18 @@ a:hover {
 
 /* Block-title opacity: 0.8 when muted, 1.0 when active */
 .panel-block.is-muted .block-title,
-.panel-block.is-muted .block-title * {
-  opacity: 0.8;
+.panel-block.is-muted .block-title *,
+.subsection.is-muted .block-title,
+.subsection.is-muted .block-title * {
+  opacity: 0.8 !important;
   filter: none !important;
   pointer-events: auto;
 }
 
 .panel-block:not(.is-muted) .block-title,
-.panel-block:not(.is-muted) .block-title * {
+.panel-block:not(.is-muted) .block-title *,
+.subsection:not(.is-muted) .block-title,
+.subsection:not(.is-muted) .block-title * {
   opacity: 1.0;
 }
 

@@ -147,10 +147,18 @@ export class UIManager {
     };
 
     this.dom.blocks = {};
+    this.dom.subsections = {};
     document.querySelectorAll('.panel-block[data-block]').forEach((block) => {
       const key = block.dataset.block;
       if (key) {
         this.dom.blocks[key] = block;
+      }
+    });
+    // Cache subsections for individual muting within merged blocks
+    document.querySelectorAll('.subsection[data-subsection]').forEach((subsection) => {
+      const key = subsection.dataset.subsection;
+      if (key) {
+        this.dom.subsections[key] = subsection;
       }
     });
     this.setDropzoneVisible(this.dropzoneVisible);
@@ -575,11 +583,6 @@ export class UIManager {
       this.stateStore.set('lightsEnabled', enabled);
       this.eventBus.emit('lights:enabled', enabled);
       this.setLightColorControlsDisabled(!enabled);
-      // Update title based on enabled state
-      const lightsTitle = document.getElementById('lightsTitle');
-      if (lightsTitle) {
-        lightsTitle.textContent = enabled ? 'Lights' : '3-Point Lighting';
-      }
       // Block muting handled by applyBlockStates via syncControls
     });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
@@ -2094,11 +2097,6 @@ export class UIManager {
     if (this.inputs.lightsEnabled) {
       this.inputs.lightsEnabled.checked = !!state.lightsEnabled;
       this.setLightColorControlsDisabled(!state.lightsEnabled);
-      // Update title based on enabled state
-      const lightsTitle = document.getElementById('lightsTitle');
-      if (lightsTitle) {
-        lightsTitle.textContent = state.lightsEnabled ? 'Lights' : '3-Point Lighting';
-      }
     }
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
@@ -2258,6 +2256,13 @@ export class UIManager {
   }
 
   setBlockMuted(blockKey, muted) {
+    // First try to find a subsection (for merged blocks)
+    const subsection = this.dom?.subsections?.[blockKey];
+    if (subsection) {
+      subsection.classList.toggle('is-muted', muted);
+      return;
+    }
+    // Fall back to regular block
     const block = this.dom?.blocks?.[blockKey];
     if (!block) {
       // Silently fail - block might not exist yet or key might be wrong

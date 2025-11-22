@@ -97,349 +97,355 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title has-reset">
-                  <span>Clay</span>
-                  <button class="block-reset-btn" data-reset="clay">Reset</button>
-                </div>
-                <label class="color-line">
-                  <span>Clay Color</span>
-                  <input
-                    type="color"
-                    id="clayColor"
-                    class="color-chip"
-                    value="#808080"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Roughness</span>
-                  <input
-                    id="clayRoughness"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.5"
-                  />
-                  <span class="value" data-output="clayRoughness">0.50</span>
-                </label>
-                <label class="slider-line">
-                  <span>Metallic</span>
-                  <input
-                    id="claySpecular"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.5"
-                  />
-                  <span class="value" data-output="claySpecular">0.50</span>
-                </label>
-                <label class="slider-line">
-                  <span>Normal Map</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="clayNormalMap" checked />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable normal map in clay mode</span>
-                  </label>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="fresnel">
-                <div class="block-title has-toggle">
-                  <span>Fresnel</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="fresnel">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="toggleFresnel" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Fresnel</span>
-                    </label>
+                <div class="subsection" data-subsection="clay">
+                  <div class="block-title has-reset">
+                    <span>Clay</span>
+                    <button class="block-reset-btn" data-reset="clay">Reset</button>
                   </div>
+                  <label class="color-line">
+                    <span>Clay Color</span>
+                    <input
+                      type="color"
+                      id="clayColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Roughness</span>
+                    <input
+                      id="clayRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.5"
+                    />
+                    <span class="value" data-output="clayRoughness">0.50</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Metallic</span>
+                    <input
+                      id="claySpecular"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.5"
+                    />
+                    <span class="value" data-output="claySpecular">0.50</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Normal Map</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="clayNormalMap" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable normal map in clay mode</span>
+                    </label>
+                  </label>
                 </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="fresnelColor"
-                    class="color-chip"
-                    value="#808080"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Radius</span>
-                  <input
-                    id="fresnelRadius"
-                    type="range"
-                    min="0.5"
-                    max="5"
-                    step="0.1"
-                    value="2"
-                  />
-                  <span class="value" data-output="fresnelRadius">2.0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="fresnelStrength"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.3"
-                  />
-                  <span class="value" data-output="fresnelStrength">0.30</span>
-                </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="fresnel">
+                  <div class="block-title has-toggle">
+                    <span>Fresnel</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="fresnel">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="toggleFresnel" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Fresnel</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="fresnelColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="fresnelRadius"
+                      type="range"
+                      min="0.5"
+                      max="5"
+                      step="0.1"
+                      value="2"
+                    />
+                    <span class="value" data-output="fresnelRadius">2.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="fresnelStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.3"
+                    />
+                    <span class="value" data-output="fresnelStrength">0.30</span>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="wireframe">
+                  <div class="block-title has-reset">
+                    <span>Wireframe</span>
+                    <button class="block-reset-btn" data-reset="wireframe">Reset</button>
+                  </div>
+                  <label class="slider-line">
+                    <span>Always on</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="wireframeAlwaysOn" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Always show wireframe</span>
+                    </label>
+                  </label>
+                  <label class="slider-line">
+                    <span>Only visible faces</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="wireframeOnlyVisibleFaces" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show wireframe only on visible faces</span>
+                    </label>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="wireframeColor"
+                      class="color-chip"
+                      value="#c8c8c8"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div class="panel-block">
-                <div class="block-title has-reset">
-                  <span>Wireframe</span>
-                  <button class="block-reset-btn" data-reset="wireframe">Reset</button>
-                </div>
-                <label class="slider-line">
-                  <span>Always on</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="wireframeAlwaysOn" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Always show wireframe</span>
-                  </label>
-                </label>
-                <label class="slider-line">
-                  <span>Only visible faces</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="wireframeOnlyVisibleFaces" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Show wireframe only on visible faces</span>
-                  </label>
-                </label>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="wireframeColor"
-                    class="color-chip"
-                    value="#c8c8c8"
-                  />
-                </label>
-              </div>
-
-              <div class="panel-block">
-                <div class="block-title has-reset">
-                  <span>Transform</span>
-                  <button class="block-reset-btn" data-reset="transform">Reset</button>
-                </div>
-                <label class="slider-line">
-                  <span>Scale</span>
-                  <input
-                    id="scaleControl"
-                    type="range"
-                    min="0.1"
-                    max="4"
-                    value="1"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="scale">1.00×</span>
-                </label>
-                <label class="slider-line">
-                  <span>Y Position</span>
-                  <input
-                    id="yOffsetControl"
-                    type="range"
-                    min="-2"
-                    max="2"
-                    value="0"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="yOffset">0.00m</span>
-                </label>
-                <label class="slider-line">
-                  <span>Rotate X</span>
-                  <input
-                    id="rotationXControl"
-                    type="range"
-                    min="-180"
-                    max="180"
-                    value="0"
-                    step="1"
-                  />
-                  <div class="slider-value-group">
-                    <span class="value" data-output="rotationX">0°</span>
-                    <button
-                      type="button"
-                      class="rotation-notch"
-                      data-rotation-axis="x"
-                      aria-label="Rotate X by 90°"
-                    >
-                      <i data-lucide="rotate-ccw"></i>
-                    </button>
+                <div class="subsection">
+                  <div class="block-title has-reset">
+                    <span>Transform</span>
+                    <button class="block-reset-btn" data-reset="transform">Reset</button>
                   </div>
-                </label>
-                <label class="slider-line">
-                  <span>Rotate Y</span>
-                  <input
-                    id="rotationYControl"
-                    type="range"
-                    min="-180"
-                    max="180"
-                    value="0"
-                    step="1"
-                  />
-                  <div class="slider-value-group">
-                    <span class="value" data-output="rotationY">0°</span>
-                    <button
-                      type="button"
-                      class="rotation-notch"
-                      data-rotation-axis="y"
-                      aria-label="Rotate Y by 90°"
-                    >
-                      <i data-lucide="rotate-ccw"></i>
-                    </button>
-                  </div>
-                </label>
-                <label class="slider-line">
-                  <span>Rotate Z</span>
-                  <input
-                    id="rotationZControl"
-                    type="range"
-                    min="-180"
-                    max="180"
-                    value="0"
-                    step="1"
-                  />
-                  <div class="slider-value-group">
-                    <span class="value" data-output="rotationZ">0°</span>
-                    <button
-                      type="button"
-                      class="rotation-notch"
-                      data-rotation-axis="z"
-                      aria-label="Rotate Z by 90°"
-                    >
-                      <i data-lucide="rotate-ccw"></i>
-                    </button>
-                  </div>
-                </label>
-              </div>
-
-              <div class="panel-block">
-                <div class="block-title">Auto-Rotate</div>
-                <div class="segmented compact">
-                  <label>
-                    <input type="radio" name="autorotate" value="0" checked />
-                    Off
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="scaleControl"
+                      type="range"
+                      min="0.1"
+                      max="4"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="scale">1.00×</span>
                   </label>
-                  <label>
-                    <input type="radio" name="autorotate" value="0.2" />
-                    Slow
+                  <label class="slider-line">
+                    <span>Y Position</span>
+                    <input
+                      id="yOffsetControl"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="yOffset">0.00m</span>
                   </label>
-                  <label>
-                    <input type="radio" name="autorotate" value="0.5" />
-                    Normal
+                  <label class="slider-line">
+                    <span>Rotate X</span>
+                    <input
+                      id="rotationXControl"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                    <div class="slider-value-group">
+                      <span class="value" data-output="rotationX">0°</span>
+                      <button
+                        type="button"
+                        class="rotation-notch"
+                        data-rotation-axis="x"
+                        aria-label="Rotate X by 90°"
+                      >
+                        <i data-lucide="rotate-ccw"></i>
+                      </button>
+                    </div>
                   </label>
-                  <label>
-                    <input type="radio" name="autorotate" value="1" />
-                    Fast
+                  <label class="slider-line">
+                    <span>Rotate Y</span>
+                    <input
+                      id="rotationYControl"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                    <div class="slider-value-group">
+                      <span class="value" data-output="rotationY">0°</span>
+                      <button
+                        type="button"
+                        class="rotation-notch"
+                        data-rotation-axis="y"
+                        aria-label="Rotate Y by 90°"
+                      >
+                        <i data-lucide="rotate-ccw"></i>
+                      </button>
+                    </div>
+                  </label>
+                  <label class="slider-line">
+                    <span>Rotate Z</span>
+                    <input
+                      id="rotationZControl"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                    <div class="slider-value-group">
+                      <span class="value" data-output="rotationZ">0°</span>
+                      <button
+                        type="button"
+                        class="rotation-notch"
+                        data-rotation-axis="z"
+                        aria-label="Rotate Z by 90°"
+                      >
+                        <i data-lucide="rotate-ccw"></i>
+                      </button>
+                    </div>
                   </label>
                 </div>
-              </div>
-
-              <div class="panel-block" data-block="podium">
-                <div class="block-title has-toggle">
-                  <span>Podium</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="podium">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="groundSolid" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable podium</span>
+                <div class="panel-block-divider"></div>
+                <div class="subsection">
+                  <div class="block-title">Auto-Rotate</div>
+                  <div class="segmented compact">
+                    <label>
+                      <input type="radio" name="autorotate" value="0" checked />
+                      Off
+                    </label>
+                    <label>
+                      <input type="radio" name="autorotate" value="0.2" />
+                      Slow
+                    </label>
+                    <label>
+                      <input type="radio" name="autorotate" value="0.5" />
+                      Normal
+                    </label>
+                    <label>
+                      <input type="radio" name="autorotate" value="1" />
+                      Fast
                     </label>
                   </div>
                 </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="groundSolidColor"
-                    class="color-chip"
-                    value="#808080"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Y Position</span>
-                  <input
-                    id="groundY"
-                    type="range"
-                    min="-2"
-                    max="2"
-                    step="0.01"
-                    value="0"
-                  />
-                  <span class="value" data-output="groundY">0.00m</span>
-                </label>
-                <label class="slider-line">
-                  <span>Scale</span>
-                  <input
-                    id="podiumScale"
-                    type="range"
-                    min="0.5"
-                    max="3"
-                    step="0.01"
-                    value="1"
-                  />
-                  <span class="value" data-output="podiumScale">1.00</span>
-                </label>
-                <button id="podiumSnap" class="ghost-btn small" type="button">
-                  Snap to bottom
-                </button>
               </div>
 
-              <div class="panel-block" data-block="grid">
-                <div class="block-title has-toggle">
-                  <span>Grid</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="grid">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="groundWire" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable grid</span>
-                    </label>
+              <div class="panel-block">
+                <div class="subsection" data-subsection="podium">
+                  <div class="block-title has-toggle">
+                    <span>Podium</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="podium">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="groundSolid" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable podium</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="groundSolidColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Y Position</span>
+                    <input
+                      id="groundY"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="groundY">0.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="podiumScale"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="podiumScale">1.00</span>
+                  </label>
+                  <button id="podiumSnap" class="ghost-btn small" type="button">
+                    Snap to bottom
+                  </button>
                 </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="groundWireColor"
-                    class="color-chip"
-                    value="#c4cadd"
-                  />
-                </label>
-                <label class="slider-line">
-                  <span>Opacity</span>
-                  <input
-                    id="groundWireOpacity"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0.45"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="groundWireOpacity">0.45</span>
-                </label>
-                <label class="slider-line">
-                  <span>Scale</span>
-                  <input
-                    id="gridScale"
-                    type="range"
-                    min="0.5"
-                    max="3"
-                    step="0.01"
-                    value="1"
-                  />
-                  <span class="value" data-output="gridScale">1.00</span>
-                </label>
-                <button id="gridSnap" class="ghost-btn small" type="button">
-                  Snap to bottom
-                </button>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="grid">
+                  <div class="block-title has-toggle">
+                    <span>Grid</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="grid">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="groundWire" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable grid</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="groundWireColor"
+                      class="color-chip"
+                      value="#c4cadd"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Opacity</span>
+                    <input
+                      id="groundWireOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.45"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="groundWireOpacity">0.45</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Scale</span>
+                    <input
+                      id="gridScale"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="gridScale">1.00</span>
+                  </label>
+                  <button id="gridSnap" class="ghost-btn small" type="button">
+                    Snap to bottom
+                  </button>
+                </div>
               </div>
 
               <div class="panel-block stats-block">
@@ -568,11 +574,25 @@
                     <span class="sr-only">Show HDRI in background</span>
                   </label>
                 </label>
+                <div class="panel-block-divider"></div>
+                <div class="block-title has-reset" style="margin-top: 0;">
+                  <span>Background Color</span>
+                  <button class="block-reset-btn" data-reset="background">Reset</button>
+                </div>
+                <label class="color-line">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    id="backgroundColor"
+                    class="color-chip"
+                    value="#000000"
+                  />
+                </label>
               </div>
 
               <div class="panel-block lights" data-block="lights">
                 <div class="block-title has-toggle">
-                  <span id="lightsTitle">3-Point Lighting</span>
+                  <span id="lightsTitle">Lights</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <button class="block-reset-btn" data-reset="lights">Reset</button>
                     <label class="effect-toggle">
@@ -618,11 +638,9 @@
                     <span class="sr-only">Show light indicators</span>
                   </label>
                 </label>
-              </div>
-
-              <div class="panel-block rotate-lights">
-                <div class="block-title has-toggle">
-                  <span>Rotate Lights</span>
+                <div class="panel-block-divider"></div>
+                <div class="block-title has-toggle" style="margin-top: 0;">
+                  <span>Rotation</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="lightsAutoRotate" />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -640,22 +658,6 @@
                     step="1"
                   />
                   <span class="value" data-output="lightsRotation">0°</span>
-                </label>
-              </div>
-
-              <div class="panel-block">
-                <div class="block-title has-reset">
-                  <span>Background</span>
-                  <button class="block-reset-btn" data-reset="background">Reset</button>
-                </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="backgroundColor"
-                    class="color-chip"
-                    value="#000000"
-                  />
                 </label>
               </div>
 
@@ -719,6 +721,7 @@
                     <span class="sr-only">Enable auto exposure</span>
                   </label>
                 </label>
+                <div class="panel-block-divider"></div>
                 <label class="slider-line slider-line--temperature">
                   <span>Temperature</span>
                   <input
@@ -793,257 +796,259 @@
                 </label>
               </div>
 
-              <div class="panel-block" data-block="dof">
-                <div class="block-title has-toggle">
-                  <span>Depth of Field</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="dof" disabled>Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="toggleDof" disabled />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Depth of Field</span>
-                    </label>
+              <div class="panel-block">
+                <div class="subsection" data-subsection="dof">
+                  <div class="block-title has-toggle">
+                    <span>Depth of Field</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="dof" disabled>Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="toggleDof" disabled />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Depth of Field</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="slider-line">
+                    <span>Focus</span>
+                    <input
+                      id="dofFocus"
+                      type="range"
+                      min="0.1"
+                      max="100"
+                      value="10"
+                      step="0.1"
+                      disabled
+                    />
+                    <span class="value" data-output="dofFocus">10.0m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Aperture</span>
+                    <input
+                      id="dofAperture"
+                      type="range"
+                      min="0.0001"
+                      max="0.02"
+                      value="0.003"
+                      step="0.0001"
+                      disabled
+                    />
+                    <span class="value" data-output="dofAperture">0.003</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="dofStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0"
+                      step="0.01"
+                      disabled
+                    />
+                    <span class="value" data-output="dofStrength">0.00</span>
+                  </label>
                 </div>
-                <label class="slider-line">
-                  <span>Focus</span>
-                  <input
-                    id="dofFocus"
-                    type="range"
-                    min="0.1"
-                    max="100"
-                    value="10"
-                    step="0.1"
-                    disabled
-                  />
-                  <span class="value" data-output="dofFocus">10.0m</span>
-                </label>
-                <label class="slider-line">
-                  <span>Aperture</span>
-                  <input
-                    id="dofAperture"
-                    type="range"
-                    min="0.0001"
-                    max="0.02"
-                    value="0.003"
-                    step="0.0001"
-                    disabled
-                  />
-                  <span class="value" data-output="dofAperture">0.003</span>
-                </label>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="dofStrength"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0"
-                    step="0.01"
-                    disabled
-                  />
-                  <span class="value" data-output="dofStrength">0.00</span>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="bloom">
-                <div class="block-title has-toggle">
-                  <span>Bloom</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="bloom">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="toggleBloom" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Bloom</span>
-                    </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="bloom">
+                  <div class="block-title has-toggle">
+                    <span>Bloom</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="bloom">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="toggleBloom" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Bloom</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="slider-line">
+                    <span>Threshold</span>
+                    <input
+                      id="bloomThreshold"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomThreshold">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="bloomStrength"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomStrength">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="bloomRadius"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.75"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomRadius">0.75</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
+                  </label>
                 </div>
-                <label class="slider-line">
-                  <span>Threshold</span>
-                  <input
-                    id="bloomThreshold"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="1"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="bloomThreshold">1.00</span>
-                </label>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="bloomStrength"
-                    type="range"
-                    min="0"
-                    max="2"
-                    value="0.2"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="bloomStrength">0.20</span>
-                </label>
-                <label class="slider-line">
-                  <span>Radius</span>
-                  <input
-                    id="bloomRadius"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0.75"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="bloomRadius">0.75</span>
-                </label>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="lens-flare">
-                <div class="block-title has-toggle">
-                  <span>Lens Flare</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="lens-flare">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="lensFlareEnabled" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable lens flare</span>
-                    </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lens-flare">
+                  <div class="block-title has-toggle">
+                    <span>Lens Flare</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="lens-flare">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="lensFlareEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable lens flare</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="slider-line">
+                    <span>Rotation</span>
+                    <input
+                      id="lensFlareRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="lensFlareRotation">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="lensFlareHeight"
+                      type="range"
+                      min="0"
+                      max="90"
+                      value="15"
+                      step="1"
+                    />
+                    <span class="value" data-output="lensFlareHeight">15°</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="lensFlareColor"
+                      class="color-chip"
+                      value="#d28756"
+                    />
+                  </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="lensFlareQuality">
+                      <option value="maximum" selected>Maximum</option>
+                      <option value="optimized">Optimized</option>
+                    </select>
+                  </label>
                 </div>
-                <label class="slider-line">
-                  <span>Rotation</span>
-                  <input
-                    id="lensFlareRotation"
-                    type="range"
-                    min="0"
-                    max="360"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="lensFlareRotation">0°</span>
-                </label>
-                <label class="slider-line">
-                  <span>Height</span>
-                  <input
-                    id="lensFlareHeight"
-                    type="range"
-                    min="0"
-                    max="90"
-                    value="15"
-                    step="1"
-                  />
-                  <span class="value" data-output="lensFlareHeight">15°</span>
-                </label>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="lensFlareColor"
-                    class="color-chip"
-                    value="#d28756"
-                  />
-                </label>
-                <label class="select-line">
-                  <span>Quality</span>
-                  <select id="lensFlareQuality">
-                    <option value="maximum" selected>Maximum</option>
-                    <option value="optimized">Optimized</option>
-                  </select>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="lens-dirt">
-                <div class="block-title has-toggle">
-                  <span>Lens Dirt</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="lens-dirt">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="lensDirtEnabled" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Lens Dirt</span>
-                    </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lens-dirt">
+                  <div class="block-title has-toggle">
+                    <span>Lens Dirt</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="lens-dirt">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="lensDirtEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Lens Dirt</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="lensDirtStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.8"
+                    />
+                    <span class="value" data-output="lensDirtStrength">0.80</span>
+                  </label>
                 </div>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="lensDirtStrength"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0.8"
-                  />
-                  <span class="value" data-output="lensDirtStrength">0.80</span>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="grain">
-                <div class="block-title has-toggle">
-                  <span>Film Grain</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="grain">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="toggleGrain" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Film Grain</span>
-                    </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="grain">
+                  <div class="block-title has-toggle">
+                    <span>Film Grain</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="grain">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="toggleGrain" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Film Grain</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="grainIntensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.20"
+                      step="0.02"
+                    />
+                    <span class="value" data-output="grainIntensity">0.20</span>
+                  </label>
                 </div>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="grainIntensity"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0.20"
-                    step="0.02"
-                  />
-                  <span class="value" data-output="grainIntensity">0.20</span>
-                </label>
-              </div>
-
-              <div class="panel-block" data-block="aberration">
-                <div class="block-title has-toggle">
-                  <span>Chromatic Aberration</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="aberration">Reset</button>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="toggleAberration" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable Chromatic Aberration</span>
-                    </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="aberration">
+                  <div class="block-title has-toggle">
+                    <span>Chromatic Aberration</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="aberration">Reset</button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="toggleAberration" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Chromatic Aberration</span>
+                      </label>
+                    </div>
                   </div>
+                  <label class="slider-line">
+                    <span>Offset</span>
+                    <input
+                      id="aberrationOffset"
+                      type="range"
+                      min="0"
+                      max="0.02"
+                      value="0.0025"
+                      step="0.0001"
+                    />
+                    <span class="value" data-output="aberrationOffset">0.003</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="aberrationStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.24"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="aberrationStrength">
+                      0.24
+                    </span>
+                  </label>
                 </div>
-                <label class="slider-line">
-                  <span>Offset</span>
-                  <input
-                    id="aberrationOffset"
-                    type="range"
-                    min="0"
-                    max="0.02"
-                    value="0.0025"
-                    step="0.0001"
-                  />
-                  <span class="value" data-output="aberrationOffset">0.003</span>
-                </label>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="aberrationStrength"
-                    type="range"
-                    min="0"
-                    max="1"
-                    value="0.24"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="aberrationStrength">
-                    0.24
-                  </span>
-                </label>
               </div>
 
               <div class="panel-block">
