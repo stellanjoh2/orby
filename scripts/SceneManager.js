@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { LensFlareEffect } from './LensFlareEffect.js';
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
 import {
   WIREFRAME_OFFSET,
@@ -23,6 +22,7 @@ import { ModelLoader } from './render/ModelLoader.js';
 import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { MaterialController } from './render/MaterialController.js';
+import { LensFlareController } from './render/LensFlareController.js';
 
 
 export class SceneManager {
@@ -124,11 +124,6 @@ export class SceneManager {
     });
     this.unlitMode = false;
     const defaults = this.stateStore.getDefaults();
-    this.lensFlareState = {
-      ...defaults.lensFlare,
-      ...(initialState.lensFlare ?? {}),
-    };
-    this.lensFlareEnabled = this.lensFlareState.enabled ?? false;
 
     this.hdriEnabled = initialState.hdriEnabled ?? true;
     this.hdriBackgroundEnabled = initialState.hdriBackground;
@@ -182,7 +177,11 @@ export class SceneManager {
     this.setupComposer();
     this.updateLensDirt(this.lensDirtSettings);
     this.loadLensDirtTexture();
-    this.setupLensFlare(this.lensFlareState);
+    this.lensFlareController = new LensFlareController({
+      camera: this.camera,
+      stateStore: this.stateStore,
+    });
+    this.lensFlareController.init(initialState, this.hdriEnabled);
     this.registerEvents();
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
@@ -396,24 +395,6 @@ export class SceneManager {
     this.ui?.updateExposureDisplay?.(value);
   }
 
-  setupLensFlare(initialLensFlare) {
-    const defaults = this.stateStore.getDefaults().lensFlare;
-    const state = initialLensFlare ?? defaults;
-    const safeHeight = Math.min(
-      90,
-      Math.max(0, state?.height ?? defaults?.height ?? 15),
-    );
-    this.lensFlare = new LensFlareEffect({
-      enabled: (state.enabled ?? false) && this.hdriEnabled,
-      rotation: state.rotation ?? 0,
-      height: safeHeight,
-      color: state.color ?? defaults?.color ?? '#d28756',
-      quality: state.quality ?? 'maximum',
-    });
-    this.camera.add(this.lensFlare);
-    this.lensFlare.position.set(0, 0, -1);
-    this.lensFlare.userData.lensflare = 'no-occlusion';
-  }
 
   registerEvents() {
     this.eventBus.on('mesh:scale', (value) => this.setScale(value));
@@ -677,16 +658,7 @@ export class SceneManager {
     this.setHdriRotation(state.hdriRotation ?? 0);
     this.setHdriEnabled(state.hdriEnabled);
     this.setHdriBackground(state.hdriBackground);
-    const lensDefaults = this.stateStore.getDefaults().lensFlare;
-    const lensState = {
-      ...lensDefaults,
-      ...(state.lensFlare ?? {}),
-    };
-    this.setLensFlareHeight(lensState.height ?? 0);
-    this.setLensFlareColor(lensState.color ?? '#d28756');
-    this.setLensFlareQuality(lensState.quality ?? 'maximum');
-    this.setLensFlareRotation(lensState.rotation ?? 0);
-    this.setLensFlareEnabled(lensState.enabled ?? false);
+    this.lensFlareController?.applyStateSnapshot(state);
     await this.setHdriPreset(state.hdri);
   }
 
@@ -721,35 +693,23 @@ export class SceneManager {
   }
 
   setLensFlareEnabled(enabled) {
-    this.lensFlareEnabled = !!enabled;
-    if (this.lensFlare) {
-      this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
-    }
+    this.lensFlareController?.setEnabled(enabled);
   }
 
   setLensFlareRotation(value) {
-    if (this.lensFlare) {
-      this.lensFlare.setRotation(value ?? 0);
-    }
+    this.lensFlareController?.setRotation(value);
   }
 
   setLensFlareHeight(value) {
-    if (this.lensFlare) {
-      const clamped = Math.max(0, Math.min(90, value ?? 0));
-      this.lensFlare.setHeight(clamped);
-    }
+    this.lensFlareController?.setHeight(value);
   }
 
   setLensFlareColor(value) {
-    if (this.lensFlare && value) {
-      this.lensFlare.setColor(value);
-    }
+    this.lensFlareController?.setColor(value);
   }
 
   setLensFlareQuality(mode) {
-    if (this.lensFlare && mode) {
-      this.lensFlare.setQuality(mode);
-    }
+    this.lensFlareController?.setQuality(mode);
   }
 
   setClayNormalMap(enabled) {
@@ -837,9 +797,7 @@ export class SceneManager {
     this.hdriEnabled = enabled;
     this.environmentController?.setEnabled(enabled);
     this.applyHdriMood(this.currentHdri);
-    if (this.lensFlare) {
-      this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
-    }
+    this.lensFlareController?.setHdriEnabled(enabled);
   }
 
   setToneMapping(value) {
@@ -1219,9 +1177,7 @@ export class SceneManager {
     }
     this.currentModel = null;
     // Clear occlusion check objects when model is removed
-    if (this.lensFlare) {
-      this.lensFlare.occlusionCheckObjects = null;
-    }
+    this.lensFlareController?.setModelRoot(null);
     this.animationController.dispose();
   }
 
@@ -1251,9 +1207,7 @@ export class SceneManager {
     this.modelRoot.add(object);
     
     // Update lens flare occlusion check to only check the model (much more performant)
-    if (this.lensFlare) {
-      this.lensFlare.occlusionCheckObjects = [this.modelRoot];
-    }
+    this.lensFlareController?.setModelRoot(this.modelRoot);
     
     this.prepareMesh(object);
     this.fitCameraToObject(object);
