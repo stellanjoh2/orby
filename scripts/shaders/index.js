@@ -158,40 +158,6 @@ void main() {
 }
 `;
 
-const backgroundVertex = `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-const backgroundFragment = `
-varying vec2 vUv;
-uniform sampler2D tBackground;
-uniform float intensity;
-uniform float blurriness;
-
-void main() {
-  vec2 uv = vUv;
-  
-  vec4 color = vec4(0.0);
-  if (blurriness > 0.0) {
-    float blurAmount = blurriness * 0.02;
-    color += texture2D(tBackground, uv + vec2(-blurAmount, -blurAmount)) * 0.25;
-    color += texture2D(tBackground, uv + vec2(blurAmount, -blurAmount)) * 0.25;
-    color += texture2D(tBackground, uv + vec2(-blurAmount, blurAmount)) * 0.25;
-    color += texture2D(tBackground, uv + vec2(blurAmount, blurAmount)) * 0.25;
-  } else {
-    color = texture2D(tBackground, uv);
-  }
-  
-  color.rgb *= intensity;
-  
-  gl_FragColor = color;
-}
-`;
-
 const rotateEquirectVertex = `
 varying vec2 vUv;
 void main() {
@@ -259,16 +225,6 @@ export const ToneMappingShader = {
   },
   vertexShader: toneMappingVertex,
   fragmentShader: toneMappingFragment,
-};
-
-export const BackgroundShader = {
-  uniforms: {
-    tBackground: { value: null },
-    intensity: { value: 1.0 },
-    blurriness: { value: 0.0 },
-  },
-  vertexShader: backgroundVertex,
-  fragmentShader: backgroundFragment,
 };
 
 export const RotateEquirectShader = {

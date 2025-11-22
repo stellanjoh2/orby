@@ -3,7 +3,6 @@ import { ColorAdjustShader } from '../shaders/index.js';
 
 const DEFAULTS = {
   contrast: 1.0,
-  hue: 0.0,
   saturation: 1.0,
   temperature: 0.0,
   tint: 0.0,
@@ -37,10 +36,6 @@ export class ColorAdjustController {
 
   setContrast(value) {
     this._setUniform('contrast', value, DEFAULTS.contrast);
-  }
-
-  setHue(value) {
-    this._setUniform('hue', value, DEFAULTS.hue);
   }
 
   setSaturation(value) {
