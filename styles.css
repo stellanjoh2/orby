@@ -718,7 +718,7 @@ a:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: color-mix(in srgb, var(--brand-secondary) 30%, transparent);
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   transition: background-color 0.3s ease;
   cursor: pointer;
@@ -746,7 +746,7 @@ a:hover {
 }
 
 .effect-toggle:hover .effect-indicator {
-  background-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .effect-toggle input:focus-visible + .effect-indicator {
