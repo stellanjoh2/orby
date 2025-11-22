@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/meshopt_decoder.module.js';
 import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/FBXLoader.js';
@@ -29,6 +28,7 @@ import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
+import { CameraController } from './render/CameraController.js';
 
 
 export class SceneManager {
@@ -77,23 +77,29 @@ export class SceneManager {
     this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     this.renderer.toneMappingExposure = 1;
 
-    this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.enableDamping = true;
-    this.controls.enablePan = true;
-    
-    // Configure mouse buttons: left = orbit, right = pan
-    this.controls.mouseButtons = {
-      LEFT: THREE.MOUSE.ROTATE,
-      MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.PAN,
-    };
-
+    this.cameraController = new CameraController(this.camera, this.canvas, {
+      initialFov: this.camera.fov,
+      getFocusPoint: () => {
+        if (this.modelBounds?.center) {
+          return this.modelBounds.center;
+        }
+        return this.controls?.target?.clone() ?? new THREE.Vector3(0, 1, 0);
+      },
+      onAltLightRotate: (deltaDegrees) => {
+        const currentRotation = this.lightsRotation ?? 0;
+        this.setLightsRotation(currentRotation + deltaDegrees, {
+          updateUi: false,
+        });
+      },
+      onAltLightRotateEnd: () => {
+        this.stateStore.set('lightsRotation', this.lightsRotation);
+        this.ui?.setLightsRotation?.(this.lightsRotation);
+      },
+    });
+    this.controls = this.cameraController.getControls();
     this.camera.position.set(0, 1.5, 6);
     this.controls.target.set(0, 1, 0);
     this.controls.update();
-
-    // Setup custom mouse interactions
-    this.setupCustomMouseControls();
 
     this.modelRoot = new THREE.Group();
     this.scene.add(this.modelRoot);
@@ -423,106 +429,6 @@ export class SceneManager {
     this.camera.add(this.lensFlare);
     this.lensFlare.position.set(0, 0, -1);
     this.lensFlare.userData.lensflare = 'no-occlusion';
-  }
-
-  setupCustomMouseControls() {
-    this.isAltRightDragging = false;
-    this.isAltLeftDragging = false;
-    this.lastMouseX = 0;
-    this.lastMouseY = 0;
-    this.originalControlsEnabled = {};
-    this.altLeftTargetSet = false;
-
-    // Alt + Right Click: Rotate lighting setup/HDRI
-    this.canvas.addEventListener('mousedown', (event) => {
-      if (event.altKey && event.button === 2) {
-        // Right mouse button
-        event.preventDefault();
-        event.stopPropagation();
-        this.isAltRightDragging = true;
-        this.lastMouseX = event.clientX;
-        this.lastMouseY = event.clientY;
-        // Disable controls temporarily
-        this.originalControlsEnabled.pan = this.controls.enablePan;
-        this.originalControlsEnabled.rotate = this.controls.enableRotate;
-        this.controls.enablePan = false;
-        this.controls.enableRotate = false;
-      } else if (event.altKey && event.button === 0) {
-        // Left mouse button - orbit around focus point
-        event.preventDefault();
-        event.stopPropagation();
-        this.isAltLeftDragging = true;
-        this.lastMouseX = event.clientX;
-        this.lastMouseY = event.clientY;
-        // Set orbit target to model center
-        if (this.modelBounds && this.modelBounds.center) {
-          this.controls.target.copy(this.modelBounds.center);
-          this.controls.update();
-          this.altLeftTargetSet = true;
-        }
-      }
-    });
-
-    this.canvas.addEventListener('mousemove', (event) => {
-      if (this.isAltRightDragging) {
-        // Rotate lights/HDRI
-        event.preventDefault();
-        const deltaX = event.clientX - this.lastMouseX;
-        const sensitivity = 0.5;
-        const currentRotation = this.lightsRotation || 0;
-        const newRotation = currentRotation + deltaX * sensitivity;
-        this.setLightsRotation(newRotation, { updateUi: false });
-        this.lastMouseX = event.clientX;
-        this.lastMouseY = event.clientY;
-      } else if (this.isAltLeftDragging && this.altLeftTargetSet) {
-        // Orbit around focus point - ensure target stays at model center
-        if (this.modelBounds && this.modelBounds.center) {
-          this.controls.target.copy(this.modelBounds.center);
-        }
-      }
-    });
-
-    this.canvas.addEventListener('mouseup', (event) => {
-      if (this.isAltRightDragging && event.button === 2) {
-        this.isAltRightDragging = false;
-        // Restore controls
-        this.controls.enablePan = this.originalControlsEnabled.pan;
-        this.controls.enableRotate = this.originalControlsEnabled.rotate;
-        // Update UI with final rotation
-        if (this.ui?.setLightsRotation) {
-          this.ui.setLightsRotation(this.lightsRotation);
-        }
-        // Update state store
-        this.stateStore.set('lightsRotation', this.lightsRotation);
-      } else if (this.isAltLeftDragging && event.button === 0) {
-        this.isAltLeftDragging = false;
-        this.altLeftTargetSet = false;
-      }
-    });
-
-    // Prevent context menu on right click with Alt
-    this.canvas.addEventListener('contextmenu', (event) => {
-      if (event.altKey) {
-        event.preventDefault();
-      }
-    });
-
-    // Handle mouse leave to reset dragging state
-    this.canvas.addEventListener('mouseleave', () => {
-      if (this.isAltRightDragging) {
-        this.isAltRightDragging = false;
-        this.controls.enablePan = this.originalControlsEnabled.pan;
-        this.controls.enableRotate = this.originalControlsEnabled.rotate;
-        if (this.ui?.setLightsRotation) {
-          this.ui.setLightsRotation(this.lightsRotation);
-        }
-        this.stateStore.set('lightsRotation', this.lightsRotation);
-      }
-      if (this.isAltLeftDragging) {
-        this.isAltLeftDragging = false;
-        this.altLeftTargetSet = false;
-      }
-    });
   }
 
   registerEvents() {
@@ -2361,7 +2267,7 @@ export class SceneManager {
       const deltaDegrees = this.lightsAutoRotateSpeed * delta;
       this.setLightsRotation(this.lightsRotation + deltaDegrees);
     }
-    this.controls.update();
+    this.cameraController.update();
     this.boneHelpers.forEach((helper) => helper.update?.());
     this.grainTintPass.uniforms.time.value += delta * 60;
     this.updateWireframeOverlayTransforms();

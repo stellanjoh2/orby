@@ -1071,60 +1071,10 @@ export class UIManager {
         }
       }
 
-      // X - Apply preset: HDRI background on, lights off, chroma/grain off, exposure 3, AA on
+      // X - Apply preset: HDRI background on, lights off, chroma/grain off, exposure bump, AA on
       if (key === 'x') {
         event.preventDefault();
-        // Set HDRI preset to "Meadow"
-        this.stateStore.set('hdri', 'meadow');
-        this.setHdriActive('meadow');
-        this.eventBus.emit('studio:hdri', 'meadow');
-        // HDRI background on
-        this.stateStore.set('hdriBackground', true);
-        this.eventBus.emit('studio:hdri-background', true);
-        if (this.inputs.hdriBackground) {
-          this.inputs.hdriBackground.checked = true;
-        }
-        // Set exposure to 2 FIRST (before HDRI intensity)
-        // This ensures auto-balance calculates correctly
-        this.stateStore.set('exposure', 2);
-        this.eventBus.emit('scene:exposure', 2);
-        if (this.inputs.exposure) {
-          this.inputs.exposure.value = 2;
-          this.updateValueLabel('exposure', 2, 'decimal');
-        }
-        // HDRI intensity to 2.50 (slider value)
-        const hdriSliderValue = 2.50;
-        const hdriIntensity = hdriSliderValue * HDRI_STRENGTH_UNIT;
-        this.stateStore.set('hdriStrength', hdriIntensity);
-        this.eventBus.emit('studio:hdri-strength', hdriIntensity);
-        if (this.inputs.hdriStrength) {
-          this.inputs.hdriStrength.value = hdriSliderValue;
-          this.updateValueLabel('hdriStrength', hdriSliderValue, 'decimal');
-        }
-        // Lights off
-        this.stateStore.set('lightsEnabled', false);
-        this.eventBus.emit('lights:enabled', false);
-        if (this.inputs.lightsEnabled) {
-          this.inputs.lightsEnabled.checked = false;
-        }
-        // Chromatic aberration off
-        this.stateStore.set('aberration.enabled', false);
-        this.eventBus.emit('render:aberration', { enabled: false, offset: this.stateStore.getState().aberration.offset, strength: this.stateStore.getState().aberration.strength });
-        if (this.inputs.toggleAberration) {
-          this.inputs.toggleAberration.checked = false;
-        }
-        // Film grain off
-        this.stateStore.set('grain.enabled', false);
-        this.eventBus.emit('render:grain', { enabled: false, intensity: this.stateStore.getState().grain.intensity, color: this.stateStore.getState().grain.color });
-        if (this.inputs.toggleGrain) {
-          this.inputs.toggleGrain.checked = false;
-        }
-        // AA on (FXAA)
-        this.stateStore.set('antiAliasing', 'fxaa');
-        this.eventBus.emit('render:anti-aliasing', 'fxaa');
-        if (this.inputs.antiAliasing) {
-          this.inputs.antiAliasing.value = 'fxaa';
-        }
+        this.applyStudioPresetX();
       }
 
       // [ / ] - Cycle through HDRI presets
@@ -1160,6 +1110,67 @@ export class UIManager {
       const index = parseInt(event.target.value, 10);
       this.eventBus.emit('animation:select', index);
     });
+  }
+
+  applyStudioPresetX() {
+    // Set HDRI preset to "Meadow"
+    this.stateStore.set('hdri', 'meadow');
+    this.setHdriActive('meadow');
+    this.eventBus.emit('studio:hdri', 'meadow');
+    // HDRI background on
+    this.stateStore.set('hdriBackground', true);
+    this.eventBus.emit('studio:hdri-background', true);
+    if (this.inputs.hdriBackground) {
+      this.inputs.hdriBackground.checked = true;
+    }
+    // Exposure to 2 (before HDRI intensity to keep them balanced)
+    this.stateStore.set('exposure', 2);
+    this.eventBus.emit('scene:exposure', 2);
+    if (this.inputs.exposure) {
+      this.inputs.exposure.value = 2;
+      this.updateValueLabel('exposure', 2, 'decimal');
+    }
+    // HDRI intensity to 2.50 (slider value)
+    const hdriSliderValue = 2.5;
+    const hdriIntensity = hdriSliderValue * HDRI_STRENGTH_UNIT;
+    this.stateStore.set('hdriStrength', hdriIntensity);
+    this.eventBus.emit('studio:hdri-strength', hdriIntensity);
+    if (this.inputs.hdriStrength) {
+      this.inputs.hdriStrength.value = hdriSliderValue;
+      this.updateValueLabel('hdriStrength', hdriSliderValue, 'decimal');
+    }
+    // Lights off
+    this.stateStore.set('lightsEnabled', false);
+    this.eventBus.emit('lights:enabled', false);
+    if (this.inputs.lightsEnabled) {
+      this.inputs.lightsEnabled.checked = false;
+    }
+    // Chromatic aberration off
+    this.stateStore.set('aberration.enabled', false);
+    this.eventBus.emit('render:aberration', {
+      enabled: false,
+      offset: this.stateStore.getState().aberration.offset,
+      strength: this.stateStore.getState().aberration.strength,
+    });
+    if (this.inputs.toggleAberration) {
+      this.inputs.toggleAberration.checked = false;
+    }
+    // Film grain off
+    this.stateStore.set('grain.enabled', false);
+    this.eventBus.emit('render:grain', {
+      enabled: false,
+      intensity: this.stateStore.getState().grain.intensity,
+      color: this.stateStore.getState().grain.color,
+    });
+    if (this.inputs.toggleGrain) {
+      this.inputs.toggleGrain.checked = false;
+    }
+    // AA on (FXAA)
+    this.stateStore.set('antiAliasing', 'fxaa');
+    this.eventBus.emit('render:anti-aliasing', 'fxaa');
+    if (this.inputs.antiAliasing) {
+      this.inputs.antiAliasing.value = 'fxaa';
+    }
   }
 
   bindCopyButtons() {
