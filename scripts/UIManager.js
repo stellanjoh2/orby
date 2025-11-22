@@ -1457,11 +1457,10 @@ export class UIManager {
             break;
             
           case 'podium':
-            this.stateStore.set('groundSolid', defaults.groundSolid);
+            // Reset only color, position, and scale - NOT the on/off toggle
             this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
             this.stateStore.set('groundY', defaults.groundY);
             this.stateStore.set('podiumScale', defaults.podiumScale);
-            this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
             this.eventBus.emit('studio:podium-scale', defaults.podiumScale);
