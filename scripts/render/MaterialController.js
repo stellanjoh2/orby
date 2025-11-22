@@ -223,10 +223,10 @@ export class MaterialController {
                   // Always ensure values are set from claySettings, even if patch doesn't include them
                   // This prevents values from being 0 or undefined
                   if (mat.roughness === undefined || mat.roughness === 0) {
-                    mat.roughness = this.claySettings.roughness ?? 0.6;
+                    mat.roughness = this.claySettings.roughness ?? 0.5;
                   }
                   if (mat.metalness === undefined || mat.metalness === 0) {
-                    mat.metalness = this.claySettings.specular ?? 0.08;
+                    mat.metalness = this.claySettings.specular ?? 0.5;
                   }
                   mat.needsUpdate = true;
                 }
@@ -246,13 +246,13 @@ export class MaterialController {
                 material.roughness === undefined ||
                 material.roughness === 0
               ) {
-                material.roughness = this.claySettings.roughness ?? 0.6;
+                material.roughness = this.claySettings.roughness ?? 0.5;
               }
               if (
                 material.metalness === undefined ||
                 material.metalness === 0
               ) {
-                material.metalness = this.claySettings.specular ?? 0.08;
+                material.metalness = this.claySettings.specular ?? 0.5;
               }
               material.needsUpdate = true;
             }
@@ -441,6 +441,7 @@ export class MaterialController {
         delete material.userData.originalOnBeforeCompile;
         delete material.userData.fresnelPatched;
         delete material.userData.fresnelUniforms;
+        delete material.userData.fresnelOnBeforeCompile;
         material.needsUpdate = true;
       }
       return;
@@ -450,35 +451,54 @@ export class MaterialController {
     // This ensures Fresnel works even after material updates/recompilations
     if (material.userData.fresnelPatched) {
       const uniforms = material.userData.fresnelUniforms;
-      // If uniforms exist and are valid, just update values
+      // If uniforms exist and are valid, just update values (no recompilation needed)
       if (uniforms && uniforms.color && uniforms.color.value) {
         uniforms.color.value.set(settings.color || '#ffffff');
         uniforms.strength.value = settings.strength || 0.5;
-        uniforms.power.value = Math.max(0.1, settings.radius || 1.0);
-        // Force shader recompilation to ensure uniforms are applied
-        material.needsUpdate = true;
+        // Invert radius: low radius (0.5) = high power (5.0) = narrow, high radius (5.0) = low power (0.5) = wide
+        const radius = settings.radius || 2.0;
+        uniforms.power.value = Math.max(0.1, 5.5 - radius);
+        // Ensure onBeforeCompile hook is still set (in case material was recompiled elsewhere)
+        // If hook is missing or different, restore it from stored reference
+        if (!material.userData.fresnelOnBeforeCompile) {
+          // Hook was lost, need to re-patch - fall through to re-patching code
+          delete material.userData.fresnelPatched;
+          delete material.userData.originalOnBeforeCompile;
+        } else if (!material.onBeforeCompile || material.onBeforeCompile !== material.userData.fresnelOnBeforeCompile) {
+          // Hook exists but material lost it, restore it and trigger recompilation
+          material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
+          material.needsUpdate = true; // Force recompilation to apply the hook
+        }
+        // Don't force recompilation on normal uniform updates - uniforms update in real-time
         return;
       }
       // If uniforms are missing, clear flag and re-patch
       delete material.userData.fresnelPatched;
       delete material.userData.originalOnBeforeCompile;
+      delete material.userData.fresnelOnBeforeCompile;
     }
 
     // Create new patch - this handles both new materials and re-patching
-    const original = material.onBeforeCompile;
-    material.userData.originalOnBeforeCompile = original;
+    // Only store original if we haven't stored it before (to preserve the true original)
+    const original = material.userData.originalOnBeforeCompile || material.onBeforeCompile;
+    if (!material.userData.originalOnBeforeCompile) {
+      material.userData.originalOnBeforeCompile = original;
+    }
 
     // Create uniforms that will be stored and reused
+    // Invert radius: low radius (0.5) = high power (5.0) = narrow, high radius (5.0) = low power (0.5) = wide
+    const radius = settings.radius || 2.0;
+    const invertedPower = Math.max(0.1, 5.5 - radius);
     const uniforms = {
       color: { value: new THREE.Color(settings.color || '#ffffff') },
       strength: { value: settings.strength || 0.5 },
-      power: { value: Math.max(0.1, settings.radius || 1.0) },
+      power: { value: invertedPower },
     };
 
     // Store uniforms before patching so they're available even if shader recompiles
     material.userData.fresnelUniforms = uniforms;
 
-    material.onBeforeCompile = (shader) => {
+    const fresnelOnBeforeCompile = (shader) => {
       original?.(shader);
 
       // Use stored uniforms or create new ones if missing (defensive)
@@ -513,6 +533,9 @@ export class MaterialController {
       // Ensure uniforms are stored after shader compilation
       material.userData.fresnelUniforms = fresnelUniforms;
     };
+    
+    material.onBeforeCompile = fresnelOnBeforeCompile;
+    material.userData.fresnelOnBeforeCompile = fresnelOnBeforeCompile; // Store reference for restoration
     material.userData.fresnelPatched = true;
     material.needsUpdate = true;
   }
@@ -522,8 +545,8 @@ export class MaterialController {
 
     // If we're in clay mode, handle clay materials separately and skip the rest
     if (this.currentShading === 'clay') {
-      const targetRoughness = this.claySettings?.roughness ?? 0.6;
-      const targetMetalness = this.claySettings?.specular ?? 0.08;
+      const targetRoughness = this.claySettings?.roughness ?? 0.5;
+      const targetMetalness = this.claySettings?.specular ?? 0.5;
 
       this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;

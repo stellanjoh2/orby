@@ -413,10 +413,9 @@ export class UIManager {
       emitFresnel();
     });
     this.inputs.fresnelRadius.addEventListener('input', (event) => {
-      const sliderValue = parseFloat(event.target.value);
-      const mapped = parseFloat((6 - sliderValue).toFixed(2));
-      this.updateValueLabel('fresnelRadius', mapped, 'decimal');
-      this.stateStore.set('fresnel.radius', mapped);
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('fresnelRadius', value, 'decimal');
+      this.stateStore.set('fresnel.radius', value);
       emitFresnel();
     });
     this.inputs.fresnelStrength.addEventListener('input', (event) => {
@@ -1659,7 +1658,7 @@ export class UIManager {
     
     if (type === 'kelvin') {
       const rounded = Math.round(value);
-      return `${rounded.toLocaleString()}K`;
+      return `${rounded}K`;
     }
 
     const formatMap = {
@@ -2172,8 +2171,7 @@ export class UIManager {
     // Fresnel
     this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
     this.inputs.fresnelColor.value = state.fresnel.color;
-    const sliderRadius = 6 - state.fresnel.radius;
-    this.inputs.fresnelRadius.value = sliderRadius;
+    this.inputs.fresnelRadius.value = state.fresnel.radius;
     this.updateValueLabel('fresnelRadius', state.fresnel.radius, 'decimal');
     this.inputs.fresnelStrength.value = state.fresnel.strength;
     this.updateValueLabel('fresnelStrength', state.fresnel.strength, 'decimal');

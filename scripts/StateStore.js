@@ -35,8 +35,8 @@ export class StateStore {
       groundWireColor: '#e1e1e1',
       clay: {
         color: '#808080',
-        roughness: 0.6,
-        specular: 0.08,
+        roughness: 0.5,
+        specular: 0.5,
         normalMap: true,
       },
       wireframe: {
