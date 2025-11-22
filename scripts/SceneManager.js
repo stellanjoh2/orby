@@ -69,8 +69,9 @@ export class SceneManager {
     this.cameraController = new CameraController(this.camera, this.canvas, {
       initialFov: this.camera.fov,
       getFocusPoint: () => {
-        if (this.modelBounds?.center) {
-          return this.modelBounds.center;
+        const bounds = this.cameraController?.getModelBounds();
+        if (bounds?.center) {
+          return bounds.center;
         }
         return this.controls?.target?.clone() ?? new THREE.Vector3(0, 1, 0);
       },
@@ -83,6 +84,10 @@ export class SceneManager {
       onAltLightRotateEnd: () => {
         this.stateStore.set('lightsRotation', this.lightsRotation);
         this.ui?.setLightsRotation?.(this.lightsRotation);
+      },
+      onModelBoundsChanged: (bounds) => {
+        // Update lights controller when model bounds change
+        this.lightsController?.setModelBounds(bounds);
       },
     });
     this.controls = this.cameraController.getControls();
@@ -106,7 +111,7 @@ export class SceneManager {
 
     this.currentShading = initialState.shading;
     this.autoRotateSpeed = 0;
-    this.lightsMaster = initialState.lightsMaster ?? 1;
+    this.lightsMaster = initialState.lightsMaster ?? 0.30;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
     this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
@@ -370,7 +375,7 @@ export class SceneManager {
     });
     this.eventBus.on('camera:focus', () => {
       if (this.currentModel) {
-        this.fitCameraToObject(this.currentModel);
+        this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
       }
     });
     this.eventBus.on('camera:reset', () => {
@@ -534,7 +539,7 @@ export class SceneManager {
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
     this.lightsEnabled = state.lightsEnabled ?? true;
-    this.lightsMaster = state.lightsMaster ?? 1;
+    this.lightsMaster = state.lightsMaster ?? 0.30;
     this.applyLightSettings(state.lights);
     if (!this.lightsEnabled) {
       Object.values(this.lights).forEach((light) => {
@@ -895,15 +900,18 @@ export class SceneManager {
   }
 
   setLightsMaster(value) {
-    this.lightsMaster = value ?? 1;
+    this.lightsMaster = value ?? 0.30;
     const lightsState = this.stateStore.getState().lights;
     this.lightsController?.setMaster(this.lightsMaster, lightsState);
   }
 
   setShowLightIndicators(enabled) {
     this.lightsController?.setIndicatorsVisible(enabled);
-    if (enabled && this.modelBounds) {
-      this.lightsController?.setModelBounds(this.modelBounds);
+    if (enabled) {
+      const bounds = this.cameraController?.getModelBounds();
+      if (bounds) {
+        this.lightsController?.setModelBounds(bounds);
+      }
     }
   }
 
@@ -1171,21 +1179,7 @@ export class SceneManager {
   }
 
   fitCameraToObject(object) {
-    const box = new THREE.Box3().setFromObject(object);
-    if (!box.isEmpty()) {
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      this.modelBounds = { box, size, center, radius: size.length() / 2 };
-      this.lightsController?.setModelBounds(this.modelBounds);
-      this.controls.target.copy(center);
-      const distance = this.modelBounds.radius * 2.2 || 5;
-      const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
-      this.camera.position.copy(center.clone().add(direction.multiplyScalar(distance)));
-      this.camera.near = Math.max(0.01, distance / 200);
-      this.camera.far = distance * 50;
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
-    }
+    this.cameraController?.fitCameraToObject(object);
   }
 
   updateStatsUI(file, object, gltfMetadata = null) {
@@ -1193,7 +1187,7 @@ export class SceneManager {
       object,
       file,
       gltfMetadata,
-      this.modelBounds,
+      this.cameraController?.getModelBounds(),
     );
     this.ui.updateStats(stats);
   }
@@ -1236,25 +1230,7 @@ export class SceneManager {
   }
 
   applyCameraPreset(preset) {
-    if (!this.modelBounds) return;
-    const { center, radius } = this.modelBounds;
-    const distance = radius * 2.4 || 5;
-    const target = center.clone();
-    let position;
-    if (preset === 'front') {
-      position = target.clone().add(new THREE.Vector3(0, radius * 0.2, distance));
-    } else if (preset === 'three-quarter') {
-      position = target
-        .clone()
-        .add(new THREE.Vector3(distance, radius * 0.4, distance));
-    } else if (preset === 'top') {
-      position = target.clone().add(new THREE.Vector3(0, distance, 0.0001));
-    }
-    if (position) {
-      this.camera.position.copy(position);
-      this.controls.target.copy(target);
-      this.controls.update();
-    }
+    this.cameraController?.applyCameraPreset(preset);
   }
 
   animate() {
