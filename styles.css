@@ -44,9 +44,14 @@ body[data-theme='violet'] {
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 45%, transparent);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 65%, transparent);
   
-  /* Drop Zone Colors - Theme-specific, may need manual adjustment */
-  --drop-gradient-start: rgba(59, 13, 120, 0.9);
-  --drop-gradient-end: rgba(7, 2, 18, 0.96);
+  /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
+  /* For bright colors like yellow, set to #000 or dark color */
+  /* For dark colors like purple, set to #fff or light color */
+  --brand-text: #02030a; /* Default to dark text, adjust if brand is dark */
+  
+  /* Drop Zone Colors - Now derived from brand colors */
+  --drop-gradient-start: color-mix(in srgb, var(--brand-primary) 20%, var(--bg) 80%);
+  --drop-gradient-end: color-mix(in srgb, var(--bg) 96%, transparent);
   --drop-outline: color-mix(in srgb, var(--brand-primary) 55%, transparent);
   --drop-outline-active: color-mix(in srgb, var(--brand-secondary) 85%, transparent);
   --drop-fill: color-mix(in srgb, var(--brand-primary) 12%, transparent);
@@ -77,9 +82,12 @@ body[data-theme='aqua'] {
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 55%, transparent);
   
-  /* Drop Zone Colors - Theme-specific, may need manual adjustment */
-  --drop-gradient-start: rgba(12, 16, 28, 0.85);
-  --drop-gradient-end: rgba(2, 4, 9, 0.92);
+  /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
+  --brand-text: #02030a; /* Default to dark text, adjust if brand is dark */
+  
+  /* Drop Zone Colors - Now derived from brand colors */
+  --drop-gradient-start: color-mix(in srgb, var(--brand-primary) 15%, var(--bg) 85%);
+  --drop-gradient-end: color-mix(in srgb, var(--bg) 92%, transparent);
   --drop-outline: color-mix(in srgb, var(--brand-primary) 40%, transparent);
   --drop-outline-active: color-mix(in srgb, var(--brand-primary) 80%, transparent);
   --drop-fill: color-mix(in srgb, var(--brand-primary) 8%, transparent);
@@ -204,7 +212,7 @@ body.dropzone-visible #webgl {
 .primary-btn {
   border-color: transparent;
   background: linear-gradient(120deg, var(--accent), var(--accent-strong));
-  color: #02030a;
+  color: var(--brand-text);
   font-weight: 700;
   box-shadow: 0 8px 16px var(--accent-shadow);
 }
@@ -379,7 +387,7 @@ body.dropzone-visible #webgl {
 }
 
 .tab.active {
-  color: var(--text);
+  color: var(--brand-text);
   background: var(--accent);
   box-shadow: 0 8px 18px var(--accent-shadow);
   transform: scale(1.01);
@@ -396,7 +404,7 @@ body.dropzone-visible #webgl {
 }
 
 .tab.active i {
-  stroke: var(--text);
+  stroke: var(--brand-text);
 }
 
 .shortcuts-grid {
@@ -697,7 +705,7 @@ body.dropzone-visible #webgl {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: color-mix(in srgb, var(--brand-secondary) 30%, transparent);
   border-radius: 999px;
   transition: background-color 0.3s ease;
   cursor: pointer;
@@ -710,14 +718,14 @@ body.dropzone-visible #webgl {
   width: var(--toggle-thumb-size);
   left: var(--toggle-thumb-offset);
   bottom: var(--toggle-thumb-offset);
-  background-color: #ffffff;
+  background-color: var(--brand-text);
   border-radius: 50%;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .effect-toggle input:checked + .effect-indicator {
-  background-color: var(--accent);
+  background-color: var(--brand-primary);
 }
 
 .effect-toggle input:checked + .effect-indicator::before {
@@ -725,11 +733,11 @@ body.dropzone-visible #webgl {
 }
 
 .effect-toggle:hover .effect-indicator {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
 }
 
 .effect-toggle input:focus-visible + .effect-indicator {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
 }
 
