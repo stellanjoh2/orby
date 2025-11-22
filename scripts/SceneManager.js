@@ -24,6 +24,7 @@ import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js
 import { MaterialController } from './render/MaterialController.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
+import { TransformController } from './render/TransformController.js';
 
 
 export class SceneManager {
@@ -92,6 +93,10 @@ export class SceneManager {
     this.modelRoot = new THREE.Group();
     this.scene.add(this.modelRoot);
     this.scene.environmentIntensity = this.hdriStrength;
+
+    this.transformController = new TransformController({
+      modelRoot: this.modelRoot,
+    });
 
     this.diagnosticsController = new MeshDiagnosticsController({
       scene: this.scene,
@@ -355,7 +360,7 @@ export class SceneManager {
       this.setWireframeSettings({ onlyVisibleFaces: value });
     });
     this.eventBus.on('mesh:reset-transform', () => {
-      this.modelRoot.rotation.y = 0;
+      this.transformController?.setRotationY(0);
     });
 
     this.eventBus.on('camera:preset', (preset) => this.applyCameraPreset(preset));
@@ -509,11 +514,7 @@ export class SceneManager {
   }
 
   async applyStateSnapshot(state) {
-    this.setScale(state.scale);
-    this.setYOffset(state.yOffset);
-    this.setRotationX(state.rotationX ?? 0);
-    this.setRotationY(state.rotationY ?? 0);
-    this.setRotationZ(state.rotationZ ?? 0);
+    this.transformController?.applyState(state);
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
@@ -1129,9 +1130,9 @@ export class SceneManager {
   setModel(object, animations) {
     this.clearModel();
     this.currentModel = object;
-    this.modelRoot.rotation.set(0, 0, 0);
-    this.modelRoot.position.set(0, 0, 0);
-    this.modelRoot.scale.setScalar(1);
+    
+    // Reset transforms before adding new model
+    this.transformController?.reset();
     this.modelRoot.add(object);
     
     // Update lens flare occlusion check to only check the model (much more performant)
@@ -1140,11 +1141,8 @@ export class SceneManager {
     this.prepareMesh(object);
     this.fitCameraToObject(object);
     const state = this.stateStore.getState();
-    this.setScale(state.scale);
-    this.setYOffset(state.yOffset);
-    this.setRotationX(state.rotationX ?? 0);
-    this.setRotationY(state.rotationY ?? 0);
-    this.setRotationZ(state.rotationZ ?? 0);
+    // Apply transform state from StateStore
+    this.transformController?.applyState(state);
     this.materialController.setModel(object, state.shading, {
       clay: state.clay,
       fresnel: state.fresnel,
@@ -1201,28 +1199,23 @@ export class SceneManager {
   }
 
   setScale(value) {
-    if (!this.modelRoot) return;
-    this.modelRoot.scale.setScalar(value);
+    this.transformController?.setScale(value);
   }
 
   setYOffset(value) {
-    if (!this.modelRoot) return;
-    this.modelRoot.position.y = value;
+    this.transformController?.setYOffset(value);
   }
 
   setRotationX(value) {
-    if (!this.modelRoot) return;
-    this.modelRoot.rotation.x = THREE.MathUtils.degToRad(value);
+    this.transformController?.setRotationX(value);
   }
 
   setRotationY(value) {
-    if (!this.modelRoot) return;
-    this.modelRoot.rotation.y = THREE.MathUtils.degToRad(value);
+    this.transformController?.setRotationY(value);
   }
 
   setRotationZ(value) {
-    if (!this.modelRoot) return;
-    this.modelRoot.rotation.z = THREE.MathUtils.degToRad(value);
+    this.transformController?.setRotationZ(value);
   }
 
   setShading(mode) {
