@@ -42,6 +42,7 @@ export class PostProcessingPipeline {
     this.filmPass = new FilmPass(0.0, 0.0, 648, false);
     this.bloomTintPass = new ShaderPass(BloomTintShader);
     this.grainTintPass = new ShaderPass(GrainTintShader);
+    this.grainTime = 0;
     this.grainTintPass.uniforms.time.value = 0;
 
     this.lensDirtPass = new ShaderPass(LensDirtShader);
@@ -78,6 +79,145 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.exposurePass);
     this.composer.addPass(this.colorAdjustPass);
     this.composer.addPass(this.toneMappingPass);
+  }
+
+  /**
+   * Update depth of field settings
+   * @param {Object} settings - DOF settings object
+   */
+  updateDof(settings) {
+    if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active = wants && settings.strength > 0.0001;
+    if (this.bokehPass) {
+      this.bokehPass.enabled = active;
+    }
+    if (!active) return;
+    this.bokehPass.uniforms.focus.value = settings.focus;
+    this.bokehPass.uniforms.aperture.value = settings.aperture;
+    this.bokehPass.uniforms.maxblur.value = settings.strength;
+  }
+
+  /**
+   * Update bloom settings
+   * @param {Object} settings - Bloom settings object
+   */
+  updateBloom(settings) {
+    if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active = wants && settings.strength > 0.0001;
+    if (this.bloomPass) {
+      this.bloomPass.enabled = active;
+    }
+    if (this.bloomTintPass) {
+      this.bloomTintPass.enabled = active;
+    }
+    if (!active) return;
+    this.bloomPass.threshold = settings.threshold;
+    this.bloomPass.strength = settings.strength;
+    this.bloomPass.radius = settings.radius;
+    this.bloomTintPass.uniforms.tint.value = new THREE.Color(settings.color);
+    this.bloomTintPass.uniforms.strength.value = THREE.MathUtils.clamp(
+      settings.strength / 4,
+      0,
+      1.5,
+    );
+  }
+
+  /**
+   * Update film grain settings
+   * @param {Object} settings - Grain settings object
+   */
+  updateGrain(settings) {
+    if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    
+    // Always keep passes enabled to prevent exposure pop
+    // Instead, set intensity to 0 when disabled
+    const intensity = wants ? (settings.intensity || 0) : 0;
+    
+    if (this.filmPass) {
+      // FilmPass uses material.uniforms, not direct uniforms
+      const material = this.filmPass.material;
+      if (material && material.uniforms) {
+        // Keep FilmPass enabled but set intensity to 0 when disabled
+        this.filmPass.enabled = true;
+        if (material.uniforms.nIntensity) {
+          material.uniforms.nIntensity.value = intensity * 0.5;
+        }
+        // Also set sIntensity (scanline intensity) to 0 to fully disable FilmPass grain
+        if (material.uniforms.sIntensity) {
+          material.uniforms.sIntensity.value = intensity * 0.5;
+        }
+      }
+    }
+    if (this.grainTintPass) {
+      // Keep GrainTintPass enabled but set intensity to 0 when disabled
+      this.grainTintPass.enabled = true;
+      if (this.grainTintPass.uniforms?.intensity) {
+        this.grainTintPass.uniforms.intensity.value = intensity;
+      }
+      if (this.grainTintPass.uniforms?.tint) {
+        this.grainTintPass.uniforms.tint.value = new THREE.Color(
+          settings.color || '#ffffff',
+        );
+      }
+    }
+  }
+
+  /**
+   * Update chromatic aberration settings
+   * @param {Object} settings - Aberration settings object
+   */
+  updateAberration(settings) {
+    if (!settings) return;
+    const wants =
+      settings.enabled === undefined ? true : Boolean(settings.enabled);
+    const active =
+      wants &&
+      settings.strength > 0.0001 &&
+      Math.abs(settings.offset) > 0.0001;
+    if (this.aberrationPass) {
+      this.aberrationPass.enabled = active;
+    }
+    if (!active) return;
+    this.aberrationPass.uniforms.offset.value = settings.offset;
+    this.aberrationPass.uniforms.strength.value = settings.strength;
+  }
+
+  /**
+   * Set tone mapping mode
+   * @param {string} value - Tone mapping mode ('none', 'linear', 'reinhard', 'aces-filmic')
+   */
+  setToneMapping(value) {
+    // Map UI values to shader pass values (0=none, 1=linear, 2=reinhard, 4=aces-filmic)
+    const toneMappingMap = {
+      'none': 0,
+      'linear': 1,
+      'reinhard': 2,
+      'aces-filmic': 4,
+    };
+    
+    const toneMappingValue = toneMappingMap[value] ?? 4; // Default to ACES Filmic
+    
+    // Update the tone mapping shader pass
+    if (this.toneMappingPass) {
+      this.toneMappingPass.uniforms.toneMappingType.value = toneMappingValue;
+    }
+  }
+
+  /**
+   * Update grain time uniform (for animation)
+   * @param {number} delta - Time delta in seconds
+   */
+  updateGrainTime(delta) {
+    if (this.grainTintPass && this.grainTintPass.uniforms?.time) {
+      this.grainTime += delta * 60;
+      this.grainTintPass.uniforms.time.value = this.grainTime;
+    }
   }
 }
 
