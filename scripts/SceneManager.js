@@ -28,6 +28,7 @@ import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
+import { HdriMoodController } from './render/HdriMoodController.js';
 
 
 export class SceneManager {
@@ -174,6 +175,7 @@ export class SceneManager {
     this.setupLoaders();
     this.setupLights();
     this.setupGround();
+    this.setupMoodController();
     this.setupEnvironment(initialState);
     this.setupComposer();
     this.updateLensDirt(this.lensDirtSettings);
@@ -223,6 +225,19 @@ export class SceneManager {
       gridY: state.gridY,
       podiumScale: state.podiumScale,
       gridScale: state.gridScale,
+    });
+  }
+
+  setupMoodController() {
+    this.hdriMood = new HdriMoodController({
+      renderer: this.renderer,
+      groundController: this.groundController,
+      getState: () => this.stateStore.getState(),
+      updateBloom: (settings) => this.updateBloom(settings),
+      updateGrain: (settings) => this.updateGrain(settings),
+      setBloomState: (value) => this.stateStore.set('bloom', value),
+      setGrainState: (value) => this.stateStore.set('grain', value),
+      fallbackBackgroundColor: this.backgroundColor,
     });
   }
 
@@ -788,7 +803,7 @@ export class SceneManager {
 
   async setHdriPreset(preset) {
     if (!preset || !HDRI_PRESETS[preset]) return;
-    this.currentHdri = preset;
+        this.currentHdri = preset;
     try {
       await this.environmentController?.setPreset(preset);
       this.applyHdriMood(preset);
@@ -1128,7 +1143,7 @@ export class SceneManager {
                   }
                   if (patch.specular !== undefined) {
                     mat.metalness = patch.specular;
-                  }
+    }
                   // Always ensure values are set from claySettings, even if patch doesn't include them
                   // This prevents values from being 0 or undefined
                   if (mat.roughness === undefined || mat.roughness === 0) {
@@ -1158,7 +1173,7 @@ export class SceneManager {
                 material.metalness = this.claySettings.specular ?? 0.08;
               }
               material.needsUpdate = true;
-            }
+    }
           }
         });
       } else {
@@ -1204,7 +1219,7 @@ export class SceneManager {
 
   updateWireframeOverlay() {
     if (!this.currentModel) return;
-
+    
     // Always clear existing overlay first to prevent duplicates
     this.clearWireframeOverlay();
 
@@ -1229,8 +1244,8 @@ export class SceneManager {
         wireMaterial.polygonOffset = true;
         wireMaterial.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
         wireMaterial.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
-      }
-
+    }
+    
       // Create wireframe meshes that follow the model
       this.currentModel.traverse((child) => {
         if (child.isMesh && child.geometry) {
@@ -1270,7 +1285,7 @@ export class SceneManager {
           this.wireframeOverlay.add(wireMesh);
         }
       });
-
+    
       // Add wireframe overlay as a child of currentModel so it inherits the same transforms
       // This ensures both the original meshes and wireframe meshes rotate together through modelRoot
       if (this.currentModel) {
@@ -1299,9 +1314,9 @@ export class SceneManager {
         wireMesh.matrixAutoUpdate = true;
         wireMesh.updateMatrix();
         wireMesh.matrixAutoUpdate = false;
-        }
-      });
     }
+      });
+  }
 
   setGroundSolid(enabled) {
     this.groundController?.setSolidEnabled(enabled);
@@ -1454,51 +1469,10 @@ export class SceneManager {
 
   applyHdriMood(preset) {
     const style = HDRI_MOODS[preset];
-    const state = this.stateStore.getState();
-    if (!style) {
-      this.groundController?.setSolidColor(state.groundSolidColor);
-      if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
-        this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
-        this.environmentController?.setFallbackColor(this.backgroundColor);
-      }
-      this.updateBloom(state.bloom);
-      this.updateGrain(state.grain);
-      return;
-    }
-    if (style.podiumColor) {
-      this.groundController?.setSolidColor(style.podiumColor);
-    }
-    if (
-      style.background &&
-      (!this.hdriBackgroundEnabled || !this.hdriEnabled)
-    ) {
-      this.renderer.setClearColor(new THREE.Color(style.background), 1);
-      this.environmentController?.setFallbackColor(style.background);
-    }
-    if (style.bloomTint && this.bloomTintPass) {
-      const bloomState = {
-        ...state.bloom,
-        enabled: true,
-        color: style.bloomTint,
-        // Preserve user's bloom strength - don't change it based on HDRI mood
-        strength: state.bloom.strength,
-        radius: state.bloom.radius,
-      };
-      // Update state store so UI reflects the mood's color (but not strength)
-      this.stateStore.set('bloom', bloomState);
-      this.updateBloom(bloomState);
-    }
-    if (this.grainTintPass) {
-      const grainState = {
-        ...state.grain,
-        color: style.grainTint ?? state.grain.color,
-      };
-      // Update state store so UI reflects the mood's color
-      if (style.grainTint) {
-        this.stateStore.set('grain', grainState);
-      }
-      this.updateGrain(grainState);
-    }
+    this.hdriMood?.apply(style, {
+      hdriBackgroundEnabled: this.hdriBackgroundEnabled,
+      hdriEnabled: this.hdriEnabled,
+    });
   }
 
   applyFresnelToModel(root) {
@@ -1697,6 +1671,7 @@ export class SceneManager {
 
 
   updateBackgroundColor(color) {
+    if (!color) return;
     this.backgroundColor = color;
     if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
       const background = new THREE.Color(color);
@@ -1704,6 +1679,7 @@ export class SceneManager {
       this.renderer.setClearColor(background, 1);
     }
     this.environmentController?.setFallbackColor(color);
+    this.hdriMood?.setFallbackBackgroundColor(color);
   }
 
   async loadFile(file, options = {}) {
