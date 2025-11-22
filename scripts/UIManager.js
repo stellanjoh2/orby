@@ -394,6 +394,37 @@ export class UIManager {
       this.stateStore.set('showNormals', enabled);
       this.eventBus.emit('mesh:normals', enabled);
     });
+    // Fresnel (moved from bindRenderControls since it's now in Object tab)
+    const emitFresnel = () =>
+      this.eventBus.emit('render:fresnel', this.stateStore.getState().fresnel);
+    this.inputs.toggleFresnel.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('fresnel.enabled', enabled);
+      this.setEffectControlsDisabled(
+        ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+        !enabled,
+      );
+      // Block muting handled by applyBlockStates via syncControls
+      emitFresnel();
+    });
+    this.inputs.fresnelColor.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('fresnel.color', value);
+      emitFresnel();
+    });
+    this.inputs.fresnelRadius.addEventListener('input', (event) => {
+      const sliderValue = parseFloat(event.target.value);
+      const mapped = parseFloat((6 - sliderValue).toFixed(2));
+      this.updateValueLabel('fresnelRadius', mapped, 'decimal');
+      this.stateStore.set('fresnel.radius', mapped);
+      emitFresnel();
+    });
+    this.inputs.fresnelStrength.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.updateValueLabel('fresnelStrength', value, 'decimal');
+      this.stateStore.set('fresnel.strength', value);
+      emitFresnel();
+    });
   }
 
   bindStudioControls() {
@@ -688,37 +719,6 @@ export class UIManager {
       this.updateValueLabel('aberrationStrength', value, 'decimal');
       this.stateStore.set('aberration.strength', value);
       emitAberration();
-    });
-
-    const emitFresnel = () =>
-      this.eventBus.emit('render:fresnel', this.stateStore.getState().fresnel);
-    this.inputs.toggleFresnel.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('fresnel.enabled', enabled);
-      this.setEffectControlsDisabled(
-        ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
-        !enabled,
-      );
-      // Block muting handled by applyBlockStates via syncControls
-      emitFresnel();
-    });
-    this.inputs.fresnelColor.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('fresnel.color', value);
-      emitFresnel();
-    });
-    this.inputs.fresnelRadius.addEventListener('input', (event) => {
-      const sliderValue = parseFloat(event.target.value);
-      const mapped = parseFloat((6 - sliderValue).toFixed(2));
-      this.updateValueLabel('fresnelRadius', mapped, 'decimal');
-      this.stateStore.set('fresnel.radius', mapped);
-      emitFresnel();
-    });
-    this.inputs.fresnelStrength.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('fresnelStrength', value, 'decimal');
-      this.stateStore.set('fresnel.strength', value);
-      emitFresnel();
     });
 
     this.bindColorInput('backgroundColor', 'background', 'scene:background');
