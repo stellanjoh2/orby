@@ -221,6 +221,24 @@ body.dropzone-visible #webgl {
   filter: brightness(1.08);
 }
 
+.dropzone-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+}
+
+.dropzone-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .workspace {
   flex: 1;
   display: flex;
@@ -312,6 +330,14 @@ body.dropzone-visible #webgl {
   border-color: var(--drop-outline-active);
   background: linear-gradient(120deg, var(--drop-fill-active), transparent);
   box-shadow: 0 0 40px var(--accent-glow), inset 0 0 30px var(--accent-muted);
+}
+
+.drop-logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 0.5rem;
 }
 
 .drop-primary {
