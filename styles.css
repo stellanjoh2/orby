@@ -22,8 +22,8 @@
 :root,
 body[data-theme='violet'] {
   /* Brand Colors - Change these to swap the main brand color */
-  --brand-primary: #b46cff;
-  --brand-secondary: #ff6bd6;
+  --brand-primary: #fff62a;
+  --brand-secondary: #ff4500;
   
   /* Base Colors */
   --bg: #050112;
@@ -55,8 +55,8 @@ body[data-theme='violet'] {
 
 body[data-theme='aqua'] {
   /* Brand Colors - Change these to swap the main brand color */
-  --brand-primary: #63a9ff;
-  --brand-secondary: #4be0c6;
+  --brand-primary: #fff62a;
+  --brand-secondary: #ff4500;
   
   /* Base Colors */
   --bg: #04060c;
