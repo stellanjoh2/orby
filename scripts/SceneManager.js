@@ -260,28 +260,11 @@ export class SceneManager {
       this.camera,
     );
     this.composer = this.postPipeline.composer;
-    this.renderPass = this.postPipeline.renderPass;
     this.lensDirtPass = this.postPipeline.lensDirtPass;
     this.fxaaPass = this.postPipeline.fxaaPass;
     this.exposurePass = this.postPipeline.exposurePass;
-    this.colorAdjust = this.postPipeline.colorAdjust;
-    this.colorAdjustPass = this.postPipeline.colorAdjustPass;
   }
 
-  updateLensDirt(settings) {
-    this.lensDirtController?.updateSettings(settings);
-  }
-
-  setAutoExposureEnabled(enabled) {
-    this.autoExposureController?.setEnabled(enabled);
-  }
-
-  updateExposureUniform(value) {
-    // Update manual exposure in controller
-    this.autoExposureController?.setManualExposure(value);
-    // Update UI display
-    this.ui?.updateExposureDisplay?.(value);
-  }
 
 
   registerEvents() {
@@ -368,7 +351,6 @@ export class SceneManager {
       this.setClayNormalMap(enabled),
     );
     this.eventBus.on('render:contrast', (value) => this.setContrast(value));
-    this.eventBus.on('render:hue', (value) => this.setHue(value));
     this.eventBus.on('render:saturation', (value) => this.setSaturation(value));
     this.eventBus.on('render:temperature', (value) =>
       this.setTemperature(value),
@@ -424,7 +406,7 @@ export class SceneManager {
       this.setFresnelSettings(settings),
     );
     this.eventBus.on('render:lens-dirt', (settings) =>
-      this.updateLensDirt(settings),
+      this.lensDirtController?.updateSettings(settings),
     );
     this.eventBus.on('render:anti-aliasing', (value) => {
       if (this.fxaaPass) {
@@ -440,11 +422,13 @@ export class SceneManager {
     );
     this.eventBus.on('scene:exposure', (value) => {
       this.autoExposureController?.setManualExposure(value);
-      this.updateExposureUniform(value);
-      this.updateLensDirt();
+      // Update UI display
+      this.ui?.updateExposureDisplay?.(value);
+      // Update lens dirt exposure factor
+      this.lensDirtController?.updateExposureFactor();
     });
     this.eventBus.on('camera:auto-exposure', (enabled) =>
-      this.setAutoExposureEnabled(enabled),
+      this.autoExposureController?.setEnabled(enabled),
     );
 
     this.eventBus.on('file:selected', (file) => this.loadFile(file));
@@ -511,7 +495,7 @@ export class SceneManager {
     }
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
-    this.updateLensDirt(state.lensDirt);
+    this.lensDirtController?.updateSettings(state.lensDirt);
     this.updateGrain(state.grain);
     this.updateAberration(state.aberration);
     this.updateBackgroundColor(state.background);
@@ -522,7 +506,6 @@ export class SceneManager {
     this.setHdriStrength(state.hdriStrength ?? 1);
     // Initialize color adjustment settings
     this.setContrast(state.camera?.contrast ?? 1.0);
-    this.setHue(state.camera?.hue ?? 0.0);
     this.setSaturation(state.camera?.saturation ?? 1.0);
     this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
     this.setTint((state.camera?.tint ?? 0) / 100);
@@ -630,48 +613,28 @@ export class SceneManager {
   }
 
   setContrast(value) {
-    this.colorAdjust?.setContrast(value);
+    this.postPipeline?.setContrast(value);
   }
 
-  setHue(value) {
-    this.colorAdjust?.setHue(value);
-  }
 
   setSaturation(value) {
-    this.colorAdjust?.setSaturation(value);
+    this.postPipeline?.setSaturation(value);
   }
 
   setTemperature(kelvin) {
-    if (!this.colorAdjust) return;
-    const neutral = CAMERA_TEMPERATURE_NEUTRAL_K;
-    const minK = CAMERA_TEMPERATURE_MIN_K;
-    const maxK = CAMERA_TEMPERATURE_MAX_K;
-    const clamped = THREE.MathUtils.clamp(
-      kelvin ?? neutral,
-      minK,
-      maxK,
-    );
-    let normalized;
-    if (clamped >= neutral) {
-      normalized =
-        (clamped - neutral) / (maxK - neutral);
-    } else {
-      normalized =
-        (clamped - neutral) / (neutral - minK);
-    }
-    this.colorAdjust.setTemperature(normalized);
+    this.postPipeline?.setTemperature(kelvin);
   }
 
   setTint(value) {
-    this.colorAdjust?.setTint(value);
+    this.postPipeline?.setTint(value);
   }
 
   setHighlights(value) {
-    this.colorAdjust?.setHighlights(value);
+    this.postPipeline?.setHighlights(value);
   }
 
   setShadows(value) {
-    this.colorAdjust?.setShadows(value);
+    this.postPipeline?.setShadows(value);
   }
 
   setHdriEnabled(enabled) {

@@ -15,6 +15,11 @@ import {
   LensDirtShader,
 } from '../shaders/index.js';
 import { ColorAdjustController } from './ColorAdjustController.js';
+import {
+  CAMERA_TEMPERATURE_MIN_K,
+  CAMERA_TEMPERATURE_MAX_K,
+  CAMERA_TEMPERATURE_NEUTRAL_K,
+} from '../constants.js';
 
 export class PostProcessingPipeline {
   constructor(renderer, scene, camera) {
@@ -218,6 +223,71 @@ export class PostProcessingPipeline {
       this.grainTime += delta * 60;
       this.grainTintPass.uniforms.time.value = this.grainTime;
     }
+  }
+
+  /**
+   * Set contrast adjustment
+   * @param {number} value - Contrast value (0-2, default 1.0)
+   */
+  setContrast(value) {
+    this.colorAdjust?.setContrast(value);
+  }
+
+  /**
+   * Set saturation adjustment
+   * @param {number} value - Saturation value (0-2, default 1.0)
+   */
+  setSaturation(value) {
+    this.colorAdjust?.setSaturation(value);
+  }
+
+  /**
+   * Set color temperature in Kelvin
+   * @param {number} kelvin - Temperature in Kelvin (2000-12000, default 6000)
+   */
+  setTemperature(kelvin) {
+    if (!this.colorAdjust) return;
+    const neutral = CAMERA_TEMPERATURE_NEUTRAL_K;
+    const minK = CAMERA_TEMPERATURE_MIN_K;
+    const maxK = CAMERA_TEMPERATURE_MAX_K;
+    const clamped = THREE.MathUtils.clamp(
+      kelvin ?? neutral,
+      minK,
+      maxK,
+    );
+    let normalized;
+    if (clamped >= neutral) {
+      normalized =
+        (clamped - neutral) / (maxK - neutral);
+    } else {
+      normalized =
+        (clamped - neutral) / (neutral - minK);
+    }
+    this.colorAdjust.setTemperature(normalized);
+  }
+
+  /**
+   * Set tint adjustment
+   * @param {number} value - Tint value (-100 to 100, normalized to -1 to 1)
+   */
+  setTint(value) {
+    this.colorAdjust?.setTint(value);
+  }
+
+  /**
+   * Set highlights adjustment
+   * @param {number} value - Highlights value (-100 to 100, normalized to -1 to 1)
+   */
+  setHighlights(value) {
+    this.colorAdjust?.setHighlights(value);
+  }
+
+  /**
+   * Set shadows adjustment
+   * @param {number} value - Shadows value (-50 to 50, normalized to -1 to 1)
+   */
+  setShadows(value) {
+    this.colorAdjust?.setShadows(value);
   }
 }
 
