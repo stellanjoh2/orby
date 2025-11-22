@@ -350,7 +350,13 @@ body.dropzone-visible #webgl {
   color: var(--text);
   background: var(--accent);
   box-shadow: 0 8px 18px var(--accent-shadow);
+}
+
+.tab.active:first-child {
   border-top-left-radius: 24px;
+}
+
+.tab.active:last-child {
   border-top-right-radius: 24px;
 }
 
