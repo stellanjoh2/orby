@@ -1,0 +1,695 @@
+import * as THREE from 'three';
+import {
+  WIREFRAME_OFFSET,
+  WIREFRAME_POLYGON_OFFSET_FACTOR,
+  WIREFRAME_POLYGON_OFFSET_UNITS,
+  WIREFRAME_OPACITY_VISIBLE,
+  WIREFRAME_OPACITY_OVERLAY,
+  CLAY_DEFAULT_ROUGHNESS,
+  CLAY_DEFAULT_METALNESS,
+} from '../constants.js';
+
+export class MaterialController {
+  constructor({
+    stateStore,
+    modelRoot,
+    onShadingChanged = null,
+    onMaterialUpdate = null,
+  }) {
+    this.stateStore = stateStore;
+    this.modelRoot = modelRoot;
+    this.onShadingChanged = onShadingChanged;
+    this.onMaterialUpdate = onMaterialUpdate;
+
+    this.currentModel = null;
+    this.currentShading = null;
+    this.originalMaterials = new WeakMap();
+    this.wireframeOverlay = null;
+    this.unlitMode = false;
+
+    // Settings
+    this.claySettings = {};
+    this.fresnelSettings = {};
+    this.wireframeSettings = {};
+  }
+
+  setModel(model, shading, initialState = {}) {
+    this.currentModel = model;
+    this.currentShading = shading;
+    this.claySettings = { ...(initialState.clay || {}) };
+    this.fresnelSettings = { ...(initialState.fresnel || {}) };
+    this.wireframeSettings = {
+      ...(initialState.wireframe || {
+        alwaysOn: false,
+        color: '#9fb7ff',
+        onlyVisibleFaces: false,
+      }),
+    };
+    this.originalMaterials = new WeakMap();
+    this.prepareMesh(model);
+    // Note: Fresnel will be applied by setShading, which is called after setModel
+  }
+
+  prepareMesh(object) {
+    object.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (!this.originalMaterials.has(child)) {
+          this.originalMaterials.set(child, child.material);
+        }
+      }
+    });
+  }
+
+  setShading(mode) {
+    if (!this.currentModel) return;
+    this.currentShading = mode;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const original = this.originalMaterials.get(child);
+      if (!original) return;
+
+      const disposeIfTransient = () => {
+        const material = child.material;
+        const sameReference =
+          material === original ||
+          (Array.isArray(material) &&
+            Array.isArray(original) &&
+            material.length === original.length &&
+            material.every((mat, idx) => mat === original[idx]));
+        if (sameReference) return;
+        if (Array.isArray(material)) {
+          material.forEach((mat) => mat?.dispose?.());
+        } else {
+          material?.dispose?.();
+        }
+      };
+
+      const applyMaterial = (material) => {
+        disposeIfTransient();
+        child.material = material;
+      };
+
+      const buildArray = (factory) => {
+        if (Array.isArray(original)) {
+          return original.map((mat) => factory(mat));
+        }
+        return factory(original);
+      };
+
+      if (mode === 'wireframe') {
+        const { color } = this.wireframeSettings;
+        const createWire = (mat) => {
+          const base = mat?.clone
+            ? mat.clone()
+            : new THREE.MeshStandardMaterial();
+          base.wireframe = true;
+          base.color = new THREE.Color(color);
+          return base;
+        };
+        applyMaterial(buildArray(createWire));
+      } else if (mode === 'clay') {
+        const { color, roughness, specular } = this.claySettings;
+        const createClay = (originalMat) => {
+          const clay = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color),
+            roughness,
+            metalness: specular,
+            side: THREE.DoubleSide,
+          });
+          // Preserve normal map from original material only if enabled
+          const normalMapEnabled =
+            this.stateStore.getState().clay?.normalMap !== false;
+          if (normalMapEnabled && originalMat?.normalMap) {
+            clay.normalMap = originalMat.normalMap;
+            clay.normalMapType =
+              originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
+            if (originalMat.normalScale) {
+              clay.normalScale = originalMat.normalScale.clone();
+            }
+          }
+          return clay;
+        };
+        applyMaterial(buildArray(createClay));
+      } else if (mode === 'textures') {
+        const createTextureMaterial = (mat) => {
+          const standard = new THREE.MeshStandardMaterial({
+            map: mat?.map ?? null,
+            color: mat?.color
+              ? mat.color.clone()
+              : new THREE.Color('#ffffff'),
+            roughness: mat?.roughness ?? 0.8,
+            metalness: mat?.metalness ?? 0,
+            normalMap: mat?.normalMap ?? null,
+            aoMap: mat?.aoMap ?? null,
+            emissive: mat?.emissive
+              ? mat.emissive.clone()
+              : new THREE.Color(0x000000),
+            emissiveIntensity: mat?.emissiveIntensity ?? 1,
+            transparent: mat?.transparent ?? false,
+            opacity: mat?.opacity ?? 1,
+            side: mat?.side ?? THREE.FrontSide,
+          });
+          if (mat?.aoMap) {
+            standard.aoMapIntensity = mat.aoMapIntensity ?? 1;
+          }
+          standard.wireframe = false;
+          return standard;
+        };
+        applyMaterial(buildArray(createTextureMaterial));
+      } else {
+        // Restore original materials when switching away from wireframe/clay/textures
+        disposeIfTransient();
+        child.material = original;
+        // Ensure wireframe is off
+        if (Array.isArray(child.material)) {
+          child.material.forEach((mat) => {
+            if (mat) {
+              mat.wireframe = false;
+            }
+          });
+        } else if (child.material) {
+          child.material.wireframe = false;
+        }
+      }
+    });
+
+    this.unlitMode = mode === 'textures';
+    this.updateWireframeOverlay();
+    this.applyFresnelToModel(this.currentModel);
+
+    if (this.onShadingChanged) {
+      this.onShadingChanged(mode);
+    }
+    if (this.onMaterialUpdate) {
+      this.onMaterialUpdate();
+    }
+  }
+
+  setClaySettings(patch) {
+    this.claySettings = { ...this.claySettings, ...patch };
+    if (this.stateStore.getState().shading === 'clay') {
+      // Update existing clay materials directly instead of recreating them
+      if (this.currentModel) {
+        this.currentModel.traverse((child) => {
+          if (!child.isMesh) return;
+          const material = child.material;
+          // Check if this is a clay material (not an original material)
+          const original = this.originalMaterials.get(child);
+          const isClayMaterial =
+            material &&
+            original &&
+            material !== original &&
+            (!Array.isArray(material) ||
+              !Array.isArray(original) ||
+              material.length !== original.length ||
+              !material.every((mat, idx) => mat === original[idx]));
+
+          if (isClayMaterial) {
+            // This is a clay material, update it directly
+            if (Array.isArray(material)) {
+              material.forEach((mat) => {
+                if (mat && mat.isMeshStandardMaterial) {
+                  if (patch.color !== undefined) {
+                    mat.color.set(patch.color);
+                  }
+                  if (patch.roughness !== undefined) {
+                    mat.roughness = patch.roughness;
+                  }
+                  if (patch.specular !== undefined) {
+                    mat.metalness = patch.specular;
+                  }
+                  // Always ensure values are set from claySettings, even if patch doesn't include them
+                  // This prevents values from being 0 or undefined
+                  if (mat.roughness === undefined || mat.roughness === 0) {
+                    mat.roughness = this.claySettings.roughness ?? 0.6;
+                  }
+                  if (mat.metalness === undefined || mat.metalness === 0) {
+                    mat.metalness = this.claySettings.specular ?? 0.08;
+                  }
+                  mat.needsUpdate = true;
+                }
+              });
+            } else if (material.isMeshStandardMaterial) {
+              if (patch.color !== undefined) {
+                material.color.set(patch.color);
+              }
+              if (patch.roughness !== undefined) {
+                material.roughness = patch.roughness;
+              }
+              if (patch.specular !== undefined) {
+                material.metalness = patch.specular;
+              }
+              // Always ensure values are set from claySettings, even if patch doesn't include them
+              if (
+                material.roughness === undefined ||
+                material.roughness === 0
+              ) {
+                material.roughness = this.claySettings.roughness ?? 0.6;
+              }
+              if (
+                material.metalness === undefined ||
+                material.metalness === 0
+              ) {
+                material.metalness = this.claySettings.specular ?? 0.08;
+              }
+              material.needsUpdate = true;
+            }
+          }
+        });
+      } else {
+        // Fallback to recreating materials if no model loaded
+        this.setShading('clay');
+      }
+    }
+  }
+
+  setWireframeSettings(patch) {
+    this.wireframeSettings = { ...this.wireframeSettings, ...patch };
+    this.stateStore.set('wireframe', this.wireframeSettings);
+    this.updateWireframeOverlay();
+    if (this.currentShading === 'wireframe') {
+      this.setShading('wireframe');
+    }
+  }
+
+  clearWireframeOverlay() {
+    if (this.wireframeOverlay) {
+      this.wireframeOverlay.traverse((child) => {
+        if (child.isMesh) {
+          // Only dispose geometry if it was cloned (has userData.isCloned)
+          if (child.geometry && child.userData.isCloned) {
+            child.geometry.dispose();
+          }
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((mat) => mat?.dispose?.());
+            } else {
+              child.material.dispose();
+            }
+          }
+        }
+      });
+      // Remove from parent (could be currentModel or modelRoot)
+      if (this.wireframeOverlay.parent) {
+        this.wireframeOverlay.parent.remove(this.wireframeOverlay);
+      }
+      this.wireframeOverlay = null;
+    }
+  }
+
+  updateWireframeOverlay() {
+    if (!this.currentModel) return;
+
+    // Always clear existing overlay first to prevent duplicates
+    this.clearWireframeOverlay();
+
+    // Create overlay if "always on" is enabled
+    if (this.wireframeSettings.alwaysOn) {
+      this.wireframeOverlay = new THREE.Group();
+      this.wireframeOverlay.name = 'wireframeOverlay';
+
+      const { color, onlyVisibleFaces } = this.wireframeSettings;
+      const wireMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(color),
+        wireframe: true,
+        depthTest: onlyVisibleFaces, // Enable depth test when only showing visible faces
+        depthWrite: false,
+        transparent: !onlyVisibleFaces, // No transparency when showing only visible faces
+        opacity: onlyVisibleFaces
+          ? WIREFRAME_OPACITY_VISIBLE
+          : WIREFRAME_OPACITY_OVERLAY,
+      });
+
+      // Add depth offset to prevent z-fighting when showing only visible faces
+      // Increased values help with darker colors where z-fighting is more visible
+      if (onlyVisibleFaces) {
+        wireMaterial.polygonOffset = true;
+        wireMaterial.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
+        wireMaterial.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
+      }
+
+      // Create wireframe meshes that follow the model
+      this.currentModel.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          let geometry = child.geometry;
+          let isCloned = false;
+
+          // If onlyVisibleFaces is enabled, push vertices along normals
+          if (onlyVisibleFaces) {
+            // Clone geometry so we don't modify the original
+            geometry = child.geometry.clone();
+            isCloned = true;
+            const positions = geometry.attributes.position;
+
+            // Compute normals if they don't exist
+            if (!geometry.attributes.normal) {
+              geometry.computeVertexNormals();
+            }
+
+            // Push vertices along their normals by a small amount (0.002 units)
+            const offset = WIREFRAME_OFFSET;
+            for (let i = 0; i < positions.count; i++) {
+              const normal = new THREE.Vector3();
+              normal.fromBufferAttribute(geometry.attributes.normal, i);
+              const position = new THREE.Vector3();
+              position.fromBufferAttribute(positions, i);
+              position.addScaledVector(normal, offset);
+              positions.setXYZ(i, position.x, position.y, position.z);
+            }
+            positions.needsUpdate = true;
+          }
+
+          const wireMesh = new THREE.Mesh(geometry, wireMaterial);
+          // Link to original mesh for matrix updates
+          wireMesh.userData.originalMesh = child;
+          wireMesh.userData.isCloned = isCloned;
+          wireMesh.renderOrder = 999; // Render on top
+          this.wireframeOverlay.add(wireMesh);
+        }
+      });
+
+      // Add wireframe overlay as a child of currentModel so it inherits the same transforms
+      // This ensures both the original meshes and wireframe meshes rotate together through modelRoot
+      if (this.currentModel) {
+        this.currentModel.add(this.wireframeOverlay);
+      } else {
+        this.modelRoot.add(this.wireframeOverlay);
+      }
+    }
+  }
+
+  updateWireframeOverlayTransforms() {
+    if (!this.wireframeOverlay || !this.currentModel) return;
+
+    // Update wireframe overlay transforms to match the model perfectly
+    // Since wireframeOverlay is now a child of currentModel (same as original meshes),
+    // we just need to copy local transforms and they'll inherit modelRoot rotations together
+    this.wireframeOverlay.traverse((wireMesh) => {
+      if (wireMesh.isMesh && wireMesh.userData.originalMesh) {
+        const original = wireMesh.userData.originalMesh;
+        // Copy local position, rotation, and scale from original
+        // This ensures they transform together through modelRoot
+        wireMesh.position.copy(original.position);
+        wireMesh.rotation.copy(original.rotation);
+        wireMesh.scale.copy(original.scale);
+        // Let Three.js handle matrix updates through the parent hierarchy
+        wireMesh.matrixAutoUpdate = true;
+        wireMesh.updateMatrix();
+        wireMesh.matrixAutoUpdate = false;
+      }
+    });
+  }
+
+  setFresnelSettings(settings) {
+    this.fresnelSettings = {
+      ...this.fresnelSettings,
+      ...settings,
+    };
+    this.fresnelSettings.radius = Math.max(
+      0.1,
+      this.fresnelSettings.radius || 1,
+    );
+    this.applyFresnelToModel(this.currentModel);
+  }
+
+  applyFresnelToModel(root) {
+    if (!root) return;
+    root.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      materials.forEach((mat) => this.applyFresnelToMaterial(mat));
+    });
+  }
+
+  applyFresnelToMaterial(material) {
+    const settings = this.fresnelSettings || {};
+    const needsFresnel =
+      settings.enabled &&
+      settings.strength > 0.0001 &&
+      material &&
+      material.onBeforeCompile !== undefined &&
+      (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial);
+
+    if (!needsFresnel) {
+      if (material?.userData?.fresnelPatched) {
+        material.onBeforeCompile =
+          material.userData.originalOnBeforeCompile || (() => {});
+        delete material.userData.originalOnBeforeCompile;
+        delete material.userData.fresnelPatched;
+        delete material.userData.fresnelUniforms;
+        material.needsUpdate = true;
+      }
+      return;
+    }
+
+    // Always re-patch if material was replaced or uniforms are missing
+    // This ensures Fresnel works even after material updates/recompilations
+    if (material.userData.fresnelPatched) {
+      const uniforms = material.userData.fresnelUniforms;
+      // If uniforms exist and are valid, just update values
+      if (uniforms && uniforms.color && uniforms.color.value) {
+        uniforms.color.value.set(settings.color || '#ffffff');
+        uniforms.strength.value = settings.strength || 0.5;
+        uniforms.power.value = Math.max(0.1, settings.radius || 1.0);
+        // Force shader recompilation to ensure uniforms are applied
+        material.needsUpdate = true;
+        return;
+      }
+      // If uniforms are missing, clear flag and re-patch
+      delete material.userData.fresnelPatched;
+      delete material.userData.originalOnBeforeCompile;
+    }
+
+    // Create new patch - this handles both new materials and re-patching
+    const original = material.onBeforeCompile;
+    material.userData.originalOnBeforeCompile = original;
+
+    // Create uniforms that will be stored and reused
+    const uniforms = {
+      color: { value: new THREE.Color(settings.color || '#ffffff') },
+      strength: { value: settings.strength || 0.5 },
+      power: { value: Math.max(0.1, settings.radius || 1.0) },
+    };
+
+    // Store uniforms before patching so they're available even if shader recompiles
+    material.userData.fresnelUniforms = uniforms;
+
+    material.onBeforeCompile = (shader) => {
+      original?.(shader);
+
+      // Use stored uniforms or create new ones if missing (defensive)
+      const fresnelUniforms = material.userData.fresnelUniforms || uniforms;
+
+      shader.uniforms.fresnelColor = fresnelUniforms.color;
+      shader.uniforms.fresnelStrength = fresnelUniforms.strength;
+      shader.uniforms.fresnelPower = fresnelUniforms.power;
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `
+        #include <common>
+        uniform vec3 fresnelColor;
+        uniform float fresnelStrength;
+        uniform float fresnelPower;
+      `,
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <lights_fragment_end>',
+        `
+        #include <lights_fragment_end>
+        vec3 fresnelNormal = normalize( normal );
+        vec3 fresnelViewDir = normalize( vViewPosition );
+        float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
+        vec3 fresnelContribution = fresnelColor * fresnelTerm * fresnelStrength;
+        reflectedLight.directDiffuse += fresnelContribution;
+        totalEmissiveRadiance += fresnelContribution;
+      `,
+      );
+
+      // Ensure uniforms are stored after shader compilation
+      material.userData.fresnelUniforms = fresnelUniforms;
+    };
+    material.userData.fresnelPatched = true;
+    material.needsUpdate = true;
+  }
+
+  updateMaterialsEnvironment(envTexture, intensity, hdriBlurriness = 0) {
+    if (!this.currentModel) return;
+
+    // If we're in clay mode, handle clay materials separately and skip the rest
+    if (this.currentShading === 'clay') {
+      const targetRoughness = this.claySettings?.roughness ?? 0.6;
+      const targetMetalness = this.claySettings?.specular ?? 0.08;
+
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const isClayMaterial = !this.originalMaterials.has(child);
+
+        if (isClayMaterial) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+
+          materials.forEach((material) => {
+            if (!material || !material.isMeshStandardMaterial) return;
+
+            // ONLY set envMap and intensity - NEVER touch roughness/metalness
+            material.envMap = envTexture;
+            if (material.envMapIntensity !== undefined) {
+              material.envMapIntensity = intensity;
+            }
+
+            // CRITICAL: Always restore roughness and metalness immediately after setting envMap
+            // Setting envMap might trigger Three.js internal updates that reset these values
+            material.roughness = targetRoughness;
+            material.metalness = targetMetalness;
+
+            material.needsUpdate = true;
+          });
+        }
+      });
+
+      // Don't process non-clay materials when in clay mode
+      return;
+    }
+
+    // For non-clay materials, apply environment and blurriness as normal
+    this.currentModel.traverse((child) => {
+      if (child.isMesh && child.material) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+
+        materials.forEach((material) => {
+          if (!material) return;
+
+          if (
+            material.isMeshStandardMaterial ||
+            material.isMeshPhysicalMaterial ||
+            material.isMeshLambertMaterial ||
+            material.isMeshPhongMaterial
+          ) {
+            material.envMap = envTexture;
+            if (material.envMapIntensity !== undefined) {
+              material.envMapIntensity = intensity;
+            }
+
+            // Apply blurriness to roughness for non-clay materials only
+            if (material.roughness !== undefined) {
+              // Store original roughness if not already stored
+              if (material.userData.originalRoughness === undefined) {
+                const originalMaterial = this.originalMaterials.get(child);
+                if (originalMaterial) {
+                  const originalMat = Array.isArray(originalMaterial)
+                    ? originalMaterial[0]
+                    : originalMaterial;
+                  if (originalMat && originalMat.roughness !== undefined) {
+                    material.userData.originalRoughness = originalMat.roughness;
+                  } else {
+                    material.userData.originalRoughness = material.roughness;
+                  }
+                } else {
+                  material.userData.originalRoughness = material.roughness;
+                }
+              }
+              const baseRoughness =
+                material.userData.originalRoughness ?? material.roughness;
+
+              // Apply blurriness by increasing roughness (which uses higher mipmap levels)
+              if (hdriBlurriness > 0) {
+                const blurRoughness =
+                  baseRoughness + (1.0 - baseRoughness) * hdriBlurriness;
+                material.roughness = Math.min(1.0, blurRoughness);
+              } else {
+                // Reset to base roughness when blurriness is 0
+                material.roughness = baseRoughness;
+              }
+            }
+
+            material.needsUpdate = true;
+          }
+        });
+      }
+    });
+  }
+
+  forceRestoreClaySettings() {
+    // Simple restoration - just set the values directly from claySettings
+    if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
+      const targetRoughness = this.claySettings.roughness ?? 0.6;
+      const targetMetalness = this.claySettings.specular ?? 0.08;
+
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const material = child.material;
+        const isClayMaterial = !this.originalMaterials.has(child) ||
+          (material !== this.originalMaterials.get(child) &&
+            (!Array.isArray(material) ||
+              !Array.isArray(this.originalMaterials.get(child)) ||
+              material.length !== this.originalMaterials.get(child).length ||
+              !material.every((mat, idx) => mat === this.originalMaterials.get(child)[idx])));
+
+        if (isClayMaterial) {
+          const materials = Array.isArray(material) ? material : [material];
+          materials.forEach((mat) => {
+            if (mat && mat.isMeshStandardMaterial) {
+              if (mat.roughness === 0 || Math.abs(mat.roughness - targetRoughness) > 0.01) {
+                mat.roughness = targetRoughness;
+              }
+              if (mat.metalness === 0 || Math.abs(mat.metalness - targetMetalness) > 0.01) {
+                mat.metalness = targetMetalness;
+              }
+              mat.needsUpdate = true;
+            }
+          });
+        }
+      });
+    }
+  }
+
+  clear() {
+    this.clearWireframeOverlay();
+    this.currentModel = null;
+    this.currentShading = null;
+    this.originalMaterials = new WeakMap();
+  }
+
+  getClaySettings() {
+    return { ...this.claySettings };
+  }
+
+  getFresnelSettings() {
+    return { ...this.fresnelSettings };
+  }
+
+  getWireframeSettings() {
+    return { ...this.wireframeSettings };
+  }
+
+  getUnlitMode() {
+    return this.unlitMode;
+  }
+
+  getOriginalMaterial(mesh) {
+    return this.originalMaterials.get(mesh);
+  }
+
+  isClayMaterial(mesh) {
+    if (!mesh || !mesh.material) return false;
+    const original = this.originalMaterials.get(mesh);
+    if (!original) return false;
+    const material = mesh.material;
+    return (
+      material !== original &&
+      (!Array.isArray(material) ||
+        !Array.isArray(original) ||
+        material.length !== original.length ||
+        !material.every((mat, idx) => mat === original[idx]))
+    );
+  }
+}
+

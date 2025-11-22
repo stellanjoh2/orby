@@ -1,11 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/meshopt_decoder.module.js';
-import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/FBXLoader.js';
-import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/OBJLoader.js';
-import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
-import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
-import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
 import { LensFlareEffect } from './LensFlareEffect.js';
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
 import {
@@ -16,19 +9,20 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
   CLAY_DEFAULT_ROUGHNESS,
   CLAY_DEFAULT_METALNESS,
-  NORMALS_HELPER_SIZE,
-  NORMALS_HELPER_COLOR,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
 } from './constants.js';
-import { formatTime } from './utils/timeFormatter.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
 import { EnvironmentController } from './render/EnvironmentController.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
 import { CameraController } from './render/CameraController.js';
+import { ModelLoader } from './render/ModelLoader.js';
+import { AnimationController } from './render/AnimationController.js';
+import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
+import { MaterialController } from './render/MaterialController.js';
 
 
 export class SceneManager {
@@ -105,10 +99,13 @@ export class SceneManager {
     this.scene.add(this.modelRoot);
     this.scene.environmentIntensity = this.hdriStrength;
 
-    this.normalsHelpers = [];
-    this.boneHelpers = [];
+    this.diagnosticsController = new MeshDiagnosticsController({
+      scene: this.scene,
+      modelRoot: this.modelRoot,
+      ui: this.ui,
+    });
+
     this.currentShading = initialState.shading;
-    this.lastBoneToastTime = 0;
     this.autoRotateSpeed = 0;
     this.lightsMaster = initialState.lightsMaster ?? 1;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
@@ -117,10 +114,14 @@ export class SceneManager {
     this.lightsAutoRotateSpeed = 30; // degrees per second
     this.currentFile = null;
     this.currentModel = null;
-    this.mixer = null;
-    this.currentAction = null;
-    this.currentClipIndex = 0;
-    this.animations = [];
+    this.animationController = new AnimationController({
+      onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
+      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
+      onTimeUpdate: (current, duration) =>
+        this.ui.updateAnimationTime(current, duration),
+      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
+      getFileName: () => this.currentFile?.name ?? 'model.glb',
+    });
     this.unlitMode = false;
     const defaults = this.stateStore.getDefaults();
     this.lensFlareState = {
@@ -134,9 +135,6 @@ export class SceneManager {
     this.hdriBlurriness = initialState.hdriBlurriness ?? 0;
     this.hdriRotation = initialState.hdriRotation ?? 0;
     this.currentHdri = initialState.hdri ?? 'meadow';
-    this.claySettings = { ...(initialState.clay || {}) };
-    this.fresnelSettings = { ...(initialState.fresnel || {}) };
-    this.wireframeSettings = { ...(initialState.wireframe || { alwaysOn: false, color: '#9fb7ff', onlyVisibleFaces: false }) };
     this.lensDirtSettings = {
       ...(initialState.lensDirt ?? defaults.lensDirt),
     };
@@ -157,28 +155,26 @@ export class SceneManager {
     );
     this.averageLuminance = 0.5;
 
-    this.originalMaterials = new WeakMap();
-    this.wireframeOverlay = null; // Group for wireframe overlay when "always on"
+    this.materialController = new MaterialController({
+      stateStore: this.stateStore,
+      modelRoot: this.modelRoot,
+      onShadingChanged: (mode) => {
+        this.currentShading = mode;
+        this.diagnosticsController.setModel(this.currentModel, mode);
+        this.refreshBoneHelpers();
+        // Apply current HDRI environment settings after shading change
+        if (this.scene.environment) {
+          const intensity = Math.max(0, this.hdriStrength);
+          this.updateMaterialsEnvironment(this.scene.environment, intensity);
+        }
+      },
+      onMaterialUpdate: () => {
+        // Trigger any additional updates needed after material changes
+      },
+    });
 
-    this.fileReaders = {
-      text: (file) =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onerror = () => reject(reader.error);
-          reader.onload = () => resolve(reader.result);
-          reader.readAsText(file);
-        }),
-      buffer: (file) =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onerror = () => reject(reader.error);
-          reader.onload = () => resolve(reader.result);
-          reader.readAsArrayBuffer(file);
-        }),
-    };
-    this.pendingObjectUrls = [];
-
-    this.setupLoaders();
+    this.modelLoader = new ModelLoader();
+    this.textureLoader = new THREE.TextureLoader();
     this.setupLights();
     this.setupGround();
     this.setupMoodController();
@@ -195,18 +191,6 @@ export class SceneManager {
   async init() {
     await this.applyStateSnapshot(this.stateStore.getState());
     this.animate();
-  }
-
-  setupLoaders() {
-    this.gltfLoader = new GLTFLoader();
-    if (this.gltfLoader.setMeshoptDecoder && MeshoptDecoder) {
-      this.gltfLoader.setMeshoptDecoder(MeshoptDecoder);
-    }
-    this.fbxLoader = new FBXLoader();
-    this.objLoader = new OBJLoader();
-    this.stlLoader = new STLLoader();
-    this.usdLoader = new USDZLoader();
-    this.textureLoader = new THREE.TextureLoader();
   }
 
   setupLights() {
@@ -606,9 +590,9 @@ export class SceneManager {
       }
     });
 
-    this.eventBus.on('animation:toggle', () => this.toggleAnimation());
-    this.eventBus.on('animation:scrub', (value) => this.scrubAnimation(value));
-    this.eventBus.on('animation:select', (index) => this.selectAnimation(index));
+    this.eventBus.on('animation:toggle', () => this.animationController.togglePlayback());
+    this.eventBus.on('animation:scrub', (value) => this.animationController.scrub(value));
+    this.eventBus.on('animation:select', (index) => this.animationController.selectAnimation(index));
 
     this.eventBus.on('export:png', () => this.exportPng());
     this.eventBus.on('app:reset', () =>
@@ -656,17 +640,16 @@ export class SceneManager {
     this.setLightsRotation(state.lightsRotation ?? 0);
     this.setShowLightIndicators(state.showLightIndicators ?? false);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
-    // Preserve existing clay settings - don't reset them when applying state snapshot
-    // Only update if state has clay settings and we don't have any yet
-    if (state.clay && !this.claySettings) {
-      this.claySettings = { ...state.clay };
-    } else if (state.clay) {
-      // Merge with existing, preserving current values
-      this.claySettings = { ...this.claySettings, ...state.clay };
+    // Update material controller settings
+    if (state.clay) {
+      this.materialController.setClaySettings(state.clay);
     }
-    this.fresnelSettings = { ...(state.fresnel || this.fresnelSettings) };
-    this.wireframeSettings = { ...(state.wireframe || this.wireframeSettings) };
-    this.updateWireframeOverlay();
+    if (state.fresnel) {
+      this.materialController.setFresnelSettings(state.fresnel);
+    }
+    if (state.wireframe) {
+      this.materialController.setWireframeSettings(state.wireframe);
+    }
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.updateLensDirt(state.lensDirt);
@@ -720,131 +703,15 @@ export class SceneManager {
   }
 
   updateMaterialsEnvironment(envTexture, intensity) {
-    if (!this.currentModel) return;
-    
-    // If we're in clay mode, handle clay materials separately and skip the rest
-    if (this.currentShading === 'clay') {
-      const targetRoughness = this.claySettings?.roughness ?? CLAY_DEFAULT_ROUGHNESS;
-      const targetMetalness = this.claySettings?.specular ?? CLAY_DEFAULT_METALNESS;
-      
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        const isClayMaterial = !this.originalMaterials.has(child);
-        
-        if (isClayMaterial) {
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          
-          materials.forEach((material) => {
-            if (!material || !material.isMeshStandardMaterial) return;
-            
-            // ONLY set envMap and intensity - NEVER touch roughness/metalness
-            material.envMap = envTexture;
-            if (material.envMapIntensity !== undefined) {
-              material.envMapIntensity = intensity;
-            }
-            
-            // CRITICAL: Always restore roughness and metalness immediately after setting envMap
-            // Setting envMap might trigger Three.js internal updates that reset these values
-            material.roughness = targetRoughness;
-            material.metalness = targetMetalness;
-            
-            material.needsUpdate = true;
-          });
-        }
-      });
-      
-      // Don't process non-clay materials when in clay mode
-      return;
-    }
-    
-    // For non-clay materials, apply environment and blurriness as normal
-    this.currentModel.traverse((child) => {
-      if (child.isMesh && child.material) {
-        const materials = Array.isArray(child.material)
-          ? child.material
-          : [child.material];
-        
-        materials.forEach((material) => {
-          if (!material) return;
-          
-          if (material.isMeshStandardMaterial || 
-              material.isMeshPhysicalMaterial || 
-              material.isMeshLambertMaterial ||
-              material.isMeshPhongMaterial) {
-            material.envMap = envTexture;
-            if (material.envMapIntensity !== undefined) {
-              material.envMapIntensity = intensity;
-            }
-            
-            // Apply blurriness to roughness for non-clay materials only
-            if (material.roughness !== undefined) {
-              // Store original roughness if not already stored
-              if (material.userData.originalRoughness === undefined) {
-                const originalMaterial = this.originalMaterials.get(child);
-                if (originalMaterial) {
-                  const originalMat = Array.isArray(originalMaterial) 
-                    ? originalMaterial[0] 
-                    : originalMaterial;
-                  if (originalMat && originalMat.roughness !== undefined) {
-                    material.userData.originalRoughness = originalMat.roughness;
-                  } else {
-                    material.userData.originalRoughness = material.roughness;
-                  }
-                } else {
-                  material.userData.originalRoughness = material.roughness;
-                }
-              }
-              const baseRoughness = material.userData.originalRoughness ?? material.roughness;
-              
-              // Apply blurriness by increasing roughness (which uses higher mipmap levels)
-              if (this.hdriBlurriness > 0) {
-                const blurRoughness = baseRoughness + (1.0 - baseRoughness) * this.hdriBlurriness;
-              material.roughness = Math.min(1.0, blurRoughness);
-              } else {
-                // Reset to base roughness when blurriness is 0
-                material.roughness = baseRoughness;
-              }
-            }
-            
-            material.needsUpdate = true;
-          }
-        });
-      }
-    });
+    this.materialController.updateMaterialsEnvironment(
+      envTexture,
+      intensity,
+      this.hdriBlurriness,
+    );
   }
 
   forceRestoreClaySettings() {
-    // Simple restoration - just set the values directly from claySettings
-    if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
-      const targetRoughness = this.claySettings.roughness ?? 0.6;
-      const targetMetalness = this.claySettings.specular ?? 0.08;
-      
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        const isClayMaterial = !this.originalMaterials.has(child);
-        
-        if (isClayMaterial) {
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          
-          materials.forEach((material) => {
-            if (!material || !material.isMeshStandardMaterial) return;
-            
-            // Simply restore the values - no complex checks needed
-            if (material.roughness !== undefined) {
-              material.roughness = targetRoughness;
-            }
-            if (material.metalness !== undefined) {
-              material.metalness = targetMetalness;
-            }
-            material.needsUpdate = true;
-          });
-        }
-      });
-    }
+    this.materialController.forceRestoreClaySettings();
   }
 
   setHdriBackground(enabled) {
@@ -887,22 +754,21 @@ export class SceneManager {
 
   setClayNormalMap(enabled) {
     if (this.currentShading === 'clay' && this.currentModel) {
-      this.currentModel.traverse((child) => {
+    this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;
-        const isClayMaterial = !this.originalMaterials.has(child);
-        if (isClayMaterial) {
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          materials.forEach((material) => {
+        if (this.materialController.isClayMaterial(child)) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        materials.forEach((material) => {
             if (!material || !material.isMeshStandardMaterial) return;
             if (enabled) {
               // Restore normal map from original material
-              const originalMaterial = this.originalMaterials.get(child);
-              if (originalMaterial) {
-                const originalMat = Array.isArray(originalMaterial)
-                  ? originalMaterial[0]
-                  : originalMaterial;
+              const originalMaterial = this.materialController.getOriginalMaterial(child);
+                if (originalMaterial) {
+                  const originalMat = Array.isArray(originalMaterial) 
+                    ? originalMaterial[0] 
+                    : originalMaterial;
                 if (originalMat?.normalMap) {
                   material.normalMap = originalMat.normalMap;
                   material.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
@@ -910,8 +776,8 @@ export class SceneManager {
                     material.normalScale = originalMat.normalScale.clone();
                   }
                 }
-              }
-            } else {
+                  }
+                } else {
               // Remove normal map
               material.normalMap = null;
             }
@@ -1023,205 +889,23 @@ export class SceneManager {
   }
 
   setClaySettings(patch) {
-    this.claySettings = { ...this.claySettings, ...patch };
-    if (this.stateStore.getState().shading === 'clay') {
-      // Update existing clay materials directly instead of recreating them
-      if (this.currentModel) {
-        this.currentModel.traverse((child) => {
-          if (!child.isMesh) return;
-          const material = child.material;
-          // Check if this is a clay material (not an original material)
-          const original = this.originalMaterials.get(child);
-          const isClayMaterial = material && original && material !== original && 
-            (!Array.isArray(material) || !Array.isArray(original) || material.length !== original.length || 
-             !material.every((mat, idx) => mat === original[idx]));
-          
-          if (isClayMaterial) {
-            // This is a clay material, update it directly
-            if (Array.isArray(material)) {
-              material.forEach((mat) => {
-                if (mat && mat.isMeshStandardMaterial) {
-                  if (patch.color !== undefined) {
-                    mat.color.set(patch.color);
-                  }
-                  if (patch.roughness !== undefined) {
-                    mat.roughness = patch.roughness;
-                  }
-                  if (patch.specular !== undefined) {
-                    mat.metalness = patch.specular;
-    }
-                  // Always ensure values are set from claySettings, even if patch doesn't include them
-                  // This prevents values from being 0 or undefined
-                  if (mat.roughness === undefined || mat.roughness === 0) {
-                    mat.roughness = this.claySettings.roughness ?? 0.6;
-                  }
-                  if (mat.metalness === undefined || mat.metalness === 0) {
-                    mat.metalness = this.claySettings.specular ?? 0.08;
-                  }
-                  mat.needsUpdate = true;
-                }
-              });
-            } else if (material.isMeshStandardMaterial) {
-              if (patch.color !== undefined) {
-                material.color.set(patch.color);
-              }
-              if (patch.roughness !== undefined) {
-                material.roughness = patch.roughness;
-              }
-              if (patch.specular !== undefined) {
-                material.metalness = patch.specular;
-              }
-              // Always ensure values are set from claySettings, even if patch doesn't include them
-              if (material.roughness === undefined || material.roughness === 0) {
-                material.roughness = this.claySettings.roughness ?? 0.6;
-              }
-              if (material.metalness === undefined || material.metalness === 0) {
-                material.metalness = this.claySettings.specular ?? 0.08;
-              }
-              material.needsUpdate = true;
-    }
-          }
-        });
-      } else {
-        // Fallback to recreating materials if no model loaded
-      this.setShading('clay');
-      }
-    }
+    this.materialController.setClaySettings(patch);
   }
 
   setWireframeSettings(patch) {
-    this.wireframeSettings = { ...this.wireframeSettings, ...patch };
-    this.stateStore.set('wireframe', this.wireframeSettings);
-    this.updateWireframeOverlay();
-    if (this.currentShading === 'wireframe') {
-      this.setShading('wireframe');
-    }
+    this.materialController.setWireframeSettings(patch);
   }
 
   clearWireframeOverlay() {
-    if (this.wireframeOverlay) {
-      this.wireframeOverlay.traverse((child) => {
-        if (child.isMesh) {
-          // Only dispose geometry if it was cloned (has userData.isCloned)
-          if (child.geometry && child.userData.isCloned) {
-            child.geometry.dispose();
-          }
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach((mat) => mat?.dispose?.());
-            } else {
-              child.material.dispose();
-            }
-          }
-        }
-      });
-      // Remove from parent (could be currentModel or modelRoot)
-      if (this.wireframeOverlay.parent) {
-        this.wireframeOverlay.parent.remove(this.wireframeOverlay);
-      }
-      this.wireframeOverlay = null;
-    }
+    this.materialController.clearWireframeOverlay();
   }
 
   updateWireframeOverlay() {
-    if (!this.currentModel) return;
-    
-    // Always clear existing overlay first to prevent duplicates
-    this.clearWireframeOverlay();
-
-    // Create overlay if "always on" is enabled
-    if (this.wireframeSettings.alwaysOn) {
-      this.wireframeOverlay = new THREE.Group();
-      this.wireframeOverlay.name = 'wireframeOverlay';
-
-      const { color, onlyVisibleFaces } = this.wireframeSettings;
-      const wireMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(color),
-        wireframe: true,
-        depthTest: onlyVisibleFaces, // Enable depth test when only showing visible faces
-        depthWrite: false,
-        transparent: !onlyVisibleFaces, // No transparency when showing only visible faces
-        opacity: onlyVisibleFaces ? WIREFRAME_OPACITY_VISIBLE : WIREFRAME_OPACITY_OVERLAY,
-      });
-      
-      // Add depth offset to prevent z-fighting when showing only visible faces
-      // Increased values help with darker colors where z-fighting is more visible
-      if (onlyVisibleFaces) {
-        wireMaterial.polygonOffset = true;
-        wireMaterial.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
-        wireMaterial.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
-    }
-    
-      // Create wireframe meshes that follow the model
-      this.currentModel.traverse((child) => {
-        if (child.isMesh && child.geometry) {
-          let geometry = child.geometry;
-          let isCloned = false;
-          
-          // If onlyVisibleFaces is enabled, push vertices along normals
-          if (onlyVisibleFaces) {
-            // Clone geometry so we don't modify the original
-            geometry = child.geometry.clone();
-            isCloned = true;
-            const positions = geometry.attributes.position;
-            
-            // Compute normals if they don't exist
-            if (!geometry.attributes.normal) {
-              geometry.computeVertexNormals();
-            }
-            
-            // Push vertices along their normals by a small amount (0.002 units)
-            const offset = WIREFRAME_OFFSET;
-            for (let i = 0; i < positions.count; i++) {
-              const normal = new THREE.Vector3();
-              normal.fromBufferAttribute(geometry.attributes.normal, i);
-              const position = new THREE.Vector3();
-              position.fromBufferAttribute(positions, i);
-              position.addScaledVector(normal, offset);
-              positions.setXYZ(i, position.x, position.y, position.z);
-            }
-            positions.needsUpdate = true;
-          }
-          
-          const wireMesh = new THREE.Mesh(geometry, wireMaterial);
-          // Link to original mesh for matrix updates
-          wireMesh.userData.originalMesh = child;
-          wireMesh.userData.isCloned = isCloned;
-          wireMesh.renderOrder = 999; // Render on top
-          this.wireframeOverlay.add(wireMesh);
-        }
-      });
-    
-      // Add wireframe overlay as a child of currentModel so it inherits the same transforms
-      // This ensures both the original meshes and wireframe meshes rotate together through modelRoot
-      if (this.currentModel) {
-        this.currentModel.add(this.wireframeOverlay);
-      } else {
-        this.modelRoot.add(this.wireframeOverlay);
-      }
-    }
+    this.materialController.updateWireframeOverlay();
   }
 
   updateWireframeOverlayTransforms() {
-    if (!this.wireframeOverlay || !this.currentModel) return;
-    
-    // Update wireframe overlay transforms to match the model perfectly
-    // Since wireframeOverlay is now a child of currentModel (same as original meshes),
-    // we just need to copy local transforms and they'll inherit modelRoot rotations together
-    this.wireframeOverlay.traverse((wireMesh) => {
-      if (wireMesh.isMesh && wireMesh.userData.originalMesh) {
-        const original = wireMesh.userData.originalMesh;
-        // Copy local position, rotation, and scale from original
-        // This ensures they transform together through modelRoot
-        wireMesh.position.copy(original.position);
-        wireMesh.rotation.copy(original.rotation);
-        wireMesh.scale.copy(original.scale);
-        // Let Three.js handle matrix updates through the parent hierarchy
-        wireMesh.matrixAutoUpdate = true;
-        wireMesh.updateMatrix();
-        wireMesh.matrixAutoUpdate = false;
-    }
-      });
+    this.materialController.updateWireframeOverlayTransforms();
   }
 
   setGroundSolid(enabled) {
@@ -1365,12 +1049,7 @@ export class SceneManager {
   }
 
   setFresnelSettings(settings = {}) {
-    this.fresnelSettings = {
-      ...this.fresnelSettings,
-      ...settings,
-    };
-    this.fresnelSettings.radius = Math.max(0.1, this.fresnelSettings.radius || 1);
-    this.applyFresnelToModel(this.currentModel);
+    this.materialController.setFresnelSettings(settings);
   }
 
   applyHdriMood(preset) {
@@ -1382,106 +1061,7 @@ export class SceneManager {
   }
 
   applyFresnelToModel(root) {
-    if (!root) return;
-    root.traverse((child) => {
-      if (!child.isMesh || !child.material) return;
-      const materials = Array.isArray(child.material)
-        ? child.material
-        : [child.material];
-      materials.forEach((mat) => this.applyFresnelToMaterial(mat));
-    });
-  }
-
-  applyFresnelToMaterial(material) {
-    const settings = this.fresnelSettings || {};
-    const needsFresnel =
-      settings.enabled &&
-      settings.strength > 0.0001 &&
-      material &&
-      material.onBeforeCompile !== undefined &&
-      (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial);
-
-    if (!needsFresnel) {
-      if (material?.userData?.fresnelPatched) {
-        material.onBeforeCompile =
-          material.userData.originalOnBeforeCompile || (() => {});
-        delete material.userData.originalOnBeforeCompile;
-        delete material.userData.fresnelPatched;
-        delete material.userData.fresnelUniforms;
-        material.needsUpdate = true;
-      }
-      return;
-    }
-
-    // Always re-patch if material was replaced or uniforms are missing
-    // This ensures Fresnel works even after material updates/recompilations
-    if (material.userData.fresnelPatched) {
-      const uniforms = material.userData.fresnelUniforms;
-      // If uniforms exist and are valid, just update values
-      if (uniforms && uniforms.color && uniforms.color.value) {
-        uniforms.color.value.set(settings.color);
-        uniforms.strength.value = settings.strength;
-        uniforms.power.value = Math.max(0.1, settings.radius);
-        // Force shader recompilation to ensure uniforms are applied
-        material.needsUpdate = true;
-        return;
-      }
-      // If uniforms are missing, clear flag and re-patch
-      delete material.userData.fresnelPatched;
-      delete material.userData.originalOnBeforeCompile;
-    }
-
-    // Create new patch - this handles both new materials and re-patching
-    const original = material.onBeforeCompile;
-    material.userData.originalOnBeforeCompile = original;
-    
-    // Create uniforms that will be stored and reused
-    const uniforms = {
-      color: { value: new THREE.Color(settings.color) },
-      strength: { value: settings.strength },
-      power: { value: Math.max(0.1, settings.radius) },
-    };
-    
-    // Store uniforms before patching so they're available even if shader recompiles
-    material.userData.fresnelUniforms = uniforms;
-    
-    material.onBeforeCompile = (shader) => {
-      original?.(shader);
-      
-      // Use stored uniforms or create new ones if missing (defensive)
-      const fresnelUniforms = material.userData.fresnelUniforms || uniforms;
-      
-      shader.uniforms.fresnelColor = fresnelUniforms.color;
-      shader.uniforms.fresnelStrength = fresnelUniforms.strength;
-      shader.uniforms.fresnelPower = fresnelUniforms.power;
-      
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <common>',
-        `
-        #include <common>
-        uniform vec3 fresnelColor;
-        uniform float fresnelStrength;
-        uniform float fresnelPower;
-      `,
-      );
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <lights_fragment_end>',
-        `
-        #include <lights_fragment_end>
-        vec3 fresnelNormal = normalize( normal );
-        vec3 fresnelViewDir = normalize( vViewPosition );
-        float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
-        vec3 fresnelContribution = fresnelColor * fresnelTerm * fresnelStrength;
-        reflectedLight.directDiffuse += fresnelContribution;
-        totalEmissiveRadiance += fresnelContribution;
-      `,
-      );
-      
-      // Ensure uniforms are stored after shader compilation
-      material.userData.fresnelUniforms = fresnelUniforms;
-    };
-    material.userData.fresnelPatched = true;
-    material.needsUpdate = true;
+    this.materialController.applyFresnelToModel(root);
   }
 
   updateDof(settings) {
@@ -1591,13 +1171,12 @@ export class SceneManager {
   async loadFile(file, options = {}) {
     if (!file) return;
     this.currentFile = file;
-    const extension = file.name.split('.').pop().toLowerCase();
     this.ui.updateTitle(file.name);
     this.ui.updateTopBarDetail(`${file.name} — Loading…`);
     this.ui.setDropzoneVisible(false);
 
     try {
-      const asset = await this.parseFileByExtension(file, extension);
+      const asset = await this.modelLoader.loadFile(file);
       this.setModel(asset.object, asset.animations ?? []);
       this.updateStatsUI(file, asset.object, asset.gltfMetadata);
       this.ui.updateTopBarDetail(`${file.name} — Idle`);
@@ -1611,231 +1190,28 @@ export class SceneManager {
     }
   }
 
-  async parseFileByExtension(file, ext) {
-    switch (ext) {
-      case 'glb':
-        return this.loadGlb(file);
-      case 'fbx':
-        return this.loadFbx(file);
-      case 'stl':
-        return this.loadStl(file);
-      default:
-        throw new Error(`Unsupported format: .${ext}`);
-    }
-  }
-
-  async loadGlb(file) {
-    const buffer = await this.fileReaders.buffer(file);
-    return new Promise((resolve, reject) => {
-      this.gltfLoader.parse(
-        buffer,
-        '',
-        (gltf) => {
-          // Extract asset metadata from the parsed GLTF
-          // The parser.json contains the original GLTF JSON structure
-          const json = gltf.parser?.json || {};
-          const asset = json.asset || {};
-          // Try to get asset name from scene name, first node name, or filename
-          let assetName = gltf.scene?.name;
-          if (!assetName && gltf.scene?.children?.length > 0) {
-            assetName = gltf.scene.children[0]?.name;
-          }
-          if (!assetName) {
-            assetName = file.name.replace(/\.[^/.]+$/, '');
-          }
-          resolve({
-            object: gltf.scene,
-            animations: gltf.animations,
-            gltfMetadata: {
-              assetName,
-              generator: asset.generator || null,
-              version: asset.version || null,
-              copyright: asset.copyright || null,
-            },
-          });
-        },
-        reject,
-      );
-    });
-  }
-
-  async loadGltf(file) {
-    this.ui.showToast('Please convert GLTF to GLB before loading');
-    throw new Error('GLTF not supported');
-  }
-
   async loadFileBundle(files) {
     if (!files?.length) return;
-    const normalizedMap = new Map();
-    files.forEach(({ file, path }) => {
-      const key = this.normalizePath(path || file.name);
-      normalizedMap.set(key, file);
-      normalizedMap.set(key.toLowerCase(), file);
-    });
-
-    const primaryKey = [...normalizedMap.keys()].find((key) =>
-      key.toLowerCase().endsWith('.gltf'),
-    );
-    let primaryFile = primaryKey ? normalizedMap.get(primaryKey) : null;
-
-    if (!primaryFile) {
-      const glbKey = [...normalizedMap.keys()].find((key) =>
-        key.toLowerCase().endsWith('.glb'),
-      );
-      if (glbKey) {
-        await this.loadFile(normalizedMap.get(glbKey));
-        return;
-      }
-      this.ui.showToast('No .gltf/.glb in folder');
-      return;
-    }
-
-    const rootPath = this.getDirectoryFromPath(primaryKey);
-    const loader = new GLTFLoader();
-    loader.setMeshoptDecoder?.(MeshoptDecoder);
-    loader.setURLModifier((url) => {
-      if (/^https?:\/\//i.test(url)) return url;
-      const decoded = decodeURI(url);
-      const relative = this.normalizePath(decoded);
-      const candidates = [
-        this.normalizePath(`${rootPath}${relative}`),
-        relative,
-      ];
-      for (const candidate of candidates) {
-        const match =
-          normalizedMap.get(candidate) ||
-          normalizedMap.get(candidate.toLowerCase());
-        if (match) {
-          const objectUrl = URL.createObjectURL(match);
-          this.registerObjectUrl(objectUrl);
-          return objectUrl;
-        }
-      }
-      return url;
-    });
-
-    const text = await this.fileReaders.text(primaryFile);
-    loader.parse(
-      text,
-      '/',
-      (gltf) => {
-        // Extract asset metadata from the parsed GLTF
-        const asset = gltf.parser?.json?.asset || {};
-        const assetName = gltf.scene?.name || primaryFile.name.replace(/\.[^/.]+$/, '');
-        const gltfMetadata = {
-          assetName,
-          generator: asset.generator || null,
-          version: asset.version || null,
-          copyright: asset.copyright || null,
-        };
-        this.setModel(gltf.scene, gltf.animations ?? []);
-        this.updateStatsUI(primaryFile, gltf.scene, gltfMetadata);
-        this.ui.updateTitle(primaryFile.name);
-        this.ui.showToast('Folder loaded');
-      },
-      (error) => {
-        console.error('Folder load failed', error);
-        this.ui.showToast('Folder load failed');
-      },
-    );
-  }
-
-  createObjectUrlDirectory(file) {
-    if (!file) return '';
-    const url = URL.createObjectURL(file);
-    this.registerObjectUrl(url);
-    return url.replace(/[^/]+$/, '');
-  }
-
-  disposePendingObjectUrls() {
-    if (!this.pendingObjectUrls) return;
-    this.pendingObjectUrls.forEach((url) => URL.revokeObjectURL(url));
-    this.pendingObjectUrls = [];
-  }
-
-  registerObjectUrl(url) {
-    this.pendingObjectUrls = this.pendingObjectUrls ?? [];
-    this.pendingObjectUrls.push(url);
-  }
-
-  normalizePath(path = '') {
-    return path
-      .replace(/\\/g, '/')
-      .replace(/^(\.\/)+/, '')
-      .replace(/\/{2,}/g, '/')
-      .replace(/^\//, '')
-      .trim();
-  }
-
-  getDirectoryFromPath(path = '') {
-    const normalized = this.normalizePath(path);
-    if (!normalized.includes('/')) return '';
-    return normalized.replace(/[^/]+$/, '');
-  }
-
-  async loadFbx(file) {
-    const buffer = await this.fileReaders.buffer(file);
-    return new Promise((resolve, reject) => {
-      try {
-        const object = this.fbxLoader.parse(buffer, '');
-        resolve({ object, animations: object.animations ?? [] });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  async loadObj(file) {
-    const text = await this.fileReaders.text(file);
-    return new Promise((resolve, reject) => {
-      try {
-        const object = this.objLoader.parse(text);
-        resolve({ object, animations: [] });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  async loadStl(file) {
-    const buffer = await this.fileReaders.buffer(file);
-    return new Promise((resolve, reject) => {
-      try {
-        const geometry = this.stlLoader.parse(buffer, { invert: true });
-        const material = new THREE.MeshStandardMaterial({
-          color: '#d0d0d0',
-          roughness: 0.35,
-          metalness: 0.05,
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        resolve({ object: mesh, animations: [] });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  async loadUsd(file) {
-    const buffer = await this.fileReaders.buffer(file);
-    if (typeof this.usdLoader.parse === 'function') {
-      const object = await this.usdLoader.parse(buffer);
-      return { object, animations: [] };
-    }
-    const blobUrl = URL.createObjectURL(new Blob([buffer]));
     try {
-      const object = await this.usdLoader.loadAsync(blobUrl);
-      return { object, animations: [] };
-    } finally {
-      URL.revokeObjectURL(blobUrl);
+      const asset = await this.modelLoader.loadFileBundle(files);
+      const sourceFile = asset.sourceFile ?? files[0]?.file;
+      if (sourceFile) {
+        this.currentFile = sourceFile;
+        this.ui.updateTitle(sourceFile.name);
+      }
+      this.setModel(asset.object, asset.animations ?? []);
+      this.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
+        this.ui.showToast('Folder loaded');
+    } catch (error) {
+        console.error('Folder load failed', error);
+      this.ui.showToast(error.message || 'Folder load failed');
     }
   }
 
   clearModel() {
-    this.normalsHelpers.forEach((helper) => this.modelRoot.remove(helper));
-    this.normalsHelpers = [];
-    this.clearBoneHelpers();
-    this.clearWireframeOverlay();
-    this.disposePendingObjectUrls();
+    this.diagnosticsController.clearAll();
+    this.materialController.clear();
+    this.modelLoader.disposeObjectUrls();
     while (this.modelRoot.children.length) {
       const child = this.modelRoot.children[0];
       this.disposeNode(child);
@@ -1846,12 +1222,7 @@ export class SceneManager {
     if (this.lensFlare) {
       this.lensFlare.occlusionCheckObjects = null;
     }
-    if (this.mixer) {
-      this.mixer.stopAllAction();
-      this.mixer = null;
-    }
-    this.animations = [];
-    this.currentAction = null;
+    this.animationController.dispose();
   }
 
   disposeNode(object) {
@@ -1892,31 +1263,31 @@ export class SceneManager {
     this.setRotationX(state.rotationX ?? 0);
     this.setRotationY(state.rotationY ?? 0);
     this.setRotationZ(state.rotationZ ?? 0);
+    this.materialController.setModel(object, state.shading, {
+      clay: state.clay,
+      fresnel: state.fresnel,
+      wireframe: state.wireframe,
+    });
     this.setShading(state.shading);
+    this.diagnosticsController.setModel(object, state.shading);
     this.toggleNormals(state.showNormals);
     this.refreshBoneHelpers();
-    this.applyFresnelToModel(this.currentModel);
+    // Apply Fresnel settings if enabled
+    if (state.fresnel?.enabled) {
+      this.setFresnelSettings(state.fresnel);
+    }
     // Apply current HDRI environment settings to the new model
     if (this.scene.environment) {
       const intensity = Math.max(0, this.hdriStrength);
       this.updateMaterialsEnvironment(this.scene.environment, intensity);
     }
-    this.setupAnimations(animations);
-    this.updateWireframeOverlay();
+    this.animationController.setModel(this.currentModel, animations);
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.();
   }
 
   prepareMesh(object) {
-    object.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        if (!this.originalMaterials.has(child)) {
-          this.originalMaterials.set(child, child.material);
-        }
-      }
-    });
+    this.materialController.prepareMesh(object);
   }
 
   fitCameraToObject(object) {
@@ -1937,112 +1308,14 @@ export class SceneManager {
     }
   }
 
-  setupAnimations(animations = []) {
-    if (!animations.length) {
-      this.ui.setAnimationClips([]);
-      return;
-    }
-    this.animations = animations;
-    this.mixer = new THREE.AnimationMixer(this.currentModel);
-    this.currentClipIndex = 0;
-    const formattedClips = animations.map((clip, index) => ({
-      name: clip.name || `Clip ${index + 1}`,
-      duration: formatTime(clip.duration),
-      seconds: clip.duration,
-    }));
-    this.ui.setAnimationClips(formattedClips);
-    this.playClip(0);
-  }
-
-  playClip(index) {
-    if (!this.animations.length) return;
-    const clip = this.animations[index];
-    if (!clip) return;
-    this.currentClipIndex = index;
-    if (this.currentAction) {
-      this.currentAction.stop();
-    }
-    this.currentAction = this.mixer.clipAction(clip);
-    this.currentAction.play();
-    this.ui.setAnimationPlaying(true);
-    const fileName = this.currentFile?.name ?? 'model.glb';
-    this.ui.updateTopBarDetail(`${fileName} — ${clip.name || 'Clip'} (${formatTime(clip.duration)})`);
-  }
-
-  toggleAnimation() {
-    if (!this.currentAction) return;
-    this.currentAction.paused = !this.currentAction.paused;
-    this.ui.setAnimationPlaying(!this.currentAction.paused);
-  }
-
-  scrubAnimation(value) {
-    if (!this.currentAction || !this.animations[this.currentClipIndex]) return;
-    const clip = this.animations[this.currentClipIndex];
-    this.currentAction.time = clip.duration * value;
-    this.mixer.update(0);
-    this.ui.updateAnimationTime(this.currentAction.time, clip.duration);
-  }
-
-  selectAnimation(index) {
-    this.playClip(index);
-  }
-
   updateStatsUI(file, object, gltfMetadata = null) {
-    const stats = {
-      triangles: 0,
-      vertices: 0,
-      materials: new Set(),
-      textures: new Set(),
-    };
-    object.traverse((child) => {
-      if (child.isMesh) {
-        const geometry = child.geometry;
-        if (!geometry) return;
-        const position = geometry.attributes.position;
-        if (geometry.index) {
-          stats.triangles += geometry.index.count / 3;
-        } else if (position) {
-          stats.triangles += position.count / 3;
-        }
-        if (position) {
-          stats.vertices += position.count;
-        }
-        const material = child.material;
-        if (Array.isArray(material)) {
-          material.forEach((mat) => mat && stats.materials.add(mat.uuid));
-        } else if (material) {
-          stats.materials.add(material.uuid);
-        }
-        const registerTexture = (map) => map && stats.textures.add(map.uuid);
-        if (material) {
-          registerTexture(material.map);
-          registerTexture(material.normalMap);
-          registerTexture(material.roughnessMap);
-          registerTexture(material.metalnessMap);
-          registerTexture(material.emissiveMap);
-          registerTexture(material.alphaMap);
-        }
-      }
-    });
-    const fileSize =
-      file?.size != null ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : '—';
-    let boundsText = '—';
-    if (this.modelBounds?.size) {
-      const { size } = this.modelBounds;
-      boundsText = `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} m`;
-    }
-    this.ui.updateStats({
-      triangles: Math.round(stats.triangles),
-      vertices: Math.round(stats.vertices),
-      materials: stats.materials.size,
-      textures: stats.textures.size,
-      fileSize,
-      bounds: boundsText,
-      assetName: gltfMetadata?.assetName || file?.name?.replace(/\.[^/.]+$/, '') || '—',
-      generator: gltfMetadata?.generator || '—',
-      version: gltfMetadata?.version || '—',
-      copyright: gltfMetadata?.copyright || '—',
-    });
+    const stats = this.diagnosticsController.calculateStats(
+      object,
+      file,
+      gltfMetadata,
+      this.modelBounds,
+    );
+    this.ui.updateStats(stats);
   }
 
   setScale(value) {
@@ -2071,161 +1344,20 @@ export class SceneManager {
   }
 
   setShading(mode) {
-    if (!this.currentModel) return;
-    this.currentShading = mode;
-    this.currentModel.traverse((child) => {
-      if (!child.isMesh) return;
-      const original = this.originalMaterials.get(child);
-      if (!original) return;
-      const disposeIfTransient = () => {
-        const material = child.material;
-        const sameReference =
-          material === original ||
-          (Array.isArray(material) &&
-            Array.isArray(original) &&
-            material.length === original.length &&
-            material.every((mat, idx) => mat === original[idx]));
-        if (sameReference) return;
-        if (Array.isArray(material)) {
-          material.forEach((mat) => mat?.dispose?.());
-        } else {
-          material?.dispose?.();
-        }
-      };
-      const applyMaterial = (material) => {
-        disposeIfTransient();
-        child.material = material;
-      };
-      const buildArray = (factory) => {
-        if (Array.isArray(original)) {
-          return original.map((mat) => factory(mat));
-        }
-        return factory(original);
-      };
-
-      if (mode === 'wireframe') {
-        const { color } = this.wireframeSettings;
-        const createWire = (mat) => {
-          const base = mat?.clone ? mat.clone() : new THREE.MeshStandardMaterial();
-          base.wireframe = true;
-          base.color = new THREE.Color(color);
-          return base;
-        };
-        applyMaterial(buildArray(createWire));
-      } else if (mode === 'clay') {
-        const { color, roughness, specular } = this.claySettings;
-        const createClay = (originalMat) => {
-          const clay = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color),
-            roughness,
-            metalness: specular,
-            side: THREE.DoubleSide,
-          });
-          // Preserve normal map from original material only if enabled
-          const normalMapEnabled = this.stateStore.getState().clay?.normalMap !== false;
-          if (normalMapEnabled && originalMat?.normalMap) {
-            clay.normalMap = originalMat.normalMap;
-            clay.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
-            if (originalMat.normalScale) {
-              clay.normalScale = originalMat.normalScale.clone();
-            }
-          }
-          return clay;
-        };
-        applyMaterial(buildArray(createClay));
-      } else if (mode === 'textures') {
-        const createTextureMaterial = (mat) => {
-          const standard = new THREE.MeshStandardMaterial({
-            map: mat?.map ?? null,
-            color: mat?.color ? mat.color.clone() : new THREE.Color('#ffffff'),
-            roughness: mat?.roughness ?? 0.8,
-            metalness: mat?.metalness ?? 0,
-            normalMap: mat?.normalMap ?? null,
-            aoMap: mat?.aoMap ?? null,
-            emissive: mat?.emissive ? mat.emissive.clone() : new THREE.Color(0x000000),
-            emissiveIntensity: mat?.emissiveIntensity ?? 1,
-            transparent: mat?.transparent ?? false,
-            opacity: mat?.opacity ?? 1,
-            side: mat?.side ?? THREE.FrontSide,
-          });
-          if (mat?.aoMap) {
-            standard.aoMapIntensity = mat.aoMapIntensity ?? 1;
-          }
-          standard.wireframe = false;
-          return standard;
-        };
-        applyMaterial(buildArray(createTextureMaterial));
-      } else {
-        // Restore original materials when switching away from wireframe/clay/textures
-        disposeIfTransient();
-        child.material = original;
-        // Ensure wireframe is off
-        if (Array.isArray(child.material)) {
-          child.material.forEach((mat) => {
-            if (mat) {
-              mat.wireframe = false;
-            }
-          });
-        } else if (child.material) {
-          child.material.wireframe = false;
-        }
-      }
-    });
-    this.unlitMode = mode === 'textures';
-    this.refreshBoneHelpers();
-    // Apply current HDRI environment settings after shading change
-    if (this.scene.environment) {
-      const intensity = Math.max(0, this.hdriStrength);
-      this.updateMaterialsEnvironment(this.scene.environment, intensity);
-    }
-    // Re-apply Fresnel after material updates (important: do this AFTER environment update)
-    this.applyFresnelToModel(this.currentModel);
+    this.materialController.setShading(mode);
+    this.unlitMode = this.materialController.getUnlitMode();
   }
 
   toggleNormals(enabled) {
-    this.normalsHelpers.forEach((helper) => this.modelRoot.remove(helper));
-    this.normalsHelpers = [];
-    if (!enabled || !this.currentModel) return;
-    this.currentModel.traverse((child) => {
-      if (child.isMesh) {
-        const helper = new VertexNormalsHelper(child, NORMALS_HELPER_SIZE, NORMALS_HELPER_COLOR);
-        this.modelRoot.add(helper);
-        this.normalsHelpers.push(helper);
-      }
-    });
+    this.diagnosticsController.toggleNormals(enabled);
   }
 
   clearBoneHelpers() {
-    this.boneHelpers.forEach((helper) => {
-      this.scene.remove(helper);
-      helper.dispose?.();
-    });
-    this.boneHelpers = [];
+    this.diagnosticsController.clearBoneHelpers();
   }
 
   refreshBoneHelpers() {
-    this.clearBoneHelpers();
-    if (!this.currentModel || this.currentShading !== 'wireframe') {
-      return;
-    }
-    let found = false;
-    this.currentModel.traverse((child) => {
-      if (child.isSkinnedMesh && child.skeleton) {
-        const helper = new THREE.SkeletonHelper(child);
-        helper.material.depthTest = false;
-        helper.material.color.set('#66ccff');
-        this.scene.add(helper);
-        this.boneHelpers.push(helper);
-        found = true;
-      }
-    });
-    if (!found) {
-      const now = performance.now();
-      if (now - this.lastBoneToastTime > 2000) {
-        this.ui.showToast('No bones/skeleton detected in this mesh');
-        this.lastBoneToastTime = now;
-      }
-    }
+    this.diagnosticsController.refreshBoneHelpers(this.currentShading);
   }
 
   applyCameraPreset(preset) {
@@ -2253,13 +1385,7 @@ export class SceneManager {
   animate() {
     requestAnimationFrame(() => this.animate());
     const delta = this.clock.getDelta();
-    if (this.mixer && this.currentAction) {
-      this.mixer.update(delta);
-      const clip = this.animations[this.currentClipIndex];
-      if (clip) {
-        this.ui.updateAnimationTime(this.currentAction.time, clip.duration);
-      }
-    }
+    this.animationController.update(delta);
     if (this.autoRotateSpeed && this.currentModel) {
       this.modelRoot.rotation.y += delta * this.autoRotateSpeed;
     }
@@ -2268,7 +1394,7 @@ export class SceneManager {
       this.setLightsRotation(this.lightsRotation + deltaDegrees);
     }
     this.cameraController.update();
-    this.boneHelpers.forEach((helper) => helper.update?.());
+    this.diagnosticsController.update(delta);
     this.grainTintPass.uniforms.time.value += delta * 60;
     this.updateWireframeOverlayTransforms();
     this.render();
@@ -2277,35 +1403,7 @@ export class SceneManager {
   render() {
     // Continuously protect clay settings during render to prevent any resets
     // This runs every frame to ensure values NEVER go to 0
-    if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
-      const targetRoughness = this.claySettings.roughness ?? 0.6;
-      const targetMetalness = this.claySettings.specular ?? 0.08;
-      
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        const isClayMaterial = !this.originalMaterials.has(child);
-        
-        if (isClayMaterial) {
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          
-          materials.forEach((material) => {
-            if (!material || !material.isMeshStandardMaterial) return;
-            
-            // Continuously check and restore - if values are 0 or wrong, fix immediately
-            if (material.roughness !== undefined && 
-                (material.roughness === 0 || Math.abs(material.roughness - targetRoughness) > 0.001)) {
-              material.roughness = targetRoughness;
-            }
-            if (material.metalness !== undefined && 
-                (material.metalness === 0 || Math.abs(material.metalness - targetMetalness) > 0.001)) {
-              material.metalness = targetMetalness;
-            }
-          });
-        }
-      });
-    }
+    this.materialController.forceRestoreClaySettings();
     
     if (this.unlitMode) {
       const previousExposure = this.renderer.toneMappingExposure;
