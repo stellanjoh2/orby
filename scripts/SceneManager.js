@@ -6,14 +6,9 @@ import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/OBJLoader.js';
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
-import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js';
 import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
 import { LensFlareEffect } from './LensFlareEffect.js';
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
-import {
-  BackgroundShader,
-  RotateEquirectShader,
-} from './shaders/index.js';
 import {
   WIREFRAME_OFFSET,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
@@ -22,13 +17,8 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
   CLAY_DEFAULT_ROUGHNESS,
   CLAY_DEFAULT_METALNESS,
-  PODIUM_TOP_RADIUS_OFFSET,
-  PODIUM_SEGMENTS,
-  PODIUM_RADIUS_MULTIPLIER,
   NORMALS_HELPER_SIZE,
   NORMALS_HELPER_COLOR,
-  DEFAULT_MATERIAL_ROUGHNESS,
-  DEFAULT_MATERIAL_METALNESS,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
@@ -37,6 +27,7 @@ import { formatTime } from './utils/timeFormatter.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
+import { EnvironmentController } from './render/EnvironmentController.js';
 
 
 export class SceneManager {
@@ -82,8 +73,6 @@ export class SceneManager {
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.clearColor = new THREE.Color('#000000');
-    this.clearAlpha = 1;
     this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     this.renderer.toneMappingExposure = 1;
 
@@ -133,18 +122,11 @@ export class SceneManager {
     };
     this.lensFlareEnabled = this.lensFlareState.enabled ?? false;
 
-    this.hdriCache = new Map();
     this.hdriEnabled = initialState.hdriEnabled ?? true;
     this.hdriBackgroundEnabled = initialState.hdriBackground;
     this.hdriBlurriness = initialState.hdriBlurriness ?? 0;
     this.hdriRotation = initialState.hdriRotation ?? 0;
-    this.currentEnvironment = null;
-    this.currentEnvironmentTexture = null;
-    this.blurredBackgroundTexture = null;
-    this.rotatedEnvironmentTexture = null;
-    this.rotationRenderTarget = null;
-    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-    this.pmremGenerator.compileEquirectangularShader();
+    this.currentHdri = initialState.hdri ?? 'meadow';
     this.claySettings = { ...(initialState.clay || {}) };
     this.fresnelSettings = { ...(initialState.fresnel || {}) };
     this.wireframeSettings = { ...(initialState.wireframe || { alwaysOn: false, color: '#9fb7ff', onlyVisibleFaces: false }) };
@@ -192,6 +174,7 @@ export class SceneManager {
     this.setupLoaders();
     this.setupLights();
     this.setupGround();
+    this.setupEnvironment(initialState);
     this.setupComposer();
     this.updateLensDirt(this.lensDirtSettings);
     this.loadLensDirtTexture();
@@ -215,7 +198,6 @@ export class SceneManager {
     this.objLoader = new OBJLoader();
     this.stlLoader = new STLLoader();
     this.usdLoader = new USDZLoader();
-    this.hdriLoader = new RGBELoader();
     this.textureLoader = new THREE.TextureLoader();
   }
 
@@ -241,6 +223,24 @@ export class SceneManager {
       gridY: state.gridY,
       podiumScale: state.podiumScale,
       gridScale: state.gridScale,
+    });
+  }
+
+  setupEnvironment(initialState) {
+    this.environmentController = new EnvironmentController(this.scene, this.renderer, {
+      presets: HDRI_PRESETS,
+      moods: HDRI_MOODS,
+      initialPreset: initialState.hdri ?? 'meadow',
+      enabled: this.hdriEnabled,
+      backgroundEnabled: this.hdriBackgroundEnabled,
+      strength: this.hdriStrength,
+      blurriness: this.hdriBlurriness,
+      rotation: this.hdriRotation,
+      fallbackColor: this.backgroundColor,
+      onEnvironmentMapUpdated: (texture, intensity) => {
+        this.updateMaterialsEnvironment(texture, intensity);
+        this.forceRestoreClaySettings();
+      },
     });
   }
 
@@ -787,192 +787,14 @@ export class SceneManager {
   }
 
   async setHdriPreset(preset) {
-    const config = HDRI_PRESETS[preset];
-    if (!preset || !config) return;
-    if (this.currentHdri === preset && this.hdriCache.has(preset)) {
-      this.applyEnvironment(this.hdriCache.get(preset));
-      this.applyHdriMood(preset);
-      // Force restore clay settings after HDRI change
-      this.forceRestoreClaySettings();
-      return;
-    }
+    if (!preset || !HDRI_PRESETS[preset]) return;
+    this.currentHdri = preset;
     try {
-      if (this.hdriCache.has(preset)) {
-        const cached = this.hdriCache.get(preset);
-        this.applyEnvironment(cached);
-        this.currentHdri = preset;
-        this.applyHdriMood(preset);
-        // Force restore clay settings after HDRI change
-        this.forceRestoreClaySettings();
-        return;
-      }
-      const texture = await this.loadHdriTexture(config);
-      if (!texture) throw new Error('Texture failed to load');
-      this.hdriCache.set(preset, texture);
-      this.applyEnvironment(texture);
-      this.currentHdri = preset;
+      await this.environmentController?.setPreset(preset);
       this.applyHdriMood(preset);
-      // Force restore clay settings after HDRI change
-      this.forceRestoreClaySettings();
     } catch (error) {
-      console.error('Failed to load HDRI', error);
+      console.error('Failed to apply HDRI preset', preset, error);
       this.ui.showToast('Failed to load HDRI');
-    }
-  }
-
-  loadHdriTexture(config) {
-    const source = typeof config === 'string' ? config : config?.url;
-    const type = typeof config === 'object' ? config.type : 'hdr';
-    if (!source) {
-      return Promise.reject(new Error('Missing HDRI source'));
-    }
-    if (type === 'ldr') {
-      return new Promise((resolve, reject) => {
-        this.textureLoader.load(
-          source,
-          (texture) => {
-            texture.mapping = THREE.EquirectangularReflectionMapping;
-            texture.encoding = THREE.sRGBEncoding;
-            resolve(texture);
-          },
-          undefined,
-          (err) => reject(err),
-        );
-      });
-    }
-    return this.hdriLoader.loadAsync(source).then((texture) => {
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      // Log loaded texture dimensions
-      const width = texture.image?.width || texture.image?.data?.width || 'unknown';
-      const height = texture.image?.height || texture.image?.data?.height || 'unknown';
-      const pixels = typeof width === 'number' && typeof height === 'number' 
-        ? `${(width * height / 1000000).toFixed(2)}M pixels` 
-        : 'unknown';
-      return texture;
-    });
-  }
-
-  applyEnvironment(texture) {
-    this.currentEnvironmentTexture = texture || null;
-    const hdriActive = this.hdriEnabled && this.currentEnvironmentTexture;
-    
-    if (!hdriActive) {
-      this.scene.environment = null;
-      this.scene.environmentIntensity = 0;
-      this.scene.background = null;
-      this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
-      // Update all materials to remove environment
-      this.updateMaterialsEnvironment(null, 0);
-      return;
-    }
-
-    // Dispose of previous environment render target if it exists
-    if (this.currentEnvironment) {
-      this.currentEnvironment.dispose();
-      this.currentEnvironment = null;
-    }
-
-    // Always use PMREMGenerator for proper IBL
-    let envTexture = null;
-    if (this.pmremGenerator) {
-      // Dispose old render target before creating new one
-      if (this.currentEnvironment) {
-        this.currentEnvironment.dispose();
-        this.currentEnvironment = null;
-      }
-      
-      // Apply rotation to the texture using a shader
-      let sourceTexture = this.currentEnvironmentTexture;
-      if (this.hdriRotation !== 0) {
-        sourceTexture = this.createRotatedTexture(this.currentEnvironmentTexture, this.hdriRotation);
-      }
-      
-      const renderTarget = this.pmremGenerator.fromEquirectangular(
-        sourceTexture,
-      );
-      this.currentEnvironment = renderTarget;
-      envTexture = renderTarget.texture;
-      
-      // Apply blurriness - PMREMGenerator creates mipmaps
-      // We can control blur by accessing different mipmap levels
-      envTexture.minFilter = THREE.LinearMipmapLinearFilter;
-      envTexture.magFilter = THREE.LinearFilter;
-      
-      // Store blurriness for background use
-      envTexture.userData.blurriness = this.hdriBlurriness;
-    } else {
-      // Fallback to original texture
-      envTexture = this.currentEnvironmentTexture;
-      // Apply rotation to original texture if needed
-      if (this.hdriRotation !== 0 && envTexture) {
-        envTexture = this.createRotatedTexture(this.currentEnvironmentTexture, this.hdriRotation);
-      }
-    }
-
-    this.scene.environment = envTexture;
-
-    // Apply intensity (also darkens the HDRI like in the example)
-    // environmentIntensity controls the brightness of environment lighting
-    const intensity = Math.max(0, this.hdriStrength);
-    this.scene.environmentIntensity = intensity;
-    
-    // Also update materials directly to ensure intensity is applied
-    // Note: Clay materials are completely skipped in updateMaterialsEnvironment
-    // They only get envMap and intensity set, nothing else
-    this.updateMaterialsEnvironment(envTexture, intensity);
-    
-    // IMMEDIATELY restore clay settings after environment update
-    // Use the dedicated method to ensure consistency
-    this.forceRestoreClaySettings();
-
-    // Handle background with blurriness and intensity (like Three.js example)
-    const backgroundIsHdri = this.hdriBackgroundEnabled;
-    if (backgroundIsHdri && this.currentEnvironmentTexture) {
-      // Try using Three.js built-in properties first (if available in newer versions)
-      if ('backgroundBlurriness' in this.scene) {
-        let bgTexture = this.currentEnvironmentTexture;
-        // Apply rotation to background texture
-        if (this.hdriRotation !== 0) {
-          bgTexture = this.createRotatedTexture(this.currentEnvironmentTexture, this.hdriRotation);
-        }
-        this.scene.background = bgTexture;
-        this.scene.backgroundBlurriness = this.hdriBlurriness;
-        this.scene.backgroundIntensity = intensity;
-      } else {
-        // Fallback for r165: use PMREM texture for blurriness
-        // PMREM creates pre-filtered mipmaps which provide blur effect
-        let bgTexture = this.currentEnvironmentTexture;
-        
-        // Apply rotation to background texture
-        if (this.hdriRotation !== 0) {
-          bgTexture = this.createRotatedTexture(this.currentEnvironmentTexture, this.hdriRotation);
-        }
-        
-        if (this.hdriBlurriness > 0 && envTexture) {
-          // Use PMREM texture which is pre-filtered (blurred)
-          // Note: PMREM texture already has rotation applied from sourceTexture
-          bgTexture = envTexture;
-        }
-        
-        // For intensity, we need to apply it manually
-        // Since we can't directly modify the background texture intensity in r165,
-        // we'll use the PMREM texture which respects environment intensity
-        // The intensity will affect the environment lighting, and we use PMREM for background
-        this.scene.background = bgTexture;
-        
-        // Note: In r165, background intensity isn't directly supported
-        // The intensity slider affects environment lighting, not the background texture
-        // To properly darken the background, we'd need a custom shader or texture modification
-      }
-      
-      this.renderer.setClearColor(this.clearColor, 1);
-    } else {
-      this.scene.background = null;
-      if ('backgroundBlurriness' in this.scene) {
-        this.scene.backgroundBlurriness = 0;
-        this.scene.backgroundIntensity = 1;
-      }
-      this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     }
   }
 
@@ -1106,10 +928,8 @@ export class SceneManager {
 
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
-    this.applyEnvironment(this.currentEnvironmentTexture);
+    this.environmentController?.setBackgroundEnabled(enabled);
     this.applyHdriMood(this.currentHdri);
-    // Force restore clay settings after any HDRI change
-    this.forceRestoreClaySettings();
   }
 
   setLensFlareEnabled(enabled) {
@@ -1228,13 +1048,11 @@ export class SceneManager {
 
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
-    this.applyEnvironment(this.currentEnvironmentTexture);
+    this.environmentController?.setEnabled(enabled);
     this.applyHdriMood(this.currentHdri);
     if (this.lensFlare) {
       this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
     }
-    // Force restore clay settings after any HDRI change
-    this.forceRestoreClaySettings();
   }
 
   setToneMapping(value) {
@@ -1267,158 +1085,20 @@ export class SceneManager {
   setHdriStrength(value) {
     const maxStrength = 5 * HDRI_STRENGTH_UNIT;
     this.hdriStrength = Math.min(maxStrength, Math.max(0, value));
-    // Regenerate environment to update both lighting and background
-    this.applyEnvironment(this.currentEnvironmentTexture);
-    // Force restore clay settings after any HDRI change
-    this.forceRestoreClaySettings();
+    this.environmentController?.setStrength(this.hdriStrength);
   }
 
   setHdriBlurriness(value) {
     this.hdriBlurriness = Math.min(1, Math.max(0, value));
-    // Regenerate environment map with new blurriness
-    this.applyEnvironment(this.currentEnvironmentTexture);
-    // Force restore clay settings after blurriness change
-    this.forceRestoreClaySettings();
+    this.environmentController?.setBlurriness(this.hdriBlurriness);
   }
 
   setHdriRotation(value) {
     this.hdriRotation = Math.min(360, Math.max(0, value));
     this.stateStore.set('hdriRotation', this.hdriRotation);
+    this.environmentController?.setRotation(this.hdriRotation);
     // Also rotate lights to stay in sync (without updating HDRI again to avoid loop)
     this.setLightsRotation(this.hdriRotation, { updateUi: true, updateHdri: false });
-    // Regenerate environment map with new rotation
-    this.applyEnvironment(this.currentEnvironmentTexture);
-    // Force restore clay settings after any HDRI change
-    this.forceRestoreClaySettings();
-  }
-
-  createRotatedTexture(sourceTexture, rotationDegrees) {
-    if (!sourceTexture) return sourceTexture;
-    
-    // Convert rotation from degrees to normalized value (0-1)
-    const rotation = (rotationDegrees / 360) % 1.0;
-    
-    // Dispose old render target if it exists
-    if (this.rotationRenderTarget) {
-      this.rotationRenderTarget.dispose();
-    }
-    
-    // Get exact texture dimensions from source - check multiple possible locations
-    let width = sourceTexture.image?.width;
-    let height = sourceTexture.image?.height;
-    
-    // For HDR textures, dimensions might be in image.data
-    if (!width && sourceTexture.image?.data) {
-      width = sourceTexture.image.data.width;
-      height = sourceTexture.image.data.height;
-    }
-    
-    // Fallback to render target size if available
-    if (!width && sourceTexture.source?.data) {
-      width = sourceTexture.source.data.width;
-      height = sourceTexture.source.data.height;
-    }
-    
-    // Last resort: use actual texture dimensions from WebGL
-    if (!width) {
-      // Try to get from the texture itself
-      const gl = this.renderer.getContext();
-      if (gl && sourceTexture.id !== undefined) {
-        // This is a workaround - we'll use the source texture's actual size
-        // For now, log a warning and use a safe default
-        console.warn('Could not detect HDRI texture dimensions, using source texture directly');
-        // Return original texture if we can't determine size
-        return sourceTexture;
-      }
-      width = 2048;
-      height = 1024;
-    }
-    
-    // Log texture size for debugging
-    
-    // Detect HDR texture properties
-    // HDR textures typically use RGBE encoding or HalfFloat/Float types
-    const isHDR = sourceTexture.encoding === THREE.RGBEEncoding || 
-                  sourceTexture.type === THREE.HalfFloatType ||
-                  sourceTexture.type === THREE.FloatType ||
-                  (sourceTexture.format === THREE.RGBAFormat && 
-                   (sourceTexture.type === THREE.UnsignedByteType && 
-                    sourceTexture.encoding === THREE.RGBEEncoding));
-    
-    // Preserve original format and type for HDR textures
-    let format = sourceTexture.format || THREE.RGBAFormat;
-    let type = sourceTexture.type || THREE.UnsignedByteType;
-    let encoding = sourceTexture.encoding || THREE.sRGBEncoding;
-    
-    // For HDR textures, ensure we use appropriate types
-    if (isHDR) {
-      // HDR textures should use HalfFloat or Float for better quality
-      if (type === THREE.UnsignedByteType && encoding === THREE.RGBEEncoding) {
-        // RGBE encoded HDR - keep the encoding
-        type = THREE.UnsignedByteType;
-        encoding = THREE.RGBEEncoding;
-      } else if (type !== THREE.HalfFloatType && type !== THREE.FloatType) {
-        // Try to use HalfFloat if available for better HDR quality
-        type = THREE.HalfFloatType;
-      }
-    }
-    
-    // Create render target with preserved format and type
-    this.rotationRenderTarget = new THREE.WebGLRenderTarget(width, height, {
-      format: format,
-      type: type,
-      encoding: encoding,
-      generateMipmaps: false, // Don't generate mipmaps for rotated texture
-    });
-    
-    // Create shader material for rotation
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        tEquirect: { value: sourceTexture },
-        rotation: { value: rotation },
-      },
-      vertexShader: RotateEquirectShader.vertexShader,
-      fragmentShader: RotateEquirectShader.fragmentShader,
-    });
-    
-    // Create a fullscreen quad
-    const quad = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      material,
-    );
-    
-    const scene = new THREE.Scene();
-    scene.add(quad);
-    
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    
-    // Render to texture
-    const oldRenderTarget = this.renderer.getRenderTarget();
-    this.renderer.setRenderTarget(this.rotationRenderTarget);
-    this.renderer.render(scene, camera);
-    this.renderer.setRenderTarget(oldRenderTarget);
-    
-    // Clean up
-    quad.geometry.dispose();
-    material.dispose();
-    scene.remove(quad);
-    
-    // Use the render target texture directly
-    const rotatedTexture = this.rotationRenderTarget.texture;
-    rotatedTexture.mapping = THREE.EquirectangularReflectionMapping;
-    rotatedTexture.encoding = encoding;
-    rotatedTexture.format = format;
-    rotatedTexture.type = type;
-    
-    // Ensure texture is properly initialized
-    if (!rotatedTexture.image) {
-      rotatedTexture.image = {
-        width: width,
-        height: height,
-      };
-    }
-    
-    return rotatedTexture;
   }
 
   setClaySettings(patch) {
@@ -1745,8 +1425,7 @@ export class SceneManager {
     if (updateHdri) {
       this.hdriRotation = this.lightsRotation;
       this.stateStore.set('hdriRotation', this.hdriRotation);
-      this.applyEnvironment(this.currentEnvironmentTexture);
-      this.forceRestoreClaySettings();
+      this.environmentController?.setRotation(this.hdriRotation);
       // Update HDRI rotation slider in UI
       if (this.ui?.inputs?.hdriRotation) {
         this.ui.inputs.hdriRotation.value = this.hdriRotation;
@@ -1778,8 +1457,9 @@ export class SceneManager {
     const state = this.stateStore.getState();
     if (!style) {
       this.groundController?.setSolidColor(state.groundSolidColor);
-      if (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture) {
+      if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
         this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
+        this.environmentController?.setFallbackColor(this.backgroundColor);
       }
       this.updateBloom(state.bloom);
       this.updateGrain(state.grain);
@@ -1790,9 +1470,10 @@ export class SceneManager {
     }
     if (
       style.background &&
-      (!this.hdriBackgroundEnabled || !this.currentEnvironmentTexture)
+      (!this.hdriBackgroundEnabled || !this.hdriEnabled)
     ) {
       this.renderer.setClearColor(new THREE.Color(style.background), 1);
+      this.environmentController?.setFallbackColor(style.background);
     }
     if (style.bloomTint && this.bloomTintPass) {
       const bloomState = {
@@ -2022,6 +1703,7 @@ export class SceneManager {
       this.scene.background = null;
       this.renderer.setClearColor(background, 1);
     }
+    this.environmentController?.setFallbackColor(color);
   }
 
   async loadFile(file, options = {}) {
