@@ -2309,7 +2309,8 @@ export class UIManager {
 
   updateExposureDisplay(value) {
     if (!this.inputs.exposure) return;
-    this.inputs.exposure.value = value.toFixed(2);
+    // Update slider value (as number) and label, even when slider is disabled
+    this.inputs.exposure.value = value;
     this.updateValueLabel('exposure', parseFloat(value), 'decimal');
   }
 }

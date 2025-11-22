@@ -23,6 +23,7 @@ import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { MaterialController } from './render/MaterialController.js';
 import { LensFlareController } from './render/LensFlareController.js';
+import { AutoExposureController } from './render/AutoExposureController.js';
 
 
 export class SceneManager {
@@ -52,14 +53,7 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     const initialState = this.stateStore.getState();
     this.backgroundColor = initialState.background ?? '#000000';
-    this.manualExposure = initialState.exposure ?? 1;
-    this.currentExposure = this.manualExposure;
-    this.autoExposureEnabled = initialState.autoExposure ?? false;
-    this.autoExposureValue = this.manualExposure;
-    this.autoExposureTarget = 0.45;
-    this.autoExposureMin = 0.15;
-    this.autoExposureMax = 2.5;
-    this.autoExposureSmooth = 0.12;
+    // Auto-exposure will be initialized after setupComposer
     this.hdriStrength = Math.min(
       5 * HDRI_STRENGTH_UNIT,
       Math.max(0, initialState.hdriStrength ?? 0.6),
@@ -136,19 +130,6 @@ export class SceneManager {
     this.lensDirtTexture = null;
     this.lensDirtTexturePath =
       './assets/images/free_texture_friday_566-1024x682.jpg';
-    this.luminanceSampleSize = 8;
-    this.luminanceRenderTarget = new THREE.WebGLRenderTarget(
-      this.luminanceSampleSize,
-      this.luminanceSampleSize,
-      {
-        depthBuffer: false,
-        stencilBuffer: false,
-      },
-    );
-    this.luminanceBuffer = new Uint8Array(
-      this.luminanceSampleSize * this.luminanceSampleSize * 4,
-    );
-    this.averageLuminance = 0.5;
 
     this.materialController = new MaterialController({
       stateStore: this.stateStore,
@@ -177,6 +158,18 @@ export class SceneManager {
     this.setupComposer();
     this.updateLensDirt(this.lensDirtSettings);
     this.loadLensDirtTexture();
+    this.autoExposureController = new AutoExposureController({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      exposurePass: this.exposurePass,
+      stateStore: this.stateStore,
+      onExposureChange: (value) => {
+        // Update UI display in real-time when auto-exposure changes exposure
+        this.ui?.updateExposureDisplay?.(value);
+      },
+    });
+    this.autoExposureController.init(initialState);
     this.lensFlareController = new LensFlareController({
       camera: this.camera,
       stateStore: this.stateStore,
@@ -268,7 +261,6 @@ export class SceneManager {
     this.colorAdjust = this.postPipeline.colorAdjust;
     this.colorAdjustPass = this.postPipeline.colorAdjustPass;
     this.toneMappingPass = this.postPipeline.toneMappingPass;
-    this.exposurePass.uniforms.exposure.value = this.currentExposure;
   }
 
   loadLensDirtTexture() {
@@ -314,84 +306,21 @@ export class SceneManager {
     this.lensDirtPass.uniforms.sensitivity.value =
       current.sensitivity ?? defaults.sensitivity ?? 1.0;
     const globalBrightness = THREE.MathUtils.clamp(
-      this.averageLuminance ?? 0,
+      this.autoExposureController?.getAverageLuminance() ?? 0,
       0,
       1,
     );
     this.lensDirtPass.uniforms.exposureFactor.value = globalBrightness;
   }
 
-  sampleSceneLuminance() {
-    if (!this.luminanceRenderTarget || !this.renderer || this.unlitMode) return;
-    const previousTarget = this.renderer.getRenderTarget();
-    this.renderer.setRenderTarget(this.luminanceRenderTarget);
-    this.renderer.render(this.scene, this.camera);
-    this.renderer.setRenderTarget(previousTarget);
-    try {
-      this.renderer.readRenderTargetPixels(
-        this.luminanceRenderTarget,
-        0,
-        0,
-        this.luminanceSampleSize,
-        this.luminanceSampleSize,
-        this.luminanceBuffer,
-      );
-      let sum = 0;
-      for (let i = 0; i < this.luminanceBuffer.length; i += 4) {
-        const r = this.luminanceBuffer[i] / 255;
-        const g = this.luminanceBuffer[i + 1] / 255;
-        const b = this.luminanceBuffer[i + 2] / 255;
-        const value = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        sum += value;
-      }
-      const avg = sum / (this.luminanceBuffer.length / 4);
-      this.averageLuminance = THREE.MathUtils.clamp(
-        THREE.MathUtils.lerp(this.averageLuminance ?? avg, avg, 0.35),
-        0,
-        1,
-      );
-      if (this.lensDirtPass) {
-        this.lensDirtPass.uniforms.exposureFactor.value = this.averageLuminance;
-      }
-    } catch (error) {
-      // Ignore read errors (e.g., if readPixels is unavailable)
-    }
-  }
-
-  applyAutoExposure() {
-    if (!this.autoExposureEnabled) return;
-    const luminance = THREE.MathUtils.clamp(
-      this.averageLuminance ?? this.autoExposureTarget,
-      0.05,
-      1.2,
-    );
-    const target = THREE.MathUtils.clamp(
-      this.autoExposureTarget / luminance,
-      this.autoExposureMin,
-      this.autoExposureMax,
-    );
-    this.autoExposureValue = THREE.MathUtils.lerp(
-      this.autoExposureValue ?? target,
-      target,
-      this.autoExposureSmooth,
-    );
-    this.updateExposureUniform(this.autoExposureValue);
-  }
-
   setAutoExposureEnabled(enabled) {
-    this.autoExposureEnabled = !!enabled;
-    if (this.autoExposureEnabled) {
-      this.autoExposureValue = this.currentExposure ?? this.manualExposure ?? 1;
-    } else {
-      this.updateExposureUniform(this.manualExposure ?? 1);
-    }
+    this.autoExposureController?.setEnabled(enabled);
   }
 
   updateExposureUniform(value) {
-    this.currentExposure = value;
-    if (this.exposurePass) {
-      this.exposurePass.uniforms.exposure.value = value;
-    }
+    // Update manual exposure in controller
+    this.autoExposureController?.setManualExposure(value);
+    // Update UI display
     this.ui?.updateExposureDisplay?.(value);
   }
 
@@ -551,10 +480,8 @@ export class SceneManager {
       this.updateBackgroundColor(color),
     );
     this.eventBus.on('scene:exposure', (value) => {
-      this.manualExposure = value;
-      if (!this.autoExposureEnabled) {
-        this.updateExposureUniform(value);
-      }
+      this.autoExposureController?.setManualExposure(value);
+      this.updateExposureUniform(value);
       this.updateLensDirt();
     });
     this.eventBus.on('camera:auto-exposure', (enabled) =>
@@ -598,11 +525,7 @@ export class SceneManager {
     this.setGridY(state.gridY ?? 0);
     this.setPodiumScale(state.podiumScale ?? 1, { updateState: false });
     this.setGridScale(state.gridScale ?? 1);
-    this.manualExposure = state.exposure ?? 1;
-    this.autoExposureEnabled = state.autoExposure ?? false;
-    this.autoExposureValue = this.manualExposure;
-    this.updateExposureUniform(this.manualExposure);
-    this.setAutoExposureEnabled(this.autoExposureEnabled);
+    this.autoExposureController?.applyStateSnapshot(state);
     // Initialize base HDRI strength if not already set
     if (this.baseHdriStrength === undefined) {
       this.baseHdriStrength = (state.hdriStrength ?? 1.0) * state.exposure;
@@ -667,7 +590,10 @@ export class SceneManager {
         this.currentHdri = preset;
     try {
       await this.environmentController?.setPreset(preset);
-      this.applyHdriMood(preset);
+        this.applyHdriMood(preset);
+      // Reset auto-exposure luminance state when HDRI changes
+      // This allows it to quickly adapt to the new scene brightness
+      this.autoExposureController?.resetLuminance();
     } catch (error) {
       console.error('Failed to apply HDRI preset', preset, error);
       this.ui.showToast('Failed to load HDRI');
@@ -798,6 +724,8 @@ export class SceneManager {
     this.environmentController?.setEnabled(enabled);
     this.applyHdriMood(this.currentHdri);
     this.lensFlareController?.setHdriEnabled(enabled);
+    // Reset auto-exposure when HDRI is toggled (scene brightness changes dramatically)
+    this.autoExposureController?.resetLuminance();
   }
 
   setToneMapping(value) {
@@ -1370,8 +1298,16 @@ export class SceneManager {
       this.renderer.toneMappingExposure = previousExposure;
       return;
     }
-    this.sampleSceneLuminance();
-    this.applyAutoExposure();
+    this.autoExposureController?.update(this.unlitMode);
+    // Update lens dirt exposure factor from auto-exposure luminance
+    if (this.lensDirtPass && this.autoExposureController) {
+      const globalBrightness = THREE.MathUtils.clamp(
+        this.autoExposureController.getAverageLuminance() ?? 0,
+        0,
+        1,
+      );
+      this.lensDirtPass.uniforms.exposureFactor.value = globalBrightness;
+    }
     if (this.composer) {
       this.composer.render();
     } else {
