@@ -491,6 +491,19 @@ body.dropzone-visible #webgl {
   line-height: 1.6;
 }
 
+.about-content a,
+a {
+  color: var(--brand-primary);
+  text-decoration: none;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.about-content a:hover,
+a:hover {
+  color: var(--brand-secondary);
+  opacity: 0.8;
+}
+
 .about-highlight {
   color: #fff;
   font-weight: 700;
