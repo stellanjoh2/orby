@@ -31,7 +31,7 @@ export class StateStore {
       gridY: 0,
       podiumScale: 1,
       gridScale: 1,
-      groundSolidColor: '#31363f',
+      groundSolidColor: '#808080',
       groundWireColor: '#e1e1e1',
       clay: {
         color: '#808080',
@@ -41,12 +41,12 @@ export class StateStore {
       },
       wireframe: {
         alwaysOn: false,
-        color: '#9fb7ff',
+        color: '#c8c8c8',
         onlyVisibleFaces: false,
       },
       fresnel: {
         enabled: false,
-        color: '#ffffff',
+        color: '#808080',
         radius: 2,
         strength: 0.3,
       },
