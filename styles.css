@@ -350,6 +350,9 @@ body.dropzone-visible #webgl {
   color: var(--text);
   background: var(--accent);
   box-shadow: 0 8px 18px var(--accent-shadow);
+  transform: scale(1.01);
+  z-index: 1;
+  position: relative;
 }
 
 .tab.active:first-child {
