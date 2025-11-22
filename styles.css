@@ -315,9 +315,8 @@ body.dropzone-visible #webgl {
 .tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid var(--stroke);
-  margin: 0 -0.6rem;
-  padding: 0 0.6rem;
+  margin: -0.6rem -0.6rem 0 -0.6rem;
+  padding: 0;
 }
 
 .tab {
@@ -333,6 +332,7 @@ body.dropzone-visible #webgl {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
 }
 
 .tab:hover:not(.active) {
@@ -346,18 +346,12 @@ body.dropzone-visible #webgl {
   stroke-width: 1.5;
 }
 
-.tab:first-child {
-  border-top-left-radius: 8px;
-}
-
-.tab:last-child {
-  border-top-right-radius: 8px;
-}
-
 .tab.active {
   color: var(--text);
   background: var(--accent);
   box-shadow: 0 8px 18px var(--accent-shadow);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
 }
 
 .tab.active i {
@@ -485,6 +479,8 @@ body.dropzone-visible #webgl {
   /* Create space for scrollbar on the right, outside the window */
   margin-right: calc(-1.2rem + 6px);
   padding-right: calc(0.6rem + 1.2rem - 6px);
+  border-top: 1px solid var(--stroke);
+  margin-top: 0;
 }
 
 .panels::-webkit-scrollbar {
