@@ -25,6 +25,7 @@ import { MaterialController } from './render/MaterialController.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
+import { LensDirtController } from './render/LensDirtController.js';
 
 
 export class SceneManager {
@@ -134,12 +135,7 @@ export class SceneManager {
     this.hdriBlurriness = initialState.hdriBlurriness ?? 0;
     this.hdriRotation = initialState.hdriRotation ?? 0;
     this.currentHdri = initialState.hdri ?? 'meadow';
-    this.lensDirtSettings = {
-      ...(initialState.lensDirt ?? defaults.lensDirt),
-    };
-    this.lensDirtTexture = null;
-    this.lensDirtTexturePath =
-      './assets/images/free_texture_friday_566-1024x682.jpg';
+    // Lens dirt will be initialized after setupComposer
 
     this.materialController = new MaterialController({
       stateStore: this.stateStore,
@@ -166,8 +162,6 @@ export class SceneManager {
     this.setupMoodController();
     this.setupEnvironment(initialState);
     this.setupComposer();
-    this.updateLensDirt(this.lensDirtSettings);
-    this.loadLensDirtTexture();
     this.autoExposureController = new AutoExposureController({
       renderer: this.renderer,
       scene: this.scene,
@@ -180,6 +174,14 @@ export class SceneManager {
       },
     });
     this.autoExposureController.init(initialState);
+    this.lensDirtController = new LensDirtController({
+      lensDirtPass: this.lensDirtPass,
+      textureLoader: this.textureLoader,
+      stateStore: this.stateStore,
+      getAverageLuminance: () => this.autoExposureController?.getAverageLuminance() ?? 0,
+      getCurrentExposure: () => this.autoExposureController?.getExposure() ?? 1.0,
+    });
+    this.lensDirtController.init(initialState);
     this.lensFlareController = new LensFlareController({
       camera: this.camera,
       stateStore: this.stateStore,
@@ -273,54 +275,8 @@ export class SceneManager {
     this.toneMappingPass = this.postPipeline.toneMappingPass;
   }
 
-  loadLensDirtTexture() {
-    if (!this.textureLoader || !this.lensDirtTexturePath) return;
-    this.textureLoader.load(
-      this.lensDirtTexturePath,
-      (texture) => {
-        if ('colorSpace' in texture && THREE.SRGBColorSpace) {
-          texture.colorSpace = THREE.SRGBColorSpace;
-        }
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        this.lensDirtTexture = texture;
-        if (this.lensDirtPass) {
-          this.lensDirtPass.uniforms.tDirt.value = texture;
-          this.updateLensDirt();
-        }
-      },
-      undefined,
-      (error) => {
-        console.warn('Failed to load lens dirt texture', error);
-      },
-    );
-  }
-
   updateLensDirt(settings) {
-    if (!this.lensDirtPass) return;
-    if (settings) {
-      this.lensDirtSettings = {
-        ...(this.lensDirtSettings ?? this.stateStore.getDefaults().lensDirt),
-        ...settings,
-      };
-    }
-    const defaults = this.stateStore.getDefaults().lensDirt;
-    const current = this.lensDirtSettings ?? defaults;
-    const enabled = !!current.enabled && !!this.lensDirtTexture;
-    this.lensDirtPass.enabled = enabled;
-    this.lensDirtPass.uniforms.strength.value = current.strength ?? defaults.strength;
-    this.lensDirtPass.uniforms.minLuminance.value =
-      current.minLuminance ?? defaults.minLuminance;
-    this.lensDirtPass.uniforms.maxLuminance.value =
-      current.maxLuminance ?? defaults.maxLuminance;
-    this.lensDirtPass.uniforms.sensitivity.value =
-      current.sensitivity ?? defaults.sensitivity ?? 1.0;
-    const globalBrightness = THREE.MathUtils.clamp(
-      this.autoExposureController?.getAverageLuminance() ?? 0,
-      0,
-      1,
-    );
-    this.lensDirtPass.uniforms.exposureFactor.value = globalBrightness;
+    this.lensDirtController?.updateSettings(settings);
   }
 
   setAutoExposureEnabled(enabled) {
@@ -1269,14 +1225,7 @@ export class SceneManager {
     }
     this.autoExposureController?.update(this.unlitMode);
     // Update lens dirt exposure factor from auto-exposure luminance
-    if (this.lensDirtPass && this.autoExposureController) {
-      const globalBrightness = THREE.MathUtils.clamp(
-        this.autoExposureController.getAverageLuminance() ?? 0,
-        0,
-        1,
-      );
-      this.lensDirtPass.uniforms.exposureFactor.value = globalBrightness;
-    }
+    this.lensDirtController?.updateExposureFactor();
     if (this.composer) {
       this.composer.render();
     } else {

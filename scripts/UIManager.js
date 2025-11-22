@@ -1510,7 +1510,7 @@ export class UIManager {
               ['lensDirtStrength'],
               !defaults.lensDirt.enabled,
             );
-            this.syncUIFromState();
+            this.syncControls(this.stateStore.getState());
             break;
             
           case 'grain':
@@ -1747,6 +1747,7 @@ export class UIManager {
       button.classList.toggle('active', button.dataset.hdri === preset);
     });
   }
+
 
   toggleHdriControls(enabled) {
     this.inputs.hdriButtons.forEach((button) => {
