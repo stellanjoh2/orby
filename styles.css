@@ -298,7 +298,7 @@ body.dropzone-visible #webgl {
   width: min(80vw, 1200px);
   aspect-ratio: 16 / 9;
   border: 2px dashed var(--drop-outline);
-  border-radius: 24px;
+  border-radius: 18px;
   background: linear-gradient(120deg, var(--drop-fill), transparent);
   pointer-events: none;
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
@@ -362,7 +362,7 @@ body.dropzone-visible #webgl {
   position: absolute;
   top: 24px;
   right: 28px;
-  border-radius: 24px;
+  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.04);
   opacity: 1;
   transform: translate3d(0, 0, 0);
@@ -422,11 +422,11 @@ body.dropzone-visible #webgl {
 }
 
 .tab.active:first-child {
-  border-top-left-radius: 24px;
+  border-top-left-radius: 18px;
 }
 
 .tab.active:last-child {
-  border-top-right-radius: 24px;
+  border-top-right-radius: 18px;
 }
 
 .tab.active i {
@@ -631,7 +631,7 @@ a:hover {
 
 .panel-block {
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1.2rem;
   margin-bottom: 0.5rem;
   background: rgba(0, 0, 0, 0.675);
