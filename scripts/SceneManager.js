@@ -100,6 +100,12 @@ export class SceneManager {
     this.scene.add(this.modelRoot);
     this.scene.environmentIntensity = this.hdriStrength;
 
+    // Create background sphere for proper DOF depth handling
+    this.backgroundSphere = this._createBackgroundSphere(this.backgroundColor);
+    // Set initial visibility: show when HDRI background is off
+    this.backgroundSphere.visible = !this.hdriBackgroundEnabled || !this.hdriEnabled;
+    this.scene.add(this.backgroundSphere);
+
     this.transformController = new TransformController({
       modelRoot: this.modelRoot,
     });
@@ -558,6 +564,13 @@ export class SceneManager {
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
     this.environmentController?.setBackgroundEnabled(enabled);
+    
+    // Show/hide background sphere based on HDRI background state
+    if (this.backgroundSphere) {
+      // Show sphere when HDRI background is off, hide when on
+      this.backgroundSphere.visible = !enabled && this.hdriEnabled;
+    }
+    
     this.applyHdriMood(this.currentHdri);
   }
 
@@ -645,6 +658,13 @@ export class SceneManager {
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
     this.environmentController?.setEnabled(enabled);
+    
+    // Show/hide background sphere based on HDRI enabled state
+    if (this.backgroundSphere) {
+      // Show sphere when HDRI is disabled or HDRI background is off
+      this.backgroundSphere.visible = !enabled || !this.hdriBackgroundEnabled;
+    }
+    
     this.applyHdriMood(this.currentHdri);
     this.lensFlareController?.setHdriEnabled(enabled);
     // Reset auto-exposure when HDRI is toggled (scene brightness changes dramatically)
@@ -870,14 +890,56 @@ export class SceneManager {
   }
 
 
+  /**
+   * Create a large background sphere for proper DOF depth handling
+   * @param {string} color - Background color hex string
+   * @returns {THREE.Mesh} - Background sphere mesh
+   */
+  _createBackgroundSphere(color) {
+    // Create a very large sphere (radius 10000) positioned far behind
+    // Use FrontSide so it renders correctly from outside
+    const geometry = new THREE.SphereGeometry(10000, 32, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      side: THREE.FrontSide, // Render outside of sphere
+      depthWrite: true, // Write to depth buffer for DOF
+      depthTest: true, // Test depth for proper rendering
+    });
+    
+    const sphere = new THREE.Mesh(geometry, material);
+    // Position at a fixed far distance - this ensures proper depth for DOF
+    // We'll update it to follow camera but always be far behind
+    sphere.position.set(0, 0, -5000);
+    sphere.renderOrder = -1000; // Render first, behind everything
+    
+    return sphere;
+  }
+
   updateBackgroundColor(color) {
     if (!color) return;
     this.backgroundColor = color;
+    
+    // Update background sphere color
+    if (this.backgroundSphere && this.backgroundSphere.material) {
+      this.backgroundSphere.material.color.set(color);
+    }
+    
     if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
+      // Set clear color as fallback, but background sphere will render on top with proper depth
       const background = new THREE.Color(color);
       this.scene.background = null;
       this.renderer.setClearColor(background, 1);
+      // Show background sphere when HDRI background is off
+      if (this.backgroundSphere) {
+        this.backgroundSphere.visible = true;
+      }
+    } else {
+      // Hide background sphere when HDRI background is on
+      if (this.backgroundSphere) {
+        this.backgroundSphere.visible = false;
+      }
     }
+    
     this.environmentController?.setFallbackColor(color);
     this.hdriMood?.setFallbackBackgroundColor(color);
   }
@@ -1197,7 +1259,26 @@ export class SceneManager {
     this.diagnosticsController.update(delta);
     this.postPipeline?.updateGrainTime(delta);
     this.updateWireframeOverlayTransforms();
+    this._updateBackgroundSphere();
     this.render();
+  }
+
+  /**
+   * Update background sphere position to follow camera
+   * This ensures it's always behind everything for proper DOF depth
+   */
+  _updateBackgroundSphere() {
+    if (!this.backgroundSphere || !this.backgroundSphere.visible) return;
+    
+    // Position sphere far behind the camera in its view direction
+    const cameraDirection = new THREE.Vector3();
+    this.camera.getWorldDirection(cameraDirection);
+    
+    // Position sphere very far behind (5000 units) to ensure it's at maximum depth
+    // This gives DOF proper depth information for smooth background blur
+    const distance = 5000;
+    this.backgroundSphere.position.copy(this.camera.position);
+    this.backgroundSphere.position.addScaledVector(cameraDirection, -distance);
   }
 
   render() {

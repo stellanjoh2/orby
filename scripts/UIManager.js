@@ -174,6 +174,7 @@ export class UIManager {
     this.bindCopyButtons();
     this.bindLocalResetButtons();
     this.bindRotationNotches();
+    this.setupSliderKeyboardSupport();
   }
 
   bindDragAndDrop() {
@@ -334,30 +335,35 @@ export class UIManager {
       this.stateStore.set('scale', value);
       this.eventBus.emit('mesh:scale', value);
     });
+    this.enableSliderKeyboardStepping(this.inputs.scale);
     this.inputs.yOffset?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -2, 2, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('yOffset', value, 'distance');
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
     });
+    if (this.inputs.yOffset) this.enableSliderKeyboardStepping(this.inputs.yOffset);
     this.inputs.rotationX?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -180, 180, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationX', value, 'angle');
       this.stateStore.set('rotationX', value);
       this.eventBus.emit('mesh:rotationX', value);
     });
+    if (this.inputs.rotationX) this.enableSliderKeyboardStepping(this.inputs.rotationX);
     this.inputs.rotationY?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -180, 180, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationY', value, 'angle');
       this.stateStore.set('rotationY', value);
       this.eventBus.emit('mesh:rotationY', value);
     });
+    if (this.inputs.rotationY) this.enableSliderKeyboardStepping(this.inputs.rotationY);
     this.inputs.rotationZ?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -180, 180, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationZ', value, 'angle');
       this.stateStore.set('rotationZ', value);
       this.eventBus.emit('mesh:rotationZ', value);
     });
+    if (this.inputs.rotationZ) this.enableSliderKeyboardStepping(this.inputs.rotationZ);
     // Transform reset is now handled by bindLocalResetButtons
     this.inputs.autoRotate.forEach((input) => {
       input.addEventListener('change', () => {
@@ -375,12 +381,14 @@ export class UIManager {
       this.updateValueLabel('clayRoughness', value, 'decimal');
       this.eventBus.emit('mesh:clay-roughness', value);
     });
+    this.enableSliderKeyboardStepping(this.inputs.clayRoughness);
     this.inputs.claySpecular.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, 0, 1, 0.5);
       this.stateStore.set('clay.specular', value);
       this.updateValueLabel('claySpecular', value, 'decimal');
       this.eventBus.emit('mesh:clay-specular', value);
     });
+    this.enableSliderKeyboardStepping(this.inputs.claySpecular);
     this.inputs.clayNormalMap?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('clay.normalMap', enabled);
@@ -535,6 +543,7 @@ export class UIManager {
       this.stateStore.set('groundY', value);
       this.eventBus.emit('studio:ground-y', value);
     });
+    this.enableSliderKeyboardStepping(this.inputs.groundY);
     this.inputs.podiumScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('podiumScale', value, 'decimal');
@@ -730,12 +739,14 @@ export class UIManager {
       this.stateStore.set('camera.tilt', value);
       this.eventBus.emit('camera:tilt', value);
     });
+    if (this.inputs.cameraTilt) this.enableSliderKeyboardStepping(this.inputs.cameraTilt);
     this.inputs.exposure.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
       this.updateValueLabel('exposure', value, 'decimal');
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
     });
+    this.enableSliderKeyboardStepping(this.inputs.exposure);
     if (this.inputs.autoExposure) {
       this.inputs.autoExposure.addEventListener('change', (event) => {
         const enabled = event.target.checked;
@@ -750,6 +761,7 @@ export class UIManager {
       this.updateValueLabel('cameraContrast', value, 'decimal');
       this.eventBus.emit('render:contrast', value);
     });
+    if (this.inputs.cameraContrast) this.enableSliderKeyboardStepping(this.inputs.cameraContrast);
     this.inputs.cameraTemperature?.addEventListener('input', (event) => {
       const parsed = this.applySnapToCenter(event.target, 2000, 10000, 6000);
       const kelvin = Number.isFinite(parsed) ? parsed : CAMERA_TEMPERATURE_NEUTRAL_K;
@@ -757,30 +769,35 @@ export class UIManager {
       this.updateValueLabel('cameraTemperature', kelvin, 'kelvin');
       this.eventBus.emit('render:temperature', kelvin);
     });
+    if (this.inputs.cameraTemperature) this.enableSliderKeyboardStepping(this.inputs.cameraTemperature);
     this.inputs.cameraTint?.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, -100, 100, 0) || 0;
       this.stateStore.set('camera.tint', value);
       this.updateValueLabel('cameraTint', value, 'integer');
       this.eventBus.emit('render:tint', value / 100);
     });
+    if (this.inputs.cameraTint) this.enableSliderKeyboardStepping(this.inputs.cameraTint);
     this.inputs.cameraHighlights?.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, -100, 100, 0) || 0;
       this.stateStore.set('camera.highlights', value);
       this.updateValueLabel('cameraHighlights', value, 'integer');
       this.eventBus.emit('render:highlights', value / 100);
     });
+    if (this.inputs.cameraHighlights) this.enableSliderKeyboardStepping(this.inputs.cameraHighlights);
     this.inputs.cameraShadows?.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, -50, 50, 0) || 0;
       this.stateStore.set('camera.shadows', value);
       this.updateValueLabel('cameraShadows', value, 'integer');
       this.eventBus.emit('render:shadows', value / 50);
     });
+    if (this.inputs.cameraShadows) this.enableSliderKeyboardStepping(this.inputs.cameraShadows);
     this.inputs.cameraSaturation?.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
       this.stateStore.set('camera.saturation', value);
       this.updateValueLabel('cameraSaturation', value, 'decimal');
       this.eventBus.emit('render:saturation', value);
     });
+    if (this.inputs.cameraSaturation) this.enableSliderKeyboardStepping(this.inputs.cameraSaturation);
     this.inputs.antiAliasing.addEventListener('change', (event) => {
       const value = event.target.value;
       this.stateStore.set('antiAliasing', value);
@@ -839,11 +856,73 @@ export class UIManager {
   bindKeyboardShortcuts(hasHelpOverlay, hideHelp) {
     const HDRI_PRESETS = ['noir-studio', 'luminous-sky', 'sunset-cove', 'steel-lab', 'cyberpunk'];
 
+    // Handle arrow keys for range inputs at document level
+    // Check both event.target and document.activeElement to catch all cases
     document.addEventListener('keydown', (event) => {
-      // Don't trigger shortcuts when typing in inputs
+      const key = event.key;
+      const code = event.code;
+      const isLeft = key === 'ArrowLeft' || code === 'ArrowLeft';
+      const isRight = key === 'ArrowRight' || code === 'ArrowRight';
+      
+      if (!isLeft && !isRight) return;
+      
+      // Check both the event target and the currently focused element
       const target = event.target;
+      const activeElement = document.activeElement;
+      const slider = (target && target.tagName === 'INPUT' && target.type === 'range') 
+        ? target 
+        : (activeElement && activeElement.tagName === 'INPUT' && activeElement.type === 'range')
+          ? activeElement
+          : null;
+      
+      if (slider) {
+        // Prevent default browser behavior (focus movement, value stepping)
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
+        // Get current value and constraints
+        const currentValue = parseFloat(slider.value) || 0;
+        const step = parseFloat(slider.step) || 0.01;
+        const min = parseFloat(slider.min) || 0;
+        const max = parseFloat(slider.max) || 100;
+        
+        // Calculate new value
+        let newValue;
+        if (isLeft) {
+          newValue = Math.max(min, currentValue - step);
+        } else {
+          newValue = Math.min(max, currentValue + step);
+        }
+        
+        // Only update if value changed
+        if (Math.abs(newValue - currentValue) > 0.0001) {
+          // Update value directly
+          slider.value = String(newValue);
+          
+          // Force input event to update state and UI
+          const inputEvent = new Event('input', { 
+            bubbles: true, 
+            cancelable: true 
+          });
+          slider.dispatchEvent(inputEvent);
+          
+          // Ensure slider stays focused
+          if (document.activeElement !== slider) {
+            slider.focus();
+          }
+        }
+        
+        return false;
+      }
+    }, true); // Capture phase - run early, before default behavior
+
+    document.addEventListener('keydown', (event) => {
+      const target = event.target;
+      
+      // Don't trigger shortcuts when typing in inputs (but range inputs handled above)
       if (
-        target.tagName === 'INPUT' ||
+        (target.tagName === 'INPUT' && target.type !== 'range') ||
         target.tagName === 'TEXTAREA' ||
         target.tagName === 'SELECT' ||
         target.isContentEditable
@@ -1720,6 +1799,44 @@ export class UIManager {
     }
     
     return currentValue;
+  }
+
+  /**
+   * Setup keyboard support for all range inputs
+   */
+  setupSliderKeyboardSupport() {
+    // Find all range inputs and ensure they're focusable
+    const allSliders = document.querySelectorAll('input[type="range"]');
+    allSliders.forEach((slider) => {
+      // Ensure focusable
+      if (!slider.hasAttribute('tabindex')) {
+        slider.setAttribute('tabindex', '0');
+      }
+      
+      // Ensure focus on click
+      slider.addEventListener('click', () => {
+        slider.focus();
+      }, { passive: true });
+    });
+  }
+
+  /**
+   * Enable keyboard arrow key stepping for a slider
+   * @param {HTMLInputElement} slider - The slider input element
+   * @deprecated - Keyboard stepping is now handled at document level for all sliders
+   */
+  enableSliderKeyboardStepping(slider) {
+    if (!slider || slider.type !== 'range') return;
+    
+    // Just ensure slider is focusable - keyboard handling is done at document level
+    slider.setAttribute('tabindex', '0');
+    
+    // Ensure slider gets focus on click
+    slider.addEventListener('click', (event) => {
+      if (event.target === slider) {
+        slider.focus();
+      }
+    });
   }
 
   /**

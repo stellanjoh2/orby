@@ -216,6 +216,84 @@ _None currently_
 
 ---
 
+## 🐛 Bugs & Issues
+
+### Depth of Field (DOF) Edge Artifacts & Ghosting
+**Status:** Known Issue  
+**Priority:** Medium  
+**Reported:** 2024
+
+**Problem:**
+- DOF creates harsh edges and "ghost" artifacts, especially on flat backgrounds
+- Background (when HDRI is disabled) shows massive ghosting effects
+- Edges where mesh meets background look disconnected from realistic camera DOF
+- Issue persists even with background sphere geometry implementation
+
+**Current Implementation:**
+- Using Three.js `BokehPass` for DOF
+- Background sphere (radius 10000) positioned 5000 units behind camera
+- Maxblur reduced to 0.01-0.04 range
+- BokehPass rings/sides set to defaults (3/5)
+
+**Potential Fixes:**
+1. **Further reduce maxblur** - Try even more conservative range (0.005-0.02)
+2. **Adjust focus distance** - Make focus closer to mesh so background is more consistently out of focus
+3. **Exclude background from DOF** - Render background separately and apply simpler blur
+4. **Custom DOF shader** - Replace BokehPass with custom implementation that handles backgrounds better
+5. **Depth buffer adjustments** - Ensure background sphere writes proper depth values
+6. **Post-process background separately** - Apply DOF only to mesh, use separate blur for background
+7. **Reduce BokehPass samples** - Further reduce rings/sides to minimize artifacts
+8. **Focus range adjustment** - Narrow the focus range to make transitions smoother
+
+**Technical Notes:**
+- Background sphere uses `MeshBasicMaterial` with `depthWrite: true` and `depthTest: true`
+- Sphere follows camera at 5000 units behind
+- Clear color set to background color as fallback
+- Issue may be fundamental to how BokehPass handles large depth differences
+
+### Slider Keyboard Stepping Not Working
+**Status:** Known Issue  
+**Priority:** Low  
+**Reported:** 2024
+
+**Problem:**
+- Arrow key stepping (Left/Right) doesn't work on several sliders:
+  - Clay Roughness
+  - Clay Metallic
+  - Podium Y Position
+  - Camera Tilt
+  - Temperature
+  - Tint
+  - Contrast
+  - Highlights
+  - Shadows
+  - Saturation
+- Sliders can receive focus, but arrow keys don't step the values
+- Some sliders work (Transform controls), but most don't
+
+**Current Implementation:**
+- Document-level keyboard handler in capture phase
+- Individual slider handlers via `enableSliderKeyboardStepping()`
+- Sliders have `tabindex="0"` and focus handlers
+- Event prevention and stopPropagation implemented
+
+**Potential Fixes:**
+1. **Debug event flow** - Check if events are being captured/stopped by other handlers
+2. **Browser default behavior** - May need to prevent default more aggressively
+3. **Event timing** - Try `keyup` instead of `keydown`
+4. **Focus verification** - Ensure sliders actually have focus when keys are pressed
+5. **Range input defaults** - Check if browser's default range input behavior is interfering
+6. **Alternative approach** - Use `input` event simulation instead of direct value setting
+7. **Test different browsers** - May be browser-specific behavior
+
+**Technical Notes:**
+- Handlers use capture phase (`true` parameter)
+- Both document-level and individual slider handlers implemented
+- Sliders are focusable and receive focus on click
+- Issue persists despite multiple implementation attempts
+
+---
+
 ## 📅 Timeline
 
 **Phase 1 (Quick Wins):** Next session  
