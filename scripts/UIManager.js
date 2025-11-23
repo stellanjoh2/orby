@@ -136,14 +136,19 @@ export class UIManager {
 
     this.buttons = {
       transformReset: q('#transformReset'),
-      export: q('#exportPng'),
-      exportTransparentPng: q('#exportTransparentPngButton'),
+      exportPng: q('#exportPngButton'),
       copyStudio: q('#copyStudioSettings'),
       copyRender: q('#copyRenderSettings'),
       resetStudio: q('#resetStudioSettings'),
       resetMesh: q('#resetMeshSettings'),
       resetRender: q('#resetRenderSettings'),
       loadMesh: q('#loadMeshButton'),
+    };
+
+    // Export settings state
+    this.exportSettings = {
+      transparent: true,
+      size: 2,
     };
 
     this.dom.blocks = {};
@@ -440,6 +445,29 @@ export class UIManager {
       this.updateValueLabel('fresnelStrength', value, 'decimal');
       this.stateStore.set('fresnel.strength', value);
       emitFresnel();
+    });
+
+    // Export controls
+    document.querySelectorAll('[data-export-transparent]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const transparent = button.dataset.exportTransparent === 'true';
+        this.exportSettings.transparent = transparent;
+        // Update active state
+        document.querySelectorAll('[data-export-transparent]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-export-size]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const size = parseInt(button.dataset.exportSize, 10);
+        this.exportSettings.size = size;
+        // Update active state
+        document.querySelectorAll('[data-export-size]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
     });
   }
 
@@ -811,12 +839,11 @@ export class UIManager {
       this.eventBus.emit('render:tone-mapping', value);
     });
 
-    this.buttons.export.addEventListener('click', () => {
-      this.eventBus.emit('export:png');
-    });
-
-    this.buttons.exportTransparentPng?.addEventListener('click', () => {
-      this.eventBus.emit('export:transparent-png');
+    this.buttons.exportPng?.addEventListener('click', () => {
+      this.eventBus.emit('export:png', {
+        transparent: this.exportSettings.transparent,
+        size: this.exportSettings.size,
+      });
     });
   }
 
