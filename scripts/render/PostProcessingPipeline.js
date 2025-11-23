@@ -35,6 +35,8 @@ export class PostProcessingPipeline {
       focus: 10,
       aperture: 0.003,
       maxblur: 0.01,
+      rings: 5, // More rings for better quality (default is 3)
+      sides: 7, // More sides for smoother bokeh (default is 5)
     });
 
     this.bloomPass = new UnrealBloomPass(
@@ -94,14 +96,18 @@ export class PostProcessingPipeline {
     if (!settings) return;
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
-    const active = wants && settings.strength > 0.0001;
+    // Use aperture to determine if DOF should be active (very small aperture = minimal blur)
+    const active = wants && settings.aperture > 0.0001;
     if (this.bokehPass) {
       this.bokehPass.enabled = active;
     }
     if (!active) return;
     this.bokehPass.uniforms.focus.value = settings.focus;
     this.bokehPass.uniforms.aperture.value = settings.aperture;
-    this.bokehPass.uniforms.maxblur.value = settings.strength;
+    // Calculate maxblur from aperture - smaller aperture = more blur
+    // Scale aperture to very subtle blur range (0.03-0.12) to prevent ghost effects in background
+    const maxblur = Math.min(0.12, Math.max(0.03, settings.aperture * 50));
+    this.bokehPass.uniforms.maxblur.value = maxblur;
   }
 
   /**
