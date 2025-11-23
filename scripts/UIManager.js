@@ -335,25 +335,25 @@ export class UIManager {
       this.eventBus.emit('mesh:scale', value);
     });
     this.inputs.yOffset?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -2, 2, 0);
       this.updateValueLabel('yOffset', value, 'distance');
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
     });
     this.inputs.rotationX?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -180, 180, 0);
       this.updateValueLabel('rotationX', value, 'angle');
       this.stateStore.set('rotationX', value);
       this.eventBus.emit('mesh:rotationX', value);
     });
     this.inputs.rotationY?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -180, 180, 0);
       this.updateValueLabel('rotationY', value, 'angle');
       this.stateStore.set('rotationY', value);
       this.eventBus.emit('mesh:rotationY', value);
     });
     this.inputs.rotationZ?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -180, 180, 0);
       this.updateValueLabel('rotationZ', value, 'angle');
       this.stateStore.set('rotationZ', value);
       this.eventBus.emit('mesh:rotationZ', value);
@@ -370,13 +370,13 @@ export class UIManager {
     });
     this.bindColorInput('clayColor', 'clay.color', 'mesh:clay-color');
     this.inputs.clayRoughness.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, 0, 1, 0.5);
       this.stateStore.set('clay.roughness', value);
       this.updateValueLabel('clayRoughness', value, 'decimal');
       this.eventBus.emit('mesh:clay-roughness', value);
     });
     this.inputs.claySpecular.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, 0, 1, 0.5);
       this.stateStore.set('clay.specular', value);
       this.updateValueLabel('claySpecular', value, 'decimal');
       this.eventBus.emit('mesh:clay-specular', value);
@@ -530,7 +530,7 @@ export class UIManager {
       this.eventBus.emit('studio:ground-wire-opacity', value);
     });
     this.inputs.groundY.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -2, 2, 0);
       this.updateValueLabel('groundY', value, 'distance');
       this.stateStore.set('groundY', value);
       this.eventBus.emit('studio:ground-y', value);
@@ -725,13 +725,13 @@ export class UIManager {
       this.eventBus.emit('camera:fov', value);
     });
     this.inputs.cameraTilt?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -45, 45, 0);
       this.updateValueLabel('cameraTilt', value, 'angle');
       this.stateStore.set('camera.tilt', value);
       this.eventBus.emit('camera:tilt', value);
     });
     this.inputs.exposure.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
       this.updateValueLabel('exposure', value, 'decimal');
       this.stateStore.set('exposure', value);
       this.eventBus.emit('scene:exposure', value);
@@ -745,38 +745,38 @@ export class UIManager {
       });
     }
     this.inputs.cameraContrast?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
       this.stateStore.set('camera.contrast', value);
       this.updateValueLabel('cameraContrast', value, 'decimal');
       this.eventBus.emit('render:contrast', value);
     });
     this.inputs.cameraTemperature?.addEventListener('input', (event) => {
-      const parsed = parseFloat(event.target.value);
+      const parsed = this.applySnapToCenter(event.target, 2000, 10000, 6000);
       const kelvin = Number.isFinite(parsed) ? parsed : CAMERA_TEMPERATURE_NEUTRAL_K;
       this.stateStore.set('camera.temperature', kelvin);
       this.updateValueLabel('cameraTemperature', kelvin, 'kelvin');
       this.eventBus.emit('render:temperature', kelvin);
     });
     this.inputs.cameraTint?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
+      const value = this.applySnapToCenter(event.target, -100, 100, 0) || 0;
       this.stateStore.set('camera.tint', value);
       this.updateValueLabel('cameraTint', value, 'integer');
       this.eventBus.emit('render:tint', value / 100);
     });
     this.inputs.cameraHighlights?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
+      const value = this.applySnapToCenter(event.target, -100, 100, 0) || 0;
       this.stateStore.set('camera.highlights', value);
       this.updateValueLabel('cameraHighlights', value, 'integer');
       this.eventBus.emit('render:highlights', value / 100);
     });
     this.inputs.cameraShadows?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) || 0;
+      const value = this.applySnapToCenter(event.target, -50, 50, 0) || 0;
       this.stateStore.set('camera.shadows', value);
       this.updateValueLabel('cameraShadows', value, 'integer');
       this.eventBus.emit('render:shadows', value / 50);
     });
     this.inputs.cameraSaturation?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
       this.stateStore.set('camera.saturation', value);
       this.updateValueLabel('cameraSaturation', value, 'decimal');
       this.eventBus.emit('render:saturation', value);
@@ -1694,6 +1694,32 @@ export class UIManager {
     } else {
       label.textContent = String(value);
     }
+  }
+
+  /**
+   * Apply snap-to-center for sliders with center default values
+   * @param {HTMLInputElement} slider - The slider input element
+   * @param {number} min - Minimum slider value
+   * @param {number} max - Maximum slider value
+   * @param {number} centerValue - The center/default value to snap to
+   * @param {number} thresholdPercent - Threshold as percentage of range (default: 3%)
+   * @returns {number} - The value (snapped if within threshold, otherwise original)
+   */
+  applySnapToCenter(slider, min, max, centerValue, thresholdPercent = 3) {
+    if (!slider) return parseFloat(slider.value);
+    
+    const currentValue = parseFloat(slider.value);
+    const range = max - min;
+    const threshold = (range * thresholdPercent) / 100;
+    const distanceFromCenter = Math.abs(currentValue - centerValue);
+    
+    // If within threshold, snap to center
+    if (distanceFromCenter <= threshold) {
+      slider.value = centerValue;
+      return centerValue;
+    }
+    
+    return currentValue;
   }
 
   /**
