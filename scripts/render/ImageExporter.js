@@ -237,16 +237,178 @@ export class ImageExporter {
       },
     );
     
-    // Step 1: Render scene directly to our render target
-    this.renderer.setRenderTarget(renderTarget);
-    this.renderer.clear(); // Clear with transparent background (alpha = 0)
-    this.renderer.render(this.scene, this.camera);
-    this.renderer.setRenderTarget(null);
-    
-    // Post-processing disabled for now - basic export works without it
-    // TODO: Add post-processing back once we have a reliable method
-    // The issue is that applying passes breaks the export, likely due to
-    // render target format mismatches or ping-pong issues
+    // Canvas Capture Approach: Render composer to canvas, then read from it
+    // This works because composer already renders correctly in viewport
+    if (this.composer) {
+      // Set render pass to clear with transparent alpha
+      if (this.postPipeline?.renderPass) {
+        this.postPipeline.renderPass.clearAlpha = 0; // Transparent clear
+      }
+      
+      // Ensure canvas size matches renderer size
+      const canvas = this.renderer.domElement;
+      canvas.width = cropInfo.fullRenderWidth;
+      canvas.height = cropInfo.fullRenderHeight;
+      
+      // Render composer normally to canvas (this is what works in viewport!)
+      this.composer.render();
+      
+      // Read pixels from canvas using WebGL readPixels
+      // We need to bind the default framebuffer and read from it
+      const gl = this.renderer.getContext();
+      const fullPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
+      
+      // Bind default framebuffer (canvas)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      
+      // Read pixels from default framebuffer
+      gl.readPixels(
+        0,
+        0,
+        cropInfo.fullRenderWidth,
+        cropInfo.fullRenderHeight,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        fullPixels,
+      );
+      
+      // Debug: Check if we got any content
+      const centerIdx = Math.floor((cropInfo.fullRenderHeight / 2) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth / 2) * 4;
+      const hasContent = fullPixels[centerIdx] > 0 || fullPixels[centerIdx + 1] > 0 || fullPixels[centerIdx + 2] > 0 || fullPixels[centerIdx + 3] > 0;
+      if (!hasContent) {
+        console.warn('Canvas appears empty after composer.render(). Trying fallback approach...');
+        // Fallback: render directly to our render target, then apply post-processing manually
+        this.renderer.setRenderTarget(renderTarget);
+        this.renderer.clear();
+        this.renderer.render(this.scene, this.camera);
+        this.renderer.setRenderTarget(null);
+        return renderTarget; // Return without post-processing
+      }
+      
+      // Fix transparency: Post-processing might set background alpha to 255
+      // We need to restore alpha for black/dark background pixels
+      // Render scene directly to get alpha channel
+      const alphaRT = new THREE.WebGLRenderTarget(
+        cropInfo.fullRenderWidth,
+        cropInfo.fullRenderHeight,
+        {
+          format: THREE.RGBAFormat,
+          type: THREE.UnsignedByteType,
+          alpha: true,
+          premultipliedAlpha: false,
+        },
+      );
+      
+      this.renderer.setRenderTarget(alphaRT);
+      this.renderer.clear();
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.setRenderTarget(null);
+      
+      // Read alpha channel from direct render (from render target)
+      const alphaPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
+      this.renderer.readRenderTargetPixels(
+        alphaRT,
+        0,
+        0,
+        cropInfo.fullRenderWidth,
+        cropInfo.fullRenderHeight,
+        alphaPixels,
+      );
+      
+      // Composite: Use RGB from post-processed canvas, alpha from direct render + bloom expansion
+      for (let i = 0; i < fullPixels.length; i += 4) {
+        const r = fullPixels[i];
+        const g = fullPixels[i + 1];
+        const b = fullPixels[i + 2];
+        const directAlpha = alphaPixels[i + 3];
+        
+        // Calculate luminance of post-processed pixel (to detect bloom)
+        const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+        
+        let finalAlpha = directAlpha;
+        
+        // If this pixel is part of the mesh (has alpha), use it directly
+        if (directAlpha > 0) {
+          finalAlpha = directAlpha;
+        } 
+        // If pixel has no mesh alpha but is bright, it's bloom - add alpha based on brightness
+        // Use higher threshold and steeper curve to avoid dark fields
+        else if (luminance > 0.3) {
+          // This is bloom - add alpha based on brightness
+          // Only clearly bright pixels get bloom alpha to avoid dark fields
+          const bloomIntensity = (luminance - 0.3) / 0.7; // Normalize to 0-1 range
+          // Steeper curve (higher power) makes it fade out more quickly
+          const bloomAlpha = Math.min(255, Math.pow(bloomIntensity, 2.0) * 255 * 1.4);
+          finalAlpha = bloomAlpha;
+        }
+        // Everything else (background, dark) is transparent
+        else {
+          finalAlpha = 0;
+        }
+        
+        fullPixels[i + 3] = finalAlpha;
+      }
+      
+      alphaRT.dispose();
+      
+      // Write pixels to our render target
+      const dataTexture = new THREE.DataTexture(
+        fullPixels,
+        cropInfo.fullRenderWidth,
+        cropInfo.fullRenderHeight,
+        THREE.RGBAFormat,
+        THREE.UnsignedByteType,
+      );
+      dataTexture.needsUpdate = true;
+      
+      // Write pixels to render target with alpha preservation
+      // Use a shader material that explicitly writes alpha from the texture
+      const alphaShader = new THREE.ShaderMaterial({
+        uniforms: {
+          tDiffuse: { value: dataTexture },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D tDiffuse;
+          varying vec2 vUv;
+          void main() {
+            vec4 texel = texture2D(tDiffuse, vUv);
+            gl_FragColor = texel; // Write alpha directly from texture
+          }
+        `,
+        transparent: true,
+      });
+      
+      const copyGeometry = new THREE.PlaneGeometry(2, 2);
+      const copyMesh = new THREE.Mesh(copyGeometry, alphaShader);
+      const copyScene = new THREE.Scene();
+      copyScene.add(copyMesh);
+      const copyCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      
+      this.renderer.setRenderTarget(renderTarget);
+      this.renderer.setClearColor(0x000000, 0); // Clear with transparent background
+      this.renderer.setClearAlpha(0);
+      this.renderer.clear();
+      this.renderer.render(copyScene, copyCamera);
+      this.renderer.setRenderTarget(null);
+      
+      // Clean up
+      dataTexture.dispose();
+      copyGeometry.dispose();
+      alphaShader.dispose();
+    } else {
+      // Fallback: direct render if no composer
+      this.renderer.setRenderTarget(renderTarget);
+      this.renderer.clear();
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.setRenderTarget(null);
+    }
     
     // Restore original settings
     this.renderer.setPixelRatio(originalPixelRatio);
