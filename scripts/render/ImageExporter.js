@@ -164,12 +164,51 @@ export class ImageExporter {
     // Convert from normalized device coordinates (-1 to 1) to pixel coordinates
     const width = originalSize.x;
     const height = originalSize.y;
-    const padding = 20; // Padding in pixels
+    const padding = 5; // Padding in pixels (max 5px from mesh edges)
 
-    const pixelMinX = Math.max(0, ((minX + 1) / 2) * width - padding);
-    const pixelMinY = Math.max(0, ((1 - maxY) / 2) * height - padding); // Flip Y
-    const pixelMaxX = Math.min(width, ((maxX + 1) / 2) * width + padding);
-    const pixelMaxY = Math.min(height, ((1 - minY) / 2) * height + padding); // Flip Y
+    // Convert to pixel coordinates
+    const pixelMinX_unpadded = ((minX + 1) / 2) * width;
+    const pixelMinY_unpadded = ((1 - maxY) / 2) * height; // Flip Y
+    const pixelMaxX_unpadded = ((maxX + 1) / 2) * width;
+    const pixelMaxY_unpadded = ((1 - minY) / 2) * height; // Flip Y
+
+    // Calculate center and size
+    const centerX = (pixelMinX_unpadded + pixelMaxX_unpadded) / 2;
+    const centerY = (pixelMinY_unpadded + pixelMaxY_unpadded) / 2;
+    const boxWidth = pixelMaxX_unpadded - pixelMinX_unpadded;
+    const boxHeight = pixelMaxY_unpadded - pixelMinY_unpadded;
+
+    // Add padding symmetrically around center
+    const paddedWidth = boxWidth + (padding * 2);
+    const paddedHeight = boxHeight + (padding * 2);
+
+    // Calculate padded bounds centered on the bounding box
+    let pixelMinX = centerX - paddedWidth / 2;
+    let pixelMinY = centerY - paddedHeight / 2;
+    let pixelMaxX = centerX + paddedWidth / 2;
+    let pixelMaxY = centerY + paddedHeight / 2;
+
+    // Clamp to screen bounds, but try to maintain symmetry
+    if (pixelMinX < 0) {
+      const offset = -pixelMinX;
+      pixelMinX = 0;
+      pixelMaxX = Math.min(width, pixelMaxX + offset);
+    }
+    if (pixelMinY < 0) {
+      const offset = -pixelMinY;
+      pixelMinY = 0;
+      pixelMaxY = Math.min(height, pixelMaxY + offset);
+    }
+    if (pixelMaxX > width) {
+      const offset = pixelMaxX - width;
+      pixelMaxX = width;
+      pixelMinX = Math.max(0, pixelMinX - offset);
+    }
+    if (pixelMaxY > height) {
+      const offset = pixelMaxY - height;
+      pixelMaxY = height;
+      pixelMinY = Math.max(0, pixelMinY - offset);
+    }
 
     const cropWidth = pixelMaxX - pixelMinX;
     const cropHeight = pixelMaxY - pixelMinY;
@@ -315,38 +354,13 @@ export class ImageExporter {
         alphaPixels,
       );
       
-      // Composite: Use RGB from post-processed canvas, alpha from direct render + bloom expansion
+      // Composite: Use RGB from post-processed canvas, alpha ONLY from mesh (no bloom expansion)
       for (let i = 0; i < fullPixels.length; i += 4) {
-        const r = fullPixels[i];
-        const g = fullPixels[i + 1];
-        const b = fullPixels[i + 2];
         const directAlpha = alphaPixels[i + 3];
         
-        // Calculate luminance of post-processed pixel (to detect bloom)
-        const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-        
-        let finalAlpha = directAlpha;
-        
-        // If this pixel is part of the mesh (has alpha), use it directly
-        if (directAlpha > 0) {
-          finalAlpha = directAlpha;
-        } 
-        // If pixel has no mesh alpha but is bright, it's bloom - add alpha based on brightness
-        // Use higher threshold and steeper curve to avoid dark fields
-        else if (luminance > 0.3) {
-          // This is bloom - add alpha based on brightness
-          // Only clearly bright pixels get bloom alpha to avoid dark fields
-          const bloomIntensity = (luminance - 0.3) / 0.7; // Normalize to 0-1 range
-          // Steeper curve (higher power) makes it fade out more quickly
-          const bloomAlpha = Math.min(255, Math.pow(bloomIntensity, 2.0) * 255 * 1.4);
-          finalAlpha = bloomAlpha;
-        }
-        // Everything else (background, dark) is transparent
-        else {
-          finalAlpha = 0;
-        }
-        
-        fullPixels[i + 3] = finalAlpha;
+        // Use mesh alpha only - no expansion for bloom outside mesh borders
+        // RGB already has post-processing (bloom, etc.) applied
+        fullPixels[i + 3] = directAlpha;
       }
       
       alphaRT.dispose();
