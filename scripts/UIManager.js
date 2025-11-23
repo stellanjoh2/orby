@@ -137,6 +137,7 @@ export class UIManager {
     this.buttons = {
       transformReset: q('#transformReset'),
       export: q('#exportPng'),
+      exportTransparentPng: q('#exportTransparentPngButton'),
       copyStudio: q('#copyStudioSettings'),
       copyRender: q('#copyRenderSettings'),
       resetStudio: q('#resetStudioSettings'),
@@ -812,6 +813,10 @@ export class UIManager {
 
     this.buttons.export.addEventListener('click', () => {
       this.eventBus.emit('export:png');
+    });
+
+    this.buttons.exportTransparentPng?.addEventListener('click', () => {
+      this.eventBus.emit('export:transparent-png');
     });
   }
 

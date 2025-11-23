@@ -149,6 +149,20 @@ export class BackgroundController {
   }
   
   /**
+   * Get background sphere (for DOF depth)
+   */
+  getBackgroundSphere() {
+    return this.backgroundSphere;
+  }
+  
+  /**
+   * Get HDRI background enabled state
+   */
+  getHdriBackgroundEnabled() {
+    return this.hdriBackgroundEnabled;
+  }
+  
+  /**
    * Dispose of resources
    */
   dispose() {
