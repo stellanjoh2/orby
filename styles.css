@@ -30,10 +30,10 @@ body[data-theme='violet'] {
   --panel: #0d081f;
   --panel-alt: #160c2f;
   --shelf-bg: rgba(7, 2, 20, 0.50);
-  --stroke: rgba(255, 255, 255, 0.08);
+  --stroke: rgba(255, 255, 255, 0.1);
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
-  --text-dim: rgba(245, 241, 255, 0.65);
+  --text-dim: rgba(245, 241, 255, 0.6);
   
   /* Accent Colors - Derived from brand-primary */
   --accent: var(--brand-primary);
@@ -67,8 +67,8 @@ body[data-theme='aqua'] {
   --bg: #04060c;
   --panel: #0d111c;
   --panel-alt: #121726;
-  --shelf-bg: rgba(0, 0, 0, 0.675);
-  --stroke: rgba(255, 255, 255, 0.08);
+  --shelf-bg: rgba(0, 0, 0, 0.6);
+  --stroke: rgba(255, 255, 255, 0.1);
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
@@ -167,7 +167,7 @@ body.dropzone-visible #webgl {
 .ghost-btn,
 .primary-btn {
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   color: var(--text);
   padding: 0.4rem 0.9rem;
@@ -178,7 +178,7 @@ body.dropzone-visible #webgl {
 }
 
 .ghost-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .ghost-btn.small {
@@ -191,7 +191,7 @@ body.dropzone-visible #webgl {
   padding: 0.75rem 1.25rem;
   margin-top: 0.5rem;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   color: var(--text);
   font-family: inherit;
@@ -205,7 +205,7 @@ body.dropzone-visible #webgl {
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -224,7 +224,7 @@ body.dropzone-visible #webgl {
 .dropzone-btn {
   padding: 0.75rem 1.5rem;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   color: var(--text);
   font-family: inherit;
@@ -235,7 +235,7 @@ body.dropzone-visible #webgl {
 }
 
 .dropzone-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -363,7 +363,7 @@ body.dropzone-visible #webgl {
   top: 24px;
   right: 28px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   opacity: 1;
   transform: translate3d(0, 0, 0);
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
@@ -402,7 +402,7 @@ body.dropzone-visible #webgl {
 }
 
 .tab:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.1);
   transition: color 0s, background 0s, border-radius 0s;
 }
 
@@ -563,7 +563,7 @@ a:hover {
   padding: 0.6rem 0.6rem 3rem 0.6rem;
   min-height: 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   /* Create space for scrollbar on the right, outside the window */
   margin-right: calc(-1.2rem + 6px);
   padding-right: calc(0.6rem + 1.2rem - 6px);
@@ -581,12 +581,12 @@ a:hover {
 }
 
 .panels::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 999px;
 }
 
 .panels::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .panel {
@@ -634,7 +634,7 @@ a:hover {
   border-radius: 6px;
   padding: 1.2rem;
   margin-bottom: 0.5rem;
-  background: rgba(0, 0, 0, 0.675);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 /* Subtle divider line within panel blocks */
@@ -649,88 +649,7 @@ a:hover {
   position: relative;
 }
 
-.subsection.is-muted > :not(.block-title, .block-title *) {
-  opacity: 0.5;
-  pointer-events: none;
-  filter: saturate(0.35);
-  transition: opacity 0.25s ease, filter 0.25s ease;
-}
-
-.subsection.is-muted .slider-line,
-.subsection.is-muted .slider-line *,
-.subsection.is-muted .color-line,
-.subsection.is-muted .color-line *,
-.subsection.is-muted .select-line,
-.subsection.is-muted .select-line *,
-.subsection.is-muted label:not(.block-title):not(.block-title *):not(.effect-toggle),
-.subsection.is-muted button:not(.block-reset-btn):not(.block-title *):not(.block-title button):not(.effect-toggle):not(.effect-toggle *),
-.subsection.is-muted input:not(.block-title *):not(.effect-toggle *),
-.subsection.is-muted select:not(.block-title *),
-.subsection.is-muted span:not(.block-title *):not(.block-title span) {
-  opacity: 0.5;
-  pointer-events: none;
-  filter: saturate(0.35);
-}
-
-
-.subsection.is-muted .effect-toggle,
-.subsection.is-muted .effect-toggle * {
-  opacity: 1;
-  pointer-events: auto;
-  filter: none !important;
-}
-
-/* Apply muted state to all content except block title and its children */
-.panel-block.is-muted > :not(.block-title, .block-title *) {
-  opacity: 0.5;
-  pointer-events: none;
-  filter: saturate(0.35);
-  transition: opacity 0.25s ease, filter 0.25s ease;
-}
-
-/* Apply muted state to nested elements (HDRI grid, sliders, etc.) */
-.panel-block.is-muted .hdri-grid,
-.panel-block.is-muted .hdri-grid *,
-.panel-block.is-muted .slider-line,
-.panel-block.is-muted .slider-line *,
-.panel-block.is-muted .color-line,
-.panel-block.is-muted .color-line *,
-.panel-block.is-muted .select-line,
-.panel-block.is-muted .select-line *,
-.panel-block.is-muted label:not(.block-title):not(.block-title *):not(.effect-toggle),
-.panel-block.is-muted button:not(.block-reset-btn):not(.block-title *):not(.block-title button):not(.effect-toggle):not(.effect-toggle *),
-.panel-block.is-muted input:not(.block-title *):not(.effect-toggle *),
-.panel-block.is-muted select:not(.block-title *),
-.panel-block.is-muted span:not(.block-title *):not(.block-title span) {
-  opacity: 0.5;
-  pointer-events: none;
-  filter: saturate(0.35);
-}
-
-/* Block-title opacity: 0.8 when muted, 1.0 when active */
-.panel-block.is-muted .block-title,
-.panel-block.is-muted .block-title *,
-.subsection.is-muted .block-title,
-.subsection.is-muted .block-title * {
-  opacity: 0.8 !important;
-  filter: none !important;
-  pointer-events: auto;
-}
-
-.panel-block:not(.is-muted) .block-title,
-.panel-block:not(.is-muted) .block-title *,
-.subsection:not(.is-muted) .block-title,
-.subsection:not(.is-muted) .block-title * {
-  opacity: 1.0;
-}
-
-/* Ensure toggle is never affected by muted state */
-.panel-block.is-muted .effect-toggle,
-.panel-block.is-muted .effect-toggle * {
-  opacity: 1 !important;
-  filter: none !important;
-  pointer-events: auto;
-}
+/* Muted UI logic removed - will be reimplemented later */
 
 .block-title {
   font-size: 1rem;
@@ -755,7 +674,7 @@ a:hover {
 
 .block-reset-btn {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   color: var(--text-dim);
   padding: 0.25rem 0.5rem;
@@ -768,11 +687,13 @@ a:hover {
 }
 
 .block-reset-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--text);
 }
 
+/* Toggle base - always isolated, never affected by muting */
+/* Force toggle to render in completely separate layer, bypassing any parent filters */
 .effect-toggle {
   --toggle-track-height: calc(0.65rem + 0.5rem);
   --toggle-thumb-size: calc(var(--toggle-track-height) - 0.3rem);
@@ -785,6 +706,16 @@ a:hover {
   margin-left: auto;
   cursor: pointer;
   justify-self: end;
+  /* Toggles are NEVER muted - always full opacity and no filters */
+  opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate !important;
+  contain: layout style paint !important; /* Completely self-contained */
+  transform: translateZ(0) !important; /* Force new compositing layer */
+  will-change: transform, opacity, filter !important;
+  mix-blend-mode: normal !important;
+  z-index: 10 !important; /* High z-index to ensure it's above filtered contexts */
 }
 
 .effect-toggle input {
@@ -796,18 +727,30 @@ a:hover {
   z-index: 2;
 }
 
+/* Toggle indicator - always isolated, never affected by muting */
 .effect-toggle .effect-indicator {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.15); /* Default unchecked color - checked state will override */
   border-radius: 999px;
   transition: background-color 0.3s ease;
   cursor: pointer;
+  /* Always isolated from parent - force separate compositing layer */
+  opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate !important;
+  contain: layout style paint !important;
+  transform: translateZ(0) !important;
+  will-change: background-color, transform, opacity, filter !important;
+  mix-blend-mode: normal !important;
+  z-index: 1;
 }
 
+/* Toggle thumb - always isolated */
 .effect-toggle .effect-indicator::before {
   position: absolute;
   content: '';
@@ -819,14 +762,22 @@ a:hover {
   border-radius: 50%;
   transition: transform 0.3s ease, background-color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 1;
+  filter: none;
 }
 
+/* Toggle checked state - always isolated */
 .effect-toggle input:checked + .effect-indicator {
-  background-color: var(--brand-primary);
+  background-color: var(--brand-primary) !important; /* Always yellow when checked */
+  opacity: 1 !important;
+  filter: none !important;
+  transform: translateZ(0) !important;
 }
 
+/* Toggle checked thumb - always isolated */
 .effect-toggle input:checked + .effect-indicator::before {
-  transform: translateX(calc(var(--toggle-track-height) * 2 - var(--toggle-thumb-size) - var(--toggle-thumb-offset) * 2));
+  transform: translateX(calc(var(--toggle-track-height) * 2 - var(--toggle-thumb-size) - var(--toggle-thumb-offset) * 2)) translateZ(0);
+  opacity: 1;
 }
 
 .effect-toggle:hover .effect-indicator {
@@ -861,7 +812,7 @@ a:hover {
 }
 
 .segmented label:hover:not(:has(input:checked)) {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.1);
   transition: border 0s, color 0s, background 0s;
 }
 
@@ -919,6 +870,24 @@ a:hover {
   width: 100%;
 }
 
+/* Disabled sliders */
+.slider-line input[type='range']:disabled {
+  opacity: 0.6;
+}
+
+/* Disabled slider thumbs should be gray, not yellow */
+input[type='range']:disabled::-webkit-slider-thumb {
+  background: #6b7280 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+input[type='range']:disabled::-moz-range-thumb {
+  background: #6b7280 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
 .slider-line--temperature input[type='range'] {
   background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
 }
@@ -957,7 +926,7 @@ a:hover {
   letter-spacing: -0.01em;
   text-align: right;
   color: var(--text-dim);
-  opacity: 0.65;
+  opacity: 0.6;
   position: static;
   padding-top: 0;
   background: none;
@@ -965,7 +934,7 @@ a:hover {
 
 .rotation-notch {
   border: none;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text);
   width: 26px;
   height: 22px;
@@ -978,7 +947,7 @@ a:hover {
 }
 
 .rotation-notch:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .rotation-notch i {
@@ -1001,7 +970,7 @@ a:hover {
   appearance: none;
   overflow: hidden;
   cursor: pointer;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1);
   flex-shrink: 1;
 }
 
@@ -1088,15 +1057,16 @@ a:hover {
 }
 
 .hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.1);
   transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
 }
 
 .hdri-card:disabled,
 .hdri-card.is-disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
   border-color: rgba(255, 255, 255, 0.05);
+  filter: saturate(0.35);
 }
 
 
@@ -1127,8 +1097,9 @@ a:hover {
 }
 
 .color-chip.is-disabled-handle {
-  opacity: 0.4;
+  opacity: 0.5;
   pointer-events: none;
+  filter: saturate(0.35);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
@@ -1146,7 +1117,7 @@ a:hover {
 .help-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1154,7 +1125,7 @@ a:hover {
 }
 
 .help-card {
-  background: rgba(8, 10, 18, 0.95);
+  background: rgba(8, 10, 18, 0.8);
   border: 1px solid var(--stroke);
   border-radius: 1rem;
   max-width: 420px;
@@ -1188,7 +1159,7 @@ a:hover {
   left: 50%;
   transform: translateX(-50%);
   padding: 0.75rem 1.25rem;
-  background: rgba(6, 12, 24, 0.9);
+  background: rgba(6, 12, 24, 0.8);
   border: 1px solid var(--accent);
   border-radius: 999px;
   letter-spacing: -0.01em;

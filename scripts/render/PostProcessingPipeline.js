@@ -35,8 +35,8 @@ export class PostProcessingPipeline {
       focus: 10,
       aperture: 0.003,
       maxblur: 0.01,
-      rings: 5, // More rings for better quality (default is 3)
-      sides: 7, // More sides for smoother bokeh (default is 5)
+      rings: 3, // Reduced rings to minimize artifacts (default is 3)
+      sides: 5, // Reduced sides for smoother, less artifact-prone bokeh (default is 5)
     });
 
     this.bloomPass = new UnrealBloomPass(
@@ -105,8 +105,10 @@ export class PostProcessingPipeline {
     this.bokehPass.uniforms.focus.value = settings.focus;
     this.bokehPass.uniforms.aperture.value = settings.aperture;
     // Calculate maxblur from aperture - smaller aperture = more blur
-    // Scale aperture to very subtle blur range (0.03-0.12) to prevent ghost effects in background
-    const maxblur = Math.min(0.12, Math.max(0.03, settings.aperture * 50));
+    // Very conservative maxblur range (0.01-0.04) for smooth, camera-like DOF
+    // This prevents harsh edges and ghosting artifacts, especially on backgrounds
+    // Real camera DOF is subtle and smooth, not aggressive
+    const maxblur = Math.min(0.04, Math.max(0.01, settings.aperture * 15));
     this.bokehPass.uniforms.maxblur.value = maxblur;
   }
 
