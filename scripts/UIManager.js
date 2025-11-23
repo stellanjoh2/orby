@@ -102,7 +102,6 @@ export class UIManager {
       showLightIndicators: q('#showLightIndicators'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
-      dofStrength: q('#dofStrength'),
       toggleDof: q('#toggleDof'),
       bloomThreshold: q('#bloomThreshold'),
       bloomStrength: q('#bloomStrength'),
@@ -606,7 +605,7 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('dof.enabled', enabled);
       this.setEffectControlsDisabled(
-        ['dofFocus', 'dofAperture', 'dofStrength'],
+        ['dofFocus', 'dofAperture'],
         !enabled,
       );
       // Block muting handled by applyBlockStates via syncControls
@@ -622,12 +621,6 @@ export class UIManager {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('dofAperture', value, 'decimal', 3);
       this.stateStore.set('dof.aperture', value);
-      emitDof();
-    });
-    this.inputs.dofStrength.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.updateValueLabel('dofStrength', value, 'decimal');
-      this.stateStore.set('dof.strength', value);
       emitDof();
     });
 
@@ -1343,7 +1336,7 @@ export class UIManager {
       // Emit events to update scene
       this.eventBus.emit('render:dof', defaults.dof);
       this.setEffectControlsDisabled(
-        ['dofFocus', 'dofAperture', 'dofStrength'],
+        ['dofFocus', 'dofAperture'],
         !defaults.dof.enabled,
       );
       this.eventBus.emit('render:bloom', defaults.bloom);
@@ -1497,7 +1490,7 @@ export class UIManager {
             this.stateStore.set('dof', defaults.dof);
             this.eventBus.emit('render:dof', defaults.dof);
             this.setEffectControlsDisabled(
-              ['dofFocus', 'dofAperture', 'dofStrength'],
+              ['dofFocus', 'dofAperture'],
               !defaults.dof.enabled,
             );
             this.syncUIFromState();
@@ -2118,11 +2111,9 @@ export class UIManager {
     this.updateValueLabel('dofFocus', state.dof.focus, 'distance');
     this.inputs.dofAperture.value = state.dof.aperture;
     this.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
-    this.inputs.dofStrength.value = state.dof.strength;
-    this.updateValueLabel('dofStrength', state.dof.strength, 'decimal');
     this.inputs.toggleDof.checked = !!state.dof.enabled;
     this.setEffectControlsDisabled(
-      ['dofFocus', 'dofAperture', 'dofStrength'],
+      ['dofFocus', 'dofAperture'],
       !state.dof.enabled,
     );
     

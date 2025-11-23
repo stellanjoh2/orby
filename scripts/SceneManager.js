@@ -978,12 +978,9 @@ export class SceneManager {
     
     this.prepareMesh(object);
     
-    // Only fit camera if this is NOT the first model load
-    // This prevents jarring camera jump on initial model load
+    // Track if this is the first model load
     const wasFirstLoad = this.isFirstModelLoad;
-    if (!this.isFirstModelLoad) {
-    this.fitCameraToObject(object);
-    } else {
+    if (this.isFirstModelLoad) {
       // Mark that we've loaded the first model
       this.isFirstModelLoad = false;
     }
@@ -1012,49 +1009,51 @@ export class SceneManager {
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.();
     
-    // Fade in mesh opacity from 0 to 1 over 2 seconds
+    // Fade in mesh opacity from 0 to 1 over 2 seconds with spin-in animation
+    // Animate object rotation relative to modelRoot (which may have saved rotation)
     this._fadeInMeshOpacity(object);
     
-    // After first model load, smoothly zoom in to focus on it
+    // Smoothly animate camera to focus on the new mesh
     // Use a small delay to ensure everything is set up
-    if (wasFirstLoad) {
-      // Fade in exposure from low to target over 2 seconds
-      const targetExposure = this.stateStore.getState().exposure ?? 1.0;
-      const startExposure = 0.1;
-      const duration = 2000; // 2 seconds
-      const startTime = performance.now();
-      
-      const fadeExposure = () => {
-        const elapsed = performance.now() - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        // Use ease-out curve for smooth fade
-        const easedProgress = 1 - Math.pow(1 - progress, 3);
-        const currentExposure = startExposure + (targetExposure - startExposure) * easedProgress;
-        
-        this.autoExposureController?.setExposure(currentExposure);
-        this.eventBus.emit('scene:exposure', currentExposure);
-        
-        if (progress < 1) {
-          requestAnimationFrame(fadeExposure);
-        } else {
-          // Ensure we end at exact target value
-          this.autoExposureController?.setExposure(targetExposure);
-          this.eventBus.emit('scene:exposure', targetExposure);
-        }
-      };
-      
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Double RAF ensures model is fully rendered before animating
-          if (this.currentModel) {
+        // Double RAF ensures model is fully rendered before animating
+        if (this.currentModel) {
+          if (wasFirstLoad) {
+            // First load: fade in exposure and animate camera
+            const targetExposure = this.stateStore.getState().exposure ?? 1.0;
+            const startExposure = 0.1;
+            const duration = 2000; // 2 seconds
+            const startTime = performance.now();
+            
+            const fadeExposure = () => {
+              const elapsed = performance.now() - startTime;
+              const progress = Math.min(1, elapsed / duration);
+              // Use smooth ease-out curve (quadratic) - starts fast, gradually slows
+              const easedProgress = 1 - Math.pow(1 - progress, 2);
+              const currentExposure = startExposure + (targetExposure - startExposure) * easedProgress;
+              
+              this.autoExposureController?.setExposure(currentExposure);
+              this.eventBus.emit('scene:exposure', currentExposure);
+              
+              if (progress < 1) {
+                requestAnimationFrame(fadeExposure);
+              } else {
+                // Ensure we end at exact target value
+                this.autoExposureController?.setExposure(targetExposure);
+                this.eventBus.emit('scene:exposure', targetExposure);
+              }
+            };
+            
             // Start exposure fade-in
             fadeExposure();
-            // Start camera focus animation
-            this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
           }
-        });
+          
+          // Smoothly animate camera to focus on the mesh (for both first and subsequent loads)
+          this.cameraController?.focusOnObjectAnimated(this.currentModel, 2.0);
+        }
       });
-    }
+    });
   }
 
   prepareMesh(object) {
@@ -1085,16 +1084,26 @@ export class SceneManager {
       }
     });
 
-    // Animate opacity from 0 to 1 over 2 seconds
+    // Set initial rotation to -90 degrees on Y axis (spins in from the left)
+    // This is relative to modelRoot, which may have its own rotation from transform controller
+    const startRotationY = -90;
+    const targetRotationY = 0;
+    object.rotation.y = THREE.MathUtils.degToRad(startRotationY);
+
+    // Animate opacity and rotation from 0 to 1 and -90° to 0° over 2 seconds
     const duration = 2000; // 2 seconds
     const startTime = performance.now();
 
     const fadeIn = () => {
       const elapsed = performance.now() - startTime;
       const progress = Math.min(1, elapsed / duration);
-      // Use ease-out curve for smooth fade
-      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      // Use smooth ease-out curve (quadratic) - starts fast, gradually slows
+      const easedProgress = 1 - Math.pow(1 - progress, 2);
       const opacity = easedProgress;
+      
+      // Animate rotation from -90° to 0° (synced with fade, relative to modelRoot)
+      const rotationY = startRotationY + (targetRotationY - startRotationY) * easedProgress;
+      object.rotation.y = THREE.MathUtils.degToRad(rotationY);
 
       materials.forEach((mat) => {
         if (mat) {
@@ -1105,12 +1114,13 @@ export class SceneManager {
       if (progress < 1) {
         requestAnimationFrame(fadeIn);
       } else {
-        // Ensure we end at exact opacity 1
+        // Ensure we end at exact opacity 1 and rotation 0° (relative to modelRoot)
         materials.forEach((mat) => {
           if (mat) {
             mat.opacity = 1;
           }
         });
+        object.rotation.y = THREE.MathUtils.degToRad(targetRotationY);
       }
     };
 

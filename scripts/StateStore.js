@@ -70,9 +70,8 @@ export class StateStore {
       },
       dof: {
         enabled: false,
-        focus: 10,
-        aperture: 0.003,
-        strength: 0,
+        focus: 1.5, // Very close focus for tight asset viewing
+        aperture: 0.003, // Moderate aperture for subtle DOF
       },
       bloom: {
         enabled: true,
