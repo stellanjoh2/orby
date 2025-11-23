@@ -21,11 +21,11 @@ export class ImageExporter {
   /**
    * Export scene as PNG (with background)
    */
-  async exportPng(currentFile, originalSize, originalPixelRatio) {
-    const targetWidth = originalSize.x * 2;
-    const targetHeight = originalSize.y * 2;
+  async exportPng(currentFile, originalSize, originalPixelRatio, size = 2) {
+    const targetWidth = originalSize.x * size;
+    const targetHeight = originalSize.y * size;
 
-    this.renderer.setPixelRatio(originalPixelRatio * 2);
+    this.renderer.setPixelRatio(originalPixelRatio * size);
     this.renderer.setSize(targetWidth, targetHeight, false);
     this.composer.setSize(targetWidth, targetHeight);
     
@@ -43,7 +43,7 @@ export class ImageExporter {
   /**
    * Export scene as transparent PNG (cropped to mesh bounds)
    */
-  async exportTransparentPng(currentModel, currentFile, cameraController) {
+  async exportTransparentPng(currentModel, currentFile, cameraController, size = 2) {
     if (!currentModel) {
       console.warn('No model loaded to export');
       return;
@@ -56,7 +56,7 @@ export class ImageExporter {
     this._setupTransparentRender();
 
     // Calculate mesh bounds and crop region
-    const cropInfo = this._calculateCropRegion(currentModel, cameraController, state.originalSize);
+    const cropInfo = this._calculateCropRegion(currentModel, cameraController, state.originalSize, size);
     if (!cropInfo) {
       console.warn('Could not calculate mesh bounds');
       this._restoreState(state);
@@ -111,6 +111,9 @@ export class ImageExporter {
       backgroundSphere.visible = false;
     }
 
+    // Note: We keep scene.environment for lighting, but clear scene.background
+    // to prevent HDRI background from bleeding through at edges
+
     // Set transparent clear color
     this.renderer.setClearColor(0x000000, 0); // Black with 0 alpha = transparent
     this.renderer.setClearAlpha(0);
@@ -120,7 +123,7 @@ export class ImageExporter {
   /**
    * Calculate crop region based on mesh bounds in screen space
    */
-  _calculateCropRegion(currentModel, cameraController, originalSize) {
+  _calculateCropRegion(currentModel, cameraController, originalSize, size = 2) {
     const bounds = cameraController?.getModelBounds();
     if (!bounds) {
       return null;
@@ -213,8 +216,8 @@ export class ImageExporter {
     const cropWidth = pixelMaxX - pixelMinX;
     const cropHeight = pixelMaxY - pixelMinY;
 
-    // Render at higher resolution (2x for better quality)
-    const scale = 2;
+    // Render at specified resolution multiplier
+    const scale = size;
     const renderWidth = Math.ceil(cropWidth * scale);
     const renderHeight = Math.ceil(cropHeight * scale);
     const fullRenderWidth = width * scale;
@@ -233,6 +236,132 @@ export class ImageExporter {
       fullRenderHeight,
       scale,
     };
+  }
+
+  /**
+   * Smooth alpha edges to reduce harsh artifacts and color bleed
+   * Applies a Gaussian blur to the alpha channel for smoother, more natural edges
+   */
+  _smoothAlphaEdges(alphaPixels, width, height) {
+    const smoothed = new Uint8Array(alphaPixels.length);
+    smoothed.set(alphaPixels); // Copy original
+    
+    // Gaussian blur for alpha channel (more natural than box blur)
+    const radius = 1;
+    const sigma = 0.8; // Gaussian standard deviation
+    const gaussianWeights = [
+      0.25, 0.5, 0.25,  // Row weights (approximate Gaussian)
+      0.5,  1.0, 0.5,   // Center row
+      0.25, 0.5, 0.25,  // Bottom row
+    ];
+    
+    for (let y = radius; y < height - radius; y++) {
+      for (let x = radius; x < width - radius; x++) {
+        const idx = (y * width + x) * 4;
+        const currentAlpha = alphaPixels[idx + 3];
+        
+        // Only smooth edge pixels (partial alpha)
+        if (currentAlpha > 0 && currentAlpha < 255) {
+          let weightedSum = 0;
+          let weightSum = 0;
+          let weightIdx = 0;
+          
+          // Sample surrounding pixels with Gaussian weights
+          for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+              const sampleIdx = ((y + dy) * width + (x + dx)) * 4;
+              const weight = gaussianWeights[weightIdx++];
+              weightedSum += alphaPixels[sampleIdx + 3] * weight;
+              weightSum += weight;
+            }
+          }
+          
+          // Apply smoothed alpha (weighted towards center for edge preservation)
+          const avgAlpha = weightedSum / weightSum;
+          const smoothedAlpha = Math.round(currentAlpha * 0.6 + avgAlpha * 0.4);
+          smoothed[idx + 3] = smoothedAlpha;
+        } else {
+          // Keep fully opaque/transparent pixels unchanged
+          smoothed[idx + 3] = currentAlpha;
+        }
+      }
+    }
+    
+    // Copy smoothed alpha back
+    for (let i = 3; i < alphaPixels.length; i += 4) {
+      alphaPixels[i] = smoothed[i];
+    }
+  }
+
+  /**
+   * Fade out the outer 3px edge of the alpha channel to soften harsh edges
+   */
+  _fadeOuterEdge(alphaPixels, width, height) {
+    const faded = new Uint8Array(alphaPixels.length);
+    faded.set(alphaPixels); // Copy original
+    
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const currentAlpha = alphaPixels[idx + 3];
+        
+        // Only process edge pixels (pixels with alpha > 0)
+        if (currentAlpha > 0) {
+          // Check if this pixel is within 2 pixels of a transparent edge
+          let distanceToEdge = Infinity;
+          
+          // Check pixels within 3-pixel radius
+          for (let dy = -3; dy <= 3; dy++) {
+            for (let dx = -3; dx <= 3; dx++) {
+              const checkX = x + dx;
+              const checkY = y + dy;
+              const dist = Math.sqrt(dx * dx + dy * dy); // Euclidean distance for smoother falloff
+              
+              if (checkX < 0 || checkX >= width || checkY < 0 || checkY >= height) {
+                // Out of bounds = edge of image
+                distanceToEdge = Math.min(distanceToEdge, dist);
+              } else {
+                const checkIdx = (checkY * width + checkX) * 4;
+                const checkAlpha = alphaPixels[checkIdx + 3];
+                
+                // If this pixel is transparent, we found an edge
+                if (checkAlpha === 0) {
+                  distanceToEdge = Math.min(distanceToEdge, dist);
+                }
+              }
+            }
+          }
+          
+          // Fade out pixels within 3 pixels of edge using smooth interpolation
+          // Euclidean distance allows for smoother, more natural falloff
+          if (distanceToEdge <= 3) {
+            // Smooth interpolation: 8% at distance 1, 25% at distance 2, 55% at distance 3
+            let fadeFactor;
+            if (distanceToEdge <= 1) {
+              // Linear interpolation from 0.08 at distance 1.0
+              fadeFactor = 0.08;
+            } else if (distanceToEdge <= 2) {
+              // Linear interpolation between distance 1 and 2
+              const t = (distanceToEdge - 1) / 1; // 0 to 1
+              fadeFactor = 0.08 + (0.25 - 0.08) * t;
+            } else {
+              // Linear interpolation between distance 2 and 3
+              const t = (distanceToEdge - 2) / 1; // 0 to 1
+              fadeFactor = 0.25 + (0.55 - 0.25) * t;
+            }
+            faded[idx + 3] = Math.round(currentAlpha * fadeFactor);
+          } else {
+            // Beyond 3 pixels: no fade
+            faded[idx + 3] = currentAlpha;
+          }
+        }
+      }
+    }
+    
+    // Copy faded alpha back
+    for (let i = 3; i < alphaPixels.length; i += 4) {
+      alphaPixels[i] = faded[i];
+    }
   }
 
   /**
@@ -257,7 +386,8 @@ export class ImageExporter {
       this.postPipeline.renderPass.clearAlpha = 0;
     }
     
-    // Resize renderer and composer
+    // Resize renderer and composer at the specified scale
+    // fullRenderWidth/Height are already scaled, so pixel ratio stays at 1 for exact resolution
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight, false);
     if (this.composer) {
@@ -289,12 +419,17 @@ export class ImageExporter {
       canvas.width = cropInfo.fullRenderWidth;
       canvas.height = cropInfo.fullRenderHeight;
       
+      // Explicitly clear the canvas to remove any stale pixels/HDRI background
+      const gl = this.renderer.getContext();
+      gl.clearColor(0, 0, 0, 0); // Clear with transparent black
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      
       // Render composer normally to canvas (this is what works in viewport!)
       this.composer.render();
       
       // Read pixels from canvas using WebGL readPixels
       // We need to bind the default framebuffer and read from it
-      const gl = this.renderer.getContext();
+      // (gl is already declared above)
       const fullPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
       
       // Bind default framebuffer (canvas)
@@ -326,7 +461,7 @@ export class ImageExporter {
       
       // Fix transparency: Post-processing might set background alpha to 255
       // We need to restore alpha for black/dark background pixels
-      // Render scene directly to get alpha channel
+      // Render scene directly to get alpha channel with anti-aliasing
       const alphaRT = new THREE.WebGLRenderTarget(
         cropInfo.fullRenderWidth,
         cropInfo.fullRenderHeight,
@@ -335,6 +470,7 @@ export class ImageExporter {
           type: THREE.UnsignedByteType,
           alpha: true,
           premultipliedAlpha: false,
+          samples: this.renderer.capabilities.isWebGL2 ? 8 : 0, // Enable 8x MSAA if available for better edge quality
         },
       );
       
@@ -354,13 +490,41 @@ export class ImageExporter {
         alphaPixels,
       );
       
-      // Composite: Use RGB from post-processed canvas, alpha ONLY from mesh (no bloom expansion)
+      // Smooth alpha edges to reduce harsh artifacts and green pixel bleed
+      this._smoothAlphaEdges(alphaPixels, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
+      
+      // Fade outer 1px edge to soften harsh edges
+      this._fadeOuterEdge(alphaPixels, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
+      
+      // Composite: Use RGB from post-processed canvas for opaque pixels, direct render RGB for edge pixels
+      // This prevents dark outlines by using clean mesh colors at edges instead of darkened post-processed values
       for (let i = 0; i < fullPixels.length; i += 4) {
         const directAlpha = alphaPixels[i + 3];
+        const postR = fullPixels[i];
+        const postG = fullPixels[i + 1];
+        const postB = fullPixels[i + 2];
+        const directR = alphaPixels[i];
+        const directG = alphaPixels[i + 1];
+        const directB = alphaPixels[i + 2];
         
         // Use mesh alpha only - no expansion for bloom outside mesh borders
-        // RGB already has post-processing (bloom, etc.) applied
         fullPixels[i + 3] = directAlpha;
+        
+        if (directAlpha === 0) {
+          // Fully transparent: zero RGB to prevent any background bleed
+          fullPixels[i] = 0;     // R
+          fullPixels[i + 1] = 0;  // G
+          fullPixels[i + 2] = 0;  // B
+        } else if (directAlpha < 255) {
+          // Edge pixels (partial alpha): use direct render RGB for clean mesh colors
+          // Direct render has proper lighting without post-processing darkening
+          fullPixels[i] = directR;     // R
+          fullPixels[i + 1] = directG;  // G
+          fullPixels[i + 2] = directB;  // B
+        } else {
+          // Fully opaque pixels: use post-processed RGB (with all effects)
+          // RGB already set from post-processed canvas
+        }
       }
       
       alphaRT.dispose();

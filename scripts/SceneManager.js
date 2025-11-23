@@ -467,8 +467,7 @@ export class SceneManager {
     this.eventBus.on('animation:scrub', (value) => this.animationController.scrub(value));
     this.eventBus.on('animation:select', (index) => this.animationController.selectAnimation(index));
 
-    this.eventBus.on('export:png', () => this.exportPng());
-    this.eventBus.on('export:transparent-png', () => this.exportTransparentPng());
+    this.eventBus.on('export:png', (settings) => this.exportPng(settings));
     this.eventBus.on('app:reset', () =>
       this.applyStateSnapshot(this.stateStore.getState()),
     );
@@ -1293,24 +1292,28 @@ export class SceneManager {
     }
   }
 
-  async exportPng() {
-    const originalSize = new THREE.Vector2();
-    this.renderer.getSize(originalSize);
-    const originalPixelRatio = this.renderer.getPixelRatio();
+  async exportPng(settings = {}) {
+    const { transparent = false, size = 2 } = settings;
     
-    await this.imageExporter.exportPng(
-      this.currentFile,
-      originalSize,
-      originalPixelRatio,
-    );
-  }
-
-  async exportTransparentPng() {
-    await this.imageExporter.exportTransparentPng(
-      this.currentModel,
-      this.currentFile,
-      this.cameraController,
-    );
+    if (transparent) {
+      await this.imageExporter.exportTransparentPng(
+        this.currentModel,
+        this.currentFile,
+        this.cameraController,
+        size,
+      );
+    } else {
+      const originalSize = new THREE.Vector2();
+      this.renderer.getSize(originalSize);
+      const originalPixelRatio = this.renderer.getPixelRatio();
+      
+      await this.imageExporter.exportPng(
+        this.currentFile,
+        originalSize,
+        originalPixelRatio,
+        size,
+      );
+    }
   }
 }
 

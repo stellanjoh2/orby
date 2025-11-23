@@ -464,6 +464,30 @@
                 </dl>
               </div>
 
+              <div class="panel-block">
+                <div class="block-title">Export</div>
+                <div class="export-controls">
+                  <div class="export-option-group">
+                    <label class="export-label">Transparent</label>
+                    <div class="export-button-group">
+                      <button data-export-transparent="true" class="export-option-btn active">YES</button>
+                      <button data-export-transparent="false" class="export-option-btn">NO</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Size</label>
+                    <div class="export-button-group">
+                      <button data-export-size="1" class="export-option-btn active">1X</button>
+                      <button data-export-size="2" class="export-option-btn">2X</button>
+                    </div>
+                  </div>
+                  <button id="exportPngButton" class="export-action-btn">
+                    <i data-lucide="download"></i>
+                    EXPORT .PNG
+                  </button>
+                </div>
+              </div>
+
               <div class="panel-block" id="animationBlock">
                 <div class="block-title">Animation</div>
                 <div class="animation-controls">
@@ -489,9 +513,6 @@
 
               <button id="loadMeshButton" class="action-btn">
                 Import New Mesh
-              </button>
-              <button id="exportTransparentPngButton" class="action-btn">
-                Export as Transparent PNG
               </button>
               <button id="resetMeshSettings" class="action-btn">
                 Reset Mesh Settings
@@ -980,7 +1001,7 @@
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="grain">Reset</button>
                       <label class="effect-toggle">
-                        <input type="checkbox" id="toggleGrain" checked />
+                        <input type="checkbox" id="toggleGrain" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Film Grain</span>
                       </label>
@@ -1006,7 +1027,7 @@
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="aberration">Reset</button>
                       <label class="effect-toggle">
-                        <input type="checkbox" id="toggleAberration" checked />
+                        <input type="checkbox" id="toggleAberration" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Chromatic Aberration</span>
                       </label>
@@ -1048,8 +1069,8 @@
                 <label class="select-line">
                   <span>Anti-Aliasing</span>
                   <select id="antiAliasing">
-                    <option value="none" selected>None</option>
-                    <option value="fxaa">FXAA</option>
+                    <option value="none">None</option>
+                    <option value="fxaa" selected>FXAA</option>
                   </select>
                 </label>
                 <label class="select-line">

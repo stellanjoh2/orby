@@ -87,8 +87,8 @@ export class StateStore {
         maxLuminance: 0.95,
         sensitivity: 0.55,
       },
-      grain: { enabled: true, intensity: 0.03, color: '#ffffff' },
-      aberration: { enabled: true, offset: 0.0025, strength: 0.24 },
+      grain: { enabled: false, intensity: 0.03, color: '#ffffff' },
+      aberration: { enabled: false, offset: 0.0025, strength: 0.24 },
       camera: {
         fov: 50,
         tilt: 0,
@@ -101,7 +101,7 @@ export class StateStore {
       },
       exposure: 1.0,
       autoExposure: false,
-      antiAliasing: 'none',
+      antiAliasing: 'fxaa',
       toneMapping: 'aces-filmic',
       background: '#000000',
     };
