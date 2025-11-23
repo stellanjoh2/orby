@@ -27,6 +27,7 @@ import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
+import { ImageExporter } from './render/ImageExporter.js';
 
 
 export class SceneManager {
@@ -271,6 +272,16 @@ export class SceneManager {
     this.lensDirtPass = this.postPipeline.lensDirtPass;
     this.fxaaPass = this.postPipeline.fxaaPass;
     this.exposurePass = this.postPipeline.exposurePass;
+    
+    // Initialize image exporter (needs composer)
+    this.imageExporter = new ImageExporter({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      composer: this.composer,
+      postPipeline: this.postPipeline,
+      backgroundController: this.backgroundController,
+    });
   }
 
 
@@ -457,6 +468,7 @@ export class SceneManager {
     this.eventBus.on('animation:select', (index) => this.animationController.selectAnimation(index));
 
     this.eventBus.on('export:png', () => this.exportPng());
+    this.eventBus.on('export:transparent-png', () => this.exportTransparentPng());
     this.eventBus.on('app:reset', () =>
       this.applyStateSnapshot(this.stateStore.getState()),
     );
@@ -1285,24 +1297,20 @@ export class SceneManager {
     const originalSize = new THREE.Vector2();
     this.renderer.getSize(originalSize);
     const originalPixelRatio = this.renderer.getPixelRatio();
-    const targetWidth = originalSize.x * 2;
-    const targetHeight = originalSize.y * 2;
+    
+    await this.imageExporter.exportPng(
+      this.currentFile,
+      originalSize,
+      originalPixelRatio,
+    );
+  }
 
-    this.renderer.setPixelRatio(originalPixelRatio * 2);
-    this.renderer.setSize(targetWidth, targetHeight, false);
-    this.composer.setSize(targetWidth, targetHeight);
-    this.render();
-    const dataUrl = this.renderer.domElement.toDataURL('image/png');
-
-    const link = document.createElement('a');
-    const name = this.currentFile?.name ?? 'orby';
-    link.href = dataUrl;
-    link.download = `${name.replace(/\.[a-z0-9]+$/i, '')}-orby.png`;
-    link.click();
-
-    this.renderer.setPixelRatio(originalPixelRatio);
-    this.renderer.setSize(originalSize.x, originalSize.y, false);
-    this.composer.setSize(originalSize.x, originalSize.y);
+  async exportTransparentPng() {
+    await this.imageExporter.exportTransparentPng(
+      this.currentModel,
+      this.currentFile,
+      this.cameraController,
+    );
   }
 }
 
