@@ -484,7 +484,8 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
-      this.inputs.backgroundColor.disabled = enabled;
+      // Don't disable background color input - user should be able to set it anytime
+      // It will be visible when HDRI background is off
     });
     this.inputs.lensFlareEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -1362,9 +1363,7 @@ export class UIManager {
       this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
       this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
       this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
-      if (this.inputs.backgroundColor) {
-        this.inputs.backgroundColor.disabled = defaults.hdriBackground;
-      }
+      // Background color input is always enabled
       this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
       this.eventBus.emit('studio:ground-wire', defaults.groundWire);
       this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
@@ -1502,9 +1501,7 @@ export class UIManager {
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
-            if (this.inputs.backgroundColor) {
-              this.inputs.backgroundColor.disabled = defaults.hdriBackground;
-            }
+            // Background color input is always enabled
             this.syncUIFromState();
             break;
           
@@ -2166,8 +2163,7 @@ export class UIManager {
       this.updateValueLabel('hdriRotation', rotation, 'angle');
     }
     this.inputs.hdriBackground.checked = state.hdriBackground;
-    this.inputs.backgroundColor.disabled =
-      state.hdriBackground && state.hdriEnabled;
+    // Background color input is always enabled - color is visible when HDRI background is off
     this.inputs.backgroundColor.value = state.background;
     
     // Lens Flare

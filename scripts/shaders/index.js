@@ -421,4 +421,3 @@ export const LensDirtShader = {
   fragmentShader: lensDirtFragment,
 };
 
-
