@@ -69,9 +69,9 @@ export class EnvironmentController {
 
   setFallbackColor(color) {
     this.fallbackColor = color ?? this.fallbackColor;
-    if (!this.backgroundEnabled || !this.enabled || !this.currentEnvironmentTexture) {
-      this.renderer.setClearColor(new THREE.Color(this.fallbackColor), 1);
-    }
+    // Always refresh environment to apply the new fallback color
+    // This ensures the background color is visible when HDRI background is off
+    this._applyEnvironment();
   }
 
   async setPreset(preset) {
@@ -318,7 +318,7 @@ export class EnvironmentController {
       this.scene.environment = null;
       this.scene.environmentIntensity = 0;
       this.scene.background = null;
-      this.renderer.setClearColor(new THREE.Color(this.fallbackColor), 1);
+      // BackgroundController will handle clear color - don't set it here
       this._notifyEnvironmentMapUpdated(null, 0);
       return;
     }
@@ -396,12 +396,14 @@ export class EnvironmentController {
         this.scene.backgroundIntensity = this.strength;
       }
     } else {
+      // HDRI background is disabled - BackgroundController will handle clear color
+      // CRITICAL: scene.background MUST be null for clear color to show
       this.scene.background = null;
       if ('backgroundBlurriness' in this.scene) {
         this.scene.backgroundBlurriness = 0;
         this.scene.backgroundIntensity = 1;
       }
-      this.renderer.setClearColor(new THREE.Color(this.fallbackColor), 1);
+      // BackgroundController will set the clear color - don't set it here
     }
   }
 

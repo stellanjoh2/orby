@@ -26,6 +26,7 @@ import { LensFlareController } from './render/LensFlareController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
+import { BackgroundController } from './render/BackgroundController.js';
 
 
 export class SceneManager {
@@ -54,7 +55,6 @@ export class SceneManager {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     const initialState = this.stateStore.getState();
-    this.backgroundColor = initialState.background ?? '#000000';
     // Auto-exposure will be initialized after setupComposer
     this.hdriStrength = Math.min(
       5 * HDRI_STRENGTH_UNIT,
@@ -64,7 +64,6 @@ export class SceneManager {
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
     this.renderer.toneMappingExposure = 1;
 
     this.cameraController = new CameraController(this.camera, this.canvas, {
@@ -100,11 +99,13 @@ export class SceneManager {
     this.scene.add(this.modelRoot);
     this.scene.environmentIntensity = this.hdriStrength;
 
-    // Create background sphere for proper DOF depth handling
-    this.backgroundSphere = this._createBackgroundSphere(this.backgroundColor);
-    // Set initial visibility: show when HDRI background is off
-    this.backgroundSphere.visible = !this.hdriBackgroundEnabled || !this.hdriEnabled;
-    this.scene.add(this.backgroundSphere);
+    // Initialize background controller (manages solid background color independently from HDRI)
+    this.backgroundController = new BackgroundController({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      initialColor: initialState.background ?? '#000000',
+    });
 
     this.transformController = new TransformController({
       modelRoot: this.modelRoot,
@@ -238,7 +239,7 @@ export class SceneManager {
       updateGrain: (settings) => this.updateGrain(settings),
       setBloomState: (value) => this.stateStore.set('bloom', value),
       setGrainState: (value) => this.stateStore.set('grain', value),
-      fallbackBackgroundColor: this.backgroundColor,
+      fallbackBackgroundColor: this.backgroundController?.getColor() ?? '#000000',
     });
   }
 
@@ -252,7 +253,7 @@ export class SceneManager {
       strength: this.hdriStrength,
       blurriness: this.hdriBlurriness,
       rotation: this.hdriRotation,
-      fallbackColor: this.backgroundColor,
+      fallbackColor: this.backgroundController?.getColor() ?? '#000000',
       onEnvironmentMapUpdated: (texture, intensity) => {
         this.updateMaterialsEnvironment(texture, intensity);
         this.forceRestoreClaySettings();
@@ -428,7 +429,7 @@ export class SceneManager {
     });
 
     this.eventBus.on('scene:background', (color) =>
-      this.updateBackgroundColor(color),
+      this.backgroundController?.setColor(color),
     );
     this.eventBus.on('scene:exposure', (value) => {
       this.autoExposureController?.setManualExposure(value);
@@ -509,7 +510,7 @@ export class SceneManager {
     this.lensDirtController?.updateSettings(state.lensDirt);
     this.updateGrain(state.grain);
     this.updateAberration(state.aberration);
-    this.updateBackgroundColor(state.background);
+    this.backgroundController?.setColor(state.background);
     if (this.fxaaPass) {
       this.fxaaPass.enabled = (state.antiAliasing ?? 'none') === 'fxaa';
     }
@@ -563,13 +564,16 @@ export class SceneManager {
 
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
+    
+    // Update environment controller's fallback color (for when HDRI is completely off)
+    const bgColor = this.backgroundController?.getColor() ?? '#000000';
+    this.environmentController?.setFallbackColor(bgColor);
+    
+    // Set background enabled on environment controller
     this.environmentController?.setBackgroundEnabled(enabled);
     
-    // Show/hide background sphere based on HDRI background state
-    if (this.backgroundSphere) {
-      // Show sphere when HDRI background is off, hide when on
-      this.backgroundSphere.visible = !enabled && this.hdriEnabled;
-    }
+    // Notify background controller of HDRI background state
+    this.backgroundController?.setHdriBackgroundEnabled(enabled);
     
     this.applyHdriMood(this.currentHdri);
   }
@@ -659,11 +663,12 @@ export class SceneManager {
     this.hdriEnabled = enabled;
     this.environmentController?.setEnabled(enabled);
     
-    // Show/hide background sphere based on HDRI enabled state
-    if (this.backgroundSphere) {
-      // Show sphere when HDRI is disabled or HDRI background is off
-      this.backgroundSphere.visible = !enabled || !this.hdriBackgroundEnabled;
-    }
+    // Update environment controller's fallback color (for when HDRI is completely off)
+    const bgColor = this.backgroundController?.getColor() ?? '#000000';
+    this.environmentController?.setFallbackColor(bgColor);
+    
+    // Notify background controller of HDRI enabled state
+    this.backgroundController?.setHdriEnabled(enabled);
     
     this.applyHdriMood(this.currentHdri);
     this.lensFlareController?.setHdriEnabled(enabled);
@@ -895,54 +900,6 @@ export class SceneManager {
    * @param {string} color - Background color hex string
    * @returns {THREE.Mesh} - Background sphere mesh
    */
-  _createBackgroundSphere(color) {
-    // Create a very large sphere (radius 10000) positioned far behind
-    // Use FrontSide so it renders correctly from outside
-    const geometry = new THREE.SphereGeometry(10000, 32, 32);
-    const material = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(color),
-      side: THREE.FrontSide, // Render outside of sphere
-      depthWrite: true, // Write to depth buffer for DOF
-      depthTest: true, // Test depth for proper rendering
-    });
-    
-    const sphere = new THREE.Mesh(geometry, material);
-    // Position at a fixed far distance - this ensures proper depth for DOF
-    // We'll update it to follow camera but always be far behind
-    sphere.position.set(0, 0, -5000);
-    sphere.renderOrder = -1000; // Render first, behind everything
-    
-    return sphere;
-  }
-
-  updateBackgroundColor(color) {
-    if (!color) return;
-    this.backgroundColor = color;
-    
-    // Update background sphere color
-    if (this.backgroundSphere && this.backgroundSphere.material) {
-      this.backgroundSphere.material.color.set(color);
-    }
-    
-    if (!this.hdriBackgroundEnabled || !this.hdriEnabled) {
-      // Set clear color as fallback, but background sphere will render on top with proper depth
-      const background = new THREE.Color(color);
-      this.scene.background = null;
-      this.renderer.setClearColor(background, 1);
-      // Show background sphere when HDRI background is off
-      if (this.backgroundSphere) {
-        this.backgroundSphere.visible = true;
-      }
-    } else {
-      // Hide background sphere when HDRI background is on
-      if (this.backgroundSphere) {
-        this.backgroundSphere.visible = false;
-      }
-    }
-    
-    this.environmentController?.setFallbackColor(color);
-    this.hdriMood?.setFallbackBackgroundColor(color);
-  }
 
   async loadFile(file, options = {}) {
     if (!file) return;
@@ -1291,7 +1248,8 @@ export class SceneManager {
       const previousColor = this.renderer.getClearColor(new THREE.Color()).clone();
       const previousAlpha = this.renderer.getClearAlpha();
       this.renderer.toneMappingExposure = 1;
-      this.renderer.setClearColor(new THREE.Color(this.backgroundColor), 1);
+      const bgColor = this.backgroundController?.getColor() ?? '#000000';
+      this.renderer.setClearColor(new THREE.Color(bgColor), 1);
       this.renderer.render(this.scene, this.camera);
       this.renderer.setClearColor(previousColor, previousAlpha);
       this.renderer.toneMappingExposure = previousExposure;

@@ -29,7 +29,8 @@ export class PostProcessingPipeline {
 
     this.composer = new EffectComposer(this.renderer);
     this.renderPass = new RenderPass(scene, camera);
-    this.renderPass.clearAlpha = 0;
+    // clearAlpha = 1 ensures the background color shows when scene.background is null
+    this.renderPass.clearAlpha = 1;
 
     this.bokehPass = new BokehPass(scene, camera, {
       focus: 10,
