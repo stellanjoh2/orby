@@ -130,6 +130,8 @@ export class UIManager {
       cameraHighlights: q('#cameraHighlights'),
       cameraShadows: q('#cameraShadows'),
       cameraSaturation: q('#cameraSaturation'),
+      vignetteIntensity: q('#vignetteIntensity'),
+      vignetteColor: q('#vignetteColor'),
       antiAliasing: q('#antiAliasing'),
       toneMapping: q('#toneMapping'),
     };
@@ -828,6 +830,18 @@ export class UIManager {
       this.eventBus.emit('render:saturation', value);
     });
     if (this.inputs.cameraSaturation) this.enableSliderKeyboardStepping(this.inputs.cameraSaturation);
+    this.inputs.vignetteIntensity?.addEventListener('input', (event) => {
+      const value = this.applySnapToCenter(event.target, 0, 1, 0);
+      this.stateStore.set('camera.vignette', value);
+      this.updateValueLabel('vignetteIntensity', value, 'decimal');
+      this.eventBus.emit('render:vignette', value);
+    });
+    if (this.inputs.vignetteIntensity) this.enableSliderKeyboardStepping(this.inputs.vignetteIntensity);
+    this.inputs.vignetteColor?.addEventListener('input', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('camera.vignetteColor', value);
+      this.eventBus.emit('render:vignette-color', value);
+    });
     this.inputs.antiAliasing.addEventListener('change', (event) => {
       const value = event.target.value;
       this.stateStore.set('antiAliasing', value);
@@ -1467,7 +1481,27 @@ export class UIManager {
         !defaults.fresnel.enabled,
       );
       this.eventBus.emit('camera:fov', defaults.camera.fov);
+      this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
       this.eventBus.emit('scene:exposure', defaults.exposure);
+      this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
+      this.eventBus.emit('render:contrast', defaults.camera.contrast);
+      this.eventBus.emit(
+        'render:temperature',
+        defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K,
+      );
+      this.eventBus.emit(
+        'render:tint',
+        (defaults.camera.tint ?? 0) / 100,
+      );
+      this.eventBus.emit(
+        'render:highlights',
+        (defaults.camera.highlights ?? 0) / 100,
+      );
+      this.eventBus.emit(
+        'render:shadows',
+        (defaults.camera.shadows ?? 0) / 100,
+      );
+      this.eventBus.emit('render:saturation', defaults.camera.saturation);
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
       this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
       
@@ -1695,6 +1729,14 @@ export class UIManager {
             );
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
             // Sync UI to reflect the reset values
+            this.syncControls(this.stateStore.getState());
+            break;
+
+          case 'vignette':
+            this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
+            this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+            this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
+            this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
             this.syncControls(this.stateStore.getState());
             break;
             
@@ -2395,6 +2437,15 @@ export class UIManager {
       const saturation = state.camera?.saturation ?? 1.0;
       this.inputs.cameraSaturation.value = saturation;
       this.updateValueLabel('cameraSaturation', saturation, 'decimal');
+    }
+    if (this.inputs.vignetteIntensity) {
+      const vignette = state.camera?.vignette ?? 0;
+      this.inputs.vignetteIntensity.value = vignette;
+      this.updateValueLabel('vignetteIntensity', vignette, 'decimal');
+    }
+    if (this.inputs.vignetteColor) {
+      const vignetteColor = state.camera?.vignetteColor ?? '#000000';
+      this.inputs.vignetteColor.value = vignetteColor;
     }
     if (this.inputs.antiAliasing) {
       this.inputs.antiAliasing.value = state.antiAliasing ?? 'none';

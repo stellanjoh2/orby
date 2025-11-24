@@ -127,6 +127,8 @@ const toneMappingFragment = `
 varying vec2 vUv;
 uniform sampler2D tDiffuse;
 uniform float toneMappingType;
+uniform float vignetteIntensity;
+uniform vec3 vignetteColor;
 
 vec3 ACESFilmicToneMapping(vec3 color) {
   // Reduced scaling to allow exposure to have more visible effect
@@ -154,6 +156,26 @@ void main() {
     gl_FragColor = vec4(ReinhardToneMapping(color.rgb), color.a);
   } else {
     gl_FragColor = vec4(ACESFilmicToneMapping(color.rgb), color.a);
+  }
+  
+  // Apply vignette
+  if (vignetteIntensity > 0.0001) {
+    vec2 center = vec2(0.5, 0.5);
+    float dist = distance(vUv, center);
+    
+    // As intensity increases, make the falloff steeper and start earlier
+    // This makes more of the image darker, not just the edges
+    float start = mix(0.3, 0.0, vignetteIntensity); // Start darkening closer to center at higher intensity
+    float end = mix(1.0, 0.6, vignetteIntensity * 0.5); // End closer to center for steeper falloff
+    float vignetteMask = smoothstep(start, end, dist);
+    
+    // Use power curve to make falloff steeper at higher intensities
+    float power = mix(1.0, 3.0, vignetteIntensity);
+    vignetteMask = pow(vignetteMask, power);
+    
+    // Blend between original color and vignette color based on mask
+    float vignetteStrength = vignetteMask * vignetteIntensity;
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * vignetteColor, vignetteStrength);
   }
 }
 `;
@@ -222,6 +244,8 @@ export const ToneMappingShader = {
   uniforms: {
     tDiffuse: { value: null },
     toneMappingType: { value: 4 },
+    vignetteIntensity: { value: 0.0 },
+    vignetteColor: { value: new THREE.Color('#000000') },
   },
   vertexShader: toneMappingVertex,
   fragmentShader: toneMappingFragment,
@@ -334,7 +358,9 @@ vec3 applyTonalRanges(
   float highlightMask = smoothstep(0.45, 1.0, luma);
   float shadowMask = 1.0 - smoothstep(0.1, 0.8, luma);
 
-  float highlightDelta = highlights * 0.25 * highlightMask;
+  // Scale highlights multiplier: at max (1.0) it's 100% stronger than original (2x)
+  float highlightsMultiplier = 0.25 * (1.0 + 1.0 * abs(highlights));
+  float highlightDelta = highlights * highlightsMultiplier * highlightMask;
   float shadowDelta = shadows * 0.25 * shadowMask;
 
   float totalDelta = highlightDelta + shadowDelta;

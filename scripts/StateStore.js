@@ -98,6 +98,8 @@ export class StateStore {
         highlights: 0,
         shadows: 0,
         saturation: 1.0,
+        vignette: 0,
+        vignetteColor: '#000000',
       },
       exposure: 1.0,
       autoExposure: false,
