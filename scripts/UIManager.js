@@ -89,6 +89,7 @@ export class UIManager {
       lensFlareHeight: q('#lensFlareHeight'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
+      diffuseBrightness: q('#diffuseBrightness'),
       clayColor: q('#clayColor'),
       clayRoughness: q('#clayRoughness'),
       claySpecular: q('#claySpecular'),
@@ -357,6 +358,13 @@ export class UIManager {
         }
       });
     });
+    this.inputs.diffuseBrightness?.addEventListener('input', (event) => {
+      const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
+      this.updateValueLabel('diffuseBrightness', value, 'decimal');
+      this.stateStore.set('diffuseBrightness', value);
+      this.eventBus.emit('mesh:diffuse-brightness', value);
+    });
+    if (this.inputs.diffuseBrightness) this.enableSliderKeyboardStepping(this.inputs.diffuseBrightness);
     this.inputs.scale.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('scale', value, 'multiplier');
@@ -1397,6 +1405,7 @@ export class UIManager {
       this.stateStore.set('yOffset', defaults.yOffset);
       this.stateStore.set('autoRotate', defaults.autoRotate);
       this.stateStore.set('showNormals', defaults.showNormals);
+      this.stateStore.set('diffuseBrightness', defaults.diffuseBrightness ?? 1.0);
       this.stateStore.set('clay', defaults.clay);
       
       // Emit events to update scene
@@ -1405,6 +1414,7 @@ export class UIManager {
       this.eventBus.emit('mesh:yOffset', defaults.yOffset);
       this.eventBus.emit('mesh:auto-rotate', defaults.autoRotate);
       this.eventBus.emit('mesh:normals', defaults.showNormals);
+      this.eventBus.emit('mesh:diffuse-brightness', defaults.diffuseBrightness ?? 1.0);
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
       this.eventBus.emit('mesh:clay-roughness', defaults.clay.roughness);
       this.eventBus.emit('mesh:clay-specular', defaults.clay.specular);
@@ -1559,6 +1569,12 @@ export class UIManager {
         const resetType = button.dataset.reset;
         
         switch (resetType) {
+          case 'diffuseBrightness':
+            this.stateStore.set('diffuseBrightness', defaults.diffuseBrightness ?? 1.0);
+            this.eventBus.emit('mesh:diffuse-brightness', defaults.diffuseBrightness ?? 1.0);
+            this.syncUIFromState();
+            break;
+            
           case 'clay':
             this.stateStore.set('clay', defaults.clay);
             this.eventBus.emit('mesh:clay-color', defaults.clay.color);
@@ -2386,6 +2402,11 @@ export class UIManager {
     }
     if (this.inputs.showNormals) {
       this.inputs.showNormals.checked = state.showNormals;
+    }
+    if (this.inputs.diffuseBrightness) {
+      const brightness = state.diffuseBrightness ?? 1.0;
+      this.inputs.diffuseBrightness.value = brightness;
+      this.updateValueLabel('diffuseBrightness', brightness, 'decimal');
     }
     this.inputs.clayColor.value = state.clay.color;
     this.inputs.clayRoughness.value = state.clay.roughness;

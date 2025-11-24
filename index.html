@@ -97,6 +97,28 @@
               </div>
 
               <div class="panel-block">
+                <div class="subsection" data-subsection="diffuseBrightness">
+                  <div class="block-title has-reset">
+                    <span>Diffuse Brightness</span>
+                    <button class="block-reset-btn" data-reset="diffuseBrightness" aria-label="Reset Diffuse Brightness">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span>Brightness</span>
+                    <input
+                      id="diffuseBrightness"
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.01"
+                      value="1"
+                    />
+                    <span class="value" data-output="diffuseBrightness">1.00</span>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="clay">
                   <div class="block-title has-reset">
                     <span>Clay</span>
@@ -1469,7 +1491,7 @@
             <i data-lucide="x"></i>
           </button>
         </div>
-        <p class="load-settings-description">Paste your scene settings JSON below and click Apply to load them. This includes lighting, camera, post-processing, and material settings. Object position and rotation are not included.</p>
+        <p class="load-settings-description">Paste your scene settings JSON below and click Apply to load them. This includes all visual settings: lighting, camera position and angle, post-processing, materials, and object transforms (scale, position, rotation).</p>
         <textarea
           id="loadSceneSettingsText"
           placeholder="Paste scene settings JSON here..."

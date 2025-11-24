@@ -1,6 +1,6 @@
 /**
  * SceneSettingsManager
- * Handles copying and loading scene settings (excluding object-specific transforms)
+ * Handles copying and loading all scene settings (including object transforms)
  */
 export class SceneSettingsManager {
   constructor(eventBus, stateStore, uiHelper) {
@@ -10,14 +10,39 @@ export class SceneSettingsManager {
   }
 
   /**
+   * Gets current camera state (position and target)
+   */
+  getCameraState() {
+    return new Promise((resolve) => {
+      const handler = (cameraState) => {
+        this.eventBus.off('camera:state', handler);
+        resolve(cameraState);
+      };
+      this.eventBus.on('camera:state', handler);
+      this.eventBus.emit('camera:get-state');
+    });
+  }
+
+  /**
    * Builds and returns the scene settings payload (excluding object transforms)
    */
-  buildSceneSettingsPayload() {
+  async buildSceneSettingsPayload() {
     const state = this.stateStore.getState();
+    
+    // Get camera position and target
+    const cameraState = await this.getCameraState();
+    
     return {
-      // Mesh settings (excluding transforms)
+      // Mesh settings (including transforms)
       shading: state.shading,
       showNormals: state.showNormals,
+      diffuseBrightness: state.diffuseBrightness,
+      scale: state.scale,
+      yOffset: state.yOffset,
+      rotationX: state.rotationX,
+      rotationY: state.rotationY,
+      rotationZ: state.rotationZ,
+      autoRotate: state.autoRotate,
       clay: state.clay,
       wireframe: state.wireframe,
       fresnel: state.fresnel,
@@ -48,6 +73,8 @@ export class SceneSettingsManager {
       camera: {
         fov: state.camera?.fov,
         tilt: state.camera?.tilt,
+        position: cameraState?.position,
+        target: cameraState?.target,
         contrast: state.camera?.contrast,
         temperature: state.camera?.temperature,
         tint: state.camera?.tint,
@@ -73,7 +100,7 @@ export class SceneSettingsManager {
    * Copies scene settings to clipboard
    */
   async copyToClipboard() {
-    const payload = this.buildSceneSettingsPayload();
+    const payload = await this.buildSceneSettingsPayload();
     const text = JSON.stringify(payload, null, 2);
     
     try {
@@ -112,7 +139,7 @@ export class SceneSettingsManager {
         return { success: false, message: 'Invalid scene settings - missing required fields' };
       }
 
-      // Apply Mesh settings (excluding transforms)
+      // Apply Mesh settings (including transforms)
       if (payload.shading !== undefined) {
         this.stateStore.set('shading', payload.shading);
         this.eventBus.emit('mesh:shading', payload.shading);
@@ -120,6 +147,35 @@ export class SceneSettingsManager {
       if (payload.showNormals !== undefined) {
         this.stateStore.set('showNormals', payload.showNormals);
         this.eventBus.emit('mesh:normals', payload.showNormals);
+      }
+      if (payload.diffuseBrightness !== undefined) {
+        this.stateStore.set('diffuseBrightness', payload.diffuseBrightness);
+        this.eventBus.emit('mesh:diffuse-brightness', payload.diffuseBrightness);
+      }
+      // Apply transform settings
+      if (payload.scale !== undefined) {
+        this.stateStore.set('scale', payload.scale);
+        this.eventBus.emit('mesh:scale', payload.scale);
+      }
+      if (payload.yOffset !== undefined) {
+        this.stateStore.set('yOffset', payload.yOffset);
+        this.eventBus.emit('mesh:yOffset', payload.yOffset);
+      }
+      if (payload.rotationX !== undefined) {
+        this.stateStore.set('rotationX', payload.rotationX);
+        this.eventBus.emit('mesh:rotationX', payload.rotationX);
+      }
+      if (payload.rotationY !== undefined) {
+        this.stateStore.set('rotationY', payload.rotationY);
+        this.eventBus.emit('mesh:rotationY', payload.rotationY);
+      }
+      if (payload.rotationZ !== undefined) {
+        this.stateStore.set('rotationZ', payload.rotationZ);
+        this.eventBus.emit('mesh:rotationZ', payload.rotationZ);
+      }
+      if (payload.autoRotate !== undefined) {
+        this.stateStore.set('autoRotate', payload.autoRotate);
+        this.eventBus.emit('mesh:auto-rotate', payload.autoRotate);
       }
       if (payload.clay) {
         this.stateStore.set('clay', payload.clay);
@@ -267,6 +323,13 @@ export class SceneSettingsManager {
         if (payload.camera.tilt !== undefined) {
           this.stateStore.set('camera.tilt', payload.camera.tilt);
           this.eventBus.emit('camera:tilt', payload.camera.tilt);
+        }
+        // Restore camera position and target (orbit angle)
+        if (payload.camera.position || payload.camera.target) {
+          this.eventBus.emit('camera:set-state', {
+            position: payload.camera.position,
+            target: payload.camera.target,
+          });
         }
         if (payload.camera.contrast !== undefined) {
           this.stateStore.set('camera.contrast', payload.camera.contrast);

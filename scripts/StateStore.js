@@ -18,6 +18,7 @@ export class StateStore {
       rotationZ: 0,
       autoRotate: 0,
       showNormals: false,
+      diffuseBrightness: 1.0,
       hdri: 'meadow',
       hdriEnabled: true,
       hdriStrength: 1.50,
