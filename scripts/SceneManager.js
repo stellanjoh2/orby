@@ -306,6 +306,9 @@ export class SceneManager {
     this.eventBus.on('mesh:clay-specular', (value) => {
       this.setClaySettings({ specular: value });
     });
+    this.eventBus.on('mesh:diffuse-brightness', (value) => {
+      this.materialController?.setDiffuseBrightness(value);
+    });
     this.eventBus.on('mesh:wireframe-always-on', (value) => {
       this.setWireframeSettings({ alwaysOn: value });
     });
@@ -336,6 +339,30 @@ export class SceneManager {
       this.camera.position.set(0, 1.5, 6);
       this.controls.target.set(0, 1, 0);
       this.controls.update();
+    });
+    this.eventBus.on('camera:get-state', () => {
+      const state = {
+        position: {
+          x: this.camera.position.x,
+          y: this.camera.position.y,
+          z: this.camera.position.z,
+        },
+        target: {
+          x: this.controls.target.x,
+          y: this.controls.target.y,
+          z: this.controls.target.z,
+        },
+      };
+      this.eventBus.emit('camera:state', state);
+    });
+    this.eventBus.on('camera:set-state', (state) => {
+      if (state.position) {
+        this.camera.position.set(state.position.x, state.position.y, state.position.z);
+      }
+      if (state.target) {
+        this.controls.target.set(state.target.x, state.target.y, state.target.z);
+        this.controls.update();
+      }
     });
 
     this.eventBus.on('studio:hdri', (preset) => this.setHdriPreset(preset));
@@ -509,6 +536,9 @@ export class SceneManager {
     this.setShowLightIndicators(state.showLightIndicators ?? false);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
     // Update material controller settings
+    if (state.diffuseBrightness !== undefined) {
+      this.materialController.setDiffuseBrightness(state.diffuseBrightness);
+    }
     if (state.clay) {
       this.materialController.setClaySettings(state.clay);
     }
@@ -1033,6 +1063,7 @@ export class SceneManager {
       clay: state.clay,
       fresnel: state.fresnel,
       wireframe: state.wireframe,
+      diffuseBrightness: state.diffuseBrightness ?? 1.0,
     });
     this.setShading(state.shading);
     this.diagnosticsController.setModel(object, state.shading);

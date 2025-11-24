@@ -31,6 +31,7 @@ export class MaterialController {
     this.claySettings = {};
     this.fresnelSettings = {};
     this.wireframeSettings = {};
+    this.diffuseBrightness = 1.0;
   }
 
   setModel(model, shading, initialState = {}) {
@@ -45,6 +46,7 @@ export class MaterialController {
         onlyVisibleFaces: false,
       }),
     };
+    this.diffuseBrightness = initialState.diffuseBrightness ?? 1.0;
     this.originalMaterials = new WeakMap();
     this.prepareMesh(model);
     // Note: Fresnel will be applied by setShading, which is called after setModel
@@ -134,11 +136,17 @@ export class MaterialController {
         applyMaterial(buildArray(createClay));
       } else if (mode === 'textures') {
         const createTextureMaterial = (mat) => {
+          // Get base color from original material or default to white
+          const baseColor = mat?.color
+            ? mat.color.clone()
+            : new THREE.Color('#ffffff');
+          
+          // Apply diffuse brightness multiplier
+          baseColor.multiplyScalar(this.diffuseBrightness);
+          
           const standard = new THREE.MeshStandardMaterial({
             map: mat?.map ?? null,
-            color: mat?.color
-              ? mat.color.clone()
-              : new THREE.Color('#ffffff'),
+            color: baseColor,
             roughness: mat?.roughness ?? 0.8,
             metalness: mat?.metalness ?? 0,
             normalMap: mat?.normalMap ?? null,
@@ -160,17 +168,31 @@ export class MaterialController {
         applyMaterial(buildArray(createTextureMaterial));
       } else {
         // Restore original materials when switching away from wireframe/clay/textures
-        disposeIfTransient();
-        child.material = original;
-        // Ensure wireframe is off
-        if (Array.isArray(child.material)) {
-          child.material.forEach((mat) => {
-            if (mat) {
-              mat.wireframe = false;
-            }
-          });
-        } else if (child.material) {
-          child.material.wireframe = false;
+        // But apply diffuse brightness to them
+        const createShadedMaterial = (mat) => {
+          if (!mat) return mat;
+          const cloned = mat.clone ? mat.clone() : mat;
+          // Apply diffuse brightness multiplier to color (which multiplies the texture map)
+          // The material's color property multiplies the texture map, so this brightens the diffuse map
+          if (cloned && (cloned.isMeshStandardMaterial || cloned.isMeshPhysicalMaterial || cloned.isMeshPhongMaterial)) {
+            const originalColor = mat.color ? mat.color.clone() : new THREE.Color('#ffffff');
+            cloned.color.copy(originalColor.multiplyScalar(this.diffuseBrightness));
+            cloned.needsUpdate = true;
+          }
+          if (cloned) {
+            cloned.wireframe = false;
+          }
+          return cloned;
+        };
+        
+        if (Array.isArray(original)) {
+          const materials = original.map(createShadedMaterial);
+          disposeIfTransient();
+          child.material = materials;
+        } else {
+          const material = createShadedMaterial(original);
+          disposeIfTransient();
+          child.material = material;
         }
       }
     });
@@ -262,6 +284,47 @@ export class MaterialController {
         // Fallback to recreating materials if no model loaded
         this.setShading('clay');
       }
+    }
+  }
+
+  setDiffuseBrightness(brightness) {
+    this.diffuseBrightness = brightness;
+    // Update existing materials in all modes (except wireframe and clay which have their own colors)
+    if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures')) {
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const original = this.originalMaterials.get(child);
+        if (!original) return;
+        
+        const material = child.material;
+        
+        // Get the base color from the original material
+        const getOriginalColor = (orig, idx = 0) => {
+          if (Array.isArray(orig)) {
+            return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
+          }
+          return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+        };
+        
+        // Apply brightness to material color (which multiplies the texture map)
+        if (Array.isArray(material) && Array.isArray(original)) {
+          material.forEach((mat, idx) => {
+            if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
+              const originalColor = getOriginalColor(original, idx);
+              const adjustedColor = originalColor.multiplyScalar(brightness);
+              mat.color.copy(adjustedColor);
+              mat.needsUpdate = true;
+            }
+          });
+        } else if (!Array.isArray(material) && !Array.isArray(original)) {
+          if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+            const originalColor = getOriginalColor(original);
+            const adjustedColor = originalColor.multiplyScalar(brightness);
+            material.color.copy(adjustedColor);
+            material.needsUpdate = true;
+          }
+        }
+      });
     }
   }
 
