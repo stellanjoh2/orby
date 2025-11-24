@@ -727,139 +727,172 @@
             <section class="panel" data-panel="render">
 
               <div class="panel-block">
-                <div class="block-title has-reset">
-                  <span>Basic</span>
-                  <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera">
-                    <i data-lucide="rotate-ccw"></i>
-                    <span class="sr-only">Reset</span>
-                  </button>
-                </div>
-                <label class="slider-line">
-                  <span>FOV</span>
-                  <input
-                    id="cameraFov"
-                    type="range"
-                    min="45"
-                    max="120"
-                    value="50"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraFov">50°</span>
-                </label>
-                <label class="slider-line">
-                  <span>Tilt</span>
-                  <input
-                    id="cameraTilt"
-                    type="range"
-                    min="-45"
-                    max="45"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraTilt">0°</span>
-                </label>
-                <label class="slider-line">
-                  <span>Exposure</span>
-                  <input
-                    id="exposure"
-                    type="range"
-                    min="0"
-                    max="2"
-                    value="1.0"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="exposure">1.00</span>
-                </label>
-                <label class="slider-line">
-                  <span>Auto Exposure</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="autoExposure" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Enable auto exposure</span>
+                <div class="subsection">
+                  <div class="block-title has-reset">
+                    <span>Basic</span>
+                    <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span>FOV</span>
+                    <input
+                      id="cameraFov"
+                      type="range"
+                      min="45"
+                      max="120"
+                      value="50"
+                      step="1"
+                    />
+                    <span class="value" data-output="cameraFov">50°</span>
                   </label>
-                </label>
-              </div>
-
-              <div class="panel-block">
-                <div class="block-title has-reset">
-                  <span>Color Correction</span>
-                  <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color Correction">
-                    <i data-lucide="rotate-ccw"></i>
-                    <span class="sr-only">Reset</span>
-                  </button>
+                  <label class="slider-line">
+                    <span>Tilt</span>
+                    <input
+                      id="cameraTilt"
+                      type="range"
+                      min="-45"
+                      max="45"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="cameraTilt">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Exposure</span>
+                    <input
+                      id="exposure"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1.0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="exposure">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Auto Exposure</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="autoExposure" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable auto exposure</span>
+                    </label>
+                  </label>
                 </div>
-                <label class="slider-line slider-line--temperature">
-                  <span>Temperature</span>
-                  <input
-                    id="cameraTemperature"
-                    type="range"
-                    min="2000"
-                    max="10000"
-                    value="6000"
-                    step="50"
-                  />
-                  <span class="value" data-output="cameraTemperature">6000K</span>
-                </label>
-                <label class="slider-line slider-line--tint">
-                  <span>Tint</span>
-                  <input
-                    id="cameraTint"
-                    type="range"
-                    min="-100"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraTint">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Contrast</span>
-                  <input
-                    id="cameraContrast"
-                    type="range"
-                    min="0"
-                    max="2"
-                    value="1.0"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="cameraContrast">1.00</span>
-                </label>
-                <label class="slider-line">
-                  <span>Highlights</span>
-                  <input
-                    id="cameraHighlights"
-                    type="range"
-                    min="-100"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraHighlights">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Shadows</span>
-                  <input
-                    id="cameraShadows"
-                    type="range"
-                    min="-50"
-                    max="50"
-                    value="0"
-                    step="1"
-                  />
-                    <span class="value" data-output="cameraShadows">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Saturation</span>
-                  <input
-                    id="cameraSaturation"
-                    type="range"
-                    min="0"
-                    max="2"
-                    value="1.0"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="cameraSaturation">1.00</span>
-                </label>
+                <div class="panel-block-divider"></div>
+                <div class="subsection">
+                  <div class="block-title has-reset">
+                    <span>Color Correction</span>
+                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color Correction">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line slider-line--temperature">
+                    <span>Temperature</span>
+                    <input
+                      id="cameraTemperature"
+                      type="range"
+                      min="2000"
+                      max="10000"
+                      value="6000"
+                      step="50"
+                    />
+                    <span class="value" data-output="cameraTemperature">6000K</span>
+                  </label>
+                  <label class="slider-line slider-line--tint">
+                    <span>Tint</span>
+                    <input
+                      id="cameraTint"
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="cameraTint">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Contrast</span>
+                    <input
+                      id="cameraContrast"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1.0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="cameraContrast">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Highlights</span>
+                    <input
+                      id="cameraHighlights"
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="cameraHighlights">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Shadows</span>
+                    <input
+                      id="cameraShadows"
+                      type="range"
+                      min="-50"
+                      max="50"
+                      value="0"
+                      step="1"
+                    />
+                      <span class="value" data-output="cameraShadows">0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Saturation</span>
+                    <input
+                      id="cameraSaturation"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1.0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="cameraSaturation">1.00</span>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="vignette">
+                  <div class="block-title has-reset">
+                    <span>Vignette</span>
+                    <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span>Intensity</span>
+                    <input
+                      id="vignetteIntensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="vignetteIntensity">0.00</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="vignetteColor"
+                      class="color-chip"
+                      value="#000000"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div class="panel-block">

@@ -298,5 +298,25 @@ export class PostProcessingPipeline {
   setShadows(value) {
     this.colorAdjust?.setShadows(value);
   }
+
+  /**
+   * Set vignette intensity
+   * @param {number} value - Vignette intensity (0-1, default 0)
+   */
+  setVignette(value) {
+    if (this.toneMappingPass) {
+      this.toneMappingPass.uniforms.vignetteIntensity.value = value;
+    }
+  }
+
+  /**
+   * Set vignette color
+   * @param {string} color - Vignette color (hex string, default '#000000')
+   */
+  setVignetteColor(color) {
+    if (this.toneMappingPass) {
+      this.toneMappingPass.uniforms.vignetteColor.value = new THREE.Color(color);
+    }
+  }
 }
 

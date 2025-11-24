@@ -697,6 +697,8 @@ a:hover {
 }
 
 .block-reset-btn i {
+  width: 16px;
+  height: 16px;
   color: rgba(255, 255, 255, 0.7);
   stroke: rgba(255, 255, 255, 0.7);
 }
@@ -705,11 +707,6 @@ a:hover {
 .block-reset-btn.is-disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.block-reset-btn i {
-  width: 16px;
-  height: 16px;
 }
 
 /* Toggle base - always isolated, never affected by muting */
@@ -1053,13 +1050,13 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .select-line select {
   grid-column: span 1;
-  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--stroke);
   border-radius: 999px;
   padding: 0.35rem 1.6rem 0.35rem 0.7rem;
   color: var(--text);
   font-family: inherit;
   appearance: none;
+  background-color: rgba(255, 255, 255, 0.05);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.6rem center;

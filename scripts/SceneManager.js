@@ -382,6 +382,8 @@ export class SceneManager {
       this.setHighlights(value),
     );
     this.eventBus.on('render:shadows', (value) => this.setShadows(value));
+    this.eventBus.on('render:vignette', (value) => this.setVignette(value));
+    this.eventBus.on('render:vignette-color', (value) => this.setVignetteColor(value));
     this.eventBus.on('studio:ground-solid', (enabled) => {
       this.setGroundSolid(enabled);
     });
@@ -534,6 +536,8 @@ export class SceneManager {
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
     this.setShadows((state.camera?.shadows ?? 0) / 50);
+    this.setVignette(state.camera?.vignette ?? 0);
+    this.setVignetteColor(state.camera?.vignetteColor ?? '#000000');
     // Initialize clay normal map setting
     if (state.clay?.normalMap !== undefined) {
       this.setClayNormalMap(state.clay.normalMap);
@@ -668,6 +672,14 @@ export class SceneManager {
 
   setShadows(value) {
     this.postPipeline?.setShadows(value);
+  }
+
+  setVignette(value) {
+    this.postPipeline?.setVignette(value);
+  }
+
+  setVignetteColor(color) {
+    this.postPipeline?.setVignetteColor(color);
   }
 
   setHdriEnabled(enabled) {
