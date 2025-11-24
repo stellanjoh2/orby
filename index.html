@@ -536,6 +536,15 @@
               <button id="resetMeshSettings" class="action-btn">
                 Reset Mesh Settings
               </button>
+              
+              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--stroke);">
+                <button class="copy-scene-settings action-btn">
+                  Copy Scene Settings
+                </button>
+                <button class="load-scene-settings action-btn">
+                  Load Scene Settings
+                </button>
+              </div>
             </section>
 
             <h2 class="panel-header-title" data-header="studio">Studio</h2>
@@ -715,12 +724,18 @@
                 </label>
               </div>
 
-              <button id="copyStudioSettings" class="action-btn">
-                Copy Studio Settings
-              </button>
               <button id="resetStudioSettings" class="action-btn">
                 Reset Studio Settings
               </button>
+              
+              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--stroke);">
+                <button class="copy-scene-settings action-btn">
+                  Copy Scene Settings
+                </button>
+                <button class="load-scene-settings action-btn">
+                  Load Scene Settings
+                </button>
+              </div>
             </section>
 
             <h2 class="panel-header-title" data-header="render">Camera</h2>
@@ -1181,16 +1196,30 @@
                 </button>
               </div>
 
-              <button id="copyRenderSettings" class="action-btn">
-                Copy FX Settings
-              </button>
               <button id="resetRenderSettings" class="action-btn">
                 Reset FX Settings
               </button>
+              
+              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--stroke);">
+                <button class="copy-scene-settings action-btn">
+                  Copy Scene Settings
+                </button>
+                <button class="load-scene-settings action-btn">
+                  Load Scene Settings
+                </button>
+              </div>
             </section>
 
             <h2 class="panel-header-title" data-header="info">Information</h2>
             <section class="panel" data-panel="info">
+              <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--stroke);">
+                <button class="copy-scene-settings action-btn">
+                  Copy Scene Settings
+                </button>
+                <button class="load-scene-settings action-btn">
+                  Load Scene Settings
+                </button>
+              </div>
               <div class="panel-block">
                 <div class="block-title"><i data-lucide="keyboard" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Keyboard Shortcuts</div>
                 <div class="shortcuts-grid">
@@ -1430,6 +1459,32 @@
       }
     </script>
     <script type="module" src="./scripts/main.js"></script>
+    
+    <!-- Global Load Scene Settings Modal -->
+    <div id="loadSceneSettingsModal" class="load-settings-modal" style="display: none;">
+      <div class="load-settings-content">
+        <div class="load-settings-header">
+          <h3>Load Scene Settings</h3>
+          <button id="closeLoadSceneSettings" class="close-btn" aria-label="Close">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p class="load-settings-description">Paste your scene settings JSON below and click Apply to load them. This includes lighting, camera, post-processing, and material settings. Object position and rotation are not included.</p>
+        <textarea
+          id="loadSceneSettingsText"
+          placeholder="Paste scene settings JSON here..."
+          rows="10"
+        ></textarea>
+        <div class="load-settings-actions">
+          <button id="applySceneSettings" class="action-btn">
+            Apply
+          </button>
+          <button id="cancelLoadSceneSettings" class="action-btn">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
 

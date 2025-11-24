@@ -2,6 +2,7 @@ import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
 import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import { CAMERA_TEMPERATURE_NEUTRAL_K } from './constants.js';
+import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -18,6 +19,18 @@ export class UIManager {
 
   init() {
     this.cacheDom();
+    // Initialize SceneSettingsManager
+    this.sceneSettingsManager = new SceneSettingsManager(
+      this.eventBus,
+      this.stateStore,
+      {
+        setHdriActive: (hdri) => this.setHdriActive(hdri),
+        toggleHdriControls: (enabled) => this.toggleHdriControls(enabled),
+        setLightColorControlsDisabled: (disabled) => this.setLightColorControlsDisabled(disabled),
+        setLightsRotationDisabled: (disabled) => this.setLightsRotationDisabled(disabled),
+        setEffectControlsDisabled: (controls, disabled) => this.setEffectControlsDisabled(controls, disabled),
+      }
+    );
     this.bindEvents();
     this.stateStore.subscribe((state) => this.syncControls(state));
     this.syncControls(this.stateStore.getState());
@@ -30,6 +43,7 @@ export class UIManager {
 
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
+    this.dom.canvas = q('#webgl');
     this.dom.dropzone = q('#dropzone');
     this.dom.topBarTitle = q('#topBarTitle');
     this.dom.topBarAnimation = q('#topBarAnimation');
@@ -139,8 +153,13 @@ export class UIManager {
     this.buttons = {
       transformReset: q('#transformReset'),
       exportPng: q('#exportPngButton'),
-      copyStudio: q('#copyStudioSettings'),
-      copyRender: q('#copyRenderSettings'),
+      copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
+      loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
+      loadSceneModal: q('#loadSceneSettingsModal'),
+      loadSceneText: q('#loadSceneSettingsText'),
+      applySceneSettings: q('#applySceneSettings'),
+      closeLoadSceneSettings: q('#closeLoadSceneSettings'),
+      cancelLoadSceneSettings: q('#cancelLoadSceneSettings'),
       resetStudio: q('#resetStudioSettings'),
       resetMesh: q('#resetMeshSettings'),
       resetRender: q('#resetRenderSettings'),
@@ -180,6 +199,7 @@ export class UIManager {
     this.bindGlobalControls();
     this.bindAnimationControls();
     this.bindCopyButtons();
+    this.bindHdriLightsRotation();
     this.bindLocalResetButtons();
     this.bindRotationNotches();
     this.setupSliderKeyboardSupport();
@@ -1302,55 +1322,72 @@ export class UIManager {
   }
 
   bindCopyButtons() {
-    const copyMesh = () => {
-      const state = this.stateStore.getState();
-      const payload = {
-        display: state.shading,
-        transform: { scale: state.scale, yOffset: state.yOffset },
-        autoRotate: state.autoRotate,
-        showNormals: state.showNormals,
-      };
-      this.copySettingsToClipboard('Mesh settings copied', payload);
+    // Copy Scene Settings (all settings except object-specific transforms)
+    const copyScene = async () => {
+      const result = await this.sceneSettingsManager.copyToClipboard();
+      this.showToast(result.message);
     };
-    const copyStudio = () => {
-      const state = this.stateStore.getState();
-      const payload = {
-        hdri: state.hdri,
-        hdriEnabled: state.hdriEnabled,
-        hdriStrength: state.hdriStrength,
-        hdriBackground: state.hdriBackground,
-        lensFlare: state.lensFlare,
-        groundSolid: state.groundSolid,
-        groundWire: state.groundWire,
-        groundSolidColor: state.groundSolidColor,
-        groundWireColor: state.groundWireColor,
-        groundWireOpacity: state.groundWireOpacity,
-        groundY: state.groundY,
-        background: state.background,
-        lights: state.lights,
-        lightsEnabled: state.lightsEnabled,
-        lightsMaster: state.lightsMaster,
-        lightsRotation: state.lightsRotation,
-        lightsAutoRotate: state.lightsAutoRotate,
-      };
-      this.copySettingsToClipboard('Studio settings copied', payload);
+    // Bind all Copy Scene Settings buttons
+    this.buttons.copySceneButtons?.forEach(button => {
+      button.addEventListener('click', copyScene);
+    });
+
+    // Load Scene Settings - Show modal
+    this.buttons.loadSceneButtons?.forEach(button => {
+      button.addEventListener('click', () => {
+        if (this.buttons.loadSceneModal) {
+          this.buttons.loadSceneModal.style.display = 'flex';
+          // Focus textarea and try to paste
+          if (this.buttons.loadSceneText) {
+            this.buttons.loadSceneText.focus();
+            // Try to paste from clipboard
+            navigator.clipboard?.readText().then(text => {
+              if (this.buttons.loadSceneText) {
+                this.buttons.loadSceneText.value = text;
+              }
+            }).catch(() => {
+              // Clipboard read failed, user can paste manually
+            });
+          }
+        }
+      });
+    });
+
+    // Close scene modal
+    const closeSceneModal = () => {
+      if (this.buttons.loadSceneModal) {
+        this.buttons.loadSceneModal.style.display = 'none';
+        if (this.buttons.loadSceneText) {
+          this.buttons.loadSceneText.value = '';
+        }
+      }
     };
-    const copyRender = () => {
-      const state = this.stateStore.getState();
-      const payload = {
-        dof: state.dof,
-        bloom: state.bloom,
-        grain: state.grain,
-        aberration: state.aberration,
-        fresnel: state.fresnel,
-        exposure: state.exposure,
-        background: state.background,
-      };
-      this.copySettingsToClipboard('Render settings copied', payload);
-    };
-    this.buttons.copyMesh?.addEventListener('click', copyMesh);
-    this.buttons.copyStudio?.addEventListener('click', copyStudio);
-    this.buttons.copyRender?.addEventListener('click', copyRender);
+
+    this.buttons.closeLoadSceneSettings?.addEventListener('click', closeSceneModal);
+    this.buttons.cancelLoadSceneSettings?.addEventListener('click', closeSceneModal);
+    
+    // Close on backdrop click
+    this.buttons.loadSceneModal?.addEventListener('click', (event) => {
+      if (event.target === this.buttons.loadSceneModal) {
+        closeSceneModal();
+      }
+    });
+
+    // Apply scene settings
+    this.buttons.applySceneSettings?.addEventListener('click', () => {
+      const text = this.buttons.loadSceneText?.value?.trim();
+      if (text) {
+        const result = this.sceneSettingsManager.loadFromText(text);
+        if (result.success) {
+          // Sync UI to reflect loaded values
+          this.syncControls(this.stateStore.getState());
+        }
+        this.showToast(result.message);
+        if (result.success) {
+          closeSceneModal();
+        }
+      }
+    });
 
     // Reset buttons
     const resetMesh = () => {
@@ -2061,6 +2098,160 @@ export class UIManager {
       .catch(() => this.showToast('Copy failed'));
   }
 
+  loadRenderSettingsFromText(text) {
+    try {
+      const payload = JSON.parse(text);
+      
+      // Validate that it looks like FX settings
+      const expectedKeys = ['dof', 'bloom', 'grain', 'aberration', 'fresnel', 'exposure', 'background', 'camera'];
+      const hasExpectedKeys = expectedKeys.some(key => key in payload);
+      
+      if (!hasExpectedKeys) {
+        this.showToast('Invalid FX settings - missing required fields');
+        return;
+      }
+
+      // Apply DOF settings
+      if (payload.dof) {
+        this.stateStore.set('dof', payload.dof);
+        this.eventBus.emit('render:dof', payload.dof);
+        this.setEffectControlsDisabled(
+          ['dofFocus', 'dofAperture'],
+          !payload.dof.enabled,
+        );
+      }
+
+      // Apply Bloom settings
+      if (payload.bloom) {
+        this.stateStore.set('bloom', payload.bloom);
+        this.eventBus.emit('render:bloom', payload.bloom);
+        this.setEffectControlsDisabled(
+          ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
+          !payload.bloom.enabled,
+        );
+      }
+
+      // Apply Grain settings
+      if (payload.grain) {
+        this.stateStore.set('grain', payload.grain);
+        this.eventBus.emit('render:grain', payload.grain);
+        this.setEffectControlsDisabled(['grainIntensity'], !payload.grain.enabled);
+      }
+
+      // Apply Aberration settings
+      if (payload.aberration) {
+        this.stateStore.set('aberration', payload.aberration);
+        this.eventBus.emit('render:aberration', payload.aberration);
+        this.setEffectControlsDisabled(
+          ['aberrationOffset', 'aberrationStrength'],
+          !payload.aberration.enabled,
+        );
+      }
+
+      // Apply Fresnel settings
+      if (payload.fresnel) {
+        this.stateStore.set('fresnel', payload.fresnel);
+        this.eventBus.emit('render:fresnel', payload.fresnel);
+        this.setEffectControlsDisabled(
+          ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+          !payload.fresnel.enabled,
+        );
+      }
+
+      // Apply Camera settings
+      if (payload.camera) {
+        if (payload.camera.fov !== undefined) {
+          this.stateStore.set('camera.fov', payload.camera.fov);
+          this.eventBus.emit('camera:fov', payload.camera.fov);
+        }
+        if (payload.camera.tilt !== undefined) {
+          this.stateStore.set('camera.tilt', payload.camera.tilt);
+          this.eventBus.emit('camera:tilt', payload.camera.tilt);
+        }
+        if (payload.camera.contrast !== undefined) {
+          this.stateStore.set('camera.contrast', payload.camera.contrast);
+          this.eventBus.emit('render:contrast', payload.camera.contrast);
+        }
+        if (payload.camera.temperature !== undefined) {
+          this.stateStore.set('camera.temperature', payload.camera.temperature);
+          this.eventBus.emit('render:temperature', payload.camera.temperature);
+        }
+        if (payload.camera.tint !== undefined) {
+          this.stateStore.set('camera.tint', payload.camera.tint);
+          this.eventBus.emit('render:tint', payload.camera.tint / 100);
+        }
+        if (payload.camera.highlights !== undefined) {
+          this.stateStore.set('camera.highlights', payload.camera.highlights);
+          this.eventBus.emit('render:highlights', payload.camera.highlights / 100);
+        }
+        if (payload.camera.shadows !== undefined) {
+          this.stateStore.set('camera.shadows', payload.camera.shadows);
+          this.eventBus.emit('render:shadows', payload.camera.shadows / 50);
+        }
+        if (payload.camera.saturation !== undefined) {
+          this.stateStore.set('camera.saturation', payload.camera.saturation);
+          this.eventBus.emit('render:saturation', payload.camera.saturation);
+        }
+        if (payload.camera.vignette !== undefined) {
+          this.stateStore.set('camera.vignette', payload.camera.vignette);
+          this.eventBus.emit('render:vignette', payload.camera.vignette);
+        }
+        if (payload.camera.vignetteColor !== undefined) {
+          this.stateStore.set('camera.vignetteColor', payload.camera.vignetteColor);
+          this.eventBus.emit('render:vignette-color', payload.camera.vignetteColor);
+        }
+      }
+
+      // Apply Exposure
+      if (payload.exposure !== undefined) {
+        this.stateStore.set('exposure', payload.exposure);
+        this.eventBus.emit('scene:exposure', payload.exposure);
+      }
+
+      // Apply Auto Exposure
+      if (payload.autoExposure !== undefined) {
+        this.stateStore.set('autoExposure', payload.autoExposure);
+        this.eventBus.emit('camera:auto-exposure', payload.autoExposure);
+      }
+
+      // Apply Lens Dirt
+      if (payload.lensDirt) {
+        this.stateStore.set('lensDirt', payload.lensDirt);
+        this.eventBus.emit('render:lens-dirt', payload.lensDirt);
+        this.setEffectControlsDisabled(
+          ['lensDirtStrength'],
+          !payload.lensDirt.enabled,
+        );
+      }
+
+      // Apply Anti-aliasing
+      if (payload.antiAliasing !== undefined) {
+        this.stateStore.set('antiAliasing', payload.antiAliasing);
+        this.eventBus.emit('render:anti-aliasing', payload.antiAliasing);
+      }
+
+      // Apply Tone Mapping
+      if (payload.toneMapping !== undefined) {
+        this.stateStore.set('toneMapping', payload.toneMapping);
+        this.eventBus.emit('render:tone-mapping', payload.toneMapping);
+      }
+
+      // Apply Background
+      if (payload.background !== undefined) {
+        this.stateStore.set('background', payload.background);
+        this.eventBus.emit('scene:background', payload.background);
+      }
+
+      // Sync UI to reflect loaded values
+      this.syncControls(this.stateStore.getState());
+      this.showToast('FX settings loaded');
+    } catch (error) {
+      console.error('Error loading FX settings:', error);
+      this.showToast('Failed to load FX settings - invalid JSON');
+    }
+  }
+
+
   updateStats(stats) {
     if (!stats) return;
     const mapping = {
@@ -2545,6 +2736,83 @@ export class UIManager {
       input.classList.toggle('is-disabled-handle', disabled);
     });
     this.setControlDisabled('lightsMaster', disabled);
+  }
+
+  bindHdriLightsRotation() {
+    if (!this.dom.canvas) return;
+
+    let isRotating = false;
+    let startX = 0;
+    let startHdriRotation = 0;
+    let startLightsRotation = 0;
+    // Rotation sensitivity: pixels to degrees (1 pixel = 0.5 degrees)
+    const rotationSensitivity = 0.5;
+
+    const handleMouseDown = (event) => {
+      // Check for Alt (Windows/Linux) or Option (Mac) + left mouse button
+      // Note: Option key on Mac triggers altKey, not metaKey
+      if (event.altKey && event.button === 0) {
+        event.preventDefault();
+        isRotating = true;
+        startX = event.clientX;
+        startHdriRotation = this.stateStore.getState().hdriRotation ?? 0;
+        startLightsRotation = this.stateStore.getState().lightsRotation ?? 0;
+        this.dom.canvas.style.cursor = 'grab';
+      }
+    };
+
+    const handleMouseMove = (event) => {
+      if (!isRotating) return;
+      event.preventDefault();
+
+      const deltaX = event.clientX - startX;
+      const rotationDelta = deltaX * rotationSensitivity;
+
+      // Calculate new rotations
+      let newHdriRotation = startHdriRotation + rotationDelta;
+      let newLightsRotation = startLightsRotation + rotationDelta;
+
+      // Normalize to 0-360 range
+      newHdriRotation = ((newHdriRotation % 360) + 360) % 360;
+      newLightsRotation = ((newLightsRotation % 360) + 360) % 360;
+
+      // Update state and emit events
+      this.stateStore.set('hdriRotation', newHdriRotation);
+      this.stateStore.set('lightsRotation', newLightsRotation);
+      this.eventBus.emit('studio:hdri-rotation', newHdriRotation);
+      this.eventBus.emit('lights:rotate', newLightsRotation);
+
+      // Update UI controls
+      if (this.inputs.hdriRotation) {
+        this.inputs.hdriRotation.value = newHdriRotation;
+        this.updateValueLabel('hdriRotation', newHdriRotation, 'angle');
+      }
+      if (this.inputs.lightsRotation) {
+        this.inputs.lightsRotation.value = newLightsRotation;
+        this.updateValueLabel('lightsRotation', newLightsRotation, 'angle');
+      }
+    };
+
+    const handleMouseUp = (event) => {
+      if (isRotating) {
+        event.preventDefault();
+        isRotating = false;
+        this.dom.canvas.style.cursor = '';
+      }
+    };
+
+    // Add event listeners
+    this.dom.canvas.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    // Also handle when mouse leaves canvas while dragging
+    this.dom.canvas.addEventListener('mouseleave', () => {
+      if (isRotating) {
+        isRotating = false;
+        this.dom.canvas.style.cursor = '';
+      }
+    });
   }
 
   updateExposureDisplay(value) {
