@@ -364,6 +364,18 @@ export class SceneManager {
         this.controls.update();
       }
     });
+    this.eventBus.on('camera:lock-orbit', () => {
+      if (this.controls) {
+        this.controls.enableRotate = false;
+        this.controls.enablePan = false;
+      }
+    });
+    this.eventBus.on('camera:unlock-orbit', () => {
+      if (this.controls) {
+        this.controls.enableRotate = true;
+        this.controls.enablePan = true;
+      }
+    });
 
     this.eventBus.on('studio:hdri', (preset) => this.setHdriPreset(preset));
     this.eventBus.on('studio:hdri-enabled', (enabled) =>
