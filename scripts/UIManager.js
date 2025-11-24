@@ -1653,18 +1653,29 @@ export class UIManager {
             
             
           case 'camera':
-            // Reset all camera & color settings
-            this.stateStore.set('camera', { ...defaults.camera });
+            // Reset only basic camera settings (FOV, Tilt, Exposure, Auto Exposure)
+            this.stateStore.set('camera.fov', defaults.camera.fov);
+            this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
             this.stateStore.set('exposure', defaults.exposure);
             this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
-            // Also reset antiAliasing and toneMapping (in Quality block, but reset together)
-            this.stateStore.set('antiAliasing', defaults.antiAliasing);
-            this.stateStore.set('toneMapping', defaults.toneMapping);
-            // Emit all events to update the scene
+            // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
+            // Sync UI to reflect the reset values
+            this.syncControls(this.stateStore.getState());
+            break;
+
+          case 'color-correction':
+            // Reset only color correction settings
+            this.stateStore.set('camera.contrast', defaults.camera.contrast);
+            this.stateStore.set('camera.temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
+            this.stateStore.set('camera.tint', defaults.camera.tint ?? 0);
+            this.stateStore.set('camera.highlights', defaults.camera.highlights ?? 0);
+            this.stateStore.set('camera.shadows', defaults.camera.shadows ?? 0);
+            this.stateStore.set('camera.saturation', defaults.camera.saturation);
+            // Emit events to update the scene
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
             this.eventBus.emit(
               'render:temperature',
@@ -1683,8 +1694,6 @@ export class UIManager {
               (defaults.camera.shadows ?? 0) / 100,
             );
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
-            this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
-            this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
             // Sync UI to reflect the reset values
             this.syncControls(this.stateStore.getState());
             break;

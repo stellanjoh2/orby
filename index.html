@@ -79,19 +79,19 @@
                       value="shaded"
                       checked
                     />
-                    Shaded
+                    SHADED
                   </label>
                   <label>
                     <input type="radio" name="shading" value="textures" />
-                    Unlit
+                    UNLIT
                   </label>
                   <label>
                     <input type="radio" name="shading" value="clay" />
-                    Clay
+                    CLAY
                   </label>
                   <label>
                     <input type="radio" name="shading" value="wireframe" />
-                    Wireframe
+                    WIRE
                   </label>
                 </div>
               </div>
@@ -100,7 +100,10 @@
                 <div class="subsection" data-subsection="clay">
                   <div class="block-title has-reset">
                     <span>Clay</span>
-                    <button class="block-reset-btn" data-reset="clay">Reset</button>
+                    <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
                   </div>
                   <label class="color-line">
                     <span>Clay Color</span>
@@ -149,7 +152,10 @@
                   <div class="block-title has-toggle">
                     <span>Fresnel</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="fresnel">Reset</button>
+                      <button class="block-reset-btn" data-reset="fresnel" aria-label="Reset Fresnel">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="toggleFresnel" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -195,7 +201,10 @@
                 <div class="subsection" data-subsection="wireframe">
                   <div class="block-title has-reset">
                     <span>Wireframe</span>
-                    <button class="block-reset-btn" data-reset="wireframe">Reset</button>
+                    <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
                   </div>
                   <label class="slider-line">
                     <span>Always on</span>
@@ -229,7 +238,10 @@
                 <div class="subsection">
                   <div class="block-title has-reset">
                     <span>Transform</span>
-                    <button class="block-reset-btn" data-reset="transform">Reset</button>
+                    <button class="block-reset-btn" data-reset="transform" aria-label="Reset Transform">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
                   </div>
                   <label class="slider-line">
                     <span>Scale</span>
@@ -328,19 +340,19 @@
                   <div class="segmented compact">
                     <label>
                       <input type="radio" name="autorotate" value="0" checked />
-                      Off
+                      OFF
                     </label>
                     <label>
                       <input type="radio" name="autorotate" value="0.2" />
-                      Slow
+                      SLOW
                     </label>
                     <label>
                       <input type="radio" name="autorotate" value="0.5" />
-                      Normal
+                      NORMAL
                     </label>
                     <label>
                       <input type="radio" name="autorotate" value="1" />
-                      Fast
+                      FAST
                     </label>
                   </div>
                 </div>
@@ -351,7 +363,10 @@
                   <div class="block-title has-toggle">
                     <span>Podium</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="podium">Reset</button>
+                      <button class="block-reset-btn" data-reset="podium" aria-label="Reset Podium">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="groundSolid" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -401,7 +416,10 @@
                   <div class="block-title has-toggle">
                     <span>Grid</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="grid">Reset</button>
+                      <button class="block-reset-btn" data-reset="grid" aria-label="Reset Grid">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="groundWire" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -527,7 +545,10 @@
                 <div class="block-title has-toggle">
                   <span>HDRI</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="hdri">Reset</button>
+                    <button class="block-reset-btn" data-reset="hdri" aria-label="Reset HDRI">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
                     <label class="effect-toggle">
                       <input type="checkbox" id="hdriEnabled" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -537,22 +558,22 @@
                 </div>
                 <div class="hdri-grid" id="hdriGrid">
                   <button data-hdri="congress" class="hdri-card">
-                    Congress
+                    CONGRESS
                   </button>
                   <button data-hdri="luminous-sky" class="hdri-card">
-                    Forest
+                    FOREST
                   </button>
                   <button data-hdri="sunset" class="hdri-card">
-                    Sunset
+                    SUNSET
                   </button>
                   <button data-hdri="meadow" class="hdri-card active">
-                    Meadow
+                    MEADOW
                   </button>
                   <button data-hdri="abandoned" class="hdri-card">
-                    Abandoned
+                    ABANDONED
                   </button>
                   <button data-hdri="beach" class="hdri-card">
-                    Beach
+                    BEACH
                   </button>
                 </div>
                 <label class="slider-line">
@@ -604,7 +625,10 @@
               <div class="panel-block" data-block="background">
                 <div class="block-title has-reset">
                   <span>Background Color</span>
-                  <button class="block-reset-btn" data-reset="background">Reset</button>
+                  <button class="block-reset-btn" data-reset="background" aria-label="Reset Background">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span class="sr-only">Reset</span>
+                  </button>
                 </div>
                 <label class="color-line">
                   <span>Color</span>
@@ -621,7 +645,10 @@
                 <div class="block-title has-toggle">
                   <span id="lightsTitle">Lights</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="lights">Reset</button>
+                    <button class="block-reset-btn" data-reset="lights" aria-label="Reset Lights">
+                      <i data-lucide="rotate-ccw"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
                     <label class="effect-toggle">
                       <input type="checkbox" id="lightsEnabled" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -702,7 +729,10 @@
               <div class="panel-block">
                 <div class="block-title has-reset">
                   <span>Basic</span>
-                  <button class="block-reset-btn" data-reset="camera">Reset</button>
+                  <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span class="sr-only">Reset</span>
+                  </button>
                 </div>
                 <label class="slider-line">
                   <span>FOV</span>
@@ -748,7 +778,16 @@
                     <span class="sr-only">Enable auto exposure</span>
                   </label>
                 </label>
-                <div class="panel-block-divider"></div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title has-reset">
+                  <span>Color Correction</span>
+                  <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color Correction">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span class="sr-only">Reset</span>
+                  </button>
+                </div>
                 <label class="slider-line slider-line--temperature">
                   <span>Temperature</span>
                   <input
@@ -828,7 +867,10 @@
                   <div class="block-title has-toggle">
                     <span>Depth of Field</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="dof">Reset</button>
+                      <button class="block-reset-btn" data-reset="dof" aria-label="Reset Depth of Field">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="toggleDof" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -866,7 +908,10 @@
                   <div class="block-title has-toggle">
                     <span>Bloom</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="bloom">Reset</button>
+                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="toggleBloom" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -920,7 +965,10 @@
                   <div class="block-title has-toggle">
                     <span>Lens Flare</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="lens-flare">Reset</button>
+                      <button class="block-reset-btn" data-reset="lens-flare" aria-label="Reset Lens Flare">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="lensFlareEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -974,7 +1022,10 @@
                   <div class="block-title has-toggle">
                     <span>Lens Dirt</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="lens-dirt">Reset</button>
+                      <button class="block-reset-btn" data-reset="lens-dirt" aria-label="Reset Lens Dirt">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="lensDirtEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -1000,7 +1051,10 @@
                   <div class="block-title has-toggle">
                     <span>Film Grain</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="grain">Reset</button>
+                      <button class="block-reset-btn" data-reset="grain" aria-label="Reset Film Grain">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="toggleGrain" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -1026,7 +1080,10 @@
                   <div class="block-title has-toggle">
                     <span>Chromatic Aberration</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="aberration">Reset</button>
+                      <button class="block-reset-btn" data-reset="aberration" aria-label="Reset Chromatic Aberration">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="toggleAberration" />
                         <span class="effect-indicator" aria-hidden="true"></span>
