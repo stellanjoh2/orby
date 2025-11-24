@@ -2779,6 +2779,8 @@ export class UIManager {
         startHdriRotation = this.stateStore.getState().hdriRotation ?? 0;
         startLightsRotation = this.stateStore.getState().lightsRotation ?? 0;
         this.dom.canvas.style.cursor = 'grab';
+        // Lock camera orbit controls during HDRI rotation
+        this.eventBus.emit('camera:lock-orbit');
       }
     };
 
@@ -2819,6 +2821,8 @@ export class UIManager {
         event.preventDefault();
         isRotating = false;
         this.dom.canvas.style.cursor = '';
+        // Unlock camera orbit controls
+        this.eventBus.emit('camera:unlock-orbit');
       }
     };
 
@@ -2832,6 +2836,8 @@ export class UIManager {
       if (isRotating) {
         isRotating = false;
         this.dom.canvas.style.cursor = '';
+        // Unlock camera orbit controls
+        this.eventBus.emit('camera:unlock-orbit');
       }
     });
   }
