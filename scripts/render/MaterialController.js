@@ -407,9 +407,10 @@ export class MaterialController {
       ...this.fresnelSettings,
       ...settings,
     };
+    // Invert radius: low radius (0.5) = high power (5.0) = narrow, high radius (5.0) = low power (0.5) = wide
     this.fresnelSettings.radius = Math.max(
-      0.1,
-      this.fresnelSettings.radius || 1,
+      0.5,
+      Math.min(5.0, this.fresnelSettings.radius || 1),
     );
     this.applyFresnelToModel(this.currentModel);
   }
