@@ -452,6 +452,7 @@ export class SceneManager {
       this.setLightsEnabled(enabled),
     );
     this.eventBus.on('lights:rotate', (value) => this.setLightsRotation(value));
+    this.eventBus.on('lights:height', (value) => this.setLightsHeight(value));
     this.eventBus.on('lights:auto-rotate', (enabled) =>
       this.setLightsAutoRotate(enabled),
     );
@@ -545,8 +546,24 @@ export class SceneManager {
       });
     }
     this.setLightsRotation(state.lightsRotation ?? 0);
+    this.setLightsHeight(state.lightsHeight ?? 5);
     this.setShowLightIndicators(state.showLightIndicators ?? false);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
+    
+    // Apply individual light properties
+    if (state.lights) {
+      Object.entries(state.lights).forEach(([lightId, config]) => {
+        if (config.intensity !== undefined) {
+          this.lightsController?.updateLightProperty(lightId, 'intensity', config.intensity);
+        }
+        if (config.height !== undefined) {
+          this.lightsController?.updateLightProperty(lightId, 'height', config.height);
+        }
+        if (config.rotate !== undefined) {
+          this.lightsController?.updateLightProperty(lightId, 'rotate', config.rotate);
+        }
+      });
+    }
     // Update material controller settings
     if (state.diffuseBrightness !== undefined) {
       this.materialController.setDiffuseBrightness(state.diffuseBrightness);
@@ -907,8 +924,12 @@ export class SceneManager {
     this.lightsController?.updateIndicators();
   }
 
-  setLightsRotation(value, { updateUi = true, updateHdri = false } = {}) {
+  setLightsRotation(value, { updateUi = true, updateHdri = false, updateState = true } = {}) {
     this.lightsRotation = this.lightsController?.setRotation(value) ?? value;
+    // Update StateStore to keep it in sync (especially important for auto-rotate)
+    if (updateState) {
+      this.stateStore.set('lightsRotation', this.lightsRotation);
+    }
     // Also rotate HDRI with lights (unless we're being called from setHdriRotation to avoid loop)
     if (updateHdri) {
       this.hdriRotation = this.lightsRotation;
@@ -927,8 +948,17 @@ export class SceneManager {
     this.updateLightIndicators();
   }
 
+  setLightsHeight(value) {
+    this.lightsController?.setHeight(value);
+  }
+
   setLightsAutoRotate(enabled) {
     this.lightsAutoRotate = enabled;
+    // When turning off auto-rotate, ensure StateStore is synced with current rotation
+    // This prevents "pop" when manually adjusting after auto-rotate stops
+    if (!enabled) {
+      this.stateStore.set('lightsRotation', this.lightsRotation);
+    }
   }
 
   setFresnelSettings(settings = {}) {

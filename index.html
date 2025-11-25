@@ -687,63 +687,303 @@
                     </label>
                   </div>
                 </div>
-                <label class="color-line light-color-row" data-light="key">
-                  <span>Key Color</span>
-                  <input type="color" class="color-chip light-chip" value="#ffdfc9" />
-                </label>
-                <label class="color-line light-color-row" data-light="fill">
-                  <span>Fill Color</span>
-                  <input type="color" class="color-chip light-chip" value="#b0c7ff" />
-                </label>
-                <label class="color-line light-color-row" data-light="rim">
-                  <span>Rim Color</span>
-                  <input type="color" class="color-chip light-chip" value="#a0eaf9" />
-                </label>
-                <label class="color-line light-color-row" data-light="ambient">
-                  <span>Ambient Color</span>
-                  <input type="color" class="color-chip light-chip" value="#7c8ca6" />
-                </label>
-                <label class="slider-line">
-                  <span>Strength</span>
-                  <input
-                    id="lightsMaster"
-                    type="range"
-                    min="0"
-                    max="5"
-                    step="0.01"
-                    value="0.30"
-                  />
-                  <span class="value" data-output="lightsMaster">1.00</span>
-                </label>
-                <label class="slider-line">
-                  <span>Show Light Indicators</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="showLightIndicators" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Show light indicators</span>
+
+                <!-- Global Light Controls -->
+                <div class="subsection" data-subsection="globalLights">
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="lightsRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="lightsRotation">0°</span>
                   </label>
-                </label>
-                <div class="panel-block-divider"></div>
-                <div class="block-title has-toggle" style="margin-top: 0;">
-                  <span>Rotation</span>
-                  <label class="effect-toggle">
-                    <input type="checkbox" id="lightsAutoRotate" />
-                    <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Auto rotate lights</span>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="lightsMaster"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.30"
+                    />
+                    <span class="value" data-output="lightsMaster">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="lightsHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="5"
+                    />
+                    <span class="value" data-output="lightsHeight">5.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Auto Rotate</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lightsAutoRotate" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Auto rotate lights</span>
+                    </label>
+                  </label>
+                  <label class="slider-line">
+                    <span>Show Spotlights</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="showLightIndicators" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show spotlights</span>
+                    </label>
                   </label>
                 </div>
-                <label class="slider-line">
-                  <span>Manual</span>
-                  <input
-                    id="lightsRotation"
-                    type="range"
-                    min="0"
-                    max="360"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="lightsRotation">0°</span>
-                </label>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Key Light -->
+                <div class="subsection" data-subsection="keyLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Key</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="keyLight" aria-label="Reset Key Light">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="keyLightEnabled" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Key Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line light-color-row" data-light="key">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#ffdfc9" />
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="keyLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="1.28"
+                    />
+                    <span class="value" data-output="keyLightStrength">1.28</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="keyLightHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="5"
+                    />
+                    <span class="value" data-output="keyLightHeight">5.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="keyLightRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="keyLightRotate">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Cast Shadows</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="keyLightCastShadows" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Cast shadows</span>
+                    </label>
+                  </label>
+                </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Fill Light -->
+                <div class="subsection" data-subsection="fillLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Fill</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="fillLight" aria-label="Reset Fill Light">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="fillLightEnabled" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Fill Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line light-color-row" data-light="fill">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#b0c7ff" />
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="fillLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.8"
+                    />
+                    <span class="value" data-output="fillLightStrength">0.80</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="fillLightHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="3"
+                    />
+                    <span class="value" data-output="fillLightHeight">3.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="fillLightRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="fillLightRotate">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Cast Shadows</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="fillLightCastShadows" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Cast shadows</span>
+                    </label>
+                  </label>
+                </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Rim Light -->
+                <div class="subsection" data-subsection="rimLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Rim</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="rimLight" aria-label="Reset Rim Light">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="rimLightEnabled" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Rim Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line light-color-row" data-light="rim">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#a0eaf9" />
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="rimLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.96"
+                    />
+                    <span class="value" data-output="rimLightStrength">0.96</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Height</span>
+                    <input
+                      id="rimLightHeight"
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value="4"
+                    />
+                    <span class="value" data-output="rimLightHeight">4.0</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Rotate</span>
+                    <input
+                      id="rimLightRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="rimLightRotate">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Cast Shadows</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="rimLightCastShadows" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Cast shadows</span>
+                    </label>
+                  </label>
+                </div>
+
+                <div class="panel-block-divider"></div>
+
+                <!-- Ambient Light -->
+                <div class="subsection" data-subsection="ambientLight">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Ambient</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="ambientLight" aria-label="Reset Ambient Light">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="ambientLightEnabled" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Ambient Light</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line light-color-row" data-light="ambient">
+                    <span>Color</span>
+                    <input type="color" class="color-chip light-chip" value="#7c8ca6" />
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="ambientLightStrength"
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.01"
+                      value="0.48"
+                    />
+                    <span class="value" data-output="ambientLightStrength">0.48</span>
+                  </label>
+                </div>
+
               </div>
 
               <button id="resetStudioSettings" class="action-btn">

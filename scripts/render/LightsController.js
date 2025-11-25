@@ -6,6 +6,7 @@ export class LightsController {
     this.lightsEnabled = options.enabled ?? true;
     this.lightsMaster = options.master ?? 1;
     this.rotation = options.rotation ?? 0;
+    this.lightsHeight = options.height ?? 5;
     this.autoRotateSpeed = options.autoRotateSpeed ?? 30;
     this.modelBounds = null;
     this.showIndicators = false;
@@ -26,6 +27,14 @@ export class LightsController {
       key: this.lights.key.position.clone(),
       fill: this.lights.fill.position.clone(),
       rim: this.lights.rim.position.clone(),
+    };
+
+    // Individual light properties
+    this.individualProperties = {
+      key: { height: 5, rotate: 0, intensity: 1.28, enabled: true, castShadows: true },
+      fill: { height: 3, rotate: 0, intensity: 0.8, enabled: true, castShadows: true },
+      rim: { height: 4, rotate: 0, intensity: 0.96, enabled: true, castShadows: true },
+      ambient: { intensity: 0.48, enabled: true },
     };
 
     Object.values(this.lights).forEach((light) => {
@@ -60,28 +69,84 @@ export class LightsController {
       if (config.color) {
         light.color = new THREE.Color(config.color);
       }
+      // Store all properties
+      if (!this.individualProperties[id]) {
+        this.individualProperties[id] = {};
+      }
+      if (config.intensity !== undefined) {
+        this.individualProperties[id].intensity = config.intensity;
+      }
+      if (config.enabled !== undefined) {
+        this.individualProperties[id].enabled = config.enabled;
+      }
+      if (config.castShadows !== undefined && light.isDirectionalLight) {
+        this.individualProperties[id].castShadows = config.castShadows;
+        if (light.shadow) {
+          light.castShadow = config.castShadows;
+        }
+      }
+      // Use individual intensity if available, otherwise use config
+      const intensity = this.individualProperties[id].intensity ?? config.intensity ?? 0;
       const multiplier = light.isAmbientLight ? 4 : 2;
-      const baseIntensity = (config.intensity ?? 0) * multiplier;
-      const targetIntensity = baseIntensity * (this.lightsMaster ?? 1);
-      light.intensity = this.lightsEnabled ? targetIntensity : 0;
+      const baseIntensity = intensity * multiplier;
+      // Clamp to max 5.0 × multiplier to prevent overexposure
+      const targetIntensity = Math.min(baseIntensity * (this.lightsMaster ?? 1), 5.0 * multiplier);
+      const isLightEnabled = (this.individualProperties[id].enabled !== false) && this.lightsEnabled;
+      light.intensity = isLightEnabled ? targetIntensity : 0;
+      
+      // Apply individual height and rotate for directional lights
+      if (light.isDirectionalLight) {
+        if (config.height !== undefined) {
+          this.individualProperties[id].height = config.height;
+        }
+        if (config.rotate !== undefined) {
+          this.individualProperties[id].rotate = config.rotate;
+        }
+        this.updateLightPosition(id);
+      }
     });
     this.updateIndicators();
   }
 
   setEnabled(enabled, lightsState = {}) {
     this.lightsEnabled = !!enabled;
+    // Update all lights based on enabled state
+    Object.keys(this.lights).forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (!light) return;
+      const props = this.individualProperties[lightId];
+      const isLightEnabled = (props?.enabled !== false) && this.lightsEnabled;
+      if (isLightEnabled) {
+        const intensity = props?.intensity ?? 0;
+        const multiplier = light.isAmbientLight ? 4 : 2;
+        const baseIntensity = intensity * multiplier;
+        // Clamp to max 5.0 × multiplier to prevent overexposure
+        const targetIntensity = Math.min(baseIntensity * (this.lightsMaster ?? 1), 5.0 * multiplier);
+        light.intensity = targetIntensity;
+      } else {
+        light.intensity = 0;
+      }
+    });
     if (this.lightsEnabled) {
       this.applySettings(lightsState);
-    } else {
-      Object.values(this.lights).forEach((light) => {
-        if (!light) return;
-        light.intensity = 0;
-      });
     }
   }
 
   setMaster(value, lightsState = {}) {
     this.lightsMaster = value ?? 1;
+    // Update all lights with new master value
+    Object.keys(this.lights).forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (!light) return;
+      const props = this.individualProperties[lightId];
+      const intensity = props?.intensity ?? 0;
+      const multiplier = light.isAmbientLight ? 4 : 2;
+      const baseIntensity = intensity * multiplier;
+      // Clamp to max 5.0 × multiplier to prevent overexposure
+      const targetIntensity = Math.min(baseIntensity * this.lightsMaster, 5.0 * multiplier);
+      const isLightEnabled = (props?.enabled !== false) && this.lightsEnabled;
+      light.intensity = isLightEnabled ? targetIntensity : 0;
+    });
     if (this.lightsEnabled) {
       this.applySettings(lightsState);
     }
@@ -91,34 +156,99 @@ export class LightsController {
   updateLightProperty(lightId, property, value) {
     const light = this.lights[lightId];
     if (!light) return;
+    
+    if (!this.individualProperties[lightId]) {
+      this.individualProperties[lightId] = {};
+    }
+    
     if (property === 'color') {
       light.color = new THREE.Color(value);
     } else if (property === 'intensity') {
+      // Store individual intensity (base value, 0-5 range)
+      this.individualProperties[lightId].intensity = Math.min(value ?? 0, 5.0);
+      // Apply intensity with master multiplier, clamped to max 5.0 total
       const multiplier = light.isAmbientLight ? 4 : 2;
-      const baseIntensity = (value ?? 0) * multiplier;
-      const targetIntensity = baseIntensity * (this.lightsMaster ?? 1);
-      light.intensity = this.lightsEnabled ? targetIntensity : 0;
+      const baseIntensity = this.individualProperties[lightId].intensity * multiplier;
+      // Clamp effective intensity to prevent overexposure (max 5.0 × multiplier)
+      const effectiveIntensity = Math.min(baseIntensity * (this.lightsMaster ?? 1), 5.0 * multiplier);
+      const isLightEnabled = this.individualProperties[lightId].enabled !== false && this.lightsEnabled;
+      light.intensity = isLightEnabled ? effectiveIntensity : 0;
+    } else if (property === 'height') {
+      // Store individual height
+      this.individualProperties[lightId].height = value ?? 5;
+      // Update light position Y
+      if (light.isDirectionalLight) {
+        this.updateLightPosition(lightId);
+      }
+    } else if (property === 'rotate') {
+      // Store individual rotation
+      this.individualProperties[lightId].rotate = value ?? 0;
+      // Update light position
+      if (light.isDirectionalLight) {
+        this.updateLightPosition(lightId);
+      }
+    } else if (property === 'enabled') {
+      // Store enabled state
+      this.individualProperties[lightId].enabled = value !== false;
+      // Update intensity based on enabled state
+      const intensity = this.individualProperties[lightId].intensity ?? 0;
+      const multiplier = light.isAmbientLight ? 4 : 2;
+      const baseIntensity = intensity * multiplier;
+      // Clamp to max 5.0 × multiplier to prevent overexposure
+      const targetIntensity = Math.min(baseIntensity * (this.lightsMaster ?? 1), 5.0 * multiplier);
+      const isLightEnabled = this.individualProperties[lightId].enabled && this.lightsEnabled;
+      light.intensity = isLightEnabled ? targetIntensity : 0;
+    } else if (property === 'castShadows') {
+      // Store cast shadows state
+      this.individualProperties[lightId].castShadows = value !== false;
+      // Update shadow casting
+      if (light.isDirectionalLight && light.shadow) {
+        light.castShadow = this.individualProperties[lightId].castShadows;
+      }
     }
     this.updateIndicators();
+  }
+
+  updateLightPosition(lightId) {
+    const light = this.lights[lightId];
+    const base = this.basePositions[lightId];
+    const props = this.individualProperties[lightId];
+    if (!light || !base || !props || !light.isDirectionalLight) return;
+
+    // Calculate position with global rotation + individual rotation
+    const globalRadians = THREE.MathUtils.degToRad(this.rotation);
+    const individualRadians = THREE.MathUtils.degToRad(props.rotate ?? 0);
+    const totalRotation = globalRadians + individualRadians;
+    
+    const cos = Math.cos(totalRotation);
+    const sin = Math.sin(totalRotation);
+    const rotatedX = base.x * cos + base.z * sin;
+    const rotatedZ = -base.x * sin + base.z * cos;
+    
+    // Use individual height or global height
+    const height = props.height ?? this.lightsHeight ?? base.y;
+    
+    light.position.set(rotatedX, height, rotatedZ);
   }
 
   setRotation(value) {
     const normalized = ((value % 360) + 360) % 360;
     this.rotation = normalized;
-    if (!this.basePositions) return normalized;
-    const radians = THREE.MathUtils.degToRad(normalized);
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
+    // Update all directional light positions
     ['key', 'fill', 'rim'].forEach((id) => {
-      const base = this.basePositions[id];
-      const light = this.lights[id];
-      if (!base || !light) return;
-      const rotatedX = base.x * cos + base.z * sin;
-      const rotatedZ = -base.x * sin + base.z * cos;
-      light.position.set(rotatedX, base.y, rotatedZ);
+      this.updateLightPosition(id);
     });
     this.updateIndicators();
     return normalized;
+  }
+
+  setHeight(value) {
+    this.lightsHeight = value ?? 5;
+    // Update all directional light positions (updateLightPosition will use individual height if available, otherwise global)
+    ['key', 'fill', 'rim'].forEach((id) => {
+      this.updateLightPosition(id);
+    });
+    this.updateIndicators();
   }
 
   setIndicatorsVisible(enabled) {
