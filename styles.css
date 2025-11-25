@@ -22,7 +22,7 @@
 :root,
 body[data-theme='violet'] {
   /* Brand Colors - Change these to swap the main brand color */
-  --brand-primary: #fff62a;
+  --brand-primary: #e1ff00;
   --brand-secondary: #ff4500;
   
   /* Base Colors */
@@ -60,7 +60,7 @@ body[data-theme='violet'] {
 
 body[data-theme='aqua'] {
   /* Brand Colors - Change these to swap the main brand color */
-  --brand-primary: #fff62a;
+  --brand-primary: #e1ff00;
   --brand-secondary: #ff4500;
   
   /* Base Colors */
@@ -966,6 +966,74 @@ a:hover {
   color: var(--text);
   background: var(--accent-muted);
   opacity: 1;
+}
+
+/* Mode Icons - Free floating spherical icons */
+.mode-icons {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  width: 100%;
+  gap: 8px;
+}
+
+.mode-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  transition: transform 0.2s ease;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mode-icon::before {
+  content: '';
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mode-icon img {
+  width: 54px;
+  height: 54px;
+  display: block;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 0;
+  /* Free floating - no background or border when unselected */
+}
+
+.mode-icon:hover img {
+  transform: scale(1.1);
+}
+
+.mode-icon input {
+  appearance: none;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Selected state - white stroked ring around icon */
+.mode-icon:has(input:checked)::before {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1);
+}
+
+.mode-icon:has(input:checked):hover img {
+  transform: scale(1.1);
 }
 
 .slider-line,
