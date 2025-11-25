@@ -657,32 +657,36 @@ export class SceneManager {
 
   setClayNormalMap(enabled) {
     if (this.currentShading === 'clay' && this.currentModel) {
-    this.currentModel.traverse((child) => {
+      this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;
         if (this.materialController.isClayMaterial(child)) {
-        const materials = Array.isArray(child.material)
-          ? child.material
-          : [child.material];
-        materials.forEach((material) => {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+          materials.forEach((material) => {
             if (!material || !material.isMeshStandardMaterial) return;
             if (enabled) {
               // Restore normal map from original material
               const originalMaterial = this.materialController.getOriginalMaterial(child);
-                if (originalMaterial) {
-                  const originalMat = Array.isArray(originalMaterial) 
-                    ? originalMaterial[0] 
-                    : originalMaterial;
+              if (originalMaterial) {
+                const originalMat = Array.isArray(originalMaterial) 
+                  ? originalMaterial[0] 
+                  : originalMaterial;
                 if (originalMat?.normalMap) {
                   material.normalMap = originalMat.normalMap;
                   material.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
                   if (originalMat.normalScale) {
                     material.normalScale = originalMat.normalScale.clone();
                   }
-                }
-                  }
                 } else {
-              // Remove normal map
+                  // Original has no normal map, ensure it's cleared
+                  material.normalMap = null;
+                }
+              }
+            } else {
+              // Remove normal map completely
               material.normalMap = null;
+              material.normalMapType = THREE.TangentSpaceNormalMap; // Reset to default
             }
             material.needsUpdate = true;
           });
