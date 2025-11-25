@@ -113,8 +113,26 @@ export class UIManager {
       lightsEnabled: q('#lightsEnabled'),
       lightsMaster: q('#lightsMaster'),
       lightsRotation: q('#lightsRotation'),
+      lightsHeight: q('#lightsHeight'),
       lightsAutoRotate: q('#lightsAutoRotate'),
       showLightIndicators: q('#showLightIndicators'),
+      keyLightStrength: q('#keyLightStrength'),
+      keyLightHeight: q('#keyLightHeight'),
+      keyLightRotate: q('#keyLightRotate'),
+      fillLightStrength: q('#fillLightStrength'),
+      fillLightHeight: q('#fillLightHeight'),
+      fillLightRotate: q('#fillLightRotate'),
+      rimLightStrength: q('#rimLightStrength'),
+      rimLightHeight: q('#rimLightHeight'),
+      rimLightRotate: q('#rimLightRotate'),
+      ambientLightStrength: q('#ambientLightStrength'),
+      keyLightEnabled: q('#keyLightEnabled'),
+      fillLightEnabled: q('#fillLightEnabled'),
+      rimLightEnabled: q('#rimLightEnabled'),
+      ambientLightEnabled: q('#ambientLightEnabled'),
+      keyLightCastShadows: q('#keyLightCastShadows'),
+      fillLightCastShadows: q('#fillLightCastShadows'),
+      rimLightCastShadows: q('#rimLightCastShadows'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
       toggleDof: q('#toggleDof'),
@@ -645,6 +663,7 @@ export class UIManager {
       this.updateValueLabel('lightsMaster', value, 'decimal');
       this.stateStore.set('lightsMaster', value);
       this.eventBus.emit('lights:master', value);
+      // Individual sliders show base values, so they don't move when global changes
     });
     this.inputs.lightsEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -659,11 +678,136 @@ export class UIManager {
       this.stateStore.set('lightsRotation', value);
       this.eventBus.emit('lights:rotate', value);
     });
+    this.inputs.lightsHeight?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('lightsHeight', value, 'decimal');
+      this.stateStore.set('lightsHeight', value);
+      this.eventBus.emit('lights:height', value);
+    });
+    if (this.inputs.lightsHeight) this.enableSliderKeyboardStepping(this.inputs.lightsHeight);
     this.inputs.lightsAutoRotate?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('lightsAutoRotate', enabled);
       this.eventBus.emit('lights:auto-rotate', enabled);
       this.setLightsRotationDisabled(enabled);
+    });
+
+    // Key Light Controls
+    // Individual strength slider shows BASE value (0-5), global is a multiplier
+    this.inputs.keyLightStrength?.addEventListener('input', (event) => {
+      const baseIntensity = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('keyLightStrength', baseIntensity, 'decimal');
+      this.stateStore.set('lights.key.intensity', baseIntensity);
+      this.eventBus.emit('lights:update', { lightId: 'key', property: 'intensity', value: baseIntensity });
+    });
+    if (this.inputs.keyLightStrength) this.enableSliderKeyboardStepping(this.inputs.keyLightStrength);
+    this.inputs.keyLightHeight?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('keyLightHeight', value, 'decimal');
+      this.stateStore.set('lights.key.height', value);
+      this.eventBus.emit('lights:update', { lightId: 'key', property: 'height', value });
+    });
+    if (this.inputs.keyLightHeight) this.enableSliderKeyboardStepping(this.inputs.keyLightHeight);
+    this.inputs.keyLightRotate?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('keyLightRotate', value, 'angle');
+      this.stateStore.set('lights.key.rotate', value);
+      this.eventBus.emit('lights:update', { lightId: 'key', property: 'rotate', value });
+    });
+
+    // Fill Light Controls
+    // Individual strength slider shows BASE value (0-5), global is a multiplier
+    this.inputs.fillLightStrength?.addEventListener('input', (event) => {
+      const baseIntensity = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('fillLightStrength', baseIntensity, 'decimal');
+      this.stateStore.set('lights.fill.intensity', baseIntensity);
+      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'intensity', value: baseIntensity });
+    });
+    if (this.inputs.fillLightStrength) this.enableSliderKeyboardStepping(this.inputs.fillLightStrength);
+    this.inputs.fillLightHeight?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('fillLightHeight', value, 'decimal');
+      this.stateStore.set('lights.fill.height', value);
+      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'height', value });
+    });
+    if (this.inputs.fillLightHeight) this.enableSliderKeyboardStepping(this.inputs.fillLightHeight);
+    this.inputs.fillLightRotate?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('fillLightRotate', value, 'angle');
+      this.stateStore.set('lights.fill.rotate', value);
+      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'rotate', value });
+    });
+
+    // Rim Light Controls
+    // Individual strength slider shows BASE value (0-5), global is a multiplier
+    this.inputs.rimLightStrength?.addEventListener('input', (event) => {
+      const baseIntensity = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('rimLightStrength', baseIntensity, 'decimal');
+      this.stateStore.set('lights.rim.intensity', baseIntensity);
+      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'intensity', value: baseIntensity });
+    });
+    if (this.inputs.rimLightStrength) this.enableSliderKeyboardStepping(this.inputs.rimLightStrength);
+    this.inputs.rimLightHeight?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('rimLightHeight', value, 'decimal');
+      this.stateStore.set('lights.rim.height', value);
+      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'height', value });
+    });
+    if (this.inputs.rimLightHeight) this.enableSliderKeyboardStepping(this.inputs.rimLightHeight);
+    this.inputs.rimLightRotate?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('rimLightRotate', value, 'angle');
+      this.stateStore.set('lights.rim.rotate', value);
+      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'rotate', value });
+    });
+
+    // Ambient Light Controls
+    // Individual strength slider shows BASE value (0-5), global is a multiplier
+    this.inputs.ambientLightStrength?.addEventListener('input', (event) => {
+      const baseIntensity = parseFloat(event.target.value) || 0;
+      this.updateValueLabel('ambientLightStrength', baseIntensity, 'decimal');
+      this.stateStore.set('lights.ambient.intensity', baseIntensity);
+      this.eventBus.emit('lights:update', { lightId: 'ambient', property: 'intensity', value: baseIntensity });
+    });
+    if (this.inputs.ambientLightStrength) this.enableSliderKeyboardStepping(this.inputs.ambientLightStrength);
+
+    // Individual Light Enabled Toggles
+    this.inputs.keyLightEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.key.enabled', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'key', property: 'enabled', value: enabled });
+    });
+    this.inputs.fillLightEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.fill.enabled', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'enabled', value: enabled });
+    });
+    this.inputs.rimLightEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.rim.enabled', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'enabled', value: enabled });
+    });
+    this.inputs.ambientLightEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.ambient.enabled', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'ambient', property: 'enabled', value: enabled });
+    });
+
+    // Cast Shadows Toggles
+    this.inputs.keyLightCastShadows?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.key.castShadows', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'key', property: 'castShadows', value: enabled });
+    });
+    this.inputs.fillLightCastShadows?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.fill.castShadows', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'castShadows', value: enabled });
+    });
+    this.inputs.rimLightCastShadows?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lights.rim.castShadows', enabled);
+      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'castShadows', value: enabled });
     });
   }
 
@@ -1483,6 +1627,7 @@ export class UIManager {
       this.eventBus.emit('lights:enabled', defaults.lightsEnabled);
       this.setLightColorControlsDisabled(!defaults.lightsEnabled);
       this.eventBus.emit('lights:rotate', defaults.lightsRotation);
+      this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.setLightsRotationDisabled(defaults.lightsAutoRotate);
       this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
@@ -1637,6 +1782,8 @@ export class UIManager {
           case 'lights':
             this.stateStore.set('lights', defaults.lights);
             this.stateStore.set('lightsMaster', defaults.lightsMaster);
+            this.stateStore.set('lightsRotation', defaults.lightsRotation);
+            this.stateStore.set('lightsHeight', defaults.lightsHeight ?? 5);
             Object.keys(defaults.lights).forEach((lightId) => {
               const light = defaults.lights[lightId];
               this.eventBus.emit('lights:update', {
@@ -1649,9 +1796,37 @@ export class UIManager {
                 property: 'intensity',
                 value: light.intensity,
               });
+              if (light.height !== undefined) {
+                this.eventBus.emit('lights:update', {
+                  lightId,
+                  property: 'height',
+                  value: light.height,
+                });
+              }
+              if (light.rotate !== undefined) {
+                this.eventBus.emit('lights:update', {
+                  lightId,
+                  property: 'rotate',
+                  value: light.rotate,
+                });
+              }
             });
             this.eventBus.emit('lights:master', defaults.lightsMaster);
+            this.eventBus.emit('lights:rotate', defaults.lightsRotation);
+            this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
             this.syncUIFromState();
+            break;
+          case 'keyLight':
+            this.resetIndividualLight('key', defaults.lights.key);
+            break;
+          case 'fillLight':
+            this.resetIndividualLight('fill', defaults.lights.fill);
+            break;
+          case 'rimLight':
+            this.resetIndividualLight('rim', defaults.lights.rim);
+            break;
+          case 'ambientLight':
+            this.resetIndividualLight('ambient', defaults.lights.ambient);
             break;
             
           case 'podium':
@@ -2509,6 +2684,11 @@ export class UIManager {
       this.inputs.lightsRotation.value = state.lightsRotation ?? 0;
       this.updateValueLabel('lightsRotation', state.lightsRotation ?? 0, 'angle');
     }
+    if (this.inputs.lightsHeight) {
+      const heightValue = state.lightsHeight ?? 5;
+      this.inputs.lightsHeight.value = heightValue;
+      this.updateValueLabel('lightsHeight', heightValue, 'decimal');
+    }
     if (this.inputs.lightsMaster) {
       const masterValue = state.lightsMaster ?? 1;
       this.inputs.lightsMaster.value = masterValue;
@@ -2528,10 +2708,78 @@ export class UIManager {
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
       const colorInput = control.querySelector('input[type="color"]');
-      if (colorInput) {
+      if (colorInput && state.lights[lightId]) {
         colorInput.value = state.lights[lightId].color;
       }
     });
+    // Sync individual light controls - show BASE values (0-5), global is a multiplier
+    if (this.inputs.keyLightStrength && state.lights?.key) {
+      const baseIntensity = state.lights.key.intensity ?? 1.28;
+      this.inputs.keyLightStrength.value = baseIntensity;
+      this.updateValueLabel('keyLightStrength', baseIntensity, 'decimal');
+    }
+    if (this.inputs.keyLightHeight && state.lights?.key) {
+      this.inputs.keyLightHeight.value = state.lights.key.height ?? 5;
+      this.updateValueLabel('keyLightHeight', state.lights.key.height ?? 5, 'decimal');
+    }
+    if (this.inputs.keyLightRotate && state.lights?.key) {
+      this.inputs.keyLightRotate.value = state.lights.key.rotate ?? 0;
+      this.updateValueLabel('keyLightRotate', state.lights.key.rotate ?? 0, 'angle');
+    }
+    if (this.inputs.fillLightStrength && state.lights?.fill) {
+      const baseIntensity = state.lights.fill.intensity ?? 0.8;
+      this.inputs.fillLightStrength.value = baseIntensity;
+      this.updateValueLabel('fillLightStrength', baseIntensity, 'decimal');
+    }
+    if (this.inputs.fillLightHeight && state.lights?.fill) {
+      this.inputs.fillLightHeight.value = state.lights.fill.height ?? 3;
+      this.updateValueLabel('fillLightHeight', state.lights.fill.height ?? 3, 'decimal');
+    }
+    if (this.inputs.fillLightRotate && state.lights?.fill) {
+      this.inputs.fillLightRotate.value = state.lights.fill.rotate ?? 0;
+      this.updateValueLabel('fillLightRotate', state.lights.fill.rotate ?? 0, 'angle');
+    }
+    if (this.inputs.rimLightStrength && state.lights?.rim) {
+      const baseIntensity = state.lights.rim.intensity ?? 0.96;
+      this.inputs.rimLightStrength.value = baseIntensity;
+      this.updateValueLabel('rimLightStrength', baseIntensity, 'decimal');
+    }
+    if (this.inputs.rimLightHeight && state.lights?.rim) {
+      this.inputs.rimLightHeight.value = state.lights.rim.height ?? 4;
+      this.updateValueLabel('rimLightHeight', state.lights.rim.height ?? 4, 'decimal');
+    }
+    if (this.inputs.rimLightRotate && state.lights?.rim) {
+      this.inputs.rimLightRotate.value = state.lights.rim.rotate ?? 0;
+      this.updateValueLabel('rimLightRotate', state.lights.rim.rotate ?? 0, 'angle');
+    }
+    if (this.inputs.ambientLightStrength && state.lights?.ambient) {
+      const baseIntensity = state.lights.ambient.intensity ?? 0.48;
+      this.inputs.ambientLightStrength.value = baseIntensity;
+      this.updateValueLabel('ambientLightStrength', baseIntensity, 'decimal');
+    }
+    // Sync individual light enabled states
+    if (this.inputs.keyLightEnabled && state.lights?.key) {
+      this.inputs.keyLightEnabled.checked = state.lights.key.enabled !== false;
+    }
+    if (this.inputs.fillLightEnabled && state.lights?.fill) {
+      this.inputs.fillLightEnabled.checked = state.lights.fill.enabled !== false;
+    }
+    if (this.inputs.rimLightEnabled && state.lights?.rim) {
+      this.inputs.rimLightEnabled.checked = state.lights.rim.enabled !== false;
+    }
+    if (this.inputs.ambientLightEnabled && state.lights?.ambient) {
+      this.inputs.ambientLightEnabled.checked = state.lights.ambient.enabled !== false;
+    }
+    // Sync cast shadows
+    if (this.inputs.keyLightCastShadows && state.lights?.key) {
+      this.inputs.keyLightCastShadows.checked = state.lights.key.castShadows !== false;
+    }
+    if (this.inputs.fillLightCastShadows && state.lights?.fill) {
+      this.inputs.fillLightCastShadows.checked = state.lights.fill.castShadows !== false;
+    }
+    if (this.inputs.rimLightCastShadows && state.lights?.rim) {
+      this.inputs.rimLightCastShadows.checked = state.lights.rim.castShadows !== false;
+    }
     
     // HDRI buttons
     this.inputs.hdriButtons.forEach((button) => {
@@ -2680,6 +2928,19 @@ export class UIManager {
 
   setLightsRotationDisabled(disabled) {
     this.setControlDisabled('lightsRotation', disabled);
+  }
+
+  resetIndividualLight(lightId, defaults) {
+    if (!defaults) return;
+    this.stateStore.set(`lights.${lightId}`, defaults);
+    Object.keys(defaults).forEach((property) => {
+      this.eventBus.emit('lights:update', {
+        lightId,
+        property,
+        value: defaults[property],
+      });
+    });
+    this.syncUIFromState();
   }
 
   setLightsRotation(value) {
