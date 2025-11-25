@@ -7,7 +7,8 @@ void main() {
   vec4 base = texture2D(tDiffuse, vUv);
   float luminance = dot(base.rgb, vec3(0.299, 0.587, 0.114));
   float mask = smoothstep(0.6, 1.2, luminance);
-  vec3 colorized = base.rgb + tint * mask * strength;
+  float blend = clamp(mask * strength, 0.0, 1.0);
+  vec3 colorized = mix(base.rgb, tint, blend);
   gl_FragColor = vec4(colorized, base.a);
 }
 

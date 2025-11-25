@@ -355,22 +355,12 @@ export class SceneSettingsManager {
           this.stateStore.set('camera.saturation', payload.camera.saturation);
           this.eventBus.emit('render:saturation', payload.camera.saturation);
         }
-        // Handle vignette - emit both intensity and color together
-        if (payload.camera.vignette !== undefined || payload.camera.vignetteColor !== undefined) {
-          const vignetteIntensity = payload.camera.vignette !== undefined 
-            ? payload.camera.vignette 
-            : this.stateStore.getState().camera?.vignette ?? 0;
-          const vignetteColor = payload.camera.vignetteColor !== undefined 
-            ? payload.camera.vignetteColor 
-            : this.stateStore.getState().camera?.vignetteColor ?? '#000000';
-          
-          if (payload.camera.vignette !== undefined) {
-            this.stateStore.set('camera.vignette', vignetteIntensity);
-          }
-          if (payload.camera.vignetteColor !== undefined) {
-            this.stateStore.set('camera.vignetteColor', vignetteColor);
-          }
-          this.eventBus.emit('render:vignette', { intensity: vignetteIntensity, color: vignetteColor });
+        // Store vignette values but don't apply yet - will be applied at the very end
+        if (payload.camera.vignette !== undefined) {
+          this.stateStore.set('camera.vignette', payload.camera.vignette);
+        }
+        if (payload.camera.vignetteColor !== undefined) {
+          this.stateStore.set('camera.vignetteColor', payload.camera.vignetteColor);
         }
       }
 
@@ -444,6 +434,18 @@ export class SceneSettingsManager {
         this.stateStore.set('background', payload.background);
         this.eventBus.emit('scene:background', payload.background);
       }
+
+      // Apply vignette LAST - after all other settings to ensure it's not overridden
+      const finalState = this.stateStore.getState();
+      const vignetteIntensity = finalState.camera?.vignette ?? 0;
+      const vignetteColor = finalState.camera?.vignetteColor ?? '#000000';
+      this.eventBus.emit('render:vignette', vignetteIntensity);
+      this.eventBus.emit('render:vignette-color', vignetteColor);
+      // Re-emit on next frame to ensure post-processing uniforms update even if pipeline reinitialized
+      requestAnimationFrame(() => {
+        this.eventBus.emit('render:vignette', this.stateStore.getState().camera?.vignette ?? 0);
+        this.eventBus.emit('render:vignette-color', this.stateStore.getState().camera?.vignetteColor ?? '#000000');
+      });
 
       return { success: true, message: 'Scene settings loaded' };
     } catch (error) {

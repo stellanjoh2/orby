@@ -133,11 +133,9 @@ export class PostProcessingPipeline {
     this.bloomPass.strength = settings.strength;
     this.bloomPass.radius = settings.radius;
     this.bloomTintPass.uniforms.tint.value = new THREE.Color(settings.color);
-    this.bloomTintPass.uniforms.strength.value = THREE.MathUtils.clamp(
-      settings.strength / 4,
-      0,
-      1.5,
-    );
+    // Increase tint strength further so bloom color is much more noticeable
+    const tintStrength = THREE.MathUtils.clamp(settings.strength * 2.5, 0, 5.0);
+    this.bloomTintPass.uniforms.strength.value = tintStrength;
   }
 
   /**
