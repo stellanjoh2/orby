@@ -306,8 +306,18 @@ export class SceneManager {
     this.eventBus.on('mesh:clay-specular', (value) => {
       this.setClaySettings({ specular: value });
     });
+    this.eventBus.on('mesh:material-brightness', (brightness) => {
+      this.materialController?.setMaterialBrightness(brightness);
+    });
+    this.eventBus.on('mesh:material-metalness', (metalness) => {
+      this.materialController?.setMaterialMetalness(metalness);
+    });
+    this.eventBus.on('mesh:material-roughness', (roughness) => {
+      this.materialController?.setMaterialRoughness(roughness);
+    });
+    // Legacy support
     this.eventBus.on('mesh:diffuse-brightness', (value) => {
-      this.materialController?.setDiffuseBrightness(value);
+      this.materialController?.setMaterialBrightness(value);
     });
     this.eventBus.on('mesh:wireframe-always-on', (value) => {
       this.setWireframeSettings({ alwaysOn: value });
@@ -445,6 +455,7 @@ export class SceneManager {
     this.eventBus.on('studio:grid-snap', () => this.snapGridToBottom());
 
     this.eventBus.on('lights:update', ({ lightId, property, value }) => {
+      console.log(`[SceneManager] Received lights:update event:`, { lightId, property, value });
       this.lightsController?.updateLightProperty(lightId, property, value);
     });
     this.eventBus.on('lights:master', (value) => this.setLightsMaster(value));
@@ -569,8 +580,18 @@ export class SceneManager {
       });
     }
     // Update material controller settings
-    if (state.diffuseBrightness !== undefined) {
-      this.materialController.setDiffuseBrightness(state.diffuseBrightness);
+    if (state.material?.brightness !== undefined) {
+      this.materialController.setMaterialBrightness(state.material.brightness);
+    }
+    if (state.material?.metalness !== undefined) {
+      this.materialController.setMaterialMetalness(state.material.metalness);
+    }
+    if (state.material?.roughness !== undefined) {
+      this.materialController.setMaterialRoughness(state.material.roughness);
+    }
+    // Legacy support
+    if (state.diffuseBrightness !== undefined && state.material?.brightness === undefined) {
+      this.materialController.setMaterialBrightness(state.diffuseBrightness);
     }
     if (state.clay) {
       this.materialController.setClaySettings(state.clay);
@@ -1117,7 +1138,11 @@ export class SceneManager {
       clay: state.clay,
       fresnel: state.fresnel,
       wireframe: state.wireframe,
-      diffuseBrightness: state.diffuseBrightness ?? 1.0,
+      material: state.material ?? {
+        brightness: state.diffuseBrightness ?? 1.0,
+        metalness: 0.0,
+        roughness: 0.5,
+      },
     });
     this.setShading(state.shading);
     this.diagnosticsController.setModel(object, state.shading);

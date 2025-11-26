@@ -31,7 +31,11 @@ export class MaterialController {
     this.claySettings = {};
     this.fresnelSettings = {};
     this.wireframeSettings = {};
-    this.diffuseBrightness = 1.0;
+    this.materialSettings = {
+      brightness: 1.0,
+      metalness: 0.0,
+      roughness: 0.8, // Default to 0.8 (original fallback value)
+    };
   }
 
   setModel(model, shading, initialState = {}) {
@@ -46,9 +50,31 @@ export class MaterialController {
         onlyVisibleFaces: false,
       }),
     };
-    this.diffuseBrightness = initialState.diffuseBrightness ?? 1.0;
+    this.materialSettings = {
+      brightness: initialState.material?.brightness ?? initialState.diffuseBrightness ?? 1.0,
+      metalness: initialState.material?.metalness ?? 0.0,
+      roughness: initialState.material?.roughness ?? 0.8, // Default to 0.8 (original fallback value)
+    };
     this.originalMaterials = new WeakMap();
     this.prepareMesh(model);
+    
+    // Try to read roughness from the first material we find to preserve artist's intention
+    if (initialState.material?.roughness === undefined) {
+      let foundRoughness = null;
+      model.traverse((child) => {
+        if (child.isMesh && child.material && !foundRoughness) {
+          const mat = Array.isArray(child.material) ? child.material[0] : child.material;
+          if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) && mat.roughness !== undefined) {
+            foundRoughness = mat.roughness;
+          }
+        }
+      });
+      if (foundRoughness !== null) {
+        this.materialSettings.roughness = foundRoughness;
+        // Update state store with the found value
+        this.stateStore?.set('material.roughness', foundRoughness);
+      }
+    }
     // Note: Fresnel will be applied by setShading, which is called after setModel
   }
 
@@ -141,14 +167,14 @@ export class MaterialController {
             ? mat.color.clone()
             : new THREE.Color('#ffffff');
           
-          // Apply diffuse brightness multiplier
-          baseColor.multiplyScalar(this.diffuseBrightness);
+          // Apply material brightness multiplier
+          baseColor.multiplyScalar(this.materialSettings.brightness);
           
           const standard = new THREE.MeshStandardMaterial({
             map: mat?.map ?? null,
             color: baseColor,
-            roughness: mat?.roughness ?? 0.8,
-            metalness: mat?.metalness ?? 0,
+            roughness: this.materialSettings.roughness,
+            metalness: this.materialSettings.metalness,
             normalMap: mat?.normalMap ?? null,
             aoMap: mat?.aoMap ?? null,
             emissive: mat?.emissive
@@ -172,11 +198,14 @@ export class MaterialController {
         const createShadedMaterial = (mat) => {
           if (!mat) return mat;
           const cloned = mat.clone ? mat.clone() : mat;
-          // Apply diffuse brightness multiplier to color (which multiplies the texture map)
+          // Apply material brightness multiplier to color (which multiplies the texture map)
           // The material's color property multiplies the texture map, so this brightens the diffuse map
           if (cloned && (cloned.isMeshStandardMaterial || cloned.isMeshPhysicalMaterial || cloned.isMeshPhongMaterial)) {
             const originalColor = mat.color ? mat.color.clone() : new THREE.Color('#ffffff');
-            cloned.color.copy(originalColor.multiplyScalar(this.diffuseBrightness));
+            cloned.color.copy(originalColor.multiplyScalar(this.materialSettings.brightness));
+            // Apply metalness and roughness
+            cloned.metalness = this.materialSettings.metalness;
+            cloned.roughness = this.materialSettings.roughness;
             cloned.needsUpdate = true;
           }
           if (cloned) {
@@ -287,8 +316,22 @@ export class MaterialController {
     }
   }
 
-  setDiffuseBrightness(brightness) {
-    this.diffuseBrightness = brightness;
+  setMaterialBrightness(brightness) {
+    this.materialSettings.brightness = brightness;
+    this.updateMaterials();
+  }
+
+  setMaterialMetalness(metalness) {
+    this.materialSettings.metalness = metalness;
+    this.updateMaterials();
+  }
+
+  setMaterialRoughness(roughness) {
+    this.materialSettings.roughness = roughness;
+    this.updateMaterials();
+  }
+
+  updateMaterials() {
     // Update existing materials in all modes (except wireframe and clay which have their own colors)
     if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures')) {
       this.currentModel.traverse((child) => {
@@ -311,18 +354,22 @@ export class MaterialController {
           material.forEach((mat, idx) => {
             if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
               const originalColor = getOriginalColor(original, idx);
-              const adjustedColor = originalColor.multiplyScalar(brightness);
+              const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
               mat.color.copy(adjustedColor);
+              // Apply metalness and roughness
+              mat.metalness = this.materialSettings.metalness;
+              mat.roughness = this.materialSettings.roughness;
               mat.needsUpdate = true;
             }
           });
-        } else if (!Array.isArray(material) && !Array.isArray(original)) {
-          if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
-            const originalColor = getOriginalColor(original);
-            const adjustedColor = originalColor.multiplyScalar(brightness);
-            material.color.copy(adjustedColor);
-            material.needsUpdate = true;
-          }
+        } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+          const originalColor = getOriginalColor(original);
+          const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+          material.color.copy(adjustedColor);
+          // Apply metalness and roughness
+          material.metalness = this.materialSettings.metalness;
+          material.roughness = this.materialSettings.roughness;
+          material.needsUpdate = true;
         }
       });
     }
@@ -645,6 +692,10 @@ export class MaterialController {
     }
 
     // For non-clay materials, apply environment and blurriness as normal
+    // IMPORTANT: Store current materialSettings values to ensure we use the latest user settings
+    const currentMetalness = this.materialSettings.metalness;
+    const currentRoughness = this.materialSettings.roughness;
+    
     this.currentModel.traverse((child) => {
       if (child.isMesh && child.material) {
         const materials = Array.isArray(child.material)
@@ -665,36 +716,24 @@ export class MaterialController {
               material.envMapIntensity = intensity;
             }
 
-            // Apply blurriness to roughness for non-clay materials only
-            if (material.roughness !== undefined) {
-              // Store original roughness if not already stored
-              if (material.userData.originalRoughness === undefined) {
-                const originalMaterial = this.originalMaterials.get(child);
-                if (originalMaterial) {
-                  const originalMat = Array.isArray(originalMaterial)
-                    ? originalMaterial[0]
-                    : originalMaterial;
-                  if (originalMat && originalMat.roughness !== undefined) {
-                    material.userData.originalRoughness = originalMat.roughness;
-                  } else {
-                    material.userData.originalRoughness = material.roughness;
-                  }
-                } else {
-                  material.userData.originalRoughness = material.roughness;
-                }
-              }
-              const baseRoughness =
-                material.userData.originalRoughness ?? material.roughness;
-
-              // Apply blurriness by increasing roughness (which uses higher mipmap levels)
+            // CRITICAL: Always restore metalness and roughness from materialSettings
+            // Setting envMap might trigger Three.js internal updates that reset these values
+            // Use stored values to ensure we have the latest user settings
+            if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) {
+              material.metalness = currentMetalness;
+              
+              // Apply blurriness to roughness, using user's desired roughness as the base
               if (hdriBlurriness > 0) {
                 const blurRoughness =
-                  baseRoughness + (1.0 - baseRoughness) * hdriBlurriness;
+                  currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
                 material.roughness = Math.min(1.0, blurRoughness);
               } else {
-                // Reset to base roughness when blurriness is 0
-                material.roughness = baseRoughness;
+                // Reset to user's desired roughness when blurriness is 0
+                material.roughness = currentRoughness;
               }
+            } else if (material.roughness !== undefined) {
+              // For non-standard materials, just set the user's desired roughness
+              material.roughness = currentRoughness;
             }
 
             material.needsUpdate = true;

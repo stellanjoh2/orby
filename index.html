@@ -97,10 +97,10 @@
               </div>
 
               <div class="panel-block">
-                <div class="subsection" data-subsection="diffuseBrightness">
+                <div class="subsection" data-subsection="material">
                   <div class="block-title has-reset">
-                    <span>Diffuse</span>
-                    <button class="block-reset-btn" data-reset="diffuseBrightness" aria-label="Reset Diffuse">
+                    <span>Material</span>
+                    <button class="block-reset-btn" data-reset="material" aria-label="Reset Material">
                       <i data-lucide="rotate-ccw"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -108,14 +108,38 @@
                   <label class="slider-line">
                     <span>Brightness</span>
                     <input
-                      id="diffuseBrightness"
+                      id="materialBrightness"
                       type="range"
                       min="0"
                       max="2"
                       step="0.01"
                       value="1"
                     />
-                    <span class="value" data-output="diffuseBrightness">1.00</span>
+                    <span class="value" data-output="materialBrightness">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Metalness</span>
+                    <input
+                      id="materialMetalness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="materialMetalness">0.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Roughness</span>
+                    <input
+                      id="materialRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.8"
+                    />
+                    <span class="value" data-output="materialRoughness">0.80</span>
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -144,7 +168,7 @@
                       min="0"
                       max="1"
                       step="0.01"
-                      value="0.5"
+                      value="0.8"
                     />
                     <span class="value" data-output="clayRoughness">0.50</span>
                   </label>
@@ -156,7 +180,7 @@
                       min="0"
                       max="1"
                       step="0.01"
-                      value="0.5"
+                      value="0.8"
                     />
                     <span class="value" data-output="claySpecular">0.50</span>
                   </label>
@@ -1482,14 +1506,6 @@
 
             <h2 class="panel-header-title" data-header="info">Information</h2>
             <section class="panel" data-panel="info">
-              <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--stroke);">
-                <button class="copy-scene-settings action-btn">
-                  Copy Scene Settings
-                </button>
-                <button class="load-scene-settings action-btn">
-                  Load Scene Settings
-                </button>
-              </div>
               <div class="panel-block">
                 <div class="block-title"><i data-lucide="keyboard" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Keyboard Shortcuts</div>
                 <div class="shortcuts-grid">
