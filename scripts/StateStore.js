@@ -18,7 +18,11 @@ export class StateStore {
       rotationZ: 0,
       autoRotate: 0,
       showNormals: false,
-      diffuseBrightness: 1.0,
+      material: {
+        brightness: 1.0,
+        metalness: 0.0,
+        roughness: 0.8,
+      },
       hdri: 'meadow',
       hdriEnabled: true,
       hdriStrength: 1.50,

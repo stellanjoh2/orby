@@ -222,12 +222,15 @@ export class LightsController {
     
     const cos = Math.cos(totalRotation);
     const sin = Math.sin(totalRotation);
+    
+    // Calculate rotated position
     const rotatedX = base.x * cos + base.z * sin;
     const rotatedZ = -base.x * sin + base.z * cos;
     
     // Use individual height or global height
     const height = props.height ?? this.lightsHeight ?? base.y;
     
+    // Set final position
     light.position.set(rotatedX, height, rotatedZ);
   }
 

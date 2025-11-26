@@ -89,7 +89,9 @@ export class UIManager {
       lensFlareHeight: q('#lensFlareHeight'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
-      diffuseBrightness: q('#diffuseBrightness'),
+      materialBrightness: q('#materialBrightness'),
+      materialMetalness: q('#materialMetalness'),
+      materialRoughness: q('#materialRoughness'),
       clayColor: q('#clayColor'),
       clayRoughness: q('#clayRoughness'),
       claySpecular: q('#claySpecular'),
@@ -377,13 +379,31 @@ export class UIManager {
         }
       });
     });
-    this.inputs.diffuseBrightness?.addEventListener('input', (event) => {
+    this.inputs.materialBrightness?.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, 0, 2, 1.0);
-      this.updateValueLabel('diffuseBrightness', value, 'decimal');
-      this.stateStore.set('diffuseBrightness', value);
-      this.eventBus.emit('mesh:diffuse-brightness', value);
+      this.updateValueLabel('materialBrightness', value, 'decimal');
+      this.stateStore.set('material.brightness', value);
+      this.eventBus.emit('mesh:material-brightness', value);
     });
-    if (this.inputs.diffuseBrightness) this.enableSliderKeyboardStepping(this.inputs.diffuseBrightness);
+    if (this.inputs.materialBrightness) this.enableSliderKeyboardStepping(this.inputs.materialBrightness);
+
+    this.inputs.materialMetalness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = isNaN(value) ? 0.0 : Math.max(0, Math.min(1, value));
+      this.updateValueLabel('materialMetalness', clampedValue, 'decimal');
+      this.stateStore.set('material.metalness', clampedValue);
+      this.eventBus.emit('mesh:material-metalness', clampedValue);
+    });
+    if (this.inputs.materialMetalness) this.enableSliderKeyboardStepping(this.inputs.materialMetalness);
+
+    this.inputs.materialRoughness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = isNaN(value) ? 0.5 : Math.max(0, Math.min(1, value));
+      this.updateValueLabel('materialRoughness', clampedValue, 'decimal');
+      this.stateStore.set('material.roughness', clampedValue);
+      this.eventBus.emit('mesh:material-roughness', clampedValue);
+    });
+    if (this.inputs.materialRoughness) this.enableSliderKeyboardStepping(this.inputs.materialRoughness);
     this.inputs.scale.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.updateValueLabel('scale', value, 'multiplier');
@@ -793,7 +813,6 @@ export class UIManager {
       this.stateStore.set('lights.key.rotate', value);
       this.eventBus.emit('lights:update', { lightId: 'key', property: 'rotate', value });
     });
-
     // Fill Light Controls
     // Individual strength slider shows BASE value (0-5), global is a multiplier
     this.inputs.fillLightStrength?.addEventListener('input', (event) => {
@@ -816,7 +835,6 @@ export class UIManager {
       this.stateStore.set('lights.fill.rotate', value);
       this.eventBus.emit('lights:update', { lightId: 'fill', property: 'rotate', value });
     });
-
     // Rim Light Controls
     // Individual strength slider shows BASE value (0-5), global is a multiplier
     this.inputs.rimLightStrength?.addEventListener('input', (event) => {
@@ -839,7 +857,6 @@ export class UIManager {
       this.stateStore.set('lights.rim.rotate', value);
       this.eventBus.emit('lights:update', { lightId: 'rim', property: 'rotate', value });
     });
-
     // Ambient Light Controls
     // Individual strength slider shows BASE value (0-5), global is a multiplier
     this.inputs.ambientLightStrength?.addEventListener('input', (event) => {
@@ -1821,8 +1838,12 @@ export class UIManager {
         
         switch (resetType) {
           case 'diffuseBrightness':
-            this.stateStore.set('diffuseBrightness', defaults.diffuseBrightness ?? 1.0);
-            this.eventBus.emit('mesh:diffuse-brightness', defaults.diffuseBrightness ?? 1.0);
+      this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
+      this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
+      this.stateStore.set('material.roughness', defaults.material?.roughness ?? 0.8);
+      this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
+      this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
+      this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? 0.8);
             this.syncUIFromState();
             break;
             
@@ -2684,10 +2705,20 @@ export class UIManager {
     if (this.inputs.showNormals) {
       this.inputs.showNormals.checked = state.showNormals;
     }
-    if (this.inputs.diffuseBrightness) {
-      const brightness = state.diffuseBrightness ?? 1.0;
-      this.inputs.diffuseBrightness.value = brightness;
-      this.updateValueLabel('diffuseBrightness', brightness, 'decimal');
+    if (this.inputs.materialBrightness) {
+      const brightness = state.material?.brightness ?? 1.0;
+      this.inputs.materialBrightness.value = brightness;
+      this.updateValueLabel('materialBrightness', brightness, 'decimal');
+    }
+    if (this.inputs.materialMetalness) {
+      const metalness = state.material?.metalness ?? 0.0;
+      this.inputs.materialMetalness.value = metalness;
+      this.updateValueLabel('materialMetalness', metalness, 'decimal');
+    }
+    if (this.inputs.materialRoughness) {
+      const roughness = state.material?.roughness ?? 0.8;
+      this.inputs.materialRoughness.value = roughness;
+      this.updateValueLabel('materialRoughness', roughness, 'decimal');
     }
     this.inputs.clayColor.value = state.clay.color;
     this.inputs.clayRoughness.value = state.clay.roughness;
@@ -3166,7 +3197,7 @@ export class UIManager {
         // Ambient only has strength
         this.setControlDisabled('ambientLightStrength', !slidersEnabled);
       } else {
-        // Directional lights have strength, height, and rotate
+        // Directional lights have strength, height, rotate, and distance
         this.setControlDisabled(`${lightId}LightStrength`, !slidersEnabled);
         this.setControlDisabled(`${lightId}LightHeight`, !slidersEnabled);
         this.setControlDisabled(`${lightId}LightRotate`, !slidersEnabled);

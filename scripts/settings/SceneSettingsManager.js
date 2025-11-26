@@ -36,7 +36,11 @@ export class SceneSettingsManager {
       // Mesh settings (including transforms)
       shading: state.shading,
       showNormals: state.showNormals,
-      diffuseBrightness: state.diffuseBrightness,
+      material: state.material ?? {
+        brightness: state.diffuseBrightness ?? 1.0,
+        metalness: 0.0,
+        roughness: 0.5,
+      },
       scale: state.scale,
       yOffset: state.yOffset,
       rotationX: state.rotationX,
@@ -150,9 +154,22 @@ export class SceneSettingsManager {
         this.stateStore.set('showNormals', payload.showNormals);
         this.eventBus.emit('mesh:normals', payload.showNormals);
       }
-      if (payload.diffuseBrightness !== undefined) {
-        this.stateStore.set('diffuseBrightness', payload.diffuseBrightness);
-        this.eventBus.emit('mesh:diffuse-brightness', payload.diffuseBrightness);
+      if (payload.material !== undefined) {
+        this.stateStore.set('material', payload.material);
+        if (payload.material.brightness !== undefined) {
+          this.eventBus.emit('mesh:material-brightness', payload.material.brightness);
+        }
+        if (payload.material.metalness !== undefined) {
+          this.eventBus.emit('mesh:material-metalness', payload.material.metalness);
+        }
+        if (payload.material.roughness !== undefined) {
+          this.eventBus.emit('mesh:material-roughness', payload.material.roughness);
+        }
+      }
+      // Legacy support
+      if (payload.diffuseBrightness !== undefined && payload.material === undefined) {
+        this.stateStore.set('material.brightness', payload.diffuseBrightness);
+        this.eventBus.emit('mesh:material-brightness', payload.diffuseBrightness);
       }
       // Apply transform settings
       if (payload.scale !== undefined) {
