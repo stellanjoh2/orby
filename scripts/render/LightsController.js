@@ -243,11 +243,23 @@ export class LightsController {
   }
 
   setHeight(value) {
+    const previousHeight = this.lightsHeight ?? 5;
     this.lightsHeight = value ?? 5;
-    // Update all directional light positions (updateLightPosition will use individual height if available, otherwise global)
+
+    // Calculate delta so we can move all lights together while preserving their relative offsets
+    const delta = this.lightsHeight - previousHeight;
+
     ['key', 'fill', 'rim'].forEach((id) => {
+      const props = this.individualProperties[id];
+      const base = this.basePositions[id];
+      if (!props || !base) return;
+
+      const currentHeight = props.height ?? base.y;
+      props.height = currentHeight + delta;
+
       this.updateLightPosition(id);
     });
+
     this.updateIndicators();
   }
 
