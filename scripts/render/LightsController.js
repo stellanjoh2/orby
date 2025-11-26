@@ -251,6 +251,21 @@ export class LightsController {
     this.updateIndicators();
   }
 
+  setCastShadows(enabled) {
+    // Apply to all directional lights (key, fill, rim)
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (light && light.isDirectionalLight && light.shadow) {
+        light.castShadow = enabled;
+        // Also update individual property to keep in sync
+        if (!this.individualProperties[lightId]) {
+          this.individualProperties[lightId] = {};
+        }
+        this.individualProperties[lightId].castShadows = enabled;
+      }
+    });
+  }
+
   setIndicatorsVisible(enabled) {
     this.showIndicators = !!enabled;
     if (this.showIndicators) {
