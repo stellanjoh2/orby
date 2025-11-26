@@ -669,7 +669,49 @@ export class UIManager {
       const enabled = event.target.checked;
       this.stateStore.set('lightsEnabled', enabled);
       this.eventBus.emit('lights:enabled', enabled);
-      this.setLightColorControlsDisabled(!enabled);
+      // When main lights are turned off, turn off all individual lights and cast shadows
+      // When main lights are turned on, turn on all individual lights and cast shadows
+      if (!enabled) {
+        // Turn off all individual lights
+        ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
+          this.stateStore.set(`lights.${lightId}.enabled`, false);
+          this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: false });
+          const enabledInput = this.inputs[`${lightId}LightEnabled`];
+          if (enabledInput) {
+            enabledInput.checked = false;
+          }
+        });
+        // Turn off cast shadows for directional lights (key, fill, rim)
+        ['key', 'fill', 'rim'].forEach((lightId) => {
+          this.stateStore.set(`lights.${lightId}.castShadows`, false);
+          this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: false });
+          const castShadowsInput = this.inputs[`${lightId}LightCastShadows`];
+          if (castShadowsInput) {
+            castShadowsInput.checked = false;
+          }
+        });
+      } else {
+        // Turn on all individual lights
+        ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
+          this.stateStore.set(`lights.${lightId}.enabled`, true);
+          this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: true });
+          const enabledInput = this.inputs[`${lightId}LightEnabled`];
+          if (enabledInput) {
+            enabledInput.checked = true;
+          }
+        });
+        // Turn on cast shadows for directional lights (key, fill, rim)
+        ['key', 'fill', 'rim'].forEach((lightId) => {
+          this.stateStore.set(`lights.${lightId}.castShadows`, true);
+          this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: true });
+          const castShadowsInput = this.inputs[`${lightId}LightCastShadows`];
+          if (castShadowsInput) {
+            castShadowsInput.checked = true;
+          }
+        });
+      }
+      // Update slider states based on which lights are actually enabled
+      this.updateLightSliderStates();
       // Block muting handled by applyBlockStates via syncControls
     });
     this.inputs.lightsRotation?.addEventListener('input', (event) => {
@@ -772,25 +814,50 @@ export class UIManager {
     if (this.inputs.ambientLightStrength) this.enableSliderKeyboardStepping(this.inputs.ambientLightStrength);
 
     // Individual Light Enabled Toggles
+    // Helper function to handle individual light toggle
+    const handleIndividualLightToggle = (lightId, enabled) => {
+      this.stateStore.set(`lights.${lightId}.enabled`, enabled);
+      this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: enabled });
+      
+      // Cast Shadows is connected to individual light enabled state
+      // (only applies to directional lights: key, fill, rim)
+      if (lightId !== 'ambient') {
+        this.stateStore.set(`lights.${lightId}.castShadows`, enabled);
+        this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: enabled });
+        const castShadowsInput = this.inputs[`${lightId}LightCastShadows`];
+        if (castShadowsInput) {
+          castShadowsInput.checked = enabled;
+        }
+      }
+      
+      // If turning on an individual light while master is off, turn master on
+      // This allows users to quickly turn all lights off, then selectively turn on specific lights
+      if (enabled) {
+        const masterEnabled = this.stateStore.getState().lightsEnabled;
+        if (!masterEnabled) {
+          this.stateStore.set('lightsEnabled', true);
+          this.eventBus.emit('lights:enabled', true);
+          // Update master toggle UI
+          if (this.inputs.lightsEnabled) {
+            this.inputs.lightsEnabled.checked = true;
+          }
+        }
+      }
+      // Update slider states based on which lights are actually enabled
+      this.updateLightSliderStates();
+    };
+
     this.inputs.keyLightEnabled?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.key.enabled', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'key', property: 'enabled', value: enabled });
+      handleIndividualLightToggle('key', event.target.checked);
     });
     this.inputs.fillLightEnabled?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.fill.enabled', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'fill', property: 'enabled', value: enabled });
+      handleIndividualLightToggle('fill', event.target.checked);
     });
     this.inputs.rimLightEnabled?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.rim.enabled', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'rim', property: 'enabled', value: enabled });
+      handleIndividualLightToggle('rim', event.target.checked);
     });
     this.inputs.ambientLightEnabled?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('lights.ambient.enabled', enabled);
-      this.eventBus.emit('lights:update', { lightId: 'ambient', property: 'enabled', value: enabled });
+      handleIndividualLightToggle('ambient', event.target.checked);
     });
 
     // Cast Shadows Toggles
@@ -1625,7 +1692,7 @@ export class UIManager {
       });
       this.eventBus.emit('lights:master', defaults.lightsMaster);
       this.eventBus.emit('lights:enabled', defaults.lightsEnabled);
-      this.setLightColorControlsDisabled(!defaults.lightsEnabled);
+      // Update slider states will be called by syncUIFromState
       this.eventBus.emit('lights:rotate', defaults.lightsRotation);
       this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
@@ -2703,8 +2770,9 @@ export class UIManager {
     }
     if (this.inputs.lightsEnabled) {
       this.inputs.lightsEnabled.checked = !!state.lightsEnabled;
-      this.setLightColorControlsDisabled(!state.lightsEnabled);
     }
+    // Update slider states based on master and individual light enabled states
+    this.updateLightSliderStates();
     this.inputs.lightControls.forEach((control) => {
       const lightId = control.dataset.light;
       const colorInput = control.querySelector('input[type="color"]');
@@ -3017,7 +3085,59 @@ export class UIManager {
       input.disabled = disabled;
       input.classList.toggle('is-disabled-handle', disabled);
     });
-    this.setControlDisabled('lightsMaster', disabled);
+    // Disable all light sliders (global, master, and individual)
+    this.setControlDisabled([
+      'lightsRotation', // Global Rotate
+      'lightsHeight',   // Global Height
+      'lightsMaster',   // Global Strength
+      // Individual light sliders (strength, height, rotate)
+      'keyLightStrength',
+      'keyLightHeight',
+      'keyLightRotate',
+      'fillLightStrength',
+      'fillLightHeight',
+      'fillLightRotate',
+      'rimLightStrength',
+      'rimLightHeight',
+      'rimLightRotate',
+      'ambientLightStrength',
+    ], disabled);
+  }
+
+  updateLightSliderStates() {
+    // Update slider states based on master switch and individual light enabled states
+    const state = this.stateStore.getState();
+    const masterEnabled = state.lightsEnabled;
+    
+    // Global sliders are enabled if master is on
+    this.setControlDisabled('lightsRotation', !masterEnabled);
+    this.setControlDisabled('lightsHeight', !masterEnabled);
+    this.setControlDisabled('lightsMaster', !masterEnabled);
+    
+    // Individual light sliders are enabled only if master is on AND that specific light is enabled
+    const lightIds = ['key', 'fill', 'rim', 'ambient'];
+    lightIds.forEach((lightId) => {
+      const lightEnabled = state.lights?.[lightId]?.enabled !== false;
+      const slidersEnabled = masterEnabled && lightEnabled;
+      
+      if (lightId === 'ambient') {
+        // Ambient only has strength
+        this.setControlDisabled('ambientLightStrength', !slidersEnabled);
+      } else {
+        // Directional lights have strength, height, and rotate
+        this.setControlDisabled(`${lightId}LightStrength`, !slidersEnabled);
+        this.setControlDisabled(`${lightId}LightHeight`, !slidersEnabled);
+        this.setControlDisabled(`${lightId}LightRotate`, !slidersEnabled);
+      }
+    });
+    
+    // Color controls are enabled if master is on
+    this.inputs.lightControls.forEach((control) => {
+      const input = control.querySelector('input[type="color"]');
+      if (!input) return;
+      input.disabled = !masterEnabled;
+      input.classList.toggle('is-disabled-handle', !masterEnabled);
+    });
   }
 
   bindHdriLightsRotation() {

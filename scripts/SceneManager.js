@@ -1310,7 +1310,9 @@ export class SceneManager {
     }
     if (this.lightsAutoRotate) {
       const deltaDegrees = this.lightsAutoRotateSpeed * delta;
-      this.setLightsRotation(this.lightsRotation + deltaDegrees);
+      // During auto-rotate, skip StateStore updates to avoid triggering full UI sync every frame
+      // StateStore will be synced when auto-rotate stops (in setLightsAutoRotate)
+      this.setLightsRotation(this.lightsRotation + deltaDegrees, { updateState: false });
     }
     this.cameraController.update();
     this.diagnosticsController.update(delta);
