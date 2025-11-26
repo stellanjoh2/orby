@@ -66,6 +66,7 @@ export class SceneSettingsManager {
       lightsEnabled: state.lightsEnabled,
       lightsMaster: state.lightsMaster,
       lightsRotation: state.lightsRotation,
+      lightsHeight: state.lightsHeight,
       lightsAutoRotate: state.lightsAutoRotate,
       showLightIndicators: state.showLightIndicators,
       background: state.background,
@@ -275,16 +276,49 @@ export class SceneSettingsManager {
         this.stateStore.set('lights', payload.lights);
         Object.keys(payload.lights).forEach((lightId) => {
           const light = payload.lights[lightId];
-          this.eventBus.emit('lights:update', {
-            lightId,
-            property: 'color',
-            value: light.color,
-          });
-          this.eventBus.emit('lights:update', {
-            lightId,
-            property: 'intensity',
-            value: light.intensity,
-          });
+          // Apply all light properties (color, intensity, enabled, castShadows, height, rotate)
+          if (light.color !== undefined) {
+            this.eventBus.emit('lights:update', {
+              lightId,
+              property: 'color',
+              value: light.color,
+            });
+          }
+          if (light.intensity !== undefined) {
+            this.eventBus.emit('lights:update', {
+              lightId,
+              property: 'intensity',
+              value: light.intensity,
+            });
+          }
+          if (light.enabled !== undefined) {
+            this.eventBus.emit('lights:update', {
+              lightId,
+              property: 'enabled',
+              value: light.enabled,
+            });
+          }
+          if (light.castShadows !== undefined) {
+            this.eventBus.emit('lights:update', {
+              lightId,
+              property: 'castShadows',
+              value: light.castShadows,
+            });
+          }
+          if (light.height !== undefined) {
+            this.eventBus.emit('lights:update', {
+              lightId,
+              property: 'height',
+              value: light.height,
+            });
+          }
+          if (light.rotate !== undefined) {
+            this.eventBus.emit('lights:update', {
+              lightId,
+              property: 'rotate',
+              value: light.rotate,
+            });
+          }
         });
       }
       if (payload.lightsEnabled !== undefined) {
@@ -301,6 +335,10 @@ export class SceneSettingsManager {
       if (payload.lightsRotation !== undefined) {
         this.stateStore.set('lightsRotation', payload.lightsRotation);
         this.eventBus.emit('lights:rotate', payload.lightsRotation);
+      }
+      if (payload.lightsHeight !== undefined) {
+        this.stateStore.set('lightsHeight', payload.lightsHeight);
+        this.eventBus.emit('lights:height', payload.lightsHeight);
       }
       if (payload.lightsAutoRotate !== undefined) {
         this.stateStore.set('lightsAutoRotate', payload.lightsAutoRotate);
