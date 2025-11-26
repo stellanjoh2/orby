@@ -459,6 +459,9 @@ export class SceneManager {
     this.eventBus.on('lights:show-indicators', (enabled) =>
       this.setShowLightIndicators(enabled),
     );
+    this.eventBus.on('lights:cast-shadows', (enabled) =>
+      this.setLightsCastShadows(enabled),
+    );
 
     this.eventBus.on('render:dof', (settings) => this.updateDof(settings));
     this.eventBus.on('render:bloom', (settings) => this.updateBloom(settings));
@@ -549,6 +552,7 @@ export class SceneManager {
     this.setLightsHeight(state.lightsHeight ?? 5);
     this.setShowLightIndicators(state.showLightIndicators ?? false);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
+    this.setLightsCastShadows(state.lightsCastShadows ?? true);
     
     // Apply individual light properties
     if (state.lights) {
@@ -950,6 +954,10 @@ export class SceneManager {
 
   setLightsHeight(value) {
     this.lightsController?.setHeight(value);
+  }
+
+  setLightsCastShadows(enabled) {
+    this.lightsController?.setCastShadows(enabled);
   }
 
   setLightsAutoRotate(enabled) {

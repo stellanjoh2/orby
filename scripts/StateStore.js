@@ -63,6 +63,7 @@ export class StateStore {
       lightsHeight: 5,
       lightsAutoRotate: false,
       showLightIndicators: false,
+      lightsCastShadows: true,
       lensFlare: {
         enabled: false,
         rotation: 0,

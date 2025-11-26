@@ -116,6 +116,7 @@ export class UIManager {
       lightsHeight: q('#lightsHeight'),
       lightsAutoRotate: q('#lightsAutoRotate'),
       showLightIndicators: q('#showLightIndicators'),
+      lightsCastShadows: q('#lightsCastShadows'),
       keyLightStrength: q('#keyLightStrength'),
       keyLightHeight: q('#keyLightHeight'),
       keyLightRotate: q('#keyLightRotate'),
@@ -657,6 +658,20 @@ export class UIManager {
       this.stateStore.set('showLightIndicators', enabled);
       this.eventBus.emit('lights:show-indicators', enabled);
     });
+    this.inputs.lightsCastShadows?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lightsCastShadows', enabled);
+      this.eventBus.emit('lights:cast-shadows', enabled);
+      // Update all individual light cast shadows to match global setting
+      ['key', 'fill', 'rim'].forEach((lightId) => {
+        this.stateStore.set(`lights.${lightId}.castShadows`, enabled);
+        this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: enabled });
+        const castShadowsInput = this.inputs[`${lightId}LightCastShadows`];
+        if (castShadowsInput) {
+          castShadowsInput.checked = enabled;
+        }
+      });
+    });
 
     this.inputs.lightsMaster?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
@@ -690,6 +705,17 @@ export class UIManager {
             castShadowsInput.checked = false;
           }
         });
+        // Turn off Show Spotlights and global Cast Shadows
+        this.stateStore.set('showLightIndicators', false);
+        this.eventBus.emit('lights:show-indicators', false);
+        if (this.inputs.showLightIndicators) {
+          this.inputs.showLightIndicators.checked = false;
+        }
+        this.stateStore.set('lightsCastShadows', false);
+        this.eventBus.emit('lights:cast-shadows', false);
+        if (this.inputs.lightsCastShadows) {
+          this.inputs.lightsCastShadows.checked = false;
+        }
       } else {
         // Turn on all individual lights
         ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
@@ -709,6 +735,17 @@ export class UIManager {
             castShadowsInput.checked = true;
           }
         });
+        // Turn on Show Spotlights and global Cast Shadows
+        this.stateStore.set('showLightIndicators', true);
+        this.eventBus.emit('lights:show-indicators', true);
+        if (this.inputs.showLightIndicators) {
+          this.inputs.showLightIndicators.checked = true;
+        }
+        this.stateStore.set('lightsCastShadows', true);
+        this.eventBus.emit('lights:cast-shadows', true);
+        if (this.inputs.lightsCastShadows) {
+          this.inputs.lightsCastShadows.checked = true;
+        }
       }
       // Update slider states based on which lights are actually enabled
       this.updateLightSliderStates();
@@ -1697,6 +1734,8 @@ export class UIManager {
       this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.setLightsRotationDisabled(defaults.lightsAutoRotate);
+      this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
+      this.eventBus.emit('lights:cast-shadows', defaults.lightsCastShadows);
       this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
       
@@ -2767,6 +2806,9 @@ export class UIManager {
     if (this.inputs.lightsAutoRotate) {
       this.inputs.lightsAutoRotate.checked = !!state.lightsAutoRotate;
       this.setLightsRotationDisabled(!!state.lightsAutoRotate);
+    }
+    if (this.inputs.lightsCastShadows) {
+      this.inputs.lightsCastShadows.checked = !!state.lightsCastShadows;
     }
     if (this.inputs.lightsEnabled) {
       this.inputs.lightsEnabled.checked = !!state.lightsEnabled;

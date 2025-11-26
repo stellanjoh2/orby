@@ -69,6 +69,7 @@ export class SceneSettingsManager {
       lightsHeight: state.lightsHeight,
       lightsAutoRotate: state.lightsAutoRotate,
       showLightIndicators: state.showLightIndicators,
+      lightsCastShadows: state.lightsCastShadows,
       background: state.background,
       // Camera/Render settings
       camera: {
@@ -350,6 +351,10 @@ export class SceneSettingsManager {
       if (payload.showLightIndicators !== undefined) {
         this.stateStore.set('showLightIndicators', payload.showLightIndicators);
         this.eventBus.emit('lights:show-indicators', payload.showLightIndicators);
+      }
+      if (payload.lightsCastShadows !== undefined) {
+        this.stateStore.set('lightsCastShadows', payload.lightsCastShadows);
+        this.eventBus.emit('lights:cast-shadows', payload.lightsCastShadows);
       }
 
       // Apply Camera settings
