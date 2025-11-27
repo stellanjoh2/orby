@@ -369,9 +369,14 @@ body.dropzone-visible #webgl {
   filter: brightness(0.95);
 }
 
-.accent-action-btn i {
-  width: 14px;
-  height: 14px;
+.accent-action-btn i,
+.accent-action-btn i svg {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
 }
 
 .scene-controls {
@@ -572,9 +577,14 @@ body.dropzone-visible #webgl {
   transition: color 0s, background 0s, border-radius 0s, opacity 0s;
 }
 
-.tab i {
-  width: 20px;
-  height: 20px;
+.tab i,
+.tab i svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
   stroke-width: 1.5;
 }
 
@@ -841,7 +851,7 @@ a:hover {
 
 .block-reset-btn {
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   width: 26px;
   height: 22px;
@@ -855,14 +865,14 @@ a:hover {
 }
 
 .block-reset-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .block-reset-btn i {
   width: 16px;
   height: 16px;
-  color: rgba(255, 255, 255, 0.7);
-  stroke: rgba(255, 255, 255, 0.7);
+  color: var(--text-dim);
+  stroke: var(--text-dim);
 }
 
 .block-reset-btn:disabled,
@@ -1190,7 +1200,7 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .rotation-notch {
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   width: 26px;
   height: 22px;
@@ -1203,12 +1213,14 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 .rotation-notch:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .rotation-notch i {
   width: 16px;
   height: 16px;
+  color: var(--text-dim);
+  stroke: var(--text-dim);
 }
 
 .color-line .color-chip {
