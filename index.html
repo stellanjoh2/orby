@@ -372,10 +372,6 @@
                       <input type="radio" name="autorotate" value="0.5" />
                       NORMAL
                     </label>
-                    <label>
-                      <input type="radio" name="autorotate" value="1" />
-                      FAST
-                    </label>
                   </div>
                 </div>
               </div>
@@ -502,6 +498,10 @@
                   <div><dt>File Size</dt><dd>—</dd></div>
                   <div><dt>Bounds</dt><dd>—</dd></div>
                 </dl>
+                <button id="loadMeshButton" class="accent-action-btn" style="margin-top: 1rem;">
+                  <i data-lucide="upload"></i>
+                  IMPORT NEW MESH
+                </button>
               </div>
 
               <div class="panel-block">
@@ -521,7 +521,7 @@
                       <button data-export-size="2" class="export-option-btn">2X</button>
                     </div>
                   </div>
-                  <button id="exportPngButton" class="export-action-btn">
+                  <button id="exportPngButton" class="accent-action-btn">
                     <i data-lucide="download"></i>
                     EXPORT .PNG
                   </button>
@@ -551,20 +551,22 @@
                 </div>
               </div>
 
-              <button id="loadMeshButton" class="action-btn">
-                Import New Mesh
-              </button>
-              <button id="resetMeshSettings" class="action-btn">
-                Reset Mesh Settings
-              </button>
-              
-              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--stroke);">
-                <button class="copy-scene-settings action-btn">
-                  Copy Scene Settings
-                </button>
-                <button class="load-scene-settings action-btn">
-                  Load Scene Settings
-                </button>
+              <div class="panel-block">
+                <div class="block-title">Scene</div>
+                <div class="scene-controls">
+                  <button id="resetMeshSettings" class="accent-action-btn">
+                    <i data-lucide="rotate-ccw"></i>
+                    RESET MESH
+                  </button>
+                  <button class="copy-scene-settings accent-action-btn">
+                    <i data-lucide="copy"></i>
+                    COPY SCENE
+                  </button>
+                  <button class="load-scene-settings accent-action-btn">
+                    <i data-lucide="upload"></i>
+                    LOAD SCENE
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -993,17 +995,22 @@
 
               </div>
 
-              <button id="resetStudioSettings" class="action-btn">
-                Reset Studio Settings
-              </button>
-              
-              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--stroke);">
-                <button class="copy-scene-settings action-btn">
-                  Copy Scene Settings
-                </button>
-                <button class="load-scene-settings action-btn">
-                  Load Scene Settings
-                </button>
+              <div class="panel-block">
+                <div class="block-title">Scene</div>
+                <div class="scene-controls">
+                  <button id="resetStudioSettings" class="accent-action-btn">
+                    <i data-lucide="rotate-ccw"></i>
+                    RESET STUDIO
+                  </button>
+                  <button class="copy-scene-settings accent-action-btn">
+                    <i data-lucide="copy"></i>
+                    COPY SCENE
+                  </button>
+                  <button class="load-scene-settings accent-action-btn">
+                    <i data-lucide="upload"></i>
+                    LOAD SCENE
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -1460,22 +1467,28 @@
               </div>
 
               <div class="panel-block export-block" style="display: none;">
-                <button id="exportPng" class="primary-btn">
-                  Export 2× PNG
+                <button id="exportPng" class="accent-action-btn">
+                  <i data-lucide="download"></i>
+                  EXPORT .PNG
                 </button>
               </div>
 
-              <button id="resetRenderSettings" class="action-btn">
-                Reset FX Settings
-              </button>
-              
-              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--stroke);">
-                <button class="copy-scene-settings action-btn">
-                  Copy Scene Settings
-                </button>
-                <button class="load-scene-settings action-btn">
-                  Load Scene Settings
-                </button>
+              <div class="panel-block">
+                <div class="block-title">Scene</div>
+                <div class="scene-controls">
+                  <button id="resetRenderSettings" class="accent-action-btn">
+                    <i data-lucide="rotate-ccw"></i>
+                    RESET CAMERA
+                  </button>
+                  <button class="copy-scene-settings accent-action-btn">
+                    <i data-lucide="copy"></i>
+                    COPY SCENE
+                  </button>
+                  <button class="load-scene-settings accent-action-btn">
+                    <i data-lucide="upload"></i>
+                    LOAD SCENE
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -1737,10 +1750,10 @@
           rows="10"
         ></textarea>
         <div class="load-settings-actions">
-          <button id="applySceneSettings" class="action-btn">
+          <button id="applySceneSettings" class="ghost-btn">
             Apply
           </button>
-          <button id="cancelLoadSceneSettings" class="action-btn">
+          <button id="cancelLoadSceneSettings" class="ghost-btn">
             Cancel
           </button>
         </div>
