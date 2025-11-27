@@ -37,9 +37,9 @@ export class SceneSettingsManager {
       shading: state.shading,
       showNormals: state.showNormals,
       material: state.material ?? {
-        brightness: state.diffuseBrightness ?? 1.0,
+        brightness: 1.0,
         metalness: 0.0,
-        roughness: 0.5,
+        roughness: 0.8,
       },
       scale: state.scale,
       yOffset: state.yOffset,

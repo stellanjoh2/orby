@@ -20,24 +20,48 @@ export class ImageExporter {
 
   /**
    * Export scene as PNG (with background)
+   * Captures the full viewport at the current aspect ratio
    */
-  async exportPng(currentFile, originalSize, originalPixelRatio, size = 2) {
-    const targetWidth = originalSize.x * size;
-    const targetHeight = originalSize.y * size;
+  async exportPng(currentFile, originalSize, originalPixelRatio, size = 1) {
+    // Get actual canvas resolution (CSS size * pixel ratio)
+    const actualWidth = originalSize.x * originalPixelRatio;
+    const actualHeight = originalSize.y * originalPixelRatio;
+    
+    // Calculate target resolution (actual resolution * size multiplier)
+    const targetWidth = Math.round(actualWidth * size);
+    const targetHeight = Math.round(actualHeight * size);
 
-    this.renderer.setPixelRatio(originalPixelRatio * size);
+    // Save current canvas size
+    const canvas = this.renderer.domElement;
+    const originalCanvasWidth = canvas.width;
+    const originalCanvasHeight = canvas.height;
+
+    // Set renderer size and pixel ratio
+    // Use pixel ratio of 1 for exact resolution control
+    this.renderer.setPixelRatio(1);
     this.renderer.setSize(targetWidth, targetHeight, false);
     this.composer.setSize(targetWidth, targetHeight);
+    
+    // Explicitly set canvas element size to match renderer size
+    // This is critical - toDataURL reads from canvas.width/height, not renderer size
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
     
     // Render through composer to get all effects
     this.composer.render();
     
-    const dataUrl = this.renderer.domElement.toDataURL('image/png');
+    // Now toDataURL will capture the full canvas at the correct size
+    const dataUrl = canvas.toDataURL('image/png');
     this._downloadImage(dataUrl, currentFile, 'orby.png');
 
+    // Restore original settings
     this.renderer.setPixelRatio(originalPixelRatio);
     this.renderer.setSize(originalSize.x, originalSize.y, false);
     this.composer.setSize(originalSize.x, originalSize.y);
+    
+    // Restore canvas size
+    canvas.width = originalCanvasWidth;
+    canvas.height = originalCanvasHeight;
   }
 
   /**
@@ -56,7 +80,8 @@ export class ImageExporter {
     this._setupTransparentRender();
 
     // Calculate mesh bounds and crop region
-    const cropInfo = this._calculateCropRegion(currentModel, cameraController, state.originalSize, size);
+    // Pass pixel ratio so we can calculate actual canvas resolution
+    const cropInfo = this._calculateCropRegion(currentModel, cameraController, state.originalSize, state.originalPixelRatio, size);
     if (!cropInfo) {
       console.warn('Could not calculate mesh bounds');
       this._restoreState(state);
@@ -126,7 +151,7 @@ export class ImageExporter {
   /**
    * Calculate crop region based on mesh bounds in screen space
    */
-  _calculateCropRegion(currentModel, cameraController, originalSize, size = 2) {
+  _calculateCropRegion(currentModel, cameraController, originalSize, originalPixelRatio, size = 2) {
     const bounds = cameraController?.getModelBounds();
     if (!bounds) {
       return null;
@@ -168,8 +193,11 @@ export class ImageExporter {
     });
 
     // Convert from normalized device coordinates (-1 to 1) to pixel coordinates
-    const width = originalSize.x;
-    const height = originalSize.y;
+    // Use actual canvas resolution (CSS size * pixel ratio) for accurate calculations
+    const actualWidth = originalSize.x * originalPixelRatio;
+    const actualHeight = originalSize.y * originalPixelRatio;
+    const width = actualWidth;
+    const height = actualHeight;
     const padding = 5; // Padding in pixels (max 5px from mesh edges)
 
     // Convert to pixel coordinates
@@ -220,11 +248,12 @@ export class ImageExporter {
     const cropHeight = pixelMaxY - pixelMinY;
 
     // Render at specified resolution multiplier
+    // Since we're already using actual resolution, just multiply by size
     const scale = size;
     const renderWidth = Math.ceil(cropWidth * scale);
     const renderHeight = Math.ceil(cropHeight * scale);
-    const fullRenderWidth = width * scale;
-    const fullRenderHeight = height * scale;
+    const fullRenderWidth = Math.round(width * scale);
+    const fullRenderHeight = Math.round(height * scale);
 
     return {
       pixelMinX,
@@ -380,6 +409,11 @@ export class ImageExporter {
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
     
+    // Save original viewport
+    const gl = this.renderer.getContext();
+    const originalViewport = new Int32Array(4);
+    gl.getParameter(gl.VIEWPORT, originalViewport);
+    
     // Set transparent clear color
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setClearAlpha(0);
@@ -418,25 +452,36 @@ export class ImageExporter {
       }
       
       // Ensure canvas size matches renderer size
+      // IMPORTANT: Set canvas size BEFORE renderer size to ensure they're in sync
       const canvas = this.renderer.domElement;
+      const originalCanvasWidth = canvas.width;
+      const originalCanvasHeight = canvas.height;
+      
+      // Set viewport first (before resizing)
+      const gl = this.renderer.getContext();
+      gl.viewport(0, 0, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
+      
+      // Now set canvas and renderer sizes
       canvas.width = cropInfo.fullRenderWidth;
       canvas.height = cropInfo.fullRenderHeight;
       
       // Explicitly clear the canvas to remove any stale pixels/HDRI background
-      const gl = this.renderer.getContext();
       gl.clearColor(0, 0, 0, 0); // Clear with transparent black
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       
+      // Force a frame to ensure canvas is ready
       // Render composer normally to canvas (this is what works in viewport!)
       this.composer.render();
       
       // Read pixels from canvas using WebGL readPixels
       // We need to bind the default framebuffer and read from it
-      // (gl is already declared above)
       const fullPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
       
       // Bind default framebuffer (canvas)
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      
+      // Ensure viewport is still set correctly before reading
+      gl.viewport(0, 0, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
       
       // Read pixels from default framebuffer
       gl.readPixels(
@@ -449,11 +494,30 @@ export class ImageExporter {
         fullPixels,
       );
       
+      // Restore canvas size immediately after reading
+      canvas.width = originalCanvasWidth;
+      canvas.height = originalCanvasHeight;
+      
       // Debug: Check if we got any content
-      const centerIdx = Math.floor((cropInfo.fullRenderHeight / 2) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth / 2) * 4;
-      const hasContent = fullPixels[centerIdx] > 0 || fullPixels[centerIdx + 1] > 0 || fullPixels[centerIdx + 2] > 0 || fullPixels[centerIdx + 3] > 0;
+      // Sample multiple points to check for content
+      let hasContent = false;
+      const samplePoints = [
+        Math.floor((cropInfo.fullRenderHeight / 2) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth / 2) * 4, // Center
+        Math.floor((cropInfo.fullRenderHeight / 4) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth / 4) * 4, // Top-left quadrant
+        Math.floor((cropInfo.fullRenderHeight * 3 / 4) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth * 3 / 4) * 4, // Bottom-right quadrant
+      ];
+      
+      for (const idx of samplePoints) {
+        if (idx >= 0 && idx < fullPixels.length - 3) {
+          if (fullPixels[idx] > 0 || fullPixels[idx + 1] > 0 || fullPixels[idx + 2] > 0 || fullPixels[idx + 3] > 0) {
+            hasContent = true;
+            break;
+          }
+        }
+      }
+      
       if (!hasContent) {
-        console.warn('Canvas appears empty after composer.render(). Trying fallback approach...');
+        console.warn(`Canvas appears empty after composer.render() at ${cropInfo.fullRenderWidth}x${cropInfo.fullRenderHeight}. Canvas size: ${canvas.width}x${canvas.height}, Renderer size: ${cropInfo.fullRenderWidth}x${cropInfo.fullRenderHeight}. Trying fallback approach...`);
         // Fallback: render directly to our render target, then apply post-processing manually
         this.renderer.setRenderTarget(renderTarget);
         this.renderer.clear();
@@ -602,6 +666,9 @@ export class ImageExporter {
       this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
     }
     
+    // Restore viewport
+    gl.viewport(originalViewport[0], originalViewport[1], originalViewport[2], originalViewport[3]);
+    
     return renderTarget;
   }
 
@@ -619,8 +686,13 @@ export class ImageExporter {
     exportContext.clearRect(0, 0, cropInfo.renderWidth, cropInfo.renderHeight);
 
     // Calculate crop coordinates in render target space
+    // pixelMinX/pixelMinY are in actual resolution space (already includes pixelRatio)
+    // We need to scale them by the size multiplier to match the render target size
     const cropX = Math.floor(cropInfo.pixelMinX * cropInfo.scale);
-    const cropY = Math.floor((state.originalSize.y - cropInfo.pixelMaxY) * cropInfo.scale); // Flip Y
+    // Flip Y: render target uses bottom-left origin, we need top-left
+    // state.originalSize.y is CSS size, but we need actual resolution for Y calculation
+    const actualHeight = state.originalSize.y * state.originalPixelRatio;
+    const cropY = Math.floor((actualHeight - cropInfo.pixelMaxY) * cropInfo.scale);
     const cropW = Math.ceil(cropInfo.renderWidth);
     const cropH = Math.ceil(cropInfo.renderHeight);
 

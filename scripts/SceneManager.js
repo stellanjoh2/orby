@@ -6,8 +6,6 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
-  CLAY_DEFAULT_ROUGHNESS,
-  CLAY_DEFAULT_METALNESS,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
@@ -1135,7 +1133,7 @@ export class SceneManager {
       material: state.material ?? {
         brightness: state.diffuseBrightness ?? 1.0,
         metalness: 0.0,
-        roughness: 0.5,
+        roughness: 0.8,
       },
     });
     this.setShading(state.shading);
