@@ -170,26 +170,25 @@ export class MaterialController {
           // Apply material brightness multiplier
           baseColor.multiplyScalar(this.materialSettings.brightness);
           
-          const standard = new THREE.MeshStandardMaterial({
+          // Use MeshBasicMaterial for truly unlit rendering - ignores all lighting
+          // Note: MeshBasicMaterial only supports map (diffuse), not normalMap, aoMap, etc.
+          const basic = new THREE.MeshBasicMaterial({
             map: mat?.map ?? null,
             color: baseColor,
-            roughness: this.materialSettings.roughness,
-            metalness: this.materialSettings.metalness,
-            normalMap: mat?.normalMap ?? null,
-            aoMap: mat?.aoMap ?? null,
-            emissive: mat?.emissive
-              ? mat.emissive.clone()
-              : new THREE.Color(0x000000),
-            emissiveIntensity: mat?.emissiveIntensity ?? 1,
             transparent: mat?.transparent ?? false,
             opacity: mat?.opacity ?? 1,
             side: mat?.side ?? THREE.FrontSide,
           });
-          if (mat?.aoMap) {
-            standard.aoMapIntensity = mat.aoMapIntensity ?? 1;
+          
+          // If original material had emissive, add it to the color for MeshBasicMaterial
+          // (since MeshBasicMaterial doesn't have separate emissive, we blend it into color)
+          if (mat?.emissive && mat.emissiveIntensity) {
+            const emissiveContribution = mat.emissive.clone().multiplyScalar(mat.emissiveIntensity);
+            basic.color.add(emissiveContribution);
           }
-          standard.wireframe = false;
-          return standard;
+          
+          basic.wireframe = false;
+          return basic;
         };
         applyMaterial(buildArray(createTextureMaterial));
       } else {
@@ -354,8 +353,35 @@ export class MaterialController {
             material.color.copy(tintedClayColor);
             material.needsUpdate = true;
           }
-        } else if (this.currentShading === 'shaded' || this.currentShading === 'textures') {
-          // For regular materials, update brightness, metalness, and roughness
+        } else if (this.currentShading === 'textures') {
+          // For unlit/textures mode (MeshBasicMaterial), only update brightness
+          // MeshBasicMaterial doesn't support metalness/roughness - it's truly unlit
+          if (!original) return;
+          
+          const getOriginalColor = (orig, idx = 0) => {
+            if (Array.isArray(orig)) {
+              return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
+            }
+            return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+          };
+          
+          if (Array.isArray(material) && Array.isArray(original)) {
+            material.forEach((mat, idx) => {
+              if (mat && mat.isMeshBasicMaterial) {
+                const originalColor = getOriginalColor(original, idx);
+                const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+                mat.color.copy(adjustedColor);
+                mat.needsUpdate = true;
+              }
+            });
+          } else if (material && material.isMeshBasicMaterial) {
+            const originalColor = getOriginalColor(original);
+            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            material.color.copy(adjustedColor);
+            material.needsUpdate = true;
+          }
+        } else if (this.currentShading === 'shaded') {
+          // For shaded mode, update brightness, metalness, and roughness
           if (!original) return;
           
           const getOriginalColor = (orig, idx = 0) => {
@@ -679,6 +705,11 @@ export class MaterialController {
 
   updateMaterialsEnvironment(envTexture, intensity, hdriBlurriness = 0) {
     if (!this.currentModel) return;
+
+    // If we're in textures/unlit mode, skip - MeshBasicMaterial doesn't use environment maps
+    if (this.currentShading === 'textures') {
+      return;
+    }
 
     // If we're in clay mode, handle clay materials separately and skip the rest
     if (this.currentShading === 'clay') {
