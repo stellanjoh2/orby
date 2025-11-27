@@ -5,8 +5,6 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
-  CLAY_DEFAULT_ROUGHNESS,
-  CLAY_DEFAULT_METALNESS,
 } from '../constants.js';
 
 export class MaterialController {

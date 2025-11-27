@@ -1654,7 +1654,7 @@ export class UIManager {
       this.stateStore.set('yOffset', defaults.yOffset);
       this.stateStore.set('autoRotate', defaults.autoRotate);
       this.stateStore.set('showNormals', defaults.showNormals);
-      this.stateStore.set('diffuseBrightness', defaults.diffuseBrightness ?? 1.0);
+      // Material brightness is now handled by material.brightness
       this.stateStore.set('clay', defaults.clay);
       
       // Emit events to update scene
@@ -1663,7 +1663,7 @@ export class UIManager {
       this.eventBus.emit('mesh:yOffset', defaults.yOffset);
       this.eventBus.emit('mesh:auto-rotate', defaults.autoRotate);
       this.eventBus.emit('mesh:normals', defaults.showNormals);
-      this.eventBus.emit('mesh:diffuse-brightness', defaults.diffuseBrightness ?? 1.0);
+      // Material brightness is now handled by mesh:material-brightness
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
       
       this.syncUIFromState();
