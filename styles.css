@@ -164,26 +164,48 @@ body.dropzone-visible #webgl {
   color: var(--text-dim);
 }
 
-.ghost-btn,
-.primary-btn {
+/* Secondary buttons - transparent style */
+.ghost-btn {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
-  padding: 0.4rem 0.9rem;
+  padding: 0.75rem 1.25rem;
   font-family: inherit;
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border 0.2s;
+  width: 100%;
 }
 
 .ghost-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ghost-btn.small {
   padding: 0.25rem 0.6rem;
   font-size: 0.75rem;
+  width: auto;
+}
+
+/* Primary button - gradient style (for play/pause) */
+.primary-btn {
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+  color: var(--brand-text);
+  padding: 0.4rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s;
+  box-shadow: 0 8px 16px var(--accent-shadow);
+}
+
+.primary-btn:hover {
+  filter: brightness(1.08);
 }
 
 /* Load Settings Modal */
@@ -299,35 +321,10 @@ body.dropzone-visible #webgl {
   margin-top: 0.25rem;
 }
 
-.load-settings-actions .action-btn {
+.load-settings-actions .ghost-btn {
   min-width: 100px;
   width: auto;
   margin-top: 0;
-}
-
-.action-btn {
-  width: 100%;
-  padding: 0.75rem 1.25rem;
-  margin-top: 0.5rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border 0.2s, opacity 0.2s;
-  opacity: 0.8;
-}
-
-.action-btn:first-of-type {
-  margin-top: 0;
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
-  opacity: 1;
 }
 
 .primary-btn {
@@ -340,6 +337,52 @@ body.dropzone-visible #webgl {
 
 .primary-btn:hover {
   filter: brightness(1.08);
+}
+
+/* Unified Accent Action Buttons (Export, Scene controls) - Slim, compact style */
+.accent-action-btn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 999px; /* Fully rounded */
+  border: none;
+  background: var(--accent);
+  color: var(--brand-text);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, filter 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  box-shadow: 0 4px 12px var(--accent-shadow);
+  box-sizing: border-box;
+  min-height: 2.5rem; /* Explicit height to match toggle buttons */
+}
+
+.accent-action-btn:hover {
+  filter: brightness(1.08);
+}
+
+.accent-action-btn:active {
+  filter: brightness(0.95);
+}
+
+.accent-action-btn i {
+  width: 14px;
+  height: 14px;
+}
+
+.scene-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Export button specific spacing */
+#exportPng {
+  margin-top: 0.5rem;
 }
 
 .dropzone-btn {
@@ -757,7 +800,7 @@ a:hover {
   border: none;
   border-radius: 6px;
   padding: 1.2rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 1.2rem;
   background: rgba(0, 0, 0, 0.6);
 }
 
@@ -778,7 +821,7 @@ a:hover {
 .block-title {
   font-size: 0.95rem;
   letter-spacing: 0.05em;
-  color: var(--text);
+  color: var(--accent);
   margin-bottom: 0.75rem;
   font-weight: 400;
 }
@@ -927,17 +970,17 @@ a:hover {
 
 .segmented {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.4rem;
 }
 
 .segmented.compact {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .segmented label {
   border: 1px solid var(--stroke);
-  padding: 0.4rem;
+  padding: 0.5rem 0.4rem;
   border-radius: 999px;
   text-align: center;
   font-size: 0.75rem;
@@ -947,6 +990,11 @@ a:hover {
   background: rgba(255, 255, 255, 0.05);
   transition: border 0.2s, color 0.2s, background 0.2s, opacity 0.2s;
   opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.5rem; /* Match other pill buttons */
 }
 
 .segmented label:hover:not(:has(input:checked)) {
@@ -1259,9 +1307,7 @@ input[type='range']:disabled::-moz-range-thumb {
 .hdri-card {
   border: 1px solid var(--stroke);
   border-radius: 999px;
-  padding: 0.4rem;
-  padding-top: calc(0.4rem + 1px);
-  padding-bottom: calc(0.4rem - 1px);
+  padding: 0.5rem 0.4rem;
   letter-spacing: -0.01em;
   font-size: 0.75rem;
   color: var(--text);
@@ -1270,6 +1316,11 @@ input[type='range']:disabled::-moz-range-thumb {
   transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
   text-align: center;
   opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
 .hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
@@ -1310,20 +1361,21 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .export-label {
   font-size: 0.9rem;
-  color: var(--text);
+  color: var(--text-dim);
   letter-spacing: -0.01em;
 }
 
 .export-button-group {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.6rem;
 }
 
+/* Export buttons use same styling as HDRI buttons */
 .export-option-btn {
   border: 1px solid var(--stroke);
   border-radius: 999px;
-  padding: 0.4rem;
+  padding: 0.5rem 0.4rem;
   letter-spacing: -0.01em;
   font-size: 0.75rem;
   color: var(--text);
@@ -1332,6 +1384,11 @@ input[type='range']:disabled::-moz-range-thumb {
   transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
   text-align: center;
   opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
 .export-option-btn:hover:not(:disabled):not(.is-disabled):not(.active) {
@@ -1343,42 +1400,11 @@ input[type='range']:disabled::-moz-range-thumb {
 .export-option-btn.active {
   border-color: var(--accent);
   color: var(--text);
+  background: var(--accent-muted);
   box-shadow: 0 8px 20px var(--accent-shadow);
   opacity: 1;
 }
 
-.export-action-btn {
-  width: 100%;
-  padding: 0.75rem 1.25rem;
-  margin-top: 0.5rem;
-  border-radius: 12px;
-  border: none;
-  background: var(--accent);
-  color: var(--brand-text);
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s, filter 0.2s, box-shadow 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  box-shadow: 0 8px 18px var(--accent-shadow);
-}
-
-.export-action-btn:hover {
-  filter: brightness(1.08);
-}
-
-.export-action-btn:active {
-  filter: brightness(0.95);
-}
-
-.export-action-btn i {
-  width: 16px;
-  height: 16px;
-}
 
 .lights .light-color-row {
   grid-template-columns: 160px auto;
@@ -1510,8 +1536,8 @@ input[type='range'] {
 
 input[type='range']::-webkit-slider-thumb {
   appearance: none;
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
@@ -1526,8 +1552,8 @@ input[type='range']:disabled::-webkit-slider-thumb {
 }
 
 input[type='range']::-moz-range-thumb {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--accent);
   border: none;
@@ -1544,11 +1570,20 @@ input[type='range']:disabled::-moz-range-thumb {
 
 input[type='range']:hover::-webkit-slider-thumb,
 input[type='range']:focus-visible::-webkit-slider-thumb {
-  transform: scale(1.1);
+  transform: scale(1.083); /* 13px / 12px */
 }
 
 input[type='range']:active::-webkit-slider-thumb {
-  transform: scale(1.5);
+  transform: scale(1.333); /* 16px / 12px */
+}
+
+input[type='range']:hover::-moz-range-thumb,
+input[type='range']:focus-visible::-moz-range-thumb {
+  transform: scale(1.083); /* 13px / 12px */
+}
+
+input[type='range']:active::-moz-range-thumb {
+  transform: scale(1.333); /* 16px / 12px */
 }
 
 input[type='range'].is-disabled-handle::-webkit-slider-thumb {
