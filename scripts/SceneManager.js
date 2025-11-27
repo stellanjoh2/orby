@@ -300,12 +300,6 @@ export class SceneManager {
     this.eventBus.on('mesh:clay-color', (value) => {
       this.setClaySettings({ color: value });
     });
-    this.eventBus.on('mesh:clay-roughness', (value) => {
-      this.setClaySettings({ roughness: value });
-    });
-    this.eventBus.on('mesh:clay-specular', (value) => {
-      this.setClaySettings({ specular: value });
-    });
     this.eventBus.on('mesh:material-brightness', (brightness) => {
       this.materialController?.setMaterialBrightness(brightness);
     });
