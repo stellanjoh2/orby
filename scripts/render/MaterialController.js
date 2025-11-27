@@ -138,12 +138,14 @@ export class MaterialController {
         };
         applyMaterial(buildArray(createWire));
       } else if (mode === 'clay') {
-        const { color, roughness, specular } = this.claySettings;
+        const { color } = this.claySettings;
+        // Use material settings for roughness and metalness (unified controls)
         const createClay = (originalMat) => {
+          const clayColor = this.getClayColorWithBrightness();
           const clay = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color),
-            roughness,
-            metalness: specular,
+            color: clayColor,
+            roughness: this.materialSettings.roughness,
+            metalness: this.materialSettings.metalness,
             side: THREE.DoubleSide,
           });
           // Preserve normal map from original material only if enabled
@@ -206,6 +208,13 @@ export class MaterialController {
             // Apply metalness and roughness
             cloned.metalness = this.materialSettings.metalness;
             cloned.roughness = this.materialSettings.roughness;
+            // Disable original metalness/roughness maps so sliders behave consistently with Clay mode
+            if ('metalnessMap' in cloned) {
+              cloned.metalnessMap = null;
+            }
+            if ('roughnessMap' in cloned) {
+              cloned.roughnessMap = null;
+            }
             cloned.needsUpdate = true;
           }
           if (cloned) {
@@ -258,53 +267,25 @@ export class MaterialController {
               !material.every((mat, idx) => mat === original[idx]));
 
           if (isClayMaterial) {
+            const tintedClayColor = this.getClayColorWithBrightness();
             // This is a clay material, update it directly
             if (Array.isArray(material)) {
               material.forEach((mat) => {
                 if (mat && mat.isMeshStandardMaterial) {
-                  if (patch.color !== undefined) {
-                    mat.color.set(patch.color);
-                  }
-                  if (patch.roughness !== undefined) {
-                    mat.roughness = patch.roughness;
-                  }
-                  if (patch.specular !== undefined) {
-                    mat.metalness = patch.specular;
-                  }
-                  // Always ensure values are set from claySettings, even if patch doesn't include them
-                  // This prevents values from being 0 or undefined
-                  if (mat.roughness === undefined || mat.roughness === 0) {
-                    mat.roughness = this.claySettings.roughness ?? 0.5;
-                  }
-                  if (mat.metalness === undefined || mat.metalness === 0) {
-                    mat.metalness = this.claySettings.specular ?? 0.5;
-                  }
+                  mat.color.copy(tintedClayColor);
+                  // Roughness and metalness are now controlled by Material settings, not clay settings
+                  // Always use material settings for roughness and metalness
+                  mat.roughness = this.materialSettings.roughness;
+                  mat.metalness = this.materialSettings.metalness;
                   mat.needsUpdate = true;
                 }
               });
             } else if (material.isMeshStandardMaterial) {
-              if (patch.color !== undefined) {
-                material.color.set(patch.color);
-              }
-              if (patch.roughness !== undefined) {
-                material.roughness = patch.roughness;
-              }
-              if (patch.specular !== undefined) {
-                material.metalness = patch.specular;
-              }
-              // Always ensure values are set from claySettings, even if patch doesn't include them
-              if (
-                material.roughness === undefined ||
-                material.roughness === 0
-              ) {
-                material.roughness = this.claySettings.roughness ?? 0.5;
-              }
-              if (
-                material.metalness === undefined ||
-                material.metalness === 0
-              ) {
-                material.metalness = this.claySettings.specular ?? 0.5;
-              }
+              material.color.copy(tintedClayColor);
+              // Roughness and metalness are now controlled by Material settings, not clay settings
+              // Always use material settings for roughness and metalness
+              material.roughness = this.materialSettings.roughness;
+              material.metalness = this.materialSettings.metalness;
               material.needsUpdate = true;
             }
           }
@@ -331,45 +312,92 @@ export class MaterialController {
     this.updateMaterials();
   }
 
+  getClayColorWithBrightness() {
+    const baseColorHex = this.claySettings?.color ?? '#808080';
+    const brightness = this.materialSettings?.brightness ?? 1.0;
+    const baseColor = new THREE.Color(baseColorHex);
+    const tinted = baseColor.multiplyScalar(brightness);
+    tinted.r = Math.min(1, Math.max(0, tinted.r));
+    tinted.g = Math.min(1, Math.max(0, tinted.g));
+    tinted.b = Math.min(1, Math.max(0, tinted.b));
+    return tinted;
+  }
+
   updateMaterials() {
-    // Update existing materials in all modes (except wireframe and clay which have their own colors)
-    if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures')) {
+    // Update existing materials in all modes (except wireframe which has its own color)
+    // Material controls now apply to both Color/Textures modes AND Clay mode
+    if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const original = this.originalMaterials.get(child);
-        if (!original) return;
-        
         const material = child.material;
         
-        // Get the base color from the original material
-        const getOriginalColor = (orig, idx = 0) => {
-          if (Array.isArray(orig)) {
-            return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
-          }
-          return orig?.color?.clone() ?? new THREE.Color('#ffffff');
-        };
+        // Check if this is a clay material
+        const isClayMaterial = original && material !== original && 
+          (!Array.isArray(material) || !Array.isArray(original) || 
+           material.length !== original.length || 
+           !material.every((mat, idx) => mat === original[idx]));
         
-        // Apply brightness to material color (which multiplies the texture map)
-        if (Array.isArray(material) && Array.isArray(original)) {
-          material.forEach((mat, idx) => {
-            if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
-              const originalColor = getOriginalColor(original, idx);
-              const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-              mat.color.copy(adjustedColor);
-              // Apply metalness and roughness
-              mat.metalness = this.materialSettings.metalness;
-              mat.roughness = this.materialSettings.roughness;
-              mat.needsUpdate = true;
+        if (this.currentShading === 'clay' && isClayMaterial) {
+          // For clay materials, only update roughness and metalness (color is controlled by clay.color)
+          const tintedClayColor = this.getClayColorWithBrightness();
+          if (Array.isArray(material)) {
+            material.forEach((mat) => {
+              if (mat && mat.isMeshStandardMaterial) {
+                mat.roughness = this.materialSettings.roughness;
+                mat.metalness = this.materialSettings.metalness;
+                mat.color.copy(tintedClayColor);
+                mat.needsUpdate = true;
+              }
+            });
+          } else if (material && material.isMeshStandardMaterial) {
+            material.roughness = this.materialSettings.roughness;
+            material.metalness = this.materialSettings.metalness;
+            material.color.copy(tintedClayColor);
+            material.needsUpdate = true;
+          }
+        } else if (this.currentShading === 'shaded' || this.currentShading === 'textures') {
+          // For regular materials, update brightness, metalness, and roughness
+          if (!original) return;
+          
+          const getOriginalColor = (orig, idx = 0) => {
+            if (Array.isArray(orig)) {
+              return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
             }
-          });
-        } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
-          const originalColor = getOriginalColor(original);
-          const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-          material.color.copy(adjustedColor);
-          // Apply metalness and roughness
-          material.metalness = this.materialSettings.metalness;
-          material.roughness = this.materialSettings.roughness;
-          material.needsUpdate = true;
+            return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+          };
+          
+          if (Array.isArray(material) && Array.isArray(original)) {
+            material.forEach((mat, idx) => {
+              if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
+                const originalColor = getOriginalColor(original, idx);
+                const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+                mat.color.copy(adjustedColor);
+                mat.metalness = this.materialSettings.metalness;
+                mat.roughness = this.materialSettings.roughness;
+                if ('metalnessMap' in mat) {
+                  mat.metalnessMap = null;
+                }
+                if ('roughnessMap' in mat) {
+                  mat.roughnessMap = null;
+                }
+                mat.needsUpdate = true;
+              }
+            });
+          } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+            const originalColor = getOriginalColor(original);
+            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            material.color.copy(adjustedColor);
+            material.metalness = this.materialSettings.metalness;
+            material.roughness = this.materialSettings.roughness;
+            if ('metalnessMap' in material) {
+              material.metalnessMap = null;
+            }
+            if ('roughnessMap' in material) {
+              material.roughnessMap = null;
+            }
+            material.needsUpdate = true;
+          }
         }
       });
     }
@@ -656,8 +684,9 @@ export class MaterialController {
 
     // If we're in clay mode, handle clay materials separately and skip the rest
     if (this.currentShading === 'clay') {
-      const targetRoughness = this.claySettings?.roughness ?? 0.5;
-      const targetMetalness = this.claySettings?.specular ?? 0.5;
+      const targetRoughness = this.materialSettings.roughness;
+      const targetMetalness = this.materialSettings.metalness;
+      const tintedClayColor = this.getClayColorWithBrightness();
 
       this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;
@@ -681,6 +710,7 @@ export class MaterialController {
             // Setting envMap might trigger Three.js internal updates that reset these values
             material.roughness = targetRoughness;
             material.metalness = targetMetalness;
+            material.color.copy(tintedClayColor);
 
             material.needsUpdate = true;
           });
@@ -746,8 +776,9 @@ export class MaterialController {
   forceRestoreClaySettings() {
     // Simple restoration - just set the values directly from claySettings
     if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
-      const targetRoughness = this.claySettings.roughness ?? 0.6;
-      const targetMetalness = this.claySettings.specular ?? 0.08;
+      const targetRoughness = this.materialSettings.roughness;
+      const targetMetalness = this.materialSettings.metalness;
+      const tintedClayColor = this.getClayColorWithBrightness();
 
       this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;
@@ -769,6 +800,7 @@ export class MaterialController {
               if (mat.metalness === 0 || Math.abs(mat.metalness - targetMetalness) > 0.01) {
                 mat.metalness = targetMetalness;
               }
+              mat.color.copy(tintedClayColor);
               mat.needsUpdate = true;
             }
           });

@@ -199,8 +199,7 @@ export class SceneSettingsManager {
       if (payload.clay) {
         this.stateStore.set('clay', payload.clay);
         this.eventBus.emit('mesh:clay-color', payload.clay.color);
-        this.eventBus.emit('mesh:clay-roughness', payload.clay.roughness);
-        this.eventBus.emit('mesh:clay-specular', payload.clay.specular);
+        // Roughness and metalness are now controlled by Material settings, not clay settings
       }
       if (payload.wireframe) {
         this.stateStore.set('wireframe', payload.wireframe);

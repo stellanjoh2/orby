@@ -93,8 +93,6 @@ export class UIManager {
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
       clayColor: q('#clayColor'),
-      clayRoughness: q('#clayRoughness'),
-      claySpecular: q('#claySpecular'),
       clayNormalMap: q('#clayNormalMap'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
       wireframeColor: q('#wireframeColor'),
@@ -450,20 +448,6 @@ export class UIManager {
       });
     });
     this.bindColorInput('clayColor', 'clay.color', 'mesh:clay-color');
-    this.inputs.clayRoughness.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, 0, 1, 0.5);
-      this.stateStore.set('clay.roughness', value);
-      this.updateValueLabel('clayRoughness', value, 'decimal');
-      this.eventBus.emit('mesh:clay-roughness', value);
-    });
-    this.enableSliderKeyboardStepping(this.inputs.clayRoughness);
-    this.inputs.claySpecular.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, 0, 1, 0.5);
-      this.stateStore.set('clay.specular', value);
-      this.updateValueLabel('claySpecular', value, 'decimal');
-      this.eventBus.emit('mesh:clay-specular', value);
-    });
-    this.enableSliderKeyboardStepping(this.inputs.claySpecular);
     this.inputs.clayNormalMap?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('clay.normalMap', enabled);
@@ -1681,8 +1665,6 @@ export class UIManager {
       this.eventBus.emit('mesh:normals', defaults.showNormals);
       this.eventBus.emit('mesh:diffuse-brightness', defaults.diffuseBrightness ?? 1.0);
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
-      this.eventBus.emit('mesh:clay-roughness', defaults.clay.roughness);
-      this.eventBus.emit('mesh:clay-specular', defaults.clay.specular);
       
       this.syncUIFromState();
       this.showToast('Mesh settings reset');
@@ -1850,8 +1832,7 @@ export class UIManager {
           case 'clay':
             this.stateStore.set('clay', defaults.clay);
             this.eventBus.emit('mesh:clay-color', defaults.clay.color);
-            this.eventBus.emit('mesh:clay-roughness', defaults.clay.roughness);
-            this.eventBus.emit('mesh:clay-specular', defaults.clay.specular);
+            // Roughness and metalness are now controlled by Material settings, not clay settings
             this.syncUIFromState();
             break;
             
@@ -2721,10 +2702,6 @@ export class UIManager {
       this.updateValueLabel('materialRoughness', roughness, 'decimal');
     }
     this.inputs.clayColor.value = state.clay.color;
-    this.inputs.clayRoughness.value = state.clay.roughness;
-    this.updateValueLabel('clayRoughness', state.clay.roughness, 'decimal');
-    this.inputs.claySpecular.value = state.clay.specular;
-    this.updateValueLabel('claySpecular', state.clay.specular, 'decimal');
     if (this.inputs.clayNormalMap) {
       this.inputs.clayNormalMap.checked = state.clay.normalMap !== false;
     }
