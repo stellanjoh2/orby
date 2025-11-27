@@ -1819,13 +1819,31 @@ export class UIManager {
         const resetType = button.dataset.reset;
         
         switch (resetType) {
-          case 'diffuseBrightness':
-      this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
-      this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
-      this.stateStore.set('material.roughness', defaults.material?.roughness ?? 0.8);
-      this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
-      this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
-      this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? 0.8);
+          case 'material':
+            this.stateStore.set(
+              'material.brightness',
+              defaults.material?.brightness ?? 1.0,
+            );
+            this.stateStore.set(
+              'material.metalness',
+              defaults.material?.metalness ?? 0.0,
+            );
+            this.stateStore.set(
+              'material.roughness',
+              defaults.material?.roughness ?? 0.8,
+            );
+            this.eventBus.emit(
+              'mesh:material-brightness',
+              defaults.material?.brightness ?? 1.0,
+            );
+            this.eventBus.emit(
+              'mesh:material-metalness',
+              defaults.material?.metalness ?? 0.0,
+            );
+            this.eventBus.emit(
+              'mesh:material-roughness',
+              defaults.material?.roughness ?? 0.8,
+            );
             this.syncUIFromState();
             break;
             
