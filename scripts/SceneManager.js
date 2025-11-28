@@ -241,8 +241,98 @@ export class SceneManager {
     });
     this.lensFlareController.init(initialState, this.hdriEnabled);
     this.registerEvents();
+    this.setupMeshClickDetection();
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
+  }
+
+  setupMeshClickDetection() {
+    // Raycaster for detecting mesh clicks
+    this.raycaster = new THREE.Raycaster();
+    
+    // Track mouse state to distinguish clicks from drags
+    this.mouseDownPos = null;
+    this.mouseDownTime = null;
+    this.mouseDownOnCanvas = false;
+    const CLICK_THRESHOLD = 5; // pixels
+    const CLICK_TIME_THRESHOLD = 200; // milliseconds
+    
+    const handleMouseDown = (event) => {
+      // Only handle left mouse button
+      if (event.button !== 0) return;
+      
+      const target = event.target;
+      const clickedOnCanvas = target === this.canvas || this.canvas.contains(target);
+      
+      if (clickedOnCanvas) {
+        this.mouseDownOnCanvas = true;
+        this.mouseDownPos = {
+          x: event.clientX,
+          y: event.clientY,
+        };
+        this.mouseDownTime = performance.now();
+      }
+    };
+    
+    const handleMouseUp = (event) => {
+      // Only handle left mouse button
+      if (event.button !== 0) return;
+      
+      const target = event.target;
+      const clickedOnCanvas = target === this.canvas || this.canvas.contains(target);
+      
+      // If click started on canvas, check if it was a click or drag
+      if (this.mouseDownOnCanvas && this.mouseDownPos && this.mouseDownTime) {
+        // Check if this was a click (not a drag)
+        const mouseMove = Math.sqrt(
+          Math.pow(event.clientX - this.mouseDownPos.x, 2) +
+          Math.pow(event.clientY - this.mouseDownPos.y, 2)
+        );
+        const mouseTime = performance.now() - this.mouseDownTime;
+        
+        const wasClick = mouseMove < CLICK_THRESHOLD && mouseTime < CLICK_TIME_THRESHOLD;
+        
+        if (wasClick && this.currentModel && clickedOnCanvas) {
+          // Convert mouse position to normalized device coordinates
+          const rect = this.canvas.getBoundingClientRect();
+          const mouse = new THREE.Vector2();
+          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          
+          // Raycast to check if we hit the mesh
+          this.raycaster.setFromCamera(mouse, this.camera);
+          const intersects = this.raycaster.intersectObject(this.currentModel, true);
+          
+          if (intersects.length > 0) {
+            // Clicked on mesh - enable rotate widget, disable move widget
+            this.stateStore.set('moveWidgetEnabled', false);
+            this.stateStore.set('rotateWidgetEnabled', true);
+            this.eventBus.emit('mesh:move-widget-enabled', false);
+            this.eventBus.emit('mesh:rotate-widget-enabled', true);
+          } else {
+            // Clicked on canvas but outside mesh - disable both widgets
+            this.stateStore.set('moveWidgetEnabled', false);
+            this.stateStore.set('rotateWidgetEnabled', false);
+            this.eventBus.emit('mesh:move-widget-enabled', false);
+            this.eventBus.emit('mesh:rotate-widget-enabled', false);
+          }
+        }
+      } else if (!clickedOnCanvas) {
+        // Clicked outside canvas (e.g., on UI) - disable both widgets
+        this.stateStore.set('moveWidgetEnabled', false);
+        this.stateStore.set('rotateWidgetEnabled', false);
+        this.eventBus.emit('mesh:move-widget-enabled', false);
+        this.eventBus.emit('mesh:rotate-widget-enabled', false);
+      }
+      
+      // Reset tracking
+      this.mouseDownPos = null;
+      this.mouseDownTime = null;
+      this.mouseDownOnCanvas = false;
+    };
+    
+    this.canvas.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
   }
 
   async init() {
@@ -332,7 +422,9 @@ export class SceneManager {
 
   registerEvents() {
     this.eventBus.on('mesh:scale', (value) => this.setScale(value));
+    this.eventBus.on('mesh:xOffset', (value) => this.setXOffset(value));
     this.eventBus.on('mesh:yOffset', (value) => this.setYOffset(value));
+    this.eventBus.on('mesh:zOffset', (value) => this.setZOffset(value));
     this.eventBus.on('mesh:rotationX', (value) => this.setRotationX(value));
     this.eventBus.on('mesh:rotationY', (value) => this.setRotationY(value));
     this.eventBus.on('mesh:rotationZ', (value) => this.setRotationZ(value));
@@ -1375,21 +1467,27 @@ export class SceneManager {
     
     // Extract transform values from modelRoot
     const scale = this.modelRoot.scale.x; // Assuming uniform scale
+    const xOffset = this.modelRoot.position.x;
     const yOffset = this.modelRoot.position.y;
+    const zOffset = this.modelRoot.position.z;
     const rotationX = THREE.MathUtils.radToDeg(this.modelRoot.rotation.x);
     const rotationY = THREE.MathUtils.radToDeg(this.modelRoot.rotation.y);
     const rotationZ = THREE.MathUtils.radToDeg(this.modelRoot.rotation.z);
     
     // Update state store
     this.stateStore.set('scale', scale);
+    this.stateStore.set('xOffset', xOffset);
     this.stateStore.set('yOffset', yOffset);
+    this.stateStore.set('zOffset', zOffset);
     this.stateStore.set('rotationX', rotationX);
     this.stateStore.set('rotationY', rotationY);
     this.stateStore.set('rotationZ', rotationZ);
     
     // Emit events to update UI sliders (using correct event names)
     this.eventBus.emit('mesh:scale', scale);
+    this.eventBus.emit('mesh:xOffset', xOffset);
     this.eventBus.emit('mesh:yOffset', yOffset);
+    this.eventBus.emit('mesh:zOffset', zOffset);
     this.eventBus.emit('mesh:rotationX', rotationX);
     this.eventBus.emit('mesh:rotationY', rotationY);
     this.eventBus.emit('mesh:rotationZ', rotationZ);
@@ -1399,8 +1497,28 @@ export class SceneManager {
     this.transformController?.setScale(value);
   }
 
+  setXOffset(value) {
+    this.transformController?.setXOffset(value);
+    // Update transform controls if attached
+    if (this.transformControlsTranslate?.object === this.modelRoot) {
+      this.transformControlsTranslate.updateMatrixWorld();
+    }
+  }
+
   setYOffset(value) {
     this.transformController?.setYOffset(value);
+    // Update transform controls if attached
+    if (this.transformControlsTranslate?.object === this.modelRoot) {
+      this.transformControlsTranslate.updateMatrixWorld();
+    }
+  }
+
+  setZOffset(value) {
+    this.transformController?.setZOffset(value);
+    // Update transform controls if attached
+    if (this.transformControlsTranslate?.object === this.modelRoot) {
+      this.transformControlsTranslate.updateMatrixWorld();
+    }
   }
 
   setRotationX(value) {

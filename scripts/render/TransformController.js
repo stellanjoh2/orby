@@ -37,12 +37,30 @@ export class TransformController {
   }
 
   /**
+   * Set the X position offset of the model
+   * @param {number} value - X offset in world units
+   */
+  setXOffset(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.position.x = value;
+  }
+
+  /**
    * Set the Y position offset of the model
    * @param {number} value - Y offset in world units
    */
   setYOffset(value) {
     if (!this.modelRoot) return;
     this.modelRoot.position.y = value;
+  }
+
+  /**
+   * Set the Z position offset of the model
+   * @param {number} value - Z offset in world units
+   */
+  setZOffset(value) {
+    if (!this.modelRoot) return;
+    this.modelRoot.position.z = value;
   }
 
   /**
@@ -79,7 +97,9 @@ export class TransformController {
   applyState(state) {
     if (!this.modelRoot) return;
     this.setScale(state.scale ?? 1);
+    this.setXOffset(state.xOffset ?? 0);
     this.setYOffset(state.yOffset ?? 0);
+    this.setZOffset(state.zOffset ?? 0);
     this.setRotationX(state.rotationX ?? 0);
     this.setRotationY(state.rotationY ?? 0);
     this.setRotationZ(state.rotationZ ?? 0);

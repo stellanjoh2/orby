@@ -66,14 +66,13 @@ export class UIManager {
     this.dom.playPause = q('#playPause');
     this.dom.animationScrub = q('#animationScrub');
     this.dom.animationTime = q('#animationTime');
-    this.dom.rotationNotches = document.querySelectorAll(
-      '[data-rotation-axis]',
-    );
 
     this.inputs = {
       shading: document.querySelectorAll('input[name="shading"]'),
       scale: q('#scaleControl'),
+      xOffset: q('#xOffsetControl'),
       yOffset: q('#yOffsetControl'),
+      zOffset: q('#zOffsetControl'),
       rotationX: q('#rotationXControl'),
       rotationY: q('#rotationYControl'),
       rotationZ: q('#rotationZControl'),
@@ -221,7 +220,6 @@ export class UIManager {
     this.bindCopyButtons();
     this.bindHdriLightsRotation();
     this.bindLocalResetButtons();
-    this.bindRotationNotches();
     this.setupSliderKeyboardSupport();
   }
 
@@ -409,29 +407,45 @@ export class UIManager {
       this.eventBus.emit('mesh:scale', value);
     });
     this.enableSliderKeyboardStepping(this.inputs.scale);
+    this.inputs.xOffset?.addEventListener('input', (event) => {
+      const value = this.applySnapToCenter(event.target, -2, 2, 0);
+      this.updateValueLabel('xOffset', value, 'distance');
+      this.stateStore.set('xOffset', value);
+      this.eventBus.emit('mesh:xOffset', value);
+    });
+    if (this.inputs.xOffset) this.enableSliderKeyboardStepping(this.inputs.xOffset);
+
     this.inputs.yOffset?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -2, 2, 0);
       this.updateValueLabel('yOffset', value, 'distance');
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
     });
     if (this.inputs.yOffset) this.enableSliderKeyboardStepping(this.inputs.yOffset);
+
+    this.inputs.zOffset?.addEventListener('input', (event) => {
+      const value = this.applySnapToCenter(event.target, -2, 2, 0);
+      this.updateValueLabel('zOffset', value, 'distance');
+      this.stateStore.set('zOffset', value);
+      this.eventBus.emit('mesh:zOffset', value);
+    });
+    if (this.inputs.zOffset) this.enableSliderKeyboardStepping(this.inputs.zOffset);
     this.inputs.rotationX?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -180, 180, 0);
       this.updateValueLabel('rotationX', value, 'angle');
       this.stateStore.set('rotationX', value);
       this.eventBus.emit('mesh:rotationX', value);
     });
     if (this.inputs.rotationX) this.enableSliderKeyboardStepping(this.inputs.rotationX);
     this.inputs.rotationY?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -180, 180, 0);
       this.updateValueLabel('rotationY', value, 'angle');
       this.stateStore.set('rotationY', value);
       this.eventBus.emit('mesh:rotationY', value);
     });
     if (this.inputs.rotationY) this.enableSliderKeyboardStepping(this.inputs.rotationY);
     this.inputs.rotationZ?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
+      const value = this.applySnapToCenter(event.target, -180, 180, 0);
       this.updateValueLabel('rotationZ', value, 'angle');
       this.stateStore.set('rotationZ', value);
       this.eventBus.emit('mesh:rotationZ', value);
@@ -1428,24 +1442,40 @@ export class UIManager {
       // Y - Focus on Y Offset slider (reset to 0)
       if (key === 'y') {
         event.preventDefault();
+        this.stateStore.set('xOffset', 0);
         this.stateStore.set('yOffset', 0);
+        this.stateStore.set('zOffset', 0);
+        this.eventBus.emit('mesh:xOffset', 0);
         this.eventBus.emit('mesh:yOffset', 0);
+        this.eventBus.emit('mesh:zOffset', 0);
+        if (this.inputs.xOffset) {
+          this.inputs.xOffset.value = 0;
+          this.updateValueLabel('xOffset', 0, 'distance');
+        }
         if (this.inputs.yOffset) {
           this.inputs.yOffset.value = 0;
           this.updateValueLabel('yOffset', 0, 'distance');
         }
+        if (this.inputs.zOffset) {
+          this.inputs.zOffset.value = 0;
+          this.updateValueLabel('zOffset', 0, 'distance');
+        }
       }
 
-      // 0 - Reset transform (scale + Y offset + rotations)
+      // 0 - Reset transform (scale + position offsets + rotations)
       if (key === '0') {
         event.preventDefault();
         this.stateStore.set('scale', 1);
+        this.stateStore.set('xOffset', 0);
         this.stateStore.set('yOffset', 0);
+        this.stateStore.set('zOffset', 0);
         this.stateStore.set('rotationX', 0);
         this.stateStore.set('rotationY', 0);
         this.stateStore.set('rotationZ', 0);
         this.eventBus.emit('mesh:scale', 1);
+        this.eventBus.emit('mesh:xOffset', 0);
         this.eventBus.emit('mesh:yOffset', 0);
+        this.eventBus.emit('mesh:zOffset', 0);
         this.eventBus.emit('mesh:rotationX', 0);
         this.eventBus.emit('mesh:rotationY', 0);
         this.eventBus.emit('mesh:rotationZ', 0);
@@ -1453,9 +1483,17 @@ export class UIManager {
           this.inputs.scale.value = 1;
           this.updateValueLabel('scale', 1, 'multiplier');
         }
+        if (this.inputs.xOffset) {
+          this.inputs.xOffset.value = 0;
+          this.updateValueLabel('xOffset', 0, 'distance');
+        }
         if (this.inputs.yOffset) {
           this.inputs.yOffset.value = 0;
           this.updateValueLabel('yOffset', 0, 'distance');
+        }
+        if (this.inputs.zOffset) {
+          this.inputs.zOffset.value = 0;
+          this.updateValueLabel('zOffset', 0, 'distance');
         }
         if (this.inputs.rotationX) {
           this.inputs.rotationX.value = 0;
@@ -1683,7 +1721,9 @@ export class UIManager {
       const defaults = this.stateStore.getDefaults();
       this.stateStore.set('shading', defaults.shading);
       this.stateStore.set('scale', defaults.scale);
+      this.stateStore.set('xOffset', defaults.xOffset ?? 0);
       this.stateStore.set('yOffset', defaults.yOffset);
+      this.stateStore.set('zOffset', defaults.zOffset ?? 0);
       this.stateStore.set('autoRotate', defaults.autoRotate);
       this.stateStore.set('showNormals', defaults.showNormals);
       // Material brightness is now handled by material.brightness
@@ -2145,26 +2185,6 @@ export class UIManager {
     });
   }
 
-  bindRotationNotches() {
-    if (!this.dom.rotationNotches) return;
-    this.dom.rotationNotches.forEach((button) => {
-      button.addEventListener('click', () => {
-        const axis = button.dataset.rotationAxis?.toUpperCase();
-        if (!axis) return;
-        const input = this.inputs[`rotation${axis}`];
-        if (!input) return;
-        const min = parseFloat(input.min ?? '-180');
-        const max = parseFloat(input.max ?? '180');
-        const range = max - min || 360;
-        let value = parseFloat(input.value) || 0;
-        value += 90;
-        if (value > max) value -= range;
-        if (value < min) value += range;
-        input.value = value;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    });
-  }
 
   toggleUi(forceState) {
     const nextState =
