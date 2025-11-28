@@ -77,6 +77,7 @@ export class UIManager {
       rotationX: q('#rotationXControl'),
       rotationY: q('#rotationYControl'),
       rotationZ: q('#rotationZControl'),
+      gizmosEnabled: q('#gizmosEnabled'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
@@ -437,6 +438,16 @@ export class UIManager {
       this.eventBus.emit('mesh:rotationZ', value);
     });
     if (this.inputs.rotationZ) this.enableSliderKeyboardStepping(this.inputs.rotationZ);
+
+    // Gizmos button (toggle on click)
+    this.inputs.gizmosEnabled?.addEventListener('click', () => {
+      const currentState = this.stateStore.getState().gizmosEnabled ?? false;
+      const newState = !currentState;
+      this.eventBus.emit('mesh:gizmos-enabled', newState);
+      this.stateStore.set('gizmosEnabled', newState);
+      // Update button active state
+      this.inputs.gizmosEnabled.classList.toggle('active', newState);
+    });
     // Transform reset is now handled by bindLocalResetButtons
     this.inputs.autoRotate.forEach((input) => {
       input.addEventListener('change', () => {
@@ -2703,6 +2714,13 @@ export class UIManager {
     }
     if (this.inputs.showNormals) {
       this.inputs.showNormals.checked = state.showNormals;
+    }
+    if (this.inputs.gizmosEnabled) {
+      const enabled = state.gizmosEnabled ?? false;
+      // Update button active state (not checked, since it's a button now)
+      this.inputs.gizmosEnabled.classList.toggle('active', enabled);
+      // Emit event to update gizmo visibility
+      this.eventBus.emit('mesh:gizmos-enabled', enabled);
     }
     if (this.inputs.materialBrightness) {
       const brightness = state.material?.brightness ?? 1.0;

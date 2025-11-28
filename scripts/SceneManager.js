@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TransformControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/TransformControls.js';
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
 import {
   WIREFRAME_OFFSET,
@@ -109,6 +110,80 @@ export class SceneManager {
     this.transformController = new TransformController({
       modelRoot: this.modelRoot,
     });
+
+    // Setup TransformControls (gizmos) for visual transform editing
+    // Create separate controls for translate and rotate so both can be visible
+    this.transformControlsTranslate = new TransformControls(this.camera, this.canvas);
+    this.transformControlsTranslate.setMode('translate');
+    this.transformControlsTranslate.setSpace('world');
+    this.transformControlsTranslate.setSize(2.5); // Make translate arrows much larger/further out
+    this.transformControlsTranslate.visible = false;
+    this.scene.add(this.transformControlsTranslate);
+    
+    this.transformControlsRotate = new TransformControls(this.camera, this.canvas);
+    this.transformControlsRotate.setMode('rotate');
+    this.transformControlsRotate.setSpace('local'); // Use local space so it follows mesh rotation
+    this.transformControlsRotate.setSize(0.7); // Make rotate gizmo smaller so it doesn't overlap with translate arrows
+    this.transformControlsRotate.visible = false;
+    this.scene.add(this.transformControlsRotate);
+    
+    // Track which gizmo is currently being interacted with
+    this.activeGizmo = null;
+    
+    // Helper to get all transform controls
+    this.transformControls = [this.transformControlsTranslate, this.transformControlsRotate];
+    
+    // Disable OrbitControls when dragging any gizmo
+    // Also hide the other gizmo when one is being dragged to prevent overlap
+    const handleTranslateDraggingChanged = (event) => {
+      const controls = this.cameraController?.getControls();
+      if (controls) {
+        controls.enabled = !event.value;
+      }
+      // Hide rotate gizmo when translate is being dragged
+      if (event.value) {
+        this.activeGizmo = 'translate';
+        this.transformControlsRotate.visible = false;
+      } else {
+        this.activeGizmo = null;
+        // Restore rotate gizmo visibility if gizmos are enabled
+        const state = this.stateStore.getState();
+        if (state.gizmosEnabled) {
+          this.transformControlsRotate.visible = true;
+        }
+      }
+    };
+    
+    const handleRotateDraggingChanged = (event) => {
+      const controls = this.cameraController?.getControls();
+      if (controls) {
+        controls.enabled = !event.value;
+      }
+      // Hide translate gizmo when rotate is being dragged
+      if (event.value) {
+        this.activeGizmo = 'rotate';
+        this.transformControlsTranslate.visible = false;
+      } else {
+        this.activeGizmo = null;
+        // Restore translate gizmo visibility if gizmos are enabled
+        const state = this.stateStore.getState();
+        if (state.gizmosEnabled) {
+          this.transformControlsTranslate.visible = true;
+        }
+      }
+    };
+    
+    this.transformControlsTranslate.addEventListener('dragging-changed', handleTranslateDraggingChanged);
+    this.transformControlsRotate.addEventListener('dragging-changed', handleRotateDraggingChanged);
+    
+    // Sync gizmo changes back to state/UI
+    const handleChange = () => {
+      if (this.modelRoot && (this.transformControlsTranslate.object === this.modelRoot || this.transformControlsRotate.object === this.modelRoot)) {
+        this._syncTransformFromGizmo();
+      }
+    };
+    this.transformControlsTranslate.addEventListener('change', handleChange);
+    this.transformControlsRotate.addEventListener('change', handleChange);
 
     this.diagnosticsController = new MeshDiagnosticsController({
       scene: this.scene,
@@ -322,6 +397,20 @@ export class SceneManager {
     });
     this.eventBus.on('mesh:reset-transform', () => {
       this.transformController?.setRotationY(0);
+    });
+    this.eventBus.on('mesh:gizmos-enabled', (enabled) => {
+      if (this.transformControlsTranslate && this.transformControlsRotate) {
+        this.transformControlsTranslate.visible = enabled;
+        this.transformControlsRotate.visible = enabled;
+        // Re-attach if model exists and gizmos are being enabled
+        if (enabled && this.currentModel && this.modelRoot) {
+          this.transformControlsTranslate.attach(this.modelRoot);
+          this.transformControlsRotate.attach(this.modelRoot);
+        } else if (!enabled) {
+          this.transformControlsTranslate.detach();
+          this.transformControlsRotate.detach();
+        }
+      }
     });
 
     this.eventBus.on('camera:preset', (preset) => this.applyCameraPreset(preset));
@@ -1082,6 +1171,9 @@ export class SceneManager {
       this.modelRoot.remove(child);
     }
     this.currentModel = null;
+    // Detach transform controls when model is cleared
+    this.transformControlsTranslate?.detach();
+    this.transformControlsRotate?.detach();
     // Clear occlusion check objects when model is removed
     this.lensFlareController?.setModelRoot(null);
     this.animationController.dispose();
@@ -1124,6 +1216,14 @@ export class SceneManager {
       this.isFirstModelLoad = false;
     }
     const state = this.stateStore.getState();
+    
+    // Attach transform controls to modelRoot if gizmos are enabled
+    if (state.gizmosEnabled && this.transformControlsTranslate && this.transformControlsRotate) {
+      this.transformControlsTranslate.attach(this.modelRoot);
+      this.transformControlsRotate.attach(this.modelRoot);
+      this.transformControlsTranslate.visible = true;
+      this.transformControlsRotate.visible = true;
+    }
     // Apply transform state from StateStore
     this.transformController?.applyState(state);
     this.materialController.setModel(object, state.shading, {
@@ -1283,6 +1383,35 @@ export class SceneManager {
       this.cameraController?.getModelBounds(),
     );
     this.ui.updateStats(stats);
+  }
+
+  /**
+   * Sync transform values from gizmo back to state/UI
+   * Called when user drags the transform controls
+   */
+  _syncTransformFromGizmo() {
+    if (!this.modelRoot) return;
+    
+    // Extract transform values from modelRoot
+    const scale = this.modelRoot.scale.x; // Assuming uniform scale
+    const yOffset = this.modelRoot.position.y;
+    const rotationX = THREE.MathUtils.radToDeg(this.modelRoot.rotation.x);
+    const rotationY = THREE.MathUtils.radToDeg(this.modelRoot.rotation.y);
+    const rotationZ = THREE.MathUtils.radToDeg(this.modelRoot.rotation.z);
+    
+    // Update state store
+    this.stateStore.set('scale', scale);
+    this.stateStore.set('yOffset', yOffset);
+    this.stateStore.set('rotationX', rotationX);
+    this.stateStore.set('rotationY', rotationY);
+    this.stateStore.set('rotationZ', rotationZ);
+    
+    // Emit events to update UI sliders (using correct event names)
+    this.eventBus.emit('mesh:scale', scale);
+    this.eventBus.emit('mesh:yOffset', yOffset);
+    this.eventBus.emit('mesh:rotationX', rotationX);
+    this.eventBus.emit('mesh:rotationY', rotationY);
+    this.eventBus.emit('mesh:rotationZ', rotationZ);
   }
 
   setScale(value) {
