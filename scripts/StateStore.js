@@ -21,6 +21,7 @@ export class StateStore {
       autoRotate: 0,
       moveWidgetEnabled: false,
       rotateWidgetEnabled: false,
+      scaleWidgetEnabled: false,
       showNormals: false,
       material: {
         brightness: 1.0,

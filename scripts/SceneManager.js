@@ -112,8 +112,8 @@ export class SceneManager {
     });
 
     // Setup TransformControls (widgets) for visual transform editing
-    // Create separate controls for translate (move) and rotate
-    const WIDGET_SIZE = 1.5; // Unified size for both widgets
+    // Create separate controls for translate (move), rotate, and scale
+    const WIDGET_SIZE = 1.5; // Unified size for all widgets
     
     this.transformControlsTranslate = new TransformControls(this.camera, this.canvas);
     this.transformControlsTranslate.setMode('translate');
@@ -128,6 +128,17 @@ export class SceneManager {
     this.transformControlsRotate.setSize(WIDGET_SIZE);
     this.transformControlsRotate.visible = false;
     this.scene.add(this.transformControlsRotate);
+    
+    this.transformControlsScale = new TransformControls(this.camera, this.canvas);
+    this.transformControlsScale.setMode('scale');
+    this.transformControlsScale.setSpace('local'); // Use local space for scale
+    this.transformControlsScale.setSize(WIDGET_SIZE);
+    // Ensure all scale axes are enabled
+    this.transformControlsScale.showX = true;
+    this.transformControlsScale.showY = true;
+    this.transformControlsScale.showZ = true;
+    this.transformControlsScale.visible = false;
+    this.scene.add(this.transformControlsScale);
     
     // Disable OrbitControls when dragging any widget
     const handleTranslateDraggingChanged = (event) => {
@@ -144,17 +155,31 @@ export class SceneManager {
       }
     };
     
+    const handleScaleDraggingChanged = (event) => {
+      const controls = this.cameraController?.getControls();
+      if (controls) {
+        controls.enabled = !event.value;
+      }
+    };
+    
     this.transformControlsTranslate.addEventListener('dragging-changed', handleTranslateDraggingChanged);
     this.transformControlsRotate.addEventListener('dragging-changed', handleRotateDraggingChanged);
+    this.transformControlsScale.addEventListener('dragging-changed', handleScaleDraggingChanged);
     
     // Sync widget changes back to state/UI
     const handleChange = () => {
-      if (this.modelRoot && (this.transformControlsTranslate.object === this.modelRoot || this.transformControlsRotate.object === this.modelRoot)) {
+      if (this.modelRoot && (this.transformControlsTranslate.object === this.modelRoot || this.transformControlsRotate.object === this.modelRoot || this.transformControlsScale.object === this.modelRoot)) {
+        // For scale widget, ensure uniform scaling (all axes the same)
+        if (this.transformControlsScale.object === this.modelRoot) {
+          const avgScale = (this.modelRoot.scale.x + this.modelRoot.scale.y + this.modelRoot.scale.z) / 3;
+          this.modelRoot.scale.setScalar(avgScale);
+        }
         this._syncTransformFromGizmo();
       }
     };
     this.transformControlsTranslate.addEventListener('change', handleChange);
     this.transformControlsRotate.addEventListener('change', handleChange);
+    this.transformControlsScale.addEventListener('change', handleChange);
 
     this.diagnosticsController = new MeshDiagnosticsController({
       scene: this.scene,
@@ -304,25 +329,31 @@ export class SceneManager {
           const intersects = this.raycaster.intersectObject(this.currentModel, true);
           
           if (intersects.length > 0) {
-            // Clicked on mesh - enable rotate widget, disable move widget
+            // Clicked on mesh - enable rotate widget, disable other widgets
             this.stateStore.set('moveWidgetEnabled', false);
             this.stateStore.set('rotateWidgetEnabled', true);
+            this.stateStore.set('scaleWidgetEnabled', false);
             this.eventBus.emit('mesh:move-widget-enabled', false);
             this.eventBus.emit('mesh:rotate-widget-enabled', true);
+            this.eventBus.emit('mesh:scale-widget-enabled', false);
           } else {
-            // Clicked on canvas but outside mesh - disable both widgets
+            // Clicked on canvas but outside mesh - disable all widgets
             this.stateStore.set('moveWidgetEnabled', false);
             this.stateStore.set('rotateWidgetEnabled', false);
+            this.stateStore.set('scaleWidgetEnabled', false);
             this.eventBus.emit('mesh:move-widget-enabled', false);
             this.eventBus.emit('mesh:rotate-widget-enabled', false);
+            this.eventBus.emit('mesh:scale-widget-enabled', false);
           }
         }
       } else if (!clickedOnCanvas) {
-        // Clicked outside canvas (e.g., on UI) - disable both widgets
+        // Clicked outside canvas (e.g., on UI) - disable all widgets
         this.stateStore.set('moveWidgetEnabled', false);
         this.stateStore.set('rotateWidgetEnabled', false);
+        this.stateStore.set('scaleWidgetEnabled', false);
         this.eventBus.emit('mesh:move-widget-enabled', false);
         this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        this.eventBus.emit('mesh:scale-widget-enabled', false);
       }
       
       // Reset tracking
@@ -461,7 +492,7 @@ export class SceneManager {
     this.eventBus.on('mesh:reset-transform', () => {
       this.transformController?.setRotationY(0);
     });
-    // Handle separate move and rotate widget visibility
+    // Handle separate move, rotate, and scale widget visibility
     this.eventBus.on('mesh:move-widget-enabled', (enabled) => {
       if (this.transformControlsTranslate) {
         this.transformControlsTranslate.visible = enabled;
@@ -480,6 +511,17 @@ export class SceneManager {
           this.transformControlsRotate.attach(this.modelRoot);
         } else if (!enabled) {
           this.transformControlsRotate.detach();
+        }
+      }
+    });
+    
+    this.eventBus.on('mesh:scale-widget-enabled', (enabled) => {
+      if (this.transformControlsScale) {
+        this.transformControlsScale.visible = enabled;
+        if (enabled && this.currentModel && this.modelRoot) {
+          this.transformControlsScale.attach(this.modelRoot);
+        } else if (!enabled) {
+          this.transformControlsScale.detach();
         }
       }
     });
@@ -1245,6 +1287,7 @@ export class SceneManager {
     // Detach transform controls when model is cleared
     this.transformControlsTranslate?.detach();
     this.transformControlsRotate?.detach();
+    this.transformControlsScale?.detach();
     // Clear occlusion check objects when model is removed
     this.lensFlareController?.setModelRoot(null);
     this.animationController.dispose();
@@ -1296,6 +1339,10 @@ export class SceneManager {
     if (state.rotateWidgetEnabled && this.transformControlsRotate) {
       this.transformControlsRotate.attach(this.modelRoot);
       this.transformControlsRotate.visible = true;
+    }
+    if (state.scaleWidgetEnabled && this.transformControlsScale) {
+      this.transformControlsScale.attach(this.modelRoot);
+      this.transformControlsScale.visible = true;
     }
     // Apply transform state from StateStore
     this.transformController?.applyState(state);
@@ -1495,6 +1542,10 @@ export class SceneManager {
 
   setScale(value) {
     this.transformController?.setScale(value);
+    // Update transform controls if attached
+    if (this.transformControlsScale?.object === this.modelRoot) {
+      this.transformControlsScale.updateMatrixWorld();
+    }
   }
 
   setXOffset(value) {

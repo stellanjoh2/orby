@@ -1293,36 +1293,59 @@ export class UIManager {
         }
       }
 
-      // W - Toggle Move widget (turns off Rotate widget)
+      // W - Toggle Move widget (turns off Rotate and Scale widgets)
       if (key === 'w') {
         event.preventDefault();
         const currentMove = this.stateStore.getState().moveWidgetEnabled ?? false;
         const newMoveState = !currentMove;
         
-        // Turn off rotate widget if move is being turned on
+        // Turn off other widgets if move is being turned on
         if (newMoveState) {
           this.stateStore.set('rotateWidgetEnabled', false);
+          this.stateStore.set('scaleWidgetEnabled', false);
           this.eventBus.emit('mesh:rotate-widget-enabled', false);
+          this.eventBus.emit('mesh:scale-widget-enabled', false);
         }
         
         this.stateStore.set('moveWidgetEnabled', newMoveState);
         this.eventBus.emit('mesh:move-widget-enabled', newMoveState);
       }
 
-      // E - Toggle Rotate widget (turns off Move widget)
+      // E - Toggle Rotate widget (turns off Move and Scale widgets)
       if (key === 'e') {
         event.preventDefault();
         const currentRotate = this.stateStore.getState().rotateWidgetEnabled ?? false;
         const newRotateState = !currentRotate;
         
-        // Turn off move widget if rotate is being turned on
+        // Turn off other widgets if rotate is being turned on
         if (newRotateState) {
           this.stateStore.set('moveWidgetEnabled', false);
+          this.stateStore.set('scaleWidgetEnabled', false);
           this.eventBus.emit('mesh:move-widget-enabled', false);
+          this.eventBus.emit('mesh:scale-widget-enabled', false);
         }
         
         this.stateStore.set('rotateWidgetEnabled', newRotateState);
         this.eventBus.emit('mesh:rotate-widget-enabled', newRotateState);
+      }
+
+      // Q - Toggle Scale widget (turns off Move and Rotate widgets)
+      // Only trigger if no modifier keys are pressed (allow browser shortcuts)
+      if (key === 'q' && !isCtrl && !isShift) {
+        event.preventDefault();
+        const currentScale = this.stateStore.getState().scaleWidgetEnabled ?? false;
+        const newScaleState = !currentScale;
+        
+        // Turn off other widgets if scale is being turned on
+        if (newScaleState) {
+          this.stateStore.set('moveWidgetEnabled', false);
+          this.stateStore.set('rotateWidgetEnabled', false);
+          this.eventBus.emit('mesh:move-widget-enabled', false);
+          this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        }
+        
+        this.stateStore.set('scaleWidgetEnabled', newScaleState);
+        this.eventBus.emit('mesh:scale-widget-enabled', newScaleState);
       }
 
       // Display modes: 1/2/3/4
