@@ -12,7 +12,9 @@ export class StateStore {
     this.defaults = {
       shading: 'shaded',
       scale: 1,
+      xOffset: 0,
       yOffset: 0,
+      zOffset: 0,
       rotationX: 0,
       rotationY: 0,
       rotationZ: 0,

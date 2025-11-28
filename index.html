@@ -278,6 +278,18 @@
                     <span class="value" data-output="scale">1.00×</span>
                   </label>
                   <label class="slider-line">
+                    <span>X Position</span>
+                    <input
+                      id="xOffsetControl"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="xOffset">0.00m</span>
+                  </label>
+                  <label class="slider-line">
                     <span>Y Position</span>
                     <input
                       id="yOffsetControl"
@@ -290,6 +302,18 @@
                     <span class="value" data-output="yOffset">0.00m</span>
                   </label>
                   <label class="slider-line">
+                    <span>Z Position</span>
+                    <input
+                      id="zOffsetControl"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      value="0"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="zOffset">0.00m</span>
+                  </label>
+                  <label class="slider-line">
                     <span>Rotate X</span>
                     <input
                       id="rotationXControl"
@@ -299,17 +323,7 @@
                       value="0"
                       step="1"
                     />
-                    <div class="slider-value-group">
-                      <span class="value" data-output="rotationX">0°</span>
-                      <button
-                        type="button"
-                        class="rotation-notch"
-                        data-rotation-axis="x"
-                        aria-label="Rotate X by 90°"
-                      >
-                        <i data-lucide="rotate-ccw"></i>
-                      </button>
-                    </div>
+                    <span class="value" data-output="rotationX">0°</span>
                   </label>
                   <label class="slider-line">
                     <span>Rotate Y</span>
@@ -321,17 +335,7 @@
                       value="0"
                       step="1"
                     />
-                    <div class="slider-value-group">
-                      <span class="value" data-output="rotationY">0°</span>
-                      <button
-                        type="button"
-                        class="rotation-notch"
-                        data-rotation-axis="y"
-                        aria-label="Rotate Y by 90°"
-                      >
-                        <i data-lucide="rotate-ccw"></i>
-                      </button>
-                    </div>
+                    <span class="value" data-output="rotationY">0°</span>
                   </label>
                   <label class="slider-line">
                     <span>Rotate Z</span>
@@ -343,17 +347,7 @@
                       value="0"
                       step="1"
                     />
-                    <div class="slider-value-group">
-                      <span class="value" data-output="rotationZ">0°</span>
-                      <button
-                        type="button"
-                        class="rotation-notch"
-                        data-rotation-axis="z"
-                        aria-label="Rotate Z by 90°"
-                      >
-                        <i data-lucide="rotate-ccw"></i>
-                      </button>
-                    </div>
+                    <span class="value" data-output="rotationZ">0°</span>
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
