@@ -189,6 +189,12 @@ body.dropzone-visible #webgl {
   width: auto;
 }
 
+.ghost-btn.active {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* Primary button - gradient style (for play/pause) */
 .primary-btn {
   border-radius: 12px;
