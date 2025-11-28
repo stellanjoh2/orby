@@ -77,7 +77,6 @@ export class UIManager {
       rotationX: q('#rotationXControl'),
       rotationY: q('#rotationYControl'),
       rotationZ: q('#rotationZControl'),
-      gizmosEnabled: q('#gizmosEnabled'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
@@ -439,15 +438,6 @@ export class UIManager {
     });
     if (this.inputs.rotationZ) this.enableSliderKeyboardStepping(this.inputs.rotationZ);
 
-    // Gizmos button (toggle on click)
-    this.inputs.gizmosEnabled?.addEventListener('click', () => {
-      const currentState = this.stateStore.getState().gizmosEnabled ?? false;
-      const newState = !currentState;
-      this.eventBus.emit('mesh:gizmos-enabled', newState);
-      this.stateStore.set('gizmosEnabled', newState);
-      // Update button active state
-      this.inputs.gizmosEnabled.classList.toggle('active', newState);
-    });
     // Transform reset is now handled by bindLocalResetButtons
     this.inputs.autoRotate.forEach((input) => {
       input.addEventListener('change', () => {
@@ -1289,6 +1279,37 @@ export class UIManager {
         }
       }
 
+      // W - Toggle Move widget (turns off Rotate widget)
+      if (key === 'w') {
+        event.preventDefault();
+        const currentMove = this.stateStore.getState().moveWidgetEnabled ?? false;
+        const newMoveState = !currentMove;
+        
+        // Turn off rotate widget if move is being turned on
+        if (newMoveState) {
+          this.stateStore.set('rotateWidgetEnabled', false);
+          this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        }
+        
+        this.stateStore.set('moveWidgetEnabled', newMoveState);
+        this.eventBus.emit('mesh:move-widget-enabled', newMoveState);
+      }
+
+      // E - Toggle Rotate widget (turns off Move widget)
+      if (key === 'e') {
+        event.preventDefault();
+        const currentRotate = this.stateStore.getState().rotateWidgetEnabled ?? false;
+        const newRotateState = !currentRotate;
+        
+        // Turn off move widget if rotate is being turned on
+        if (newRotateState) {
+          this.stateStore.set('moveWidgetEnabled', false);
+          this.eventBus.emit('mesh:move-widget-enabled', false);
+        }
+        
+        this.stateStore.set('rotateWidgetEnabled', newRotateState);
+        this.eventBus.emit('mesh:rotate-widget-enabled', newRotateState);
+      }
 
       // Display modes: 1/2/3/4
       if (key === '1' || key === '2' || key === '3' || key === '4') {
@@ -2715,13 +2736,7 @@ export class UIManager {
     if (this.inputs.showNormals) {
       this.inputs.showNormals.checked = state.showNormals;
     }
-    if (this.inputs.gizmosEnabled) {
-      const enabled = state.gizmosEnabled ?? false;
-      // Update button active state (not checked, since it's a button now)
-      this.inputs.gizmosEnabled.classList.toggle('active', enabled);
-      // Emit event to update gizmo visibility
-      this.eventBus.emit('mesh:gizmos-enabled', enabled);
-    }
+    // Widget states are managed via keyboard shortcuts (W/E), no UI sync needed
     if (this.inputs.materialBrightness) {
       const brightness = state.material?.brightness ?? 1.0;
       this.inputs.materialBrightness.value = brightness;

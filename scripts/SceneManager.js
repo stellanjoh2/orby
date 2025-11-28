@@ -111,46 +111,29 @@ export class SceneManager {
       modelRoot: this.modelRoot,
     });
 
-    // Setup TransformControls (gizmos) for visual transform editing
-    // Create separate controls for translate and rotate so both can be visible
+    // Setup TransformControls (widgets) for visual transform editing
+    // Create separate controls for translate (move) and rotate
+    const WIDGET_SIZE = 1.5; // Unified size for both widgets
+    
     this.transformControlsTranslate = new TransformControls(this.camera, this.canvas);
     this.transformControlsTranslate.setMode('translate');
-    this.transformControlsTranslate.setSpace('world');
-    this.transformControlsTranslate.setSize(2.5); // Make translate arrows much larger/further out
+    this.transformControlsTranslate.setSpace('local'); // Use local/object space for move
+    this.transformControlsTranslate.setSize(WIDGET_SIZE);
     this.transformControlsTranslate.visible = false;
     this.scene.add(this.transformControlsTranslate);
     
     this.transformControlsRotate = new TransformControls(this.camera, this.canvas);
     this.transformControlsRotate.setMode('rotate');
     this.transformControlsRotate.setSpace('local'); // Use local space so it follows mesh rotation
-    this.transformControlsRotate.setSize(0.7); // Make rotate gizmo smaller so it doesn't overlap with translate arrows
+    this.transformControlsRotate.setSize(WIDGET_SIZE);
     this.transformControlsRotate.visible = false;
     this.scene.add(this.transformControlsRotate);
     
-    // Track which gizmo is currently being interacted with
-    this.activeGizmo = null;
-    
-    // Helper to get all transform controls
-    this.transformControls = [this.transformControlsTranslate, this.transformControlsRotate];
-    
-    // Disable OrbitControls when dragging any gizmo
-    // Also hide the other gizmo when one is being dragged to prevent overlap
+    // Disable OrbitControls when dragging any widget
     const handleTranslateDraggingChanged = (event) => {
       const controls = this.cameraController?.getControls();
       if (controls) {
         controls.enabled = !event.value;
-      }
-      // Hide rotate gizmo when translate is being dragged
-      if (event.value) {
-        this.activeGizmo = 'translate';
-        this.transformControlsRotate.visible = false;
-      } else {
-        this.activeGizmo = null;
-        // Restore rotate gizmo visibility if gizmos are enabled
-        const state = this.stateStore.getState();
-        if (state.gizmosEnabled) {
-          this.transformControlsRotate.visible = true;
-        }
       }
     };
     
@@ -159,24 +142,12 @@ export class SceneManager {
       if (controls) {
         controls.enabled = !event.value;
       }
-      // Hide translate gizmo when rotate is being dragged
-      if (event.value) {
-        this.activeGizmo = 'rotate';
-        this.transformControlsTranslate.visible = false;
-      } else {
-        this.activeGizmo = null;
-        // Restore translate gizmo visibility if gizmos are enabled
-        const state = this.stateStore.getState();
-        if (state.gizmosEnabled) {
-          this.transformControlsTranslate.visible = true;
-        }
-      }
     };
     
     this.transformControlsTranslate.addEventListener('dragging-changed', handleTranslateDraggingChanged);
     this.transformControlsRotate.addEventListener('dragging-changed', handleRotateDraggingChanged);
     
-    // Sync gizmo changes back to state/UI
+    // Sync widget changes back to state/UI
     const handleChange = () => {
       if (this.modelRoot && (this.transformControlsTranslate.object === this.modelRoot || this.transformControlsRotate.object === this.modelRoot)) {
         this._syncTransformFromGizmo();
@@ -398,16 +369,24 @@ export class SceneManager {
     this.eventBus.on('mesh:reset-transform', () => {
       this.transformController?.setRotationY(0);
     });
-    this.eventBus.on('mesh:gizmos-enabled', (enabled) => {
-      if (this.transformControlsTranslate && this.transformControlsRotate) {
+    // Handle separate move and rotate widget visibility
+    this.eventBus.on('mesh:move-widget-enabled', (enabled) => {
+      if (this.transformControlsTranslate) {
         this.transformControlsTranslate.visible = enabled;
-        this.transformControlsRotate.visible = enabled;
-        // Re-attach if model exists and gizmos are being enabled
         if (enabled && this.currentModel && this.modelRoot) {
           this.transformControlsTranslate.attach(this.modelRoot);
-          this.transformControlsRotate.attach(this.modelRoot);
         } else if (!enabled) {
           this.transformControlsTranslate.detach();
+        }
+      }
+    });
+    
+    this.eventBus.on('mesh:rotate-widget-enabled', (enabled) => {
+      if (this.transformControlsRotate) {
+        this.transformControlsRotate.visible = enabled;
+        if (enabled && this.currentModel && this.modelRoot) {
+          this.transformControlsRotate.attach(this.modelRoot);
+        } else if (!enabled) {
           this.transformControlsRotate.detach();
         }
       }
@@ -1217,11 +1196,13 @@ export class SceneManager {
     }
     const state = this.stateStore.getState();
     
-    // Attach transform controls to modelRoot if gizmos are enabled
-    if (state.gizmosEnabled && this.transformControlsTranslate && this.transformControlsRotate) {
+    // Attach transform controls to modelRoot based on widget visibility states
+    if (state.moveWidgetEnabled && this.transformControlsTranslate) {
       this.transformControlsTranslate.attach(this.modelRoot);
-      this.transformControlsRotate.attach(this.modelRoot);
       this.transformControlsTranslate.visible = true;
+    }
+    if (state.rotateWidgetEnabled && this.transformControlsRotate) {
+      this.transformControlsRotate.attach(this.modelRoot);
       this.transformControlsRotate.visible = true;
     }
     // Apply transform state from StateStore
