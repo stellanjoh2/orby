@@ -1394,6 +1394,14 @@ export class SceneManager {
       this.updateMaterialsEnvironment(this.scene.environment, intensity);
     }
     this.animationController.setModel(this.currentModel, animations);
+    
+    // Re-apply ground/podium state after model load to ensure visibility is correct
+    // Use a small delay to ensure ground meshes are fully initialized
+    requestAnimationFrame(() => {
+      this.setGroundSolid(state.groundSolid);
+      this.setGroundWire(state.groundWire);
+    });
+    
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.();
     
