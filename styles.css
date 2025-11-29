@@ -113,6 +113,11 @@ body.dropzone-visible #webgl {
   pointer-events: none;
 }
 
+body:not(.dropzone-visible) .dropzone-version-tag {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .top-bar {
   display: none;
 }
