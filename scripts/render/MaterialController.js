@@ -86,6 +86,153 @@ export class MaterialController {
         }
       }
     });
+    
+    // Identify and replace window materials with glass
+    this.applyGlassMaterial(object);
+  }
+  
+  isWindowMesh(mesh) {
+    if (!mesh || !mesh.isMesh) return false;
+    
+    const name = mesh.name?.toLowerCase() || '';
+    const parentName = mesh.parent?.name?.toLowerCase() || '';
+    const fullName = `${name} ${parentName}`;
+    
+    // Exclude non-window parts (lights, engine, etc.)
+    const excludeKeywords = ['light', 'engine', 'hood', 'cleaner', 'chrome', 'gumme', 'gomme', 'translucent'];
+    const isExcluded = excludeKeywords.some(keyword => fullName.includes(keyword));
+    if (isExcluded) return false;
+    
+    // Only check for actual window/glass keywords (more specific)
+    const windowKeywords = ['glass', 'windshield', 'windscreen', 'visor', 'glazing'];
+    const isWindowByName = windowKeywords.some(keyword => 
+      name.includes(keyword) || parentName.includes(keyword)
+    );
+    
+    // Only check material name for glass/window (not just transparency, as many things are transparent)
+    const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    const materialName = material?.name?.toLowerCase() || '';
+    const isWindowByMaterial = materialName.includes('glass') || materialName.includes('window');
+    
+    return isWindowByName || isWindowByMaterial;
+  }
+  
+  identifyWindowMaterials(object) {
+    if (!object) return [];
+    
+    const windowInfo = [];
+    object.traverse((child) => {
+      if (!this.isWindowMesh(child)) return;
+      
+      const material = Array.isArray(child.material) ? child.material[0] : child.material;
+      const info = {
+        meshName: child.name || 'unnamed',
+        parentName: child.parent?.name || 'none',
+        materialName: material?.name || 'unnamed',
+        materialType: material?.type || 'unknown',
+        transparent: material?.transparent || false,
+        opacity: material?.opacity !== undefined ? material.opacity : 1.0,
+        roughness: material?.roughness !== undefined ? material.roughness : 'N/A',
+        metalness: material?.metalness !== undefined ? material.metalness : 'N/A',
+      };
+      windowInfo.push(info);
+    });
+    
+    return windowInfo;
+  }
+  
+  applyGlassMaterial(object) {
+    if (!object) return;
+    
+    // First, identify and log current window materials
+    const windowInfo = this.identifyWindowMaterials(object);
+    if (windowInfo.length > 0) {
+      console.log('[MaterialController] Identified window materials:');
+      windowInfo.forEach((info, idx) => {
+        console.log(`  Window ${idx + 1}:`, {
+          mesh: info.meshName,
+          parent: info.parentName,
+          material: info.materialName,
+          type: info.materialType,
+          transparent: info.transparent,
+          opacity: info.opacity,
+          roughness: info.roughness,
+          metalness: info.metalness,
+        });
+      });
+    }
+    
+    object.traverse((child) => {
+      if (!this.isWindowMesh(child)) return;
+      
+      // Check if mesh has valid geometry
+      if (!child.geometry || !child.geometry.attributes || !child.geometry.attributes.position) {
+        console.warn(`[MaterialController] Window mesh "${child.name || 'unnamed'}" has invalid geometry, skipping glass material`);
+        return;
+      }
+      
+      const originalMaterial = this.originalMaterials.get(child) || child.material;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      
+      // Create optimized glass material (using MeshStandardMaterial for better performance)
+      // Transmission is expensive, so we use transparency + environment map for reflections
+      const glassMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0x0a0a0a), // Near black like real car windows
+        transparent: true,
+        opacity: 0.2, // 20% opaque (80% transparent) - very see-through
+        roughness: 0.05, // Very smooth/glossy for shiny reflections
+        metalness: 0.0,
+        side: THREE.DoubleSide, // Render both sides
+        depthWrite: true, // Keep depth writing for proper sorting
+        depthTest: true, // Enable depth testing
+        // Remove any textures that might be causing issues
+        map: null,
+        normalMap: null,
+        aoMap: null,
+        emissiveMap: null,
+        metalnessMap: null,
+        roughnessMap: null,
+        // Use environment map for reflections instead of expensive transmission
+      });
+      
+      // Always set environment map for reflections (glass should be reflective)
+      // The environment map will be set by updateMaterialsEnvironment, but we ensure it's enabled
+      // Preserve environment map if original had one, otherwise it will be set later
+      if (originalMaterial && !Array.isArray(originalMaterial)) {
+        if (originalMaterial.envMap) {
+          glassMaterial.envMap = originalMaterial.envMap;
+          glassMaterial.envMapIntensity = (originalMaterial.envMapIntensity || 1.0) * 2.0; // Boost reflection intensity for glass
+        }
+      }
+      
+      // Mark this as a glass material so we can identify it later
+      glassMaterial.userData.isGlass = true;
+      
+      // Apply glass material
+      if (Array.isArray(child.material)) {
+        // Replace all materials in array with glass
+        child.material = materials.map(() => glassMaterial.clone());
+      } else {
+        child.material = glassMaterial;
+      }
+      
+      // Set render order for proper transparency sorting (render glass after opaque objects)
+      child.renderOrder = 1;
+      
+      // Store original material for restoration
+      if (!this.originalMaterials.has(child)) {
+        this.originalMaterials.set(child, originalMaterial);
+      }
+      
+      // Log window detection for debugging
+      console.log(`[MaterialController] Applied glass material to window mesh: ${child.name || 'unnamed'} (parent: ${child.parent?.name || 'none'})`, {
+        geometry: child.geometry ? 'valid' : 'invalid',
+        vertices: child.geometry?.attributes?.position?.count || 0,
+        material: glassMaterial.type,
+        opacity: glassMaterial.opacity,
+        transparent: glassMaterial.transparent,
+      });
+    });
   }
 
   setShading(mode) {
@@ -93,6 +240,11 @@ export class MaterialController {
     this.currentShading = mode;
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
+      
+      // Skip glass materials - they should maintain their properties
+      const isGlass = this.isWindowMesh(child);
+      if (isGlass) return;
+      
       const original = this.originalMaterials.get(child);
       if (!original) return;
 
@@ -194,9 +346,17 @@ export class MaterialController {
       } else {
         // Restore original materials when switching away from wireframe/clay/textures
         // But apply diffuse brightness to them
-        const createShadedMaterial = (mat) => {
+        const createShadedMaterial = (mat, isGlass = false) => {
           if (!mat) return mat;
           const cloned = mat.clone ? mat.clone() : mat;
+          // Don't apply brightness/metalness/roughness to glass materials
+          if (isGlass) {
+            // Glass materials should keep their properties
+            if (cloned) {
+              cloned.wireframe = false;
+            }
+            return cloned;
+          }
           // Apply material brightness multiplier to color (which multiplies the texture map)
           // The material's color property multiplies the texture map, so this brightens the diffuse map
           if (cloned && (cloned.isMeshStandardMaterial || cloned.isMeshPhysicalMaterial || cloned.isMeshPhongMaterial)) {
@@ -220,12 +380,15 @@ export class MaterialController {
           return cloned;
         };
         
+        // Check if this is a glass mesh (before we potentially replace the material)
+        const isGlass = this.isWindowMesh(child);
+        
         if (Array.isArray(original)) {
-          const materials = original.map(createShadedMaterial);
+          const materials = original.map((mat) => createShadedMaterial(mat, isGlass));
           disposeIfTransient();
           child.material = materials;
         } else {
-          const material = createShadedMaterial(original);
+          const material = createShadedMaterial(original, isGlass);
           disposeIfTransient();
           child.material = material;
         }
@@ -328,6 +491,10 @@ export class MaterialController {
         if (!child.isMesh) return;
         const original = this.originalMaterials.get(child);
         const material = child.material;
+        
+        // Skip glass materials - they should not be affected by brightness/metalness/roughness sliders
+        const isGlass = this.isWindowMesh(child);
+        if (isGlass) return;
         
         // Check if this is a clay material
         const isClayMaterial = original && material !== original && 
@@ -764,6 +931,7 @@ export class MaterialController {
         materials.forEach((material) => {
           if (!material) return;
 
+          // Apply environment map to all materials that support it (including glass)
           if (
             material.isMeshStandardMaterial ||
             material.isMeshPhysicalMaterial ||
@@ -772,26 +940,39 @@ export class MaterialController {
           ) {
             material.envMap = envTexture;
             if (material.envMapIntensity !== undefined) {
-              material.envMapIntensity = intensity;
+              // Boost intensity for glass materials to make reflections more visible
+              const isGlass = this.isWindowMesh(child);
+              material.envMapIntensity = isGlass ? intensity * 2.0 : intensity;
             }
 
             // CRITICAL: Always restore metalness and roughness from materialSettings
             // Setting envMap might trigger Three.js internal updates that reset these values
             // Use stored values to ensure we have the latest user settings
+            // BUT: Preserve glass material properties (they should stay glossy and transparent)
+            const isGlass = material.userData?.isGlass || this.isWindowMesh(child);
             if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) {
-              material.metalness = currentMetalness;
-              
-              // Apply blurriness to roughness, using user's desired roughness as the base
-              if (hdriBlurriness > 0) {
-                const blurRoughness =
-                  currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
-                material.roughness = Math.min(1.0, blurRoughness);
+              if (isGlass) {
+                // Glass materials: keep low roughness for reflections, no metalness, maintain transparency
+                material.metalness = 0.0;
+                material.roughness = 0.05; // Keep glass glossy
+                material.transparent = true;
+                material.opacity = 0.2; // Ensure transparency is maintained
+                material.depthWrite = false; // Important for proper transparency
               } else {
-                // Reset to user's desired roughness when blurriness is 0
-                material.roughness = currentRoughness;
+                material.metalness = currentMetalness;
+                
+                // Apply blurriness to roughness, using user's desired roughness as the base
+                if (hdriBlurriness > 0) {
+                  const blurRoughness =
+                    currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
+                  material.roughness = Math.min(1.0, blurRoughness);
+                } else {
+                  // Reset to user's desired roughness when blurriness is 0
+                  material.roughness = currentRoughness;
+                }
               }
-            } else if (material.roughness !== undefined) {
-              // For non-standard materials, just set the user's desired roughness
+            } else if (material.roughness !== undefined && !isGlass) {
+              // For non-standard materials, just set the user's desired roughness (unless it's glass)
               material.roughness = currentRoughness;
             }
 

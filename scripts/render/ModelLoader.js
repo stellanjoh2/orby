@@ -136,6 +136,8 @@ export class ModelLoader {
     switch (ext) {
       case 'glb':
         return this.loadGlb(file);
+      case 'gltf':
+        return this.loadGltf(file);
       case 'fbx':
         return this.loadFbx(file);
       case 'obj':
@@ -178,6 +180,59 @@ export class ModelLoader {
           });
         },
         reject,
+      );
+    });
+  }
+
+  async loadGltf(file) {
+    // For single .gltf files, parse as text and use the parser
+    // Note: External resources (bin files, textures) won't be resolved for single-file drag-and-drop
+    // Users should drag the entire folder for GLTF files with external resources
+    const text = await this.fileReaders.text(file);
+    return new Promise((resolve, reject) => {
+      const loader = new GLTFLoader();
+      if (loader.setMeshoptDecoder && MeshoptDecoder) {
+        loader.setMeshoptDecoder(MeshoptDecoder);
+      }
+      
+      // Parse the GLTF JSON text
+      loader.parse(
+        text,
+        '', // Base path is empty for single file
+        (gltf) => {
+          const json = gltf.parser?.json || {};
+          const asset = json.asset || {};
+          let assetName = gltf.scene?.name;
+          if (!assetName && gltf.scene?.children?.length > 0) {
+            assetName = gltf.scene.children[0]?.name;
+          }
+          if (!assetName) {
+            assetName = file.name.replace(/\.[^/.]+$/, '');
+          }
+          resolve({
+            object: gltf.scene,
+            animations: gltf.animations || [],
+            gltfMetadata: {
+              assetName,
+              generator: asset.generator || null,
+              version: asset.version || null,
+              copyright: asset.copyright || null,
+            },
+          });
+        },
+        (error) => {
+          // Provide a helpful error message if external resources are missing
+          const errorMessage = error?.message || 'Unknown error';
+          if (errorMessage.includes('404') || errorMessage.includes('Failed to load')) {
+            reject(new Error(
+              `Failed to load GLTF file. This file may reference external resources (bin files, textures). ` +
+              `Please drag and drop the entire folder containing the .gltf file and all its resources. ` +
+              `Original error: ${errorMessage}`
+            ));
+          } else {
+            reject(error);
+          }
+        },
       );
     });
   }

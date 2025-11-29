@@ -135,8 +135,20 @@ export class GroundController {
 
   setSolidEnabled(enabled) {
     this.solidEnabled = !!enabled;
-    if (this.podium) this.podium.visible = this.solidEnabled;
-    if (this.podiumShadow) this.podiumShadow.visible = this.solidEnabled;
+    
+    // Ensure podium exists - rebuild if it doesn't
+    if (!this.podium) {
+      console.warn('[GroundController] Podium mesh does not exist, rebuilding...');
+      this.buildGroundMeshes();
+    }
+    
+    // Set visibility
+    if (this.podium) {
+      this.podium.visible = this.solidEnabled;
+    }
+    if (this.podiumShadow) {
+      this.podiumShadow.visible = this.solidEnabled;
+    }
   }
 
   setWireEnabled(enabled) {
