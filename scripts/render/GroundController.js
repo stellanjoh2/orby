@@ -67,6 +67,12 @@ export class GroundController {
       (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
     const segments = PODIUM_SEGMENTS;
 
+    // Validate dimensions before creating geometry
+    if (baseRadius <= 0 || topRadius <= 0 || height <= 0 || !isFinite(baseRadius) || !isFinite(topRadius) || !isFinite(height)) {
+      console.error('Invalid podium geometry dimensions:', { baseRadius, topRadius, height, scale: this.podiumScale });
+      return;
+    }
+
     const podiumGeo = new THREE.CylinderGeometry(
       topRadius,
       baseRadius,
@@ -85,18 +91,23 @@ export class GroundController {
 
     this.podium = new THREE.Mesh(podiumGeo, solidMat);
     this.podium.receiveShadow = true;
-    this.podium.visible = false;
+    // Set visibility based on solidEnabled state, not hardcoded false
+    this.podium.visible = this.solidEnabled;
     this.scene.add(this.podium);
 
     const shadowMat = new THREE.ShadowMaterial({ opacity: 0.4 });
-    this.podiumShadow = new THREE.Mesh(
-      new THREE.CircleGeometry(baseRadius * PODIUM_RADIUS_MULTIPLIER, segments),
-      shadowMat,
-    );
-    this.podiumShadow.rotation.x = -Math.PI / 2;
-    this.podiumShadow.receiveShadow = true;
-    this.podiumShadow.visible = false;
-    this.scene.add(this.podiumShadow);
+    const shadowRadius = baseRadius * PODIUM_RADIUS_MULTIPLIER;
+    if (shadowRadius > 0 && isFinite(shadowRadius)) {
+      this.podiumShadow = new THREE.Mesh(
+        new THREE.CircleGeometry(shadowRadius, segments),
+        shadowMat,
+      );
+      this.podiumShadow.rotation.x = -Math.PI / 2;
+      this.podiumShadow.receiveShadow = true;
+      // Set visibility based on solidEnabled state, not hardcoded false
+      this.podiumShadow.visible = this.solidEnabled;
+      this.scene.add(this.podiumShadow);
+    }
 
     this.grid = new THREE.GridHelper(
       baseRadius * 2 * this.gridScale,
@@ -189,12 +200,27 @@ export class GroundController {
 
   setPodiumScale(value) {
     this.podiumScale = clampScale(value ?? this.podiumScale);
-    const wasVisible = this.podium?.visible ?? false;
+    // Use solidEnabled as source of truth, not podium.visible
+    const wasVisible = this.solidEnabled;
     const currentColor = this.solidColor;
-    const topFaceY = this.groundY + this.groundHeight / 2;
+    const currentGroundY = this.groundY;
+    const topFaceY = currentGroundY + this.groundHeight / 2;
+    
+    // Ensure valid geometry dimensions before rebuilding
+    const baseRadius = this.podiumBaseRadius * this.podiumScale;
+    const topRadius = (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
+    
+    // Validate geometry dimensions to prevent invalid meshes
+    if (baseRadius <= 0 || topRadius <= 0 || this.groundHeight <= 0) {
+      console.warn('Invalid podium dimensions, skipping rebuild');
+      return this.groundY;
+    }
+    
     this.buildGroundMeshes();
+    // Restore visibility state using the source of truth
     this.setSolidEnabled(wasVisible);
     this.setSolidColor(currentColor);
+    // Restore ground Y position
     this.groundY = topFaceY - this.groundHeight / 2;
     this.setGroundY(this.groundY);
     return this.groundY;
