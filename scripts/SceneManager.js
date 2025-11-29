@@ -85,6 +85,23 @@ export class SceneManager {
         this.stateStore.set('lightsRotation', this.lightsRotation);
         this.ui?.setLightsRotation?.(this.lightsRotation);
       },
+      onAltLightHeight: (deltaHeight) => {
+        // Get current height from lights controller (source of truth)
+        if (!this.lightsController) {
+          console.warn('lightsController not available for height adjustment');
+          return;
+        }
+        const currentHeight = this.lightsController.lightsHeight ?? 5;
+        const newHeight = Math.max(0.1, Math.min(20, currentHeight + deltaHeight));
+        // Directly call setHeight on lightsController for immediate update
+        this.lightsController.setHeight(newHeight);
+      },
+      onAltLightHeightEnd: () => {
+        // Get current height from lights controller and sync to state/UI
+        const currentHeight = this.lightsController?.lightsHeight ?? this.stateStore.getState().lightsHeight ?? 5;
+        this.stateStore.set('lightsHeight', currentHeight);
+        this.ui?.syncControls?.(this.stateStore.getState());
+      },
       onModelBoundsChanged: (bounds) => {
         // Update lights controller when model bounds change
         this.lightsController?.setModelBounds(bounds);
@@ -1167,8 +1184,15 @@ export class SceneManager {
     this.updateLightIndicators();
   }
 
-  setLightsHeight(value) {
-    this.lightsController?.setHeight(value);
+  setLightsHeight(value, { updateUi = true, updateState = true } = {}) {
+    if (!this.lightsController) return;
+    this.lightsController.setHeight(value);
+    if (updateState) {
+      this.stateStore.set('lightsHeight', value);
+    }
+    if (updateUi) {
+      this.ui?.syncControls?.(this.stateStore.getState());
+    }
   }
 
   setLightsCastShadows(enabled) {

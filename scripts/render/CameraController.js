@@ -11,7 +11,10 @@ export class CameraController {
       getFocusPoint = null,
       onAltLightRotate = null,
       onAltLightRotateEnd = null,
+      onAltLightHeight = null,
+      onAltLightHeightEnd = null,
       altLightRotateSensitivity = 0.5,
+      altLightHeightSensitivity = 0.1,
       onModelBoundsChanged = null,
     } = {},
   ) {
@@ -21,9 +24,12 @@ export class CameraController {
       getFocusPoint,
       onAltLightRotate,
       onAltLightRotateEnd,
+      onAltLightHeight,
+      onAltLightHeightEnd,
       onModelBoundsChanged,
     };
     this.altLightRotateSensitivity = altLightRotateSensitivity;
+    this.altLightHeightSensitivity = altLightHeightSensitivity ?? 0.15;
     this.modelBounds = null;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -380,6 +386,7 @@ export class CameraController {
         event.stopPropagation();
         this.altRightDragging = true;
         this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
         this._storeControlState();
         this.controls.enablePan = false;
         this.controls.enableRotate = false;
@@ -395,9 +402,21 @@ export class CameraController {
     this.mousemoveHandler = (event) => {
       if (this.altRightDragging) {
         const deltaX = event.clientX - this.lastMouseX;
+        const deltaY = event.clientY - this.lastMouseY;
         this.lastMouseX = event.clientX;
-        const deltaDegrees = deltaX * this.altLightRotateSensitivity;
-        this.callbacks.onAltLightRotate?.(deltaDegrees);
+        this.lastMouseY = event.clientY;
+        
+        // Horizontal movement = light rotation
+        if (Math.abs(deltaX) > 0) {
+          const deltaDegrees = deltaX * this.altLightRotateSensitivity;
+          this.callbacks.onAltLightRotate?.(deltaDegrees);
+        }
+        
+        // Vertical movement = light height
+        if (Math.abs(deltaY) > 0) {
+          const deltaHeight = -deltaY * this.altLightHeightSensitivity; // Negative so up = higher
+          this.callbacks.onAltLightHeight?.(deltaHeight);
+        }
       } else if (this.altLeftDragging) {
         this._focusOnModelCenter(true);
       }
@@ -408,6 +427,7 @@ export class CameraController {
         this.altRightDragging = false;
         this._restoreControlState();
         this.callbacks.onAltLightRotateEnd?.();
+        this.callbacks.onAltLightHeightEnd?.();
       } else if (this.altLeftDragging && event.button === 0) {
         this.altLeftDragging = false;
         this.altLeftTargetSet = false;
@@ -419,6 +439,7 @@ export class CameraController {
         this.altRightDragging = false;
         this._restoreControlState();
         this.callbacks.onAltLightRotateEnd?.();
+        this.callbacks.onAltLightHeightEnd?.();
       }
       if (this.altLeftDragging) {
         this.altLeftDragging = false;
