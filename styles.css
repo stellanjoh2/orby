@@ -1194,7 +1194,7 @@ input[type='range']:disabled::-moz-range-thumb {
 .info-version-tag {
   display: block;
   margin-top: 1.75rem;
-  font-size: 0.6rem;
+  font-size: 0.69rem;
   letter-spacing: -0.01em;
   text-align: right;
   color: var(--text-dim);
@@ -1202,6 +1202,20 @@ input[type='range']:disabled::-moz-range-thumb {
   position: static;
   padding-top: 0;
   background: none;
+}
+
+.dropzone-version-tag {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.69rem;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: var(--text-dim);
+  opacity: 0.5;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .rotation-notch {
