@@ -30,7 +30,7 @@ body[data-theme='violet'] {
   --panel: #0d081f;
   --panel-alt: #160c2f;
   --shelf-bg: rgba(7, 2, 20, 0.50);
-  --stroke: rgba(255, 255, 255, 0.1);
+  --stroke: rgba(255, 255, 255, 0.15);
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
@@ -68,7 +68,7 @@ body[data-theme='aqua'] {
   --panel: #0d111c;
   --panel-alt: #121726;
   --shelf-bg: rgba(0, 0, 0, 0.6);
-  --stroke: rgba(255, 255, 255, 0.1);
+  --stroke: rgba(255, 255, 255, 0.15);
   --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
@@ -173,7 +173,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .ghost-btn {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   padding: 0.75rem 1.25rem;
   font-family: inherit;
@@ -308,7 +308,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   width: 100%;
   min-height: 300px;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   border: 1px solid var(--stroke);
   border-radius: 8px;
   color: var(--text);
@@ -322,7 +322,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 
 .load-settings-content textarea:focus {
   border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .load-settings-actions {
@@ -355,39 +355,44 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   width: 100%;
   padding: 0.5rem 1rem;
   border-radius: 999px; /* Fully rounded */
-  border: none;
-  background: var(--accent);
-  color: var(--brand-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text);
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, filter 0.2s, box-shadow 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  box-shadow: 0 4px 12px var(--accent-shadow);
+  box-shadow: none;
   box-sizing: border-box;
   min-height: 2.5rem; /* Explicit height to match toggle buttons */
+  opacity: 0.6;
 }
 
 .accent-action-btn:hover {
-  filter: brightness(1.08);
+  background: var(--accent);
+  color: var(--brand-text);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px var(--accent-shadow);
+  opacity: 1;
 }
 
 .accent-action-btn:active {
   filter: brightness(0.95);
 }
 
-.accent-action-btn i,
-.accent-action-btn i svg {
-  width: 14px !important;
-  height: 14px !important;
-  min-width: 14px !important;
-  min-height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
+/* Accent action button icons - smaller size (12px) */
+.accent-action-btn i {
+  font-size: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .scene-controls {
@@ -543,7 +548,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   top: 24px;
   right: 28px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   opacity: 1;
   transform: translate3d(0, 0, 0);
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
@@ -588,15 +593,14 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   transition: color 0s, background 0s, border-radius 0s, opacity 0s;
 }
 
-.tab i,
-.tab i svg {
+/* Tab icons - larger size (20px) */
+.tab i {
+  font-size: 20px !important;
   width: 20px !important;
   height: 20px !important;
-  min-width: 20px !important;
-  min-height: 20px !important;
-  max-width: 20px !important;
-  max-height: 20px !important;
-  stroke-width: 1.5;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .tab.active {
@@ -633,7 +637,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   align-items: center;
   gap: 1rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .shortcut-row:last-child {
@@ -825,11 +829,12 @@ a:hover {
   background: rgba(0, 0, 0, 0.6);
 }
 
-/* Subtle divider line within panel blocks */
+/* Subtle divider line within panel blocks - only spans content width */
 .panel-block-divider {
-  margin: 1rem -1.2rem;
-  border-top: 1px solid var(--stroke);
+  margin: 1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
   border-bottom: none;
+  max-width: 100%;
 }
 
 /* Subsection within merged panel blocks - can be muted individually */
@@ -867,7 +872,7 @@ a:hover {
 
 .block-reset-btn {
   border: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   width: 26px;
   height: 22px;
@@ -1013,7 +1018,7 @@ a:hover {
   cursor: pointer;
   letter-spacing: -0.01em;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   transition: border 0.2s, color 0.2s, background 0.2s, opacity 0.2s;
   opacity: 0.6;
   display: flex;
@@ -1166,12 +1171,12 @@ a:hover {
   border-radius: 2px;
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
   transition: background 0.15s ease;
 }
@@ -1180,12 +1185,12 @@ a:hover {
 .slider-line input[type='range']:active::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
@@ -1193,12 +1198,12 @@ a:hover {
 .is-muted .slider-line input[type='range']::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
@@ -1206,12 +1211,12 @@ a:hover {
 .is-muted .slider-line input[type='range']:active::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
@@ -1222,12 +1227,12 @@ a:hover {
   border-radius: 2px;
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
   border: none;
   transition: background 0.15s ease;
@@ -1237,12 +1242,12 @@ a:hover {
 .slider-line input[type='range']:active::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
@@ -1250,12 +1255,12 @@ a:hover {
 .is-muted .slider-line input[type='range']::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
@@ -1263,12 +1268,12 @@ a:hover {
 .is-muted .slider-line input[type='range']:active::-moz-range-track {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-start, 0%),
     var(--text-dim) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
@@ -1367,7 +1372,7 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .rotation-notch {
   border: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   width: 26px;
   height: 22px;
@@ -1470,7 +1475,7 @@ input[type='range']:disabled::-moz-range-thumb {
   color: var(--text);
   font-family: inherit;
   appearance: none;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.15);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.6rem center;
@@ -1490,7 +1495,7 @@ input[type='range']:disabled::-moz-range-thumb {
   letter-spacing: -0.01em;
   font-size: 0.75rem;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
   transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
   text-align: center;
@@ -1502,17 +1507,21 @@ input[type='range']:disabled::-moz-range-thumb {
   min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
-.hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 0.8;
+.hdri-card:hover {
   transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
+}
+
+.hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  opacity: 1 !important;
 }
 
 .hdri-card:disabled,
 .hdri-card.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
   filter: saturate(0.35);
 }
 
@@ -1558,7 +1567,7 @@ input[type='range']:disabled::-moz-range-thumb {
   letter-spacing: -0.01em;
   font-size: 0.75rem;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
   transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
   text-align: center;
@@ -1570,10 +1579,14 @@ input[type='range']:disabled::-moz-range-thumb {
   min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
-.export-option-btn:hover:not(:disabled):not(.is-disabled):not(.active) {
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 0.8;
+.export-option-btn:hover {
   transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
+}
+
+.export-option-btn:hover:not(:disabled):not(.is-disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  opacity: 1 !important;
 }
 
 .export-option-btn.active {
