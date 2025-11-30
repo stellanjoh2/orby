@@ -27,6 +27,7 @@ import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { ImageExporter } from './render/ImageExporter.js';
+import { HistogramController } from './render/HistogramController.js';
 
 
 export class SceneManager {
@@ -282,6 +283,18 @@ export class SceneManager {
       stateStore: this.stateStore,
     });
     this.lensFlareController.init(initialState, this.hdriEnabled);
+    
+    // Initialize histogram controller
+    const histogramContainer = document.querySelector('#histogramContainer');
+    if (histogramContainer) {
+      this.histogramController = new HistogramController(
+        this.renderer,
+        this.canvas,
+        histogramContainer,
+        this.composer // Pass composer so it can read from the correct render target
+      );
+    }
+    
     this.registerEvents();
     this.setupMeshClickDetection();
     this.handleResize();
@@ -634,6 +647,9 @@ export class SceneManager {
     );
     this.eventBus.on('render:contrast', (value) => this.setContrast(value));
     this.eventBus.on('render:saturation', (value) => this.setSaturation(value));
+    this.eventBus.on('render:clarity', (value) => this.setClarity(value));
+    this.eventBus.on('render:fade', (value) => this.setFade(value));
+    this.eventBus.on('render:sharpness', (value) => this.setSharpness(value));
     this.eventBus.on('render:temperature', (value) =>
       this.setTemperature(value),
     );
@@ -827,6 +843,9 @@ export class SceneManager {
     // Initialize color adjustment settings
     this.setContrast(state.camera?.contrast ?? 1.0);
     this.setSaturation(state.camera?.saturation ?? 1.0);
+    this.setClarity(state.camera?.clarity ?? 0);
+    this.setFade(state.camera?.fade ?? 0);
+    this.setSharpness(state.camera?.sharpness ?? 0);
     this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
@@ -955,6 +974,18 @@ export class SceneManager {
 
   setSaturation(value) {
     this.postPipeline?.setSaturation(value);
+  }
+
+  setClarity(value) {
+    this.postPipeline?.setClarity(value);
+  }
+
+  setFade(value) {
+    this.postPipeline?.setFade(value);
+  }
+
+  setSharpness(value) {
+    this.postPipeline?.setSharpness(value);
   }
 
   setTemperature(kelvin) {
@@ -1656,6 +1687,11 @@ export class SceneManager {
     this.updateWireframeOverlayTransforms();
     this._updateBackgroundSphere();
     this.render();
+    
+    // Update histogram after rendering
+    if (this.histogramController) {
+      this.histogramController.update();
+    }
   }
 
   /**
@@ -1710,6 +1746,11 @@ export class SceneManager {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.composer?.setSize(width, height);
+    
+    // Update color adjust resolution for sharpness
+    if (this.postPipeline?.colorAdjust) {
+      this.postPipeline.colorAdjust.setResolution(width, height);
+    }
     
     // Update FXAA resolution on resize
     if (this.fxaaPass) {
