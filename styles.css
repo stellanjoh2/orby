@@ -31,7 +31,6 @@ body[data-theme='violet'] {
   --panel-alt: #160c2f;
   --shelf-bg: rgba(7, 2, 20, 0.50);
   --stroke: rgba(255, 255, 255, 0.15);
-  --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
   
@@ -69,7 +68,6 @@ body[data-theme='aqua'] {
   --panel-alt: #121726;
   --shelf-bg: rgba(0, 0, 0, 0.6);
   --stroke: rgba(255, 255, 255, 0.15);
-  --stroke-strong: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
   
@@ -322,7 +320,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 
 .load-settings-content textarea:focus {
   border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .load-settings-actions {
@@ -548,7 +546,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   top: 24px;
   right: 28px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--stroke);
   opacity: 1;
   transform: translate3d(0, 0, 0);
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
@@ -637,7 +635,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   align-items: center;
   gap: 1rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid var(--stroke);
 }
 
 .shortcut-row:last-child {
@@ -665,7 +663,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   height: 1.75rem;
   padding: 0 0.5rem;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--stroke);
   border-radius: 4px;
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
@@ -832,7 +830,7 @@ a:hover {
 /* Subtle divider line within panel blocks - only spans content width */
 .panel-block-divider {
   margin: 1rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid var(--stroke);
   border-bottom: none;
   max-width: 100%;
 }
@@ -1507,21 +1505,18 @@ input[type='range']:disabled::-moz-range-thumb {
   min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
-.hdri-card:hover {
-  transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
-}
-
 .hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  opacity: 1 !important;
+  transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+  opacity: 1;
 }
 
 .hdri-card:disabled,
 .hdri-card.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--stroke);
   filter: saturate(0.35);
 }
 
@@ -1579,14 +1574,11 @@ input[type='range']:disabled::-moz-range-thumb {
   min-height: 2.5rem; /* Match accent-action-btn exactly */
 }
 
-.export-option-btn:hover {
-  transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
-}
-
 .export-option-btn:hover:not(:disabled):not(.is-disabled):not(.active) {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  opacity: 1 !important;
+  transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+  opacity: 1;
 }
 
 .export-option-btn.active {
