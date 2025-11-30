@@ -1831,3 +1831,38 @@ body.ui-hidden .shelf {
   pointer-events: none;
 }
 
+/* Histogram visualization */
+.histogram-container {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.histogram-container canvas {
+  width: 100%;
+  height: 80px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.histogram-warning {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.histogram-warning--overexposed {
+  background: rgba(255, 100, 100, 0.9);
+}
+
+.histogram-warning--close {
+  background: rgba(255, 150, 50, 0.9);
+}
+
