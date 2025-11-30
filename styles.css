@@ -653,6 +653,8 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--text);
 }
 
 .shortcut-keys kbd {

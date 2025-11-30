@@ -47,7 +47,7 @@
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
           />
-          <div class="dropzone-version-tag">v0.5.32 · 2025-11-30 13:20:08 UTC</div>
+          <div class="dropzone-version-tag">v0.5.33 · 2025-11-30 21:52:00 UTC</div>
           <div class="mobile-warning" id="mobileWarning" style="display: none;">
             <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
           </div>
@@ -327,7 +327,7 @@
                       value="0"
                       step="1"
                     />
-                    <span class="value" data-output="rotationX">0°</span>
+                      <span class="value" data-output="rotationX">0°</span>
                   </label>
                   <label class="slider-line">
                     <span>Rotate Y</span>
@@ -339,7 +339,7 @@
                       value="0"
                       step="1"
                     />
-                    <span class="value" data-output="rotationY">0°</span>
+                      <span class="value" data-output="rotationY">0°</span>
                   </label>
                   <label class="slider-line">
                     <span>Rotate Z</span>
@@ -351,7 +351,7 @@
                       value="0"
                       step="1"
                     />
-                    <span class="value" data-output="rotationZ">0°</span>
+                      <span class="value" data-output="rotationZ">0°</span>
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -555,11 +555,11 @@
                   <button id="resetMeshSettings" class="accent-action-btn">
                     <i class="fa-solid fa-rotate-left"></i>
                     Reset Object
-                  </button>
+              </button>
                   <button class="copy-scene-settings accent-action-btn">
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene
-                  </button>
+              </button>
                   <button class="load-scene-settings accent-action-btn">
                     <i class="fa-solid fa-upload"></i>
                     Load Scene
@@ -766,13 +766,13 @@
                         <input type="checkbox" id="keyLightEnabled" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Key Light</span>
-                      </label>
-                    </div>
+                    </label>
                   </div>
-                  <label class="color-line light-color-row" data-light="key">
+                </div>
+                <label class="color-line light-color-row" data-light="key">
                     <span>Color</span>
-                    <input type="color" class="color-chip light-chip" value="#ffdfc9" />
-                  </label>
+                  <input type="color" class="color-chip light-chip" value="#ffdfc9" />
+                </label>
                   <label class="slider-line">
                     <span>Strength</span>
                     <input
@@ -784,7 +784,7 @@
                       value="1.28"
                     />
                     <span class="value" data-output="keyLightStrength">1.28</span>
-                  </label>
+                </label>
                   <label class="slider-line">
                     <span>Height</span>
                     <input
@@ -796,7 +796,7 @@
                       value="5"
                     />
                     <span class="value" data-output="keyLightHeight">5.0</span>
-                  </label>
+                </label>
                   <label class="slider-line">
                     <span>Rotate</span>
                     <input
@@ -840,20 +840,20 @@
                   <label class="color-line light-color-row" data-light="fill">
                     <span>Color</span>
                     <input type="color" class="color-chip light-chip" value="#b0c7ff" />
-                  </label>
-                  <label class="slider-line">
-                    <span>Strength</span>
-                    <input
+                </label>
+                <label class="slider-line">
+                  <span>Strength</span>
+                  <input
                       id="fillLightStrength"
-                      type="range"
-                      min="0"
-                      max="5"
-                      step="0.01"
+                    type="range"
+                    min="0"
+                    max="5"
+                    step="0.01"
                       value="0.8"
-                    />
+                  />
                     <span class="value" data-output="fillLightStrength">0.80</span>
-                  </label>
-                  <label class="slider-line">
+                </label>
+                <label class="slider-line">
                     <span>Height</span>
                     <input
                       id="fillLightHeight"
@@ -879,12 +879,12 @@
                   </label>
                   <label class="slider-line">
                     <span>Cast Shadows</span>
-                    <label class="effect-toggle">
+                  <label class="effect-toggle">
                       <input type="checkbox" id="fillLightCastShadows" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Cast shadows</span>
-                    </label>
                   </label>
+                </label>
                 </div>
 
                 <div class="panel-block-divider"></div>
@@ -898,20 +898,20 @@
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                  <label class="effect-toggle">
                         <input type="checkbox" id="rimLightEnabled" checked />
-                        <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Rim Light</span>
-                      </label>
-                    </div>
+                  </label>
+                </div>
                   </div>
                   <label class="color-line light-color-row" data-light="rim">
                     <span>Color</span>
                     <input type="color" class="color-chip light-chip" value="#a0eaf9" />
                   </label>
-                  <label class="slider-line">
+                <label class="slider-line">
                     <span>Strength</span>
-                    <input
+                  <input
                       id="rimLightStrength"
                       type="range"
                       min="0"
@@ -937,12 +937,12 @@
                     <span>Rotate</span>
                     <input
                       id="rimLightRotate"
-                      type="range"
-                      min="0"
-                      max="360"
-                      value="0"
-                      step="1"
-                    />
+                    type="range"
+                    min="0"
+                    max="360"
+                    value="0"
+                    step="1"
+                  />
                     <span class="value" data-output="rimLightRotate">0°</span>
                   </label>
                   <label class="slider-line">
@@ -952,8 +952,8 @@
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Cast shadows</span>
                     </label>
-                  </label>
-                </div>
+                </label>
+              </div>
 
                 <div class="panel-block-divider"></div>
 
@@ -965,7 +965,7 @@
                       <button class="block-reset-btn" data-reset="ambientLight" aria-label="Reset Ambient Light">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
-                      </button>
+              </button>
                       <label class="effect-toggle">
                         <input type="checkbox" id="ambientLightEnabled" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -999,7 +999,7 @@
                   <button id="resetStudioSettings" class="accent-action-btn">
                         <i class="fa-solid fa-rotate-left"></i>
                     Reset Studio
-                  </button>
+              </button>
                   <button class="copy-scene-settings accent-action-btn">
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene
@@ -1017,57 +1017,57 @@
 
               <div class="panel-block">
                 <div class="subsection">
-                  <div class="block-title has-reset">
-                    <span>Basic</span>
+                <div class="block-title has-reset">
+                  <span>Basic</span>
                     <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
-                  </div>
-                  <label class="slider-line">
-                    <span>FOV</span>
-                    <input
-                      id="cameraFov"
-                      type="range"
-                      min="45"
-                      max="120"
-                      value="50"
-                      step="1"
-                    />
-                    <span class="value" data-output="cameraFov">50°</span>
+                </div>
+                <label class="slider-line">
+                  <span>FOV</span>
+                  <input
+                    id="cameraFov"
+                    type="range"
+                    min="45"
+                    max="120"
+                    value="50"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraFov">50°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Tilt</span>
+                  <input
+                    id="cameraTilt"
+                    type="range"
+                    min="-45"
+                    max="45"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraTilt">0°</span>
+                </label>
+                <label class="slider-line">
+                  <span>Exposure</span>
+                  <input
+                    id="exposure"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="exposure">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Auto Exposure</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="autoExposure" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable auto exposure</span>
                   </label>
-                  <label class="slider-line">
-                    <span>Tilt</span>
-                    <input
-                      id="cameraTilt"
-                      type="range"
-                      min="-45"
-                      max="45"
-                      value="0"
-                      step="1"
-                    />
-                    <span class="value" data-output="cameraTilt">0°</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Exposure</span>
-                    <input
-                      id="exposure"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="1.0"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="exposure">1.00</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Auto Exposure</span>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="autoExposure" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable auto exposure</span>
-                    </label>
-                  </label>
+                </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
@@ -1085,78 +1085,78 @@
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
-                  <label class="slider-line slider-line--temperature">
-                    <span>Temperature</span>
-                    <input
-                      id="cameraTemperature"
-                      type="range"
-                      min="2000"
-                      max="10000"
-                      value="6000"
-                      step="50"
-                    />
-                    <span class="value" data-output="cameraTemperature">6000K</span>
-                  </label>
-                  <label class="slider-line slider-line--tint">
-                    <span>Tint</span>
-                    <input
-                      id="cameraTint"
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value="0"
-                      step="1"
-                    />
-                    <span class="value" data-output="cameraTint">0</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Contrast</span>
-                    <input
-                      id="cameraContrast"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="1.0"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="cameraContrast">1.00</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Highlights</span>
-                    <input
-                      id="cameraHighlights"
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value="0"
-                      step="1"
-                    />
-                    <span class="value" data-output="cameraHighlights">0</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Shadows</span>
-                    <input
-                      id="cameraShadows"
-                      type="range"
-                      min="-50"
-                      max="50"
-                      value="0"
-                      step="1"
-                    />
-                      <span class="value" data-output="cameraShadows">0</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Saturation</span>
-                    <input
-                      id="cameraSaturation"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="1.0"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="cameraSaturation">1.00</span>
-                  </label>
+                <label class="slider-line slider-line--temperature">
+                  <span>Temperature</span>
+                  <input
+                    id="cameraTemperature"
+                    type="range"
+                    min="2000"
+                    max="10000"
+                    value="6000"
+                    step="50"
+                  />
+                  <span class="value" data-output="cameraTemperature">6000K</span>
+                </label>
+                <label class="slider-line slider-line--tint">
+                  <span>Tint</span>
+                  <input
+                    id="cameraTint"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraTint">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Contrast</span>
+                  <input
+                    id="cameraContrast"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraContrast">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Highlights</span>
+                  <input
+                    id="cameraHighlights"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraHighlights">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Shadows</span>
+                  <input
+                    id="cameraShadows"
+                    type="range"
+                    min="-50"
+                    max="50"
+                    value="0"
+                    step="1"
+                  />
+                    <span class="value" data-output="cameraShadows">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Saturation</span>
+                  <input
+                    id="cameraSaturation"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraSaturation">1.00</span>
+                </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="vignette">
@@ -1484,11 +1484,11 @@
                   <button id="resetRenderSettings" class="accent-action-btn">
                         <i class="fa-solid fa-rotate-left"></i>
                     Reset Camera
-                  </button>
+              </button>
                   <button class="copy-scene-settings accent-action-btn">
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene
-                  </button>
+              </button>
                   <button class="load-scene-settings accent-action-btn">
                     <i class="fa-solid fa-upload"></i>
                     Load Scene
@@ -1568,7 +1568,7 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Reset Y offset to 0</span>
+                    <span class="shortcut-action">Reset all position offsets to 0</span>
                     <span class="shortcut-keys"><kbd>Y</kbd></span>
                   </div>
                   
@@ -1623,8 +1623,13 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Rotate lighting setup / HDRI</span>
-                    <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Right Click</kbd></span>
+                    <span class="shortcut-action">Rotate lighting setup / HDRI (horizontal)</span>
+                    <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Right Click</kbd> + drag left/right</span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Adjust light height (vertical)</span>
+                    <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Right Click</kbd> + drag up/down</span>
                   </div>
                   
                   <div class="shortcut-row">
@@ -1694,7 +1699,7 @@
                   <ul style="list-style: none; padding: 0; margin: 0;">
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Real-time 3D model viewer</span> — Load and view GLB, GLTF, OBJ, FBX, and more with instant preview and smooth interactions</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional transform widgets</span> — Interactive gizmos (W=Move, E=Rotate, Q=Scale) for precise object manipulation with click-to-select</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Textures to view your models in different contexts</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, grain, chromatic aberration, and color grading for cinematic results</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, and roughness in real time to fine-tune materials</li>
@@ -1702,6 +1707,110 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">High-quality export</span> — Export PNG images at 1x or 2x resolution with transparent background support</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, camera presets, and adjustable FOV for the perfect shot</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title"><i class="fa-solid fa-circle-question" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Feature FAQ</div>
+                <div class="about-content">
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Transform Widgets</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Move, rotate, and scale your 3D model with visual gizmos. Click the mesh to activate rotate widgets, or use W/E/Q keys to toggle move, rotate, and scale controls. Perfect for positioning your model exactly where you want it.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Display Modes</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Material Controls</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Brightness:</strong> Makes your model lighter or darker. <strong>Metalness:</strong> Controls how metallic the surface looks (0 = plastic, 1 = chrome). <strong>Roughness:</strong> Adjusts surface smoothness (0 = mirror-like, 1 = matte).</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Fresnel</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Adds a colored glow around the edges of your model when viewed at an angle. Think of it like rim lighting that follows the silhouette. Great for making objects pop or creating a stylized look.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">HDRI (Environment)</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A 360° image that wraps around your scene, providing realistic lighting and reflections. Choose from different environments (meadow, studio, sunset) to change the mood and lighting of your render. The HDRI acts as both a light source and a background.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">3-Point Lighting</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Professional lighting setup with four lights: <strong>Key</strong> (main light), <strong>Fill</strong> (softens shadows), <strong>Rim</strong> (separates object from background), and <strong>Ambient</strong> (overall scene brightness). Adjust each light's color, intensity, and position to create the perfect look.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Post-Processing Effects</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Camera Controls</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Exposure:</strong> Controls overall image brightness (like a camera's exposure setting).</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Histogram</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Podium & Grid</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Add a platform (podium) or grid floor to your scene. Great for product presentations or architectural renders. The podium can be scaled and colored, and the grid helps with alignment and perspective.</p>
+                  </div>
+                  
+                  <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Scene Settings</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Copy and paste all your settings (lighting, camera, effects, materials) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="block-title"><i class="fa-solid fa-book" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Learn More</div>
+                <div class="about-content">
+                  <p style="margin: 0 0 1rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Learn about the technologies and concepts behind Orby:</p>
+                  <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="margin-bottom: 0.75rem;">
+                      • <span class="about-highlight">3D File Formats:</span>
+                      <ul style="list-style: none; padding-left: 1.5rem; margin-top: 0.25rem;">
+                        <li style="margin-bottom: 0.25rem;">
+                          <a href="https://en.wikipedia.org/wiki/glTF" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">glTF / GLB</a> — Modern 3D format standard
+                        </li>
+                        <li style="margin-bottom: 0.25rem;">
+                          <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">OBJ</a> — Wavefront 3D object format
+                        </li>
+                        <li style="margin-bottom: 0.25rem;">
+                          <a href="https://en.wikipedia.org/wiki/FBX" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">FBX</a> — Autodesk 3D format
+                        </li>
+                        <li style="margin-bottom: 0.25rem;">
+                          <a href="https://en.wikipedia.org/wiki/STL_(file_format)" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">STL</a> — Stereolithography format
+                        </li>
+                      </ul>
+                    </li>
+                    <li style="margin-bottom: 0.75rem;">
+                      • <span class="about-highlight">HDRI</span> — <a href="https://en.wikipedia.org/wiki/High-dynamic-range_imaging" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">High Dynamic Range Imaging</a> for realistic lighting
+                    </li>
+                    <li style="margin-bottom: 0.75rem;">
+                      • <span class="about-highlight">Three.js</span> — <a href="https://en.wikipedia.org/wiki/Three.js" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">JavaScript 3D library</a> for WebGL rendering
+                    </li>
+                    <li style="margin-bottom: 0.75rem;">
+                      • <span class="about-highlight">WebGL</span> — <a href="https://en.wikipedia.org/wiki/WebGL" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">Web Graphics Library</a> for hardware-accelerated 3D
+                    </li>
+                    <li style="margin-bottom: 0.75rem;">
+                      • <span class="about-highlight">PBR</span> — <a href="https://en.wikipedia.org/wiki/Physically_based_rendering" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">Physically Based Rendering</a> for realistic materials
+                    </li>
+                    <li style="margin-bottom: 0.75rem;">
+                      • <span class="about-highlight">Post-Processing</span> — <a href="https://en.wikipedia.org/wiki/Post-processing_(video)" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">Image effects</a> applied after rendering
+                    </li>
+                    <li>
+                      • <span class="about-highlight">3-Point Lighting</span> — <a href="https://en.wikipedia.org/wiki/Three-point_lighting" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">Professional lighting technique</a> for photography and film
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -1740,7 +1849,7 @@
                       • <span class="about-highlight">GSAP</span> — Animation library (<a href="https://greensock.com/gsap/" target="_blank" rel="noreferrer">website</a>)
                     </li>
                     <li>
-                      • <span class="about-highlight">Lucide</span> — Icon library (<a href="https://lucide.dev/" target="_blank" rel="noreferrer">website</a>)
+                      • <span class="about-highlight">Font Awesome</span> — Icon library (<a href="https://fontawesome.com/" target="_blank" rel="noreferrer">website</a>)
                     </li>
                   </ul>
                 </div>
@@ -1749,11 +1858,11 @@
               <div class="panel-block">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Histogram: color all bars based on warning level, remove grid lines and labels, adjust background opacity.</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Mobile device detection and warning message.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.32 · 2025-11-30 13:20:08 UTC</div>
+              <div class="info-version-tag">v0.5.33 · 2025-11-30 21:52:00 UTC</div>
             </section>
           </div>
         </aside>
