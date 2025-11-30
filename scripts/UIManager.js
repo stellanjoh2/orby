@@ -3344,6 +3344,10 @@ export class UIManager {
       const lightEnabled = state.lights?.[lightId]?.enabled !== false;
       const slidersEnabled = masterEnabled && lightEnabled;
       
+      // Apply muted state to subsection (for gray thumbs)
+      const subsectionKey = lightId === 'ambient' ? 'ambientLight' : `${lightId}Light`;
+      this.setBlockMuted(subsectionKey, !slidersEnabled);
+      
       if (lightId === 'ambient') {
         // Ambient only has strength
         this.setControlDisabled('ambientLightStrength', !slidersEnabled);
