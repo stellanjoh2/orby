@@ -386,14 +386,22 @@ export class ResetControls {
             break;
             
           case 'camera':
+            // Reset basic camera settings (FOV, Tilt, Exposure, Auto Exposure)
             this.stateStore.set('camera.fov', defaults.camera.fov);
             this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
             this.stateStore.set('exposure', defaults.exposure);
             this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
+            // Also reset vignette (camera/post-processing effect)
+            this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
+            this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+            // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
+            this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
+            this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
+            // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
             break;
 
