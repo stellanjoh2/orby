@@ -1168,6 +1168,20 @@ a:hover {
     rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.05) 100%
   );
+  transition: background 0.15s ease;
+}
+
+/* Active/dragging state: full opacity for visual feedback */
+.slider-line input[type='range']:active::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    var(--accent) var(--slider-fill-start, 0%),
+    var(--accent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
 }
 
 /* Muted blocks: use gray fill instead of accent color */
@@ -1178,6 +1192,19 @@ a:hover {
     rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* Muted blocks: active state with full opacity gray */
+.is-muted .slider-line input[type='range']:active::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    var(--text-dim) var(--slider-fill-start, 0%),
+    var(--text-dim) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.05) 100%
   );
@@ -1198,6 +1225,20 @@ a:hover {
     rgba(255, 255, 255, 0.05) 100%
   );
   border: none;
+  transition: background 0.15s ease;
+}
+
+/* Active/dragging state: full opacity for visual feedback */
+.slider-line input[type='range']:active::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    var(--accent) var(--slider-fill-start, 0%),
+    var(--accent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
 }
 
 /* Muted blocks: use gray fill instead of accent color */
@@ -1208,6 +1249,19 @@ a:hover {
     rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
     color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* Muted blocks: active state with full opacity gray */
+.is-muted .slider-line input[type='range']:active::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    var(--text-dim) var(--slider-fill-start, 0%),
+    var(--text-dim) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.05) 100%
   );
