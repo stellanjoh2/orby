@@ -4,6 +4,20 @@ import { UIManager } from './UIManager.js';
 import { SceneManager } from './SceneManager.js';
 import { GamepadController } from './input/GamepadController.js';
 
+// Detect mobile devices
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+}
+
+// Show mobile warning if on mobile
+if (isMobileDevice()) {
+  const mobileWarning = document.getElementById('mobileWarning');
+  if (mobileWarning) {
+    mobileWarning.style.display = 'block';
+  }
+}
+
 const eventBus = new EventBus();
 const stateStore = new StateStore();
 const ui = new UIManager(eventBus, stateStore);
@@ -20,42 +34,8 @@ ui.init();
 scene
   .init()
   .then(() => {
-    // Initialize Lucide icons
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
-      
-      // Force icon sizes after Lucide creates them
-      const resizeIcons = () => {
-        // Tab icons - 20px
-        document.querySelectorAll('.tab i[data-lucide] svg').forEach((svg) => {
-          svg.setAttribute('width', '20');
-          svg.setAttribute('height', '20');
-          svg.style.width = '20px';
-          svg.style.height = '20px';
-        });
-        
-        // Accent action button icons - 14px
-        document.querySelectorAll('.accent-action-btn i[data-lucide] svg').forEach((svg) => {
-          svg.setAttribute('width', '14');
-          svg.setAttribute('height', '14');
-          svg.style.width = '14px';
-          svg.style.height = '14px';
-        });
-      };
-      
-      // Resize immediately and after a short delay
-      resizeIcons();
-      setTimeout(resizeIcons, 100);
-      
-      // Watch for dynamically added icons
-      const shelf = document.getElementById('shelf');
-      if (shelf) {
-        const observer = new MutationObserver(() => {
-          resizeIcons();
-        });
-        observer.observe(shelf, { childList: true, subtree: true });
-      }
-    }
+    // Font Awesome icons are loaded via CDN - no initialization needed
+    // Icon sizes are controlled via CSS
     console.info('Orby ready');
   })
   .catch((error) => {

@@ -47,7 +47,10 @@
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
           />
-          <div class="dropzone-version-tag">v0.5.31 · 2025-11-30 12:36:53 UTC</div>
+          <div class="dropzone-version-tag">v0.5.32 · 2025-11-30 13:20:08 UTC</div>
+          <div class="mobile-warning" id="mobileWarning" style="display: none;">
+            <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
+          </div>
         </section>
 
         <aside class="shelf is-shelf-hidden" id="shelf">
@@ -1068,6 +1071,13 @@
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
+                  <div class="block-title">
+                    <span>Histogram</span>
+                  </div>
+                  <div id="histogramContainer" class="histogram-container"></div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection">
                   <div class="block-title has-reset">
                     <span>Color Correction</span>
                     <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color Correction">
@@ -1739,11 +1749,11 @@
               <div class="panel-block">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Adjust spacing and disable Transform slider snapping increased vertical spacing between panel blocks from 0.3rem to 0.5rem. disabled slider snapping to center for all Transform settings (Move X/Y/Z, Rotate X/Y/Z).</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Histogram: color all bars based on warning level, remove grid lines and labels, adjust background opacity.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.31 · 2025-11-30 12:36:53 UTC</div>
+              <div class="info-version-tag">v0.5.32 · 2025-11-30 13:20:08 UTC</div>
             </section>
           </div>
         </aside>
