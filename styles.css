@@ -1866,3 +1866,28 @@ body.ui-hidden .shelf {
   background: rgba(255, 150, 50, 0.9);
 }
 
+/* Mobile Warning */
+.mobile-warning {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  max-width: 90%;
+  width: 400px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(22px);
+}
+
+.mobile-warning p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
