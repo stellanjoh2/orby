@@ -409,7 +409,7 @@ export class UIManager {
     });
     this.enableSliderKeyboardStepping(this.inputs.scale);
     this.inputs.xOffset?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -2, 2, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('xOffset', value, 'distance');
       this.stateStore.set('xOffset', value);
       this.eventBus.emit('mesh:xOffset', value);
@@ -417,7 +417,7 @@ export class UIManager {
     if (this.inputs.xOffset) this.enableSliderKeyboardStepping(this.inputs.xOffset);
 
     this.inputs.yOffset?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -2, 2, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('yOffset', value, 'distance');
       this.stateStore.set('yOffset', value);
       this.eventBus.emit('mesh:yOffset', value);
@@ -425,28 +425,28 @@ export class UIManager {
     if (this.inputs.yOffset) this.enableSliderKeyboardStepping(this.inputs.yOffset);
 
     this.inputs.zOffset?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -2, 2, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('zOffset', value, 'distance');
       this.stateStore.set('zOffset', value);
       this.eventBus.emit('mesh:zOffset', value);
     });
     if (this.inputs.zOffset) this.enableSliderKeyboardStepping(this.inputs.zOffset);
     this.inputs.rotationX?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -180, 180, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationX', value, 'angle');
       this.stateStore.set('rotationX', value);
       this.eventBus.emit('mesh:rotationX', value);
     });
     if (this.inputs.rotationX) this.enableSliderKeyboardStepping(this.inputs.rotationX);
     this.inputs.rotationY?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -180, 180, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationY', value, 'angle');
       this.stateStore.set('rotationY', value);
       this.eventBus.emit('mesh:rotationY', value);
     });
     if (this.inputs.rotationY) this.enableSliderKeyboardStepping(this.inputs.rotationY);
     this.inputs.rotationZ?.addEventListener('input', (event) => {
-      const value = this.applySnapToCenter(event.target, -180, 180, 0);
+      const value = parseFloat(event.target.value);
       this.updateValueLabel('rotationZ', value, 'angle');
       this.stateStore.set('rotationZ', value);
       this.eventBus.emit('mesh:rotationZ', value);
