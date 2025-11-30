@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-theme="violet">
@@ -47,22 +47,22 @@
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
           />
-          <div class="dropzone-version-tag">v0.5.27 · 2025-11-30 10:54:05 UTC</div>
+          <div class="dropzone-version-tag">v0.5.28 · 2025-11-30 11:35:36 UTC</div>
         </section>
 
         <aside class="shelf is-shelf-hidden" id="shelf">
           <nav class="tabs" role="tablist" aria-label="Orby Panels">
             <button class="tab active" data-tab="mesh" aria-selected="true" title="Mesh">
-              <i data-lucide="box"></i>
+              <i class="fa-solid fa-cube"></i>
             </button>
             <button class="tab" data-tab="studio" aria-selected="false" title="Studio">
-              <i data-lucide="lightbulb"></i>
+              <i class="fa-solid fa-lightbulb"></i>
             </button>
             <button class="tab" data-tab="render" aria-selected="false" title="FX">
-              <i data-lucide="camera"></i>
+              <i class="fa-solid fa-camera"></i>
             </button>
             <button class="tab" data-tab="info" aria-selected="false" title="Information">
-              <i data-lucide="info"></i>
+              <i class="fa-solid fa-circle-info"></i>
             </button>
           </nav>
 
@@ -102,7 +102,7 @@
                   <div class="block-title has-reset">
                     <span>Material</span>
                     <button class="block-reset-btn" data-reset="material" aria-label="Reset Material">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -148,7 +148,7 @@
                   <div class="block-title has-reset">
                     <span>Clay</span>
                     <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -176,7 +176,7 @@
                     <span>Fresnel</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="fresnel" aria-label="Reset Fresnel">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -225,7 +225,7 @@
                   <div class="block-title has-reset">
                     <span>Wireframe</span>
                     <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -262,7 +262,7 @@
                   <div class="block-title has-reset">
                     <span>Transform</span>
                     <button class="block-reset-btn" data-reset="transform" aria-label="Reset Transform">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -377,7 +377,7 @@
                     <span>Podium</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="podium" aria-label="Reset Podium">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -430,7 +430,7 @@
                     <span>Grid</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="grid" aria-label="Reset Grid">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -494,8 +494,8 @@
                   <div><dt>Bounds</dt><dd>—</dd></div>
                 </dl>
                 <button id="loadMeshButton" class="accent-action-btn" style="margin-top: 1rem;">
-                  <i data-lucide="sparkle"></i>
-                  IMPORT NEW MESH
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  Import New Mesh
                 </button>
               </div>
 
@@ -517,8 +517,8 @@
                     </div>
                   </div>
                   <button id="exportPngButton" class="accent-action-btn">
-                    <i data-lucide="download"></i>
-                    EXPORT .PNG
+                    <i class="fa-solid fa-download"></i>
+                    Export .PNG
                   </button>
                 </div>
               </div>
@@ -550,16 +550,16 @@
                 <div class="block-title">Scene</div>
                 <div class="scene-controls">
                   <button id="resetMeshSettings" class="accent-action-btn">
-                    <i data-lucide="rotate-ccw"></i>
-                    RESET OBJECT
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset Object
                   </button>
                   <button class="copy-scene-settings accent-action-btn">
-                    <i data-lucide="copy"></i>
-                    COPY SCENE
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Scene
                   </button>
                   <button class="load-scene-settings accent-action-btn">
-                    <i data-lucide="upload"></i>
-                    LOAD SCENE
+                    <i class="fa-solid fa-upload"></i>
+                    Load Scene
                   </button>
                 </div>
               </div>
@@ -573,7 +573,7 @@
                   <span>HDRI</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <button class="block-reset-btn" data-reset="hdri" aria-label="Reset HDRI">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                     <label class="effect-toggle">
@@ -653,7 +653,7 @@
                 <div class="block-title has-reset">
                   <span>Background Color</span>
                   <button class="block-reset-btn" data-reset="background" aria-label="Reset Background">
-                    <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                     <span class="sr-only">Reset</span>
                   </button>
                 </div>
@@ -673,7 +673,7 @@
                   <span id="lightsTitle">Lights</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <button class="block-reset-btn" data-reset="lights" aria-label="Reset Lights">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                     <label class="effect-toggle">
@@ -756,7 +756,7 @@
                     <span>Key</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="keyLight" aria-label="Reset Key Light">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -824,7 +824,7 @@
                     <span>Fill</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="fillLight" aria-label="Reset Fill Light">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -892,7 +892,7 @@
                     <span>Rim</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="rimLight" aria-label="Reset Rim Light">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -960,7 +960,7 @@
                     <span>Ambient</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="ambientLight" aria-label="Reset Ambient Light">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -994,16 +994,16 @@
                 <div class="block-title">Scene</div>
                 <div class="scene-controls">
                   <button id="resetStudioSettings" class="accent-action-btn">
-                    <i data-lucide="rotate-ccw"></i>
-                    RESET STUDIO
+                        <i class="fa-solid fa-rotate-left"></i>
+                    Reset Studio
                   </button>
                   <button class="copy-scene-settings accent-action-btn">
-                    <i data-lucide="copy"></i>
-                    COPY SCENE
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Scene
                   </button>
                   <button class="load-scene-settings accent-action-btn">
-                    <i data-lucide="upload"></i>
-                    LOAD SCENE
+                    <i class="fa-solid fa-upload"></i>
+                    Load Scene
                   </button>
                 </div>
               </div>
@@ -1017,7 +1017,7 @@
                   <div class="block-title has-reset">
                     <span>Basic</span>
                     <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -1071,7 +1071,7 @@
                   <div class="block-title has-reset">
                     <span>Color Correction</span>
                     <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color Correction">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -1153,7 +1153,7 @@
                   <div class="block-title has-reset">
                     <span>Vignette</span>
                     <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette">
-                      <i data-lucide="rotate-ccw"></i>
+                      <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
@@ -1187,7 +1187,7 @@
                     <span>Depth of Field</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="dof" aria-label="Reset Depth of Field">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -1228,7 +1228,7 @@
                     <span>Bloom</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -1285,7 +1285,7 @@
                     <span>Lens Flare</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="lens-flare" aria-label="Reset Lens Flare">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -1342,7 +1342,7 @@
                     <span>Lens Dirt</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="lens-dirt" aria-label="Reset Lens Dirt">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -1371,7 +1371,7 @@
                     <span>Film Grain</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="grain" aria-label="Reset Film Grain">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -1400,7 +1400,7 @@
                     <span>Chromatic Aberration</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="aberration" aria-label="Reset Chromatic Aberration">
-                        <i data-lucide="rotate-ccw"></i>
+                        <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle">
@@ -1463,8 +1463,8 @@
 
               <div class="panel-block export-block" style="display: none;">
                 <button id="exportPng" class="accent-action-btn">
-                  <i data-lucide="download"></i>
-                  EXPORT .PNG
+                  <i class="fa-solid fa-download"></i>
+                  Export .PNG
                 </button>
               </div>
 
@@ -1472,16 +1472,16 @@
                 <div class="block-title">Scene</div>
                 <div class="scene-controls">
                   <button id="resetRenderSettings" class="accent-action-btn">
-                    <i data-lucide="rotate-ccw"></i>
-                    RESET CAMERA
+                        <i class="fa-solid fa-rotate-left"></i>
+                    Reset Camera
                   </button>
                   <button class="copy-scene-settings accent-action-btn">
-                    <i data-lucide="copy"></i>
-                    COPY SCENE
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Scene
                   </button>
                   <button class="load-scene-settings accent-action-btn">
-                    <i data-lucide="upload"></i>
-                    LOAD SCENE
+                    <i class="fa-solid fa-upload"></i>
+                    Load Scene
                   </button>
                 </div>
               </div>
@@ -1490,7 +1490,7 @@
             <h2 class="panel-header-title" data-header="info">Information</h2>
             <section class="panel" data-panel="info">
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="keyboard" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Keyboard Shortcuts</div>
+                <div class="block-title"><i class="fa-solid fa-keyboard" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Keyboard Shortcuts</div>
                 <div class="shortcuts-grid">
                   <div class="shortcut-row">
                     <span class="shortcut-action">Toggle Move widget</span>
@@ -1590,7 +1590,7 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="mouse-pointer-2" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Mouse Controls</div>
+                <div class="block-title"><i class="fa-solid fa-computer-mouse" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Mouse Controls</div>
                 <div class="shortcuts-grid">
                   <div class="shortcut-row">
                     <span class="shortcut-action">Select mesh / Show rotate widget</span>
@@ -1625,7 +1625,7 @@
               </div>
 
             <div class="panel-block">
-              <div class="block-title"><i data-lucide="gamepad-2" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Gamepad Controls</div>
+              <div class="block-title"><i class="fa-solid fa-gamepad" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Gamepad Controls</div>
               <div class="shortcuts-grid">
                 <div class="shortcut-row">
                   <span class="shortcut-action">Zoom / dolly</span>
@@ -1671,7 +1671,7 @@
             </div>
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="info" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
+                <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
                 <div class="about-content">
                   <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It’s perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
                   <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
@@ -1679,7 +1679,7 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="sparkles" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Key Features</div>
+                <div class="block-title"><i class="fa-solid fa-wand-magic-sparkles" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Key Features</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Real-time 3D model viewer</span> — Load and view GLB, GLTF, OBJ, FBX, and more with instant preview and smooth interactions</li>
@@ -1697,7 +1697,7 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="shield" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Privacy</div>
+                <div class="block-title"><i class="fa-solid fa-shield" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Privacy</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">100% client-side</span> – runs completely in your browser</li>
@@ -1711,7 +1711,7 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="heart" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Credits</div>
+                <div class="block-title"><i class="fa-solid fa-heart" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Credits</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
                     <li style="margin-bottom: 0.5rem;">
@@ -1737,13 +1737,13 @@
               </div>
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="code" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Reduce muted headline opacity to 0.75 and active slider fill opacity to 0.5.</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Unify low opacity grays to 0.15 and improve button hover states all low opacity grays (0.05, 0.08, 0.1) to 0.15 for consistency. --stroke CSS variable from 0.1 to 0.15.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.27 · 2025-11-30 10:54:05 UTC</div>
+              <div class="info-version-tag">v0.5.28 · 2025-11-30 11:35:36 UTC</div>
             </section>
           </div>
         </aside>
@@ -1771,7 +1771,7 @@
         <div class="load-settings-header">
           <h3>Load Scene Settings</h3>
           <button id="closeLoadSceneSettings" class="close-btn" aria-label="Close">
-            <i data-lucide="x"></i>
+            <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
         <p class="load-settings-description">Paste your scene settings JSON below and click Apply to load them. This includes all visual settings: lighting, camera position and angle, post-processing, materials, and object transforms (scale, position, rotation).</p>
