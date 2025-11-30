@@ -757,7 +757,7 @@ a:hover {
   /* Create space for scrollbar on the right, outside the window */
   margin-right: calc(-1.2rem + 12px);
   padding-right: calc(0.6rem + 1.2rem - 12px);
-  border-top: 1px solid var(--stroke);
+  border-top: none;
   margin-top: 0;
 }
 
@@ -823,7 +823,7 @@ a:hover {
   border: none;
   border-radius: 6px;
   padding: 1.2rem;
-  margin-bottom: 1.2rem;
+  margin-bottom: 0.3rem;
   background: rgba(0, 0, 0, 0.6);
 }
 
@@ -1483,7 +1483,7 @@ input[type='range']:disabled::-moz-range-thumb {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.6rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1.1rem;
 }
 
 .hdri-card {
