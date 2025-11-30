@@ -221,6 +221,7 @@ export class UIManager {
     this.bindHdriLightsRotation();
     this.bindLocalResetButtons();
     this.setupSliderKeyboardSupport();
+    this.setupSliderFillUpdates();
   }
 
   bindDragAndDrop() {
@@ -2191,12 +2192,16 @@ export class UIManager {
             
           case 'transform':
             this.stateStore.set('scale', defaults.scale);
+            this.stateStore.set('xOffset', defaults.xOffset);
             this.stateStore.set('yOffset', defaults.yOffset);
+            this.stateStore.set('zOffset', defaults.zOffset);
             this.stateStore.set('rotationX', defaults.rotationX);
             this.stateStore.set('rotationY', defaults.rotationY);
             this.stateStore.set('rotationZ', defaults.rotationZ);
             this.eventBus.emit('mesh:scale', defaults.scale);
+            this.eventBus.emit('mesh:xOffset', defaults.xOffset);
             this.eventBus.emit('mesh:yOffset', defaults.yOffset);
+            this.eventBus.emit('mesh:zOffset', defaults.zOffset);
             this.eventBus.emit('mesh:rotationX', defaults.rotationX);
             this.eventBus.emit('mesh:rotationY', defaults.rotationY);
             this.eventBus.emit('mesh:rotationZ', defaults.rotationZ);
@@ -2281,6 +2286,77 @@ export class UIManager {
       label.textContent = this.formatSliderValue(value, type, decimals);
     } else {
       label.textContent = String(value);
+    }
+  }
+
+  /**
+   * Setup global slider fill updates for all range inputs
+   * This ensures all sliders get the fill effect automatically
+   */
+  setupSliderFillUpdates() {
+    // Add global listener for all slider inputs
+    document.addEventListener('input', (event) => {
+      if (event.target.type === 'range') {
+        this.updateSliderFill(event.target);
+      }
+    }, true); // Use capture phase to catch all events
+    
+    // Initialize fill for all existing sliders
+    document.querySelectorAll('input[type="range"]').forEach((slider) => {
+      this.updateSliderFill(slider);
+    });
+  }
+
+  /**
+   * Update slider fill effect using CSS variable
+   * Calculates fill percentage based on slider value, min, and max
+   * Supports both left-to-right fill and center-outward fill for centered sliders
+   * @param {HTMLInputElement} slider - The slider input element
+   */
+  updateSliderFill(slider) {
+    if (!slider || slider.type !== 'range') return;
+    
+    // Skip temperature and tint sliders (they have custom gradients)
+    const sliderLine = slider.closest('.slider-line');
+    if (sliderLine?.classList.contains('slider-line--temperature') || 
+        sliderLine?.classList.contains('slider-line--tint')) {
+      return;
+    }
+    
+    const min = parseFloat(slider.min) || 0;
+    const max = parseFloat(slider.max) || 100;
+    const value = parseFloat(slider.value) || 0;
+    
+    // Detect if this is a centered slider (min < 0 and max > 0)
+    const isCentered = min < 0 && max > 0;
+    
+    if (isCentered) {
+      // Center-outward fill: fill from center point outward
+      const center = 0;
+      const range = max - min;
+      const centerPercent = ((center - min) / range) * 100; // Position of center on track
+      
+      if (value === center) {
+        // At center: no fill
+        slider.style.setProperty('--slider-fill-start', `${centerPercent}%`);
+        slider.style.setProperty('--slider-fill-end', `${centerPercent}%`);
+      } else if (value > center) {
+        // Positive value: fill from center to value (right side)
+        const valuePercent = ((value - min) / range) * 100;
+        slider.style.setProperty('--slider-fill-start', `${centerPercent}%`);
+        slider.style.setProperty('--slider-fill-end', `${valuePercent}%`);
+      } else {
+        // Negative value: fill from value to center (left side)
+        const valuePercent = ((value - min) / range) * 100;
+        slider.style.setProperty('--slider-fill-start', `${valuePercent}%`);
+        slider.style.setProperty('--slider-fill-end', `${centerPercent}%`);
+      }
+    } else {
+      // Left-to-right fill: fill from 0% to value percentage
+      const range = max - min;
+      const fillPercent = range > 0 ? ((value - min) / range) * 100 : 0;
+      slider.style.setProperty('--slider-fill-start', '0%');
+      slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
     }
   }
 
@@ -3132,6 +3208,10 @@ export class UIManager {
     this.syncStudioControls(state);
     this.syncRenderControls(state);
     this.applyBlockStates(state);
+    // Update slider fills after syncing all controls
+    document.querySelectorAll('input[type="range"]').forEach((slider) => {
+      this.updateSliderFill(slider);
+    });
   }
 
   setEffectControlsDisabled(ids, disabled) {

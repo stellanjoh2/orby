@@ -1145,6 +1145,89 @@ a:hover {
   align-self: center;
   justify-self: stretch;
   width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  position: relative;
+  /* Remove default track styling */
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+/* WebKit slider track with fill effect */
+.slider-line input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* Muted blocks: use gray fill instead of accent color */
+.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* Firefox slider track with fill effect */
+.slider-line input[type='range']::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 25%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border: none;
+}
+
+/* Muted blocks: use gray fill instead of accent color */
+.is-muted .slider-line input[type='range']::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.05) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* Temperature and Tint sliders keep their custom gradients */
+.slider-line--temperature input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
+}
+
+.slider-line--temperature input[type='range']::-moz-range-track {
+  background: linear-gradient(90deg, #1d5bff, #f6f2ff, #ffbb6b);
+}
+
+.slider-line--tint input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
+}
+
+.slider-line--tint input[type='range']::-moz-range-track {
+  background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
 }
 
 /* Disabled sliders */
@@ -1580,6 +1663,8 @@ input[type='range']::-webkit-slider-thumb {
   cursor: pointer;
   box-shadow: 0 0 10px var(--accent-glow);
   transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease, background 0.2s ease;
+  /* Center the thumb vertically on the track: (thumb height - track height) / 2 = (12 - 4) / 2 = 4px */
+  margin-top: -4px;
 }
 
 input[type='range']:disabled::-webkit-slider-thumb {
