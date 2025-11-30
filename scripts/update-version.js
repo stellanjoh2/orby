@@ -156,7 +156,7 @@ try {
   
   // Update changelog in its own "Latest Changes" section
   // Find and replace the content inside the existing "Latest Changes" panel-block
-  const changelogRegex = /(<div class="panel-block">\s*<div class="block-title"><i data-lucide="code"[^>]*><\/i>Latest Changes<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[^<]*(<\/div>\s*<\/div>\s*<\/div>)/;
+  const changelogRegex = /(<div class="panel-block">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[^<]*(<\/div>\s*<\/div>\s*<\/div>)/;
   
   if (changelogRegex.test(html)) {
     html = html.replace(changelogRegex, `$1${changelogText}$2`);
@@ -167,7 +167,7 @@ try {
       html = html.replace(creditsEndRegex, `$1
 
               <div class="panel-block">
-                <div class="block-title"><i data-lucide="code" style="width: 1rem; height: 1rem; display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
                   <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">${changelogText}</div>
                 </div>

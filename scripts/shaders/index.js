@@ -278,6 +278,10 @@ uniform float temperature;
 uniform float tint;
 uniform float highlights;
 uniform float shadows;
+uniform float clarity;
+uniform float fade;
+uniform float sharpness;
+uniform vec2 resolution;
 uniform float bypass;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
@@ -369,6 +373,58 @@ vec3 applyTonalRanges(
   return color + vec3(adjustment);
 }
 
+// Clarity: Midtone contrast enhancement (like Lightroom)
+vec3 applyClarity(vec3 color, float amount) {
+  if (abs(amount) < 0.0001) {
+    return color;
+  }
+  float luma = dot(color, LUMA);
+  // Create a mask that emphasizes midtones (0.2 to 0.8)
+  float midtoneMask = smoothstep(0.2, 0.5, luma) * (1.0 - smoothstep(0.5, 0.8, luma));
+  // Apply local contrast enhancement to midtones
+  float clarityAmount = amount * 0.01; // Scale to reasonable range
+  vec3 enhanced = (color - vec3(0.5)) * (1.0 + clarityAmount * midtoneMask) + vec3(0.5);
+  return mix(color, enhanced, midtoneMask * 0.5);
+}
+
+// Fade: Reduce black point (fade to black, like Darkroom)
+vec3 applyFade(vec3 color, float amount) {
+  if (abs(amount) < 0.0001) {
+    return color;
+  }
+  // Reduce black point - lift shadows towards gray
+  float fadeAmount = amount * 0.01; // Scale to 0-1 range
+  return mix(color, vec3(0.5), fadeAmount * (1.0 - dot(color, LUMA)));
+}
+
+// Sharpness: Simple unsharp mask
+vec3 applySharpness(sampler2D tex, vec2 uv, vec2 res, float amount) {
+  if (abs(amount) < 0.0001) {
+    return texture2D(tex, uv).rgb;
+  }
+  // Safety check: if resolution is invalid (too small), skip sharpness
+  if (res.x < 2.0 || res.y < 2.0) {
+    return texture2D(tex, uv).rgb;
+  }
+  vec2 pixelSize = 1.0 / res;
+  vec3 center = texture2D(tex, uv).rgb;
+  
+  // Sample neighboring pixels for unsharp mask
+  vec3 left = texture2D(tex, uv + vec2(-pixelSize.x, 0.0)).rgb;
+  vec3 right = texture2D(tex, uv + vec2(pixelSize.x, 0.0)).rgb;
+  vec3 top = texture2D(tex, uv + vec2(0.0, -pixelSize.y)).rgb;
+  vec3 bottom = texture2D(tex, uv + vec2(0.0, pixelSize.y)).rgb;
+  
+  // Calculate blur (average of neighbors)
+  vec3 blur = (left + right + top + bottom) * 0.25;
+  
+  // Unsharp mask: center - blur, then add back with strength
+  // Don't clamp here - preserve HDR values, clamping happens at the end
+  float sharpAmount = amount * 0.01; // Scale to reasonable range
+  vec3 sharp = center + (center - blur) * sharpAmount;
+  return max(sharp, vec3(0.0)); // Only clamp negative values, preserve highlights
+}
+
 void main() {
   vec4 color = texture2D(tDiffuse, vUv);
   if (bypass > 0.5) {
@@ -377,11 +433,21 @@ void main() {
   }
 
   vec3 adjusted = max(color.rgb, vec3(0.0));
+  
+  // Apply sharpness first (needs original texture sampling before other adjustments)
+  // This ensures sharpness operates on the raw input, not processed values
+  if (abs(sharpness) > 0.0001) {
+    adjusted = applySharpness(tDiffuse, vUv, resolution, sharpness);
+  }
+  
+  // Apply color and tonal adjustments
   adjusted = applyContrast(adjusted, contrast);
   adjusted = applySaturation(adjusted, saturation);
   adjusted = applyHue(adjusted, hue);
   adjusted = applyWhiteBalance(adjusted, temperature, tint);
   adjusted = applyTonalRanges(adjusted, highlights, shadows);
+  adjusted = applyClarity(adjusted, clarity);
+  adjusted = applyFade(adjusted, fade);
 
   gl_FragColor = vec4(max(adjusted, vec3(0.0)), color.a);
 }
@@ -397,6 +463,10 @@ export const ColorAdjustShader = {
     tint: { value: 0.0 },
     highlights: { value: 0.0 },
     shadows: { value: 0.0 },
+    clarity: { value: 0.0 },
+    fade: { value: 0.0 },
+    sharpness: { value: 0.0 },
+    resolution: { value: new THREE.Vector2(1, 1) },
     bypass: { value: 1.0 },
   },
   vertexShader: colorAdjustVertex,

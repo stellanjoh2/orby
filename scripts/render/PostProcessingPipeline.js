@@ -69,7 +69,7 @@ export class PostProcessingPipeline {
     this.fxaaPass.renderToScreen = false;
     this.exposurePass.renderToScreen = false;
 
-    this.colorAdjust = new ColorAdjustController();
+    this.colorAdjust = new ColorAdjustController(this.renderer);
     this.colorAdjustPass = this.colorAdjust.getPass();
 
     this.toneMappingPass = new ShaderPass(ToneMappingShader);
@@ -296,6 +296,30 @@ export class PostProcessingPipeline {
    */
   setShadows(value) {
     this.colorAdjust?.setShadows(value);
+  }
+
+  /**
+   * Set clarity adjustment (midtone contrast)
+   * @param {number} value - Clarity value (-100 to 100, default 0)
+   */
+  setClarity(value) {
+    this.colorAdjust?.setClarity(value);
+  }
+
+  /**
+   * Set fade adjustment (fade to black)
+   * @param {number} value - Fade value (0 to 100, default 0)
+   */
+  setFade(value) {
+    this.colorAdjust?.setFade(value);
+  }
+
+  /**
+   * Set sharpness adjustment
+   * @param {number} value - Sharpness value (0 to 100, default 0)
+   */
+  setSharpness(value) {
+    this.colorAdjust?.setSharpness(value);
   }
 
   /**

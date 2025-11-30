@@ -163,6 +163,9 @@ export class UIManager {
       cameraHighlights: q('#cameraHighlights'),
       cameraShadows: q('#cameraShadows'),
       cameraSaturation: q('#cameraSaturation'),
+      cameraClarity: q('#cameraClarity'),
+      cameraFade: q('#cameraFade'),
+      cameraSharpness: q('#cameraSharpness'),
       vignetteIntensity: q('#vignetteIntensity'),
       vignetteColor: q('#vignetteColor'),
       antiAliasing: q('#antiAliasing'),
@@ -1123,6 +1126,27 @@ export class UIManager {
       this.eventBus.emit('render:saturation', value);
     });
     if (this.inputs.cameraSaturation) this.enableSliderKeyboardStepping(this.inputs.cameraSaturation);
+    this.inputs.cameraClarity?.addEventListener('input', (event) => {
+      const value = this.applySnapToCenter(event.target, -100, 100, 0);
+      this.stateStore.set('camera.clarity', value);
+      this.updateValueLabel('cameraClarity', value, 'integer');
+      this.eventBus.emit('render:clarity', value);
+    });
+    if (this.inputs.cameraClarity) this.enableSliderKeyboardStepping(this.inputs.cameraClarity);
+    this.inputs.cameraFade?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.fade', value);
+      this.updateValueLabel('cameraFade', value, 'integer');
+      this.eventBus.emit('render:fade', value);
+    });
+    if (this.inputs.cameraFade) this.enableSliderKeyboardStepping(this.inputs.cameraFade);
+    this.inputs.cameraSharpness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value) || 0;
+      this.stateStore.set('camera.sharpness', value);
+      this.updateValueLabel('cameraSharpness', value, 'integer');
+      this.eventBus.emit('render:sharpness', value);
+    });
+    if (this.inputs.cameraSharpness) this.enableSliderKeyboardStepping(this.inputs.cameraSharpness);
     this.inputs.vignetteIntensity?.addEventListener('input', (event) => {
       const value = this.applySnapToCenter(event.target, 0, 1, 0);
       this.stateStore.set('camera.vignette', value);
@@ -2152,13 +2176,16 @@ export class UIManager {
             break;
 
           case 'color-correction':
-            // Reset only color correction settings
+            // Reset only color & tone settings
             this.stateStore.set('camera.contrast', defaults.camera.contrast);
             this.stateStore.set('camera.temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
             this.stateStore.set('camera.tint', defaults.camera.tint ?? 0);
             this.stateStore.set('camera.highlights', defaults.camera.highlights ?? 0);
             this.stateStore.set('camera.shadows', defaults.camera.shadows ?? 0);
             this.stateStore.set('camera.saturation', defaults.camera.saturation);
+            this.stateStore.set('camera.clarity', defaults.camera.clarity ?? 0);
+            this.stateStore.set('camera.fade', defaults.camera.fade ?? 0);
+            this.stateStore.set('camera.sharpness', defaults.camera.sharpness ?? 0);
             // Emit events to update the scene
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
             this.eventBus.emit(
@@ -2178,6 +2205,9 @@ export class UIManager {
               (defaults.camera.shadows ?? 0) / 100,
             );
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
+            this.eventBus.emit('render:clarity', defaults.camera.clarity ?? 0);
+            this.eventBus.emit('render:fade', defaults.camera.fade ?? 0);
+            this.eventBus.emit('render:sharpness', defaults.camera.sharpness ?? 0);
             // Sync UI to reflect the reset values
             this.syncControls(this.stateStore.getState());
             break;
@@ -3185,6 +3215,21 @@ export class UIManager {
       const saturation = state.camera?.saturation ?? 1.0;
       this.inputs.cameraSaturation.value = saturation;
       this.updateValueLabel('cameraSaturation', saturation, 'decimal');
+    }
+    if (this.inputs.cameraClarity) {
+      const clarity = state.camera?.clarity ?? 0;
+      this.inputs.cameraClarity.value = clarity;
+      this.updateValueLabel('cameraClarity', clarity, 'integer');
+    }
+    if (this.inputs.cameraFade) {
+      const fade = state.camera?.fade ?? 0;
+      this.inputs.cameraFade.value = fade;
+      this.updateValueLabel('cameraFade', fade, 'integer');
+    }
+    if (this.inputs.cameraSharpness) {
+      const sharpness = state.camera?.sharpness ?? 0;
+      this.inputs.cameraSharpness.value = sharpness;
+      this.updateValueLabel('cameraSharpness', sharpness, 'integer');
     }
     if (this.inputs.vignetteIntensity) {
       const vignette = state.camera?.vignette ?? 0;

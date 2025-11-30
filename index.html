@@ -47,7 +47,7 @@
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
           />
-          <div class="dropzone-version-tag">v0.5.33 · 2025-11-30 21:52:00 UTC</div>
+          <div class="dropzone-version-tag">v0.5.34 · 2025-11-30 22:26:49 UTC</div>
           <div class="mobile-warning" id="mobileWarning" style="display: none;">
             <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
           </div>
@@ -1079,8 +1079,8 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
                   <div class="block-title has-reset">
-                    <span>Color Correction</span>
-                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color Correction">
+                    <span>Color & Tone</span>
+                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -1156,6 +1156,42 @@
                     step="0.01"
                   />
                   <span class="value" data-output="cameraSaturation">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Clarity</span>
+                  <input
+                    id="cameraClarity"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraClarity">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Fade</span>
+                  <input
+                    id="cameraFade"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraFade">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Sharpness</span>
+                  <input
+                    id="cameraSharpness"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraSharpness">0</span>
                 </label>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -1858,11 +1894,11 @@
               <div class="panel-block">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Mobile device detection and warning message.</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Feature FAQ section, Learn More section with Wikipedia links, and update Information page accuracy.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.33 · 2025-11-30 21:52:00 UTC</div>
+              <div class="info-version-tag">v0.5.34 · 2025-11-30 22:26:49 UTC</div>
             </section>
           </div>
         </aside>
