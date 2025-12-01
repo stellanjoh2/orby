@@ -41,6 +41,8 @@ body[data-theme='violet'] {
   --accent-shadow: color-mix(in srgb, var(--brand-primary) 35%, transparent);
   --accent-muted: color-mix(in srgb, var(--brand-primary) 18%, transparent);
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 45%, transparent);
+  /* Brighter hover color for links / interactive text */
+  --accent-hover: color-mix(in srgb, var(--brand-primary) 40%, white 60%);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 65%, transparent);
   
   /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
@@ -710,16 +712,12 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .about-content a,
-a {
-  color: var(--brand-primary);
+.about-content a:visited,
+a,
+a:visited {
+  color: var(--accent);
   text-decoration: none;
   transition: color 0.2s ease, opacity 0.2s ease;
-}
-
-.about-content a:hover,
-a:hover {
-  color: var(--brand-secondary);
-  opacity: 0.8;
 }
 
 .about-highlight {
@@ -1838,6 +1836,45 @@ body.ui-hidden .shelf {
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
   position: relative;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.histogram-container--expanded {
+  max-height: 120px;
+  opacity: 1;
+}
+
+.histogram-container--collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: -0.35rem; /* pull the divider a bit closer when hidden */
+}
+
+/* Information tab quick navigation */
+.info-quicknav {
+  display: block !important;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.info-quicknav a {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.info-quicknav a:hover {
+  color: var(--accent-hover);
+}
+
+/* Global link hover color for inline text links */
+a:hover {
+  color: var(--accent-hover);
 }
 
 .histogram-container canvas {

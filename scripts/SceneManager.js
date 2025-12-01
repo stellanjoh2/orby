@@ -294,6 +294,8 @@ export class SceneManager {
         histogramContainer,
         this.composer // Pass composer so it can read from the correct render target
       );
+      const histogramState = this.stateStore.getState();
+      this.histogramController.setEnabled(histogramState.histogramEnabled ?? false);
     }
     
     // Initialize event manager and register all event listeners

@@ -8,6 +8,7 @@ export class HistogramController {
     this.canvas = canvas;
     this.containerElement = containerElement;
     this.composer = composer; // Optional: if post-processing is used
+    this.enabled = false;
     
     // Create canvas for histogram rendering
     this.histogramCanvas = document.createElement('canvas');
@@ -46,6 +47,22 @@ export class HistogramController {
     
     // Sample size for performance (read every Nth pixel)
     this.sampleRate = 8; // Increased sampling for better performance
+
+    // Start disabled by default (UI controls when to enable)
+    if (this.containerElement) {
+      this.setEnabled(false);
+    }
+  }
+  
+  setEnabled(enabled) {
+    this.enabled = !!enabled;
+    if (this.containerElement) {
+      this.containerElement.classList.toggle('histogram-container--collapsed', !this.enabled);
+      this.containerElement.classList.toggle('histogram-container--expanded', this.enabled);
+    }
+    if (!this.enabled && this.histogramCtx && this.histogramCanvas) {
+      this.histogramCtx.clearRect(0, 0, this.histogramCanvas.width, this.histogramCanvas.height);
+    }
   }
   
   /**
@@ -60,6 +77,7 @@ export class HistogramController {
    * Read pixel data from WebGL canvas and build histogram
    */
   update() {
+    if (!this.enabled) return;
     const now = performance.now();
     if (now - this.lastUpdate < this.updateInterval) {
       return;

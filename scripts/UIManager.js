@@ -188,6 +188,7 @@ export class UIManager {
       cameraSharpness: q('#cameraSharpness'),
       vignetteIntensity: q('#vignetteIntensity'),
       vignetteColor: q('#vignetteColor'),
+      histogramEnabled: q('#histogramEnabled'),
       antiAliasing: q('#antiAliasing'),
       toneMapping: q('#toneMapping'),
     };
@@ -244,6 +245,19 @@ export class UIManager {
     // Setup slider utilities
     this.helpers.setupSliderKeyboardSupport();
     this.helpers.setupSliderFillUpdates();
+
+    // Quick Navigation (Information tab) smooth scrolling
+    const infoQuicknavLinks = document.querySelectorAll('.info-quicknav a[href^="#"]');
+    infoQuicknavLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+        const target = document.querySelector(href);
+        if (!target) return;
+        event.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
   }
 
   bindDragAndDrop() {
