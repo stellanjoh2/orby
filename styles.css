@@ -650,6 +650,13 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   line-height: 1.4;
 }
 
+.shortcut-note {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.1rem;
+}
+
 .shortcut-keys {
   display: flex;
   align-items: center;
