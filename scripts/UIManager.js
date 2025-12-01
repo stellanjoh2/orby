@@ -98,6 +98,7 @@ export class UIManager {
       rotationY: q('#rotationYControl'),
       rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
+      cameraAutoOrbit: document.querySelectorAll('input[name="cameraAutoOrbit"]'),
       showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
@@ -957,6 +958,13 @@ export class UIManager {
     this.inputs.autoRotate.forEach((input) => {
       input.checked = parseFloat(input.value) === state.autoRotate;
     });
+    // Sync camera auto-orbit
+    if (this.inputs.cameraAutoOrbit) {
+      const autoOrbitValue = state.camera?.autoOrbit ?? 'off';
+      this.inputs.cameraAutoOrbit.forEach((radio) => {
+        radio.checked = radio.value === autoOrbitValue;
+      });
+    }
     this.inputs.shading.forEach((input) => {
       input.checked = input.value === state.shading;
     });

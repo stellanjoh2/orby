@@ -148,6 +148,15 @@ export class RenderControls {
       this.eventBus.emit('camera:tilt', value);
     });
     if (this.ui.inputs.cameraTilt) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTilt);
+    
+    // Camera Auto-Orbit
+    this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
+      radio.addEventListener('change', (event) => {
+        const value = event.target.value;
+        this.stateStore.set('camera.autoOrbit', value);
+        this.eventBus.emit('camera:auto-orbit', value);
+      });
+    });
 
     // Exposure
     this.ui.inputs.exposure.addEventListener('input', (event) => {
@@ -345,6 +354,13 @@ export class RenderControls {
     if (this.ui.inputs.cameraTilt) {
       this.ui.inputs.cameraTilt.value = state.camera.tilt ?? 0;
       this.helpers.updateValueLabel('cameraTilt', state.camera.tilt ?? 0, 'angle');
+    }
+    // Sync camera auto-orbit
+    if (this.ui.inputs.cameraAutoOrbit) {
+      const autoOrbitValue = state.camera?.autoOrbit ?? 'off';
+      this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
+        radio.checked = radio.value === autoOrbitValue;
+      });
     }
     this.ui.inputs.exposure.value = state.exposure;
     this.helpers.updateValueLabel('exposure', state.exposure, 'decimal');

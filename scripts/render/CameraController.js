@@ -55,6 +55,11 @@ export class CameraController {
     this.baseCameraQuaternion = this.camera.quaternion.clone();
     this.currentTilt = 0;
 
+    // Auto-orbit state
+    this.autoOrbitMode = 'off'; // 'off', 'slow', 'fast'
+    this.autoOrbitTime = 0; // Time accumulator for smooth orbit
+    this.autoOrbitBaseSpherical = null; // Store initial orbit position
+
     this.altRightDragging = false;
     this.altLeftDragging = false;
     this.altLeftTargetSet = false;
@@ -221,8 +226,104 @@ export class CameraController {
     this.camera.lookAt(target);
   }
 
+  /**
+   * Set auto-orbit mode
+   * @param {string} mode - 'off', 'slow', or 'fast'
+   */
+  setAutoOrbit(mode) {
+    this.autoOrbitMode = mode;
+    const isActive = mode !== 'off';
+    
+    if (isActive) {
+      // Store current orbit position when starting
+      // Use model center if available, otherwise use controls target
+      const target = this.callbacks.getFocusPoint?.() ?? this.controls.target ?? new THREE.Vector3();
+      this._orbitOffset.copy(this.camera.position).sub(target);
+      this._orbitSpherical.setFromVector3(this._orbitOffset);
+      this.autoOrbitBaseSpherical = this._orbitSpherical.clone();
+      this.autoOrbitTime = 0;
+      
+      // Disable all mouse controls during auto-orbit
+      this.controls.enablePan = false;
+      this.controls.enableRotate = false;
+      this.controls.enableZoom = false; // Disable zoom during auto-orbit
+      this.controls.enableDamping = false; // Disable damping to prevent interference
+    } else {
+      // Restore normal controls when auto-orbit is off
+      this.controls.enablePan = true;
+      this.controls.enableRotate = true;
+      this.controls.enableZoom = true; // Re-enable zoom
+      this.controls.enableDamping = true;
+      this.autoOrbitBaseSpherical = null;
+    }
+  }
+
+  /**
+   * Update auto-orbit camera movement
+   * Creates interesting multi-axis orbits for screensaver effect
+   * @param {number} delta - Time delta in seconds
+   */
+  updateAutoOrbit(delta) {
+    if (this.autoOrbitMode === 'off' || !this.autoOrbitBaseSpherical) return;
+
+    // Speed multipliers
+    const speeds = {
+      slow: 0.15,
+      fast: 0.4,
+    };
+    const speed = speeds[this.autoOrbitMode] || 0;
+
+    this.autoOrbitTime += delta * speed;
+
+    // Get model center (target point) - use focus point callback if available
+    const target = this.callbacks.getFocusPoint?.() ?? this.controls.target ?? new THREE.Vector3();
+    
+    // Create interesting multi-axis orbit pattern
+    // Combine horizontal rotation with vertical oscillation and distance variation
+    const horizontalSpeed = 1.0; // Full rotation around Y axis
+    const verticalSpeed = 0.6; // Slower vertical oscillation
+    const distanceSpeed = 0.4; // Even slower distance variation
+    
+    // Horizontal rotation (theta) - full 360° rotation
+    const theta = this.autoOrbitBaseSpherical.theta + this.autoOrbitTime * horizontalSpeed;
+    
+    // Vertical oscillation (phi) - oscillates between 30° and 80° for interesting angles
+    const basePhi = this.autoOrbitBaseSpherical.phi;
+    const phiRange = 0.4; // ~23° range
+    const phiOffset = Math.sin(this.autoOrbitTime * verticalSpeed) * phiRange;
+    const phi = THREE.MathUtils.clamp(
+      basePhi + phiOffset,
+      0.3, // ~17° from top
+      Math.PI - 0.5 // ~29° from bottom
+    );
+    
+    // Distance variation - subtle zoom in/out effect
+    const baseRadius = this.autoOrbitBaseSpherical.radius;
+    const radiusVariation = 0.15; // 15% variation
+    const radiusOffset = Math.sin(this.autoOrbitTime * distanceSpeed) * radiusVariation;
+    const radius = baseRadius * (1 + radiusOffset);
+    
+    // Apply orbit
+    this._orbitSpherical.set(radius, phi, theta);
+    this._orbitOffset.setFromSpherical(this._orbitSpherical);
+    this.camera.position.copy(target).add(this._orbitOffset);
+    
+    // Always look at target
+    this.camera.lookAt(target);
+    
+    // Update controls target to keep it in sync
+    this.controls.target.copy(target);
+    // Note: controls.update() is called in update() method, but pan/rotate are disabled
+    // This allows zoom (dolly) to still work while auto-orbit controls position
+  }
+
   update() {
-    this.controls.update();
+    // Only update controls if auto-orbit is off (to prevent interference)
+    // When auto-orbit is on, we manually control camera position
+    if (this.autoOrbitMode === 'off') {
+      this.controls.update();
+    }
+    
     // Always apply tilt after controls update to ensure it's maintained
     // This ensures smooth transitions and prevents OrbitControls from overriding it
     this._applyTilt();
