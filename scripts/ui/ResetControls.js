@@ -424,7 +424,10 @@ export class ResetControls {
             this.eventBus.emit('render:clarity', defaults.camera.clarity ?? 0);
             this.eventBus.emit('render:fade', defaults.camera.fade ?? 0);
             this.eventBus.emit('render:sharpness', defaults.camera.sharpness ?? 0);
-            this.ui.syncControls(this.stateStore.getState());
+            // Ensure state is fully updated and DOM has time to update before syncing UI
+            requestAnimationFrame(() => {
+              this.ui.syncControls(this.stateStore.getState());
+            });
             break;
 
           case 'vignette':

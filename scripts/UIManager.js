@@ -1385,8 +1385,11 @@ export class UIManager {
     this.renderControls.sync(state);
     this.applyBlockStates(state);
     // Update slider fills after syncing all controls
-    document.querySelectorAll('input[type="range"]').forEach((slider) => {
-      this.helpers.updateSliderFill(slider);
+    // Use requestAnimationFrame to ensure DOM has updated before calculating fills
+    requestAnimationFrame(() => {
+      document.querySelectorAll('input[type="range"]').forEach((slider) => {
+        this.helpers.updateSliderFill(slider);
+      });
     });
   }
 
