@@ -1219,6 +1219,7 @@ export class SceneManager {
     this.materialController.prepareMesh(object);
   }
 
+
   _fadeInMeshOpacity(object) {
     // Collect all materials from the mesh
     const materials = [];
