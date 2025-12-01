@@ -97,6 +97,7 @@ export class EventManager {
       s.camera.fov = value;
       s.camera.updateProjectionMatrix();
     });
+    eventBus.on('camera:auto-orbit', (value) => s.setCameraAutoOrbit(value));
     eventBus.on('camera:tilt', (value) => {
       s.cameraController?.setTilt(value);
     });

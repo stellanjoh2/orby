@@ -208,6 +208,7 @@ export class SceneManager {
 
     this.currentShading = initialState.shading;
     this.autoRotateSpeed = 0;
+    this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
     this.lightsMaster = initialState.lightsMaster ?? 0.30;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
@@ -493,6 +494,7 @@ export class SceneManager {
     this.setShading(state.shading);
     this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
+    this.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off');
     this.setGroundSolid(state.groundSolid);
     this.setGroundWire(state.groundWire);
     this.setGroundSolidColor(state.groundSolidColor);
@@ -822,6 +824,11 @@ export class SceneManager {
 
   setGroundWireOpacity(value) {
     this.groundController?.setWireOpacity(value);
+  }
+
+  setCameraAutoOrbit(mode) {
+    this.cameraAutoOrbit = mode ?? 'off';
+    this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
   }
 
   setGroundY(value) {
@@ -1415,6 +1422,10 @@ export class SceneManager {
       this.setLightsRotation(this.lightsRotation + deltaDegrees, { updateState: false });
     }
     this.cameraController.update();
+    // Update camera auto-orbit
+    if (this.cameraAutoOrbit !== 'off') {
+      this.cameraController.updateAutoOrbit(delta);
+    }
     this.diagnosticsController.update(delta);
     this.postPipeline?.updateGrainTime(delta);
     this.updateWireframeOverlayTransforms();
