@@ -87,8 +87,8 @@ export class MaterialController {
       }
     });
     
-    // Identify and replace window materials with glass
-    this.applyGlassMaterial(object);
+    // Disabled: Glass material application - keeping default transparency behavior
+    // this.applyGlassMaterial(object);
   }
   
   isWindowMesh(mesh) {
@@ -183,7 +183,7 @@ export class MaterialController {
         roughness: 0.05, // Very smooth/glossy for shiny reflections
         metalness: 0.0,
         side: THREE.DoubleSide, // Render both sides
-        depthWrite: true, // Keep depth writing for proper sorting
+        depthWrite: true, // Keep default depth writing
         depthTest: true, // Enable depth testing
         // Remove any textures that might be causing issues
         map: null,
