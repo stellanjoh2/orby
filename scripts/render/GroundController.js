@@ -264,5 +264,6 @@ export class GroundController {
   getGridScale() {
     return this.gridScale;
   }
+
 }
 
