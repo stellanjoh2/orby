@@ -47,7 +47,7 @@
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
           />
-          <div class="dropzone-version-tag">v0.5.36 · 2025-11-30 23:53:56 UTC</div>
+          <div class="dropzone-version-tag">v0.5.37 · 2025-12-01 00:02:23 UTC</div>
           <div class="mobile-warning" id="mobileWarning" style="display: none;">
             <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
           </div>
@@ -1071,10 +1071,15 @@
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
-                  <div class="block-title">
+                  <div class="block-title has-toggle">
                     <span>Histogram</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="histogramEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable histogram</span>
+                    </label>
                   </div>
-                  <div id="histogramContainer" class="histogram-container"></div>
+                  <div id="histogramContainer" class="histogram-container histogram-container--collapsed"></div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
@@ -1535,7 +1540,28 @@
 
             <h2 class="panel-header-title" data-header="info">Information</h2>
             <section class="panel" data-panel="info">
+              <!-- Quick Navigation for Information tab -->
               <div class="panel-block">
+                <div class="block-title">
+                  <i class="fa-solid fa-list" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                  Quick Navigation
+                </div>
+                <nav class="info-quicknav" style="display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; font-size: 0.85rem; color: var(--text-dim);">
+                  <a href="#info-shortcuts">Shortcuts</a>
+                  <a href="#info-mouse">Mouse</a>
+                  <a href="#info-gamepad">Gamepad</a>
+                  <a href="#info-about">About Orby</a>
+                  <a href="#info-features">Key Features</a>
+                  <a href="#info-faq">Feature FAQ</a>
+                  <a href="#info-performance">Performance</a>
+                  <a href="#info-learn">Learn More</a>
+                  <a href="#info-privacy">Privacy</a>
+                  <a href="#info-credits">Credits</a>
+                  <a href="#info-changelog">Latest Changes</a>
+                </nav>
+              </div>
+
+              <div class="panel-block" id="info-shortcuts">
                 <div class="block-title"><i class="fa-solid fa-keyboard" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Keyboard Shortcuts</div>
                 <div class="shortcuts-grid">
                   <div class="shortcut-row">
@@ -1635,7 +1661,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="info-mouse">
                 <div class="block-title"><i class="fa-solid fa-computer-mouse" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Mouse Controls</div>
                 <div class="shortcuts-grid">
                   <div class="shortcut-row">
@@ -1675,7 +1701,7 @@
                 </div>
               </div>
 
-            <div class="panel-block">
+            <div class="panel-block" id="info-gamepad">
               <div class="block-title"><i class="fa-solid fa-gamepad" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Gamepad Controls</div>
               <div class="shortcuts-grid">
                 <div class="shortcut-row">
@@ -1721,7 +1747,7 @@
               </div>
             </div>
 
-              <div class="panel-block">
+            <div class="panel-block" id="info-about">
                 <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
                 <div class="about-content">
                   <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It’s perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
@@ -1729,7 +1755,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="info-features">
                 <div class="block-title"><i class="fa-solid fa-wand-magic-sparkles" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Key Features</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
@@ -1747,7 +1773,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="info-faq">
                 <div class="block-title"><i class="fa-solid fa-circle-question" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Feature FAQ</div>
                 <div class="about-content">
                   <div style="margin-bottom: 1.5rem;">
@@ -1807,7 +1833,28 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <!-- Performance section -->
+              <div class="panel-block" id="info-performance">
+                <div class="block-title"><i class="fa-solid fa-gauge-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Performance</div>
+                <div class="about-content">
+                  <p style="margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    Orby is a real-time GPU renderer built on WebGL and Three.js. Every frame, the scene is drawn and then post-processing effects are applied as full-screen “passes”. The more heavy effects you stack, and the higher your resolution, the more work your GPU has to do each frame.
+                  </p>
+                  <ul style="list-style: none; padding: 0; margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Very cheap (almost free):</span> exposure, contrast, saturation, tint, temperature, fade. These are simple color operations inside a single pass.</li>
+                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Medium cost:</span> vignette, clarity, sharpness, Fresnel. These add extra calculations or one extra pass, but are usually fine on modern GPUs.</li>
+                    <li><span class="about-highlight">Heavier effects:</span> depth of field, bloom, lens dirt, film grain, chromatic aberration, FXAA, and some histogram/auto-exposure work. These often require additional buffers and multiple full-screen passes and will have the biggest impact on frame rate.</li>
+                  </ul>
+                  <p style="margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    Turning an effect <strong>on</strong> is usually the biggest step in cost. Increasing intensity (for example, bloom strength from 0.3 to 0.6) changes the look more than the performance. The real performance lever is how many heavy effects you run at the same time.
+                  </p>
+                  <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    If Orby feels slow, start by disabling the heavier effects (Depth of Field, Bloom, Lens Dirt, Grain, Chromatic Aberration, FXAA), or run the browser window a bit smaller so the internal render resolution is lower. For quick look-dev, stick to the cheaper color & tone controls first, then enable the cinematic effects at the end when you are close to final.
+                  </p>
+                </div>
+              </div>
+
+              <div class="panel-block" id="info-learn">
                 <div class="block-title"><i class="fa-solid fa-book" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Learn More</div>
                 <div class="about-content">
                   <p style="margin: 0 0 1rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Learn about the technologies and concepts behind Orby:</p>
@@ -1851,7 +1898,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="info-privacy">
                 <div class="block-title"><i class="fa-solid fa-shield" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Privacy</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
@@ -1865,7 +1912,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="info-credits">
                 <div class="block-title"><i class="fa-solid fa-heart" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Credits</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
@@ -1891,14 +1938,14 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="info-changelog">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">SceneManager: Extract EventManager for event handling extract all eventBus.on() listeners into EventManager.js. reduce SceneManager.js from 1,787 to 1,517 lines (-270 lines).</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Slider fill updates on reset and improve sync timing requestAnimationFrame to syncControls() to ensure DOM updates before calculating slider fills. requestAnimationFrame to color-correction reset for proper state synchronization.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.36 · 2025-11-30 23:53:56 UTC</div>
+              <div class="info-version-tag">v0.5.37 · 2025-12-01 00:02:23 UTC</div>
             </section>
           </div>
         </aside>

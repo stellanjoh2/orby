@@ -114,7 +114,26 @@ export class RenderControls {
 
     // Background
     this.helpers.bindColorInput('backgroundColor', 'background', 'scene:background');
-
+    
+    // Histogram toggle
+    if (this.ui.inputs.histogramEnabled) {
+      const updateHistogramUi = (enabled) => {
+        const container = document.querySelector('#histogramContainer');
+        if (container) {
+          container.classList.toggle('histogram-container--collapsed', !enabled);
+          container.classList.toggle('histogram-container--expanded', enabled);
+        }
+      };
+      this.ui.inputs.histogramEnabled.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('histogramEnabled', enabled);
+        this.eventBus.emit('render:histogram-enabled', enabled);
+        updateHistogramUi(enabled);
+      });
+      // Initialize UI state from current store
+      updateHistogramUi(this.stateStore.getState().histogramEnabled ?? false);
+    }
+    
     // Camera
     this.ui.inputs.cameraFov.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -382,6 +401,15 @@ export class RenderControls {
     if (this.ui.inputs.vignetteColor) {
       const vignetteColor = state.camera?.vignetteColor ?? '#000000';
       this.ui.inputs.vignetteColor.value = vignetteColor;
+    }
+    if (this.ui.inputs.histogramEnabled) {
+      const enabled = state.histogramEnabled ?? false;
+      this.ui.inputs.histogramEnabled.checked = enabled;
+      const container = document.querySelector('#histogramContainer');
+      if (container) {
+        container.classList.toggle('histogram-container--collapsed', !enabled);
+        container.classList.toggle('histogram-container--expanded', enabled);
+      }
     }
     if (this.ui.inputs.antiAliasing) {
       this.ui.inputs.antiAliasing.value = state.antiAliasing ?? 'none';

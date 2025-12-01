@@ -185,6 +185,11 @@ export class EventManager {
       }
     });
     eventBus.on('render:tone-mapping', (value) => s.setToneMapping(value));
+    eventBus.on('render:histogram-enabled', (enabled) => {
+      if (s.histogramController) {
+        s.histogramController.setEnabled(enabled);
+      }
+    });
 
     // Ground/Podium events
     eventBus.on('studio:ground-solid', (enabled) => s.setGroundSolid(enabled));
