@@ -20,7 +20,6 @@ export class GlobalControls {
     this.bindToggleUi();
     this.bindKeyboardShortcuts();
     this.bindTabs();
-    this.bindDragAndDrop();
     this.bindHdriLightsRotation();
   }
 
@@ -99,116 +98,6 @@ export class GlobalControls {
         });
       });
     });
-  }
-
-  bindDragAndDrop() {
-    const emitFile = (file) => {
-      if (!file) return;
-      this.eventBus.emit('file:selected', file);
-    };
-    
-    ['dragenter', 'dragover'].forEach((event) => {
-      this.ui.dom.dropzone.addEventListener(event, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.ui.dom.dropzone.classList.add('drag-active');
-      });
-    });
-    
-    ['dragleave', 'dragend', 'drop'].forEach((event) => {
-      this.ui.dom.dropzone.addEventListener(event, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.ui.dom.dropzone.classList.remove('drag-active');
-      });
-    });
-    
-    this.ui.dom.dropzone.addEventListener('drop', (event) => {
-      this.handleDropEvent(event, emitFile);
-    });
-    
-    this.ui.dom.browseButton.addEventListener('click', () => this.ui.dom.fileInput.click());
-    
-    this.ui.dom.fileInput.addEventListener('change', (event) => {
-      const file = event.target.files[0];
-      emitFile(file);
-      this.ui.dom.fileInput.value = '';
-    });
-    
-    this.ui.buttons.loadMesh?.addEventListener('click', () => {
-      this.ui.dom.fileInput.click();
-    });
-
-    window.addEventListener('drop', (event) => this.handleDropEvent(event, emitFile), { passive: false });
-  }
-
-  handleDropEvent(event, emitFile) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const entries = this.extractEntries(event.dataTransfer);
-    if (entries.length) {
-      this.collectFilesFromEntries(entries).then((files) => {
-        if (files.length === 1) {
-          emitFile(files[0].file);
-        } else if (files.length > 1) {
-          this.eventBus.emit('file:bundle', files);
-        }
-      });
-      return;
-    }
-
-    const fileList = event.dataTransfer?.files;
-    if (fileList && fileList.length) {
-      if (fileList.length === 1) {
-        emitFile(fileList[0]);
-      } else {
-        const files = Array.from(fileList).map((file) => ({
-          file,
-          path: file.webkitRelativePath || file.name,
-        }));
-        this.eventBus.emit('file:bundle', files);
-      }
-    }
-  }
-
-  extractEntries(dataTransfer) {
-    const items = dataTransfer?.items;
-    if (!items) return [];
-    const entries = [];
-    for (const item of items) {
-      if (item.kind !== 'file') continue;
-      const entry = item.webkitGetAsEntry?.();
-      if (entry) entries.push(entry);
-    }
-    return entries;
-  }
-
-  async collectFilesFromEntries(entries) {
-    const files = [];
-    const traverse = (entry, path = '') =>
-      new Promise((resolve) => {
-        if (entry.isFile) {
-          entry.file((file) => {
-            files.push({ file, path: `${path}${file.name}` });
-            resolve();
-          });
-        } else if (entry.isDirectory) {
-          const reader = entry.createReader();
-          reader.readEntries(async (entriesList) => {
-            for (const child of entriesList) {
-              await traverse(child, `${path}${entry.name}/`);
-            }
-            resolve();
-          });
-        } else {
-          resolve();
-        }
-      });
-    for (const entry of entries) {
-      await traverse(entry);
-    }
-    return files;
   }
 
   bindKeyboardShortcuts() {

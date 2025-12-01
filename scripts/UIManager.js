@@ -10,6 +10,7 @@ import { RenderControls } from './ui/RenderControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { ResetControls } from './ui/ResetControls.js';
+import { StartMenuController } from './ui/StartMenuController.js';
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -21,7 +22,6 @@ export class UIManager {
     this.currentAnimationDuration = 0;
     this.animationPlaying = false;
     this.shelfRevealed = false;
-    this.dropzoneVisible = true;
   }
 
   init() {
@@ -31,12 +31,16 @@ export class UIManager {
     this.helpers = new UIHelpers(this.eventBus, this.stateStore, this);
     
     // Initialize control modules
+    this.startMenuController = new StartMenuController(this.eventBus, this);
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this);
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this);
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this);
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this);
+    
+    // Initialize start menu
+    this.startMenuController.init();
     
     // Initialize SceneSettingsManager
     this.sceneSettingsManager = new SceneSettingsManager(
@@ -64,7 +68,6 @@ export class UIManager {
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
     this.dom.canvas = q('#webgl');
-    this.dom.dropzone = q('#dropzone');
     this.dom.topBarTitle = q('#topBarTitle');
     this.dom.topBarAnimation = q('#topBarAnimation');
     this.dom.resetAll = q('#resetAll');
@@ -75,8 +78,6 @@ export class UIManager {
     this.dom.shelf = q('#shelf');
     this.dom.shelf?.classList.add('is-shelf-hidden');
     this.dom.topBar = document.querySelector('.top-bar');
-    this.dom.fileInput = q('#fileInput');
-    this.dom.browseButton = q('#browseButton');
     this.dom.tabs = document.querySelectorAll('.tab');
     this.dom.panels = document.querySelectorAll('.panel');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
@@ -230,7 +231,7 @@ export class UIManager {
         this.dom.subsections[key] = subsection;
       }
     });
-    this.setDropzoneVisible(this.dropzoneVisible);
+    // Start menu visibility is managed by StartMenuController
   }
 
   bindEvents() {
@@ -260,116 +261,6 @@ export class UIManager {
     });
   }
 
-  bindDragAndDrop() {
-    const emitFile = (file) => {
-      if (!file) return;
-      this.eventBus.emit('file:selected', file);
-    };
-    ['dragenter', 'dragover'].forEach((event) => {
-      this.dom.dropzone.addEventListener(event, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.dom.dropzone.classList.add('drag-active');
-      });
-    });
-    ['dragleave', 'dragend', 'drop'].forEach((event) => {
-      this.dom.dropzone.addEventListener(event, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.dom.dropzone.classList.remove('drag-active');
-      });
-    });
-    this.dom.dropzone.addEventListener('drop', (event) => {
-      this.handleDropEvent(event, emitFile);
-    });
-    this.dom.browseButton.addEventListener('click', () =>
-      this.dom.fileInput.click(),
-    );
-    this.dom.fileInput.addEventListener('change', (event) => {
-      const file = event.target.files[0];
-      emitFile(file);
-      this.dom.fileInput.value = '';
-    });
-    
-    this.buttons.loadMesh?.addEventListener('click', () => {
-      this.dom.fileInput.click();
-    });
-
-    window.addEventListener(
-      'drop',
-      (event) => this.handleDropEvent(event, emitFile),
-      { passive: false },
-    );
-  }
-
-  handleDropEvent(event, emitFile) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const entries = this.extractEntries(event.dataTransfer);
-    if (entries.length) {
-      this.collectFilesFromEntries(entries).then((files) => {
-        if (files.length === 1) {
-          emitFile(files[0].file);
-        } else if (files.length > 1) {
-          this.eventBus.emit('file:bundle', files);
-        }
-      });
-      return;
-    }
-
-    const fileList = event.dataTransfer?.files;
-    if (fileList && fileList.length) {
-      if (fileList.length === 1) {
-        emitFile(fileList[0]);
-      } else {
-        const files = Array.from(fileList).map((file) => ({
-          file,
-          path: file.webkitRelativePath || file.name,
-        }));
-        this.eventBus.emit('file:bundle', files);
-      }
-    }
-  }
-
-  extractEntries(dataTransfer) {
-    const items = dataTransfer?.items;
-    if (!items) return [];
-    const entries = [];
-    for (const item of items) {
-      if (item.kind !== 'file') continue;
-      const entry = item.webkitGetAsEntry?.();
-      if (entry) entries.push(entry);
-    }
-    return entries;
-  }
-
-  async collectFilesFromEntries(entries) {
-    const files = [];
-    const traverse = (entry, path = '') =>
-      new Promise((resolve) => {
-        if (entry.isFile) {
-          entry.file((file) => {
-            files.push({ file, path: `${path}${file.name}` });
-            resolve();
-          });
-        } else if (entry.isDirectory) {
-          const reader = entry.createReader();
-          reader.readEntries(async (entriesList) => {
-            for (const child of entriesList) {
-              await traverse(child, `${path}${entry.name}/`);
-            }
-            resolve();
-          });
-        } else {
-          resolve();
-        }
-      });
-    for (const entry of entries) {
-      await traverse(entry);
-    }
-    return files;
-  }
 
   // bindMeshControls() - Moved to MeshControls.js
 
@@ -403,7 +294,10 @@ export class UIManager {
         );
       }
     }
-    this.setDropzoneVisible(this.dropzoneVisible);
+    // Update start menu visibility when UI is toggled (refresh with current intended state)
+    if (this.startMenuController) {
+      this.startMenuController.updateVisibility();
+    }
     if (this.uiHidden) {
       document.activeElement?.blur?.();
     }
@@ -692,12 +586,9 @@ export class UIManager {
   }
 
   setDropzoneVisible(visible) {
-    if (!this.dom.dropzone) return;
-    this.dropzoneVisible = visible;
-    const shouldShow = visible && !this.uiHidden;
-    this.dom.dropzone.style.pointerEvents = shouldShow ? 'auto' : 'none';
-    this.dom.dropzone.style.opacity = shouldShow ? '1' : '0';
-    document.body.classList.toggle('dropzone-visible', shouldShow);
+    if (this.startMenuController) {
+      this.startMenuController.setVisible(visible);
+    }
   }
 
   revealShelf() {
