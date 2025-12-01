@@ -407,21 +407,49 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .dropzone-btn {
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
+  padding: 0.5rem 1.5rem;
+  border-radius: 999px; /* Fully rounded like accent-action-btn */
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: dropRevealButton 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  min-height: 2.5rem;
+  box-shadow: none;
+  position: relative;
+  z-index: 2; /* Ensure button is above dropzone background */
+}
+
+@keyframes dropReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropRevealButton {
+  to {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
 }
 
 .dropzone-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--accent) !important;
+  color: var(--brand-text) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 4px 12px var(--accent-shadow) !important;
+  opacity: 1 !important;
+}
+
+.dropzone-btn:active {
+  filter: brightness(0.95);
 }
 
 .workspace {
@@ -474,7 +502,31 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   border: 0;
   text-align: center;
   pointer-events: auto;
-  transition: opacity 0.3s, box-shadow 0.3s;
+  opacity: 0;
+  animation: dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dropzone.hiding {
+  animation: dropzoneHide 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+@keyframes dropzoneReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dropzoneHide {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 .dropzone::before {
@@ -518,22 +570,29 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .drop-logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--brand-primary);
-  letter-spacing: -0.01em;
-  margin-bottom: 0.5rem;
+  width: 384px;
+  height: auto;
+  margin-bottom: 3rem; /* Increased distance from text */
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0s forwards;
 }
 
 .drop-primary {
-  font-size: 1.4rem;
+  font-size: 1.8rem;
   letter-spacing: 0.05em;
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
 }
 
 .drop-secondary {
   color: var(--text-dim);
   font-size: 0.75rem;
   letter-spacing: -0.01em;
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
 }
 
 .shelf {
