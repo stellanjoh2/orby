@@ -236,8 +236,9 @@ export class CameraController {
     
     if (isActive) {
       // Store current orbit position when starting
-      // Use model center if available, otherwise use controls target
-      const target = this.callbacks.getFocusPoint?.() ?? this.controls.target ?? new THREE.Vector3();
+      // Use current controls target (where camera is already looking) to avoid jump-cut
+      // User can press 'F' to focus on object if they want to orbit around model center
+      const target = this.controls.target ?? new THREE.Vector3();
       this._orbitOffset.copy(this.camera.position).sub(target);
       this._orbitSpherical.setFromVector3(this._orbitOffset);
       this.autoOrbitBaseSpherical = this._orbitSpherical.clone();
@@ -275,8 +276,9 @@ export class CameraController {
 
     this.autoOrbitTime += delta * speed;
 
-    // Get model center (target point) - use focus point callback if available
-    const target = this.callbacks.getFocusPoint?.() ?? this.controls.target ?? new THREE.Vector3();
+    // Use current controls target (where we're orbiting around)
+    // This stays consistent with where we started orbiting from
+    const target = this.controls.target ?? new THREE.Vector3();
     
     // Create interesting multi-axis orbit pattern
     // Combine horizontal rotation with vertical oscillation and distance variation

@@ -34,12 +34,18 @@
         <section class="viewport">
           <canvas id="webgl" tabindex="0"></canvas>
           <div class="dropzone" id="dropzone">
-            <img src="./assets/orby-logotype.svg" alt="Orby" class="drop-logo" />
+            <img src="./assets/images/orby-logotype.svg" alt="Orby" class="drop-logo" />
             <p class="drop-primary">Drag and drop your 3D model here</p>
             <button id="browseButton" class="dropzone-btn">
               Browse Files
             </button>
-            <p class="drop-secondary">Supports .glb, .gltf, .obj, .fbx</p>
+            <p class="drop-secondary">Supports .glb, .gltf, .obj, .fbx. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
+            <div class="quick-start-guide">
+              <span><strong>V</strong> — Hide UI</span>
+              <span><strong>F</strong> — Focus camera</span>
+              <span><strong>Q/W/E</strong> — Transform widgets</span>
+              <span><strong>1/2/3/4</strong> — Display modes</span>
+            </div>
           </div>
           <input
             type="file"
@@ -47,7 +53,7 @@
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
           />
-          <div class="dropzone-version-tag">v0.5.44 · 2025-12-02 06:19:27 UTC</div>
+          <div class="dropzone-version-tag">v0.5.45 · 2025-12-02 06:22:32 UTC</div>
           <div class="mobile-warning" id="mobileWarning" style="display: none;">
             <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
           </div>
@@ -1969,7 +1975,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.44 · 2025-12-02 06:19:27 UTC</div>
+              <div class="info-version-tag">v0.5.45 · 2025-12-02 06:22:32 UTC</div>
             </section>
           </div>
         </aside>

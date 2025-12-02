@@ -290,8 +290,8 @@ export class GlobalControls {
         }
       }
 
-      // H/V - Toggle UI visibility
-      if (key === 'h' || key === 'v') {
+      // V - Toggle UI visibility
+      if (key === 'v') {
         event.preventDefault();
         this.ui.toggleUi();
       }

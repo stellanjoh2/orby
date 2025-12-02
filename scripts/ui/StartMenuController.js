@@ -12,6 +12,7 @@ export class StartMenuController {
     this.dropzone = null;
     this.fileInput = null;
     this.browseButton = null;
+    this.loadTestLink = null;
     this.loadMeshButton = null;
   }
 
@@ -25,6 +26,7 @@ export class StartMenuController {
     this.dropzone = document.querySelector('#dropzone');
     this.fileInput = document.querySelector('#fileInput');
     this.browseButton = document.querySelector('#browseButton');
+    this.loadTestLink = document.querySelector('#loadTestLink');
     this.loadMeshButton = this.ui.buttons?.loadMesh;
   }
 
@@ -61,6 +63,14 @@ export class StartMenuController {
     this.browseButton.addEventListener('click', () => {
       this.fileInput.click();
     });
+
+    // Load Test Object link click
+    if (this.loadTestLink) {
+      this.loadTestLink.addEventListener('click', async (event) => {
+        event.preventDefault();
+        await this.loadTestObject();
+      });
+    }
 
     // File input change
     this.fileInput.addEventListener('change', (event) => {
@@ -190,6 +200,32 @@ export class StartMenuController {
     }
     
     document.body.classList.toggle('dropzone-visible', shouldShow);
+  }
+
+  /**
+   * Load test object from server
+   */
+  async loadTestObject() {
+    const testFileUrl = './assets/3D-assets/Stitched_Memories_1122161936_texture.glb';
+    const fileName = 'Stitched_Memories_1122161936_texture.glb';
+    
+    try {
+      // Fetch the file from server
+      const response = await fetch(testFileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch test file: ${response.statusText}`);
+      }
+      
+      // Convert response to blob, then to File object
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: 'model/gltf-binary' });
+      
+      // Emit file:selected event to load it
+      this.eventBus.emit('file:selected', file);
+    } catch (error) {
+      console.error('Failed to load test object:', error);
+      this.ui.showToast('Could not load test object');
+    }
   }
 }
 
