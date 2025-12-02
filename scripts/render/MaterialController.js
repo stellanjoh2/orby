@@ -591,6 +591,13 @@ export class MaterialController {
           }
         }
       });
+      
+      // CRITICAL: Reapply Fresnel after material updates
+      // Material updates trigger shader recompilation which can lose the onBeforeCompile hook
+      // Reapplying ensures Fresnel continues to work
+      if (this.fresnelSettings?.enabled) {
+        this.applyFresnelToModel(this.currentModel);
+      }
     }
   }
 
@@ -912,6 +919,12 @@ export class MaterialController {
           });
         }
       });
+      
+      // CRITICAL: Reapply Fresnel after material updates
+      // Material updates trigger shader recompilation which can lose the onBeforeCompile hook
+      if (this.fresnelSettings?.enabled) {
+        this.applyFresnelToModel(this.currentModel);
+      }
 
       // Don't process non-clay materials when in clay mode
       return;
@@ -979,6 +992,12 @@ export class MaterialController {
             material.needsUpdate = true;
           }
         });
+      }
+      
+      // CRITICAL: Reapply Fresnel after material updates
+      // Material updates trigger shader recompilation which can lose the onBeforeCompile hook
+      if (this.fresnelSettings?.enabled) {
+        this.applyFresnelToModel(this.currentModel);
       }
     });
   }
