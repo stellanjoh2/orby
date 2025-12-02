@@ -585,7 +585,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .drop-logo {
   width: 384px;
   height: auto;
-  margin-bottom: 3rem; /* Increased distance from text */
+  margin-bottom: 1rem;
   opacity: 0;
   transform: translateY(-20px);
   animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0s forwards;
@@ -625,6 +625,19 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .quick-start-guide strong {
   color: var(--accent);
   font-weight: 700;
+}
+
+.drop-note {
+  margin-top: 1.5rem;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  letter-spacing: -0.01em;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+  max-width: 500px;
+  line-height: 1.5;
 }
 
 body:not(.dropzone-visible) .quick-start-guide {
@@ -1853,6 +1866,68 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
     opacity: 0;
     transform: translate(-50%, 10px);
   }
+}
+
+/* Tooltip System */
+.tooltip {
+  position: absolute;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  max-width: 300px;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.tooltip--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltip[data-position="top"] {
+  transform: translateY(4px);
+}
+
+.tooltip[data-position="top"].tooltip--visible {
+  transform: translateY(0);
+}
+
+.tooltip[data-position="bottom"] {
+  transform: translateY(-4px);
+}
+
+.tooltip[data-position="bottom"].tooltip--visible {
+  transform: translateY(0);
+}
+
+.tooltip[data-position="left"] {
+  transform: translateX(4px);
+}
+
+.tooltip[data-position="left"].tooltip--visible {
+  transform: translateX(0);
+}
+
+.tooltip[data-position="right"] {
+  transform: translateX(-4px);
+}
+
+.tooltip[data-position="right"].tooltip--visible {
+  transform: translateX(0);
 }
 
 @keyframes fadeIn {

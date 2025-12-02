@@ -3,6 +3,7 @@ import { StateStore } from './StateStore.js';
 import { UIManager } from './UIManager.js';
 import { SceneManager } from './SceneManager.js';
 import { GamepadController } from './input/GamepadController.js';
+import { TooltipController } from './ui/TooltipController.js';
 
 // Detect mobile devices
 function isMobileDevice() {
@@ -21,6 +22,7 @@ if (isMobileDevice()) {
 const eventBus = new EventBus();
 const stateStore = new StateStore();
 const ui = new UIManager(eventBus, stateStore);
+const tooltips = new TooltipController();
 const scene = new SceneManager(eventBus, stateStore, ui);
 const gamepad = new GamepadController({
   cameraController: scene.cameraController,
@@ -91,5 +93,5 @@ scene
     ui.showToast('Scene init failed');
   });
 
-window.orby = { eventBus, stateStore, ui, scene, gamepad };
+window.orby = { eventBus, stateStore, ui, scene, gamepad, tooltips };
 
