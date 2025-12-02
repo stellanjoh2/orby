@@ -227,7 +227,9 @@ export class GlobalControls {
       // Display modes: 1/2/3/4
       if (key === '1' || key === '2' || key === '3' || key === '4') {
         event.preventDefault();
-        const modes = ['shaded', 'wireframe', 'clay', 'textures'];
+        // Match UI order:
+        // 1: Shaded, 2: Unlit, 3: Clay, 4: Wireframe
+        const modes = ['shaded', 'textures', 'clay', 'wireframe'];
         const modeIndex = parseInt(key) - 1;
         if (modes[modeIndex]) {
           this.stateStore.set('shading', modes[modeIndex]);
