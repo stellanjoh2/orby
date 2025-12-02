@@ -37,6 +37,54 @@ scene
     // Font Awesome icons are loaded via CDN - no initialization needed
     // Icon sizes are controlled via CSS
     console.info('Orby ready');
+
+    // Setup fullscreen toggle button
+    const fullscreenButton = document.getElementById('fullscreenToggle');
+    if (fullscreenButton) {
+      const isFullscreen = () =>
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement;
+
+      const requestFullscreen = (element) => {
+        if (element.requestFullscreen) element.requestFullscreen();
+        else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+        else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
+        else if (element.msRequestFullscreen) element.msRequestFullscreen();
+      };
+
+      const exitFullscreen = () => {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+      };
+
+      const updateFullscreenIcon = () => {
+        const icon = fullscreenButton.querySelector('i');
+        const active = !!isFullscreen();
+        fullscreenButton.classList.toggle('is-active', active);
+        if (icon) {
+          icon.classList.toggle('fa-expand', !active);
+          icon.classList.toggle('fa-compress', active);
+        }
+      };
+
+      fullscreenButton.addEventListener('click', () => {
+        if (!isFullscreen()) {
+          // Request fullscreen on the whole document for true fullscreen
+          requestFullscreen(document.documentElement);
+        } else {
+          exitFullscreen();
+        }
+      });
+
+      document.addEventListener('fullscreenchange', updateFullscreenIcon);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+      document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
+      document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
+    }
   })
   .catch((error) => {
     console.error('Orby failed to initialize', error);
