@@ -46,6 +46,7 @@
               <span><strong>Q/W/E</strong> — Transform widgets</span>
               <span><strong>1/2/3/4</strong> — Display modes</span>
             </div>
+            <p class="drop-note">⚠️ Orby isn't great at handling window resizing yet. If you notice black borders around the viewer, please refresh your browser at its current window size.</p>
           </div>
           <input
             type="file"
@@ -57,7 +58,7 @@
             id="fullscreenToggle"
             class="viewport-fullscreen-btn"
             type="button"
-            title="Toggle fullscreen"
+            data-tooltip="Toggle fullscreen"
           >
             <i class="fa-solid fa-expand"></i>
           </button>
@@ -69,16 +70,16 @@
 
         <aside class="shelf is-shelf-hidden" id="shelf">
           <nav class="tabs" role="tablist" aria-label="Orby Panels">
-            <button class="tab active" data-tab="mesh" aria-selected="true" title="Mesh">
+            <button class="tab active" data-tab="mesh" aria-selected="true" data-tooltip="Object">
               <i class="fa-solid fa-cube"></i>
             </button>
-            <button class="tab" data-tab="studio" aria-selected="false" title="Studio">
+            <button class="tab" data-tab="studio" aria-selected="false" data-tooltip="Studio">
               <i class="fa-solid fa-lightbulb"></i>
             </button>
-            <button class="tab" data-tab="render" aria-selected="false" title="FX">
+            <button class="tab" data-tab="render" aria-selected="false" data-tooltip="Camera & FX">
               <i class="fa-solid fa-camera"></i>
             </button>
-            <button class="tab" data-tab="info" aria-selected="false" title="Information">
+            <button class="tab" data-tab="info" aria-selected="false" data-tooltip="Information">
               <i class="fa-solid fa-circle-info"></i>
             </button>
           </nav>
@@ -90,7 +91,7 @@
               <div class="panel-block">
                 <div class="block-title">Display</div>
                 <div class="mode-icons" role="group">
-                  <label class="mode-icon" data-mode="shaded">
+                  <label class="mode-icon" data-mode="shaded" data-tooltip="Shaded — Full lighting and materials">
                     <input
                       type="radio"
                       name="shading"
@@ -99,15 +100,15 @@
                     />
                     <img src="./assets/images/modeicon-color.png" alt="Shaded" />
                   </label>
-                  <label class="mode-icon" data-mode="textures">
+                  <label class="mode-icon" data-mode="textures" data-tooltip="Unlit — Textures without lighting">
                     <input type="radio" name="shading" value="textures" />
                     <img src="./assets/images/modeicon-unlit.png" alt="Unlit" />
                   </label>
-                  <label class="mode-icon" data-mode="clay">
+                  <label class="mode-icon" data-mode="clay" data-tooltip="Clay — Uniform material preview">
                     <input type="radio" name="shading" value="clay" />
                     <img src="./assets/images/modeicon-clay.png" alt="Clay" />
                   </label>
-                  <label class="mode-icon" data-mode="wireframe">
+                  <label class="mode-icon" data-mode="wireframe" data-tooltip="Wireframe — Mesh structure view">
                     <input type="radio" name="shading" value="wireframe" />
                     <img src="./assets/images/modeicon-wire.png" alt="Wire" />
                   </label>
@@ -118,13 +119,13 @@
                 <div class="subsection" data-subsection="material">
                   <div class="block-title has-reset">
                     <span>Material</span>
-                    <button class="block-reset-btn" data-reset="material" aria-label="Reset Material">
+                    <button class="block-reset-btn" data-reset="material" aria-label="Reset Material" data-tooltip="Reset Material settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span>Brightness</span>
+                    <span data-tooltip="Adjust overall material brightness">Brightness</span>
                     <input
                       id="materialBrightness"
                       type="range"
@@ -136,7 +137,7 @@
                     <span class="value" data-output="materialBrightness">1.00</span>
                   </label>
                   <label class="slider-line">
-                    <span>Metalness</span>
+                    <span data-tooltip="Control metallic appearance (0 = dielectric, 1 = metal)">Metalness</span>
                     <input
                       id="materialMetalness"
                       type="range"
@@ -148,7 +149,7 @@
                     <span class="value" data-output="materialMetalness">0.00</span>
                   </label>
                   <label class="slider-line">
-                    <span>Roughness</span>
+                    <span data-tooltip="Control surface smoothness (0 = mirror, 1 = rough)">Roughness</span>
                     <input
                       id="materialRoughness"
                       type="range"
@@ -164,7 +165,7 @@
                 <div class="subsection" data-subsection="clay">
                   <div class="block-title has-reset">
                     <span>Clay</span>
-                    <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay">
+                    <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay" data-tooltip="Reset Clay settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -180,7 +181,7 @@
                   </label>
                   <label class="slider-line">
                     <span>Normal Map</span>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Show surface details from normal maps in clay mode">
                       <input type="checkbox" id="clayNormalMap" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Enable normal map in clay mode</span>
@@ -192,11 +193,11 @@
                   <div class="block-title has-toggle">
                     <span>Fresnel</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="fresnel" aria-label="Reset Fresnel">
+                      <button class="block-reset-btn" data-reset="fresnel" aria-label="Reset Fresnel" data-tooltip="Reset Fresnel settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable edge lighting effect">
                         <input type="checkbox" id="toggleFresnel" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Fresnel</span>
@@ -241,14 +242,14 @@
                 <div class="subsection" data-subsection="wireframe">
                   <div class="block-title has-reset">
                     <span>Wireframe</span>
-                    <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe">
+                    <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe" data-tooltip="Reset Wireframe settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
                   <label class="slider-line">
                     <span>Always on</span>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Show wireframe overlay on all display modes">
                       <input type="checkbox" id="wireframeAlwaysOn" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Always show wireframe</span>
@@ -256,7 +257,7 @@
                   </label>
                   <label class="slider-line">
                     <span>Only visible faces</span>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Hide wireframe lines on back-facing surfaces">
                       <input type="checkbox" id="wireframeOnlyVisibleFaces" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Show wireframe only on visible faces</span>
@@ -278,7 +279,7 @@
                 <div class="subsection">
                   <div class="block-title has-reset">
                     <span>Transform</span>
-                    <button class="block-reset-btn" data-reset="transform" aria-label="Reset Transform">
+                    <button class="block-reset-btn" data-reset="transform" aria-label="Reset Transform" data-tooltip="Reset Transform settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -296,7 +297,7 @@
                     <span class="value" data-output="scale">1.00×</span>
                   </label>
                   <label class="slider-line">
-                    <span>Move X</span>
+                    <span data-tooltip="Move object along X axis">Move X</span>
                     <input
                       id="xOffsetControl"
                       type="range"
@@ -308,7 +309,7 @@
                     <span class="value" data-output="xOffset">0.00m</span>
                   </label>
                   <label class="slider-line">
-                    <span>Move Y</span>
+                    <span data-tooltip="Move object along Y axis">Move Y</span>
                     <input
                       id="yOffsetControl"
                       type="range"
@@ -320,7 +321,7 @@
                     <span class="value" data-output="yOffset">0.00m</span>
                   </label>
                   <label class="slider-line">
-                    <span>Move Z</span>
+                    <span data-tooltip="Move object along Z axis">Move Z</span>
                     <input
                       id="zOffsetControl"
                       type="range"
@@ -332,7 +333,7 @@
                     <span class="value" data-output="zOffset">0.00m</span>
                   </label>
                   <label class="slider-line">
-                    <span>Rotate X</span>
+                    <span data-tooltip="Rotate object around X axis">Rotate X</span>
                     <input
                       id="rotationXControl"
                       type="range"
@@ -344,7 +345,7 @@
                       <span class="value" data-output="rotationX">0°</span>
                   </label>
                   <label class="slider-line">
-                    <span>Rotate Y</span>
+                    <span data-tooltip="Rotate object around Y axis">Rotate Y</span>
                     <input
                       id="rotationYControl"
                       type="range"
@@ -356,7 +357,7 @@
                       <span class="value" data-output="rotationY">0°</span>
                   </label>
                   <label class="slider-line">
-                    <span>Rotate Z</span>
+                    <span data-tooltip="Rotate object around Z axis">Rotate Z</span>
                     <input
                       id="rotationZControl"
                       type="range"
@@ -393,11 +394,11 @@
                   <div class="block-title has-toggle">
                     <span>Podium</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="podium" aria-label="Reset Podium">
+                      <button class="block-reset-btn" data-reset="podium" aria-label="Reset Podium" data-tooltip="Reset Podium settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Show/hide podium platform">
                         <input type="checkbox" id="groundSolid" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable podium</span>
@@ -414,7 +415,7 @@
                     />
                   </label>
                   <label class="slider-line">
-                    <span>Y Position</span>
+                    <span data-tooltip="Vertical position of the podium">Y Position</span>
                     <input
                       id="groundY"
                       type="range"
@@ -426,7 +427,7 @@
                     <span class="value" data-output="groundY">0.00m</span>
                   </label>
                   <label class="slider-line">
-                    <span>Scale</span>
+                    <span data-tooltip="Size of the podium">Scale</span>
                     <input
                       id="podiumScale"
                       type="range"
@@ -437,7 +438,7 @@
                     />
                     <span class="value" data-output="podiumScale">1.00</span>
                   </label>
-                  <button id="podiumSnap" class="ghost-btn small" type="button">
+                  <button id="podiumSnap" class="ghost-btn small" type="button" data-tooltip="Position podium at the bottom of the object">
                     Snap to bottom
                   </button>
                 </div>
@@ -446,11 +447,11 @@
                   <div class="block-title has-toggle">
                     <span>Grid</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="grid" aria-label="Reset Grid">
+                      <button class="block-reset-btn" data-reset="grid" aria-label="Reset Grid" data-tooltip="Reset Grid settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Show/hide ground grid">
                         <input type="checkbox" id="groundWire" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable grid</span>
@@ -510,7 +511,7 @@
                   <div><dt>File Size</dt><dd>—</dd></div>
                   <div><dt>Bounds</dt><dd>—</dd></div>
                 </dl>
-                <button id="loadMeshButton" class="accent-action-btn" style="margin-top: 1rem;">
+                <button id="loadMeshButton" class="accent-action-btn" style="margin-top: 1rem;" data-tooltip="Load a new 3D model file">
                   <i class="fa-solid fa-wand-magic-sparkles"></i>
                   Import New Mesh
                 </button>
@@ -522,18 +523,18 @@
                   <div class="export-option-group">
                     <label class="export-label">Transparent</label>
                     <div class="export-button-group">
-                      <button data-export-transparent="true" class="export-option-btn active">YES</button>
-                      <button data-export-transparent="false" class="export-option-btn">NO</button>
+                      <button data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
+                      <button data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
                     </div>
                   </div>
                   <div class="export-option-group">
                     <label class="export-label">Size</label>
                     <div class="export-button-group">
-                      <button data-export-size="1" class="export-option-btn active">1X</button>
-                      <button data-export-size="2" class="export-option-btn">2X</button>
+                      <button data-export-size="1" class="export-option-btn active" data-tooltip="Export at 1× resolution">1X</button>
+                      <button data-export-size="2" class="export-option-btn" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
                     </div>
                   </div>
-                  <button id="exportPngButton" class="accent-action-btn">
+                  <button id="exportPngButton" class="accent-action-btn" data-tooltip="Export current view as PNG image">
                     <i class="fa-solid fa-download"></i>
                     Export .PNG
                   </button>
@@ -566,15 +567,15 @@
               <div class="panel-block">
                 <div class="block-title">Scene</div>
                 <div class="scene-controls">
-                  <button id="resetMeshSettings" class="accent-action-btn">
+                  <button id="resetMeshSettings" class="accent-action-btn" data-tooltip="Reset all object settings to defaults">
                     <i class="fa-solid fa-rotate-left"></i>
                     Reset Object
               </button>
-                  <button class="copy-scene-settings accent-action-btn">
+                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene
               </button>
-                  <button class="load-scene-settings accent-action-btn">
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
                     <i class="fa-solid fa-upload"></i>
                     Load Scene
                   </button>
@@ -589,11 +590,11 @@
                 <div class="block-title has-toggle">
                   <span>HDRI</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="hdri" aria-label="Reset HDRI">
+                    <button class="block-reset-btn" data-reset="hdri" aria-label="Reset HDRI" data-tooltip="Reset HDRI settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Enable/disable HDRI environment lighting">
                       <input type="checkbox" id="hdriEnabled" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Enable HDRI Lighting</span>
@@ -601,27 +602,27 @@
                   </div>
                 </div>
                 <div class="hdri-grid" id="hdriGrid">
-                  <button data-hdri="congress" class="hdri-card">
+                  <button data-hdri="congress" class="hdri-card" data-tooltip="Congress Hall environment">
                     CONGRESS
                   </button>
-                  <button data-hdri="luminous-sky" class="hdri-card">
+                  <button data-hdri="luminous-sky" class="hdri-card" data-tooltip="Forest environment">
                     FOREST
                   </button>
-                  <button data-hdri="sunset" class="hdri-card">
+                  <button data-hdri="sunset" class="hdri-card" data-tooltip="Sunset environment">
                     SUNSET
                   </button>
-                  <button data-hdri="meadow" class="hdri-card active">
+                  <button data-hdri="meadow" class="hdri-card active" data-tooltip="Meadow environment">
                     MEADOW
                   </button>
-                  <button data-hdri="abandoned" class="hdri-card">
+                  <button data-hdri="abandoned" class="hdri-card" data-tooltip="Abandoned building environment">
                     ABANDONED
                   </button>
-                  <button data-hdri="beach" class="hdri-card">
+                  <button data-hdri="beach" class="hdri-card" data-tooltip="Beach environment">
                     BEACH
                   </button>
                 </div>
                 <label class="slider-line">
-                  <span>Intensity</span>
+                  <span data-tooltip="HDRI lighting intensity">Intensity</span>
                   <input
                     id="hdriStrength"
                     type="range"
@@ -633,7 +634,7 @@
                   <span class="value" data-output="hdriStrength">1.50</span>
                 </label>
                 <label class="slider-line">
-                  <span>Blurriness</span>
+                  <span data-tooltip="Blur amount for HDRI reflections">Blurriness</span>
                   <input
                     id="hdriBlurriness"
                     type="range"
@@ -669,7 +670,7 @@
               <div class="panel-block" data-block="background">
                 <div class="block-title has-reset">
                   <span>Background Color</span>
-                  <button class="block-reset-btn" data-reset="background" aria-label="Reset Background">
+                  <button class="block-reset-btn" data-reset="background" aria-label="Reset Background" data-tooltip="Reset Background Color">
                         <i class="fa-solid fa-rotate-left"></i>
                     <span class="sr-only">Reset</span>
                   </button>
@@ -689,11 +690,11 @@
                 <div class="block-title has-toggle">
                   <span id="lightsTitle">Lights</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="lights" aria-label="Reset Lights">
+                    <button class="block-reset-btn" data-reset="lights" aria-label="Reset Lights" data-tooltip="Reset all light settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Enable/disable 3-point lighting system">
                       <input type="checkbox" id="lightsEnabled" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Enable 3-Point Lighting</span>
@@ -704,7 +705,7 @@
                 <!-- Global Light Controls -->
                 <div class="subsection" data-subsection="globalLights">
                   <label class="slider-line">
-                    <span>Strength</span>
+                    <span data-tooltip="Overall light intensity multiplier">Strength</span>
                     <input
                       id="lightsMaster"
                       type="range"
@@ -716,7 +717,7 @@
                     <span class="value" data-output="lightsMaster">1.00</span>
                   </label>
                   <label class="slider-line">
-                    <span>Height</span>
+                    <span data-tooltip="Vertical position of all lights">Height</span>
                     <input
                       id="lightsHeight"
                       type="range"
@@ -728,7 +729,7 @@
                     <span class="value" data-output="lightsHeight">5.0</span>
                   </label>
                   <label class="slider-line">
-                    <span>Rotate</span>
+                    <span data-tooltip="Rotate all lights around the object">Rotate</span>
                     <input
                       id="lightsRotation"
                       type="range"
@@ -741,23 +742,23 @@
                   </label>
                   <label class="slider-line">
                     <span>Auto Rotate</span>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Automatically rotate lights around the object">
                       <input type="checkbox" id="lightsAutoRotate" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Auto rotate lights</span>
                     </label>
                   </label>
                   <label class="slider-line">
-                    <span>Show Spotlights</span>
-                    <label class="effect-toggle">
+                    <span data-tooltip="Show visual indicators for light positions">Show Spotlights</span>
+                    <label class="effect-toggle" data-tooltip="Display light position indicators in the viewport">
                       <input type="checkbox" id="showLightIndicators" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Show spotlights</span>
                     </label>
                   </label>
                   <label class="slider-line">
-                    <span>Cast Shadows</span>
-                    <label class="effect-toggle">
+                    <span data-tooltip="Enable shadow casting from lights">Cast Shadows</span>
+                    <label class="effect-toggle" data-tooltip="Enable/disable shadow casting">
                       <input type="checkbox" id="lightsCastShadows" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Cast shadows</span>
@@ -772,11 +773,11 @@
                   <div class="block-title has-toggle has-reset">
                     <span>Key</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="keyLight" aria-label="Reset Key Light">
+                      <button class="block-reset-btn" data-reset="keyLight" aria-label="Reset Key Light" data-tooltip="Reset Key Light settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable Key Light (main light)">
                         <input type="checkbox" id="keyLightEnabled" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Key Light</span>
@@ -840,11 +841,11 @@
                   <div class="block-title has-toggle has-reset">
                     <span>Fill</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="fillLight" aria-label="Reset Fill Light">
+                      <button class="block-reset-btn" data-reset="fillLight" aria-label="Reset Fill Light" data-tooltip="Reset Fill Light settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable Fill Light (soft fill)">
                         <input type="checkbox" id="fillLightEnabled" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Fill Light</span>
@@ -908,11 +909,11 @@
                   <div class="block-title has-toggle has-reset">
                     <span>Rim</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="rimLight" aria-label="Reset Rim Light">
+                      <button class="block-reset-btn" data-reset="rimLight" aria-label="Reset Rim Light" data-tooltip="Reset Rim Light settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                  <label class="effect-toggle">
+                  <label class="effect-toggle" data-tooltip="Enable/disable Rim Light (edge highlight)">
                         <input type="checkbox" id="rimLightEnabled" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Rim Light</span>
@@ -976,11 +977,11 @@
                   <div class="block-title has-toggle has-reset">
                     <span>Ambient</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="ambientLight" aria-label="Reset Ambient Light">
+                      <button class="block-reset-btn" data-reset="ambientLight" aria-label="Reset Ambient Light" data-tooltip="Reset Ambient Light settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
               </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable Ambient Light (global illumination)">
                         <input type="checkbox" id="ambientLightEnabled" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Ambient Light</span>
@@ -1010,15 +1011,15 @@
               <div class="panel-block">
                 <div class="block-title">Scene</div>
                 <div class="scene-controls">
-                  <button id="resetStudioSettings" class="accent-action-btn">
+                  <button id="resetStudioSettings" class="accent-action-btn" data-tooltip="Reset all studio settings to defaults">
                         <i class="fa-solid fa-rotate-left"></i>
                     Reset Studio
               </button>
-                  <button class="copy-scene-settings accent-action-btn">
+                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene
                   </button>
-                  <button class="load-scene-settings accent-action-btn">
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
                     <i class="fa-solid fa-upload"></i>
                     Load Scene
                   </button>
@@ -1033,13 +1034,13 @@
                 <div class="subsection">
                 <div class="block-title has-reset">
                   <span>Basic</span>
-                    <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera">
+                    <button class="block-reset-btn" data-reset="camera" aria-label="Reset Camera" data-tooltip="Reset Camera settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
                 </div>
                 <label class="slider-line">
-                  <span>FOV</span>
+                  <span data-tooltip="Field of view (camera angle)">FOV</span>
                   <input
                     id="cameraFov"
                     type="range"
@@ -1051,7 +1052,7 @@
                   <span class="value" data-output="cameraFov">50°</span>
                 </label>
                 <label class="slider-line">
-                  <span>Tilt</span>
+                  <span data-tooltip="Camera tilt angle">Tilt</span>
                   <input
                     id="cameraTilt"
                     type="range"
@@ -1063,7 +1064,7 @@
                   <span class="value" data-output="cameraTilt">0°</span>
                 </label>
                 <label class="slider-line">
-                  <span>Exposure</span>
+                  <span data-tooltip="Overall scene brightness">Exposure</span>
                   <input
                     id="exposure"
                     type="range"
@@ -1076,7 +1077,7 @@
                 </label>
                 <label class="slider-line">
                   <span>Auto Exposure</span>
-                  <label class="effect-toggle">
+                  <label class="effect-toggle" data-tooltip="Automatically adjust exposure for optimal brightness">
                     <input type="checkbox" id="autoExposure" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable auto exposure</span>
@@ -1105,7 +1106,7 @@
                 <div class="subsection">
                   <div class="block-title has-toggle">
                     <span>Histogram</span>
-                    <label class="effect-toggle">
+                    <label class="effect-toggle" data-tooltip="Show/hide exposure histogram">
                       <input type="checkbox" id="histogramEnabled" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Enable histogram</span>
@@ -1117,7 +1118,7 @@
                 <div class="subsection">
                   <div class="block-title has-reset">
                     <span>Color & Tone</span>
-                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone">
+                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone" data-tooltip="Reset Color & Tone settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -1235,7 +1236,7 @@
                 <div class="subsection" data-subsection="vignette">
                   <div class="block-title has-reset">
                     <span>Vignette</span>
-                    <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette">
+                    <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette" data-tooltip="Reset Vignette settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -1269,11 +1270,11 @@
                   <div class="block-title has-toggle">
                     <span>Depth of Field</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="dof" aria-label="Reset Depth of Field">
+                      <button class="block-reset-btn" data-reset="dof" aria-label="Reset Depth of Field" data-tooltip="Reset Depth of Field settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable depth of field blur effect">
                         <input type="checkbox" id="toggleDof" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Depth of Field</span>
@@ -1310,11 +1311,11 @@
                   <div class="block-title has-toggle">
                     <span>Bloom</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom">
+                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom" data-tooltip="Reset Bloom settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable bloom glow effect">
                         <input type="checkbox" id="toggleBloom" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Bloom</span>
@@ -1367,11 +1368,11 @@
                   <div class="block-title has-toggle">
                     <span>Lens Flare</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="lens-flare" aria-label="Reset Lens Flare">
+                      <button class="block-reset-btn" data-reset="lens-flare" aria-label="Reset Lens Flare" data-tooltip="Reset Lens Flare settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable lens flare effect">
                         <input type="checkbox" id="lensFlareEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable lens flare</span>
@@ -1424,11 +1425,11 @@
                   <div class="block-title has-toggle">
                     <span>Lens Dirt</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="lens-dirt" aria-label="Reset Lens Dirt">
+                      <button class="block-reset-btn" data-reset="lens-dirt" aria-label="Reset Lens Dirt" data-tooltip="Reset Lens Dirt settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable lens dirt overlay">
                         <input type="checkbox" id="lensDirtEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Lens Dirt</span>
@@ -1453,11 +1454,11 @@
                   <div class="block-title has-toggle">
                     <span>Film Grain</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="grain" aria-label="Reset Film Grain">
+                      <button class="block-reset-btn" data-reset="grain" aria-label="Reset Film Grain" data-tooltip="Reset Film Grain settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable film grain effect">
                         <input type="checkbox" id="toggleGrain" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Film Grain</span>
@@ -1482,11 +1483,11 @@
                   <div class="block-title has-toggle">
                     <span>Chromatic Aberration</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="aberration" aria-label="Reset Chromatic Aberration">
+                      <button class="block-reset-btn" data-reset="aberration" aria-label="Reset Chromatic Aberration" data-tooltip="Reset Chromatic Aberration settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle">
+                      <label class="effect-toggle" data-tooltip="Enable/disable chromatic aberration effect">
                         <input type="checkbox" id="toggleAberration" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Chromatic Aberration</span>
@@ -1545,7 +1546,7 @@
               </div>
 
               <div class="panel-block export-block" style="display: none;">
-                <button id="exportPng" class="accent-action-btn">
+                <button id="exportPng" class="accent-action-btn" data-tooltip="Export current view as PNG image">
                   <i class="fa-solid fa-download"></i>
                   Export .PNG
                 </button>
@@ -1554,15 +1555,15 @@
               <div class="panel-block">
                 <div class="block-title">Scene</div>
                 <div class="scene-controls">
-                  <button id="resetRenderSettings" class="accent-action-btn">
+                  <button id="resetRenderSettings" class="accent-action-btn" data-tooltip="Reset all camera settings to defaults">
                         <i class="fa-solid fa-rotate-left"></i>
                     Reset Camera
               </button>
-                  <button class="copy-scene-settings accent-action-btn">
+                  <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene
               </button>
-                  <button class="load-scene-settings accent-action-btn">
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
                     <i class="fa-solid fa-upload"></i>
                     Load Scene
                   </button>
@@ -1643,17 +1644,7 @@
                   
                   <div class="shortcut-row">
                     <span class="shortcut-action">Toggle UI visibility</span>
-                    <span class="shortcut-keys"><kbd>H</kbd></span>
-                  </div>
-                  
-                  <div class="shortcut-row">
-                    <span class="shortcut-action">Cycle through tabs</span>
-                    <span class="shortcut-keys"><kbd>Tab</kbd></span>
-                  </div>
-                  
-                  <div class="shortcut-row">
-                    <span class="shortcut-action">Close any open modals/overlays</span>
-                    <span class="shortcut-keys"><kbd>Esc</kbd></span>
+                    <span class="shortcut-keys"><kbd>V</kbd></span>
                   </div>
                   
                   <div class="shortcut-row">
@@ -1733,7 +1724,7 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Orbit around focus point</span>
+                    <span class="shortcut-action">Focus camera on model center</span>
                     <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Left Click</kbd></span>
                   </div>
                 </div>
