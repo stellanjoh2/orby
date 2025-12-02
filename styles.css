@@ -1473,6 +1473,56 @@ input[type='range']:disabled::-moz-range-thumb {
   pointer-events: none;
 }
 
+/* Fullscreen toggle button (bottom-left of viewport) */
+.viewport-fullscreen-btn {
+  position: absolute;
+  bottom: 1.2rem;
+  left: 1.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  opacity: 0.75;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s,
+    opacity 0.2s;
+  z-index: 12;
+}
+
+.viewport-fullscreen-btn i {
+  font-size: 14px;
+}
+
+.viewport-fullscreen-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--brand-text);
+  box-shadow: 0 8px 22px var(--accent-shadow);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.viewport-fullscreen-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+}
+
+body:not(.dropzone-visible) .viewport-fullscreen-btn {
+  opacity: 0.9;
+}
+
 .rotation-notch {
   border: none;
   background: rgba(255, 255, 255, 0.15);
