@@ -113,6 +113,7 @@ export class UIManager {
       materialBrightness: q('#materialBrightness'),
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
+      materialEmissive: q('#materialEmissive'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
@@ -256,7 +257,7 @@ export class UIManager {
         if (!href) return;
         const target = document.querySelector(href);
         if (!target) return;
-        event.preventDefault();
+    event.preventDefault();
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
@@ -937,6 +938,11 @@ export class UIManager {
       const roughness = state.material?.roughness ?? 0.8;
       this.inputs.materialRoughness.value = roughness;
       this.updateValueLabel('materialRoughness', roughness, 'decimal');
+    }
+    if (this.inputs.materialEmissive) {
+      const emissive = state.material?.emissive ?? 0.0;
+      this.inputs.materialEmissive.value = emissive;
+      this.updateValueLabel('materialEmissive', emissive, 'decimal');
     }
     this.inputs.clayColor.value = state.clay.color;
     if (this.inputs.clayNormalMap) {

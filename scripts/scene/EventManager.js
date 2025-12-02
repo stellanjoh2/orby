@@ -40,6 +40,9 @@ export class EventManager {
     eventBus.on('mesh:material-roughness', (roughness) => {
       s.materialController?.setMaterialRoughness(roughness);
     });
+    eventBus.on('mesh:material-emissive', (emissive) => {
+      s.materialController?.setMaterialEmissive(emissive);
+    });
     // Legacy support
     eventBus.on('mesh:diffuse-brightness', (value) => {
       s.materialController?.setMaterialBrightness(value);

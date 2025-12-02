@@ -242,6 +242,11 @@ export class MeshControls {
       this.ui.inputs.materialRoughness.value = roughness;
       this.helpers.updateValueLabel('materialRoughness', roughness, 'decimal');
     }
+    if (this.ui.inputs.materialEmissive) {
+      const emissive = state.material?.emissive ?? 0.0;
+      this.ui.inputs.materialEmissive.value = emissive;
+      this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
+    }
     this.ui.inputs.clayColor.value = state.clay.color;
     if (this.ui.inputs.clayNormalMap) {
       this.ui.inputs.clayNormalMap.checked = state.clay.normalMap !== false;
