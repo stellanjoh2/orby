@@ -956,6 +956,8 @@ a:visited {
 /* Muted blocks: reduce headline opacity */
 .is-muted .block-title {
   opacity: 0.75;
+  /* Also desaturate the accent color when muted */
+  color: color-mix(in srgb, var(--accent) 25%, var(--text-dim) 75%);
 }
 
 .block-title.has-toggle {
