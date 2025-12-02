@@ -205,14 +205,18 @@ export class HistogramController {
     // Determine bar color based on warning level
     let barColor;
     if (warningLevel === 2) {
-      // Overexposed - red
+      // Overexposed - red (keep same)
       barColor = 'rgba(255, 100, 100, 0.8)';
     } else if (warningLevel === 1) {
-      // Close to overexposing - orange
+      // Close to overexposing - orange (keep same)
       barColor = 'rgba(255, 150, 50, 0.8)';
     } else {
-      // Normal - white
-      barColor = 'rgba(255, 255, 255, 0.6)';
+      // Normal - primary brand color (neon yellow/green) at full opacity
+      // Get brand color from CSS variable, fallback to #c4ff00
+      const brandColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--accent')
+        .trim() || '#c4ff00';
+      barColor = brandColor; // Use at opacity 1.0 (full opacity)
     }
     
     // Draw histogram bars
