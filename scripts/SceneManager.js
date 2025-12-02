@@ -550,6 +550,9 @@ export class SceneManager {
     if (state.material?.roughness !== undefined) {
       this.materialController.setMaterialRoughness(state.material.roughness);
     }
+    if (state.material?.emissive !== undefined) {
+      this.materialController.setMaterialEmissive(state.material.emissive);
+    }
     // Legacy support
     if (state.diffuseBrightness !== undefined && state.material?.brightness === undefined) {
       this.materialController.setMaterialBrightness(state.diffuseBrightness);

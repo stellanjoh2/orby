@@ -44,7 +44,21 @@ export class TooltipController {
    * Handle mouse enter on elements with data-tooltip
    */
   handleMouseEnter(event) {
-    const target = event.target.closest('[data-tooltip]');
+    // Handle cases where event.target might not have closest (e.g., SVG elements)
+    let target = null;
+    if (event.target && typeof event.target.closest === 'function') {
+      target = event.target.closest('[data-tooltip]');
+    } else if (event.target && event.target.parentElement) {
+      // Fallback: traverse up the DOM tree manually
+      let element = event.target.parentElement;
+      while (element && element !== document.body) {
+        if (element.hasAttribute && element.hasAttribute('data-tooltip')) {
+          target = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     if (!target || target.disabled) return;
     
     const text = target.getAttribute('data-tooltip');
@@ -84,7 +98,21 @@ export class TooltipController {
    * Handle mouse leave
    */
   handleMouseLeave(event) {
-    const target = event.target.closest('[data-tooltip]');
+    // Handle cases where event.target might not have closest (e.g., SVG elements)
+    let target = null;
+    if (event.target && typeof event.target.closest === 'function') {
+      target = event.target.closest('[data-tooltip]');
+    } else if (event.target && event.target.parentElement) {
+      // Fallback: traverse up the DOM tree manually
+      let element = event.target.parentElement;
+      while (element && element !== document.body) {
+        if (element.hasAttribute && element.hasAttribute('data-tooltip')) {
+          target = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     
     // If we're leaving the current target, hide the tooltip
     if (target === this.currentTarget) {
@@ -103,7 +131,20 @@ export class TooltipController {
    * Handle focus (keyboard navigation)
    */
   handleFocus(event) {
-    const target = event.target.closest('[data-tooltip]');
+    // Handle cases where event.target might not have closest
+    let target = null;
+    if (event.target && typeof event.target.closest === 'function') {
+      target = event.target.closest('[data-tooltip]');
+    } else if (event.target && event.target.parentElement) {
+      let element = event.target.parentElement;
+      while (element && element !== document.body) {
+        if (element.hasAttribute && element.hasAttribute('data-tooltip')) {
+          target = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     if (!target || target.disabled) return;
     
     const text = target.getAttribute('data-tooltip');
@@ -117,7 +158,20 @@ export class TooltipController {
    * Handle blur (keyboard navigation)
    */
   handleBlur(event) {
-    const target = event.target.closest('[data-tooltip]');
+    // Handle cases where event.target might not have closest
+    let target = null;
+    if (event.target && typeof event.target.closest === 'function') {
+      target = event.target.closest('[data-tooltip]');
+    } else if (event.target && event.target.parentElement) {
+      let element = event.target.parentElement;
+      while (element && element !== document.body) {
+        if (element.hasAttribute && element.hasAttribute('data-tooltip')) {
+          target = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     if (!target || target === this.currentTarget) return;
     
     this.hide();
@@ -127,7 +181,20 @@ export class TooltipController {
    * Handle touch (mobile)
    */
   handleTouchStart(event) {
-    const target = event.target.closest('[data-tooltip]');
+    // Handle cases where event.target might not have closest
+    let target = null;
+    if (event.target && typeof event.target.closest === 'function') {
+      target = event.target.closest('[data-tooltip]');
+    } else if (event.target && event.target.parentElement) {
+      let element = event.target.parentElement;
+      while (element && element !== document.body) {
+        if (element.hasAttribute && element.hasAttribute('data-tooltip')) {
+          target = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     if (!target || target.disabled) return;
     
     const text = target.getAttribute('data-tooltip');

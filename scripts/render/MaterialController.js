@@ -33,6 +33,7 @@ export class MaterialController {
       brightness: 1.0,
       metalness: 0.0,
       roughness: 0.8, // Default to 0.8 (original fallback value)
+      emissive: 0.0,
     };
   }
 
@@ -52,6 +53,7 @@ export class MaterialController {
       brightness: initialState.material?.brightness ?? initialState.diffuseBrightness ?? 1.0,
       metalness: initialState.material?.metalness ?? 0.0,
       roughness: initialState.material?.roughness ?? 0.8, // Default to 0.8 (original fallback value)
+      emissive: initialState.material?.emissive ?? 0.0,
     };
     this.originalMaterials = new WeakMap();
     this.prepareMesh(model);
@@ -361,10 +363,20 @@ export class MaterialController {
           // The material's color property multiplies the texture map, so this brightens the diffuse map
           if (cloned && (cloned.isMeshStandardMaterial || cloned.isMeshPhysicalMaterial || cloned.isMeshPhongMaterial)) {
             const originalColor = mat.color ? mat.color.clone() : new THREE.Color('#ffffff');
-            cloned.color.copy(originalColor.multiplyScalar(this.materialSettings.brightness));
+            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            cloned.color.copy(adjustedColor);
             // Apply metalness and roughness
             cloned.metalness = this.materialSettings.metalness;
             cloned.roughness = this.materialSettings.roughness;
+            // Apply emissive: multiply adjusted color by emissive value for glowing effect
+            const emissiveIntensity = this.materialSettings.emissive || 0.0;
+            if (emissiveIntensity > 0) {
+              cloned.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
+              cloned.emissiveIntensity = emissiveIntensity;
+            } else {
+              cloned.emissive.set(0, 0, 0);
+              cloned.emissiveIntensity = 0;
+            }
             // Disable original metalness/roughness maps so sliders behave consistently with Clay mode
             if ('metalnessMap' in cloned) {
               cloned.metalnessMap = null;
@@ -398,6 +410,12 @@ export class MaterialController {
     this.unlitMode = mode === 'textures';
     this.updateWireframeOverlay();
     this.applyFresnelToModel(this.currentModel);
+    
+    // CRITICAL: Reapply emissive after shading change
+    // Materials are recreated in setShading, so we need to ensure emissive is applied
+    if (this.materialSettings?.emissive > 0 && mode !== 'wireframe' && mode !== 'textures') {
+      this.updateMaterials();
+    }
 
     if (this.onShadingChanged) {
       this.onShadingChanged(mode);
@@ -469,6 +487,11 @@ export class MaterialController {
 
   setMaterialRoughness(roughness) {
     this.materialSettings.roughness = roughness;
+    this.updateMaterials();
+  }
+
+  setMaterialEmissive(emissive) {
+    this.materialSettings.emissive = emissive;
     this.updateMaterials();
   }
 
@@ -566,6 +589,15 @@ export class MaterialController {
                 mat.color.copy(adjustedColor);
                 mat.metalness = this.materialSettings.metalness;
                 mat.roughness = this.materialSettings.roughness;
+                // Apply emissive: multiply original color by emissive value for glowing effect
+                const emissiveIntensity = this.materialSettings.emissive || 0.0;
+                if (emissiveIntensity > 0) {
+                  mat.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
+                  mat.emissiveIntensity = emissiveIntensity;
+                } else {
+                  mat.emissive.set(0, 0, 0);
+                  mat.emissiveIntensity = 0;
+                }
                 if ('metalnessMap' in mat) {
                   mat.metalnessMap = null;
                 }
@@ -581,6 +613,15 @@ export class MaterialController {
             material.color.copy(adjustedColor);
             material.metalness = this.materialSettings.metalness;
             material.roughness = this.materialSettings.roughness;
+            // Apply emissive: multiply adjusted color by emissive value for glowing effect
+            const emissiveIntensity = this.materialSettings.emissive || 0.0;
+            if (emissiveIntensity > 0) {
+              material.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
+              material.emissiveIntensity = emissiveIntensity;
+            } else {
+              material.emissive.set(0, 0, 0);
+              material.emissiveIntensity = 0;
+            }
             if ('metalnessMap' in material) {
               material.metalnessMap = null;
             }

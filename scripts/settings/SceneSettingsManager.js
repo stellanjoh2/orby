@@ -40,6 +40,7 @@ export class SceneSettingsManager {
         brightness: 1.0,
         metalness: 0.0,
         roughness: 0.8,
+        emissive: 0.0,
       },
       scale: state.scale,
       yOffset: state.yOffset,
@@ -164,6 +165,9 @@ export class SceneSettingsManager {
         }
         if (payload.material.roughness !== undefined) {
           this.eventBus.emit('mesh:material-roughness', payload.material.roughness);
+        }
+        if (payload.material.emissive !== undefined) {
+          this.eventBus.emit('mesh:material-emissive', payload.material.emissive);
         }
       }
       // Legacy support
