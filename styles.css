@@ -609,7 +609,6 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .quick-start-guide {
-  margin-top: 4rem;
   display: flex;
   gap: 2rem;
   align-items: center;
@@ -628,7 +627,6 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .drop-note {
-  margin-top: 1.5rem;
   color: var(--text-dim);
   font-size: 0.95rem;
   letter-spacing: -0.01em;
