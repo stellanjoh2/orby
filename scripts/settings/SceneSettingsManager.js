@@ -210,6 +210,9 @@ export class SceneSettingsManager {
         this.eventBus.emit('mesh:wireframe-always-on', payload.wireframe.alwaysOn);
         this.eventBus.emit('mesh:wireframe-color', payload.wireframe.color);
         this.eventBus.emit('mesh:wireframe-only-visible-faces', payload.wireframe.onlyVisibleFaces);
+        if (payload.wireframe.hideMesh !== undefined) {
+          this.eventBus.emit('mesh:wireframe-hide-mesh', payload.wireframe.hideMesh);
+        }
       }
       if (payload.fresnel) {
         this.stateStore.set('fresnel', payload.fresnel);

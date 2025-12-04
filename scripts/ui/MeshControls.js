@@ -138,6 +138,11 @@ export class MeshControls {
       this.stateStore.set('wireframe.onlyVisibleFaces', enabled);
       this.eventBus.emit('mesh:wireframe-only-visible-faces', enabled);
     });
+    this.ui.inputs.wireframeHideMesh?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('wireframe.hideMesh', enabled);
+      this.eventBus.emit('mesh:wireframe-hide-mesh', enabled);
+    });
 
     // Normals
     this.ui.inputs.showNormals?.addEventListener('change', (event) => {
@@ -261,6 +266,9 @@ export class MeshControls {
       if (this.ui.inputs.wireframeOnlyVisibleFaces) {
         this.ui.inputs.wireframeOnlyVisibleFaces.checked = !!state.wireframe.onlyVisibleFaces;
       }
+      if (this.ui.inputs.wireframeHideMesh) {
+        this.ui.inputs.wireframeHideMesh.checked = !!state.wireframe.hideMesh;
+      }
     }
     
     // Radio buttons
@@ -271,21 +279,8 @@ export class MeshControls {
       input.checked = input.value === state.shading;
     });
 
-    // When the main shading mode is pure wireframe, the \"Always on\" and
-    // \"Only visible faces\" overlay controls would otherwise create a
-    // second wireframe layer on top. To keep things coherent, we visually
-    // mute and disable those toggles while in wireframe shading mode.
-    const inWireframeMode = state.shading === 'wireframe';
-    const wireframeSection = document.querySelector('[data-subsection=\"wireframe\"]');
-    if (wireframeSection) {
-      wireframeSection.classList.toggle('is-muted', inWireframeMode);
-    }
-    if (this.ui.inputs.wireframeAlwaysOn) {
-      this.ui.inputs.wireframeAlwaysOn.disabled = inWireframeMode;
-    }
-    if (this.ui.inputs.wireframeOnlyVisibleFaces) {
-      this.ui.inputs.wireframeOnlyVisibleFaces.disabled = inWireframeMode;
-    }
+    // Wireframe mode now uses the overlay system, so overlay controls are always enabled
+    // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode
   }
 }
 

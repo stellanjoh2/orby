@@ -56,6 +56,9 @@ export class EventManager {
     eventBus.on('mesh:wireframe-only-visible-faces', (value) => {
       s.setWireframeSettings({ onlyVisibleFaces: value });
     });
+    eventBus.on('mesh:wireframe-hide-mesh', (value) => {
+      s.setWireframeSettings({ hideMesh: value });
+    });
     eventBus.on('mesh:reset-transform', () => {
       s.transformController?.setRotationY(0);
     });
