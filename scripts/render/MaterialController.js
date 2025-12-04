@@ -47,6 +47,7 @@ export class MaterialController {
         alwaysOn: false,
         color: '#9fb7ff',
         onlyVisibleFaces: false,
+        hideMesh: false,
       }),
     };
     this.materialSettings = {
@@ -279,16 +280,9 @@ export class MaterialController {
       };
 
       if (mode === 'wireframe') {
-        const { color } = this.wireframeSettings;
-        const createWire = (mat) => {
-          const base = mat?.clone
-            ? mat.clone()
-            : new THREE.MeshStandardMaterial();
-          base.wireframe = true;
-          base.color = new THREE.Color(color);
-          return base;
-        };
-        applyMaterial(buildArray(createWire));
+        // Wireframe mode: keep original materials but show overlay on top
+        // Restore original materials (they'll be visible under the wireframe overlay)
+        applyMaterial(original);
       } else if (mode === 'clay') {
         const { color } = this.claySettings;
         // Use material settings for roughness and metalness (unified controls)
@@ -318,7 +312,7 @@ export class MaterialController {
         const createTextureMaterial = (mat) => {
           // Get base color from original material or default to white
           const baseColor = mat?.color
-            ? mat.color.clone()
+              ? mat.color.clone()
             : new THREE.Color('#ffffff');
           
           // Apply material brightness multiplier
@@ -534,9 +528,9 @@ export class MaterialController {
                 mat.roughness = this.materialSettings.roughness;
                 mat.metalness = this.materialSettings.metalness;
                 mat.color.copy(tintedClayColor);
-                mat.needsUpdate = true;
-              }
-            });
+                  mat.needsUpdate = true;
+                }
+              });
           } else if (material && material.isMeshStandardMaterial) {
             material.roughness = this.materialSettings.roughness;
             material.metalness = this.materialSettings.metalness;
@@ -618,7 +612,7 @@ export class MaterialController {
             if (emissiveIntensity > 0) {
               material.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
               material.emissiveIntensity = emissiveIntensity;
-            } else {
+      } else {
               material.emissive.set(0, 0, 0);
               material.emissiveIntensity = 0;
             }
@@ -646,13 +640,8 @@ export class MaterialController {
     this.wireframeSettings = { ...this.wireframeSettings, ...patch };
     this.stateStore.set('wireframe', this.wireframeSettings);
     this.updateWireframeOverlay();
-    // Only refresh full wireframe shading when properties that affect it change.
-    // The dedicated wireframe display mode currently only depends on the wireframe color.
-    // Toggling overlay settings like "always on" or "only visible faces" should not
-    // retrigger the diagnostic wireframe mode or spam the bones warning toast.
-    if (this.currentShading === 'wireframe' && Object.prototype.hasOwnProperty.call(patch, 'color')) {
-      this.setShading('wireframe');
-    }
+    // Wireframe mode now uses overlay, so any setting change just updates the overlay
+    // No need to refresh shading mode
   }
 
   clearWireframeOverlay() {
@@ -686,16 +675,20 @@ export class MaterialController {
     // Always clear existing overlay first to prevent duplicates
     this.clearWireframeOverlay();
 
-    // When the main shading mode is set to pure wireframe, we rely on that mode
-    // instead of stacking an additional overlay on top (which creates a
-    // confusing \"wireframe-on-wireframe\" look). In that case, skip creating
-    // the overlay entirely.
-    if (this.currentShading === 'wireframe') {
-      return;
-    }
+    // Update mesh visibility based on hideMesh setting
+    const { hideMesh } = this.wireframeSettings;
+    this.currentModel.traverse((child) => {
+      if (child.isMesh) {
+        // Hide mesh if hideMesh is enabled (but keep wireframe overlay visible)
+        child.visible = !hideMesh;
+      }
+    });
 
-    // Create overlay if "always on" is enabled
-    if (this.wireframeSettings.alwaysOn) {
+    // Create overlay if "always on" is enabled OR if wireframe mode is active
+    // Wireframe mode now shows overlay on top of original materials (not pure wireframe)
+    const shouldShowOverlay = this.wireframeSettings.alwaysOn || this.currentShading === 'wireframe';
+    
+    if (shouldShowOverlay) {
       this.wireframeOverlay = new THREE.Group();
       this.wireframeOverlay.name = 'wireframeOverlay';
 
@@ -1024,18 +1017,18 @@ export class MaterialController {
                 material.transparent = true;
                 material.opacity = 0.2; // Ensure transparency is maintained
                 material.depthWrite = false; // Important for proper transparency
-              } else {
+                  } else {
                 material.metalness = currentMetalness;
                 
                 // Apply blurriness to roughness, using user's desired roughness as the base
-                if (hdriBlurriness > 0) {
-                  const blurRoughness =
+              if (hdriBlurriness > 0) {
+                const blurRoughness =
                     currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
-                  material.roughness = Math.min(1.0, blurRoughness);
-                } else {
+                material.roughness = Math.min(1.0, blurRoughness);
+              } else {
                   // Reset to user's desired roughness when blurriness is 0
                   material.roughness = currentRoughness;
-                }
+              }
               }
             } else if (material.roughness !== undefined && !isGlass) {
               // For non-standard materials, just set the user's desired roughness (unless it's glass)

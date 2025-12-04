@@ -119,6 +119,7 @@ export class UIManager {
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
       wireframeColor: q('#wireframeColor'),
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
+      wireframeHideMesh: q('#wireframeHideMesh'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
       groundSolidColor: q('#groundSolidColor'),

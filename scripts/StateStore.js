@@ -52,6 +52,7 @@ export class StateStore {
         alwaysOn: false,
         color: '#c8c8c8',
         onlyVisibleFaces: false,
+        hideMesh: false,
       },
       fresnel: {
         enabled: false,

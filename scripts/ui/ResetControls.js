@@ -250,9 +250,13 @@ export class ResetControls {
             if (this.ui.inputs.wireframeOnlyVisibleFaces) {
               this.ui.inputs.wireframeOnlyVisibleFaces.checked = defaults.wireframe.onlyVisibleFaces;
             }
+            if (this.ui.inputs.wireframeHideMesh) {
+              this.ui.inputs.wireframeHideMesh.checked = defaults.wireframe.hideMesh;
+            }
             this.eventBus.emit('mesh:wireframe-always-on', defaults.wireframe.alwaysOn);
             this.eventBus.emit('mesh:wireframe-color', defaults.wireframe.color);
             this.eventBus.emit('mesh:wireframe-only-visible-faces', defaults.wireframe.onlyVisibleFaces);
+            this.eventBus.emit('mesh:wireframe-hide-mesh', defaults.wireframe.hideMesh);
             this.ui.syncUIFromState();
             break;
             
