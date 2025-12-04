@@ -592,7 +592,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .drop-primary {
-  font-size: 1.8rem;
+  font-size: 2rem;
   letter-spacing: 0.05em;
   opacity: 0;
   transform: translateY(-20px);
@@ -601,7 +601,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 
 .drop-secondary {
   color: var(--text-dim);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   letter-spacing: -0.01em;
   opacity: 0;
   transform: translateY(-20px);
@@ -616,7 +616,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   justify-content: center;
   flex-wrap: wrap;
   color: var(--text-dim);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
@@ -630,13 +630,13 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .drop-note {
   margin-top: 1.5rem;
   color: var(--text-dim);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   letter-spacing: -0.01em;
   text-align: center;
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
-  max-width: 500px;
+  max-width: 680px;
   line-height: 1.5;
 }
 

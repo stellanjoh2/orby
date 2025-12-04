@@ -270,6 +270,22 @@ export class MeshControls {
     this.ui.inputs.shading.forEach((input) => {
       input.checked = input.value === state.shading;
     });
+
+    // When the main shading mode is pure wireframe, the \"Always on\" and
+    // \"Only visible faces\" overlay controls would otherwise create a
+    // second wireframe layer on top. To keep things coherent, we visually
+    // mute and disable those toggles while in wireframe shading mode.
+    const inWireframeMode = state.shading === 'wireframe';
+    const wireframeSection = document.querySelector('[data-subsection=\"wireframe\"]');
+    if (wireframeSection) {
+      wireframeSection.classList.toggle('is-muted', inWireframeMode);
+    }
+    if (this.ui.inputs.wireframeAlwaysOn) {
+      this.ui.inputs.wireframeAlwaysOn.disabled = inWireframeMode;
+    }
+    if (this.ui.inputs.wireframeOnlyVisibleFaces) {
+      this.ui.inputs.wireframeOnlyVisibleFaces.disabled = inWireframeMode;
+    }
   }
 }
 

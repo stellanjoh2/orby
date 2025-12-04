@@ -646,7 +646,11 @@ export class MaterialController {
     this.wireframeSettings = { ...this.wireframeSettings, ...patch };
     this.stateStore.set('wireframe', this.wireframeSettings);
     this.updateWireframeOverlay();
-    if (this.currentShading === 'wireframe') {
+    // Only refresh full wireframe shading when properties that affect it change.
+    // The dedicated wireframe display mode currently only depends on the wireframe color.
+    // Toggling overlay settings like "always on" or "only visible faces" should not
+    // retrigger the diagnostic wireframe mode or spam the bones warning toast.
+    if (this.currentShading === 'wireframe' && Object.prototype.hasOwnProperty.call(patch, 'color')) {
       this.setShading('wireframe');
     }
   }
@@ -681,6 +685,14 @@ export class MaterialController {
 
     // Always clear existing overlay first to prevent duplicates
     this.clearWireframeOverlay();
+
+    // When the main shading mode is set to pure wireframe, we rely on that mode
+    // instead of stacking an additional overlay on top (which creates a
+    // confusing \"wireframe-on-wireframe\" look). In that case, skip creating
+    // the overlay entirely.
+    if (this.currentShading === 'wireframe') {
+      return;
+    }
 
     // Create overlay if "always on" is enabled
     if (this.wireframeSettings.alwaysOn) {
