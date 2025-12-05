@@ -217,6 +217,9 @@ export class EnvironmentController {
           texture.encoding = THREE.sRGBEncoding;
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
+          // Set wrapping to prevent seams in equirectangular maps
+          texture.wrapS = THREE.RepeatWrapping; // Horizontal wrap (seamless left/right)
+          texture.wrapT = THREE.ClampToEdgeWrapping; // Vertical clamp (prevent pole seams)
           resolve(texture);
         };
         img.onerror = reject;
@@ -241,6 +244,9 @@ export class EnvironmentController {
           (texture) => {
             texture.mapping = THREE.EquirectangularReflectionMapping;
             texture.encoding = THREE.sRGBEncoding;
+            // Set wrapping to prevent seams in equirectangular maps
+            texture.wrapS = THREE.RepeatWrapping; // Horizontal wrap (seamless left/right)
+            texture.wrapT = THREE.ClampToEdgeWrapping; // Vertical clamp (prevent pole seams)
             resolve(texture);
           },
           undefined,
@@ -251,6 +257,9 @@ export class EnvironmentController {
 
     const texture = await this.hdriLoader.loadAsync(source);
     texture.mapping = THREE.EquirectangularReflectionMapping;
+    // Set wrapping to prevent seams in equirectangular maps
+    texture.wrapS = THREE.RepeatWrapping; // Horizontal wrap (seamless left/right)
+    texture.wrapT = THREE.ClampToEdgeWrapping; // Vertical clamp (prevent pole seams)
     return texture;
   }
 
@@ -489,6 +498,9 @@ export class EnvironmentController {
     rotatedTexture.format = format;
     rotatedTexture.type = type;
     rotatedTexture.image = rotatedTexture.image || { width, height };
+    // Set wrapping to prevent seams in equirectangular maps
+    rotatedTexture.wrapS = THREE.RepeatWrapping; // Horizontal wrap (seamless left/right)
+    rotatedTexture.wrapT = THREE.ClampToEdgeWrapping; // Vertical clamp (prevent pole seams)
 
     return rotatedTexture;
   }
