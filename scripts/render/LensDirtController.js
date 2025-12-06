@@ -13,7 +13,7 @@ export class LensDirtController {
     this.getCurrentExposure = getCurrentExposure; // Callback to get current exposure value from auto-exposure
 
     this.lensDirtTexture = null;
-    this.lensDirtTexturePath = './assets/images/free_texture_friday_566-1024x682.jpg';
+    this.lensDirtTexturePath = './assets/images/lens-dirt.jpg';
     this.lensDirtSettings = null;
     this.baseExposure = 1.0; // Reference exposure value for normalization
   }
