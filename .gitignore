@@ -6,3 +6,8 @@ TEMP/
 **/.DS_Store
 
 *.hdr
+
+# Purchased HDRI assets - not included in MIT license
+assets/hdris/*.jpg
+assets/hdris/*.hdr
+assets/hdris/*.exr
