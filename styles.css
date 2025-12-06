@@ -545,7 +545,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .dropzone::before {
   content: '';
   position: absolute;
-  width: min(80vw, 1200px);
+  width: min(96vw, 1440px);
   aspect-ratio: 16 / 9;
   border: 2px dashed var(--drop-outline);
   border-radius: 18px;
@@ -583,12 +583,15 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .drop-logo {
-  width: 384px;
+  width: 440px;
   height: auto;
   margin-bottom: 1rem;
   opacity: 0;
   transform: translateY(-20px);
   animation: dropReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0s forwards;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .drop-primary {

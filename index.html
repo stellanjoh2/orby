@@ -26,6 +26,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-theme="violet">
@@ -34,7 +35,7 @@
         <section class="viewport">
           <canvas id="webgl" tabindex="0"></canvas>
           <div class="dropzone" id="dropzone">
-            <img src="./assets/images/orby-logotype.svg" alt="Orby" class="drop-logo" />
+            <div id="logotypeAnimation" class="drop-logo"></div>
             <p class="drop-primary">Drag and drop your 3D model here</p>
             <button id="browseButton" class="dropzone-btn">
               Browse Files
@@ -62,7 +63,7 @@
           >
             <i class="fa-solid fa-expand"></i>
           </button>
-          <div class="dropzone-version-tag">v0.5.57 · 2025-12-04 23:00:28 UTC</div>
+          <div class="dropzone-version-tag">v0.5.58 · 2025-12-05 07:30:33 UTC</div>
           <div class="mobile-warning" id="mobileWarning" style="display: none;">
             <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
           </div>
@@ -1994,7 +1995,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.57 · 2025-12-04 23:00:28 UTC</div>
+              <div class="info-version-tag">v0.5.58 · 2025-12-05 07:30:33 UTC</div>
             </section>
           </div>
         </aside>

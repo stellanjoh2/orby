@@ -14,11 +14,14 @@ export class StartMenuController {
     this.browseButton = null;
     this.loadTestLink = null;
     this.loadMeshButton = null;
+    this.logotypeAnimation = null;
+    this.animationInstance = null;
   }
 
   init() {
     this.cacheDom();
     this.bindEvents();
+    this.initLogotypeAnimation();
     this.setVisible(this.visible);
   }
 
@@ -28,6 +31,7 @@ export class StartMenuController {
     this.browseButton = document.querySelector('#browseButton');
     this.loadTestLink = document.querySelector('#loadTestLink');
     this.loadMeshButton = this.ui.buttons?.loadMesh;
+    this.logotypeAnimation = document.querySelector('#logotypeAnimation');
   }
 
   bindEvents() {
@@ -200,6 +204,55 @@ export class StartMenuController {
     }
     
     document.body.classList.toggle('dropzone-visible', shouldShow);
+  }
+
+  /**
+   * Initialize Lottie animation for logotype
+   */
+  initLogotypeAnimation() {
+    if (!this.logotypeAnimation) {
+      console.warn('Animation container not found');
+      return;
+    }
+
+    // Wait for Lottie library to load
+    const tryInit = () => {
+      if (typeof lottie === 'undefined') {
+        // Retry after a short delay
+        setTimeout(tryInit, 100);
+        return;
+      }
+
+      try {
+        // Add cache-busting parameter to ensure fresh file is loaded
+        const cacheBuster = `?v=${Date.now()}`;
+        this.animationInstance = lottie.loadAnimation({
+          container: this.logotypeAnimation,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          path: `./assets/animations/data.json${cacheBuster}`
+        });
+
+        // Scale animation to match the logo size (440px width)
+        // The animation is 1920x830, so we maintain aspect ratio
+        if (this.animationInstance) {
+          this.animationInstance.addEventListener('DOMLoaded', () => {
+            const svg = this.logotypeAnimation.querySelector('svg');
+            if (svg) {
+              // Calculate height based on aspect ratio: 830/1920 = 0.432
+              const height = 440 * (830 / 1920);
+              svg.style.width = '440px';
+              svg.style.height = `${height}px`;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load logotype animation:', error);
+      }
+    };
+
+    tryInit();
   }
 
   /**
