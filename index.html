@@ -63,7 +63,7 @@
           >
             <i class="fa-solid fa-expand"></i>
           </button>
-          <div class="dropzone-version-tag">v0.5.59 · 2025-12-06 14:06:32 UTC</div>
+          <div class="dropzone-version-tag">v0.5.60 · 2025-12-06 20:03:19 UTC</div>
           <div class="mobile-warning" id="mobileWarning" style="display: none;">
             <p>This app is not optimized for mobile devices. Please use a desktop browser for the best experience.</p>
           </div>
@@ -1702,6 +1702,21 @@
                     <span class="shortcut-action">Cycle through HDRI presets</span>
                     <span class="shortcut-keys"><kbd>[</kbd> <kbd>]</kbd></span>
                   </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Cycle through tabs</span>
+                    <span class="shortcut-keys"><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Apply studio preset</span>
+                    <span class="shortcut-keys"><kbd>X</kbd></span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Exit auto-orbit</span>
+                    <span class="shortcut-keys"><kbd>Esc</kbd></span>
+                  </div>
                 </div>
               </div>
 
@@ -1814,11 +1829,11 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, grain, chromatic aberration, and color grading for cinematic results</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, and roughness in real time to fine-tune materials</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and auto-rotate</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">High-quality export</span> — Export PNG images at 1x or 2x resolution with transparent background support</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, camera presets, and adjustable FOV for the perfect shot</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, auto-orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
                   </ul>
                 </div>
               </div>
@@ -1833,12 +1848,12 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Display Modes</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model. You can also enable a wireframe overlay on any display mode, or hide the mesh entirely to see only the wireframe.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Material Controls</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Brightness:</strong> Makes your model lighter or darker. <strong>Metalness:</strong> Controls how metallic the surface looks (0 = plastic, 1 = chrome). <strong>Roughness:</strong> Adjusts surface smoothness (0 = mirror-like, 1 = matte).</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Brightness:</strong> Makes your model lighter or darker. <strong>Metalness:</strong> Controls how metallic the surface looks (0 = plastic, 1 = chrome). <strong>Roughness:</strong> Adjusts surface smoothness (0 = mirror-like, 1 = matte). <strong>Emissive:</strong> Adds glowing light to materials, perfect for sci-fi effects, neon signs, or any glowing elements.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
@@ -1863,7 +1878,7 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--accent); font-size: 0.95rem; font-weight: 700;">Camera Controls</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Exposure:</strong> Controls overall image brightness (like a camera's exposure setting).</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Auto-Orbit:</strong> Automatically orbits the camera around your model with smooth multi-axis movement—perfect for screensaver-style presentations. Press Esc to exit. <strong>Exposure:</strong> Controls overall image brightness (like a camera's exposure setting).</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
@@ -1995,7 +2010,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.59 · 2025-12-06 14:06:32 UTC</div>
+              <div class="info-version-tag">v0.5.60 · 2025-12-06 20:03:19 UTC</div>
             </section>
           </div>
         </aside>
