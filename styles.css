@@ -444,6 +444,28 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   }
 }
 
+@keyframes demoLogotypeFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes demoLogotypeFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
 @keyframes dropRevealButton {
   to {
     opacity: 0.6;
@@ -1527,7 +1549,7 @@ input[type='range']:disabled::-moz-range-thumb {
 /* Fullscreen toggle button (bottom-left of viewport) */
 .viewport-fullscreen-btn {
   position: absolute;
-  bottom: 1.2rem;
+  top: 1.2rem;
   left: 1.5rem;
   width: 32px;
   height: 32px;
@@ -1535,7 +1557,7 @@ input[type='range']:disabled::-moz-range-thumb {
   border: 1px solid var(--stroke);
   background: rgba(0, 0, 0, 0.5);
   color: var(--text-dim);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   cursor: pointer;
@@ -1562,7 +1584,7 @@ input[type='range']:disabled::-moz-range-thumb {
   color: var(--brand-text);
   box-shadow: 0 8px 22px var(--accent-shadow);
   opacity: 1;
-  transform: translateY(-1px);
+  transform: translateY(1px);
 }
 
 .viewport-fullscreen-btn:active {
@@ -1572,6 +1594,39 @@ input[type='range']:disabled::-moz-range-thumb {
 
 body:not(.dropzone-visible) .viewport-fullscreen-btn {
   opacity: 0.9;
+}
+
+/* Demo Logotype - Bottom Left Corner */
+.demo-logotype {
+  position: absolute;
+  bottom: 4.5rem;
+  left: 4.5rem;
+  width: 440px;
+  height: auto;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.2));
+  will-change: opacity, transform;
+  transform: translateZ(0); /* Force GPU acceleration */
+}
+
+.demo-logotype svg {
+  width: 440px;
+  height: auto;
+}
+
+.demo-logotype.visible {
+  opacity: 1;
+  pointer-events: auto;
+  animation: demoLogotypeFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.demo-logotype.hiding {
+  animation: demoLogotypeFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .rotation-notch {

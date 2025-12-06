@@ -248,6 +248,18 @@ export class StartMenuController {
               const height = 440 * (830 / 1920);
               svg.style.width = '440px';
               svg.style.height = `${height}px`;
+              
+              // Trigger reveal animation when Lottie animation finishes loading
+              // This creates a subtle scale-up and fade-in effect
+              requestAnimationFrame(() => {
+                // Ensure initial state is set (already set in CSS, but ensure it's applied)
+                this.logotypeAnimation.style.opacity = '0';
+                this.logotypeAnimation.style.transform = 'scale(0.85)';
+                // Force reflow to ensure styles are applied
+                this.logotypeAnimation.offsetHeight;
+                // Apply reveal animation class
+                this.logotypeAnimation.classList.add('reveal');
+              });
             }
           });
         }

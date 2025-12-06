@@ -98,15 +98,15 @@ export class GroundController {
     const shadowMat = new THREE.ShadowMaterial({ opacity: 0.4 });
     const shadowRadius = baseRadius * PODIUM_RADIUS_MULTIPLIER;
     if (shadowRadius > 0 && isFinite(shadowRadius)) {
-      this.podiumShadow = new THREE.Mesh(
+    this.podiumShadow = new THREE.Mesh(
         new THREE.CircleGeometry(shadowRadius, segments),
-        shadowMat,
-      );
-      this.podiumShadow.rotation.x = -Math.PI / 2;
-      this.podiumShadow.receiveShadow = true;
+      shadowMat,
+    );
+    this.podiumShadow.rotation.x = -Math.PI / 2;
+    this.podiumShadow.receiveShadow = true;
       // Set visibility based on solidEnabled state, not hardcoded false
       this.podiumShadow.visible = this.solidEnabled;
-      this.scene.add(this.podiumShadow);
+    this.scene.add(this.podiumShadow);
     }
 
     this.grid = new THREE.GridHelper(

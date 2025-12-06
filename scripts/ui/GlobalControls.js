@@ -292,6 +292,14 @@ export class GlobalControls {
         }
       }
 
+      // O - Toggle demo logotype (Orby branded screensaver)
+      if (key === 'o') {
+        event.preventDefault();
+        if (this.ui.demoLogotype) {
+          this.ui.demoLogotype.toggle();
+        }
+      }
+
       // V - Toggle UI visibility
       if (key === 'v') {
         event.preventDefault();
