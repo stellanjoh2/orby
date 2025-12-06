@@ -7,7 +7,5 @@ TEMP/
 
 *.hdr
 
-# Purchased HDRI assets - not included in MIT license
-assets/hdris/*.jpg
-assets/hdris/*.hdr
-assets/hdris/*.exr
+# Note: HDRI files in assets/hdris/ are kept in repo but are NOT included in MIT license
+# See ASSETS_LICENSE.md for details
