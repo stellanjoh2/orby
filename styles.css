@@ -798,6 +798,27 @@ body:not(.dropzone-visible) .quick-start-guide {
   min-width: auto;
 }
 
+.info-logotype-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.info-logotype {
+  width: 300px;
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.info-logotype svg {
+  width: 300px;
+  height: auto;
+}
+
 .info-list {
   display: grid;
   gap: 0.75rem;

@@ -15,13 +15,16 @@ export class StartMenuController {
     this.loadTestLink = null;
     this.loadMeshButton = null;
     this.logotypeAnimation = null;
+    this.infoLogotypeAnimation = null;
     this.animationInstance = null;
+    this.infoAnimationInstance = null;
   }
 
   init() {
     this.cacheDom();
     this.bindEvents();
     this.initLogotypeAnimation();
+    this.initInfoLogotypeAnimation();
     this.setVisible(this.visible);
   }
 
@@ -32,6 +35,7 @@ export class StartMenuController {
     this.loadTestLink = document.querySelector('#loadTestLink');
     this.loadMeshButton = this.ui.buttons?.loadMesh;
     this.logotypeAnimation = document.querySelector('#logotypeAnimation');
+    this.infoLogotypeAnimation = document.querySelector('#infoLogotypeAnimation');
   }
 
   bindEvents() {
@@ -249,6 +253,54 @@ export class StartMenuController {
         }
       } catch (error) {
         console.error('Failed to load logotype animation:', error);
+      }
+    };
+
+    tryInit();
+  }
+
+  /**
+   * Initialize Lottie animation for logotype in Information tab
+   */
+  initInfoLogotypeAnimation() {
+    if (!this.infoLogotypeAnimation) {
+      return;
+    }
+
+    // Wait for Lottie library to load
+    const tryInit = () => {
+      if (typeof lottie === 'undefined') {
+        // Retry after a short delay
+        setTimeout(tryInit, 100);
+        return;
+      }
+
+      try {
+        // Add cache-busting parameter to ensure fresh file is loaded
+        const cacheBuster = `?v=${Date.now()}`;
+        this.infoAnimationInstance = lottie.loadAnimation({
+          container: this.infoLogotypeAnimation,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          path: `./assets/animations/data.json${cacheBuster}`
+        });
+
+        // Scale animation to 300px width for info tab
+        // The animation is 1920x830, so we maintain aspect ratio
+        if (this.infoAnimationInstance) {
+          this.infoAnimationInstance.addEventListener('DOMLoaded', () => {
+            const svg = this.infoLogotypeAnimation.querySelector('svg');
+            if (svg) {
+              // Calculate height based on aspect ratio: 830/1920 = 0.432
+              const height = 300 * (830 / 1920);
+              svg.style.width = '300px';
+              svg.style.height = `${height}px`;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load info logotype animation:', error);
       }
     };
 
