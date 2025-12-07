@@ -600,13 +600,17 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   }
 }
 
+.dropzone {
+  /* Define padding variable at dropzone level so it's available to all children */
+  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 20), 5.5rem);
+}
+
 .dropzone::before {
   content: '';
   position: absolute;
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
-  /* Padding scales from 4rem (64px) at 1440px+ down to 0.25rem (4px) at small sizes */
-  /* Using larger default padding for symmetrical look (matching bottom spacing) */
-  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 24), 4rem);
+  /* Padding scales from 5.5rem (88px) at 1440px+ down to 0.25rem (4px) at small sizes */
+  /* Using larger default padding for symmetrical look with more generous spacing */
   inset: var(--dropzone-padding);
   width: auto;
   height: auto;
@@ -1587,9 +1591,9 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .dropzone-version-tag {
   position: absolute;
-  /* Position relative to dropzone border, not viewport */
-  /* Use the same responsive padding variable for consistent spacing */
-  bottom: var(--dropzone-padding, 1.2rem);
+  /* Position so text sits just inside/at border bottom edge */
+  /* Account for text height to align baseline with border edge */
+  bottom: calc(var(--dropzone-padding, 1.2rem) - 1rem);
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.69rem;
