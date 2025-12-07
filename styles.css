@@ -598,14 +598,15 @@ body.dropzone-visible #webgl {
 
 .dropzone {
   /* Define padding variable at dropzone level so it's available to all children */
-  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 20), 5.5rem);
+  /* Increased max padding by 50%: 5.5rem -> 8.25rem (132px) */
+  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 20), 8.25rem);
 }
 
 .dropzone::before {
   content: '';
   position: absolute;
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
-  /* Padding scales from 5.5rem (88px) at 1440px+ down to 0.25rem (4px) at small sizes */
+  /* Padding scales from 8.25rem (132px) at 1440px+ down to 0.25rem (4px) at small sizes */
   /* Using larger default padding for symmetrical look with more generous spacing */
   /* Use explicit top/right/bottom/left for true symmetry - all sides equal */
   top: var(--dropzone-padding);
@@ -615,7 +616,8 @@ body.dropzone-visible #webgl {
   /* Remove aspect-ratio constraint to allow true equal padding on all sides */
   /* The border will adapt to viewport while maintaining equal padding */
   border: 2px dashed var(--drop-outline);
-  border-radius: clamp(8px, 1.125vw, 18px); /* Responsive border radius too */
+  /* Doubled corner roundness: 18px -> 36px max */
+  border-radius: clamp(8px, 2.25vw, 36px);
   background: linear-gradient(120deg, var(--drop-fill), transparent);
   pointer-events: none;
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
