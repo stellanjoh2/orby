@@ -2,14 +2,19 @@
  * Brand Color System
  * 
  * To change the main brand color, simply update:
- * - --brand-primary: The main brand color (currently purple #b46cff)
- * - --brand-secondary: The secondary accent color (currently pink #ff6bd6)
+ * - --brand-primary: The main brand color (currently neon yellow #c4ff00)
+ * - --brand-secondary: The secondary accent color (currently orange #ff4500)
  * 
  * All accent-related colors (--accent, --accent-strong, --accent-border, etc.)
  * will automatically derive from these two base colors using CSS color-mix().
  * 
  * Note: color-mix() requires modern browsers (Chrome 111+, Firefox 113+, Safari 16.2+)
  * For older browser support, you may need to manually set the derived colors.
+ * 
+ * IMPORTANT: The logotype SVG animation (assets/animations/data.json) has embedded colors.
+ * To change the logotype color, you'll need to either:
+ * 1. Update the fill colors in the Lottie JSON file directly, OR
+ * 2. Use CSS filters on .drop-logo and .demo-logotype (see below)
  */
 
 :root {
@@ -19,15 +24,15 @@
   --danger: #ff7b7b;
 }
 
-/* Text selection color - inverted brand primary (purple) at 0.5 opacity */
-/* Brand primary #c4ff00 inverted = #3b00ff */
+/* Text selection color - inverted brand primary at 0.5 opacity */
+/* Dynamically calculated from brand-primary */
 ::selection {
-  background-color: rgba(59, 0, 255, 0.5);
+  background-color: color-mix(in srgb, var(--brand-primary-inverted) 50%, transparent);
   color: var(--text);
 }
 
 ::-moz-selection {
-  background-color: rgba(59, 0, 255, 0.5);
+  background-color: color-mix(in srgb, var(--brand-primary-inverted) 50%, transparent);
   color: var(--text);
 }
 
@@ -36,6 +41,10 @@ body[data-theme='violet'] {
   /* Brand Colors - Change these to swap the main brand color */
   --brand-primary: #c4ff00;
   --brand-secondary: #ff4500;
+  
+  /* Inverted brand primary for text selection (1:1 color inversion) */
+  /* Calculated: RGB(196, 255, 0) -> RGB(59, 0, 255) = #3b00ff */
+  --brand-primary-inverted: #3b00ff;
   
   /* Base Colors */
   --bg: #050112;
@@ -75,6 +84,9 @@ body[data-theme='aqua'] {
   /* Brand Colors - Change these to swap the main brand color */
   --brand-primary: #c4ff00;
   --brand-secondary: #ff4500;
+  
+  /* Inverted brand primary for text selection (1:1 color inversion) */
+  --brand-primary-inverted: #3b00ff;
   
   /* Base Colors */
   --bg: #04060c;
