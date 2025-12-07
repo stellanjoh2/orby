@@ -137,10 +137,6 @@ body.dropzone-visible #webgl {
   pointer-events: none;
 }
 
-body:not(.dropzone-visible) .dropzone-version-tag {
-  opacity: 0;
-  pointer-events: none;
-}
 
 .top-bar {
   display: none;
@@ -1589,21 +1585,6 @@ input[type='range']:disabled::-moz-range-thumb {
   background: none;
 }
 
-.dropzone-version-tag {
-  position: absolute;
-  /* Position so text sits just inside/at border bottom edge */
-  /* Account for text height to align baseline with border edge */
-  bottom: calc(var(--dropzone-padding, 1.2rem) - 1rem);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.69rem;
-  letter-spacing: -0.01em;
-  text-align: center;
-  color: var(--text-dim);
-  opacity: 0.5;
-  z-index: 10;
-  pointer-events: none;
-}
 
 /* Fullscreen toggle button (bottom-left of viewport) */
 .viewport-fullscreen-btn {
