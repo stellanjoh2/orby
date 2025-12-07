@@ -19,6 +19,18 @@
   --danger: #ff7b7b;
 }
 
+/* Text selection color - inverted brand primary (purple) at 0.5 opacity */
+/* Brand primary #c4ff00 inverted = #3b00ff */
+::selection {
+  background-color: rgba(59, 0, 255, 0.5);
+  color: var(--text);
+}
+
+::-moz-selection {
+  background-color: rgba(59, 0, 255, 0.5);
+  color: var(--text);
+}
+
 :root,
 body[data-theme='violet'] {
   /* Brand Colors - Change these to swap the main brand color */
@@ -619,7 +631,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .drop-logo {
   width: 440px;
   height: auto;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   opacity: 0;
   transform: scale(0.85);
   display: flex;
@@ -640,6 +652,10 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
 }
 
+.brand-highlight {
+  color: var(--brand-primary);
+}
+
 .drop-secondary {
   color: var(--text-dim);
   font-size: 0.9rem;
@@ -647,6 +663,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.15s forwards;
+  margin-bottom: 2.5rem;
 }
 
 .quick-start-guide {
