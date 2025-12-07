@@ -603,10 +603,16 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 .dropzone::before {
   content: '';
   position: absolute;
-  width: min(96vw, 1440px);
+  /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
+  /* Padding scales from 2rem (32px) at 1440px+ down to 0.25rem (4px) at small sizes */
+  /* Formula: starts at 2rem, scales down linearly, minimum 0.25rem */
+  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 30), 2rem);
+  inset: var(--dropzone-padding);
+  width: auto;
+  height: auto;
   aspect-ratio: 16 / 9;
   border: 2px dashed var(--drop-outline);
-  border-radius: 18px;
+  border-radius: clamp(8px, 1.125vw, 18px); /* Responsive border radius too */
   background: linear-gradient(120deg, var(--drop-fill), transparent);
   pointer-events: none;
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
