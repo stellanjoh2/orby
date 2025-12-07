@@ -573,6 +573,9 @@ body.dropzone-visible #webgl {
   pointer-events: auto;
   opacity: 0;
   animation: dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Add padding to push content away from border - matches border inset */
+  padding: var(--dropzone-padding);
+  box-sizing: border-box;
 }
 
 .dropzone.hiding {
