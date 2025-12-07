@@ -428,20 +428,22 @@ body.dropzone-visible #webgl {
 }
 
 .dropzone-btn {
-  padding: 0.5rem 1.5rem;
+  padding: clamp(0.4rem, 0.8vw, 0.5rem) clamp(1rem, 2vw, 1.5rem);
   border-radius: 999px; /* Fully rounded like accent-action-btn */
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.8rem;
+  /* Responsive font size: scales down on smaller screens */
+  font-size: clamp(0.7rem, 1.2vw, 0.8rem);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
   opacity: 0;
   transform: translateY(-15px);
   animation: dropRevealButton 1s cubic-bezier(0.16, 1, 0.3, 1) 1.05s forwards;
-  min-height: 2.5rem;
+  /* Responsive min-height: scales down on smaller screens */
+  min-height: clamp(2rem, 4vw, 2.5rem);
   box-shadow: none;
   position: relative;
   z-index: 2; /* Ensure button is above dropzone background */
@@ -598,15 +600,15 @@ body.dropzone-visible #webgl {
 
 .dropzone {
   /* Define padding variable at dropzone level so it's available to all children */
-  /* Increased max padding by 50%: 5.5rem -> 8.25rem (132px) */
-  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 20), 8.25rem);
+  /* Max padding: 15rem (240px) for generous spacing at large sizes */
+  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 20), 15rem);
 }
 
 .dropzone::before {
   content: '';
   position: absolute;
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
-  /* Padding scales from 8.25rem (132px) at 1440px+ down to 0.25rem (4px) at small sizes */
+  /* Padding scales from 15rem (240px) at 1440px+ down to 0.25rem (4px) at small sizes */
   /* Using larger default padding for symmetrical look with more generous spacing */
   /* Use explicit top/right/bottom/left for true symmetry - all sides equal */
   top: var(--dropzone-padding);
@@ -677,11 +679,16 @@ body.dropzone-visible #webgl {
 
 .drop-primary {
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
-  font-size: 3rem;
+  /* Responsive font size: scales from 3rem down to 2rem on smaller screens */
+  font-size: clamp(2rem, 4vw, 3rem);
   letter-spacing: 0.05em;
   opacity: 0;
   transform: translateY(-15px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
+  /* Allow text to break into 2 lines naturally */
+  max-width: 90%;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .brand-highlight {
@@ -690,22 +697,26 @@ body.dropzone-visible #webgl {
 
 .drop-secondary {
   color: var(--text-dim);
-  font-size: 0.9rem;
+  /* Responsive font size: scales down on smaller screens */
+  font-size: clamp(0.75rem, 1.2vw, 0.9rem);
   letter-spacing: -0.01em;
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.15s forwards;
-  margin-bottom: 2.5rem;
+  /* Responsive margin: scales down on smaller screens */
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
 }
 
 .quick-start-guide {
   display: flex;
-  gap: 2rem;
+  /* Responsive gap: scales down on smaller screens */
+  gap: clamp(1rem, 2.5vw, 2rem);
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
   color: var(--text-dim);
-  font-size: 0.9rem;
+  /* Responsive font size: scales down on smaller screens */
+  font-size: clamp(0.75rem, 1.2vw, 0.9rem);
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
@@ -718,13 +729,15 @@ body.dropzone-visible #webgl {
 
 .drop-note {
   color: var(--text-dim);
-  font-size: 0.95rem;
+  /* Responsive font size: scales down on smaller screens */
+  font-size: clamp(0.8rem, 1.3vw, 0.95rem);
   letter-spacing: -0.01em;
   text-align: center;
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.25s forwards;
-  max-width: 680px;
+  /* Responsive max-width: scales down on smaller screens */
+  max-width: clamp(90%, 85vw, 680px);
   line-height: 1.5;
 }
 
