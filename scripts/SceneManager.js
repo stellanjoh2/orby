@@ -38,6 +38,7 @@ export class SceneManager {
     this.ui = uiManager;
 
     this.canvas = document.querySelector('#webgl');
+    this.viewport = document.querySelector('.viewport');
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
@@ -304,7 +305,33 @@ export class SceneManager {
     this.eventManager.register();
     this.setupMeshClickDetection();
     this.handleResize();
-    window.addEventListener('resize', () => this.handleResize());
+    
+    // Debounce resize handler to prevent excessive calls
+    let resizeTimeout;
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        this.handleResize();
+      }, 16); // ~1 frame debounce (16ms at 60fps)
+    };
+    
+    window.addEventListener('resize', debouncedResize);
+    
+    // Handle fullscreen changes explicitly
+    const handleFullscreenChange = () => {
+      // Use requestAnimationFrame to ensure fullscreen transition completes
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Double RAF to ensure layout is complete
+          this.handleResize();
+        });
+      });
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
   }
 
   setupMeshClickDetection() {
@@ -1487,24 +1514,86 @@ export class SceneManager {
   }
 
   handleResize() {
-    const width = this.canvas.clientWidth || window.innerWidth;
-    const height = this.canvas.clientHeight || window.innerHeight;
-    this.renderer.setSize(width, height);
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.composer?.setSize(width, height);
-    
-    // Update color adjust resolution for sharpness
-    if (this.postPipeline?.colorAdjust) {
-      this.postPipeline.colorAdjust.setResolution(width, height);
-    }
-    
-    // Update FXAA resolution on resize
-    if (this.fxaaPass) {
-      const pixelRatio = this.renderer.getPixelRatio();
-      this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (width * pixelRatio);
-      this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (height * pixelRatio);
-    }
+    // Use requestAnimationFrame to ensure DOM has updated before reading dimensions
+    requestAnimationFrame(() => {
+      // Get dimensions from the viewport container (parent of canvas)
+      // This is more reliable since the canvas is absolutely positioned with inset: 0
+      const container = this.viewport || this.canvas.parentElement;
+      const containerRect = container ? container.getBoundingClientRect() : null;
+      const canvasRect = this.canvas.getBoundingClientRect();
+      
+      // Prefer container dimensions, fallback to canvas, then window
+      const width = containerRect 
+        ? Math.floor(containerRect.width) 
+        : (Math.floor(canvasRect.width) || window.innerWidth);
+      const height = containerRect 
+        ? Math.floor(containerRect.height) 
+        : (Math.floor(canvasRect.height) || window.innerHeight);
+      
+      // Ensure we have valid dimensions
+      if (width <= 0 || height <= 0) {
+        console.warn('Invalid dimensions during resize, skipping');
+        return;
+      }
+      
+      // Check if we're in fullscreen mode
+      const isFullscreen = !!(document.fullscreenElement || 
+                              document.webkitFullscreenElement || 
+                              document.mozFullScreenElement || 
+                              document.msFullscreenElement);
+      
+      // In fullscreen, use window dimensions to ensure we fill the entire screen
+      const finalWidth = isFullscreen ? window.innerWidth : width;
+      const finalHeight = isFullscreen ? window.innerHeight : height;
+      
+      // Update renderer size
+      // Pass false to prevent Three.js from setting canvas width/height attributes
+      // (CSS handles the display size, we just need renderer internal size to match)
+      this.renderer.setSize(finalWidth, finalHeight, false);
+      
+      // Ensure canvas element matches (for absolutely positioned elements)
+      if (this.canvas.style.width !== '100%' || this.canvas.style.height !== '100%') {
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = '100%';
+      }
+      
+      // Update camera aspect ratio and projection matrix
+      this.camera.aspect = finalWidth / finalHeight;
+      this.camera.updateProjectionMatrix();
+      
+      // Update composer (post-processing pipeline)
+      if (this.composer) {
+        this.composer.setSize(finalWidth, finalHeight);
+      }
+      
+      // Update bloom pass resolution (UnrealBloomPass resolution is passed as Vector2 in constructor)
+      // EffectComposer.setSize() should handle this, but we update it explicitly to be safe
+      if (this.postPipeline?.bloomPass) {
+        // UnrealBloomPass has a resolution property that needs updating
+        if (this.postPipeline.bloomPass.resolution) {
+          this.postPipeline.bloomPass.resolution.set(finalWidth, finalHeight);
+        }
+        // Some versions use setSize method
+        if (typeof this.postPipeline.bloomPass.setSize === 'function') {
+          this.postPipeline.bloomPass.setSize(finalWidth, finalHeight);
+        }
+      }
+      
+      // Update color adjust resolution for sharpness
+      if (this.postPipeline?.colorAdjust) {
+        this.postPipeline.colorAdjust.setResolution(finalWidth, finalHeight);
+      }
+      
+      // Update FXAA resolution on resize
+      if (this.fxaaPass) {
+        const pixelRatio = this.renderer.getPixelRatio();
+        this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (finalWidth * pixelRatio);
+        this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (finalHeight * pixelRatio);
+      }
+      
+      // Note: Histogram controller doesn't need explicit resize handling
+      // as it reads from the composer's render target which is updated by composer.setSize()
+    });
   }
 
   async exportPng(settings = {}) {
