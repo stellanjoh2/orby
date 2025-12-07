@@ -625,12 +625,6 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   transform-origin: center center;
 }
 
-/* Scale all direct children (pseudo-elements like ::before are not affected) */
-.dropzone > * {
-  transform: scale(var(--dropzone-scale));
-  transform-origin: center center;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -655,7 +649,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
 }
 
 .drop-logo {
-  width: 440px;
+  width: clamp(264px, 30.5vw, 440px); /* Scales from 440px down to 264px (60% of 440px) */
   height: auto;
   margin-bottom: 0;
   opacity: 0;
@@ -663,6 +657,7 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   display: flex;
   justify-content: center;
   align-items: center;
+  transform-origin: center center;
 }
 
 .drop-logo.reveal {
