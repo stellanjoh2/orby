@@ -2177,6 +2177,17 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
   }
 }
 
+/* Hide UI on mobile and vertical tablet (smallest window sizes) */
+@media (max-width: 768px) {
+  .shelf {
+    display: none !important;
+  }
+  .viewport {
+    width: 100% !important;
+    height: 100vh !important;
+  }
+}
+
 body.ui-hidden .top-bar,
 body.ui-hidden #dropzone {
   pointer-events: none;
