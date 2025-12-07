@@ -2199,8 +2199,8 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
 }
 
 /* Hide UI on mobile and vertical tablet (smallest window sizes) */
-/* Hide when width is small OR when screen is short (vertical tablet) */
-@media (max-width: 1024px), (max-height: 800px) {
+/* Hide when width is small OR when screen is very short (mobile portrait) */
+@media (max-width: 1024px), (max-height: 500px) {
   .shelf {
     display: none !important;
   }
