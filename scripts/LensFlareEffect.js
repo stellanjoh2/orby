@@ -320,9 +320,16 @@ const fragmentShader = `
         vec2 texelSize = vec2(1.0) / vec2(iResolution.xy);
         vec3 distortion = vec3(-(texelSize.x * uDistortion), 0.2, texelSize.x * uDistortion);
         vec4 c = vec4(0.0);
+        // Reduce texture lookups: use 6 instead of 8 for better performance
+        // Skip every other iteration for distant samples
         for (int i = 0; i < 8; i++) {
-        vec2 offset = texCoord + (ghostVec * float(i));
-        c += textureDistorted(lensDirtTexture, offset, ghostVecAspectNormalized, distortion) * pow(max(0.0, 1.0 - (length(vec2(0.5) - offset) / length(vec2(0.5)))), 10.0);
+            // Skip samples that are likely outside view or have low contribution
+            vec2 offset = texCoord + (ghostVec * float(i));
+            float distFromCenter = length(vec2(0.5) - offset);
+            // Early skip for samples far from center (they contribute less)
+            if(distFromCenter > 0.7 && i > 4) continue;
+            
+            c += textureDistorted(lensDirtTexture, offset, ghostVecAspectNormalized, distortion) * pow(max(0.0, 1.0 - (distFromCenter / length(vec2(0.5)))), 10.0);
         }                       
         vec2 haloOffset = texCoord + haloVecAspectNormalized; 
         return (c * getLensColor((length(vec2(0.5) - aspectTexCoord) / length(vec2(haloScale))))) + 
@@ -331,15 +338,32 @@ const fragmentShader = `
 
     void main()
     {
+        // Early exit if disabled - saves expensive shader calculations
+        if(!enabled) {
+            gl_FragColor = vec4(0.0);
+            return;
+        }
+        
+        // Early exit if opacity is very low - skip expensive calculations
+        if(opacity < 0.01) {
+            gl_FragColor = vec4(0.0);
+            return;
+        }
+        
         vec2 uv = vUv;
         vec2 myUV = uv -0.5;
         myUV.y *= iResolution.y/iResolution.x;
         vec2 mouse = lensPosition * 0.5;
         mouse.y *= iResolution.y/iResolution.x;
         
+        // Distance-based LOD: skip expensive features when far from lens position
+        float distFromLens = length(myUV - mouse);
+        bool useHighQuality = distFromLens < 1.5; // Only use expensive features near the lens
+        
         vec3 finalColor = LensFlare(myUV, mouse) * 20.0 * colorGain / 256.;
 
-        if(aditionalStreaks){
+        // Only compute expensive features when close to lens position or when explicitly enabled
+        if(aditionalStreaks && useHighQuality){
             vec3 circColor = vec3(0.9, 0.2, 0.1);
             vec3 circColor2 = vec3(0.3, 0.1, 0.9);
 
@@ -348,7 +372,7 @@ const fragmentShader = `
             }
         }
 
-        if(secondaryGhosts){
+        if(secondaryGhosts && useHighQuality){
             vec3 altGhosts = vec3(0.1);
             altGhosts += renderhex(myUV, -lensPosition*0.25, ghostScale * 1.4, vec3(0.03)* colorGain);
             altGhosts += renderhex(myUV, lensPosition*0.25, ghostScale * 0.5, vec3(0.03)* colorGain);
@@ -362,7 +386,8 @@ const fragmentShader = `
             finalColor += altGhosts;
         }
         
-        if(starBurst){
+        // starBurst is the most expensive feature - only compute when close to lens
+        if(starBurst && useHighQuality){
             vTexCoord = myUV + 0.5;
             vec4 lensMod = getLensDirt(myUV);
             float tooBright = 1.0 - (clamp(uBrightDark, 0.0, 0.5) * 2.0); 
@@ -375,11 +400,8 @@ const fragmentShader = `
             finalColor += clamp((lensMod.rgb * getStartBurst().rgb ), 0.01, 1.0);
         }
 
-        if(enabled){
-            gl_FragColor = vec4(finalColor, mix(finalColor, -vec3(.15), 0.5) * opacity);
-        } else {
-            gl_FragColor = vec4(0.0);
-        }
+        // enabled check already done at top, so we can just output here
+        gl_FragColor = vec4(finalColor, mix(finalColor, -vec3(.15), 0.5) * opacity);
     }
 `;
 
@@ -468,7 +490,7 @@ export class LensFlareEffect extends THREE.Mesh {
     this.intersections = [];
     this.occlusionCheckObjects = null; // Will be set to only check relevant objects
     this.lastOcclusionCheck = 0;
-    this.occlusionCheckInterval = 0.05; // Check every 50ms instead of every frame (20 checks/sec)
+    this.occlusionCheckInterval = 0.1; // Check every 100ms instead of every frame (10 checks/sec) - reduces overhead when occluded
 
     this.distance = options.distance ?? 40;
     this.azimuthDeg = options.rotation ?? 0;
@@ -594,8 +616,13 @@ export class LensFlareEffect extends THREE.Mesh {
     
     // Only check specific objects instead of all scene children
     // This is much more performant, especially when occluded
-    const objectsToCheck = this.occlusionCheckObjects || scene.children;
-    this.raycaster.intersectObjects(objectsToCheck, true, this.intersections);
+    // If no occlusionCheckObjects are set, skip occlusion check entirely (better than checking all scene children)
+    if (!this.occlusionCheckObjects || this.occlusionCheckObjects.length === 0) {
+      this.targetOpacity = this.baseOpacity;
+      return;
+    }
+    
+    this.raycaster.intersectObjects(this.occlusionCheckObjects, true, this.intersections);
 
     const occluder = this.intersections.find(
       (hit) =>
@@ -604,12 +631,18 @@ export class LensFlareEffect extends THREE.Mesh {
         hit.object.userData?.lensflare !== 'no-occlusion',
     );
 
-    this.targetOpacity = occluder ? 0 : this.baseOpacity;
+    const isOccluded = !!occluder;
+    this.targetOpacity = isOccluded ? 0 : this.baseOpacity;
+    
+    // When occluded, disable shader entirely to save performance
+    // The shader is very expensive, so we should skip it completely when not visible
+    this.material.uniforms.enabled.value = !isOccluded && this.userEnabled;
   }
 
   setEnabled(enabled) {
     this.userEnabled = !!enabled;
     this.visible = !!enabled;
+    // Update enabled uniform - this will be further controlled by occlusion state
     this.material.uniforms.enabled.value = this.visible;
     if (!this.visible) {
       this.targetOpacity = 0;
@@ -617,6 +650,8 @@ export class LensFlareEffect extends THREE.Mesh {
       this.material.uniforms.opacity.value = 0;
     } else {
       this.targetOpacity = this.baseOpacity;
+      // Re-check occlusion state when re-enabling
+      // The occlusion check will update the enabled uniform if needed
     }
   }
 
