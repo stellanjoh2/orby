@@ -505,7 +505,7 @@ body.dropzone-visible #webgl {
 }
 
 .drop-link {
-  color: var(--accent);
+  color: #6149FF;
   text-decoration: none;
   cursor: pointer;
   transition: opacity 0.2s;
@@ -956,7 +956,7 @@ body:not(.dropzone-visible) .quick-start-guide {
 .about-content a:visited,
 a,
 a:visited {
-  color: var(--accent);
+  color: #6149FF;
   text-decoration: none;
   transition: color 0.2s ease, opacity 0.2s ease;
 }
@@ -2261,7 +2261,7 @@ body.ui-hidden .shelf {
 .info-quicknav a {
   display: block;
   margin-bottom: 0.25rem;
-  color: var(--accent);
+  color: #6149FF;
   text-decoration: none;
 }
 
@@ -2271,7 +2271,8 @@ body.ui-hidden .shelf {
 
 /* Global link hover color for inline text links */
 a:hover {
-  color: var(--accent-hover);
+  color: #6149FF;
+  opacity: 1;
 }
 
 .histogram-container canvas {
