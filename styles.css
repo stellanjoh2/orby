@@ -607,10 +607,13 @@ body.dropzone-visible #webgl {
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
   /* Padding scales from 5.5rem (88px) at 1440px+ down to 0.25rem (4px) at small sizes */
   /* Using larger default padding for symmetrical look with more generous spacing */
-  inset: var(--dropzone-padding);
-  width: auto;
-  height: auto;
-  aspect-ratio: 16 / 9;
+  /* Use explicit top/right/bottom/left for true symmetry - all sides equal */
+  top: var(--dropzone-padding);
+  right: var(--dropzone-padding);
+  bottom: var(--dropzone-padding);
+  left: var(--dropzone-padding);
+  /* Remove aspect-ratio constraint to allow true equal padding on all sides */
+  /* The border will adapt to viewport while maintaining equal padding */
   border: 2px dashed var(--drop-outline);
   border-radius: clamp(8px, 1.125vw, 18px); /* Responsive border radius too */
   background: linear-gradient(120deg, var(--drop-fill), transparent);
