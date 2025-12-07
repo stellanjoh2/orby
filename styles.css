@@ -617,6 +617,20 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   z-index: 1;
 }
 
+/* Scale down dropzone content when window shrinks (maintains aspect ratio) */
+/* Scale the entire dropzone container for consistent scaling */
+.dropzone {
+  --dropzone-scale: clamp(0.6, calc(100vw / 1440), 1);
+  transform: scale(var(--dropzone-scale));
+  transform-origin: center center;
+}
+
+/* Scale all direct children (pseudo-elements like ::before are not affected) */
+.dropzone > * {
+  transform: scale(var(--dropzone-scale));
+  transform-origin: center center;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1279,26 +1293,32 @@ a:visited {
   min-width: 0;
 }
 
+.mode-icon {
+  transform-origin: center center;
+}
+
 .mode-icon::before {
   content: '';
   position: absolute;
-  width: 70px;
-  height: 70px;
+  width: clamp(50px, 4.375vw, 70px);
+  height: clamp(50px, 4.375vw, 70px);
   border-radius: 50%;
   border: 3px solid transparent;
   transition: border-color 0.2s ease, transform 0.2s ease;
   pointer-events: none;
   z-index: 1;
+  transform-origin: center center;
 }
 
 .mode-icon img {
-  width: 54px;
-  height: 54px;
+  width: clamp(38px, 3.375vw, 54px);
+  height: clamp(38px, 3.375vw, 54px);
   display: block;
   border-radius: 50%;
   transition: transform 0.2s ease;
   position: relative;
   z-index: 0;
+  transform-origin: center center;
   /* Free floating - no background or border when unselected */
 }
 
