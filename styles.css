@@ -967,7 +967,11 @@ a:visited {
   font-weight: 700;
 }
 
-/* Ensure links with about-highlight class get proper hover color */
+/* Ensure links with about-highlight class get purple color and hover */
+a.about-highlight {
+  color: #7E6BFF !important;
+}
+
 a.about-highlight:hover {
   color: #9D8AFF !important;
 }
