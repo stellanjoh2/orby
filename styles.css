@@ -505,14 +505,15 @@ body.dropzone-visible #webgl {
 }
 
 .drop-link {
-  color: #6149FF;
+  color: #7E6BFF;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.2s;
-  opacity: 0.8;
+  transition: color 0.2s, opacity 0.2s;
+  opacity: 0.9;
 }
 
 .drop-link:hover {
+  color: #9D8AFF;
   opacity: 1;
   text-decoration: underline;
 }
@@ -956,7 +957,7 @@ body:not(.dropzone-visible) .quick-start-guide {
 .about-content a:visited,
 a,
 a:visited {
-  color: #6149FF;
+  color: #7E6BFF;
   text-decoration: none;
   transition: color 0.2s ease, opacity 0.2s ease;
 }
@@ -964,6 +965,11 @@ a:visited {
 .about-highlight {
   color: #fff;
   font-weight: 700;
+}
+
+/* Ensure links with about-highlight class get proper hover color */
+a.about-highlight:hover {
+  color: #9D8AFF !important;
 }
 
 .microcopy {
@@ -2261,17 +2267,18 @@ body.ui-hidden .shelf {
 .info-quicknav a {
   display: block;
   margin-bottom: 0.25rem;
-  color: #6149FF;
+  color: #7E6BFF;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 .info-quicknav a:hover {
-  color: var(--accent-hover);
+  color: #9D8AFF;
 }
 
 /* Global link hover color for inline text links */
 a:hover {
-  color: #6149FF;
+  color: #9D8AFF;
   opacity: 1;
 }
 
