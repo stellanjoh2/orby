@@ -604,15 +604,15 @@ body.dropzone-visible #webgl {
 
 .dropzone {
   /* Define padding variable at dropzone level so it's available to all children */
-  /* Max padding: 15rem (240px) for generous spacing at large sizes */
-  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 20), 15rem);
+  /* Max padding: 20rem (320px) for even more generous spacing at large sizes */
+  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 15), 20rem);
 }
 
 .dropzone::before {
   content: '';
   position: absolute;
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
-  /* Padding scales from 15rem (240px) at 1440px+ down to 0.25rem (4px) at small sizes */
+  /* Padding scales from 20rem (320px) at 1440px+ down to 0.25rem (4px) at small sizes */
   /* Using larger default padding for symmetrical look with more generous spacing */
   /* Use explicit top/right/bottom/left for true symmetry - all sides equal */
   top: var(--dropzone-padding);
