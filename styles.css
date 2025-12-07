@@ -604,9 +604,9 @@ body:not(.dropzone-visible) .dropzone-version-tag {
   content: '';
   position: absolute;
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
-  /* Padding scales from 2rem (32px) at 1440px+ down to 0.25rem (4px) at small sizes */
-  /* Formula: starts at 2rem, scales down linearly, minimum 0.25rem */
-  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 30), 2rem);
+  /* Padding scales from 4rem (64px) at 1440px+ down to 0.25rem (4px) at small sizes */
+  /* Using larger default padding for symmetrical look (matching bottom spacing) */
+  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 24), 4rem);
   inset: var(--dropzone-padding);
   width: auto;
   height: auto;
@@ -1587,7 +1587,9 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .dropzone-version-tag {
   position: absolute;
-  bottom: 1.2rem;
+  /* Position relative to dropzone border, not viewport */
+  /* Use the same responsive padding variable for consistent spacing */
+  bottom: var(--dropzone-padding, 1.2rem);
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.69rem;
