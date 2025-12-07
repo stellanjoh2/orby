@@ -557,7 +557,11 @@ body.dropzone-visible #webgl {
 
 .dropzone {
   position: absolute;
-  inset: 0;
+  /* Center the dropzone and constrain its size */
+  top: 50%;
+  left: 50%;
+  width: min(100%, 1200px);
+  height: min(100%, 800px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -635,9 +639,10 @@ body.dropzone-visible #webgl {
 
 /* Scale down dropzone content when window shrinks (maintains aspect ratio) */
 /* Scale the entire dropzone container for consistent scaling */
+/* Combine centering and scaling transforms */
 .dropzone {
   --dropzone-scale: clamp(0.6, calc(100vw / 1440), 1);
-  transform: scale(var(--dropzone-scale));
+  transform: translate(-50%, -50%) scale(var(--dropzone-scale));
   transform-origin: center center;
 }
 
