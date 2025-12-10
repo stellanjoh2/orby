@@ -16,6 +16,7 @@ export class LensDirtController {
     this.lensDirtTexturePath = './assets/images/lens-dirt.jpg';
     this.lensDirtSettings = null;
     this.baseExposure = 1.0; // Reference exposure value for normalization
+    this.textureLoadAttempted = false; // Track if we've attempted to load the texture
   }
 
   /**
@@ -36,6 +37,10 @@ export class LensDirtController {
    */
   loadTexture() {
     if (!this.textureLoader || !this.lensDirtTexturePath) return;
+    // Prevent multiple simultaneous load attempts
+    if (this.textureLoadAttempted && !this.lensDirtTexture) return;
+    
+    this.textureLoadAttempted = true;
     this.textureLoader.load(
       this.lensDirtTexturePath,
       (texture) => {
@@ -53,6 +58,8 @@ export class LensDirtController {
       undefined,
       (error) => {
         console.warn('Failed to load lens dirt texture', error);
+        // Reset flag on error so we can retry later if needed
+        this.textureLoadAttempted = false;
       },
     );
   }
@@ -72,9 +79,21 @@ export class LensDirtController {
       };
     }
 
+    // Always read the current enabled state from StateStore to avoid stale data
+    const currentState = this.stateStore.getState();
     const defaults = this.stateStore.getDefaults().lensDirt;
     const current = this.lensDirtSettings ?? defaults;
-    const enabled = !!current.enabled && !!this.lensDirtTexture;
+    // Use StateStore's current state for enabled, fallback to local settings
+    const enabledState = currentState.lensDirt?.enabled ?? current.enabled ?? defaults.enabled;
+    
+    // If texture is missing but should be enabled, try to reload it (only if not already attempted)
+    if (enabledState && !this.lensDirtTexture && this.textureLoader && !this.textureLoadAttempted) {
+      console.warn('Lens dirt texture missing but enabled - attempting to reload');
+      this.loadTexture();
+    }
+    
+    // Only enable if both the state says enabled AND texture is loaded
+    const enabled = !!enabledState && !!this.lensDirtTexture;
 
     this.lensDirtPass.enabled = enabled;
     this.lensDirtPass.uniforms.strength.value = current.strength ?? defaults.strength;

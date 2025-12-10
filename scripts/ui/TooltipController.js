@@ -36,6 +36,15 @@ export class TooltipController {
     document.addEventListener('focus', this.handleFocus.bind(this), true);
     document.addEventListener('blur', this.handleBlur.bind(this), true);
     
+    // Global mouse move to check if we're still over a tooltip element
+    document.addEventListener('mousemove', this.handleMouseMove.bind(this), true);
+    
+    // Hide tooltip on click anywhere
+    document.addEventListener('click', this.handleClick.bind(this), true);
+    
+    // Hide tooltip on scroll (tooltip position would be wrong)
+    document.addEventListener('scroll', this.handleScroll.bind(this), true);
+    
     // Touch support for mobile
     document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: true });
   }
@@ -123,6 +132,79 @@ export class TooltipController {
       }
       
       // Hide immediately
+      this.hide();
+    }
+    
+    // Also check if we're leaving the tooltip itself
+    if (event.relatedTarget === this.tooltip || this.tooltip.contains(event.relatedTarget)) {
+      // Mouse is moving to tooltip, don't hide yet
+      return;
+    }
+    
+    // If we're not moving to another tooltip element, hide
+    if (!target && this.isVisible) {
+      this.hide();
+    }
+  }
+  
+  /**
+   * Handle mouse move - check if we're still over a tooltip element
+   * Only runs occasionally to avoid performance issues
+   */
+  handleMouseMove(event) {
+    // Only check if tooltip is visible and throttle checks
+    if (!this.isVisible || !this.currentTarget) return;
+    
+    // Throttle: only check every 100ms to avoid performance issues
+    if (!this.lastMouseMoveCheck) {
+      this.lastMouseMoveCheck = 0;
+    }
+    const now = performance.now();
+    if (now - this.lastMouseMoveCheck < 100) return;
+    this.lastMouseMoveCheck = now;
+    
+    // Check if current target still exists in DOM (might have been removed)
+    if (!document.body.contains(this.currentTarget)) {
+      this.hide();
+      return;
+    }
+    
+    // Check if mouse is still over the current target or the tooltip itself
+    const isOverTarget = this.currentTarget.contains(event.target) || this.currentTarget === event.target;
+    const isOverTooltip = this.tooltip.contains(event.target) || this.tooltip === event.target;
+    
+    // If mouse is not over target or tooltip, check if we're moving to another tooltip
+    if (!isOverTarget && !isOverTooltip) {
+      let newTarget = null;
+      if (event.target && typeof event.target.closest === 'function') {
+        newTarget = event.target.closest('[data-tooltip]');
+      }
+      
+      // If not moving to another tooltip, hide
+      if (!newTarget) {
+        this.hide();
+      }
+    }
+  }
+  
+  /**
+   * Handle click - hide tooltip on any click
+   */
+  handleClick(event) {
+    // Don't hide if clicking on the tooltip itself
+    if (this.tooltip.contains(event.target)) return;
+    
+    // Hide tooltip on any click
+    if (this.isVisible) {
+      this.hide();
+    }
+  }
+  
+  /**
+   * Handle scroll - hide tooltip on scroll (position would be wrong)
+   */
+  handleScroll(event) {
+    if (this.isVisible) {
       this.hide();
     }
   }
@@ -254,7 +336,13 @@ export class TooltipController {
       this.hideTimeout = null;
     }
     
-    if (!this.isVisible && !this.currentTarget) return;
+    // Always hide if called, even if state seems inconsistent
+    if (!this.isVisible && !this.currentTarget) {
+      // Force cleanup anyway
+      this.tooltip.classList.remove('tooltip--visible');
+      this.tooltip.setAttribute('aria-hidden', 'true');
+      return;
+    }
     
     this.tooltip.classList.remove('tooltip--visible');
     this.tooltip.setAttribute('aria-hidden', 'true');
