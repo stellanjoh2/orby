@@ -743,11 +743,23 @@ export class MaterialController {
             positions.needsUpdate = true;
           }
 
-          const wireMesh = new THREE.Mesh(geometry, wireMaterial);
+          const wireMesh = child.isSkinnedMesh
+            ? new THREE.SkinnedMesh(geometry, wireMaterial)
+            : new THREE.Mesh(geometry, wireMaterial);
+
           // Link to original mesh for matrix updates
           wireMesh.userData.originalMesh = child;
           wireMesh.userData.isCloned = isCloned;
           wireMesh.renderOrder = 999; // Render on top
+
+          // Keep wireframe in sync with skinned animations by sharing the skeleton
+          if (child.isSkinnedMesh) {
+            wireMesh.bind(child.skeleton, child.bindMatrix);
+            // Use the same bindMatrixInverse to avoid reshaping issues
+            if (child.bindMatrixInverse) {
+              wireMesh.bindMatrixInverse = child.bindMatrixInverse.clone();
+            }
+          }
           this.wireframeOverlay.add(wireMesh);
         }
       });
@@ -776,10 +788,14 @@ export class MaterialController {
         wireMesh.position.copy(original.position);
         wireMesh.rotation.copy(original.rotation);
         wireMesh.scale.copy(original.scale);
-        // Let Three.js handle matrix updates through the parent hierarchy
+        // Let Three.js handle matrix updates through the parent hierarchy.
+        // For skinned meshes, keep auto-updates enabled so skinning continues to run.
+        const shouldDisableAutoUpdate = !wireMesh.isSkinnedMesh;
         wireMesh.matrixAutoUpdate = true;
         wireMesh.updateMatrix();
-        wireMesh.matrixAutoUpdate = false;
+        if (shouldDisableAutoUpdate) {
+          wireMesh.matrixAutoUpdate = false;
+        }
       }
     });
   }

@@ -67,7 +67,20 @@ export class AnimationControls {
 
   setAnimationPlaying(playing) {
     this.ui.animationPlaying = playing;
-    this.ui.dom.playPause.textContent = playing ? 'Pause' : 'Play';
+    const button = this.ui.dom.playPause;
+    const icon = button.querySelector('i');
+    const srLabel = button.querySelector('.sr-only');
+
+    if (icon) {
+      icon.classList.toggle('fa-play', !playing);
+      icon.classList.toggle('fa-pause', playing);
+    }
+
+    if (srLabel) {
+      srLabel.textContent = playing ? 'Pause' : 'Play';
+    }
+
+    button.setAttribute('aria-label', playing ? 'Pause animation' : 'Play animation');
   }
 
   updateAnimationTime(current, duration) {

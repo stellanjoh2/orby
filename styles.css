@@ -239,6 +239,48 @@ body.dropzone-visible #webgl {
   filter: brightness(1.08);
 }
 
+.primary-btn.icon-btn {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  gap: 0.25rem;
+}
+
+.primary-btn.icon-btn i {
+  font-size: 1.1rem;
+  color: var(--brand-text);
+}
+
+.animation-play-btn {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border 0.2s, background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.animation-play-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.animation-play-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Load Settings Modal */
 .load-settings-modal {
   position: fixed;
@@ -1795,6 +1837,14 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 #animationScrub {
   flex: 1;
+}
+
+#animationTime {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.8ch;
+  text-align: right;
 }
 
 .select-line select {

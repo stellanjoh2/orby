@@ -580,8 +580,9 @@
               <div class="panel-block" id="animationBlock">
                 <div class="block-title">Animation</div>
                 <div class="animation-controls">
-                  <button id="playPause" class="primary-btn small" disabled>
-                    Play
+                  <button id="playPause" class="animation-play-btn" disabled aria-label="Play animation">
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                    <span class="sr-only">Play</span>
                   </button>
                   <input
                     type="range"
@@ -592,11 +593,10 @@
                     value="0"
                     disabled
                   />
+                  <span id="animationTime">0:00</span>
                 </div>
                 <div class="select-line">
-                  <label for="animationSelect">Clip</label>
                   <select id="animationSelect" disabled></select>
-                  <span id="animationTime">0:00</span>
                 </div>
               </div>
 
@@ -2038,7 +2038,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.109 · 2025-12-11 08:38:32 UTC</div>
+              <div class="info-version-tag">v0.5.110 · 2025-12-11 08:38:44 UTC</div>
             </section>
           </div>
         </aside>
