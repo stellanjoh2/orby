@@ -83,7 +83,6 @@ export class EnvironmentController {
       this.currentLowResTexture = null;
       this.fadeProgress = 1.0;
       this.currentPreset = preset;
-      // Re-apply environment to ensure rotation is applied (rotation is already stored in this.rotation)
       this._applyEnvironment();
       return this.moods?.[preset] ?? null;
     }
@@ -98,14 +97,10 @@ export class EnvironmentController {
         this.currentPreset = preset;
         
         // Pre-generate low-res PMREM immediately so it's ready
-        // Apply rotation to low-res to keep it synced with final rotation
+        // NOTE: Don't apply rotation during fade - rotation will be applied after fade completes
+        // This prevents PMREM regeneration during transition
         if (this.pmremGenerator && this.currentLowResTexture) {
-          let sourceTexture = this.currentLowResTexture;
-          // Apply rotation if needed to keep low-res and full-res in sync
-          if (this.rotation !== 0) {
-            sourceTexture = this._createRotatedTexture(this.currentLowResTexture, this.rotation);
-          }
-          this.lowResEnvironmentRenderTarget = this.pmremGenerator.fromEquirectangular(sourceTexture);
+          this.lowResEnvironmentRenderTarget = this.pmremGenerator.fromEquirectangular(this.currentLowResTexture);
         }
         
         this._applyEnvironment(); // Show low-res immediately
@@ -122,14 +117,11 @@ export class EnvironmentController {
         
         // Pre-generate PMREM for full-res texture BEFORE starting fade
         // This is critical to prevent pop - both PMREM targets must be ready
-        // Apply rotation to full-res to keep it synced with low-res rotation
+        // NOTE: Don't apply rotation during fade - rotation will be applied after fade completes
+        // This prevents PMREM regeneration during transition
         if (this.pmremGenerator && this.currentEnvironmentTexture) {
-          let sourceTexture = this.currentEnvironmentTexture;
-          // Apply rotation if needed to keep low-res and full-res in sync
-          if (this.rotation !== 0) {
-            sourceTexture = this._createRotatedTexture(this.currentEnvironmentTexture, this.rotation);
-          }
-          const fullResTarget = this.pmremGenerator.fromEquirectangular(sourceTexture);
+          // Generate and store the full-res PMREM target (without rotation)
+          const fullResTarget = this.pmremGenerator.fromEquirectangular(this.currentEnvironmentTexture);
           this.environmentRenderTarget = fullResTarget;
           this.fullResPmremReady = true;
         } else {
@@ -311,10 +303,7 @@ export class EnvironmentController {
               this.lowResEnvironmentRenderTarget = null;
             }
           }, 300);
-          // Rotation is already applied to both low-res and full-res PMREM targets
-          // No need to re-apply after fade - they're already synced
-          // Just ensure final state is applied
-          this._applyEnvironment();
+          this._applyEnvironment(); // Final update with full-res
         }
       };
       animate();
@@ -398,13 +387,12 @@ export class EnvironmentController {
 
     if (this.backgroundEnabled && activeTexture) {
       let bgTexture = activeTexture;
-      // If using PMREM (which has rotation baked in), use envTexture for background
-      // Otherwise, apply rotation to the source texture
-      if (envTexture && this.pmremGenerator) {
-        // PMREM already has rotation applied, use it directly
-        bgTexture = envTexture;
+      // During fade, don't apply rotation to background to prevent pop
+      // Use the same texture that's being used for environment
+      if (isFading) {
+        // During fade, use the same texture as environment (no rotation)
+        bgTexture = activeTexture;
       } else if (this.rotation !== 0) {
-        // No PMREM path - apply rotation to source texture
         bgTexture = this._createRotatedTexture(activeTexture, this.rotation);
       }
       if (this.blurriness > 0 && envTexture) {
@@ -456,12 +444,6 @@ export class EnvironmentController {
       return sourceTexture;
     }
 
-    // Ensure source texture has correct wrapping modes to prevent seams
-    // This is critical - the rotation shader samples from this texture
-    sourceTexture.wrapS = THREE.RepeatWrapping; // Horizontal wrap (seamless left/right)
-    sourceTexture.wrapT = THREE.ClampToEdgeWrapping; // Vertical clamp (prevent pole seams)
-    sourceTexture.needsUpdate = true; // Ensure wrapping changes take effect
-
     const isHDR =
       sourceTexture.encoding === THREE.RGBEEncoding ||
       sourceTexture.type === THREE.HalfFloatType ||
@@ -487,13 +469,10 @@ export class EnvironmentController {
       generateMipmaps: false,
     });
 
-    // Convert rotation from degrees (0-360) to UV offset (0-1)
-    const rotationUV = (rotation % 360) / 360.0;
-    
     const material = new THREE.ShaderMaterial({
       uniforms: {
         tEquirect: { value: sourceTexture },
-        rotation: { value: rotationUV },
+        rotation: { value: rotation },
       },
       vertexShader: RotateEquirectShader.vertexShader,
       fragmentShader: RotateEquirectShader.fragmentShader,
