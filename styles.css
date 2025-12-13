@@ -1407,9 +1407,9 @@ a.about-highlight:hover {
   pointer-events: none;
 }
 
-/* Selected state - white stroked ring around icon */
+/* Selected state - brand yellow stroked ring around icon */
 .mode-icon:has(input:checked)::before {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent);
   transform: scale(1);
 }
 
@@ -1863,52 +1863,69 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 .hdri-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.8rem 1rem;
   margin-bottom: 1.1rem;
+  padding: 0.75rem 0;
 }
 
-.hdri-card {
-  border: 1px solid var(--stroke);
-  border-radius: 999px;
-  padding: 0.5rem 0.4rem;
-  letter-spacing: -0.01em;
-  font-size: 0.75rem;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
-  text-align: center;
-  opacity: 0.6;
+.hdri-icon {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
-  min-height: 2.5rem; /* Match accent-action-btn exactly */
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  transition: transform 0.2s ease;
+  transform-origin: center center;
 }
 
-.hdri-card:hover:not(:disabled):not(.is-disabled):not(.active) {
-  transition: border 0s, box-shadow 0s, color 0s, opacity 0s, background 0s;
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.25);
-  opacity: 1;
+.hdri-icon::before {
+  content: '';
+  position: absolute;
+  width: clamp(62px, 5.8vw, 92px);
+  height: clamp(62px, 5.8vw, 92px);
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 1;
+  transform-origin: center center;
 }
 
-.hdri-card:disabled,
-.hdri-card.is-disabled {
+.hdri-icon img {
+  width: clamp(52px, 4.8vw, 78px);
+  height: clamp(52px, 4.8vw, 78px);
+  display: block;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 0;
+  transform-origin: center center;
+  object-fit: cover;
+}
+
+.hdri-icon:hover img {
+  transform: scale(1.1);
+}
+
+.hdri-icon:disabled,
+.hdri-icon.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: var(--stroke);
   filter: saturate(0.35);
 }
 
-
-.hdri-card.active {
+.hdri-icon.active::before {
   border-color: var(--accent);
-  color: var(--text);
-  background: var(--accent-muted);
-  box-shadow: 0 8px 20px var(--accent-shadow);
-  opacity: 1;
+  transform: scale(1);
+}
+
+.hdri-icon.active:hover img {
+  transform: scale(1.1);
 }
 
 /* Export Controls */
