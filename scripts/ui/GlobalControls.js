@@ -239,12 +239,29 @@ export class GlobalControls {
         }
       }
 
-      // Space - Play/Pause animation
+      // Space - Cycle through camera auto-orbit speeds
       if (key === ' ') {
         event.preventDefault();
-        if (this.ui.dom.playPause && !this.ui.dom.playPause.disabled) {
-          this.eventBus.emit('animation:toggle');
+        const state = this.stateStore.getState();
+        const currentMode = state.camera?.autoOrbit ?? 'off';
+        const modes = ['off', 'slow', 'fast'];
+        const currentIndex = modes.indexOf(currentMode);
+        const nextIndex = (currentIndex + 1) % modes.length;
+        const nextMode = modes[nextIndex];
+        
+        // Update state
+        if (!state.camera) {
+          this.stateStore.set('camera', { autoOrbit: nextMode });
+        } else {
+          this.stateStore.set('camera.autoOrbit', nextMode);
         }
+        
+        // Emit event
+        this.eventBus.emit('camera:auto-orbit', nextMode);
+        
+        // Sync UI radio buttons
+        const radio = document.querySelector(`input[name="cameraAutoOrbit"][value="${nextMode}"]`);
+        if (radio) radio.checked = true;
       }
 
       // Arrow keys - Scrub animation
@@ -447,10 +464,59 @@ export class GlobalControls {
         }
       }
 
-      // X - Apply studio preset
+      // X - Cycle through wireframe modes
       if (key === 'x') {
         event.preventDefault();
-        this.applyStudioPresetX();
+        const state = this.stateStore.getState();
+        const wireframe = state.wireframe || {};
+        const currentAlwaysOn = wireframe.alwaysOn || false;
+        const currentOnlyVisible = wireframe.onlyVisibleFaces || false;
+        const currentHideMesh = wireframe.hideMesh || false;
+        
+        // Cycle through modes:
+        // 1. Off (all false)
+        // 2. Only visible faces
+        // 3. Always on + only visible faces
+        // 4. Hide mesh
+        let nextAlwaysOn = false;
+        let nextOnlyVisible = false;
+        let nextHideMesh = false;
+        
+        if (!currentAlwaysOn && !currentOnlyVisible && !currentHideMesh) {
+          // State 0 -> State 1: Only visible faces
+          nextOnlyVisible = true;
+        } else if (currentOnlyVisible && !currentAlwaysOn && !currentHideMesh) {
+          // State 1 -> State 2: Always on + only visible faces
+          nextAlwaysOn = true;
+          nextOnlyVisible = true;
+        } else if (currentAlwaysOn && currentOnlyVisible && !currentHideMesh) {
+          // State 2 -> State 3: Hide mesh
+          nextHideMesh = true;
+        } else {
+          // State 3 -> State 0: All off
+          // (next values already false)
+        }
+        
+        // Update state
+        this.stateStore.set('wireframe.alwaysOn', nextAlwaysOn);
+        this.stateStore.set('wireframe.onlyVisibleFaces', nextOnlyVisible);
+        this.stateStore.set('wireframe.hideMesh', nextHideMesh);
+        
+        // Emit events
+        this.eventBus.emit('mesh:wireframe-always-on', nextAlwaysOn);
+        this.eventBus.emit('mesh:wireframe-only-visible-faces', nextOnlyVisible);
+        this.eventBus.emit('mesh:wireframe-hide-mesh', nextHideMesh);
+        
+        // Sync UI
+        if (this.ui.inputs.wireframeAlwaysOn) {
+          this.ui.inputs.wireframeAlwaysOn.checked = nextAlwaysOn;
+        }
+        if (this.ui.inputs.wireframeOnlyVisibleFaces) {
+          this.ui.inputs.wireframeOnlyVisibleFaces.checked = nextOnlyVisible;
+        }
+        if (this.ui.inputs.wireframeHideMesh) {
+          this.ui.inputs.wireframeHideMesh.checked = nextHideMesh;
+        }
       }
 
       // [ / ] - Cycle through HDRI presets
