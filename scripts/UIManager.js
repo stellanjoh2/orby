@@ -1235,12 +1235,35 @@ export class UIManager {
     );
     
     // Fresnel
-    this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
-    this.inputs.fresnelColor.value = state.fresnel.color;
-    this.inputs.fresnelRadius.value = state.fresnel.radius;
-    this.updateValueLabel('fresnelRadius', state.fresnel.radius, 'decimal');
-    this.inputs.fresnelStrength.value = state.fresnel.strength;
-    this.updateValueLabel('fresnelStrength', state.fresnel.strength, 'decimal');
+    if (this.inputs.toggleFresnel) {
+      this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
+    }
+    if (this.inputs.fresnelColor) {
+      // Only update if user is not actively interacting
+      const isInteracting = this.meshControls?.fresnelInteracting?.color || 
+                           document.activeElement === this.inputs.fresnelColor;
+      if (!isInteracting) {
+        this.inputs.fresnelColor.value = state.fresnel.color;
+      }
+    }
+    if (this.inputs.fresnelRadius) {
+      // Only update if user is not actively interacting
+      const isInteracting = this.meshControls?.fresnelInteracting?.radius || 
+                           document.activeElement === this.inputs.fresnelRadius;
+      if (!isInteracting) {
+        this.inputs.fresnelRadius.value = state.fresnel.radius;
+        this.updateValueLabel('fresnelRadius', state.fresnel.radius, 'decimal');
+      }
+    }
+    if (this.inputs.fresnelStrength) {
+      // Only update if user is not actively interacting
+      const isInteracting = this.meshControls?.fresnelInteracting?.strength || 
+                           document.activeElement === this.inputs.fresnelStrength;
+      if (!isInteracting) {
+        this.inputs.fresnelStrength.value = state.fresnel.strength;
+        this.updateValueLabel('fresnelStrength', state.fresnel.strength, 'decimal');
+      }
+    }
     this.setEffectControlsDisabled(
       ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
       !state.fresnel.enabled,

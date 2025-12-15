@@ -10,6 +10,12 @@ export class MeshControls {
     this.stateStore = stateStore;
     this.ui = uiManager;
     this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    // Track which Fresnel inputs are currently being interacted with
+    this.fresnelInteracting = {
+      radius: false,
+      strength: false,
+      color: false,
+    };
   }
 
   bind() {
@@ -163,32 +169,73 @@ export class MeshControls {
         strength: fresnel.strength !== undefined ? fresnel.strength : 1.0,
       });
     };
-    this.ui.inputs.toggleFresnel.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('fresnel.enabled', enabled);
-      this.ui.setEffectControlsDisabled(
-        ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
-        !enabled,
-      );
-      emitFresnel();
-    });
-    this.ui.inputs.fresnelColor.addEventListener('input', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('fresnel.color', value);
-      emitFresnel();
-    });
-    this.ui.inputs.fresnelRadius.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('fresnelRadius', value, 'decimal');
-      this.stateStore.set('fresnel.radius', value);
-      emitFresnel();
-    });
-    this.ui.inputs.fresnelStrength.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('fresnelStrength', value, 'decimal');
-      this.stateStore.set('fresnel.strength', value);
-      emitFresnel();
-    });
+    
+    // Add defensive checks to ensure inputs exist before binding
+    if (this.ui.inputs.toggleFresnel) {
+      this.ui.inputs.toggleFresnel.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('fresnel.enabled', enabled);
+        this.ui.setEffectControlsDisabled(
+          ['fresnelColor', 'fresnelRadius', 'fresnelStrength'],
+          !enabled,
+        );
+        emitFresnel();
+      });
+    }
+    
+    // Global mouseup handler to reset interaction flags (in case mouse is released outside input)
+    const handleGlobalMouseUp = () => {
+      this.fresnelInteracting.color = false;
+      this.fresnelInteracting.radius = false;
+      this.fresnelInteracting.strength = false;
+    };
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    
+    if (this.ui.inputs.fresnelColor) {
+      this.ui.inputs.fresnelColor.addEventListener('mousedown', () => {
+        this.fresnelInteracting.color = true;
+      });
+      this.ui.inputs.fresnelColor.addEventListener('mouseup', () => {
+        this.fresnelInteracting.color = false;
+      });
+      this.ui.inputs.fresnelColor.addEventListener('input', (event) => {
+        const value = event.target.value;
+        this.stateStore.set('fresnel.color', value);
+        emitFresnel();
+      });
+    }
+    
+    if (this.ui.inputs.fresnelRadius) {
+      this.ui.inputs.fresnelRadius.addEventListener('mousedown', () => {
+        this.fresnelInteracting.radius = true;
+      });
+      this.ui.inputs.fresnelRadius.addEventListener('mouseup', () => {
+        this.fresnelInteracting.radius = false;
+      });
+      this.ui.inputs.fresnelRadius.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (isNaN(value)) return; // Guard against invalid values
+        this.helpers.updateValueLabel('fresnelRadius', value, 'decimal');
+        this.stateStore.set('fresnel.radius', value);
+        emitFresnel();
+      });
+    }
+    
+    if (this.ui.inputs.fresnelStrength) {
+      this.ui.inputs.fresnelStrength.addEventListener('mousedown', () => {
+        this.fresnelInteracting.strength = true;
+      });
+      this.ui.inputs.fresnelStrength.addEventListener('mouseup', () => {
+        this.fresnelInteracting.strength = false;
+      });
+      this.ui.inputs.fresnelStrength.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (isNaN(value)) return; // Guard against invalid values
+        this.helpers.updateValueLabel('fresnelStrength', value, 'decimal');
+        this.stateStore.set('fresnel.strength', value);
+        emitFresnel();
+      });
+    }
 
     // Export controls
     document.querySelectorAll('[data-export-transparent]').forEach((button) => {

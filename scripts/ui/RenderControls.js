@@ -340,12 +340,35 @@ export class RenderControls {
     this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !state.aberration.enabled);
     
     // Fresnel (synced here but bound in MeshControls)
-    this.ui.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
-    this.ui.inputs.fresnelColor.value = state.fresnel.color;
-    this.ui.inputs.fresnelRadius.value = state.fresnel.radius;
-    this.helpers.updateValueLabel('fresnelRadius', state.fresnel.radius, 'decimal');
-    this.ui.inputs.fresnelStrength.value = state.fresnel.strength;
-    this.helpers.updateValueLabel('fresnelStrength', state.fresnel.strength, 'decimal');
+    if (this.ui.inputs.toggleFresnel) {
+      this.ui.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
+    }
+    if (this.ui.inputs.fresnelColor) {
+      // Only update if user is not actively interacting
+      const isInteracting = this.ui.meshControls?.fresnelInteracting?.color || 
+                           document.activeElement === this.ui.inputs.fresnelColor;
+      if (!isInteracting) {
+        this.ui.inputs.fresnelColor.value = state.fresnel.color;
+      }
+    }
+    if (this.ui.inputs.fresnelRadius) {
+      // Only update if user is not actively interacting
+      const isInteracting = this.ui.meshControls?.fresnelInteracting?.radius || 
+                           document.activeElement === this.ui.inputs.fresnelRadius;
+      if (!isInteracting) {
+        this.ui.inputs.fresnelRadius.value = state.fresnel.radius;
+        this.helpers.updateValueLabel('fresnelRadius', state.fresnel.radius, 'decimal');
+      }
+    }
+    if (this.ui.inputs.fresnelStrength) {
+      // Only update if user is not actively interacting
+      const isInteracting = this.ui.meshControls?.fresnelInteracting?.strength || 
+                           document.activeElement === this.ui.inputs.fresnelStrength;
+      if (!isInteracting) {
+        this.ui.inputs.fresnelStrength.value = state.fresnel.strength;
+        this.helpers.updateValueLabel('fresnelStrength', state.fresnel.strength, 'decimal');
+      }
+    }
     this.ui.setEffectControlsDisabled(['fresnelColor', 'fresnelRadius', 'fresnelStrength'], !state.fresnel.enabled);
     
     // Camera & Exposure
