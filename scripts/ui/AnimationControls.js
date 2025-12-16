@@ -50,6 +50,7 @@ export class AnimationControls {
       this.ui.animationPlaying = false;
       this.ui.dom.playPause.disabled = true;
       this.ui.dom.animationScrub.disabled = true;
+      this.ui.dom.animationSelect.disabled = true; // Disable dropdown when no clips
       return;
     }
     clips.forEach((clip, index) => {
@@ -62,6 +63,7 @@ export class AnimationControls {
     this.ui.dom.animationBlock.hidden = false;
     this.ui.dom.playPause.disabled = false;
     this.ui.dom.animationScrub.disabled = false;
+    this.ui.dom.animationSelect.disabled = false; // Enable dropdown when clips are available
     this.ui.currentAnimationDuration = clips[0].seconds ?? 0;
   }
 

@@ -875,6 +875,7 @@ export class UIManager {
       this.animationPlaying = false;
       this.dom.playPause.disabled = true;
       this.dom.animationScrub.disabled = true;
+      this.dom.animationSelect.disabled = true; // Disable dropdown when no clips
       return;
     }
     clips.forEach((clip, index) => {
@@ -887,6 +888,7 @@ export class UIManager {
     this.dom.animationBlock.hidden = false;
     this.dom.playPause.disabled = false;
     this.dom.animationScrub.disabled = false;
+    this.dom.animationSelect.disabled = false; // Enable dropdown when clips are available
     this.currentAnimationDuration = clips[0].seconds ?? 0;
   }
 
