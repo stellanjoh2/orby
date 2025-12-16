@@ -647,7 +647,11 @@ body.dropzone-visible #webgl {
 .dropzone {
   /* Define padding variable at dropzone level so it's available to all children */
   /* Max padding: 20rem (320px) for even more generous spacing at large sizes */
+  /* Base symmetric padding (used for top/bottom by default) */
   --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 15), 20rem);
+  /* Allow separate horizontal control on very wide screens */
+  --dropzone-padding-x: var(--dropzone-padding);
+  --dropzone-padding-y: var(--dropzone-padding);
 }
 
 .dropzone::before {
@@ -656,11 +660,11 @@ body.dropzone-visible #webgl {
   /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
   /* Padding scales from 20rem (320px) at 1440px+ down to 0.25rem (4px) at small sizes */
   /* Using larger default padding for symmetrical look with more generous spacing */
-  /* Use explicit top/right/bottom/left for true symmetry - all sides equal */
-  top: var(--dropzone-padding);
-  right: var(--dropzone-padding);
-  bottom: var(--dropzone-padding);
-  left: var(--dropzone-padding);
+  /* Use separate horizontal/vertical padding so we can keep more side breathing room on ultrawides */
+  top: var(--dropzone-padding-y);
+  right: var(--dropzone-padding-x);
+  bottom: var(--dropzone-padding-y);
+  left: var(--dropzone-padding-x);
   /* Remove aspect-ratio constraint to allow true equal padding on all sides */
   /* The border will adapt to viewport while maintaining equal padding */
   border: 2px dashed var(--drop-outline);
@@ -671,6 +675,20 @@ body.dropzone-visible #webgl {
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
 }
 
+/* On very wide screens, increase horizontal padding only (narrower dropzone, same vertical spacing) */
+@media (min-width: 1600px) {
+  .dropzone {
+    --dropzone-padding-x: clamp(4rem, calc((100vw - 1440px) / 2), 14rem);
+    /*
+      Vertical padding:
+      - On tall fullscreen 16:9 (e.g. 1080p), keep a comfortable cushion from top/bottom
+      - As the window height shrinks, padding tapers down
+      - Overall more generous so fullscreen doesn’t feel cramped
+    */
+    --dropzone-padding-y: clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem);
+  }
+}
+
 .dropzone > * {
   position: relative;
   z-index: 1;
@@ -679,7 +697,14 @@ body.dropzone-visible #webgl {
 /* Scale down dropzone content when window shrinks (maintains aspect ratio) */
 /* Scale the entire dropzone container for consistent scaling */
 .dropzone {
-  --dropzone-scale: clamp(0.6, calc(100vw / 1440), 1);
+  /* Scale based on BOTH width and height so content shrinks on short windows */
+  /* - Use 1440×900 as the comfortable baseline size */
+  /* - As either width or height gets smaller, scale down the whole hero */
+  --dropzone-scale: clamp(
+    0.6,
+    min(100vw / 1440, 100vh / 900),
+    1
+  );
   transform: scale(var(--dropzone-scale));
   transform-origin: center center;
 }
