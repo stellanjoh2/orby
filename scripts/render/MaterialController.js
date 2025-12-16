@@ -993,9 +993,15 @@ export class MaterialController {
     }
 
     // For non-clay materials, apply environment and blurriness as normal
-    // IMPORTANT: Store current materialSettings values to ensure we use the latest user settings
-    const currentMetalness = this.materialSettings.metalness;
-    const currentRoughness = this.materialSettings.roughness;
+    // IMPORTANT: Always read the latest values from stateStore to ensure we have the most current user settings
+    // This prevents values from "resetting" when HDRI blurriness changes
+    const state = this.stateStore?.getState();
+    const currentMetalness = state?.material?.metalness ?? this.materialSettings.metalness ?? 0.0;
+    const currentRoughness = state?.material?.roughness ?? this.materialSettings.roughness ?? 0.8;
+    
+    // Also update materialSettings to keep them in sync
+    this.materialSettings.metalness = currentMetalness;
+    this.materialSettings.roughness = currentRoughness;
     
     this.currentModel.traverse((child) => {
       if (child.isMesh && child.material) {

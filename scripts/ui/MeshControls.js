@@ -16,6 +16,13 @@ export class MeshControls {
       strength: false,
       color: false,
     };
+    // Track which material inputs are currently being interacted with
+    this.materialInteracting = {
+      metalness: false,
+      roughness: false,
+      brightness: false,
+      emissive: false,
+    };
   }
 
   bind() {
@@ -38,6 +45,15 @@ export class MeshControls {
     });
     if (this.ui.inputs.materialBrightness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialBrightness);
 
+    // Global mouseup handler to reset interaction flags (in case mouse is released outside input)
+    // Note: This will be combined with the Fresnel handler below
+    
+    this.ui.inputs.materialMetalness?.addEventListener('mousedown', () => {
+      this.materialInteracting.metalness = true;
+    });
+    this.ui.inputs.materialMetalness?.addEventListener('mouseup', () => {
+      this.materialInteracting.metalness = false;
+    });
     this.ui.inputs.materialMetalness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       const clampedValue = isNaN(value) ? 0.0 : Math.max(0, Math.min(1, value));
@@ -47,6 +63,12 @@ export class MeshControls {
     });
     if (this.ui.inputs.materialMetalness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialMetalness);
 
+    this.ui.inputs.materialRoughness?.addEventListener('mousedown', () => {
+      this.materialInteracting.roughness = true;
+    });
+    this.ui.inputs.materialRoughness?.addEventListener('mouseup', () => {
+      this.materialInteracting.roughness = false;
+    });
     this.ui.inputs.materialRoughness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       const clampedValue = isNaN(value) ? 0.5 : Math.max(0, Math.min(1, value));
@@ -185,6 +207,12 @@ export class MeshControls {
     
     // Global mouseup handler to reset interaction flags (in case mouse is released outside input)
     const handleGlobalMouseUp = () => {
+      // Reset material interaction flags
+      this.materialInteracting.metalness = false;
+      this.materialInteracting.roughness = false;
+      this.materialInteracting.brightness = false;
+      this.materialInteracting.emissive = false;
+      // Reset Fresnel interaction flags
       this.fresnelInteracting.color = false;
       this.fresnelInteracting.radius = false;
       this.fresnelInteracting.strength = false;
@@ -285,14 +313,24 @@ export class MeshControls {
       this.helpers.updateValueLabel('materialBrightness', brightness, 'decimal');
     }
     if (this.ui.inputs.materialMetalness) {
-      const metalness = state.material?.metalness ?? 0.0;
-      this.ui.inputs.materialMetalness.value = metalness;
-      this.helpers.updateValueLabel('materialMetalness', metalness, 'decimal');
+      // Only update if user is not actively interacting
+      const isInteracting = this.materialInteracting?.metalness || 
+                           document.activeElement === this.ui.inputs.materialMetalness;
+      if (!isInteracting) {
+        const metalness = state.material?.metalness ?? 0.0;
+        this.ui.inputs.materialMetalness.value = metalness;
+        this.helpers.updateValueLabel('materialMetalness', metalness, 'decimal');
+      }
     }
     if (this.ui.inputs.materialRoughness) {
-      const roughness = state.material?.roughness ?? 0.8;
-      this.ui.inputs.materialRoughness.value = roughness;
-      this.helpers.updateValueLabel('materialRoughness', roughness, 'decimal');
+      // Only update if user is not actively interacting
+      const isInteracting = this.materialInteracting?.roughness || 
+                           document.activeElement === this.ui.inputs.materialRoughness;
+      if (!isInteracting) {
+        const roughness = state.material?.roughness ?? 0.8;
+        this.ui.inputs.materialRoughness.value = roughness;
+        this.helpers.updateValueLabel('materialRoughness', roughness, 'decimal');
+      }
     }
     if (this.ui.inputs.materialEmissive) {
       const emissive = state.material?.emissive ?? 0.0;
