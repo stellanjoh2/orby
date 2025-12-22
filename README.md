@@ -650,9 +650,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Legal Disclaimer
 
-**Personal Project**: Orby is developed independently and is not affiliated with, endorsed by, or connected to any employer or organization. It is free, open-source, and non-commercial.
-
-**Individual Work**: The views and work expressed herein are solely those of the individual author and do not represent any company, employer, or institution.
+**Personal Project**: Orby is developed independently and is not affiliated with, endorsed by, or connected to any employer or organization. It is free, open-source, and non-commercial. The views and work expressed herein are solely those of the individual author and do not represent any company, employer, or institution.
 
 ---
 
