@@ -213,11 +213,7 @@ export class MaterialController {
       }
       
       // Apply glass material to window mesh
-        vertices: child.geometry?.attributes?.position?.count || 0,
-        material: glassMaterial.type,
-        opacity: glassMaterial.opacity,
-        transparent: glassMaterial.transparent,
-      });
+      child.material = glassMaterial;
     });
   }
 
