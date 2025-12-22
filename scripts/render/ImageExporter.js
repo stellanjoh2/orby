@@ -88,9 +88,6 @@ export class ImageExporter {
       return;
     }
     
-    // Debug: Log export dimensions
-    console.log(`Export dimensions: ${cropInfo.renderWidth}x${cropInfo.renderHeight} (${size}x scale, crop region: ${cropInfo.cropWidth}x${cropInfo.cropHeight}, viewport: ${state.originalSize.x}x${state.originalSize.y})`);
-
     // Render to render target with transparency
     const renderTarget = this._renderToTarget(cropInfo, state);
 

@@ -147,23 +147,8 @@ export class MaterialController {
   applyGlassMaterial(object) {
     if (!object) return;
     
-    // First, identify and log current window materials
+    // First, identify window materials
     const windowInfo = this.identifyWindowMaterials(object);
-    if (windowInfo.length > 0) {
-      console.log('[MaterialController] Identified window materials:');
-      windowInfo.forEach((info, idx) => {
-        console.log(`  Window ${idx + 1}:`, {
-          mesh: info.meshName,
-          parent: info.parentName,
-          material: info.materialName,
-          type: info.materialType,
-          transparent: info.transparent,
-          opacity: info.opacity,
-          roughness: info.roughness,
-          metalness: info.metalness,
-        });
-      });
-    }
     
     object.traverse((child) => {
       if (!this.isWindowMesh(child)) return;
@@ -227,9 +212,7 @@ export class MaterialController {
         this.originalMaterials.set(child, originalMaterial);
       }
       
-      // Log window detection for debugging
-      console.log(`[MaterialController] Applied glass material to window mesh: ${child.name || 'unnamed'} (parent: ${child.parent?.name || 'none'})`, {
-        geometry: child.geometry ? 'valid' : 'invalid',
+      // Apply glass material to window mesh
         vertices: child.geometry?.attributes?.position?.count || 0,
         material: glassMaterial.type,
         opacity: glassMaterial.opacity,

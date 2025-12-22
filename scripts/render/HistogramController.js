@@ -185,7 +185,7 @@ export class HistogramController {
       }
     } catch (error) {
       // Silently fail if reading pixels fails (e.g., during initialization)
-      console.debug('Histogram update failed:', error);
+      // Histogram update failed silently
     }
   }
   

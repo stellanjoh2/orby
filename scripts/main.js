@@ -38,7 +38,6 @@ scene
   .then(() => {
     // Font Awesome icons are loaded via CDN - no initialization needed
     // Icon sizes are controlled via CSS
-    console.info('Orby ready');
 
     // Setup fullscreen toggle button
     const fullscreenButton = document.getElementById('fullscreenToggle');

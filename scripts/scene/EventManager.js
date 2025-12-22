@@ -212,7 +212,6 @@ export class EventManager {
 
     // Lights events
     eventBus.on('lights:update', ({ lightId, property, value }) => {
-      console.log(`[SceneManager] Received lights:update event:`, { lightId, property, value });
       s.lightsController?.updateLightProperty(lightId, property, value);
     });
     eventBus.on('lights:master', (value) => s.setLightsMaster(value));
