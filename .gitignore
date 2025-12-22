@@ -1,11 +1,29 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+
 # Test assets - keep locally only
 TEMP/
 
 # macOS
 .DS_Store
 **/.DS_Store
+Thumbs.db
 
 *.hdr
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+sphere.obj
 
 # Note: HDRI files in assets/hdris/ are kept in repo but are NOT included in MIT license
 # See ASSETS_LICENSE.md for details

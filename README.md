@@ -648,6 +648,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Important**: The MIT license applies to the source code only. HDRI environment maps in `assets/hdris/` are purchased assets and are **NOT** included in the MIT license. See [ASSETS_LICENSE.md](ASSETS_LICENSE.md) for details. If you fork or clone this repository, you must provide your own licensed HDRI maps.
 
+### Legal Disclaimer
+
+**Personal Project**: Orby is developed independently and is not affiliated with, endorsed by, or connected to any employer or organization. It is free, open-source, and non-commercial.
+
+**Individual Work**: The views and work expressed herein are solely those of the individual author and do not represent any company, employer, or institution.
+
 ---
 
 ## 🙏 Credits
