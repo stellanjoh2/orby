@@ -152,6 +152,8 @@ export class ResetControls {
       this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
       this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
       this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+      // Ensure lens flare toggle is fully reset (state + event + UI sync)
+      this.stateStore.set('lensFlare.enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
       this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
@@ -193,6 +195,7 @@ export class ResetControls {
       this.stateStore.set('fresnel', defaults.fresnel);
       this.stateStore.set('camera', defaults.camera);
       this.stateStore.set('exposure', defaults.exposure);
+      this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
       this.stateStore.set('antiAliasing', defaults.antiAliasing);
       this.stateStore.set('toneMapping', defaults.toneMapping);
       
@@ -216,6 +219,11 @@ export class ResetControls {
       this.eventBus.emit('render:highlights', (defaults.camera.highlights ?? 0) / 100);
       this.eventBus.emit('render:shadows', (defaults.camera.shadows ?? 0) / 100);
       this.eventBus.emit('render:saturation', defaults.camera.saturation);
+      this.eventBus.emit('render:clarity', defaults.camera.clarity ?? 0);
+      this.eventBus.emit('render:fade', defaults.camera.fade ?? 0);
+      this.eventBus.emit('render:sharpness', defaults.camera.sharpness ?? 0);
+      this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
+      this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
       this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
       
