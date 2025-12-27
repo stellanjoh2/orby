@@ -172,13 +172,6 @@ export class MeshControls {
       this.eventBus.emit('mesh:wireframe-hide-mesh', enabled);
     });
 
-    // Normals
-    this.ui.inputs.showNormals?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
-      this.stateStore.set('showNormals', enabled);
-      this.eventBus.emit('mesh:normals', enabled);
-    });
-
     // Fresnel (moved from bindRenderControls since it's now in Object tab)
     const emitFresnel = () => {
       const state = this.stateStore.getState();
@@ -303,9 +296,6 @@ export class MeshControls {
     if (this.ui.inputs.rotationZ) {
       this.ui.inputs.rotationZ.value = state.rotationZ ?? 0;
       this.helpers.updateValueLabel('rotationZ', state.rotationZ ?? 0, 'angle');
-    }
-    if (this.ui.inputs.showNormals) {
-      this.ui.inputs.showNormals.checked = state.showNormals;
     }
     if (this.ui.inputs.materialBrightness) {
       const brightness = state.material?.brightness ?? 1.0;

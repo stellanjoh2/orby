@@ -88,25 +88,35 @@ export class ResetControls {
       this.stateStore.set('xOffset', defaults.xOffset ?? 0);
       this.stateStore.set('yOffset', defaults.yOffset);
       this.stateStore.set('zOffset', defaults.zOffset ?? 0);
+      this.stateStore.set('rotationX', defaults.rotationX ?? 0);
+      this.stateStore.set('rotationY', defaults.rotationY ?? 0);
+      this.stateStore.set('rotationZ', defaults.rotationZ ?? 0);
       this.stateStore.set('autoRotate', defaults.autoRotate);
-      this.stateStore.set('showNormals', defaults.showNormals);
       this.stateStore.set('clay', defaults.clay);
+      this.stateStore.set('fresnel', defaults.fresnel);
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
       this.stateStore.set('material.roughness', defaults.material?.roughness ?? 0.8);
+      this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
       
       this.eventBus.emit('mesh:shading', defaults.shading);
       this.eventBus.emit('mesh:scale', defaults.scale);
+      this.eventBus.emit('mesh:xOffset', defaults.xOffset ?? 0);
       this.eventBus.emit('mesh:yOffset', defaults.yOffset);
+      this.eventBus.emit('mesh:zOffset', defaults.zOffset ?? 0);
+      this.eventBus.emit('mesh:rotationX', defaults.rotationX ?? 0);
+      this.eventBus.emit('mesh:rotationY', defaults.rotationY ?? 0);
+      this.eventBus.emit('mesh:rotationZ', defaults.rotationZ ?? 0);
       this.eventBus.emit('mesh:auto-rotate', defaults.autoRotate);
-      this.eventBus.emit('mesh:normals', defaults.showNormals);
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
+      this.eventBus.emit('mesh:clay-normal-map', defaults.clay.normalMap);
       // Emit material reset events
       this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
       this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
       this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? 0.8);
       this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
+      this.eventBus.emit('render:fresnel', defaults.fresnel);
       
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset');

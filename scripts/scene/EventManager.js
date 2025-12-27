@@ -24,7 +24,6 @@ export class EventManager {
     eventBus.on('mesh:rotationY', (value) => s.setRotationY(value));
     eventBus.on('mesh:rotationZ', (value) => s.setRotationZ(value));
     eventBus.on('mesh:shading', (mode) => s.setShading(mode));
-    eventBus.on('mesh:normals', (enabled) => s.toggleNormals(enabled));
     eventBus.on('mesh:auto-rotate', (speed) => {
       s.autoRotateSpeed = speed;
     });

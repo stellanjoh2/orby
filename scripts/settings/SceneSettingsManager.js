@@ -35,7 +35,6 @@ export class SceneSettingsManager {
     return {
       // Mesh settings (including transforms)
       shading: state.shading,
-      showNormals: state.showNormals,
       material: state.material ?? {
         brightness: 1.0,
         metalness: 0.0,
@@ -150,10 +149,6 @@ export class SceneSettingsManager {
       if (payload.shading !== undefined) {
         this.stateStore.set('shading', payload.shading);
         this.eventBus.emit('mesh:shading', payload.shading);
-      }
-      if (payload.showNormals !== undefined) {
-        this.stateStore.set('showNormals', payload.showNormals);
-        this.eventBus.emit('mesh:normals', payload.showNormals);
       }
       if (payload.material !== undefined) {
         this.stateStore.set('material', payload.material);

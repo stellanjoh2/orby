@@ -519,7 +519,6 @@ export class SceneManager {
   async applyStateSnapshot(state) {
     this.transformController?.applyState(state);
     this.setShading(state.shading);
-    this.toggleNormals(state.showNormals);
     this.autoRotateSpeed = state.autoRotate;
     this.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off');
     this.setGroundSolid(state.groundSolid);
@@ -1099,7 +1098,7 @@ export class SceneManager {
   }
 
   clearModel() {
-    this.diagnosticsController.clearAll();
+    this.diagnosticsController.clearBoneHelpers();
     this.materialController.clear();
     this.modelLoader.disposeObjectUrls();
     while (this.modelRoot.children.length) {
@@ -1182,7 +1181,6 @@ export class SceneManager {
     });
     this.setShading(state.shading);
     this.diagnosticsController.setModel(object, state.shading);
-    this.toggleNormals(state.showNormals);
     this.refreshBoneHelpers();
     // Apply Fresnel settings if enabled
     if (state.fresnel?.enabled) {
@@ -1420,10 +1418,6 @@ export class SceneManager {
   setShading(mode) {
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
-  }
-
-  toggleNormals(enabled) {
-    this.diagnosticsController.toggleNormals(enabled);
   }
 
   clearBoneHelpers() {

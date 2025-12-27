@@ -22,7 +22,6 @@ export class StateStore {
       moveWidgetEnabled: false,
       rotateWidgetEnabled: false,
       scaleWidgetEnabled: false,
-      showNormals: false,
       material: {
         brightness: 1.0,
         metalness: 0.0,

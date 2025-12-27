@@ -104,7 +104,6 @@ export class UIManager {
       rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       cameraAutoOrbit: document.querySelectorAll('input[name="cameraAutoOrbit"]'),
-      showNormals: q('#showNormals'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
       hdriBlurriness: q('#hdriBlurriness'),
@@ -940,9 +939,6 @@ export class UIManager {
     if (this.inputs.rotationZ) {
       this.inputs.rotationZ.value = state.rotationZ ?? 0;
       this.updateValueLabel('rotationZ', state.rotationZ ?? 0, 'angle');
-    }
-    if (this.inputs.showNormals) {
-      this.inputs.showNormals.checked = state.showNormals;
     }
     // Widget states are managed via keyboard shortcuts (W/E), no UI sync needed
     if (this.inputs.materialBrightness) {

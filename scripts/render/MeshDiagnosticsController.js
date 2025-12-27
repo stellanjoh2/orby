@@ -1,17 +1,10 @@
 import * as THREE from 'three';
-import { VertexNormalsHelper } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/helpers/VertexNormalsHelper.js';
-import {
-  NORMALS_HELPER_SIZE,
-  NORMALS_HELPER_COLOR,
-} from '../constants.js';
-
 export class MeshDiagnosticsController {
   constructor({ scene, modelRoot, ui }) {
     this.scene = scene;
     this.modelRoot = modelRoot;
     this.ui = ui;
 
-    this.normalsHelpers = [];
     this.boneHelpers = [];
     this.lastBoneToastTime = 0;
     this.currentModel = null;
@@ -21,34 +14,7 @@ export class MeshDiagnosticsController {
   setModel(model, shading) {
     this.currentModel = model;
     this.currentShading = shading;
-    this.clearAll();
-  }
-
-  clearAll() {
-    this.clearNormals();
     this.clearBoneHelpers();
-  }
-
-  toggleNormals(enabled) {
-    this.clearNormals();
-    if (!enabled || !this.currentModel) return;
-
-    this.currentModel.traverse((child) => {
-      if (child.isMesh) {
-        const helper = new VertexNormalsHelper(
-          child,
-          NORMALS_HELPER_SIZE,
-          NORMALS_HELPER_COLOR,
-        );
-        this.modelRoot.add(helper);
-        this.normalsHelpers.push(helper);
-      }
-    });
-  }
-
-  clearNormals() {
-    this.normalsHelpers.forEach((helper) => this.modelRoot.remove(helper));
-    this.normalsHelpers = [];
   }
 
   refreshBoneHelpers(shading) {
