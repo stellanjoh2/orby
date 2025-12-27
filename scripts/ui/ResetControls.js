@@ -127,6 +127,7 @@ export class ResetControls {
       this.stateStore.set('hdri', defaults.hdri);
       this.stateStore.set('hdriEnabled', defaults.hdriEnabled);
       this.stateStore.set('hdriStrength', defaults.hdriStrength);
+      this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
       this.stateStore.set('hdriBackground', defaults.hdriBackground);
       this.stateStore.set('groundSolid', defaults.groundSolid);
       this.stateStore.set('groundWire', defaults.groundWire);
@@ -139,7 +140,9 @@ export class ResetControls {
       this.stateStore.set('lightsEnabled', defaults.lightsEnabled);
       this.stateStore.set('lightsMaster', defaults.lightsMaster);
       this.stateStore.set('lightsRotation', defaults.lightsRotation);
+      this.stateStore.set('lightsHeight', defaults.lightsHeight ?? 5);
       this.stateStore.set('lightsAutoRotate', defaults.lightsAutoRotate);
+      this.stateStore.set('showLightIndicators', defaults.showLightIndicators ?? false);
       this.stateStore.set('lensFlare', defaults.lensFlare);
       
       this.ui.setHdriActive(defaults.hdri);
@@ -147,6 +150,7 @@ export class ResetControls {
       this.eventBus.emit('studio:hdri-enabled', defaults.hdriEnabled);
       this.ui.toggleHdriControls(defaults.hdriEnabled);
       this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
+      this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
       this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
       this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
@@ -174,6 +178,7 @@ export class ResetControls {
       this.ui.setLightsRotationDisabled(defaults.lightsAutoRotate);
       this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
       this.eventBus.emit('lights:cast-shadows', defaults.lightsCastShadows);
+      this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
       
       this.ui.syncUIFromState();
       this.helpers.showToast('Studio settings reset');
