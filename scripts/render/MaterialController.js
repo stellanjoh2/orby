@@ -34,7 +34,6 @@ export class MaterialController {
       metalness: 0.0,
       roughness: 0.8, // Default to 0.8 (original fallback value)
       emissive: 0.0,
-      style: 'standard',
     };
   }
 
@@ -56,7 +55,6 @@ export class MaterialController {
       metalness: initialState.material?.metalness ?? 0.0,
       roughness: initialState.material?.roughness ?? 0.8, // Default to 0.8 (original fallback value)
       emissive: initialState.material?.emissive ?? 0.0,
-      style: initialState.material?.style ?? 'standard',
     };
     this.originalMaterials = new WeakMap();
     this.prepareMesh(model);
@@ -470,13 +468,6 @@ export class MaterialController {
     this.updateMaterials();
   }
 
-  setMaterialStyle(style) {
-    const nextStyle = style || 'standard';
-    if (this.materialSettings.style === nextStyle) return;
-    this.materialSettings.style = nextStyle;
-    this.updateMaterials();
-  }
-
   getClayColorWithBrightness() {
     const baseColorHex = this.claySettings?.color ?? '#808080';
     const brightness = this.materialSettings?.brightness ?? 1.0;
@@ -492,83 +483,14 @@ export class MaterialController {
     // Update existing materials in all modes (except wireframe which has its own color)
     // Material controls now apply to both Color/Textures modes AND Clay mode
     if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
-      const style = this.materialSettings.style ?? 'standard';
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const original = this.originalMaterials.get(child);
-        let material = child.material;
+        const material = child.material;
         
         // Skip glass materials - they should not be affected by brightness/metalness/roughness sliders
         const isGlass = this.isWindowMesh(child);
         if (isGlass) return;
-
-        const disposeMaterial = (mat) => {
-          if (!mat) return;
-          if (Array.isArray(mat)) {
-            mat.forEach(disposeMaterial);
-          } else if (mat !== original && mat.dispose) {
-            mat.dispose();
-          }
-        };
-
-        const applyToonMaterial = (origMat) => {
-          if (!origMat) return null;
-          const baseColor = origMat.color?.clone() ?? new THREE.Color('#ffffff');
-          const adjustedColor = baseColor.multiplyScalar(this.materialSettings.brightness);
-          const toon = new THREE.MeshToonMaterial({
-            color: adjustedColor,
-            map: origMat.map ?? null,
-            normalMap: origMat.normalMap ?? null,
-            transparent: origMat.transparent ?? false,
-            opacity: origMat.opacity ?? 1,
-            side: origMat.side ?? THREE.FrontSide,
-            depthWrite: origMat.depthWrite ?? true,
-            depthTest: origMat.depthTest ?? true,
-            alphaTest: origMat.alphaTest ?? 0,
-            skinning: origMat.skinning ?? false,
-            morphTargets: origMat.morphTargets ?? false,
-            morphNormals: origMat.morphNormals ?? false,
-          });
-          const emissiveIntensity = this.materialSettings.emissive || 0.0;
-          if (emissiveIntensity > 0) {
-            toon.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
-            toon.emissiveIntensity = emissiveIntensity;
-          } else {
-            toon.emissive.set(0, 0, 0);
-            toon.emissiveIntensity = 0;
-          }
-          return toon;
-        };
-
-        // Handle style switch
-        if (style === 'toon') {
-          if (!original) return;
-          // Dispose previous non-original materials before swapping
-          if (material !== original) {
-            disposeMaterial(material);
-          }
-          if (Array.isArray(original)) {
-            child.material = original.map((origMat) => applyToonMaterial(origMat) || origMat);
-          } else {
-            const toonMat = applyToonMaterial(original);
-            if (toonMat) {
-              child.material = toonMat;
-            }
-          }
-          return; // Toon style overrides further PBR adjustments
-        } else {
-          // If returning to standard, restore original materials before applying adjustments
-          if (original) {
-            const needsRestore =
-              (Array.isArray(material) && material !== original) ||
-              (!Array.isArray(material) && material !== original);
-            if (needsRestore) {
-              disposeMaterial(material);
-              child.material = original;
-              material = child.material;
-            }
-          }
-        }
         
         // Check if this is a clay material
         const isClayMaterial = original && material !== original && 

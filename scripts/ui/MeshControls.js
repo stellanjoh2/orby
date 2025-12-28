@@ -44,11 +44,6 @@ export class MeshControls {
       this.eventBus.emit('mesh:material-brightness', value);
     });
     if (this.ui.inputs.materialBrightness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialBrightness);
-    this.ui.inputs.materialStyle?.addEventListener('change', (event) => {
-      const style = event.target.value || 'standard';
-      this.stateStore.set('material.style', style);
-      this.eventBus.emit('mesh:material-style', style);
-    });
 
     // Global mouseup handler to reset interaction flags (in case mouse is released outside input)
     // Note: This will be combined with the Fresnel handler below
@@ -306,9 +301,6 @@ export class MeshControls {
       const brightness = state.material?.brightness ?? 1.0;
       this.ui.inputs.materialBrightness.value = brightness;
       this.helpers.updateValueLabel('materialBrightness', brightness, 'decimal');
-    }
-    if (this.ui.inputs.materialStyle) {
-      this.ui.inputs.materialStyle.value = state.material?.style ?? 'standard';
     }
     if (this.ui.inputs.materialMetalness) {
       // Only update if user is not actively interacting
