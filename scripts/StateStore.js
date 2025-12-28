@@ -27,6 +27,7 @@ export class StateStore {
         metalness: 0.0,
         roughness: 0.8,
         emissive: 0.0,
+        style: 'standard',
       },
       hdri: 'meadow',
       hdriEnabled: true,
