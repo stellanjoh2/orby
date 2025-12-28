@@ -118,6 +118,7 @@ export class UIManager {
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
       materialEmissive: q('#materialEmissive'),
+      materialStyle: q('#materialStyle'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),

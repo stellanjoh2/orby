@@ -167,6 +167,9 @@ export class SceneSettingsManager {
         if (payload.material.emissive !== undefined) {
           this.eventBus.emit('mesh:material-emissive', payload.material.emissive);
         }
+        if (payload.material.style !== undefined) {
+          this.eventBus.emit('mesh:material-style', payload.material.style);
+        }
       }
       // Legacy support
       if (payload.diffuseBrightness !== undefined && payload.material === undefined) {

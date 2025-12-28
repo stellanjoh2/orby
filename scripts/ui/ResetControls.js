@@ -99,6 +99,7 @@ export class ResetControls {
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
       this.stateStore.set('material.roughness', defaults.material?.roughness ?? 0.8);
       this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+      this.stateStore.set('material.style', defaults.material?.style ?? 'standard');
       
       this.eventBus.emit('mesh:shading', defaults.shading);
       this.eventBus.emit('mesh:scale', defaults.scale);
@@ -116,6 +117,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
       this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? 0.8);
       this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
+      this.eventBus.emit('mesh:material-style', defaults.material?.style ?? 'standard');
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       
       this.ui.syncUIFromState();
