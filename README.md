@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Firefox%20%7C%20Safari%20%7C%20Edge-blue)](https://github.com/stellanjoh2/orby)
-[![Version](https://img.shields.io/badge/Version-0.5.62-brightgreen)](https://github.com/stellanjoh2/orby)
+[![Version](https://img.shields.io/badge/Version-0.5.141-brightgreen)](https://github.com/stellanjoh2/orby)
 
 </div>
 
@@ -24,7 +24,7 @@ Orby is a professional-grade 3D model viewer that runs entirely in your browser.
 - 🎬 **Full cinematic post-processing**: selective bloom, depth of field, film grain, chromatic aberration, professional tonemapping
 - 🌍 **HDR environments** with blur, rotation, and intensity controls
 - 💡 **Custom 3-point studio lighting** that blends seamlessly with image-based lighting
-- 🎨 **Real-time material controls**: brightness, metalness, roughness, emissive glow
+- 🎨 **Real-time material controls**: brightness (up to 3.0), metalness, roughness, emissive glow
 - 📊 **Exposure histogram** with overexposure warnings
 - 🎥 **Auto-orbit camera** for screensaver-style presentations
 - 🔄 **Scene settings import/export** - save and share your setups
@@ -225,7 +225,8 @@ Professional color correction tools:
 - **Shadows** - Dark area adjustment
 - **Clarity** - Local contrast
 - **Fade** - Overall desaturation
-- **Sharpness** - Edge enhancement
+- **Sharpness** - Edge enhancement  
+> Copy Scene includes clarity, fade, and sharpness along with other camera settings.
 
 ### Lighting
 
@@ -271,7 +272,7 @@ Additional controls:
 
 #### Material Controls
 Real-time material adjustments:
-- **Brightness** - Makes your model lighter or darker
+- **Brightness** - Makes your model lighter or darker (0–3 range)
 - **Metalness** - Controls how metallic the surface looks (0 = plastic, 1 = chrome)
 - **Roughness** - Adjusts surface smoothness (0 = mirror-like, 1 = matte)
 - **Emissive** - Adds glowing light to materials (0-2 range), perfect for sci-fi effects, neon signs, or any glowing elements
@@ -286,7 +287,8 @@ Advanced wireframe options:
 - **Always On** - Show wireframe overlay on all display modes
 - **Only Visible Faces** - Hide wireframe lines on back-facing surfaces
 - **Hide Mesh** - Hide underlying mesh while keeping wireframe visible
-- **Color** - Customizable wireframe color
+- **Color** - Customizable wireframe color  
+> Note: Normals helpers were removed from the UI; wireframe overlay is the diagnostics view.
 
 #### Fresnel Effect
 Edge lighting effect with customizable:
