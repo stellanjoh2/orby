@@ -87,6 +87,9 @@ export class SceneSettingsManager {
         highlights: state.camera?.highlights,
         shadows: state.camera?.shadows,
         saturation: state.camera?.saturation,
+        clarity: state.camera?.clarity,
+        fade: state.camera?.fade,
+        sharpness: state.camera?.sharpness,
         vignette: state.camera?.vignette,
         vignetteColor: state.camera?.vignetteColor,
       },
@@ -415,6 +418,18 @@ export class SceneSettingsManager {
         if (payload.camera.saturation !== undefined) {
           this.stateStore.set('camera.saturation', payload.camera.saturation);
           this.eventBus.emit('render:saturation', payload.camera.saturation);
+        }
+        if (payload.camera.clarity !== undefined) {
+          this.stateStore.set('camera.clarity', payload.camera.clarity);
+          this.eventBus.emit('render:clarity', payload.camera.clarity);
+        }
+        if (payload.camera.fade !== undefined) {
+          this.stateStore.set('camera.fade', payload.camera.fade);
+          this.eventBus.emit('render:fade', payload.camera.fade);
+        }
+        if (payload.camera.sharpness !== undefined) {
+          this.stateStore.set('camera.sharpness', payload.camera.sharpness);
+          this.eventBus.emit('render:sharpness', payload.camera.sharpness);
         }
         // Store vignette values but don't apply yet - will be applied at the very end
         if (payload.camera.vignette !== undefined) {
