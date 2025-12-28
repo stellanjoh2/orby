@@ -518,8 +518,9 @@ export class MaterialController {
 
         const applyToonMaterial = (origMat) => {
           if (!origMat) return null;
+          const toonBrightness = Math.max(this.materialSettings.brightness ?? 1.0, 1.1);
           const baseColor = origMat.color?.clone() ?? new THREE.Color('#ffffff');
-          const adjustedColor = baseColor.multiplyScalar(this.materialSettings.brightness);
+          const adjustedColor = baseColor.multiplyScalar(toonBrightness);
           this.clampColor(adjustedColor);
           const toon = new THREE.MeshToonMaterial({
             color: adjustedColor,
@@ -658,12 +659,6 @@ export class MaterialController {
                   mat.emissive.set(0, 0, 0);
                   mat.emissiveIntensity = 0;
                 }
-                if ('metalnessMap' in mat) {
-                  mat.metalnessMap = null;
-                }
-                if ('roughnessMap' in mat) {
-                  mat.roughnessMap = null;
-                }
                 mat.needsUpdate = true;
               }
             });
@@ -682,12 +677,6 @@ export class MaterialController {
       } else {
               material.emissive.set(0, 0, 0);
               material.emissiveIntensity = 0;
-            }
-            if ('metalnessMap' in material) {
-              material.metalnessMap = null;
-            }
-            if ('roughnessMap' in material) {
-              material.roughnessMap = null;
             }
             material.needsUpdate = true;
           }
