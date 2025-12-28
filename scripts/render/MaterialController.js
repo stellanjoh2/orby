@@ -482,15 +482,10 @@ export class MaterialController {
     const brightness = this.materialSettings?.brightness ?? 1.0;
     const baseColor = new THREE.Color(baseColorHex);
     const tinted = baseColor.multiplyScalar(brightness);
-    this.clampColor(tinted);
+    tinted.r = Math.min(1, Math.max(0, tinted.r));
+    tinted.g = Math.min(1, Math.max(0, tinted.g));
+    tinted.b = Math.min(1, Math.max(0, tinted.b));
     return tinted;
-  }
-
-  clampColor(color) {
-    if (!color) return;
-    color.r = Math.min(1, Math.max(0, color.r));
-    color.g = Math.min(1, Math.max(0, color.g));
-    color.b = Math.min(1, Math.max(0, color.b));
   }
 
   updateMaterials() {
@@ -520,7 +515,6 @@ export class MaterialController {
           if (!origMat) return null;
           const baseColor = origMat.color?.clone() ?? new THREE.Color('#ffffff');
           const adjustedColor = baseColor.multiplyScalar(this.materialSettings.brightness);
-          this.clampColor(adjustedColor);
           const toon = new THREE.MeshToonMaterial({
             color: adjustedColor,
             map: origMat.map ?? null,
@@ -617,7 +611,6 @@ export class MaterialController {
               if (mat && mat.isMeshBasicMaterial) {
                 const originalColor = getOriginalColor(original, idx);
                 const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-                this.clampColor(adjustedColor);
                 mat.color.copy(adjustedColor);
                 mat.needsUpdate = true;
               }
@@ -625,7 +618,6 @@ export class MaterialController {
           } else if (material && material.isMeshBasicMaterial) {
             const originalColor = getOriginalColor(original);
             const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-            this.clampColor(adjustedColor);
             material.color.copy(adjustedColor);
             material.needsUpdate = true;
           }
@@ -645,7 +637,6 @@ export class MaterialController {
               if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
                 const originalColor = getOriginalColor(original, idx);
                 const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-                this.clampColor(adjustedColor);
                 mat.color.copy(adjustedColor);
                 mat.metalness = this.materialSettings.metalness;
                 mat.roughness = this.materialSettings.roughness;
@@ -670,7 +661,6 @@ export class MaterialController {
           } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
             const originalColor = getOriginalColor(original);
             const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-            this.clampColor(adjustedColor);
             material.color.copy(adjustedColor);
             material.metalness = this.materialSettings.metalness;
             material.roughness = this.materialSettings.roughness;
