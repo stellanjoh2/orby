@@ -114,14 +114,17 @@ export class ImageExporter {
 
     // Save state and prepare scene
     const state = this._saveState();
+    const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
     const originalMaterials = [];
     this._setupSilhouetteRender(originalMaterials);
+    this._setupTransparentRender();
+    if (this.postPipeline?.renderPass) {
+      this.postPipeline.renderPass.clearAlpha = 0;
+    }
 
-    // Clear and render mask
+    // Clear and render mask on transparent background
     const gl = this.renderer.getContext();
-    this.renderer.setClearColor(0xffffff, 1);
-    this.renderer.setClearAlpha(1);
-    gl.clearColor(1, 1, 1, 1);
+    gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.renderer.autoClear = true;
     this.renderer.render(this.scene, this.camera);
@@ -131,6 +134,9 @@ export class ImageExporter {
 
     // Restore scene/materials
     this._restoreSilhouetteMaterials(originalMaterials);
+    if (this.postPipeline?.renderPass) {
+      this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
+    }
     this._restoreState(state);
 
     // Vectorize and download
@@ -152,11 +158,16 @@ export class ImageExporter {
 
     const state = this._saveState();
     const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
+    const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
     try {
       // Disable bloom for vector capture to avoid large glow fields in traced SVG
       if (this.postPipeline?.bloomPass) {
         this.postPipeline.bloomPass.enabled = false;
       }
+      if (this.postPipeline?.renderPass) {
+        this.postPipeline.renderPass.clearAlpha = 0;
+      }
+      this._setupTransparentRender();
 
       // Render current view using composer if available (to match on-screen colors)
       if (this.composer) {
@@ -180,7 +191,10 @@ export class ImageExporter {
         blur: 0,
         linefilter: false,
       };
-      const svg = await this._vectorizeWithOptions(dataUrl, options, { preserveHighlights: true });
+      const svg = await this._vectorizeWithOptions(dataUrl, options, {
+        preserveHighlights: true,
+        alphaMask: true,
+      });
       if (!svg) {
         throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
       }
@@ -188,6 +202,9 @@ export class ImageExporter {
     } finally {
       if (this.postPipeline?.bloomPass && originalBloomEnabled !== undefined) {
         this.postPipeline.bloomPass.enabled = originalBloomEnabled;
+      }
+      if (this.postPipeline?.renderPass) {
+        this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
       }
       this._restoreState(state);
     }
@@ -869,7 +886,7 @@ export class ImageExporter {
       blur: 0,
       linefilter: false,
     };
-    return this._vectorizeWithOptions(dataUrl, options);
+    return this._vectorizeWithOptions(dataUrl, options, { alphaMask: true });
   }
 
   async _vectorizeWithOptions(dataUrl, options, processing = {}) {
@@ -884,15 +901,29 @@ export class ImageExporter {
           offscreen.height = img.height;
           const ctx = offscreen.getContext('2d');
           ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+          let imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
 
           if (processing.preserveHighlights) {
             this._boostHighlights(imageData.data);
           }
 
-          const svgstr = window.ImageTracer?.imagedataToSVG
+          // Use alpha as ground truth for mesh/background separation.
+          // Transparent pixels are replaced with a key color, then stripped from SVG.
+          const bgKey = [1, 255, 1];
+          if (processing.alphaMask) {
+            this._applyAlphaMaskForVector(imageData.data, 220, bgKey);
+          }
+
+          if (processing.alphaMask) {
+            imageData = this._cropImageDataByKeyColor(imageData, bgKey, 2);
+          }
+
+          let svgstr = window.ImageTracer?.imagedataToSVG
             ? window.ImageTracer.imagedataToSVG(imageData, options)
             : null;
+          if (svgstr && processing.alphaMask) {
+            svgstr = this._removeKeyColorPaths(svgstr, bgKey);
+          }
           resolve(svgstr);
         } catch (err) {
           console.error('ImageTracer vectorization error', err);
@@ -923,6 +954,104 @@ export class ImageExporter {
         data[i + c] = Math.min(255, Math.max(0, Math.round(corrected)));
       }
     }
+  }
+
+  _applyAlphaMaskForVector(data, alphaCutoff = 220, bgKey = [1, 255, 1]) {
+    const [kr, kg, kb] = bgKey;
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i + 3];
+      if (a < alphaCutoff) {
+        data[i] = kr;
+        data[i + 1] = kg;
+        data[i + 2] = kb;
+        data[i + 3] = 255;
+      } else {
+        // Remove edge blending against background by un-premultiplying.
+        const inv = 255 / Math.max(1, a);
+        data[i] = Math.min(255, Math.round(data[i] * inv));
+        data[i + 1] = Math.min(255, Math.round(data[i + 1] * inv));
+        data[i + 2] = Math.min(255, Math.round(data[i + 2] * inv));
+        data[i + 3] = 255;
+      }
+    }
+  }
+
+  _removeKeyColorPaths(svg, keyRgb) {
+    const [r, g, b] = keyRgb;
+    const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    const rgb = `rgb(${r},${g},${b})`;
+    const escapedHex = hex.replace('#', '\\#');
+    const escapedRgb = rgb.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+
+    let output = svg.replace(
+      new RegExp(`<path[^>]*fill=["'](?:${escapedHex}|${escapedRgb})["'][^>]*/?>`, 'gi'),
+      '',
+    );
+    output = output.replace(
+      new RegExp(`<rect[^>]*fill=["'](?:${escapedHex}|${escapedRgb})["'][^>]*/?>`, 'gi'),
+      '',
+    );
+    // Remove any full-canvas background rectangles ImageTracer may emit.
+    output = output.replace(/<rect[^>]*>/gi, (tag) => {
+      const hasOrigin = /x=["']0(?:\.0+)?["']/.test(tag) || !/x=/.test(tag);
+      const hasYOrigin = /y=["']0(?:\.0+)?["']/.test(tag) || !/y=/.test(tag);
+      const fullW = /width=["'](?:100%|[0-9.]+)["']/.test(tag);
+      const fullH = /height=["'](?:100%|[0-9.]+)["']/.test(tag);
+      return hasOrigin && hasYOrigin && fullW && fullH ? '' : tag;
+    });
+    return output;
+  }
+
+  _cropImageDataByKeyColor(imageData, keyRgb, padding = 2) {
+    const [kr, kg, kb] = keyRgb;
+    const { data, width, height } = imageData;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (y * width + x) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const isBg = r === kr && g === kg && b === kb;
+        if (!isBg) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // If nothing found, return original
+    if (maxX < minX || maxY < minY) {
+      return imageData;
+    }
+
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(width - 1, maxX + padding);
+    maxY = Math.min(height - 1, maxY + padding);
+
+    const cropW = maxX - minX + 1;
+    const cropH = maxY - minY + 1;
+    const cropped = new ImageData(cropW, cropH);
+
+    for (let y = 0; y < cropH; y += 1) {
+      for (let x = 0; x < cropW; x += 1) {
+        const srcI = ((minY + y) * width + (minX + x)) * 4;
+        const dstI = (y * cropW + x) * 4;
+        cropped.data[dstI] = data[srcI];
+        cropped.data[dstI + 1] = data[srcI + 1];
+        cropped.data[dstI + 2] = data[srcI + 2];
+        cropped.data[dstI + 3] = data[srcI + 3];
+      }
+    }
+
+    return cropped;
   }
 
   async _ensureImageTracer() {
