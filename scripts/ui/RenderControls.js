@@ -283,6 +283,9 @@ export class RenderControls {
         size: this.ui.exportSettings.size,
       });
     });
+    this.ui.buttons.exportSvg?.addEventListener('click', () => {
+      this.eventBus.emit('export:svg');
+    });
   }
 
   sync(state) {

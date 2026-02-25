@@ -16,6 +16,7 @@ export class ImageExporter {
     this.composer = composer;
     this.postPipeline = postPipeline;
     this.backgroundController = backgroundController;
+    this._imageTracerLoaded = false;
   }
 
   /**
@@ -103,6 +104,44 @@ export class ImageExporter {
   }
 
   /**
+   * Export a silhouette as SVG by rendering a black-on-white mask and tracing it
+   */
+  async exportSvgSilhouette(currentModel, currentFile) {
+    if (!currentModel) {
+      console.warn('No model loaded to export SVG');
+      return;
+    }
+
+    // Save state and prepare scene
+    const state = this._saveState();
+    const originalMaterials = [];
+    this._setupSilhouetteRender(originalMaterials);
+
+    // Clear and render mask
+    const gl = this.renderer.getContext();
+    this.renderer.setClearColor(0xffffff, 1);
+    this.renderer.setClearAlpha(1);
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    this.renderer.autoClear = true;
+    this.renderer.render(this.scene, this.camera);
+
+    // Capture mask
+    const dataUrl = this.renderer.domElement.toDataURL('image/png');
+
+    // Restore scene/materials
+    this._restoreSilhouetteMaterials(originalMaterials);
+    this._restoreState(state);
+
+    // Vectorize and download
+    const svg = await this._vectorizeMask(dataUrl);
+    if (!svg) {
+      throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
+    }
+    this._downloadText(svg, currentFile, 'silhouette.svg', 'image/svg+xml');
+  }
+
+  /**
    * Save current renderer/scene state
    */
   _saveState() {
@@ -118,6 +157,7 @@ export class ImageExporter {
       originalBackgroundSphereVisible: this.backgroundController?.getBackgroundSphere()?.visible ?? false,
       originalHdriBackgroundEnabled: this.backgroundController?.getHdriBackgroundEnabled() ?? false,
       originalAutoClear: this.renderer.autoClear,
+      originalEnvironment: this.scene.environment,
     };
   }
 
@@ -728,6 +768,109 @@ export class ImageExporter {
   }
 
   /**
+   * Prepare scene for silhouette render (black model on white)
+   */
+  _setupSilhouetteRender(originalMaterials) {
+    if (this.backgroundController?.hdriBackgroundEnabled) {
+      this.scene.environment = null;
+    }
+    const backgroundSphere = this.backgroundController?.getBackgroundSphere();
+    if (backgroundSphere) {
+      backgroundSphere.visible = false;
+    }
+
+    const silhouetteMaterialCache = new Map();
+    this.scene.traverse((child) => {
+      if (!child.isMesh) return;
+      const mat = child.material;
+      originalMaterials.push({ child, material: mat });
+      const key = child.isSkinnedMesh ? 'skinned' : 'static';
+      let silMat = silhouetteMaterialCache.get(key);
+      if (!silMat) {
+        silMat = new THREE.MeshBasicMaterial({
+          color: 0x000000,
+          side: THREE.DoubleSide,
+          skinning: !!child.isSkinnedMesh,
+          depthWrite: true,
+        });
+        silhouetteMaterialCache.set(key, silMat);
+      }
+      child.material = silMat;
+    });
+  }
+
+  _restoreSilhouetteMaterials(originalMaterials) {
+    originalMaterials.forEach(({ child, material }) => {
+      if (child) {
+        child.material = material;
+      }
+    });
+  }
+
+  async _vectorizeMask(dataUrl) {
+    await this._ensureImageTracer();
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = img.width;
+          offscreen.height = img.height;
+          const ctx = offscreen.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+          const options = {
+            colorsampling: 0,
+            numberofcolors: 2,
+            pathomit: 0,
+            ltres: 1,
+            qtres: 1,
+            blur: 0,
+            linefilter: false,
+          };
+          const svgstr = window.ImageTracer?.imagedataToSVG
+            ? window.ImageTracer.imagedataToSVG(imageData, options)
+            : null;
+          resolve(svgstr);
+        } catch (err) {
+          console.error('ImageTracer vectorization error', err);
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
+  }
+
+  async _ensureImageTracer() {
+    if (this._imageTracerLoaded) return;
+    if (typeof window !== 'undefined' && window.ImageTracer) {
+      this._imageTracerLoaded = true;
+      return;
+    }
+    // Prefer local copy, fall back to CDN
+    await new Promise((resolve, reject) => {
+      const tryLoad = (src, onfail) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
+          this._imageTracerLoaded = true;
+          resolve();
+        };
+        script.onerror = () => {
+          script.remove();
+          onfail?.();
+        };
+        document.head.appendChild(script);
+      };
+      tryLoad('./scripts/vendor/imagetracer_v1.2.6.js', () => {
+        tryLoad('https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.js', () => reject(new Error('ImageTracer load failed')));
+      });
+    });
+  }
+
+  /**
    * Download image file
    */
   _downloadImage(dataUrl, currentFile, suffix) {
@@ -738,12 +881,28 @@ export class ImageExporter {
     link.click();
   }
 
+  _downloadText(text, currentFile, suffix, mime = 'text/plain') {
+    if (!text) return;
+    const name = currentFile?.name ?? 'orby';
+    const filename = `${name.replace(/\.[a-z0-9]+$/i, '')}-${suffix}`;
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   /**
    * Restore original renderer/scene state
    */
   _restoreState(state) {
     this.renderer.setClearColor(state.originalClearColor, state.originalClearAlpha);
     this.scene.background = state.originalBackground;
+    this.scene.environment = state.originalEnvironment;
     const backgroundSphere = this.backgroundController?.getBackgroundSphere();
     if (backgroundSphere) {
       backgroundSphere.visible = state.originalBackgroundSphereVisible;

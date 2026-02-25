@@ -250,6 +250,7 @@ export class EventManager {
 
     // Export events
     eventBus.on('export:png', (settings) => s.exportPng(settings));
+    eventBus.on('export:svg', () => s.exportSvgSilhouette());
     
     // App events
     eventBus.on('app:reset', () => s.applyStateSnapshot(s.stateStore.getState()));

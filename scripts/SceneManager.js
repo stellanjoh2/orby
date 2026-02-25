@@ -1613,5 +1613,24 @@ export class SceneManager {
       );
     }
   }
+
+  async exportSvgSilhouette() {
+    if (!this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before exporting SVG');
+      return;
+    }
+    try {
+      this.ui?.showToast?.('Exporting SVG silhouette…');
+      await this.imageExporter.exportSvgSilhouette(
+        this.currentModel,
+        this.currentFile,
+        this.cameraController,
+      );
+      this.ui?.showToast?.('SVG silhouette exported');
+    } catch (error) {
+      console.error('SVG export failed', error);
+      this.ui?.showToast?.('SVG export failed');
+    }
+  }
 }
 
