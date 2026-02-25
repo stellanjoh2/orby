@@ -117,14 +117,17 @@ export class ImageExporter {
     const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
     const originalMaterials = [];
     this._setupSilhouetteRender(originalMaterials);
-    this._setupTransparentRender();
+    // Use a white background for robust silhouette segmentation
+    this.scene.background = null;
     if (this.postPipeline?.renderPass) {
       this.postPipeline.renderPass.clearAlpha = 0;
     }
 
-    // Clear and render mask on transparent background
+    // Clear and render mask on white background
     const gl = this.renderer.getContext();
-    gl.clearColor(0, 0, 0, 0);
+    this.renderer.setClearColor(0xffffff, 1);
+    this.renderer.setClearAlpha(1);
+    gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.renderer.autoClear = true;
     this.renderer.render(this.scene, this.camera);
@@ -139,8 +142,8 @@ export class ImageExporter {
     }
     this._restoreState(state);
 
-    // Vectorize and download
-    const svg = await this._vectorizeMask(dataUrl);
+    // Vectorize and download (dedicated silhouette pipeline)
+    const svg = await this._vectorizeSilhouette(dataUrl);
     if (!svg) {
       throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
     }
@@ -880,13 +883,73 @@ export class ImageExporter {
     const options = {
       colorsampling: 0,
       numberofcolors: 2,
+      pal: [
+        { r: 0, g: 0, b: 0, a: 255 },       // silhouette
+        { r: 255, g: 255, b: 255, a: 255 }, // background
+      ],
       pathomit: 0,
       ltres: 1,
       qtres: 1,
       blur: 0,
       linefilter: false,
     };
-    return this._vectorizeWithOptions(dataUrl, options, { alphaMask: true });
+    return this._vectorizeWithOptions(dataUrl, options, {
+      silhouetteBinaryLuma: true,
+      removeWhiteBackground: true,
+    });
+  }
+
+  async _vectorizeSilhouette(dataUrl) {
+    await this._ensureImageTracer();
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = img.width;
+          offscreen.height = img.height;
+          const ctx = offscreen.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+
+          // Hard black/white threshold from the rendered silhouette image.
+          // Keep this isolated from color export processing.
+          const threshold = 240;
+          for (let i = 0; i < imageData.data.length; i += 4) {
+            const lum =
+              0.2126 * imageData.data[i] +
+              0.7152 * imageData.data[i + 1] +
+              0.0722 * imageData.data[i + 2];
+            const isBg = lum >= threshold;
+            imageData.data[i] = isBg ? 255 : 0;
+            imageData.data[i + 1] = isBg ? 255 : 0;
+            imageData.data[i + 2] = isBg ? 255 : 0;
+            imageData.data[i + 3] = 255;
+          }
+
+          const options = {
+            colorsampling: 0,
+            numberofcolors: 2,
+            pathomit: 0,
+            ltres: 1,
+            qtres: 1,
+            blur: 0,
+            linefilter: false,
+          };
+
+          const svgstr = window.ImageTracer?.imagedataToSVG
+            ? window.ImageTracer.imagedataToSVG(imageData, options)
+            : null;
+          resolve(svgstr);
+        } catch (err) {
+          console.error('ImageTracer silhouette vectorization error', err);
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
   }
 
   async _vectorizeWithOptions(dataUrl, options, processing = {}) {
@@ -910,20 +973,30 @@ export class ImageExporter {
           // Use alpha as ground truth for mesh/background separation.
           // Transparent pixels are replaced with a key color, then stripped from SVG.
           const bgKey = [1, 255, 1];
-          if (processing.alphaMask) {
-            this._applyAlphaMaskForVector(imageData.data, 220, bgKey);
+          if (processing.silhouetteBinaryLuma) {
+            this._applyLuminanceBinaryMask(imageData.data, 245, bgKey);
+            this._fillTinyBackgroundHoles(imageData, bgKey, 6);
+          } else if (processing.alphaMask) {
+            if (processing.silhouetteBinary) {
+              this._applySilhouetteBinaryMask(imageData.data, 1, bgKey);
+            } else {
+              this._applyAlphaMaskForVector(imageData.data, 220, bgKey);
+            }
             this._fillTinyBackgroundHoles(imageData, bgKey, 6);
           }
 
-          if (processing.alphaMask) {
+          if (processing.alphaMask || processing.silhouetteBinaryLuma) {
             imageData = this._cropImageDataByKeyColor(imageData, bgKey, 2);
           }
 
           let svgstr = window.ImageTracer?.imagedataToSVG
             ? window.ImageTracer.imagedataToSVG(imageData, options)
             : null;
-          if (svgstr && processing.alphaMask) {
+          if (svgstr && (processing.alphaMask || processing.silhouetteBinaryLuma)) {
             svgstr = this._removeKeyColorPaths(svgstr, bgKey);
+          }
+          if (svgstr && processing.removeWhiteBackground) {
+            svgstr = this._removeWhitePaths(svgstr);
           }
           resolve(svgstr);
         } catch (err) {
@@ -974,6 +1047,42 @@ export class ImageExporter {
         data[i + 2] = Math.min(255, Math.round(data[i + 2] * inv));
         data[i + 3] = 255;
       }
+    }
+  }
+
+  _applySilhouetteBinaryMask(data, alphaCutoff = 1, bgKey = [1, 255, 1]) {
+    const [kr, kg, kb] = bgKey;
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i + 3];
+      if (a < alphaCutoff) {
+        // Background key
+        data[i] = kr;
+        data[i + 1] = kg;
+        data[i + 2] = kb;
+      } else {
+        // Force solid silhouette foreground
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+      }
+      data[i + 3] = 255;
+    }
+  }
+
+  _applyLuminanceBinaryMask(data, whiteThreshold = 245, bgKey = [1, 255, 1]) {
+    const [kr, kg, kb] = bgKey;
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+      if (lum >= whiteThreshold) {
+        data[i] = kr;
+        data[i + 1] = kg;
+        data[i + 2] = kb;
+      } else {
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+      }
+      data[i + 3] = 255;
     }
   }
 
@@ -1081,6 +1190,20 @@ export class ImageExporter {
       const fullH = /height=["'](?:100%|[0-9.]+)["']/.test(tag);
       return hasOrigin && hasYOrigin && fullW && fullH ? '' : tag;
     });
+    return output;
+  }
+
+  _removeWhitePaths(svg) {
+    // Remove white background geometry from strict silhouette traces.
+    // Includes common white encodings emitted by imagetracer.
+    let output = svg.replace(
+      /<path[^>]*fill=["'](?:#fff(?:fff)?|rgb\(255,\s*255,\s*255\)|white)["'][^>]*\/?>/gi,
+      '',
+    );
+    output = output.replace(
+      /<rect[^>]*fill=["'](?:#fff(?:fff)?|rgb\(255,\s*255,\s*255\)|white)["'][^>]*\/?>/gi,
+      '',
+    );
     return output;
   }
 
