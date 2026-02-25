@@ -151,7 +151,13 @@ export class ImageExporter {
     }
 
     const state = this._saveState();
+    const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
     try {
+      // Disable bloom for vector capture to avoid large glow fields in traced SVG
+      if (this.postPipeline?.bloomPass) {
+        this.postPipeline.bloomPass.enabled = false;
+      }
+
       // Render current view using composer if available (to match on-screen colors)
       if (this.composer) {
         this.composer.render();
@@ -161,22 +167,28 @@ export class ImageExporter {
 
       const dataUrl = this.renderer.domElement.toDataURL('image/png');
 
-      // Vectorize with a higher color budget to reduce wash-out
+      // Vectorize with a higher color budget and stronger color quantization passes
+      // to better preserve bright highlights/details (e.g. glossy eyes/speculars).
       const options = {
         colorsampling: 1,      // auto-pick palette from image
-        numberofcolors: 24,    // more colors to preserve saturation
+        numberofcolors: 64,    // higher palette to keep highlight separation
+        colorquantcycles: 5,   // refine palette selection
+        mincolorratio: 0,      // keep rare highlight colors
         pathomit: 0,
         ltres: 1,
         qtres: 1,
         blur: 0,
         linefilter: false,
       };
-      const svg = await this._vectorizeWithOptions(dataUrl, options);
+      const svg = await this._vectorizeWithOptions(dataUrl, options, { preserveHighlights: true });
       if (!svg) {
         throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
       }
       this._downloadText(svg, currentFile, 'color.svg', 'image/svg+xml');
     } finally {
+      if (this.postPipeline?.bloomPass && originalBloomEnabled !== undefined) {
+        this.postPipeline.bloomPass.enabled = originalBloomEnabled;
+      }
       this._restoreState(state);
     }
   }
@@ -860,7 +872,7 @@ export class ImageExporter {
     return this._vectorizeWithOptions(dataUrl, options);
   }
 
-  async _vectorizeWithOptions(dataUrl, options) {
+  async _vectorizeWithOptions(dataUrl, options, processing = {}) {
     await this._ensureImageTracer();
     return new Promise((resolve) => {
       const img = new Image();
@@ -873,6 +885,11 @@ export class ImageExporter {
           const ctx = offscreen.getContext('2d');
           ctx.drawImage(img, 0, 0);
           const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+
+          if (processing.preserveHighlights) {
+            this._boostHighlights(imageData.data);
+          }
+
           const svgstr = window.ImageTracer?.imagedataToSVG
             ? window.ImageTracer.imagedataToSVG(imageData, options)
             : null;
@@ -885,6 +902,27 @@ export class ImageExporter {
       img.onerror = () => resolve(null);
       img.src = dataUrl;
     });
+  }
+
+  _boostHighlights(data) {
+    // Targeted tonal lift before quantization:
+    // stronger on already bright pixels to preserve specular details.
+    const gamma = 0.86;
+    const lift = 6;
+    const highlightStart = 0.72;
+    const extraHighlightGain = 0.35;
+    for (let i = 0; i < data.length; i += 4) {
+      const luminance = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+      const highlightT = Math.max(0, (luminance - highlightStart) / (1 - highlightStart));
+      for (let c = 0; c < 3; c += 1) {
+        const normalized = data[i + c] / 255;
+        let corrected = Math.pow(normalized, gamma) * 255 + lift;
+        if (highlightT > 0) {
+          corrected *= 1 + extraHighlightGain * highlightT;
+        }
+        data[i + c] = Math.min(255, Math.max(0, Math.round(corrected)));
+      }
+    }
   }
 
   async _ensureImageTracer() {
