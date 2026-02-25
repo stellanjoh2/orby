@@ -152,21 +152,19 @@ export class ImageExporter {
 
     const state = this._saveState();
     try {
-      // Render current view to PNG (no material overrides)
-      const gl = this.renderer.getContext();
-      this.renderer.setClearColor(0xffffff, 1);
-      this.renderer.setClearAlpha(1);
-      gl.clearColor(1, 1, 1, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      this.renderer.autoClear = true;
-      this.renderer.render(this.scene, this.camera);
+      // Render current view using composer if available (to match on-screen colors)
+      if (this.composer) {
+        this.composer.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
 
       const dataUrl = this.renderer.domElement.toDataURL('image/png');
 
-      // Vectorize with limited colors for flatter output
+      // Vectorize with a higher color budget to reduce wash-out
       const options = {
-        colorsampling: 1,      // sample to auto-pick palette
-        numberofcolors: 12,    // keep palette small for vector cleanliness
+        colorsampling: 1,      // auto-pick palette from image
+        numberofcolors: 24,    // more colors to preserve saturation
         pathomit: 0,
         ltres: 1,
         qtres: 1,
