@@ -104,7 +104,7 @@ export class ImageExporter {
   }
 
   /**
-   * Export a silhouette as SVG (mesh only, transparent background)
+   * Export a silhouette as SVG by rendering a black-on-white mask and tracing it
    */
   async exportSvgSilhouette(currentModel, currentFile) {
     if (!currentModel) {
@@ -116,11 +116,12 @@ export class ImageExporter {
     const state = this._saveState();
     const originalMaterials = [];
     this._setupSilhouetteRender(originalMaterials);
-    this._setupTransparentRender();
 
-    // Clear and render mask with transparent background
+    // Clear and render mask
     const gl = this.renderer.getContext();
-    gl.clearColor(0, 0, 0, 0);
+    this.renderer.setClearColor(0xffffff, 1);
+    this.renderer.setClearAlpha(1);
+    gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.renderer.autoClear = true;
     this.renderer.render(this.scene, this.camera);
@@ -157,12 +158,6 @@ export class ImageExporter {
         this.postPipeline.bloomPass.enabled = false;
       }
 
-      // Render current view with transparent background (mesh only)
-      this._setupTransparentRender();
-      const gl = this.renderer.getContext();
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
       // Render current view using composer if available (to match on-screen colors)
       if (this.composer) {
         this.composer.render();
@@ -185,10 +180,7 @@ export class ImageExporter {
         blur: 0,
         linefilter: false,
       };
-      const svg = await this._vectorizeWithOptions(dataUrl, options, {
-        preserveHighlights: true,
-        ignoreTransparentBackground: true,
-      });
+      const svg = await this._vectorizeWithOptions(dataUrl, options, { preserveHighlights: true });
       if (!svg) {
         throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
       }
@@ -877,7 +869,7 @@ export class ImageExporter {
       blur: 0,
       linefilter: false,
     };
-    return this._vectorizeWithOptions(dataUrl, options, { ignoreTransparentBackground: true });
+    return this._vectorizeWithOptions(dataUrl, options);
   }
 
   async _vectorizeWithOptions(dataUrl, options, processing = {}) {
@@ -898,19 +890,9 @@ export class ImageExporter {
             this._boostHighlights(imageData.data);
           }
 
-          // Convert transparent pixels to a chroma key color so we can strip
-          // the background path from traced SVG output.
-          const bgKey = [1, 255, 1];
-          if (processing.ignoreTransparentBackground) {
-            this._paintTransparentAsKey(imageData.data, bgKey);
-          }
-
-          let svgstr = window.ImageTracer?.imagedataToSVG
+          const svgstr = window.ImageTracer?.imagedataToSVG
             ? window.ImageTracer.imagedataToSVG(imageData, options)
             : null;
-          if (svgstr && processing.ignoreTransparentBackground) {
-            svgstr = this._removeKeyColorPaths(svgstr, bgKey);
-          }
           resolve(svgstr);
         } catch (err) {
           console.error('ImageTracer vectorization error', err);
@@ -941,38 +923,6 @@ export class ImageExporter {
         data[i + c] = Math.min(255, Math.max(0, Math.round(corrected)));
       }
     }
-  }
-
-  _paintTransparentAsKey(data, keyRgb) {
-    const [kr, kg, kb] = keyRgb;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i + 3] === 0) {
-        data[i] = kr;
-        data[i + 1] = kg;
-        data[i + 2] = kb;
-        data[i + 3] = 255;
-      }
-    }
-  }
-
-  _removeKeyColorPaths(svg, keyRgb) {
-    const [r, g, b] = keyRgb;
-    const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-    const rgb = `rgb(${r},${g},${b})`;
-    const escapedHex = hex.replace('#', '\\#');
-    const escapedRgb = rgb.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-
-    // Remove any path/group elements using the chroma-key fill color.
-    // Keep this conservative to avoid removing actual mesh colors.
-    let output = svg.replace(
-      new RegExp(`<path[^>]*fill=["'](?:${escapedHex}|${escapedRgb})["'][^>]*/?>`, 'gi'),
-      '',
-    );
-    output = output.replace(
-      new RegExp(`<rect[^>]*fill=["'](?:${escapedHex}|${escapedRgb})["'][^>]*/?>`, 'gi'),
-      '',
-    );
-    return output;
   }
 
   async _ensureImageTracer() {
