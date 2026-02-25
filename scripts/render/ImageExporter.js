@@ -912,6 +912,7 @@ export class ImageExporter {
           const bgKey = [1, 255, 1];
           if (processing.alphaMask) {
             this._applyAlphaMaskForVector(imageData.data, 220, bgKey);
+            this._fillTinyBackgroundHoles(imageData, bgKey, 6);
           }
 
           if (processing.alphaMask) {
@@ -972,6 +973,87 @@ export class ImageExporter {
         data[i + 1] = Math.min(255, Math.round(data[i + 1] * inv));
         data[i + 2] = Math.min(255, Math.round(data[i + 2] * inv));
         data[i + 3] = 255;
+      }
+    }
+  }
+
+  _fillTinyBackgroundHoles(imageData, keyRgb, maxHoleArea = 6) {
+    const [kr, kg, kb] = keyRgb;
+    const { data, width, height } = imageData;
+    const visited = new Uint8Array(width * height);
+    const neighbors4 = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
+    const neighbors8 = [
+      [1, 0], [-1, 0], [0, 1], [0, -1],
+      [1, 1], [1, -1], [-1, 1], [-1, -1],
+    ];
+
+    const isBg = (x, y) => {
+      const i = (y * width + x) * 4;
+      return data[i] === kr && data[i + 1] === kg && data[i + 2] === kb;
+    };
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const idx = y * width + x;
+        if (visited[idx] || !isBg(x, y)) continue;
+
+        // BFS background component
+        const queue = [[x, y]];
+        const pixels = [];
+        visited[idx] = 1;
+        let touchesBorder = false;
+
+        for (let q = 0; q < queue.length; q += 1) {
+          const [cx, cy] = queue[q];
+          pixels.push([cx, cy]);
+          if (cx === 0 || cy === 0 || cx === width - 1 || cy === height - 1) {
+            touchesBorder = true;
+          }
+          for (const [dx, dy] of neighbors4) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            const nIdx = ny * width + nx;
+            if (visited[nIdx] || !isBg(nx, ny)) continue;
+            visited[nIdx] = 1;
+            queue.push([nx, ny]);
+          }
+        }
+
+        // Fill only tiny enclosed holes
+        if (touchesBorder || pixels.length > maxHoleArea) continue;
+
+        // Pick a representative neighboring foreground color
+        let fillR = null;
+        let fillG = null;
+        let fillB = null;
+        outer: for (const [px, py] of pixels) {
+          for (const [dx, dy] of neighbors8) {
+            const nx = px + dx;
+            const ny = py + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            if (isBg(nx, ny)) continue;
+            const i = (ny * width + nx) * 4;
+            fillR = data[i];
+            fillG = data[i + 1];
+            fillB = data[i + 2];
+            break outer;
+          }
+        }
+        if (fillR === null) continue;
+
+        for (const [px, py] of pixels) {
+          const i = (py * width + px) * 4;
+          data[i] = fillR;
+          data[i + 1] = fillG;
+          data[i + 2] = fillB;
+          data[i + 3] = 255;
+        }
       }
     }
   }
