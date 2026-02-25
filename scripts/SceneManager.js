@@ -1632,5 +1632,23 @@ export class SceneManager {
       this.ui?.showToast?.('SVG export failed');
     }
   }
+
+  async exportSvgColor() {
+    if (!this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before exporting SVG');
+      return;
+    }
+    try {
+      this.ui?.showToast?.('Exporting SVG (color)…');
+      await this.imageExporter.exportSvgColor(
+        this.currentModel,
+        this.currentFile,
+      );
+      this.ui?.showToast?.('SVG (color) exported');
+    } catch (error) {
+      console.error('SVG (color) export failed', error);
+      this.ui?.showToast?.('SVG (color) export failed');
+    }
+  }
 }
 

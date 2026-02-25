@@ -142,6 +142,48 @@ export class ImageExporter {
   }
 
   /**
+   * Export a flat-color SVG by rendering the current view to PNG and tracing with limited colors
+   */
+  async exportSvgColor(currentModel, currentFile) {
+    if (!currentModel) {
+      console.warn('No model loaded to export SVG');
+      return;
+    }
+
+    const state = this._saveState();
+    try {
+      // Render current view to PNG (no material overrides)
+      const gl = this.renderer.getContext();
+      this.renderer.setClearColor(0xffffff, 1);
+      this.renderer.setClearAlpha(1);
+      gl.clearColor(1, 1, 1, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      this.renderer.autoClear = true;
+      this.renderer.render(this.scene, this.camera);
+
+      const dataUrl = this.renderer.domElement.toDataURL('image/png');
+
+      // Vectorize with limited colors for flatter output
+      const options = {
+        colorsampling: 1,      // sample to auto-pick palette
+        numberofcolors: 12,    // keep palette small for vector cleanliness
+        pathomit: 0,
+        ltres: 1,
+        qtres: 1,
+        blur: 0,
+        linefilter: false,
+      };
+      const svg = await this._vectorizeWithOptions(dataUrl, options);
+      if (!svg) {
+        throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
+      }
+      this._downloadText(svg, currentFile, 'color.svg', 'image/svg+xml');
+    } finally {
+      this._restoreState(state);
+    }
+  }
+
+  /**
    * Save current renderer/scene state
    */
   _saveState() {
@@ -808,6 +850,19 @@ export class ImageExporter {
   }
 
   async _vectorizeMask(dataUrl) {
+    const options = {
+      colorsampling: 0,
+      numberofcolors: 2,
+      pathomit: 0,
+      ltres: 1,
+      qtres: 1,
+      blur: 0,
+      linefilter: false,
+    };
+    return this._vectorizeWithOptions(dataUrl, options);
+  }
+
+  async _vectorizeWithOptions(dataUrl, options) {
     await this._ensureImageTracer();
     return new Promise((resolve) => {
       const img = new Image();
@@ -820,15 +875,6 @@ export class ImageExporter {
           const ctx = offscreen.getContext('2d');
           ctx.drawImage(img, 0, 0);
           const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
-          const options = {
-            colorsampling: 0,
-            numberofcolors: 2,
-            pathomit: 0,
-            ltres: 1,
-            qtres: 1,
-            blur: 0,
-            linefilter: false,
-          };
           const svgstr = window.ImageTracer?.imagedataToSVG
             ? window.ImageTracer.imagedataToSVG(imageData, options)
             : null;

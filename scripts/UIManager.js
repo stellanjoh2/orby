@@ -205,6 +205,7 @@ export class UIManager {
       transformReset: q('#transformReset'),
       exportPng: q('#exportPngButton'),
       exportSvg: q('#exportSvgButton'),
+      exportSvgColor: q('#exportSvgColorButton'),
       copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
       loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
       loadSceneModal: q('#loadSceneSettingsModal'),
