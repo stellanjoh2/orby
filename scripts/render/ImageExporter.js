@@ -981,8 +981,9 @@ export class ImageExporter {
               this._applySilhouetteBinaryMask(imageData.data, 1, bgKey);
             } else {
               this._applyAlphaMaskForVector(imageData.data, 220, bgKey);
+              this._morphCloseMask(imageData, bgKey, 1);
             }
-            this._fillTinyBackgroundHoles(imageData, bgKey, 6);
+            this._fillTinyBackgroundHoles(imageData, bgKey, 24);
           }
 
           if (processing.alphaMask || processing.silhouetteBinaryLuma) {
@@ -994,6 +995,9 @@ export class ImageExporter {
             : null;
           if (svgstr && (processing.alphaMask || processing.silhouetteBinaryLuma)) {
             svgstr = this._removeKeyColorPaths(svgstr, bgKey);
+            if (processing.alphaMask) {
+              svgstr = this._removeNearKeyColorPaths(svgstr, bgKey, 52);
+            }
           }
           if (svgstr && processing.removeWhiteBackground) {
             svgstr = this._removeWhitePaths(svgstr);
@@ -1167,6 +1171,87 @@ export class ImageExporter {
     }
   }
 
+  _morphCloseMask(imageData, keyRgb, iterations = 1) {
+    const [kr, kg, kb] = keyRgb;
+    const { data, width, height } = imageData;
+    const isBgAt = (arr, x, y) => {
+      const i = (y * width + x) * 4;
+      return arr[i] === kr && arr[i + 1] === kg && arr[i + 2] === kb;
+    };
+
+    // Convert to binary mask: 1 = foreground, 0 = background
+    const base = new Uint8Array(width * height);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        base[y * width + x] = isBgAt(data, x, y) ? 0 : 1;
+      }
+    }
+
+    const neighbors = [
+      [-1, -1], [0, -1], [1, -1],
+      [-1, 0],  [0, 0],  [1, 0],
+      [-1, 1],  [0, 1],  [1, 1],
+    ];
+
+    let mask = base;
+    for (let it = 0; it < iterations; it += 1) {
+      // Dilation
+      const dilated = new Uint8Array(width * height);
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          let on = 0;
+          for (const [dx, dy] of neighbors) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            if (mask[ny * width + nx]) {
+              on = 1;
+              break;
+            }
+          }
+          dilated[y * width + x] = on;
+        }
+      }
+
+      // Erosion
+      const eroded = new Uint8Array(width * height);
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          let on = 1;
+          for (const [dx, dy] of neighbors) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+              on = 0;
+              break;
+            }
+            if (!dilated[ny * width + nx]) {
+              on = 0;
+              break;
+            }
+          }
+          eroded[y * width + x] = on;
+        }
+      }
+      mask = eroded;
+    }
+
+    // Apply closed mask back to imageData (keep original FG color, key BG color)
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (y * width + x) * 4;
+        if (!mask[y * width + x]) {
+          data[i] = kr;
+          data[i + 1] = kg;
+          data[i + 2] = kb;
+          data[i + 3] = 255;
+        } else {
+          data[i + 3] = 255;
+        }
+      }
+    }
+  }
+
   _removeKeyColorPaths(svg, keyRgb) {
     const [r, g, b] = keyRgb;
     const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
@@ -1191,6 +1276,48 @@ export class ImageExporter {
       return hasOrigin && hasYOrigin && fullW && fullH ? '' : tag;
     });
     return output;
+  }
+
+  _removeNearKeyColorPaths(svg, keyRgb, tolerance = 52) {
+    const toRgb = (fill) => {
+      const lower = fill.toLowerCase().trim();
+      if (lower.startsWith('#')) {
+        let hex = lower.slice(1);
+        if (hex.length === 3) {
+          hex = hex.split('').map((c) => c + c).join('');
+        }
+        if (hex.length !== 6) return null;
+        return [
+          parseInt(hex.slice(0, 2), 16),
+          parseInt(hex.slice(2, 4), 16),
+          parseInt(hex.slice(4, 6), 16),
+        ];
+      }
+      const m = lower.match(/^rgb\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)$/);
+      if (!m) return null;
+      return [Number(m[1]), Number(m[2]), Number(m[3])];
+    };
+
+    const colorDist = (a, b) => {
+      const dr = a[0] - b[0];
+      const dg = a[1] - b[1];
+      const db = a[2] - b[2];
+      return Math.sqrt(dr * dr + dg * dg + db * db);
+    };
+
+    const [kr, kg, kb] = keyRgb;
+    const key = [kr, kg, kb];
+
+    return svg.replace(/<(path|rect)\b([^>]*?)\/?>/gi, (tag, el, attrs) => {
+      const fillMatch = attrs.match(/\bfill=["']([^"']+)["']/i);
+      if (!fillMatch) return tag;
+      const rgb = toRgb(fillMatch[1]);
+      if (!rgb) return tag;
+      if (colorDist(rgb, key) <= tolerance) {
+        return '';
+      }
+      return tag;
+    });
   }
 
   _removeWhitePaths(svg) {
