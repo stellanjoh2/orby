@@ -24,6 +24,7 @@ export class MeshControls {
       emissive: false,
     };
     this.svgDepthDebounceTimer = null;
+    this.svgNormalDebounceTimer = null;
   }
 
   bind() {
@@ -92,6 +93,27 @@ export class MeshControls {
       }, 60);
     });
     if (this.ui.inputs.svgExtrudeDepth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeDepth);
+    this.ui.inputs.svgExtrudeBevelWidth?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(0.15, value)) : 0.02;
+      this.helpers.updateValueLabel('svgExtrudeBevelWidth', clampedValue, 'decimal', 3);
+      this.stateStore.set('svgExtrude.bevelWidth', clampedValue);
+      this.eventBus.emit('mesh:svg-extrude-bevel-width', clampedValue);
+    });
+    if (this.ui.inputs.svgExtrudeBevelWidth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeBevelWidth);
+    this.ui.inputs.svgExtrudeNormalAngle?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(180, value)) : 45;
+      this.helpers.updateValueLabel('svgExtrudeNormalAngle', clampedValue, 'angle');
+      this.stateStore.set('svgExtrude.normalAngle', clampedValue);
+      if (this.svgNormalDebounceTimer) {
+        clearTimeout(this.svgNormalDebounceTimer);
+      }
+      this.svgNormalDebounceTimer = setTimeout(() => {
+        this.eventBus.emit('mesh:svg-extrude-normal-angle', clampedValue);
+      }, 60);
+    });
+    if (this.ui.inputs.svgExtrudeNormalAngle) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeNormalAngle);
     this.ui.inputs.svgExtrudeColorOverride?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       const color = this.ui.inputs.svgExtrudeColor?.value || '#7ed321';
@@ -359,6 +381,20 @@ export class MeshControls {
       this.ui.inputs.svgExtrudeDepth.value = depth;
       this.helpers.updateValueLabel('svgExtrudeDepth', depth, 'decimal');
       this.ui.setControlDisabled('svgExtrudeDepth', !state.svgExtrude?.enabled);
+    }
+    if (this.ui.inputs.svgExtrudeBevelWidth) {
+      const enabled = !!state.svgExtrude?.enabled;
+      const bevelWidth = state.svgExtrude?.bevelWidth ?? 0.02;
+      this.ui.inputs.svgExtrudeBevelWidth.value = bevelWidth;
+      this.helpers.updateValueLabel('svgExtrudeBevelWidth', bevelWidth, 'decimal', 3);
+      this.ui.setControlDisabled('svgExtrudeBevelWidth', !enabled);
+    }
+    if (this.ui.inputs.svgExtrudeNormalAngle) {
+      const enabled = !!state.svgExtrude?.enabled;
+      const normalAngle = state.svgExtrude?.normalAngle ?? 45;
+      this.ui.inputs.svgExtrudeNormalAngle.value = normalAngle;
+      this.helpers.updateValueLabel('svgExtrudeNormalAngle', normalAngle, 'angle');
+      this.ui.setControlDisabled('svgExtrudeNormalAngle', !enabled);
     }
     if (this.ui.inputs.svgExtrudeColorOverride) {
       const enabled = !!state.svgExtrude?.enabled;

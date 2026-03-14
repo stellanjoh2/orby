@@ -215,6 +215,30 @@
                     <span class="value" data-output="svgExtrudeDepth">0.20</span>
                   </label>
                   <label class="slider-line">
+                    <span data-tooltip="Convex edge chamfer amount for SVG extrusion">Bevel Width</span>
+                    <input
+                      id="svgExtrudeBevelWidth"
+                      type="range"
+                      min="0"
+                      max="0.15"
+                      step="0.001"
+                      value="0.02"
+                    />
+                    <span class="value" data-output="svgExtrudeBevelWidth">0.02</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Average normal angle (0 = faceted, higher = smoother)">Normal Angle</span>
+                    <input
+                      id="svgExtrudeNormalAngle"
+                      type="range"
+                      min="0"
+                      max="180"
+                      step="1"
+                      value="45"
+                    />
+                    <span class="value" data-output="svgExtrudeNormalAngle">45°</span>
+                  </label>
+                  <label class="slider-line">
                     <span data-tooltip="Override imported SVG fill colors with one chosen color">Color Override</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="svgExtrudeColorOverride" />
@@ -2110,7 +2134,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.151 · 2026-02-25 11:22:32 UTC</div>
+              <div class="info-version-tag">v0.5.152 · 2026-03-14 14:41:16 UTC</div>
             </section>
           </div>
         </aside>

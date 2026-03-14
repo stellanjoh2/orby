@@ -31,6 +31,8 @@ export class StateStore {
       svgExtrude: {
         enabled: false,
         depth: 0.2,
+        bevelWidth: 0.02,
+        normalAngle: 45,
         colorOverride: false,
         overrideColor: '#7ed321',
       },

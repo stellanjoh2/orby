@@ -95,6 +95,8 @@ export class ResetControls {
       this.stateStore.set('clay', defaults.clay);
       this.stateStore.set('fresnel', defaults.fresnel);
       this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
+      this.stateStore.set('svgExtrude.bevelWidth', defaults.svgExtrude?.bevelWidth ?? 0.02);
+      this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
       this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
       this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
       // Reset material properties
@@ -121,6 +123,8 @@ export class ResetControls {
       this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
+      this.eventBus.emit('mesh:svg-extrude-bevel-width', defaults.svgExtrude?.bevelWidth ?? 0.02);
+      this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
       this.eventBus.emit('mesh:svg-extrude-color-override', {
         enabled: defaults.svgExtrude?.colorOverride ?? false,
         color: defaults.svgExtrude?.overrideColor ?? '#7ed321',
@@ -497,9 +501,13 @@ export class ResetControls {
 
           case 'svg-extrude':
             this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
+            this.stateStore.set('svgExtrude.bevelWidth', defaults.svgExtrude?.bevelWidth ?? 0.02);
+            this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
             this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
             this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
             this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
+            this.eventBus.emit('mesh:svg-extrude-bevel-width', defaults.svgExtrude?.bevelWidth ?? 0.02);
+            this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
             this.eventBus.emit('mesh:svg-extrude-color-override', {
               enabled: defaults.svgExtrude?.colorOverride ?? false,
               color: defaults.svgExtrude?.overrideColor ?? '#7ed321',

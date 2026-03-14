@@ -52,6 +52,8 @@ export class SceneSettingsManager {
       fresnel: state.fresnel,
       svgExtrude: {
         depth: state.svgExtrude?.depth ?? 0.2,
+        bevelWidth: state.svgExtrude?.bevelWidth ?? 0.02,
+        normalAngle: state.svgExtrude?.normalAngle ?? 45,
         colorOverride: !!state.svgExtrude?.colorOverride,
         overrideColor: state.svgExtrude?.overrideColor ?? '#7ed321',
       },
@@ -230,6 +232,14 @@ export class SceneSettingsManager {
       if (payload.svgExtrude?.depth !== undefined) {
         this.stateStore.set('svgExtrude.depth', payload.svgExtrude.depth);
         this.eventBus.emit('mesh:svg-extrude-depth', payload.svgExtrude.depth);
+      }
+      if (payload.svgExtrude?.bevelWidth !== undefined) {
+        this.stateStore.set('svgExtrude.bevelWidth', payload.svgExtrude.bevelWidth);
+        this.eventBus.emit('mesh:svg-extrude-bevel-width', payload.svgExtrude.bevelWidth);
+      }
+      if (payload.svgExtrude?.normalAngle !== undefined) {
+        this.stateStore.set('svgExtrude.normalAngle', payload.svgExtrude.normalAngle);
+        this.eventBus.emit('mesh:svg-extrude-normal-angle', payload.svgExtrude.normalAngle);
       }
       if (payload.svgExtrude?.colorOverride !== undefined || payload.svgExtrude?.overrideColor !== undefined) {
         const enabled = !!payload.svgExtrude?.colorOverride;

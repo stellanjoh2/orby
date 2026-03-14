@@ -119,6 +119,8 @@ export class UIManager {
       materialRoughness: q('#materialRoughness'),
       materialEmissive: q('#materialEmissive'),
       svgExtrudeDepth: q('#svgExtrudeDepth'),
+      svgExtrudeBevelWidth: q('#svgExtrudeBevelWidth'),
+      svgExtrudeNormalAngle: q('#svgExtrudeNormalAngle'),
       svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),
       svgExtrudeColor: q('#svgExtrudeColor'),
       clayColor: q('#clayColor'),
