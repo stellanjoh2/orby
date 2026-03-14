@@ -5,6 +5,7 @@ import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/OBJLoader.js';
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
+import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 
 export class ModelLoader {
   constructor() {
@@ -37,6 +38,7 @@ export class ModelLoader {
     this.objLoader = new OBJLoader();
     this.stlLoader = new STLLoader();
     this.usdLoader = new USDZLoader();
+    this.svgExtrudeImporter = new SvgExtrudeImporter();
   }
 
   disposeObjectUrls() {
@@ -50,10 +52,10 @@ export class ModelLoader {
     this.pendingObjectUrls.push(url);
   }
 
-  async loadFile(file) {
+  async loadFile(file, options = {}) {
     if (!file) throw new Error('No file provided');
     const extension = file.name.split('.').pop().toLowerCase();
-    const asset = await this.parseFileByExtension(file, extension);
+    const asset = await this.parseFileByExtension(file, extension, options);
     return { ...asset, sourceFile: file };
   }
 
@@ -132,7 +134,7 @@ export class ModelLoader {
     });
   }
 
-  async parseFileByExtension(file, ext) {
+  async parseFileByExtension(file, ext, options = {}) {
     switch (ext) {
       case 'glb':
         return this.loadGlb(file);
@@ -147,9 +149,32 @@ export class ModelLoader {
       case 'usdz':
       case 'usd':
         return this.loadUsd(file);
+      case 'svg':
+        return this.loadSvg(file, options);
       default:
         throw new Error(`Unsupported format: .${ext}`);
     }
+  }
+
+  async loadSvg(file, options = {}) {
+    const depth = options.svgExtrudeDepth;
+    const object = await this.svgExtrudeImporter.loadFromFile(file, { depth });
+    const assetName = file.name.replace(/\.[^/.]+$/, '') || 'SVG';
+    return {
+      object,
+      animations: [],
+      gltfMetadata: {
+        assetName,
+        generator: 'SvgExtrudeImporter',
+        version: null,
+        copyright: null,
+      },
+      svgExtrude: {
+        enabled: true,
+        depth: this.svgExtrudeImporter.getDepth(),
+        importer: this.svgExtrudeImporter,
+      },
+    };
   }
 
   async loadGlb(file) {

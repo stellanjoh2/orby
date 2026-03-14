@@ -28,6 +28,12 @@ export class StateStore {
         roughness: 0.8,
         emissive: 0.0,
       },
+      svgExtrude: {
+        enabled: false,
+        depth: 0.2,
+        colorOverride: false,
+        overrideColor: '#7ed321',
+      },
       hdri: 'meadow',
       hdriEnabled: true,
       hdriStrength: 1.50,

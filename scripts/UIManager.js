@@ -118,6 +118,9 @@ export class UIManager {
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
       materialEmissive: q('#materialEmissive'),
+      svgExtrudeDepth: q('#svgExtrudeDepth'),
+      svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),
+      svgExtrudeColor: q('#svgExtrudeColor'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
@@ -1440,6 +1443,7 @@ export class UIManager {
     
     // Fresnel block - only muted if fresnel.enabled is false
     this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
+    this.setBlockMuted('svg-extrude', !currentState.svgExtrude?.enabled);
   }
 
   setLightColorControlsDisabled(disabled) {

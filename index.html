@@ -56,11 +56,11 @@
           <canvas id="webgl" tabindex="0"></canvas>
           <div class="dropzone" id="dropzone">
             <div id="logotypeAnimation" class="drop-logo"></div>
-            <p class="drop-primary">Drag and drop your <span class="brand-highlight">3D model</span> here</p>
+            <p class="drop-primary">Drag and drop your <span class="brand-highlight">3D model</span> or SVG here</p>
             <button id="browseButton" class="dropzone-btn">
               Browse Files
             </button>
-            <p class="drop-secondary">Orby is optimized for .gltf/.glb. Files stay local and private. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
+            <p class="drop-secondary">Orby is optimized for .gltf/.glb, and supports SVG extrusion. Files stay local and private. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
             <div class="quick-start-guide">
               <span><strong>V</strong> — Hide UI</span>
               <span><strong>F</strong> — Focus camera</span>
@@ -72,7 +72,7 @@
             type="file"
             id="fileInput"
             class="sr-only"
-            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz"
+            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg"
           />
           <button
             id="fullscreenToggle"
@@ -191,6 +191,45 @@
                       value="0"
                     />
                     <span class="value" data-output="materialEmissive">0.00</span>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="svg-extrude">
+                  <div class="block-title has-reset">
+                    <span>SVG Extrude</span>
+                    <button class="block-reset-btn" data-reset="svg-extrude" aria-label="Reset SVG Extrude" data-tooltip="Reset SVG extrusion settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Extrusion depth for imported SVG files">Depth</span>
+                    <input
+                      id="svgExtrudeDepth"
+                      type="range"
+                      min="0.01"
+                      max="2"
+                      step="0.01"
+                      value="0.2"
+                    />
+                    <span class="value" data-output="svgExtrudeDepth">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Override imported SVG fill colors with one chosen color">Color Override</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="svgExtrudeColorOverride" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable SVG color override</span>
+                    </label>
+                  </label>
+                  <label class="color-line">
+                    <span data-tooltip="Pick the override color for SVG extrusion">Override Color</span>
+                    <input
+                      type="color"
+                      id="svgExtrudeColor"
+                      class="color-chip"
+                      value="#7ed321"
+                    />
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -2071,7 +2110,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.150 · 2026-02-25 11:14:07 UTC</div>
+              <div class="info-version-tag">v0.5.151 · 2026-02-25 11:22:32 UTC</div>
             </section>
           </div>
         </aside>

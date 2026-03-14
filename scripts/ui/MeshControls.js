@@ -23,6 +23,7 @@ export class MeshControls {
       brightness: false,
       emissive: false,
     };
+    this.svgDepthDebounceTimer = null;
   }
 
   bind() {
@@ -77,6 +78,32 @@ export class MeshControls {
       this.eventBus.emit('mesh:material-roughness', clampedValue);
     });
     if (this.ui.inputs.materialRoughness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialRoughness);
+
+    this.ui.inputs.svgExtrudeDepth?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2;
+      this.helpers.updateValueLabel('svgExtrudeDepth', clampedValue, 'decimal');
+      this.stateStore.set('svgExtrude.depth', clampedValue);
+      if (this.svgDepthDebounceTimer) {
+        clearTimeout(this.svgDepthDebounceTimer);
+      }
+      this.svgDepthDebounceTimer = setTimeout(() => {
+        this.eventBus.emit('mesh:svg-extrude-depth', clampedValue);
+      }, 60);
+    });
+    if (this.ui.inputs.svgExtrudeDepth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeDepth);
+    this.ui.inputs.svgExtrudeColorOverride?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      const color = this.ui.inputs.svgExtrudeColor?.value || '#7ed321';
+      this.stateStore.set('svgExtrude.colorOverride', enabled);
+      this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
+    });
+    this.ui.inputs.svgExtrudeColor?.addEventListener('input', (event) => {
+      const color = event.target.value;
+      const enabled = !!(this.stateStore.getState().svgExtrude?.colorOverride);
+      this.stateStore.set('svgExtrude.overrideColor', color);
+      this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
+    });
 
     // Transform controls
     this.ui.inputs.scale.addEventListener('input', (event) => {
@@ -326,6 +353,25 @@ export class MeshControls {
       const emissive = state.material?.emissive ?? 0.0;
       this.ui.inputs.materialEmissive.value = emissive;
       this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
+    }
+    if (this.ui.inputs.svgExtrudeDepth) {
+      const depth = state.svgExtrude?.depth ?? 0.2;
+      this.ui.inputs.svgExtrudeDepth.value = depth;
+      this.helpers.updateValueLabel('svgExtrudeDepth', depth, 'decimal');
+      this.ui.setControlDisabled('svgExtrudeDepth', !state.svgExtrude?.enabled);
+    }
+    if (this.ui.inputs.svgExtrudeColorOverride) {
+      const enabled = !!state.svgExtrude?.enabled;
+      const overrideEnabled = !!state.svgExtrude?.colorOverride;
+      this.ui.inputs.svgExtrudeColorOverride.checked = overrideEnabled;
+      this.ui.setControlDisabled('svgExtrudeColorOverride', !enabled);
+    }
+    if (this.ui.inputs.svgExtrudeColor) {
+      const enabled = !!state.svgExtrude?.enabled;
+      const overrideEnabled = !!state.svgExtrude?.colorOverride;
+      const color = state.svgExtrude?.overrideColor ?? '#7ed321';
+      this.ui.inputs.svgExtrudeColor.value = color;
+      this.ui.setControlDisabled('svgExtrudeColor', !(enabled && overrideEnabled));
     }
     this.ui.inputs.clayColor.value = state.clay.color;
     if (this.ui.inputs.clayNormalMap) {

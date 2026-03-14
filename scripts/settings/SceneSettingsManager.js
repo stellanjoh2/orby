@@ -50,6 +50,11 @@ export class SceneSettingsManager {
       clay: state.clay,
       wireframe: state.wireframe,
       fresnel: state.fresnel,
+      svgExtrude: {
+        depth: state.svgExtrude?.depth ?? 0.2,
+        colorOverride: !!state.svgExtrude?.colorOverride,
+        overrideColor: state.svgExtrude?.overrideColor ?? '#7ed321',
+      },
       // Studio settings
       hdri: state.hdri,
       hdriEnabled: state.hdriEnabled,
@@ -221,6 +226,17 @@ export class SceneSettingsManager {
             !payload.fresnel.enabled,
           );
         }
+      }
+      if (payload.svgExtrude?.depth !== undefined) {
+        this.stateStore.set('svgExtrude.depth', payload.svgExtrude.depth);
+        this.eventBus.emit('mesh:svg-extrude-depth', payload.svgExtrude.depth);
+      }
+      if (payload.svgExtrude?.colorOverride !== undefined || payload.svgExtrude?.overrideColor !== undefined) {
+        const enabled = !!payload.svgExtrude?.colorOverride;
+        const color = payload.svgExtrude?.overrideColor ?? '#7ed321';
+        this.stateStore.set('svgExtrude.colorOverride', enabled);
+        this.stateStore.set('svgExtrude.overrideColor', color);
+        this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
       }
 
       // Apply Studio settings

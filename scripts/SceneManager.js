@@ -217,6 +217,9 @@ export class SceneManager {
     this.lightsAutoRotateSpeed = 30; // degrees per second
     this.currentFile = null;
     this.currentModel = null;
+    this.currentAssetMetadata = null;
+    this.svgExtrudeImporter = null;
+    this.isSvgExtrudeModel = false;
     this.isFirstModelLoad = true; // Track if this is the first model load
     this.animationController = new AnimationController({
       onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
@@ -591,6 +594,18 @@ export class SceneManager {
     }
     if (state.wireframe) {
       this.materialController.setWireframeSettings(state.wireframe);
+    }
+    if (state.svgExtrude?.depth !== undefined) {
+      this.setSvgExtrudeDepth(state.svgExtrude.depth);
+    }
+    if (state.svgExtrude) {
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!state.svgExtrude.colorOverride,
+          color: state.svgExtrude.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
     }
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
@@ -1065,8 +1080,10 @@ export class SceneManager {
     }
 
     try {
-      const asset = await this.modelLoader.loadFile(file);
+      const svgExtrudeDepth = this.stateStore.getState()?.svgExtrude?.depth;
+      const asset = await this.modelLoader.loadFile(file, { svgExtrudeDepth });
       this.setModel(asset.object, asset.animations ?? []);
+      this._applyAssetMetadata(asset);
       this.updateStatsUI(file, asset.object, asset.gltfMetadata);
       this.ui.updateTopBarDetail(`${file.name} — Idle`);
       if (!options.silent) {
@@ -1089,6 +1106,7 @@ export class SceneManager {
         this.ui.updateTitle(sourceFile.name);
       }
       this.setModel(asset.object, asset.animations ?? []);
+      this._applyAssetMetadata(asset);
       this.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
         this.ui.showToast('Folder loaded');
     } catch (error) {
@@ -1114,6 +1132,30 @@ export class SceneManager {
     // Clear occlusion check objects when model is removed
     this.lensFlareController?.setModelRoot(null);
     this.animationController.dispose();
+    this.currentAssetMetadata = null;
+    this.svgExtrudeImporter = null;
+    this.isSvgExtrudeModel = false;
+  }
+
+  _applyAssetMetadata(asset = {}) {
+    this.currentAssetMetadata = asset?.gltfMetadata || null;
+    const svgExtrude = asset?.svgExtrude || null;
+    const isSvgExtrude = !!svgExtrude?.enabled;
+    this.svgExtrudeImporter = isSvgExtrude ? svgExtrude.importer : null;
+    this.isSvgExtrudeModel = isSvgExtrude;
+    this.stateStore.set('svgExtrude.enabled', isSvgExtrude);
+    if (isSvgExtrude) {
+      const nextDepth = svgExtrude.depth ?? this.stateStore.getState()?.svgExtrude?.depth ?? 0.2;
+      this.stateStore.set('svgExtrude.depth', nextDepth);
+      const svgState = this.stateStore.getState().svgExtrude || {};
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!svgState.colorOverride,
+          color: svgState.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
+    }
   }
 
   disposeNode(object) {
@@ -1320,6 +1362,53 @@ export class SceneManager {
     };
 
     requestAnimationFrame(fadeIn);
+  }
+
+  setSvgExtrudeDepth(depth) {
+    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
+    try {
+      this.svgExtrudeImporter.setDepth(depth);
+      // Register rebuilt meshes as originals so material controls keep working.
+      this.materialController.prepareMesh(this.currentModel);
+      this.setSvgExtrudeColorOverride(this.stateStore.getState().svgExtrude || {}, { updateState: false });
+      this.setShading(this.currentShading);
+      this.refreshBoneHelpers();
+      if (this.currentFile) {
+        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
+      }
+    } catch (error) {
+      console.error('Failed to update SVG extrusion depth', error);
+      this.ui?.showToast?.('Could not update SVG depth');
+    }
+  }
+
+  setSvgExtrudeColorOverride(settings = {}, options = {}) {
+    const { updateState = true } = options;
+    const enabled = !!settings.enabled;
+    const color = settings.color || settings.overrideColor || '#7ed321';
+    if (updateState) {
+      this.stateStore.set('svgExtrude.colorOverride', enabled);
+      this.stateStore.set('svgExtrude.overrideColor', color);
+    }
+    if (!this.currentModel || !this.isSvgExtrudeModel) return;
+    const overrideColor = new THREE.Color(color);
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
+      const baseHex = child.userData.orbySvgBaseColor || '#ffffff';
+      const targetColor = enabled ? overrideColor : new THREE.Color(baseHex);
+      const originalMaterial = this.materialController.getOriginalMaterial(child);
+      const applyColor = (material) => {
+        if (!material) return;
+        if (Array.isArray(material)) {
+          material.forEach((mat) => mat?.color?.copy?.(targetColor));
+        } else if (material.color) {
+          material.color.copy(targetColor);
+        }
+      };
+      applyColor(originalMaterial);
+      applyColor(child.material);
+    });
+    this.materialController.updateMaterials();
   }
 
   fitCameraToObject(object) {

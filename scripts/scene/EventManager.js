@@ -42,6 +42,8 @@ export class EventManager {
     eventBus.on('mesh:material-emissive', (emissive) => {
       s.materialController?.setMaterialEmissive(emissive);
     });
+    eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
+    eventBus.on('mesh:svg-extrude-color-override', (settings) => s.setSvgExtrudeColorOverride(settings));
     // Legacy support
     eventBus.on('mesh:diffuse-brightness', (value) => {
       s.materialController?.setMaterialBrightness(value);
