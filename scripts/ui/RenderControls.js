@@ -289,6 +289,9 @@ export class RenderControls {
     this.ui.buttons.exportSvgColor?.addEventListener('click', () => {
       this.eventBus.emit('export:svg-color');
     });
+    this.ui.buttons.exportSvgGlb?.addEventListener('click', () => {
+      this.eventBus.emit('export:svg-glb');
+    });
   }
 
   sync(state) {

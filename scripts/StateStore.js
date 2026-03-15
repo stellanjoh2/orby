@@ -35,6 +35,9 @@ export class StateStore {
         colorOverride: false,
         overrideColor: '#7ed321',
       },
+      advanced: {
+        reverseNormals: false,
+      },
       hdri: 'meadow',
       hdriEnabled: true,
       hdriStrength: 1.50,

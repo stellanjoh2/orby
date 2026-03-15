@@ -106,6 +106,11 @@ export class MeshControls {
       }, 60);
     });
     if (this.ui.inputs.svgExtrudeNormalAngle) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeNormalAngle);
+    this.ui.inputs.reverseNormals?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('advanced.reverseNormals', enabled);
+      this.eventBus.emit('mesh:reverse-normals', enabled);
+    });
     this.ui.inputs.svgExtrudeColorOverride?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       const color = this.ui.inputs.svgExtrudeColor?.value || '#7ed321';
@@ -380,6 +385,9 @@ export class MeshControls {
       this.ui.inputs.svgExtrudeNormalAngle.value = normalAngle;
       this.helpers.updateValueLabel('svgExtrudeNormalAngle', normalAngle, 'angle');
       this.ui.setControlDisabled('svgExtrudeNormalAngle', !enabled);
+    }
+    if (this.ui.inputs.reverseNormals) {
+      this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
     }
     if (this.ui.inputs.svgExtrudeColorOverride) {
       const enabled = !!state.svgExtrude?.enabled;

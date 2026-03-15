@@ -28,6 +28,7 @@ import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { HistogramController } from './render/HistogramController.js';
+import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
 
 
@@ -220,7 +221,12 @@ export class SceneManager {
     this.currentAssetMetadata = null;
     this.svgExtrudeImporter = null;
     this.isSvgExtrudeModel = false;
+    this.reverseNormalsEnabled = initialState.advanced?.reverseNormals ?? false;
+    this.originalGeometryIndices = new WeakMap();
+    this.originalGeometryAttributes = new WeakMap();
+    this.originalMaterialSides = new WeakMap();
     this.isFirstModelLoad = true; // Track if this is the first model load
+    this.svgGlbExporter = new SvgGlbExporter();
     this.animationController = new AnimationController({
       onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
       onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
@@ -610,6 +616,7 @@ export class SceneManager {
         { updateState: false },
       );
     }
+    this.setReverseNormals(state.advanced?.reverseNormals ?? false);
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
     this.lensDirtController?.updateSettings(state.lensDirt);
@@ -1141,6 +1148,9 @@ export class SceneManager {
     this.currentAssetMetadata = null;
     this.svgExtrudeImporter = null;
     this.isSvgExtrudeModel = false;
+    this.originalGeometryIndices = new WeakMap();
+    this.originalGeometryAttributes = new WeakMap();
+    this.originalMaterialSides = new WeakMap();
   }
 
   _applyAssetMetadata(asset = {}) {
@@ -1230,6 +1240,7 @@ export class SceneManager {
       },
     });
     this.setShading(state.shading);
+    this.setReverseNormals(state.advanced?.reverseNormals ?? false);
     this.diagnosticsController.setModel(object, state.shading);
     this.refreshBoneHelpers();
     // Apply Fresnel settings if enabled
@@ -1308,12 +1319,18 @@ export class SceneManager {
   _fadeInMeshOpacity(object) {
     // Collect all materials from the mesh
     const materials = [];
+    const originalMaterialStates = new Map();
     object.traverse((child) => {
       if (child.isMesh && child.material) {
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         mats.forEach((mat) => {
           if (mat && !materials.includes(mat)) {
             materials.push(mat);
+            originalMaterialStates.set(mat, {
+              transparent: !!mat.transparent,
+              opacity: Number.isFinite(mat.opacity) ? mat.opacity : 1,
+              depthWrite: mat.depthWrite !== false,
+            });
           }
         });
       }
@@ -1326,6 +1343,8 @@ export class SceneManager {
       if (mat) {
         mat.transparent = true;
         mat.opacity = 0;
+        // During fade we disable depth writes to avoid temporary sorting artifacts.
+        mat.depthWrite = false;
       }
     });
 
@@ -1352,7 +1371,9 @@ export class SceneManager {
 
       materials.forEach((mat) => {
         if (mat) {
-          mat.opacity = opacity;
+          const original = originalMaterialStates.get(mat);
+          const targetOpacity = original ? original.opacity : 1;
+          mat.opacity = targetOpacity * opacity;
         }
       });
 
@@ -1362,7 +1383,16 @@ export class SceneManager {
         // Ensure we end at exact opacity 1 and rotation 0° (relative to modelRoot)
         materials.forEach((mat) => {
           if (mat) {
-            mat.opacity = 1;
+            const original = originalMaterialStates.get(mat);
+            if (original) {
+              mat.opacity = original.opacity;
+              mat.transparent = original.transparent;
+              mat.depthWrite = original.depthWrite;
+            } else {
+              mat.opacity = 1;
+              mat.transparent = false;
+              mat.depthWrite = true;
+            }
           }
         });
         object.rotation.y = THREE.MathUtils.degToRad(targetRotationY);
@@ -1380,6 +1410,7 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setSvgExtrudeColorOverride(this.stateStore.getState().svgExtrude || {}, { updateState: false });
       this.setShading(this.currentShading);
+      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
         this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
@@ -1397,6 +1428,7 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setSvgExtrudeColorOverride(this.stateStore.getState().svgExtrude || {}, { updateState: false });
       this.setShading(this.currentShading);
+      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
         this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
@@ -1405,6 +1437,79 @@ export class SceneManager {
       console.error('Failed to update SVG normal angle', error);
       this.ui?.showToast?.('Could not update SVG normal angle');
     }
+  }
+
+  setReverseNormals(enabled) {
+    this.reverseNormalsEnabled = !!enabled;
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.geometry) return;
+      const geometry = child.geometry;
+      const attributes = geometry.attributes || {};
+      if (!this.originalGeometryAttributes.has(geometry)) {
+        const cached = {};
+        Object.keys(attributes).forEach((name) => {
+          const attr = attributes[name];
+          if (!attr?.array) return;
+          cached[name] = new attr.array.constructor(attr.array);
+        });
+        this.originalGeometryAttributes.set(geometry, cached);
+      }
+      const sourceAttributes = this.originalGeometryAttributes.get(geometry);
+
+      // Restore all attributes from the cached original orientation first.
+      Object.keys(sourceAttributes || {}).forEach((name) => {
+        const attr = geometry.getAttribute(name);
+        const sourceArray = sourceAttributes[name];
+        if (!attr?.array || !sourceArray) return;
+        attr.array.set(sourceArray);
+        attr.needsUpdate = true;
+      });
+
+      // Restore index orientation first.
+      const indexAttr = geometry.index;
+      if (indexAttr?.array) {
+        if (!this.originalGeometryIndices.has(geometry)) {
+          this.originalGeometryIndices.set(
+            geometry,
+            new indexAttr.array.constructor(indexAttr.array),
+          );
+        }
+        const originalIndex = this.originalGeometryIndices.get(geometry);
+        indexAttr.array.set(originalIndex);
+        indexAttr.needsUpdate = true;
+      }
+
+      geometry.computeBoundingSphere();
+
+      const applySideForMaterial = (material) => {
+        if (!material) return;
+        if (!this.originalMaterialSides.has(material)) {
+          this.originalMaterialSides.set(material, material.side);
+        }
+        const originalSide = this.originalMaterialSides.get(material);
+        if (this.reverseNormalsEnabled) {
+          // Make reversal visually deterministic by flipping face culling mode.
+          if (originalSide === THREE.FrontSide) {
+            material.side = THREE.BackSide;
+          } else if (originalSide === THREE.BackSide) {
+            material.side = THREE.FrontSide;
+          } else {
+            // If source is DoubleSide, pick BackSide so reverse mode is visible.
+            material.side = THREE.BackSide;
+          }
+        } else {
+          material.side = originalSide;
+        }
+        material.needsUpdate = true;
+      };
+
+      if (Array.isArray(child.material)) {
+        child.material.forEach(applySideForMaterial);
+      } else {
+        applySideForMaterial(child.material);
+      }
+    });
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {
@@ -1532,6 +1637,8 @@ export class SceneManager {
   setShading(mode) {
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
+    // Material instances are recreated when shading changes; reapply reverse mode.
+    this.setReverseNormals(this.reverseNormalsEnabled);
   }
 
   clearBoneHelpers() {
@@ -1762,6 +1869,26 @@ export class SceneManager {
     } catch (error) {
       console.error('SVG (color) export failed', error);
       this.ui?.showToast?.('SVG (color) export failed');
+    }
+  }
+
+  async exportSvgGlb() {
+    if (!this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before exporting GLB');
+      return;
+    }
+    if (!this.isSvgExtrudeModel) {
+      this.ui?.showToast?.('Export .GLB is for imported SVG meshes only');
+      return;
+    }
+    try {
+      this.ui?.showToast?.('Exporting .GLB…');
+      const sourceName = this.currentFile?.name || this.currentAssetMetadata?.assetName || 'svg-extrude';
+      await this.svgGlbExporter.exportFromModelRoot(this.modelRoot, sourceName);
+      this.ui?.showToast?.('.GLB exported');
+    } catch (error) {
+      console.error('SVG GLB export failed', error);
+      this.ui?.showToast?.('SVG .GLB export failed');
     }
   }
 }

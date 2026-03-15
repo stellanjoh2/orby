@@ -98,6 +98,7 @@ export class ResetControls {
       this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
       this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
       this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
+      this.stateStore.set('advanced.reverseNormals', defaults.advanced?.reverseNormals ?? false);
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
@@ -127,6 +128,7 @@ export class ResetControls {
         enabled: defaults.svgExtrude?.colorOverride ?? false,
         color: defaults.svgExtrude?.overrideColor ?? '#7ed321',
       });
+      this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
       
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset');
@@ -508,6 +510,12 @@ export class ResetControls {
               enabled: defaults.svgExtrude?.colorOverride ?? false,
               color: defaults.svgExtrude?.overrideColor ?? '#7ed321',
             });
+            this.ui.syncUIFromState();
+            break;
+
+          case 'advanced':
+            this.stateStore.set('advanced.reverseNormals', defaults.advanced?.reverseNormals ?? false);
+            this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
             this.ui.syncUIFromState();
             break;
         }

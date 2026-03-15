@@ -56,6 +56,9 @@ export class SceneSettingsManager {
         colorOverride: !!state.svgExtrude?.colorOverride,
         overrideColor: state.svgExtrude?.overrideColor ?? '#7ed321',
       },
+      advanced: {
+        reverseNormals: !!state.advanced?.reverseNormals,
+      },
       // Studio settings
       hdri: state.hdri,
       hdriEnabled: state.hdriEnabled,
@@ -242,6 +245,11 @@ export class SceneSettingsManager {
         this.stateStore.set('svgExtrude.colorOverride', enabled);
         this.stateStore.set('svgExtrude.overrideColor', color);
         this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
+      }
+      if (payload.advanced?.reverseNormals !== undefined) {
+        const enabled = !!payload.advanced.reverseNormals;
+        this.stateStore.set('advanced.reverseNormals', enabled);
+        this.eventBus.emit('mesh:reverse-normals', enabled);
       }
 
       // Apply Studio settings

@@ -44,6 +44,7 @@ export class EventManager {
     });
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
+    eventBus.on('mesh:reverse-normals', (enabled) => s.setReverseNormals(enabled));
     eventBus.on('mesh:svg-extrude-color-override', (settings) => s.setSvgExtrudeColorOverride(settings));
     // Legacy support
     eventBus.on('mesh:diffuse-brightness', (value) => {
@@ -255,6 +256,7 @@ export class EventManager {
     eventBus.on('export:png', (settings) => s.exportPng(settings));
     eventBus.on('export:svg', () => s.exportSvgSilhouette());
     eventBus.on('export:svg-color', () => s.exportSvgColor());
+    eventBus.on('export:svg-glb', () => s.exportSvgGlb());
     
     // App events
     eventBus.on('app:reset', () => s.applyStateSnapshot(s.stateStore.getState()));

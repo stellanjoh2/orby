@@ -369,6 +369,26 @@
               </div>
 
               <div class="panel-block">
+                <div class="subsection" data-subsection="advanced">
+                  <div class="block-title has-reset">
+                    <span>Advanced</span>
+                    <button class="block-reset-btn" data-reset="advanced" aria-label="Reset Advanced" data-tooltip="Reset Advanced settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Reverse mesh normal direction on the current model">Reverse Normals</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="reverseNormals" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Reverse normal direction</span>
+                    </label>
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel-block">
                 <div class="subsection">
                   <div class="block-title has-reset">
                     <span>Transform</span>
@@ -638,6 +658,10 @@
                   <button id="exportSvgColorButton" class="accent-action-btn" data-tooltip="Export flat-color vector SVG">
                     <i class="fa-solid fa-palette"></i>
                     Export .SVG (Color)
+                  </button>
+                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export imported SVG extrusion as .GLB (SVG only)">
+                    <i class="fa-solid fa-cube"></i>
+                    Export .GLB (SVG only)
                   </button>
                 </div>
               </div>
@@ -2124,7 +2148,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.155 · 2026-03-15 08:36:34 UTC</div>
+              <div class="info-version-tag">v0.5.156 · 2026-03-15 08:44:12 UTC</div>
             </section>
           </div>
         </aside>
