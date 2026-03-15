@@ -213,6 +213,7 @@ export class EventManager {
     eventBus.on('studio:ground-wire-color', (color) => s.setGroundWireColor(color));
     eventBus.on('studio:ground-wire-opacity', (value) => s.setGroundWireOpacity(value));
     eventBus.on('studio:ground-y', (value) => s.setGroundY(value));
+    eventBus.on('studio:grid-y', (value) => s.setGridY(value));
     eventBus.on('studio:podium-scale', (value) => s.setPodiumScale(value));
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
     eventBus.on('studio:podium-snap', () => s.snapPodiumToBottom());

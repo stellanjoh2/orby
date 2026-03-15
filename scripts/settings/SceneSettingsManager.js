@@ -42,7 +42,9 @@ export class SceneSettingsManager {
         emissive: 0.0,
       },
       scale: state.scale,
+      xOffset: state.xOffset,
       yOffset: state.yOffset,
+      zOffset: state.zOffset,
       rotationX: state.rotationX,
       rotationY: state.rotationY,
       rotationZ: state.rotationZ,
@@ -76,6 +78,7 @@ export class SceneSettingsManager {
       groundWireColor: state.groundWireColor,
       groundWireOpacity: state.groundWireOpacity,
       groundY: state.groundY,
+      gridY: state.gridY,
       podiumScale: state.podiumScale,
       gridScale: state.gridScale,
       lights: state.lights,
@@ -104,9 +107,11 @@ export class SceneSettingsManager {
         sharpness: state.camera?.sharpness,
         vignette: state.camera?.vignette,
         vignetteColor: state.camera?.vignetteColor,
+        autoOrbit: state.camera?.autoOrbit,
       },
       exposure: state.exposure,
       autoExposure: state.autoExposure,
+      histogramEnabled: state.histogramEnabled,
       dof: state.dof,
       bloom: state.bloom,
       grain: state.grain,
@@ -193,6 +198,14 @@ export class SceneSettingsManager {
       if (payload.yOffset !== undefined) {
         this.stateStore.set('yOffset', payload.yOffset);
         this.eventBus.emit('mesh:yOffset', payload.yOffset);
+      }
+      if (payload.xOffset !== undefined) {
+        this.stateStore.set('xOffset', payload.xOffset);
+        this.eventBus.emit('mesh:xOffset', payload.xOffset);
+      }
+      if (payload.zOffset !== undefined) {
+        this.stateStore.set('zOffset', payload.zOffset);
+        this.eventBus.emit('mesh:zOffset', payload.zOffset);
       }
       if (payload.rotationX !== undefined) {
         this.stateStore.set('rotationX', payload.rotationX);
@@ -331,6 +344,10 @@ export class SceneSettingsManager {
         this.stateStore.set('groundY', payload.groundY);
         this.eventBus.emit('studio:ground-y', payload.groundY);
       }
+      if (payload.gridY !== undefined) {
+        this.stateStore.set('gridY', payload.gridY);
+        this.eventBus.emit('studio:grid-y', payload.gridY);
+      }
       if (payload.podiumScale !== undefined) {
         this.stateStore.set('podiumScale', payload.podiumScale);
         this.eventBus.emit('studio:podium-scale', payload.podiumScale);
@@ -433,6 +450,10 @@ export class SceneSettingsManager {
           this.stateStore.set('camera.tilt', payload.camera.tilt);
           this.eventBus.emit('camera:tilt', payload.camera.tilt);
         }
+        if (payload.camera.autoOrbit !== undefined) {
+          this.stateStore.set('camera.autoOrbit', payload.camera.autoOrbit);
+          this.eventBus.emit('camera:auto-orbit', payload.camera.autoOrbit);
+        }
         // Restore camera position and target (orbit angle)
         if (payload.camera.position || payload.camera.target) {
           this.eventBus.emit('camera:set-state', {
@@ -493,6 +514,10 @@ export class SceneSettingsManager {
       if (payload.autoExposure !== undefined) {
         this.stateStore.set('autoExposure', payload.autoExposure);
         this.eventBus.emit('camera:auto-exposure', payload.autoExposure);
+      }
+      if (payload.histogramEnabled !== undefined) {
+        this.stateStore.set('histogramEnabled', !!payload.histogramEnabled);
+        this.eventBus.emit('render:histogram-enabled', !!payload.histogramEnabled);
       }
 
       // Apply Post-processing
