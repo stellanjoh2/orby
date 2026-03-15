@@ -458,26 +458,6 @@ body.dropzone-visible #webgl {
   justify-content: center !important;
 }
 
-.scene-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.scene-controls-divider {
-  height: 1px;
-  width: 100%;
-  margin: 0.1rem 0 0.2rem;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    color-mix(in srgb, var(--text-dim) 55%, transparent) 20%,
-    color-mix(in srgb, var(--text-dim) 55%, transparent) 80%,
-    transparent 100%
-  );
-  opacity: 0.6;
-}
-
 /* Export button specific spacing */
 #exportPng {
   margin-top: 0.5rem;
