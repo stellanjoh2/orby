@@ -607,6 +607,15 @@ export class SceneManager {
     if (state.svgExtrude?.normalAngle !== undefined) {
       this.setSvgExtrudeNormalAngle(state.svgExtrude.normalAngle);
     }
+    if (state.svgExtrude?.colorDepths !== undefined) {
+      this.setSvgExtrudeColorDepths(state.svgExtrude.colorDepths, { updateState: false });
+    }
+    if (state.svgExtrude?.colorOffsets !== undefined) {
+      this.setSvgExtrudeColorOffsets(state.svgExtrude.colorOffsets, { updateState: false });
+    }
+    if (state.svgExtrude?.flipDirection !== undefined) {
+      this.setSvgExtrudeFlipDirection(state.svgExtrude.flipDirection, { updateState: false });
+    }
     if (state.svgExtrude) {
       this.setSvgExtrudeColorOverride(
         {
@@ -1094,6 +1103,9 @@ export class SceneManager {
       const asset = await this.modelLoader.loadFile(file, {
         svgExtrudeDepth: svgExtrudeState.depth,
         svgExtrudeNormalAngle: svgExtrudeState.normalAngle,
+        svgExtrudeColorDepths: svgExtrudeState.colorDepths || {},
+        svgExtrudeColorOffsets: svgExtrudeState.colorOffsets || {},
+        svgExtrudeFlipDirection: !!svgExtrudeState.flipDirection,
       });
       this.setModel(asset.object, asset.animations ?? []);
       this._applyAssetMetadata(asset);
@@ -1160,11 +1172,45 @@ export class SceneManager {
     this.svgExtrudeImporter = isSvgExtrude ? svgExtrude.importer : null;
     this.isSvgExtrudeModel = isSvgExtrude;
     this.stateStore.set('svgExtrude.enabled', isSvgExtrude);
+    if (!isSvgExtrude) {
+      this.stateStore.set('svgExtrude.availableColors', []);
+      this.stateStore.set('svgExtrude.colorDepths', {});
+      this.stateStore.set('svgExtrude.colorOffsets', {});
+      this.stateStore.set('svgExtrude.flipDirection', false);
+      return;
+    }
     if (isSvgExtrude) {
       const nextDepth = svgExtrude.depth ?? this.stateStore.getState()?.svgExtrude?.depth ?? 0.2;
       this.stateStore.set('svgExtrude.depth', nextDepth);
       const nextNormalAngle = svgExtrude.normalAngle ?? this.stateStore.getState()?.svgExtrude?.normalAngle ?? 45;
       this.stateStore.set('svgExtrude.normalAngle', nextNormalAngle);
+      const flipDirection = !!(svgExtrude.flipDirection ?? this.stateStore.getState()?.svgExtrude?.flipDirection);
+      this.stateStore.set('svgExtrude.flipDirection', flipDirection);
+      const availableColors = Array.isArray(svgExtrude.colors) ? svgExtrude.colors : [];
+      this.stateStore.set('svgExtrude.availableColors', availableColors);
+      const existingColorDepths =
+        svgExtrude.colorDepths ??
+        this.stateStore.getState()?.svgExtrude?.colorDepths ??
+        {};
+      const existingColorOffsets =
+        svgExtrude.colorOffsets ??
+        this.stateStore.getState()?.svgExtrude?.colorOffsets ??
+        {};
+      const nextColorDepths = {};
+      const nextColorOffsets = {};
+      availableColors.forEach((color) => {
+        if (existingColorDepths[color] !== undefined) {
+          nextColorDepths[color] = existingColorDepths[color];
+        }
+        if (existingColorOffsets[color] !== undefined) {
+          nextColorOffsets[color] = existingColorOffsets[color];
+        }
+      });
+      this.stateStore.set('svgExtrude.colorDepths', nextColorDepths);
+      this.stateStore.set('svgExtrude.colorOffsets', nextColorOffsets);
+      this.setSvgExtrudeColorDepths(nextColorDepths, { updateState: false });
+      this.setSvgExtrudeColorOffsets(nextColorOffsets, { updateState: false });
+      this.setSvgExtrudeFlipDirection(flipDirection, { updateState: false });
       const svgState = this.stateStore.getState().svgExtrude || {};
       this.setSvgExtrudeColorOverride(
         {
@@ -1444,6 +1490,131 @@ export class SceneManager {
     } catch (error) {
       console.error('Failed to update SVG normal angle', error);
       this.ui?.showToast?.('Could not update SVG normal angle');
+    }
+  }
+
+  setSvgExtrudeColorDepths(colorDepths = {}, options = {}) {
+    const { updateState = true } = options;
+    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
+    const availableColors = this.stateStore.getState()?.svgExtrude?.availableColors || [];
+    const sanitized = {};
+    Object.entries(colorDepths || {}).forEach(([color, value]) => {
+      if (!availableColors.includes(color)) return;
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      sanitized[color] = Math.max(0.01, Math.min(1.0, numeric));
+    });
+    if (updateState) {
+      this.stateStore.set('svgExtrude.colorDepths', sanitized);
+    }
+    try {
+      this.svgExtrudeImporter.setColorDepths(sanitized);
+      this.materialController.prepareMesh(this.currentModel);
+      this.setShading(this.currentShading);
+      const svgState = this.stateStore.getState().svgExtrude || {};
+      const overrideEnabled = !!svgState.colorOverride;
+      if (overrideEnabled) {
+        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
+      }
+      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
+      this.refreshBoneHelpers();
+      if (this.currentFile) {
+        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
+      }
+    } catch (error) {
+      console.error('Failed to update SVG color depths', error);
+      this.ui?.showToast?.('Could not update SVG color depths');
+    }
+  }
+
+  setSvgExtrudeColorDepth({ color, depth } = {}) {
+    if (!color) return;
+    const numericDepth = Number(depth);
+    if (!Number.isFinite(numericDepth)) return;
+    const state = this.stateStore.getState();
+    const baseDepth = Number(state.svgExtrude?.depth ?? 0.2);
+    const existing = { ...(state.svgExtrude?.colorDepths || {}) };
+    const clamped = Math.max(0.01, Math.min(2.0, numericDepth));
+    if (Math.abs(clamped - baseDepth) < 0.0001) {
+      delete existing[color];
+    } else {
+      existing[color] = clamped;
+    }
+    this.setSvgExtrudeColorDepths(existing, { updateState: true });
+  }
+
+  setSvgExtrudeColorOffsets(colorOffsets = {}, options = {}) {
+    const { updateState = true } = options;
+    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
+    const availableColors = this.stateStore.getState()?.svgExtrude?.availableColors || [];
+    const sanitized = {};
+    Object.entries(colorOffsets || {}).forEach(([color, value]) => {
+      if (!availableColors.includes(color)) return;
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      sanitized[color] = Math.max(-1.0, Math.min(1.0, numeric));
+    });
+    if (updateState) {
+      this.stateStore.set('svgExtrude.colorOffsets', sanitized);
+    }
+    try {
+      this.svgExtrudeImporter.setColorOffsets(sanitized);
+      this.materialController.prepareMesh(this.currentModel);
+      this.setShading(this.currentShading);
+      const svgState = this.stateStore.getState().svgExtrude || {};
+      const overrideEnabled = !!svgState.colorOverride;
+      if (overrideEnabled) {
+        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
+      }
+      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
+      this.refreshBoneHelpers();
+      if (this.currentFile) {
+        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
+      }
+    } catch (error) {
+      console.error('Failed to update SVG color offsets', error);
+      this.ui?.showToast?.('Could not update SVG color offsets');
+    }
+  }
+
+  setSvgExtrudeColorOffset({ color, offset } = {}) {
+    if (!color) return;
+    const numericOffset = Number(offset);
+    if (!Number.isFinite(numericOffset)) return;
+    const existing = { ...(this.stateStore.getState().svgExtrude?.colorOffsets || {}) };
+    const clamped = Math.max(-1.0, Math.min(1.0, numericOffset));
+    if (Math.abs(clamped) < 0.0001) {
+      delete existing[color];
+    } else {
+      existing[color] = clamped;
+    }
+    this.setSvgExtrudeColorOffsets(existing, { updateState: true });
+  }
+
+  setSvgExtrudeFlipDirection(enabled, options = {}) {
+    const { updateState = true } = options;
+    const flipDirection = !!enabled;
+    if (updateState) {
+      this.stateStore.set('svgExtrude.flipDirection', flipDirection);
+    }
+    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
+    try {
+      this.svgExtrudeImporter.setFlipDirection(flipDirection);
+      this.materialController.prepareMesh(this.currentModel);
+      this.setShading(this.currentShading);
+      const svgState = this.stateStore.getState().svgExtrude || {};
+      const overrideEnabled = !!svgState.colorOverride;
+      if (overrideEnabled) {
+        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
+      }
+      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
+      this.refreshBoneHelpers();
+      if (this.currentFile) {
+        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
+      }
+    } catch (error) {
+      console.error('Failed to update SVG extrude direction', error);
+      this.ui?.showToast?.('Could not update SVG direction');
     }
   }
 

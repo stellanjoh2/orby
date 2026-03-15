@@ -96,6 +96,9 @@ export class ResetControls {
       this.stateStore.set('fresnel', defaults.fresnel);
       this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
       this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
+      this.stateStore.set('svgExtrude.colorDepths', defaults.svgExtrude?.colorDepths ?? {});
+      this.stateStore.set('svgExtrude.colorOffsets', defaults.svgExtrude?.colorOffsets ?? {});
+      this.stateStore.set('svgExtrude.flipDirection', defaults.svgExtrude?.flipDirection ?? false);
       this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
       this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
       this.stateStore.set('advanced.reverseNormals', defaults.advanced?.reverseNormals ?? false);
@@ -124,6 +127,9 @@ export class ResetControls {
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
       this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
+      this.eventBus.emit('mesh:svg-extrude-color-depths', defaults.svgExtrude?.colorDepths ?? {});
+      this.eventBus.emit('mesh:svg-extrude-color-offsets', defaults.svgExtrude?.colorOffsets ?? {});
+      this.eventBus.emit('mesh:svg-extrude-flip-direction', defaults.svgExtrude?.flipDirection ?? false);
       this.eventBus.emit('mesh:svg-extrude-color-override', {
         enabled: defaults.svgExtrude?.colorOverride ?? false,
         color: defaults.svgExtrude?.overrideColor ?? '#7ed321',
@@ -502,10 +508,16 @@ export class ResetControls {
           case 'svg-extrude':
             this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
             this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
+            this.stateStore.set('svgExtrude.colorDepths', defaults.svgExtrude?.colorDepths ?? {});
+            this.stateStore.set('svgExtrude.colorOffsets', defaults.svgExtrude?.colorOffsets ?? {});
+            this.stateStore.set('svgExtrude.flipDirection', defaults.svgExtrude?.flipDirection ?? false);
             this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
             this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
             this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
             this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
+            this.eventBus.emit('mesh:svg-extrude-color-depths', defaults.svgExtrude?.colorDepths ?? {});
+            this.eventBus.emit('mesh:svg-extrude-color-offsets', defaults.svgExtrude?.colorOffsets ?? {});
+            this.eventBus.emit('mesh:svg-extrude-flip-direction', defaults.svgExtrude?.flipDirection ?? false);
             this.eventBus.emit('mesh:svg-extrude-color-override', {
               enabled: defaults.svgExtrude?.colorOverride ?? false,
               color: defaults.svgExtrude?.overrideColor ?? '#7ed321',

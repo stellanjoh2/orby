@@ -349,6 +349,14 @@
                     <span class="value" data-output="svgExtrudeNormalAngle">45°</span>
                   </label>
                   <label class="slider-line">
+                    <span data-tooltip="Flip extrusion direction (front/back)">Flip Direction</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="svgExtrudeFlipDirection" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Flip SVG extrusion direction</span>
+                    </label>
+                  </label>
+                  <label class="slider-line">
                     <span data-tooltip="Override imported SVG fill colors with one chosen color">Color Override</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="svgExtrudeColorOverride" />
@@ -365,6 +373,7 @@
                       value="#7ed321"
                     />
                   </label>
+                  <div id="svgExtrudeColorDepths" data-tooltip="Per-color extrusion depth overrides for imported SVG fills"></div>
                 </div>
               </div>
 

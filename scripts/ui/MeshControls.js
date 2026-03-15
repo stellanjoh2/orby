@@ -25,6 +25,7 @@ export class MeshControls {
     };
     this.svgDepthDebounceTimer = null;
     this.svgNormalDebounceTimer = null;
+    this.svgColorDebounceTimers = new Map();
   }
 
   bind() {
@@ -106,6 +107,11 @@ export class MeshControls {
       }, 60);
     });
     if (this.ui.inputs.svgExtrudeNormalAngle) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeNormalAngle);
+    this.ui.inputs.svgExtrudeFlipDirection?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('svgExtrude.flipDirection', enabled);
+      this.eventBus.emit('mesh:svg-extrude-flip-direction', enabled);
+    });
     this.ui.inputs.reverseNormals?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       this.stateStore.set('advanced.reverseNormals', enabled);
@@ -122,6 +128,49 @@ export class MeshControls {
       const enabled = !!(this.stateStore.getState().svgExtrude?.colorOverride);
       this.stateStore.set('svgExtrude.overrideColor', color);
       this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
+    });
+    this.ui.inputs.svgExtrudeColorDepths?.addEventListener('input', (event) => {
+      const input = event.target;
+      if (!input || input.tagName !== 'INPUT' || input.type !== 'range') return;
+      const color = input.dataset.color;
+      const kind = input.dataset.kind || 'depth';
+      if (!color) return;
+      const value = parseFloat(input.value);
+      const clampedValue = kind === 'offset'
+        ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
+        : (Number.isFinite(value) ? Math.max(0.01, Math.min(1.0, value)) : 0.2);
+      const sliderLine = input.closest('.slider-line');
+      const output = sliderLine?.querySelector('.value');
+      if (output) {
+        output.textContent = this.ui.formatSliderValue(clampedValue, 'decimal');
+      }
+      if (kind === 'offset') {
+        const currentOffsets = {
+          ...(this.stateStore.getState().svgExtrude?.colorOffsets || {}),
+          [color]: clampedValue,
+        };
+        this.stateStore.set('svgExtrude.colorOffsets', currentOffsets);
+      } else {
+        const currentDepths = {
+          ...(this.stateStore.getState().svgExtrude?.colorDepths || {}),
+          [color]: clampedValue,
+        };
+        this.stateStore.set('svgExtrude.colorDepths', currentDepths);
+      }
+      const timerKey = `${kind}:${color}`;
+      const existingTimer = this.svgColorDebounceTimers.get(timerKey);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+      const timer = setTimeout(() => {
+        if (kind === 'offset') {
+          this.eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: clampedValue });
+        } else {
+          this.eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
+        }
+        this.svgColorDebounceTimers.delete(timerKey);
+      }, 80);
+      this.svgColorDebounceTimers.set(timerKey, timer);
     });
 
     // Transform controls
@@ -386,6 +435,11 @@ export class MeshControls {
       this.helpers.updateValueLabel('svgExtrudeNormalAngle', normalAngle, 'angle');
       this.ui.setControlDisabled('svgExtrudeNormalAngle', !enabled);
     }
+    if (this.ui.inputs.svgExtrudeFlipDirection) {
+      const enabled = !!state.svgExtrude?.enabled;
+      this.ui.inputs.svgExtrudeFlipDirection.checked = !!state.svgExtrude?.flipDirection;
+      this.ui.setControlDisabled('svgExtrudeFlipDirection', !enabled);
+    }
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
     }
@@ -402,6 +456,7 @@ export class MeshControls {
       this.ui.inputs.svgExtrudeColor.value = color;
       this.ui.setControlDisabled('svgExtrudeColor', !(enabled && overrideEnabled));
     }
+    this.renderSvgColorDepthControls(state);
     this.ui.inputs.clayColor.value = state.clay.color;
     if (this.ui.inputs.clayNormalMap) {
       this.ui.inputs.clayNormalMap.checked = state.clay.normalMap !== false;
@@ -431,6 +486,60 @@ export class MeshControls {
 
     // Wireframe mode now uses the overlay system, so overlay controls are always enabled
     // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode
+  }
+
+  renderSvgColorDepthControls(state) {
+    const container = this.ui.inputs.svgExtrudeColorDepths;
+    if (!container) return;
+    const enabled = !!state.svgExtrude?.enabled;
+    const palette = Array.isArray(state.svgExtrude?.availableColors)
+      ? state.svgExtrude.availableColors
+      : [];
+    const overrides = state.svgExtrude?.colorDepths || {};
+    const offsets = state.svgExtrude?.colorOffsets || {};
+    const globalDepth = Number(state.svgExtrude?.depth ?? 0.2);
+
+    if (!enabled || palette.length <= 1) {
+      container.innerHTML = '';
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = '';
+
+    const rows = palette
+      .map((color, index) => {
+        const depth = Number.isFinite(Number(overrides[color]))
+          ? Number(overrides[color])
+          : globalDepth;
+        const safeDepth = Math.max(0.01, Math.min(1.0, depth));
+        const offset = Number.isFinite(Number(offsets[color])) ? Number(offsets[color]) : 0;
+        const safeOffset = Math.max(-1.0, Math.min(1.0, offset));
+        return `
+<label class="slider-line">
+  <span>
+    <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
+    Depth ${index + 1}
+  </span>
+  <input type="range" min="0.01" max="1" step="0.005" value="${safeDepth.toFixed(3)}" data-color="${color}" data-kind="depth" />
+  <span class="value">${this.ui.formatSliderValue(safeDepth, 'decimal')}</span>
+</label>
+<label class="slider-line">
+  <span>
+    <span class="color-chip" style="background:${color}; pointer-events:none; opacity:0.6;" title="${color.toUpperCase()}"></span>
+    Position ${index + 1}
+  </span>
+  <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(3)}" data-color="${color}" data-kind="offset" />
+  <span class="value">${this.ui.formatSliderValue(safeOffset, 'decimal')}</span>
+</label>`;
+      })
+      .join('');
+
+    container.innerHTML = rows;
+    const shouldDisable = !enabled;
+    container.querySelectorAll('input[type="range"]').forEach((input) => {
+      input.disabled = shouldDisable;
+      input.classList.toggle('is-disabled-handle', shouldDisable);
+    });
   }
 }
 

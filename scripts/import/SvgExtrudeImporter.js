@@ -8,6 +8,8 @@ const MAX_DEPTH = 2.0;
 const DEFAULT_NORMAL_ANGLE_DEG = 45;
 const MIN_NORMAL_ANGLE_DEG = 0;
 const MAX_NORMAL_ANGLE_DEG = 180;
+const MIN_COLOR_OFFSET = -1.0;
+const MAX_COLOR_OFFSET = 1.0;
 
 const clampDepth = (value) => {
   const numeric = Number(value);
@@ -29,6 +31,10 @@ export class SvgExtrudeImporter {
     this.group = null;
     this.currentDepth = DEFAULT_DEPTH;
     this.currentNormalAngleDeg = DEFAULT_NORMAL_ANGLE_DEG;
+    this.currentColorDepths = {};
+    this.currentColorOffsets = {};
+    this.currentColorPalette = [];
+    this.currentFlipDirection = false;
   }
 
   async loadFromFile(file, options = {}) {
@@ -44,6 +50,9 @@ export class SvgExtrudeImporter {
     this.sourceName = sourceName;
     this.currentDepth = clampDepth(options.depth ?? this.currentDepth);
     this.currentNormalAngleDeg = clampNormalAngleDeg(options.normalAngleDeg ?? this.currentNormalAngleDeg);
+    this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
+    this.currentColorOffsets = { ...(options.colorOffsets || this.currentColorOffsets || {}) };
+    this.currentFlipDirection = !!(options.flipDirection ?? this.currentFlipDirection);
     this.group = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
     return this.group;
   }
@@ -55,6 +64,28 @@ export class SvgExtrudeImporter {
     const depth = clampDepth(nextDepth);
     this.currentDepth = depth;
     const rebuilt = this._buildGroup(depth, this.currentNormalAngleDeg);
+    if (!this.group) {
+      this.group = rebuilt;
+      return this.group;
+    }
+    this._replaceChildren(this.group, rebuilt);
+    return this.group;
+  }
+
+  setColorOffsets(nextColorOffsets = {}) {
+    if (!this.svgText) {
+      throw new Error('No SVG source available for color offset update');
+    }
+    const sanitized = {};
+    Object.entries(nextColorOffsets || {}).forEach(([color, offsetValue]) => {
+      if (typeof color !== 'string') return;
+      const key = color.toLowerCase();
+      const numericOffset = Number(offsetValue);
+      if (!Number.isFinite(numericOffset)) return;
+      sanitized[key] = Math.max(MIN_COLOR_OFFSET, Math.min(MAX_COLOR_OFFSET, numericOffset));
+    });
+    this.currentColorOffsets = sanitized;
+    const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
     if (!this.group) {
       this.group = rebuilt;
       return this.group;
@@ -78,12 +109,64 @@ export class SvgExtrudeImporter {
     return this.group;
   }
 
+  setColorDepths(nextColorDepths = {}) {
+    if (!this.svgText) {
+      throw new Error('No SVG source available for color depth update');
+    }
+    const sanitized = {};
+    Object.entries(nextColorDepths || {}).forEach(([color, depthValue]) => {
+      if (typeof color !== 'string') return;
+      const key = color.toLowerCase();
+      const depth = clampDepth(depthValue);
+      if (!Number.isFinite(depth)) return;
+      sanitized[key] = depth;
+    });
+    this.currentColorDepths = sanitized;
+    const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
+    if (!this.group) {
+      this.group = rebuilt;
+      return this.group;
+    }
+    this._replaceChildren(this.group, rebuilt);
+    return this.group;
+  }
+
+  setFlipDirection(enabled) {
+    if (!this.svgText) {
+      throw new Error('No SVG source available for direction update');
+    }
+    this.currentFlipDirection = !!enabled;
+    const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
+    if (!this.group) {
+      this.group = rebuilt;
+      return this.group;
+    }
+    this._replaceChildren(this.group, rebuilt);
+    return this.group;
+  }
+
   getDepth() {
     return this.currentDepth;
   }
 
   getNormalAngleDeg() {
     return this.currentNormalAngleDeg;
+  }
+
+  getColorDepths() {
+    return { ...this.currentColorDepths };
+  }
+
+  getAvailableColors() {
+    return [...this.currentColorPalette];
+  }
+
+  getColorOffsets() {
+    return { ...this.currentColorOffsets };
+  }
+
+  getFlipDirection() {
+    return !!this.currentFlipDirection;
   }
 
   _buildGroup(depth, normalAngleDeg) {
@@ -93,6 +176,7 @@ export class SvgExtrudeImporter {
     group.userData.orbySvgExtrude = true;
     group.userData.orbySvgExtrudeDepth = depth;
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
+    group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
     const creaseAngleRad = THREE.MathUtils.degToRad(clampNormalAngleDeg(normalAngleDeg));
 
@@ -105,6 +189,7 @@ export class SvgExtrudeImporter {
 
     let meshCount = 0;
 
+    const colorPaletteSet = new Set();
     for (const path of data.paths || []) {
       const fill = path?.userData?.style?.fill;
       if (!fill || fill === 'none') continue;
@@ -115,6 +200,16 @@ export class SvgExtrudeImporter {
       if (!shapes?.length) continue;
 
       const baseColor = path.color?.isColor ? path.color.clone() : new THREE.Color(0xffffff);
+      const baseHex = `#${baseColor.getHexString().toLowerCase()}`;
+      colorPaletteSet.add(baseHex);
+      const perColorDepth = this.currentColorDepths?.[baseHex];
+      const perColorOffset = this.currentColorOffsets?.[baseHex];
+      const effectiveDepth = Number.isFinite(perColorDepth)
+        ? clampDepth(perColorDepth)
+        : depth;
+      const effectiveOffset = Number.isFinite(Number(perColorOffset))
+        ? Math.max(MIN_COLOR_OFFSET, Math.min(MAX_COLOR_OFFSET, Number(perColorOffset)))
+        : 0;
       const material = new THREE.MeshStandardMaterial({
         color: baseColor,
         roughness: 0.8,
@@ -123,7 +218,10 @@ export class SvgExtrudeImporter {
       });
 
       for (const shape of shapes) {
-        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const geometry = new THREE.ExtrudeGeometry(shape, {
+          ...extrudeSettings,
+          depth: effectiveDepth,
+        });
         // Smooth curved surfaces while preserving sharper corners via crease angle.
         const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
         geometry.dispose();
@@ -131,6 +229,8 @@ export class SvgExtrudeImporter {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
+        mesh.userData.orbySvgEffectiveDepth = effectiveDepth;
+        mesh.userData.orbySvgColorOffset = effectiveOffset;
         mesh.userData.orbySvgBaseColor = `#${baseColor.getHexString()}`;
         mesh.userData.orbySvgBaseColorLinear = {
           r: baseColor.r,
@@ -147,8 +247,10 @@ export class SvgExtrudeImporter {
     if (!meshCount) {
       throw new Error('SVG has no filled paths to extrude');
     }
+    this.currentColorPalette = [...colorPaletteSet].sort();
 
     this._normalizeGeometrySpace(group);
+    this._applyDirectionOffset(group, this.currentFlipDirection);
     return group;
   }
 
@@ -208,6 +310,21 @@ export class SvgExtrudeImporter {
     targetGroup.scale.copy(sourceGroup.scale);
     targetGroup.position.copy(sourceGroup.position);
     targetGroup.rotation.copy(sourceGroup.rotation);
+  }
+
+  _applyDirectionOffset(group, flipDirection) {
+    group.traverse((child) => {
+      if (!child.isMesh || !child.geometry) return;
+      const depth = clampDepth(child.userData?.orbySvgEffectiveDepth ?? this.currentDepth);
+      const colorOffset = Math.max(
+        MIN_COLOR_OFFSET,
+        Math.min(MAX_COLOR_OFFSET, Number(child.userData?.orbySvgColorOffset ?? 0)),
+      );
+      const directionOffset = (flipDirection ? 1 : -1) * depth * 0.5;
+      child.geometry.translate(0, 0, directionOffset + colorOffset);
+      child.geometry.computeBoundingBox();
+      child.geometry.computeBoundingSphere();
+    });
   }
 
   _disposeNode(node) {

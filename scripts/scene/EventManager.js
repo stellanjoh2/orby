@@ -44,6 +44,11 @@ export class EventManager {
     });
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
+    eventBus.on('mesh:svg-extrude-color-depths', (payload) => s.setSvgExtrudeColorDepths(payload));
+    eventBus.on('mesh:svg-extrude-color-depth', (payload) => s.setSvgExtrudeColorDepth(payload));
+    eventBus.on('mesh:svg-extrude-color-offsets', (payload) => s.setSvgExtrudeColorOffsets(payload));
+    eventBus.on('mesh:svg-extrude-color-offset', (payload) => s.setSvgExtrudeColorOffset(payload));
+    eventBus.on('mesh:svg-extrude-flip-direction', (enabled) => s.setSvgExtrudeFlipDirection(enabled));
     eventBus.on('mesh:reverse-normals', (enabled) => s.setReverseNormals(enabled));
     eventBus.on('mesh:svg-extrude-color-override', (settings) => s.setSvgExtrudeColorOverride(settings));
     // Legacy support

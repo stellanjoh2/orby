@@ -53,6 +53,9 @@ export class SceneSettingsManager {
       svgExtrude: {
         depth: state.svgExtrude?.depth ?? 0.2,
         normalAngle: state.svgExtrude?.normalAngle ?? 45,
+        colorDepths: state.svgExtrude?.colorDepths ?? {},
+        colorOffsets: state.svgExtrude?.colorOffsets ?? {},
+        flipDirection: !!state.svgExtrude?.flipDirection,
         colorOverride: !!state.svgExtrude?.colorOverride,
         overrideColor: state.svgExtrude?.overrideColor ?? '#7ed321',
       },
@@ -238,6 +241,19 @@ export class SceneSettingsManager {
       if (payload.svgExtrude?.normalAngle !== undefined) {
         this.stateStore.set('svgExtrude.normalAngle', payload.svgExtrude.normalAngle);
         this.eventBus.emit('mesh:svg-extrude-normal-angle', payload.svgExtrude.normalAngle);
+      }
+      if (payload.svgExtrude?.colorDepths !== undefined) {
+        this.stateStore.set('svgExtrude.colorDepths', payload.svgExtrude.colorDepths || {});
+        this.eventBus.emit('mesh:svg-extrude-color-depths', payload.svgExtrude.colorDepths || {});
+      }
+      if (payload.svgExtrude?.colorOffsets !== undefined) {
+        this.stateStore.set('svgExtrude.colorOffsets', payload.svgExtrude.colorOffsets || {});
+        this.eventBus.emit('mesh:svg-extrude-color-offsets', payload.svgExtrude.colorOffsets || {});
+      }
+      if (payload.svgExtrude?.flipDirection !== undefined) {
+        const enabled = !!payload.svgExtrude.flipDirection;
+        this.stateStore.set('svgExtrude.flipDirection', enabled);
+        this.eventBus.emit('mesh:svg-extrude-flip-direction', enabled);
       }
       if (payload.svgExtrude?.colorOverride !== undefined || payload.svgExtrude?.overrideColor !== undefined) {
         const enabled = !!payload.svgExtrude?.colorOverride;

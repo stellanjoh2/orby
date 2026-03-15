@@ -159,7 +159,16 @@ export class ModelLoader {
   async loadSvg(file, options = {}) {
     const depth = options.svgExtrudeDepth;
     const normalAngleDeg = options.svgExtrudeNormalAngle;
-    const object = await this.svgExtrudeImporter.loadFromFile(file, { depth, normalAngleDeg });
+    const colorDepths = options.svgExtrudeColorDepths || {};
+    const colorOffsets = options.svgExtrudeColorOffsets || {};
+    const flipDirection = !!options.svgExtrudeFlipDirection;
+    const object = await this.svgExtrudeImporter.loadFromFile(file, {
+      depth,
+      normalAngleDeg,
+      colorDepths,
+      colorOffsets,
+      flipDirection,
+    });
     const assetName = file.name.replace(/\.[^/.]+$/, '') || 'SVG';
     return {
       object,
@@ -174,6 +183,10 @@ export class ModelLoader {
         enabled: true,
         depth: this.svgExtrudeImporter.getDepth(),
         normalAngle: this.svgExtrudeImporter.getNormalAngleDeg(),
+        colorDepths: this.svgExtrudeImporter.getColorDepths(),
+        colorOffsets: this.svgExtrudeImporter.getColorOffsets(),
+        colors: this.svgExtrudeImporter.getAvailableColors(),
+        flipDirection: this.svgExtrudeImporter.getFlipDirection(),
         importer: this.svgExtrudeImporter,
       },
     };
