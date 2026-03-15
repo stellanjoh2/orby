@@ -723,13 +723,21 @@ body.dropzone-visible #webgl {
 }
 
 .dropzone.drag-active {
-  box-shadow: inset 0 0 50px var(--accent-muted), 0 0 25px var(--accent-glow);
+  box-shadow:
+    inset 0 0 50px color-mix(in srgb, #00eaff 22%, transparent),
+    0 0 25px color-mix(in srgb, #00eaff 55%, transparent);
 }
 
 .dropzone.drag-active::before {
-  border-color: var(--drop-outline-active);
-  background: linear-gradient(120deg, var(--drop-fill-active), transparent);
-  box-shadow: 0 0 40px var(--accent-glow), inset 0 0 30px var(--accent-muted);
+  border-color: color-mix(in srgb, #00eaff 90%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, #00eaff 24%, transparent),
+    transparent
+  );
+  box-shadow:
+    0 0 40px color-mix(in srgb, #00eaff 60%, transparent),
+    inset 0 0 30px color-mix(in srgb, #00eaff 18%, transparent);
 }
 
 .drop-logo {
