@@ -28,6 +28,25 @@ export class ResetControls {
     this.ui.buttons.copySceneButtons?.forEach(button => {
       button.addEventListener('click', copyScene);
     });
+    const saveOrby = async () => {
+      const result = await this.ui.sceneSettingsManager.saveOrbyToFile();
+      this.helpers.showToast(result.message);
+    };
+    this.ui.buttons.saveOrbyButtons?.forEach((button) => {
+      button.addEventListener('click', saveOrby);
+    });
+    this.ui.buttons.loadOrbyButtons?.forEach((button) => {
+      button.addEventListener('click', () => {
+        this.ui.buttons.orbyFileInput?.click();
+      });
+    });
+    this.ui.buttons.orbyFileInput?.addEventListener('change', async (event) => {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      const result = await this.ui.sceneSettingsManager.loadOrbyFromFile(file);
+      this.helpers.showToast(result.message);
+      event.target.value = '';
+    });
 
     // Load Scene Settings - Show modal
     this.ui.buttons.loadSceneButtons?.forEach(button => {

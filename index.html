@@ -57,9 +57,14 @@
           <div class="dropzone" id="dropzone">
             <div id="logotypeAnimation" class="drop-logo"></div>
             <p class="drop-primary">Drag and drop your <span class="brand-highlight">3D model</span> or <span class="brand-highlight">SVG</span> here</p>
-            <button id="browseButton" class="dropzone-btn">
-              Browse Files
-            </button>
+            <div class="dropzone-actions">
+              <button id="browseButton" class="dropzone-btn">
+                Browse Files
+              </button>
+              <button class="dropzone-btn load-orby-scene" data-tooltip="Load entire scene and model from .orby file">
+                Load Scene
+              </button>
+            </div>
             <p class="drop-secondary">Orby is optimized for .gltf/.glb, and supports SVG extrusion. Files stay local and private. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
             <div class="quick-start-guide">
               <span><strong>V</strong> — Hide UI</span>
@@ -708,11 +713,20 @@
               </button>
                   <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
                     <i class="fa-solid fa-copy"></i>
-                    Copy Scene
+                    Copy Scene Settings
               </button>
                   <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
                     <i class="fa-solid fa-upload"></i>
-                    Load Scene
+                    Load Scene Settings
+                  </button>
+                  <div class="scene-controls-divider" aria-hidden="true"></div>
+                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save .orby Scene
+                  </button>
+                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                    <i class="fa-solid fa-file-import"></i>
+                    Load .orby Scene
                   </button>
                 </div>
               </div>
@@ -1152,11 +1166,20 @@
               </button>
                   <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
                     <i class="fa-solid fa-copy"></i>
-                    Copy Scene
+                    Copy Scene Settings
                   </button>
                   <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
                     <i class="fa-solid fa-upload"></i>
-                    Load Scene
+                    Load Scene Settings
+                  </button>
+                  <div class="scene-controls-divider" aria-hidden="true"></div>
+                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save .orby Scene
+                  </button>
+                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                    <i class="fa-solid fa-file-import"></i>
+                    Load .orby Scene
                   </button>
                 </div>
               </div>
@@ -1696,11 +1719,20 @@
               </button>
                   <button class="copy-scene-settings accent-action-btn" data-tooltip="Copy all scene settings to clipboard">
                     <i class="fa-solid fa-copy"></i>
-                    Copy Scene
+                    Copy Scene Settings
               </button>
                   <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
                     <i class="fa-solid fa-upload"></i>
-                    Load Scene
+                    Load Scene Settings
+                  </button>
+                  <div class="scene-controls-divider" aria-hidden="true"></div>
+                  <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save .orby Scene
+                  </button>
+                  <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
+                    <i class="fa-solid fa-file-import"></i>
+                    Load .orby Scene
                   </button>
                 </div>
               </div>
@@ -2178,7 +2210,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.160 · 2026-03-15 19:32:57 UTC</div>
+              <div class="info-version-tag">v0.5.161 · 2026-03-15 20:37:13 UTC</div>
             </section>
           </div>
         </aside>
@@ -2198,6 +2230,12 @@
         }
       }
     </script>
+    <input
+      type="file"
+      id="orbyFileInput"
+      class="sr-only"
+      accept=".orby,application/json"
+    />
     <script type="module" src="./scripts/main.js"></script>
     
     <!-- Global Load Scene Settings Modal -->

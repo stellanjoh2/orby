@@ -1114,10 +1114,12 @@ export class SceneManager {
       if (!options.silent) {
         this.ui.showToast('Model loaded');
       }
+      this.eventBus.emit('scene:model-load-complete', { success: true, file });
     } catch (error) {
       console.error('Failed to load model', error);
       this.ui.showToast('Could not load model');
       this.ui.setDropzoneVisible(true);
+      this.eventBus.emit('scene:model-load-complete', { success: false, file, error });
     }
   }
 
@@ -1134,9 +1136,11 @@ export class SceneManager {
       this._applyAssetMetadata(asset);
       this.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
         this.ui.showToast('Folder loaded');
+      this.eventBus.emit('scene:model-load-complete', { success: true, file: sourceFile });
     } catch (error) {
         console.error('Folder load failed', error);
       this.ui.showToast(error.message || 'Folder load failed');
+      this.eventBus.emit('scene:model-load-complete', { success: false, error });
     }
   }
 

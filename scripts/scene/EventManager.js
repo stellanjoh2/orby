@@ -252,6 +252,9 @@ export class EventManager {
         s.ui.showToast('No model to reload');
       }
     });
+    eventBus.on('scene:get-current-file', () => {
+      eventBus.emit('scene:current-file', { file: s.currentFile || null });
+    });
 
     // Animation events
     eventBus.on('animation:toggle', () => s.animationController.togglePlayback());

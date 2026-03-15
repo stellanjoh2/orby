@@ -150,6 +150,147 @@ export class SceneSettingsManager {
     }
   }
 
+  async getCurrentFile() {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const handler = (payload) => {
+        if (resolved) return;
+        resolved = true;
+        this.eventBus.off('scene:current-file', handler);
+        resolve(payload?.file || null);
+      };
+      this.eventBus.on('scene:current-file', handler);
+      this.eventBus.emit('scene:get-current-file');
+      // Defensive timeout to avoid hanging forever if listener is missing.
+      setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        this.eventBus.off('scene:current-file', handler);
+        resolve(null);
+      }, 1500);
+    });
+  }
+
+  arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+  }
+
+  base64ToUint8Array(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  async saveOrbyToFile() {
+    try {
+      const sceneSettings = await this.buildSceneSettingsPayload();
+      const sourceFile = await this.getCurrentFile();
+      if (!sourceFile) {
+        return { success: false, message: 'Load a mesh before saving .orby' };
+      }
+
+      const fileBuffer = await sourceFile.arrayBuffer();
+      const orbyPayload = {
+        type: 'orby-scene',
+        schemaVersion: 1,
+        createdAt: new Date().toISOString(),
+        sceneSettings,
+        asset: {
+          name: sourceFile.name || 'model',
+          type: sourceFile.type || '',
+          lastModified: sourceFile.lastModified || Date.now(),
+          dataBase64: this.arrayBufferToBase64(fileBuffer),
+        },
+      };
+
+      const text = JSON.stringify(orbyPayload);
+      const blob = new Blob([text], { type: 'application/json' });
+      const baseName = (sourceFile.name || 'scene').replace(/\.[^/.]+$/, '');
+      const fileName = `${baseName}.orby`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      return { success: true, message: '.orby scene saved' };
+    } catch (error) {
+      console.error('Failed to save .orby scene', error);
+      return { success: false, message: 'Failed to save .orby scene' };
+    }
+  }
+
+  async loadOrbyFromFile(file) {
+    try {
+      if (!file) {
+        return { success: false, message: 'No .orby file selected' };
+      }
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      if (payload?.type !== 'orby-scene' || !payload?.asset?.dataBase64 || !payload?.sceneSettings) {
+        return { success: false, message: 'Invalid .orby file' };
+      }
+      const bytes = this.base64ToUint8Array(payload.asset.dataBase64);
+      const embeddedFile = new File(
+        [bytes],
+        payload.asset.name || 'model.glb',
+        {
+          type: payload.asset.type || 'application/octet-stream',
+          lastModified: payload.asset.lastModified || Date.now(),
+        },
+      );
+
+      // Always start from a clean baseline so no stale settings leak from current scene.
+      this.stateStore.reset();
+      this.eventBus.emit('app:reset');
+
+      const loadComplete = new Promise((resolve) => {
+        let done = false;
+        const handler = (result) => {
+          if (done) return;
+          done = true;
+          this.eventBus.off('scene:model-load-complete', handler);
+          resolve(result || { success: false });
+        };
+        this.eventBus.on('scene:model-load-complete', handler);
+        setTimeout(() => {
+          if (done) return;
+          done = true;
+          this.eventBus.off('scene:model-load-complete', handler);
+          resolve({ success: false, timeout: true });
+        }, 12000);
+      });
+      this.eventBus.emit('file:selected', embeddedFile);
+      const modelLoadResult = await loadComplete;
+      if (!modelLoadResult?.success) {
+        return { success: false, message: 'Failed to load mesh from .orby file' };
+      }
+
+      // Apply saved scene settings after mesh load to ensure all controls (including
+      // podium/ground colors and model-dependent settings) overwrite defaults cleanly.
+      const sceneLoadResult = this.loadFromText(JSON.stringify(payload.sceneSettings));
+      if (!sceneLoadResult.success) {
+        return sceneLoadResult;
+      }
+      return { success: true, message: '.orby scene loaded' };
+    } catch (error) {
+      console.error('Error loading .orby scene:', error);
+      return { success: false, message: 'Failed to load .orby file' };
+    }
+  }
+
   /**
    * Loads scene settings from JSON text
    */
