@@ -7,6 +7,9 @@ import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 
+const FBX_TARGET_MAX_DIMENSION = 2.0;
+const FBX_SCALE_NORMALIZE_THRESHOLD = 20.0;
+
 export class ModelLoader {
   constructor() {
     this.fileReaders = {
@@ -282,10 +285,96 @@ export class ModelLoader {
     return new Promise((resolve, reject) => {
       try {
         const object = this.fbxLoader.parse(buffer, '');
+        this.normalizeFbxScale(object);
+        this.applyFbxVertexColorFallback(object);
         resolve({ object, animations: object.animations ?? [] });
       } catch (error) {
         reject(error);
       }
+    });
+  }
+
+  normalizeFbxScale(object) {
+    if (!object) return;
+    const bounds = new THREE.Box3().setFromObject(object);
+    if (!bounds || bounds.isEmpty()) return;
+    const size = new THREE.Vector3();
+    bounds.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (!Number.isFinite(maxDim) || maxDim <= FBX_SCALE_NORMALIZE_THRESHOLD) return;
+    const uniformScale = FBX_TARGET_MAX_DIMENSION / maxDim;
+    if (!Number.isFinite(uniformScale) || uniformScale <= 0) return;
+    object.scale.multiplyScalar(uniformScale);
+    object.updateMatrixWorld(true);
+  }
+
+  applyFbxVertexColorFallback(object) {
+    if (!object) return;
+    object.traverse((child) => {
+      if (!child?.isMesh || !child.geometry) return;
+      const hasVertexColor = !!child.geometry.getAttribute?.('color');
+      if (hasVertexColor && !child.geometry.getAttribute('normal')) {
+        child.geometry.computeVertexNormals();
+      }
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      const patched = materials.map((material) => {
+        if (!material) {
+          return new THREE.MeshStandardMaterial({
+            color: hasVertexColor ? 0xffffff : 0xababab,
+            roughness: 0.85,
+            metalness: 0.0,
+            vertexColors: hasVertexColor,
+          });
+        }
+
+        if (!hasVertexColor) return material;
+
+        const hasAnyTextureMap = !!(
+          material.map ||
+          material.normalMap ||
+          material.emissiveMap ||
+          material.roughnessMap ||
+          material.metalnessMap ||
+          material.specularMap
+        );
+
+        // For untextured vertex-color FBX meshes, use a known-good PBR material path.
+        // This avoids loader-specific material quirks that can render black in lit mode.
+        if (!hasAnyTextureMap) {
+          return new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.9,
+            metalness: 0.0,
+            vertexColors: true,
+            side: material.side ?? THREE.DoubleSide,
+            transparent: false,
+            opacity: 1.0,
+            depthWrite: true,
+            depthTest: true,
+          });
+        }
+
+        // Preserve original material type where possible, but force vertex color usage.
+        if ('vertexColors' in material) {
+          material.vertexColors = true;
+        }
+
+        // If source material is near-black with no texture map, white-balance it so
+        // vertex colors remain visible under lit shading.
+        const hasMap = !!material.map;
+        const isVeryDark =
+          material.color &&
+          Number.isFinite(material.color.r) &&
+          Number.isFinite(material.color.g) &&
+          Number.isFinite(material.color.b) &&
+          Math.max(material.color.r, material.color.g, material.color.b) < 0.08;
+        if (!hasMap && isVeryDark && material.color) {
+          material.color.setRGB(1, 1, 1);
+        }
+        material.needsUpdate = true;
+        return material;
+      });
+      child.material = Array.isArray(child.material) ? patched : patched[0];
     });
   }
 

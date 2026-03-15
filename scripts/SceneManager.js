@@ -1488,8 +1488,8 @@ export class SceneManager {
         this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
       }
     } catch (error) {
-      console.error('Failed to update SVG normal angle', error);
-      this.ui?.showToast?.('Could not update SVG normal angle');
+      console.error('Failed to update SVG smoothing angle', error);
+      this.ui?.showToast?.('Could not update SVG smoothing angle');
     }
   }
 

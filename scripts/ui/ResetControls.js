@@ -523,6 +523,7 @@ export class ResetControls {
               color: defaults.svgExtrude?.overrideColor ?? '#7ed321',
             });
             this.ui.syncUIFromState();
+            this.helpers.showToast('SVG Extrude settings reset');
             break;
 
           case 'advanced':

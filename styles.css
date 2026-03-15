@@ -1678,6 +1678,21 @@ input[type='range']:disabled::-moz-range-thumb {
   margin-left: 4px;
 }
 
+#svgExtrudeColorDepths {
+  margin-top: 0.35rem;
+}
+
+#svgExtrudeColorDepths .slider-line {
+  margin-bottom: 0.45rem;
+}
+
+.svg-extrude-note {
+  margin: 0.35rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .info-version-tag {
   display: block;
   margin-top: 1.75rem;

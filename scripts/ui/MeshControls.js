@@ -91,7 +91,7 @@ export class MeshControls {
       }
       this.svgDepthDebounceTimer = setTimeout(() => {
         this.eventBus.emit('mesh:svg-extrude-depth', clampedValue);
-      }, 60);
+      }, 45);
     });
     if (this.ui.inputs.svgExtrudeDepth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeDepth);
     this.ui.inputs.svgExtrudeNormalAngle?.addEventListener('input', (event) => {
@@ -104,7 +104,7 @@ export class MeshControls {
       }
       this.svgNormalDebounceTimer = setTimeout(() => {
         this.eventBus.emit('mesh:svg-extrude-normal-angle', clampedValue);
-      }, 60);
+      }, 45);
     });
     if (this.ui.inputs.svgExtrudeNormalAngle) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeNormalAngle);
     this.ui.inputs.svgExtrudeFlipDirection?.addEventListener('change', (event) => {
@@ -169,7 +169,7 @@ export class MeshControls {
           this.eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
         }
         this.svgColorDebounceTimers.delete(timerKey);
-      }, 80);
+      }, 50);
       this.svgColorDebounceTimers.set(timerKey, timer);
     });
 
@@ -499,9 +499,21 @@ export class MeshControls {
     const offsets = state.svgExtrude?.colorOffsets || {};
     const globalDepth = Number(state.svgExtrude?.depth ?? 0.2);
 
-    if (!enabled || palette.length <= 1) {
+    if (!enabled) {
       container.innerHTML = '';
       container.style.display = 'none';
+      return;
+    }
+
+    if (palette.length === 0) {
+      container.innerHTML = '<div class="svg-extrude-note">Per-color controls appear after importing an SVG with fill colors.</div>';
+      container.style.display = '';
+      return;
+    }
+
+    if (palette.length === 1) {
+      container.innerHTML = '<div class="svg-extrude-note">Only one fill color detected, so per-color controls are hidden.</div>';
+      container.style.display = '';
       return;
     }
     container.style.display = '';
@@ -520,7 +532,7 @@ export class MeshControls {
     <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
     Depth ${index + 1}
   </span>
-  <input type="range" min="0.01" max="1" step="0.005" value="${safeDepth.toFixed(3)}" data-color="${color}" data-kind="depth" />
+  <input type="range" min="0.01" max="1" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
   <span class="value">${this.ui.formatSliderValue(safeDepth, 'decimal')}</span>
 </label>
 <label class="slider-line">
@@ -528,7 +540,7 @@ export class MeshControls {
     <span class="color-chip" style="background:${color}; pointer-events:none; opacity:0.6;" title="${color.toUpperCase()}"></span>
     Position ${index + 1}
   </span>
-  <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(3)}" data-color="${color}" data-kind="offset" />
+  <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position ${index + 1} (${color.toUpperCase()})" title="Position for ${color.toUpperCase()}" />
   <span class="value">${this.ui.formatSliderValue(safeOffset, 'decimal')}</span>
 </label>`;
       })

@@ -325,7 +325,7 @@
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Extrusion depth for imported SVG files">Depth</span>
+                    <span data-tooltip="Global depth for all imported SVG fills">Depth</span>
                     <input
                       id="svgExtrudeDepth"
                       type="range"
@@ -337,7 +337,7 @@
                     <span class="value" data-output="svgExtrudeDepth">0.20</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Average normal angle (0 = faceted, higher = smoother)">Normal Angle</span>
+                    <span data-tooltip="Controls surface smoothing (0 = faceted edges, higher = smoother highlights)">Smoothing Angle</span>
                     <input
                       id="svgExtrudeNormalAngle"
                       type="range"
@@ -349,7 +349,7 @@
                     <span class="value" data-output="svgExtrudeNormalAngle">45°</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Flip extrusion direction (front/back)">Flip Direction</span>
+                    <span data-tooltip="Inverts extrusion direction along the Z axis">Flip Direction</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="svgExtrudeFlipDirection" />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -357,7 +357,7 @@
                     </label>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Override imported SVG fill colors with one chosen color">Color Override</span>
+                    <span data-tooltip="Replace all imported SVG fills with one chosen color">Color Override</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="svgExtrudeColorOverride" />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -365,7 +365,7 @@
                     </label>
                   </label>
                   <label class="color-line">
-                    <span data-tooltip="Pick the override color for SVG extrusion">Override Color</span>
+                    <span data-tooltip="Color used when Color Override is enabled">Override Color</span>
                     <input
                       type="color"
                       id="svgExtrudeColor"
@@ -373,7 +373,8 @@
                       value="#7ed321"
                     />
                   </label>
-                  <div id="svgExtrudeColorDepths" data-tooltip="Per-color extrusion depth overrides for imported SVG fills"></div>
+                  <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
+                  <p class="svg-extrude-note" data-tooltip="Higher triangulation quality can increase polycount and rebuild time on complex logos">Tip: dense logos may rebuild slightly slower when adjusting per-color controls.</p>
                 </div>
               </div>
 
@@ -1724,6 +1725,7 @@
                   <a href="#info-gamepad">Gamepad</a>
                   <a href="#info-features">Key Features</a>
                   <a href="#info-faq">Feature FAQ</a>
+                  <a href="#info-svg-extrude">SVG Extrude</a>
                   <a href="#info-performance">Performance</a>
                   <a href="#info-learn">Learn More</a>
                   <a href="#info-about">About Orby</a>
@@ -1955,6 +1957,7 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, grain, chromatic aberration, and color grading for cinematic results</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and auto-rotate</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">High-quality export</span> — Export PNG images at 1x or 2x resolution with transparent background support</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
@@ -2020,6 +2023,24 @@
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Scene Settings</h4>
                     <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Copy and paste all your settings (lighting, camera, effects, materials) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
                   </div>
+                </div>
+              </div>
+
+              <div class="panel-block" id="info-svg-extrude">
+                <div class="block-title"><i class="fa-solid fa-bezier-curve" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>SVG Extrude</div>
+                <div class="about-content">
+                  <p style="margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    Orby can convert SVG fills into 3D meshes. After importing an SVG, use the <strong>Object → SVG Extrude</strong> block to control form and shading.
+                  </p>
+                  <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    <li style="margin-bottom: 0.35rem;"><strong>Depth:</strong> Sets global extrusion depth for all SVG fills.</li>
+                    <li style="margin-bottom: 0.35rem;"><strong>Smoothing Angle:</strong> Controls normal smoothing (lower = faceted edges, higher = smoother highlights).</li>
+                    <li style="margin-bottom: 0.35rem;"><strong>Flip Direction:</strong> Inverts front/back extrusion direction.</li>
+                    <li style="margin-bottom: 0.35rem;"><strong>Color Override:</strong> Replaces imported SVG fill colors with a single chosen color.</li>
+                    <li style="margin-bottom: 0.35rem;"><strong>Per-color Depth/Position:</strong> Fine-tune each detected fill color independently for layered logo effects.</li>
+                    <li style="margin-bottom: 0.35rem;"><strong>Scene Settings Support:</strong> SVG extrude controls are included when copying/loading scene settings.</li>
+                    <li><strong>SVG to GLB Export:</strong> Exported SVG meshes are saved as opaque GLB materials for predictable shading across viewers.</li>
+                  </ul>
                 </div>
               </div>
 
