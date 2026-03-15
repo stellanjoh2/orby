@@ -132,6 +132,11 @@ export class SvgExtrudeImporter {
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
         mesh.userData.orbySvgBaseColor = `#${baseColor.getHexString()}`;
+        mesh.userData.orbySvgBaseColorLinear = {
+          r: baseColor.r,
+          g: baseColor.g,
+          b: baseColor.b,
+        };
         group.add(mesh);
         meshCount += 1;
       }

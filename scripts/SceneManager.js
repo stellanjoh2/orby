@@ -1408,8 +1408,12 @@ export class SceneManager {
       this.svgExtrudeImporter.setDepth(depth);
       // Register rebuilt meshes as originals so material controls keep working.
       this.materialController.prepareMesh(this.currentModel);
-      this.setSvgExtrudeColorOverride(this.stateStore.getState().svgExtrude || {}, { updateState: false });
       this.setShading(this.currentShading);
+      const svgState = this.stateStore.getState().svgExtrude || {};
+      const overrideEnabled = !!svgState.colorOverride;
+      if (overrideEnabled) {
+        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
+      }
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -1426,8 +1430,12 @@ export class SceneManager {
     try {
       this.svgExtrudeImporter.setNormalAngleDeg(normalAngle);
       this.materialController.prepareMesh(this.currentModel);
-      this.setSvgExtrudeColorOverride(this.stateStore.getState().svgExtrude || {}, { updateState: false });
       this.setShading(this.currentShading);
+      const svgState = this.stateStore.getState().svgExtrude || {};
+      const overrideEnabled = !!svgState.colorOverride;
+      if (overrideEnabled) {
+        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
+      }
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -1514,7 +1522,7 @@ export class SceneManager {
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {
     const { updateState = true } = options;
-    const enabled = !!settings.enabled;
+    const enabled = !!(settings.enabled ?? settings.colorOverride);
     const color = settings.color || settings.overrideColor || '#7ed321';
     if (updateState) {
       this.stateStore.set('svgExtrude.colorOverride', enabled);
@@ -1525,7 +1533,11 @@ export class SceneManager {
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
       const baseHex = child.userData.orbySvgBaseColor || '#ffffff';
-      const targetColor = enabled ? overrideColor : new THREE.Color(baseHex);
+      const baseLinear = child.userData.orbySvgBaseColorLinear;
+      const baseColor = (baseLinear && Number.isFinite(baseLinear.r) && Number.isFinite(baseLinear.g) && Number.isFinite(baseLinear.b))
+        ? new THREE.Color().setRGB(baseLinear.r, baseLinear.g, baseLinear.b)
+        : new THREE.Color(baseHex);
+      const targetColor = enabled ? overrideColor : baseColor;
       const originalMaterial = this.materialController.getOriginalMaterial(child);
       const applyColor = (material) => {
         if (!material) return;
