@@ -598,9 +598,6 @@ export class SceneManager {
     if (state.svgExtrude?.depth !== undefined) {
       this.setSvgExtrudeDepth(state.svgExtrude.depth);
     }
-    if (state.svgExtrude?.bevelWidth !== undefined) {
-      this.setSvgExtrudeBevelWidth(state.svgExtrude.bevelWidth);
-    }
     if (state.svgExtrude?.normalAngle !== undefined) {
       this.setSvgExtrudeNormalAngle(state.svgExtrude.normalAngle);
     }
@@ -1089,7 +1086,6 @@ export class SceneManager {
       const svgExtrudeState = this.stateStore.getState()?.svgExtrude || {};
       const asset = await this.modelLoader.loadFile(file, {
         svgExtrudeDepth: svgExtrudeState.depth,
-        svgExtrudeBevelWidth: svgExtrudeState.bevelWidth,
         svgExtrudeNormalAngle: svgExtrudeState.normalAngle,
       });
       this.setModel(asset.object, asset.animations ?? []);
@@ -1157,8 +1153,6 @@ export class SceneManager {
     if (isSvgExtrude) {
       const nextDepth = svgExtrude.depth ?? this.stateStore.getState()?.svgExtrude?.depth ?? 0.2;
       this.stateStore.set('svgExtrude.depth', nextDepth);
-      const nextBevel = svgExtrude.bevelWidth ?? this.stateStore.getState()?.svgExtrude?.bevelWidth ?? 0.02;
-      this.stateStore.set('svgExtrude.bevelWidth', nextBevel);
       const nextNormalAngle = svgExtrude.normalAngle ?? this.stateStore.getState()?.svgExtrude?.normalAngle ?? 45;
       this.stateStore.set('svgExtrude.normalAngle', nextNormalAngle);
       const svgState = this.stateStore.getState().svgExtrude || {};
@@ -1393,23 +1387,6 @@ export class SceneManager {
     } catch (error) {
       console.error('Failed to update SVG extrusion depth', error);
       this.ui?.showToast?.('Could not update SVG depth');
-    }
-  }
-
-  setSvgExtrudeBevelWidth(bevelWidth) {
-    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
-    try {
-      this.svgExtrudeImporter.setBevelWidth(bevelWidth);
-      this.materialController.prepareMesh(this.currentModel);
-      this.setSvgExtrudeColorOverride(this.stateStore.getState().svgExtrude || {}, { updateState: false });
-      this.setShading(this.currentShading);
-      this.refreshBoneHelpers();
-      if (this.currentFile) {
-        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
-      }
-    } catch (error) {
-      console.error('Failed to update SVG bevel width', error);
-      this.ui?.showToast?.('Could not update SVG bevel');
     }
   }
 

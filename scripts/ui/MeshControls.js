@@ -93,14 +93,6 @@ export class MeshControls {
       }, 60);
     });
     if (this.ui.inputs.svgExtrudeDepth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeDepth);
-    this.ui.inputs.svgExtrudeBevelWidth?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(0.15, value)) : 0.02;
-      this.helpers.updateValueLabel('svgExtrudeBevelWidth', clampedValue, 'decimal', 3);
-      this.stateStore.set('svgExtrude.bevelWidth', clampedValue);
-      this.eventBus.emit('mesh:svg-extrude-bevel-width', clampedValue);
-    });
-    if (this.ui.inputs.svgExtrudeBevelWidth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeBevelWidth);
     this.ui.inputs.svgExtrudeNormalAngle?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(180, value)) : 45;
@@ -381,13 +373,6 @@ export class MeshControls {
       this.ui.inputs.svgExtrudeDepth.value = depth;
       this.helpers.updateValueLabel('svgExtrudeDepth', depth, 'decimal');
       this.ui.setControlDisabled('svgExtrudeDepth', !state.svgExtrude?.enabled);
-    }
-    if (this.ui.inputs.svgExtrudeBevelWidth) {
-      const enabled = !!state.svgExtrude?.enabled;
-      const bevelWidth = state.svgExtrude?.bevelWidth ?? 0.02;
-      this.ui.inputs.svgExtrudeBevelWidth.value = bevelWidth;
-      this.helpers.updateValueLabel('svgExtrudeBevelWidth', bevelWidth, 'decimal', 3);
-      this.ui.setControlDisabled('svgExtrudeBevelWidth', !enabled);
     }
     if (this.ui.inputs.svgExtrudeNormalAngle) {
       const enabled = !!state.svgExtrude?.enabled;

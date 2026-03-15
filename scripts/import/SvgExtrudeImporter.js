@@ -5,9 +5,6 @@ import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/exa
 const DEFAULT_DEPTH = 0.2;
 const MIN_DEPTH = 0.01;
 const MAX_DEPTH = 2.0;
-const DEFAULT_BEVEL_WIDTH = 0.02;
-const MIN_BEVEL_WIDTH = 0.0;
-const MAX_BEVEL_WIDTH = 0.15;
 const DEFAULT_NORMAL_ANGLE_DEG = 45;
 const MIN_NORMAL_ANGLE_DEG = 0;
 const MAX_NORMAL_ANGLE_DEG = 180;
@@ -16,12 +13,6 @@ const clampDepth = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return DEFAULT_DEPTH;
   return Math.max(MIN_DEPTH, Math.min(MAX_DEPTH, numeric));
-};
-
-const clampBevelWidth = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return DEFAULT_BEVEL_WIDTH;
-  return Math.max(MIN_BEVEL_WIDTH, Math.min(MAX_BEVEL_WIDTH, numeric));
 };
 
 const clampNormalAngleDeg = (value) => {
@@ -37,7 +28,6 @@ export class SvgExtrudeImporter {
     this.sourceName = 'SVG';
     this.group = null;
     this.currentDepth = DEFAULT_DEPTH;
-    this.currentBevelWidth = DEFAULT_BEVEL_WIDTH;
     this.currentNormalAngleDeg = DEFAULT_NORMAL_ANGLE_DEG;
   }
 
@@ -53,9 +43,8 @@ export class SvgExtrudeImporter {
     this.svgText = svgText;
     this.sourceName = sourceName;
     this.currentDepth = clampDepth(options.depth ?? this.currentDepth);
-    this.currentBevelWidth = clampBevelWidth(options.bevelWidth ?? this.currentBevelWidth);
     this.currentNormalAngleDeg = clampNormalAngleDeg(options.normalAngleDeg ?? this.currentNormalAngleDeg);
-    this.group = this._buildGroup(this.currentDepth, this.currentBevelWidth, this.currentNormalAngleDeg);
+    this.group = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
     return this.group;
   }
 
@@ -65,22 +54,7 @@ export class SvgExtrudeImporter {
     }
     const depth = clampDepth(nextDepth);
     this.currentDepth = depth;
-    const rebuilt = this._buildGroup(depth, this.currentBevelWidth, this.currentNormalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
-    }
-    this._replaceChildren(this.group, rebuilt);
-    return this.group;
-  }
-
-  setBevelWidth(nextBevelWidth) {
-    if (!this.svgText) {
-      throw new Error('No SVG source available for bevel update');
-    }
-    const bevelWidth = clampBevelWidth(nextBevelWidth);
-    this.currentBevelWidth = bevelWidth;
-    const rebuilt = this._buildGroup(this.currentDepth, bevelWidth, this.currentNormalAngleDeg);
+    const rebuilt = this._buildGroup(depth, this.currentNormalAngleDeg);
     if (!this.group) {
       this.group = rebuilt;
       return this.group;
@@ -95,7 +69,7 @@ export class SvgExtrudeImporter {
     }
     const normalAngleDeg = clampNormalAngleDeg(nextNormalAngleDeg);
     this.currentNormalAngleDeg = normalAngleDeg;
-    const rebuilt = this._buildGroup(this.currentDepth, this.currentBevelWidth, normalAngleDeg);
+    const rebuilt = this._buildGroup(this.currentDepth, normalAngleDeg);
     if (!this.group) {
       this.group = rebuilt;
       return this.group;
@@ -108,36 +82,25 @@ export class SvgExtrudeImporter {
     return this.currentDepth;
   }
 
-  getBevelWidth() {
-    return this.currentBevelWidth;
-  }
-
   getNormalAngleDeg() {
     return this.currentNormalAngleDeg;
   }
 
-  _buildGroup(depth, bevelWidth, normalAngleDeg) {
+  _buildGroup(depth, normalAngleDeg) {
     const data = this.loader.parse(this.svgText);
     const group = new THREE.Group();
     group.name = this.sourceName.replace(/\.[^/.]+$/, '') || 'SVG';
     group.userData.orbySvgExtrude = true;
     group.userData.orbySvgExtrudeDepth = depth;
-    group.userData.orbySvgExtrudeBevelWidth = bevelWidth;
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
 
-    const safeBevel = Math.min(bevelWidth, depth * 0.45);
-    const bevelEnabled = safeBevel > 0;
     const creaseAngleRad = THREE.MathUtils.degToRad(clampNormalAngleDeg(normalAngleDeg));
 
     const extrudeSettings = {
       depth,
       steps: 1,
       curveSegments: 16,
-      bevelEnabled,
-      bevelThickness: bevelEnabled ? safeBevel * 0.65 : 0,
-      bevelSize: bevelEnabled ? safeBevel : 0,
-      bevelOffset: 0,
-      bevelSegments: bevelEnabled ? 3 : 1,
+      bevelEnabled: false,
     };
 
     let meshCount = 0;

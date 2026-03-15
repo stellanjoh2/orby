@@ -158,9 +158,8 @@ export class ModelLoader {
 
   async loadSvg(file, options = {}) {
     const depth = options.svgExtrudeDepth;
-    const bevelWidth = options.svgExtrudeBevelWidth;
     const normalAngleDeg = options.svgExtrudeNormalAngle;
-    const object = await this.svgExtrudeImporter.loadFromFile(file, { depth, bevelWidth, normalAngleDeg });
+    const object = await this.svgExtrudeImporter.loadFromFile(file, { depth, normalAngleDeg });
     const assetName = file.name.replace(/\.[^/.]+$/, '') || 'SVG';
     return {
       object,
@@ -174,7 +173,6 @@ export class ModelLoader {
       svgExtrude: {
         enabled: true,
         depth: this.svgExtrudeImporter.getDepth(),
-        bevelWidth: this.svgExtrudeImporter.getBevelWidth(),
         normalAngle: this.svgExtrudeImporter.getNormalAngleDeg(),
         importer: this.svgExtrudeImporter,
       },
