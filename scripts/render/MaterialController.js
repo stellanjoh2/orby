@@ -7,6 +7,17 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
 } from '../constants.js';
 
+/** Ensure fresnel color uniform stays a THREE.Color (Three may replace .value on recompile). */
+function setFresnelColorUniform(uniform, cssColor) {
+  const hex = cssColor || '#ffffff';
+  const v = uniform?.value;
+  if (v instanceof THREE.Color) {
+    v.set(hex);
+  } else {
+    uniform.value = new THREE.Color(hex);
+  }
+}
+
 export class MaterialController {
   constructor({
     stateStore,
@@ -830,8 +841,8 @@ export class MaterialController {
     if (material.userData.fresnelPatched) {
       const uniforms = material.userData.fresnelUniforms;
       // If uniforms exist and are valid, just update values (no recompilation needed)
-      if (uniforms && uniforms.color && uniforms.color.value) {
-        uniforms.color.value.set(settings.color || '#ffffff');
+      if (uniforms && uniforms.color && uniforms.color.value !== undefined) {
+        setFresnelColorUniform(uniforms.color, settings.color);
         uniforms.strength.value = settings.strength || 0.5;
         // Invert radius: low radius (0.5) = high power (5.0) = narrow, high radius (5.0) = low power (0.5) = wide
         const radius = settings.radius || 2.0;
