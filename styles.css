@@ -124,11 +124,25 @@ body[data-theme='aqua'] {
   box-sizing: border-box;
 }
 
+/* Full-height chain avoids a 1px body strip at the top on some DPR/100vh cases */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100dvh;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -571,7 +585,6 @@ body.dropzone-visible #webgl {
   display: flex;
   min-height: 0;
   min-width: 0;
-  height: 100vh;
   background: var(--bg);
   position: relative;
   overflow: hidden;
@@ -591,7 +604,8 @@ body.dropzone-visible #webgl {
   width: 100%;
   height: 100%;
   display: block;
-  background: var(--bg);
+  /* Match .viewport; avoids a visible seam with the 3D pass */
+  background: #000;
   outline: none;
 }
 
@@ -828,16 +842,20 @@ body:not(.dropzone-visible) .quick-start-guide {
 }
 
 .shelf {
+  /* Inset of panel box from the browser chrome (top / right / bottom) */
+  --shelf-inset: 48px;
   width: clamp(320px, 23vw, 380px);
   background: var(--shelf-bg);
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(22px);
-  height: calc(100vh - 48px);
+  /* Fallback for browsers without dvh, then prefer dynamic viewport height */
+  height: calc(100vh - 2 * var(--shelf-inset));
+  height: calc(100dvh - 2 * var(--shelf-inset));
   padding: 0.4rem 0.4rem 0.4rem 0.4rem;
   position: absolute;
-  top: 24px;
-  right: 28px;
+  top: var(--shelf-inset);
+  right: var(--shelf-inset);
   border-radius: 18px;
   border: 1px solid var(--stroke);
   opacity: 1;
@@ -2342,6 +2360,7 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
   .viewport {
     width: 100% !important;
     height: 100vh !important;
+    height: 100dvh !important;
   }
 }
 
