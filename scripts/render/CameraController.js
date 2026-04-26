@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
+function defaultModelViewDirection() {
+  return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
+}
+
 export class CameraController {
   constructor(
     camera,
@@ -359,8 +363,8 @@ export class CameraController {
       adjustedCenter.y -= size.y * 0.05; // Negative Y = down, which makes mesh appear higher
       
       this.controls.target.copy(adjustedCenter);
-      const distance = this.modelBounds.radius * 2.2 || 5;
-      const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
+      const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
+      const direction = defaultModelViewDirection();
       this.camera.position.copy(adjustedCenter.clone().add(direction.multiplyScalar(distance)));
       this.camera.near = Math.max(0.01, distance / 200);
       this.camera.far = distance * 50;
@@ -390,8 +394,8 @@ export class CameraController {
       const adjustedCenter = center.clone();
       adjustedCenter.y -= size.y * 0.05; // Negative Y = down, which makes mesh appear higher
       
-      const distance = this.modelBounds.radius * 2.2 || 5;
-      const direction = new THREE.Vector3(1.5, 1.2, 1.5).normalize();
+      const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
+      const direction = defaultModelViewDirection();
       const targetPosition = adjustedCenter.clone().add(direction.multiplyScalar(distance));
       const targetPoint = adjustedCenter.clone();
       
