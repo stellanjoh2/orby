@@ -5,6 +5,12 @@ on:
     branches:
       - main
 
+# One Pages deployment at a time; cancel an older run when a newer commit lands
+# (avoids 400: "in progress deployment" from deploy-pages).
+concurrency:
+  group: pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pages: write
@@ -20,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       
       - name: Install dependencies
