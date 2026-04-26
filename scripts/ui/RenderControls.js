@@ -2,7 +2,10 @@
  * RenderControls - Handles all render/post-processing-related UI controls
  * Manages DOF, bloom, grain, aberration, camera, exposure, and export
  */
-import { CAMERA_TEMPERATURE_NEUTRAL_K } from '../constants.js';
+import {
+  CAMERA_TEMPERATURE_NEUTRAL_K,
+  getAntiAliasingUiState,
+} from '../constants.js';
 import { UIHelpers } from './UIHelpers.js';
 
 export class RenderControls {
@@ -264,6 +267,16 @@ export class RenderControls {
       this.eventBus.emit('render:vignette-color', value);
     });
 
+    if (this.ui.inputs.renderQuality) {
+      this.ui.inputs.renderQuality.addEventListener('change', (event) => {
+        const raw = event.target.value;
+        const value =
+          raw === 'medium' || raw === 'low' || raw === 'max' ? raw : 'max';
+        this.stateStore.set('renderQuality', value);
+        this.eventBus.emit('render:apply-performance');
+      });
+    }
+
     // Anti-aliasing & Tone Mapping
     this.ui.inputs.antiAliasing.addEventListener('change', (event) => {
       const value = event.target.value;
@@ -460,7 +473,16 @@ export class RenderControls {
       }
     }
     if (this.ui.inputs.antiAliasing) {
-      this.ui.inputs.antiAliasing.value = state.antiAliasing ?? 'none';
+      const aa = getAntiAliasingUiState(
+        state.renderQuality,
+        state.antiAliasing,
+      );
+      this.ui.inputs.antiAliasing.value = aa.value;
+      this.ui.inputs.antiAliasing.disabled = aa.disabled;
+      this.ui.inputs.antiAliasing.classList.toggle('is-disabled-handle', aa.disabled);
+    }
+    if (this.ui.inputs.renderQuality) {
+      this.ui.inputs.renderQuality.value = state.renderQuality ?? 'max';
     }
     if (this.ui.inputs.toneMapping) {
       this.ui.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';

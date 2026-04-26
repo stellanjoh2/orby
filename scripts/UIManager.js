@@ -1,7 +1,10 @@
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
 import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
-import { CAMERA_TEMPERATURE_NEUTRAL_K } from './constants.js';
+import {
+  CAMERA_TEMPERATURE_NEUTRAL_K,
+  getAntiAliasingUiState,
+} from './constants.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
@@ -205,6 +208,7 @@ export class UIManager {
       vignetteColor: q('#vignetteColor'),
       histogramEnabled: q('#histogramEnabled'),
       antiAliasing: q('#antiAliasing'),
+      renderQuality: q('#renderQuality'),
       toneMapping: q('#toneMapping'),
     };
 
@@ -778,6 +782,19 @@ export class UIManager {
         );
       }
 
+      if (payload.renderQuality !== undefined) {
+        const q = payload.renderQuality;
+        this.stateStore.set(
+          'renderQuality',
+          q === 'medium' || q === 'low' ? q : 'max',
+        );
+      } else if (payload.performanceMode !== undefined) {
+        this.stateStore.set(
+          'renderQuality',
+          payload.performanceMode ? 'low' : 'max',
+        );
+      }
+
       // Apply Anti-aliasing
       if (payload.antiAliasing !== undefined) {
         this.stateStore.set('antiAliasing', payload.antiAliasing);
@@ -795,6 +812,8 @@ export class UIManager {
         this.stateStore.set('background', payload.background);
         this.eventBus.emit('scene:background', payload.background);
       }
+
+      this.eventBus.emit('render:apply-performance');
 
       // Sync UI to reflect loaded values
       this.syncControls(this.stateStore.getState());
@@ -1344,7 +1363,15 @@ export class UIManager {
       this.inputs.vignetteColor.value = vignetteColor;
     }
     if (this.inputs.antiAliasing) {
-      this.inputs.antiAliasing.value = state.antiAliasing ?? 'none';
+      const aa = getAntiAliasingUiState(
+        state.renderQuality,
+        state.antiAliasing,
+      );
+      this.inputs.antiAliasing.value = aa.value;
+      this.setControlDisabled('antiAliasing', aa.disabled);
+    }
+    if (this.inputs.renderQuality) {
+      this.inputs.renderQuality.value = state.renderQuality ?? 'max';
     }
     if (this.inputs.toneMapping) {
       this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';

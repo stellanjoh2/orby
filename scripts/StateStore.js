@@ -134,6 +134,7 @@ export class StateStore {
       autoExposure: false,
       histogramEnabled: false,
       antiAliasing: 'fxaa',
+      renderQuality: 'max',
       toneMapping: 'aces-filmic',
       background: '#000000',
     };

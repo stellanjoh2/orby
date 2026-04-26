@@ -266,6 +266,22 @@ export class LightsController {
     this.updateIndicators();
   }
 
+  /**
+   * @param {number} size - Shadow map width/height (e.g. 1024 or 2048)
+   */
+  setShadowMapResolution(size) {
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (light?.isDirectionalLight && light.shadow) {
+        light.shadow.mapSize.set(size, size);
+        if (light.shadow.map) {
+          light.shadow.map.dispose();
+          light.shadow.map = null;
+        }
+      }
+    });
+  }
+
   setCastShadows(enabled) {
     // Apply to all directional lights (key, fill, rim)
     ['key', 'fill', 'rim'].forEach((lightId) => {

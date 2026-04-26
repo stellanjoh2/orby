@@ -118,6 +118,7 @@ export class SceneSettingsManager {
       aberration: state.aberration,
       lensDirt: state.lensDirt,
       antiAliasing: state.antiAliasing,
+      renderQuality: state.renderQuality,
       toneMapping: state.toneMapping,
     };
   }
@@ -713,6 +714,18 @@ export class SceneSettingsManager {
         this.stateStore.set('antiAliasing', payload.antiAliasing);
         this.eventBus.emit('render:anti-aliasing', payload.antiAliasing);
       }
+      if (payload.renderQuality !== undefined) {
+        const q = payload.renderQuality;
+        this.stateStore.set(
+          'renderQuality',
+          q === 'medium' || q === 'low' ? q : 'max',
+        );
+      } else if (payload.performanceMode !== undefined) {
+        this.stateStore.set(
+          'renderQuality',
+          payload.performanceMode ? 'low' : 'max',
+        );
+      }
       if (payload.toneMapping !== undefined) {
         this.stateStore.set('toneMapping', payload.toneMapping);
         this.eventBus.emit('render:tone-mapping', payload.toneMapping);
@@ -733,6 +746,8 @@ export class SceneSettingsManager {
         this.eventBus.emit('render:vignette', this.stateStore.getState().camera?.vignette ?? 0);
         this.eventBus.emit('render:vignette-color', this.stateStore.getState().camera?.vignetteColor ?? '#000000');
       });
+
+      this.eventBus.emit('render:apply-performance');
 
       return { success: true, message: 'Scene settings loaded' };
     } catch (error) {

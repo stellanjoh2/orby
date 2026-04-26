@@ -1,3 +1,5 @@
+import { resolveRenderQualityTier } from '../constants.js';
+
 /**
  * EventManager - Handles all eventBus event listeners for SceneManager
  * Centralizes all event registration and delegation to SceneManager methods
@@ -188,16 +190,27 @@ export class EventManager {
     eventBus.on('render:shadows', (value) => s.setShadows(value));
     eventBus.on('render:vignette', (value) => s.setVignette(value));
     eventBus.on('render:vignette-color', (value) => s.setVignetteColor(value));
-    eventBus.on('render:dof', (settings) => s.updateDof(settings));
-    eventBus.on('render:bloom', (settings) => s.updateBloom(settings));
+    eventBus.on('render:dof', (settings) => {
+      s.updateDof(settings);
+      s.applyRenderQualityVisualOverrides();
+    });
+    eventBus.on('render:bloom', (settings) => {
+      s.updateBloom(settings);
+      s.applyRenderQualityVisualOverrides();
+    });
     eventBus.on('render:grain', (settings) => s.updateGrain(settings));
     eventBus.on('render:aberration', (settings) => s.updateAberration(settings));
     eventBus.on('render:fresnel', (settings) => s.setFresnelSettings(settings));
     eventBus.on('render:lens-dirt', (settings) => s.lensDirtController?.updateSettings(settings));
     eventBus.on('render:anti-aliasing', (value) => {
       if (s.fxaaPass) {
-        s.fxaaPass.enabled = value === 'fxaa';
+        const state = s.stateStore.getState();
+        const tier = resolveRenderQualityTier(state.renderQuality);
+        s.fxaaPass.enabled = !tier.forceFxaaOff && value === 'fxaa';
       }
+    });
+    eventBus.on('render:apply-performance', () => {
+      s.applyRenderQualitySettings();
     });
     eventBus.on('render:tone-mapping', (value) => s.setToneMapping(value));
     eventBus.on('render:histogram-enabled', (enabled) => {

@@ -234,6 +234,7 @@ export class ResetControls {
       this.stateStore.set('exposure', defaults.exposure);
       this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
       this.stateStore.set('antiAliasing', defaults.antiAliasing);
+      this.stateStore.set('renderQuality', defaults.renderQuality ?? 'max');
       this.stateStore.set('toneMapping', defaults.toneMapping);
       
       this.eventBus.emit('render:dof', defaults.dof);
@@ -263,6 +264,7 @@ export class ResetControls {
       this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
       this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
+      this.eventBus.emit('render:apply-performance');
       
       this.ui.syncUIFromState();
       this.helpers.showToast('FX settings reset');

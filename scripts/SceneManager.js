@@ -10,6 +10,7 @@ import {
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  resolveRenderQualityTier,
 } from './constants.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
@@ -626,15 +627,10 @@ export class SceneManager {
       );
     }
     this.setReverseNormals(state.advanced?.reverseNormals ?? false);
-    this.updateDof(state.dof);
-    this.updateBloom(state.bloom);
     this.lensDirtController?.updateSettings(state.lensDirt);
     this.updateGrain(state.grain);
     this.updateAberration(state.aberration);
     this.backgroundController?.setColor(state.background);
-    if (this.fxaaPass) {
-      this.fxaaPass.enabled = (state.antiAliasing ?? 'none') === 'fxaa';
-    }
     this.setToneMapping(state.toneMapping ?? 'aces-filmic');
     this.setHdriStrength(state.hdriStrength ?? 1);
     // Initialize color adjustment settings
@@ -659,6 +655,51 @@ export class SceneManager {
     this.setHdriBackground(state.hdriBackground);
     this.lensFlareController?.applyStateSnapshot(state);
     await this.setHdriPreset(state.hdri);
+    this.applyRenderQualitySettings();
+  }
+
+  /**
+   * After state-driven pass updates, apply tier rules (e.g. Low disables DOF/bloom
+   * even when those effects are "on" in saved settings).
+   */
+  applyRenderQualityVisualOverrides() {
+    const tier = resolveRenderQualityTier(
+      this.stateStore.getState().renderQuality,
+    );
+    if (tier.forceDepthOfFieldOff && this.postPipeline?.bokehPass) {
+      this.postPipeline.bokehPass.enabled = false;
+    }
+    if (tier.forceBloomOff) {
+      if (this.postPipeline?.bloomPass) {
+        this.postPipeline.bloomPass.enabled = false;
+      }
+      if (this.postPipeline?.bloomTintPass) {
+        this.postPipeline.bloomTintPass.enabled = false;
+      }
+    }
+  }
+
+  /**
+   * Apply render quality tier: DPR cap, shadow resolution, bloom internal scale, FXAA/DOF policy.
+   */
+  applyRenderQualitySettings() {
+    const state = this.stateStore.getState();
+    const tier = resolveRenderQualityTier(state.renderQuality);
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, tier.maxPixelRatio),
+    );
+    this.handleResize();
+    this.updateDof(state.dof);
+    this.updateBloom(state.bloom);
+    this.applyRenderQualityVisualOverrides();
+    if (this.fxaaPass) {
+      this.fxaaPass.enabled =
+        !tier.forceFxaaOff && (state.antiAliasing ?? 'none') === 'fxaa';
+    }
+    this.lightsController?.setShadowMapResolution(tier.shadowMapSize);
+    this.renderer.shadowMap.type = tier.softShadowMap
+      ? THREE.PCFSoftShadowMap
+      : THREE.PCFShadowMap;
   }
 
   async setHdriPreset(preset) {
@@ -1968,16 +2009,19 @@ export class SceneManager {
         this.composer.setSize(finalWidth, finalHeight);
       }
       
-      // Update bloom pass resolution (UnrealBloomPass resolution is passed as Vector2 in constructor)
-      // EffectComposer.setSize() should handle this, but we update it explicitly to be safe
+      // UnrealBloomPass internal resolution (tier may decimate for speed)
+      const tier = resolveRenderQualityTier(
+        this.stateStore.getState().renderQuality,
+      );
+      const bloomScale = tier.bloomResolutionScale;
+      const bloomW = Math.max(1, Math.floor(finalWidth * bloomScale));
+      const bloomH = Math.max(1, Math.floor(finalHeight * bloomScale));
       if (this.postPipeline?.bloomPass) {
-        // UnrealBloomPass has a resolution property that needs updating
         if (this.postPipeline.bloomPass.resolution) {
-          this.postPipeline.bloomPass.resolution.set(finalWidth, finalHeight);
+          this.postPipeline.bloomPass.resolution.set(bloomW, bloomH);
         }
-        // Some versions use setSize method
         if (typeof this.postPipeline.bloomPass.setSize === 'function') {
-          this.postPipeline.bloomPass.setSize(finalWidth, finalHeight);
+          this.postPipeline.bloomPass.setSize(bloomW, bloomH);
         }
       }
       

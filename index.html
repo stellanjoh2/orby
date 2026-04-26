@@ -1684,6 +1684,14 @@
                   <span>Quality</span>
                 </div>
                 <label class="select-line">
+                  <span data-tooltip="Max: full quality. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved.">Render quality</span>
+                  <select id="renderQuality" aria-label="Render quality">
+                    <option value="max" selected>Max</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </label>
+                <label class="select-line">
                   <span>Anti-Aliasing</span>
                   <select id="antiAliasing">
                     <option value="none">None</option>
@@ -2207,7 +2215,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.169 · 2026-04-25 14:36:47 UTC</div>
+              <div class="info-version-tag">v0.5.170 · 2026-04-25 14:36:51 UTC</div>
             </section>
           </div>
         </aside>

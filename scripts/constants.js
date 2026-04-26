@@ -18,6 +18,73 @@ export const DEFAULT_MATERIAL_METALNESS = 0.08;
 
 export const BLOOM_LUMINANCE_THRESHOLD_MIN = 0.6;
 export const BLOOM_LUMINANCE_THRESHOLD_MAX = 1.2;
+
+/** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
+
+export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('max');
+
+/**
+ * Viewport / post tradeoffs. max = full quality; medium/low reduce GPU load.
+ * bloomResolutionScale: UnrealBloomPass internal size = viewport × this per axis.
+ */
+export const RENDER_QUALITY = {
+  max: {
+    maxPixelRatio: 2,
+    shadowMapSize: 2048,
+    softShadowMap: true,
+    bloomResolutionScale: 1,
+    forceDepthOfFieldOff: false,
+    forceBloomOff: false,
+    forceFxaaOff: false,
+  },
+  medium: {
+    maxPixelRatio: 1,
+    shadowMapSize: 1024,
+    softShadowMap: false,
+    bloomResolutionScale: 0.5,
+    /** Depth of field still runs if enabled (unlike Low). */
+    forceDepthOfFieldOff: false,
+    forceBloomOff: false,
+    forceFxaaOff: true,
+  },
+  low: {
+    maxPixelRatio: 1,
+    shadowMapSize: 1024,
+    softShadowMap: false,
+    /** Unused when bloom is off; kept for typing consistency. */
+    bloomResolutionScale: 0.25,
+    /** Cheapest tier: DOF and bloom passes off in the compositor (settings preserved). */
+    forceDepthOfFieldOff: true,
+    forceBloomOff: true,
+    forceFxaaOff: true,
+  },
+};
+
+/**
+ * @param {string | undefined} id
+ * @returns {typeof RENDER_QUALITY['max']}
+ */
+export function resolveRenderQualityTier(id) {
+  if (id === 'medium' || id === 'low') {
+    return RENDER_QUALITY[id];
+  }
+  return RENDER_QUALITY.max;
+}
+
+/**
+ * Anti-aliasing select: medium/low tiers force FXAA off in the GPU while keeping
+ * `state.antiAliasing` for when the user returns to Max — use this for display + disabled.
+ * @param {string | undefined} renderQuality
+ * @param {string | undefined} storedAntiAliasing
+ */
+export function getAntiAliasingUiState(renderQuality, storedAntiAliasing) {
+  const tier = resolveRenderQualityTier(renderQuality);
+  if (tier.forceFxaaOff) {
+    return { value: 'none', disabled: true };
+  }
+  return { value: storedAntiAliasing ?? 'none', disabled: false };
+}
+
 export const GRAIN_UV_SCALE = 800.0;
 export const GRAIN_TIME_SCALE = 0.05;
 export const GRAIN_AMOUNT_MULTIPLIER = 0.5;

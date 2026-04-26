@@ -586,9 +586,7 @@ export class GlobalControls {
     }
     this.stateStore.set('antiAliasing', 'fxaa');
     this.eventBus.emit('render:anti-aliasing', 'fxaa');
-    if (this.ui.inputs.antiAliasing) {
-      this.ui.inputs.antiAliasing.value = 'fxaa';
-    }
+    this.ui.syncUIFromState();
   }
 
   bindHdriLightsRotation() {
