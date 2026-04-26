@@ -144,7 +144,6 @@ export class UIManager {
       gridSnap: q('#gridSnap'),
       gridScale: q('#gridScale'),
       podiumScale: q('#podiumScale'),
-      gridScale: q('#gridScale'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),

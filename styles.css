@@ -844,6 +844,9 @@ body:not(.dropzone-visible) .quick-start-guide {
 .shelf {
   /* Inset of panel box from the browser chrome (top / right / bottom) */
   --shelf-inset: 48px;
+  /* One rhythm unit: = gap between vertical panel cards; 2× --shelf-g = horizontal inset to card edges */
+  --shelf-rhythm: 0.75rem;
+  --shelf-g: calc(var(--shelf-rhythm) / 2);
   width: clamp(320px, 23vw, 380px);
   background: var(--shelf-bg);
   display: flex;
@@ -852,7 +855,7 @@ body:not(.dropzone-visible) .quick-start-guide {
   /* Fallback for browsers without dvh, then prefer dynamic viewport height */
   height: calc(100vh - 2 * var(--shelf-inset));
   height: calc(100dvh - 2 * var(--shelf-inset));
-  padding: 0.4rem 0.4rem 0.4rem 0.4rem;
+  padding: var(--shelf-g);
   position: absolute;
   top: var(--shelf-inset);
   right: var(--shelf-inset);
@@ -875,7 +878,7 @@ body:not(.dropzone-visible) .quick-start-guide {
 .tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  margin: -0.6rem -0.6rem 0 -0.6rem;
+  margin: calc(-1 * var(--shelf-g)) calc(-1 * var(--shelf-g)) 0 calc(-1 * var(--shelf-g));
   padding: 0;
 }
 
@@ -1096,33 +1099,49 @@ a.about-highlight:hover {
 .panels {
   flex: 1;
   overflow-y: auto;
-  padding: 0.6rem 0.6rem 3rem 0.6rem;
   min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-  /* Create space for scrollbar on the right, outside the window */
-  margin-right: calc(-1.2rem + 12px);
-  padding-right: calc(0.6rem + 1.2rem - 12px);
+  padding: var(--shelf-g) var(--shelf-g) 3rem var(--shelf-g);
   border-top: none;
   margin-top: 0;
+  /*
+   * Do NOT set scrollbar-width / scrollbar-color here. In Chrome 121+ they enable the
+   * standard scrollbar model and the ::-webkit-scrollbar { width } rules are effectively ignored
+   * (so the bar stayed “OS wide”). Firefox has no webkit scrollbars; scope those props below.
+   */
+}
+
+/* Firefox only — thin + accent using the spec track model (no ::-webkit) */
+@supports (selector(::-moz-progress-bar)) {
+  .panels {
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
 }
 
 .panels::-webkit-scrollbar {
-  width: 4px;
+  /* Literal px — some WebKit builds ignore `width: var(--x)` on scrollbar pseudos; !important vs Chrome’s scrollbar-width */
+  width: 2px !important;
+  min-width: 0 !important;
+  max-width: 2px !important;
+  /* Push track a bit toward the outer edge of the glass */
+  margin: 0 0 0 4px;
 }
 
 .panels::-webkit-scrollbar-track {
   background: transparent;
-  margin: 10px 0;
+  margin: 0.5rem 0;
 }
 
 .panels::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 999px;
+  /* Match brand — ::-webkit (Chrome, Safari, Edge) */
+  background: var(--accent) !important;
+  background-color: var(--accent) !important;
+  border-radius: 1px;
 }
 
 .panels::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.8);
+  background: color-mix(in srgb, var(--accent) 88%, white 12%) !important;
+  background-color: color-mix(in srgb, var(--accent) 88%, white 12%) !important;
 }
 
 .panel {
@@ -1170,7 +1189,7 @@ a.about-highlight:hover {
   border: none;
   border-radius: 6px;
   padding: 1.2rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--shelf-rhythm);
   background: rgba(0, 0, 0, 0.6);
 }
 
