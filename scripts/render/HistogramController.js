@@ -41,7 +41,13 @@ export class HistogramController {
     this.bins = 64; // Reduced from 256 for better performance
     this.histogramData = new Array(this.bins).fill(0);
     this.overexposedBins = new Set(); // Track which bins contain overexposed pixels
-    this.overexposedThreshold = 0.93; // 93% brightness considered overexposed (less sensitive)
+    // Per-channel 0.93 alone misses tone-mapped / graded "near white" (common 220–250 sRGB) that
+    // still stack in the right histogram bins. Combine with luminance and top-bin mass.
+    this.channelSevereThreshold = 0.95;
+    this.channelWarnThreshold = 0.88;
+    this.luminanceSevereThreshold = 0.95;
+    this.luminanceWarnThreshold = 0.88;
+    this.overexposedThreshold = 0.93; // legacy bar tint (very hot single channel)
     this.updateInterval = 60; // Update every 60ms (~16fps)
     this.lastUpdate = 0;
     
@@ -130,6 +136,8 @@ export class HistogramController {
       this.histogramData.fill(0);
       this.overexposedBins.clear();
       let overexposedCount = 0;
+      let warnCount = 0;
+      let inTopHighBinsCount = 0;
       let totalPixels = 0;
       
       // Process pixels with sampling (using flipped data)
@@ -139,23 +147,38 @@ export class HistogramController {
         const b = flippedPixels[i + 2] / 255;
         
         const luminance = this.getLuminance(r, g, b);
-        const bin = Math.floor(luminance * (this.bins - 1));
-        
-        // Check for overexposure (any channel > threshold)
-        const isOverexposed = r > this.overexposedThreshold || g > this.overexposedThreshold || b > this.overexposedThreshold;
-        
+        const bin = Math.min(
+          this.bins - 1,
+          Math.max(0, Math.floor(luminance * this.bins)),
+        );
+        const maxCh = Math.max(r, g, b);
+        const isSevere = maxCh > this.channelSevereThreshold || luminance > this.luminanceSevereThreshold;
+        const isWarn = maxCh > this.channelWarnThreshold || luminance > this.luminanceWarnThreshold;
+        // Bar tint: near clip (legacy 0.93 channel check still marks hot bins)
+        const isOverexposedBin =
+          isSevere ||
+          isWarn ||
+          r > this.overexposedThreshold ||
+          g > this.overexposedThreshold ||
+          b > this.overexposedThreshold;
+
         if (bin >= 0 && bin < this.bins) {
           this.histogramData[bin]++;
-          // Mark this bin as containing overexposed pixels
-          if (isOverexposed) {
+          if (isOverexposedBin) {
             this.overexposedBins.add(bin);
           }
         }
-        
-        if (isOverexposed) {
+
+        if (isSevere) {
           overexposedCount++;
         }
-        
+        if (isWarn) {
+          warnCount++;
+        }
+        if (bin >= this.bins - 4) {
+          inTopHighBinsCount++;
+        }
+
         totalPixels++;
       }
       
@@ -166,14 +189,22 @@ export class HistogramController {
           this.histogramData[i] = this.histogramData[i] / maxCount;
         }
       }
-      
-      // Check if overexposed (>2% of pixels) or close to overexposing (>1% of pixels)
-      const overexposedRatio = overexposedCount / totalPixels;
-      const isOverexposed = overexposedRatio > 0.02; // 2% threshold (less sensitive)
-      const isCloseToOverexposing = overexposedRatio > 0.01 && !isOverexposed; // 1% threshold (less sensitive)
+
+      const severeRatio = totalPixels > 0 ? overexposedCount / totalPixels : 0;
+      const warnRatio = totalPixels > 0 ? warnCount / totalPixels : 0;
+      const topHighBinsRatio = totalPixels > 0 ? inTopHighBinsCount / totalPixels : 0;
+      // Red: true clips / severe compression OR the histogram is crammed in the right edge (clipping)
+      const isCatastrophicHighlights =
+        severeRatio > 0.02 || (topHighBinsRatio > 0.18 && warnRatio > 0.2);
+      // Orange: many pixels in highlight range without as many true severes
+      const isCloseToOverexposing =
+        !isCatastrophicHighlights &&
+        (warnRatio > 0.04 || (topHighBinsRatio > 0.12 && warnRatio > 0.08));
       
       // Render histogram with warning level (0 = none, 1 = close, 2 = overexposed)
-      const warningLevel = isOverexposed ? 2 : (isCloseToOverexposing ? 1 : 0);
+      const warningLevel = isCatastrophicHighlights
+        ? 2
+        : (isCloseToOverexposing ? 1 : 0);
       this.renderHistogram(warningLevel);
       
       // Hide warning labels (no longer needed)

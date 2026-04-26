@@ -7,6 +7,7 @@ import {
   getAntiAliasingUiState,
 } from '../constants.js';
 import { UIHelpers } from './UIHelpers.js';
+import { ToneCurveController } from './ToneCurveController.js';
 
 export class RenderControls {
   constructor(eventBus, stateStore, uiManager) {
@@ -14,6 +15,7 @@ export class RenderControls {
     this.stateStore = stateStore;
     this.ui = uiManager;
     this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    this.toneCurveController = null;
   }
 
   bind() {
@@ -305,6 +307,12 @@ export class RenderControls {
     this.ui.buttons.exportSvgGlb?.addEventListener('click', () => {
       this.eventBus.emit('export:svg-glb');
     });
+
+    this.toneCurveController = new ToneCurveController(
+      this.eventBus,
+      this.stateStore,
+    );
+    this.toneCurveController.bind();
   }
 
   sync(state) {
@@ -487,6 +495,7 @@ export class RenderControls {
     if (this.ui.inputs.toneMapping) {
       this.ui.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
     }
+    this.toneCurveController?.syncFromState(state);
   }
 }
 

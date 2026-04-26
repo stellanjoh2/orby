@@ -283,6 +283,10 @@ uniform float fade;
 uniform float sharpness;
 uniform vec2 resolution;
 uniform float bypass;
+uniform vec2 toneP1;
+uniform vec2 toneP2;
+uniform vec4 toneDydx; // f'(0), f'(x1), f'(x2), f'(1) — PCHIP, CPU
+uniform float toneCurveIdentity;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 const float CONTRAST_PIVOT = 0.18;
@@ -397,6 +401,57 @@ vec3 applyFade(vec3 color, float amount) {
   return mix(color, vec3(0.5), fadeAmount * (1.0 - dot(color, LUMA)));
 }
 
+// Master luminance remapping: monotone PCHIP (smooth) through (0,0)–p1–p2–(1,1)
+float hermite1dLuma(float tLocal, float h, float y0, float y1, float m0, float m1) {
+  if (h < 0.0001) {
+    return mix(y0, y1, 0.5);
+  }
+  float u = tLocal / h;
+  float u2 = u * u;
+  float u3 = u2 * u;
+  return (2.0 * u3 - 3.0 * u2 + 1.0) * y0
+       + (u3 - 2.0 * u2 + u) * (h * m0)
+       + (-2.0 * u3 + 3.0 * u2) * y1
+       + (u3 - u2) * (h * m1);
+}
+
+float evalToneCurve(float t) {
+  float x1 = toneP1.x;
+  float y1 = toneP1.y;
+  float x2 = toneP2.x;
+  float y2 = toneP2.y;
+  float m0 = toneDydx.x;
+  float m1 = toneDydx.y;
+  float m2 = toneDydx.z;
+  float m3 = toneDydx.w;
+  t = clamp(t, 0.0, 1.0);
+  if (t < 0.00001) {
+    return 0.0;
+  }
+  if (t > 0.99999) {
+    return 1.0;
+  }
+  if (t <= x1) {
+    return hermite1dLuma(t, x1, 0.0, y1, m0, m1);
+  } else if (t <= x2) {
+    return hermite1dLuma(t - x1, x2 - x1, y1, y2, m1, m2);
+  } else {
+    return hermite1dLuma(t - x2, 1.0 - x2, y2, 1.0, m2, m3);
+  }
+}
+
+vec3 applyLumaToneCurve(vec3 c) {
+  if (toneCurveIdentity > 0.5) {
+    return c;
+  }
+  float l = dot(c, LUMA);
+  if (l < 1e-5) {
+    return c;
+  }
+  float l2 = evalToneCurve(l);
+  return clamp(c * (l2 / l), 0.0, 4.0);
+}
+
 // Sharpness: Simple unsharp mask
 vec3 applySharpness(sampler2D tex, vec2 uv, vec2 res, float amount) {
   if (abs(amount) < 0.0001) {
@@ -448,6 +503,7 @@ void main() {
   adjusted = applyTonalRanges(adjusted, highlights, shadows);
   adjusted = applyClarity(adjusted, clarity);
   adjusted = applyFade(adjusted, fade);
+  adjusted = applyLumaToneCurve(adjusted);
 
   gl_FragColor = vec4(max(adjusted, vec3(0.0)), color.a);
 }
@@ -468,6 +524,10 @@ export const ColorAdjustShader = {
     sharpness: { value: 0.0 },
     resolution: { value: new THREE.Vector2(1, 1) },
     bypass: { value: 1.0 },
+    toneP1: { value: new THREE.Vector2(0.25, 0.25) },
+    toneP2: { value: new THREE.Vector2(0.75, 0.75) },
+    toneDydx: { value: new THREE.Vector4(1.0, 1.0, 1.0, 1.0) },
+    toneCurveIdentity: { value: 1.0 },
   },
   vertexShader: colorAdjustVertex,
   fragmentShader: colorAdjustFragment,

@@ -112,6 +112,7 @@ export class SceneSettingsManager {
       exposure: state.exposure,
       autoExposure: state.autoExposure,
       histogramEnabled: state.histogramEnabled,
+      toneCurve: state.toneCurve,
       dof: state.dof,
       bloom: state.bloom,
       grain: state.grain,
@@ -660,6 +661,10 @@ export class SceneSettingsManager {
       if (payload.histogramEnabled !== undefined) {
         this.stateStore.set('histogramEnabled', !!payload.histogramEnabled);
         this.eventBus.emit('render:histogram-enabled', !!payload.histogramEnabled);
+      }
+      if (payload.toneCurve) {
+        this.stateStore.set('toneCurve', payload.toneCurve);
+        this.eventBus.emit('render:tone-curve', this.stateStore.getState().toneCurve);
       }
 
       // Apply Post-processing

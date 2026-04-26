@@ -639,6 +639,7 @@ export class SceneManager {
     this.setClarity(state.camera?.clarity ?? 0);
     this.setFade(state.camera?.fade ?? 0);
     this.setSharpness(state.camera?.sharpness ?? 0);
+    this.setToneCurve(state.toneCurve);
     this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
@@ -824,6 +825,17 @@ export class SceneManager {
 
   setSharpness(value) {
     this.postPipeline?.setSharpness(value);
+  }
+
+  setToneCurve(curve) {
+    const c =
+      curve?.p1 && curve?.p2
+        ? curve
+        : {
+            p1: { x: 0.25, y: 0.25 },
+            p2: { x: 0.75, y: 0.75 },
+          };
+    this.postPipeline?.setToneCurve(c);
   }
 
   setTemperature(kelvin) {

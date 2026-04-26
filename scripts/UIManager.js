@@ -772,6 +772,11 @@ export class UIManager {
         this.eventBus.emit('camera:auto-exposure', payload.autoExposure);
       }
 
+      if (payload.toneCurve) {
+        this.stateStore.set('toneCurve', payload.toneCurve);
+        this.eventBus.emit('render:tone-curve', this.stateStore.getState().toneCurve);
+      }
+
       // Apply Lens Dirt
       if (payload.lensDirt) {
         this.stateStore.set('lensDirt', payload.lensDirt);

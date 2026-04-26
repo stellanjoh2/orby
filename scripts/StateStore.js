@@ -133,6 +133,10 @@ export class StateStore {
       exposure: 1.0,
       autoExposure: false,
       histogramEnabled: false,
+      toneCurve: {
+        p1: { x: 0.25, y: 0.25 },
+        p2: { x: 0.75, y: 0.75 },
+      },
       antiAliasing: 'fxaa',
       renderQuality: 'max',
       toneMapping: 'aces-filmic',

@@ -322,6 +322,10 @@ export class PostProcessingPipeline {
     this.colorAdjust?.setSharpness(value);
   }
 
+  setToneCurve(curve) {
+    this.colorAdjust?.setToneCurve(curve);
+  }
+
   /**
    * Set vignette intensity
    * @param {number} value - Vignette intensity (0-1, default 0)

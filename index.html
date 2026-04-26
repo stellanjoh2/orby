@@ -1269,6 +1269,29 @@
                     </label>
                   </div>
                   <div id="histogramContainer" class="histogram-container histogram-container--collapsed"></div>
+                  <div class="subsection tone-curve-sub">
+                    <div class="block-title has-reset">
+                      <span>Curve</span>
+                      <button
+                        class="block-reset-btn"
+                        data-reset="tone-curve"
+                        aria-label="Reset curve"
+                        data-tooltip="Reset"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                    </div>
+                    <div class="tone-curve-canvas-wrap">
+                      <canvas
+                        id="toneCurveCanvas"
+                        class="tone-curve-canvas"
+                        width="320"
+                        height="180"
+                        aria-label="Tone curve"
+                      ></canvas>
+                    </div>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">

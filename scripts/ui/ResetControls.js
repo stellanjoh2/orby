@@ -235,6 +235,7 @@ export class ResetControls {
       this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
       this.stateStore.set('antiAliasing', defaults.antiAliasing);
       this.stateStore.set('renderQuality', defaults.renderQuality ?? 'max');
+      this.stateStore.set('toneCurve', defaults.toneCurve);
       this.stateStore.set('toneMapping', defaults.toneMapping);
       
       this.eventBus.emit('render:dof', defaults.dof);
@@ -263,6 +264,7 @@ export class ResetControls {
       this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
       this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
+      this.eventBus.emit('render:tone-curve', defaults.toneCurve);
       this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
       this.eventBus.emit('render:apply-performance');
       
@@ -505,6 +507,14 @@ export class ResetControls {
             this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
             this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
             this.ui.syncControls(this.stateStore.getState());
+            break;
+
+          case 'tone-curve':
+            this.stateStore.set('toneCurve', defaults.toneCurve);
+            this.eventBus.emit('render:tone-curve', this.stateStore.getState().toneCurve);
+            this.ui.renderControls.toneCurveController?.syncFromState(
+              this.stateStore.getState(),
+            );
             break;
             
           case 'transform':

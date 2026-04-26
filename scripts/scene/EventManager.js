@@ -184,6 +184,7 @@ export class EventManager {
     eventBus.on('render:clarity', (value) => s.setClarity(value));
     eventBus.on('render:fade', (value) => s.setFade(value));
     eventBus.on('render:sharpness', (value) => s.setSharpness(value));
+    eventBus.on('render:tone-curve', (curve) => s.setToneCurve(curve));
     eventBus.on('render:temperature', (value) => s.setTemperature(value));
     eventBus.on('render:tint', (value) => s.setTint(value));
     eventBus.on('render:highlights', (value) => s.setHighlights(value));
