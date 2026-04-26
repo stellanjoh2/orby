@@ -632,8 +632,8 @@ body.dropzone-visible #webgl {
   pointer-events: auto;
   opacity: 0;
   animation: dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  /* Add padding to push content away from border - matches border inset */
-  padding: var(--dropzone-padding);
+  /* Must use x/y — from 1600px up they differ from --dropzone-padding; keep in sync with ::before */
+  padding: var(--dropzone-padding-y) var(--dropzone-padding-x);
   box-sizing: border-box;
 }
 
@@ -670,6 +670,16 @@ body.dropzone-visible #webgl {
   --dropzone-padding-y: var(--dropzone-padding);
 }
 
+/* Big screens: frame ~20% smaller in each direction (more inset):
+   inner' = 0.8 * inner  →  p' = 0.1 * viewport + 0.8 * p */
+@media (min-width: 1200px) {
+  .dropzone {
+    --dropzone-padding: calc(
+      0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
+    );
+  }
+}
+
 .dropzone::before {
   content: '';
   position: absolute;
@@ -694,14 +704,19 @@ body.dropzone-visible #webgl {
 /* On very wide screens, increase horizontal padding only (narrower dropzone, same vertical spacing) */
 @media (min-width: 1600px) {
   .dropzone {
-    --dropzone-padding-x: clamp(4rem, calc((100vw - 1440px) / 2), 14rem);
+    --dropzone-padding-x: calc(
+      0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
+    );
     /*
       Vertical padding:
       - On tall fullscreen 16:9 (e.g. 1080p), keep a comfortable cushion from top/bottom
       - As the window height shrinks, padding tapers down
       - Overall more generous so fullscreen doesn’t feel cramped
+      - Same 0.8 inner-scale as the 1200px rule, using height
     */
-    --dropzone-padding-y: clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem);
+    --dropzone-padding-y: calc(
+      0.1 * 100vh + 0.8 * clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem)
+    );
   }
 }
 
@@ -716,8 +731,9 @@ body.dropzone-visible #webgl {
   /* Scale based on BOTH width and height so content shrinks on short windows */
   /* - Use 1440×900 as the comfortable baseline size */
   /* - As either width or height gets smaller, scale down the whole hero */
+  /* Floor was 0.6; nudging up so the whole hero (incl. frame) doesn’t pack down as hard on small windows */
   --dropzone-scale: clamp(
-    0.6,
+    0.68,
     min(100vw / 1440, 100vh / 900),
     1
   );
@@ -757,7 +773,8 @@ body.dropzone-visible #webgl {
 }
 
 .drop-logo {
-  width: clamp(264px, 30.5vw, 440px); /* Scales from 440px down to 264px (60% of 440px) */
+  /* Slightly lower vw + cap so it scales down earlier as the window shrinks, and on large screens sits below the old 440px max */
+  width: clamp(264px, 28vw, 400px);
   height: auto;
   margin-bottom: 0;
   opacity: 0;
@@ -2449,7 +2466,7 @@ body.ui-hidden .shelf {
 }
 
 .look-filter-presets-container--expanded {
-  max-height: 24rem;
+  max-height: 40rem;
   opacity: 1;
 }
 

@@ -58,6 +58,7 @@ export class ToneCurveController {
     this.w = 1;
     this.h = 1;
     this.drag = null;
+    this.hover = null;
     this._resizeObserver = null;
   }
 
@@ -89,7 +90,7 @@ export class ToneCurveController {
     this.canvas.addEventListener('pointerdown', (e) => this._onPointerDown(e));
     this.canvas.addEventListener('pointermove', (e) => this._onPointerMove(e));
     this.canvas.addEventListener('pointerup', (e) => this._onPointerUp(e));
-    this.canvas.addEventListener('pointerleave', (e) => this._onPointerUp(e));
+    this.canvas.addEventListener('pointerleave', (e) => this._onPointerLeave(e));
   }
 
   syncFromState(state) {
@@ -147,12 +148,23 @@ export class ToneCurveController {
     if (!hit) return;
     this.drag = hit;
     this.canvas.setPointerCapture(e.pointerId);
+    this._draw();
   }
 
   _onPointerMove(e) {
-    if (!this.drag) return;
     const pn = this.toNorm(e.clientX, e.clientY);
     const state = this.stateStore.getState();
+    const cCurve = constrainOrder(copyCurve(state.toneCurve));
+
+    if (!this.drag) {
+      const h = this._hit(pn, cCurve);
+      if (h !== this.hover) {
+        this.hover = h;
+        this._draw();
+      }
+      return;
+    }
+
     const c0 = copyCurve(state.toneCurve);
     if (this.drag === 'p1') {
       c0.p1.x = pn.x;
@@ -171,6 +183,14 @@ export class ToneCurveController {
     this._draw();
   }
 
+  _onPointerLeave(e) {
+    if (this.hover !== null) {
+      this.hover = null;
+      this._draw();
+    }
+    this._onPointerUp(e);
+  }
+
   _onPointerUp(e) {
     if (this.drag && this.canvas) {
       try {
@@ -180,6 +200,7 @@ export class ToneCurveController {
       }
     }
     this.drag = null;
+    this._draw();
   }
 
   _draw() {
@@ -248,8 +269,14 @@ export class ToneCurveController {
     }
     ctx.stroke();
 
-    const r = 6 * this.dpr;
-    const drawKnob = (P) => {
+    const r0 = 6 * this.dpr;
+    const knobScale = (key) => {
+      if (this.drag === key) return 1.333;
+      if (!this.drag && this.hover === key) return 1.083;
+      return 1;
+    };
+    const drawKnob = (P, scale) => {
+      const r = r0 * scale;
       ctx.beginPath();
       ctx.arc(P.x, P.y, r, 0, Math.PI * 2);
       ctx.fillStyle = BRAND;
@@ -258,7 +285,7 @@ export class ToneCurveController {
       ctx.lineWidth = 2 * this.dpr;
       ctx.stroke();
     };
-    drawKnob(B);
-    drawKnob(C);
+    drawKnob(B, knobScale('p1'));
+    drawKnob(C, knobScale('p2'));
   }
 }
