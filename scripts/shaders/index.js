@@ -290,13 +290,16 @@ uniform float toneCurveIdentity;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 const float CONTRAST_PIVOT = 0.18;
+// Without a floor, amount 0 maps every pixel to the pivot (flat gray).
+const float CONTRAST_AMOUNT_MIN = 0.18;
 const float EPSILON = 1e-5;
 
 vec3 applyContrast(vec3 color, float amount) {
-  if (abs(amount - 1.0) < 0.0001) {
+  float a = max(amount, CONTRAST_AMOUNT_MIN);
+  if (abs(a - 1.0) < 0.0001) {
     return color;
   }
-  return (color - vec3(CONTRAST_PIVOT)) * amount + vec3(CONTRAST_PIVOT);
+  return (color - vec3(CONTRAST_PIVOT)) * a + vec3(CONTRAST_PIVOT);
 }
 
 vec3 applySaturation(vec3 color, float amount) {

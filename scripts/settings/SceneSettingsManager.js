@@ -1,3 +1,5 @@
+import { sanitizeDof } from '../constants.js';
+
 /**
  * SceneSettingsManager
  * Handles copying and loading all scene settings (including object transforms)
@@ -53,6 +55,10 @@ export class SceneSettingsManager {
       wireframe: state.wireframe,
       fresnel: state.fresnel,
       svgExtrude: {
+        enabled: !!state.svgExtrude?.enabled,
+        availableColors: Array.isArray(state.svgExtrude?.availableColors)
+          ? [...state.svgExtrude.availableColors]
+          : [],
         depth: state.svgExtrude?.depth ?? 0.2,
         normalAngle: state.svgExtrude?.normalAngle ?? 45,
         colorDepths: state.svgExtrude?.colorDepths ?? {},
@@ -124,6 +130,9 @@ export class SceneSettingsManager {
       toneMapping: state.toneMapping,
       lookFilterPreset: state.lookFilterPreset,
       lookFilterPresetsOpen: state.lookFilterPresetsOpen,
+      moveWidgetEnabled: !!state.moveWidgetEnabled,
+      rotateWidgetEnabled: !!state.rotateWidgetEnabled,
+      scaleWidgetEnabled: !!state.scaleWidgetEnabled,
     };
   }
 
@@ -393,6 +402,15 @@ export class SceneSettingsManager {
           );
         }
       }
+      if (payload.svgExtrude?.enabled !== undefined) {
+        this.stateStore.set('svgExtrude.enabled', !!payload.svgExtrude.enabled);
+      }
+      if (payload.svgExtrude?.availableColors !== undefined) {
+        const colors = Array.isArray(payload.svgExtrude.availableColors)
+          ? payload.svgExtrude.availableColors.map((c) => String(c))
+          : [];
+        this.stateStore.set('svgExtrude.availableColors', colors);
+      }
       if (payload.svgExtrude?.depth !== undefined) {
         this.stateStore.set('svgExtrude.depth', payload.svgExtrude.depth);
         this.eventBus.emit('mesh:svg-extrude-depth', payload.svgExtrude.depth);
@@ -586,6 +604,22 @@ export class SceneSettingsManager {
         this.eventBus.emit('lights:cast-shadows', payload.lightsCastShadows);
       }
 
+      if (payload.moveWidgetEnabled !== undefined) {
+        const on = !!payload.moveWidgetEnabled;
+        this.stateStore.set('moveWidgetEnabled', on);
+        this.eventBus.emit('mesh:move-widget-enabled', on);
+      }
+      if (payload.rotateWidgetEnabled !== undefined) {
+        const on = !!payload.rotateWidgetEnabled;
+        this.stateStore.set('rotateWidgetEnabled', on);
+        this.eventBus.emit('mesh:rotate-widget-enabled', on);
+      }
+      if (payload.scaleWidgetEnabled !== undefined) {
+        const on = !!payload.scaleWidgetEnabled;
+        this.stateStore.set('scaleWidgetEnabled', on);
+        this.eventBus.emit('mesh:scale-widget-enabled', on);
+      }
+
       // Apply Camera settings
       if (payload.camera) {
         if (payload.camera.fov !== undefined) {
@@ -675,8 +709,9 @@ export class SceneSettingsManager {
 
       // Apply Post-processing
       if (payload.dof) {
-        this.stateStore.set('dof', payload.dof);
-        this.eventBus.emit('render:dof', payload.dof);
+        const dof = sanitizeDof(payload.dof);
+        this.stateStore.set('dof', dof);
+        this.eventBus.emit('render:dof', dof);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
             ['dofFocus', 'dofAperture'],

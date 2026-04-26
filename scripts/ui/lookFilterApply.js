@@ -1,3 +1,4 @@
+import { sanitizeDof } from '../constants.js';
 import { mergeLookFilterState } from '../render/lookFilterPresets.js';
 
 /**
@@ -7,7 +8,10 @@ import { mergeLookFilterState } from '../render/lookFilterPresets.js';
 export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
   const defaults = stateStore.getDefaults();
   const current = stateStore.getState();
-  const b = mergeLookFilterState(presetId, defaults, current);
+  const merged = mergeLookFilterState(presetId, defaults, current);
+  const dof = merged.dof ? sanitizeDof(merged.dof) : merged.dof;
+  const b =
+    merged.dof && dof !== merged.dof ? { ...merged, dof } : merged;
 
   stateStore.setTopLevelBundle({
     lookFilterPreset: b.lookFilterPreset,

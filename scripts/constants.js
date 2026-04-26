@@ -19,6 +19,23 @@ export const DEFAULT_MATERIAL_METALNESS = 0.08;
 export const BLOOM_LUMINANCE_THRESHOLD_MIN = 0.6;
 export const BLOOM_LUMINANCE_THRESHOLD_MAX = 1.2;
 
+/** Minimum focus distance (meters) for depth of field — matches camera near plane. */
+export const DOF_FOCUS_MIN_M = 0.1;
+
+/**
+ * @param {object | undefined} dof
+ * @returns {object | undefined}
+ */
+export function sanitizeDof(dof) {
+  if (!dof || typeof dof.focus !== 'number' || Number.isNaN(dof.focus)) {
+    return dof;
+  }
+  if (dof.focus >= DOF_FOCUS_MIN_M) {
+    return dof;
+  }
+  return { ...dof, focus: DOF_FOCUS_MIN_M };
+}
+
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
 export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('medium');

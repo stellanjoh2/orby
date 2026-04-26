@@ -4,6 +4,7 @@
  */
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
   RENDER_QUALITY_DEFAULT,
 } from '../constants.js';
@@ -36,7 +37,11 @@ export class RenderControls {
     });
     this.ui.inputs.dofFocus.addEventListener('input', (event) => {
       touchLookFilterCustom();
-      const value = parseFloat(event.target.value);
+      const raw = parseFloat(event.target.value);
+      const value = Math.max(DOF_FOCUS_MIN_M, raw);
+      if (value !== raw) {
+        event.target.value = String(value);
+      }
       this.helpers.updateValueLabel('dofFocus', value, 'distance');
       this.stateStore.set('dof.focus', value);
       emitDof();
@@ -400,8 +405,12 @@ export class RenderControls {
 
   sync(state) {
     // DOF
-    this.ui.inputs.dofFocus.value = state.dof.focus;
-    this.helpers.updateValueLabel('dofFocus', state.dof.focus, 'distance');
+    const dofFocus = Math.max(DOF_FOCUS_MIN_M, state.dof.focus ?? DOF_FOCUS_MIN_M);
+    if (dofFocus !== state.dof.focus) {
+      this.stateStore.set('dof.focus', dofFocus);
+    }
+    this.ui.inputs.dofFocus.value = dofFocus;
+    this.helpers.updateValueLabel('dofFocus', dofFocus, 'distance');
     this.ui.inputs.dofAperture.value = state.dof.aperture;
     this.helpers.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
     this.ui.inputs.toggleDof.checked = !!state.dof.enabled;

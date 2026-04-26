@@ -3,7 +3,9 @@ import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
+  sanitizeDof,
 } from './constants.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
@@ -672,8 +674,9 @@ export class UIManager {
 
       // Apply DOF settings
       if (payload.dof) {
-        this.stateStore.set('dof', payload.dof);
-        this.eventBus.emit('render:dof', payload.dof);
+        const dof = sanitizeDof(payload.dof);
+        this.stateStore.set('dof', dof);
+        this.eventBus.emit('render:dof', dof);
         this.setEffectControlsDisabled(
           ['dofFocus', 'dofAperture'],
           !payload.dof.enabled,
@@ -1212,8 +1215,12 @@ export class UIManager {
 
   syncRenderControls(state) {
     // DOF
-    this.inputs.dofFocus.value = state.dof.focus;
-    this.updateValueLabel('dofFocus', state.dof.focus, 'distance');
+    const dofFocus = Math.max(DOF_FOCUS_MIN_M, state.dof.focus ?? DOF_FOCUS_MIN_M);
+    if (dofFocus !== state.dof.focus) {
+      this.stateStore.set('dof.focus', dofFocus);
+    }
+    this.inputs.dofFocus.value = dofFocus;
+    this.updateValueLabel('dofFocus', dofFocus, 'distance');
     this.inputs.dofAperture.value = state.dof.aperture;
     this.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
     this.inputs.toggleDof.checked = !!state.dof.enabled;

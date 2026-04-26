@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js';
-import { BokehPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js';
+import { MeshglBokehPass } from './MeshglBokehPass.js';
 import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/FilmPass.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
@@ -19,6 +19,7 @@ import {
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  DOF_FOCUS_MIN_M,
 } from '../constants.js';
 
 export class PostProcessingPipeline {
@@ -32,12 +33,10 @@ export class PostProcessingPipeline {
     // clearAlpha = 1 ensures the background color shows when scene.background is null
     this.renderPass.clearAlpha = 1;
 
-    this.bokehPass = new BokehPass(scene, camera, {
+    this.bokehPass = new MeshglBokehPass(scene, camera, {
       focus: 10,
       aperture: 0.003,
       maxblur: 0.01,
-      rings: 3, // Reduced rings to minimize artifacts (default is 3)
-      sides: 5, // Reduced sides for smoother, less artifact-prone bokeh (default is 5)
     });
 
     this.bloomPass = new UnrealBloomPass(
@@ -103,7 +102,13 @@ export class PostProcessingPipeline {
       this.bokehPass.enabled = active;
     }
     if (!active) return;
-    this.bokehPass.uniforms.focus.value = settings.focus;
+    const focus = Math.max(
+      DOF_FOCUS_MIN_M,
+      typeof settings.focus === 'number' && !Number.isNaN(settings.focus)
+        ? settings.focus
+        : DOF_FOCUS_MIN_M,
+    );
+    this.bokehPass.uniforms.focus.value = focus;
     this.bokehPass.uniforms.aperture.value = settings.aperture;
     // Calculate maxblur from aperture - smaller aperture = more blur
     // Very conservative maxblur range (0.01-0.04) for smooth, camera-like DOF
