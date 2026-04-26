@@ -133,14 +133,17 @@ export class StateStore {
       exposure: 1.0,
       autoExposure: false,
       histogramEnabled: false,
+      toneCurveOpen: false,
       toneCurve: {
         p1: { x: 0.25, y: 0.25 },
         p2: { x: 0.75, y: 0.75 },
       },
       antiAliasing: 'fxaa',
-      renderQuality: 'max',
+      renderQuality: 'medium',
       toneMapping: 'aces-filmic',
       background: '#000000',
+      lookFilterPreset: 'none',
+      lookFilterPresetsOpen: false,
     };
     this.state = clone(this.defaults);
     this.subscribers = new Set();
@@ -179,6 +182,22 @@ export class StateStore {
       target = target[key];
     }
     target[segments.at(-1)] = value;
+    this.notify();
+  }
+
+  /**
+   * Replace many top-level state keys in one go (single notify + one getState() clone
+   * for subscribers). Use for look-filter apply and similar bulk updates — avoids
+   * N× full UI sync, GC churn, and stacked rAF slider-fill passes.
+   * @param {Record<string, unknown>} partial — top-level keys only, e.g. { camera, bloom, … }
+   */
+  setTopLevelBundle(partial) {
+    if (!partial || typeof partial !== 'object') return;
+    const keys = Object.keys(partial);
+    if (keys.length === 0) return;
+    for (const key of keys) {
+      this.state[key] = partial[key];
+    }
     this.notify();
   }
 

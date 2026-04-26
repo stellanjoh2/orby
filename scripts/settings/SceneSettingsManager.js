@@ -112,6 +112,7 @@ export class SceneSettingsManager {
       exposure: state.exposure,
       autoExposure: state.autoExposure,
       histogramEnabled: state.histogramEnabled,
+      toneCurveOpen: state.toneCurveOpen,
       toneCurve: state.toneCurve,
       dof: state.dof,
       bloom: state.bloom,
@@ -121,6 +122,8 @@ export class SceneSettingsManager {
       antiAliasing: state.antiAliasing,
       renderQuality: state.renderQuality,
       toneMapping: state.toneMapping,
+      lookFilterPreset: state.lookFilterPreset,
+      lookFilterPresetsOpen: state.lookFilterPresetsOpen,
     };
   }
 
@@ -662,6 +665,9 @@ export class SceneSettingsManager {
         this.stateStore.set('histogramEnabled', !!payload.histogramEnabled);
         this.eventBus.emit('render:histogram-enabled', !!payload.histogramEnabled);
       }
+      if (payload.toneCurveOpen !== undefined) {
+        this.stateStore.set('toneCurveOpen', !!payload.toneCurveOpen);
+      }
       if (payload.toneCurve) {
         this.stateStore.set('toneCurve', payload.toneCurve);
         this.eventBus.emit('render:tone-curve', this.stateStore.getState().toneCurve);
@@ -728,12 +734,21 @@ export class SceneSettingsManager {
       } else if (payload.performanceMode !== undefined) {
         this.stateStore.set(
           'renderQuality',
-          payload.performanceMode ? 'low' : 'max',
+          payload.performanceMode ? 'low' : 'medium',
         );
       }
       if (payload.toneMapping !== undefined) {
         this.stateStore.set('toneMapping', payload.toneMapping);
         this.eventBus.emit('render:tone-mapping', payload.toneMapping);
+      }
+      if (payload.lookFilterPreset !== undefined) {
+        this.stateStore.set('lookFilterPreset', payload.lookFilterPreset);
+      }
+      if (payload.lookFilterPresetsOpen !== undefined) {
+        this.stateStore.set(
+          'lookFilterPresetsOpen',
+          !!payload.lookFilterPresetsOpen,
+        );
       }
       if (payload.background !== undefined) {
         this.stateStore.set('background', payload.background);

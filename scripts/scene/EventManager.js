@@ -219,6 +219,9 @@ export class EventManager {
         s.histogramController.setEnabled(enabled);
       }
     });
+    eventBus.on('render:look-filter', (presetId) => {
+      s.applyLookFilter(presetId);
+    });
 
     // Ground/Podium events
     eventBus.on('studio:ground-solid', (enabled) => s.setGroundSolid(enabled));

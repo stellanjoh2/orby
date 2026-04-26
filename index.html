@@ -1269,27 +1269,228 @@
                     </label>
                   </div>
                   <div id="histogramContainer" class="histogram-container histogram-container--collapsed"></div>
+                  <div class="panel-block-divider"></div>
                   <div class="subsection tone-curve-sub">
-                    <div class="block-title has-reset">
+                    <div class="block-title has-toggle has-reset">
                       <span>Curve</span>
-                      <button
-                        class="block-reset-btn"
-                        data-reset="tone-curve"
-                        aria-label="Reset curve"
-                        data-tooltip="Reset"
-                      >
-                        <i class="fa-solid fa-rotate-left"></i>
-                        <span class="sr-only">Reset</span>
-                      </button>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button
+                          class="block-reset-btn"
+                          data-reset="tone-curve"
+                          aria-label="Reset curve"
+                          data-tooltip="Reset"
+                        >
+                          <i class="fa-solid fa-rotate-left"></i>
+                          <span class="sr-only">Reset</span>
+                        </button>
+                        <label class="effect-toggle" data-tooltip="Show or hide the tone curve">
+                          <input type="checkbox" id="toneCurveOpen" />
+                          <span class="effect-indicator" aria-hidden="true"></span>
+                          <span class="sr-only">Show tone curve</span>
+                        </label>
+                      </div>
                     </div>
-                    <div class="tone-curve-canvas-wrap">
-                      <canvas
-                        id="toneCurveCanvas"
-                        class="tone-curve-canvas"
-                        width="320"
-                        height="180"
-                        aria-label="Tone curve"
-                      ></canvas>
+                    <div
+                      id="toneCurveContainer"
+                      class="tone-curve-foldout tone-curve-foldout--collapsed"
+                    >
+                      <div class="tone-curve-canvas-wrap">
+                        <canvas
+                          id="toneCurveCanvas"
+                          class="tone-curve-canvas"
+                          width="320"
+                          height="180"
+                          aria-label="Tone curve"
+                        ></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="look-filters">
+                  <div class="block-title has-toggle">
+                    <span>Filters</span>
+                    <label class="effect-toggle" data-tooltip="Show filter style presets">
+                      <input type="checkbox" id="lookFilterPresetsOpen" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show filters</span>
+                    </label>
+                  </div>
+                  <div
+                    id="lookFilterPresetsContainer"
+                    class="look-filter-presets-container look-filter-presets-container--collapsed"
+                  >
+                    <div class="look-filter-grid" role="list" aria-label="Look filters">
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="none"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/none.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">None</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="studio"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/studio.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Studio</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="noir"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/noir.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Noir</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="golden"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/golden.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Golden</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="frost"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/frost.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Frost</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="vintage"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/vintage.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Vintage</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="cinema"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/cinema.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Cinema</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="mood"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/mood.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Mood</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="dream"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/dream.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Dream</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="neon"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/neon.svg"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Neon</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1707,11 +1908,11 @@
                   <span>Quality</span>
                 </div>
                 <label class="select-line">
-                  <span data-tooltip="Max: full quality. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved.">Render quality</span>
+                  <span data-tooltip="Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Epic: full quality.">Render quality</span>
                   <select id="renderQuality" aria-label="Render quality">
-                    <option value="max" selected>Max</option>
-                    <option value="medium">Medium</option>
                     <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="max">Epic</option>
                   </select>
                 </label>
                 <label class="select-line">
@@ -1785,6 +1986,8 @@
                   <a href="#info-gamepad">Gamepad</a>
                   <a href="#info-features">Key Features</a>
                   <a href="#info-faq">Feature FAQ</a>
+                  <a href="#info-look-filters">Look filters</a>
+                  <a href="#info-tone-curve">Tone curve</a>
                   <a href="#info-svg-extrude">SVG Extrude</a>
                   <a href="#info-performance">Performance</a>
                   <a href="#info-learn">Learn More</a>
@@ -1999,15 +2202,6 @@
             </div>
 
               <div class="panel-block" id="info-features">
-                <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
-                <div class="about-content">
-                  <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It’s perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
-                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
-                  <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
-                </div>
-              </div>
-
-              <div class="panel-block" id="info-features">
                 <div class="block-title"><i class="fa-solid fa-wand-magic-sparkles" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Key Features</div>
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
@@ -2015,7 +2209,10 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional transform widgets</span> — Interactive gizmos (W=Move, E=Rotate, Q=Scale) for precise object manipulation with click-to-select</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, grain, chromatic aberration, and color grading for cinematic results</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, film grain, chromatic aberration, lens dirt, and full color &amp; tone grading for cinematic results</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Look filter presets</span> — One-tap style presets in Camera (thumbnail grid) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance tone curve</span> — Two-point curve editor (smooth PCHIP) for response shaping, with optional fold-out next to the histogram</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Histogram &amp; exposure tools</span> — Live luminance histogram (optional), auto exposure, and manual exposure for predictable brightness</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and auto-rotate</li>
@@ -2061,17 +2258,27 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Post-Processing Effects</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Chromatic Aberration:</strong> Splits color channels slightly at the edges. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere. <strong>Color &amp; Tone</strong> (contrast, temperature, H/S/L, highlights/shadows, clarity, fade, sharpness, vignette) and <strong>tone mapping</strong> (e.g. ACES) sit in the Camera tab alongside exposure.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Camera Controls</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Auto-Orbit:</strong> Automatically orbits the camera around your model with smooth multi-axis movement—perfect for screensaver-style presentations. Press Esc to exit. <strong>Exposure:</strong> Controls overall image brightness (like a camera's exposure setting).</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Auto-Orbit:</strong> Automatically orbits the camera around your model with smooth multi-axis movement—perfect for screensaver-style presentations. Press Esc to exit. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look filters</strong>, and the rest of Color &amp; Tone for a full grade.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Histogram</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure. Toggle it on from the Camera tab; it sits in a fold-out under the heading, same idea as the curve (see below).</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 id="info-tone-curve" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Tone curve</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A <strong>luminance</strong> response curve with two draggable control points (smooth PCHIP interpolation). It shapes how shadows and highlights map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
+                  </div>
+                  
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 id="info-look-filters" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Look filter presets</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Under <strong>Camera → Filters</strong>, pick a thumbnail preset (Studio, Noir, Golden, etc.) for a one-tap look: color grade, tone curve, bloom, grain, chromatic aberration, and more are applied together. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or load scene JSON.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
@@ -2081,7 +2288,7 @@
                   
                   <div>
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Scene Settings</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Copy and paste all your settings (lighting, camera, effects, materials) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Copy and paste all your settings (lighting, camera, effects, materials, tone curve, look filter selection, histogram/curve panel toggles, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
                   </div>
                 </div>
               </div>
@@ -2112,8 +2319,8 @@
                     Orby is a real-time GPU renderer built on WebGL and Three.js. Every frame, the scene is drawn and then post-processing effects are applied as full-screen “passes”. The more heavy effects you stack, and the higher your resolution, the more work your GPU has to do each frame.
                   </p>
                   <ul style="list-style: none; padding: 0; margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
-                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Very cheap (almost free):</span> exposure, contrast, saturation, tint, temperature, fade. These are simple color operations inside a single pass.</li>
-                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Medium cost:</span> vignette, clarity, sharpness, Fresnel. These add extra calculations or one extra pass, but are usually fine on modern GPUs.</li>
+                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Very cheap (almost free):</span> exposure, contrast, saturation, tint, temperature, fade, and the <strong>luminance tone curve</strong> (evaluated in the same color pass). These are light math per pixel.</li>
+                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Medium cost:</span> vignette, clarity, sharpness, Fresnel. These add extra calculations or an extra pass, but are usually fine on modern GPUs.</li>
                     <li><span class="about-highlight">Heavier effects:</span> depth of field, bloom, lens dirt, film grain, chromatic aberration, FXAA, and some histogram/auto-exposure work. These often require additional buffers and multiple full-screen passes and will have the biggest impact on frame rate.</li>
                   </ul>
                   <p style="margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
@@ -2173,8 +2380,8 @@
                 <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
                 <div class="about-content">
                   <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It's perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
-                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
-                  <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
+                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">look filter presets</span>, <span class="about-highlight">a luminance tone curve</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
+                <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
                 </div>
               </div>
 
@@ -2234,11 +2441,11 @@
               <div class="panel-block" id="info-changelog">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Slider fill updates on reset and improve sync timing requestAnimationFrame to syncControls() to ensure DOM updates before calculating slider fills. requestAnimationFrame to color-correction reset for proper state synchronization.</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Load scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.173 · 2026-04-26 07:40:38 UTC</div>
+              <div class="info-version-tag">v0.5.174 · 2026-04-26 08:01:04 UTC</div>
             </section>
           </div>
         </aside>

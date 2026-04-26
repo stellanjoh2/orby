@@ -207,6 +207,8 @@ export class UIManager {
       vignetteIntensity: q('#vignetteIntensity'),
       vignetteColor: q('#vignetteColor'),
       histogramEnabled: q('#histogramEnabled'),
+      toneCurveOpen: q('#toneCurveOpen'),
+      lookFilterPresetsOpen: q('#lookFilterPresetsOpen'),
       antiAliasing: q('#antiAliasing'),
       renderQuality: q('#renderQuality'),
       toneMapping: q('#toneMapping'),
@@ -796,7 +798,7 @@ export class UIManager {
       } else if (payload.performanceMode !== undefined) {
         this.stateStore.set(
           'renderQuality',
-          payload.performanceMode ? 'low' : 'max',
+          payload.performanceMode ? 'low' : 'medium',
         );
       }
 
@@ -1376,7 +1378,7 @@ export class UIManager {
       this.setControlDisabled('antiAliasing', aa.disabled);
     }
     if (this.inputs.renderQuality) {
-      this.inputs.renderQuality.value = state.renderQuality ?? 'max';
+      this.inputs.renderQuality.value = state.renderQuality ?? 'medium';
     }
     if (this.inputs.toneMapping) {
       this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';

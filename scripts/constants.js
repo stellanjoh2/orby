@@ -21,7 +21,7 @@ export const BLOOM_LUMINANCE_THRESHOLD_MAX = 1.2;
 
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
-export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('max');
+export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('medium');
 
 /**
  * Viewport / post tradeoffs. max = full quality; medium/low reduce GPU load.
@@ -73,7 +73,7 @@ export function resolveRenderQualityTier(id) {
 
 /**
  * Anti-aliasing select: medium/low tiers force FXAA off in the GPU while keeping
- * `state.antiAliasing` for when the user returns to Max — use this for display + disabled.
+ * `state.antiAliasing` for when the user returns to Epic — use this for display + disabled.
  * @param {string | undefined} renderQuality
  * @param {string | undefined} storedAntiAliasing
  */

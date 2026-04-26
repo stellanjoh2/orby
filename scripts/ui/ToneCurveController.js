@@ -162,7 +162,11 @@ export class ToneCurveController {
       c0.p2.y = pn.y;
     }
     const c = constrainOrder(c0);
+    const prevLook = this.stateStore.getState().lookFilterPreset;
     this.stateStore.set('toneCurve', c);
+    if (prevLook !== 'custom') {
+      this.stateStore.set('lookFilterPreset', 'custom');
+    }
     this.eventBus.emit('render:tone-curve', c);
     this._draw();
   }

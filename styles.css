@@ -2397,6 +2397,119 @@ body.ui-hidden .shelf {
   margin-bottom: -0.35rem; /* pull the divider a bit closer when hidden */
 }
 
+/* Tone curve — fold-out panel (like histogram) */
+.tone-curve-foldout {
+  margin-top: 0.45rem;
+  margin-bottom: 0.25rem;
+  position: relative;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.tone-curve-foldout--expanded {
+  max-height: 200px;
+  opacity: 1;
+}
+
+.tone-curve-foldout--collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: -0.2rem;
+}
+
+/* Look filter presets (Camera & FX) */
+.look-filter-presets-container {
+  margin-top: 0.45rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.look-filter-presets-container--expanded {
+  max-height: 24rem;
+  opacity: 1;
+}
+
+.look-filter-presets-container--collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: -0.2rem;
+}
+
+.look-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem 0.4rem;
+}
+
+.look-filter-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  color: var(--text-dim, #9a9a9a);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.15s ease,
+    border 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.look-filter-tile:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text, #e8e8e8);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.look-filter-tile.is-selected {
+  border: 1px solid var(--accent);
+  color: var(--text, #e8e8e8);
+  box-shadow: 0 2px 10px var(--accent-shadow);
+  background: var(--accent-muted);
+}
+
+.look-filter-tile.is-selected .look-filter-tile__label {
+  color: var(--accent);
+}
+
+.look-filter-tile__thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
+  object-fit: cover;
+  object-position: center;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  vertical-align: top;
+  flex: 0 0 auto;
+}
+
+.look-filter-tile__label {
+  line-height: 1.2;
+  padding: 0.3rem 0.2rem 0.32rem;
+  flex: 0 0 auto;
+  background: rgba(0, 0, 0, 0.2);
+}
+
 /* Information tab quick navigation */
 .info-quicknav {
   display: block !important;
@@ -2429,13 +2542,13 @@ a:hover {
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* Tone curve — same voice as other blocks, minimal chrome */
+/* Tone curve block — divider above handles spacing from Histogram */
 .tone-curve-sub {
-  margin-top: 0.75rem;
+  margin-top: 0;
 }
 
 .tone-curve-canvas-wrap {
-  margin-top: 0.4rem;
+  margin-top: 0.35rem;
   border-radius: 4px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.35);

@@ -31,6 +31,7 @@ import { ImageExporter } from './render/ImageExporter.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
+import { applyLookFilterPreset } from './ui/lookFilterApply.js';
 
 
 export class SceneManager {
@@ -881,6 +882,15 @@ export class SceneManager {
 
   setToneMapping(value) {
     this.postPipeline?.setToneMapping(value);
+  }
+
+  applyLookFilter(presetId) {
+    applyLookFilterPreset({
+      eventBus: this.eventBus,
+      stateStore: this.stateStore,
+      ui: this.ui,
+      presetId,
+    });
   }
 
   setHdriStrength(value) {
@@ -2016,8 +2026,11 @@ export class SceneManager {
       this.camera.aspect = finalWidth / finalHeight;
       this.camera.updateProjectionMatrix();
       
-      // Update composer (post-processing pipeline)
+      // Update composer (post-processing pipeline). EffectComposer caches _pixelRatio from
+      // construction; it does not follow renderer.setPixelRatio() unless we sync here.
+      // Without this, switching render quality (Epic ↔ Medium) leaves passes sized for the old DPR.
       if (this.composer) {
+        this.composer.setPixelRatio(this.renderer.getPixelRatio());
         this.composer.setSize(finalWidth, finalHeight);
       }
       

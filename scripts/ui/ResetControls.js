@@ -234,9 +234,10 @@ export class ResetControls {
       this.stateStore.set('exposure', defaults.exposure);
       this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
       this.stateStore.set('antiAliasing', defaults.antiAliasing);
-      this.stateStore.set('renderQuality', defaults.renderQuality ?? 'max');
+      this.stateStore.set('renderQuality', defaults.renderQuality ?? 'medium');
       this.stateStore.set('toneCurve', defaults.toneCurve);
       this.stateStore.set('toneMapping', defaults.toneMapping);
+      this.stateStore.set('lookFilterPreset', 'none');
       
       this.eventBus.emit('render:dof', defaults.dof);
       this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
@@ -415,6 +416,7 @@ export class ResetControls {
             break;
             
           case 'dof':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('dof', defaults.dof);
             this.eventBus.emit('render:dof', defaults.dof);
             this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
@@ -422,6 +424,7 @@ export class ResetControls {
             break;
             
           case 'bloom':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('bloom', defaults.bloom);
             this.eventBus.emit('render:bloom', defaults.bloom);
             this.ui.setEffectControlsDisabled(['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'], !defaults.bloom.enabled);
@@ -429,6 +432,7 @@ export class ResetControls {
             break;
 
           case 'lens-dirt':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('lensDirt', defaults.lensDirt);
             this.eventBus.emit('render:lens-dirt', defaults.lensDirt);
             this.ui.setEffectControlsDisabled(['lensDirtStrength'], !defaults.lensDirt.enabled);
@@ -436,6 +440,7 @@ export class ResetControls {
             break;
             
           case 'grain':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('grain', defaults.grain);
             this.eventBus.emit('render:grain', defaults.grain);
             this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
@@ -443,6 +448,7 @@ export class ResetControls {
             break;
             
           case 'aberration':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('aberration', defaults.aberration);
             this.eventBus.emit('render:aberration', defaults.aberration);
             this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !defaults.aberration.enabled);
@@ -458,6 +464,7 @@ export class ResetControls {
             
           case 'camera':
             // Reset basic camera settings (FOV, Tilt, Exposure, Auto Exposure)
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('camera.fov', defaults.camera.fov);
             this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
             this.stateStore.set('exposure', defaults.exposure);
@@ -477,6 +484,7 @@ export class ResetControls {
             break;
 
           case 'color-correction':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('camera.contrast', defaults.camera.contrast);
             this.stateStore.set('camera.temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
             this.stateStore.set('camera.tint', defaults.camera.tint ?? 0);
@@ -502,6 +510,7 @@ export class ResetControls {
             break;
 
           case 'vignette':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
             this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
             this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
@@ -510,6 +519,7 @@ export class ResetControls {
             break;
 
           case 'tone-curve':
+            this.stateStore.set('lookFilterPreset', 'custom');
             this.stateStore.set('toneCurve', defaults.toneCurve);
             this.eventBus.emit('render:tone-curve', this.stateStore.getState().toneCurve);
             this.ui.renderControls.toneCurveController?.syncFromState(
