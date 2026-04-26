@@ -478,7 +478,6 @@ export class SceneManager {
       updateBloom: (settings) => this.updateBloom(settings),
       updateGrain: (settings) => this.updateGrain(settings),
       setBloomState: (value) => this.stateStore.set('bloom', value),
-      setGrainState: (value) => this.stateStore.set('grain', value),
       fallbackBackgroundColor: this.backgroundController?.getColor() ?? '#000000',
     });
   }

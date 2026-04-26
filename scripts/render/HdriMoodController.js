@@ -7,7 +7,6 @@ export class HdriMoodController {
     updateBloom,
     updateGrain,
     setBloomState,
-    setGrainState,
     fallbackBackgroundColor = '#000000',
   }) {
     this.renderer = renderer;
@@ -16,7 +15,6 @@ export class HdriMoodController {
     this.updateBloom = updateBloom;
     this.updateGrain = updateGrain;
     this.setBloomState = setBloomState;
-    this.setGrainState = setGrainState;
     this.fallbackBackgroundColor = fallbackBackgroundColor;
   }
 
@@ -27,19 +25,6 @@ export class HdriMoodController {
 
   apply(style, { hdriBackgroundEnabled, hdriEnabled }) {
     const state = this.getState?.() ?? {};
-    if (!style) {
-      this.groundController?.setSolidColor(state.groundSolidColor);
-      if (!hdriBackgroundEnabled || !hdriEnabled) {
-        this.renderer.setClearColor(
-          new THREE.Color(this.fallbackBackgroundColor),
-          1,
-        );
-      }
-      if (state.bloom) this.updateBloom?.(state.bloom);
-      if (state.grain) this.updateGrain?.(state.grain);
-      return;
-    }
-
     if (!style) {
       this.groundController?.setSolidColor(state.groundSolidColor);
       if (!hdriBackgroundEnabled || !hdriEnabled) {
@@ -72,17 +57,6 @@ export class HdriMoodController {
       };
       this.setBloomState?.(bloomState);
       this.updateBloom?.(bloomState);
-    }
-
-    if (state.grain) {
-      const grainState = {
-        ...state.grain,
-        color: style.grainTint ?? state.grain.color,
-      };
-      if (style.grainTint) {
-        this.setGrainState?.(grainState);
-      }
-      this.updateGrain?.(grainState);
     }
   }
 }
