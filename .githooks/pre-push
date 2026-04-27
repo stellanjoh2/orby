@@ -1,0 +1,27 @@
+#!/bin/sh
+# Bump VERSION + index.html tags/changelog into the tip commit (amend), so one push
+# = one Pages deploy. Requires: git config core.hooksPath .githooks
+# Disable any post-push hook that also runs scripts/update-version.js or you will get
+# a second commit and duplicate workflow runs.
+
+set -e
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+[ "$branch" = "main" ] || exit 0
+
+if ! git rev-parse --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+  exit 0
+fi
+
+ahead=$(git rev-list --count '@{u}..HEAD')
+[ "$ahead" -ge 1 ] || exit 0
+
+node scripts/update-version.js
+
+git add VERSION index.html
+
+if git diff --cached --quiet; then
+  exit 0
+fi
+
+git commit --amend --no-edit

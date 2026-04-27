@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "python3 -m http.server 8000",
     "build": "node build.js",
-    "preview": "python3 -m http.server 8000 -d dist"
+    "preview": "python3 -m http.server 8000 -d dist",
+    "setup-hooks": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "esbuild": "^0.19.0"

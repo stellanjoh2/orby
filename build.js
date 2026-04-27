@@ -6,6 +6,32 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+/** Match scripts/update-version.js display format (CI may build before index.html is re-synced). */
+function formatVersionBanner(versionLine) {
+  const v = versionLine.trim();
+  const iso = new Date().toISOString();
+  const utcDate = iso.split('T')[0];
+  const utcTime = `${iso.split('T')[1].split('.')[0]} UTC`;
+  return `v${v} · ${utcDate} ${utcTime}`;
+}
+
+function injectVersionIntoHtml(html) {
+  const versionPath = join(__dirname, 'VERSION');
+  if (!existsSync(versionPath)) return html;
+  const line = readFileSync(versionPath, 'utf-8').trim();
+  if (!/^\d+\.\d+\.\d+$/.test(line)) return html;
+  const banner = formatVersionBanner(line);
+  return html
+    .replace(
+      /<div class="info-version-tag">[^<]+<\/div>/,
+      `<div class="info-version-tag">${banner}</div>`,
+    )
+    .replace(
+      /<div class="dropzone-version-tag">[^<]+<\/div>/,
+      `<div class="dropzone-version-tag">${banner}</div>`,
+    );
+}
+
 // Clean dist folder
 const distDir = join(__dirname, 'dist');
 if (existsSync(distDir)) {
@@ -30,12 +56,9 @@ await esbuild.build({
   }
 });
 
-// Copy HTML and replace script reference
+// Copy HTML (refresh version banners from VERSION for deterministic deploys)
 const indexHtml = readFileSync('index.html', 'utf-8');
-const updatedHtml = indexHtml.replace(
-  '<script type="module" src="./scripts/main.js"></script>',
-  '<script type="module" src="./scripts/main.js"></script>'
-);
+const updatedHtml = injectVersionIntoHtml(indexHtml);
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
 
 // Copy assets
