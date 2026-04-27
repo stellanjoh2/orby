@@ -158,7 +158,7 @@
                       id="materialBrightness"
                       type="range"
                       min="0"
-                      max="3"
+                      max="5"
                       step="0.01"
                       value="1"
                     />
@@ -221,10 +221,10 @@
                   </label>
                   <label class="slider-line">
                     <span>Normal Map</span>
-                    <label class="effect-toggle" data-tooltip="Show surface details from normal maps in clay mode">
+                    <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
                       <input type="checkbox" id="clayNormalMap" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable normal map in clay mode</span>
+                      <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
                     </label>
                   </label>
                 </div>
@@ -557,6 +557,25 @@
                       </label>
                     </div>
                   </div>
+                  <label class="select-line">
+                    <span data-tooltip="Built-in podium shape; custom meshes match the default platform footprint">Podium mesh</span>
+                    <select id="podiumPreset" aria-label="Podium mesh preset">
+                      <option value="default">Default (cylinder)</option>
+                      <option value="desert">Desert rock</option>
+                    </select>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Rotate the podium around the vertical axis">Podium rotate</span>
+                    <input
+                      id="podiumRotation"
+                      type="range"
+                      min="0"
+                      max="360"
+                      step="1"
+                      value="0"
+                    />
+                    <span class="value" data-output="podiumRotation">0°</span>
+                  </label>
                   <label class="color-line">
                     <span>Color</span>
                     <input
@@ -618,6 +637,18 @@
                       class="color-chip"
                       value="#c4cadd"
                     />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical position of the grid">Y Position</span>
+                    <input
+                      id="gridY"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="gridY">0.00m</span>
                   </label>
                   <label class="slider-line">
                     <span>Opacity</span>
@@ -2501,7 +2532,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.190 · 2026-04-27 09:17:54 UTC</div>
+              <div class="info-version-tag">v0.5.191 · 2026-04-27 19:10:44 UTC</div>
             </section>
           </div>
         </aside>

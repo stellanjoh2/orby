@@ -41,7 +41,7 @@ export class MeshControls {
 
     // Material controls
     this.ui.inputs.materialBrightness?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 3, 1.0);
+      const value = this.helpers.applySnapToCenter(event.target, 0, 5, 1.0);
       this.helpers.updateValueLabel('materialBrightness', value, 'decimal');
       this.stateStore.set('material.brightness', value);
       this.eventBus.emit('mesh:material-brightness', value);

@@ -544,6 +544,8 @@ export class SceneManager {
     this.setGroundWireColor(state.groundWireColor);
     this.setGroundWireOpacity(state.groundWireOpacity);
     this.setGridY(state.gridY ?? 0);
+    this.groundController?.setPodiumRotation?.(state.podiumRotation ?? 0);
+    await this.groundController?.setPodiumPreset?.(state.podiumPreset ?? 'default');
     this.setPodiumScale(state.podiumScale ?? 1, { updateState: false });
     this.setGridScale(state.gridScale ?? 1);
     this.autoExposureController?.applyStateSnapshot(state);
@@ -781,41 +783,63 @@ export class SceneManager {
   }
 
   setClayNormalMap(enabled) {
-    if (this.currentShading === 'clay' && this.currentModel) {
+    if (!this.currentModel) return;
+
+    const applyFromOriginal = (material, originalMat) => {
+      if (!material) return;
+      if (enabled) {
+        if (originalMat?.normalMap) {
+          material.normalMap = originalMat.normalMap;
+          material.normalMapType =
+            originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
+          if (originalMat.normalScale) {
+            material.normalScale = originalMat.normalScale.clone();
+          }
+        } else {
+          material.normalMap = null;
+        }
+      } else {
+        material.normalMap = null;
+        material.normalMapType = THREE.TangentSpaceNormalMap;
+      }
+      material.needsUpdate = true;
+    };
+
+    const isPbrWithNormalSlot = (m) =>
+      m &&
+      (m.isMeshStandardMaterial ||
+        m.isMeshPhysicalMaterial);
+
+    if (this.currentShading === 'clay') {
       this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.material) return;
-        if (this.materialController.isClayMaterial(child)) {
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          materials.forEach((material) => {
-            if (!material || !material.isMeshStandardMaterial) return;
-            if (enabled) {
-              // Restore normal map from original material
-              const originalMaterial = this.materialController.getOriginalMaterial(child);
-              if (originalMaterial) {
-                const originalMat = Array.isArray(originalMaterial) 
-                  ? originalMaterial[0] 
-                  : originalMaterial;
-                if (originalMat?.normalMap) {
-                  material.normalMap = originalMat.normalMap;
-                  material.normalMapType = originalMat.normalMapType ?? THREE.TangentSpaceNormalMap;
-                  if (originalMat.normalScale) {
-                    material.normalScale = originalMat.normalScale.clone();
-                  }
-                } else {
-                  // Original has no normal map, ensure it's cleared
-                  material.normalMap = null;
-                }
-              }
-            } else {
-              // Remove normal map completely
-              material.normalMap = null;
-              material.normalMapType = THREE.TangentSpaceNormalMap; // Reset to default
-            }
-            material.needsUpdate = true;
-          });
-        }
+        if (!this.materialController.isClayMaterial(child)) return;
+        const originals = this.materialController.getOriginalMaterial(child);
+        if (!originals) return;
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        const origs = Array.isArray(originals) ? originals : [originals];
+        materials.forEach((material, i) => {
+          if (!material?.isMeshStandardMaterial) return;
+          const originalMat = origs[i] ?? origs[0];
+          applyFromOriginal(material, originalMat);
+        });
+      });
+    } else if (this.currentShading === 'shaded') {
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const originals = this.materialController.getOriginalMaterial(child);
+        if (!originals) return;
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        const origs = Array.isArray(originals) ? originals : [originals];
+        materials.forEach((material, i) => {
+          if (!isPbrWithNormalSlot(material)) return;
+          const originalMat = origs[i] ?? origs[0];
+          applyFromOriginal(material, originalMat);
+        });
       });
     }
   }
@@ -1032,6 +1056,29 @@ export class SceneManager {
     if (updateState && typeof newGroundY === 'number') {
       this.stateStore.set('groundY', newGroundY);
     }
+  }
+
+  async applyPodiumPresetFromUi(preset) {
+    try {
+      const swapped = await this.groundController?.setPodiumPreset?.(preset);
+      if (swapped) {
+        this.groundController?.setPodiumScale?.(this.stateStore.getState().podiumScale ?? 1);
+      }
+    } catch (err) {
+      console.error(err);
+      this.stateStore.set('podiumPreset', 'default');
+      try {
+        await this.groundController?.setPodiumPreset?.('default');
+      } catch {
+        /* ignore secondary failure */
+      }
+      this.ui?.showToast?.('Could not load custom podium');
+    }
+    this.ui?.syncControls?.(this.stateStore.getState());
+  }
+
+  applyPodiumRotationFromUi(degrees) {
+    this.groundController?.setPodiumRotation?.(degrees);
   }
 
   setGridScale(value) {

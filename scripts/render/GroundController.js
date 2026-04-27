@@ -1,13 +1,30 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js';
 import {
   PODIUM_TOP_RADIUS_OFFSET,
   PODIUM_SEGMENTS,
-  PODIUM_RADIUS_MULTIPLIER,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  PODIUM_PRESET_DEFAULT,
+  PODIUM_PRESET_DESERT,
+  DESERT_PODIUM_GLB_URL,
 } from '../constants.js';
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
+
+function disposeObjectGpuResources(root) {
+  if (!root) return;
+  root.traverse((child) => {
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => {
+        if (!m) return;
+        m.dispose?.();
+      });
+    }
+  });
+}
 
 export class GroundController {
   constructor(scene, options = {}) {
@@ -24,50 +41,64 @@ export class GroundController {
     this.groundHeight = options.groundHeight ?? 0.1;
     this.podiumBaseRadius = 2;
 
+    this.podiumPreset = PODIUM_PRESET_DEFAULT;
+    this.podiumRotationY = THREE.MathUtils.degToRad(options.podiumRotation ?? 0);
+
     this.podium = null;
-    this.podiumShadow = null;
+    /** Horizontal extent (max of X/Z size) after centering & top alignment, before uniform podium scale. */
+    this.customFlatExtent = 0;
+
     this.grid = null;
     this.gridMaterials = null;
 
-    this.buildGroundMeshes();
+    this.gltfLoader = new GLTFLoader();
+    this._podiumLoadToken = 0;
+
+    this.buildGrid();
+    this.buildDefaultPodium();
     this.setSolidEnabled(this.solidEnabled);
     this.setWireEnabled(this.wireEnabled);
   }
 
-  disposeMeshes() {
-    if (this.podium) {
-      this.scene.remove(this.podium);
-      this.podium.geometry.dispose();
-      this.podium.material.dispose?.();
-      this.podium = null;
+  disposePodium() {
+    if (!this.podium) {
+      this.customFlatExtent = 0;
+      return;
     }
-    if (this.podiumShadow) {
-      this.scene.remove(this.podiumShadow);
-      this.podiumShadow.geometry.dispose();
-      this.podiumShadow.material.dispose?.();
-      this.podiumShadow = null;
-    }
-    if (this.grid) {
-      this.scene.remove(this.grid);
-      if (Array.isArray(this.grid.material)) {
-        this.grid.material.forEach((mat) => mat?.dispose?.());
-      } else {
-        this.grid.material?.dispose?.();
-      }
-      this.grid = null;
-      this.gridMaterials = null;
-    }
+    this.scene.remove(this.podium);
+    disposeObjectGpuResources(this.podium);
+    this.podium = null;
+    this.customFlatExtent = 0;
   }
 
-  buildGroundMeshes() {
-    this.disposeMeshes();
+  disposeGrid() {
+    if (!this.grid) return;
+    this.scene.remove(this.grid);
+    if (Array.isArray(this.grid.material)) {
+      this.grid.material.forEach((mat) => mat?.dispose?.());
+    } else {
+      this.grid.material?.dispose?.();
+    }
+    this.grid = null;
+    this.gridMaterials = null;
+  }
+
+  disposeMeshes() {
+    this.disposePodium();
+    this.disposeGrid();
+  }
+
+  buildDefaultPodium() {
+    this.disposePodium();
+    this.podiumPreset = PODIUM_PRESET_DEFAULT;
+    this.customFlatExtent = 0;
+
     const baseRadius = this.podiumBaseRadius * this.podiumScale;
     const height = this.groundHeight;
     const topRadius =
       (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
     const segments = PODIUM_SEGMENTS;
 
-    // Validate dimensions before creating geometry
     if (baseRadius <= 0 || topRadius <= 0 || height <= 0 || !isFinite(baseRadius) || !isFinite(topRadius) || !isFinite(height)) {
       console.error('Invalid podium geometry dimensions:', { baseRadius, topRadius, height, scale: this.podiumScale });
       return;
@@ -91,24 +122,16 @@ export class GroundController {
 
     this.podium = new THREE.Mesh(podiumGeo, solidMat);
     this.podium.receiveShadow = true;
-    // Set visibility based on solidEnabled state, not hardcoded false
+    this.podium.rotation.y = this.podiumRotationY;
     this.podium.visible = this.solidEnabled;
     this.scene.add(this.podium);
 
-    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.4 });
-    const shadowRadius = baseRadius * PODIUM_RADIUS_MULTIPLIER;
-    if (shadowRadius > 0 && isFinite(shadowRadius)) {
-    this.podiumShadow = new THREE.Mesh(
-        new THREE.CircleGeometry(shadowRadius, segments),
-      shadowMat,
-    );
-    this.podiumShadow.rotation.x = -Math.PI / 2;
-    this.podiumShadow.receiveShadow = true;
-      // Set visibility based on solidEnabled state, not hardcoded false
-      this.podiumShadow.visible = this.solidEnabled;
-    this.scene.add(this.podiumShadow);
-    }
+    this.setGroundY(this.groundY);
+  }
 
+  buildGrid() {
+    this.disposeGrid();
+    const baseRadius = this.podiumBaseRadius * this.podiumScale;
     this.grid = new THREE.GridHelper(
       baseRadius * 2 * this.gridScale,
       32,
@@ -126,28 +149,129 @@ export class GroundController {
       mat.toneMapped = false;
       if (mat.color) mat.color.set(this.wireColor);
     });
-    this.grid.visible = false;
+    this.grid.visible = this.wireEnabled;
     this.scene.add(this.grid);
-
-    this.setGroundY(this.groundY);
     this.setGridY(this.gridY);
+  }
+
+  /**
+   * @param {string} preset 'default' | 'desert'
+   */
+  async setPodiumPreset(preset) {
+    const next = preset === PODIUM_PRESET_DESERT ? PODIUM_PRESET_DESERT : PODIUM_PRESET_DEFAULT;
+    const isCylinderPodium = this.podium instanceof THREE.Mesh;
+    if (next === PODIUM_PRESET_DEFAULT && this.podiumPreset === PODIUM_PRESET_DEFAULT && isCylinderPodium) {
+      return false;
+    }
+    if (
+      next === PODIUM_PRESET_DESERT &&
+      this.podiumPreset === PODIUM_PRESET_DESERT &&
+      !isCylinderPodium &&
+      this.customFlatExtent > 0
+    ) {
+      return false;
+    }
+
+    const token = ++this._podiumLoadToken;
+
+    if (next === PODIUM_PRESET_DEFAULT) {
+      this.podiumPreset = next;
+      const wasVisible = this.solidEnabled;
+      const currentColor = this.solidColor;
+      const currentGroundY = this.groundY;
+      const wasCustom = this.customFlatExtent > 0;
+
+      this.buildDefaultPodium();
+      this.setSolidEnabled(wasVisible);
+      this.setSolidColor(currentColor);
+      if (wasCustom) {
+        this.groundY = currentGroundY;
+      } else {
+        const topFaceY = currentGroundY + this.groundHeight / 2;
+        this.groundY = topFaceY - this.groundHeight / 2;
+      }
+      this.setGroundY(this.groundY);
+      return true;
+    }
+
+    this.podiumPreset = next;
+    this.disposePodium();
+
+    let gltf;
+    try {
+      gltf = await new Promise((resolve, reject) => {
+        this.gltfLoader.load(DESERT_PODIUM_GLB_URL, resolve, undefined, reject);
+      });
+    } catch (err) {
+      console.error('[GroundController] Desert podium load failed:', err);
+      this.podiumPreset = PODIUM_PRESET_DEFAULT;
+      this.buildDefaultPodium();
+      this.setSolidEnabled(this.solidEnabled);
+      throw err;
+    }
+
+    if (token !== this._podiumLoadToken) return false;
+
+    const content = gltf.scene;
+    const box = new THREE.Box3().setFromObject(content);
+    if (box.isEmpty()) {
+      console.error('[GroundController] Desert podium has empty bounds');
+      this.podiumPreset = PODIUM_PRESET_DEFAULT;
+      this.buildDefaultPodium();
+      this.setSolidEnabled(this.solidEnabled);
+      return true;
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    content.position.x -= center.x;
+    content.position.z -= center.z;
+    content.position.y -= box.max.y;
+
+    const box2 = new THREE.Box3().setFromObject(content);
+    const size = box2.getSize(new THREE.Vector3());
+    const flatExtent = Math.max(size.x, size.z, 1e-6);
+
+    const wrapper = new THREE.Group();
+    wrapper.add(content);
+    wrapper.rotation.y = this.podiumRotationY;
+
+    const targetDiameter = 2 * this.podiumBaseRadius * this.podiumScale;
+    wrapper.scale.setScalar(targetDiameter / flatExtent);
+    this.customFlatExtent = flatExtent;
+
+    content.traverse((child) => {
+      if (child.isMesh) {
+        child.receiveShadow = true;
+      }
+    });
+
+    this.podium = wrapper;
+    this.podium.visible = this.solidEnabled;
+    this.scene.add(this.podium);
+    this.setGroundY(this.groundY);
+    this.rebuildGridKeepingWireState();
+    return true;
+  }
+
+  /**
+   * @param {number} degrees 0–360
+   */
+  setPodiumRotation(degrees) {
+    const deg = ((Number(degrees) || 0) % 360 + 360) % 360;
+    this.podiumRotationY = THREE.MathUtils.degToRad(deg);
+    if (this.podium) this.podium.rotation.y = this.podiumRotationY;
   }
 
   setSolidEnabled(enabled) {
     this.solidEnabled = !!enabled;
-    
-    // Ensure podium exists - rebuild if it doesn't
+
     if (!this.podium) {
-      console.warn('[GroundController] Podium mesh does not exist, rebuilding...');
-      this.buildGroundMeshes();
+      console.warn('[GroundController] Podium missing, rebuilding default…');
+      this.buildDefaultPodium();
     }
-    
-    // Set visibility
+
     if (this.podium) {
       this.podium.visible = this.solidEnabled;
-    }
-    if (this.podiumShadow) {
-      this.podiumShadow.visible = this.solidEnabled;
     }
   }
 
@@ -159,6 +283,7 @@ export class GroundController {
   setSolidColor(color) {
     if (!color) return;
     this.solidColor = color;
+    if (this.podiumPreset !== PODIUM_PRESET_DEFAULT) return;
     if (this.podium?.material?.color) {
       this.podium.material.color.set(color);
     }
@@ -186,9 +311,6 @@ export class GroundController {
   setGroundY(value) {
     this.groundY = value ?? 0;
     if (this.podium) this.podium.position.y = this.groundY;
-    if (this.podiumShadow) {
-      this.podiumShadow.position.y = this.groundY - this.groundHeight;
-    }
   }
 
   setGridY(value) {
@@ -212,36 +334,49 @@ export class GroundController {
 
   setPodiumScale(value) {
     this.podiumScale = clampScale(value ?? this.podiumScale);
-    // Use solidEnabled as source of truth, not podium.visible
+
+    if (this.podiumPreset === PODIUM_PRESET_DESERT && this.podium && this.customFlatExtent > 0) {
+      const targetDiameter = 2 * this.podiumBaseRadius * this.podiumScale;
+      this.podium.scale.setScalar(targetDiameter / this.customFlatExtent);
+      this.rebuildGridKeepingWireState();
+      return this.groundY;
+    }
+
     const wasVisible = this.solidEnabled;
     const currentColor = this.solidColor;
     const currentGroundY = this.groundY;
     const topFaceY = currentGroundY + this.groundHeight / 2;
-    
-    // Ensure valid geometry dimensions before rebuilding
+
     const baseRadius = this.podiumBaseRadius * this.podiumScale;
     const topRadius = (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
-    
-    // Validate geometry dimensions to prevent invalid meshes
+
     if (baseRadius <= 0 || topRadius <= 0 || this.groundHeight <= 0) {
       console.warn('Invalid podium dimensions, skipping rebuild');
       return this.groundY;
     }
-    
-    this.buildGroundMeshes();
-    // Restore visibility state using the source of truth
+
+    this.buildDefaultPodium();
     this.setSolidEnabled(wasVisible);
     this.setSolidColor(currentColor);
-    // Restore ground Y position
     this.groundY = topFaceY - this.groundHeight / 2;
     this.setGroundY(this.groundY);
+
+    this.rebuildGridKeepingWireState();
     return this.groundY;
+  }
+
+  rebuildGridKeepingWireState() {
+    const wasVisible = this.wireEnabled;
+    this.disposeGrid();
+    this.buildGrid();
+    this.setWireEnabled(wasVisible);
   }
 
   setGridScale(value) {
     this.gridScale = clampScale(value ?? this.gridScale);
-    const wasVisible = this.grid?.visible ?? false;
-    this.buildGroundMeshes();
+    const wasVisible = this.wireEnabled;
+    this.disposeGrid();
+    this.buildGrid();
     this.setWireEnabled(wasVisible);
   }
 
@@ -265,5 +400,7 @@ export class GroundController {
     return this.gridScale;
   }
 
+  getPodiumPreset() {
+    return this.podiumPreset;
+  }
 }
-

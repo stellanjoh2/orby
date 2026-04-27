@@ -55,6 +55,8 @@ export class StateStore {
       groundWireOpacity: 1.0,
       groundY: 0,
       gridY: 0,
+      podiumPreset: 'default',
+      podiumRotation: 0,
       podiumScale: 1,
       gridScale: 1,
       groundSolidColor: '#808080',

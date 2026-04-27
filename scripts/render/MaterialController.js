@@ -377,6 +377,16 @@ export class MaterialController {
             if ('roughnessMap' in cloned) {
               cloned.roughnessMap = null;
             }
+            const normalMapEnabled =
+              this.stateStore.getState().clay?.normalMap !== false;
+            if (!normalMapEnabled) {
+              if ('normalMap' in cloned) {
+                cloned.normalMap = null;
+              }
+              if ('normalMapType' in cloned) {
+                cloned.normalMapType = THREE.TangentSpaceNormalMap;
+              }
+            }
             cloned.needsUpdate = true;
           }
           if (cloned) {

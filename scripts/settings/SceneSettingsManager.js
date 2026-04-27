@@ -87,6 +87,8 @@ export class SceneSettingsManager {
       groundWireOpacity: state.groundWireOpacity,
       groundY: state.groundY,
       gridY: state.gridY,
+      podiumPreset: state.podiumPreset,
+      podiumRotation: state.podiumRotation,
       podiumScale: state.podiumScale,
       gridScale: state.gridScale,
       lights: state.lights,
@@ -383,6 +385,12 @@ export class SceneSettingsManager {
       if (payload.clay) {
         this.stateStore.set('clay', payload.clay);
         this.eventBus.emit('mesh:clay-color', payload.clay.color);
+        if (payload.clay.normalMap !== undefined) {
+          this.eventBus.emit(
+            'mesh:clay-normal-map',
+            payload.clay.normalMap !== false,
+          );
+        }
         // Roughness and metalness are now controlled by Material settings, not clay settings
       }
       if (payload.wireframe) {
@@ -526,6 +534,14 @@ export class SceneSettingsManager {
       if (payload.gridY !== undefined) {
         this.stateStore.set('gridY', payload.gridY);
         this.eventBus.emit('studio:grid-y', payload.gridY);
+      }
+      if (payload.podiumRotation !== undefined) {
+        this.stateStore.set('podiumRotation', payload.podiumRotation);
+        this.eventBus.emit('studio:podium-rotation', payload.podiumRotation);
+      }
+      if (payload.podiumPreset !== undefined) {
+        this.stateStore.set('podiumPreset', payload.podiumPreset);
+        this.eventBus.emit('studio:podium-preset', payload.podiumPreset);
       }
       if (payload.podiumScale !== undefined) {
         this.stateStore.set('podiumScale', payload.podiumScale);
