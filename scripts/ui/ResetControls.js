@@ -235,6 +235,7 @@ export class ResetControls {
       this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
       this.stateStore.set('antiAliasing', defaults.antiAliasing);
       this.stateStore.set('renderQuality', defaults.renderQuality ?? 'medium');
+      this.stateStore.set('svgColorDetail', defaults.svgColorDetail ?? 'high');
       this.stateStore.set('toneCurve', defaults.toneCurve);
       this.stateStore.set('toneMapping', defaults.toneMapping);
       this.stateStore.set('lookFilterPreset', 'none');

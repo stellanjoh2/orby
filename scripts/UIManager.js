@@ -213,6 +213,7 @@ export class UIManager {
       antiAliasing: q('#antiAliasing'),
       renderQuality: q('#renderQuality'),
       toneMapping: q('#toneMapping'),
+      exportSvgColorDetail: q('#exportSvgColorDetail'),
     };
 
     this.buttons = {
@@ -1388,6 +1389,12 @@ export class UIManager {
     }
     if (this.inputs.toneMapping) {
       this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
+    }
+    if (this.inputs.exportSvgColorDetail) {
+      this.inputs.exportSvgColorDetail.value =
+        state.svgColorDetail === 'low' || state.svgColorDetail === 'medium' || state.svgColorDetail === 'high'
+          ? state.svgColorDetail
+          : 'high';
     }
   }
 

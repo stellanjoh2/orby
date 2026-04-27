@@ -4,9 +4,9 @@
   "description": "A completely free, zero-install, drag-and-drop 3D model viewer",
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000 --bind 0.0.0.0",
     "build": "node build.js",
-    "preview": "python3 -m http.server 8000 -d dist",
+    "preview": "python3 -m http.server 8000 --bind 0.0.0.0 -d dist",
     "setup-hooks": "git config core.hooksPath .githooks"
   },
   "devDependencies": {

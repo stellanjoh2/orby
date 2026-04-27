@@ -361,8 +361,20 @@ export class RenderControls {
     this.ui.buttons.exportSvg?.addEventListener('click', () => {
       this.eventBus.emit('export:svg');
     });
+    if (this.ui.inputs.exportSvgColorDetail) {
+      this.ui.inputs.exportSvgColorDetail.addEventListener('change', (event) => {
+        const raw = event.target.value;
+        const level =
+          raw === 'low' || raw === 'medium' || raw === 'high' ? raw : 'high';
+        this.stateStore.set('svgColorDetail', level);
+      });
+    }
     this.ui.buttons.exportSvgColor?.addEventListener('click', () => {
-      this.eventBus.emit('export:svg-color');
+      const raw = this.ui.inputs.exportSvgColorDetail?.value;
+      const level =
+        raw === 'low' || raw === 'medium' || raw === 'high' ? raw : 'high';
+      this.stateStore.set('svgColorDetail', level);
+      this.eventBus.emit('export:svg-color', { detail: level });
     });
     this.ui.buttons.exportSvgGlb?.addEventListener('click', () => {
       this.eventBus.emit('export:svg-glb');
@@ -596,6 +608,12 @@ export class RenderControls {
     }
     if (this.ui.inputs.toneMapping) {
       this.ui.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
+    }
+    if (this.ui.inputs.exportSvgColorDetail) {
+      this.ui.inputs.exportSvgColorDetail.value =
+        state.svgColorDetail === 'low' || state.svgColorDetail === 'medium' || state.svgColorDetail === 'high'
+          ? state.svgColorDetail
+          : 'high';
     }
     if (this.ui.inputs.lookFilterPresetsOpen) {
       const open = state.lookFilterPresetsOpen ?? false;

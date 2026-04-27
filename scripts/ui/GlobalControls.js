@@ -326,7 +326,7 @@ export class GlobalControls {
       // Tab - Cycle through tabs
       if (key === 'tab' && !isCtrl) {
         event.preventDefault();
-        const tabs = ['mesh', 'studio', 'render', 'info'];
+        const tabs = ['mesh', 'studio', 'render', 'export', 'info'];
         const currentIndex = tabs.indexOf(this.ui.activeTab);
         const nextIndex = isShift
           ? (currentIndex - 1 + tabs.length) % tabs.length

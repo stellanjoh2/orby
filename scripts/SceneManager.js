@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TransformControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/TransformControls.js';
+import { TransformControls } from './vendor/TransformControls.js';
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
 import {
   WIREFRAME_OFFSET,
@@ -2109,16 +2109,19 @@ export class SceneManager {
     }
   }
 
-  async exportSvgColor() {
+  async exportSvgColor(detail = 'high') {
     if (!this.currentModel) {
       this.ui?.showToast?.('Load a mesh before exporting SVG');
       return;
     }
+    const level =
+      detail === 'low' || detail === 'medium' || detail === 'high' ? detail : 'high';
     try {
       this.ui?.showToast?.('Exporting SVG (color)…');
       await this.imageExporter.exportSvgColor(
         this.currentModel,
         this.currentFile,
+        level,
       );
       this.ui?.showToast?.('SVG (color) exported');
     } catch (error) {

@@ -104,6 +104,9 @@
             <button class="tab" data-tab="render" aria-selected="false" data-tooltip="Camera & FX">
               <i class="fa-solid fa-camera"></i>
             </button>
+            <button class="tab" data-tab="export" aria-selected="false" data-tooltip="Export">
+              <i class="fa-solid fa-file-export"></i>
+            </button>
             <button class="tab" data-tab="info" aria-selected="false" data-tooltip="Information">
               <i class="fa-solid fa-circle-info"></i>
             </button>
@@ -642,42 +645,6 @@
                   <i class="fa-solid fa-wand-magic-sparkles"></i>
                   Import New Mesh
                 </button>
-              </div>
-
-              <div class="panel-block">
-                <div class="block-title">Export</div>
-                <div class="export-controls">
-                  <div class="export-option-group">
-                    <label class="export-label">Transparent</label>
-                    <div class="export-button-group">
-                      <button data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
-                      <button data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
-                    </div>
-                  </div>
-                  <div class="export-option-group">
-                    <label class="export-label">Size</label>
-                    <div class="export-button-group">
-                      <button data-export-size="1" class="export-option-btn active" data-tooltip="Export at 1× resolution">1X</button>
-                      <button data-export-size="2" class="export-option-btn" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
-                    </div>
-                  </div>
-                  <button id="exportPngButton" class="accent-action-btn" data-tooltip="Export current view as PNG image">
-                    <i class="fa-solid fa-download"></i>
-                    Export .PNG
-                  </button>
-                  <button id="exportSvgButton" class="accent-action-btn" data-tooltip="Export silhouette as vector SVG">
-                    <i class="fa-solid fa-draw-polygon"></i>
-                    Export .SVG (Silhouette)
-                  </button>
-                  <button id="exportSvgColorButton" class="accent-action-btn" data-tooltip="Export flat-color vector SVG">
-                    <i class="fa-solid fa-palette"></i>
-                    Export .SVG (Color)
-                  </button>
-                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export imported SVG extrusion as .GLB (SVG only)">
-                    <i class="fa-solid fa-cube"></i>
-                    Export .GLB (SVG only)
-                  </button>
-                </div>
               </div>
 
               <div class="panel-block" id="animationBlock">
@@ -1961,6 +1928,74 @@
                   <button class="load-orby-scene accent-action-btn" data-tooltip="Load entire scene and model from .orby file">
                     <i class="fa-solid fa-file-import"></i>
                     Load .orby Scene
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <h2 class="panel-header-title" data-header="export">Export</h2>
+            <section class="panel" data-panel="export">
+              <div class="panel-block">
+                <h3 class="export-format-headline">PNG</h3>
+                <p class="export-format-sub">
+                  Raster snapshot of the current view—lighting, materials, and post effects included. Toggle transparency to drop the background; size is relative to the viewer—1× matches your current screen resolution, 2× exports at double that (larger file, more detail).
+                </p>
+                <div class="export-controls">
+                  <div class="export-option-group">
+                    <label class="export-label">Transparent</label>
+                    <div class="export-button-group">
+                      <button data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
+                      <button data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Size</label>
+                    <div class="export-button-group">
+                      <button data-export-size="1" class="export-option-btn active" data-tooltip="Export at 1× resolution">1X</button>
+                      <button data-export-size="2" class="export-option-btn" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
+                    </div>
+                  </div>
+                  <button id="exportPngButton" class="accent-action-btn" data-tooltip="Export current view as PNG image">
+                    <i class="fa-solid fa-download"></i>
+                    Export .PNG
+                  </button>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <h3 class="export-format-headline">SVG</h3>
+                <p class="export-format-sub">
+                  Vector output derived from the current framing—great for logos, precision edges, and scaling without pixels. Silhouette traces a single outline; Color builds flat filled regions from the render.
+                </p>
+                <label class="select-line">
+                  <span data-tooltip="Low: fewer colors and coarser paths (smaller files). Medium: balanced. High: maximum colors and trace detail (larger files).">Color vector detail</span>
+                  <select id="exportSvgColorDetail" aria-label="SVG color export detail">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high" selected>High</option>
+                  </select>
+                </label>
+                <div class="export-controls">
+                  <button id="exportSvgButton" class="accent-action-btn" data-tooltip="Export silhouette as vector SVG">
+                    <i class="fa-solid fa-draw-polygon"></i>
+                    Export .SVG (Silhouette)
+                  </button>
+                  <button id="exportSvgColorButton" class="accent-action-btn" data-tooltip="Export flat-color vector SVG using the detail level above">
+                    <i class="fa-solid fa-palette"></i>
+                    Export .SVG (Color)
+                  </button>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <h3 class="export-format-headline">.GLB</h3>
+                <p class="export-format-sub">
+                  Exports the extruded mesh as a compact glTF binary for use in other 3D tools, game engines, and AR viewers. Available when the loaded asset is an imported SVG extrusion.
+                </p>
+                <div class="export-controls">
+                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export imported SVG extrusion as .GLB (SVG only)">
+                    <i class="fa-solid fa-cube"></i>
+                    Export .GLB (SVG only)
                   </button>
                 </div>
               </div>

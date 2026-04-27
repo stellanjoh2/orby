@@ -151,13 +151,80 @@ export class ImageExporter {
   }
 
   /**
-   * Export a flat-color SVG by rendering the current view to PNG and tracing with limited colors
+   * Map UI detail level to ImageTracer options (colors, path coarsening, small-path culling).
+   * @param {'low'|'medium'|'high'} detail
    */
-  async exportSvgColor(currentModel, currentFile) {
+  _getSvgColorVectorizeOptions(detail) {
+    const level = detail === 'low' || detail === 'medium' ? detail : 'high';
+    if (level === 'low') {
+      // Very few colors alone creates jagged “busy” banding; blur before quantize
+      // and aggressive pathomit / ltres keep Low visibly simpler than Medium.
+      return {
+        options: {
+          colorsampling: 1,
+          numberofcolors: 10,
+          colorquantcycles: 1,
+          mincolorratio: 0.008,
+          pathomit: 22,
+          ltres: 5,
+          qtres: 5,
+          blurradius: 3,
+          blurdelta: 64,
+          linefilter: false,
+          roundcoords: 2,
+        },
+        preserveHighlights: false,
+      };
+    }
+    if (level === 'medium') {
+      return {
+        options: {
+          colorsampling: 1,
+          numberofcolors: 32,
+          colorquantcycles: 3,
+          mincolorratio: 0.0005,
+          pathomit: 4,
+          ltres: 1.9,
+          qtres: 1.9,
+          blurradius: 0,
+          blurdelta: 20,
+          linefilter: false,
+          // -1: full float path coords; fewer integer-rounding steps → fewer vector microgaps
+          roundcoords: -1,
+        },
+        preserveHighlights: true,
+      };
+    }
+    // high — maximum palette and trace fidelity (previous default)
+    return {
+      options: {
+        colorsampling: 1,
+        numberofcolors: 64,
+        colorquantcycles: 5,
+        mincolorratio: 0,
+        pathomit: 0,
+        ltres: 1,
+        qtres: 1,
+        blurradius: 0,
+        blurdelta: 20,
+        linefilter: false,
+        roundcoords: -1,
+      },
+      preserveHighlights: true,
+    };
+  }
+
+  /**
+   * Export a flat-color SVG by rendering the current view to PNG and tracing with limited colors
+   * @param {'low'|'medium'|'high'} [detail='high'] — trace density and color complexity
+   */
+  async exportSvgColor(currentModel, currentFile, detail = 'high') {
     if (!currentModel) {
       console.warn('No model loaded to export SVG');
       return;
     }
+
+    const { options, preserveHighlights } = this._getSvgColorVectorizeOptions(detail);
 
     const state = this._saveState();
     const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
@@ -181,22 +248,13 @@ export class ImageExporter {
 
       const dataUrl = this.renderer.domElement.toDataURL('image/png');
 
-      // Vectorize with a higher color budget and stronger color quantization passes
-      // to better preserve bright highlights/details (e.g. glossy eyes/speculars).
-      const options = {
-        colorsampling: 1,      // auto-pick palette from image
-        numberofcolors: 64,    // higher palette to keep highlight separation
-        colorquantcycles: 5,   // refine palette selection
-        mincolorratio: 0,      // keep rare highlight colors
-        pathomit: 0,
-        ltres: 1,
-        qtres: 1,
-        blur: 0,
-        linefilter: false,
-      };
+      // Vectorize: options + optional highlight pre-pass for speculars (high / medium)
       const svg = await this._vectorizeWithOptions(dataUrl, options, {
-        preserveHighlights: true,
+        preserveHighlights,
         alphaMask: true,
+        rasterSeamHealIterations: 3,
+        hairlineSeamStroke: true,
+        colorSafetyNet: true,
       });
       if (!svg) {
         throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
@@ -980,10 +1038,30 @@ export class ImageExporter {
             if (processing.silhouetteBinary) {
               this._applySilhouetteBinaryMask(imageData.data, 1, bgKey);
             } else {
-              this._applyAlphaMaskForVector(imageData.data, 220, bgKey);
+              this._applyAlphaMaskForVector(imageData.data, bgKey);
               this._morphCloseMask(imageData, bgKey, 1);
             }
             this._fillTinyBackgroundHoles(imageData, bgKey, 24);
+            if (!processing.silhouetteBinary) {
+              this._healLuminanceSeamFringe(imageData, bgKey, {
+                centerLumMin: 235,
+                neighborLumMax: 215,
+                minVotes: 2,
+              });
+              // Second pass: slightly looser (more mid tones as anchors) for stubborn microgaps
+              this._healLuminanceSeamFringe(imageData, bgKey, {
+                centerLumMin: 218,
+                neighborLumMax: 232,
+                minVotes: 3,
+              });
+            }
+            const seamIt = Number(processing.rasterSeamHealIterations) || 0;
+            if (seamIt > 0 && !processing.silhouetteBinary) {
+              this._majoritySqueezeImageData(imageData, bgKey, seamIt);
+            }
+            if (!processing.silhouetteBinary) {
+              this._microSnapBrightOutliersToNeighborConsensus(imageData, bgKey, 2);
+            }
           }
 
           if (processing.alphaMask || processing.silhouetteBinaryLuma) {
@@ -997,6 +1075,18 @@ export class ImageExporter {
             svgstr = this._removeKeyColorPaths(svgstr, bgKey);
             if (processing.alphaMask) {
               svgstr = this._removeNearKeyColorPaths(svgstr, bgKey, 52);
+            }
+            if (processing.hairlineSeamStroke && processing.alphaMask && !processing.silhouetteBinary) {
+              svgstr = this._addHairlineSeamStrokesToSvg(svgstr);
+            }
+            if (
+              svgstr
+              && processing.colorSafetyNet
+              && processing.alphaMask
+              && !processing.silhouetteBinary
+              && !processing.silhouetteBinaryLuma
+            ) {
+              svgstr = this._prependColorSafetyNetLayer(svgstr, imageData, bgKey);
             }
           }
           if (svgstr && processing.removeWhiteBackground) {
@@ -1034,18 +1124,22 @@ export class ImageExporter {
     }
   }
 
-  _applyAlphaMaskForVector(data, alphaCutoff = 220, bgKey = [1, 255, 1]) {
+  /**
+   * Opaque Pixels: un-premultiply. Fully transparent: key (stripped from SVG after trace).
+   * Do NOT key low-alpha **edge** pixels: those are mesh AA; keying and removing their paths
+   * is what created hairline “see-through” holes between color fields.
+   */
+  _applyAlphaMaskForVector(data, bgKey = [1, 255, 1]) {
     const [kr, kg, kb] = bgKey;
     for (let i = 0; i < data.length; i += 4) {
       const a = data[i + 3];
-      if (a < alphaCutoff) {
+      if (a < 1) {
         data[i] = kr;
         data[i + 1] = kg;
         data[i + 2] = kb;
         data[i + 3] = 255;
       } else {
-        // Remove edge blending against background by un-premultiplying.
-        const inv = 255 / Math.max(1, a);
+        const inv = 255 / a;
         data[i] = Math.min(255, Math.round(data[i] * inv));
         data[i + 1] = Math.min(255, Math.round(data[i + 1] * inv));
         data[i + 2] = Math.min(255, Math.round(data[i + 2] * inv));
@@ -1088,6 +1182,404 @@ export class ImageExporter {
       }
       data[i + 3] = 255;
     }
+  }
+
+  /**
+   * Merge bright seam pixels into dominant darker 3×3 neighbor color (k-means + trace
+   * otherwise leave 1px “third” colors or no fill → white microgaps). Params tune aggressiveness.
+   * @param {{ centerLumMin: number, neighborLumMax: number, minVotes: number }} opts
+   */
+  _healLuminanceSeamFringe(imageData, keyRgb, opts) {
+    const { centerLumMin, neighborLumMax, minVotes } = opts;
+    const [kr, kg, kb] = keyRgb;
+    const w = imageData.width;
+    const h = imageData.height;
+    const src = imageData.data;
+    const isKey = (j) => src[j] === kr && src[j + 1] === kg && src[j + 2] === kb;
+    const lumAt = (buf, j) => 0.2126 * buf[j] + 0.7152 * buf[j + 1] + 0.0722 * buf[j + 2];
+    const buf = new Uint8ClampedArray(src);
+    for (let y = 0; y < h; y += 1) {
+      for (let x = 0; x < w; x += 1) {
+        const o = (y * w + x) * 4;
+        if (isKey(o)) continue;
+        if (lumAt(src, o) < centerLumMin) continue;
+        const counts = new Map();
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            const j = (ny * w + nx) * 4;
+            if (isKey(j)) continue;
+            if (lumAt(src, j) > neighborLumMax) continue;
+            const k = `${src[j]},${src[j + 1]},${src[j + 2]}`;
+            counts.set(k, (counts.get(k) || 0) + 1);
+          }
+        }
+        if (counts.size === 0) continue;
+        let bestK = null;
+        let bestN = 0;
+        for (const [k, n] of counts) {
+          if (n > bestN) {
+            bestN = n;
+            bestK = k;
+          }
+        }
+        if (bestN < minVotes) continue;
+        const [r, g, b] = bestK.split(',').map(Number);
+        buf[o] = r;
+        buf[o + 1] = g;
+        buf[o + 2] = b;
+        buf[o + 3] = 255;
+      }
+    }
+    imageData.data.set(buf);
+  }
+
+  /**
+   * 3×3 majority vote of opaque colors (skips key). Collapses 1px AA speckle so imagetracer
+   * does not leave tiny "third color" slivers that pathomit can drop → holes.
+   */
+  _majoritySqueezeImageData(imageData, keyRgb, iterations = 1) {
+    const [kr, kg, kb] = keyRgb;
+    const w = imageData.width;
+    const h = imageData.height;
+    const isKey = (b, j) => b[j] === kr && b[j + 1] === kg && b[j + 2] === kb;
+    const buf = new Uint8ClampedArray(imageData.data);
+    const next = new Uint8ClampedArray(buf.length);
+
+    for (let it = 0; it < iterations; it += 1) {
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const counts = new Map();
+          for (let dy = -1; dy <= 1; dy += 1) {
+            for (let dx = -1; dx <= 1; dx += 1) {
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              const j = (ny * w + nx) * 4;
+              if (isKey(buf, j)) continue;
+              const k = `${buf[j]},${buf[j + 1]},${buf[j + 2]}`;
+              counts.set(k, (counts.get(k) || 0) + 1);
+            }
+          }
+          const o = (y * w + x) * 4;
+          if (counts.size === 0) {
+            next[o] = buf[o];
+            next[o + 1] = buf[o + 1];
+            next[o + 2] = buf[o + 2];
+            next[o + 3] = buf[o + 3];
+            continue;
+          }
+          let bestK = null;
+          let bestN = -1;
+          for (const [k, n] of counts) {
+            if (n > bestN) {
+              bestN = n;
+              bestK = k;
+            }
+          }
+          const [r, g, b] = bestK.split(',').map(Number);
+          next[o] = r;
+          next[o + 1] = g;
+          next[o + 2] = b;
+          next[o + 3] = 255;
+        }
+      }
+      buf.set(next);
+    }
+    imageData.data.set(buf);
+  }
+
+  /**
+   * Last raster pass: 1px “sparkle” holes are often L≈255 while 5–6 8-neighbors are the
+   * same mid/dark k-means color. Real bright regions (e.g. large white shapes) do not
+   * get 5+ identical neighbors, so we leave them alone.
+   */
+  _microSnapBrightOutliersToNeighborConsensus(imageData, keyRgb, iterations = 2) {
+    const [kr, kg, kb] = keyRgb;
+    const w = imageData.width;
+    const h = imageData.height;
+    const isKey = (b, o) => b[o] === kr && b[o + 1] === kg && b[o + 2] === kb;
+    const lumAt = (b, o) => 0.2126 * b[o] + 0.7152 * b[o + 1] + 0.0722 * b[o + 2];
+    const minNeighborAlign = 5;
+    const centerLumMin = 241;
+
+    for (let pass = 0; pass < iterations; pass += 1) {
+      const src = imageData.data;
+      const out = new Uint8ClampedArray(src.length);
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const o = (y * w + x) * 4;
+          if (isKey(src, o)) {
+            out[o] = src[o];
+            out[o + 1] = src[o + 1];
+            out[o + 2] = src[o + 2];
+            out[o + 3] = src[o + 3];
+            continue;
+          }
+          if (lumAt(src, o) < centerLumMin) {
+            out[o] = src[o];
+            out[o + 1] = src[o + 1];
+            out[o + 2] = src[o + 2];
+            out[o + 3] = src[o + 3];
+            continue;
+          }
+          const counts = new Map();
+          for (let dy = -1; dy <= 1; dy += 1) {
+            for (let dx = -1; dx <= 1; dx += 1) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              const j = (ny * w + nx) * 4;
+              if (isKey(src, j)) continue;
+              const k = `${src[j]},${src[j + 1]},${src[j + 2]}`;
+              counts.set(k, (counts.get(k) || 0) + 1);
+            }
+          }
+          if (counts.size === 0) {
+            out[o] = src[o];
+            out[o + 1] = src[o + 1];
+            out[o + 2] = src[o + 2];
+            out[o + 3] = src[o + 3];
+            continue;
+          }
+          let bestK = null;
+          let bestN = 0;
+          for (const [k, n] of counts) {
+            if (n > bestN) {
+              bestN = n;
+              bestK = k;
+            }
+          }
+          if (bestN < minNeighborAlign) {
+            out[o] = src[o];
+            out[o + 1] = src[o + 1];
+            out[o + 2] = src[o + 2];
+            out[o + 3] = src[o + 3];
+            continue;
+          }
+          const [r, g, b] = bestK.split(',').map(Number);
+          if (r === src[o] && g === src[o + 1] && b === src[o + 2]) {
+            out[o] = src[o];
+            out[o + 1] = src[o + 1];
+            out[o + 2] = src[o + 2];
+            out[o + 3] = 255;
+            continue;
+          }
+          out[o] = r;
+          out[o + 1] = g;
+          out[o + 2] = b;
+          out[o + 3] = 255;
+        }
+      }
+      imageData.data.set(out);
+    }
+  }
+
+  _meanForegroundRgb(imageData, keyRgb) {
+    const [kr, kg, kb] = keyRgb;
+    const d = imageData.data;
+    let s = 0;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) continue;
+      r += d[i];
+      g += d[i + 1];
+      b += d[i + 2];
+      s += 1;
+    }
+    if (s < 1) return null;
+    return {
+      r: Math.round(r / s),
+      g: Math.round(g / s),
+      b: Math.round(b / s),
+    };
+  }
+
+  _imageDataToFlatForegroundColor(imageData, keyRgb, mean) {
+    const [kr, kg, kb] = keyRgb;
+    const d = imageData.data;
+    const { width, height } = imageData;
+    const out = new ImageData(width, height);
+    const o = out.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) {
+        o[i] = d[i];
+        o[i + 1] = d[i + 1];
+        o[i + 2] = d[i + 2];
+        o[i + 3] = d[i + 3];
+      } else {
+        o[i] = mean.r;
+        o[i + 1] = mean.g;
+        o[i + 2] = mean.b;
+        o[i + 3] = 255;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * One solid-color trace of the same footprint as the art: gaps in the top layer show
+   * this mean field color instead of white/empty (not pixel-perfect, but no “see-through”).
+   */
+  _prependColorSafetyNetLayer(mainSvg, imageData, keyRgb) {
+    if (typeof window === 'undefined' || !window.ImageTracer?.imagedataToSVG) return mainSvg;
+    if (typeof window.DOMParser === 'undefined' || !window.XMLSerializer) return mainSvg;
+    const [kr, kg, kb] = keyRgb;
+    const mean = this._meanForegroundRgb(imageData, keyRgb);
+    if (!mean) return mainSvg;
+    const flat = this._imageDataToFlatForegroundColor(imageData, keyRgb, mean);
+    const safetyOptions = {
+      colorsampling: 0,
+      numberofcolors: 2,
+      colorquantcycles: 1,
+      mincolorratio: 0,
+      pathomit: 0,
+      ltres: 0.5,
+      qtres: 0.5,
+      blurradius: 0,
+      blurdelta: 20,
+      linefilter: false,
+      roundcoords: -1,
+      rightangleenhance: true,
+      viewbox: false,
+      desc: false,
+      scale: 1,
+      pal: [
+        { r: kr, g: kg, b: kb, a: 255 },
+        { r: mean.r, g: mean.g, b: mean.b, a: 255 },
+      ],
+    };
+    let net;
+    try {
+      net = window.ImageTracer.imagedataToSVG(flat, safetyOptions);
+    } catch (e) {
+      console.warn('safety net trace failed', e);
+      return mainSvg;
+    }
+    if (!net) return mainSvg;
+    net = this._removeKeyColorPaths(net, keyRgb);
+    try {
+      const mainDoc = new window.DOMParser().parseFromString(mainSvg, 'image/svg+xml');
+      const netDoc = new window.DOMParser().parseFromString(net, 'image/svg+xml');
+      if (mainDoc.querySelector('parsererror') || netDoc.querySelector('parsererror')) {
+        return mainSvg;
+      }
+      const mainRoot = mainDoc.documentElement;
+      const netRoot = netDoc.documentElement;
+      if (!mainRoot || !netRoot) return mainSvg;
+      const NS = 'http://www.w3.org/2000/svg';
+      const g = mainDoc.createElementNS(NS, 'g');
+      g.setAttribute('id', 'orby-safety-net');
+      g.setAttribute('data-orby', 'color-safety-net');
+      g.setAttribute('aria-hidden', 'true');
+      g.setAttribute('style', 'pointer-events: none;');
+      const fromNet = netRoot.querySelectorAll('path, rect, polygon, polyline, circle, ellipse');
+      if (fromNet.length === 0) return mainSvg;
+      fromNet.forEach((node) => {
+        const imported = mainDoc.importNode(node, true);
+        imported.setAttribute('stroke', 'none');
+        imported.removeAttribute('stroke-width');
+        imported.setAttribute('opacity', '1');
+        g.appendChild(imported);
+      });
+      if (g.childNodes.length === 0) return mainSvg;
+      if (mainRoot.firstChild) {
+        mainRoot.insertBefore(g, mainRoot.firstChild);
+      } else {
+        mainRoot.appendChild(g);
+      }
+      return new window.XMLSerializer().serializeToString(mainRoot);
+    } catch (e) {
+      console.warn('safety net merge failed', e);
+    }
+    return mainSvg;
+  }
+
+  /**
+   * Slight same-color under-stroke to bridge hairline gaps. ImageTracer already uses
+   * stroke-width 1; we nudge a little by view size but stay near 1 so dense traces do
+   * not look like pebbles (thick stroke + round caps on tiny paths reads as "dots").
+   */
+  _addHairlineSeamStrokesToSvg(svgString) {
+    if (typeof window === 'undefined' || !window.DOMParser) return svgString;
+    try {
+      const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
+      const parseErr = doc.querySelector('parsererror');
+      if (parseErr) return svgString;
+      const root = doc.documentElement;
+      if (!root || root.localName.toLowerCase() !== 'svg') return svgString;
+
+      let w = 800;
+      let h = 600;
+      const vb = root.getAttribute('viewBox');
+      if (vb) {
+        const p = vb.trim().split(/[\s,]+/).map(parseFloat);
+        if (p.length >= 4) {
+          w = Math.max(1, p[2] || w);
+          h = Math.max(1, p[3] || h);
+        }
+      } else {
+        const wAttr = root.getAttribute('width');
+        const hAttr = root.getAttribute('height');
+        if (wAttr) w = Math.max(1, parseFloat(wAttr) || w);
+        if (hAttr) h = Math.max(1, parseFloat(hAttr) || h);
+      }
+      const m = Math.min(w, h);
+      // Slight nudge over 1.0: seal remaining vector gaps without the old “pebble” width.
+      const sw = Math.max(0.85, Math.min(1.52, 0.92 + m * 0.00035));
+
+      const getFill = (el) => {
+        let f = el.getAttribute('fill');
+        if (f && f !== 'none') return f;
+        const st = el.getAttribute('style');
+        if (!st) return null;
+        const mFill = st.match(/fill:\s*([^;]+)/i);
+        return mFill ? mFill[1].trim() : null;
+      };
+
+      const apply = (el) => {
+        const fill = getFill(el);
+        if (!fill || fill === 'none' || /^\s*url\(/i.test(fill)) return;
+        el.setAttribute('fill', fill);
+        el.setAttribute('stroke', fill);
+        el.setAttribute('stroke-width', String(sw));
+        el.setAttribute('stroke-linejoin', 'miter');
+        el.setAttribute('stroke-miterlimit', '2');
+        el.setAttribute('stroke-linecap', 'butt');
+        el.setAttribute('paint-order', 'stroke fill');
+        if (el.hasAttribute('vector-effect')) {
+          el.removeAttribute('vector-effect');
+        }
+        const st = el.getAttribute('style');
+        if (st) {
+          const next = st
+            .replace(/stroke[^;]*/gi, '')
+            .replace(/stroke-width[^;]*/gi, '')
+            .replace(/fill[^;]*/gi, '')
+            .replace(/;+/g, ';')
+            .replace(/^;|;$/g, '')
+            .trim();
+          if (next) {
+            el.setAttribute('style', next);
+          } else {
+            el.removeAttribute('style');
+          }
+        }
+      };
+      root.querySelectorAll('path, rect, polygon, polyline, circle, ellipse').forEach(apply);
+      if (window.XMLSerializer) {
+        return new window.XMLSerializer().serializeToString(root);
+      }
+    } catch (e) {
+      console.warn('hairline seam stroke pass failed', e);
+    }
+    return svgString;
   }
 
   _fillTinyBackgroundHoles(imageData, keyRgb, maxHoleArea = 6) {

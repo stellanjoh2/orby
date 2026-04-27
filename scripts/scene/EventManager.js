@@ -281,7 +281,13 @@ export class EventManager {
     // Export events
     eventBus.on('export:png', (settings) => s.exportPng(settings));
     eventBus.on('export:svg', () => s.exportSvgSilhouette());
-    eventBus.on('export:svg-color', () => s.exportSvgColor());
+    eventBus.on('export:svg-color', (payload) =>
+      s.exportSvgColor(
+        payload && typeof payload === 'object' && 'detail' in payload
+          ? payload.detail
+          : undefined,
+      ),
+    );
     eventBus.on('export:svg-glb', () => s.exportSvgGlb());
     
     // App events

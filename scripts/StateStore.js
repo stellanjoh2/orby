@@ -144,6 +144,8 @@ export class StateStore {
       background: '#000000',
       lookFilterPreset: 'none',
       lookFilterPresetsOpen: false,
+      /** 'low' | 'medium' | 'high' — color SVG (ImageTracer) trace fidelity */
+      svgColorDetail: 'high',
     };
     this.state = clone(this.defaults);
     this.subscribers = new Set();

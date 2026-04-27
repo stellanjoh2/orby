@@ -894,7 +894,7 @@ body:not(.dropzone-visible) .quick-start-guide {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   margin: calc(-1 * var(--shelf-g)) calc(-1 * var(--shelf-g)) 0 calc(-1 * var(--shelf-g));
   padding: 0;
 }
@@ -2030,6 +2030,24 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 .hdri-icon.active:hover img {
   transform: scale(1.1);
+}
+
+/* Export format sections (Export tab) */
+.export-format-headline {
+  font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--brand-primary);
+  margin: 0 0 0.4rem 0;
+}
+
+.export-format-sub {
+  margin: 0 0 1rem 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  letter-spacing: -0.01em;
 }
 
 /* Export Controls */
