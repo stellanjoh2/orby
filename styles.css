@@ -1127,10 +1127,14 @@ a.about-highlight:hover {
    */
 }
 
-/* Firefox only — thin + accent using the spec track model (no ::-webkit) */
+/* Firefox only — thin + accent when revealed (no ::-webkit) */
 @supports (selector(::-moz-progress-bar)) {
   .panels {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .panels.panels--scrollbar-reveal {
     scrollbar-color: var(--accent) transparent;
   }
 }
@@ -1150,13 +1154,18 @@ a.about-highlight:hover {
 }
 
 .panels::-webkit-scrollbar-thumb {
-  /* Match brand — ::-webkit (Chrome, Safari, Edge) */
-  background: var(--accent) !important;
-  background-color: var(--accent) !important;
+  /* Hidden until .panels--scrollbar-reveal. No transition here — it tanks scroll FPS (thumb repaints every frame). */
   border-radius: 1px;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
-.panels::-webkit-scrollbar-thumb:hover {
+.panels.panels--scrollbar-reveal::-webkit-scrollbar-thumb {
+  background: var(--accent) !important;
+  background-color: var(--accent) !important;
+}
+
+.panels.panels--scrollbar-reveal::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--accent) 88%, white 12%) !important;
   background-color: color-mix(in srgb, var(--accent) 88%, white 12%) !important;
 }

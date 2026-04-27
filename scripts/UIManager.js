@@ -90,6 +90,7 @@ export class UIManager {
     this.dom.topBar = document.querySelector('.top-bar');
     this.dom.tabs = document.querySelectorAll('.tab');
     this.dom.panels = document.querySelectorAll('.panel');
+    this.dom.panelsContainer = q('.panels');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
     this.dom.stats = q('#meshStats');
     this.dom.animationBlock = q('#animationBlock');
@@ -287,6 +288,42 @@ export class UIManager {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
+
+    this.setupPanelsScrollbarReveal();
+  }
+
+  /**
+   * Show the shelf .panels scrollbar only while actively scrolling. Scroll is coalesced
+   * to one rAF per frame (trackpads emit many events/sec); do not add CSS transitions
+   * on ::-webkit-scrollbar-thumb — that plus scroll repaints hammers the compositor.
+   */
+  setupPanelsScrollbarReveal() {
+    const el = this.dom.panelsContainer;
+    if (!el) return;
+    const revealClass = 'panels--scrollbar-reveal';
+    let hideTimer = null;
+    let rafId = 0;
+    let shelfScrollActive = false;
+    const emitPanelsScrolling = (active) => {
+      if (!!active === shelfScrollActive) return;
+      shelfScrollActive = !!active;
+      this.eventBus.emit('ui:panels-scrolling', { active: shelfScrollActive });
+    };
+    const onScroll = () => {
+      if (rafId !== 0) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        el.classList.add(revealClass);
+        emitPanelsScrolling(true);
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          el.classList.remove(revealClass);
+          hideTimer = null;
+          emitPanelsScrolling(false);
+        }, 500);
+      });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
   }
 
 

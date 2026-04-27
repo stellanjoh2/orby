@@ -68,6 +68,15 @@ export class LensFlareController {
   }
 
   /**
+   * Freeze lens-flare procedural time (iTime) while true (e.g. shelf UI scrolling).
+   */
+  setTimeAnimationPaused(paused) {
+    if (this.lensFlare) {
+      this.lensFlare.setTimeAnimationPaused(!!paused);
+    }
+  }
+
+  /**
    * Update HDRI enabled state (lens flare requires HDRI to be enabled)
    * @param {boolean} enabled - Whether HDRI is enabled
    */

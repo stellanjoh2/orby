@@ -504,6 +504,8 @@ export class LensFlareEffect extends THREE.Mesh {
     this.followMouse = options.followMouse ?? false;
     this.enableOcclusion = options.occlusion ?? true;
     this.userEnabled = options.enabled ?? false;
+    /** When true, iTime is not advanced (e.g. while scrolling the settings shelf). */
+    this.timeAnimationPaused = false;
 
     this.material.uniforms.opacity.value = this.currentOpacity;
 
@@ -558,7 +560,9 @@ export class LensFlareEffect extends THREE.Mesh {
         this.updateProjectedPosition(camera, scene);
       }
 
-      this.material.uniforms.iTime.value = elapsed;
+      if (!this.timeAnimationPaused) {
+        this.material.uniforms.iTime.value = elapsed;
+      }
       const dampingFactor =
         this.targetOpacity < this.currentOpacity
           ? this.fadeOutSpeed
@@ -653,6 +657,10 @@ export class LensFlareEffect extends THREE.Mesh {
       // Re-check occlusion state when re-enabling
       // The occlusion check will update the enabled uniform if needed
     }
+  }
+
+  setTimeAnimationPaused(paused) {
+    this.timeAnimationPaused = !!paused;
   }
 
   setRotation(degrees = 0) {

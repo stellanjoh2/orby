@@ -39,6 +39,11 @@ export class SceneManager {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
+    /** True while the settings shelf `.panels` is being scrolled (drives light FX throttling). */
+    this.panelsShelfScrolling = false;
+    this.eventBus.on('ui:panels-scrolling', (payload) => {
+      this.setPanelsShelfScrolling(!!payload?.active);
+    });
 
     this.canvas = document.querySelector('#webgl');
     this.viewport = document.querySelector('.viewport');
@@ -297,6 +302,7 @@ export class SceneManager {
       stateStore: this.stateStore,
     });
     this.lensFlareController.init(initialState, this.hdriEnabled);
+    this.lensFlareController.setTimeAnimationPaused(this.panelsShelfScrolling);
     
     // Initialize histogram controller
     const histogramContainer = document.querySelector('#histogramContainer');
@@ -1902,6 +1908,16 @@ export class SceneManager {
     this.cameraController?.applyCameraPreset(preset);
   }
 
+  /**
+   * When the shelf panel list is scrolling, pause grain time, lens-flare iTime, and histogram readback.
+   */
+  setPanelsShelfScrolling(active) {
+    const on = !!active;
+    if (this.panelsShelfScrolling === on) return;
+    this.panelsShelfScrolling = on;
+    this.lensFlareController?.setTimeAnimationPaused(on);
+  }
+
   animate() {
     requestAnimationFrame(() => this.animate());
     const delta = this.clock.getDelta();
@@ -1921,13 +1937,15 @@ export class SceneManager {
       this.cameraController.updateAutoOrbit(delta);
     }
     this.diagnosticsController.update(delta);
-    this.postPipeline?.updateGrainTime(delta);
+    if (!this.panelsShelfScrolling) {
+      this.postPipeline?.updateGrainTime(delta);
+    }
     this.updateWireframeOverlayTransforms();
     this._updateBackgroundSphere();
     this.render();
     
-    // Update histogram after rendering
-    if (this.histogramController) {
+    // Update histogram after rendering (skip during shelf scroll to avoid readPixels stall)
+    if (this.histogramController && !this.panelsShelfScrolling) {
       this.histogramController.update();
     }
   }
