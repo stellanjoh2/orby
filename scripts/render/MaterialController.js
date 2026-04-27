@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { reapplySvgExtrudeProceduralFromState } from './SvgExtrudeSurfaceShader.js';
 import {
   WIREFRAME_OFFSET,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
@@ -97,6 +98,14 @@ export class MaterialController {
         child.receiveShadow = true;
         if (!this.originalMaterials.has(child)) {
           this.originalMaterials.set(child, child.material);
+        }
+        // Some exporters set an own `onBeforeCompile: undefined` on materials, which shadows
+        // Material.prototype.onBeforeCompile and breaks customProgramCacheKey (undefined.toString()).
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (m?.isMaterial && typeof m.onBeforeCompile !== 'function') {
+            delete m.onBeforeCompile;
+          }
         }
       }
     });
@@ -394,6 +403,7 @@ export class MaterialController {
     this.unlitMode = mode === 'textures';
     this.updateWireframeOverlay();
     this.applyFresnelToModel(this.currentModel);
+    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, mode);
     
     // CRITICAL: Reapply emissive after shading change
     // Materials are recreated in setShading, so we need to ensure emissive is applied
@@ -623,6 +633,7 @@ export class MaterialController {
       if (this.fresnelSettings?.enabled) {
         this.applyFresnelToModel(this.currentModel);
       }
+      reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
     }
   }
 
@@ -977,6 +988,7 @@ export class MaterialController {
       if (this.fresnelSettings?.enabled) {
         this.applyFresnelToModel(this.currentModel);
       }
+      reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
 
       // Don't process non-clay materials when in clay mode
       return;
@@ -1058,6 +1070,7 @@ export class MaterialController {
         this.applyFresnelToModel(this.currentModel);
       }
     });
+    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
   }
 
   forceRestoreClaySettings() {

@@ -345,7 +345,7 @@
                     <span class="value" data-output="svgExtrudeDepth">0.20</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Controls surface smoothing (0 = faceted edges, higher = smoother highlights)">Smoothing Angle</span>
+                    <span data-tooltip="Controls surface smoothing (0 = faceted edges, higher = smoother highlights)">Angle</span>
                     <input
                       id="svgExtrudeNormalAngle"
                       type="range"
@@ -380,6 +380,28 @@
                       class="color-chip"
                       value="#7ed321"
                     />
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Procedural PBR surface detail (roughness and metalness variation)">Surface</span>
+                    <select id="svgExtrudeSurfacePreset" aria-label="SVG extrude surface material">
+                      <option value="none">Default (smooth)</option>
+                      <option value="carPaint">Car paint (metallic flake)</option>
+                      <option value="brushed">Brushed metal</option>
+                      <option value="ceramic">Ceramic (micro-grain)</option>
+                      <option value="satin">Satin plastic</option>
+                    </select>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Size of the procedural pattern in world space">Texture scale</span>
+                    <input
+                      id="svgExtrudeSurfaceScale"
+                      type="range"
+                      min="0.2"
+                      max="10"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="svgExtrudeSurfaceScale">1.00</span>
                   </label>
                   <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
                 </div>
@@ -2335,7 +2357,7 @@
                   </p>
                   <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Depth:</span> Sets global extrusion depth for all SVG fills.</li>
-                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Smoothing Angle:</span> Controls normal smoothing (lower = faceted edges, higher = smoother highlights).</li>
+                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Angle:</span> Controls normal smoothing (lower = faceted edges, higher = smoother highlights).</li>
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Flip Direction:</span> Inverts front/back extrusion direction.</li>
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Color Override:</span> Replaces imported SVG fill colors with a single chosen color.</li>
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Per-Color Depth/Position:</span> Fine-tune each detected fill color independently for layered logo effects.</li>

@@ -107,6 +107,23 @@ export class MeshControls {
       }, 45);
     });
     if (this.ui.inputs.svgExtrudeNormalAngle) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeNormalAngle);
+    this.ui.inputs.svgExtrudeSurfacePreset?.addEventListener('change', (event) => {
+      const preset = event?.target?.value || 'none';
+      const scale = Number(this.stateStore.getState().svgExtrude?.surfaceScale ?? 1) || 1.0;
+      this.stateStore.set('svgExtrude.surfacePreset', preset);
+      this.eventBus.emit('mesh:svg-extrude-surface', { preset, scale });
+    });
+    this.ui.inputs.svgExtrudeSurfaceScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const scale = Number.isFinite(value) ? Math.max(0.2, Math.min(10, value)) : 1.0;
+      const preset = this.stateStore.getState().svgExtrude?.surfacePreset ?? 'none';
+      this.helpers.updateValueLabel('svgExtrudeSurfaceScale', scale, 'decimal');
+      this.stateStore.set('svgExtrude.surfaceScale', scale);
+      this.eventBus.emit('mesh:svg-extrude-surface', { preset, scale });
+    });
+    if (this.ui.inputs.svgExtrudeSurfaceScale) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeSurfaceScale);
+    }
     this.ui.inputs.svgExtrudeFlipDirection?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       this.stateStore.set('svgExtrude.flipDirection', enabled);
@@ -434,6 +451,20 @@ export class MeshControls {
       this.ui.inputs.svgExtrudeNormalAngle.value = normalAngle;
       this.helpers.updateValueLabel('svgExtrudeNormalAngle', normalAngle, 'angle');
       this.ui.setControlDisabled('svgExtrudeNormalAngle', !enabled);
+    }
+    if (this.ui.inputs.svgExtrudeSurfacePreset) {
+      const enabled = !!state.svgExtrude?.enabled;
+      const preset = state.svgExtrude?.surfacePreset ?? 'none';
+      this.ui.inputs.svgExtrudeSurfacePreset.value = preset;
+      this.ui.setControlDisabled('svgExtrudeSurfacePreset', !enabled);
+    }
+    if (this.ui.inputs.svgExtrudeSurfaceScale) {
+      const enabled = !!state.svgExtrude?.enabled;
+      const raw = Number(state.svgExtrude?.surfaceScale ?? 1) || 1.0;
+      const scale = Math.max(0.2, Math.min(10, raw));
+      this.ui.inputs.svgExtrudeSurfaceScale.value = scale;
+      this.helpers.updateValueLabel('svgExtrudeSurfaceScale', scale, 'decimal');
+      this.ui.setControlDisabled('svgExtrudeSurfaceScale', !enabled);
     }
     if (this.ui.inputs.svgExtrudeFlipDirection) {
       const enabled = !!state.svgExtrude?.enabled;

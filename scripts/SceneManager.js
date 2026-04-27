@@ -22,6 +22,7 @@ import { ModelLoader } from './render/ModelLoader.js';
 import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { MaterialController } from './render/MaterialController.js';
+import { reapplySvgExtrudeProceduralFromState } from './render/SvgExtrudeSurfaceShader.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
@@ -628,6 +629,13 @@ export class SceneManager {
         {
           enabled: !!state.svgExtrude.colorOverride,
           color: state.svgExtrude.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
+      this.setSvgExtrudeSurface(
+        {
+          preset: state.svgExtrude.surfacePreset,
+          scale: state.svgExtrude.surfaceScale,
         },
         { updateState: false },
       );
@@ -1560,8 +1568,8 @@ export class SceneManager {
         this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
       }
     } catch (error) {
-      console.error('Failed to update SVG smoothing angle', error);
-      this.ui?.showToast?.('Could not update SVG smoothing angle');
+      console.error('Failed to update SVG normal angle', error);
+      this.ui?.showToast?.('Could not update SVG angle');
     }
   }
 
@@ -1761,6 +1769,24 @@ export class SceneManager {
         applySideForMaterial(child.material);
       }
     });
+  }
+
+  setSvgExtrudeSurface(settings = {}, options = {}) {
+    const { updateState = true } = options;
+    if (updateState) {
+      if (settings.preset !== undefined) {
+        this.stateStore.set('svgExtrude.surfacePreset', settings.preset);
+      }
+      if (settings.scale !== undefined) {
+        this.stateStore.set('svgExtrude.surfaceScale', settings.scale);
+      }
+    }
+    if (!this.currentModel || !this.isSvgExtrudeModel) return;
+    reapplySvgExtrudeProceduralFromState(
+      this.currentModel,
+      this.stateStore,
+      this.currentShading,
+    );
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {

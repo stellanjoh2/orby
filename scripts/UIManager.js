@@ -130,6 +130,8 @@ export class UIManager {
       svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),
       svgExtrudeColor: q('#svgExtrudeColor'),
       svgExtrudeColorDepths: q('#svgExtrudeColorDepths'),
+      svgExtrudeSurfacePreset: q('#svgExtrudeSurfacePreset'),
+      svgExtrudeSurfaceScale: q('#svgExtrudeSurfaceScale'),
       reverseNormals: q('#reverseNormals'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),

@@ -38,6 +38,8 @@ export class StateStore {
         flipDirection: false,
         colorOverride: false,
         overrideColor: '#7ed321',
+        surfacePreset: 'none',
+        surfaceScale: 1.0,
       },
       advanced: {
         reverseNormals: false,

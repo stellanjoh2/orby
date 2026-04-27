@@ -66,6 +66,8 @@ export class SceneSettingsManager {
         flipDirection: !!state.svgExtrude?.flipDirection,
         colorOverride: !!state.svgExtrude?.colorOverride,
         overrideColor: state.svgExtrude?.overrideColor ?? '#7ed321',
+        surfacePreset: state.svgExtrude?.surfacePreset ?? 'none',
+        surfaceScale: state.svgExtrude?.surfaceScale ?? 1.0,
       },
       advanced: {
         reverseNormals: !!state.advanced?.reverseNormals,
@@ -438,6 +440,19 @@ export class SceneSettingsManager {
         this.stateStore.set('svgExtrude.colorOverride', enabled);
         this.stateStore.set('svgExtrude.overrideColor', color);
         this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
+      }
+      if (payload.svgExtrude?.surfacePreset !== undefined || payload.svgExtrude?.surfaceScale !== undefined) {
+        if (payload.svgExtrude?.surfacePreset !== undefined) {
+          this.stateStore.set('svgExtrude.surfacePreset', payload.svgExtrude.surfacePreset);
+        }
+        if (payload.svgExtrude?.surfaceScale !== undefined) {
+          this.stateStore.set('svgExtrude.surfaceScale', payload.svgExtrude.surfaceScale);
+        }
+        const st = this.stateStore.getState().svgExtrude;
+        this.eventBus.emit('mesh:svg-extrude-surface', {
+          preset: st?.surfacePreset ?? 'none',
+          scale: st?.surfaceScale ?? 1.0,
+        });
       }
       if (payload.advanced?.reverseNormals !== undefined) {
         const enabled = !!payload.advanced.reverseNormals;
