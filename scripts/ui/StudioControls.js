@@ -134,21 +134,6 @@ export class StudioControls {
     this.ui.inputs.podiumSnap?.addEventListener('click', () => {
       this.eventBus.emit('studio:podium-snap');
     });
-    this.ui.inputs.podiumPreset?.addEventListener('change', (event) => {
-      const value = event.target.value;
-      this.stateStore.set('podiumPreset', value);
-      this.ui.updateGroundSolidColorForPodiumPreset?.(value);
-      this.eventBus.emit('studio:podium-preset', value);
-    });
-    this.ui.inputs.podiumRotation?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumRotation', value, 'angle');
-      this.stateStore.set('podiumRotation', value);
-      this.eventBus.emit('studio:podium-rotation', value);
-    });
-    if (this.ui.inputs.podiumRotation) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumRotation);
-    }
     this.ui.inputs.gridSnap?.addEventListener('click', () => {
       this.eventBus.emit('studio:grid-snap');
     });
@@ -415,15 +400,6 @@ export class StudioControls {
       this.ui.inputs.podiumScale.value = state.podiumScale ?? 1;
       this.helpers.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
     }
-    if (this.ui.inputs.podiumPreset) {
-      this.ui.inputs.podiumPreset.value = state.podiumPreset ?? 'default';
-    }
-    if (this.ui.inputs.podiumRotation) {
-      const rot = state.podiumRotation ?? 0;
-      this.ui.inputs.podiumRotation.value = rot;
-      this.helpers.updateValueLabel('podiumRotation', rot, 'angle');
-    }
-    this.ui.updateGroundSolidColorForPodiumPreset?.(state.podiumPreset ?? 'default');
     if (this.ui.inputs.gridScale) {
       this.ui.inputs.gridScale.value = state.gridScale ?? 1;
       this.helpers.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');

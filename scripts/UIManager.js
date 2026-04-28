@@ -150,8 +150,6 @@ export class UIManager {
       gridSnap: q('#gridSnap'),
       gridScale: q('#gridScale'),
       podiumScale: q('#podiumScale'),
-      podiumPreset: q('#podiumPreset'),
-      podiumRotation: q('#podiumRotation'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
@@ -1143,15 +1141,6 @@ export class UIManager {
       this.inputs.podiumScale.value = state.podiumScale ?? 1;
       this.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
     }
-    if (this.inputs.podiumPreset) {
-      this.inputs.podiumPreset.value = state.podiumPreset ?? 'default';
-    }
-    if (this.inputs.podiumRotation) {
-      const rot = state.podiumRotation ?? 0;
-      this.inputs.podiumRotation.value = rot;
-      this.updateValueLabel('podiumRotation', rot, 'angle');
-    }
-    this.updateGroundSolidColorForPodiumPreset(state.podiumPreset ?? 'default');
     if (this.inputs.gridScale) {
       this.inputs.gridScale.value = state.gridScale ?? 1;
       this.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');
@@ -1495,14 +1484,6 @@ export class UIManager {
     this.updateValueLabel('lightsRotation', normalized, 'angle');
   }
 
-  updateGroundSolidColorForPodiumPreset(preset) {
-    const isDefault = (preset ?? 'default') === 'default';
-    const input = this.inputs.groundSolidColor;
-    if (!input) return;
-    input.disabled = !isDefault;
-    input.classList.toggle('is-disabled-handle', !isDefault);
-  }
-
   setBlockMuted(blockKey, muted) {
     // First try to find a subsection (for merged blocks)
     const subsection = this.dom?.subsections?.[blockKey];
@@ -1562,7 +1543,6 @@ export class UIManager {
     // Fresnel block - only muted if fresnel.enabled is false
     this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
     this.setBlockMuted('svg-extrude', !currentState.svgExtrude?.enabled);
-    this.updateGroundSolidColorForPodiumPreset(currentState.podiumPreset ?? 'default');
   }
 
   setLightColorControlsDisabled(disabled) {

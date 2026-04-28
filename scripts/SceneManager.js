@@ -544,8 +544,6 @@ export class SceneManager {
     this.setGroundWireColor(state.groundWireColor);
     this.setGroundWireOpacity(state.groundWireOpacity);
     this.setGridY(state.gridY ?? 0);
-    this.groundController?.setPodiumRotation?.(state.podiumRotation ?? 0);
-    await this.groundController?.setPodiumPreset?.(state.podiumPreset ?? 'default');
     this.setPodiumScale(state.podiumScale ?? 1, { updateState: false });
     this.setGridScale(state.gridScale ?? 1);
     this.autoExposureController?.applyStateSnapshot(state);
@@ -1056,29 +1054,6 @@ export class SceneManager {
     if (updateState && typeof newGroundY === 'number') {
       this.stateStore.set('groundY', newGroundY);
     }
-  }
-
-  async applyPodiumPresetFromUi(preset) {
-    try {
-      const swapped = await this.groundController?.setPodiumPreset?.(preset);
-      if (swapped) {
-        this.groundController?.setPodiumScale?.(this.stateStore.getState().podiumScale ?? 1);
-      }
-    } catch (err) {
-      console.error(err);
-      this.stateStore.set('podiumPreset', 'default');
-      try {
-        await this.groundController?.setPodiumPreset?.('default');
-      } catch {
-        /* ignore secondary failure */
-      }
-      this.ui?.showToast?.('Could not load custom podium');
-    }
-    this.ui?.syncControls?.(this.stateStore.getState());
-  }
-
-  applyPodiumRotationFromUi(degrees) {
-    this.groundController?.setPodiumRotation?.(degrees);
   }
 
   setGridScale(value) {

@@ -233,10 +233,6 @@ export class EventManager {
     eventBus.on('studio:ground-y', (value) => s.setGroundY(value));
     eventBus.on('studio:grid-y', (value) => s.setGridY(value));
     eventBus.on('studio:podium-scale', (value) => s.setPodiumScale(value));
-    eventBus.on('studio:podium-preset', (preset) => {
-      void s.applyPodiumPresetFromUi(preset);
-    });
-    eventBus.on('studio:podium-rotation', (value) => s.applyPodiumRotationFromUi(value));
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
     eventBus.on('studio:podium-snap', () => s.snapPodiumToBottom());
     eventBus.on('studio:grid-snap', () => s.snapGridToBottom());

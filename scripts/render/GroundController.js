@@ -1,13 +1,9 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js';
 import {
   PODIUM_TOP_RADIUS_OFFSET,
   PODIUM_SEGMENTS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
-  PODIUM_PRESET_DEFAULT,
-  PODIUM_PRESET_DESERT,
-  DESERT_PODIUM_GLB_URL,
 } from '../constants.js';
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
@@ -41,18 +37,10 @@ export class GroundController {
     this.groundHeight = options.groundHeight ?? 0.1;
     this.podiumBaseRadius = 2;
 
-    this.podiumPreset = PODIUM_PRESET_DEFAULT;
-    this.podiumRotationY = THREE.MathUtils.degToRad(options.podiumRotation ?? 0);
-
     this.podium = null;
-    /** Horizontal extent (max of X/Z size) after centering & top alignment, before uniform podium scale. */
-    this.customFlatExtent = 0;
 
     this.grid = null;
     this.gridMaterials = null;
-
-    this.gltfLoader = new GLTFLoader();
-    this._podiumLoadToken = 0;
 
     this.buildGrid();
     this.buildDefaultPodium();
@@ -61,14 +49,10 @@ export class GroundController {
   }
 
   disposePodium() {
-    if (!this.podium) {
-      this.customFlatExtent = 0;
-      return;
-    }
+    if (!this.podium) return;
     this.scene.remove(this.podium);
     disposeObjectGpuResources(this.podium);
     this.podium = null;
-    this.customFlatExtent = 0;
   }
 
   disposeGrid() {
@@ -90,8 +74,6 @@ export class GroundController {
 
   buildDefaultPodium() {
     this.disposePodium();
-    this.podiumPreset = PODIUM_PRESET_DEFAULT;
-    this.customFlatExtent = 0;
 
     const baseRadius = this.podiumBaseRadius * this.podiumScale;
     const height = this.groundHeight;
@@ -122,7 +104,6 @@ export class GroundController {
 
     this.podium = new THREE.Mesh(podiumGeo, solidMat);
     this.podium.receiveShadow = true;
-    this.podium.rotation.y = this.podiumRotationY;
     this.podium.visible = this.solidEnabled;
     this.scene.add(this.podium);
 
@@ -154,114 +135,6 @@ export class GroundController {
     this.setGridY(this.gridY);
   }
 
-  /**
-   * @param {string} preset 'default' | 'desert'
-   */
-  async setPodiumPreset(preset) {
-    const next = preset === PODIUM_PRESET_DESERT ? PODIUM_PRESET_DESERT : PODIUM_PRESET_DEFAULT;
-    const isCylinderPodium = this.podium instanceof THREE.Mesh;
-    if (next === PODIUM_PRESET_DEFAULT && this.podiumPreset === PODIUM_PRESET_DEFAULT && isCylinderPodium) {
-      return false;
-    }
-    if (
-      next === PODIUM_PRESET_DESERT &&
-      this.podiumPreset === PODIUM_PRESET_DESERT &&
-      !isCylinderPodium &&
-      this.customFlatExtent > 0
-    ) {
-      return false;
-    }
-
-    const token = ++this._podiumLoadToken;
-
-    if (next === PODIUM_PRESET_DEFAULT) {
-      this.podiumPreset = next;
-      const wasVisible = this.solidEnabled;
-      const currentColor = this.solidColor;
-      const currentGroundY = this.groundY;
-      const wasCustom = this.customFlatExtent > 0;
-
-      this.buildDefaultPodium();
-      this.setSolidEnabled(wasVisible);
-      this.setSolidColor(currentColor);
-      if (wasCustom) {
-        this.groundY = currentGroundY;
-      } else {
-        const topFaceY = currentGroundY + this.groundHeight / 2;
-        this.groundY = topFaceY - this.groundHeight / 2;
-      }
-      this.setGroundY(this.groundY);
-      return true;
-    }
-
-    this.podiumPreset = next;
-    this.disposePodium();
-
-    let gltf;
-    try {
-      gltf = await new Promise((resolve, reject) => {
-        this.gltfLoader.load(DESERT_PODIUM_GLB_URL, resolve, undefined, reject);
-      });
-    } catch (err) {
-      console.error('[GroundController] Desert podium load failed:', err);
-      this.podiumPreset = PODIUM_PRESET_DEFAULT;
-      this.buildDefaultPodium();
-      this.setSolidEnabled(this.solidEnabled);
-      throw err;
-    }
-
-    if (token !== this._podiumLoadToken) return false;
-
-    const content = gltf.scene;
-    const box = new THREE.Box3().setFromObject(content);
-    if (box.isEmpty()) {
-      console.error('[GroundController] Desert podium has empty bounds');
-      this.podiumPreset = PODIUM_PRESET_DEFAULT;
-      this.buildDefaultPodium();
-      this.setSolidEnabled(this.solidEnabled);
-      return true;
-    }
-
-    const center = box.getCenter(new THREE.Vector3());
-    content.position.x -= center.x;
-    content.position.z -= center.z;
-    content.position.y -= box.max.y;
-
-    const box2 = new THREE.Box3().setFromObject(content);
-    const size = box2.getSize(new THREE.Vector3());
-    const flatExtent = Math.max(size.x, size.z, 1e-6);
-
-    const wrapper = new THREE.Group();
-    wrapper.add(content);
-    wrapper.rotation.y = this.podiumRotationY;
-
-    const targetDiameter = 2 * this.podiumBaseRadius * this.podiumScale;
-    wrapper.scale.setScalar(targetDiameter / flatExtent);
-    this.customFlatExtent = flatExtent;
-
-    content.traverse((child) => {
-      if (child.isMesh) {
-        child.receiveShadow = true;
-      }
-    });
-
-    this.podium = wrapper;
-    this.podium.visible = this.solidEnabled;
-    this.scene.add(this.podium);
-    this.setGroundY(this.groundY);
-    this.rebuildGridKeepingWireState();
-    return true;
-  }
-
-  /**
-   * @param {number} degrees 0–360
-   */
-  setPodiumRotation(degrees) {
-    const deg = ((Number(degrees) || 0) % 360 + 360) % 360;
-    this.podiumRotationY = THREE.MathUtils.degToRad(deg);
-    if (this.podium) this.podium.rotation.y = this.podiumRotationY;
-  }
-
   setSolidEnabled(enabled) {
     this.solidEnabled = !!enabled;
 
@@ -283,7 +156,6 @@ export class GroundController {
   setSolidColor(color) {
     if (!color) return;
     this.solidColor = color;
-    if (this.podiumPreset !== PODIUM_PRESET_DEFAULT) return;
     if (this.podium?.material?.color) {
       this.podium.material.color.set(color);
     }
@@ -334,13 +206,6 @@ export class GroundController {
 
   setPodiumScale(value) {
     this.podiumScale = clampScale(value ?? this.podiumScale);
-
-    if (this.podiumPreset === PODIUM_PRESET_DESERT && this.podium && this.customFlatExtent > 0) {
-      const targetDiameter = 2 * this.podiumBaseRadius * this.podiumScale;
-      this.podium.scale.setScalar(targetDiameter / this.customFlatExtent);
-      this.rebuildGridKeepingWireState();
-      return this.groundY;
-    }
 
     const wasVisible = this.solidEnabled;
     const currentColor = this.solidColor;
@@ -398,9 +263,5 @@ export class GroundController {
 
   getGridScale() {
     return this.gridScale;
-  }
-
-  getPodiumPreset() {
-    return this.podiumPreset;
   }
 }

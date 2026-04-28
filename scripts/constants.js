@@ -9,14 +9,6 @@ export const WIREFRAME_OPACITY_OVERLAY = 0.8;
 export const PODIUM_TOP_RADIUS_OFFSET = 0.08;
 export const PODIUM_SEGMENTS = 96;
 
-/** Built-in podium mesh selector (custom GLB prototypes). */
-export const PODIUM_PRESET_DEFAULT = 'default';
-export const PODIUM_PRESET_DESERT = 'desert';
-
-/** Desert rock outcrop — same footprint target as the gray cylinder (see GroundController). */
-export const DESERT_PODIUM_GLB_URL =
-  'assets/3D-assets/Meshy_AI_Desert_Rock_Outcrop_0427203202_texture.glb';
-
 export const NORMALS_HELPER_SIZE = 0.08;
 export const NORMALS_HELPER_COLOR = '#4db3ff';
 

@@ -400,12 +400,8 @@ export class ResetControls {
             this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
             this.stateStore.set('groundY', defaults.groundY);
             this.stateStore.set('podiumScale', defaults.podiumScale);
-            this.stateStore.set('podiumPreset', defaults.podiumPreset);
-            this.stateStore.set('podiumRotation', defaults.podiumRotation);
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
-            this.eventBus.emit('studio:podium-rotation', defaults.podiumRotation);
             this.eventBus.emit('studio:podium-scale', defaults.podiumScale);
-            this.eventBus.emit('studio:podium-preset', defaults.podiumPreset);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
             this.ui.syncControls(this.stateStore.getState());
             break;
