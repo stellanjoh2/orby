@@ -1104,14 +1104,20 @@ export class MaterialController {
           const materials = Array.isArray(material) ? material : [material];
           materials.forEach((mat) => {
             if (mat && mat.isMeshStandardMaterial) {
+              let dirty = false;
               if (mat.roughness === 0 || Math.abs(mat.roughness - targetRoughness) > 0.01) {
                 mat.roughness = targetRoughness;
+                dirty = true;
               }
               if (mat.metalness === 0 || Math.abs(mat.metalness - targetMetalness) > 0.01) {
                 mat.metalness = targetMetalness;
+                dirty = true;
               }
-              mat.color.copy(tintedClayColor);
-              mat.needsUpdate = true;
+              if (!mat.color.equals(tintedClayColor)) {
+                mat.color.copy(tintedClayColor);
+                dirty = true;
+              }
+              if (dirty) mat.needsUpdate = true;
             }
           });
         }

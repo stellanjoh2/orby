@@ -199,7 +199,14 @@ export class AutoExposureController {
    */
   update(unlitMode = false) {
     if (unlitMode) return;
-    
+
+    // Sampling runs a full extra scene render + readPixels sync every time. Skip when neither
+    // auto-exposure nor lens dirt needs live luminance (lens dirt uses getAverageLuminance).
+    const lensDirtRequested = this.stateStore?.getState()?.lensDirt?.enabled === true;
+    if (!this.enabled && !lensDirtRequested) {
+      return;
+    }
+
     this.sampleSceneLuminance();
     this.applyAutoExposure();
   }

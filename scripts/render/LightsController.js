@@ -42,7 +42,7 @@ export class LightsController {
       if ('castShadow' in light && light.shadow) {
         light.castShadow = true;
         light.shadow.radius = 4;
-        light.shadow.mapSize.set(2048, 2048);
+        light.shadow.mapSize.set(1024, 1024);
         light.shadow.bias = -0.0001;
       } else {
         light.castShadow = false;
@@ -267,7 +267,7 @@ export class LightsController {
   }
 
   /**
-   * @param {number} size - Shadow map width/height (e.g. 1024 or 2048)
+   * @param {number} size - Shadow map width/height (square, e.g. 1024)
    */
   setShadowMapResolution(size) {
     ['key', 'fill', 'rim'].forEach((lightId) => {

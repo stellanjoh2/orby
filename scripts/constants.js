@@ -46,7 +46,7 @@ export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('medium');
 export const RENDER_QUALITY = {
   max: {
     maxPixelRatio: 2,
-    shadowMapSize: 2048,
+    shadowMapSize: 1024,
     softShadowMap: true,
     bloomResolutionScale: 1,
     forceDepthOfFieldOff: false,
