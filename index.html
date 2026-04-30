@@ -2598,26 +2598,55 @@
         </p>
         <form id="bugReportForm">
           <div class="bug-report-field">
-            <label for="bugReportSubject">Subject</label>
-            <input id="bugReportSubject" name="subject" type="text" autocomplete="off" maxlength="180" required />
-          </div>
-          <div class="bug-report-field">
             <label for="bugReportCategory">Category</label>
             <select id="bugReportCategory" name="category" required>
               <option value="crash">Crash / freeze</option>
               <option value="rendering" selected>Rendering / display</option>
+              <option value="loaded-mesh-materials">Loaded mesh / materials</option>
               <option value="ui">UI / controls</option>
               <option value="export">Export</option>
               <option value="performance">Performance</option>
               <option value="other">Other</option>
             </select>
           </div>
+          <div class="bug-report-field bug-report-field-severity">
+            <fieldset class="bug-report-severity-fieldset">
+              <legend class="bug-report-severity-legend">Severity</legend>
+              <div class="bug-report-severity-options">
+                <label class="bug-report-severity-option" data-severity="blocker">
+                  <input type="radio" name="severity" value="blocker" />
+                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
+                  <span class="bug-report-severity-text">Blocker — crash, data loss, unusable</span>
+                </label>
+                <label class="bug-report-severity-option" data-severity="major">
+                  <input type="radio" name="severity" value="major" />
+                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
+                  <span class="bug-report-severity-text">Major — core feature broken</span>
+                </label>
+                <label class="bug-report-severity-option" data-severity="moderate">
+                  <input type="radio" name="severity" value="moderate" checked />
+                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
+                  <span class="bug-report-severity-text">Moderate — annoying, workaround may exist</span>
+                </label>
+                <label class="bug-report-severity-option" data-severity="minor">
+                  <input type="radio" name="severity" value="minor" />
+                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
+                  <span class="bug-report-severity-text">Minor — small glitch</span>
+                </label>
+                <label class="bug-report-severity-option" data-severity="cosmetic">
+                  <input type="radio" name="severity" value="cosmetic" />
+                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
+                  <span class="bug-report-severity-text">Low — cosmetic / polish</span>
+                </label>
+              </div>
+            </fieldset>
+          </div>
           <div class="bug-report-field">
             <label for="bugReportMessage">Details</label>
             <textarea
               id="bugReportMessage"
               name="message"
-              rows="5"
+              rows="6"
               maxlength="8000"
               required
               placeholder="Steps to reproduce, browser/OS, what you expected…"

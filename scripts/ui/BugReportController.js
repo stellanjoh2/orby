@@ -38,12 +38,13 @@ export class BugReportController {
       el.addEventListener('click', () => this.open());
     });
 
-    const subjectInput = this.form.querySelector('#bugReportSubject');
     const messageInput = this.form.querySelector('#bugReportMessage');
     for (const ev of ['input', 'change']) {
-      subjectInput?.addEventListener(ev, () => this.syncSendButton());
       messageInput?.addEventListener(ev, () => this.syncSendButton());
     }
+    this.form.querySelectorAll('input[name="severity"]').forEach((el) => {
+      el.addEventListener('change', () => this.syncSendButton());
+    });
 
     this.closeBtn?.addEventListener('click', () => this.close());
     this.cancelBtn?.addEventListener('click', () => this.close());
@@ -119,9 +120,8 @@ export class BugReportController {
 
   syncSendButton() {
     if (!this.submitBtn || !this.form || this._sending) return;
-    const subject = this.form.querySelector('#bugReportSubject')?.value?.trim() ?? '';
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
-    const valid = subject.length > 0 && message.length >= 8;
+    const valid = message.length >= 8;
     this.submitBtn.disabled = !valid;
   }
 
@@ -141,8 +141,8 @@ export class BugReportController {
     this._bugBackdropDown = false;
     this.setStatus('');
     this.modal.style.display = 'flex';
-    const subject = this.form?.querySelector('#bugReportSubject');
-    subject?.focus();
+    const messageEl = this.form?.querySelector('#bugReportMessage');
+    messageEl?.focus();
     void this._prepareTurnstileForOpen();
     this.syncSendButton();
   }
@@ -166,12 +166,13 @@ export class BugReportController {
   async submit() {
     if (!this.form || !this.submitBtn) return;
 
-    const subject = this.form.querySelector('#bugReportSubject')?.value?.trim() ?? '';
     const category = this.form.querySelector('#bugReportCategory')?.value ?? '';
+    const severity =
+      this.form.querySelector('input[name="severity"]:checked')?.value ?? '';
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
 
-    if (!subject) {
-      this.setStatus('Please add a short subject.', true);
+    if (!severity) {
+      this.setStatus('Choose a severity level.', true);
       return;
     }
     if (message.length < 8) {
@@ -199,8 +200,8 @@ export class BugReportController {
     const apiUrl = this.getApiUrl();
 
     const payload = {
-      subject,
       category,
+      severity,
       message,
       honeypot: this.honeypot?.value ?? '',
       turnstileToken,

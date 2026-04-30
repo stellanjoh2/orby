@@ -445,14 +445,24 @@ body.dropzone-visible #webgl {
   max-width: 520px;
 }
 
+.bug-report-content .load-settings-description {
+  margin: 0 0 0.75rem 0;
+}
+
+.bug-report-content #bugReportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .bug-report-content textarea {
-  min-height: 168px;
+  min-height: 12.5rem; /* ~20% taller than prior ~168px */
 }
 
 .bug-report-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.55rem;
 }
 
 .bug-report-field label {
@@ -500,14 +510,115 @@ body.dropzone-visible #webgl {
   background: rgba(255, 255, 255, 0.16);
 }
 
+.bug-report-field-severity {
+  gap: 0;
+}
+
+.bug-report-severity-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.bug-report-severity-legend {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  padding: 0;
+  margin: 0 0 0.55rem 0;
+}
+
+.bug-report-severity-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bug-report-severity-option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.bug-report-severity-option:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bug-report-severity-option input {
+  position: absolute;
+  left: 0.4rem;
+  top: 0.42rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.bug-report-severity-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bug-report-severity-option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--stroke));
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.bug-report-severity-dot {
+  flex-shrink: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.32em;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+/* Serious (red) → low (green) */
+.bug-report-severity-option[data-severity='blocker'] .bug-report-severity-dot {
+  background: #dc2626;
+}
+.bug-report-severity-option[data-severity='major'] .bug-report-severity-dot {
+  background: #ea580c;
+}
+.bug-report-severity-option[data-severity='moderate'] .bug-report-severity-dot {
+  background: #ca8a04;
+}
+.bug-report-severity-option[data-severity='minor'] .bug-report-severity-dot {
+  background: #65a30d;
+}
+.bug-report-severity-option[data-severity='cosmetic'] .bug-report-severity-dot {
+  background: #16a34a;
+}
+
 .bug-report-turnstile {
+  margin-top: 0;
+}
+
+/* No extra gap when Turnstile is not configured (host stays empty) */
+.bug-report-turnstile:empty {
+  display: none;
+}
+
+.bug-report-turnstile:not(:empty) {
   min-height: 4rem;
-  margin-top: 0.5rem;
 }
 
 .bug-report-status {
   margin: 0;
-  min-height: 1.25rem;
+  min-height: 1.15rem;
   font-size: 0.82rem;
 }
 
@@ -518,7 +629,7 @@ body.dropzone-visible #webgl {
   align-items: stretch;
   justify-content: stretch;
   gap: 0.75rem;
-  margin-top: 0.75rem;
+  margin-top: 0;
   width: 100%;
 }
 

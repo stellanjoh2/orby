@@ -1,5 +1,6 @@
 /**
- * Vercel serverless: POST JSON { subject, category, message, honeypot?, turnstileToken? }
+ * Vercel serverless: POST JSON { category, severity, message, honeypot?, turnstileToken? }
+ * Email subject line uses a short auto-preview from message (no separate subject field).
  *
  * CORS: If orby.studio (or another origin) gets preflight errors on preview URLs,
  * open Vercel → Project → Settings → Deployment Protection → OPTIONS Allowlist
@@ -27,11 +28,15 @@ const TURNSTILE_VERIFY = 'https://challenges.cloudflare.com/turnstile/v0/sitever
 const CATEGORIES = new Set([
   'crash',
   'rendering',
+  'loaded-mesh-materials',
   'ui',
   'export',
   'performance',
   'other',
 ]);
+
+/** Serious → low; must match bug modal option values */
+const SEVERITIES = new Set(['blocker', 'major', 'moderate', 'minor', 'cosmetic']);
 
 /** @type {{ hourly: import('@upstash/ratelimit').Ratelimit; burst: import('@upstash/ratelimit').Ratelimit } | null | false} */
 let ratelimitPair;
@@ -90,6 +95,14 @@ function clampStr(s, max) {
   if (typeof s !== 'string') return '';
   const t = s.trim().slice(0, max);
   return t.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+}
+
+/** One-line preview for email subject (RFC 5322 line length friendly). */
+function subjectPreviewFromMessage(message, max = 90) {
+  const oneLine = message.replace(/\s+/g, ' ').trim();
+  if (!oneLine) return 'Report';
+  if (oneLine.length <= max) return oneLine;
+  return `${oneLine.slice(0, max - 1)}…`;
 }
 
 function clientIp(req) {
@@ -170,13 +183,15 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
-  const subject = clampStr(body.subject, 180);
   const category = clampStr(body.category, 40);
+  const severity = clampStr(body.severity, 24);
   const message = clampStr(body.message, 8000);
 
-  if (!subject || !CATEGORIES.has(category) || message.length < 8) {
+  if (!CATEGORIES.has(category) || !SEVERITIES.has(severity) || message.length < 8) {
     return res.status(400).json({ error: 'Invalid payload' });
   }
+
+  const preview = subjectPreviewFromMessage(message);
 
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (turnstileSecret) {
@@ -192,6 +207,7 @@ export default async function handler(req, res) {
 
   const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '';
   const text = [
+    `Severity: ${severity}`,
     `Category: ${category}`,
     '',
     message,
@@ -201,7 +217,7 @@ export default async function handler(req, res) {
     `Time: ${new Date().toISOString()}`,
   ].join('\n');
 
-  const emailSubject = `[Orby bug] ${category} — ${subject}`;
+  const emailSubject = `[Orby bug][${severity}] ${category} — ${preview}`;
 
   let resendRes;
   try {
