@@ -1,6 +1,6 @@
 /**
  * Vercel serverless: POST JSON { category, severity, message, honeypot?, turnstileToken? }
- * Email subject line uses a short auto-preview from message (no separate subject field).
+ * Email subject line is short: "Orby Bug - Moderate - Rendering" (severity + category labels).
  *
  * CORS: If orby.studio (or another origin) gets preflight errors on preview URLs,
  * open Vercel → Project → Settings → Deployment Protection → OPTIONS Allowlist
@@ -37,6 +37,26 @@ const CATEGORIES = new Set([
 
 /** Serious → low; must match bug modal option values */
 const SEVERITIES = new Set(['blocker', 'major', 'moderate', 'minor', 'cosmetic']);
+
+/** Must match bug modal category values → short inbox labels */
+const CATEGORY_LABELS = {
+  crash: 'Crash',
+  rendering: 'Rendering',
+  'loaded-mesh-materials': 'Mesh / materials',
+  ui: 'UI',
+  export: 'Export',
+  performance: 'Performance',
+  other: 'Other',
+};
+
+/** Must match bug modal severity values */
+const SEVERITY_LABELS = {
+  blocker: 'Blocker',
+  major: 'Major',
+  moderate: 'Moderate',
+  minor: 'Minor',
+  cosmetic: 'Low',
+};
 
 /** @type {{ hourly: import('@upstash/ratelimit').Ratelimit; burst: import('@upstash/ratelimit').Ratelimit } | null | false} */
 let ratelimitPair;
@@ -95,14 +115,6 @@ function clampStr(s, max) {
   if (typeof s !== 'string') return '';
   const t = s.trim().slice(0, max);
   return t.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
-}
-
-/** One-line preview for email subject (RFC 5322 line length friendly). */
-function subjectPreviewFromMessage(message, max = 90) {
-  const oneLine = message.replace(/\s+/g, ' ').trim();
-  if (!oneLine) return 'Report';
-  if (oneLine.length <= max) return oneLine;
-  return `${oneLine.slice(0, max - 1)}…`;
 }
 
 function clientIp(req) {
@@ -191,7 +203,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid payload' });
   }
 
-  const preview = subjectPreviewFromMessage(message);
+  const catLabel = CATEGORY_LABELS[category] ?? category;
+  const sevLabel = SEVERITY_LABELS[severity] ?? severity;
 
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (turnstileSecret) {
@@ -207,8 +220,8 @@ export default async function handler(req, res) {
 
   const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '';
   const text = [
-    `Severity: ${severity}`,
-    `Category: ${category}`,
+    `Severity: ${sevLabel}`,
+    `Category: ${catLabel}`,
     '',
     message,
     '',
@@ -217,7 +230,7 @@ export default async function handler(req, res) {
     `Time: ${new Date().toISOString()}`,
   ].join('\n');
 
-  const emailSubject = `[Orby bug][${severity}] ${category} — ${preview}`;
+  const emailSubject = `Orby Bug - ${sevLabel} - ${catLabel}`;
 
   let resendRes;
   try {

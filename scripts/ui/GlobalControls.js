@@ -161,6 +161,11 @@ export class GlobalControls {
         target.isContentEditable
       ) {
         if (event.key === 'Escape') {
+          if (this.ui.bugReport?.isOpen?.()) {
+            event.preventDefault();
+            this.ui.bugReport.close();
+            return;
+          }
           if (hasHelpOverlay && hideHelp && this.ui.dom.helpOverlay && !this.ui.dom.helpOverlay.hidden) {
             event.preventDefault();
             hideHelp();
