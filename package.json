@@ -11,6 +11,8 @@
     "setup-hooks": "git config core.hooksPath .githooks"
   },
   "dependencies": {
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "esbuild": "^0.19.0"
   }
 }

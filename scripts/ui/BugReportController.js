@@ -1,6 +1,7 @@
 /**
  * Simple bug report modal → POST to serverless (see /api/bug-report.js).
  * API URL: meta[name="orby-bug-report-api"] content, or "/api/bug-report".
+ * Turnstile: meta[name="orby-turnstile-site-key"] when using Cloudflare with server secret.
  */
 export class BugReportController {
   /**
@@ -10,6 +11,12 @@ export class BugReportController {
     this.ui = ui;
     /** @type {boolean} */
     this._sending = false;
+    /** @type {string} */
+    this._turnstileSiteKey = '';
+    /** @type {string | null} */
+    this._turnstileWidgetId = null;
+    /** @type {Promise<void> | null} */
+    this._turnstileScriptPromise = null;
   }
 
   init() {
@@ -17,11 +24,15 @@ export class BugReportController {
     this.form = document.querySelector('#bugReportForm');
     if (!this.modal || !this.form) return;
 
+    const siteRaw = document.querySelector('meta[name="orby-turnstile-site-key"]')?.getAttribute('content');
+    this._turnstileSiteKey = typeof siteRaw === 'string' ? siteRaw.trim() : '';
+
     this.closeBtn = document.querySelector('#closeBugReport');
     this.cancelBtn = document.querySelector('#cancelBugReport');
     this.submitBtn = document.querySelector('#submitBugReport');
     this.honeypot = this.form.querySelector('input[name="honeypot"]');
     this.statusEl = this.modal.querySelector('.bug-report-status');
+    this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
 
     document.querySelectorAll('[data-bug-report-open]').forEach((el) => {
       el.addEventListener('click', () => this.open());
@@ -52,6 +63,60 @@ export class BugReportController {
     this.syncSendButton();
   }
 
+  _ensureTurnstileScript() {
+    if (typeof window.turnstile !== 'undefined') return Promise.resolve();
+    if (this._turnstileScriptPromise) return this._turnstileScriptPromise;
+    this._turnstileScriptPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('turnstile script'));
+      document.head.appendChild(s);
+    });
+    return this._turnstileScriptPromise;
+  }
+
+  _removeTurnstileWidget() {
+    if (this._turnstileWidgetId != null && typeof window.turnstile !== 'undefined') {
+      try {
+        window.turnstile.remove(this._turnstileWidgetId);
+      } catch {
+        /* ignore */
+      }
+    }
+    this._turnstileWidgetId = null;
+  }
+
+  _resetTurnstile() {
+    if (this._turnstileWidgetId != null && typeof window.turnstile !== 'undefined') {
+      try {
+        window.turnstile.reset(this._turnstileWidgetId);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  async _prepareTurnstileForOpen() {
+    if (!this._turnstileSiteKey || !this.turnstileHost) return;
+    try {
+      await this._ensureTurnstileScript();
+    } catch {
+      this.setStatus('Could not load security check. Try again or refresh.', true);
+      return;
+    }
+    this._removeTurnstileWidget();
+    try {
+      this._turnstileWidgetId = window.turnstile.render(this.turnstileHost, {
+        sitekey: this._turnstileSiteKey,
+        theme: 'auto',
+      });
+    } catch {
+      this.setStatus('Security check failed to start. Try again.', true);
+    }
+  }
+
   syncSendButton() {
     if (!this.submitBtn || !this.form || this._sending) return;
     const subject = this.form.querySelector('#bugReportSubject')?.value?.trim() ?? '';
@@ -78,12 +143,14 @@ export class BugReportController {
     this.modal.style.display = 'flex';
     const subject = this.form?.querySelector('#bugReportSubject');
     subject?.focus();
+    void this._prepareTurnstileForOpen();
     this.syncSendButton();
   }
 
   close() {
     if (!this.modal || !this.form) return;
     this.modal.style.display = 'none';
+    this._removeTurnstileWidget();
     this.form.reset();
     this.setStatus('');
     this._sending = false;
@@ -112,6 +179,19 @@ export class BugReportController {
       return;
     }
 
+    let turnstileToken = '';
+    if (this._turnstileSiteKey) {
+      if (typeof window.turnstile === 'undefined' || this._turnstileWidgetId == null) {
+        this.setStatus('Security check is still loading. Wait a moment.', true);
+        return;
+      }
+      turnstileToken = window.turnstile.getResponse(this._turnstileWidgetId) || '';
+      if (!turnstileToken) {
+        this.setStatus('Complete the security check below the form.', true);
+        return;
+      }
+    }
+
     this._sending = true;
     this.submitBtn.disabled = true;
     this.setStatus('Sending…');
@@ -123,6 +203,7 @@ export class BugReportController {
       category,
       message,
       honeypot: this.honeypot?.value ?? '',
+      turnstileToken,
     };
 
     try {
@@ -140,11 +221,20 @@ export class BugReportController {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         let msg;
-        if ((res.status === 405 || res.status === 404) && apiUrl.startsWith('/')) {
+        if (res.status === 429) {
+          const sec = typeof err.retryAfter === 'number' ? err.retryAfter : null;
+          msg =
+            sec != null && sec > 0
+              ? `${err.error || 'Too many requests.'} Retry in about ${sec}s.`
+              : err.error || 'Too many requests. Try again later.';
+        } else if ((res.status === 405 || res.status === 404) && apiUrl.startsWith('/')) {
           msg =
             'This site is static: add GitHub Actions variable BUG_REPORT_API_URL (your full Vercel URL ending in /api/bug-report), then redeploy.';
         } else if (res.status === 503) {
           msg = 'Reporting is not available (server not configured).';
+        } else if (err.code === 'turnstile_failed' || err.code === 'turnstile_required') {
+          msg = err.error || 'Security check failed. Try again.';
+          this._resetTurnstile();
         } else {
           msg = err.error || 'Could not send report. Try again later.';
         }

@@ -500,6 +500,11 @@ body.dropzone-visible #webgl {
   background: rgba(255, 255, 255, 0.16);
 }
 
+.bug-report-turnstile {
+  min-height: 4rem;
+  margin-top: 0.5rem;
+}
+
 .bug-report-status {
   margin: 0;
   min-height: 1.25rem;

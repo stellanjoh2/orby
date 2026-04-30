@@ -5,6 +5,8 @@ name: Deploy to GitHub Pages
 # site can POST to your Vercel serverless route. CORS on that route must
 # allow https://orby.studio (or leave BUG_REPORT_ALLOWED_ORIGINS unset on Vercel
 # to echo the request Origin).
+# Optional: TURNSTILE_SITE_KEY (public) must match TURNSTILE_SECRET_KEY on Vercel.
+# Optional: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN on Vercel for rate limits.
 
 on:
   push:
@@ -42,6 +44,7 @@ jobs:
         run: npm run build
         env:
           BUG_REPORT_API_URL: ${{ vars.BUG_REPORT_API_URL }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
       
       - name: Setup Pages
         uses: actions/configure-pages@v4

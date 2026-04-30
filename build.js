@@ -43,6 +43,17 @@ function injectBugReportApiUrl(html) {
   );
 }
 
+/** Public Turnstile site key; set TURNSTILE_SITE_KEY in CI to match TURNSTILE_SECRET_KEY on Vercel. */
+function injectTurnstileSiteKey(html) {
+  const key = process.env.TURNSTILE_SITE_KEY?.trim();
+  if (!key) return html;
+  const safe = key.replace(/"/g, '&quot;');
+  return html.replace(
+    /<meta\s+name="orby-turnstile-site-key"\s+content="[^"]*"\s*\/>/,
+    `<meta name="orby-turnstile-site-key" content="${safe}" />`,
+  );
+}
+
 // Clean dist folder
 const distDir = join(__dirname, 'dist');
 if (existsSync(distDir)) {
@@ -69,7 +80,7 @@ await esbuild.build({
 
 // Copy HTML (refresh version banners from VERSION for deterministic deploys)
 const indexHtml = readFileSync('index.html', 'utf-8');
-const updatedHtml = injectBugReportApiUrl(injectVersionIntoHtml(indexHtml));
+const updatedHtml = injectTurnstileSiteKey(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml)));
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
 
 // Copy assets

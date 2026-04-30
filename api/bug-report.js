@@ -1,5 +1,5 @@
 /**
- * Vercel serverless: POST JSON { subject, category, message, honeypot? }
+ * Vercel serverless: POST JSON { subject, category, message, honeypot?, turnstileToken? }
  *
  * CORS: If orby.studio (or another origin) gets preflight errors on preview URLs,
  * open Vercel → Project → Settings → Deployment Protection → OPTIONS Allowlist
@@ -12,9 +12,18 @@
  *   RESEND_FROM          — e.g. "Orby <onboarding@resend.dev>" (test) or a verified domain sender
  *   BUG_REPORT_ALLOWED_ORIGINS — optional, comma list (e.g. https://orby.studio,http://localhost:3000).
  *                                If unset, only the request Origin that matches /^https?:\\/\\// is echoed (permissive).
+ *
+ * Abuse protection (recommended for production):
+ *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — from upstash.com; enables per-IP rate limits.
+ *   TURNSTILE_SECRET_KEY — Cloudflare Turnstile secret; requires site key in built HTML (orby-turnstile-site-key meta).
+ *                          When set, turnstileToken is required and verified. When unset, captcha is skipped.
  */
 
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
 const RESEND_URL = 'https://api.resend.com/emails';
+const TURNSTILE_VERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const CATEGORIES = new Set([
   'crash',
   'rendering',
@@ -23,6 +32,34 @@ const CATEGORIES = new Set([
   'performance',
   'other',
 ]);
+
+/** @type {{ hourly: import('@upstash/ratelimit').Ratelimit; burst: import('@upstash/ratelimit').Ratelimit } | null | false} */
+let ratelimitPair;
+
+function getRateLimiters() {
+  if (ratelimitPair === false) return null;
+  if (ratelimitPair) return ratelimitPair;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url?.trim() || !token?.trim()) {
+    ratelimitPair = false;
+    return null;
+  }
+  const redis = new Redis({ url: url.trim(), token: token.trim() });
+  ratelimitPair = {
+    hourly: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(12, '1 h'),
+      prefix: 'orby-bug:h',
+    }),
+    burst: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(4, '1 m'),
+      prefix: 'orby-bug:m',
+    }),
+  };
+  return ratelimitPair;
+}
 
 function corsHeaders(origin, req) {
   const allow =
@@ -55,6 +92,43 @@ function clampStr(s, max) {
   return t.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 }
 
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.trim() !== '') {
+    return xff.split(',')[0].trim();
+  }
+  const rip = req.headers['x-real-ip'];
+  if (typeof rip === 'string' && rip.trim() !== '') return rip.trim();
+  return 'unknown';
+}
+
+/**
+ * @param {string} token
+ * @param {string} secret
+ * @param {string} ip
+ */
+async function verifyTurnstile(token, secret, ip) {
+  const body = new URLSearchParams();
+  body.set('secret', secret);
+  body.set('response', token);
+  if (ip && ip !== 'unknown') body.set('remoteip', ip);
+
+  let res;
+  try {
+    res = await fetch(TURNSTILE_VERIFY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    return false;
+  }
+  if (!res.ok) return false;
+  const data = await res.json().catch(() => null);
+  return data?.success === true;
+}
+
 export default async function handler(req, res) {
   const origin = req.headers.origin;
   const headers = corsHeaders(origin, req);
@@ -76,6 +150,21 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'Bug reporting is not configured' });
   }
 
+  const ip = clientIp(req);
+  const limiters = getRateLimiters();
+  if (limiters) {
+    const [h, b] = await Promise.all([limiters.hourly.limit(ip), limiters.burst.limit(ip)]);
+    const hit = !h.success ? h : !b.success ? b : null;
+    if (hit) {
+      const retryAfter = Math.max(1, Math.ceil((hit.reset - Date.now()) / 1000));
+      res.setHeader('Retry-After', String(retryAfter));
+      return res.status(429).json({
+        error: 'Too many reports from this network. Try again later.',
+        retryAfter,
+      });
+    }
+  }
+
   const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
   if (body.honeypot) {
     return res.status(204).end();
@@ -87,6 +176,18 @@ export default async function handler(req, res) {
 
   if (!subject || !CATEGORIES.has(category) || message.length < 8) {
     return res.status(400).json({ error: 'Invalid payload' });
+  }
+
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
+  if (turnstileSecret) {
+    const token = typeof body.turnstileToken === 'string' ? body.turnstileToken.trim() : '';
+    if (!token) {
+      return res.status(400).json({ error: 'Security check required', code: 'turnstile_required' });
+    }
+    const ok = await verifyTurnstile(token, turnstileSecret, ip);
+    if (!ok) {
+      return res.status(400).json({ error: 'Security check failed', code: 'turnstile_failed' });
+    }
   }
 
   const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '';
