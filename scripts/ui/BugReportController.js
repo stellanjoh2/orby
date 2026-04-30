@@ -86,6 +86,8 @@ export class BugReportController {
     this.submitBtn.disabled = true;
     this.setStatus('Sending…');
 
+    const apiUrl = this.getApiUrl();
+
     const payload = {
       subject,
       category,
@@ -94,7 +96,7 @@ export class BugReportController {
     };
 
     try {
-      const res = await fetch(this.getApiUrl(), {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -107,10 +109,15 @@ export class BugReportController {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        const msg =
-          res.status === 503
-            ? 'Reporting is not available (server not configured).'
-            : err.error || 'Could not send report. Try again later.';
+        let msg;
+        if ((res.status === 405 || res.status === 404) && apiUrl.startsWith('/')) {
+          msg =
+            'This site is static: add GitHub Actions variable BUG_REPORT_API_URL (your full Vercel URL ending in /api/bug-report), then redeploy.';
+        } else if (res.status === 503) {
+          msg = 'Reporting is not available (server not configured).';
+        } else {
+          msg = err.error || 'Could not send report. Try again later.';
+        }
         this.setStatus(msg, true);
         this.submitBtn.disabled = false;
         return;
