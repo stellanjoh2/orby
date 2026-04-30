@@ -4,6 +4,7 @@
  */
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { CAMERA_TEMPERATURE_NEUTRAL_K } from '../constants.js';
+import { animateModalClose, animateModalOpen } from './modalReveal.js';
 import { UIHelpers } from './UIHelpers.js';
 
 export class ResetControls {
@@ -51,28 +52,33 @@ export class ResetControls {
     // Load Scene Settings - Show modal
     this.ui.buttons.loadSceneButtons?.forEach(button => {
       button.addEventListener('click', () => {
-        if (this.ui.buttons.loadSceneModal) {
-          this.ui.buttons.loadSceneModal.style.display = 'flex';
-          if (this.ui.buttons.loadSceneText) {
-            this.ui.buttons.loadSceneText.focus();
-            navigator.clipboard?.readText().then(text => {
+        const modal = this.ui.buttons.loadSceneModal;
+        const text = this.ui.buttons.loadSceneText;
+        if (!modal) return;
+        const panel = modal.querySelector('.load-settings-content');
+        void animateModalOpen(modal, panel).then(() => {
+          if (text) {
+            text.focus();
+            navigator.clipboard?.readText().then((clip) => {
               if (this.ui.buttons.loadSceneText) {
-                this.ui.buttons.loadSceneText.value = text;
+                this.ui.buttons.loadSceneText.value = clip;
               }
             }).catch(() => {});
           }
-        }
+        });
       });
     });
 
     // Close scene modal
     const closeSceneModal = () => {
-      if (this.ui.buttons.loadSceneModal) {
-        this.ui.buttons.loadSceneModal.style.display = 'none';
+      const modal = this.ui.buttons.loadSceneModal;
+      if (!modal) return;
+      const panel = modal.querySelector('.load-settings-content');
+      animateModalClose(modal, panel, () => {
         if (this.ui.buttons.loadSceneText) {
           this.ui.buttons.loadSceneText.value = '';
         }
-      }
+      });
     };
 
     this.ui.buttons.closeLoadSceneSettings?.addEventListener('click', closeSceneModal);

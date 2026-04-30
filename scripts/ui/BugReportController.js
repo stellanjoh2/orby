@@ -3,6 +3,8 @@
  * API URL: meta[name="orby-bug-report-api"] content, or "/api/bug-report".
  * Turnstile: meta[name="orby-turnstile-site-key"] when using Cloudflare with server secret.
  */
+import { animateModalClose, animateModalOpen } from './modalReveal.js';
+
 export class BugReportController {
   /**
    * @param {import('./UIManager.js').UIManager} ui
@@ -140,21 +142,26 @@ export class BugReportController {
     this._sending = false;
     this._bugBackdropDown = false;
     this.setStatus('');
-    this.modal.style.display = 'flex';
-    const messageEl = this.form?.querySelector('#bugReportMessage');
-    messageEl?.focus();
+    const panel = this.modal.querySelector('.load-settings-content');
+    void animateModalOpen(this.modal, panel).then(() => {
+      const messageEl = this.form?.querySelector('#bugReportMessage');
+      messageEl?.focus();
+    });
     void this._prepareTurnstileForOpen();
     this.syncSendButton();
   }
 
   close() {
     if (!this.modal || !this.form) return;
-    this.modal.style.display = 'none';
-    this._removeTurnstileWidget();
-    this.form.reset();
-    this.setStatus('');
-    this._sending = false;
-    this.syncSendButton();
+    if (this.modal.style.display === 'none') return;
+    const panel = this.modal.querySelector('.load-settings-content');
+    animateModalClose(this.modal, panel, () => {
+      this._removeTurnstileWidget();
+      this.form.reset();
+      this.setStatus('');
+      this._sending = false;
+      this.syncSendButton();
+    });
   }
 
   setStatus(text, isError = false) {
