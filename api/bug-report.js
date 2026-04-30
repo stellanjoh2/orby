@@ -1,6 +1,11 @@
 /**
  * Vercel serverless: POST JSON { subject, category, message, honeypot? }
  *
+ * CORS: If orby.studio (or another origin) gets preflight errors on preview URLs,
+ * open Vercel → Project → Settings → Deployment Protection → OPTIONS Allowlist
+ * and add path `/api` (or `/api/bug-report`). Protection can block OPTIONS before
+ * this handler runs, which yields "No Access-Control-Allow-Origin" in the browser.
+ *
  * Env (Vercel → Settings → Environment Variables):
  *   RESEND_API_KEY       — from resend.com
  *   BUG_REPORT_TO        — your private inbox
@@ -19,7 +24,7 @@ const CATEGORIES = new Set([
   'other',
 ]);
 
-function corsHeaders(origin) {
+function corsHeaders(origin, req) {
   const allow =
     process.env.BUG_REPORT_ALLOWED_ORIGINS?.split(',')
       .map((s) => s.trim())
@@ -30,11 +35,17 @@ function corsHeaders(origin) {
   } else if (origin && /^https?:\/\//i.test(origin)) {
     allowOrigin = origin;
   }
+  const requested = req.headers['access-control-request-headers'];
+  const allowHeaders =
+    typeof requested === 'string' && requested.trim() !== ''
+      ? requested
+      : 'Content-Type';
   return {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': allowHeaders,
     'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
   };
 }
 
@@ -46,14 +57,15 @@ function clampStr(s, max) {
 
 export default async function handler(req, res) {
   const origin = req.headers.origin;
-  const headers = corsHeaders(origin);
+  const headers = corsHeaders(origin, req);
   Object.entries(headers).forEach(([k, v]) => res.setHeader(k, v));
 
-  if (req.method === 'OPTIONS') {
+  const method = String(req.method || '').toUpperCase();
+  if (method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  if (req.method !== 'POST') {
+  if (method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
