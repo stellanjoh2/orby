@@ -1,7 +1,6 @@
 /**
- * Simple bug report modal → POST to serverless (see /api/bug-report.js).
- * API URL: meta[name="orby-bug-report-api"] content, or "/api/bug-report".
- * Turnstile: meta[name="orby-turnstile-site-key"] when using Cloudflare with server secret.
+ * Bug report modal → POST /api/bug-report.
+ * API URL: meta[name="orby-bug-report-api"] or "/api/bug-report"; Turnstile: meta orby-turnstile-site-key + server secret.
  */
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
 
@@ -123,7 +122,8 @@ export class BugReportController {
   syncSendButton() {
     if (!this.submitBtn || !this.form || this._sending) return;
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
-    const valid = message.length >= 8;
+    const severity = this.form.querySelector('input[name="severity"]:checked')?.value ?? '';
+    const valid = message.length >= 8 && Boolean(severity);
     this.submitBtn.disabled = !valid;
   }
 
@@ -174,8 +174,7 @@ export class BugReportController {
     if (!this.form || !this.submitBtn) return;
 
     const category = this.form.querySelector('#bugReportCategory')?.value ?? '';
-    const severity =
-      this.form.querySelector('input[name="severity"]:checked')?.value ?? '';
+    const severity = this.form.querySelector('input[name="severity"]:checked')?.value ?? '';
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
 
     if (!severity) {

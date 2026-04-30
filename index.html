@@ -2056,7 +2056,7 @@
                 </p>
                 <button type="button" class="bug-report-panel-open accent-action-btn" data-bug-report-open>
                   <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                  Report a bug
+                  Tell us what happened
                 </button>
               </div>
               
@@ -2596,7 +2596,7 @@
         <form id="bugReportForm">
           <div class="bug-report-field">
             <label for="bugReportCategory">Category</label>
-            <select id="bugReportCategory" name="category" required>
+            <select id="bugReportCategory" name="category" required aria-required="true">
               <option value="crash">Crash / freeze</option>
               <option value="rendering" selected>Rendering / display</option>
               <option value="loaded-mesh-materials">Loaded mesh / materials</option>
@@ -2639,7 +2639,7 @@
             </fieldset>
           </div>
           <div class="bug-report-field">
-            <label for="bugReportMessage">Details</label>
+            <label for="bugReportMessage" id="bugReportMessageLabel">Details</label>
             <textarea
               id="bugReportMessage"
               name="message"
@@ -2647,6 +2647,7 @@
               maxlength="8000"
               required
               placeholder="Steps to reproduce, browser/OS, what you expected…"
+              aria-labelledby="bugReportMessageLabel"
             ></textarea>
           </div>
           <input
