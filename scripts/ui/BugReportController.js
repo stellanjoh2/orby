@@ -8,6 +8,8 @@ export class BugReportController {
    */
   constructor(ui) {
     this.ui = ui;
+    /** @type {boolean} */
+    this._sending = false;
   }
 
   init() {
@@ -15,14 +17,23 @@ export class BugReportController {
     this.form = document.querySelector('#bugReportForm');
     if (!this.modal || !this.form) return;
 
-    this.openBtn = document.querySelector('#openBugReport');
     this.closeBtn = document.querySelector('#closeBugReport');
     this.cancelBtn = document.querySelector('#cancelBugReport');
     this.submitBtn = document.querySelector('#submitBugReport');
     this.honeypot = this.form.querySelector('input[name="honeypot"]');
     this.statusEl = this.modal.querySelector('.bug-report-status');
 
-    this.openBtn?.addEventListener('click', () => this.open());
+    document.querySelectorAll('[data-bug-report-open]').forEach((el) => {
+      el.addEventListener('click', () => this.open());
+    });
+
+    const subjectInput = this.form.querySelector('#bugReportSubject');
+    const messageInput = this.form.querySelector('#bugReportMessage');
+    for (const ev of ['input', 'change']) {
+      subjectInput?.addEventListener(ev, () => this.syncSendButton());
+      messageInput?.addEventListener(ev, () => this.syncSendButton());
+    }
+
     this.closeBtn?.addEventListener('click', () => this.close());
     this.cancelBtn?.addEventListener('click', () => this.close());
     this.modal.addEventListener('click', (e) => {
@@ -33,6 +44,16 @@ export class BugReportController {
       e.preventDefault();
       this.submit();
     });
+
+    this.syncSendButton();
+  }
+
+  syncSendButton() {
+    if (!this.submitBtn || !this.form || this._sending) return;
+    const subject = this.form.querySelector('#bugReportSubject')?.value?.trim() ?? '';
+    const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
+    const valid = subject.length > 0 && message.length >= 8;
+    this.submitBtn.disabled = !valid;
   }
 
   getApiUrl() {
@@ -47,10 +68,12 @@ export class BugReportController {
 
   open() {
     if (!this.modal) return;
+    this._sending = false;
     this.setStatus('');
     this.modal.style.display = 'flex';
     const subject = this.form?.querySelector('#bugReportSubject');
     subject?.focus();
+    this.syncSendButton();
   }
 
   close() {
@@ -58,7 +81,8 @@ export class BugReportController {
     this.modal.style.display = 'none';
     this.form.reset();
     this.setStatus('');
-    if (this.submitBtn) this.submitBtn.disabled = false;
+    this._sending = false;
+    this.syncSendButton();
   }
 
   setStatus(text, isError = false) {
@@ -83,6 +107,7 @@ export class BugReportController {
       return;
     }
 
+    this._sending = true;
     this.submitBtn.disabled = true;
     this.setStatus('Sending…');
 
@@ -119,7 +144,8 @@ export class BugReportController {
           msg = err.error || 'Could not send report. Try again later.';
         }
         this.setStatus(msg, true);
-        this.submitBtn.disabled = false;
+        this._sending = false;
+        this.syncSendButton();
         return;
       }
 
@@ -127,7 +153,8 @@ export class BugReportController {
       this.ui.helpers.showToast('Thanks — report sent.');
     } catch {
       this.setStatus('Network error. Check your connection.', true);
-      this.submitBtn.disabled = false;
+      this._sending = false;
+      this.syncSendButton();
     }
   }
 }

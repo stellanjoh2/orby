@@ -415,30 +415,38 @@ body.dropzone-visible #webgl {
   margin-top: 0;
 }
 
-/* Bug report modal */
-.info-quicknav .info-quicknav-bug {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: inherit;
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+/* Bug report — Information panel + modal */
+.bug-report-panel-description {
+  margin: 0 0 1rem 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-dim);
 }
 
-.info-quicknav .info-quicknav-bug:hover {
-  color: var(--text);
+.bug-report-panel-block .bug-report-panel-open.accent-action-btn {
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.bug-report-panel-block .bug-report-panel-open.accent-action-btn:not(:disabled) {
+  opacity: 1;
+  background: var(--brand-primary);
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  box-shadow: 0 4px 14px var(--accent-shadow);
+}
+
+.bug-report-panel-block .bug-report-panel-open.accent-action-btn:hover:not(:disabled) {
+  filter: brightness(1.07);
+  opacity: 1;
 }
 
 .bug-report-content {
-  max-width: 440px;
+  max-width: 520px;
 }
 
 .bug-report-content textarea {
-  min-height: 140px;
+  min-height: 168px;
 }
 
 .bug-report-field {
@@ -498,13 +506,64 @@ body.dropzone-visible #webgl {
   font-size: 0.82rem;
 }
 
-.bug-report-content .load-settings-actions {
+.bug-report-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0.75rem;
   margin-top: 0.75rem;
+  width: 100%;
 }
 
-.bug-report-content .load-settings-actions .accent-action-btn {
+.bug-report-modal-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  margin-top: 0;
+  box-sizing: border-box;
+  border-radius: 999px;
   width: auto;
-  min-width: 120px;
+  max-width: none;
+}
+
+.bug-report-content .bug-report-modal-btn.ghost-btn {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.bug-report-content .bug-report-modal-btn.ghost-btn:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--stroke));
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+}
+
+.bug-report-content .bug-report-modal-btn.accent-action-btn:not(:disabled) {
+  opacity: 1;
+  background: var(--brand-primary);
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  box-shadow: 0 4px 14px var(--accent-shadow);
+}
+
+.bug-report-content .bug-report-modal-btn.accent-action-btn:hover:not(:disabled) {
+  filter: brightness(1.07);
+  opacity: 1;
+}
+
+.bug-report-content .bug-report-modal-btn.accent-action-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  color: var(--text-dim);
 }
 
 .primary-btn {

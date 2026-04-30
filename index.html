@@ -2043,6 +2043,20 @@
               <div class="info-logotype-container">
                 <div id="infoLogotypeAnimation" class="info-logotype"></div>
               </div>
+
+              <div class="panel-block bug-report-panel-block" id="info-bug-report">
+                <div class="block-title">
+                  <i class="fa-solid fa-bug" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                  Report a bug
+                </div>
+                <p class="bug-report-panel-description">
+                  Spotted something wrong? Tell us what happened. We do not collect your email, and you will not get an automated reply from this form.
+                </p>
+                <button type="button" class="bug-report-panel-open accent-action-btn" data-bug-report-open>
+                  <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                  Report a bug
+                </button>
+              </div>
               
               <!-- Quick Navigation for Information tab -->
               <div class="panel-block">
@@ -2066,9 +2080,6 @@
                   <a href="#info-legal">Legal</a>
                   <a href="#info-credits">Credits</a>
                   <a href="#info-changelog">Latest Changes</a>
-                  <button type="button" id="openBugReport" class="info-quicknav-bug">
-                    Report a bug
-                  </button>
                 </nav>
               </div>
 
@@ -2619,9 +2630,9 @@
             aria-hidden="true"
           />
           <p class="bug-report-status" aria-live="polite"></p>
-          <div class="load-settings-actions">
-            <button type="submit" id="submitBugReport" class="accent-action-btn">Send</button>
-            <button type="button" id="cancelBugReport" class="ghost-btn">Cancel</button>
+          <div class="load-settings-actions bug-report-actions">
+            <button type="button" id="cancelBugReport" class="ghost-btn bug-report-modal-btn">Cancel</button>
+            <button type="submit" id="submitBugReport" class="accent-action-btn bug-report-modal-btn">Send</button>
           </div>
         </form>
       </div>
