@@ -415,6 +415,98 @@ body.dropzone-visible #webgl {
   margin-top: 0;
 }
 
+/* Bug report modal */
+.info-quicknav .info-quicknav-bug {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.info-quicknav .info-quicknav-bug:hover {
+  color: var(--text);
+}
+
+.bug-report-content {
+  max-width: 440px;
+}
+
+.bug-report-content textarea {
+  min-height: 140px;
+}
+
+.bug-report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bug-report-field label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.bug-report-field input,
+.bug-report-field select {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bug-report-field input:focus,
+.bug-report-field select:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.bug-report-field textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bug-report-field textarea:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.bug-report-status {
+  margin: 0;
+  min-height: 1.25rem;
+  font-size: 0.82rem;
+}
+
+.bug-report-content .load-settings-actions {
+  margin-top: 0.75rem;
+}
+
+.bug-report-content .load-settings-actions .accent-action-btn {
+  width: auto;
+  min-width: 120px;
+}
+
 .primary-btn {
   border-color: transparent;
   background: linear-gradient(120deg, var(--accent), var(--accent-strong));
@@ -897,6 +989,8 @@ body:not(.dropzone-visible) .quick-start-guide {
   grid-template-columns: repeat(5, 1fr);
   margin: calc(-1 * var(--shelf-g)) calc(-1 * var(--shelf-g)) 0 calc(-1 * var(--shelf-g));
   padding: 0;
+  /* Keep each tab's hit targets inside its grid cell (no overlapping neighbors). */
+  isolation: isolate;
 }
 
 .tab {
@@ -935,10 +1029,10 @@ body:not(.dropzone-visible) .quick-start-guide {
 .tab.active {
   color: var(--brand-text);
   background: var(--accent);
-  box-shadow: 0 8px 18px var(--accent-shadow);
-  transform: scale(1.01);
-  z-index: 1;
-  position: relative;
+  /* Depth without transform — scale(1.01) + z-index used to spill into adjacent tabs */
+  box-shadow:
+    0 8px 18px var(--accent-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   opacity: 1;
 }
 

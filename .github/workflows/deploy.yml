@@ -1,5 +1,11 @@
 name: Deploy to GitHub Pages
 
+# For bug reports from Pages: add repository Variable BUG_REPORT_API_URL
+# (e.g. https://your-deployment.vercel.app/api/bug-report) so the static
+# site can POST to your Vercel serverless route. CORS on that route must
+# allow https://orby.studio (or leave BUG_REPORT_ALLOWED_ORIGINS unset on Vercel
+# to echo the request Origin).
+
 on:
   push:
     branches:
@@ -34,6 +40,8 @@ jobs:
       
       - name: Build
         run: npm run build
+        env:
+          BUG_REPORT_API_URL: ${{ vars.BUG_REPORT_API_URL }}
       
       - name: Setup Pages
         uses: actions/configure-pages@v4

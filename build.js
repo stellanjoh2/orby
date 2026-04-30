@@ -32,6 +32,17 @@ function injectVersionIntoHtml(html) {
     );
 }
 
+/** GitHub Pages is static; set BUG_REPORT_API_URL in Actions (repo variable) to your Vercel /api/bug-report URL. */
+function injectBugReportApiUrl(html) {
+  const url = process.env.BUG_REPORT_API_URL?.trim();
+  if (!url) return html;
+  const safe = url.replace(/"/g, '&quot;');
+  return html.replace(
+    /<meta\s+name="orby-bug-report-api"\s+content="[^"]*"\s*\/>/,
+    `<meta name="orby-bug-report-api" content="${safe}" />`,
+  );
+}
+
 // Clean dist folder
 const distDir = join(__dirname, 'dist');
 if (existsSync(distDir)) {
@@ -58,7 +69,7 @@ await esbuild.build({
 
 // Copy HTML (refresh version banners from VERSION for deterministic deploys)
 const indexHtml = readFileSync('index.html', 'utf-8');
-const updatedHtml = injectVersionIntoHtml(indexHtml);
+const updatedHtml = injectBugReportApiUrl(injectVersionIntoHtml(indexHtml));
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
 
 // Copy assets

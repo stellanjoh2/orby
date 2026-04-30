@@ -17,6 +17,7 @@ import { AnimationControls } from './ui/AnimationControls.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
+import { BugReportController } from './ui/BugReportController.js';
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -45,12 +46,14 @@ export class UIManager {
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this);
     this.demoLogotype = new DemoLogotypeController();
-    
+    this.bugReport = new BugReportController(this);
+
     // Initialize start menu
     this.startMenuController.init();
-    
+
     // Initialize demo logotype
     this.demoLogotype.init();
+    this.bugReport.init();
     
     // Initialize SceneSettingsManager
     this.sceneSettingsManager = new SceneSettingsManager(
