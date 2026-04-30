@@ -9,7 +9,7 @@
     "preview": "python3 -m http.server 8000 --bind 0.0.0.0 -d dist",
     "setup-hooks": "git config core.hooksPath .githooks"
   },
-  "devDependencies": {
+  "dependencies": {
     "esbuild": "^0.19.0"
   }
 }
