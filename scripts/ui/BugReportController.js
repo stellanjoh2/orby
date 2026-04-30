@@ -36,8 +36,12 @@ export class BugReportController {
 
     this.closeBtn?.addEventListener('click', () => this.close());
     this.cancelBtn?.addEventListener('click', () => this.close());
+    /** Only close on backdrop if press+release both started on the dimmed overlay (not after dragging from an input). */
+    this.modal.addEventListener('pointerdown', (e) => {
+      this._bugBackdropDown = e.target === this.modal;
+    });
     this.modal.addEventListener('click', (e) => {
-      if (e.target === this.modal) this.close();
+      if (e.target === this.modal && this._bugBackdropDown) this.close();
     });
 
     this.form.addEventListener('submit', (e) => {
@@ -69,6 +73,7 @@ export class BugReportController {
   open() {
     if (!this.modal) return;
     this._sending = false;
+    this._bugBackdropDown = false;
     this.setStatus('');
     this.modal.style.display = 'flex';
     const subject = this.form?.querySelector('#bugReportSubject');
