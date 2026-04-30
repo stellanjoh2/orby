@@ -496,10 +496,8 @@ body.dropzone-visible #webgl {
 .bug-report-field input,
 .bug-report-field select {
   width: 100%;
-  padding: 0.55rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.12);
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -507,10 +505,34 @@ body.dropzone-visible #webgl {
   box-sizing: border-box;
 }
 
-.bug-report-field input:focus,
-.bug-report-field select:focus {
+.bug-report-field input {
+  padding: 0.55rem 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Match shelf .select-line chevron: extra right inset so the arrow doesn’t hug the edge */
+.bug-report-field select {
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.12);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 12px 12px;
+}
+
+.bug-report-field input:focus {
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.16);
+}
+
+.bug-report-field select:focus {
+  border-color: var(--accent);
+  background-color: rgba(255, 255, 255, 0.16);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 12px 12px;
 }
 
 .bug-report-field textarea {
