@@ -3,14 +3,13 @@
  * Manages HDRI, lights, ground, podium, grid, and lens flare
  */
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
-import { UIHelpers } from './UIHelpers.js';
 
 export class StudioControls {
-  constructor(eventBus, stateStore, uiManager) {
+  constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
-    this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    this.helpers = helpers;
   }
 
   bind() {

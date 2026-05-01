@@ -363,8 +363,8 @@ Export all your settings as JSON:
 
 Perfect for saving your favorite setups or sharing them with others.
 
-#### Load Scene
-Import scene settings from JSON:
+#### Paste Scene Settings
+Import scene settings from JSON (paste into the dialog):
 - Paste your scene settings JSON
 - Instantly apply all settings at once
 - Restore complete scene configurations

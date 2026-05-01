@@ -8,15 +8,14 @@ import {
   getAntiAliasingUiState,
   RENDER_QUALITY_DEFAULT,
 } from '../constants.js';
-import { UIHelpers } from './UIHelpers.js';
 import { ToneCurveController } from './ToneCurveController.js';
 
 export class RenderControls {
-  constructor(eventBus, stateStore, uiManager) {
+  constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
-    this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    this.helpers = helpers;
     this.toneCurveController = null;
   }
 

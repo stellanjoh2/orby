@@ -4,14 +4,13 @@
  */
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
-import { UIHelpers } from './UIHelpers.js';
 
 export class GlobalControls {
-  constructor(eventBus, stateStore, uiManager) {
+  constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
-    this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    this.helpers = helpers;
   }
 
   bind() {

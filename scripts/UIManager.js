@@ -30,6 +30,8 @@ export class UIManager {
     this.currentAnimationDuration = 0;
     this.animationPlaying = false;
     this.shelfRevealed = false;
+    /** Set while a coalesced post-sync slider-fill rAF is pending (see scheduleAllRangeSliderFills). */
+    this._rangeSliderFillRafId = null;
   }
 
   init() {
@@ -40,12 +42,12 @@ export class UIManager {
     
     // Initialize control modules
     this.startMenuController = new StartMenuController(this.eventBus, this);
-    this.meshControls = new MeshControls(this.eventBus, this.stateStore, this);
-    this.studioControls = new StudioControls(this.eventBus, this.stateStore, this);
-    this.renderControls = new RenderControls(this.eventBus, this.stateStore, this);
-    this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this);
+    this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
-    this.resetControls = new ResetControls(this.eventBus, this.stateStore, this);
+    this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
     this.demoLogotype = new DemoLogotypeController();
     this.bugReport = new BugReportController(this);
 
@@ -1451,9 +1453,17 @@ export class UIManager {
     this.studioControls.sync(state);
     this.renderControls.sync(state);
     this.applyBlockStates(state);
-    // Update slider fills after syncing all controls
-    // Use requestAnimationFrame to ensure DOM has updated before calculating fills
-    requestAnimationFrame(() => {
+    this.scheduleAllRangeSliderFills();
+  }
+
+  /**
+   * After control values change, refresh range slider CSS fill variables once per frame.
+   * Coalesces multiple syncControls / notify() bursts into a single DOM pass.
+   */
+  scheduleAllRangeSliderFills() {
+    if (this._rangeSliderFillRafId != null) return;
+    this._rangeSliderFillRafId = requestAnimationFrame(() => {
+      this._rangeSliderFillRafId = null;
       document.querySelectorAll('input[type="range"]').forEach((slider) => {
         this.helpers.updateSliderFill(slider);
       });
@@ -1524,10 +1534,20 @@ export class UIManager {
     this.setBlockMuted('lights', !currentState.lightsEnabled);
     
     // Podium block - only muted if groundSolid is false
-    this.setBlockMuted('podium', !currentState.groundSolid);
-    
+    const podiumOn = !!currentState.groundSolid;
+    this.setBlockMuted('podium', !podiumOn);
+    this.setControlDisabled(
+      ['groundSolidColor', 'groundY', 'podiumScale', 'podiumSnap'],
+      !podiumOn,
+    );
+
     // Grid block - only muted if groundWire is false
-    this.setBlockMuted('grid', !currentState.groundWire);
+    const gridOn = !!currentState.groundWire;
+    this.setBlockMuted('grid', !gridOn);
+    this.setControlDisabled(
+      ['groundWireColor', 'groundWireOpacity', 'gridY', 'gridScale', 'gridSnap'],
+      !gridOn,
+    );
     
     // DOF block - only muted if dof.enabled is false
     this.setBlockMuted('dof', !currentState.dof?.enabled);

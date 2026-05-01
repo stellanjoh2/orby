@@ -2,12 +2,7 @@
  * Look filter (Camera & FX) presets: Instagram-style one-tap grades + post stack.
  * Presets only override grading and post keys; FOV, tilt, and orbit are preserved from current state.
  */
-function deepClone(value) {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+import { deepClone } from '../utils/deepClone.js';
 
 const GRADING_KEYS = [
   'contrast',

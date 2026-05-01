@@ -3,14 +3,13 @@
  * Manages shading, materials, transforms, clay, wireframe, fresnel, and export settings
  */
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
-import { UIHelpers } from './UIHelpers.js';
 
 export class MeshControls {
-  constructor(eventBus, stateStore, uiManager) {
+  constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
-    this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    this.helpers = helpers;
     // Track which Fresnel inputs are currently being interacted with
     this.fresnelInteracting = {
       radius: false,

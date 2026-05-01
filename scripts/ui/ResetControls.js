@@ -1,18 +1,17 @@
 /**
  * ResetControls - Handles all reset button logic
- * Manages copy/load scene settings, and local/section reset buttons
+ * Manages copy/paste scene settings, and local/section reset buttons
  */
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
-import { UIHelpers } from './UIHelpers.js';
 
 export class ResetControls {
-  constructor(eventBus, stateStore, uiManager) {
+  constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
     this.stateStore = stateStore;
     this.ui = uiManager;
-    this.helpers = new UIHelpers(eventBus, stateStore, uiManager);
+    this.helpers = helpers;
   }
 
   bind() {
@@ -49,7 +48,7 @@ export class ResetControls {
       event.target.value = '';
     });
 
-    // Load Scene Settings - Show modal
+    // Paste scene settings — show modal
     this.ui.buttons.loadSceneButtons?.forEach(button => {
       button.addEventListener('click', () => {
         const modal = this.ui.buttons.loadSceneModal;
@@ -108,6 +107,7 @@ export class ResetControls {
     // Reset buttons (Mesh, Studio, Render)
     const resetMesh = () => {
       const defaults = this.stateStore.getDefaults();
+      this.stateStore.batch(() => {
       this.stateStore.set('shading', defaults.shading);
       this.stateStore.set('scale', defaults.scale);
       this.stateStore.set('xOffset', defaults.xOffset ?? 0);
@@ -134,7 +134,7 @@ export class ResetControls {
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
       this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
-      
+      });
       this.eventBus.emit('mesh:shading', defaults.shading);
       this.eventBus.emit('mesh:scale', defaults.scale);
       this.eventBus.emit('mesh:xOffset', defaults.xOffset ?? 0);
@@ -173,6 +173,7 @@ export class ResetControls {
 
     const resetStudio = () => {
       const defaults = this.stateStore.getDefaults();
+      this.stateStore.batch(() => {
       this.stateStore.set('hdri', defaults.hdri);
       this.stateStore.set('hdriEnabled', defaults.hdriEnabled);
       this.stateStore.set('hdriStrength', defaults.hdriStrength);
@@ -193,7 +194,9 @@ export class ResetControls {
       this.stateStore.set('lightsAutoRotate', defaults.lightsAutoRotate);
       this.stateStore.set('showLightIndicators', defaults.showLightIndicators ?? false);
       this.stateStore.set('lensFlare', defaults.lensFlare);
-      
+      this.stateStore.set('lensFlare.enabled', defaults.lensFlare.enabled);
+      this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
+      });
       this.ui.setHdriActive(defaults.hdri);
       this.eventBus.emit('studio:hdri', defaults.hdri);
       this.eventBus.emit('studio:hdri-enabled', defaults.hdriEnabled);
@@ -202,7 +205,6 @@ export class ResetControls {
       this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
       this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
       // Ensure lens flare toggle is fully reset (state + event + UI sync)
-      this.stateStore.set('lensFlare.enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
       this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
@@ -227,7 +229,6 @@ export class ResetControls {
       this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.ui.setLightsRotationDisabled(defaults.lightsAutoRotate);
-      this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
       this.eventBus.emit('lights:cast-shadows', defaults.lightsCastShadows);
       this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
       
@@ -237,6 +238,7 @@ export class ResetControls {
 
     const resetRender = () => {
       const defaults = this.stateStore.getDefaults();
+      this.stateStore.batch(() => {
       this.stateStore.set('dof', defaults.dof);
       this.stateStore.set('bloom', defaults.bloom);
       this.stateStore.set('grain', defaults.grain);
@@ -251,7 +253,7 @@ export class ResetControls {
       this.stateStore.set('toneCurve', defaults.toneCurve);
       this.stateStore.set('toneMapping', defaults.toneMapping);
       this.stateStore.set('lookFilterPreset', 'none');
-      
+      });
       this.eventBus.emit('render:dof', defaults.dof);
       this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
       this.eventBus.emit('render:bloom', defaults.bloom);
@@ -300,10 +302,12 @@ export class ResetControls {
         
         switch (resetType) {
           case 'material':
-            this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
-            this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
-            this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
-            this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+            this.stateStore.batch(() => {
+              this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
+              this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
+              this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
+              this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+            });
             this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
             this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
             this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
@@ -339,12 +343,14 @@ export class ResetControls {
             break;
             
           case 'hdri':
-            this.stateStore.set('hdri', defaults.hdri);
-            this.stateStore.set('hdriStrength', defaults.hdriStrength);
-            this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
-            this.stateStore.set('hdriRotation', defaults.hdriRotation);
-            this.stateStore.set('hdriBackground', defaults.hdriBackground);
-            this.stateStore.set('lensFlare', defaults.lensFlare);
+            this.stateStore.batch(() => {
+              this.stateStore.set('hdri', defaults.hdri);
+              this.stateStore.set('hdriStrength', defaults.hdriStrength);
+              this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
+              this.stateStore.set('hdriRotation', defaults.hdriRotation);
+              this.stateStore.set('hdriBackground', defaults.hdriBackground);
+              this.stateStore.set('lensFlare', defaults.lensFlare);
+            });
             this.ui.setHdriActive(defaults.hdri);
             this.eventBus.emit('studio:hdri', defaults.hdri);
             this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
@@ -369,10 +375,12 @@ export class ResetControls {
             break;
             
           case 'lights':
-            this.stateStore.set('lights', defaults.lights);
-            this.stateStore.set('lightsMaster', defaults.lightsMaster);
-            this.stateStore.set('lightsRotation', defaults.lightsRotation);
-            this.stateStore.set('lightsHeight', defaults.lightsHeight ?? 5);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lights', defaults.lights);
+              this.stateStore.set('lightsMaster', defaults.lightsMaster);
+              this.stateStore.set('lightsRotation', defaults.lightsRotation);
+              this.stateStore.set('lightsHeight', defaults.lightsHeight ?? 5);
+            });
             Object.keys(defaults.lights).forEach((lightId) => {
               const light = defaults.lights[lightId];
               this.eventBus.emit('lights:update', { lightId, property: 'color', value: light.color });
@@ -403,9 +411,11 @@ export class ResetControls {
             break;
             
           case 'podium':
-            this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
-            this.stateStore.set('groundY', defaults.groundY);
-            this.stateStore.set('podiumScale', defaults.podiumScale);
+            this.stateStore.batch(() => {
+              this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
+              this.stateStore.set('groundY', defaults.groundY);
+              this.stateStore.set('podiumScale', defaults.podiumScale);
+            });
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
             this.eventBus.emit('studio:podium-scale', defaults.podiumScale);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
@@ -419,10 +429,12 @@ export class ResetControls {
             break;
             
           case 'grid':
-            this.stateStore.set('groundWireColor', defaults.groundWireColor);
-            this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
-            this.stateStore.set('gridY', defaults.gridY);
-            this.stateStore.set('gridScale', defaults.gridScale);
+            this.stateStore.batch(() => {
+              this.stateStore.set('groundWireColor', defaults.groundWireColor);
+              this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
+              this.stateStore.set('gridY', defaults.gridY);
+              this.stateStore.set('gridScale', defaults.gridScale);
+            });
             this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
             this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
             this.eventBus.emit('studio:grid-y', defaults.gridY);
@@ -431,40 +443,50 @@ export class ResetControls {
             break;
             
           case 'dof':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('dof', defaults.dof);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('dof', defaults.dof);
+            });
             this.eventBus.emit('render:dof', defaults.dof);
             this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
             this.ui.syncUIFromState();
             break;
             
           case 'bloom':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('bloom', defaults.bloom);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('bloom', defaults.bloom);
+            });
             this.eventBus.emit('render:bloom', defaults.bloom);
             this.ui.setEffectControlsDisabled(['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'], !defaults.bloom.enabled);
             this.ui.syncUIFromState();
             break;
 
           case 'lens-dirt':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('lensDirt', defaults.lensDirt);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('lensDirt', defaults.lensDirt);
+            });
             this.eventBus.emit('render:lens-dirt', defaults.lensDirt);
             this.ui.setEffectControlsDisabled(['lensDirtStrength'], !defaults.lensDirt.enabled);
             this.ui.syncControls(this.stateStore.getState());
             break;
             
           case 'grain':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('grain', defaults.grain);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('grain', defaults.grain);
+            });
             this.eventBus.emit('render:grain', defaults.grain);
             this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
             this.ui.syncUIFromState();
             break;
             
           case 'aberration':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('aberration', defaults.aberration);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('aberration', defaults.aberration);
+            });
             this.eventBus.emit('render:aberration', defaults.aberration);
             this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !defaults.aberration.enabled);
             this.ui.syncUIFromState();
@@ -479,14 +501,16 @@ export class ResetControls {
             
           case 'camera':
             // Reset basic camera settings (FOV, Tilt, Exposure, Auto Exposure)
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('camera.fov', defaults.camera.fov);
-            this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
-            this.stateStore.set('exposure', defaults.exposure);
-            this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
-            // Also reset vignette (camera/post-processing effect)
-            this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
-            this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('camera.fov', defaults.camera.fov);
+              this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
+              this.stateStore.set('exposure', defaults.exposure);
+              this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
+              // Also reset vignette (camera/post-processing effect)
+              this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
+              this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+            });
             // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
@@ -499,16 +523,18 @@ export class ResetControls {
             break;
 
           case 'color-correction':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('camera.contrast', defaults.camera.contrast);
-            this.stateStore.set('camera.temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
-            this.stateStore.set('camera.tint', defaults.camera.tint ?? 0);
-            this.stateStore.set('camera.highlights', defaults.camera.highlights ?? 0);
-            this.stateStore.set('camera.shadows', defaults.camera.shadows ?? 0);
-            this.stateStore.set('camera.saturation', defaults.camera.saturation);
-            this.stateStore.set('camera.clarity', defaults.camera.clarity ?? 0);
-            this.stateStore.set('camera.fade', defaults.camera.fade ?? 0);
-            this.stateStore.set('camera.sharpness', defaults.camera.sharpness ?? 0);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('camera.contrast', defaults.camera.contrast);
+              this.stateStore.set('camera.temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
+              this.stateStore.set('camera.tint', defaults.camera.tint ?? 0);
+              this.stateStore.set('camera.highlights', defaults.camera.highlights ?? 0);
+              this.stateStore.set('camera.shadows', defaults.camera.shadows ?? 0);
+              this.stateStore.set('camera.saturation', defaults.camera.saturation);
+              this.stateStore.set('camera.clarity', defaults.camera.clarity ?? 0);
+              this.stateStore.set('camera.fade', defaults.camera.fade ?? 0);
+              this.stateStore.set('camera.sharpness', defaults.camera.sharpness ?? 0);
+            });
             this.eventBus.emit('render:contrast', defaults.camera.contrast);
             this.eventBus.emit('render:temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
             this.eventBus.emit('render:tint', (defaults.camera.tint ?? 0) / 100);
@@ -525,17 +551,21 @@ export class ResetControls {
             break;
 
           case 'vignette':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
-            this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
+              this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+            });
             this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
             this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
             this.ui.syncControls(this.stateStore.getState());
             break;
 
           case 'tone-curve':
-            this.stateStore.set('lookFilterPreset', 'custom');
-            this.stateStore.set('toneCurve', defaults.toneCurve);
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('toneCurve', defaults.toneCurve);
+            });
             this.eventBus.emit('render:tone-curve', this.stateStore.getState().toneCurve);
             this.ui.renderControls.toneCurveController?.syncFromState(
               this.stateStore.getState(),
@@ -543,13 +573,15 @@ export class ResetControls {
             break;
             
           case 'transform':
-            this.stateStore.set('scale', defaults.scale);
-            this.stateStore.set('xOffset', defaults.xOffset);
-            this.stateStore.set('yOffset', defaults.yOffset);
-            this.stateStore.set('zOffset', defaults.zOffset);
-            this.stateStore.set('rotationX', defaults.rotationX);
-            this.stateStore.set('rotationY', defaults.rotationY);
-            this.stateStore.set('rotationZ', defaults.rotationZ);
+            this.stateStore.batch(() => {
+              this.stateStore.set('scale', defaults.scale);
+              this.stateStore.set('xOffset', defaults.xOffset);
+              this.stateStore.set('yOffset', defaults.yOffset);
+              this.stateStore.set('zOffset', defaults.zOffset);
+              this.stateStore.set('rotationX', defaults.rotationX);
+              this.stateStore.set('rotationY', defaults.rotationY);
+              this.stateStore.set('rotationZ', defaults.rotationZ);
+            });
             this.eventBus.emit('mesh:scale', defaults.scale);
             this.eventBus.emit('mesh:xOffset', defaults.xOffset);
             this.eventBus.emit('mesh:yOffset', defaults.yOffset);
@@ -562,15 +594,17 @@ export class ResetControls {
             break;
 
           case 'svg-extrude':
-            this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
-            this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
-            this.stateStore.set('svgExtrude.colorDepths', defaults.svgExtrude?.colorDepths ?? {});
-            this.stateStore.set('svgExtrude.colorOffsets', defaults.svgExtrude?.colorOffsets ?? {});
-            this.stateStore.set('svgExtrude.flipDirection', defaults.svgExtrude?.flipDirection ?? false);
-            this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
-            this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
-            this.stateStore.set('svgExtrude.surfacePreset', defaults.svgExtrude?.surfacePreset ?? 'none');
-            this.stateStore.set('svgExtrude.surfaceScale', defaults.svgExtrude?.surfaceScale ?? 1.0);
+            this.stateStore.batch(() => {
+              this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
+              this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
+              this.stateStore.set('svgExtrude.colorDepths', defaults.svgExtrude?.colorDepths ?? {});
+              this.stateStore.set('svgExtrude.colorOffsets', defaults.svgExtrude?.colorOffsets ?? {});
+              this.stateStore.set('svgExtrude.flipDirection', defaults.svgExtrude?.flipDirection ?? false);
+              this.stateStore.set('svgExtrude.colorOverride', defaults.svgExtrude?.colorOverride ?? false);
+              this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
+              this.stateStore.set('svgExtrude.surfacePreset', defaults.svgExtrude?.surfacePreset ?? 'none');
+              this.stateStore.set('svgExtrude.surfaceScale', defaults.svgExtrude?.surfaceScale ?? 1.0);
+            });
             this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
             this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
             this.eventBus.emit('mesh:svg-extrude-color-depths', defaults.svgExtrude?.colorDepths ?? {});

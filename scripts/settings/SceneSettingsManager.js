@@ -308,7 +308,7 @@ export class SceneSettingsManager {
   }
 
   /**
-   * Loads scene settings from JSON text
+   * Applies scene settings from pasted JSON text (e.g. from clipboard).
    */
   loadFromText(text) {
     try {
@@ -322,6 +322,7 @@ export class SceneSettingsManager {
         return { success: false, message: 'Invalid scene settings - missing required fields' };
       }
 
+      this.stateStore.batch(() => {
       // Apply Mesh settings (including transforms)
       if (payload.shading !== undefined) {
         this.stateStore.set('shading', payload.shading);
@@ -824,11 +825,12 @@ export class SceneSettingsManager {
       });
 
       this.eventBus.emit('render:apply-performance');
+      });
 
-      return { success: true, message: 'Scene settings loaded' };
+      return { success: true, message: 'Scene settings applied' };
     } catch (error) {
-      console.error('Error loading scene settings:', error);
-      return { success: false, message: 'Failed to load scene settings - invalid JSON' };
+      console.error('Error applying pasted scene settings:', error);
+      return { success: false, message: 'Invalid pasted scene settings — could not parse JSON' };
     }
   }
 }

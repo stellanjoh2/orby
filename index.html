@@ -719,9 +719,9 @@
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene Settings
               </button>
-                  <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
                     <i class="fa-solid fa-upload"></i>
-                    Load Scene Settings
+                    Paste Scene Settings
                   </button>
                   <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
                     <i class="fa-solid fa-floppy-disk"></i>
@@ -1171,9 +1171,9 @@
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene Settings
                   </button>
-                  <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
                     <i class="fa-solid fa-upload"></i>
-                    Load Scene Settings
+                    Paste Scene Settings
                   </button>
                   <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
                     <i class="fa-solid fa-floppy-disk"></i>
@@ -1955,9 +1955,9 @@
                     <i class="fa-solid fa-copy"></i>
                     Copy Scene Settings
               </button>
-                  <button class="load-scene-settings accent-action-btn" data-tooltip="Load scene settings from clipboard">
+                  <button class="load-scene-settings accent-action-btn" data-tooltip="Paste scene settings from clipboard into a dialog">
                     <i class="fa-solid fa-upload"></i>
-                    Load Scene Settings
+                    Paste Scene Settings
                   </button>
                   <button class="save-orby-scene accent-action-btn" data-tooltip="Save entire scene and model as .orby file">
                     <i class="fa-solid fa-floppy-disk"></i>
@@ -2364,7 +2364,7 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 id="info-look-filters" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Look filter presets</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Under <strong>Camera → Filters</strong>, pick a thumbnail preset (Studio, Noir, Golden, etc.) for a one-tap look: color grade, tone curve, bloom, grain, chromatic aberration, and more are applied together. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or load scene JSON.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Under <strong>Camera → Filters</strong>, pick a thumbnail preset (Studio, Noir, Golden, etc.) for a one-tap look: color grade, tone curve, bloom, grain, chromatic aberration, and more are applied together. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
@@ -2391,7 +2391,7 @@
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Flip Direction:</span> Inverts front/back extrusion direction.</li>
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Color Override:</span> Replaces imported SVG fill colors with a single chosen color.</li>
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Per-Color Depth/Position:</span> Fine-tune each detected fill color independently for layered logo effects.</li>
-                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Scene Settings:</span> SVG extrude controls are included when copying/loading scene settings.</li>
+                    <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Scene Settings:</span> SVG extrude controls are included when copying or pasting scene settings.</li>
                     <li><span class="about-highlight">SVG to GLB Export:</span> Exported SVG meshes are saved as opaque GLB materials for predictable shading across viewers.</li>
                   </ul>
                 </div>
@@ -2527,11 +2527,11 @@
               <div class="panel-block" id="info-changelog">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Load scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.225 · 2026-05-01 11:12:04 UTC</div>
+              <div class="info-version-tag">v0.5.226 · 2026-05-01 11:12:13 UTC</div>
             </section>
           </div>
         </aside>
@@ -2560,14 +2560,14 @@
     />
     <script type="module" src="./scripts/main.js"></script>
     
-    <!-- Global Load Scene Settings Modal -->
+    <!-- Paste scene settings modal (JSON) -->
     <div id="loadSceneSettingsModal" class="load-settings-modal" style="display: none;">
       <div class="load-settings-content">
         <div class="load-settings-header">
-          <h3>Load Scene Settings</h3>
+          <h3>Paste Scene Settings</h3>
           <button type="button" id="closeLoadSceneSettings" class="close-btn" aria-label="Close"></button>
         </div>
-        <p class="load-settings-description">Paste your scene settings JSON below and click Apply to load them. This includes all visual settings: lighting, camera position and angle, post-processing, materials, and object transforms (scale, position, rotation).</p>
+        <p class="load-settings-description">Paste your scene settings JSON below and click Apply. This includes all visual settings: lighting, camera position and angle, post-processing, materials, and object transforms (scale, position, rotation).</p>
         <textarea
           id="loadSceneSettingsText"
           placeholder="Paste scene settings JSON here..."

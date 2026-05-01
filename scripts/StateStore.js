@@ -1,11 +1,5 @@
 import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from './constants.js';
-
-const clone = (value) => {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-  return JSON.parse(JSON.stringify(value));
-};
+import { deepClone } from './utils/deepClone.js';
 
 export class StateStore {
   constructor() {
@@ -149,16 +143,18 @@ export class StateStore {
       /** 'low' | 'medium' | 'high' — color SVG (ImageTracer) trace fidelity */
       svgColorDetail: 'high',
     };
-    this.state = clone(this.defaults);
+    this.state = deepClone(this.defaults);
     this.subscribers = new Set();
+    /** When > 0, `set` / `setTopLevelBundle` / `reset` defer `notify` until outermost batch ends. */
+    this._batchDepth = 0;
   }
 
   getState() {
-    return clone(this.state);
+    return deepClone(this.state);
   }
 
   getDefaults() {
-    return clone(this.defaults);
+    return deepClone(this.defaults);
   }
 
   subscribe(callback) {
@@ -177,7 +173,17 @@ export class StateStore {
     }
   }
 
-  set(path, value) {
+  _notifyIfIdle() {
+    if (this._batchDepth === 0) {
+      this.notify();
+    }
+  }
+
+  /**
+   * @param {string} path - Dot path, same as `set`
+   * @param {unknown} value
+   */
+  _writePath(path, value) {
     const segments = path.split('.');
     let target = this.state;
     for (let i = 0; i < segments.length - 1; i += 1) {
@@ -186,7 +192,32 @@ export class StateStore {
       target = target[key];
     }
     target[segments.at(-1)] = value;
-    this.notify();
+  }
+
+  set(path, value) {
+    this._writePath(path, value);
+    this._notifyIfIdle();
+  }
+
+  /**
+   * Run `fn` with batching: commits many `set`/`setTopLevelBundle`/`reset` mutations,
+   * then a single `notify` when the outermost batch completes. Nested batches collapse
+   * to one notification.
+   * @param {() => void} fn
+   */
+  batch(fn) {
+    this._batchDepth += 1;
+    try {
+      fn();
+    } finally {
+      this._batchDepth -= 1;
+      if (this._batchDepth === 0) {
+        this.notify();
+      }
+      if (this._batchDepth < 0) {
+        this._batchDepth = 0;
+      }
+    }
   }
 
   /**
@@ -202,12 +233,12 @@ export class StateStore {
     for (const key of keys) {
       this.state[key] = partial[key];
     }
-    this.notify();
+    this._notifyIfIdle();
   }
 
   reset() {
-    this.state = clone(this.defaults);
-    this.notify();
+    this.state = deepClone(this.defaults);
+    this._notifyIfIdle();
     return this.getState();
   }
 }

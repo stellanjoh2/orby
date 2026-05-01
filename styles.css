@@ -22,7 +22,7 @@
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
   --danger: #ff7b7b;
-  /* Right-hand settings shelf and centered modals (load scene, bug report) */
+  /* Right-hand settings shelf and centered modals (paste scene settings, bug report) */
   --app-settings-chrome-radius: 18px;
   /* Object shelf Scene / Export pills, modal footers — keep in sync */
   --ui-accent-action-font-size: 0.8rem;
