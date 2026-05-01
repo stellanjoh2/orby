@@ -235,40 +235,25 @@ export function reapplySvgExtrudeProceduralFromState(model, storeLike, shadingOv
       : storeLike.stateStore?.getState?.();
   if (!st) return;
   const shading = shadingOverride ?? st.shading;
-  if (shading === 'textures' || shading === 'wireframe') {
-    model.traverse((child) => {
-      if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
-    });
-    return;
-  }
-  const enabled = !!st.svgExtrude?.enabled;
-  if (!enabled) {
-    model.traverse((child) => {
-      if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
-    });
-    return;
-  }
   const idx = getSvgExtrudeSurfacePresetIndex(st.svgExtrude?.surfacePreset ?? 'none');
   const scale = clampScale(st.svgExtrude?.surfaceScale ?? 1);
-  if (idx < 1) {
-    model.traverse((child) => {
-      if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
-    });
-    return;
-  }
+  const stripProcedural =
+    shading === 'textures' ||
+    shading === 'wireframe' ||
+    !st.svgExtrude?.enabled ||
+    idx < 1;
+
   model.traverse((child) => {
     if (!child.isMesh || !child.userData?.orbySvgExtrude) return;
     const mats = Array.isArray(child.material) ? child.material : [child.material];
-    mats.forEach((m) => {
-      if (m?.isMeshStandardMaterial) {
-        applySvgExtrudeProceduralToMaterial(m, { presetIndex: idx, scale });
-      }
-    });
+    if (stripProcedural) {
+      mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
+    } else {
+      mats.forEach((m) => {
+        if (m?.isMeshStandardMaterial) {
+          applySvgExtrudeProceduralToMaterial(m, { presetIndex: idx, scale });
+        }
+      });
+    }
   });
 }

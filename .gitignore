@@ -21,6 +21,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+*.bak
 
 # Test files
 sphere.obj

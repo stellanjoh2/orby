@@ -10,6 +10,22 @@ export class EventManager {
   }
 
   /**
+   * Show/hide a transform gizmo and attach/detach from model root.
+   * @param {*} s - SceneManager instance (`register` shorthand)
+   * @param {*} control - TransformControls instance or null
+   * @param {boolean} enabled
+   */
+  setTransformWidgetEnabled(s, control, enabled) {
+    if (!control) return;
+    control.visible = enabled;
+    if (enabled && s.currentModel && s.modelRoot) {
+      control.attach(s.modelRoot);
+    } else if (!enabled) {
+      control.detach();
+    }
+  }
+
+  /**
    * Register all event listeners
    * All events delegate to SceneManager methods
    */
@@ -76,36 +92,13 @@ export class EventManager {
     
     // Transform widget visibility
     eventBus.on('mesh:move-widget-enabled', (enabled) => {
-      if (s.transformControlsTranslate) {
-        s.transformControlsTranslate.visible = enabled;
-        if (enabled && s.currentModel && s.modelRoot) {
-          s.transformControlsTranslate.attach(s.modelRoot);
-        } else if (!enabled) {
-          s.transformControlsTranslate.detach();
-        }
-      }
+      this.setTransformWidgetEnabled(s, s.transformControlsTranslate, enabled);
     });
-    
     eventBus.on('mesh:rotate-widget-enabled', (enabled) => {
-      if (s.transformControlsRotate) {
-        s.transformControlsRotate.visible = enabled;
-        if (enabled && s.currentModel && s.modelRoot) {
-          s.transformControlsRotate.attach(s.modelRoot);
-        } else if (!enabled) {
-          s.transformControlsRotate.detach();
-        }
-      }
+      this.setTransformWidgetEnabled(s, s.transformControlsRotate, enabled);
     });
-    
     eventBus.on('mesh:scale-widget-enabled', (enabled) => {
-      if (s.transformControlsScale) {
-        s.transformControlsScale.visible = enabled;
-        if (enabled && s.currentModel && s.modelRoot) {
-          s.transformControlsScale.attach(s.modelRoot);
-        } else if (!enabled) {
-          s.transformControlsScale.detach();
-        }
-      }
+      this.setTransformWidgetEnabled(s, s.transformControlsScale, enabled);
     });
 
     // Camera events
