@@ -3401,3 +3401,89 @@ body.ui-hidden .shelf {
   line-height: 1.5;
 }
 
+/* ── Mobile landing (html.mobile-landing from scripts/main.js): logotype + notice only ── */
+html.mobile-landing .workspace {
+  background: var(--bg);
+}
+
+html.mobile-landing .viewport {
+  background: var(--bg);
+}
+
+html.mobile-landing #webgl {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+html.mobile-landing .dropzone::before,
+html.mobile-landing .dropzone::after {
+  content: none !important;
+  animation: none !important;
+}
+
+html.mobile-landing .dropzone {
+  background: var(--bg) !important;
+  background-image: none !important;
+  justify-content: flex-start;
+  align-items: center;
+  gap: clamp(0.75rem, 3vmin, 1.5rem);
+  padding-top: clamp(1.75rem, 9vmin, 3.25rem);
+  --dropzone-padding-x: 1.25rem;
+  --dropzone-padding-y: clamp(1.5rem, 6vmin, 2.5rem);
+}
+
+html.mobile-landing .drop-primary,
+html.mobile-landing .dropzone-actions,
+html.mobile-landing .drop-secondary,
+html.mobile-landing .quick-start-guide {
+  display: none !important;
+}
+
+html.mobile-landing .viewport-fullscreen-btn,
+html.mobile-landing .viewport-load-spinner {
+  display: none !important;
+}
+
+html.mobile-landing #shelf {
+  display: none !important;
+}
+
+html.mobile-landing .demo-logotype {
+  display: none !important;
+}
+
+html.mobile-landing .drop-logo {
+  width: min(
+    88vw,
+    max(120px, min(280px, 68vw)),
+    38vh
+  );
+  margin-bottom: 0;
+}
+
+html.mobile-landing .mobile-warning {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0 clamp(0.25rem, 3vw, 1rem);
+  max-width: min(20rem, 92vw);
+  width: 100%;
+  text-align: center;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+html.mobile-landing .mobile-warning p {
+  margin: 0;
+  font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
+  font-size: clamp(0.95rem, 3.85vw, 1.0625rem);
+  font-weight: 600;
+  line-height: 1.48;
+  color: var(--text-dim);
+}
+

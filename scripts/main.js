@@ -11,8 +11,40 @@ function isMobileDevice() {
          (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
 }
 
-// Show mobile warning if on mobile
-if (isMobileDevice()) {
+/**
+ * Debug the mobile splash on a desktop browser without emulating UA.
+ * Options (any one):
+ * - URL query: ?orbyMobile=1
+ * - sessionStorage (Application tab → Session storage): key orby_mobile_landing = 1
+ * - Console before reload: window.__ORBY_DEBUG_MOBILE_LANDING__ = true
+ */
+function isForcedMobileLandingDebug() {
+  try {
+    if (typeof window !== 'undefined' && window.__ORBY_DEBUG_MOBILE_LANDING__ === true) {
+      return true;
+    }
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('orbyMobile') === '1') return true;
+    if (q.has('mobileLanding')) return true;
+    if (sessionStorage.getItem('orby_mobile_landing') === '1') return true;
+  } catch {
+    /* sessionStorage / URL blocked */
+  }
+  return false;
+}
+
+function shouldShowMobileLanding() {
+  return isForcedMobileLandingDebug() || isMobileDevice();
+}
+
+// Show mobile warning if on mobile; CSS (html.mobile-landing) hides the rest of the UI
+if (shouldShowMobileLanding()) {
+  if (isForcedMobileLandingDebug() && !isMobileDevice()) {
+    console.info(
+      '[Orby] Mobile landing UI forced for debugging. Remove ?orbyMobile=1, clear sessionStorage orby_mobile_landing, or unset __ORBY_DEBUG_MOBILE_LANDING__.',
+    );
+  }
+  document.documentElement.classList.add('mobile-landing');
   const mobileWarning = document.getElementById('mobileWarning');
   if (mobileWarning) {
     mobileWarning.style.display = 'block';
