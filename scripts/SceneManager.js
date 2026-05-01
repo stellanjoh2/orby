@@ -722,6 +722,7 @@ export class SceneManager {
   async setHdriPreset(preset) {
     if (!preset || !HDRI_PRESETS[preset]) return;
         this.currentHdri = preset;
+    this.ui.beginLoadSpinner();
     try {
       await this.environmentController?.setPreset(preset);
         this.applyHdriMood(preset);
@@ -731,6 +732,8 @@ export class SceneManager {
     } catch (error) {
       console.error('Failed to apply HDRI preset', preset, error);
       this.ui.showToast('Failed to load HDRI');
+    } finally {
+      this.ui.endLoadSpinner();
     }
   }
 
@@ -1198,6 +1201,7 @@ export class SceneManager {
       this.eventBus.emit('scene:exposure', startExposure);
     }
 
+    this.ui.beginLoadSpinner();
     try {
       const svgExtrudeState = this.stateStore.getState()?.svgExtrude || {};
       const asset = await this.modelLoader.loadFile(file, {
@@ -1220,11 +1224,14 @@ export class SceneManager {
       this.ui.showToast('Could not load model');
       this.ui.setDropzoneVisible(true);
       this.eventBus.emit('scene:model-load-complete', { success: false, file, error });
+    } finally {
+      this.ui.endLoadSpinner();
     }
   }
 
   async loadFileBundle(files) {
     if (!files?.length) return;
+    this.ui.beginLoadSpinner();
     try {
       const asset = await this.modelLoader.loadFileBundle(files);
       const sourceFile = asset.sourceFile ?? files[0]?.file;
@@ -1241,6 +1248,8 @@ export class SceneManager {
         console.error('Folder load failed', error);
       this.ui.showToast(error.message || 'Folder load failed');
       this.eventBus.emit('scene:model-load-complete', { success: false, error });
+    } finally {
+      this.ui.endLoadSpinner();
     }
   }
 

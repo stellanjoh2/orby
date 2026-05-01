@@ -32,6 +32,8 @@ export class UIManager {
     this.shelfRevealed = false;
     /** Set while a coalesced post-sync slider-fill rAF is pending (see scheduleAllRangeSliderFills). */
     this._rangeSliderFillRafId = null;
+    /** Nested loads (model + HDRI) toggle #viewportLoadSpinner while depth > 0 */
+    this._loadSpinnerDepth = 0;
   }
 
   init() {
@@ -142,6 +144,7 @@ export class UIManager {
     const q = (sel) => document.querySelector(sel);
     this.dom.canvas = q('#webgl');
     this.dom.fullscreenToggle = q('#fullscreenToggle');
+    this.dom.loadSpinner = q('#viewportLoadSpinner');
     this.dom.topBarTitle = q('#topBarTitle');
     this.dom.topBarAnimation = q('#topBarAnimation');
     this.dom.resetAll = q('#resetAll');
@@ -987,6 +990,24 @@ export class UIManager {
     if (this.dom.topBarAnimation) {
       this.dom.topBarAnimation.textContent = detail;
     }
+  }
+
+  beginLoadSpinner() {
+    this._loadSpinnerDepth += 1;
+    this._syncLoadSpinner();
+  }
+
+  endLoadSpinner() {
+    this._loadSpinnerDepth = Math.max(0, this._loadSpinnerDepth - 1);
+    this._syncLoadSpinner();
+  }
+
+  _syncLoadSpinner() {
+    const el = this.dom.loadSpinner;
+    if (!el) return;
+    const on = this._loadSpinnerDepth > 0;
+    el.classList.toggle('is-visible', on);
+    el.setAttribute('aria-hidden', on ? 'false' : 'true');
   }
 
   extractAnimationName(fullName) {
