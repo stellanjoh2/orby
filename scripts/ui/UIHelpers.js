@@ -237,13 +237,13 @@ export class UIHelpers {
    * Show toast notification
    * @param {string} message - Toast message
    */
-  showToast(message) {
+  showToast(message, durationMs = 3200) {
     const template = this.ui.dom.toastTemplate?.content?.firstElementChild;
     if (!template) return;
     const toast = template.cloneNode(true);
     toast.querySelector('.toast-message').textContent = message;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3200);
+    setTimeout(() => toast.remove(), durationMs);
   }
 
   /**

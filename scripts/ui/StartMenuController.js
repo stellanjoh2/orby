@@ -7,7 +7,7 @@ export class StartMenuController {
     this.eventBus = eventBus;
     this.ui = uiManager;
     this.visible = true;
-    
+
     // Cache DOM elements
     this.dropzone = null;
     this.fileInput = null;

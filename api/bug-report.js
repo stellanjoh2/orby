@@ -15,7 +15,7 @@
  *                                If unset, only the request Origin that matches /^https?:\\/\\// is echoed (permissive).
  *
  * Abuse protection (recommended for production):
- *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — from upstash.com; enables per-IP rate limits.
+ *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — from upstash.com; per-IP sliding windows: 1 req/min, 4 req/h.
  *   TURNSTILE_SECRET_KEY — Cloudflare Turnstile secret; requires site key in built HTML (orby-turnstile-site-key meta).
  *                          When set, turnstileToken is required and verified. When unset, captcha is skipped.
  */
@@ -58,6 +58,18 @@ const SEVERITY_LABELS = {
   cosmetic: 'Low',
 };
 
+/** Matches client BugReportController (`MIN_BUG_MESSAGE_*` + word split) */
+const MIN_BUG_MESSAGE_CHARS = 50;
+const MIN_BUG_MESSAGE_WORDS = 10;
+
+function isValidBugReportMessageBody(message) {
+  if (typeof message !== 'string') return false;
+  const t = message.trim();
+  if (t.length < MIN_BUG_MESSAGE_CHARS) return false;
+  const words = t.split(/\s+/).filter(Boolean).length;
+  return words >= MIN_BUG_MESSAGE_WORDS;
+}
+
 /** @type {{ hourly: import('@upstash/ratelimit').Ratelimit; burst: import('@upstash/ratelimit').Ratelimit } | null | false} */
 let ratelimitPair;
 
@@ -74,12 +86,12 @@ function getRateLimiters() {
   ratelimitPair = {
     hourly: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(12, '1 h'),
+      limiter: Ratelimit.slidingWindow(4, '1 h'),
       prefix: 'orby-bug:h',
     }),
     burst: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(4, '1 m'),
+      limiter: Ratelimit.slidingWindow(1, '1 m'),
       prefix: 'orby-bug:m',
     }),
   };
@@ -199,7 +211,7 @@ export default async function handler(req, res) {
   const severity = clampStr(body.severity, 24);
   const message = clampStr(body.message, 8000);
 
-  if (!CATEGORIES.has(category) || !SEVERITIES.has(severity) || message.length < 8) {
+  if (!CATEGORIES.has(category) || !SEVERITIES.has(severity) || !isValidBugReportMessageBody(message)) {
     return res.status(400).json({ error: 'Invalid payload' });
   }
 

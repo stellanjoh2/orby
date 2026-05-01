@@ -317,6 +317,12 @@ body.dropzone-visible #webgl {
   box-sizing: border-box;
 }
 
+/* Thank-you overlay: hide modal panel so it isn’t visible through the translucent layer */
+.load-settings-modal.bug-report-modal.bug-report-modal--thank-you-mask {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .load-settings-content {
   background: rgba(0, 0, 0, 0.6);
   border: none;
@@ -484,6 +490,113 @@ body.dropzone-visible #webgl {
 .bug-report-content .bug-report-intro-emphasis {
   color: #fff;
   font-weight: 600;
+}
+
+.bug-report-thank-you-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  margin: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  /* Single dim + blur over the app — avoid stacking with the modal panel */
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.bug-report-thank-you-layer.bug-report-thank-you-layer--under-modal {
+  z-index: 9999;
+  pointer-events: none;
+  cursor: default;
+}
+
+.bug-report-thank-you-layer[hidden] {
+  display: none !important;
+}
+
+.bug-report-thank-you-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.25rem;
+  max-width: min(58rem, 96vw);
+  pointer-events: none;
+  cursor: default;
+}
+
+.bug-report-thank-you-stack .bug-report-thank-you-ok {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.bug-report-thank-you-message {
+  margin: 0;
+  max-width: 100%;
+  text-align: center;
+  /* Match landing .drop-primary */
+  font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  color: var(--text);
+  text-wrap: balance;
+  pointer-events: none;
+}
+
+/*
+ * Same fade-up as landing `.drop-primary` (dropReveal + cubic-bezier).
+ * Toggle class per play so dev replay restarts cleanly.
+ */
+.orby-drop-fade-up-playing {
+  opacity: 0;
+  transform: translateY(-15px);
+  animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) var(--orby-fade-delay, 0s) forwards;
+}
+
+.bug-report-thank-you-stack .bug-report-thank-you-message.orby-drop-fade-up-playing {
+  --orby-fade-delay: 0s;
+}
+
+.bug-report-thank-you-stack .bug-report-thank-you-ok.orby-drop-fade-up-playing {
+  --orby-fade-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bug-report-thank-you-message.orby-drop-fade-up-playing,
+  .bug-report-thank-you-ok.orby-drop-fade-up-playing {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bug-report-thank-you-ok {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 72%, transparent);
+  padding: 0.52rem 1.9rem;
+  font-family: inherit;
+  font-size: var(--ui-accent-action-font-size);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--brand-primary);
+  color: var(--brand-text);
+  cursor: pointer;
+  box-shadow: 0 6px 22px var(--accent-shadow);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.bug-report-thank-you-ok:hover {
+  filter: brightness(1.06);
+}
+
+.bug-report-thank-you-ok:active {
+  transform: scale(0.98);
 }
 
 .bug-report-content #bugReportForm {
@@ -752,6 +865,22 @@ body.dropzone-visible #webgl {
   border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--stroke));
   background: rgba(255, 255, 255, 0.14);
   color: var(--text);
+}
+
+.bug-report-content .bug-report-modal-btn.accent-action-btn {
+  transition:
+    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bug-report-content .bug-report-modal-btn.accent-action-btn {
+    transition-duration: 0.01ms;
+  }
 }
 
 .bug-report-content .bug-report-modal-btn.accent-action-btn:not(:disabled) {
@@ -1152,13 +1281,11 @@ body.dropzone-visible #webgl {
 
 .drop-primary {
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
-  /* Responsive font size: scales from 3rem down to 2rem on smaller screens */
   font-size: clamp(2rem, 4vw, 3rem);
   letter-spacing: 0.05em;
   opacity: 0;
   transform: translateY(-15px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
-  /* Allow text to break into 2 lines naturally */
   max-width: 90%;
   line-height: 1.2;
   text-align: center;

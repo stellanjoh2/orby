@@ -2,14 +2,40 @@
  * Bug report modal → POST /api/bug-report.
  * API URL: meta[name="orby-bug-report-api"] or "/api/bug-report"; Turnstile: meta orby-turnstile-site-key + server secret.
  */
+import gsap from 'gsap';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
+
+/** Minimum usable detail — keep in sync with api/bug-report.js */
+const MIN_BUG_MESSAGE_CHARS = 50;
+const MIN_BUG_MESSAGE_WORDS = 10;
+
+function bugReportMessagePassesDetailBar(trimmed) {
+  if (trimmed.length < MIN_BUG_MESSAGE_CHARS) return false;
+  const words = trimmed.split(/\s+/).filter(Boolean).length;
+  return words >= MIN_BUG_MESSAGE_WORDS;
+}
+
+function escapeHtmlMinimal(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+/** Plain copy + lime tail (landing `.brand-highlight` / `--brand-primary`) */
+const BUG_REPORT_THANK_YOU_PREFIX =
+  'Thanks for flagging this, we really appreciate you taking the time. ';
+const BUG_REPORT_THANK_YOU_ACCENT_TAIL = 'We\u2019ll look into it shortly.';
+
+const BUG_REPORT_THANK_YOU_FULL_TEXT = BUG_REPORT_THANK_YOU_PREFIX + BUG_REPORT_THANK_YOU_ACCENT_TAIL;
+
+/** Backdrop fades in briefly before content (matches prior feel vs full 1s line reveal) */
+const THANK_YOU_SCRIM_IN = 0.22;
+
+const ORBY_DROP_FADE_UP_PLAYING_CLASS = 'orby-drop-fade-up-playing';
 
 export class BugReportController {
   /**
    * @param {import('./UIManager.js').UIManager} ui
    */
   constructor(ui) {
-    this.ui = ui;
     /** @type {boolean} */
     this._sending = false;
     /** @type {string} */
@@ -18,6 +44,8 @@ export class BugReportController {
     this._turnstileWidgetId = null;
     /** @type {Promise<void> | null} */
     this._turnstileScriptPromise = null;
+    /** @type {boolean} set when opaque thank-you backdrop is layered under modal (success path only) */
+    this._thankYouBackdropPrimed = false;
   }
 
   init() {
@@ -34,6 +62,19 @@ export class BugReportController {
     this.honeypot = this.form.querySelector('input[name="honeypot"]');
     this.statusEl = this.modal.querySelector('.bug-report-status');
     this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
+    this.thankYouLayer = document.querySelector('#bugReportThankYouLayer');
+    this.thankYouStack = document.querySelector('#bugReportThankYouStack');
+    this.thankYouMessageEl = document.querySelector('#bugReportThankYouMessage');
+    this.thankYouOkBtn = document.querySelector('#bugReportThankYouOk');
+
+    this.thankYouLayer?.addEventListener('click', (e) => {
+      if (e.target === this.thankYouLayer) this._dismissBugReportThankYou();
+    });
+    this.thankYouStack?.addEventListener('click', (e) => e.stopPropagation());
+    this.thankYouOkBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._dismissBugReportThankYou();
+    });
 
     document.querySelectorAll('[data-bug-report-open]').forEach((el) => {
       el.addEventListener('click', () => this.open());
@@ -243,7 +284,7 @@ export class BugReportController {
     if (!this.submitBtn || !this.form || this._sending) return;
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
     const severity = this.form.querySelector('input[name="severity"]')?.value?.trim() ?? '';
-    const valid = message.length >= 8 && Boolean(severity);
+    const valid = bugReportMessagePassesDetailBar(message) && Boolean(severity);
     this.submitBtn.disabled = !valid;
   }
 
@@ -257,8 +298,35 @@ export class BugReportController {
     return this.modal?.style.display === 'flex';
   }
 
+  /** Form / Turnstile / status reset after modal is no longer visible. */
+  _resetBugModalAfterClose() {
+    if (!this.form) return;
+    this._removeTurnstileWidget();
+    this.form.reset();
+    this.syncSeverityFromHidden();
+    this.setStatus('');
+    this._sending = false;
+    this.syncSendButton();
+  }
+
+  /**
+   * Hide bug modal without wipe (thank-you already faded). Dev preview leaves the modal open under the overlay.
+   */
+  _quietHideBugModal() {
+    if (!this.modal || !this.form) return;
+    if (!this.isOpen()) return;
+    const panel = this.modal.querySelector('.load-settings-content');
+    this._closeSeverityListbox();
+    gsap.killTweensOf([this.modal, panel].filter(Boolean));
+    this.modal.style.display = 'none';
+    if (panel) gsap.set(panel, { clearProps: 'clipPath,transform' });
+    gsap.set(this.modal, { clearProps: 'clipPath,transform' });
+    this._resetBugModalAfterClose();
+  }
+
   open() {
     if (!this.modal) return;
+    this._teardownBugReportThankYouQuiet();
     this._sending = false;
     this._bugBackdropDown = false;
     this.setStatus('');
@@ -272,18 +340,180 @@ export class BugReportController {
     this.syncSendButton();
   }
 
-  close() {
+  /**
+   * @param {() => void} [onAfterCleanup] runs after modal is hidden
+   * @param {{ preserveViewportBackdrop?: boolean }} [opts] keep full-modal dim scrim until hidden (thank-you path)
+   */
+  close(onAfterCleanup, opts = {}) {
     if (!this.modal || !this.form) return;
     if (this.modal.style.display === 'none') return;
     this._closeSeverityListbox();
     const panel = this.modal.querySelector('.load-settings-content');
-    animateModalClose(this.modal, panel, () => {
-      this._removeTurnstileWidget();
-      this.form.reset();
-      this.syncSeverityFromHidden();
-      this.setStatus('');
-      this._sending = false;
-      this.syncSendButton();
+    const preserveBackdrop = opts.preserveViewportBackdrop === true;
+    animateModalClose(
+      this.modal,
+      panel,
+      () => {
+        this._resetBugModalAfterClose();
+        if (typeof onAfterCleanup === 'function') queueMicrotask(() => onAfterCleanup());
+      },
+      preserveBackdrop,
+    );
+  }
+
+  _thankYouReducedMotion() {
+    return (
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+  }
+
+  _maskBugModalBehindThankYou() {
+    if (!this.modal || this.modal.style.display === 'none') return;
+    this.modal.classList.add('bug-report-modal--thank-you-mask');
+  }
+
+  _unmaskBugModalBehindThankYou() {
+    this.modal?.classList.remove('bug-report-modal--thank-you-mask');
+  }
+
+  /** Opaque scrim beneath bug modal — avoids canvas flash during close wipe. Success path only. */
+  _primeThankYouBackdropBehindModal() {
+    const layer = this.thankYouLayer;
+    if (!layer) return;
+    gsap.killTweensOf(layer);
+    this._thankYouBackdropPrimed = true;
+    layer.classList.add('bug-report-thank-you-layer--under-modal');
+    layer.removeAttribute('hidden');
+    layer.style.display = 'flex';
+    layer.removeAttribute('aria-label');
+    layer.setAttribute('aria-hidden', 'true');
+    gsap.set(layer, { opacity: 1 });
+  }
+
+  _teardownBugReportThankYouQuiet() {
+    this._unmaskBugModalBehindThankYou();
+    this._thankYouBackdropPrimed = false;
+    this.thankYouLayer?.classList.remove('bug-report-thank-you-layer--under-modal');
+    if (!this.thankYouLayer || !this.thankYouMessageEl) return;
+    gsap.killTweensOf([this.thankYouLayer, this.thankYouMessageEl, this.thankYouOkBtn]);
+    this.thankYouMessageEl.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    this.thankYouOkBtn?.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    this.thankYouLayer.removeAttribute('aria-label');
+    this.thankYouMessageEl.textContent = '';
+    this.thankYouMessageEl.removeAttribute('aria-hidden');
+    this.thankYouLayer.setAttribute('hidden', '');
+    this.thankYouLayer.style.display = '';
+    this.thankYouLayer.setAttribute('aria-hidden', 'true');
+    gsap.set(this.thankYouMessageEl, { clearProps: 'all' });
+    gsap.set(this.thankYouLayer, { clearProps: 'opacity' });
+    if (this.thankYouOkBtn) gsap.set(this.thankYouOkBtn, { clearProps: 'opacity,transform' });
+  }
+
+  /**
+   * Full-screen thank-you (after successful send).
+   * Backdrop click closes; “Keep Orbing” is the primary OK.
+   */
+  _playBugReportThankYou() {
+    const layer = this.thankYouLayer;
+    const msg = this.thankYouMessageEl;
+    const ok = this.thankYouOkBtn;
+    if (!layer || !msg) return;
+
+    const bridgedBackdrop = this._thankYouBackdropPrimed;
+    if (bridgedBackdrop) this._thankYouBackdropPrimed = false;
+
+    const skipBackdropReveal =
+      bridgedBackdrop || (!layer.hasAttribute('hidden') && layer.style.display === 'flex');
+
+    this._maskBugModalBehindThankYou();
+
+    gsap.killTweensOf([msg, ok]);
+    if (!skipBackdropReveal) gsap.killTweensOf(layer);
+
+    msg.innerHTML = `${escapeHtmlMinimal(BUG_REPORT_THANK_YOU_PREFIX)}<span class="brand-highlight">${escapeHtmlMinimal(BUG_REPORT_THANK_YOU_ACCENT_TAIL)}</span>`;
+    msg.removeAttribute('aria-hidden');
+    layer.setAttribute('aria-label', BUG_REPORT_THANK_YOU_FULL_TEXT);
+
+    layer.removeAttribute('hidden');
+    layer.style.display = 'flex';
+    layer.setAttribute('aria-hidden', 'false');
+
+    if (!ok) {
+      gsap.set(layer, { opacity: skipBackdropReveal ? 1 : 0 });
+      if (!skipBackdropReveal) {
+        gsap.to(layer, { opacity: 1, duration: THANK_YOU_SCRIM_IN, ease: 'power2.out' });
+      }
+      if (this._thankYouReducedMotion()) {
+        gsap.killTweensOf(layer);
+        gsap.set(layer, { opacity: 1 });
+        msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+        gsap.set(msg, { opacity: 1, clearProps: 'transform' });
+      } else {
+        msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+        void msg.offsetWidth;
+        msg.classList.add(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+      }
+      return;
+    }
+
+    if (this._thankYouReducedMotion()) {
+      gsap.killTweensOf(layer);
+      gsap.set(layer, { opacity: 1 });
+      gsap.set([msg, ok], { opacity: 1, y: 0, clearProps: 'transform' });
+      msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+      ok.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+      return;
+    }
+
+    if (skipBackdropReveal) {
+      gsap.set(layer, { opacity: 1 });
+    } else {
+      gsap.set(layer, { opacity: 0 });
+      gsap.to(layer, { opacity: 1, duration: THANK_YOU_SCRIM_IN, ease: 'power2.out' });
+    }
+
+    msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    ok.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    void msg.offsetWidth;
+    msg.classList.add(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    ok.classList.add(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+  }
+
+  _dismissBugReportThankYou() {
+    const layer = this.thankYouLayer;
+    const msg = this.thankYouMessageEl;
+    const ok = this.thankYouOkBtn;
+    if (!layer?.isConnected) return;
+
+    gsap.killTweensOf([layer, msg, ok]);
+
+    msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    ok?.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+
+    const fast = this._thankYouReducedMotion();
+    const done = () => {
+      this._thankYouBackdropPrimed = false;
+      if (this.isOpen()) {
+        this._quietHideBugModal();
+      }
+      layer.classList.remove('bug-report-thank-you-layer--under-modal');
+      layer.removeAttribute('aria-label');
+      layer.setAttribute('hidden', '');
+      layer.style.display = '';
+      layer.setAttribute('aria-hidden', 'true');
+      msg.textContent = '';
+      msg.removeAttribute('aria-hidden');
+      gsap.set(msg, { clearProps: 'all' });
+      gsap.set(layer, { clearProps: 'opacity' });
+      if (ok) gsap.set(ok, { clearProps: 'opacity,transform' });
+      this._unmaskBugModalBehindThankYou();
+    };
+
+    gsap.to(layer, {
+      opacity: 0,
+      duration: fast ? 0.14 : 0.34,
+      ease: fast ? 'power1.in' : 'power2.inOut',
+      onComplete: done,
     });
   }
 
@@ -304,8 +534,11 @@ export class BugReportController {
       this.setStatus('Choose a severity level.', true);
       return;
     }
-    if (message.length < 8) {
-      this.setStatus('Please describe the issue in a bit more detail.', true);
+    if (!bugReportMessagePassesDetailBar(message)) {
+      this.setStatus(
+        `Add a bit more detail — at least ${MIN_BUG_MESSAGE_WORDS} words and ${MIN_BUG_MESSAGE_CHARS} characters. Steps to reproduce and browser/OS really help.`,
+        true,
+      );
       return;
     }
 
@@ -353,10 +586,12 @@ export class BugReportController {
         let msg;
         if (res.status === 429) {
           const sec = typeof err.retryAfter === 'number' ? err.retryAfter : null;
-          msg =
+          const short =
             sec != null && sec > 0
-              ? `${err.error || 'Too many requests.'} Retry in about ${sec}s.`
-              : err.error || 'Too many requests. Try again later.';
+              ? `Wait a bit before sending the next report (try again in about ${sec}s).`
+              : 'Wait a bit before sending the next report.';
+          msg = `You're sending reports a little too often. ${short}`;
+          this.ui.helpers.showToast(short, 5500);
         } else if ((res.status === 405 || res.status === 404) && apiUrl.startsWith('/')) {
           msg =
             'This site is static: add GitHub Actions variable BUG_REPORT_API_URL (your full Vercel URL ending in /api/bug-report), then redeploy.';
@@ -374,8 +609,14 @@ export class BugReportController {
         return;
       }
 
-      this.close();
-      this.ui.helpers.showToast('Thanks — report sent.');
+      this._primeThankYouBackdropBehindModal();
+      this.close(
+        () => {
+          this.thankYouLayer?.classList.remove('bug-report-thank-you-layer--under-modal');
+          void this._playBugReportThankYou();
+        },
+        { preserveViewportBackdrop: true },
+      );
     } catch {
       this.setStatus('Network error. Check your connection.', true);
       this._sending = false;

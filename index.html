@@ -2664,7 +2664,7 @@
               rows="6"
               maxlength="8000"
               required
-              placeholder="Steps to reproduce, browser/OS, what you expected…"
+              placeholder="About 10+ words: steps to reproduce, browser/OS, what you expected…"
               aria-labelledby="bugReportMessageLabel"
             ></textarea>
           </div>
@@ -2683,6 +2683,15 @@
             <button type="submit" id="submitBugReport" class="accent-action-btn bug-report-modal-btn">Send</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div id="bugReportThankYouLayer" class="bug-report-thank-you-layer" hidden aria-hidden="true" role="status">
+      <div class="bug-report-thank-you-stack" id="bugReportThankYouStack">
+        <p class="bug-report-thank-you-message" id="bugReportThankYouMessage"></p>
+        <button type="button" id="bugReportThankYouOk" class="bug-report-thank-you-ok">
+          Keep Orbing
+        </button>
       </div>
     </div>
   </body>

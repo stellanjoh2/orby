@@ -58,8 +58,9 @@ export function animateModalOpen(modal, panel = null) {
  * @param {HTMLElement | null} modal
  * @param {HTMLElement | null} [panel]
  * @param {() => void} [afterHidden]
+ * @param {boolean} [preserveViewportBackdrop] If true, only wipes the panel; modal root stays full-screen (keeps dim scrim during close — e.g. bug report → thank-you).
  */
-export function animateModalClose(modal, panel = null, afterHidden) {
+export function animateModalClose(modal, panel = null, afterHidden, preserveViewportBackdrop = false) {
   if (!modal) {
     afterHidden?.();
     return;
@@ -96,9 +97,8 @@ export function animateModalClose(modal, panel = null, afterHidden) {
     defaults: { ease: 'power3.in' },
     onComplete: finish,
   });
-  tl.to(content, { y: 32, clipPath: 'inset(100% 0 0 0)', duration: 0.26 }, 0).to(
-    modal,
-    { clipPath: 'inset(0 0 100% 0)', duration: 0.22 },
-    0.05,
-  );
+  tl.to(content, { y: 32, clipPath: 'inset(100% 0 0 0)', duration: 0.26 }, 0);
+  if (!preserveViewportBackdrop) {
+    tl.to(modal, { clipPath: 'inset(0 0 100% 0)', duration: 0.22 }, 0.05);
+  }
 }
