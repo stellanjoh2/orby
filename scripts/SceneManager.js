@@ -343,6 +343,7 @@ export class SceneManager {
         requestAnimationFrame(() => {
           // Double RAF to ensure layout is complete
           this.handleResize();
+          this.ui?.syncFullscreenToggle?.();
         });
       });
     };

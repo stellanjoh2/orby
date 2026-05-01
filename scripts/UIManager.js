@@ -79,11 +79,69 @@ export class UIManager {
     document.querySelectorAll('.panel-header-title').forEach((header) => {
       header.classList.toggle('visible', header.dataset.header === initialTab);
     });
+
+    this.bindFullscreenToggle();
+  }
+
+  /**
+   * True when the document is in browser fullscreen (any vendor prefix).
+   */
+  isDocumentFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+  }
+
+  /**
+   * Sync fullscreen toggle button icon/state with document fullscreen API.
+   * Called from SceneManager after layout updates on fullscreen transitions.
+   */
+  syncFullscreenToggle() {
+    const btn = this.dom.fullscreenToggle;
+    if (!btn) return;
+    const active = this.isDocumentFullscreen();
+    btn.classList.toggle('is-active', active);
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.classList.toggle('fa-expand', !active);
+      icon.classList.toggle('fa-compress', active);
+    }
+  }
+
+  bindFullscreenToggle() {
+    const btn = this.dom.fullscreenToggle;
+    if (!btn) return;
+
+    const requestFullscreen = (element) => {
+      if (element.requestFullscreen) element.requestFullscreen();
+      else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+      else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
+      else if (element.msRequestFullscreen) element.msRequestFullscreen();
+    };
+
+    const exitFullscreen = () => {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+      else if (document.msExitFullscreen) document.msExitFullscreen();
+    };
+
+    btn.addEventListener('click', () => {
+      if (!this.isDocumentFullscreen()) {
+        requestFullscreen(document.documentElement);
+      } else {
+        exitFullscreen();
+      }
+    });
   }
 
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
     this.dom.canvas = q('#webgl');
+    this.dom.fullscreenToggle = q('#fullscreenToggle');
     this.dom.topBarTitle = q('#topBarTitle');
     this.dom.topBarAnimation = q('#topBarAnimation');
     this.dom.resetAll = q('#resetAll');
