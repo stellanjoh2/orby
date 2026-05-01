@@ -1,6 +1,6 @@
 /**
  * Vercel serverless: POST JSON { category, severity, message, honeypot?, turnstileToken? }
- * Email subject line is short: "Orby Bug - Moderate - Rendering" (severity + category labels).
+ * Email subject line is short: "Orby Issue - Moderate - Rendering" (severity + category labels).
  *
  * CORS: If orby.studio (or another origin) gets preflight errors on preview URLs,
  * open Vercel → Project → Settings → Deployment Protection → OPTIONS Allowlist
@@ -184,7 +184,7 @@ export default async function handler(req, res) {
   const to = process.env.BUG_REPORT_TO;
   const from = process.env.RESEND_FROM;
   if (!key || !to || !from) {
-    return res.status(503).json({ error: 'Bug reporting is not configured' });
+    return res.status(503).json({ error: 'Issue reporting is not configured' });
   }
 
   const ip = clientIp(req);
@@ -242,7 +242,7 @@ export default async function handler(req, res) {
     `Time: ${new Date().toISOString()}`,
   ].join('\n');
 
-  const emailSubject = `Orby Bug - ${sevLabel} - ${catLabel}`;
+  const emailSubject = `Orby Issue - ${sevLabel} - ${catLabel}`;
 
   let resendRes;
   try {

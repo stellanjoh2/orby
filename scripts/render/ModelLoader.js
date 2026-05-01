@@ -10,6 +10,27 @@ import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 const FBX_TARGET_MAX_DIMENSION = 2.0;
 const FBX_SCALE_NORMALIZE_THRESHOLD = 20.0;
 
+function countMeshes(root) {
+  let n = 0;
+  root?.traverse?.((o) => {
+    if (o.isMesh) n += 1;
+  });
+  return n;
+}
+
+/** User-facing copy for unknown extensions (3D viewers vs raster images). */
+function unsupportedFormatMessage(ext) {
+  const raw = ext != null ? String(ext).toLowerCase().replace(/^\.+/, '') : '';
+  const label = raw ? `.${raw}` : 'this file';
+  return (
+    `Unsupported file type (${label}). ` +
+    `Orby opens 3D geometry in GLB, GLTF (single file or whole folder with textures), OBJ, FBX, STL, ` +
+    `USDZ / USD when the package uses a text USDA stage (binary USDC is not supported in the browser here), ` +
+    `and SVG for extruded logos. ` +
+    `Raster images such as PNG, JPEG, or WebP are not imported as meshes—convert or export from your DCC to a supported 3D format first.`
+  );
+}
+
 export class ModelLoader {
   constructor() {
     this.fileReaders = {
@@ -155,7 +176,7 @@ export class ModelLoader {
       case 'svg':
         return this.loadSvg(file, options);
       default:
-        throw new Error(`Unsupported format: .${ext}`);
+        throw new Error(unsupportedFormatMessage(ext));
     }
   }
 
@@ -410,17 +431,25 @@ export class ModelLoader {
 
   async loadUsd(file) {
     const buffer = await this.fileReaders.buffer(file);
+    let object;
     if (typeof this.usdLoader.parse === 'function') {
-      const object = await this.usdLoader.parse(buffer);
-      return { object, animations: [] };
+      object = await this.usdLoader.parse(buffer);
+    } else {
+      const blobUrl = URL.createObjectURL(new Blob([buffer]));
+      try {
+        object = await this.usdLoader.loadAsync(blobUrl);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
     }
-    const blobUrl = URL.createObjectURL(new Blob([buffer]));
-    try {
-      const object = await this.usdLoader.loadAsync(blobUrl);
-      return { object, animations: [] };
-    } finally {
-      URL.revokeObjectURL(blobUrl);
+    // Three.js USDZLoader only supports text USDA / non-crate USD inside USDZ.
+    // Typical Apple / exporter USDZ uses binary USDC as the root — that yields an empty Group with no warning thrown.
+    if (countMeshes(object) === 0) {
+      throw new Error(
+        'This USDZ uses binary USD (USDC). The viewer only loads USDZ packages whose main stage is text USDA—a common exporter default is USDC, which shows up empty here. Prefer GLB/glTF, or convert with usdcat and repackage if you control the asset.',
+      );
     }
+    return { object, animations: [] };
   }
 
   normalizePath(path = '') {

@@ -19,6 +19,10 @@ import { ResetControls } from './ui/ResetControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
 import { BugReportController } from './ui/BugReportController.js';
+import { animateModalOpen, snapModalHidden } from './ui/modalReveal.js';
+
+/** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
+export const LONG_TOAST_CHAR_THRESHOLD = 110;
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -159,6 +163,11 @@ export class UIManager {
     this.dom.panels = document.querySelectorAll('.panel');
     this.dom.panelsContainer = q('.panels');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
+    this.dom.messageAlertModal = q('#messageAlertModal');
+    this.dom.messageAlertTitle = q('#messageAlertTitle');
+    this.dom.messageAlertBody = q('#messageAlertBody');
+    this.dom.messageAlertOk = q('#messageAlertOk');
+    this.dom.messageAlertClose = q('#messageAlertClose');
     this.dom.stats = q('#meshStats');
     this.dom.animationBlock = q('#animationBlock');
     this.dom.animationSelect = q('#animationSelect');
@@ -360,6 +369,60 @@ export class UIManager {
     });
 
     this.setupPanelsScrollbarReveal();
+    this.bindMessageAlert();
+  }
+
+  getMessageAlertPanel() {
+    return this.dom.messageAlertModal?.querySelector('.message-alert-content');
+  }
+
+  bindMessageAlert() {
+    const modal = this.dom.messageAlertModal;
+    if (!modal) return;
+
+    this._closeMessageAlert = () => {
+      if (this._messageAlertKeydownHandler) {
+        document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
+        this._messageAlertKeydownHandler = null;
+      }
+      snapModalHidden(modal, this.getMessageAlertPanel());
+    };
+
+    this.dom.messageAlertOk?.addEventListener('click', () => this._closeMessageAlert?.());
+    this.dom.messageAlertClose?.addEventListener('click', () => this._closeMessageAlert?.());
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) this._closeMessageAlert?.();
+    });
+  }
+
+  /**
+   * Modal with OK — for long errors/warnings that need time to read. Short messages use showToast().
+   */
+  showMessageAlert(message, title = 'Message') {
+    if (!this.dom.messageAlertModal || !this.dom.messageAlertBody) return;
+
+    const text = typeof message === 'string' ? message : String(message ?? '');
+    if (this.dom.messageAlertTitle) {
+      this.dom.messageAlertTitle.textContent = title;
+    }
+    this.dom.messageAlertBody.textContent = text;
+
+    if (this._messageAlertKeydownHandler) {
+      document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
+      this._messageAlertKeydownHandler = null;
+    }
+    this._messageAlertKeydownHandler = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        this._closeMessageAlert?.();
+      }
+    };
+    document.addEventListener('keydown', this._messageAlertKeydownHandler, true);
+
+    void animateModalOpen(this.dom.messageAlertModal, this.getMessageAlertPanel()).then(() => {
+      this.dom.messageAlertOk?.focus();
+    });
   }
 
   /**
@@ -736,13 +799,18 @@ export class UIManager {
     });
   }
 
-  showToast(message) {
+  showToast(message, durationMs = 3200) {
+    const text = typeof message === 'string' ? message : String(message ?? '');
+    if (text.length > LONG_TOAST_CHAR_THRESHOLD) {
+      this.showMessageAlert(text, 'Message');
+      return;
+    }
     const template = this.dom.toastTemplate?.content?.firstElementChild;
     if (!template) return;
     const toast = template.cloneNode(true);
-    toast.querySelector('.toast-message').textContent = message;
+    toast.querySelector('.toast-message').textContent = text;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3200);
+    setTimeout(() => toast.remove(), durationMs);
   }
 
   copySettingsToClipboard(message, payload) {

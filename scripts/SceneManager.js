@@ -34,7 +34,7 @@ import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
-
+import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
 
 export class SceneManager {
   constructor(eventBus, stateStore, uiManager) {
@@ -1185,6 +1185,9 @@ export class SceneManager {
 
   async loadFile(file, options = {}) {
     if (!file) return;
+    const previousFile = this.currentFile;
+    const hadExistingModel = !!this.currentModel;
+
     this.currentFile = file;
     this.ui.updateTitle(file.name);
     this.ui.updateTopBarDetail(`${file.name} — Loading…`);
@@ -1221,8 +1224,26 @@ export class SceneManager {
       this.eventBus.emit('scene:model-load-complete', { success: true, file });
     } catch (error) {
       console.error('Failed to load model', error);
-      this.ui.showToast('Could not load model');
-      this.ui.setDropzoneVisible(true);
+      const msg =
+        error && typeof error.message === 'string' && error.message.trim().length > 0
+          ? error.message.trim()
+          : 'Could not load model';
+      if (msg.length > LONG_TOAST_CHAR_THRESHOLD) {
+        this.ui.showMessageAlert(msg, 'Couldn’t load model');
+      } else {
+        this.ui.showToast(msg);
+      }
+
+      if (hadExistingModel) {
+        // Keep the viewer visible with the mesh that was already loaded — do not reopen the dark start screen over it.
+        this.currentFile = previousFile ?? null;
+        this.ui.setDropzoneVisible(false);
+        const label = previousFile?.name ?? 'Model';
+        this.ui.updateTitle(label);
+        this.ui.updateTopBarDetail(`${label} — Idle`);
+      } else {
+        this.ui.setDropzoneVisible(true);
+      }
       this.eventBus.emit('scene:model-load-complete', { success: false, file, error });
     } finally {
       this.ui.endLoadSpinner();
@@ -1246,7 +1267,13 @@ export class SceneManager {
       this.eventBus.emit('scene:model-load-complete', { success: true, file: sourceFile });
     } catch (error) {
         console.error('Folder load failed', error);
-      this.ui.showToast(error.message || 'Folder load failed');
+      const raw = error?.message || 'Folder load failed';
+      const msg = typeof raw === 'string' ? raw.trim() : String(raw);
+      if (msg.length > LONG_TOAST_CHAR_THRESHOLD) {
+        this.ui.showMessageAlert(msg, 'Couldn’t load folder');
+      } else {
+        this.ui.showToast(msg);
+      }
       this.eventBus.emit('scene:model-load-complete', { success: false, error });
     } finally {
       this.ui.endLoadSpinner();

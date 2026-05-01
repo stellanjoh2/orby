@@ -9,6 +9,20 @@ export function prefersReducedMotion() {
 /** Prevents stacking close timelines (killing a tween skips its onComplete). */
 const modalCloseInProgress = new WeakSet();
 
+/**
+ * Instantly hide a modal and clear GSAP state (e.g. dismiss / recovery when animation was interrupted).
+ */
+export function snapModalHidden(modal, panel = null) {
+  if (!modal) return;
+  const content = panel ?? modal.querySelector('.load-settings-content');
+  modalCloseInProgress.delete(modal);
+  const kill = content ? [modal, content] : [modal];
+  gsap.killTweensOf(kill);
+  modal.style.display = 'none';
+  if (content) gsap.set(content, { clearProps: 'clipPath,transform' });
+  gsap.set(modal, { clearProps: 'clipPath,transform' });
+}
+
 /** * Full-viewport wipe + content lift. Uses clip-path and y only (no opacity on the overlay).
  * @param {HTMLElement | null} modal
  * @param {HTMLElement | null} [panel]

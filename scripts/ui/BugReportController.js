@@ -1,5 +1,5 @@
 /**
- * Bug report modal → POST /api/bug-report.
+ * Issue report modal → POST /api/bug-report.
  * API URL: meta[name="orby-bug-report-api"] or "/api/bug-report"; Turnstile: meta orby-turnstile-site-key + server secret.
  */
 import gsap from 'gsap';
@@ -21,7 +21,7 @@ function escapeHtmlMinimal(s) {
 
 /** Plain copy + lime tail (landing `.brand-highlight` / `--brand-primary`) */
 const BUG_REPORT_THANK_YOU_PREFIX =
-  'Thanks for flagging this, we really appreciate you taking the time. ';
+  'Thanks for letting us know — we really appreciate you taking the time. ';
 const BUG_REPORT_THANK_YOU_ACCENT_TAIL = 'We\u2019ll look into it shortly.';
 
 const BUG_REPORT_THANK_YOU_FULL_TEXT = BUG_REPORT_THANK_YOU_PREFIX + BUG_REPORT_THANK_YOU_ACCENT_TAIL;
@@ -561,20 +561,20 @@ export class BugReportController {
           const sec = typeof err.retryAfter === 'number' ? err.retryAfter : null;
           const short =
             sec != null && sec > 0
-              ? `Wait a bit before sending the next report (try again in about ${sec}s).`
-              : 'Wait a bit before sending the next report.';
-          msg = `You're sending reports a little too often. ${short}`;
+              ? `Wait a bit before trying again (about ${sec}s).`
+              : 'Wait a bit before trying again.';
+          msg = `You're submitting a little too often. ${short}`;
           this.ui.helpers.showToast(short, 5500);
         } else if ((res.status === 405 || res.status === 404) && apiUrl.startsWith('/')) {
           msg =
             'This site is static: add GitHub Actions variable BUG_REPORT_API_URL (your full Vercel URL ending in /api/bug-report), then redeploy.';
         } else if (res.status === 503) {
-          msg = 'Reporting is not available (server not configured).';
+          msg = 'Issue reporting isn’t available (server not configured).';
         } else if (err.code === 'turnstile_failed' || err.code === 'turnstile_required') {
           msg = err.error || 'Security check failed. Try again.';
           this._resetTurnstile();
         } else {
-          msg = err.error || 'Could not send report. Try again later.';
+          msg = err.error || 'Could not submit. Try again later.';
         }
         this.setStatus(msg, true);
         this._sending = false;

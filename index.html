@@ -6,6 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
+    <style>html{background:#000}</style>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -2116,11 +2117,11 @@
 
               <div class="panel-block bug-report-panel-block" id="info-bug-report">
                 <div class="block-title">
-                  <i class="fa-solid fa-bug" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
-                  Report a bug
+                  <i class="fa-solid fa-circle-exclamation" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                  Report an issue
                 </div>
                 <p class="bug-report-panel-description">
-                  Spotted something wrong? Tell us what happened. We can’t reply from here, but we read every report.
+                  Spotted something wrong? Tell us what happened. We can’t reply from here, but we read everything you send.
                 </p>
                 <button type="button" class="bug-report-panel-open accent-action-btn" data-bug-report-open>
                   <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
@@ -2138,6 +2139,8 @@
                   <a href="#info-shortcuts">Shortcuts</a>
                   <a href="#info-mouse">Mouse</a>
                   <a href="#info-gamepad">Gamepad</a>
+                  <a href="#info-about">About Orby</a>
+                  <a href="#info-privacy">Privacy</a>
                   <a href="#info-features">Key Features</a>
                   <a href="#info-faq">Feature FAQ</a>
                   <a href="#info-look-filters">Look filters</a>
@@ -2145,8 +2148,6 @@
                   <a href="#info-svg-extrude">SVG Extrude</a>
                   <a href="#info-performance">Performance</a>
                   <a href="#info-learn">Learn More</a>
-                  <a href="#info-about">About Orby</a>
-                  <a href="#info-privacy">Privacy</a>
                   <a href="#info-legal">Legal</a>
                   <a href="#info-credits">Credits</a>
                   <a href="#info-changelog">Latest Changes</a>
@@ -2355,6 +2356,29 @@
               </div>
             </div>
 
+              <div class="panel-block" id="info-about">
+                <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
+                <div class="about-content">
+                  <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It's perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
+                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">look filter presets</span>, <span class="about-highlight">a luminance tone curve</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
+                <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
+                </div>
+              </div>
+
+              <div class="panel-block" id="info-privacy">
+                <div class="block-title"><i class="fa-solid fa-shield" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Privacy</div>
+                <div class="about-content">
+                  <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">100% client-side</span> – runs completely in your browser</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Zero uploads, zero servers</span>, zero cloud storage</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">No accounts</span>, no login, no cookies, no analytics, no tracking</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Close the tab</span> and your model is instantly and permanently gone</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">No one can ever access your files</span></li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Your content will not be used to train AI</span></li>
+                  </ul>
+                </div>
+              </div>
+
               <div class="panel-block" id="info-features">
                 <div class="block-title"><i class="fa-solid fa-wand-magic-sparkles" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Key Features</div>
                 <div class="about-content">
@@ -2530,29 +2554,6 @@
                 </div>
               </div>
 
-              <div class="panel-block" id="info-about">
-                <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
-                <div class="about-content">
-                  <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It's perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
-                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">look filter presets</span>, <span class="about-highlight">a luminance tone curve</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
-                <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
-                </div>
-              </div>
-
-              <div class="panel-block" id="info-privacy">
-                <div class="block-title"><i class="fa-solid fa-shield" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Privacy</div>
-                <div class="about-content">
-                  <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">100% client-side</span> – runs completely in your browser</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Zero uploads, zero servers</span>, zero cloud storage</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">No accounts</span>, no login, no cookies, no analytics, no tracking</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Close the tab</span> and your model is instantly and permanently gone</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">No one can ever access your files</span></li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Your content will not be used to train AI</span></li>
-                  </ul>
-                </div>
-              </div>
-
               <div class="panel-block" id="info-legal">
                 <div class="block-title"><i class="fa-solid fa-scale-balanced" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Legal</div>
                 <div class="about-content">
@@ -2599,7 +2600,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.266 · 2026-05-01 14:46:35 UTC</div>
+              <div class="info-version-tag">v0.5.267 · 2026-05-01 14:46:42 UTC</div>
             </section>
           </div>
         </aside>
@@ -2628,6 +2629,27 @@
     />
     <script type="module" src="./scripts/main.js"></script>
     
+    <!-- Long messages: stay open until OK (e.g. unsupported USDZ); short text still uses toast -->
+    <div
+      id="messageAlertModal"
+      class="load-settings-modal message-alert-modal"
+      style="display: none;"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="messageAlertTitle"
+    >
+      <div class="load-settings-content message-alert-content">
+        <div class="load-settings-header">
+          <h3 id="messageAlertTitle">Message</h3>
+          <button type="button" id="messageAlertClose" class="close-btn" aria-label="Close"></button>
+        </div>
+        <p id="messageAlertBody" class="message-alert-body"></p>
+        <div class="load-settings-actions message-alert-actions">
+          <button type="button" id="messageAlertOk" class="accent-action-btn">OK</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Paste scene settings modal (JSON) -->
     <div id="loadSceneSettingsModal" class="load-settings-modal" style="display: none;">
       <div class="load-settings-content">
@@ -2655,11 +2677,11 @@
     <div id="bugReportModal" class="load-settings-modal bug-report-modal" style="display: none;">
       <div class="load-settings-content bug-report-content">
         <div class="load-settings-header">
-          <h3>Report a bug</h3>
+          <h3>Report an issue</h3>
           <button type="button" id="closeBugReport" class="close-btn" aria-label="Close"></button>
         </div>
         <p class="load-settings-description">
-          Tell us what went wrong. We’re always looking to improve and really appreciate your feedback. <span class="bug-report-intro-emphasis">We don’t collect contact details</span>, so we can’t reply, but every report is read.
+          Tell us what’s happening. We’re always looking to improve and really appreciate your feedback. <span class="bug-report-intro-emphasis">We don’t collect contact details</span>, so we can’t reply, but every submission is read.
         </p>
         <form id="bugReportForm">
           <div class="bug-report-field">

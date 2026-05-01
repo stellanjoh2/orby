@@ -1,13 +1,17 @@
 /*
  * Brand Color System
- * 
+ *
  * To change the main brand color, simply update:
  * - --brand-primary: The main brand color (currently neon yellow #c4ff00)
  * - --brand-secondary: The secondary accent color (currently orange #ff4500)
- * 
+ *
  * All accent-related colors (--accent, --accent-strong, --accent-border, etc.)
  * will automatically derive from these two base colors using CSS color-mix().
- * 
+ *
+ * Semantic palette (not derived from brand):
+ * - --danger: Soft coral for inline error/destructive hints
+ * - --warning: Strong red for critical notices; same hue as bug-report “blocker” severity
+ *
  * Note: color-mix() requires modern browsers (Chrome 111+, Firefox 113+, Safari 16.2+)
  * For older browser support, you may need to manually set the derived colors.
  * 
@@ -22,6 +26,8 @@
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
   --danger: #ff7b7b;
+  /* Critical alerts — matches bug-report severity “blocker” dot */
+  --warning: #dc2626;
   /* Right-hand settings shelf and centered modals (paste scene settings, bug report) */
   --app-settings-chrome-radius: 18px;
   /* Object shelf Scene / Export pills, modal footers — keep in sync */
@@ -151,6 +157,8 @@ body[data-theme='aqua'] {
 html {
   height: 100%;
   overflow: hidden;
+  /* Covers overscroll/gutters before body paints; keeps boot from flashing UA gray */
+  background: #000;
 }
 
 #app {
@@ -475,6 +483,39 @@ body.dropzone-visible #webgl {
   font-weight: 700;
 }
 
+/* Dismissible long-message dialog (same shell as paste-settings / bug report) */
+.message-alert-modal .message-alert-content {
+  max-width: min(28rem, 92vw);
+}
+
+.message-alert-modal .load-settings-header h3 {
+  color: var(--warning);
+}
+
+.message-alert-body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-height: min(50vh, 22rem);
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+/* Big-message template: one extra line of air between body copy and OK */
+.message-alert-actions {
+  justify-content: flex-end;
+  flex-shrink: 0;
+  margin-top: 1.1rem;
+}
+
+.message-alert-actions .accent-action-btn {
+  min-width: 5.5rem;
+}
+
 /* Bug report — Information panel + modal */
 .bug-report-panel-description {
   margin: 0 0 1rem 0;
@@ -494,6 +535,9 @@ body.dropzone-visible #webgl {
 
 .bug-report-content .load-settings-description {
   margin: 0 0 0.75rem 0;
+  /* Match big-message template body (.message-alert-body) */
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 .bug-report-content .bug-report-intro-emphasis {
@@ -802,9 +846,9 @@ body.dropzone-visible #webgl {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
-/* Serious (red) → low (green) */
+/* Serious → low severity (hue ramp); blocker uses semantic --warning */
 .bug-report-severity-dot[data-severity='blocker'] {
-  background: #dc2626;
+  background: var(--warning);
 }
 
 .bug-report-severity-dot[data-severity='major'] {
@@ -1096,6 +1140,11 @@ body.dropzone-visible #webgl {
   overflow: hidden;
 }
 
+/* While start menu hides the dropzone (shell prep); --bg can read gray on some displays */
+html.orby-dropzone-shell-pending .workspace {
+  background: #000;
+}
+
 .viewport {
   position: relative;
   flex: 1;
@@ -1113,7 +1162,7 @@ body.dropzone-visible #webgl {
   width: 100%;
   height: 100%;
   display: block;
-  /* Match .viewport; avoids a visible seam with the 3D pass */
+  /* Match .viewport; backs transparent WebGL clears (renderer alpha: true) */
   background: #000;
   outline: none;
 }
@@ -1137,7 +1186,7 @@ body.dropzone-visible #webgl {
   text-align: center;
   pointer-events: auto;
   opacity: 0;
-  animation: dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Reveal timing is driven by StartMenuController (after shell prep); avoids first-paint animation before JS. */
   /* Must use x/y — from 1600px up they differ from --dropzone-padding; keep in sync with ::before / ::after */
   padding: var(--dropzone-padding-y) var(--dropzone-padding-x);
   box-sizing: border-box;

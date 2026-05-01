@@ -234,10 +234,13 @@ export class UIHelpers {
   }
 
   /**
-   * Show toast notification
-   * @param {string} message - Toast message
+   * Show toast notification — delegates to UIManager (long strings use dismissible dialog).
    */
   showToast(message, durationMs = 3200) {
+    if (typeof this.ui?.showToast === 'function') {
+      this.ui.showToast(message, durationMs);
+      return;
+    }
     const template = this.ui.dom.toastTemplate?.content?.firstElementChild;
     if (!template) return;
     const toast = template.cloneNode(true);

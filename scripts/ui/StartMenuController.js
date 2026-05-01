@@ -66,6 +66,51 @@ export class StartMenuController {
     /** Mobile splash — avoid double fire from animation + timeout */
     this._mobileSplashMessageDone = false;
     this._desktopDropzoneTextRevealed = false;
+    /** First visit: defer dropzone fade-in until fonts settle + idle so Lottie/GSAP/main chunk can warm up */
+    this._dropzoneShellReady = false;
+    this._dropzoneShellPrepPromise = null;
+  }
+
+  /**
+   * Wait for first-paint-critical work to finish, then allow the dropzone opacity animation + logo reveal.
+   * @param {{ fast?: boolean }} options — `fast`: skip fonts/idle (error / fallback paths). Users with reduced motion use the short path automatically.
+   */
+  ensureDropzoneShellReady(options = {}) {
+    if (this._dropzoneShellReady) return Promise.resolve();
+    if (this._dropzoneShellPrepPromise) return this._dropzoneShellPrepPromise;
+    const { fast = false } = options;
+    this._dropzoneShellPrepPromise = (async () => {
+      if (this._dropzoneShellReady) return;
+      const rush = fast || prefersReducedMotion();
+      if (!rush) {
+        try {
+          if (document.fonts?.ready) await document.fonts.ready;
+        } catch (_) {
+          /* ignore */
+        }
+        await new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        );
+        if (typeof requestIdleCallback === 'function') {
+          await new Promise((r) =>
+            requestIdleCallback(() => r(), { timeout: 550 }),
+          );
+        } else {
+          await new Promise((r) => setTimeout(r, 72));
+        }
+      } else {
+        await new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        );
+      }
+      this._dropzoneShellReady = true;
+      if (this.visible && !this.ui.uiHidden) {
+        this.updateVisibility();
+      }
+    })().finally(() => {
+      this._dropzoneShellPrepPromise = null;
+    });
+    return this._dropzoneShellPrepPromise;
   }
 
   init() {
@@ -238,15 +283,25 @@ export class StartMenuController {
   updateVisibility() {
     if (!this.dropzone) return;
     const shouldShow = this.visible && !this.ui.uiHidden;
-    
+    const canRevealChrome = shouldShow && this._dropzoneShellReady;
+
     if (shouldShow) {
       // When showing, remove hiding class and let reveal animation handle it
       this.dropzone.classList.remove('hiding');
-      this.dropzone.style.pointerEvents = 'auto';
-      this.dropzone.style.animation = 'dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      if (canRevealChrome) {
+        this.dropzone.style.pointerEvents = 'auto';
+        this.dropzone.style.opacity = '';
+        this.dropzone.style.animation =
+          'dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      } else {
+        this.dropzone.style.pointerEvents = 'none';
+        this.dropzone.style.animation = 'none';
+        this.dropzone.style.opacity = '0';
+      }
     } else {
       // When hiding, first remove any existing animation and inline styles
       this.dropzone.style.animation = '';
+      this.dropzone.style.opacity = '';
       // Ensure opacity is at 1 before starting hide animation
       this.dropzone.style.opacity = '1';
       // Force a reflow to ensure browser processes the changes
@@ -259,6 +314,10 @@ export class StartMenuController {
     }
     
     document.body.classList.toggle('dropzone-visible', shouldShow);
+    document.documentElement.classList.toggle(
+      'orby-dropzone-shell-pending',
+      Boolean(shouldShow && !canRevealChrome),
+    );
     this.syncDropzoneLogotypePlayback(shouldShow);
   }
 
@@ -502,6 +561,12 @@ export class StartMenuController {
       return;
     }
 
+    const shellRevealWatchdog = window.setTimeout(() => {
+      if (!this._dropzoneShellReady) {
+        void this.ensureDropzoneShellReady({ fast: true });
+      }
+    }, 5200);
+
     // Wait for Lottie library to load
     const tryInit = () => {
       if (typeof lottie === 'undefined') {
@@ -527,43 +592,54 @@ export class StartMenuController {
         // Let .drop-logo CSS control width; SVG fills container so it scales with the viewport
         if (this.animationInstance) {
           this.animationInstance.addEventListener('DOMLoaded', () => {
+            window.clearTimeout(shellRevealWatchdog);
             const isMobileSplash =
               document.documentElement.classList.contains('mobile-landing');
             const svg = this.logotypeAnimation.querySelector('svg');
-            if (svg) {
-              svg.style.width = '100%';
-              svg.style.height = 'auto';
 
-              // Trigger reveal animation when Lottie animation finishes loading
-              // This creates a subtle scale-up and fade-in effect
-              requestAnimationFrame(() => {
-                this.logotypeAnimation.style.opacity = '0';
-                this.logotypeAnimation.style.transform = 'scale(0.85)';
-                this.logotypeAnimation.offsetHeight;
-                this.logotypeAnimation.classList.add('reveal');
-                if (isMobileSplash) {
-                  this.scheduleMobileSplashAfterLogoReveal();
-                } else {
-                  this.scheduleDesktopDropzoneTextAfterLogo();
-                }
-              });
-            } else if (isMobileSplash) {
-              requestAnimationFrame(() => this.revealMobileSplashMessage());
-            } else {
-              requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
-            }
+            void this.ensureDropzoneShellReady().then(() => {
+              if (svg) {
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+
+                // Trigger reveal when Lottie is in the DOM — after shell prep so GSAP/fonts settle
+                requestAnimationFrame(() => {
+                  this.logotypeAnimation.style.opacity = '0';
+                  this.logotypeAnimation.style.transform = 'scale(0.85)';
+                  this.logotypeAnimation.offsetHeight;
+                  this.logotypeAnimation.classList.add('reveal');
+                  if (isMobileSplash) {
+                    this.scheduleMobileSplashAfterLogoReveal();
+                  } else {
+                    this.scheduleDesktopDropzoneTextAfterLogo();
+                  }
+                });
+              } else if (isMobileSplash) {
+                requestAnimationFrame(() => this.revealMobileSplashMessage());
+              } else {
+                requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
+              }
+            });
+
             this.syncDropzoneLogotypePlayback(
               this.visible && !this.ui.uiHidden,
             );
           });
         }
       } catch (error) {
+        window.clearTimeout(shellRevealWatchdog);
         console.error('Failed to load logotype animation:', error);
-        if (document.documentElement.classList.contains('mobile-landing')) {
-          requestAnimationFrame(() => this.revealMobileSplashMessage());
-        } else {
-          requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
-        }
+        void this.ensureDropzoneShellReady({ fast: true }).then(() => {
+          if (
+            document.documentElement.classList.contains('mobile-landing')
+          ) {
+            requestAnimationFrame(() => this.revealMobileSplashMessage());
+          } else {
+            requestAnimationFrame(() =>
+              this.revealDesktopDropzoneIntroText(),
+            );
+          }
+        });
       }
     };
 
