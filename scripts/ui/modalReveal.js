@@ -1,17 +1,15 @@
 import gsap from 'gsap';
 
-/** Prevents stacking close timelines (killing a tween skips its onComplete). */
-const modalCloseInProgress = new WeakSet();
-
-function reducedMotion() {
+export function prefersReducedMotion() {
   return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 }
 
-/**
- * Full-viewport wipe + content lift. Uses clip-path and y only (no opacity on the overlay).
+/** Prevents stacking close timelines (killing a tween skips its onComplete). */
+const modalCloseInProgress = new WeakSet();
+
+/** * Full-viewport wipe + content lift. Uses clip-path and y only (no opacity on the overlay).
  * @param {HTMLElement | null} modal
  * @param {HTMLElement | null} [panel]
  * @returns {Promise<void>}
@@ -25,7 +23,7 @@ export function animateModalOpen(modal, panel = null) {
     return Promise.resolve();
   }
 
-  if (reducedMotion()) {
+  if (prefersReducedMotion()) {
     gsap.killTweensOf([modal, content]);
     modal.style.display = 'flex';
     gsap.set([modal, content], { clearProps: 'clipPath,transform' });
@@ -83,7 +81,7 @@ export function animateModalClose(modal, panel = null, afterHidden, preserveView
   if (modalCloseInProgress.has(modal)) return;
   modalCloseInProgress.add(modal);
 
-  if (reducedMotion()) {
+  if (prefersReducedMotion()) {
     gsap.killTweensOf([modal, content]);
     finish();
     return;

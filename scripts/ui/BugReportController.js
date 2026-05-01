@@ -3,7 +3,7 @@
  * API URL: meta[name="orby-bug-report-api"] or "/api/bug-report"; Turnstile: meta orby-turnstile-site-key + server secret.
  */
 import gsap from 'gsap';
-import { animateModalClose, animateModalOpen } from './modalReveal.js';
+import { animateModalClose, animateModalOpen, prefersReducedMotion } from './modalReveal.js';
 
 /** Minimum usable detail — keep in sync with api/bug-report.js */
 const MIN_BUG_MESSAGE_CHARS = 50;
@@ -63,14 +63,13 @@ export class BugReportController {
     this.statusEl = this.modal.querySelector('.bug-report-status');
     this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
     this.thankYouLayer = document.querySelector('#bugReportThankYouLayer');
-    this.thankYouStack = document.querySelector('#bugReportThankYouStack');
     this.thankYouMessageEl = document.querySelector('#bugReportThankYouMessage');
     this.thankYouOkBtn = document.querySelector('#bugReportThankYouOk');
 
     this.thankYouLayer?.addEventListener('click', (e) => {
       if (e.target === this.thankYouLayer) this._dismissBugReportThankYou();
     });
-    this.thankYouStack?.addEventListener('click', (e) => e.stopPropagation());
+    document.querySelector('#bugReportThankYouStack')?.addEventListener('click', (e) => e.stopPropagation());
     this.thankYouOkBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this._dismissBugReportThankYou();
@@ -309,9 +308,7 @@ export class BugReportController {
     this.syncSendButton();
   }
 
-  /**
-   * Hide bug modal without wipe (thank-you already faded). Dev preview leaves the modal open under the overlay.
-   */
+  /** Hide bug modal without wipe animation (runs after thank-you fade when the form was left open underneath). */
   _quietHideBugModal() {
     if (!this.modal || !this.form) return;
     if (!this.isOpen()) return;
@@ -361,13 +358,8 @@ export class BugReportController {
     );
   }
 
-  _thankYouReducedMotion() {
-    return (
-      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    );
-  }
 
-  _maskBugModalBehindThankYou() {
+
     if (!this.modal || this.modal.style.display === 'none') return;
     this.modal.classList.add('bug-report-modal--thank-you-mask');
   }
@@ -417,7 +409,7 @@ export class BugReportController {
     const layer = this.thankYouLayer;
     const msg = this.thankYouMessageEl;
     const ok = this.thankYouOkBtn;
-    if (!layer || !msg) return;
+    if (!layer || !msg || !ok) return;
 
     const bridgedBackdrop = this._thankYouBackdropPrimed;
     if (bridgedBackdrop) this._thankYouBackdropPrimed = false;
@@ -438,25 +430,7 @@ export class BugReportController {
     layer.style.display = 'flex';
     layer.setAttribute('aria-hidden', 'false');
 
-    if (!ok) {
-      gsap.set(layer, { opacity: skipBackdropReveal ? 1 : 0 });
-      if (!skipBackdropReveal) {
-        gsap.to(layer, { opacity: 1, duration: THANK_YOU_SCRIM_IN, ease: 'power2.out' });
-      }
-      if (this._thankYouReducedMotion()) {
-        gsap.killTweensOf(layer);
-        gsap.set(layer, { opacity: 1 });
-        msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-        gsap.set(msg, { opacity: 1, clearProps: 'transform' });
-      } else {
-        msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-        void msg.offsetWidth;
-        msg.classList.add(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-      }
-      return;
-    }
-
-    if (this._thankYouReducedMotion()) {
+    if (prefersReducedMotion()) {
       gsap.killTweensOf(layer);
       gsap.set(layer, { opacity: 1 });
       gsap.set([msg, ok], { opacity: 1, y: 0, clearProps: 'transform' });
@@ -490,7 +464,7 @@ export class BugReportController {
     msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
     ok?.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
 
-    const fast = this._thankYouReducedMotion();
+    const fast = prefersReducedMotion();
     const done = () => {
       this._thankYouBackdropPrimed = false;
       if (this.isOpen()) {
