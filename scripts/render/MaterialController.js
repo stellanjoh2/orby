@@ -6,6 +6,7 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
+  DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
 
 /** Ensure fresnel color uniform stays a THREE.Color (Three may replace .value on recompile). */
@@ -44,7 +45,7 @@ export class MaterialController {
     this.materialSettings = {
       brightness: 1.0,
       metalness: 0.0,
-      roughness: 0.8, // Default to 0.8 (original fallback value)
+      roughness: DEFAULT_MATERIAL_ROUGHNESS,
       emissive: 0.0,
     };
   }
@@ -65,7 +66,7 @@ export class MaterialController {
     this.materialSettings = {
       brightness: initialState.material?.brightness ?? initialState.diffuseBrightness ?? 1.0,
       metalness: initialState.material?.metalness ?? 0.0,
-      roughness: initialState.material?.roughness ?? 0.8, // Default to 0.8 (original fallback value)
+      roughness: initialState.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
       emissive: initialState.material?.emissive ?? 0.0,
     };
     this.originalMaterials = new WeakMap();
@@ -1009,7 +1010,8 @@ export class MaterialController {
     // This prevents values from "resetting" when HDRI blurriness changes
     const state = this.stateStore?.getState();
     const currentMetalness = state?.material?.metalness ?? this.materialSettings.metalness ?? 0.0;
-    const currentRoughness = state?.material?.roughness ?? this.materialSettings.roughness ?? 0.8;
+    const currentRoughness =
+      state?.material?.roughness ?? this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
     
     // Also update materialSettings to keep them in sync
     this.materialSettings.metalness = currentMetalness;

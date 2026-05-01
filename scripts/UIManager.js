@@ -3,6 +3,7 @@ import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  DEFAULT_MATERIAL_ROUGHNESS,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
   sanitizeDof,
@@ -1037,7 +1038,7 @@ export class UIManager {
       this.updateValueLabel('materialMetalness', metalness, 'decimal');
     }
     if (this.inputs.materialRoughness) {
-      const roughness = state.material?.roughness ?? 0.8;
+      const roughness = state.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
       this.inputs.materialRoughness.value = roughness;
       this.updateValueLabel('materialRoughness', roughness, 'decimal');
     }

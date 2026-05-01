@@ -3,7 +3,7 @@
  * Manages copy/load scene settings, and local/section reset buttons
  */
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
-import { CAMERA_TEMPERATURE_NEUTRAL_K } from '../constants.js';
+import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
 import { UIHelpers } from './UIHelpers.js';
 
@@ -132,7 +132,7 @@ export class ResetControls {
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
-      this.stateStore.set('material.roughness', defaults.material?.roughness ?? 0.8);
+      this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
       
       this.eventBus.emit('mesh:shading', defaults.shading);
@@ -149,7 +149,7 @@ export class ResetControls {
       // Emit material reset events
       this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
       this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
-      this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? 0.8);
+      this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
@@ -302,11 +302,11 @@ export class ResetControls {
           case 'material':
             this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
             this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
-            this.stateStore.set('material.roughness', defaults.material?.roughness ?? 0.8);
+            this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
             this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
             this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
             this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
-            this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? 0.8);
+            this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
             this.ui.syncUIFromState();
             break;

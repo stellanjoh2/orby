@@ -549,9 +549,9 @@ export class GlobalControls {
   }
 
   applyStudioPresetX() {
-    this.stateStore.set('hdri', 'meadow');
-    this.ui.setHdriActive('meadow');
-    this.eventBus.emit('studio:hdri', 'meadow');
+    this.stateStore.set('hdri', 'beach');
+    this.ui.setHdriActive('beach');
+    this.eventBus.emit('studio:hdri', 'beach');
     this.stateStore.set('hdriBackground', true);
     this.eventBus.emit('studio:hdri-background', true);
     if (this.ui.inputs.hdriBackground) {

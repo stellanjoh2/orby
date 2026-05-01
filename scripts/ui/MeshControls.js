@@ -2,6 +2,7 @@
  * MeshControls - Handles all mesh/object-related UI controls
  * Manages shading, materials, transforms, clay, wireframe, fresnel, and export settings
  */
+import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { UIHelpers } from './UIHelpers.js';
 
 export class MeshControls {
@@ -429,7 +430,7 @@ export class MeshControls {
       const isInteracting = this.materialInteracting?.roughness || 
                            document.activeElement === this.ui.inputs.materialRoughness;
       if (!isInteracting) {
-        const roughness = state.material?.roughness ?? 0.8;
+        const roughness = state.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
         this.ui.inputs.materialRoughness.value = roughness;
         this.helpers.updateValueLabel('materialRoughness', roughness, 'decimal');
       }

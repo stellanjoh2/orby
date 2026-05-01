@@ -12,7 +12,8 @@ export const PODIUM_SEGMENTS = 96;
 export const NORMALS_HELPER_SIZE = 0.08;
 export const NORMALS_HELPER_COLOR = '#4db3ff';
 
-export const DEFAULT_MATERIAL_ROUGHNESS = 0.8;
+/** Neutral PBR default on load (glTF often ~0.5; 0.8 read overly chalky under HDR). */
+export const DEFAULT_MATERIAL_ROUGHNESS = 0.5;
 export const DEFAULT_MATERIAL_METALNESS = 0.08;
 
 export const BLOOM_LUMINANCE_THRESHOLD_MIN = 0.6;

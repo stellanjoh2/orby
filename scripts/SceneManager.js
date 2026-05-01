@@ -11,6 +11,7 @@ import {
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   resolveRenderQualityTier,
+  DEFAULT_MATERIAL_ROUGHNESS,
 } from './constants.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
@@ -70,7 +71,7 @@ export class SceneManager {
     // Auto-exposure will be initialized after setupComposer
     this.hdriStrength = Math.min(
       5 * HDRI_STRENGTH_UNIT,
-      Math.max(0, initialState.hdriStrength ?? 1.50),
+      Math.max(0, initialState.hdriStrength ?? 2),
     );
     // Disable tone mapping on renderer - we'll apply it as a post-processing pass instead
     this.renderer.toneMapping = THREE.NoToneMapping;
@@ -250,7 +251,7 @@ export class SceneManager {
     this.hdriBackgroundEnabled = initialState.hdriBackground;
     this.hdriBlurriness = initialState.hdriBlurriness ?? 0;
     this.hdriRotation = initialState.hdriRotation ?? 0;
-    this.currentHdri = initialState.hdri ?? 'meadow';
+    this.currentHdri = initialState.hdri ?? 'beach';
     // Lens dirt will be initialized after setupComposer
 
     this.materialController = new MaterialController({
@@ -493,7 +494,7 @@ export class SceneManager {
     this.environmentController = new EnvironmentController(this.scene, this.renderer, {
       presets: HDRI_PRESETS,
       moods: HDRI_MOODS,
-      initialPreset: initialState.hdri ?? 'meadow',
+      initialPreset: initialState.hdri ?? 'beach',
       enabled: this.hdriEnabled,
       backgroundEnabled: this.hdriBackgroundEnabled,
       strength: this.hdriStrength,
@@ -549,7 +550,7 @@ export class SceneManager {
     this.autoExposureController?.applyStateSnapshot(state);
     // Initialize base HDRI strength if not already set
     if (this.baseHdriStrength === undefined) {
-      this.baseHdriStrength = (state.hdriStrength ?? 1.0) * state.exposure;
+      this.baseHdriStrength = (state.hdriStrength ?? 2) * state.exposure;
     }
     this.camera.fov = state.camera.fov;
     this.camera.updateProjectionMatrix();
@@ -646,7 +647,7 @@ export class SceneManager {
     this.updateAberration(state.aberration);
     this.backgroundController?.setColor(state.background);
     this.setToneMapping(state.toneMapping ?? 'aces-filmic');
-    this.setHdriStrength(state.hdriStrength ?? 1);
+    this.setHdriStrength(state.hdriStrength ?? 2);
     // Initialize color adjustment settings
     this.setContrast(state.camera?.contrast ?? 1.0);
     this.setSaturation(state.camera?.saturation ?? 1.0);
@@ -1384,7 +1385,7 @@ export class SceneManager {
       material: state.material ?? {
         brightness: state.diffuseBrightness ?? 1.0,
         metalness: 0.0,
-        roughness: 0.8,
+        roughness: DEFAULT_MATERIAL_ROUGHNESS,
       },
     });
     this.setShading(state.shading);

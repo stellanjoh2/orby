@@ -1,4 +1,4 @@
-import { sanitizeDof } from '../constants.js';
+import { sanitizeDof, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 
 /**
  * SceneSettingsManager
@@ -40,7 +40,7 @@ export class SceneSettingsManager {
       material: state.material ?? {
         brightness: 1.0,
         metalness: 0.0,
-        roughness: 0.8,
+        roughness: DEFAULT_MATERIAL_ROUGHNESS,
         emissive: 0.0,
       },
       scale: state.scale,

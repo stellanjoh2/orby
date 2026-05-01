@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -272,7 +273,7 @@ export class SvgExtrudeImporter {
         : 0;
       const material = new THREE.MeshStandardMaterial({
         color: baseColor,
-        roughness: 0.8,
+        roughness: DEFAULT_MATERIAL_ROUGHNESS,
         metalness: 0.0,
         side: THREE.FrontSide,
       });

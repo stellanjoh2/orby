@@ -1,4 +1,4 @@
-import { CAMERA_TEMPERATURE_NEUTRAL_K } from './constants.js';
+import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from './constants.js';
 
 const clone = (value) => {
   if (typeof structuredClone === 'function') {
@@ -25,7 +25,7 @@ export class StateStore {
       material: {
         brightness: 1.0,
         metalness: 0.0,
-        roughness: 0.8,
+        roughness: DEFAULT_MATERIAL_ROUGHNESS,
         emissive: 0.0,
       },
       svgExtrude: {
@@ -44,9 +44,9 @@ export class StateStore {
       advanced: {
         reverseNormals: false,
       },
-      hdri: 'meadow',
+      hdri: 'beach',
       hdriEnabled: true,
-      hdriStrength: 1.50,
+      hdriStrength: 2,
       hdriBlurriness: 0,
       hdriRotation: 0,
       hdriBackground: true,
