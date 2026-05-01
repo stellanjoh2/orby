@@ -358,8 +358,7 @@ export class BugReportController {
     );
   }
 
-
-
+  _maskBugModalBehindThankYou() {
     if (!this.modal || this.modal.style.display === 'none') return;
     this.modal.classList.add('bug-report-modal--thank-you-mask');
   }
