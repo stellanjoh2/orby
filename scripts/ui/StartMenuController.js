@@ -2,6 +2,41 @@
  * StartMenuController - Manages the start menu/dropzone functionality
  * Handles drag & drop, file input, visibility, and all start menu interactions
  */
+import gsap from 'gsap';
+
+/**
+ * Wrap whitespace-delimited text nodes in span.mobile-splash-word (recursive).
+ */
+function wrapWordsForStagger(paragraphRoot) {
+  if (paragraphRoot.querySelector('.mobile-splash-word')) return;
+  const processNode = (node) => {
+    const children = Array.from(node.childNodes);
+    for (const child of children) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const text = child.textContent;
+        if (!text.trim()) continue;
+        const fragment = document.createDocumentFragment();
+        for (const part of text.split(/(\s+)/)) {
+          if (part === '') continue;
+          if (/^\s+$/.test(part)) {
+            fragment.appendChild(document.createTextNode(part));
+          } else {
+            const span = document.createElement('span');
+            span.className = 'mobile-splash-word';
+            span.textContent = part;
+            fragment.appendChild(span);
+          }
+        }
+        node.insertBefore(fragment, child);
+        node.removeChild(child);
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        processNode(child);
+      }
+    }
+  };
+  processNode(paragraphRoot);
+}
+
 export class StartMenuController {
   constructor(eventBus, uiManager) {
     this.eventBus = eventBus;
@@ -18,6 +53,9 @@ export class StartMenuController {
     this.infoLogotypeAnimation = null;
     this.animationInstance = null;
     this.infoAnimationInstance = null;
+
+    /** Mobile splash — avoid double fire from animation + timeout */
+    this._mobileSplashMessageDone = false;
   }
 
   init() {
@@ -36,6 +74,7 @@ export class StartMenuController {
     this.loadMeshButton = this.ui.buttons?.loadMesh;
     this.logotypeAnimation = document.querySelector('#logotypeAnimation');
     this.infoLogotypeAnimation = document.querySelector('#infoLogotypeAnimation');
+    this.mobileWarning = document.querySelector('#mobileWarning');
   }
 
   bindEvents() {
@@ -223,6 +262,87 @@ export class StartMenuController {
     }
   }
 
+  /** After `.drop-logo` CSS `logotypeReveal` completes (fallback timeout ~750ms). */
+  scheduleMobileSplashAfterLogoReveal() {
+    if (!document.documentElement.classList.contains('mobile-landing')) return;
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(fallbackTimer);
+      this.logotypeAnimation.removeEventListener('animationend', onEnd);
+      this.revealMobileSplashMessage();
+    };
+
+    const onEnd = (event) => {
+      if (event.target !== this.logotypeAnimation) return;
+      if (!String(event.animationName || '').includes('logotypeReveal')) return;
+      finish();
+    };
+
+    this.logotypeAnimation.addEventListener('animationend', onEnd);
+    const fallbackTimer = window.setTimeout(finish, 750);
+  }
+
+  /**
+   * Mobile splash message: waits for logo timing from schedule/reveal callers.
+   * Stagger-in words with GSAP after wrapping copy in spans.
+   */
+  revealMobileSplashMessage() {
+    if (!document.documentElement.classList.contains('mobile-landing')) return;
+    if (this._mobileSplashMessageDone || !this.mobileWarning) return;
+    this._mobileSplashMessageDone = true;
+
+    const p = this.mobileWarning.querySelector('p');
+    gsap.killTweensOf(this.mobileWarning);
+
+    if (!p) {
+      gsap.set(this.mobileWarning, {
+        visibility: 'visible',
+        opacity: 1,
+        pointerEvents: 'auto',
+      });
+      this.mobileWarning.setAttribute('aria-hidden', 'false');
+      return;
+    }
+
+    wrapWordsForStagger(p);
+    const words = [...p.querySelectorAll('.mobile-splash-word')];
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (words.length) gsap.killTweensOf(words);
+
+    this.mobileWarning.setAttribute('aria-hidden', 'false');
+    gsap.set(this.mobileWarning, {
+      visibility: 'visible',
+      opacity: 1,
+      pointerEvents: 'auto',
+    });
+
+    if (reduced) {
+      gsap.set(p, { opacity: 1 });
+      if (words.length) gsap.set(words, { opacity: 1, y: 0 });
+      return;
+    }
+
+    const targets = words.length ? words : [p];
+    gsap.fromTo(
+      targets,
+      { opacity: 0, y: 14 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.42,
+        stagger: 0.035,
+        ease: 'power2.out',
+        overwrite: true,
+      },
+    );
+  }
+
   /**
    * Initialize Lottie animation for logotype
    */
@@ -257,22 +377,26 @@ export class StartMenuController {
         // Let .drop-logo CSS control width; SVG fills container so it scales with the viewport
         if (this.animationInstance) {
           this.animationInstance.addEventListener('DOMLoaded', () => {
+            const isMobileSplash =
+              document.documentElement.classList.contains('mobile-landing');
             const svg = this.logotypeAnimation.querySelector('svg');
             if (svg) {
               svg.style.width = '100%';
               svg.style.height = 'auto';
-              
+
               // Trigger reveal animation when Lottie animation finishes loading
               // This creates a subtle scale-up and fade-in effect
               requestAnimationFrame(() => {
-                // Ensure initial state is set (already set in CSS, but ensure it's applied)
                 this.logotypeAnimation.style.opacity = '0';
                 this.logotypeAnimation.style.transform = 'scale(0.85)';
-                // Force reflow to ensure styles are applied
                 this.logotypeAnimation.offsetHeight;
-                // Apply reveal animation class
                 this.logotypeAnimation.classList.add('reveal');
+                if (isMobileSplash) {
+                  this.scheduleMobileSplashAfterLogoReveal();
+                }
               });
+            } else if (isMobileSplash) {
+              requestAnimationFrame(() => this.revealMobileSplashMessage());
             }
             this.syncDropzoneLogotypePlayback(
               this.visible && !this.ui.uiHidden,
@@ -281,6 +405,9 @@ export class StartMenuController {
         }
       } catch (error) {
         console.error('Failed to load logotype animation:', error);
+        if (document.documentElement.classList.contains('mobile-landing')) {
+          requestAnimationFrame(() => this.revealMobileSplashMessage());
+        }
       }
     };
 

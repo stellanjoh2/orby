@@ -3486,10 +3486,16 @@ html.mobile-landing .dropzone {
 
 html.mobile-landing #mobileWarning {
   display: block !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html.mobile-landing #mobileWarning .mobile-splash-word {
+  display: inline-block;
 }
 
 html.mobile-landing .drop-primary,
-html.mobile-landing .dropzone-actions,
 html.mobile-landing .drop-secondary,
 html.mobile-landing .quick-start-guide {
   display: none !important;
@@ -3540,7 +3546,7 @@ html.mobile-landing .mobile-warning p {
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
   font-size: clamp(1.75rem, 7.5vmin, 2.25rem);
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1;
   color: var(--text);
 }
 
