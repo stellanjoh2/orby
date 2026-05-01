@@ -37,6 +37,21 @@ function shouldShowMobileLanding() {
   return isForcedMobileLandingDebug() || isMobileDevice();
 }
 
+/** Helps mobile browsers/iOS tint the toolbar and status chrome true black (#000). */
+function setMobileSplashChromeMetaTags() {
+  const ensureContentMeta = (name, content) => {
+    let el = document.querySelector(`meta[name="${name}"]`);
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('name', name);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', content);
+  };
+  ensureContentMeta('theme-color', '#000000');
+  ensureContentMeta('apple-mobile-web-app-status-bar-style', 'black');
+}
+
 // Show mobile warning if on mobile; CSS (html.mobile-landing) hides the rest of the UI
 if (shouldShowMobileLanding()) {
   if (isForcedMobileLandingDebug() && !isMobileDevice()) {
@@ -45,6 +60,7 @@ if (shouldShowMobileLanding()) {
     );
   }
   document.documentElement.classList.add('mobile-landing');
+  setMobileSplashChromeMetaTags();
   const mobileWarning = document.getElementById('mobileWarning');
   if (mobileWarning) {
     mobileWarning.style.display = 'block';
