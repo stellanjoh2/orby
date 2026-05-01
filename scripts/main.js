@@ -61,10 +61,6 @@ if (shouldShowMobileLanding()) {
   }
   document.documentElement.classList.add('mobile-landing');
   setMobileSplashChromeMetaTags();
-  const mobileWarning = document.getElementById('mobileWarning');
-  if (mobileWarning) {
-    mobileWarning.style.display = 'block';
-  }
 }
 
 const eventBus = new EventBus();

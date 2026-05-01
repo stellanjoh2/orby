@@ -48,6 +48,64 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="./styles.css" />
+    <!-- Before first paint on mobile — avoid one-frame desktop dropzone flash until main.js runs -->
+    <script>
+      (function () {
+        function mobileLandingForced() {
+          try {
+            if (
+              typeof window !== 'undefined' &&
+              window.__ORBY_DEBUG_MOBILE_LANDING__ === true
+            ) {
+              return true;
+            }
+          } catch (e) {}
+          try {
+            if (
+              typeof sessionStorage !== 'undefined' &&
+              sessionStorage.getItem('orby_mobile_landing') === '1'
+            ) {
+              return true;
+            }
+          } catch (e) {}
+          try {
+            var q =
+              typeof location !== 'undefined'
+                ? new URLSearchParams(location.search)
+                : null;
+            if (q && (q.get('orbyMobile') === '1' || q.has('mobileLanding')))
+              return true;
+          } catch (e) {}
+          return false;
+        }
+        function mobileDevice() {
+          var ua =
+            typeof navigator !== 'undefined'
+              ? navigator.userAgent || ''
+              : '';
+          if (
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+              ua,
+            )
+          ) {
+            return true;
+          }
+          try {
+            if (
+              typeof window !== 'undefined' &&
+              window.matchMedia &&
+              window.matchMedia('(max-width: 768px)').matches
+            ) {
+              return true;
+            }
+          } catch (e) {}
+          return false;
+        }
+        if (mobileLandingForced() || mobileDevice()) {
+          document.documentElement.classList.add('mobile-landing');
+        }
+      })();
+    </script>
     <!-- Empty in source; CI may set via BUG_REPORT_API_URL (see build.js). -->
     <meta name="orby-bug-report-api" content="" />
     <!-- Cloudflare Turnstile site key; CI via TURNSTILE_SITE_KEY (see build.js). Pair with TURNSTILE_SECRET_KEY on Vercel. -->
@@ -60,7 +118,7 @@
           <canvas id="webgl" tabindex="0"></canvas>
           <div class="dropzone" id="dropzone">
             <div id="logotypeAnimation" class="drop-logo"></div>
-            <div class="mobile-warning" id="mobileWarning" style="display: none;">
+            <div class="mobile-warning" id="mobileWarning">
               <p>
                 This app is not optimized for mobile devices. Please use a <span class="brand-highlight">desktop browser</span> for the best experience.
               </p>
@@ -2541,7 +2599,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.252 · 2026-05-01 14:15:57 UTC</div>
+              <div class="info-version-tag">v0.5.253 · 2026-05-01 14:16:03 UTC</div>
             </section>
           </div>
         </aside>

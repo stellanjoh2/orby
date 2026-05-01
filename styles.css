@@ -3376,7 +3376,12 @@ body.ui-hidden .shelf {
   background: rgba(255, 150, 50, 0.9);
 }
 
-/* Mobile Warning */
+/* Landing notice (shown only inside mobile splash layout — see html.mobile-landing rules) */
+#mobileWarning {
+  display: none;
+}
+
+/* Mobile Warning (desktop-centered modal fallback; normally hidden via #mobileWarning) */
 .mobile-warning {
   position: fixed;
   top: 50%;
@@ -3401,7 +3406,7 @@ body.ui-hidden .shelf {
   line-height: 1.5;
 }
 
-/* ── Mobile landing (html.mobile-landing from scripts/main.js): logotype + notice only ── */
+/* ── Mobile landing (html.mobile-landing from inline head script + scripts/main.js) ── */
 html.mobile-landing,
 html.mobile-landing body {
   background-color: #000 !important;
@@ -3454,6 +3459,8 @@ html.mobile-landing .dropzone::after {
 }
 
 html.mobile-landing .dropzone {
+  opacity: 1 !important;
+  animation: none !important;
   position: fixed !important;
   inset: 0 !important;
   z-index: 3 !important;
@@ -3475,6 +3482,10 @@ html.mobile-landing .dropzone {
   gap: clamp(1rem, 4vmin, 1.75rem);
   --dropzone-padding-x: clamp(1rem, 5vw, 1.5rem);
   --dropzone-padding-y: clamp(1rem, 5vmin, 2rem);
+}
+
+html.mobile-landing #mobileWarning {
+  display: block !important;
 }
 
 html.mobile-landing .drop-primary,
@@ -3529,7 +3540,7 @@ html.mobile-landing .mobile-warning p {
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
   font-size: clamp(1.75rem, 7.5vmin, 2.25rem);
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.15;
   color: var(--text);
 }
 
