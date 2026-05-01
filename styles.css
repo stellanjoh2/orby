@@ -3527,8 +3527,7 @@ html.mobile-landing .mobile-warning {
 html.mobile-landing .mobile-warning p {
   margin: 0;
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
-  /* ~25% larger than prior splash sizing */
-  font-size: clamp(2.1875rem, 9.4vmin, 2.8125rem);
+  font-size: clamp(1.75rem, 7.5vmin, 2.25rem);
   font-weight: 600;
   line-height: 1.35;
   color: var(--text);
