@@ -3402,17 +3402,27 @@ body.ui-hidden .shelf {
 }
 
 /* ── Mobile landing (html.mobile-landing from scripts/main.js): logotype + notice only ── */
+html.mobile-landing,
+html.mobile-landing body {
+  background: #000;
+}
+
+html.mobile-landing #app {
+  background: #000;
+}
+
 html.mobile-landing .workspace {
-  background: var(--bg);
+  background: #000;
 }
 
 html.mobile-landing .viewport {
-  background: var(--bg);
+  background: #000;
 }
 
 html.mobile-landing #webgl {
   opacity: 0 !important;
   pointer-events: none;
+  background: #000 !important;
 }
 
 html.mobile-landing .dropzone::before,
@@ -3422,14 +3432,15 @@ html.mobile-landing .dropzone::after {
 }
 
 html.mobile-landing .dropzone {
-  background: var(--bg) !important;
+  background: #000 !important;
   background-image: none !important;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
-  gap: clamp(0.75rem, 3vmin, 1.5rem);
-  padding-top: clamp(1.75rem, 9vmin, 3.25rem);
-  --dropzone-padding-x: 1.25rem;
-  --dropzone-padding-y: clamp(1.5rem, 6vmin, 2.5rem);
+  gap: clamp(1rem, 4vmin, 1.75rem);
+  padding-block: clamp(1rem, 5vmin, 2rem);
+  padding-inline: clamp(1rem, 5vw, 1.5rem);
+  --dropzone-padding-x: clamp(1rem, 5vw, 1.5rem);
+  --dropzone-padding-y: clamp(1rem, 5vmin, 2rem);
 }
 
 html.mobile-landing .drop-primary,
@@ -3454,9 +3465,9 @@ html.mobile-landing .demo-logotype {
 
 html.mobile-landing .drop-logo {
   width: min(
-    88vw,
-    max(120px, min(280px, 68vw)),
-    38vh
+    78vw,
+    max(88px, min(200px, 52vw)),
+    26vh
   );
   margin-bottom: 0;
 }
@@ -3470,8 +3481,8 @@ html.mobile-landing .mobile-warning {
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 0 clamp(0.25rem, 3vw, 1rem);
-  max-width: min(20rem, 92vw);
+  padding: 0;
+  max-width: min(24rem, 92vw);
   width: 100%;
   text-align: center;
   box-shadow: none;
@@ -3481,9 +3492,14 @@ html.mobile-landing .mobile-warning {
 html.mobile-landing .mobile-warning p {
   margin: 0;
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
-  font-size: clamp(0.95rem, 3.85vw, 1.0625rem);
+  font-size: clamp(1.75rem, 7.5vmin, 2.25rem);
   font-weight: 600;
-  line-height: 1.48;
-  color: var(--text-dim);
+  line-height: 1.35;
+  color: var(--text);
+}
+
+html.mobile-landing .mobile-warning .brand-highlight {
+  color: var(--brand-primary);
+  font-weight: 700;
 }
 
