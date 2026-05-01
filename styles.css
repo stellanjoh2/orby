@@ -3496,6 +3496,7 @@ html.mobile-landing #mobileWarning .mobile-splash-word {
 }
 
 html.mobile-landing .drop-primary,
+html.mobile-landing .dropzone-actions,
 html.mobile-landing .drop-secondary,
 html.mobile-landing .quick-start-guide {
   display: none !important;
