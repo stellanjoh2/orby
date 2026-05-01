@@ -1431,6 +1431,10 @@ body:not(.dropzone-visible) .dropzone::after {
   color: var(--brand-primary);
 }
 
+.drop-secondary strong.brand-highlight {
+  font-weight: 700;
+}
+
 .drop-secondary {
   color: var(--text-dim);
   /* Responsive font size: scales down on smaller screens */
