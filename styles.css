@@ -1102,6 +1102,9 @@ body.dropzone-visible #webgl {
   background: #000;
   min-height: 0;
   min-width: 0;
+  /* Clip dropzone paints (blur / shadows); inset(0) reinforces overflow in WebKit. */
+  overflow: hidden;
+  clip-path: inset(0);
 }
 
 #webgl {
@@ -1128,19 +1131,18 @@ body.dropzone-visible #webgl {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  background: radial-gradient(
-    circle at top,
-    var(--drop-gradient-start),
-    var(--drop-gradient-end)
-  );
+  background-color: #000;
+  background-image: none;
   border: 0;
   text-align: center;
   pointer-events: auto;
   opacity: 0;
   animation: dropzoneReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  /* Must use x/y — from 1600px up they differ from --dropzone-padding; keep in sync with ::before */
+  /* Must use x/y — from 1600px up they differ from --dropzone-padding; keep in sync with ::before / ::after */
   padding: var(--dropzone-padding-y) var(--dropzone-padding-x);
   box-sizing: border-box;
+  /* Clip blurred glow to this layer (glow still fills inner padding; inset is inside this box). */
+  overflow: hidden;
 }
 
 .dropzone.hiding {
@@ -1174,37 +1176,146 @@ body.dropzone-visible #webgl {
   /* Allow separate horizontal control on very wide screens */
   --dropzone-padding-x: var(--dropzone-padding);
   --dropzone-padding-y: var(--dropzone-padding);
+  /* Magic-card style frame (CodePen gayane-gasparyan/jOmaBQK) — stroke & radius preserved */
+  --dropzone-frame-stroke: 2px;
+  --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
+  /*
+   * Constant rotation speed (no drag speed-up).
+   */
+  --dropzone-magic-spin: 16s;
+  --dropzone-magic-bleed: 33.75px;
+  /* Blur is the main GPU cost — keep substantial but below ~70px when possible */
+  --dropzone-glow-blur: 46.5px;
+  --dropzone-glow-radial-w: 201%;
+  --dropzone-glow-radial-h: 114%;
+  --dropzone-glow-rim-a: 36px;
+  --dropzone-glow-rim-b: 72px;
+  --dropzone-glow-rim-c: 114px;
+  /* Cyan drag accents on ::before only (full-bleed box-shadow on .dropzone escapes clip → edge haze) */
+  --dropzone-drag-rim-cyan-a: 16.5px;
+  --dropzone-drag-rim-cyan-b: 28.5px;
+  --dropzone-drag-rim-cyan-c: 42px;
 }
 
-/* Big screens: frame ~20% smaller in each direction (more inset):
-   inner' = 0.8 * inner  →  p' = 0.1 * viewport + 0.8 * p */
-@media (min-width: 1200px) {
+.dropzone.drag-active {
+  --dropzone-magic-bleed: 16.875px;
+  --dropzone-glow-blur: 33px;
+  --dropzone-glow-radial-w: 131.625%;
+  --dropzone-glow-radial-h: 74.25%;
+  --dropzone-glow-rim-a: 23.625px;
+  --dropzone-glow-rim-b: 47.25px;
+  --dropzone-glow-rim-c: 74.25px;
+}
+
+/* Big screens: extra horizontal inset only — vertical inset follows *height* so short
+   windows are not dominated by width-based padding (avoids stroke cutting through content). */
+@media (min-width: 1200px) and (max-width: 1599px) {
   .dropzone {
-    --dropzone-padding: calc(
+    --dropzone-padding-x: calc(
       0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
+    );
+    --dropzone-padding-y: min(
+      calc(
+        0.06 * 100vh + 0.8 * clamp(0.35rem, calc((100vh - 500px) / 12), 4.5rem)
+      ),
+      max(0.35rem, calc((100vh - 460px) / 2))
     );
   }
 }
 
+/* Inspired by Magic Card pen: animate gradient angle only (no layout transform). */
+@property --dropzone-magic-rotate {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Soft diffuse glow — filtered blur is the main cost; pseudos animate the same angle (two repaints). */
+.dropzone::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: calc(var(--dropzone-padding-y) - var(--dropzone-magic-bleed));
+  right: calc(var(--dropzone-padding-x) - var(--dropzone-magic-bleed));
+  bottom: calc(var(--dropzone-padding-y) - var(--dropzone-magic-bleed));
+  left: calc(var(--dropzone-padding-x) - var(--dropzone-magic-bleed));
+  border-radius: calc(
+    var(--dropzone-frame-radius) + min(6px, var(--dropzone-magic-bleed))
+  );
+  /* Bottom pool + rotating sweep — lime, purple, dead zone (transparent → reads black) */
+  background-image:
+    radial-gradient(
+      ellipse var(--dropzone-glow-radial-w) var(--dropzone-glow-radial-h) at 50% 108%,
+      color-mix(in srgb, var(--text-link) 38%, transparent) 0%,
+      transparent 65%
+    ),
+    linear-gradient(
+      var(--dropzone-magic-rotate),
+      var(--brand-primary) 0%,
+      var(--text-link) 32%,
+      transparent 40%,
+      transparent 46%,
+      transparent 51%,
+      transparent 58%,
+      var(--brand-primary) 100%
+    );
+  filter: blur(var(--dropzone-glow-blur));
+  opacity: 0.48;
+  pointer-events: none;
+  animation: dropzoneMagicSpin var(--dropzone-magic-spin) linear infinite;
+  transition:
+    opacity 0.35s ease,
+    filter 0.35s ease,
+    top 0.35s ease,
+    right 0.35s ease,
+    bottom 0.35s ease,
+    left 0.35s ease;
+}
+
+/* Frame + inner window above blurred glow. */
 .dropzone::before {
   content: '';
   position: absolute;
-  /* Responsive padding: large on desktop, shrinks dramatically on smaller screens */
-  /* Padding scales from 20rem (320px) at 1440px+ down to 0.25rem (4px) at small sizes */
-  /* Using larger default padding for symmetrical look with more generous spacing */
-  /* Use separate horizontal/vertical padding so we can keep more side breathing room on ultrawides */
+  z-index: 1;
   top: var(--dropzone-padding-y);
   right: var(--dropzone-padding-x);
   bottom: var(--dropzone-padding-y);
   left: var(--dropzone-padding-x);
-  /* Remove aspect-ratio constraint to allow true equal padding on all sides */
-  /* The border will adapt to viewport while maintaining equal padding */
-  border: 2px dashed var(--drop-outline);
-  /* Doubled corner roundness: 18px -> 36px max */
-  border-radius: clamp(8px, 2.25vw, 36px);
-  background: linear-gradient(120deg, var(--drop-fill), transparent);
+  border-radius: var(--dropzone-frame-radius);
+  border: var(--dropzone-frame-stroke) solid transparent;
+  /* Solid black card interior (avoids panel tint reading as blue/purple “window”) */
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(
+        var(--dropzone-magic-rotate),
+        var(--brand-primary) 0%,
+        var(--text-link) 32%,
+        transparent 40%,
+        transparent 46%,
+        transparent 51%,
+        transparent 58%,
+        var(--brand-primary) 100%
+      )
+      border-box;
+  background-origin: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-clip: padding-box, border-box;
   pointer-events: none;
-  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+  animation: dropzoneMagicSpin var(--dropzone-magic-spin) linear infinite;
+  /* Rim read on the stroke; bulk glow comes from ::after */
+  box-shadow:
+    0 0 var(--dropzone-glow-rim-a) color-mix(in srgb, var(--brand-primary) 32%, transparent),
+    0 0 var(--dropzone-glow-rim-b) color-mix(in srgb, var(--text-link) 18%, transparent),
+    0 0 var(--dropzone-glow-rim-c) color-mix(in srgb, var(--text-link) 10%, transparent);
+  transition:
+    filter 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+@keyframes dropzoneMagicSpin {
+  to {
+    --dropzone-magic-rotate: 360deg;
+  }
 }
 
 /* On very wide screens, increase horizontal padding only (narrower dropzone, same vertical spacing) */
@@ -1220,31 +1331,18 @@ body.dropzone-visible #webgl {
       - Overall more generous so fullscreen doesn’t feel cramped
       - Same 0.8 inner-scale as the 1200px rule, using height
     */
-    --dropzone-padding-y: calc(
-      0.1 * 100vh + 0.8 * clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem)
+    --dropzone-padding-y: min(
+      calc(
+        0.1 * 100vh + 0.8 * clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem)
+      ),
+      max(0.35rem, calc((100vh - 460px) / 2))
     );
   }
 }
 
 .dropzone > * {
   position: relative;
-  z-index: 1;
-}
-
-/* Scale down dropzone content when window shrinks (maintains aspect ratio) */
-/* Scale the entire dropzone container for consistent scaling */
-.dropzone {
-  /* Scale based on BOTH width and height so content shrinks on short windows */
-  /* - Use 1440×900 as the comfortable baseline size */
-  /* - As either width or height gets smaller, scale down the whole hero */
-  /* Floor was 0.6; nudging up so the whole hero (incl. frame) doesn’t pack down as hard on small windows */
-  --dropzone-scale: clamp(
-    0.68,
-    min(100vw / 1440, 100vh / 900),
-    1
-  );
-  transform: scale(var(--dropzone-scale));
-  transform-origin: center center;
+  z-index: 2;
 }
 
 .sr-only {
@@ -1260,27 +1358,43 @@ body.dropzone-visible #webgl {
   white-space: nowrap;
 }
 
-.dropzone.drag-active {
+.dropzone.drag-active::before {
+  filter: brightness(1.1) saturate(1.2);
   box-shadow:
-    inset 0 0 50px color-mix(in srgb, #00eaff 22%, transparent),
-    0 0 25px color-mix(in srgb, #00eaff 55%, transparent);
+    0 0 var(--dropzone-drag-rim-cyan-a) color-mix(in srgb, #00eaff 42%, transparent),
+    0 0 var(--dropzone-drag-rim-cyan-b) color-mix(in srgb, var(--brand-primary) 28%, transparent),
+    0 0 var(--dropzone-drag-rim-cyan-c) color-mix(in srgb, var(--text-link) 16%, transparent);
 }
 
-.dropzone.drag-active::before {
-  border-color: color-mix(in srgb, #00eaff 90%, transparent);
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, #00eaff 24%, transparent),
-    transparent
-  );
-  box-shadow:
-    0 0 40px color-mix(in srgb, #00eaff 60%, transparent),
-    inset 0 0 30px color-mix(in srgb, #00eaff 18%, transparent);
+.dropzone.drag-active::after {
+  opacity: 0.52;
+  filter: blur(var(--dropzone-glow-blur)) saturate(1.08);
+}
+
+/* Start menu off — stop gradient spin / @property churn (nothing visible; saves compositor work). */
+body:not(.dropzone-visible) .dropzone::before,
+body:not(.dropzone-visible) .dropzone::after {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone::before,
+  .dropzone::after {
+    animation: none;
+  }
 }
 
 .drop-logo {
-  /* Slightly lower vw + cap so it scales down earlier as the window shrinks, and on large screens sits below the old 440px max */
-  width: clamp(264px, 28vw, 400px);
+  /*
+   * Caps at 440px from ~2560px viewport width; below that, width tracks linearly with vw so
+   * shrinking from fullscreen starts reducing the mark immediately (not only below ~1570px with 28vw).
+   * 48vh still limits wide+short layouts; 140px floor preserves legibility.
+   */
+  width: min(
+    92%,
+    max(140px, min(440px, calc(100vw * 440 / 2560))),
+    48vh
+  );
   height: auto;
   margin-bottom: 0;
   opacity: 0;
@@ -1289,6 +1403,12 @@ body.dropzone-visible #webgl {
   justify-content: center;
   align-items: center;
   transform-origin: center center;
+}
+
+.drop-logo svg {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 .drop-logo.reveal {
@@ -1534,7 +1654,8 @@ body:not(.dropzone-visible) .quick-start-guide {
 }
 
 .info-logotype {
-  width: 300px;
+  width: min(300px, 100%);
+  max-width: min(300px, 92vw);
   height: auto;
   display: flex;
   justify-content: center;
@@ -1542,8 +1663,9 @@ body:not(.dropzone-visible) .quick-start-guide {
 }
 
 .info-logotype svg {
-  width: 300px;
+  width: 100%;
   height: auto;
+  display: block;
 }
 
 .info-list {
@@ -2351,9 +2473,10 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 /* Demo Logotype - Bottom Left Corner */
 .demo-logotype {
   position: absolute;
-  bottom: 4.5rem;
-  left: 4.5rem;
-  width: 440px;
+  bottom: clamp(1rem, 4vw, 4.5rem);
+  left: clamp(1rem, 4vw, 4.5rem);
+  width: min(440px, calc(100vw - 2rem), max(160px, 38vw));
+  max-width: 440px;
   height: auto;
   z-index: 10;
   opacity: 0;
@@ -2367,8 +2490,9 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 }
 
 .demo-logotype svg {
-  width: 440px;
+  width: 100%;
   height: auto;
+  display: block;
 }
 
 .demo-logotype.visible {

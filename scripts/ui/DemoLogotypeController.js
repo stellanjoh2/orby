@@ -54,21 +54,13 @@ export class DemoLogotypeController {
           }
         });
         
-        // Set frame rate to 30fps for better performance (half of original 60fps)
         if (this.animationInstance) {
           this.animationInstance.setSpeed(0.5);
-        }
-
-        // Scale animation to match the logo size (440px width)
-        // The animation is 1920x830, so we maintain aspect ratio
-        if (this.animationInstance) {
           this.animationInstance.addEventListener('DOMLoaded', () => {
             const svg = this.container.querySelector('svg');
             if (svg) {
-              // Calculate height based on aspect ratio: 830/1920 = 0.432
-              const height = 440 * (830 / 1920);
-              svg.style.width = '440px';
-              svg.style.height = `${height}px`;
+              svg.style.width = '100%';
+              svg.style.height = 'auto';
             }
           });
         }

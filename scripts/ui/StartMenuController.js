@@ -208,6 +208,19 @@ export class StartMenuController {
     }
     
     document.body.classList.toggle('dropzone-visible', shouldShow);
+    this.syncDropzoneLogotypePlayback(shouldShow);
+  }
+
+  /**
+   * Pause dropzone Lottie when off-screen (in-game); resume on start menu.
+   */
+  syncDropzoneLogotypePlayback(shouldShow) {
+    if (!this.animationInstance) return;
+    if (shouldShow) {
+      this.animationInstance.play();
+    } else {
+      this.animationInstance.pause();
+    }
   }
 
   /**
@@ -235,19 +248,19 @@ export class StartMenuController {
           renderer: 'svg',
           loop: true,
           autoplay: true,
-          path: `./assets/animations/data.json${cacheBuster}`
+          path: `./assets/animations/data.json${cacheBuster}`,
+          rendererSettings: {
+            preserveAspectRatio: 'xMidYMid meet'
+          }
         });
 
-        // Scale animation to match the logo size (440px width)
-        // The animation is 1920x830, so we maintain aspect ratio
+        // Let .drop-logo CSS control width; SVG fills container so it scales with the viewport
         if (this.animationInstance) {
           this.animationInstance.addEventListener('DOMLoaded', () => {
             const svg = this.logotypeAnimation.querySelector('svg');
             if (svg) {
-              // Calculate height based on aspect ratio: 830/1920 = 0.432
-              const height = 440 * (830 / 1920);
-              svg.style.width = '440px';
-              svg.style.height = `${height}px`;
+              svg.style.width = '100%';
+              svg.style.height = 'auto';
               
               // Trigger reveal animation when Lottie animation finishes loading
               // This creates a subtle scale-up and fade-in effect
@@ -261,6 +274,9 @@ export class StartMenuController {
                 this.logotypeAnimation.classList.add('reveal');
               });
             }
+            this.syncDropzoneLogotypePlayback(
+              this.visible && !this.ui.uiHidden,
+            );
           });
         }
       } catch (error) {
@@ -295,19 +311,18 @@ export class StartMenuController {
           renderer: 'svg',
           loop: true,
           autoplay: true,
-          path: `./assets/animations/data.json${cacheBuster}`
+          path: `./assets/animations/data.json${cacheBuster}`,
+          rendererSettings: {
+            preserveAspectRatio: 'xMidYMid meet'
+          }
         });
 
-        // Scale animation to 300px width for info tab
-        // The animation is 1920x830, so we maintain aspect ratio
         if (this.infoAnimationInstance) {
           this.infoAnimationInstance.addEventListener('DOMLoaded', () => {
             const svg = this.infoLogotypeAnimation.querySelector('svg');
             if (svg) {
-              // Calculate height based on aspect ratio: 830/1920 = 0.432
-              const height = 300 * (830 / 1920);
-              svg.style.width = '300px';
-              svg.style.height = `${height}px`;
+              svg.style.width = '100%';
+              svg.style.height = 'auto';
             }
           });
         }
