@@ -4,11 +4,13 @@
  */
 import gsap from 'gsap';
 
+const STAGGER_CLASS = 'orby-stagger-word';
+
 /**
- * Wrap whitespace-delimited text nodes in span.mobile-splash-word (recursive).
+ * Wrap whitespace-delimited text nodes in spans for word stagger (recursive).
  */
 function wrapWordsForStagger(paragraphRoot) {
-  if (paragraphRoot.querySelector('.mobile-splash-word')) return;
+  if (!paragraphRoot || paragraphRoot.querySelector(`.${STAGGER_CLASS}`)) return;
   const processNode = (node) => {
     const children = Array.from(node.childNodes);
     for (const child of children) {
@@ -22,7 +24,7 @@ function wrapWordsForStagger(paragraphRoot) {
             fragment.appendChild(document.createTextNode(part));
           } else {
             const span = document.createElement('span');
-            span.className = 'mobile-splash-word';
+            span.className = STAGGER_CLASS;
             span.textContent = part;
             fragment.appendChild(span);
           }
@@ -35,6 +37,13 @@ function wrapWordsForStagger(paragraphRoot) {
     }
   };
   processNode(paragraphRoot);
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 }
 
 export class StartMenuController {
@@ -56,6 +65,7 @@ export class StartMenuController {
 
     /** Mobile splash — avoid double fire from animation + timeout */
     this._mobileSplashMessageDone = false;
+    this._desktopDropzoneTextRevealed = false;
   }
 
   init() {
@@ -75,6 +85,8 @@ export class StartMenuController {
     this.logotypeAnimation = document.querySelector('#logotypeAnimation');
     this.infoLogotypeAnimation = document.querySelector('#infoLogotypeAnimation');
     this.mobileWarning = document.querySelector('#mobileWarning');
+    this.dropPrimary = document.querySelector('.drop-primary');
+    this.dropSecondary = document.querySelector('.drop-secondary');
   }
 
   bindEvents() {
@@ -285,6 +297,146 @@ export class StartMenuController {
     const fallbackTimer = window.setTimeout(finish, 750);
   }
 
+  /** Desktop start menu — same cue as mobile: after logo `logotypeReveal` ends. */
+  scheduleDesktopDropzoneTextAfterLogo() {
+    if (document.documentElement.classList.contains('mobile-landing')) return;
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(fallbackTimer);
+      this.logotypeAnimation.removeEventListener('animationend', onEnd);
+      this.revealDesktopDropzoneIntroText();
+    };
+
+    const onEnd = (event) => {
+      if (event.target !== this.logotypeAnimation) return;
+      if (!String(event.animationName || '').includes('logotypeReveal')) return;
+      finish();
+    };
+
+    this.logotypeAnimation.addEventListener('animationend', onEnd);
+    const fallbackTimer = window.setTimeout(finish, 750);
+  }
+
+  /**
+   * Desktop start menu after logo: word stagger on headline only, then legacy-style block fades.
+   * Order: 1 logo (CSS before this) → 2 headline → 3 buttons → 4 secondary → 5 legend.
+   */
+  revealDesktopDropzoneIntroText() {
+    if (document.documentElement.classList.contains('mobile-landing')) return;
+    if (this._desktopDropzoneTextRevealed) return;
+    this._desktopDropzoneTextRevealed = true;
+
+    const primary = this.dropPrimary;
+    const secondary = this.dropSecondary;
+    const guide = this.dropzone?.querySelector('.quick-start-guide');
+    const buttons = this.dropzone?.querySelectorAll('.dropzone-btn');
+
+    const killTargets = [primary, secondary, guide].filter(Boolean);
+    if (buttons?.length) killTargets.push(...buttons);
+    gsap.killTweensOf(killTargets);
+
+    wrapWordsForStagger(primary);
+
+    const w1 = primary ? [...primary.querySelectorAll(`.${STAGGER_CLASS}`)] : [];
+
+    /** Headline stays word-staggered; lower blocks quicker and slightly overlapped so no dead air between them */
+    const revealEase = 'power4.out';
+    const blockDur = 0.38;
+    const blockEase = 'power3.out';
+    const headWordDur = 0.42;
+    const headStagger = 0.035;
+    /** Start next block tween this many seconds before the previous block tween ends (buttons / info / legend only) */
+    const blockOverlap = 0.2;
+
+    if (prefersReducedMotion()) {
+      if (primary) gsap.set(primary, { opacity: 1 });
+      [...w1].forEach((node) =>
+        gsap.set(node, { opacity: 1, y: 0, clearProps: 'transform' }),
+      );
+      if (!w1.length && primary) {
+        gsap.set(primary, { opacity: 1, clearProps: 'transform' });
+      }
+      if (buttons?.length) {
+        gsap.set(buttons, { opacity: 0.6, y: 0, clearProps: 'transform' });
+      }
+      if (secondary)
+        gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
+      if (guide) gsap.set(guide, { opacity: 1, y: 0, clearProps: 'transform' });
+      return;
+    }
+
+    if (primary) gsap.set(primary, { opacity: 1 });
+
+    const tl = gsap.timeline({
+      defaults: { ease: revealEase, overwrite: true },
+    });
+
+    let headRan = false;
+    if (w1.length) {
+      tl.fromTo(
+        w1,
+        { opacity: 0, y: 14 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: headWordDur,
+          stagger: headStagger,
+          ease: 'power2.out',
+        },
+      );
+      headRan = true;
+    } else if (primary) {
+      tl.fromTo(
+        primary,
+        { opacity: 0, y: -15 },
+        { opacity: 1, y: 0, duration: blockDur },
+      );
+      headRan = true;
+    }
+
+    const blockAfterHead = headRan ? '>' : 0;
+    /* 3 Buttons before info + legend — matches classic dropRevealButton end state */
+    if (buttons?.length) {
+      tl.fromTo(
+        [...buttons],
+        { opacity: 0, y: -15 },
+        {
+          opacity: 0.6,
+          y: 0,
+          duration: blockDur,
+          ease: blockEase,
+          stagger: 0.022,
+        },
+        blockAfterHead,
+      );
+    }
+
+    if (secondary) {
+      tl.fromTo(
+        secondary,
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: blockDur, ease: blockEase },
+        buttons?.length ? `>-=${blockOverlap}` : blockAfterHead,
+      );
+    }
+
+    if (guide) {
+      tl.fromTo(
+        guide,
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: blockDur, ease: blockEase },
+        secondary
+          ? `>-=${blockOverlap}`
+          : buttons?.length
+            ? `>-=${blockOverlap}`
+            : blockAfterHead,
+      );
+    }
+  }
+
   /**
    * Mobile splash message: waits for logo timing from schedule/reveal callers.
    * Stagger-in words with GSAP after wrapping copy in spans.
@@ -308,10 +460,8 @@ export class StartMenuController {
     }
 
     wrapWordsForStagger(p);
-    const words = [...p.querySelectorAll('.mobile-splash-word')];
-    const reduced =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const words = [...p.querySelectorAll(`.${STAGGER_CLASS}`)];
+    const reduced = prefersReducedMotion();
 
     if (words.length) gsap.killTweensOf(words);
 
@@ -335,8 +485,8 @@ export class StartMenuController {
       {
         opacity: 1,
         y: 0,
-        duration: 0.42,
-        stagger: 0.035,
+        duration: 0.28,
+        stagger: 0.022,
         ease: 'power2.out',
         overwrite: true,
       },
@@ -393,10 +543,14 @@ export class StartMenuController {
                 this.logotypeAnimation.classList.add('reveal');
                 if (isMobileSplash) {
                   this.scheduleMobileSplashAfterLogoReveal();
+                } else {
+                  this.scheduleDesktopDropzoneTextAfterLogo();
                 }
               });
             } else if (isMobileSplash) {
               requestAnimationFrame(() => this.revealMobileSplashMessage());
+            } else {
+              requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
             }
             this.syncDropzoneLogotypePlayback(
               this.visible && !this.ui.uiHidden,
@@ -407,6 +561,8 @@ export class StartMenuController {
         console.error('Failed to load logotype animation:', error);
         if (document.documentElement.classList.contains('mobile-landing')) {
           requestAnimationFrame(() => this.revealMobileSplashMessage());
+        } else {
+          requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
         }
       }
     };

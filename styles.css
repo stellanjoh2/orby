@@ -1486,6 +1486,35 @@ body:not(.dropzone-visible) .quick-start-guide {
   pointer-events: none;
 }
 
+/* Desktop dropzone — headline uses GSAP word stagger; other intro blocks use scripted fades (same order as legacy CSS timeline) */
+#dropzone .orby-stagger-word {
+  display: inline-block;
+}
+
+html:not(.mobile-landing) .drop-primary {
+  opacity: 0;
+  transform: none;
+  animation: none !important;
+}
+
+html:not(.mobile-landing) .drop-secondary {
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: none !important;
+}
+
+html:not(.mobile-landing) .dropzone-btn {
+  animation: none !important;
+  opacity: 0;
+  transform: translateY(-15px);
+}
+
+html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
+  animation: none !important;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 .shelf {
   /* Inset of panel box from the browser chrome (top / right / bottom) */
   --shelf-inset: 48px;
@@ -3491,10 +3520,6 @@ html.mobile-landing #mobileWarning {
   pointer-events: none;
 }
 
-html.mobile-landing #mobileWarning .mobile-splash-word {
-  display: inline-block;
-}
-
 html.mobile-landing .drop-primary,
 html.mobile-landing .dropzone-actions,
 html.mobile-landing .drop-secondary,
@@ -3547,7 +3572,7 @@ html.mobile-landing .mobile-warning p {
   font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
   font-size: clamp(1.75rem, 7.5vmin, 2.25rem);
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.1;
   color: var(--text);
 }
 
