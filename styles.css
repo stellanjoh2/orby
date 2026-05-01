@@ -22,6 +22,8 @@
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
   --danger: #ff7b7b;
+  /* Object shelf Scene / Export pills, modal footers — keep in sync */
+  --ui-accent-action-font-size: 0.8rem;
 }
 
 /* Text selection color - inverted brand primary at 0.5 opacity */
@@ -373,8 +375,8 @@ body.dropzone-visible #webgl {
 }
 
 .close-btn:hover {
-  color: rgba(255, 255, 255, 0.95);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--brand-primary) 14%, transparent);
 }
 
 .close-btn:focus-visible {
@@ -438,6 +440,13 @@ body.dropzone-visible #webgl {
   margin-top: 0;
 }
 
+/* Modal footers: same label typography as Object panel Scene buttons (.accent-action-btn) */
+.load-settings-modal .load-settings-actions button {
+  font-family: inherit;
+  font-size: var(--ui-accent-action-font-size);
+  font-weight: 700;
+}
+
 /* Bug report — Information panel + modal */
 .bug-report-panel-description {
   margin: 0 0 1rem 0;
@@ -470,6 +479,11 @@ body.dropzone-visible #webgl {
 
 .bug-report-content .load-settings-description {
   margin: 0 0 0.75rem 0;
+}
+
+.bug-report-content .bug-report-intro-emphasis {
+  color: #fff;
+  font-weight: 600;
 }
 
 .bug-report-content #bugReportForm {
@@ -555,71 +569,102 @@ body.dropzone-visible #webgl {
   background: rgba(255, 255, 255, 0.16);
 }
 
-.bug-report-field-severity {
-  gap: 0;
-}
-
-.bug-report-severity-fieldset {
-  border: none;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-}
-
-.bug-report-severity-legend {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  padding: 0;
-  margin: 0 0 0.55rem 0;
-}
-
-.bug-report-severity-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.bug-report-severity-option {
+/* Custom severity combobox: matches .bug-report-field select (Category) */
+.bug-report-severity-combo {
   position: relative;
+}
+
+.bug-report-severity-trigger {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  outline: none;
+  box-sizing: border-box;
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.12);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 12px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bug-report-severity-trigger:focus {
+  border-color: var(--accent);
+  background-color: rgba(255, 255, 255, 0.16);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 12px 12px;
+}
+
+.bug-report-severity-trigger:focus-visible {
+  border-color: var(--accent);
+}
+
+.bug-report-severity-trigger-inner {
   display: flex;
   align-items: flex-start;
   gap: 0.55rem;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.bug-report-severity-trigger-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bug-report-severity-listbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
   margin: 0;
-  padding: 0.45rem 0.55rem;
+  padding: 0.35rem 0;
+  list-style: none;
   border-radius: 8px;
   border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  background: rgba(22, 22, 24, 0.98);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  max-height: min(16rem, 70vh);
+  overflow-y: auto;
+  outline: none;
+}
+
+.bug-report-severity-listbox:focus {
+  border-color: var(--accent);
+}
+
+.bug-report-severity-list-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
   font-size: 0.88rem;
   line-height: 1.35;
   color: var(--text);
-}
-
-.bug-report-severity-option:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.bug-report-severity-option input {
-  position: absolute;
-  left: 0.4rem;
-  top: 0.42rem;
-  width: 1.15rem;
-  height: 1.15rem;
-  margin: 0;
-  opacity: 0;
   cursor: pointer;
-  z-index: 1;
+  transition: background 0.12s;
 }
 
-.bug-report-severity-option:has(input:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.bug-report-severity-list-option:hover,
+.bug-report-severity-list-option:focus {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
 }
 
-.bug-report-severity-option:has(input:checked) {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--stroke));
-  background: rgba(255, 255, 255, 0.14);
+.bug-report-severity-list-option[aria-selected='true'] {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 2px 0 0 0 var(--accent);
 }
 
 .bug-report-severity-dot {
@@ -632,19 +677,23 @@ body.dropzone-visible #webgl {
 }
 
 /* Serious (red) → low (green) */
-.bug-report-severity-option[data-severity='blocker'] .bug-report-severity-dot {
+.bug-report-severity-dot[data-severity='blocker'] {
   background: #dc2626;
 }
-.bug-report-severity-option[data-severity='major'] .bug-report-severity-dot {
+
+.bug-report-severity-dot[data-severity='major'] {
   background: #ea580c;
 }
-.bug-report-severity-option[data-severity='moderate'] .bug-report-severity-dot {
+
+.bug-report-severity-dot[data-severity='moderate'] {
   background: #ca8a04;
 }
-.bug-report-severity-option[data-severity='minor'] .bug-report-severity-dot {
+
+.bug-report-severity-dot[data-severity='minor'] {
   background: #65a30d;
 }
-.bug-report-severity-option[data-severity='cosmetic'] .bug-report-severity-dot {
+
+.bug-report-severity-dot[data-severity='cosmetic'] {
   background: #16a34a;
 }
 
@@ -748,7 +797,7 @@ body.dropzone-visible #webgl {
   background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: var(--ui-accent-action-font-size);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;

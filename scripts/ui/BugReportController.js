@@ -43,9 +43,12 @@ export class BugReportController {
     for (const ev of ['input', 'change']) {
       messageInput?.addEventListener(ev, () => this.syncSendButton());
     }
-    this.form.querySelectorAll('input[name="severity"]').forEach((el) => {
-      el.addEventListener('change', () => this.syncSendButton());
-    });
+    this.severityCombo = this.form.querySelector('#bugReportSeverityCombo');
+    this.severityTrigger = this.form.querySelector('#bugReportSeverityTrigger');
+    this.severityListbox = this.form.querySelector('#bugReportSeverityListbox');
+    this.severityHidden = this.form.querySelector('#bugReportSeverity');
+    this._severityDocCapture = false;
+    this._bindSeverityCombo();
 
     this.closeBtn?.addEventListener('click', () => this.close());
     this.cancelBtn?.addEventListener('click', () => this.close());
@@ -63,6 +66,123 @@ export class BugReportController {
     });
 
     this.syncSendButton();
+  }
+
+  _closeSeverityListbox() {
+    if (!this.severityListbox || !this.severityTrigger) return;
+    this.severityListbox.hidden = true;
+    this.severityTrigger.setAttribute('aria-expanded', 'false');
+    if (this._severityDocCapture) {
+      document.removeEventListener('pointerdown', this._onSeverityDocPointer, true);
+      this._severityDocCapture = false;
+    }
+  }
+
+  _openSeverityListbox() {
+    if (!this.severityListbox || !this.severityTrigger) return;
+    this.severityListbox.hidden = false;
+    this.severityTrigger.setAttribute('aria-expanded', 'true');
+    if (!this._severityDocCapture) {
+      document.addEventListener('pointerdown', this._onSeverityDocPointer, true);
+      this._severityDocCapture = true;
+    }
+    queueMicrotask(() => this.severityListbox?.focus());
+  }
+
+  /** @param {Event} e */
+  _onSeverityDocPointer = (e) => {
+    if (!this.severityCombo || !(e.target instanceof Node)) return;
+    if (this.severityCombo.contains(e.target)) return;
+    this._closeSeverityListbox();
+  };
+
+  syncSeverityFromHidden() {
+    const v = this.severityHidden?.value?.trim() ?? '';
+    if (!v || !this.severityListbox) return;
+    const opt = this.severityListbox.querySelector(`[role="option"][data-value="${CSS.escape(v)}"]`);
+    const label = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? '';
+    if (this.severityTrigger) {
+      const dot = this.severityTrigger.querySelector('.bug-report-severity-dot');
+      if (dot) dot.setAttribute('data-severity', v);
+      const textEl = this.severityTrigger.querySelector('.bug-report-severity-trigger-text');
+      if (textEl && label) textEl.textContent = label;
+    }
+    this.severityListbox.querySelectorAll('[role="option"]').forEach((el) => {
+      const sel = el.getAttribute('data-value') === v;
+      el.setAttribute('aria-selected', sel ? 'true' : 'false');
+    });
+    this.syncSendButton();
+  }
+
+  _setBugReportSeverity(value) {
+    if (!this.severityHidden || !value) return;
+    this.severityHidden.value = value;
+    this.syncSeverityFromHidden();
+  }
+
+  _bindSeverityCombo() {
+    if (!this.severityCombo || !this.severityTrigger || !this.severityListbox || !this.severityHidden) return;
+
+    this.severityTrigger.addEventListener('click', () => {
+      const open = this.severityTrigger?.getAttribute('aria-expanded') === 'true';
+      if (open) this._closeSeverityListbox();
+      else this._openSeverityListbox();
+    });
+
+    this.severityTrigger.addEventListener('keydown', (e) => {
+      const open = this.severityTrigger?.getAttribute('aria-expanded') === 'true';
+      if (e.key === 'Escape' && open) {
+        e.preventDefault();
+        this._closeSeverityListbox();
+        return;
+      }
+      if ((e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') && !open) {
+        e.preventDefault();
+        this._openSeverityListbox();
+      }
+    });
+
+    this.severityListbox.addEventListener('click', (e) => {
+      const li = e.target?.closest?.('[role="option"]');
+      const val = li?.getAttribute?.('data-value');
+      if (!val) return;
+      this._setBugReportSeverity(val);
+      this._closeSeverityListbox();
+      this.severityTrigger?.focus();
+    });
+
+    this.severityListbox.addEventListener('keydown', (e) => {
+      const opts = [...this.severityListbox.querySelectorAll('[role="option"]')];
+      const cur = this.severityHidden.value;
+      let ix = opts.findIndex((o) => o.getAttribute('data-value') === cur);
+      if (ix < 0) ix = 0;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this._closeSeverityListbox();
+        this.severityTrigger?.focus();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const n = Math.min(opts.length - 1, ix + 1);
+        this._setBugReportSeverity(opts[n].getAttribute('data-value') ?? '');
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const n = Math.max(0, ix - 1);
+        this._setBugReportSeverity(opts[n].getAttribute('data-value') ?? '');
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this._closeSeverityListbox();
+        this.severityTrigger?.focus();
+      }
+    });
+
+    this.syncSeverityFromHidden();
   }
 
   _ensureTurnstileScript() {
@@ -122,7 +242,7 @@ export class BugReportController {
   syncSendButton() {
     if (!this.submitBtn || !this.form || this._sending) return;
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
-    const severity = this.form.querySelector('input[name="severity"]:checked')?.value ?? '';
+    const severity = this.form.querySelector('input[name="severity"]')?.value?.trim() ?? '';
     const valid = message.length >= 8 && Boolean(severity);
     this.submitBtn.disabled = !valid;
   }
@@ -142,6 +262,7 @@ export class BugReportController {
     this._sending = false;
     this._bugBackdropDown = false;
     this.setStatus('');
+    this._closeSeverityListbox();
     const panel = this.modal.querySelector('.load-settings-content');
     void animateModalOpen(this.modal, panel).then(() => {
       const messageEl = this.form?.querySelector('#bugReportMessage');
@@ -154,10 +275,12 @@ export class BugReportController {
   close() {
     if (!this.modal || !this.form) return;
     if (this.modal.style.display === 'none') return;
+    this._closeSeverityListbox();
     const panel = this.modal.querySelector('.load-settings-content');
     animateModalClose(this.modal, panel, () => {
       this._removeTurnstileWidget();
       this.form.reset();
+      this.syncSeverityFromHidden();
       this.setStatus('');
       this._sending = false;
       this.syncSendButton();
@@ -174,7 +297,7 @@ export class BugReportController {
     if (!this.form || !this.submitBtn) return;
 
     const category = this.form.querySelector('#bugReportCategory')?.value ?? '';
-    const severity = this.form.querySelector('input[name="severity"]:checked')?.value ?? '';
+    const severity = this.form.querySelector('input[name="severity"]')?.value?.trim() ?? '';
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
 
     if (!severity) {

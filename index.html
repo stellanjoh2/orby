@@ -2052,7 +2052,7 @@
                   Report a bug
                 </div>
                 <p class="bug-report-panel-description">
-                  Spotted something wrong? Tell us what happened. We do not collect your email, and you will not get an automated reply from this form.
+                  Spotted something wrong? Tell us what happened. We can’t reply from here, but we read every report.
                 </p>
                 <button type="button" class="bug-report-panel-open accent-action-btn" data-bug-report-open>
                   <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
@@ -2531,7 +2531,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.212 · 2026-04-30 15:59:39 UTC</div>
+              <div class="info-version-tag">v0.5.213 · 2026-04-30 21:43:44 UTC</div>
             </section>
           </div>
         </aside>
@@ -2591,7 +2591,7 @@
           <button type="button" id="closeBugReport" class="close-btn" aria-label="Close"></button>
         </div>
         <p class="load-settings-description">
-          Describe what went wrong. We do not collect your email; you will not get a reply through this form.
+          Tell us what went wrong. We’re always looking to improve and really appreciate your feedback. <span class="bug-report-intro-emphasis">We don’t collect contact details</span>, so we can’t reply, but every report is read.
         </p>
         <form id="bugReportForm">
           <div class="bug-report-field">
@@ -2607,36 +2607,54 @@
             </select>
           </div>
           <div class="bug-report-field bug-report-field-severity">
-            <fieldset class="bug-report-severity-fieldset">
-              <legend class="bug-report-severity-legend">Severity</legend>
-              <div class="bug-report-severity-options">
-                <label class="bug-report-severity-option" data-severity="blocker">
-                  <input type="radio" name="severity" value="blocker" />
-                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
-                  <span class="bug-report-severity-text">Blocker — crash, data loss, unusable</span>
-                </label>
-                <label class="bug-report-severity-option" data-severity="major">
-                  <input type="radio" name="severity" value="major" />
-                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
-                  <span class="bug-report-severity-text">Major — core feature broken</span>
-                </label>
-                <label class="bug-report-severity-option" data-severity="moderate">
-                  <input type="radio" name="severity" value="moderate" checked />
-                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
-                  <span class="bug-report-severity-text">Moderate — annoying, workaround may exist</span>
-                </label>
-                <label class="bug-report-severity-option" data-severity="minor">
-                  <input type="radio" name="severity" value="minor" />
-                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
-                  <span class="bug-report-severity-text">Minor — small glitch</span>
-                </label>
-                <label class="bug-report-severity-option" data-severity="cosmetic">
-                  <input type="radio" name="severity" value="cosmetic" />
-                  <span class="bug-report-severity-dot" aria-hidden="true"></span>
-                  <span class="bug-report-severity-text">Low — cosmetic / polish</span>
-                </label>
-              </div>
-            </fieldset>
+            <label id="bugReportSeverityLabel" for="bugReportSeverityTrigger">Severity</label>
+            <div class="bug-report-severity-combo" id="bugReportSeverityCombo">
+              <input type="hidden" name="severity" id="bugReportSeverity" value="moderate" />
+              <button
+                type="button"
+                id="bugReportSeverityTrigger"
+                class="bug-report-severity-trigger"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="bugReportSeverityListbox"
+              >
+                <span class="bug-report-severity-trigger-inner">
+                  <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
+                  <span class="bug-report-severity-trigger-text" id="bugReportSeverityTriggerText">
+                    Moderate — noticeable issue, workaround possible
+                  </span>
+                </span>
+              </button>
+              <ul
+                id="bugReportSeverityListbox"
+                class="bug-report-severity-listbox"
+                role="listbox"
+                tabindex="-1"
+                aria-labelledby="bugReportSeverityLabel"
+                hidden
+              >
+                <li role="option" data-value="blocker" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="blocker" aria-hidden="true"></span>
+                  <span>Blocker — can’t use the app or it crashes</span>
+                </li>
+                <li role="option" data-value="major" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="major" aria-hidden="true"></span>
+                  <span>Major — important feature broken</span>
+                </li>
+                <li role="option" data-value="moderate" class="bug-report-severity-list-option" aria-selected="true" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
+                  <span>Moderate — noticeable issue, workaround possible</span>
+                </li>
+                <li role="option" data-value="minor" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="minor" aria-hidden="true"></span>
+                  <span>Minor — minor glitch</span>
+                </li>
+                <li role="option" data-value="cosmetic" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="cosmetic" aria-hidden="true"></span>
+                  <span>Low — visual issue or polish</span>
+                </li>
+              </ul>
+            </div>
           </div>
           <div class="bug-report-field">
             <label for="bugReportMessage" id="bugReportMessageLabel">Details</label>
