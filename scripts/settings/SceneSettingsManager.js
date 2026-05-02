@@ -71,6 +71,7 @@ export class SceneSettingsManager {
       },
       advanced: {
         reverseNormals: !!state.advanced?.reverseNormals,
+        transparencyFix: state.advanced?.transparencyFix ?? 'default',
       },
       // Studio settings
       hdri: state.hdri,
@@ -465,6 +466,14 @@ export class SceneSettingsManager {
         const enabled = !!payload.advanced.reverseNormals;
         this.stateStore.set('advanced.reverseNormals', enabled);
         this.eventBus.emit('mesh:reverse-normals', enabled);
+      }
+      if (payload.advanced?.transparencyFix !== undefined) {
+        const allowed = ['default', 'opaqueBlend', 'frontFace', 'opaqueAndFrontFace'];
+        const tf = allowed.includes(payload.advanced.transparencyFix)
+          ? payload.advanced.transparencyFix
+          : 'default';
+        this.stateStore.set('advanced.transparencyFix', tf);
+        this.eventBus.emit('mesh:transparency-fix');
       }
 
       // Apply Studio settings

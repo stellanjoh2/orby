@@ -209,6 +209,7 @@ export class UIManager {
       svgExtrudeSurfacePreset: q('#svgExtrudeSurfacePreset'),
       svgExtrudeSurfaceScale: q('#svgExtrudeSurfaceScale'),
       reverseNormals: q('#reverseNormals'),
+      transparencyFix: q('#transparencyFix'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),

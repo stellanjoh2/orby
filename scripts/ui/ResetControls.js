@@ -129,6 +129,10 @@ export class ResetControls {
       this.stateStore.set('svgExtrude.surfacePreset', defaults.svgExtrude?.surfacePreset ?? 'none');
       this.stateStore.set('svgExtrude.surfaceScale', defaults.svgExtrude?.surfaceScale ?? 1.0);
       this.stateStore.set('advanced.reverseNormals', defaults.advanced?.reverseNormals ?? false);
+      this.stateStore.set(
+        'advanced.transparencyFix',
+        defaults.advanced?.transparencyFix ?? 'default',
+      );
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
@@ -166,7 +170,8 @@ export class ResetControls {
         scale: defaults.svgExtrude?.surfaceScale ?? 1.0,
       });
       this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
-      
+      this.eventBus.emit('mesh:transparency-fix');
+
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset');
     };
@@ -624,7 +629,12 @@ export class ResetControls {
 
           case 'advanced':
             this.stateStore.set('advanced.reverseNormals', defaults.advanced?.reverseNormals ?? false);
+            this.stateStore.set(
+              'advanced.transparencyFix',
+              defaults.advanced?.transparencyFix ?? 'default',
+            );
             this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
+            this.eventBus.emit('mesh:transparency-fix');
             this.ui.syncUIFromState();
             break;
         }

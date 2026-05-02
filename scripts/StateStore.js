@@ -37,6 +37,8 @@ export class StateStore {
       },
       advanced: {
         reverseNormals: false,
+        /** @type {'default' | 'opaqueBlend' | 'frontFace' | 'opaqueAndFrontFace'} */
+        transparencyFix: 'default',
       },
       hdri: 'beach',
       hdriEnabled: true,

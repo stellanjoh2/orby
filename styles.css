@@ -1433,6 +1433,12 @@ body:not(.dropzone-visible) .dropzone::after {
   }
 }
 
+/* Pause gradient frame animation during window resize (reduces compositor churn) */
+html.orby-window-resizing body.dropzone-visible .dropzone::before,
+html.orby-window-resizing body.dropzone-visible .dropzone::after {
+  animation-play-state: paused;
+}
+
 .drop-logo {
   /*
    * Caps at 440px from ~2560px viewport width; below that, width tracks linearly with vw so
@@ -1562,6 +1568,18 @@ html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
   animation: none !important;
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* Narrow or short desktop windows: hide keyboard legend; less bottom margin on secondary
+   so logo + copy stay visually centered in the dropzone */
+@media (max-width: 1140px), (max-height: 950px) {
+  html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
+    display: none !important;
+  }
+
+  html:not(.mobile-landing) body.dropzone-visible .drop-secondary {
+    margin-bottom: clamp(0.35rem, 1.5vw, 0.85rem);
+  }
 }
 
 .shelf {

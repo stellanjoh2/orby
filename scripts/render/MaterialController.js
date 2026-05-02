@@ -9,6 +9,9 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
 
+/** BLEND materials at/above this opacity are treated as fully opaque (alpha-hash + force-opaque modes). */
+const GLTF_FULL_OPACITY_BLEND_THRESHOLD = 0.989;
+
 /** Ensure fresnel color uniform stays a THREE.Color (Three may replace .value on recompile). */
 function setFresnelColorUniform(uniform, cssColor) {
   const hex = cssColor || '#ffffff';
@@ -94,6 +97,8 @@ export class MaterialController {
   }
 
   prepareMesh(object) {
+    this._snapshotImportMaterialBaselinesIfNeeded(object);
+
     object.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -111,9 +116,183 @@ export class MaterialController {
         }
       }
     });
-    
-    // Disabled: Glass material application - keeping default transparency behavior
-    // this.applyGlassMaterial(object);
+
+    this.applyTransparencyPipeline(object);
+  }
+
+  _forEachMeshMaterial(object, callback) {
+    if (!object) return;
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (let i = 0; i < mats.length; i++) {
+        const m = mats[i];
+        if (m) callback(child, m);
+      }
+    });
+  }
+
+  _forEachUniqueMaterial(object, callback) {
+    const seen = new Set();
+    this._forEachMeshMaterial(object, (mesh, m) => {
+      if (seen.has(m)) return;
+      seen.add(m);
+      callback(m);
+    });
+  }
+
+  /**
+   * Capture loader output once per material so Advanced → Alpha modes can restore and re-apply.
+   */
+  _snapshotImportMaterialBaselinesIfNeeded(object) {
+    this._forEachUniqueMaterial(object, (m) => {
+      if (m.userData?.orbyGltfImportBaseline) return;
+      if (!('transparent' in m)) return;
+      m.userData.orbyGltfImportBaseline = {
+        transparent: !!m.transparent,
+        opacity: Number.isFinite(m.opacity) ? m.opacity : 1,
+        side: m.side,
+        depthWrite: m.depthWrite !== false,
+        alphaHash: 'alphaHash' in m ? !!m.alphaHash : false,
+      };
+    });
+  }
+
+  _restoreImportMaterialBaselines(object) {
+    this._forEachUniqueMaterial(object, (m) => {
+      const b = m.userData?.orbyGltfImportBaseline;
+      if (!b) return;
+      m.transparent = b.transparent;
+      m.opacity = b.opacity;
+      m.side = b.side;
+      m.depthWrite = b.depthWrite;
+      if ('alphaHash' in m) m.alphaHash = b.alphaHash;
+      delete m.userData.orbyGlassPresentation;
+      delete m.userData.orbyBlendMitigation;
+      delete m.userData.orbyUserOpaqueBlend;
+      m.needsUpdate = true;
+    });
+  }
+
+  /**
+   * User-controlled transparency handling (Advanced panel). Starts from imported material state each time.
+   */
+  applyTransparencyPipeline(object) {
+    if (!object) return;
+    this._restoreImportMaterialBaselines(object);
+
+    const mode = this.stateStore?.getState()?.advanced?.transparencyFix ?? 'default';
+
+    if (mode === 'opaqueBlend') {
+      this._applyUserForceOpaqueBlend(object);
+    } else if (mode === 'frontFace') {
+      this._applyUserForceFrontFace(object);
+    } else if (mode === 'opaqueAndFrontFace') {
+      this._applyUserForceOpaqueBlend(object);
+      this._applyUserForceFrontFace(object);
+    } else {
+      this.applyNamedGlassPresentation(object);
+      this.applyGltfBlendSortingMitigation(object);
+    }
+  }
+
+  /** Re-run pipeline after load / when Advanced setting changes (uses currentModel). */
+  reapplyTransparencyPipeline() {
+    if (!this.currentModel) return;
+    this.applyTransparencyPipeline(this.currentModel);
+  }
+
+  /** Treat full-opacity BLEND glTF as opaque shading (fixes many Sketchfab single-atlas exports). */
+  _applyUserForceOpaqueBlend(object) {
+    this._forEachUniqueMaterial(object, (m) => {
+      if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
+
+      const b = m.userData?.orbyGltfImportBaseline;
+      const baseOp = b ? b.opacity : (Number.isFinite(m.opacity) ? m.opacity : 1);
+      const baseTr = b ? b.transparent : m.transparent;
+      const hasTransmission = m.isMeshPhysicalMaterial && m.transmission > 0.01;
+      if (hasTransmission) return;
+
+      if (baseTr && baseOp >= GLTF_FULL_OPACITY_BLEND_THRESHOLD) {
+        m.transparent = false;
+        m.opacity = 1;
+        m.depthWrite = true;
+        if ('alphaHash' in m) m.alphaHash = false;
+        m.needsUpdate = true;
+      }
+    });
+  }
+
+  _applyUserForceFrontFace(object) {
+    this._forEachUniqueMaterial(object, (m) => {
+      if (m.side === undefined) return;
+      m.side = THREE.FrontSide;
+      m.needsUpdate = true;
+    });
+  }
+
+  /**
+   * Reduces transparency popping / z-fighting when glTF marks full-opacity surfaces as BLEND + DoubleSide
+   * (common on Sketchfab). Uses Three.js alpha-hash transparency when available.
+   */
+  applyGltfBlendSortingMitigation(object) {
+    this._forEachUniqueMaterial(object, (m) => {
+      if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
+      if (m.userData?.orbySkipBlendMitigation) return;
+
+      const hasTransmission = m.isMeshPhysicalMaterial && m.transmission > 0.01;
+      if (hasTransmission) return;
+      if (!m.transparent) return;
+
+      const op = Number.isFinite(m.opacity) ? m.opacity : 1;
+      if (op < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return;
+      if (m.side !== THREE.DoubleSide) return;
+      if (m.alphaTest > 0) return;
+
+      if ('alphaHash' in m && typeof m.alphaHash === 'boolean') {
+        m.alphaHash = true;
+        m.needsUpdate = true;
+      }
+    });
+  }
+
+  /**
+   * Promote heuristic “glass” meshes (visor/window/…) from fully opaque PBR to translucent blend.
+   * Runs at prepare time so fade-in + shading see correct transparency without needing scene.environment.
+   */
+  applyNamedGlassPresentation(object) {
+    this._forEachMeshMaterial(object, (mesh, m) => {
+      if (!this.isWindowMesh(mesh)) return;
+      if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
+      if (m.userData?.orbyGlassPresentation) return;
+
+      const hasTransmission = m.isMeshPhysicalMaterial && m.transmission > 0.01;
+      if (hasTransmission) {
+        m.userData.orbyGlassPresentation = true;
+        return;
+      }
+
+      m.userData.orbyGlassPresentation = true;
+      m.metalness = 0.0;
+      m.depthWrite = false;
+      if (Number.isFinite(m.roughness)) {
+        m.roughness = Math.min(m.roughness, 0.14);
+      } else {
+        m.roughness = 0.1;
+      }
+
+      if (!m.transparent) {
+        m.transparent = true;
+        m.opacity = 0.45;
+      } else if (Number.isFinite(m.opacity) && m.opacity > 0.95) {
+        m.transparent = true;
+        m.opacity = 0.45;
+      } else {
+        m.transparent = true;
+      }
+
+      m.needsUpdate = true;
+    });
   }
   
   isWindowMesh(mesh) {
@@ -129,114 +308,27 @@ export class MaterialController {
     if (isExcluded) return false;
     
     // Only check for actual window/glass keywords (more specific)
-    const windowKeywords = ['glass', 'windshield', 'windscreen', 'visor', 'glazing'];
+    const windowKeywords = [
+      'window',
+      'glass',
+      'windshield',
+      'windscreen',
+      'visor',
+      'glazing',
+      'plexi',
+      'canopy',
+    ];
     const isWindowByName = windowKeywords.some(keyword => 
       name.includes(keyword) || parentName.includes(keyword)
     );
     
-    // Only check material name for glass/window (not just transparency, as many things are transparent)
     const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
     const materialName = material?.name?.toLowerCase() || '';
-    const isWindowByMaterial = materialName.includes('glass') || materialName.includes('window');
-    
+    const isWindowByMaterial = windowKeywords.some((keyword) =>
+      materialName.includes(keyword),
+    );
+
     return isWindowByName || isWindowByMaterial;
-  }
-  
-  identifyWindowMaterials(object) {
-    if (!object) return [];
-    
-    const windowInfo = [];
-    object.traverse((child) => {
-      if (!this.isWindowMesh(child)) return;
-      
-      const material = Array.isArray(child.material) ? child.material[0] : child.material;
-      const info = {
-        meshName: child.name || 'unnamed',
-        parentName: child.parent?.name || 'none',
-        materialName: material?.name || 'unnamed',
-        materialType: material?.type || 'unknown',
-        transparent: material?.transparent || false,
-        opacity: material?.opacity !== undefined ? material.opacity : 1.0,
-        roughness: material?.roughness !== undefined ? material.roughness : 'N/A',
-        metalness: material?.metalness !== undefined ? material.metalness : 'N/A',
-      };
-      windowInfo.push(info);
-    });
-    
-    return windowInfo;
-  }
-  
-  applyGlassMaterial(object) {
-    if (!object) return;
-    
-    // First, identify window materials
-    const windowInfo = this.identifyWindowMaterials(object);
-    
-    object.traverse((child) => {
-      if (!this.isWindowMesh(child)) return;
-      
-      // Check if mesh has valid geometry
-      if (!child.geometry || !child.geometry.attributes || !child.geometry.attributes.position) {
-        console.warn(`[MaterialController] Window mesh "${child.name || 'unnamed'}" has invalid geometry, skipping glass material`);
-        return;
-      }
-      
-      const originalMaterial = this.originalMaterials.get(child) || child.material;
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      
-      // Create optimized glass material (using MeshStandardMaterial for better performance)
-      // Transmission is expensive, so we use transparency + environment map for reflections
-      const glassMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(0x0a0a0a), // Near black like real car windows
-        transparent: true,
-        opacity: 0.2, // 20% opaque (80% transparent) - very see-through
-        roughness: 0.05, // Very smooth/glossy for shiny reflections
-        metalness: 0.0,
-        side: THREE.DoubleSide, // Render both sides
-        depthWrite: true, // Keep default depth writing
-        depthTest: true, // Enable depth testing
-        // Remove any textures that might be causing issues
-        map: null,
-        normalMap: null,
-        aoMap: null,
-        emissiveMap: null,
-        metalnessMap: null,
-        roughnessMap: null,
-        // Use environment map for reflections instead of expensive transmission
-      });
-      
-      // Always set environment map for reflections (glass should be reflective)
-      // The environment map will be set by updateMaterialsEnvironment, but we ensure it's enabled
-      // Preserve environment map if original had one, otherwise it will be set later
-      if (originalMaterial && !Array.isArray(originalMaterial)) {
-        if (originalMaterial.envMap) {
-          glassMaterial.envMap = originalMaterial.envMap;
-          glassMaterial.envMapIntensity = (originalMaterial.envMapIntensity || 1.0) * 2.0; // Boost reflection intensity for glass
-        }
-      }
-      
-      // Mark this as a glass material so we can identify it later
-      glassMaterial.userData.isGlass = true;
-      
-      // Apply glass material
-      if (Array.isArray(child.material)) {
-        // Replace all materials in array with glass
-        child.material = materials.map(() => glassMaterial.clone());
-      } else {
-        child.material = glassMaterial;
-      }
-      
-      // Set render order for proper transparency sorting (render glass after opaque objects)
-      child.renderOrder = 1;
-      
-      // Store original material for restoration
-      if (!this.originalMaterials.has(child)) {
-        this.originalMaterials.set(child, originalMaterial);
-      }
-      
-      // Apply glass material to window mesh
-      child.material = glassMaterial;
-    });
   }
 
   setShading(mode) {
@@ -1007,70 +1099,55 @@ export class MaterialController {
     this.materialSettings.roughness = currentRoughness;
     
     this.currentModel.traverse((child) => {
-      if (child.isMesh && child.material) {
-        const materials = Array.isArray(child.material)
-          ? child.material
-          : [child.material];
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
 
-        materials.forEach((material) => {
-          if (!material) return;
+      materials.forEach((material) => {
+        if (!material) return;
 
-          // Apply environment map to all materials that support it (including glass)
-          if (
-            material.isMeshStandardMaterial ||
-            material.isMeshPhysicalMaterial ||
-            material.isMeshLambertMaterial ||
-            material.isMeshPhongMaterial
-          ) {
-            material.envMap = envTexture;
-            if (material.envMapIntensity !== undefined) {
-              // Boost intensity for glass materials to make reflections more visible
-              const isGlass = this.isWindowMesh(child);
-              material.envMapIntensity = isGlass ? intensity * 2.0 : intensity;
-            }
+        if (
+          material.isMeshStandardMaterial ||
+          material.isMeshPhysicalMaterial ||
+          material.isMeshLambertMaterial ||
+          material.isMeshPhongMaterial
+        ) {
+          material.envMap = envTexture;
+          if (material.envMapIntensity !== undefined) {
+            const isGlass = this.isWindowMesh(child);
+            material.envMapIntensity = isGlass ? intensity * 2.0 : intensity;
+          }
 
-            // CRITICAL: Always restore metalness and roughness from materialSettings
-            // Setting envMap might trigger Three.js internal updates that reset these values
-            // Use stored values to ensure we have the latest user settings
-            // BUT: Preserve glass material properties (they should stay glossy and transparent)
-            const isGlass = material.userData?.isGlass || this.isWindowMesh(child);
-            if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) {
-              if (isGlass) {
-                // Glass materials: keep low roughness for reflections, no metalness, maintain transparency
-                material.metalness = 0.0;
-                material.roughness = 0.05; // Keep glass glossy
-                material.transparent = true;
-                material.opacity = 0.2; // Ensure transparency is maintained
-                material.depthWrite = false; // Important for proper transparency
-                  } else {
-                material.metalness = currentMetalness;
-                
-                // Apply blurriness to roughness, using user's desired roughness as the base
+          const isGlass = material.userData?.isGlass || this.isWindowMesh(child);
+          if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) {
+            if (isGlass) {
+              material.metalness = 0.0;
+              if (material.transparent) {
+                material.depthWrite = false;
+              }
+            } else {
+              material.metalness = currentMetalness;
               if (hdriBlurriness > 0) {
                 const blurRoughness =
-                    currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
+                  currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
                 material.roughness = Math.min(1.0, blurRoughness);
               } else {
-                  // Reset to user's desired roughness when blurriness is 0
-                  material.roughness = currentRoughness;
+                material.roughness = currentRoughness;
               }
-              }
-            } else if (material.roughness !== undefined && !isGlass) {
-              // For non-standard materials, just set the user's desired roughness (unless it's glass)
-              material.roughness = currentRoughness;
             }
-
-            material.needsUpdate = true;
+          } else if (material.roughness !== undefined && !isGlass) {
+            material.roughness = currentRoughness;
           }
-        });
-      }
-      
-      // CRITICAL: Reapply Fresnel after material updates
-      // Material updates trigger shader recompilation which can lose the onBeforeCompile hook
-      if (this.fresnelSettings?.enabled) {
-        this.applyFresnelToModel(this.currentModel);
-      }
+
+          material.needsUpdate = true;
+        }
+      });
     });
+
+    if (this.fresnelSettings?.enabled) {
+      this.applyFresnelToModel(this.currentModel);
+    }
     reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
   }
 

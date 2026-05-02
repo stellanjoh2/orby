@@ -78,6 +78,8 @@ export class SceneManager {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMappingExposure = 1;
+    // Opaque first, then transparent (back-to-front) — important for glTF glass / blend materials.
+    this.renderer.sortObjects = true;
 
     this.cameraController = new CameraController(this.camera, this.canvas, {
       initialFov: this.camera.fov,
@@ -1829,6 +1831,36 @@ export class SceneManager {
         applySideForMaterial(child.material);
       }
     });
+  }
+
+  /**
+   * After Advanced → Alpha changes material.side, refresh reverse-normals cache.
+   */
+  refreshMaterialSidesForReverseNormals() {
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach((mat) => {
+        if (mat) {
+          this.originalMaterialSides.set(mat, mat.side);
+        }
+      });
+    });
+    this.setReverseNormals(this.reverseNormalsEnabled);
+  }
+
+  /**
+   * Reapply material transparency pipeline from state (after user changes Advanced → Alpha).
+   */
+  applyTransparencyFixFromState() {
+    if (!this.currentModel) return;
+    this.materialController.reapplyTransparencyPipeline();
+    this.refreshMaterialSidesForReverseNormals();
+    if (this.scene.environment) {
+      const intensity = Math.max(0, this.hdriStrength ?? 0);
+      this.updateMaterialsEnvironment(this.scene.environment, intensity);
+    }
   }
 
   setSvgExtrudeSurface(settings = {}, options = {}) {

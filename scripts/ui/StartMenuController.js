@@ -116,6 +116,7 @@ export class StartMenuController {
   init() {
     this.cacheDom();
     this.bindEvents();
+    this.bindDropzoneGradientResizePause();
     this.initLogotypeAnimation();
     this.initInfoLogotypeAnimation();
     this.setVisible(this.visible);
@@ -194,6 +195,29 @@ export class StartMenuController {
     window.addEventListener('drop', (event) => {
       this.handleDropEvent(event, emitFile);
     }, { passive: false });
+  }
+
+  /**
+   * While the user is resizing the browser, pause the dropzone frame gradient spin
+   * (see styles: html.orby-window-resizing).
+   */
+  bindDropzoneGradientResizePause() {
+    if (typeof window === 'undefined') return;
+    let endTimer = null;
+    const END_MS = 140;
+    const clearResizing = () => {
+      document.documentElement.classList.remove('orby-window-resizing');
+      endTimer = null;
+    };
+    window.addEventListener(
+      'resize',
+      () => {
+        document.documentElement.classList.add('orby-window-resizing');
+        if (endTimer !== null) window.clearTimeout(endTimer);
+        endTimer = window.setTimeout(clearResizing, END_MS);
+      },
+      { passive: true },
+    );
   }
 
   handleDropEvent(event, emitFile) {

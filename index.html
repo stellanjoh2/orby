@@ -497,6 +497,17 @@
                       <span class="sr-only">Reverse normal direction</span>
                     </label>
                   </label>
+                  <label class="select-line">
+                    <span
+                      data-tooltip="Bad Sketchfab-style exports often mark the whole mesh BLEND + double-sided — try “Opaque + front faces” for cameras / dense props. True thin glass in the same atlas may look wrong until you split materials in a DCC."
+                      >Alpha</span>
+                    <select id="transparencyFix" aria-label="Alpha">
+                      <option value="default">Default (import + auto)</option>
+                      <option value="opaqueBlend">Force opaque (blend→solid)</option>
+                      <option value="frontFace">Front faces only</option>
+                      <option value="opaqueAndFrontFace">Opaque + front faces</option>
+                    </select>
+                  </label>
                 </div>
               </div>
 
@@ -2097,12 +2108,12 @@
               <div class="panel-block">
                 <h3 class="export-format-headline">.GLB</h3>
                 <p class="export-format-sub">
-                  Exports the extruded mesh as a compact glTF binary for use in other 3D tools, game engines, and AR viewers. Available when the loaded asset is an imported SVG extrusion.
+                  Turn extruded logos, icons, or other vector graphics into a .GLB for other 3D tools and AR. Only when you started from an imported SVG. Tip: dial in extrusion and materials before exporting.
                 </p>
                 <div class="export-controls">
-                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export imported SVG extrusion as .GLB (SVG only)">
+                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export imported SVG extrusion as .GLB (SVG source only)">
                     <i class="fa-solid fa-cube"></i>
-                    Export .GLB (SVG only)
+                    Export .GLB (SVG source only)
                   </button>
                 </div>
               </div>
@@ -2600,7 +2611,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.271 · 2026-05-01 16:35:02 UTC</div>
+              <div class="info-version-tag">v0.5.272 · 2026-05-02 10:25:35 UTC</div>
             </section>
           </div>
         </aside>

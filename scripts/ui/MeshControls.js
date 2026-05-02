@@ -134,6 +134,13 @@ export class MeshControls {
       this.stateStore.set('advanced.reverseNormals', enabled);
       this.eventBus.emit('mesh:reverse-normals', enabled);
     });
+    this.ui.inputs.transparencyFix?.addEventListener('change', (event) => {
+      const value = event.target.value || 'default';
+      const allowed = ['default', 'opaqueBlend', 'frontFace', 'opaqueAndFrontFace'];
+      const mode = allowed.includes(value) ? value : 'default';
+      this.stateStore.set('advanced.transparencyFix', mode);
+      this.eventBus.emit('mesh:transparency-fix');
+    });
     this.ui.inputs.svgExtrudeColorOverride?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       const color = this.ui.inputs.svgExtrudeColor?.value || '#7ed321';
@@ -473,6 +480,11 @@ export class MeshControls {
     }
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
+    }
+    if (this.ui.inputs.transparencyFix) {
+      const tf = state.advanced?.transparencyFix ?? 'default';
+      const allowed = ['default', 'opaqueBlend', 'frontFace', 'opaqueAndFrontFace'];
+      this.ui.inputs.transparencyFix.value = allowed.includes(tf) ? tf : 'default';
     }
     if (this.ui.inputs.svgExtrudeColorOverride) {
       const enabled = !!state.svgExtrude?.enabled;

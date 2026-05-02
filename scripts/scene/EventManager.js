@@ -69,6 +69,7 @@ export class EventManager {
     eventBus.on('mesh:svg-extrude-flip-direction', (enabled) => s.setSvgExtrudeFlipDirection(enabled));
     eventBus.on('mesh:svg-extrude-surface', (payload) => s.setSvgExtrudeSurface(payload ?? {}));
     eventBus.on('mesh:reverse-normals', (enabled) => s.setReverseNormals(enabled));
+    eventBus.on('mesh:transparency-fix', () => s.applyTransparencyFixFromState());
     eventBus.on('mesh:svg-extrude-color-override', (settings) => s.setSvgExtrudeColorOverride(settings));
     // Legacy support
     eventBus.on('mesh:diffuse-brightness', (value) => {

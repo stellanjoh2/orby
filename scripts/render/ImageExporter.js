@@ -66,7 +66,9 @@ export class ImageExporter {
   }
 
   /**
-   * Export scene as transparent PNG (cropped to mesh bounds)
+   * Export scene as transparent PNG.
+   * Uses a coarse screen-space AABB for the render/read region, then tightens the
+   * export to the actual non-transparent pixels so irregular silhouettes avoid empty margins.
    */
   async exportTransparentPng(currentModel, currentFile, cameraController, size = 2) {
     if (!currentModel) {
@@ -435,6 +437,34 @@ export class ImageExporter {
       fullRenderHeight,
       scale,
     };
+  }
+
+  /**
+   * Bounding box of pixels with alpha above threshold.
+   * Buffer layout matches WebGL readPixels: row 0 is the bottom scanline of the region.
+   * @returns {{ minCol: number, minRow: number, maxCol: number, maxRow: number } | null}
+   */
+  _computeTightAlphaBounds(pixels, width, height, minAlpha = 1) {
+    let minCol = width;
+    let minRow = height;
+    let maxCol = -1;
+    let maxRow = -1;
+    for (let row = 0; row < height; row++) {
+      const rowOffset = row * width * 4;
+      for (let col = 0; col < width; col++) {
+        const idx = rowOffset + col * 4;
+        if (pixels[idx + 3] > minAlpha) {
+          if (col < minCol) minCol = col;
+          if (col > maxCol) maxCol = col;
+          if (row < minRow) minRow = row;
+          if (row > maxRow) maxRow = row;
+        }
+      }
+    }
+    if (maxCol < minCol || maxRow < minRow) {
+      return null;
+    }
+    return { minCol, minRow, maxCol, maxRow };
   }
 
   /**
@@ -840,60 +870,69 @@ export class ImageExporter {
   }
 
   /**
-   * Extract cropped region from render target and convert to image
+   * Extract cropped region from render target and convert to image.
+   * Tightens the crop using the rendered alpha so the PNG matches the silhouette, not the 3D AABB.
    */
   _extractCroppedImage(renderTarget, cropInfo, state) {
-    // Create a temporary canvas for the cropped export
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = cropInfo.renderWidth;
-    exportCanvas.height = cropInfo.renderHeight;
-    const exportContext = exportCanvas.getContext('2d', { alpha: true });
+    const tightPadding = 3; // px around opaque content (edge soften may use partial alpha)
 
-    // Clear the canvas with transparent pixels
-    exportContext.clearRect(0, 0, cropInfo.renderWidth, cropInfo.renderHeight);
-
-    // Calculate crop coordinates in render target space
-    // pixelMinX/pixelMinY are in actual resolution space (already includes pixelRatio)
-    // We need to scale them by the size multiplier to match the render target size
+    // Calculate crop coordinates in render target space (coarse AABB region)
     const cropX = Math.floor(cropInfo.pixelMinX * cropInfo.scale);
-    // Flip Y: render target uses bottom-left origin, we need top-left
-    // state.originalSize.y is CSS size, but we need actual resolution for Y calculation
     const actualHeight = state.originalSize.y * state.originalPixelRatio;
     const cropY = Math.floor((actualHeight - cropInfo.pixelMaxY) * cropInfo.scale);
     const cropW = Math.ceil(cropInfo.renderWidth);
     const cropH = Math.ceil(cropInfo.renderHeight);
 
-    // Read pixels from the render target
-    const pixels = new Uint8Array(cropW * cropH * 4);
+    const regionPixels = new Uint8Array(cropW * cropH * 4);
     this.renderer.readRenderTargetPixels(
       renderTarget,
       cropX,
       cropY,
       cropW,
       cropH,
-      pixels,
+      regionPixels,
     );
 
-    // Flip pixels vertically (WebGL uses bottom-left origin, canvas uses top-left)
-    const flippedPixels = new Uint8Array(cropW * cropH * 4);
-    for (let y = 0; y < cropH; y++) {
-      const srcRow = cropH - 1 - y;
-      for (let x = 0; x < cropW; x++) {
-        const srcIdx = (srcRow * cropW + x) * 4;
-        const dstIdx = (y * cropW + x) * 4;
-        flippedPixels[dstIdx] = pixels[srcIdx];
-        flippedPixels[dstIdx + 1] = pixels[srcIdx + 1];
-        flippedPixels[dstIdx + 2] = pixels[srcIdx + 2];
-        flippedPixels[dstIdx + 3] = pixels[srcIdx + 3];
+    const tight = this._computeTightAlphaBounds(regionPixels, cropW, cropH);
+    let minCol = 0;
+    let minRow = 0;
+    let maxCol = cropW - 1;
+    let maxRow = cropH - 1;
+    if (tight) {
+      minCol = Math.max(0, tight.minCol - tightPadding);
+      minRow = Math.max(0, tight.minRow - tightPadding);
+      maxCol = Math.min(cropW - 1, tight.maxCol + tightPadding);
+      maxRow = Math.min(cropH - 1, tight.maxRow + tightPadding);
+    }
+
+    const outW = maxCol - minCol + 1;
+    const outH = maxRow - minRow + 1;
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = outW;
+    exportCanvas.height = outH;
+    const exportContext = exportCanvas.getContext('2d', { alpha: true });
+    exportContext.clearRect(0, 0, outW, outH);
+
+    // Flip vertically: buffer row 0 = GL bottom; canvas row 0 = top
+    const flippedPixels = new Uint8Array(outW * outH * 4);
+    for (let cy = 0; cy < outH; cy++) {
+      const srcRow = maxRow - cy;
+      for (let cx = 0; cx < outW; cx++) {
+        const srcCol = minCol + cx;
+        const srcIdx = (srcRow * cropW + srcCol) * 4;
+        const dstIdx = (cy * outW + cx) * 4;
+        flippedPixels[dstIdx] = regionPixels[srcIdx];
+        flippedPixels[dstIdx + 1] = regionPixels[srcIdx + 1];
+        flippedPixels[dstIdx + 2] = regionPixels[srcIdx + 2];
+        flippedPixels[dstIdx + 3] = regionPixels[srcIdx + 3];
       }
     }
 
-    // Create ImageData and put it on the export canvas
-    const imageData = exportContext.createImageData(cropInfo.renderWidth, cropInfo.renderHeight);
+    const imageData = exportContext.createImageData(outW, outH);
     imageData.data.set(flippedPixels);
     exportContext.putImageData(imageData, 0, 0);
 
-    // Export as PNG (PNG format preserves transparency)
     return exportCanvas.toDataURL('image/png');
   }
 

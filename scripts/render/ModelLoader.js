@@ -6,6 +6,7 @@ import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
+import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
 
 const FBX_TARGET_MAX_DIMENSION = 2.0;
 const FBX_SCALE_NORMALIZE_THRESHOLD = 20.0;
@@ -29,6 +30,13 @@ function unsupportedFormatMessage(ext) {
     `and SVG for extruded logos. ` +
     `Raster images such as PNG, JPEG, or WebP are not imported as meshes—convert or export from your DCC to a supported 3D format first.`
   );
+}
+
+function configureGLTFLoader(loader) {
+  if (loader.setMeshoptDecoder && MeshoptDecoder) {
+    loader.setMeshoptDecoder(MeshoptDecoder);
+  }
+  registerKHRMaterialsPbrSpecularGlossiness(loader);
 }
 
 export class ModelLoader {
@@ -55,9 +63,7 @@ export class ModelLoader {
 
   setupLoaders() {
     this.gltfLoader = new GLTFLoader();
-    if (this.gltfLoader.setMeshoptDecoder && MeshoptDecoder) {
-      this.gltfLoader.setMeshoptDecoder(MeshoptDecoder);
-    }
+    configureGLTFLoader(this.gltfLoader);
     this.fbxLoader = new FBXLoader();
     this.objLoader = new OBJLoader();
     this.stlLoader = new STLLoader();
@@ -109,7 +115,7 @@ export class ModelLoader {
 
     const rootPath = this.getDirectoryFromPath(primaryKey);
     const loader = new GLTFLoader();
-    loader.setMeshoptDecoder?.(MeshoptDecoder);
+    configureGLTFLoader(loader);
     loader.setURLModifier((url) => {
       if (/^https?:\/\//i.test(url)) return url;
       const decoded = decodeURI(url);
@@ -255,10 +261,8 @@ export class ModelLoader {
     const text = await this.fileReaders.text(file);
     return new Promise((resolve, reject) => {
       const loader = new GLTFLoader();
-      if (loader.setMeshoptDecoder && MeshoptDecoder) {
-        loader.setMeshoptDecoder(MeshoptDecoder);
-      }
-      
+      configureGLTFLoader(loader);
+
       // Parse the GLTF JSON text
       loader.parse(
         text,

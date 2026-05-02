@@ -494,7 +494,7 @@ The canvas size is calculated on page load and doesn't automatically update when
 
 ### Model Compatibility
 
-- **Transparency issues**: Some models with transparent materials may have rendering or sorting issues. This is a known limitation being worked on.
+- **Transparent materials**: Overlapping transparent surfaces can still sort imperfectly (a general real-time/WebGL constraint). Orby applies defaults for glass-like naming and exposes **Advanced → Alpha** modes when a GLB needs opaque blend, single-sided rendering, or similar tweaks.
 - Some complex models with unusual material setups may not render perfectly.
 - Models with very large textures may take longer to load.
 - Certain GLTF extensions may not be fully supported.
@@ -716,7 +716,7 @@ Orby is built with the help of amazing open-source projects and contributors:
 ### Materials look wrong
 
 - Some models may have unusual material setups that don't render perfectly
-- **Transparency issues**: If transparent materials aren't rendering correctly, this is a known limitation. Try switching display modes or adjusting material settings.
+- **Transparency / glass**: Use **Advanced → Alpha** if windows, decals, or glass look wrong (solid, popping, or odd sorting). Try other display modes or material sliders if needed.
 - Try switching to different shading modes (Shaded, Unlit, Clay)
 - Adjust material brightness, metalness, and roughness sliders
 - Check if the model has texture files that need to be in the same directory (for OBJ/FBX)
