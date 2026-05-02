@@ -116,6 +116,14 @@ export class StateStore {
       },
       grain: { enabled: false, intensity: 0.03, color: '#ffffff' },
       aberration: { enabled: false, offset: 0.0025, strength: 0.24 },
+      /** Screen-space AO (N8AO); off by default — GPU-heavy when enabled. */
+      ambientOcclusion: {
+        enabled: false,
+        intensity: 5,
+        radius: 5,
+        quality: 'medium',
+        color: '#000000',
+      },
       camera: {
         fov: 50,
         tilt: 0,

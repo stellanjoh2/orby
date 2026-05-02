@@ -197,6 +197,9 @@ export class EventManager {
     });
     eventBus.on('render:grain', (settings) => s.updateGrain(settings));
     eventBus.on('render:aberration', (settings) => s.updateAberration(settings));
+    eventBus.on('render:ambient-occlusion', (settings) =>
+      s.updateAmbientOcclusion(settings),
+    );
     eventBus.on('render:fresnel', (settings) => s.setFresnelSettings(settings));
     eventBus.on('render:lens-dirt', (settings) => s.lensDirtController?.updateSettings(settings));
     eventBus.on('render:anti-aliasing', (value) => {

@@ -22,6 +22,65 @@ export const BLOOM_LUMINANCE_THRESHOLD_MAX = 1.2;
 /** Minimum focus distance (meters) for depth of field — matches camera near plane. */
 export const DOF_FOCUS_MIN_M = 0.1;
 
+/** N8AO intensity slider / pipeline floor (zero reads as “AO off” visually). */
+export const AMBIENT_OCCLUSION_INTENSITY_MIN = 0.25;
+export const AMBIENT_OCCLUSION_INTENSITY_MAX = 20;
+
+/** Matches scene render-quality naming: low / medium / max (Epic). */
+export const AMBIENT_OCCLUSION_QUALITY_DEFAULT = /** @type {const} */ ('medium');
+
+/**
+ * Maps UI tier → half-resolution AO buffer + N8AO `setQualityMode` preset (see n8ao readme).
+ */
+export const AMBIENT_OCCLUSION_QUALITY = {
+  low: { halfRes: true, n8aoMode: 'Low' },
+  medium: { halfRes: true, n8aoMode: 'Medium' },
+  max: { halfRes: false, n8aoMode: 'Ultra' },
+};
+
+/**
+ * @param {string | undefined} id
+ * @returns {typeof AMBIENT_OCCLUSION_QUALITY['max']}
+ */
+export function resolveAmbientOcclusionQualityTier(id) {
+  if (id === 'low') return AMBIENT_OCCLUSION_QUALITY.low;
+  if (id === 'medium') return AMBIENT_OCCLUSION_QUALITY.medium;
+  if (id === 'max') return AMBIENT_OCCLUSION_QUALITY.max;
+  return AMBIENT_OCCLUSION_QUALITY.medium;
+}
+
+/**
+ * @param {object | undefined} ao
+ * @returns {object | undefined}
+ */
+export function sanitizeAmbientOcclusion(ao) {
+  if (!ao || typeof ao !== 'object') return ao;
+  let intensity =
+    typeof ao.intensity === 'number' && !Number.isNaN(ao.intensity)
+      ? ao.intensity
+      : 5;
+  intensity = Math.min(
+    AMBIENT_OCCLUSION_INTENSITY_MAX,
+    Math.max(AMBIENT_OCCLUSION_INTENSITY_MIN, intensity),
+  );
+  const color =
+    typeof ao.color === 'string' && ao.color.trim().length > 0
+      ? ao.color.trim()
+      : '#000000';
+  let quality =
+    typeof ao.quality === 'string' ? ao.quality.trim().toLowerCase() : '';
+  if (quality === 'epic' || quality === 'high') quality = 'max';
+  if (quality !== 'low' && quality !== 'medium' && quality !== 'max') {
+    if (typeof ao.halfRes === 'boolean') {
+      quality = ao.halfRes ? 'medium' : 'max';
+    } else {
+      quality = AMBIENT_OCCLUSION_QUALITY_DEFAULT;
+    }
+  }
+  const { halfRes: _legacyHalfRes, ...rest } = ao;
+  return { ...rest, intensity, color, quality };
+}
+
 /**
  * @param {object | undefined} dof
  * @returns {object | undefined}
@@ -52,6 +111,7 @@ export const RENDER_QUALITY = {
     bloomResolutionScale: 1,
     forceDepthOfFieldOff: false,
     forceBloomOff: false,
+    forceAmbientOcclusionOff: false,
     forceFxaaOff: false,
   },
   medium: {
@@ -62,6 +122,7 @@ export const RENDER_QUALITY = {
     /** Depth of field still runs if enabled (unlike Low). */
     forceDepthOfFieldOff: false,
     forceBloomOff: false,
+    forceAmbientOcclusionOff: false,
     forceFxaaOff: true,
   },
   low: {
@@ -73,6 +134,7 @@ export const RENDER_QUALITY = {
     /** Cheapest tier: DOF and bloom passes off in the compositor (settings preserved). */
     forceDepthOfFieldOff: true,
     forceBloomOff: true,
+    forceAmbientOcclusionOff: true,
     forceFxaaOff: true,
   },
 };

@@ -1,4 +1,8 @@
-import { sanitizeDof, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import {
+  sanitizeDof,
+  sanitizeAmbientOcclusion,
+  DEFAULT_MATERIAL_ROUGHNESS,
+} from '../constants.js';
 
 /**
  * SceneSettingsManager
@@ -129,6 +133,7 @@ export class SceneSettingsManager {
       bloom: state.bloom,
       grain: state.grain,
       aberration: state.aberration,
+      ambientOcclusion: state.ambientOcclusion,
       lensDirt: state.lensDirt,
       antiAliasing: state.antiAliasing,
       renderQuality: state.renderQuality,
@@ -794,6 +799,22 @@ export class SceneSettingsManager {
           this.uiHelper.setEffectControlsDisabled(
             ['aberrationOffset', 'aberrationStrength'],
             !payload.aberration.enabled,
+          );
+        }
+      }
+      if (payload.ambientOcclusion) {
+        const ao = sanitizeAmbientOcclusion(payload.ambientOcclusion);
+        this.stateStore.set('ambientOcclusion', ao);
+        this.eventBus.emit('render:ambient-occlusion', ao);
+        if (this.uiHelper?.setEffectControlsDisabled) {
+          this.uiHelper.setEffectControlsDisabled(
+            [
+              'ambientOcclusionIntensity',
+              'ambientOcclusionRadius',
+              'ambientOcclusionColor',
+              'ambientOcclusionQuality',
+            ],
+            !ao.enabled,
           );
         }
       }

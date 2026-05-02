@@ -3,10 +3,12 @@
  * Manages DOF, bloom, grain, aberration, camera, exposure, and export
  */
 import {
+  AMBIENT_OCCLUSION_INTENSITY_MIN,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
   RENDER_QUALITY_DEFAULT,
+  sanitizeAmbientOcclusion,
 } from '../constants.js';
 import { ToneCurveController } from './ToneCurveController.js';
 
@@ -140,6 +142,65 @@ export class RenderControls {
       emitAberration();
     });
 
+    const emitAmbientOcclusion = () =>
+      this.eventBus.emit('render:ambient-occlusion', this.stateStore.getState().ambientOcclusion);
+    if (this.ui.inputs.toggleAmbientOcclusion) {
+      this.ui.inputs.toggleAmbientOcclusion.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        const enabled = event.target.checked;
+        this.stateStore.set('ambientOcclusion.enabled', enabled);
+        this.ui.setEffectControlsDisabled(
+          [
+            'ambientOcclusionIntensity',
+            'ambientOcclusionRadius',
+            'ambientOcclusionColor',
+            'ambientOcclusionQuality',
+          ],
+          !enabled,
+        );
+        emitAmbientOcclusion();
+      });
+    }
+    if (this.ui.inputs.ambientOcclusionIntensity) {
+      this.ui.inputs.ambientOcclusionIntensity.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        const raw = parseFloat(event.target.value);
+        const value = Math.max(AMBIENT_OCCLUSION_INTENSITY_MIN, raw);
+        if (value !== raw) {
+          event.target.value = String(value);
+        }
+        this.helpers.updateValueLabel('ambientOcclusionIntensity', value, 'decimal');
+        this.stateStore.set('ambientOcclusion.intensity', value);
+        emitAmbientOcclusion();
+      });
+    }
+    if (this.ui.inputs.ambientOcclusionRadius) {
+      this.ui.inputs.ambientOcclusionRadius.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        const value = parseFloat(event.target.value);
+        this.helpers.updateValueLabel('ambientOcclusionRadius', value, 'decimal');
+        this.stateStore.set('ambientOcclusion.radius', value);
+        emitAmbientOcclusion();
+      });
+    }
+    if (this.ui.inputs.ambientOcclusionQuality) {
+      this.ui.inputs.ambientOcclusionQuality.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        const value = event.target.value;
+        const normalized =
+          value === 'low' || value === 'medium' ? value : 'max';
+        this.stateStore.set('ambientOcclusion.quality', normalized);
+        emitAmbientOcclusion();
+      });
+    }
+    if (this.ui.inputs.ambientOcclusionColor) {
+      this.ui.inputs.ambientOcclusionColor.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        this.stateStore.set('ambientOcclusion.color', event.target.value);
+        emitAmbientOcclusion();
+      });
+    }
+
     // Background
     this.helpers.bindColorInput('backgroundColor', 'background', 'scene:background');
     
@@ -188,7 +249,8 @@ export class RenderControls {
       this.eventBus.emit('camera:fov', value);
     });
     this.ui.inputs.cameraTilt?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -45, 45, 0);
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
       this.helpers.updateValueLabel('cameraTilt', value, 'angle');
       this.stateStore.set('camera.tilt', value);
       this.eventBus.emit('camera:tilt', value);
@@ -471,7 +533,44 @@ export class RenderControls {
     this.helpers.updateValueLabel('aberrationStrength', state.aberration.strength, 'decimal');
     this.ui.inputs.toggleAberration.checked = !!state.aberration.enabled;
     this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !state.aberration.enabled);
-    
+
+    const aoRaw = state.ambientOcclusion ?? {
+      enabled: false,
+      intensity: 5,
+      radius: 5,
+      quality: 'medium',
+      color: '#000000',
+    };
+    const ao = sanitizeAmbientOcclusion(aoRaw) ?? aoRaw;
+    if (this.ui.inputs.toggleAmbientOcclusion) {
+      this.ui.inputs.toggleAmbientOcclusion.checked = !!ao.enabled;
+    }
+    if (this.ui.inputs.ambientOcclusionIntensity) {
+      this.ui.inputs.ambientOcclusionIntensity.value = ao.intensity;
+      this.helpers.updateValueLabel('ambientOcclusionIntensity', ao.intensity, 'decimal');
+    }
+    if (this.ui.inputs.ambientOcclusionRadius) {
+      this.ui.inputs.ambientOcclusionRadius.value = ao.radius;
+      this.helpers.updateValueLabel('ambientOcclusionRadius', ao.radius, 'decimal');
+    }
+    if (this.ui.inputs.ambientOcclusionColor && ao.color) {
+      this.ui.inputs.ambientOcclusionColor.value = ao.color;
+    }
+    if (this.ui.inputs.ambientOcclusionQuality) {
+      const qVal = ao.quality === 'low' || ao.quality === 'medium' ? ao.quality : 'max';
+      this.ui.inputs.ambientOcclusionQuality.value = qVal;
+    }
+    const aoMuted = !ao.enabled;
+    this.ui.setEffectControlsDisabled(
+      [
+        'ambientOcclusionIntensity',
+        'ambientOcclusionRadius',
+        'ambientOcclusionColor',
+        'ambientOcclusionQuality',
+      ],
+      aoMuted,
+    );
+
     // Fresnel (synced here but bound in MeshControls)
     if (this.ui.inputs.toggleFresnel) {
       this.ui.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
@@ -505,15 +604,17 @@ export class RenderControls {
     this.ui.setEffectControlsDisabled(['fresnelColor', 'fresnelRadius', 'fresnelStrength'], !state.fresnel.enabled);
     
     // Camera & Exposure
-    this.ui.inputs.cameraFov.value = state.camera.fov;
-    this.helpers.updateValueLabel('cameraFov', state.camera.fov, 'angle');
+    const cam = state.camera ?? {};
+    this.ui.inputs.cameraFov.value = cam.fov ?? 50;
+    this.helpers.updateValueLabel('cameraFov', cam.fov ?? 50, 'angle');
     if (this.ui.inputs.cameraTilt) {
-      this.ui.inputs.cameraTilt.value = state.camera.tilt ?? 0;
-      this.helpers.updateValueLabel('cameraTilt', state.camera.tilt ?? 0, 'angle');
+      const tilt = cam.tilt ?? 0;
+      this.ui.inputs.cameraTilt.value = tilt;
+      this.helpers.updateValueLabel('cameraTilt', tilt, 'angle');
     }
     // Sync camera auto-orbit
     if (this.ui.inputs.cameraAutoOrbit) {
-      const autoOrbitValue = state.camera?.autoOrbit ?? 'off';
+      const autoOrbitValue = cam.autoOrbit ?? 'off';
       this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
         radio.checked = radio.value === autoOrbitValue;
       });

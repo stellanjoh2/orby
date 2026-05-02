@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { N8AOPass } from 'n8ao';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js';
 import { MeshglBokehPass } from './MeshglBokehPass.js';
@@ -16,10 +17,13 @@ import {
 } from '../shaders/index.js';
 import { ColorAdjustController } from './ColorAdjustController.js';
 import {
+  AMBIENT_OCCLUSION_INTENSITY_MAX,
+  AMBIENT_OCCLUSION_INTENSITY_MIN,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  resolveAmbientOcclusionQualityTier,
 } from '../constants.js';
 
 export class PostProcessingPipeline {
@@ -32,6 +36,17 @@ export class PostProcessingPipeline {
     this.renderPass = new RenderPass(scene, camera);
     // clearAlpha = 1 ensures the background color shows when scene.background is null
     this.renderPass.clearAlpha = 1;
+
+    const rw = Math.max(1, Math.floor(size.x));
+    const rh = Math.max(1, Math.floor(size.y));
+    this.n8aoPass = new N8AOPass(scene, camera, rw, rh);
+    this.n8aoPass.enabled = false;
+    /** Last N8AO preset applied via `setQualityMode` (shader recompile if changed). */
+    this._n8aoAppliedMode = 'Medium';
+    this.n8aoPass.setQualityMode(this._n8aoAppliedMode);
+    // Must stay off: later passes (exposure, tone mapping, grading) already handle display
+    // transforms — N8AO's gamma pass washes the scene out / looks unnaturally ambient-lit.
+    this.n8aoPass.configuration.gammaCorrection = false;
 
     this.bokehPass = new MeshglBokehPass(scene, camera, {
       focus: 10,
@@ -75,6 +90,7 @@ export class PostProcessingPipeline {
     this.toneMappingPass.renderToScreen = true;
 
     this.composer.addPass(this.renderPass);
+    this.composer.addPass(this.n8aoPass);
     this.composer.addPass(this.bokehPass);
     this.composer.addPass(this.bloomPass);
     this.composer.addPass(this.bloomTintPass);
@@ -204,6 +220,53 @@ export class PostProcessingPipeline {
     if (!active) return;
     this.aberrationPass.uniforms.offset.value = settings.offset;
     this.aberrationPass.uniforms.strength.value = settings.strength;
+  }
+
+  /**
+   * Screen-space ambient occlusion (N8AO / WebGL). When active, replaces RenderPass:
+   * N8AOPass renders the scene and composites AO in one pass.
+   * @param {object} settings
+   * @param {boolean} forceOffTier - Render-quality tier disables AO (e.g. Low)
+   */
+  updateAmbientOcclusion(settings, forceOffTier = false) {
+    if (!this.n8aoPass || !this.renderPass) return;
+    const wants = Boolean(settings?.enabled);
+    const active = wants && !forceOffTier;
+    this.renderPass.enabled = !active;
+    this.n8aoPass.enabled = active;
+    if (!active) return;
+
+    this.n8aoPass.configuration.gammaCorrection = false;
+
+    const intensity =
+      typeof settings.intensity === 'number' && !Number.isNaN(settings.intensity)
+        ? settings.intensity
+        : 5;
+    const radius =
+      typeof settings.radius === 'number' && !Number.isNaN(settings.radius)
+        ? settings.radius
+        : 5;
+    const aoQ = resolveAmbientOcclusionQualityTier(settings.quality);
+    if (this._n8aoAppliedMode !== aoQ.n8aoMode) {
+      this.n8aoPass.setQualityMode(aoQ.n8aoMode);
+      this._n8aoAppliedMode = aoQ.n8aoMode;
+    }
+    const halfRes = aoQ.halfRes;
+
+    this.n8aoPass.configuration.intensity = THREE.MathUtils.clamp(
+      intensity,
+      AMBIENT_OCCLUSION_INTENSITY_MIN,
+      AMBIENT_OCCLUSION_INTENSITY_MAX,
+    );
+    this.n8aoPass.configuration.aoRadius = THREE.MathUtils.clamp(radius, 0.1, 25);
+    const hex =
+      typeof settings.color === 'string' && settings.color.trim().length > 0
+        ? settings.color.trim()
+        : '#000000';
+    this.n8aoPass.configuration.color = new THREE.Color(hex);
+    if (this.n8aoPass.configuration.halfRes !== halfRes) {
+      this.n8aoPass.configuration.halfRes = halfRes;
+    }
   }
 
   /**

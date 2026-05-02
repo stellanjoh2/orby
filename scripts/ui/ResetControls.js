@@ -250,6 +250,7 @@ export class ResetControls {
       this.stateStore.set('bloom', defaults.bloom);
       this.stateStore.set('grain', defaults.grain);
       this.stateStore.set('aberration', defaults.aberration);
+      this.stateStore.set('ambientOcclusion', defaults.ambientOcclusion);
       this.stateStore.set('fresnel', defaults.fresnel);
       this.stateStore.set('camera', defaults.camera);
       this.stateStore.set('exposure', defaults.exposure);
@@ -269,6 +270,16 @@ export class ResetControls {
       this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
       this.eventBus.emit('render:aberration', defaults.aberration);
       this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !defaults.aberration.enabled);
+      this.eventBus.emit('render:ambient-occlusion', defaults.ambientOcclusion);
+      this.ui.setEffectControlsDisabled(
+        [
+          'ambientOcclusionIntensity',
+          'ambientOcclusionRadius',
+          'ambientOcclusionColor',
+          'ambientOcclusionQuality',
+        ],
+        !defaults.ambientOcclusion.enabled,
+      );
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.ui.setEffectControlsDisabled(['fresnelColor', 'fresnelRadius', 'fresnelStrength'], !defaults.fresnel.enabled);
       this.eventBus.emit('camera:fov', defaults.camera.fov);
@@ -498,7 +509,25 @@ export class ResetControls {
             this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !defaults.aberration.enabled);
             this.ui.syncUIFromState();
             break;
-            
+
+          case 'ambient-occlusion':
+            this.stateStore.batch(() => {
+              this.stateStore.set('lookFilterPreset', 'custom');
+              this.stateStore.set('ambientOcclusion', defaults.ambientOcclusion);
+            });
+            this.eventBus.emit('render:ambient-occlusion', defaults.ambientOcclusion);
+            this.ui.setEffectControlsDisabled(
+              [
+                'ambientOcclusionIntensity',
+                'ambientOcclusionRadius',
+                'ambientOcclusionColor',
+                'ambientOcclusionQuality',
+              ],
+              !defaults.ambientOcclusion.enabled,
+            );
+            this.ui.syncUIFromState();
+            break;
+
           case 'fresnel':
             this.stateStore.set('fresnel', defaults.fresnel);
             this.eventBus.emit('render:fresnel', defaults.fresnel);

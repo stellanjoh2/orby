@@ -7,6 +7,7 @@ import {
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
   sanitizeDof,
+  sanitizeAmbientOcclusion,
 } from './constants.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
@@ -271,6 +272,11 @@ export class UIManager {
       aberrationOffset: q('#aberrationOffset'),
       aberrationStrength: q('#aberrationStrength'),
       toggleAberration: q('#toggleAberration'),
+      toggleAmbientOcclusion: q('#toggleAmbientOcclusion'),
+      ambientOcclusionIntensity: q('#ambientOcclusionIntensity'),
+      ambientOcclusionRadius: q('#ambientOcclusionRadius'),
+      ambientOcclusionColor: q('#ambientOcclusionColor'),
+      ambientOcclusionQuality: q('#ambientOcclusionQuality'),
       toggleFresnel: q('#toggleFresnel'),
       fresnelColor: q('#fresnelColor'),
       fresnelRadius: q('#fresnelRadius'),
@@ -844,7 +850,17 @@ export class UIManager {
       const payload = JSON.parse(text);
       
       // Validate that it looks like FX settings
-      const expectedKeys = ['dof', 'bloom', 'grain', 'aberration', 'fresnel', 'exposure', 'background', 'camera'];
+      const expectedKeys = [
+        'dof',
+        'bloom',
+        'grain',
+        'aberration',
+        'ambientOcclusion',
+        'fresnel',
+        'exposure',
+        'background',
+        'camera',
+      ];
       const hasExpectedKeys = expectedKeys.some(key => key in payload);
       
       if (!hasExpectedKeys) {
@@ -887,6 +903,22 @@ export class UIManager {
         this.setEffectControlsDisabled(
           ['aberrationOffset', 'aberrationStrength'],
           !payload.aberration.enabled,
+        );
+      }
+
+      if (payload.ambientOcclusion) {
+        const ao = sanitizeAmbientOcclusion(payload.ambientOcclusion);
+        this.stateStore.set('ambientOcclusion', ao);
+        this.eventBus.emit('render:ambient-occlusion', ao);
+        const muted = !ao.enabled;
+        this.setEffectControlsDisabled(
+          [
+            'ambientOcclusionIntensity',
+            'ambientOcclusionRadius',
+            'ambientOcclusionColor',
+            'ambientOcclusionQuality',
+          ],
+          muted,
         );
       }
 
@@ -1478,7 +1510,44 @@ export class UIManager {
       ['aberrationOffset', 'aberrationStrength'],
       !state.aberration.enabled,
     );
-    
+
+    const aoRaw = state.ambientOcclusion ?? {
+      enabled: false,
+      intensity: 5,
+      radius: 5,
+      quality: 'medium',
+      color: '#000000',
+    };
+    const ao = sanitizeAmbientOcclusion(aoRaw) ?? aoRaw;
+    if (this.inputs.toggleAmbientOcclusion) {
+      this.inputs.toggleAmbientOcclusion.checked = !!ao.enabled;
+    }
+    if (this.inputs.ambientOcclusionIntensity) {
+      this.inputs.ambientOcclusionIntensity.value = ao.intensity;
+      this.updateValueLabel('ambientOcclusionIntensity', ao.intensity, 'decimal');
+    }
+    if (this.inputs.ambientOcclusionRadius) {
+      this.inputs.ambientOcclusionRadius.value = ao.radius;
+      this.updateValueLabel('ambientOcclusionRadius', ao.radius, 'decimal');
+    }
+    if (this.inputs.ambientOcclusionColor && ao.color) {
+      this.inputs.ambientOcclusionColor.value = ao.color;
+    }
+    if (this.inputs.ambientOcclusionQuality) {
+      const qVal = ao.quality === 'low' || ao.quality === 'medium' ? ao.quality : 'max';
+      this.inputs.ambientOcclusionQuality.value = qVal;
+    }
+    const aoMuted = !ao.enabled;
+    this.setEffectControlsDisabled(
+      [
+        'ambientOcclusionIntensity',
+        'ambientOcclusionRadius',
+        'ambientOcclusionColor',
+        'ambientOcclusionQuality',
+      ],
+      aoMuted,
+    );
+
     // Fresnel
     if (this.inputs.toggleFresnel) {
       this.inputs.toggleFresnel.checked = !!state.fresnel.enabled;
@@ -1515,11 +1584,13 @@ export class UIManager {
     );
     
     // Camera & Exposure
-    this.inputs.cameraFov.value = state.camera.fov;
-    this.updateValueLabel('cameraFov', state.camera.fov, 'angle');
+    const cam = state.camera ?? {};
+    this.inputs.cameraFov.value = cam.fov ?? 50;
+    this.updateValueLabel('cameraFov', cam.fov ?? 50, 'angle');
     if (this.inputs.cameraTilt) {
-      this.inputs.cameraTilt.value = state.camera.tilt ?? 0;
-      this.updateValueLabel('cameraTilt', state.camera.tilt ?? 0, 'angle');
+      const tilt = cam.tilt ?? 0;
+      this.inputs.cameraTilt.value = tilt;
+      this.updateValueLabel('cameraTilt', tilt, 'angle');
     }
     this.inputs.exposure.value = state.exposure;
     this.updateValueLabel('exposure', state.exposure, 'decimal');
@@ -1714,7 +1785,12 @@ export class UIManager {
     
     // Aberration block - only muted if aberration.enabled is false
     this.setBlockMuted('aberration', !currentState.aberration?.enabled);
-    
+
+    this.setBlockMuted(
+      'ambient-occlusion',
+      !currentState.ambientOcclusion?.enabled,
+    );
+
     // Fresnel block - only muted if fresnel.enabled is false
     this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
     this.setBlockMuted('svg-extrude', !currentState.svgExtrude?.enabled);

@@ -1973,6 +1973,64 @@
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="ambient-occlusion">
+                  <div class="block-title has-toggle">
+                    <span>Ambient occlusion</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="ambient-occlusion" aria-label="Reset Ambient Occlusion" data-tooltip="Reset ambient occlusion settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Screen-space AO (N8AO). Uses WebGL post-processing; off by default. Turn off Render quality → Low if this stays disabled there.">
+                        <input type="checkbox" id="toggleAmbientOcclusion" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Ambient Occlusion</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="slider-line">
+                    <span>Intensity</span>
+                    <input
+                      id="ambientOcclusionIntensity"
+                      type="range"
+                      min="0.25"
+                      max="20"
+                      value="5"
+                      step="0.25"
+                    />
+                    <span class="value" data-output="ambientOcclusionIntensity">5.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="ambientOcclusionRadius"
+                      type="range"
+                      min="0.1"
+                      max="12"
+                      value="5"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="ambientOcclusionRadius">5.00</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Colour</span>
+                    <input
+                      type="color"
+                      id="ambientOcclusionColor"
+                      class="color-chip"
+                      value="#000000"
+                    />
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Epic: full resolution + Ultra N8AO preset.">AO quality</span>
+                    <select id="ambientOcclusionQuality" aria-label="Ambient occlusion quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="max">Epic</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="aberration">
                   <div class="block-title has-toggle">
                     <span>Chromatic Aberration</span>
@@ -2641,7 +2699,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.280 · 2026-05-02 11:46:16 UTC</div>
+              <div class="info-version-tag">v0.5.281 · 2026-05-02 11:46:21 UTC</div>
             </section>
           </div>
         </aside>
@@ -2658,6 +2716,9 @@
       {
         "imports": {
           "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+          "three/examples/jsm/postprocessing/Pass.js": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/Pass.js",
+          "postprocessing": "https://cdn.jsdelivr.net/npm/postprocessing@6.36.4/build/index.js",
+          "n8ao": "https://cdn.jsdelivr.net/npm/n8ao@1.10.1/dist/N8AO.js",
           "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.7/+esm"
         }
       }

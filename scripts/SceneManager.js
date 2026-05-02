@@ -12,6 +12,7 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   resolveRenderQualityTier,
   DEFAULT_MATERIAL_ROUGHNESS,
+  sanitizeAmbientOcclusion,
 } from './constants.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
@@ -710,6 +711,7 @@ export class SceneManager {
     this.handleResize();
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
+    this.updateAmbientOcclusion(state.ambientOcclusion);
     this.applyRenderQualityVisualOverrides();
     if (this.fxaaPass) {
       this.fxaaPass.enabled =
@@ -1178,6 +1180,25 @@ export class SceneManager {
     this.postPipeline?.updateAberration(settings);
   }
 
+  updateAmbientOcclusion(settings) {
+    const defaults = {
+      enabled: false,
+      intensity: 5,
+      radius: 5,
+      quality: 'medium',
+      color: '#000000',
+    };
+    const raw = settings ?? this.stateStore.getState().ambientOcclusion;
+    const merged = { ...defaults, ...(raw && typeof raw === 'object' ? raw : {}) };
+    const ao = sanitizeAmbientOcclusion(merged) ?? merged;
+    const tier = resolveRenderQualityTier(
+      this.stateStore.getState().renderQuality,
+    );
+    this.postPipeline?.updateAmbientOcclusion(
+      ao,
+      tier.forceAmbientOcclusionOff,
+    );
+  }
 
   /**
    * Create a large background sphere for proper DOF depth handling

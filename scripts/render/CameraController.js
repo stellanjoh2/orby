@@ -51,13 +51,16 @@ export class CameraController {
     this._panMove = new THREE.Vector3();
     this._dollyDirection = new THREE.Vector3();
     this._dollyOffset = new THREE.Vector3();
+    this._tiltRollQuat = new THREE.Quaternion();
+    this._tiltSyncedUp = new THREE.Vector3();
+    this._tiltTowardTarget = new THREE.Vector3();
+    this._tiltLocalRollAxis = new THREE.Vector3(0, 0, 1);
     this.camera.fov = initialFov;
     this.camera.updateProjectionMatrix();
     this.controls.update();
-    
-    // Store base camera rotation for tilt calculation
-    this.baseCameraQuaternion = this.camera.quaternion.clone();
+
     this.currentTilt = 0;
+    this._applyTilt();
 
     // Auto-orbit state
     this.autoOrbitMode = 'off'; // 'off', 'slow', 'fast'
@@ -85,60 +88,44 @@ export class CameraController {
    * @param {number} degrees - Tilt angle in degrees (-45 to 45)
    */
   setTilt(degrees) {
-    this.currentTilt = degrees;
+    const n = typeof degrees === 'number' ? degrees : Number(degrees);
+    this.currentTilt = Number.isFinite(n) ? n : 0;
     this._applyTilt();
   }
 
   /**
    * Apply tilt rotation to camera (called after OrbitControls updates)
-   * This rotates the camera around the view direction (forward axis) for left/right roll
+   * Roll around the view axis using a local Z quaternion after a neutral lookAt —
+   * avoids fragile pairing of custom camera.up with lookAt when values come from UI/state as strings.
    */
   _applyTilt() {
-    // Clamp tilt to -45 to +45 degrees
-    const clampedTilt = THREE.MathUtils.clamp(this.currentTilt, -45, 45);
-    
-    if (Math.abs(clampedTilt) < 0.01) {
-      // No tilt - ensure camera up is aligned with world up
-      this.camera.up.set(0, 1, 0);
-      this.controls.update();
-      return;
-    }
+    const target = this.controls?.target;
+    if (!target) return;
 
-    const radians = THREE.MathUtils.degToRad(clampedTilt);
-    
-    // Get the camera's view direction (from camera to target) - this is the forward axis
-    const forward = new THREE.Vector3();
-    forward.subVectors(this.controls.target, this.camera.position).normalize();
-    
-    // Get the camera's right vector (perpendicular to forward and world up)
-    const worldUp = new THREE.Vector3(0, 1, 0);
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, worldUp).normalize();
-    
-    // If right vector is zero (camera looking straight up/down), use a fallback
-    if (right.length() < 0.1) {
-      right.set(1, 0, 0);
-      right.crossVectors(right, forward).normalize();
+    const raw = Number(this.currentTilt);
+    const clampedTilt = THREE.MathUtils.clamp(
+      Number.isFinite(raw) ? raw : 0,
+      -45,
+      45,
+    );
+
+    const towardTarget = this._tiltTowardTarget.subVectors(
+      target,
+      this.camera.position,
+    );
+    if (towardTarget.lengthSq() < 1e-10) return;
+
+    // Zero-roll aim toward target (world up), then roll in camera-local space.
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(target);
+
+    if (Math.abs(clampedTilt) >= 0.01) {
+      const radians = THREE.MathUtils.degToRad(clampedTilt);
+      this._tiltRollQuat.setFromAxisAngle(this._tiltLocalRollAxis, radians);
+      this.camera.quaternion.multiply(this._tiltRollQuat);
+      this._tiltSyncedUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+      this.camera.up.copy(this._tiltSyncedUp);
     }
-    
-    // Calculate the base up vector (perpendicular to forward and right)
-    // This is what the up vector would be with no tilt
-    const baseUp = new THREE.Vector3();
-    baseUp.crossVectors(right, forward).normalize();
-    
-    // Rotate the base up vector around the forward axis by the tilt angle
-    // Using Rodrigues' rotation formula: v' = v*cos(θ) + (k×v)*sin(θ) + k*(k·v)*(1-cos(θ))
-    // For rotation around forward axis: up' = up*cos(θ) + right*sin(θ)
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
-    const tiltedUp = new THREE.Vector3();
-    tiltedUp.copy(baseUp).multiplyScalar(cos);
-    tiltedUp.addScaledVector(right, sin);
-    tiltedUp.normalize();
-    
-    // Set the camera's up vector
-    this.camera.up.copy(tiltedUp);
-    this.controls.update();
   }
 
   getTargetDistance() {
@@ -167,6 +154,9 @@ export class CameraController {
       }
     }
     this.controls.update();
+    if (this.autoOrbitMode === 'off') {
+      this._applyTilt();
+    }
   }
 
   pan(deltaX, deltaY) {
@@ -189,6 +179,9 @@ export class CameraController {
       }
     }
     this.controls.update();
+    if (this.autoOrbitMode === 'off') {
+      this._applyTilt();
+    }
   }
 
   dolly(amount) {
@@ -211,6 +204,9 @@ export class CameraController {
       this.camera.lookAt(target);
     }
     this.controls.update();
+    if (this.autoOrbitMode === 'off') {
+      this._applyTilt();
+    }
   }
 
   _applyOrbitFallback(deltaTheta, deltaPhi) {
@@ -313,26 +309,18 @@ export class CameraController {
     this._orbitSpherical.set(radius, phi, theta);
     this._orbitOffset.setFromSpherical(this._orbitSpherical);
     this.camera.position.copy(target).add(this._orbitOffset);
-    
-    // Always look at target
-    this.camera.lookAt(target);
-    
-    // Update controls target to keep it in sync
     this.controls.target.copy(target);
-    // Note: controls.update() is called in update() method, but pan/rotate are disabled
-    // This allows zoom (dolly) to still work while auto-orbit controls position
+    // Apply roll after scripted pose (do not run OrbitControls.update here).
+    this._applyTilt();
   }
 
   update() {
     // Only update controls if auto-orbit is off (to prevent interference)
-    // When auto-orbit is on, we manually control camera position
+    // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {
       this.controls.update();
+      this._applyTilt();
     }
-    
-    // Always apply tilt after controls update to ensure it's maintained
-    // This ensures smooth transitions and prevents OrbitControls from overriding it
-    this._applyTilt();
   }
 
   /**
@@ -370,6 +358,9 @@ export class CameraController {
       this.camera.far = distance * 50;
       this.camera.updateProjectionMatrix();
       this.controls.update();
+      if (this.autoOrbitMode === 'off') {
+        this._applyTilt();
+      }
     }
   }
 
@@ -434,9 +425,7 @@ export class CameraController {
         ease: 'power2.inOut',
         onUpdate: () => {
           this.controls.target.set(targetObj.x, targetObj.y, targetObj.z);
-          // Use lookAt for smooth camera orientation during animation
-          this.camera.lookAt(this.controls.target);
-          this.controls.update();
+          this._applyTilt();
         },
         onComplete: () => {
           // Update camera near/far planes and restore controls
@@ -446,6 +435,9 @@ export class CameraController {
           this.controls.enablePan = wasPanEnabled;
           this.controls.enableRotate = wasRotateEnabled;
           this.controls.update();
+          if (this.autoOrbitMode === 'off') {
+            this._applyTilt();
+          }
         },
       });
     }
@@ -476,6 +468,9 @@ export class CameraController {
       this.camera.position.copy(position);
       this.controls.target.copy(target);
       this.controls.update();
+      if (this.autoOrbitMode === 'off') {
+        this._applyTilt();
+      }
     }
   }
 
@@ -606,6 +601,9 @@ export class CameraController {
 
     this.controls.target.copy(point);
     this.controls.update();
+    if (this.autoOrbitMode === 'off') {
+      this._applyTilt();
+    }
     this.altLeftTargetSet = true;
   }
 }
