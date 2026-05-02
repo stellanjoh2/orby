@@ -43,6 +43,10 @@ export class StateStore {
         glassOpacity: 0.45,
         /** Multiplier on scene HDRI env intensity for those materials (1 ≈ same as non-glass). */
         glassReflection: 2,
+        /** Base body tint (darker / colored glass). #ffffff = neutral. */
+        glassTint: '#ffffff',
+        /** 0 = import-like; 1 = crush glTF transmission + darken (less see-through). */
+        glassBody: 0,
       },
       hdri: 'beach',
       hdriEnabled: true,

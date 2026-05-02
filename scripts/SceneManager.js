@@ -1326,6 +1326,7 @@ export class SceneManager {
     this.originalGeometryIndices = new WeakMap();
     this.originalGeometryAttributes = new WeakMap();
     this.originalMaterialSides = new WeakMap();
+    this.eventBus.emit('ui:advanced-alpha-visible', { visible: false });
     this.eventBus.emit('ui:advanced-glass-visible', { visible: false });
   }
 
@@ -1415,9 +1416,6 @@ export class SceneManager {
     this.lensFlareController?.setModelRoot(this.modelRoot);
     
     this.prepareMesh(object);
-    this.eventBus.emit('ui:advanced-glass-visible', {
-      visible: this.materialController.modelHasHeuristicGlass(object),
-    });
 
     // Track if this is the first model load
     const wasFirstLoad = this.isFirstModelLoad;
@@ -1453,6 +1451,7 @@ export class SceneManager {
       },
     });
     this.setShading(state.shading);
+    this._emitAdvancedAlphaPanelVisibility();
     this.setReverseNormals(state.advanced?.reverseNormals ?? false);
     this.diagnosticsController.setModel(object, state.shading);
     this.refreshBoneHelpers();
@@ -1526,6 +1525,17 @@ export class SceneManager {
 
   prepareMesh(object) {
     this.materialController.prepareMesh(object);
+  }
+
+  /** After shading/material setup, sync Advanced → Alpha UI from import materials (originalMaterials). */
+  _emitAdvancedAlphaPanelVisibility() {
+    if (!this.currentModel) return;
+    const hasAlphaMaterials =
+      this.materialController.modelHasAlphaRelevantMaterials(this.currentModel);
+    const hasHeuristicGlass =
+      hasAlphaMaterials && this.materialController.modelHasHeuristicGlass(this.currentModel);
+    this.eventBus.emit('ui:advanced-alpha-visible', { visible: hasAlphaMaterials });
+    this.eventBus.emit('ui:advanced-glass-visible', { visible: hasHeuristicGlass });
   }
 
 

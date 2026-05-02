@@ -29,6 +29,12 @@ export class MeshControls {
   }
 
   bind() {
+    this.eventBus.on('ui:advanced-alpha-visible', (payload) => {
+      const visible = !!(payload?.visible ?? payload);
+      const wrap = this.ui.inputs.advancedAlphaControls;
+      if (wrap) wrap.hidden = !visible;
+      this.refreshAdvancedGlassControls(this.stateStore.getState());
+    });
     this.eventBus.on('ui:advanced-glass-visible', (payload) => {
       const visible = !!(payload?.visible ?? payload);
       const wrap = this.ui.inputs.advancedGlassControls;
@@ -170,6 +176,18 @@ export class MeshControls {
     });
     if (this.ui.inputs.glassReflection) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.glassReflection);
+    }
+    this.helpers.bindColorInput('glassTint', 'advanced.glassTint', 'mesh:glass-appearance');
+
+    this.ui.inputs.glassBody?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+      this.helpers.updateValueLabel('glassBody', clamped, 'decimal');
+      this.stateStore.set('advanced.glassBody', clamped);
+      this.eventBus.emit('mesh:glass-appearance');
+    });
+    if (this.ui.inputs.glassBody) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.glassBody);
     }
     this.ui.inputs.svgExtrudeColorOverride?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
@@ -430,8 +448,10 @@ export class MeshControls {
   }
 
   refreshAdvancedGlassControls(state) {
+    const alphaWrap = this.ui.inputs.advancedAlphaControls;
+    const alphaSectionVisible = !!(alphaWrap && !alphaWrap.hidden);
     const wrap = this.ui.inputs.advancedGlassControls;
-    const visible = !!(wrap && !wrap.hidden);
+    const visible = alphaSectionVisible && !!(wrap && !wrap.hidden);
     const mode = state.advanced?.transparencyFix ?? 'default';
     const opacityEnabled = visible && mode === 'default';
     if (this.ui.inputs.glassOpacity) {
@@ -439,6 +459,12 @@ export class MeshControls {
     }
     if (this.ui.inputs.glassReflection) {
       this.ui.setControlDisabled('glassReflection', !visible);
+    }
+    if (this.ui.inputs.glassTint) {
+      this.ui.setControlDisabled('glassTint', !opacityEnabled);
+    }
+    if (this.ui.inputs.glassBody) {
+      this.ui.setControlDisabled('glassBody', !opacityEnabled);
     }
   }
 
@@ -545,6 +571,22 @@ export class MeshControls {
       if (!active) {
         this.ui.inputs.glassReflection.value = r;
         this.helpers.updateValueLabel('glassReflection', r, 'decimal');
+      }
+    }
+    if (this.ui.inputs.glassTint) {
+      const t = state.advanced?.glassTint ?? '#ffffff';
+      const valid = typeof t === 'string' && /^#[0-9A-Fa-f]{6}$/.test(t) ? t : '#ffffff';
+      if (document.activeElement !== this.ui.inputs.glassTint) {
+        this.ui.inputs.glassTint.value = valid;
+      }
+    }
+    if (this.ui.inputs.glassBody) {
+      const raw = Number(state.advanced?.glassBody ?? 0);
+      const b = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0;
+      const active = document.activeElement === this.ui.inputs.glassBody;
+      if (!active) {
+        this.ui.inputs.glassBody.value = b;
+        this.helpers.updateValueLabel('glassBody', b, 'decimal');
       }
     }
     this.refreshAdvancedGlassControls(state);

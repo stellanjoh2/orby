@@ -78,6 +78,8 @@ export class SceneSettingsManager {
         transparencyFix: state.advanced?.transparencyFix ?? 'default',
         glassOpacity: state.advanced?.glassOpacity ?? 0.45,
         glassReflection: state.advanced?.glassReflection ?? 2,
+        glassTint: state.advanced?.glassTint ?? '#ffffff',
+        glassBody: state.advanced?.glassBody ?? 0,
       },
       // Studio settings
       hdri: state.hdri,
@@ -484,7 +486,9 @@ export class SceneSettingsManager {
       }
       if (
         payload.advanced?.glassOpacity !== undefined ||
-        payload.advanced?.glassReflection !== undefined
+        payload.advanced?.glassReflection !== undefined ||
+        payload.advanced?.glassTint !== undefined ||
+        payload.advanced?.glassBody !== undefined
       ) {
         if (payload.advanced?.glassOpacity !== undefined) {
           const o = Number(payload.advanced.glassOpacity);
@@ -496,6 +500,18 @@ export class SceneSettingsManager {
           const r = Number(payload.advanced.glassReflection);
           if (Number.isFinite(r)) {
             this.stateStore.set('advanced.glassReflection', Math.min(4, Math.max(0, r)));
+          }
+        }
+        if (payload.advanced?.glassTint !== undefined) {
+          const t = String(payload.advanced.glassTint).trim();
+          if (/^#[0-9A-Fa-f]{6}$/.test(t)) {
+            this.stateStore.set('advanced.glassTint', t);
+          }
+        }
+        if (payload.advanced?.glassBody !== undefined) {
+          const b = Number(payload.advanced.glassBody);
+          if (Number.isFinite(b)) {
+            this.stateStore.set('advanced.glassBody', Math.min(1, Math.max(0, b)));
           }
         }
         this.eventBus.emit('mesh:glass-appearance');

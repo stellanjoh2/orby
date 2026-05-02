@@ -178,8 +178,6 @@ export function applySvgExtrudeProceduralToMaterial(material, opts) {
   const uniformRefs = getOrUpdateUniformRefs(material, presetIndex, scale);
   const hadPatch = !!material.userData?.svgExtrudeProceduralPatched;
   const storedHook = material.userData?.svgExtrudeProceduralOnBeforeCompile;
-  // Three.js or other material code can clear or replace onAfterCompile/compile; then uniforms
-  // look fine but the shader no longer runs our code.
   const hookIsLive =
     hadPatch && typeof storedHook === 'function' && material.onBeforeCompile === storedHook;
 
@@ -228,7 +226,6 @@ export function removeSvgExtrudeProceduralFromMaterial(material) {
  */
 export function reapplySvgExtrudeProceduralFromState(model, storeLike, shadingOverride) {
   if (!model || !storeLike) return;
-  // Must call getState on the object so `this` is bound (StateStore.getState uses this.state).
   const st =
     typeof storeLike.getState === 'function'
       ? storeLike.getState()

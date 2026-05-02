@@ -218,26 +218,135 @@ export class MaterialController {
   }
 
   /**
+   * Import-side signals that Advanced → Alpha may apply (baseline + maps + glTF hints).
+   * Prefer sources stored in {@link #originalMaterials} after prepareMesh — mesh.material may be clones
+   * without complete userData after {@link #setShading}.
+   */
+  _materialImportLooksAlphaRelevant(m) {
+    if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
+
+    const b = m.userData?.orbyGltfImportBaseline;
+    if (b) {
+      if (b.transparent) return true;
+      if (Number.isFinite(b.opacity) && b.opacity < 0.999) return true;
+    } else if ('transparent' in m) {
+      if (m.transparent) return true;
+      const op = Number.isFinite(m.opacity) ? m.opacity : 1;
+      if (op < 0.999) return true;
+    }
+
+    const gltfMode = m.userData?.alphaMode;
+    if (gltfMode === 'BLEND' || gltfMode === 'MASK') return true;
+
+    if (m.alphaMap) return true;
+    if (m.alphaTest > 0) return true;
+
+    if (m.map && m.map.format === THREE.RGBAFormat) return true;
+
+    if (m.isMeshPhysicalMaterial && m.transmission > 0.01) return true;
+
+    return false;
+  }
+
+  /**
+   * True if any mesh uses materials where transparency / alpha matters (import intent).
+   * Uses {@link #originalMaterials} when set so behavior stays correct after shaded-mode clones replace mesh.material.
+   */
+  modelHasAlphaRelevantMaterials(object) {
+    if (!object) return false;
+    let found = false;
+    object.traverse((child) => {
+      if (found || !child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const mats = stored
+        ? Array.isArray(stored)
+          ? stored
+          : [stored]
+        : Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+      for (const m of mats) {
+        if (this._materialImportLooksAlphaRelevant(m)) {
+          found = true;
+          return;
+        }
+      }
+    });
+    return found;
+  }
+
+  /**
    * Apply Advanced glass opacity (Alpha → Default only). Reflection strength is applied in updateMaterialsEnvironment.
    */
   applyGlassAppearanceFromState(object) {
     if (!object || !this.stateStore) return;
-    const mode = this.stateStore.getState()?.advanced?.transparencyFix ?? 'default';
-    const rawOp = this.stateStore.getState()?.advanced?.glassOpacity;
+    const adv = this.stateStore.getState()?.advanced;
+    const mode = adv?.transparencyFix ?? 'default';
+    const rawOp = adv?.glassOpacity;
     const glassOpacity = Number.isFinite(Number(rawOp))
       ? Math.min(1, Math.max(0.02, Number(rawOp)))
       : 0.45;
+    const rawBody = adv?.glassBody;
+    const glassBody = Number.isFinite(Number(rawBody))
+      ? Math.min(1, Math.max(0, Number(rawBody)))
+      : 0;
+    const rawTint = adv?.glassTint;
+    const glassTintHex =
+      typeof rawTint === 'string' && /^#[0-9A-Fa-f]{6}$/.test(rawTint.trim())
+        ? rawTint.trim()
+        : '#ffffff';
+    const bodyDarken = Math.max(0.06, 1 - 0.72 * glassBody);
+    /** Pull effective coverage toward opaque when body is high (stacks with Glass opacity). */
+    const bodyOpacity = Math.min(
+      1,
+      glassOpacity + glassBody * (1 - glassOpacity) * 0.55,
+    );
 
     this._forEachMeshMaterial(object, (mesh, m) => {
       if (!this.isWindowMesh(mesh)) return;
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
-      if (m.isMeshPhysicalMaterial && m.transmission > 0.01) return;
 
       if (mode !== 'default') return;
 
-      m.opacity = glassOpacity;
-      m.transparent = glassOpacity < 1;
-      m.depthWrite = !m.transparent;
+      // glTF car glass often uses MeshPhysicalMaterial + transmission (any magnitude). We must
+      // keep using this path after crushing transmission, else we stop driving body once T<0.01.
+      const hadPhysSnapshot = !!m.userData?.orbyAdvGlassPhysical;
+      const physTransmission = m.isMeshPhysicalMaterial ? Number(m.transmission) || 0 : 0;
+      const usePhysicalGlassPath =
+        m.isMeshPhysicalMaterial && (physTransmission > 1e-6 || hadPhysSnapshot);
+
+      if (usePhysicalGlassPath) {
+        if (!m.userData.orbyAdvGlassPhysical) {
+          m.userData.orbyAdvGlassPhysical = {
+            baseTransmission: Math.min(1, Math.max(0, physTransmission)),
+            baseThickness: Number.isFinite(m.thickness) ? m.thickness : 1,
+          };
+        }
+        const snap = m.userData.orbyAdvGlassPhysical;
+        const bt = snap.baseTransmission;
+        // Linear to 0 at full body — noticeably reduces see-through vs a soft floor at ~2% T.
+        m.transmission = bt * (1 - glassBody);
+        if (glassBody >= 0.999) m.transmission = 0;
+        // Thicker slab = more in-volume absorption while transmission > 0 (reads “more solid”).
+        const th0 = Number.isFinite(snap.baseThickness) ? snap.baseThickness : 1;
+        m.thickness = th0 * (1 + 4 * glassBody);
+
+        m.color.set(glassTintHex);
+        m.color.multiplyScalar(bodyDarken);
+        m.metalness = 0;
+        m.opacity = bodyOpacity;
+        m.transparent = true;
+        m.depthWrite = false;
+        m.needsUpdate = true;
+        return;
+      }
+
+      // Standard (or physical with no measurable transmission): single blend path.
+      m.color.set(glassTintHex);
+      m.color.multiplyScalar(bodyDarken);
+      m.opacity = bodyOpacity;
+      m.transparent = true;
+      m.depthWrite = false;
       m.needsUpdate = true;
     });
   }
@@ -363,16 +472,27 @@ export class MaterialController {
       'glazing',
       'plexi',
       'canopy',
+      'sunroof',
+      'moonroof',
+      'roof_glass',
+      'rearscreen',
+      'rear_screen',
+      'quarterglass',
+      'sideglass',
+      'doorglass',
+      'fenster',
+      'vitre',
+      'parabrisas',
     ];
-    const isWindowByName = windowKeywords.some(keyword => 
-      name.includes(keyword) || parentName.includes(keyword)
+    const isWindowByName = windowKeywords.some(
+      (keyword) => name.includes(keyword) || parentName.includes(keyword),
     );
-    
-    const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    const materialName = material?.name?.toLowerCase() || '';
-    const isWindowByMaterial = windowKeywords.some((keyword) =>
-      materialName.includes(keyword),
-    );
+
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const isWindowByMaterial = materials.some((mat) => {
+      const materialName = mat?.name?.toLowerCase() || '';
+      return windowKeywords.some((keyword) => materialName.includes(keyword));
+    });
 
     return isWindowByName || isWindowByMaterial;
   }
@@ -969,7 +1089,6 @@ export class MaterialController {
       settings.enabled &&
       settings.strength > 0.0001 &&
       material &&
-      material.onBeforeCompile !== undefined &&
       (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial);
 
     if (!needsFresnel) {

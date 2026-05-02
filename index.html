@@ -497,6 +497,7 @@
                       <span class="sr-only">Reverse normal direction</span>
                     </label>
                   </label>
+                  <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
                   <label class="select-line">
                     <span
                       data-tooltip="Bad Sketchfab-style exports often mark the whole mesh BLEND + double-sided — try “Opaque + front faces” for cameras / dense props. True thin glass in the same atlas may look wrong until you split materials in a DCC."
@@ -537,6 +538,32 @@
                       />
                       <span class="value" data-output="glassReflection">2.00</span>
                     </label>
+                    <label class="color-line">
+                      <span
+                        data-tooltip="Body tint for detected glass / windows: darker or saturated colors read as tinted automotive or privacy glass. Uses Alpha → Default."
+                        >Glass tint</span>
+                      <input
+                        type="color"
+                        id="glassTint"
+                        class="color-chip"
+                        value="#ffffff"
+                      />
+                    </label>
+                    <label class="slider-line slider-line--track-short">
+                      <span
+                        data-tooltip="Makes heuristic glass read more solid: reduces glTF transmission (common on car windows), darkens the pane, and stacks with Glass opacity. Uses Alpha → Default."
+                        >Glass body</span>
+                      <input
+                        id="glassBody"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0"
+                      />
+                      <span class="value" data-output="glassBody">0.00</span>
+                    </label>
+                  </div>
                   </div>
                 </div>
               </div>
