@@ -187,6 +187,7 @@ export class UIManager {
       rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       cameraAutoOrbit: document.querySelectorAll('input[name="cameraAutoOrbit"]'),
+      cameraHandheld: document.querySelectorAll('input[name="cameraHandheld"]'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
       hdriBlurriness: q('#hdriBlurriness'),
@@ -977,6 +978,12 @@ export class UIManager {
           this.stateStore.set('camera.vignetteColor', payload.camera.vignetteColor);
           this.eventBus.emit('render:vignette-color', payload.camera.vignetteColor);
         }
+        if (payload.camera.handheld !== undefined) {
+          let h = payload.camera.handheld;
+          if (h === 'medium') h = 'high';
+          this.stateStore.set('camera.handheld', h);
+          this.eventBus.emit('camera:handheld', h);
+        }
       }
 
       // Apply Exposure
@@ -1260,6 +1267,13 @@ export class UIManager {
       const autoOrbitValue = state.camera?.autoOrbit ?? 'off';
       this.inputs.cameraAutoOrbit.forEach((radio) => {
         radio.checked = radio.value === autoOrbitValue;
+      });
+    }
+    if (this.inputs.cameraHandheld) {
+      let handheldValue = state.camera?.handheld ?? 'off';
+      if (handheldValue === 'medium') handheldValue = 'high';
+      this.inputs.cameraHandheld.forEach((radio) => {
+        radio.checked = radio.value === handheldValue;
       });
     }
     this.inputs.shading.forEach((input) => {

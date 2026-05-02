@@ -266,6 +266,16 @@ export class RenderControls {
       });
     });
 
+    if (this.ui.inputs.cameraHandheld) {
+      this.ui.inputs.cameraHandheld.forEach((radio) => {
+        radio.addEventListener('change', (event) => {
+          const value = event.target.value;
+          this.stateStore.set('camera.handheld', value);
+          this.eventBus.emit('camera:handheld', value);
+        });
+      });
+    }
+
     // Exposure
     this.ui.inputs.exposure.addEventListener('input', (event) => {
       touchLookFilterCustom();
@@ -617,6 +627,13 @@ export class RenderControls {
       const autoOrbitValue = cam.autoOrbit ?? 'off';
       this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
         radio.checked = radio.value === autoOrbitValue;
+      });
+    }
+    if (this.ui.inputs.cameraHandheld) {
+      let handheldValue = cam.handheld ?? 'off';
+      if (handheldValue === 'medium') handheldValue = 'high';
+      this.ui.inputs.cameraHandheld.forEach((radio) => {
+        radio.checked = radio.value === handheldValue;
       });
     }
     this.ui.inputs.exposure.value = state.exposure;

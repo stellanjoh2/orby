@@ -6,6 +6,16 @@ function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
 }
 
+/**
+ * pos — fraction of camera–target distance for position wobble;
+ * rot — degrees scale for pitch/yaw euler wobble;
+ * dutch — max degrees for roll around the lens axis (independent slow noise, very subtle).
+ */
+const HANDHELD_PRESETS = {
+  low: { pos: 0.00045, rot: 0.06, dutch: 0.1575 },
+  high: { pos: 0.0013125, rot: 0.18, dutch: 0.36 },
+};
+
 export class CameraController {
   constructor(
     camera,
@@ -55,6 +65,11 @@ export class CameraController {
     this._tiltSyncedUp = new THREE.Vector3();
     this._tiltTowardTarget = new THREE.Vector3();
     this._tiltLocalRollAxis = new THREE.Vector3(0, 0, 1);
+    this.handheldMode = 'off';
+    this._handheldTime = 0;
+    this._handheldPosLocal = new THREE.Vector3();
+    this._handheldEuler = new THREE.Euler();
+    this._handheldQuat = new THREE.Quaternion();
     this.camera.fov = initialFov;
     this.camera.updateProjectionMatrix();
     this.controls.update();
@@ -91,6 +106,97 @@ export class CameraController {
     const n = typeof degrees === 'number' ? degrees : Number(degrees);
     this.currentTilt = Number.isFinite(n) ? n : 0;
     this._applyTilt();
+  }
+
+  /**
+   * Handheld camera shake layered on top of orbit controls (must run after controls + tilt each frame).
+   * @param {'off'|'low'|'high'} mode — legacy `medium` is treated as `high`
+   */
+  setHandheldMode(mode) {
+    let m = mode;
+    if (m === 'medium') m = 'high';
+    const allowed = new Set(['off', 'low', 'high']);
+    this.handheldMode = allowed.has(m) ? m : 'off';
+    if (this.handheldMode === 'off') {
+      this._handheldTime = 0;
+    }
+  }
+
+  /**
+   * Apply procedural handheld offset to the current camera pose. Orbit math stays unaware;
+   * this runs once per frame after OrbitControls and tilt.
+   * @param {number} delta seconds
+   */
+  applyHandheldMotion(delta) {
+    if (this.handheldMode === 'off') return;
+    const d = typeof delta === 'number' ? delta : 0;
+    if (!Number.isFinite(d) || d <= 0 || d > 0.25) return;
+
+    const preset = HANDHELD_PRESETS[this.handheldMode];
+    if (!preset) return;
+
+    this._handheldTime += d;
+    const t = this._handheldTime;
+    const dist = Math.max(0.25, this.getTargetDistance());
+    const p = dist * preset.pos;
+    const rDeg = preset.rot;
+
+    const lx =
+      (Math.sin(t * 2.1) * Math.cos(t * 0.37) + 0.35 * Math.sin(t * 5.3)) * p;
+    const ly =
+      (Math.cos(t * 1.8) * Math.sin(t * 0.52) + 0.28 * Math.sin(t * 4.8)) * p;
+    let lz =
+      (Math.sin(t * 1.3 + 0.7) * 0.45 + 0.2 * Math.sin(t * 3.1)) * p * 0.35;
+    if (this.handheldMode === 'high') {
+      lz +=
+        Math.sin(t * 0.42 + 0.3) * p * 0.55 +
+        Math.sin(t * 2.15) * Math.cos(t * 0.18) * p * 0.25;
+    }
+
+    this._handheldPosLocal.set(lx, ly, lz);
+    this._handheldPosLocal.applyQuaternion(this.camera.quaternion);
+    this.camera.position.add(this._handheldPosLocal);
+
+    const r = THREE.MathUtils.degToRad(rDeg);
+    const pitch =
+      r *
+      (Math.sin(t * 1.9 + 0.2) * Math.cos(t * 0.41) +
+        0.4 * Math.sin(t * 4.2));
+    const yaw =
+      r *
+      (Math.cos(t * 2.2) * Math.sin(t * 0.33) + 0.35 * Math.sin(t * 3.7));
+    const roll =
+      r *
+      (Math.sin(t * 1.5 + 1.1) * Math.cos(t * 0.55) + 0.3 * Math.sin(t * 5.1));
+    if (this.handheldMode === 'high') {
+      const slow = r * 0.55 * Math.sin(t * 0.38 + 0.6);
+      const yawExtra = r * 0.4 * Math.sin(t * 0.31);
+      this._handheldEuler.set(
+        pitch + slow * 0.35,
+        yaw + yawExtra,
+        roll + slow * 0.5,
+        'YXZ',
+      );
+    } else {
+      this._handheldEuler.set(pitch, yaw, roll, 'YXZ');
+    }
+    this._handheldQuat.setFromEuler(this._handheldEuler);
+    this.camera.quaternion.multiply(this._handheldQuat);
+
+    // Dutch roll around view axis (same local-Z roll as UI tilt) — reads clearly at subtle amps.
+    const dutchDeg = preset.dutch ?? 0;
+    if (dutchDeg > 1e-6) {
+      const dn =
+        Math.sin(t * 1.07 + 0.45) * 0.55 +
+        0.32 * Math.sin(t * 2.65 + 0.9) +
+        (this.handheldMode === 'high' ? 0.22 * Math.sin(t * 0.27 + 0.2) : 0);
+      const dutchRad = THREE.MathUtils.degToRad(dutchDeg) * dn;
+      this._tiltRollQuat.setFromAxisAngle(this._tiltLocalRollAxis, dutchRad);
+      this.camera.quaternion.multiply(this._tiltRollQuat);
+    }
+
+    this._tiltSyncedUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+    this.camera.up.copy(this._tiltSyncedUp);
   }
 
   /**

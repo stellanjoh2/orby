@@ -223,6 +223,7 @@ export class SceneManager {
     this.currentShading = initialState.shading;
     this.autoRotateSpeed = 0;
     this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
+    this.cameraHandheld = initialState.camera?.handheld ?? 'off';
     this.lightsMaster = initialState.lightsMaster ?? 0.30;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
@@ -543,6 +544,7 @@ export class SceneManager {
     this.setShading(state.shading);
     this.autoRotateSpeed = state.autoRotate;
     this.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off');
+    this.setCameraHandheld(state.camera?.handheld ?? 'off');
     this.setGroundSolid(state.groundSolid);
     this.setGroundWire(state.groundWire);
     this.setGroundSolidColor(state.groundSolidColor);
@@ -999,6 +1001,13 @@ export class SceneManager {
   setCameraAutoOrbit(mode) {
     this.cameraAutoOrbit = mode ?? 'off';
     this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
+  }
+
+  setCameraHandheld(mode) {
+    let m = mode ?? 'off';
+    if (m === 'medium') m = 'high';
+    this.cameraHandheld = m;
+    this.cameraController?.setHandheldMode(this.cameraHandheld);
   }
 
   setGroundY(value) {
@@ -2099,6 +2108,7 @@ export class SceneManager {
     if (this.cameraAutoOrbit !== 'off') {
       this.cameraController.updateAutoOrbit(delta);
     }
+    this.cameraController.applyHandheldMotion(delta);
     this.diagnosticsController.update(delta);
     if (!this.panelsShelfScrolling) {
       this.postPipeline?.updateGrainTime(delta);

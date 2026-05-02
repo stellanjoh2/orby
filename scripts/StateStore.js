@@ -132,6 +132,7 @@ export class StateStore {
         fov: 50,
         tilt: 0,
         autoOrbit: 'off',
+        handheld: 'off',
         contrast: 1.0,
         temperature: CAMERA_TEMPERATURE_NEUTRAL_K,
         tint: 0,

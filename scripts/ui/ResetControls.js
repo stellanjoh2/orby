@@ -286,6 +286,7 @@ export class ResetControls {
       this.ui.setEffectControlsDisabled(['fresnelColor', 'fresnelRadius', 'fresnelStrength'], !defaults.fresnel.enabled);
       this.eventBus.emit('camera:fov', defaults.camera.fov);
       this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
+      this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
       this.eventBus.emit('scene:exposure', defaults.exposure);
       this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
       this.eventBus.emit('render:contrast', defaults.camera.contrast);
@@ -543,6 +544,7 @@ export class ResetControls {
               this.stateStore.set('lookFilterPreset', 'custom');
               this.stateStore.set('camera.fov', defaults.camera.fov);
               this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
+              this.stateStore.set('camera.handheld', defaults.camera.handheld ?? 'off');
               this.stateStore.set('exposure', defaults.exposure);
               this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
               // Also reset vignette (camera/post-processing effect)
@@ -552,6 +554,7 @@ export class ResetControls {
             // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
+            this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
             this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);

@@ -1971,6 +1971,11 @@ a.about-highlight:focus-visible {
   position: relative;
 }
 
+.subsection--handheld-spacing {
+  margin-top: 0.85rem;
+  padding-top: 0.35rem;
+}
+
 /* Muted UI logic removed - will be reimplemented later */
 
 .block-title {
