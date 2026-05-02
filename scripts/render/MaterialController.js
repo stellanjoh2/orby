@@ -35,7 +35,8 @@ export class MaterialController {
     this.currentModel = null;
     this.currentShading = null;
     this.originalMaterials = new WeakMap();
-    this.wireframeOverlay = null;
+    /** @type {THREE.Mesh[]|null} Wire overlay meshes (parented next to their source mesh for correct hierarchy). */
+    this.wireframeOverlayMeshes = null;
     this.unlitMode = false;
 
     // Settings
@@ -657,10 +658,10 @@ export class MaterialController {
   }
 
   clearWireframeOverlay() {
-    if (this.wireframeOverlay) {
-      this.wireframeOverlay.traverse((child) => {
+    const meshes = this.wireframeOverlayMeshes;
+    if (meshes && meshes.length) {
+      for (const child of meshes) {
         if (child.isMesh) {
-          // Only dispose geometry if it was cloned (has userData.isCloned)
           if (child.geometry && child.userData.isCloned) {
             child.geometry.dispose();
           }
@@ -671,13 +672,10 @@ export class MaterialController {
               child.material.dispose();
             }
           }
+          child.parent?.remove(child);
         }
-      });
-      // Remove from parent (could be currentModel or modelRoot)
-      if (this.wireframeOverlay.parent) {
-        this.wireframeOverlay.parent.remove(this.wireframeOverlay);
       }
-      this.wireframeOverlay = null;
+      this.wireframeOverlayMeshes = null;
     }
   }
 
@@ -690,7 +688,7 @@ export class MaterialController {
     // Update mesh visibility based on hideMesh setting
     const { hideMesh } = this.wireframeSettings;
     this.currentModel.traverse((child) => {
-      if (child.isMesh) {
+      if (child.isMesh && !child.userData.isWireframeOverlay) {
         // Hide mesh if hideMesh is enabled (but keep wireframe overlay visible)
         child.visible = !hideMesh;
       }
@@ -701,8 +699,7 @@ export class MaterialController {
     const shouldShowOverlay = this.wireframeSettings.alwaysOn || this.currentShading === 'wireframe';
     
     if (shouldShowOverlay) {
-      this.wireframeOverlay = new THREE.Group();
-      this.wireframeOverlay.name = 'wireframeOverlay';
+      this.wireframeOverlayMeshes = [];
 
       const { color, onlyVisibleFaces } = this.wireframeSettings;
       const wireMaterial = new THREE.MeshBasicMaterial({
@@ -724,92 +721,84 @@ export class MaterialController {
         wireMaterial.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
       }
 
-      // Create wireframe meshes that follow the model
+      // Create wireframe meshes that follow the model.
+      // Parent each wire mesh to the same Object3D as the source mesh so local transforms
+      // (position/rotation/scale) stay correct — a single overlay group under the model root
+      // would misapply nested locals and produce huge offsets / wrong scale (common on GLB).
       this.currentModel.traverse((child) => {
-        if (child.isMesh && child.geometry) {
-          let geometry = child.geometry;
-          let isCloned = false;
+        if (!child.isMesh || !child.geometry || child.userData.isWireframeOverlay) return;
+        // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
+        if (child.isInstancedMesh) return;
 
-          // If onlyVisibleFaces is enabled, push vertices along normals
-          if (onlyVisibleFaces) {
-            // Clone geometry so we don't modify the original
-            geometry = child.geometry.clone();
-            isCloned = true;
-            const positions = geometry.attributes.position;
+        let geometry = child.geometry;
+        let isCloned = false;
 
-            // Compute normals if they don't exist
-            if (!geometry.attributes.normal) {
-              geometry.computeVertexNormals();
-            }
+        // If onlyVisibleFaces is enabled, push vertices along normals
+        if (onlyVisibleFaces) {
+          geometry = child.geometry.clone();
+          isCloned = true;
+          const positions = geometry.attributes.position;
 
-            // Push vertices along their normals by a small amount (0.002 units)
-            const offset = WIREFRAME_OFFSET;
-            for (let i = 0; i < positions.count; i++) {
-              const normal = new THREE.Vector3();
-              normal.fromBufferAttribute(geometry.attributes.normal, i);
-              const position = new THREE.Vector3();
-              position.fromBufferAttribute(positions, i);
-              position.addScaledVector(normal, offset);
-              positions.setXYZ(i, position.x, position.y, position.z);
-            }
-            positions.needsUpdate = true;
+          if (!geometry.attributes.normal) {
+            geometry.computeVertexNormals();
           }
 
-          const wireMesh = child.isSkinnedMesh
-            ? new THREE.SkinnedMesh(geometry, wireMaterial)
-            : new THREE.Mesh(geometry, wireMaterial);
-
-          // Link to original mesh for matrix updates
-          wireMesh.userData.originalMesh = child;
-          wireMesh.userData.isCloned = isCloned;
-          wireMesh.renderOrder = 999; // Render on top
-
-          // Keep wireframe in sync with skinned animations by sharing the skeleton
-          if (child.isSkinnedMesh) {
-            wireMesh.bind(child.skeleton, child.bindMatrix);
-            // Use the same bindMatrixInverse to avoid reshaping issues
-            if (child.bindMatrixInverse) {
-              wireMesh.bindMatrixInverse = child.bindMatrixInverse.clone();
-            }
+          const offset = WIREFRAME_OFFSET;
+          for (let i = 0; i < positions.count; i++) {
+            const normal = new THREE.Vector3();
+            normal.fromBufferAttribute(geometry.attributes.normal, i);
+            const position = new THREE.Vector3();
+            position.fromBufferAttribute(positions, i);
+            position.addScaledVector(normal, offset);
+            positions.setXYZ(i, position.x, position.y, position.z);
           }
-          this.wireframeOverlay.add(wireMesh);
+          positions.needsUpdate = true;
         }
-      });
 
-      // Add wireframe overlay as a child of currentModel so it inherits the same transforms
-      // This ensures both the original meshes and wireframe meshes rotate together through modelRoot
-      if (this.currentModel) {
-        this.currentModel.add(this.wireframeOverlay);
-      } else {
-        this.modelRoot.add(this.wireframeOverlay);
-      }
+        const wireMesh = child.isSkinnedMesh
+          ? new THREE.SkinnedMesh(geometry, wireMaterial)
+          : new THREE.Mesh(geometry, wireMaterial);
+
+        wireMesh.userData.originalMesh = child;
+        wireMesh.userData.isCloned = isCloned;
+        wireMesh.userData.isWireframeOverlay = true;
+        wireMesh.name = child.name ? `${child.name}_wireframe` : 'wireframe';
+        wireMesh.renderOrder = 999;
+
+        if (child.isSkinnedMesh) {
+          wireMesh.bind(child.skeleton, child.bindMatrix);
+          if (child.bindMatrixInverse) {
+            wireMesh.bindMatrixInverse = child.bindMatrixInverse.clone();
+          }
+        }
+        const hostParent = child.parent;
+        if (hostParent) {
+          hostParent.add(wireMesh);
+        } else {
+          this.currentModel.add(wireMesh);
+        }
+        this.wireframeOverlayMeshes.push(wireMesh);
+      });
     }
   }
 
   updateWireframeOverlayTransforms() {
-    if (!this.wireframeOverlay || !this.currentModel) return;
+    if (!this.wireframeOverlayMeshes?.length || !this.currentModel) return;
 
-    // Update wireframe overlay transforms to match the model perfectly
-    // Since wireframeOverlay is now a child of currentModel (same as original meshes),
-    // we just need to copy local transforms and they'll inherit modelRoot rotations together
-    this.wireframeOverlay.traverse((wireMesh) => {
-      if (wireMesh.isMesh && wireMesh.userData.originalMesh) {
-        const original = wireMesh.userData.originalMesh;
-        // Copy local position, rotation, and scale from original
-        // This ensures they transform together through modelRoot
-        wireMesh.position.copy(original.position);
-        wireMesh.rotation.copy(original.rotation);
-        wireMesh.scale.copy(original.scale);
-        // Let Three.js handle matrix updates through the parent hierarchy.
-        // For skinned meshes, keep auto-updates enabled so skinning continues to run.
-        const shouldDisableAutoUpdate = !wireMesh.isSkinnedMesh;
-        wireMesh.matrixAutoUpdate = true;
-        wireMesh.updateMatrix();
-        if (shouldDisableAutoUpdate) {
-          wireMesh.matrixAutoUpdate = false;
-        }
+    // Keep wire mesh locals in sync with each source mesh (same parent in the scene graph).
+    for (const wireMesh of this.wireframeOverlayMeshes) {
+      if (!wireMesh.isMesh || !wireMesh.userData.originalMesh) continue;
+      const original = wireMesh.userData.originalMesh;
+      wireMesh.position.copy(original.position);
+      wireMesh.rotation.copy(original.rotation);
+      wireMesh.scale.copy(original.scale);
+      const shouldDisableAutoUpdate = !wireMesh.isSkinnedMesh;
+      wireMesh.matrixAutoUpdate = true;
+      wireMesh.updateMatrix();
+      if (shouldDisableAutoUpdate) {
+        wireMesh.matrixAutoUpdate = false;
       }
-    });
+    }
   }
 
   setFresnelSettings(settings) {
