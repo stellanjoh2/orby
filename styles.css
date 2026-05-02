@@ -1936,6 +1936,10 @@ a.about-highlight:focus-visible {
   display: block;
 }
 
+.panel-header-title .orby-stagger-word {
+  display: inline-block;
+}
+
 .panel-header h2 {
   margin: 0;
   font-size: 1rem;
@@ -1969,11 +1973,6 @@ a.about-highlight:focus-visible {
 /* Subsection within merged panel blocks - can be muted individually */
 .subsection {
   position: relative;
-}
-
-.subsection--handheld-spacing {
-  margin-top: 0.85rem;
-  padding-top: 0.35rem;
 }
 
 /* Muted UI logic removed - will be reimplemented later */

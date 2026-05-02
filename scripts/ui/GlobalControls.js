@@ -4,6 +4,7 @@
  */
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import { revealShelfPanelHeadline } from './panelHeadlineReveal.js';
 
 export class GlobalControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -95,6 +96,9 @@ export class GlobalControls {
         document.querySelectorAll('.panel-header-title').forEach((header) => {
           header.classList.toggle('visible', header.dataset.header === target);
         });
+        revealShelfPanelHeadline(
+          document.querySelector(`.panel-header-title[data-header="${target}"]`),
+        );
       });
     });
   }
@@ -336,7 +340,6 @@ export class GlobalControls {
           ? (currentIndex - 1 + tabs.length) % tabs.length
           : (currentIndex + 1) % tabs.length;
         const nextTab = tabs[nextIndex];
-        this.ui.activeTab = nextTab;
         const tabButton = document.querySelector(`[data-tab="${nextTab}"]`);
         if (tabButton) {
           tabButton.click();

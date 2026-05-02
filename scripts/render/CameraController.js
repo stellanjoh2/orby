@@ -12,8 +12,8 @@ function defaultModelViewDirection() {
  * dutch — max degrees for roll around the lens axis (independent slow noise, very subtle).
  */
 const HANDHELD_PRESETS = {
-  low: { pos: 0.00045, rot: 0.06, dutch: 0.1575 },
-  high: { pos: 0.0013125, rot: 0.18, dutch: 0.36 },
+  low: { pos: 0.000225, rot: 0.03, dutch: 0.18 },
+  high: { pos: 0.00065625, rot: 0.09, dutch: 0.39 },
 };
 
 export class CameraController {
@@ -183,14 +183,20 @@ export class CameraController {
     this._handheldQuat.setFromEuler(this._handheldEuler);
     this.camera.quaternion.multiply(this._handheldQuat);
 
-    // Dutch roll around view axis (same local-Z roll as UI tilt) — reads clearly at subtle amps.
+    // Dutch roll around view axis (same local-Z roll as UI tilt).
     const dutchDeg = preset.dutch ?? 0;
     if (dutchDeg > 1e-6) {
       const dn =
-        Math.sin(t * 1.07 + 0.45) * 0.55 +
-        0.32 * Math.sin(t * 2.65 + 0.9) +
-        (this.handheldMode === 'high' ? 0.22 * Math.sin(t * 0.27 + 0.2) : 0);
-      const dutchRad = THREE.MathUtils.degToRad(dutchDeg) * dn;
+        Math.sin(t * 1.07 + 0.45) * 0.52 +
+        0.3 * Math.sin(t * 2.65 + 0.9) +
+        0.22 * Math.sin(t * 3.38 + 0.15) +
+        0.14 * Math.sin(t * 6.05 + 1.1) +
+        0.12 * Math.sin(t * 0.31 + 0.55) +
+        (this.handheldMode === 'high'
+          ? 0.26 * Math.sin(t * 0.27 + 0.2) + 0.1 * Math.sin(t * 1.85)
+          : 0);
+      const dnClamped = THREE.MathUtils.clamp(dn, -1, 1);
+      const dutchRad = THREE.MathUtils.degToRad(dutchDeg) * dnClamped;
       this._tiltRollQuat.setFromAxisAngle(this._tiltLocalRollAxis, dutchRad);
       this.camera.quaternion.multiply(this._tiltRollQuat);
     }
