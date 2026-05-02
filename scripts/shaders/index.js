@@ -451,7 +451,17 @@ vec3 applyLumaToneCurve(vec3 c) {
   if (l < 1e-5) {
     return c;
   }
-  float l2 = evalToneCurve(l);
+  // evalToneCurve() clamps input to [0,1], so l > 1 used to map every HDR pixel to l2=1
+  // (scale 1/l), which crushed highlights and conflicted with toneCurveIdentity bypass —
+  // a visible 1-frame pop when |x−y| crossed TONE_IDENTITY_EPS (~neutral curve).
+  // Extrapolate past white using PCHIP slope at t=1 (toneDydx.w) so HDR stays continuous.
+  float l2;
+  if (l <= 1.0) {
+    l2 = evalToneCurve(l);
+  } else {
+    float dEnd = max(toneDydx.w, 0.0);
+    l2 = 1.0 + (l - 1.0) * dEnd;
+  }
   return clamp(c * (l2 / l), 0.0, 4.0);
 }
 
