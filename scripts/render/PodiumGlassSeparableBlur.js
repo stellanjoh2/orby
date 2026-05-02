@@ -102,34 +102,46 @@ void main() {
     const r = radiusPx / Math.sqrt(cycles);
 
     const prevTarget = renderer.getRenderTarget();
-    const prevVp = new THREE.Vector4();
-    renderer.getViewport(prevVp);
     const prevAutoClear = renderer.autoClear;
 
     let src = sourceTexture;
-    for (let c = 0; c < cycles; c++) {
-      this.material.uniforms.tDiffuse.value = src;
+    try {
+      for (let c = 0; c < cycles; c++) {
+        this.material.uniforms.tDiffuse.value = src;
 
-      this.material.uniforms.pixelStep.value.set(r / w, 0);
-      renderer.setRenderTarget(this.rtH);
-      renderer.setViewport(0, 0, w, h);
-      renderer.autoClear = true;
-      renderer.clear();
-      renderer.render(this.scene, this.camera);
+        this.material.uniforms.pixelStep.value.set(r / w, 0);
+        renderer.setRenderTarget(this.rtH);
+        renderer.setViewport(0, 0, w, h);
+        renderer.autoClear = true;
+        renderer.clear();
+        renderer.render(this.scene, this.camera);
 
-      this.material.uniforms.tDiffuse.value = this.rtH.texture;
-      this.material.uniforms.pixelStep.value.set(0, r / h);
-      renderer.setRenderTarget(this.rtV);
-      renderer.setViewport(0, 0, w, h);
-      renderer.clear();
-      renderer.render(this.scene, this.camera);
+        this.material.uniforms.tDiffuse.value = this.rtH.texture;
+        this.material.uniforms.pixelStep.value.set(0, r / h);
+        renderer.setRenderTarget(this.rtV);
+        renderer.setViewport(0, 0, w, h);
+        renderer.clear();
+        renderer.render(this.scene, this.camera);
 
-      src = this.rtV.texture;
+        src = this.rtV.texture;
+      }
+    } finally {
+      renderer.setRenderTarget(prevTarget);
+      // Blur used setViewport(0,0,w,h) on small RTs; that updates renderer._viewport. Later
+      // setRenderTarget(null) applies _viewport×pixelRatio for the canvas — if we don't sync
+      // here, the rest of the frame draws in a tiny corner (~1/4 area when w,h ≈ half).
+      // setRenderTarget fixes GL state but does not realign Three's logical _viewport.
+      const pr = renderer.getPixelRatio();
+      if (prevTarget && prevTarget.isWebGLRenderTarget) {
+        const vp = prevTarget.viewport;
+        renderer.setViewport(vp.x / pr, vp.y / pr, vp.z / pr, vp.w / pr);
+      } else {
+        const sz = new THREE.Vector2();
+        renderer.getSize(sz);
+        renderer.setViewport(0, 0, sz.x, sz.y);
+      }
+      renderer.autoClear = prevAutoClear;
     }
-
-    renderer.setRenderTarget(prevTarget);
-    renderer.setViewport(prevVp.x, prevVp.y, prevVp.z, prevVp.w);
-    renderer.autoClear = prevAutoClear;
 
     return this.rtV.texture;
   }

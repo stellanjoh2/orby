@@ -558,7 +558,41 @@ export class SceneManager {
       composer: this.composer,
       postPipeline: this.postPipeline,
       backgroundController: this.backgroundController,
+      syncPostProcessingForLogicalSize: (w, h) =>
+        this.syncPostProcessingForLogicalSize(w, h),
     });
+  }
+
+  /**
+   * Keeps EffectComposer pixel ratio and pass resolutions aligned with the renderer.
+   * EffectComposer caches its own pixel ratio — changing only renderer.setPixelRatio breaks exports.
+   */
+  syncPostProcessingForLogicalSize(width, height) {
+    if (!this.composer || width <= 0 || height <= 0) return;
+    const pr = this.renderer.getPixelRatio();
+    this.composer.setPixelRatio(pr);
+    this.composer.setSize(width, height);
+
+    const tier = resolveRenderQualityTier(this.stateStore.getState().renderQuality);
+    const bloomScale = tier.bloomResolutionScale;
+    const bloomW = Math.max(1, Math.floor(width * bloomScale));
+    const bloomH = Math.max(1, Math.floor(height * bloomScale));
+    if (this.postPipeline?.bloomPass) {
+      if (this.postPipeline.bloomPass.resolution) {
+        this.postPipeline.bloomPass.resolution.set(bloomW, bloomH);
+      }
+      if (typeof this.postPipeline.bloomPass.setSize === 'function') {
+        this.postPipeline.bloomPass.setSize(bloomW, bloomH);
+      }
+    }
+    if (this.postPipeline?.colorAdjust) {
+      this.postPipeline.colorAdjust.setResolution(width, height);
+    }
+    if (this.fxaaPass) {
+      this.fxaaPass.material.uniforms.resolution.value.x = 1 / (width * pr);
+      this.fxaaPass.material.uniforms.resolution.value.y = 1 / (height * pr);
+    }
+    this.groundController?.resizePodiumReflector?.(width, height);
   }
 
 
@@ -2369,46 +2403,7 @@ export class SceneManager {
       this.camera.aspect = finalWidth / finalHeight;
       this.camera.updateProjectionMatrix();
       
-      // Update composer (post-processing pipeline). EffectComposer caches _pixelRatio from
-      // construction; it does not follow renderer.setPixelRatio() unless we sync here.
-      // Without this, switching render quality (Epic ↔ Medium) leaves passes sized for the old DPR.
-      if (this.composer) {
-        this.composer.setPixelRatio(this.renderer.getPixelRatio());
-        this.composer.setSize(finalWidth, finalHeight);
-      }
-      
-      // UnrealBloomPass internal resolution (tier may decimate for speed)
-      const tier = resolveRenderQualityTier(
-        this.stateStore.getState().renderQuality,
-      );
-      const bloomScale = tier.bloomResolutionScale;
-      const bloomW = Math.max(1, Math.floor(finalWidth * bloomScale));
-      const bloomH = Math.max(1, Math.floor(finalHeight * bloomScale));
-      if (this.postPipeline?.bloomPass) {
-        if (this.postPipeline.bloomPass.resolution) {
-          this.postPipeline.bloomPass.resolution.set(bloomW, bloomH);
-        }
-        if (typeof this.postPipeline.bloomPass.setSize === 'function') {
-          this.postPipeline.bloomPass.setSize(bloomW, bloomH);
-        }
-      }
-      
-      // Update color adjust resolution for sharpness
-      if (this.postPipeline?.colorAdjust) {
-        this.postPipeline.colorAdjust.setResolution(finalWidth, finalHeight);
-      }
-      
-      // Update FXAA resolution on resize
-      if (this.fxaaPass) {
-        const pixelRatio = this.renderer.getPixelRatio();
-        this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (finalWidth * pixelRatio);
-        this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (finalHeight * pixelRatio);
-      }
-      
-      // Note: Histogram controller doesn't need explicit resize handling
-      // as it reads from the composer's render target which is updated by composer.setSize()
-
-      this.groundController?.resizePodiumReflector?.(finalWidth, finalHeight);
+      this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
     });
   }
 

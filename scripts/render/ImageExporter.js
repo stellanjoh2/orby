@@ -9,14 +9,38 @@ import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/
  * Manages render targets, cropping, pixel manipulation, and file downloads
  */
 export class ImageExporter {
-  constructor({ renderer, scene, camera, composer, postPipeline, backgroundController } = {}) {
+  constructor({
+    renderer,
+    scene,
+    camera,
+    composer,
+    postPipeline,
+    backgroundController,
+    /** Align composer pixel ratio + bloom/FXAA/N8AO-dependent passes (see SceneManager). */
+    syncPostProcessingForLogicalSize,
+  } = {}) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.composer = composer;
     this.postPipeline = postPipeline;
     this.backgroundController = backgroundController;
+    this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this._imageTracerLoaded = false;
+  }
+
+  /**
+   * After setSize / composer.resize, align viewport + scissor with Three's logical size.
+   * setViewport expects logical width/height (it multiplies by pixelRatio for GL); getDrawingBufferSize is physical.
+   */
+  _ensureFullDrawingBufferViewport() {
+    const r = this.renderer;
+    const logical = new THREE.Vector2();
+    r.getSize(logical);
+    r.setViewport(0, 0, logical.x, logical.y);
+    if (typeof r.setScissorTest === 'function') {
+      r.setScissorTest(false);
+    }
   }
 
   /**
@@ -32,23 +56,25 @@ export class ImageExporter {
     const targetWidth = Math.round(actualWidth * size);
     const targetHeight = Math.round(actualHeight * size);
 
-    // Save current canvas size
     const canvas = this.renderer.domElement;
-    const originalCanvasWidth = canvas.width;
-    const originalCanvasHeight = canvas.height;
 
     // Set renderer size and pixel ratio
     // Use pixel ratio of 1 for exact resolution control
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(targetWidth, targetHeight, false);
-    this.composer.setSize(targetWidth, targetHeight);
-    
-    // Explicitly set canvas element size to match renderer size
-    // This is critical - toDataURL reads from canvas.width/height, not renderer size
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    
+    this.camera.aspect = targetWidth / Math.max(1e-6, targetHeight);
+    this.camera.updateProjectionMatrix();
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(targetWidth, targetHeight);
+    } else if (this.composer) {
+      this.composer.setPixelRatio(1);
+      this.composer.setSize(targetWidth, targetHeight);
+    }
+
+    // setSize already sizes the canvas; avoid redundant assignments that can upset GL state.
+
     // Render through composer to get all effects
+    this._ensureFullDrawingBufferViewport();
     this.composer.render();
     
     // Now toDataURL will capture the full canvas at the correct size
@@ -58,11 +84,16 @@ export class ImageExporter {
     // Restore original settings
     this.renderer.setPixelRatio(originalPixelRatio);
     this.renderer.setSize(originalSize.x, originalSize.y, false);
-    this.composer.setSize(originalSize.x, originalSize.y);
-    
-    // Restore canvas size
-    canvas.width = originalCanvasWidth;
-    canvas.height = originalCanvasHeight;
+    this.camera.aspect = originalSize.x / Math.max(1e-6, originalSize.y);
+    this.camera.updateProjectionMatrix();
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(originalSize.x, originalSize.y);
+    } else if (this.composer) {
+      this.composer.setPixelRatio(originalPixelRatio);
+      this.composer.setSize(originalSize.x, originalSize.y);
+    }
+
+    this._ensureFullDrawingBufferViewport();
   }
 
   /**
@@ -243,6 +274,7 @@ export class ImageExporter {
 
       // Render current view using composer if available (to match on-screen colors)
       if (this.composer) {
+        this._ensureFullDrawingBufferViewport();
         this.composer.render();
       } else {
         this.renderer.render(this.scene, this.camera);
@@ -605,12 +637,9 @@ export class ImageExporter {
     const originalClearColor = this.renderer.getClearColor(new THREE.Color()).clone();
     const originalClearAlpha = this.renderer.getClearAlpha();
     const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
-    
-    // Save original viewport
+
     const gl = this.renderer.getContext();
-    const originalViewport = new Int32Array(4);
-    gl.getParameter(gl.VIEWPORT, originalViewport);
-    
+
     // Set transparent clear color
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setClearAlpha(0);
@@ -624,7 +653,16 @@ export class ImageExporter {
     // fullRenderWidth/Height are already scaled, so pixel ratio stays at 1 for exact resolution
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight, false);
-    if (this.composer) {
+    this.camera.aspect =
+      cropInfo.fullRenderWidth / Math.max(1e-6, cropInfo.fullRenderHeight);
+    this.camera.updateProjectionMatrix();
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(
+        cropInfo.fullRenderWidth,
+        cropInfo.fullRenderHeight,
+      );
+    } else if (this.composer) {
+      this.composer.setPixelRatio(1);
       this.composer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
     }
     
@@ -647,26 +685,13 @@ export class ImageExporter {
       if (this.postPipeline?.renderPass) {
         this.postPipeline.renderPass.clearAlpha = 0; // Transparent clear
       }
-      
-      // Ensure canvas size matches renderer size
-      // IMPORTANT: Set canvas size BEFORE renderer size to ensure they're in sync
-      const canvas = this.renderer.domElement;
-      const originalCanvasWidth = canvas.width;
-      const originalCanvasHeight = canvas.height;
-      
-      // Set viewport first (before resizing)
-      const gl = this.renderer.getContext();
-      gl.viewport(0, 0, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
-      
-      // Now set canvas and renderer sizes
-      canvas.width = cropInfo.fullRenderWidth;
-      canvas.height = cropInfo.fullRenderHeight;
-      
-      // Explicitly clear the canvas to remove any stale pixels/HDRI background
+
+      // Renderer.setSize already matched canvas to fullRender*; reset viewport after any stale state.
+      this._ensureFullDrawingBufferViewport();
+
       gl.clearColor(0, 0, 0, 0); // Clear with transparent black
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      
-      // Force a frame to ensure canvas is ready
+
       // Render composer normally to canvas (this is what works in viewport!)
       this.composer.render();
       
@@ -690,11 +715,7 @@ export class ImageExporter {
         gl.UNSIGNED_BYTE,
         fullPixels,
       );
-      
-      // Restore canvas size immediately after reading
-      canvas.width = originalCanvasWidth;
-      canvas.height = originalCanvasHeight;
-      
+
       // Debug: Check if we got any content
       // Sample multiple points to check for content
       let hasContent = false;
@@ -714,7 +735,7 @@ export class ImageExporter {
       }
       
       if (!hasContent) {
-        console.warn(`Canvas appears empty after composer.render() at ${cropInfo.fullRenderWidth}x${cropInfo.fullRenderHeight}. Canvas size: ${canvas.width}x${canvas.height}, Renderer size: ${cropInfo.fullRenderWidth}x${cropInfo.fullRenderHeight}. Trying fallback approach...`);
+        console.warn(`Canvas appears empty after composer.render() at ${cropInfo.fullRenderWidth}x${cropInfo.fullRenderHeight}. Renderer canvas: ${this.renderer.domElement.width}x${this.renderer.domElement.height}. Trying fallback approach...`);
         // Fallback: render directly to our render target, then apply post-processing manually
         this.renderer.setRenderTarget(renderTarget);
         this.renderer.clear();
@@ -855,7 +876,13 @@ export class ImageExporter {
     // Restore original settings
     this.renderer.setPixelRatio(originalPixelRatio);
     this.renderer.setSize(originalSize.x, originalSize.y, false);
-    if (this.composer) {
+    this.camera.aspect =
+      originalSize.x / Math.max(1e-6, originalSize.y);
+    this.camera.updateProjectionMatrix();
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(originalSize.x, originalSize.y);
+    } else if (this.composer) {
+      this.composer.setPixelRatio(originalPixelRatio);
       this.composer.setSize(originalSize.x, originalSize.y);
     }
     this.renderer.setClearColor(originalClearColor, originalClearAlpha);
@@ -863,9 +890,8 @@ export class ImageExporter {
       this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
     }
     
-    // Restore viewport
-    gl.viewport(originalViewport[0], originalViewport[1], originalViewport[2], originalViewport[3]);
-    
+    this._ensureFullDrawingBufferViewport();
+
     return renderTarget;
   }
 
@@ -1983,7 +2009,13 @@ export class ImageExporter {
     }
     this.renderer.setPixelRatio(state.originalPixelRatio);
     this.renderer.setSize(state.originalSize.x, state.originalSize.y, false);
-    if (this.composer) {
+    this.camera.aspect =
+      state.originalSize.x / Math.max(1e-6, state.originalSize.y);
+    this.camera.updateProjectionMatrix();
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(state.originalSize.x, state.originalSize.y);
+    } else if (this.composer) {
+      this.composer.setPixelRatio(state.originalPixelRatio);
       this.composer.setSize(state.originalSize.x, state.originalSize.y);
     }
     this.renderer.autoClear = state.originalAutoClear;
