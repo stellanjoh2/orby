@@ -133,6 +133,8 @@ export class ResetControls {
         'advanced.transparencyFix',
         defaults.advanced?.transparencyFix ?? 'default',
       );
+      this.stateStore.set('advanced.glassOpacity', defaults.advanced?.glassOpacity ?? 0.45);
+      this.stateStore.set('advanced.glassReflection', defaults.advanced?.glassReflection ?? 2);
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
@@ -633,8 +635,11 @@ export class ResetControls {
               'advanced.transparencyFix',
               defaults.advanced?.transparencyFix ?? 'default',
             );
+            this.stateStore.set('advanced.glassOpacity', defaults.advanced?.glassOpacity ?? 0.45);
+            this.stateStore.set('advanced.glassReflection', defaults.advanced?.glassReflection ?? 2);
             this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
             this.eventBus.emit('mesh:transparency-fix');
+            this.eventBus.emit('mesh:glass-appearance');
             this.ui.syncUIFromState();
             break;
         }

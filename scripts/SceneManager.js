@@ -1305,6 +1305,7 @@ export class SceneManager {
     this.originalGeometryIndices = new WeakMap();
     this.originalGeometryAttributes = new WeakMap();
     this.originalMaterialSides = new WeakMap();
+    this.eventBus.emit('ui:advanced-glass-visible', { visible: false });
   }
 
   _applyAssetMetadata(asset = {}) {
@@ -1393,7 +1394,10 @@ export class SceneManager {
     this.lensFlareController?.setModelRoot(this.modelRoot);
     
     this.prepareMesh(object);
-    
+    this.eventBus.emit('ui:advanced-glass-visible', {
+      visible: this.materialController.modelHasHeuristicGlass(object),
+    });
+
     // Track if this is the first model load
     const wasFirstLoad = this.isFirstModelLoad;
     if (this.isFirstModelLoad) {
@@ -1857,6 +1861,16 @@ export class SceneManager {
     if (!this.currentModel) return;
     this.materialController.reapplyTransparencyPipeline();
     this.refreshMaterialSidesForReverseNormals();
+    if (this.scene.environment) {
+      const intensity = Math.max(0, this.hdriStrength ?? 0);
+      this.updateMaterialsEnvironment(this.scene.environment, intensity);
+    }
+  }
+
+  /** Advanced glass opacity + HDRI reflection multiplier (heuristic glass/window meshes). */
+  applyGlassAppearanceFromState() {
+    if (!this.currentModel) return;
+    this.materialController.applyGlassAppearanceFromState(this.currentModel);
     if (this.scene.environment) {
       const intensity = Math.max(0, this.hdriStrength ?? 0);
       this.updateMaterialsEnvironment(this.scene.environment, intensity);

@@ -194,6 +194,52 @@ export class MaterialController {
       this.applyNamedGlassPresentation(object);
       this.applyGltfBlendSortingMitigation(object);
     }
+    this.applyGlassAppearanceFromState(object);
+  }
+
+  /**
+   * True if the model has Standard/Physical materials on meshes matching glass/window heuristics.
+   */
+  modelHasHeuristicGlass(object) {
+    if (!object) return false;
+    let found = false;
+    object.traverse((child) => {
+      if (found || !child.isMesh) return;
+      if (!this.isWindowMesh(child)) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        if (m?.isMeshStandardMaterial || m?.isMeshPhysicalMaterial) {
+          found = true;
+          return;
+        }
+      }
+    });
+    return found;
+  }
+
+  /**
+   * Apply Advanced glass opacity (Alpha → Default only). Reflection strength is applied in updateMaterialsEnvironment.
+   */
+  applyGlassAppearanceFromState(object) {
+    if (!object || !this.stateStore) return;
+    const mode = this.stateStore.getState()?.advanced?.transparencyFix ?? 'default';
+    const rawOp = this.stateStore.getState()?.advanced?.glassOpacity;
+    const glassOpacity = Number.isFinite(Number(rawOp))
+      ? Math.min(1, Math.max(0.02, Number(rawOp)))
+      : 0.45;
+
+    this._forEachMeshMaterial(object, (mesh, m) => {
+      if (!this.isWindowMesh(mesh)) return;
+      if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
+      if (m.isMeshPhysicalMaterial && m.transmission > 0.01) return;
+
+      if (mode !== 'default') return;
+
+      m.opacity = glassOpacity;
+      m.transparent = glassOpacity < 1;
+      m.depthWrite = !m.transparent;
+      m.needsUpdate = true;
+    });
   }
 
   /** Re-run pipeline after load / when Advanced setting changes (uses currentModel). */
@@ -1090,6 +1136,10 @@ export class MaterialController {
     // IMPORTANT: Always read the latest values from stateStore to ensure we have the most current user settings
     // This prevents values from "resetting" when HDRI blurriness changes
     const state = this.stateStore?.getState();
+    const rawGlassRef = state?.advanced?.glassReflection;
+    const glassEnvMul = Number.isFinite(Number(rawGlassRef))
+      ? Math.min(4, Math.max(0, Number(rawGlassRef)))
+      : 2;
     const currentMetalness = state?.material?.metalness ?? this.materialSettings.metalness ?? 0.0;
     const currentRoughness =
       state?.material?.roughness ?? this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
@@ -1116,7 +1166,7 @@ export class MaterialController {
           material.envMap = envTexture;
           if (material.envMapIntensity !== undefined) {
             const isGlass = this.isWindowMesh(child);
-            material.envMapIntensity = isGlass ? intensity * 2.0 : intensity;
+            material.envMapIntensity = isGlass ? intensity * glassEnvMul : intensity;
           }
 
           const isGlass = material.userData?.isGlass || this.isWindowMesh(child);

@@ -39,6 +39,10 @@ export class StateStore {
         reverseNormals: false,
         /** @type {'default' | 'opaqueBlend' | 'frontFace' | 'opaqueAndFrontFace'} */
         transparencyFix: 'default',
+        /** Heuristic glass/window materials only (see MaterialController.isWindowMesh). */
+        glassOpacity: 0.45,
+        /** Multiplier on scene HDRI env intensity for those materials (1 ≈ same as non-glass). */
+        glassReflection: 2,
       },
       hdri: 'beach',
       hdriEnabled: true,

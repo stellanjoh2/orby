@@ -72,6 +72,8 @@ export class SceneSettingsManager {
       advanced: {
         reverseNormals: !!state.advanced?.reverseNormals,
         transparencyFix: state.advanced?.transparencyFix ?? 'default',
+        glassOpacity: state.advanced?.glassOpacity ?? 0.45,
+        glassReflection: state.advanced?.glassReflection ?? 2,
       },
       // Studio settings
       hdri: state.hdri,
@@ -474,6 +476,24 @@ export class SceneSettingsManager {
           : 'default';
         this.stateStore.set('advanced.transparencyFix', tf);
         this.eventBus.emit('mesh:transparency-fix');
+      }
+      if (
+        payload.advanced?.glassOpacity !== undefined ||
+        payload.advanced?.glassReflection !== undefined
+      ) {
+        if (payload.advanced?.glassOpacity !== undefined) {
+          const o = Number(payload.advanced.glassOpacity);
+          if (Number.isFinite(o)) {
+            this.stateStore.set('advanced.glassOpacity', Math.min(1, Math.max(0.02, o)));
+          }
+        }
+        if (payload.advanced?.glassReflection !== undefined) {
+          const r = Number(payload.advanced.glassReflection);
+          if (Number.isFinite(r)) {
+            this.stateStore.set('advanced.glassReflection', Math.min(4, Math.max(0, r)));
+          }
+        }
+        this.eventBus.emit('mesh:glass-appearance');
       }
 
       // Apply Studio settings

@@ -2279,6 +2279,29 @@ a.about-highlight:focus-visible {
   column-gap: 0.2rem;
 }
 
+/**
+ * Short slider track — same row layout as `.slider-line`, but the range column stays narrow so
+ * column 1 can use `minmax(0, 1fr)` for longer labels. Default rows keep full-width tracks.
+ * Tune per block with `--slider-track-short-width` (px).
+ */
+.slider-line.slider-line--track-short {
+  --slider-track-short-width: 104px;
+  grid-template-columns: minmax(0, 1fr) var(--slider-track-short-width, 104px) auto;
+  column-gap: 0.35rem;
+}
+
+.slider-line.slider-line--track-short span:first-child {
+  white-space: normal;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.slider-line.slider-line--track-short input[type='range'] {
+  width: 100%;
+  max-width: 100%;
+  justify-self: stretch;
+}
+
 .slider-line span:first-child {
   grid-column: 1;
   align-self: center;

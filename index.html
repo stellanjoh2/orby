@@ -508,6 +508,36 @@
                       <option value="opaqueAndFrontFace">Opaque + front faces</option>
                     </select>
                   </label>
+                  <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
+                    <label class="slider-line slider-line--track-short">
+                      <span
+                        data-tooltip="Opacity for meshes detected as glass / windows (names or materials). Uses Alpha → Default."
+                        >Glass opacity</span>
+                      <input
+                        id="glassOpacity"
+                        type="range"
+                        min="0.02"
+                        max="1"
+                        step="0.01"
+                        value="0.45"
+                      />
+                      <span class="value" data-output="glassOpacity">0.45</span>
+                    </label>
+                    <label class="slider-line slider-line--track-short">
+                      <span
+                        data-tooltip="Environment reflection strength on glass/window materials, relative to the scene HDRI intensity slider."
+                        >Glass reflections</span>
+                      <input
+                        id="glassReflection"
+                        type="range"
+                        min="0"
+                        max="4"
+                        step="0.05"
+                        value="2"
+                      />
+                      <span class="value" data-output="glassReflection">2.00</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -2611,7 +2641,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.277 · 2026-05-02 11:34:47 UTC</div>
+              <div class="info-version-tag">v0.5.278 · 2026-05-02 11:34:53 UTC</div>
             </section>
           </div>
         </aside>
