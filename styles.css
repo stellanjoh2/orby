@@ -516,6 +516,16 @@ body.dropzone-visible #webgl {
   min-width: 5.5rem;
 }
 
+.message-alert-actions.message-alert-actions--wide {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.message-alert-actions.message-alert-actions--wide .accent-action-btn {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Bug report — Information panel + modal */
 .bug-report-panel-description {
   margin: 0 0 1rem 0;
@@ -1970,6 +1980,12 @@ a.about-highlight:focus-visible {
   max-width: 100%;
 }
 
+/* Headline immediately after an in-block divider — avoid double vertical gap */
+.panel-block-divider + .block-title,
+.panel-block-divider + .subsection > .block-title:first-child {
+  margin-top: 0;
+}
+
 /* Subsection within merged panel blocks - can be muted individually */
 .subsection {
   position: relative;
@@ -2267,6 +2283,38 @@ a.about-highlight:focus-visible {
   transform: scale(1.1);
 }
 
+.panel-hint.map-slots-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-dim);
+}
+
+.map-slot-row {
+  display: grid;
+  grid-template-columns: 108px auto minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+  font-size: 0.85rem;
+}
+
+.map-slot-row > span:first-child {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+.map-slot-name {
+  display: block;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, var(--text-dim));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .slider-line,
 .color-line,
 .select-line {
@@ -2314,6 +2362,12 @@ a.about-highlight:focus-visible {
   font-size: 0.9rem;
   color: var(--text-dim);
   white-space: nowrap;
+}
+
+/* Toggle-only row (no range/value): align switch with the right column like other rows */
+.slider-line > .effect-toggle {
+  grid-column: 2 / -1;
+  justify-self: end;
 }
 
 .color-line span:first-child,

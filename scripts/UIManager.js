@@ -4,6 +4,10 @@ import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_PODIUM_GLASS_BLUR,
+  DEFAULT_PODIUM_GLASS_AMOUNT,
+  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
   sanitizeDof,
@@ -168,8 +172,11 @@ export class UIManager {
     this.dom.messageAlertTitle = q('#messageAlertTitle');
     this.dom.messageAlertBody = q('#messageAlertBody');
     this.dom.messageAlertOk = q('#messageAlertOk');
+    this.dom.messageAlertActions = q('#messageAlertActions');
     this.dom.messageAlertClose = q('#messageAlertClose');
     this.dom.stats = q('#meshStats');
+    this.dom.fbxMapSlotsDivider = q('#fbxMapSlotsDivider');
+    this.dom.studioPodiumGlassPanel = q('#studioPodiumGlassPanel');
     this.dom.animationBlock = q('#animationBlock');
     this.dom.animationSelect = q('#animationSelect');
     this.dom.playPause = q('#playPause');
@@ -235,6 +242,12 @@ export class UIManager {
       gridSnap: q('#gridSnap'),
       gridScale: q('#gridScale'),
       podiumScale: q('#podiumScale'),
+      podiumMetalness: q('#podiumMetalness'),
+      podiumRoughness: q('#podiumRoughness'),
+      podiumGlassSurface: q('#podiumGlassSurface'),
+      podiumGlassBrightness: q('#podiumGlassBrightness'),
+      podiumGlassBlur: q('#podiumGlassBlur'),
+      podiumGlassAmount: q('#podiumGlassAmount'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
@@ -308,6 +321,9 @@ export class UIManager {
       renderQuality: q('#renderQuality'),
       toneMapping: q('#toneMapping'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
+      fbxMapFileInput: q('#fbxMapFileInput'),
+      fbxMapInvertNormalY: q('#fbxMapInvertNormalY'),
+      fbxMapPbrUvChannel: q('#fbxMapPbrUvChannel'),
     };
 
     this.buttons = {
@@ -411,15 +427,24 @@ export class UIManager {
 
   /**
    * Modal with OK — for long errors/warnings that need time to read. Short messages use showToast().
+   * @param {{ okLabel?: string }} [options] — e.g. `{ okLabel: 'CONTINUE' }` for full-width primary CTA styling.
    */
-  showMessageAlert(message, title = 'Message') {
+  showMessageAlert(message, title = 'Message', options = {}) {
     if (!this.dom.messageAlertModal || !this.dom.messageAlertBody) return;
 
     const text = typeof message === 'string' ? message : String(message ?? '');
+    const okLabel =
+      typeof options?.okLabel === 'string' && options.okLabel.trim() ? options.okLabel.trim() : 'OK';
+
     if (this.dom.messageAlertTitle) {
       this.dom.messageAlertTitle.textContent = title;
     }
     this.dom.messageAlertBody.textContent = text;
+
+    if (this.dom.messageAlertOk) {
+      this.dom.messageAlertOk.textContent = okLabel;
+    }
+    this.dom.messageAlertActions?.classList.toggle('message-alert-actions--wide', okLabel !== 'OK');
 
     if (this._messageAlertKeydownHandler) {
       document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
@@ -1347,6 +1372,38 @@ export class UIManager {
       this.inputs.podiumScale.value = state.podiumScale ?? 1;
       this.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
     }
+    if (this.inputs.podiumMetalness) {
+      const vm = state.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS;
+      this.inputs.podiumMetalness.value = vm;
+      this.updateValueLabel('podiumMetalness', vm, 'decimal');
+    }
+    if (this.inputs.podiumRoughness) {
+      const vr = state.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS;
+      this.inputs.podiumRoughness.value = vr;
+      this.updateValueLabel('podiumRoughness', vr, 'decimal');
+    }
+    if (this.inputs.podiumGlassSurface) {
+      this.inputs.podiumGlassSurface.checked = !!(
+        state.podiumGlassSurface ??
+        state.podiumReflectMesh ??
+        false
+      );
+    }
+    if (this.inputs.podiumGlassBrightness) {
+      const br = state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS;
+      this.inputs.podiumGlassBrightness.value = br;
+      this.updateValueLabel('podiumGlassBrightness', br, 'decimal');
+    }
+    if (this.inputs.podiumGlassBlur) {
+      const vb = state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR;
+      this.inputs.podiumGlassBlur.value = vb;
+      this.updateValueLabel('podiumGlassBlur', vb, 'decimal');
+    }
+    if (this.inputs.podiumGlassAmount) {
+      const va = state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT;
+      this.inputs.podiumGlassAmount.value = va;
+      this.updateValueLabel('podiumGlassAmount', va, 'decimal');
+    }
     if (this.inputs.gridScale) {
       this.inputs.gridScale.value = state.gridScale ?? 1;
       this.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');
@@ -1772,13 +1829,31 @@ export class UIManager {
     // Lights block - only muted if lightsEnabled is false
     this.setBlockMuted('lights', !currentState.lightsEnabled);
     
-    // Podium block - only muted if groundSolid is false
+    // Podium platform — muted when disabled; Glass panel only exists once podium is enabled
     const podiumOn = !!currentState.groundSolid;
+    const glassOn = !!(
+      currentState.podiumGlassSurface ??
+      currentState.podiumReflectMesh ??
+      false
+    );
+    if (this.dom.studioPodiumGlassPanel) {
+      this.dom.studioPodiumGlassPanel.hidden = !podiumOn;
+    }
     this.setBlockMuted('podium', !podiumOn);
     this.setControlDisabled(
-      ['groundSolidColor', 'groundY', 'podiumScale', 'podiumSnap'],
+      [
+        'groundSolidColor',
+        'groundY',
+        'podiumScale',
+        'podiumMetalness',
+        'podiumRoughness',
+        'podiumSnap',
+      ],
       !podiumOn,
     );
+    this.setControlDisabled('podiumGlassBrightness', !glassOn);
+    this.setControlDisabled('podiumGlassBlur', !glassOn);
+    this.setControlDisabled('podiumGlassAmount', !glassOn);
 
     // Grid block - only muted if groundWire is false
     const gridOn = !!currentState.groundWire;
@@ -1811,6 +1886,15 @@ export class UIManager {
     // Fresnel block - only muted if fresnel.enabled is false
     this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
     this.setBlockMuted('svg-extrude', !currentState.svgExtrude?.enabled);
+
+    const fbxSlots = this.dom.subsections?.fbxMapSlots;
+    if (fbxSlots) {
+      const on = !!currentState.fbxMapSlots?.enabled;
+      fbxSlots.hidden = !on;
+    }
+    if (this.dom.fbxMapSlotsDivider) {
+      this.dom.fbxMapSlotsDivider.hidden = !currentState.fbxMapSlots?.enabled;
+    }
   }
 
   setLightColorControlsDisabled(disabled) {

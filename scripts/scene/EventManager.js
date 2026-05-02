@@ -60,6 +60,11 @@ export class EventManager {
     eventBus.on('mesh:material-emissive', (emissive) => {
       s.materialController?.setMaterialEmissive(emissive);
     });
+    eventBus.on('mesh:fbx-map-slot', (payload) => {
+      void s.applyFbxMapSlot(payload);
+    });
+    eventBus.on('mesh:fbx-invert-normal-y', (enabled) => s.setFbxInvertNormalY(enabled));
+    eventBus.on('mesh:fbx-pbr-uv-channel', (channel) => s.setFbxPbrUvChannel(channel));
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
     eventBus.on('mesh:svg-extrude-color-depths', (payload) => s.setSvgExtrudeColorDepths(payload));
@@ -232,6 +237,14 @@ export class EventManager {
     eventBus.on('studio:ground-y', (value) => s.setGroundY(value));
     eventBus.on('studio:grid-y', (value) => s.setGridY(value));
     eventBus.on('studio:podium-scale', (value) => s.setPodiumScale(value));
+    eventBus.on('studio:podium-metalness', (value) => s.setPodiumMetalness(value));
+    eventBus.on('studio:podium-roughness', (value) => s.setPodiumRoughness(value));
+    eventBus.on('studio:podium-reflection', (value) => s.setPodiumReflection(value));
+    eventBus.on('studio:podium-clearcoat', (value) => s.setPodiumClearcoat(value));
+    eventBus.on('studio:podium-glass-surface', (enabled) => s.setPodiumGlassSurface(enabled));
+    eventBus.on('studio:podium-glass-blur', (value) => s.setPodiumGlassBlur(value));
+    eventBus.on('studio:podium-glass-amount', (value) => s.setPodiumGlassAmount(value));
+    eventBus.on('studio:podium-glass-brightness', (value) => s.setPodiumGlassBrightness(value));
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
     eventBus.on('studio:podium-snap', () => s.snapPodiumToBottom());
     eventBus.on('studio:grid-snap', () => s.snapGridToBottom());

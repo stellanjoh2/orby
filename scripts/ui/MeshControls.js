@@ -42,6 +42,47 @@ export class MeshControls {
       this.refreshAdvancedGlassControls(this.stateStore.getState());
     });
 
+    this._pendingFbxMapSlot = null;
+    document.querySelectorAll('[data-fbx-map-slot]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this._pendingFbxMapSlot = btn.getAttribute('data-fbx-map-slot');
+        this.ui.inputs.fbxMapFileInput?.click();
+      });
+    });
+    this.ui.inputs.fbxMapFileInput?.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      const slot = this._pendingFbxMapSlot;
+      event.target.value = '';
+      if (!file || !slot) return;
+      this.eventBus.emit('mesh:fbx-map-slot', { slot, file });
+    });
+    this.eventBus.on('scene:fbx-map-applied', (payload) => {
+      const slot = payload?.slot;
+      const name = typeof payload?.name === 'string' ? payload.name : '';
+      const label = document.querySelector(`[data-fbx-map-filename="${slot}"]`);
+      if (label) {
+        const short = name.length > 30 ? `${name.slice(0, 28)}…` : name;
+        label.textContent = short || '—';
+        label.title = name;
+      }
+    });
+    this.eventBus.on('scene:fbx-map-slots-reset', () => {
+      document.querySelectorAll('[data-fbx-map-filename]').forEach((el) => {
+        el.textContent = '—';
+        el.title = '';
+      });
+    });
+
+    this.ui.inputs.fbxMapInvertNormalY?.addEventListener('change', (event) => {
+      this.eventBus.emit('mesh:fbx-invert-normal-y', !!event.target.checked);
+    });
+
+    this.ui.inputs.fbxMapPbrUvChannel?.addEventListener('change', (event) => {
+      const raw = parseInt(event?.target?.value, 10);
+      const channel = raw === 1 ? 1 : 0;
+      this.eventBus.emit('mesh:fbx-pbr-uv-channel', channel);
+    });
+
     // Shading mode
     this.ui.inputs.shading.forEach((input) => {
       input.addEventListener('change', () => {
@@ -549,6 +590,16 @@ export class MeshControls {
     }
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
+    }
+    if (this.ui.inputs.fbxMapInvertNormalY) {
+      const fbxOn = !!state.fbxMapSlots?.enabled;
+      this.ui.inputs.fbxMapInvertNormalY.checked = !!state.fbxMapSlots?.invertNormalY;
+      this.ui.setControlDisabled('fbxMapInvertNormalY', !fbxOn);
+    }
+    if (this.ui.inputs.fbxMapPbrUvChannel) {
+      const fbxOn = !!state.fbxMapSlots?.enabled;
+      this.ui.inputs.fbxMapPbrUvChannel.value = state.fbxMapSlots?.pbrUvChannel === 1 ? '1' : '0';
+      this.ui.setControlDisabled('fbxMapPbrUvChannel', !fbxOn);
     }
     if (this.ui.inputs.transparencyFix) {
       const tf = state.advanced?.transparencyFix ?? 'default';

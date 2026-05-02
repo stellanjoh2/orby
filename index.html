@@ -217,6 +217,73 @@
               </div>
 
               <div class="panel-block">
+                <div class="subsection" data-subsection="fbxMapSlots" id="fbxMapSlotsSubsection" hidden>
+                  <div class="block-title">Map Slots</div>
+                  <p class="panel-hint map-slots-hint">FBX — choose files from disk. Slot textures share one UV transform: we prefer Albedo, then Normal, then other maps (matches FBX tiling). Assign Base Color first when you can. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
+                  <label class="select-line map-slot-uv-line">
+                    <span data-tooltip="Roughness, metallic, AO, ORM, etc. can use UV2 if your bake used a second set. Normal maps always use UV1 here — Three.js builds tangents from the first UV only.">Detail maps UV</span>
+                    <select id="fbxMapPbrUvChannel" aria-label="UV channel for detail maps">
+                      <option value="0">UV1 (first)</option>
+                      <option value="1">UV2 (second)</option>
+                    </select>
+                  </label>
+                  <input type="file" id="fbxMapFileInput" class="sr-only" accept="image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" tabindex="-1" aria-hidden="true" />
+                  <div class="map-slot-row">
+                    <span>Albedo</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="albedo">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="albedo" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Normal</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="normal">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="normal" title="">—</span>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="If lighting looks inverted (bumps look like dents), turn this on. Fixes many DirectX vs OpenGL normal maps.">Invert normal Y</span>
+                    <label class="effect-toggle" data-tooltip="Flip tangent-space Y (green) for normal maps">
+                      <input type="checkbox" id="fbxMapInvertNormalY" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Invert normal map Y</span>
+                    </label>
+                    <span class="value" aria-hidden="true"></span>
+                  </label>
+                  <div class="map-slot-row">
+                    <span>ORM packed</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="orm" data-tooltip="Single texture: ambient occlusion in red, roughness in green, metallic in blue">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="orm" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Roughness</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="roughness">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="roughness" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Metallic</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="metallic">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="metallic" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Occlusion</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="occlusion">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="occlusion" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Displacement</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="displacement">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="displacement" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Emissive</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="emissive">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="emissive" title="">—</span>
+                  </div>
+                  <div class="map-slot-row">
+                    <span>Opacity</span>
+                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="opacity">Choose…</button>
+                    <span class="map-slot-name" data-fbx-map-filename="opacity" title="">—</span>
+                  </div>
+                </div>
+                <div class="panel-block-divider" id="fbxMapSlotsDivider" hidden></div>
                 <div class="subsection" data-subsection="material">
                   <div class="block-title has-reset">
                     <span>Material</span>
@@ -731,11 +798,92 @@
                     />
                     <span class="value" data-output="podiumScale">1.00</span>
                   </label>
+                  <label class="slider-line">
+                    <span data-tooltip="PBR metalness — higher reads more like metal">Metalness</span>
+                    <input
+                      id="podiumMetalness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.08"
+                    />
+                    <span class="value" data-output="podiumMetalness">0.08</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Lower roughness = glossier surface">Roughness</span>
+                    <input
+                      id="podiumRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.50"
+                    />
+                    <span class="value" data-output="podiumRoughness">0.50</span>
+                  </label>
                   <button id="podiumSnap" class="ghost-btn small" type="button" data-tooltip="Position podium at the bottom of the object">
                     Snap to bottom
                   </button>
                 </div>
-                <div class="panel-block-divider"></div>
+                <div id="studioPodiumGlassPanel" hidden>
+                  <div class="panel-block-divider"></div>
+                  <div class="subsection" data-subsection="podium-glass">
+                    <div class="block-title has-toggle">
+                      <span>Podium glass</span>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button class="block-reset-btn" data-reset="podium-glass" aria-label="Reset Podium glass" data-tooltip="Reset Podium glass settings">
+                          <i class="fa-solid fa-rotate-left"></i>
+                          <span class="sr-only">Reset</span>
+                        </button>
+                        <label class="effect-toggle" data-tooltip="Realtime planar reflection of the loaded mesh on the podium top (extra GPU). Turn off for HDRI-only highlights.">
+                          <input type="checkbox" id="podiumGlassSurface" />
+                          <span class="effect-indicator" aria-hidden="true"></span>
+                          <span class="sr-only">Enable planar reflection on the podium top</span>
+                        </label>
+                      </div>
+                    </div>
+                    <label class="slider-line">
+                      <span data-tooltip="Base tone under the reflection — black to white (mid gray is neutral).">Brightness</span>
+                      <input
+                        id="podiumGlassBrightness"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.1"
+                      />
+                      <span class="value" data-output="podiumGlassBrightness">0.10</span>
+                    </label>
+                    <label class="slider-line">
+                      <span data-tooltip="Progressive softness — blur spreads wider as you increase. Disabled when Podium glass reflection is off.">Blur</span>
+                      <input
+                        id="podiumGlassBlur"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.1"
+                      />
+                      <span class="value" data-output="podiumGlassBlur">0.10</span>
+                    </label>
+                    <label class="slider-line">
+                      <span data-tooltip="How strong the reflection is vs the base tone (lower = subtler, less mirror-like).">Amount</span>
+                      <input
+                        id="podiumGlassAmount"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0.5"
+                      />
+                      <span class="value" data-output="podiumGlassAmount">0.50</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-block">
                 <div class="subsection" data-subsection="grid">
                   <div class="block-title has-toggle">
                     <span>Grid</span>
@@ -1408,11 +1556,11 @@
                     </label>
                     <label>
                       <input type="radio" name="cameraHandheld" value="low" />
-                      LOW
+                      SUBTLE
                     </label>
                     <label>
                       <input type="radio" name="cameraHandheld" value="high" />
-                      HIGH
+                      STRONG
                     </label>
                   </div>
                 </div>
@@ -2744,7 +2892,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.297 · 2026-05-02 17:56:02 UTC</div>
+              <div class="info-version-tag">v0.5.298 · 2026-05-02 17:56:08 UTC</div>
             </section>
           </div>
         </aside>
@@ -2762,6 +2910,7 @@
         "imports": {
           "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
           "three/examples/jsm/postprocessing/Pass.js": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/Pass.js",
+          "three/examples/jsm/objects/Reflector.js": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js",
           "postprocessing": "https://cdn.jsdelivr.net/npm/postprocessing@6.36.4/build/index.js",
           "n8ao": "https://cdn.jsdelivr.net/npm/n8ao@1.10.1/dist/N8AO.js",
           "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.7/+esm"
@@ -2791,7 +2940,7 @@
           <button type="button" id="messageAlertClose" class="close-btn" aria-label="Close"></button>
         </div>
         <p id="messageAlertBody" class="message-alert-body"></p>
-        <div class="load-settings-actions message-alert-actions">
+        <div class="load-settings-actions message-alert-actions" id="messageAlertActions">
           <button type="button" id="messageAlertOk" class="accent-action-btn">OK</button>
         </div>
       </div>

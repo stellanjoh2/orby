@@ -12,6 +12,10 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   resolveRenderQualityTier,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_PODIUM_GLASS_BLUR,
+  DEFAULT_PODIUM_GLASS_AMOUNT,
+  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
   sanitizeAmbientOcclusion,
 } from './constants.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
@@ -36,6 +40,12 @@ import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
 import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
+
+/** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
+const FBX_IMPORT_WIP_ALERT_BODY =
+  'FBX import is still a work in progress. Materials and textures may not match what you see in your DCC ' +
+  '(UV sets, packed maps, and how external textures resolve are all unfinished). ' +
+  'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
 
 export class SceneManager {
   constructor(eventBus, stateStore, uiManager) {
@@ -455,6 +465,13 @@ export class SceneManager {
 
   async init() {
     await this.applyStateSnapshot(this.stateStore.getState());
+    requestAnimationFrame(() => {
+      const container = this.viewport || this.canvas?.parentElement;
+      const rect = container?.getBoundingClientRect?.();
+      if (rect?.width > 0 && rect?.height > 0) {
+        this.groundController?.resizePodiumReflector?.(rect.width, rect.height);
+      }
+    });
     this.animate();
   }
 
@@ -480,6 +497,15 @@ export class SceneManager {
       gridY: state.gridY,
       podiumScale: state.podiumScale,
       gridScale: state.gridScale,
+      podiumMetalness: state.podiumMetalness,
+      podiumRoughness: state.podiumRoughness,
+      podiumReflection: state.podiumReflection,
+      podiumClearcoat: state.podiumClearcoat,
+      renderer: this.renderer,
+      podiumGlassSurface: !!(state.podiumGlassSurface ?? state.podiumReflectMesh ?? false),
+      podiumGlassBlur: state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR,
+      podiumGlassAmount: state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT,
+      podiumGlassBrightness: state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS,
     });
   }
 
@@ -552,6 +578,23 @@ export class SceneManager {
     this.setGroundWireOpacity(state.groundWireOpacity);
     this.setGridY(state.gridY ?? 0);
     this.setPodiumScale(state.podiumScale ?? 1, { updateState: false });
+    this.setPodiumMetalness(state.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS, { updateState: false });
+    this.setPodiumRoughness(state.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS, { updateState: false });
+    this.setPodiumReflection(state.podiumReflection ?? 1, { updateState: false });
+    this.setPodiumClearcoat(state.podiumClearcoat ?? 0, { updateState: false });
+    this.setPodiumGlassSurface(
+      !!(state.podiumGlassSurface ?? state.podiumReflectMesh ?? false),
+      { updateState: false },
+    );
+    this.setPodiumGlassBlur(state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR, {
+      updateState: false,
+    });
+    this.setPodiumGlassAmount(state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT, {
+      updateState: false,
+    });
+    this.setPodiumGlassBrightness(state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS, {
+      updateState: false,
+    });
     this.setGridScale(state.gridScale ?? 1);
     this.autoExposureController?.applyStateSnapshot(state);
     // Initialize base HDRI strength if not already set
@@ -745,6 +788,11 @@ export class SceneManager {
 
   updateMaterialsEnvironment(envTexture, intensity) {
     this.materialController.updateMaterialsEnvironment(
+      envTexture,
+      intensity,
+      this.hdriBlurriness,
+    );
+    this.groundController?.applyPodiumEnvironment(
       envTexture,
       intensity,
       this.hdriBlurriness,
@@ -1078,6 +1126,47 @@ export class SceneManager {
     this.groundController?.setGridScale(value);
   }
 
+  setPodiumMetalness(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumMetalness(value);
+    if (updateState) this.stateStore.set('podiumMetalness', value);
+  }
+
+  setPodiumRoughness(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumRoughness(value);
+    if (updateState) this.stateStore.set('podiumRoughness', value);
+  }
+
+  setPodiumReflection(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumReflection(value);
+    if (updateState) this.stateStore.set('podiumReflection', value);
+  }
+
+  setPodiumClearcoat(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumClearcoat(value);
+    if (updateState) this.stateStore.set('podiumClearcoat', value);
+  }
+
+  setPodiumGlassSurface(enabled, { updateState = true } = {}) {
+    const on = !!enabled;
+    this.groundController?.setPodiumGlassSurface(on);
+    if (updateState) this.stateStore.set('podiumGlassSurface', on);
+  }
+
+  setPodiumGlassBlur(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumGlassBlur(value);
+    if (updateState) this.stateStore.set('podiumGlassBlur', value);
+  }
+
+  setPodiumGlassAmount(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumGlassAmount(value);
+    if (updateState) this.stateStore.set('podiumGlassAmount', value);
+  }
+
+  setPodiumGlassBrightness(value, { updateState = true } = {}) {
+    this.groundController?.setPodiumGlassBrightness(value);
+    if (updateState) this.stateStore.set('podiumGlassBrightness', value);
+  }
+
   applyLightSettings(lightsState) {
     if (!lightsState) return;
     this.lightsController?.applySettings(lightsState);
@@ -1248,10 +1337,21 @@ export class SceneManager {
       });
       this.setModel(asset.object, asset.animations ?? []);
       this._applyAssetMetadata(asset);
+      const isFbx = typeof file?.name === 'string' && file.name.toLowerCase().endsWith('.fbx');
+      this.stateStore.set('fbxMapSlots.enabled', isFbx);
+      if (isFbx) {
+        this.eventBus.emit('scene:fbx-map-slots-reset');
+      }
       this.updateStatsUI(file, asset.object, asset.gltfMetadata);
       this.ui.updateTopBarDetail(`${file.name} — Idle`);
       if (!options.silent) {
-        this.ui.showToast('Model loaded');
+        if (isFbx) {
+          this.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
+            okLabel: 'CONTINUE',
+          });
+        } else {
+          this.ui.showToast('Model loaded');
+        }
       }
       this.eventBus.emit('scene:model-load-complete', { success: true, file });
     } catch (error) {
@@ -1294,8 +1394,20 @@ export class SceneManager {
       }
       this.setModel(asset.object, asset.animations ?? []);
       this._applyAssetMetadata(asset);
+      const isFbx =
+        typeof sourceFile?.name === 'string' && sourceFile.name.toLowerCase().endsWith('.fbx');
+      this.stateStore.set('fbxMapSlots.enabled', isFbx);
+      if (isFbx) {
+        this.eventBus.emit('scene:fbx-map-slots-reset');
+      }
       this.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
+      if (isFbx) {
+        this.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
+          okLabel: 'CONTINUE',
+        });
+      } else {
         this.ui.showToast('Folder loaded');
+      }
       this.eventBus.emit('scene:model-load-complete', { success: true, file: sourceFile });
     } catch (error) {
         console.error('Folder load failed', error);
@@ -1313,6 +1425,9 @@ export class SceneManager {
   }
 
   clearModel() {
+    this.stateStore.set('fbxMapSlots.enabled', false);
+    this.stateStore.set('fbxMapSlots.invertNormalY', false);
+    this.stateStore.set('fbxMapSlots.pbrUvChannel', 0);
     this.diagnosticsController.clearBoneHelpers();
     this.materialController.clear();
     this.modelLoader.disposeObjectUrls();
@@ -1337,6 +1452,44 @@ export class SceneManager {
     this.originalMaterialSides = new WeakMap();
     this.eventBus.emit('ui:advanced-alpha-visible', { visible: false });
     this.eventBus.emit('ui:advanced-glass-visible', { visible: false });
+  }
+
+  /**
+   * Apply a user-picked image to all non-glass mesh materials (FBX Map Slots UI).
+   * @param {{ slot: string, file: File }} payload
+   */
+  async applyFbxMapSlot(payload = {}) {
+    const slot = payload?.slot;
+    const file = payload?.file;
+    if (!slot || !file || !this.currentModel) return;
+    if (!this.stateStore.getState()?.fbxMapSlots?.enabled) return;
+
+    const url = URL.createObjectURL(file);
+    try {
+      const tex = await this.textureLoader.loadAsync(url);
+      tex.userData.orbyFbxUserTexture = true;
+      tex.userData.orbyFbxBlobUrl = url;
+      this.materialController.applyFbxSlotTexture(slot, tex);
+      const shading = this.stateStore.getState()?.shading ?? 'shaded';
+      this.materialController.setShading(shading);
+      this.eventBus.emit('scene:fbx-map-applied', { slot, name: file.name });
+    } catch (err) {
+      console.error('FBX map slot load failed', err);
+      URL.revokeObjectURL(url);
+      this.ui?.showToast?.('Could not load texture');
+    }
+  }
+
+  setFbxInvertNormalY(enabled) {
+    this.stateStore.set('fbxMapSlots.invertNormalY', !!enabled);
+    this.materialController?.applyFbxNormalYInvertFromState?.();
+  }
+
+  setFbxPbrUvChannel(channel) {
+    const n = Number(channel);
+    const idx = n === 1 ? 1 : 0;
+    this.stateStore.set('fbxMapSlots.pbrUvChannel', idx);
+    this.materialController?.applyFbxPbrUvChannelsFromState?.();
   }
 
   _applyAssetMetadata(asset = {}) {
@@ -2254,6 +2407,8 @@ export class SceneManager {
       
       // Note: Histogram controller doesn't need explicit resize handling
       // as it reads from the composer's render target which is updated by composer.setSize()
+
+      this.groundController?.resizePodiumReflector?.(finalWidth, finalHeight);
     });
   }
 

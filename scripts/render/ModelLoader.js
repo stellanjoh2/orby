@@ -25,7 +25,7 @@ function unsupportedFormatMessage(ext) {
   const label = raw ? `.${raw}` : 'this file';
   return (
     `Unsupported file type (${label}). ` +
-    `Orby opens 3D geometry in GLB, GLTF (single file or whole folder with textures), OBJ, FBX, STL, ` +
+    `Orby opens 3D geometry in GLB, GLTF (single file or whole folder with textures), OBJ, FBX (drop the FBX plus texture PNGs in one folder — external FBX textures do not load from a single file alone), STL, ` +
     `USDZ / USD when the package uses a text USDA stage (binary USDC is not supported in the browser here), ` +
     `and SVG for extruded logos. ` +
     `Raster images such as PNG, JPEG, or WebP are not imported as meshes—convert or export from your DCC to a supported 3D format first.`
@@ -110,7 +110,15 @@ export class ModelLoader {
       if (glbKey) {
         return this.loadFile(normalizedMap.get(glbKey));
       }
-      throw new Error('No .gltf/.glb in folder');
+      const fbxKey = [...normalizedMap.keys()].find((key) =>
+        key.toLowerCase().endsWith('.fbx'),
+      );
+      if (fbxKey) {
+        return this.loadFbxFromBundle(normalizedMap, fbxKey);
+      }
+      throw new Error(
+        'No supported root file in folder. Add a .gltf, .glb, or .fbx (with texture files if the FBX references external images).',
+      );
     }
 
     const rootPath = this.getDirectoryFromPath(primaryKey);
@@ -303,6 +311,60 @@ export class ModelLoader {
         },
       );
     });
+  }
+
+  /**
+   * Map basename → File for resolving FBX embedded texture filenames when dropping a folder.
+   */
+  _buildBasenameFileLookup(normalizedMap) {
+    const lookup = new Map();
+    for (const [key, file] of normalizedMap.entries()) {
+      if (!(file instanceof File)) continue;
+      const base = String(key)
+        .split('/')
+        .pop()
+        .split('\\')
+        .pop()
+        .toLowerCase();
+      if (!lookup.has(base)) lookup.set(base, file);
+    }
+    return lookup;
+  }
+
+  /**
+   * Redirect FBX TextureLoader requests (e.g. ak_Roughness.png) to blob URLs from the dropped folder.
+   */
+  _applyFbxBundleUrlModifier(manager, basenameLookup) {
+    manager.setURLModifier((url) => {
+      if (!url || /^blob:/i.test(url) || /^data:/i.test(url)) return url;
+      const decoded = decodeURIComponent(String(url).split('?')[0]);
+      const base = decoded
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()
+        .toLowerCase();
+      const file = basenameLookup.get(base);
+      if (file) {
+        const blobUrl = URL.createObjectURL(file);
+        this.registerObjectUrl(blobUrl);
+        return blobUrl;
+      }
+      return url;
+    });
+  }
+
+  async loadFbxFromBundle(normalizedMap, fbxKey) {
+    const file = normalizedMap.get(fbxKey);
+    if (!file) throw new Error('FBX missing from bundle');
+    const buffer = await this.fileReaders.buffer(file);
+    const basenameLookup = this._buildBasenameFileLookup(normalizedMap);
+    const manager = new THREE.LoadingManager();
+    this._applyFbxBundleUrlModifier(manager, basenameLookup);
+    const loader = new FBXLoader(manager);
+    const object = loader.parse(buffer, '');
+    this.normalizeFbxScale(object);
+    this.applyFbxVertexColorFallback(object);
+    return { object, animations: object.animations ?? [], sourceFile: file };
   }
 
   async loadFbx(file) {

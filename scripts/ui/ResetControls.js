@@ -436,10 +436,32 @@ export class ResetControls {
               this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
               this.stateStore.set('groundY', defaults.groundY);
               this.stateStore.set('podiumScale', defaults.podiumScale);
+              this.stateStore.set('podiumMetalness', defaults.podiumMetalness);
+              this.stateStore.set('podiumRoughness', defaults.podiumRoughness);
+              this.stateStore.set('podiumReflection', defaults.podiumReflection);
+              this.stateStore.set('podiumClearcoat', defaults.podiumClearcoat);
             });
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
             this.eventBus.emit('studio:podium-scale', defaults.podiumScale);
+            this.eventBus.emit('studio:podium-metalness', defaults.podiumMetalness);
+            this.eventBus.emit('studio:podium-roughness', defaults.podiumRoughness);
+            this.eventBus.emit('studio:podium-reflection', defaults.podiumReflection);
+            this.eventBus.emit('studio:podium-clearcoat', defaults.podiumClearcoat);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
+            this.ui.syncControls(this.stateStore.getState());
+            break;
+
+          case 'podium-glass':
+            this.stateStore.batch(() => {
+              this.stateStore.set('podiumGlassSurface', defaults.podiumGlassSurface);
+              this.stateStore.set('podiumGlassBrightness', defaults.podiumGlassBrightness);
+              this.stateStore.set('podiumGlassBlur', defaults.podiumGlassBlur);
+              this.stateStore.set('podiumGlassAmount', defaults.podiumGlassAmount);
+            });
+            this.eventBus.emit('studio:podium-glass-surface', defaults.podiumGlassSurface);
+            this.eventBus.emit('studio:podium-glass-brightness', defaults.podiumGlassBrightness);
+            this.eventBus.emit('studio:podium-glass-blur', defaults.podiumGlassBlur);
+            this.eventBus.emit('studio:podium-glass-amount', defaults.podiumGlassAmount);
             this.ui.syncControls(this.stateStore.getState());
             break;
             

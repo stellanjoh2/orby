@@ -1,4 +1,11 @@
-import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from './constants.js';
+import {
+  CAMERA_TEMPERATURE_NEUTRAL_K,
+  DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_PODIUM_GLASS_BLUR,
+  DEFAULT_PODIUM_GLASS_AMOUNT,
+  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+} from './constants.js';
 import { deepClone } from './utils/deepClone.js';
 
 export class StateStore {
@@ -21,6 +28,14 @@ export class StateStore {
         metalness: 0.0,
         roughness: DEFAULT_MATERIAL_ROUGHNESS,
         emissive: 0.0,
+      },
+      /** Shown when the loaded source file is `.fbx` — manual texture slot assignment. */
+      fbxMapSlots: {
+        enabled: false,
+        /** DirectX-style normal maps vs OpenGL — toggles tangent Y via normalScale. */
+        invertNormalY: false,
+        /** 0 = first UV (`uv`), 1 = second (`uv2`) — Three.js Texture.channel for detail maps only; base color stays on `uv`. */
+        pbrUvChannel: 0,
       },
       svgExtrude: {
         enabled: false,
@@ -61,6 +76,15 @@ export class StateStore {
       gridY: 0,
       podiumScale: 1,
       gridScale: 1,
+      podiumMetalness: DEFAULT_MATERIAL_METALNESS,
+      podiumRoughness: DEFAULT_MATERIAL_ROUGHNESS,
+      podiumReflection: 1,
+      podiumClearcoat: 0,
+      /** Planar glass reflection on podium top — off until user enables Glass (requires podium). */
+      podiumGlassSurface: false,
+      podiumGlassBlur: DEFAULT_PODIUM_GLASS_BLUR,
+      podiumGlassAmount: DEFAULT_PODIUM_GLASS_AMOUNT,
+      podiumGlassBrightness: DEFAULT_PODIUM_GLASS_BRIGHTNESS,
       groundSolidColor: '#808080',
       groundWireColor: '#e1e1e1',
       clay: {

@@ -97,6 +97,14 @@ export class SceneSettingsManager {
       groundY: state.groundY,
       gridY: state.gridY,
       podiumScale: state.podiumScale,
+      podiumMetalness: state.podiumMetalness,
+      podiumRoughness: state.podiumRoughness,
+      podiumReflection: state.podiumReflection,
+      podiumClearcoat: state.podiumClearcoat,
+      podiumGlassSurface: state.podiumGlassSurface ?? state.podiumReflectMesh,
+      podiumGlassBlur: state.podiumGlassBlur,
+      podiumGlassAmount: state.podiumGlassAmount,
+      podiumGlassBrightness: state.podiumGlassBrightness,
       gridScale: state.gridScale,
       lights: state.lights,
       lightsEnabled: state.lightsEnabled,
@@ -588,6 +596,41 @@ export class SceneSettingsManager {
       if (payload.podiumScale !== undefined) {
         this.stateStore.set('podiumScale', payload.podiumScale);
         this.eventBus.emit('studio:podium-scale', payload.podiumScale);
+      }
+      if (payload.podiumMetalness !== undefined) {
+        this.stateStore.set('podiumMetalness', payload.podiumMetalness);
+        this.eventBus.emit('studio:podium-metalness', payload.podiumMetalness);
+      }
+      if (payload.podiumRoughness !== undefined) {
+        this.stateStore.set('podiumRoughness', payload.podiumRoughness);
+        this.eventBus.emit('studio:podium-roughness', payload.podiumRoughness);
+      }
+      if (payload.podiumReflection !== undefined) {
+        this.stateStore.set('podiumReflection', payload.podiumReflection);
+        this.eventBus.emit('studio:podium-reflection', payload.podiumReflection);
+      }
+      if (payload.podiumClearcoat !== undefined) {
+        this.stateStore.set('podiumClearcoat', payload.podiumClearcoat);
+        this.eventBus.emit('studio:podium-clearcoat', payload.podiumClearcoat);
+      }
+      if (payload.podiumGlassSurface !== undefined) {
+        this.stateStore.set('podiumGlassSurface', payload.podiumGlassSurface);
+        this.eventBus.emit('studio:podium-glass-surface', payload.podiumGlassSurface);
+      } else if (payload.podiumReflectMesh !== undefined) {
+        this.stateStore.set('podiumGlassSurface', payload.podiumReflectMesh);
+        this.eventBus.emit('studio:podium-glass-surface', payload.podiumReflectMesh);
+      }
+      if (payload.podiumGlassBlur !== undefined) {
+        this.stateStore.set('podiumGlassBlur', payload.podiumGlassBlur);
+        this.eventBus.emit('studio:podium-glass-blur', payload.podiumGlassBlur);
+      }
+      if (payload.podiumGlassAmount !== undefined) {
+        this.stateStore.set('podiumGlassAmount', payload.podiumGlassAmount);
+        this.eventBus.emit('studio:podium-glass-amount', payload.podiumGlassAmount);
+      }
+      if (payload.podiumGlassBrightness !== undefined) {
+        this.stateStore.set('podiumGlassBrightness', payload.podiumGlassBrightness);
+        this.eventBus.emit('studio:podium-glass-brightness', payload.podiumGlassBrightness);
       }
       if (payload.gridScale !== undefined) {
         this.stateStore.set('gridScale', payload.gridScale);

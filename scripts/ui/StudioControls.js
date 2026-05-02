@@ -3,6 +3,13 @@
  * Manages HDRI, lights, ground, podium, grid, and lens flare
  */
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import {
+  DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_PODIUM_GLASS_BLUR,
+  DEFAULT_PODIUM_GLASS_AMOUNT,
+  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+} from '../constants.js';
 
 export class StudioControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -124,6 +131,51 @@ export class StudioControls {
       this.stateStore.set('podiumScale', value);
       this.eventBus.emit('studio:podium-scale', value);
     });
+    this.ui.inputs.podiumMetalness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('podiumMetalness', value, 'decimal');
+      this.stateStore.set('podiumMetalness', value);
+      this.eventBus.emit('studio:podium-metalness', value);
+    });
+    this.ui.inputs.podiumRoughness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('podiumRoughness', value, 'decimal');
+      this.stateStore.set('podiumRoughness', value);
+      this.eventBus.emit('studio:podium-roughness', value);
+    });
+    this.ui.inputs.podiumGlassSurface?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('podiumGlassSurface', enabled);
+      this.eventBus.emit('studio:podium-glass-surface', enabled);
+      this.ui.applyBlockStates?.(this.stateStore.getState());
+    });
+    this.ui.inputs.podiumGlassBrightness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('podiumGlassBrightness', value, 'decimal');
+      this.stateStore.set('podiumGlassBrightness', value);
+      this.eventBus.emit('studio:podium-glass-brightness', value);
+    });
+    if (this.ui.inputs.podiumGlassBrightness) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumGlassBrightness);
+    }
+    this.ui.inputs.podiumGlassBlur?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('podiumGlassBlur', value, 'decimal');
+      this.stateStore.set('podiumGlassBlur', value);
+      this.eventBus.emit('studio:podium-glass-blur', value);
+    });
+    if (this.ui.inputs.podiumGlassBlur) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumGlassBlur);
+    }
+    this.ui.inputs.podiumGlassAmount?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('podiumGlassAmount', value, 'decimal');
+      this.stateStore.set('podiumGlassAmount', value);
+      this.eventBus.emit('studio:podium-glass-amount', value);
+    });
+    if (this.ui.inputs.podiumGlassAmount) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumGlassAmount);
+    }
     this.ui.inputs.gridScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('gridScale', value, 'decimal');
@@ -398,6 +450,38 @@ export class StudioControls {
     if (this.ui.inputs.podiumScale) {
       this.ui.inputs.podiumScale.value = state.podiumScale ?? 1;
       this.helpers.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
+    }
+    if (this.ui.inputs.podiumMetalness) {
+      const v = state.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS;
+      this.ui.inputs.podiumMetalness.value = v;
+      this.helpers.updateValueLabel('podiumMetalness', v, 'decimal');
+    }
+    if (this.ui.inputs.podiumRoughness) {
+      const v = state.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS;
+      this.ui.inputs.podiumRoughness.value = v;
+      this.helpers.updateValueLabel('podiumRoughness', v, 'decimal');
+    }
+    if (this.ui.inputs.podiumGlassSurface) {
+      this.ui.inputs.podiumGlassSurface.checked = !!(
+        state.podiumGlassSurface ??
+        state.podiumReflectMesh ??
+        false
+      );
+    }
+    if (this.ui.inputs.podiumGlassBrightness) {
+      const br = state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS;
+      this.ui.inputs.podiumGlassBrightness.value = br;
+      this.helpers.updateValueLabel('podiumGlassBrightness', br, 'decimal');
+    }
+    if (this.ui.inputs.podiumGlassBlur) {
+      const vb = state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR;
+      this.ui.inputs.podiumGlassBlur.value = vb;
+      this.helpers.updateValueLabel('podiumGlassBlur', vb, 'decimal');
+    }
+    if (this.ui.inputs.podiumGlassAmount) {
+      const va = state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT;
+      this.ui.inputs.podiumGlassAmount.value = va;
+      this.helpers.updateValueLabel('podiumGlassAmount', va, 'decimal');
     }
     if (this.ui.inputs.gridScale) {
       this.ui.inputs.gridScale.value = state.gridScale ?? 1;
