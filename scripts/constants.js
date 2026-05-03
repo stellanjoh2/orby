@@ -28,6 +28,8 @@ export const NORMALS_HELPER_COLOR = '#4db3ff';
 /** Neutral PBR default on load (glTF often ~0.5; 0.8 read overly chalky under HDR). */
 export const DEFAULT_MATERIAL_ROUGHNESS = 0.5;
 export const DEFAULT_MATERIAL_METALNESS = 0.08;
+/** Upper bound for Mesh → Material emissive slider (also `index.html` #materialEmissive max). */
+export const MATERIAL_EMISSIVE_SLIDER_MAX = 4;
 
 export const BLOOM_LUMINANCE_THRESHOLD_MIN = 0.6;
 export const BLOOM_LUMINANCE_THRESHOLD_MAX = 1.2;

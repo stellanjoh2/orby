@@ -1739,6 +1739,7 @@ export class SceneManager {
     requestAnimationFrame(() => {
       this.setGroundSolid(state.groundSolid);
       this.setGroundWire(state.groundWire);
+      this.materialController?.resyncEmissiveFromImportedMaterials?.();
     });
     
     this.ui.setDropzoneVisible(false);

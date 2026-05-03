@@ -142,6 +142,106 @@ export class MaterialController {
   }
 
   /**
+   * Whether the imported material had emissive content (glTF emissiveTexture / emissiveFactor, etc.).
+   * `targetMat` is the live shaded clone when available — its emissiveMap can differ if import was synced late.
+   * When false and the user Emissive slider is 0, we clear emissive on the working material.
+   */
+  _importMaterialHasEmissiveBaseline(importMat, targetMat) {
+    if (importMat?.emissiveMap || targetMat?.emissiveMap) return true;
+    if (!importMat) return false;
+    const int = Number(importMat.emissiveIntensity);
+    if (!Number.isFinite(int) || int === 0 || !importMat.emissive) return false;
+    const e = importMat.emissive;
+    return e.r !== 0 || e.g !== 0 || e.b !== 0;
+  }
+
+  /**
+   * User Emissive slider > 0: tint-based glow (existing behavior).
+   * Slider at 0: keep file emissive + map so glTF emissive textures are not wiped by updateMaterials / setShading.
+   */
+  _applyUserEmissiveOrRestoreImport(target, importMat, adjustedColor, userEmissive) {
+    const slider = userEmissive > 0 ? userEmissive : 0;
+    if (slider > 0) {
+      target.emissive.copy(adjustedColor).multiplyScalar(slider);
+      target.emissiveIntensity = slider;
+      return;
+    }
+    const map = importMat?.emissiveMap || target?.emissiveMap;
+    if (map) target.emissiveMap = map;
+
+    if (this._importMaterialHasEmissiveBaseline(importMat, target)) {
+      if (importMat?.emissive) target.emissive.copy(importMat.emissive);
+      else if (map) target.emissive.setRGB(1, 1, 1);
+      else target.emissive.set(0, 0, 0);
+      // Rare broken exports: emissiveTexture but zero emissiveFactor — still show the map.
+      if (
+        map &&
+        target.emissive.r === 0 &&
+        target.emissive.g === 0 &&
+        target.emissive.b === 0
+      ) {
+        target.emissive.setRGB(1, 1, 1);
+      }
+      const ei = importMat?.emissiveIntensity;
+      if (map && (!Number.isFinite(ei) || ei <= 0)) {
+        target.emissiveIntensity = 1;
+      } else {
+        target.emissiveIntensity = Number.isFinite(ei) && ei >= 0 ? ei : 1;
+      }
+      return;
+    }
+    target.emissive.set(0, 0, 0);
+    target.emissiveIntensity = 0;
+  }
+
+  /**
+   * Reattach emissive textures from {@link #originalMaterials} to shaded clones and re-apply the
+   * emissive slider vs import baseline. Run deferred once after load so any late texture binding
+   * on the import material still reaches the mesh.
+   */
+  resyncEmissiveFromImportedMaterials() {
+    if (!this.currentModel || this.currentShading !== 'shaded') return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || this.isWindowMesh(child)) return;
+      const original = this.originalMaterials.get(child);
+      if (!original) return;
+
+      const getOrigColor = (orig, idx = 0) => {
+        if (Array.isArray(orig)) {
+          return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
+        }
+        return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+      };
+
+      const userEm = this.materialSettings.emissive ?? 0;
+      const bright = this.materialSettings.brightness ?? 1;
+
+      const patch = (mat, idx) => {
+        if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
+        const origMat = Array.isArray(original) ? original[idx] : original;
+        if (!origMat) return;
+        if (origMat.emissiveMap && mat.emissiveMap !== origMat.emissiveMap) {
+          mat.emissiveMap = origMat.emissiveMap;
+        }
+        const adjustedColor = getOrigColor(original, idx).multiplyScalar(bright);
+        this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm);
+        mat.needsUpdate = true;
+      };
+
+      if (Array.isArray(child.material) && Array.isArray(original)) {
+        child.material.forEach((m, i) => patch(m, i));
+      } else if (child.material) {
+        patch(child.material, 0);
+      }
+    });
+
+    if (this.fresnelSettings?.enabled) {
+      this.applyFresnelToModel(this.currentModel);
+    }
+    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
+  }
+
+  /**
    * Capture loader output once per material so Advanced → Alpha modes can restore and re-apply.
    */
   _snapshotImportMaterialBaselinesIfNeeded(object) {
@@ -673,15 +773,12 @@ export class MaterialController {
             // Apply metalness and roughness
             cloned.metalness = this.materialSettings.metalness;
             cloned.roughness = this.materialSettings.roughness;
-            // Apply emissive: multiply adjusted color by emissive value for glowing effect
-            const emissiveIntensity = this.materialSettings.emissive || 0.0;
-            if (emissiveIntensity > 0) {
-              cloned.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
-              cloned.emissiveIntensity = emissiveIntensity;
-            } else {
-              cloned.emissive.set(0, 0, 0);
-              cloned.emissiveIntensity = 0;
-            }
+            this._applyUserEmissiveOrRestoreImport(
+              cloned,
+              mat,
+              adjustedColor,
+              this.materialSettings.emissive || 0.0,
+            );
             // Disable original metalness/roughness maps so sliders behave consistently — unless the user
             // assigned FBX slot textures (manual maps).
             if (!mat?.userData?.orbyFbxSlotMaps) {
@@ -730,9 +827,15 @@ export class MaterialController {
     this.applyFresnelToModel(this.currentModel);
     reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, mode);
     
-    // CRITICAL: Reapply emissive after shading change
-    // Materials are recreated in setShading, so we need to ensure emissive is applied
-    if (this.materialSettings?.emissive > 0 && mode !== 'wireframe' && mode !== 'textures') {
+    // After recreating shaded materials, either apply user emissive glow or re-sync file emissive
+    // (microtask so hooks like Fresnel/SVG run first; import textures may also finish binding).
+    if (mode === 'shaded') {
+      if (this.materialSettings?.emissive > 0) {
+        this.updateMaterials();
+      } else {
+        queueMicrotask(() => this.resyncEmissiveFromImportedMaterials());
+      }
+    } else if (this.materialSettings?.emissive > 0 && mode !== 'wireframe' && mode !== 'textures') {
       this.updateMaterials();
     }
 
@@ -908,15 +1011,13 @@ export class MaterialController {
                 mat.color.copy(adjustedColor);
                 mat.metalness = this.materialSettings.metalness;
                 mat.roughness = this.materialSettings.roughness;
-                // Apply emissive: multiply original color by emissive value for glowing effect
-                const emissiveIntensity = this.materialSettings.emissive || 0.0;
-                if (emissiveIntensity > 0) {
-                  mat.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
-                  mat.emissiveIntensity = emissiveIntensity;
-                } else {
-                  mat.emissive.set(0, 0, 0);
-                  mat.emissiveIntensity = 0;
-                }
+                const origMat = Array.isArray(original) ? original[idx] : original;
+                this._applyUserEmissiveOrRestoreImport(
+                  mat,
+                  origMat,
+                  adjustedColor,
+                  this.materialSettings.emissive || 0.0,
+                );
                 if ('metalnessMap' in mat) {
                   mat.metalnessMap = null;
                 }
@@ -932,15 +1033,12 @@ export class MaterialController {
             material.color.copy(adjustedColor);
             material.metalness = this.materialSettings.metalness;
             material.roughness = this.materialSettings.roughness;
-            // Apply emissive: multiply adjusted color by emissive value for glowing effect
-            const emissiveIntensity = this.materialSettings.emissive || 0.0;
-            if (emissiveIntensity > 0) {
-              material.emissive.copy(adjustedColor).multiplyScalar(emissiveIntensity);
-              material.emissiveIntensity = emissiveIntensity;
-      } else {
-              material.emissive.set(0, 0, 0);
-              material.emissiveIntensity = 0;
-            }
+            this._applyUserEmissiveOrRestoreImport(
+              material,
+              original,
+              adjustedColor,
+              this.materialSettings.emissive || 0.0,
+            );
             if ('metalnessMap' in material) {
               material.metalnessMap = null;
             }

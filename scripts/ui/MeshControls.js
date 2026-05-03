@@ -2,7 +2,10 @@
  * MeshControls - Handles all mesh/object-related UI controls
  * Manages shading, materials, transforms, clay, wireframe, fresnel, and export settings
  */
-import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import {
+  DEFAULT_MATERIAL_ROUGHNESS,
+  MATERIAL_EMISSIVE_SLIDER_MAX,
+} from '../constants.js';
 
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -134,6 +137,25 @@ export class MeshControls {
       this.eventBus.emit('mesh:material-roughness', clampedValue);
     });
     if (this.ui.inputs.materialRoughness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialRoughness);
+
+    this.ui.inputs.materialEmissive?.addEventListener('mousedown', () => {
+      this.materialInteracting.emissive = true;
+    });
+    this.ui.inputs.materialEmissive?.addEventListener('mouseup', () => {
+      this.materialInteracting.emissive = false;
+    });
+    this.ui.inputs.materialEmissive?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = isNaN(value)
+        ? 0
+        : Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, value));
+      this.helpers.updateValueLabel('materialEmissive', clampedValue, 'decimal');
+      this.stateStore.set('material.emissive', clampedValue);
+      this.eventBus.emit('mesh:material-emissive', clampedValue);
+    });
+    if (this.ui.inputs.materialEmissive) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialEmissive);
+    }
 
     this.ui.inputs.svgExtrudeDepth?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -576,9 +598,14 @@ export class MeshControls {
       }
     }
     if (this.ui.inputs.materialEmissive) {
-      const emissive = state.material?.emissive ?? 0.0;
-      this.ui.inputs.materialEmissive.value = emissive;
-      this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
+      const isInteracting =
+        this.materialInteracting?.emissive ||
+        document.activeElement === this.ui.inputs.materialEmissive;
+      if (!isInteracting) {
+        const emissive = state.material?.emissive ?? 0.0;
+        this.ui.inputs.materialEmissive.value = emissive;
+        this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
+      }
     }
     if (this.ui.inputs.svgExtrudeDepth) {
       const depth = state.svgExtrude?.depth ?? 0.2;
