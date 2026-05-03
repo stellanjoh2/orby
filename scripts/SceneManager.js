@@ -1829,9 +1829,15 @@ export class SceneManager {
 
     if (materials.length === 0) return;
 
-    // Set initial opacity to 0 and enable transparency
+    // Set initial opacity to 0 and enable transparency (skip KHR transmission — animating opacity breaks it)
     materials.forEach((mat) => {
       if (mat) {
+        const isTransmission =
+          mat.isMeshPhysicalMaterial &&
+          (Number(mat.transmission) > 0.01 || mat.transmissionMap);
+        if (isTransmission) {
+          return;
+        }
         mat.transparent = true;
         mat.opacity = 0;
         // During fade we disable depth writes to avoid temporary sorting artifacts.
@@ -1862,6 +1868,12 @@ export class SceneManager {
 
       materials.forEach((mat) => {
         if (mat) {
+          const isTransmission =
+            mat.isMeshPhysicalMaterial &&
+            (Number(mat.transmission) > 0.01 || mat.transmissionMap);
+          if (isTransmission) {
+            return;
+          }
           const original = originalMaterialStates.get(mat);
           const targetOpacity = original ? original.opacity : 1;
           mat.opacity = targetOpacity * opacity;
@@ -2170,6 +2182,8 @@ export class SceneManager {
   applyGlassAppearanceFromState() {
     if (!this.currentModel) return;
     this.materialController.applyGlassAppearanceFromState(this.currentModel);
+    this.materialController.applyGlassOrientationFromState(this.currentModel);
+    this.refreshMaterialSidesForReverseNormals();
     if (this.scene.environment) {
       const intensity = Math.max(0, this.hdriStrength ?? 0);
       this.updateMaterialsEnvironment(this.scene.environment, intensity);

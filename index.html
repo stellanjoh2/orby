@@ -342,33 +342,6 @@
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="clay">
-                  <div class="block-title has-reset">
-                    <span>Clay</span>
-                    <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay" data-tooltip="Reset Clay settings">
-                      <i class="fa-solid fa-rotate-left"></i>
-                      <span class="sr-only">Reset</span>
-                    </button>
-                  </div>
-                  <label class="color-line">
-                    <span>Clay Color</span>
-                    <input
-                      type="color"
-                      id="clayColor"
-                      class="color-chip"
-                      value="#808080"
-                    />
-                  </label>
-                  <label class="slider-line">
-                    <span>Normal Map</span>
-                    <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
-                      <input type="checkbox" id="clayNormalMap" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
-                    </label>
-                  </label>
-                </div>
-                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fresnel">
                   <div class="block-title has-toggle">
                     <span>Fresnel</span>
@@ -419,6 +392,33 @@
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="clay">
+                  <div class="block-title has-reset">
+                    <span>Clay</span>
+                    <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay" data-tooltip="Reset Clay settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="color-line">
+                    <span>Clay Color</span>
+                    <input
+                      type="color"
+                      id="clayColor"
+                      class="color-chip"
+                      value="#808080"
+                    />
+                  </label>
+                  <label class="slider-line">
+                    <span>Normal Map</span>
+                    <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
+                      <input type="checkbox" id="clayNormalMap" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
+                    </label>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="wireframe">
                   <div class="block-title has-reset">
                     <span>Wireframe</span>
@@ -463,7 +463,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block" id="svgExtrudePanelBlock" hidden>
                 <div class="subsection" data-subsection="svg-extrude">
                   <div class="block-title has-reset">
                     <span>SVG Extrude</span>
@@ -565,21 +565,64 @@
                     </label>
                   </label>
                   <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
+                  <p class="panel-hint advanced-import-hint">
+                    Blended transparent surfaces are sorted per mesh in WebGL—not like Sketchfab’s viewer. The two controls below usually matter most;
+                    fine glass often needs glTF transmission or separate materials from the author.
+                  </p>
+                  <p class="panel-hint advanced-transparency-doc">
+                    <button type="button" class="drop-link advanced-info-doc-btn" data-open-info-section="#info-transparency">
+                      Read more under Information — Transparency
+                    </button>
+                  </p>
                   <label class="select-line">
                     <span
-                      data-tooltip="Bad Sketchfab-style exports often mark the whole mesh BLEND + double-sided — try “Opaque + front faces” for cameras / dense props. True thin glass in the same atlas may look wrong until you split materials in a DCC."
-                      >Alpha</span>
-                    <select id="transparencyFix" aria-label="Alpha">
-                      <option value="default">Default (import + auto)</option>
-                      <option value="opaqueBlend">Force opaque (blend→solid)</option>
+                      data-tooltip="Auto applies viewer defaults. Other modes trade sorting vs solid surfaces—try if layers look wrong."
+                      >Transparency mode</span>
+                    <select id="transparencyFix" aria-label="Transparency mode">
+                      <option value="default">Auto (recommended)</option>
+                      <option value="opaqueBlend">Treat blend as solid</option>
                       <option value="frontFace">Front faces only</option>
-                      <option value="opaqueAndFrontFace">Opaque + front faces</option>
+                      <option value="opaqueAndFrontFace">Solid + front faces</option>
                     </select>
                   </label>
+                  <label class="slider-line">
+                    <span
+                      data-tooltip="Uses light dither so stacked blended surfaces sort more predictably (common on Sketchfab). Turn off if hair or cloth looks too grainy."
+                      >Stabilize layered transparency</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="blendSortingMitigation" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Stabilize layered transparency</span>
+                    </label>
+                  </label>
+                  <details class="advanced-import-details">
+                    <summary>Rare fixes for transmission &amp; named glass…</summary>
+                    <label class="slider-line">
+                      <span
+                        data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
+                        >Flip glass normal Y</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="flipGlassNormalMapY" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Flip glass normal map Y</span>
+                      </label>
+                    </label>
+                    <label class="slider-line">
+                      <span
+                        data-tooltip="Front-side only for those same materials—not for whole-body BLEND characters (use Transparency mode)."
+                        >Glass: front faces only</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="glassFrontFacesOnly" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Glass front faces only</span>
+                      </label>
+                    </label>
+                  </details>
                   <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
+                    <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
                     <label class="slider-line slider-line--track-short">
                       <span
-                        data-tooltip="Opacity for meshes detected as glass / windows (names or materials). Uses Alpha → Default."
+                        data-tooltip="Only when transparency mode is Auto. Opacity for meshes detected as glass or windows from names."
                         >Glass opacity</span>
                       <input
                         id="glassOpacity"
@@ -607,7 +650,7 @@
                     </label>
                     <label class="color-line">
                       <span
-                        data-tooltip="Body tint for detected glass / windows: darker or saturated colors read as tinted automotive or privacy glass. Uses Alpha → Default."
+                        data-tooltip="Only when transparency mode is Auto. Tint for detected glass / windows."
                         >Glass tint</span>
                       <input
                         type="color"
@@ -618,7 +661,7 @@
                     </label>
                     <label class="slider-line slider-line--track-short">
                       <span
-                        data-tooltip="Makes heuristic glass read more solid: reduces glTF transmission (common on car windows), darkens the pane, and stacks with Glass opacity. Uses Alpha → Default."
+                        data-tooltip="Only when transparency mode is Auto. Makes heuristic glass read more solid (transmission, tint)."
                         >Glass body</span>
                       <input
                         id="glassBody"
@@ -2519,6 +2562,7 @@
                   <a href="#info-look-filters">Look filters</a>
                   <a href="#info-tone-curve">Tone curve</a>
                   <a href="#info-svg-extrude">SVG Extrude</a>
+                  <a href="#info-transparency">Transparency</a>
                   <a href="#info-performance">Performance</a>
                   <a href="#info-learn">Learn More</a>
                   <a href="#info-legal">Legal</a>
@@ -2858,6 +2902,43 @@
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Per-Color Depth/Position:</span> Fine-tune each detected fill color independently for layered logo effects.</li>
                     <li style="margin-bottom: 0.35rem;"><span class="about-highlight">Scene Settings:</span> SVG extrude controls are included when copying or pasting scene settings.</li>
                     <li><span class="about-highlight">SVG to GLB Export:</span> Exported SVG meshes are saved as opaque GLB materials for predictable shading across viewers.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="panel-block" id="info-transparency">
+                <div class="block-title">
+                  <i class="fa-solid fa-droplet" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                  Transparency &amp; glass (the short version)
+                </div>
+                <div class="about-content">
+                  <p style="margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    If you work with <span class="about-highlight">glTF / GLB</span> for the web, this is familiar: <strong>transparent and blended surfaces are hard in real time</strong>. Orby is built on WebGL and Three.js, like many product viewers—rules below apply broadly, not only here.
+                  </p>
+                  <ul style="list-style: none; padding: 0; margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    <li style="margin-bottom: 0.5rem;">
+                      <span class="about-highlight">Sorting.</span> Engines usually sort <strong>draws</strong> (meshes, batches), not <strong>every triangle</strong>. Many blended pixels in a <strong>single</strong> mesh and material can’t be ordered perfectly. That’s why you can see “see-through” layers, flicker, or a visor fighting with a face when everything shares one <strong>BLEND</strong> atlas—common in downloads from marketplaces.
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      <span class="about-highlight">Sketchfab vs your tab.</span> The Sketchfab site uses a <strong>tuned</strong> viewer for their content. The file is still standard glTF, but <strong>another app won’t match it pixel-for-pixel</strong> unless it makes similar rendering tradeoffs.
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      <span class="about-highlight">“Real” glass in glTF.</span> Thin, refractive panes often use the <span class="about-highlight">KHR_materials_transmission</span> extension. Orby <strong>keeps those materials’ own roughness and similar inputs</strong> when the environment updates, so transmission glass is meant to track the file more closely than a single global roughness/metalness slider.
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      <span class="about-highlight">Orby’s Mesh → Advanced.</span> <strong>Transparency mode</strong> and <strong>Stabilize layered transparency</strong> only change <strong>how</strong> blended surfaces are drawn (trade sorting stability vs grain). They cannot rewrite an asset that packs unrelated surfaces into one blended material—authors often <strong>split meshes or materials</strong>, use mask vs blend where appropriate, or transmission where it’s supported.
+                    </li>
+                  </ul>
+                  <p style="margin: 0 0 0.5rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    Further reading (external):
+                  </p>
+                  <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                    <li style="margin-bottom: 0.35rem;">
+                      • Khronos — <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#material-alphamode" target="_blank" rel="noreferrer">glTF 2.0 material alpha modes</a> (OPAQUE, MASK, BLEND)
+                    </li>
+                    <li>
+                      • Three.js — <a href="https://threejs.org/manual/en/transparency.html" target="_blank" rel="noreferrer">Transparency</a> (sorting, double-sided, tradeoffs)
+                    </li>
                   </ul>
                 </div>
               </div>

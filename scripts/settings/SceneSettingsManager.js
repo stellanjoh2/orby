@@ -81,6 +81,9 @@ export class SceneSettingsManager {
         glassReflection: state.advanced?.glassReflection ?? 2,
         glassTint: state.advanced?.glassTint ?? '#ffffff',
         glassBody: state.advanced?.glassBody ?? 0,
+        blendSortingMitigation: state.advanced?.blendSortingMitigation !== false,
+        flipGlassNormalMapY: !!state.advanced?.flipGlassNormalMapY,
+        glassFrontFacesOnly: !!state.advanced?.glassFrontFacesOnly,
       },
       // Studio settings
       hdri: state.hdri,
@@ -494,6 +497,27 @@ export class SceneSettingsManager {
           : 'default';
         this.stateStore.set('advanced.transparencyFix', tf);
         this.eventBus.emit('mesh:transparency-fix');
+      }
+      if (payload.advanced?.blendSortingMitigation !== undefined) {
+        this.stateStore.set(
+          'advanced.blendSortingMitigation',
+          !!payload.advanced.blendSortingMitigation,
+        );
+        this.eventBus.emit('mesh:transparency-fix');
+      }
+      if (payload.advanced?.flipGlassNormalMapY !== undefined) {
+        this.stateStore.set(
+          'advanced.flipGlassNormalMapY',
+          !!payload.advanced.flipGlassNormalMapY,
+        );
+        this.eventBus.emit('mesh:glass-appearance');
+      }
+      if (payload.advanced?.glassFrontFacesOnly !== undefined) {
+        this.stateStore.set(
+          'advanced.glassFrontFacesOnly',
+          !!payload.advanced.glassFrontFacesOnly,
+        );
+        this.eventBus.emit('mesh:glass-appearance');
       }
       if (
         payload.advanced?.glassOpacity !== undefined ||

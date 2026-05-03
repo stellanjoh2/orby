@@ -196,6 +196,19 @@ export class MeshControls {
       this.eventBus.emit('mesh:transparency-fix');
       this.refreshAdvancedGlassControls(this.stateStore.getState());
     });
+    this.ui.inputs.blendSortingMitigation?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('advanced.blendSortingMitigation', enabled);
+      this.eventBus.emit('mesh:transparency-fix');
+    });
+    this.ui.inputs.flipGlassNormalMapY?.addEventListener('change', (event) => {
+      this.stateStore.set('advanced.flipGlassNormalMapY', !!event.target.checked);
+      this.eventBus.emit('mesh:glass-appearance');
+    });
+    this.ui.inputs.glassFrontFacesOnly?.addEventListener('change', (event) => {
+      this.stateStore.set('advanced.glassFrontFacesOnly', !!event.target.checked);
+      this.eventBus.emit('mesh:glass-appearance');
+    });
 
     this.ui.inputs.glassOpacity?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -495,6 +508,17 @@ export class MeshControls {
     const visible = alphaSectionVisible && !!(wrap && !wrap.hidden);
     const mode = state.advanced?.transparencyFix ?? 'default';
     const opacityEnabled = visible && mode === 'default';
+    /** Alpha-hash toggle lives next to Alpha dropdown, not under glass controls — do not require glass section visible. */
+    const blendMitigationEnabled = alphaSectionVisible && mode === 'default';
+    if (this.ui.inputs.blendSortingMitigation) {
+      this.ui.setControlDisabled('blendSortingMitigation', !blendMitigationEnabled);
+    }
+    if (this.ui.inputs.flipGlassNormalMapY) {
+      this.ui.setControlDisabled('flipGlassNormalMapY', !blendMitigationEnabled);
+    }
+    if (this.ui.inputs.glassFrontFacesOnly) {
+      this.ui.setControlDisabled('glassFrontFacesOnly', !blendMitigationEnabled);
+    }
     if (this.ui.inputs.glassOpacity) {
       this.ui.setControlDisabled('glassOpacity', !opacityEnabled);
     }
@@ -605,6 +629,17 @@ export class MeshControls {
       const tf = state.advanced?.transparencyFix ?? 'default';
       const allowed = ['default', 'opaqueBlend', 'frontFace', 'opaqueAndFrontFace'];
       this.ui.inputs.transparencyFix.value = allowed.includes(tf) ? tf : 'default';
+    }
+    if (this.ui.inputs.blendSortingMitigation) {
+      /** Default-on when key missing (matches MaterialController `!== false`). */
+      this.ui.inputs.blendSortingMitigation.checked =
+        state.advanced?.blendSortingMitigation !== false;
+    }
+    if (this.ui.inputs.flipGlassNormalMapY) {
+      this.ui.inputs.flipGlassNormalMapY.checked = !!state.advanced?.flipGlassNormalMapY;
+    }
+    if (this.ui.inputs.glassFrontFacesOnly) {
+      this.ui.inputs.glassFrontFacesOnly.checked = !!state.advanced?.glassFrontFacesOnly;
     }
     if (this.ui.inputs.glassOpacity) {
       const raw = Number(state.advanced?.glassOpacity ?? 0.45);

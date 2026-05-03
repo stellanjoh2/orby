@@ -9,7 +9,7 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
 
-/** BLEND materials at/above this opacity are treated as fully opaque (alpha-hash + force-opaque modes). */
+/** BLEND materials at/above this opacity are treated as fully opaque (optional alpha-hash + force-opaque modes). */
 const GLTF_FULL_OPACITY_BLEND_THRESHOLD = 0.989;
 
 /** Ensure fresnel color uniform stays a THREE.Color (Three may replace .value on recompile). */
@@ -195,6 +195,7 @@ export class MaterialController {
       this.applyGltfBlendSortingMitigation(object);
     }
     this.applyGlassAppearanceFromState(object);
+    this.applyGlassOrientationFromState(object);
   }
 
   /**
@@ -241,7 +242,7 @@ export class MaterialController {
     if (m.alphaMap) return true;
     if (m.alphaTest > 0) return true;
 
-    if (m.map && m.map.format === THREE.RGBAFormat) return true;
+    // Do not treat RGBAFormat baseColor alone as transparency — glTF often uses RGBA PNGs for OPAQUE materials.
 
     if (m.isMeshPhysicalMaterial && m.transmission > 0.01) return true;
 
@@ -276,7 +277,50 @@ export class MaterialController {
   }
 
   /**
-   * Apply Advanced glass opacity (Alpha → Default only). Reflection strength is applied in updateMaterialsEnvironment.
+   * Glass / transmission often looks “flipped” (wrong refraction, inside-out) from tangent normal
+   * convention or double-sided shells. Optional fixes — transmission & window-tagged meshes only.
+   */
+  applyGlassOrientationFromState(object) {
+    if (!object || !this.stateStore) return;
+    const adv = this.stateStore.getState()?.advanced ?? {};
+    const flipY = adv.flipGlassNormalMapY === true;
+    const frontOnly = adv.glassFrontFacesOnly === true;
+
+    this._forEachMeshMaterial(object, (mesh, m) => {
+      if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
+      if (!this._isGlassLikeForOrientation(mesh, m)) return;
+
+      const b = m.userData?.orbyGltfImportBaseline;
+
+      if (m.normalMap && m.normalScale) {
+        if (m.userData.orbyGlassImportNormalY === undefined) {
+          m.userData.orbyGlassImportNormalY = Number.isFinite(m.normalScale.y)
+            ? m.normalScale.y
+            : 1;
+        }
+        const baseY = m.userData.orbyGlassImportNormalY;
+        m.normalScale.y = flipY ? -baseY : baseY;
+      }
+
+      if (frontOnly) {
+        m.side = THREE.FrontSide;
+      } else if (b && b.side !== undefined) {
+        m.side = b.side;
+      }
+
+      m.needsUpdate = true;
+    });
+  }
+
+  /** Transmission / heuristic glass — not full-mesh BLEND characters (those need Alpha modes instead). */
+  _isGlassLikeForOrientation(mesh, m) {
+    if (!mesh?.isMesh || !m) return false;
+    if (m.isMeshPhysicalMaterial && Number(m.transmission) > 1e-4) return true;
+    return this.isWindowMesh(mesh);
+  }
+
+  /**
+   * Apply Advanced glass opacity (transparency mode Auto only). Reflection strength is applied in updateMaterialsEnvironment.
    */
   applyGlassAppearanceFromState(object) {
     if (!object || !this.stateStore) return;
@@ -387,10 +431,15 @@ export class MaterialController {
   }
 
   /**
-   * Reduces transparency popping / z-fighting when glTF marks full-opacity surfaces as BLEND + DoubleSide
-   * (common on Sketchfab). Uses Three.js alpha-hash transparency when available.
+   * Sketchfab-style BLEND + DoubleSide on a single mesh cannot be depth-sorted per triangle in WebGL;
+   * alpha-hash trades a slight dither for stable layering (visor vs face vs helmet).
+   * Controlled by Advanced → “Alpha-hash blend fix” (default on); turn off for softer hair/fur only.
    */
   applyGltfBlendSortingMitigation(object) {
+    const enabled =
+      this.stateStore?.getState()?.advanced?.blendSortingMitigation !== false;
+    if (!enabled) return;
+
     this._forEachUniqueMaterial(object, (m) => {
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
       if (m.userData?.orbySkipBlendMitigation) return;
@@ -483,6 +532,9 @@ export class MaterialController {
       'fenster',
       'vitre',
       'parabrisas',
+      'crystal',
+      'lens',
+      'acrylic',
     ];
     const isWindowByName = windowKeywords.some(
       (keyword) => name.includes(keyword) || parentName.includes(keyword),
@@ -1285,10 +1337,24 @@ export class MaterialController {
           material.isMeshLambertMaterial ||
           material.isMeshPhongMaterial
         ) {
+          const usesTransmission =
+            material.isMeshPhysicalMaterial &&
+            (Number(material.transmission) > 1e-4 || !!material.transmissionMap);
+
           material.envMap = envTexture;
           if (material.envMapIntensity !== undefined) {
-            const isGlass = this.isWindowMesh(child);
-            material.envMapIntensity = isGlass ? intensity * glassEnvMul : intensity;
+            const glassBoost =
+              this.isWindowMesh(child) || usesTransmission;
+            material.envMapIntensity = glassBoost
+              ? intensity * glassEnvMul
+              : intensity;
+          }
+
+          // glTF KHR_materials_transmission — preserve imported roughness/metalness/IOR; crushing them
+          // with global sliders breaks glass on every HDRI update (felt like imports were never correct).
+          if (usesTransmission) {
+            material.needsUpdate = true;
+            return;
           }
 
           const isGlass = material.userData?.isGlass || this.isWindowMesh(child);

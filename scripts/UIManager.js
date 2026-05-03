@@ -177,6 +177,7 @@ export class UIManager {
     this.dom.messageAlertClose = q('#messageAlertClose');
     this.dom.stats = q('#meshStats');
     this.dom.fbxMapSlotsDivider = q('#fbxMapSlotsDivider');
+    this.dom.svgExtrudePanelBlock = q('#svgExtrudePanelBlock');
     this.dom.studioPodiumGlassPanel = q('#studioPodiumGlassPanel');
     this.dom.animationBlock = q('#animationBlock');
     this.dom.animationSelect = q('#animationSelect');
@@ -221,6 +222,9 @@ export class UIManager {
       reverseNormals: q('#reverseNormals'),
       advancedAlphaControls: q('#advancedAlphaControls'),
       transparencyFix: q('#transparencyFix'),
+      blendSortingMitigation: q('#blendSortingMitigation'),
+      flipGlassNormalMapY: q('#flipGlassNormalMapY'),
+      glassFrontFacesOnly: q('#glassFrontFacesOnly'),
       glassOpacity: q('#glassOpacity'),
       glassReflection: q('#glassReflection'),
       glassTint: q('#glassTint'),
@@ -402,6 +406,21 @@ export class UIManager {
         if (!target) return;
     event.preventDefault();
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    document.querySelectorAll('[data-open-info-section]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sel = btn.getAttribute('data-open-info-section');
+        const tabButton = document.querySelector('[data-tab="info"]');
+        tabButton?.click();
+        const scrollToTarget = () => {
+          const el = sel ? document.querySelector(sel) : null;
+          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        requestAnimationFrame(() => {
+          requestAnimationFrame(scrollToTarget);
+        });
       });
     });
 
@@ -1959,7 +1978,11 @@ export class UIManager {
 
     // Fresnel block - only muted if fresnel.enabled is false
     this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
-    this.setBlockMuted('svg-extrude', !currentState.svgExtrude?.enabled);
+
+    const svgExtrudeOn = !!currentState.svgExtrude?.enabled;
+    if (this.dom.svgExtrudePanelBlock) {
+      this.dom.svgExtrudePanelBlock.hidden = !svgExtrudeOn;
+    }
 
     const fbxSlots = this.dom.subsections?.fbxMapSlots;
     if (fbxSlots) {
