@@ -3057,7 +3057,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.327 · 2026-05-03 16:30:50 UTC</div>
+              <div class="info-version-tag">v0.5.328 · 2026-05-03 16:31:11 UTC</div>
             </section>
           </div>
         </aside>
@@ -3209,15 +3209,23 @@
           </div>
           <div class="bug-report-field">
             <label for="bugReportMessage" id="bugReportMessageLabel">Details</label>
-            <textarea
-              id="bugReportMessage"
-              name="message"
-              rows="6"
-              maxlength="8000"
-              required
-              placeholder="About 10+ words: steps to reproduce, browser/OS, what you expected…"
-              aria-labelledby="bugReportMessageLabel"
-            ></textarea>
+            <div class="bug-report-message-stage">
+              <textarea
+                id="bugReportMessage"
+                class="bug-report-message-textarea"
+                name="message"
+                rows="6"
+                maxlength="8000"
+                required
+                placeholder="About 10+ words: steps to reproduce, browser/OS, what you expected…"
+                aria-labelledby="bugReportMessageLabel"
+              ></textarea>
+              <div class="bug-report-message-sending-overlay" hidden aria-hidden="true">
+                <div class="bug-report-message-sending-bar-track">
+                  <div class="bug-report-message-sending-bar-fill"></div>
+                </div>
+              </div>
+            </div>
           </div>
           <input
             type="text"
@@ -3229,21 +3237,7 @@
           />
           <div id="bug-report-turnstile" class="bug-report-turnstile"></div>
           <p class="bug-report-status" aria-live="polite">
-            <span class="bug-report-status-row">
-              <span class="bug-report-status-spinner" hidden>
-                <img
-                  src="./assets/images/favicon.svg"
-                  alt=""
-                  width="20"
-                  height="20"
-                  decoding="async"
-                />
-              </span>
-              <span class="bug-report-status-text"></span>
-            </span>
-            <span class="bug-report-status-progress-line" hidden>
-              <span class="bug-report-status-progress-fill"></span>
-            </span>
+            <span class="bug-report-status-text"></span>
           </p>
           <div class="load-settings-actions bug-report-actions">
             <button type="button" id="cancelBugReport" class="ghost-btn bug-report-modal-btn">Cancel</button>

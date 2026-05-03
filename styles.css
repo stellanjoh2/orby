@@ -674,6 +674,8 @@ body.dropzone-visible #webgl {
 
 .bug-report-content textarea {
   min-height: 12.5rem; /* ~20% taller than prior ~168px */
+  box-shadow: none;
+  filter: none;
 }
 
 .bug-report-field {
@@ -729,7 +731,16 @@ body.dropzone-visible #webgl {
   background-size: 12px 12px;
 }
 
-.bug-report-field textarea {
+.bug-report-message-stage {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: none;
+  filter: none;
+}
+
+.bug-report-field textarea,
+.bug-report-field .bug-report-message-textarea {
   width: 100%;
   padding: 0.65rem 0.75rem;
   border-radius: 8px;
@@ -739,14 +750,71 @@ body.dropzone-visible #webgl {
   font-family: inherit;
   font-size: 0.9rem;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
   outline: none;
   box-sizing: border-box;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none;
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
 }
 
-.bug-report-field textarea:focus {
+.bug-report-field textarea:focus,
+.bug-report-field .bug-report-message-textarea:focus {
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.16);
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+}
+
+.bug-report-message-stage--sending .bug-report-message-textarea {
+  /* Keep opacity 1 — translucent text over dark modal reads as a muddy “drop shadow” fringe; dimming is the overlay’s job */
+  pointer-events: none;
+}
+
+.bug-report-message-sending-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.52);
+  pointer-events: none;
+  box-shadow: none;
+  filter: none;
+}
+
+.bug-report-message-sending-overlay[hidden] {
+  display: none !important;
+}
+
+.bug-report-message-sending-bar-track {
+  width: min(14rem, 78%);
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.bug-report-message-sending-bar-fill {
+  display: block;
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--brand-primary) 40%, transparent),
+    var(--brand-primary)
+  );
+}
+
+.bug-report-message-stage--sending .bug-report-message-sending-bar-fill {
+  animation: bug-report-progress-slide 1.08s ease-in-out infinite;
 }
 
 /* Custom severity combobox: matches .bug-report-field select (Category) */
@@ -896,74 +964,8 @@ body.dropzone-visible #webgl {
   font-size: 0.82rem;
 }
 
-.bug-report-status-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
 .bug-report-status-text {
   min-width: 0;
-}
-
-.bug-report-status--sending {
-  min-height: 2.35rem;
-}
-
-.bug-report-status--sending .bug-report-status-text {
-  font-size: 1.02rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--brand-primary);
-  text-shadow: 0 0 20px color-mix(in srgb, var(--brand-primary) 28%, transparent);
-}
-
-.bug-report-status-spinner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.bug-report-status-spinner img {
-  width: 1.25rem;
-  height: 1.25rem;
-  display: block;
-}
-
-.bug-report-status--sending .bug-report-status-spinner img {
-  animation: bug-report-logo-spin 0.88s linear infinite;
-}
-
-.bug-report-status-progress-line {
-  display: block;
-  width: 100%;
-  max-width: 15rem;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  margin-top: 0.55rem;
-  overflow: hidden;
-}
-
-.bug-report-status-progress-fill {
-  display: block;
-  height: 100%;
-  width: 38%;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--brand-primary) 40%, transparent),
-    var(--brand-primary)
-  );
-  animation: bug-report-progress-slide 1.08s ease-in-out infinite;
-}
-
-@keyframes bug-report-logo-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes bug-report-progress-slide {
@@ -977,14 +979,10 @@ body.dropzone-visible #webgl {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bug-report-status--sending .bug-report-status-spinner img,
-  .bug-report-status-progress-fill {
+  .bug-report-message-stage--sending .bug-report-message-sending-bar-fill {
     animation: none;
-  }
-
-  .bug-report-status-progress-fill {
     width: 100%;
-    opacity: 0.45;
+    opacity: 0.5;
     transform: none;
   }
 }

@@ -62,8 +62,8 @@ export class BugReportController {
     this.honeypot = this.form.querySelector('input[name="honeypot"]');
     this.statusEl = this.modal.querySelector('.bug-report-status');
     this.statusTextEl = this.modal.querySelector('.bug-report-status-text');
-    this.statusSpinnerEl = this.modal.querySelector('.bug-report-status-spinner');
-    this.statusProgressEl = this.modal.querySelector('.bug-report-status-progress-line');
+    this.messageStage = this.form.querySelector('.bug-report-message-stage');
+    this.messageOverlay = this.form.querySelector('.bug-report-message-sending-overlay');
     this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
     this.thankYouLayer = document.querySelector('#bugReportThankYouLayer');
     this.thankYouMessageEl = document.querySelector('#bugReportThankYouMessage');
@@ -108,6 +108,7 @@ export class BugReportController {
       this.submit();
     });
 
+    this.setStatus('');
     this.syncSendButton();
   }
 
@@ -508,16 +509,21 @@ export class BugReportController {
       this.statusEl.textContent = text;
     }
 
-    if (this.statusSpinnerEl && this.statusProgressEl) {
+    if (this.messageStage && this.messageOverlay) {
       if (sending) {
-        this.statusEl.classList.add('bug-report-status--sending');
-        this.statusSpinnerEl.removeAttribute('hidden');
-        this.statusProgressEl.removeAttribute('hidden');
+        this.messageStage.classList.add('bug-report-message-stage--sending');
+        this.messageOverlay.removeAttribute('hidden');
+        this.messageOverlay.setAttribute('aria-hidden', 'false');
       } else {
-        this.statusEl.classList.remove('bug-report-status--sending');
-        this.statusSpinnerEl.setAttribute('hidden', '');
-        this.statusProgressEl.setAttribute('hidden', '');
+        this.messageStage.classList.remove('bug-report-message-stage--sending');
+        this.messageOverlay.setAttribute('hidden', '');
+        this.messageOverlay.setAttribute('aria-hidden', 'true');
       }
+    }
+
+    if (this.form) {
+      if (sending) this.form.setAttribute('aria-busy', 'true');
+      else this.form.removeAttribute('aria-busy');
     }
 
     if (sending) {
@@ -561,7 +567,7 @@ export class BugReportController {
 
     this._sending = true;
     this.submitBtn.disabled = true;
-    this.setStatus('Sending…', false, { sending: true });
+    this.setStatus('', false, { sending: true });
 
     const apiUrl = this.getApiUrl();
 
