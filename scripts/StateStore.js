@@ -6,6 +6,7 @@ import {
   DEFAULT_PODIUM_GLASS_AMOUNT,
   DEFAULT_PODIUM_GLASS_BRIGHTNESS,
 } from './constants.js';
+import { defaultAberration } from './render/chromaticAberration.js';
 import { deepClone } from './utils/deepClone.js';
 
 export class StateStore {
@@ -143,7 +144,7 @@ export class StateStore {
         sensitivity: 0.55,
       },
       grain: { enabled: false, intensity: 0.03, color: '#ffffff' },
-      aberration: { enabled: false, offset: 0.0025, strength: 0.24 },
+      aberration: { ...defaultAberration },
       /** Screen-space AO (N8AO); off by default — GPU-heavy when enabled. */
       ambientOcclusion: {
         enabled: false,

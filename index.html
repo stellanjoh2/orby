@@ -2298,6 +2298,28 @@
                       </label>
                     </div>
                   </div>
+                  <label class="select-line">
+                    <span data-tooltip="How RGB separates — Classic matches real lateral lens CA (red vs blue). Other picks are stylized.">Look</span>
+                    <select id="aberrationLook" aria-label="Chromatic aberration look">
+                      <option value="classic">Red / Blue (Classic)</option>
+                      <option value="redCyan">Red / Cyan (Complementary)</option>
+                      <option value="magentaGreen">Magenta / Green (Horror)</option>
+                      <option value="prismatic">RGB Split (Prismatic)</option>
+                      <option value="yellowViolet">Yellow / Violet (Cinematic)</option>
+                      <option value="orangeTeal">Orange / Teal (Blockbuster)</option>
+                      <option value="vhs">VHS chroma bleed</option>
+                    </select>
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Radial follows the optical axis (most lens-like). Horizontal is typical scan-line glitch. Zoom scales channels slightly — very subtle.">Direction</span>
+                    <select id="aberrationDirection" aria-label="Chromatic aberration direction">
+                      <option value="radial">Radial (from center)</option>
+                      <option value="horizontal">Horizontal</option>
+                      <option value="vertical">Vertical</option>
+                      <option value="diagonal">Diagonal</option>
+                      <option value="zoom">Zoom / scale</option>
+                    </select>
+                  </label>
                   <label class="slider-line">
                     <span>Offset</span>
                     <input
@@ -2409,8 +2431,8 @@
                   <div class="export-option-group">
                     <label class="export-label">Size</label>
                     <div class="export-button-group">
-                      <button data-export-size="1" class="export-option-btn active" data-tooltip="Export at 1× resolution">1X</button>
-                      <button data-export-size="2" class="export-option-btn" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
+                      <button data-export-size="1" class="export-option-btn" data-tooltip="Export at 1× resolution">1X</button>
+                      <button data-export-size="2" class="export-option-btn active" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
                     </div>
                   </div>
                   <button id="exportPngButton" class="accent-action-btn" data-tooltip="Export current view as PNG image">
@@ -2951,7 +2973,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.314 · 2026-05-03 08:59:13 UTC</div>
+              <div class="info-version-tag">v0.5.315 · 2026-05-03 08:59:25 UTC</div>
             </section>
           </div>
         </aside>

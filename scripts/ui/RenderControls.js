@@ -124,9 +124,31 @@ export class RenderControls {
       touchLookFilterCustom();
       const enabled = event.target.checked;
       this.stateStore.set('aberration.enabled', enabled);
-      this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !enabled);
+      this.ui.setEffectControlsDisabled(
+        [
+          'aberrationLook',
+          'aberrationDirection',
+          'aberrationOffset',
+          'aberrationStrength',
+        ],
+        !enabled,
+      );
       emitAberration();
     });
+    if (this.ui.inputs.aberrationLook) {
+      this.ui.inputs.aberrationLook.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        this.stateStore.set('aberration.look', event.target.value);
+        emitAberration();
+      });
+    }
+    if (this.ui.inputs.aberrationDirection) {
+      this.ui.inputs.aberrationDirection.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        this.stateStore.set('aberration.direction', event.target.value);
+        emitAberration();
+      });
+    }
     this.ui.inputs.aberrationOffset.addEventListener('input', (event) => {
       touchLookFilterCustom();
       const value = parseFloat(event.target.value);
@@ -445,14 +467,21 @@ export class RenderControls {
     });
 
     if (this.ui.inputs.renderQuality) {
-      this.ui.inputs.renderQuality.addEventListener('change', (event) => {
-        touchLookFilterCustom();
-        const raw = event.target.value;
+      this.ui.inputs.renderQuality.addEventListener('change', () => {
+        const raw = this.ui.inputs.renderQuality.value;
         const value =
           raw === 'medium' || raw === 'low' || raw === 'max'
             ? raw
             : RENDER_QUALITY_DEFAULT;
-        this.stateStore.set('renderQuality', value);
+        // Batch with look-filter touch: calling touchLookFilterCustom() before set() used to
+        // notify subscribers while renderQuality was still the old tier, so syncControls reset
+        // this <select> to Medium and Epic didn't apply until a second change.
+        this.stateStore.batch(() => {
+          this.stateStore.set('renderQuality', value);
+          if (this.stateStore.getState().lookFilterPreset !== 'custom') {
+            this.stateStore.set('lookFilterPreset', 'custom');
+          }
+        });
         this.eventBus.emit('render:apply-performance');
       });
     }
@@ -591,7 +620,31 @@ export class RenderControls {
     this.ui.inputs.aberrationStrength.value = state.aberration.strength;
     this.helpers.updateValueLabel('aberrationStrength', state.aberration.strength, 'decimal');
     this.ui.inputs.toggleAberration.checked = !!state.aberration.enabled;
-    this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !state.aberration.enabled);
+    if (this.ui.inputs.aberrationLook) {
+      const lk = state.aberration.look ?? 'classic';
+      if ([...this.ui.inputs.aberrationLook.options].some((o) => o.value === lk)) {
+        this.ui.inputs.aberrationLook.value = lk;
+      } else {
+        this.ui.inputs.aberrationLook.value = 'classic';
+      }
+    }
+    if (this.ui.inputs.aberrationDirection) {
+      const dk = state.aberration.direction ?? 'radial';
+      if ([...this.ui.inputs.aberrationDirection.options].some((o) => o.value === dk)) {
+        this.ui.inputs.aberrationDirection.value = dk;
+      } else {
+        this.ui.inputs.aberrationDirection.value = 'radial';
+      }
+    }
+    this.ui.setEffectControlsDisabled(
+      [
+        'aberrationLook',
+        'aberrationDirection',
+        'aberrationOffset',
+        'aberrationStrength',
+      ],
+      !state.aberration.enabled,
+    );
 
     const aoRaw = state.ambientOcclusion ?? {
       enabled: false,

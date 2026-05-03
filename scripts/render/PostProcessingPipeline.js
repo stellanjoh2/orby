@@ -10,12 +10,15 @@ import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/
 import {
   BloomTintShader,
   GrainTintShader,
-  AberrationShader,
   ExposureShader,
   ToneMappingShader,
   LensDirtShader,
   LensDistortionShader,
 } from '../shaders/index.js';
+import {
+  AberrationShader,
+  applyChromaticAberrationToPass,
+} from './chromaticAberration.js';
 import { ColorAdjustController } from './ColorAdjustController.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
@@ -72,6 +75,10 @@ export class PostProcessingPipeline {
     this.lensDirtPass.enabled = false;
 
     this.aberrationPass = new ShaderPass(AberrationShader);
+    const abAsp = size.y > 0 ? size.x / size.y : 1;
+    if (this.aberrationPass.uniforms?.aspectRatio) {
+      this.aberrationPass.uniforms.aspectRatio.value = abAsp;
+    }
     this.exposurePass = new ShaderPass(ExposureShader);
 
     this.fxaaPass = new ShaderPass(FXAAShader);
@@ -214,19 +221,7 @@ export class PostProcessingPipeline {
    * @param {Object} settings - Aberration settings object
    */
   updateAberration(settings) {
-    if (!settings) return;
-    const wants =
-      settings.enabled === undefined ? true : Boolean(settings.enabled);
-    const active =
-      wants &&
-      settings.strength > 0.0001 &&
-      Math.abs(settings.offset) > 0.0001;
-    if (this.aberrationPass) {
-      this.aberrationPass.enabled = active;
-    }
-    if (!active) return;
-    this.aberrationPass.uniforms.offset.value = settings.offset;
-    this.aberrationPass.uniforms.strength.value = settings.strength;
+    applyChromaticAberrationToPass(this.aberrationPass, settings);
   }
 
   /**

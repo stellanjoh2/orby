@@ -54,6 +54,8 @@ export class SceneManager {
     this.ui = uiManager;
     /** True while the settings shelf `.panels` is being scrolled (drives light FX throttling). */
     this.panelsShelfScrolling = false;
+    /** Skip rAF resize while PNG/export pipeline mutates renderer size (avoids composer/canvas mismatch). */
+    this._suppressResizeForExport = false;
     this.eventBus.on('ui:panels-scrolling', (payload) => {
       this.setPanelsShelfScrolling(!!payload?.active);
     });
@@ -560,7 +562,20 @@ export class SceneManager {
       backgroundController: this.backgroundController,
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
+      syncPerspectiveProjection: () => this.syncPerspectiveCameraFovAndLens(),
+      renderComposerPassForExport: () => {
+        this._ensureComposerBuffersMatchRenderer();
+        this._resetRendererViewportToCanvas();
+        this.composer.render();
+        this._resetRendererViewportToCanvas();
+      },
     });
+
+    const szComposer = new THREE.Vector2();
+    this.renderer.getSize(szComposer);
+    if (szComposer.x > 0 && szComposer.y > 0) {
+      this.syncPostProcessingForLogicalSize(szComposer.x, szComposer.y);
+    }
   }
 
   /**
@@ -591,6 +606,10 @@ export class SceneManager {
     if (this.fxaaPass) {
       this.fxaaPass.material.uniforms.resolution.value.x = 1 / (width * pr);
       this.fxaaPass.material.uniforms.resolution.value.y = 1 / (height * pr);
+    }
+    if (this.postPipeline?.aberrationPass?.uniforms?.aspectRatio) {
+      this.postPipeline.aberrationPass.uniforms.aspectRatio.value =
+        height > 0 ? width / height : 1;
     }
     this.groundController?.resizePodiumReflector?.(width, height);
   }
@@ -834,6 +853,12 @@ export class SceneManager {
     this.renderer.setPixelRatio(
       Math.min(window.devicePixelRatio, tier.maxPixelRatio),
     );
+    // Keep composer RT pixel ratio in lockstep immediately (handleResize is rAF-deferred).
+    const szNow = new THREE.Vector2();
+    this.renderer.getSize(szNow);
+    if (this.composer && szNow.x > 0 && szNow.y > 0) {
+      this.syncPostProcessingForLogicalSize(szNow.x, szNow.y);
+    }
     this.handleResize();
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
@@ -2375,6 +2400,36 @@ export class SceneManager {
     this.backgroundSphere.position.addScaledVector(cameraDirection, -distance);
   }
 
+  /**
+   * EffectComposer RTs use `logical × composer._pixelRatio`. If that drifts from
+   * `renderer.getPixelRatio()` (async resize, Epic/Medium toggle), podium blur restores the
+   * viewport with `rtWidth / rendererPR` and undershoots (~¾ frame + L-shaped black bars).
+   */
+  _ensureComposerBuffersMatchRenderer() {
+    if (!this.composer?.renderTarget1) return;
+    const sz = new THREE.Vector2();
+    this.renderer.getSize(sz);
+    const db = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(db);
+    const rt = this.composer.renderTarget1;
+    // Composer RTs should match the canvas backing store when PR + logical size are in sync.
+    if (Math.abs(rt.width - db.x) > 2 || Math.abs(rt.height - db.y) > 2) {
+      this.syncPostProcessingForLogicalSize(sz.x, sz.y);
+    }
+  }
+
+  /** Reset logical viewport + scissor around the post stack (passes may leave partial viewport). */
+  _resetRendererViewportToCanvas() {
+    const r = this.renderer;
+    const db = new THREE.Vector2();
+    r.getDrawingBufferSize(db);
+    const pr = Math.max(1e-6, r.getPixelRatio());
+    r.setViewport(0, 0, db.x / pr, db.y / pr);
+    if (typeof r.setScissorTest === 'function') {
+      r.setScissorTest(false);
+    }
+  }
+
   render() {
     // Continuously protect clay settings during render to prevent any resets
     // This runs every frame to ensure values NEVER go to 0
@@ -2396,7 +2451,10 @@ export class SceneManager {
     // Update lens dirt exposure factor from auto-exposure luminance
     this.lensDirtController?.updateExposureFactor();
     if (this.composer) {
+      this._ensureComposerBuffersMatchRenderer();
+      this._resetRendererViewportToCanvas();
       this.composer.render();
+      this._resetRendererViewportToCanvas();
     } else {
       this.renderer.render(this.scene, this.camera);
     }
@@ -2405,6 +2463,9 @@ export class SceneManager {
   handleResize() {
     // Use requestAnimationFrame to ensure DOM has updated before reading dimensions
     requestAnimationFrame(() => {
+      if (this._suppressResizeForExport) {
+        return;
+      }
       // Get dimensions from the viewport container (parent of canvas)
       // This is more reliable since the canvas is absolutely positioned with inset: 0
       const container = this.viewport || this.canvas.parentElement;
@@ -2456,25 +2517,30 @@ export class SceneManager {
 
   async exportPng(settings = {}) {
     const { transparent = false, size = 2 } = settings;
-    
-    if (transparent) {
-      await this.imageExporter.exportTransparentPng(
-        this.currentModel,
-        this.currentFile,
-        this.cameraController,
-        size,
-      );
-    } else {
-      const originalSize = new THREE.Vector2();
-      this.renderer.getSize(originalSize);
-      const originalPixelRatio = this.renderer.getPixelRatio();
-      
-      await this.imageExporter.exportPng(
-        this.currentFile,
-        originalSize,
-        originalPixelRatio,
-        size,
-      );
+    this._suppressResizeForExport = true;
+    try {
+      if (transparent) {
+        await this.imageExporter.exportTransparentPng(
+          this.currentModel,
+          this.currentFile,
+          this.cameraController,
+          size,
+        );
+      } else {
+        const originalSize = new THREE.Vector2();
+        this.renderer.getSize(originalSize);
+        const originalPixelRatio = this.renderer.getPixelRatio();
+
+        await this.imageExporter.exportPng(
+          this.currentFile,
+          originalSize,
+          originalPixelRatio,
+          size,
+        );
+      }
+    } finally {
+      this._suppressResizeForExport = false;
+      this.handleResize();
     }
   }
 

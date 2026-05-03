@@ -281,12 +281,15 @@ export class GroundController {
       (this.podiumBaseRadius - PODIUM_TOP_RADIUS_OFFSET) * this.podiumScale;
     if (topRadius <= 0) return;
 
-    const canvas = this.renderer.domElement;
-    const dpr = Math.min(this.renderer.getPixelRatio?.() ?? 1, 2);
+    const dpr = Math.max(1e-6, this.renderer.getPixelRatio?.() ?? 1);
+    const logical = new THREE.Vector2();
+    this.renderer.getSize(logical);
+    let lw = logical.x > 0 ? logical.x : window.innerWidth;
+    let lh = logical.y > 0 ? logical.y : window.innerHeight;
     const rw = this._reflectorTexW
-      ?? Math.max(256, Math.floor((canvas.clientWidth || window.innerWidth) * dpr * PODIUM_REFLECTOR_RES_SCALE));
+      ?? Math.max(256, Math.floor(lw * dpr * PODIUM_REFLECTOR_RES_SCALE));
     const rh = this._reflectorTexH
-      ?? Math.max(256, Math.floor((canvas.clientHeight || window.innerHeight) * dpr * PODIUM_REFLECTOR_RES_SCALE));
+      ?? Math.max(256, Math.floor(lh * dpr * PODIUM_REFLECTOR_RES_SCALE));
 
     const segments = Math.min(96, Math.max(48, PODIUM_SEGMENTS));
     const geom = new THREE.CircleGeometry(topRadius * 0.992, segments);
@@ -314,6 +317,17 @@ export class GroundController {
     const originalBeforeRender = reflector.onBeforeRender;
     reflector.onBeforeRender = function podiumGlassOnBeforeRender(renderer, scene, camera) {
       originalBeforeRender.call(reflector, renderer, scene, camera);
+      // Reflector restores the framebuffer via setRenderTarget but does not align Three's
+      // logical viewport with the full canvas. Use drawing-buffer size so viewport matches
+      // the backing store (getSize() can drift vs getDrawingBufferSize at DPR/export boundaries).
+      const db = new THREE.Vector2();
+      renderer.getDrawingBufferSize(db);
+      const pr = Math.max(1e-6, renderer.getPixelRatio?.() ?? 1);
+      renderer.setViewport(0, 0, db.x / pr, db.y / pr);
+      if (typeof renderer.setScissorTest === 'function') {
+        renderer.setScissorTest(false);
+      }
+
       const sharpTex = reflector.getRenderTarget().texture;
       const b = scope.podiumGlassBlur;
       if (b < 0.015 || !scope._glassSepBlur) {
@@ -334,10 +348,11 @@ export class GroundController {
   /** Call from SceneManager on resize so the reflector render target stays sharp enough without wasting pixels. */
   resizePodiumReflector(width, height) {
     if (!this.renderer) return;
-    const canvas = this.renderer.domElement;
-    const w = width ?? canvas.clientWidth ?? window.innerWidth;
-    const h = height ?? canvas.clientHeight ?? window.innerHeight;
-    const dpr = Math.min(this.renderer.getPixelRatio?.() ?? 1, 2);
+    const logical = new THREE.Vector2();
+    this.renderer.getSize(logical);
+    const w = width ?? (logical.x > 0 ? logical.x : window.innerWidth);
+    const h = height ?? (logical.y > 0 ? logical.y : window.innerHeight);
+    const dpr = Math.max(1e-6, this.renderer.getPixelRatio?.() ?? 1);
     this._reflectorTexW = Math.max(256, Math.floor(w * dpr * PODIUM_REFLECTOR_RES_SCALE));
     this._reflectorTexH = Math.max(256, Math.floor(h * dpr * PODIUM_REFLECTOR_RES_SCALE));
     if (this.podium && this.podiumGlassSurface) this.rebuildPodiumReflector();

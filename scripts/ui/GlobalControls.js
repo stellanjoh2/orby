@@ -579,11 +579,7 @@ export class GlobalControls {
       this.ui.inputs.lightsEnabled.checked = false;
     }
     this.stateStore.set('aberration.enabled', false);
-    this.eventBus.emit('render:aberration', {
-      enabled: false,
-      offset: this.stateStore.getState().aberration.offset,
-      strength: this.stateStore.getState().aberration.strength,
-    });
+    this.eventBus.emit('render:aberration', this.stateStore.getState().aberration);
     if (this.ui.inputs.toggleAberration) {
       this.ui.inputs.toggleAberration.checked = false;
     }

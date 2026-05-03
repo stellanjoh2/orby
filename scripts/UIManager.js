@@ -25,6 +25,7 @@ import { StartMenuController } from './ui/StartMenuController.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
 import { BugReportController } from './ui/BugReportController.js';
 import { animateModalOpen, snapModalHidden } from './ui/modalReveal.js';
+import { mergeAberrationSettings } from './render/chromaticAberration.js';
 
 /** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
 export const LONG_TOAST_CHAR_THRESHOLD = 110;
@@ -286,6 +287,8 @@ export class UIManager {
       lensDirtStrength: q('#lensDirtStrength'),
       grainIntensity: q('#grainIntensity'),
       toggleGrain: q('#toggleGrain'),
+      aberrationLook: q('#aberrationLook'),
+      aberrationDirection: q('#aberrationDirection'),
       aberrationOffset: q('#aberrationOffset'),
       aberrationStrength: q('#aberrationStrength'),
       toggleAberration: q('#toggleAberration'),
@@ -931,10 +934,16 @@ export class UIManager {
 
       // Apply Aberration settings
       if (payload.aberration) {
-        this.stateStore.set('aberration', payload.aberration);
-        this.eventBus.emit('render:aberration', payload.aberration);
+        const ab = mergeAberrationSettings(payload.aberration);
+        this.stateStore.set('aberration', ab);
+        this.eventBus.emit('render:aberration', ab);
         this.setEffectControlsDisabled(
-          ['aberrationOffset', 'aberrationStrength'],
+          [
+            'aberrationLook',
+            'aberrationDirection',
+            'aberrationOffset',
+            'aberrationStrength',
+          ],
           !payload.aberration.enabled,
         );
       }
@@ -1597,8 +1606,29 @@ export class UIManager {
     this.inputs.aberrationStrength.value = state.aberration.strength;
     this.updateValueLabel('aberrationStrength', state.aberration.strength, 'decimal');
     this.inputs.toggleAberration.checked = !!state.aberration.enabled;
+    if (this.inputs.aberrationLook) {
+      const lk = state.aberration.look ?? 'classic';
+      if ([...this.inputs.aberrationLook.options].some((o) => o.value === lk)) {
+        this.inputs.aberrationLook.value = lk;
+      } else {
+        this.inputs.aberrationLook.value = 'classic';
+      }
+    }
+    if (this.inputs.aberrationDirection) {
+      const dk = state.aberration.direction ?? 'radial';
+      if ([...this.inputs.aberrationDirection.options].some((o) => o.value === dk)) {
+        this.inputs.aberrationDirection.value = dk;
+      } else {
+        this.inputs.aberrationDirection.value = 'radial';
+      }
+    }
     this.setEffectControlsDisabled(
-      ['aberrationOffset', 'aberrationStrength'],
+      [
+        'aberrationLook',
+        'aberrationDirection',
+        'aberrationOffset',
+        'aberrationStrength',
+      ],
       !state.aberration.enabled,
     );
 

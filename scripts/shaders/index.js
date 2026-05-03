@@ -70,31 +70,6 @@ void main() {
 }
 `;
 
-const aberrationVertex = `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-const aberrationFragment = `
-varying vec2 vUv;
-uniform sampler2D tDiffuse;
-uniform float offset;
-uniform float strength;
-
-void main() {
-  vec2 center = vec2(0.5);
-  vec2 dir = normalize(vUv - center);
-  vec2 shift = dir * offset * strength;
-  float r = texture2D(tDiffuse, vUv + shift).r;
-  float g = texture2D(tDiffuse, vUv).g;
-  float b = texture2D(tDiffuse, vUv - shift).b;
-  gl_FragColor = vec4(r, g, b, 1.0);
-}
-`;
-
 const exposureVertex = `
 varying vec2 vUv;
 void main() {
@@ -219,16 +194,6 @@ export const GrainTintShader = {
   },
   vertexShader: grainTintVertex,
   fragmentShader: grainTintFragment,
-};
-
-export const AberrationShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    offset: { value: 0.003 },
-    strength: { value: 0.4 },
-  },
-  vertexShader: aberrationVertex,
-  fragmentShader: aberrationFragment,
 };
 
 export const ExposureShader = {
@@ -640,4 +605,14 @@ export const LensDistortionShader = {
   vertexShader: lensDistortionVertex,
   fragmentShader: lensDistortionFragment,
 };
+
+export {
+  ABERRATION_DIRECTION_IDS,
+  ABERRATION_LOOK_IDS,
+  AberrationShader,
+  applyChromaticAberrationToPass,
+  defaultAberration,
+  isChromaticAberrationActive,
+  mergeAberrationSettings,
+} from '../render/chromaticAberration.js';
 

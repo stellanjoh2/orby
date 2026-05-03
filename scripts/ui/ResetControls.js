@@ -273,7 +273,15 @@ export class ResetControls {
       this.eventBus.emit('render:grain', defaults.grain);
       this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
       this.eventBus.emit('render:aberration', defaults.aberration);
-      this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !defaults.aberration.enabled);
+      this.ui.setEffectControlsDisabled(
+        [
+          'aberrationLook',
+          'aberrationDirection',
+          'aberrationOffset',
+          'aberrationStrength',
+        ],
+        !defaults.aberration.enabled,
+      );
       this.eventBus.emit('render:ambient-occlusion', defaults.ambientOcclusion);
       this.ui.setEffectControlsDisabled(
         [
@@ -533,7 +541,15 @@ export class ResetControls {
               this.stateStore.set('aberration', defaults.aberration);
             });
             this.eventBus.emit('render:aberration', defaults.aberration);
-            this.ui.setEffectControlsDisabled(['aberrationOffset', 'aberrationStrength'], !defaults.aberration.enabled);
+            this.ui.setEffectControlsDisabled(
+              [
+                'aberrationLook',
+                'aberrationDirection',
+                'aberrationOffset',
+                'aberrationStrength',
+              ],
+              !defaults.aberration.enabled,
+            );
             this.ui.syncUIFromState();
             break;
 

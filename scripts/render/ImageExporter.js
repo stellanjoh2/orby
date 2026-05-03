@@ -18,6 +18,17 @@ export class ImageExporter {
     backgroundController,
     /** Align composer pixel ratio + bloom/FXAA/N8AO-dependent passes (see SceneManager). */
     syncPostProcessingForLogicalSize,
+    /**
+     * After export/resize changes `camera.aspect`, keep vertical FOV + lens distortion/fisheye
+     * uniforms in sync (same as interactive resize). Required or exports show black borders.
+     */
+    syncPerspectiveProjection,
+    /**
+     * Same EffectComposer + viewport sequence as interactive `SceneManager.render()` (minus
+     * per-frame clay/exposure). Using this for PNG export fixes partial-frame readback on Epic
+     * when `composer.render()` alone leaves a sub-viewport.
+     */
+    renderComposerPassForExport,
   } = {}) {
     this.renderer = renderer;
     this.scene = scene;
@@ -26,20 +37,93 @@ export class ImageExporter {
     this.postPipeline = postPipeline;
     this.backgroundController = backgroundController;
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
+    this.syncPerspectiveProjection = syncPerspectiveProjection;
+    this.renderComposerPassForExport = renderComposerPassForExport;
     this._imageTracerLoaded = false;
   }
 
   /**
-   * After setSize / composer.resize, align viewport + scissor with Three's logical size.
-   * setViewport expects logical width/height (it multiplies by pixelRatio for GL); getDrawingBufferSize is physical.
+   * Bind the default framebuffer and set viewport/scissor to cover the full drawing buffer.
+   * Uses drawing-buffer size / pixelRatio so GL viewport matches canvas backing store even when
+   * logical getSize() and pass chains drift (fixes L-shaped black bars on PNG export).
    */
   _ensureFullDrawingBufferViewport() {
     const r = this.renderer;
-    const logical = new THREE.Vector2();
-    r.getSize(logical);
-    r.setViewport(0, 0, logical.x, logical.y);
+    r.setRenderTarget(null);
+    const db = new THREE.Vector2();
+    r.getDrawingBufferSize(db);
+    const pr = Math.max(1e-6, r.getPixelRatio());
+    r.setViewport(0, 0, db.x / pr, db.y / pr);
     if (typeof r.setScissorTest === 'function') {
       r.setScissorTest(false);
+    }
+  }
+
+  /**
+   * EffectComposer RTs must match renderer.getDrawingBufferSize(); export resize can leave them stale.
+   */
+  _ensureComposerMatchesDrawingBuffer() {
+    const composer = this.composer;
+    if (!composer?.renderTarget1) return;
+    const db = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(db);
+    const rt = composer.renderTarget1;
+    if (Math.abs(rt.width - db.x) <= 2 && Math.abs(rt.height - db.y) <= 2) {
+      return;
+    }
+    const logical = new THREE.Vector2();
+    this.renderer.getSize(logical);
+    if (logical.x <= 0 || logical.y <= 0) return;
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(logical.x, logical.y);
+    } else {
+      const pr = this.renderer.getPixelRatio();
+      composer.setPixelRatio(pr);
+      composer.setSize(logical.x, logical.y);
+    }
+  }
+
+  /**
+   * Read the composer's final ping-pong buffer (after `renderToScreen: false` render) into a PNG
+   * data URL. Avoids `canvas.toDataURL`, which can capture a wrong viewport on the default FBO
+   * (Epic / 2× exports showed a quarter-frame in the top-left).
+   */
+  _captureComposerOutputAsPngDataUrl(targetWidth, targetHeight) {
+    const r = this.renderer;
+    const composer = this.composer;
+    const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
+      type: THREE.UnsignedByteType,
+      format: THREE.RGBAFormat,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      depthBuffer: false,
+      stencilBuffer: false,
+    });
+
+    try {
+      composer.copyPass.render(r, byteRT, composer.readBuffer, 0, false);
+
+      const pixels = new Uint8Array(targetWidth * targetHeight * 4);
+      r.readRenderTargetPixels(byteRT, 0, 0, targetWidth, targetHeight, pixels);
+
+      const flipped = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+      const rowStride = targetWidth * 4;
+      for (let y = 0; y < targetHeight; y += 1) {
+        const srcRow = (targetHeight - 1 - y) * rowStride;
+        const dstRow = y * rowStride;
+        flipped.set(pixels.subarray(srcRow, srcRow + rowStride), dstRow);
+      }
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = targetWidth;
+      exportCanvas.height = targetHeight;
+      const ctx = exportCanvas.getContext('2d');
+      const imageData = ctx.createImageData(targetWidth, targetHeight);
+      imageData.data.set(flipped);
+      ctx.putImageData(imageData, 0, 0);
+      return exportCanvas.toDataURL('image/png');
+    } finally {
+      byteRT.dispose();
     }
   }
 
@@ -48,13 +132,12 @@ export class ImageExporter {
    * Captures the full viewport at the current aspect ratio
    */
   async exportPng(currentFile, originalSize, originalPixelRatio, size = 1) {
-    // Get actual canvas resolution (CSS size * pixel ratio)
-    const actualWidth = originalSize.x * originalPixelRatio;
-    const actualHeight = originalSize.y * originalPixelRatio;
-    
-    // Calculate target resolution (actual resolution * size multiplier)
-    const targetWidth = Math.round(actualWidth * size);
-    const targetHeight = Math.round(actualHeight * size);
+    const scale = Math.max(0.25, Number(size) || 1);
+    // Authoritative pre-export pixel size (matches Three's backing store, including rounding).
+    const db = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(db);
+    const targetWidth = Math.max(1, Math.round(db.x * scale));
+    const targetHeight = Math.max(1, Math.round(db.y * scale));
 
     const canvas = this.renderer.domElement;
 
@@ -70,15 +153,63 @@ export class ImageExporter {
       this.composer.setPixelRatio(1);
       this.composer.setSize(targetWidth, targetHeight);
     }
+    if (this.syncPerspectiveProjection) {
+      this.syncPerspectiveProjection();
+    }
 
-    // setSize already sizes the canvas; avoid redundant assignments that can upset GL state.
+    this._ensureComposerMatchesDrawingBuffer();
 
-    // Render through composer to get all effects
-    this._ensureFullDrawingBufferViewport();
-    this.composer.render();
-    
-    // Now toDataURL will capture the full canvas at the correct size
-    const dataUrl = canvas.toDataURL('image/png');
+    // Epic (max) keeps FXAA on when selected; Medium forces it off. FXAA's fullscreen pass
+    // combined with DPR>1 / composer ping-pong has consistently produced a quarter-frame
+    // viewport on PNG readback — skip FXAA for this single capture only, then restore.
+    const fxaaPass = this.postPipeline?.fxaaPass;
+    const fxaaWasEnabled = fxaaPass?.enabled === true;
+    if (fxaaWasEnabled) {
+      fxaaPass.enabled = false;
+    }
+    const prevComposerRenderToScreen = this.composer?.renderToScreen;
+    if (this.composer) {
+      // Last pass must render into ping-pong RTs, not the canvas; canvas readback then misses
+      // the correct viewport at 2× / Epic. Final color is copied from `readBuffer` in
+      // `_captureComposerOutputAsPngDataUrl`.
+      this.composer.renderToScreen = false;
+    }
+    try {
+      // Never re-sync post-processing from getSize() here — any drift vs setSize() shrinks
+      // EffectComposer buffers (half canvas → quarter-frame at 2×). Sizes above already used
+      // syncPostProcessingForLogicalSize(targetWidth, targetHeight).
+      this._ensureComposerMatchesDrawingBuffer();
+      this.renderer.setViewport(0, 0, targetWidth, targetHeight);
+      if (typeof this.renderer.setScissorTest === 'function') {
+        this.renderer.setScissorTest(false);
+      }
+      if (typeof this.renderComposerPassForExport === 'function') {
+        this.renderer.setRenderTarget(null);
+        this.renderComposerPassForExport();
+      } else if (this.composer) {
+        this._ensureFullDrawingBufferViewport();
+        this.composer.render();
+      } else {
+        this._ensureFullDrawingBufferViewport();
+        this.renderer.render(this.scene, this.camera);
+      }
+    } finally {
+      if (fxaaWasEnabled) {
+        fxaaPass.enabled = true;
+      }
+      if (this.composer && prevComposerRenderToScreen !== undefined) {
+        this.composer.renderToScreen = prevComposerRenderToScreen;
+      }
+    }
+
+    const gl = this.renderer.getContext();
+    if (gl && typeof gl.finish === 'function') {
+      gl.finish();
+    }
+
+    const dataUrl = this.composer
+      ? this._captureComposerOutputAsPngDataUrl(targetWidth, targetHeight)
+      : canvas.toDataURL('image/png');
     this._downloadImage(dataUrl, currentFile, 'orby.png');
 
     // Restore original settings
@@ -91,6 +222,9 @@ export class ImageExporter {
     } else if (this.composer) {
       this.composer.setPixelRatio(originalPixelRatio);
       this.composer.setSize(originalSize.x, originalSize.y);
+    }
+    if (this.syncPerspectiveProjection) {
+      this.syncPerspectiveProjection();
     }
 
     this._ensureFullDrawingBufferViewport();
@@ -276,6 +410,7 @@ export class ImageExporter {
       if (this.composer) {
         this._ensureFullDrawingBufferViewport();
         this.composer.render();
+        this._ensureFullDrawingBufferViewport();
       } else {
         this.renderer.render(this.scene, this.camera);
       }
@@ -665,6 +800,9 @@ export class ImageExporter {
       this.composer.setPixelRatio(1);
       this.composer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
     }
+    if (this.syncPerspectiveProjection) {
+      this.syncPerspectiveProjection();
+    }
     
     // Create our render target with alpha
     const renderTarget = new THREE.WebGLRenderTarget(
@@ -694,7 +832,8 @@ export class ImageExporter {
 
       // Render composer normally to canvas (this is what works in viewport!)
       this.composer.render();
-      
+      this._ensureFullDrawingBufferViewport();
+
       // Read pixels from canvas using WebGL readPixels
       // We need to bind the default framebuffer and read from it
       const fullPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
@@ -884,6 +1023,9 @@ export class ImageExporter {
     } else if (this.composer) {
       this.composer.setPixelRatio(originalPixelRatio);
       this.composer.setSize(originalSize.x, originalSize.y);
+    }
+    if (this.syncPerspectiveProjection) {
+      this.syncPerspectiveProjection();
     }
     this.renderer.setClearColor(originalClearColor, originalClearAlpha);
     if (this.postPipeline?.renderPass) {
@@ -2017,6 +2159,9 @@ export class ImageExporter {
     } else if (this.composer) {
       this.composer.setPixelRatio(state.originalPixelRatio);
       this.composer.setSize(state.originalSize.x, state.originalSize.y);
+    }
+    if (this.syncPerspectiveProjection) {
+      this.syncPerspectiveProjection();
     }
     this.renderer.autoClear = state.originalAutoClear;
 

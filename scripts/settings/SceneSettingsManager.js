@@ -3,6 +3,7 @@ import {
   sanitizeAmbientOcclusion,
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
+import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 
 /**
  * SceneSettingsManager
@@ -860,11 +861,17 @@ export class SceneSettingsManager {
         }
       }
       if (payload.aberration) {
-        this.stateStore.set('aberration', payload.aberration);
-        this.eventBus.emit('render:aberration', payload.aberration);
+        const ab = mergeAberrationSettings(payload.aberration);
+        this.stateStore.set('aberration', ab);
+        this.eventBus.emit('render:aberration', ab);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
-            ['aberrationOffset', 'aberrationStrength'],
+            [
+              'aberrationLook',
+              'aberrationDirection',
+              'aberrationOffset',
+              'aberrationStrength',
+            ],
             !payload.aberration.enabled,
           );
         }

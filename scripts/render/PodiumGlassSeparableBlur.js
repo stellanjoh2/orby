@@ -103,6 +103,10 @@ void main() {
 
     const prevTarget = renderer.getRenderTarget();
     const prevAutoClear = renderer.autoClear;
+    /** WebGLRenderer multiplies setViewport by pixelRatio; RT `w`/`h` are already texture pixels. */
+    const pr = Math.max(1e-6, renderer.getPixelRatio());
+    const vw = w / pr;
+    const vh = h / pr;
 
     let src = sourceTexture;
     try {
@@ -111,7 +115,7 @@ void main() {
 
         this.material.uniforms.pixelStep.value.set(r / w, 0);
         renderer.setRenderTarget(this.rtH);
-        renderer.setViewport(0, 0, w, h);
+        renderer.setViewport(0, 0, vw, vh);
         renderer.autoClear = true;
         renderer.clear();
         renderer.render(this.scene, this.camera);
@@ -119,7 +123,7 @@ void main() {
         this.material.uniforms.tDiffuse.value = this.rtH.texture;
         this.material.uniforms.pixelStep.value.set(0, r / h);
         renderer.setRenderTarget(this.rtV);
-        renderer.setViewport(0, 0, w, h);
+        renderer.setViewport(0, 0, vw, vh);
         renderer.clear();
         renderer.render(this.scene, this.camera);
 
@@ -127,18 +131,15 @@ void main() {
       }
     } finally {
       renderer.setRenderTarget(prevTarget);
-      // Blur used setViewport(0,0,w,h) on small RTs; that updates renderer._viewport. Later
-      // setRenderTarget(null) applies _viewport×pixelRatio for the canvas — if we don't sync
-      // here, the rest of the frame draws in a tiny corner (~1/4 area when w,h ≈ half).
-      // setRenderTarget fixes GL state but does not realign Three's logical _viewport.
-      const pr = renderer.getPixelRatio();
-      if (prevTarget && prevTarget.isWebGLRenderTarget) {
-        const vp = prevTarget.viewport;
-        renderer.setViewport(vp.x / pr, vp.y / pr, vp.z / pr, vp.w / pr);
-      } else {
-        const sz = new THREE.Vector2();
-        renderer.getSize(sz);
-        renderer.setViewport(0, 0, sz.x, sz.y);
+      // Match WebGL backing store (same idea as ImageExporter._ensureFullDrawingBufferViewport).
+      // getSize() alone can drift vs canvas dimensions during Epic/DPR/export and leaves a
+      // half‑size viewport (quarter‑frame black) after blur passes.
+      const db = new THREE.Vector2();
+      renderer.getDrawingBufferSize(db);
+      const pr = Math.max(1e-6, renderer.getPixelRatio());
+      renderer.setViewport(0, 0, db.x / pr, db.y / pr);
+      if (typeof renderer.setScissorTest === 'function') {
+        renderer.setScissorTest(false);
       }
       renderer.autoClear = prevAutoClear;
     }
