@@ -248,7 +248,7 @@
                     <span class="value" aria-hidden="true"></span>
                   </label>
                   <div class="map-slot-row">
-                    <span>ORM packed</span>
+                    <span>ORM Packed</span>
                     <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="orm" data-tooltip="Single texture: ambient occlusion in red, roughness in green, metallic in blue">Choose…</button>
                     <span class="map-slot-name" data-fbx-map-filename="orm" title="">—</span>
                   </div>
@@ -428,7 +428,7 @@
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span>Always on</span>
+                    <span>Always On</span>
                     <label class="effect-toggle" data-tooltip="Show wireframe overlay on all display modes">
                       <input type="checkbox" id="wireframeAlwaysOn" />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -436,7 +436,7 @@
                     </label>
                   </label>
                   <label class="slider-line">
-                    <span>Only visible faces</span>
+                    <span>Only Visible Faces</span>
                     <label class="effect-toggle" data-tooltip="Hide wireframe lines on back-facing surfaces">
                       <input type="checkbox" id="wireframeOnlyVisibleFaces" />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -444,7 +444,7 @@
                     </label>
                   </label>
                   <label class="slider-line">
-                    <span>Hide mesh</span>
+                    <span>Hide Mesh</span>
                     <label class="effect-toggle" data-tooltip="Hide the underlying mesh to show only wireframe">
                       <input type="checkbox" id="wireframeHideMesh" />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -532,7 +532,7 @@
                     </select>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Size of the procedural pattern in world space">Texture scale</span>
+                    <span data-tooltip="Size of the procedural pattern in world space">Texture Scale</span>
                     <input
                       id="svgExtrudeSurfaceScale"
                       type="range"
@@ -577,8 +577,8 @@
                   <label class="select-line">
                     <span
                       data-tooltip="Auto applies viewer defaults. Other modes trade sorting vs solid surfaces—try if layers look wrong."
-                      >Transparency mode</span>
-                    <select id="transparencyFix" aria-label="Transparency mode">
+                      >Transparency Mode</span>
+                    <select id="transparencyFix" aria-label="Transparency Mode">
                       <option value="default">Auto (recommended)</option>
                       <option value="opaqueBlend">Treat blend as solid</option>
                       <option value="frontFace">Front faces only</option>
@@ -588,19 +588,19 @@
                   <label class="slider-line">
                     <span
                       data-tooltip="Uses light dither so stacked blended surfaces sort more predictably (common on Sketchfab). Turn off if hair or cloth looks too grainy."
-                      >Stabilize layered transparency</span>
+                      >Stabilize Layered Transparency</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="blendSortingMitigation" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Stabilize layered transparency</span>
+                      <span class="sr-only">Stabilize Layered Transparency</span>
                     </label>
                   </label>
                   <details class="advanced-import-details">
-                    <summary>Rare fixes for transmission &amp; named glass…</summary>
+                    <summary>Rare Fixes — Transmission &amp; Glass</summary>
                     <label class="slider-line">
                       <span
                         data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
-                        >Flip glass normal Y</span>
+                        >Flip Glass Normal Y</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="flipGlassNormalMapY" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -609,8 +609,8 @@
                     </label>
                     <label class="slider-line">
                       <span
-                        data-tooltip="Front-side only for those same materials—not for whole-body BLEND characters (use Transparency mode)."
-                        >Glass: front faces only</span>
+                        data-tooltip="Front-side only for those same materials—not for whole-body BLEND characters (use Transparency Mode)."
+                        >Glass: Front Faces Only</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="glassFrontFacesOnly" />
                         <span class="effect-indicator" aria-hidden="true"></span>
@@ -622,7 +622,7 @@
                     <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
                     <label class="slider-line slider-line--track-short">
                       <span
-                        data-tooltip="Only when transparency mode is Auto. Opacity for meshes detected as glass or windows from names."
+                        data-tooltip="Only when Transparency Mode is Auto. Opacity for meshes detected as glass or windows from names."
                         >Glass opacity</span>
                       <input
                         id="glassOpacity"
@@ -650,7 +650,7 @@
                     </label>
                     <label class="color-line">
                       <span
-                        data-tooltip="Only when transparency mode is Auto. Tint for detected glass / windows."
+                        data-tooltip="Only when Transparency Mode is Auto. Tint for detected glass / windows."
                         >Glass tint</span>
                       <input
                         type="color"
@@ -661,7 +661,7 @@
                     </label>
                     <label class="slider-line slider-line--track-short">
                       <span
-                        data-tooltip="Only when transparency mode is Auto. Makes heuristic glass read more solid (transmission, tint)."
+                        data-tooltip="Only when Transparency Mode is Auto. Makes heuristic glass read more solid (transmission, tint)."
                         >Glass body</span>
                       <input
                         id="glassBody"
@@ -774,7 +774,7 @@
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
-                  <div class="block-title">Auto-Rotate</div>
+                  <div class="block-title">Auto Rotate</div>
                   <div class="segmented compact">
                     <label>
                       <input type="radio" name="autorotate" value="0" checked />
@@ -866,16 +866,16 @@
                     <span class="value" data-output="podiumRoughness">0.50</span>
                   </label>
                   <button id="podiumSnap" class="ghost-btn small" type="button" data-tooltip="Position podium at the bottom of the object">
-                    Snap to bottom
+                    Snap To Bottom
                   </button>
                 </div>
                 <div id="studioPodiumGlassPanel" hidden>
                   <div class="panel-block-divider"></div>
                   <div class="subsection" data-subsection="podium-glass">
                     <div class="block-title has-toggle">
-                      <span>Podium glass</span>
+                      <span>Podium Glass</span>
                       <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <button class="block-reset-btn" data-reset="podium-glass" aria-label="Reset Podium glass" data-tooltip="Reset Podium glass settings">
+                        <button class="block-reset-btn" data-reset="podium-glass" aria-label="Reset Podium Glass" data-tooltip="Reset Podium Glass settings">
                           <i class="fa-solid fa-rotate-left"></i>
                           <span class="sr-only">Reset</span>
                         </button>
@@ -899,7 +899,7 @@
                       <span class="value" data-output="podiumGlassBrightness">0.10</span>
                     </label>
                     <label class="slider-line">
-                      <span data-tooltip="Progressive softness — blur spreads wider as you increase. Disabled when Podium glass reflection is off.">Blur</span>
+                      <span data-tooltip="Progressive softness — blur spreads wider as you increase. Disabled when Podium Glass reflection is off.">Blur</span>
                       <input
                         id="podiumGlassBlur"
                         type="range"
@@ -988,7 +988,7 @@
                     <span class="value" data-output="gridScale">1.00</span>
                   </label>
                   <button id="gridSnap" class="ghost-btn small" type="button">
-                    Snap to bottom
+                    Snap To Bottom
                   </button>
                 </div>
               </div>
@@ -1138,7 +1138,7 @@
                   <span class="value" data-output="hdriRotation">0°</span>
                 </label>
                 <label class="slider-line">
-                  <span>Show in Background</span>
+                  <span>Show In Background</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriBackground" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -1573,7 +1573,7 @@
                 </label>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
-                  <div class="block-title">Auto-Orbit</div>
+                  <div class="block-title">Auto Orbit</div>
                   <div class="segmented compact">
                     <label>
                       <input type="radio" name="cameraAutoOrbit" value="off" checked />
@@ -1610,14 +1610,14 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
                   <div class="block-title has-toggle">
-                    <span data-tooltip="Post-process barrel / fisheye (Giliam de Carpentier). Renders after full grading stack.">Fisheye lens</span>
+                    <span data-tooltip="Post-process barrel / fisheye (Giliam de Carpentier). Renders after full grading stack.">Fisheye Lens</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button
                         type="button"
                         class="block-reset-btn"
                         data-reset="fisheye"
-                        aria-label="Reset Fisheye lens"
-                        data-tooltip="Reset fisheye lens to defaults"
+                        aria-label="Reset Fisheye Lens"
+                        data-tooltip="Reset Fisheye Lens to defaults"
                       >
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
@@ -1625,12 +1625,12 @@
                       <label class="effect-toggle" data-tooltip="Enable lens distortion (uses horizontal FOV + strength + cylindrical ratio)">
                         <input type="checkbox" id="fisheyeEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable fisheye lens</span>
+                        <span class="sr-only">Enable Fisheye Lens</span>
                       </label>
                     </div>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Target horizontal field of view; vertical FOV is derived so the shader matches the projection (avoids black edges)">Horiz. FOV</span>
+                    <span data-tooltip="Target horizontal field of view; vertical FOV is derived so the shader matches the projection (avoids black edges)">Horizontal FOV</span>
                     <input
                       id="fisheyeHorizontalFOV"
                       type="range"
@@ -1676,7 +1676,7 @@
                     <label class="effect-toggle" data-tooltip="Show/hide exposure histogram">
                       <input type="checkbox" id="histogramEnabled" />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable histogram</span>
+                      <span class="sr-only">Enable Histogram</span>
                     </label>
                   </div>
                   <div id="histogramContainer" class="histogram-container histogram-container--collapsed"></div>
@@ -1694,10 +1694,10 @@
                           <i class="fa-solid fa-rotate-left"></i>
                           <span class="sr-only">Reset</span>
                         </button>
-                        <label class="effect-toggle" data-tooltip="Show or hide the tone curve">
+                        <label class="effect-toggle" data-tooltip="Show or hide the Tone Curve">
                           <input type="checkbox" id="toneCurveOpen" />
                           <span class="effect-indicator" aria-hidden="true"></span>
-                          <span class="sr-only">Show tone curve</span>
+                          <span class="sr-only">Show Tone Curve</span>
                         </label>
                       </div>
                     </div>
@@ -1711,7 +1711,7 @@
                           class="tone-curve-canvas"
                           width="320"
                           height="180"
-                          aria-label="Tone curve"
+                          aria-label="Tone Curve"
                         ></canvas>
                       </div>
                     </div>
@@ -1720,18 +1720,18 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="look-filters">
                   <div class="block-title has-toggle">
-                    <span>Filters</span>
-                    <label class="effect-toggle" data-tooltip="Show filter style presets">
+                    <span>Look Filters</span>
+                    <label class="effect-toggle" data-tooltip="Show Look Filter presets">
                       <input type="checkbox" id="lookFilterPresetsOpen" />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Show filters</span>
+                      <span class="sr-only">Show Look Filters</span>
                     </label>
                   </div>
                   <div
                     id="lookFilterPresetsContainer"
                     class="look-filter-presets-container look-filter-presets-container--collapsed"
                   >
-                    <div class="look-filter-grid" role="list" aria-label="Look filters">
+                    <div class="look-filter-grid" role="list" aria-label="Look Filters">
                       <button
                         type="button"
                         class="look-filter-tile"
@@ -2270,13 +2270,13 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="ambient-occlusion">
                   <div class="block-title has-toggle">
-                    <span>Ambient occlusion</span>
+                    <span>Ambient Occlusion</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="ambient-occlusion" aria-label="Reset Ambient Occlusion" data-tooltip="Reset ambient occlusion settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Screen-space AO (N8AO). Uses WebGL post-processing; off by default. Turn off Render quality → Low if this stays disabled there.">
+                      <label class="effect-toggle" data-tooltip="Screen-space AO (N8AO). Uses WebGL post-processing; off by default. Turn off Render Quality → Low if this stays disabled there.">
                         <input type="checkbox" id="toggleAmbientOcclusion" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Ambient Occlusion</span>
@@ -2317,8 +2317,8 @@
                     />
                   </label>
                   <label class="select-line">
-                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Epic: full resolution + Ultra N8AO preset.">AO quality</span>
-                    <select id="ambientOcclusionQuality" aria-label="Ambient occlusion quality">
+                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Epic: full resolution + Ultra N8AO preset.">AO Quality</span>
+                    <select id="ambientOcclusionQuality" aria-label="Ambient Occlusion quality">
                       <option value="low">Low</option>
                       <option value="medium" selected>Medium</option>
                       <option value="max">Epic</option>
@@ -2397,8 +2397,8 @@
                   <span>Quality</span>
                 </div>
                 <label class="select-line">
-                  <span data-tooltip="Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Epic: full quality.">Render quality</span>
-                  <select id="renderQuality" aria-label="Render quality">
+                  <span data-tooltip="Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Epic: full quality.">Render Quality</span>
+                  <select id="renderQuality" aria-label="Render Quality">
                     <option value="low">Low</option>
                     <option value="medium" selected>Medium</option>
                     <option value="max">Epic</option>
@@ -2534,7 +2534,7 @@
               <div class="panel-block bug-report-panel-block" id="info-bug-report">
                 <div class="block-title">
                   <i class="fa-solid fa-circle-exclamation" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
-                  Report an issue
+                  Report An Issue
                 </div>
                 <p class="bug-report-panel-description">
                   Spotted something wrong? Tell us what happened. We can’t reply from here, but we read everything you send.
@@ -2559,8 +2559,8 @@
                   <a href="#info-privacy">Privacy</a>
                   <a href="#info-features">Key Features</a>
                   <a href="#info-faq">Feature FAQ</a>
-                  <a href="#info-look-filters">Look filters</a>
-                  <a href="#info-tone-curve">Tone curve</a>
+                  <a href="#info-look-filters">Look Filters</a>
+                  <a href="#info-tone-curve">Tone Curve</a>
                   <a href="#info-svg-extrude">SVG Extrude</a>
                   <a href="#info-transparency">Transparency</a>
                   <a href="#info-performance">Performance</a>
@@ -2645,7 +2645,7 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Toggle auto-rotate on/off</span>
+                    <span class="shortcut-action">Toggle Auto Rotate on/off</span>
                     <span class="shortcut-keys"><kbd>A</kbd></span>
                   </div>
                   
@@ -2675,7 +2675,7 @@
               </div>
 
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Exit auto-orbit</span>
+                    <span class="shortcut-action">Exit Auto Orbit</span>
                     <span class="shortcut-keys"><kbd>Esc</kbd></span>
                   </div>
                 </div>
@@ -2755,7 +2755,7 @@
                   <span class="shortcut-keys"><kbd>D-pad Left</kbd> · <kbd>D-pad Right</kbd></span>
                 </div>
                 <div class="shortcut-row">
-                  <span class="shortcut-action">Cycle auto-rotate speeds</span>
+                  <span class="shortcut-action">Cycle Auto Rotate speeds</span>
                   <span class="shortcut-keys"><kbd>Cross / A</kbd></span>
                 </div>
                 <div class="shortcut-row">
@@ -2777,7 +2777,7 @@
                 <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
                 <div class="about-content">
                   <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It's perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
-                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">look filter presets</span>, <span class="about-highlight">a luminance tone curve</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
+                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">Look Filter Presets</span>, <span class="about-highlight">a Luminance Tone Curve</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
                 <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
                 </div>
               </div>
@@ -2805,15 +2805,15 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, film grain, chromatic aberration, lens dirt, and full color &amp; tone grading for cinematic results</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Look filter presets</span> — One-tap style presets in Camera (thumbnail grid) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance tone curve</span> — Two-point curve editor (smooth PCHIP) for response shaping, with optional fold-out next to the histogram</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Look Filter Presets</span> — One-tap style presets in Camera (thumbnail grid) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance Tone Curve</span> — Two-point curve editor (smooth PCHIP) for response shaping, with optional fold-out next to the histogram</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Histogram &amp; exposure tools</span> — Live luminance histogram (optional), auto exposure, and manual exposure for predictable brightness</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and auto-rotate</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and Auto Rotate</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">High-quality export</span> — Export PNG images at 1x or 2x resolution with transparent background support</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, auto-orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, Auto Orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
                   </ul>
                 </div>
               </div>
@@ -2858,7 +2858,7 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Camera Controls</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Auto-Orbit:</strong> Automatically orbits the camera around your model with smooth multi-axis movement—perfect for screensaver-style presentations. Press Esc to exit. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look filters</strong>, and the rest of Color &amp; Tone for a full grade.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;"><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Auto Orbit:</strong> Automatically orbits the camera around your model with smooth multi-axis movement—perfect for screensaver-style presentations. Press Esc to exit. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look Filters</strong>, and the rest of Color &amp; Tone for a full grade.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
@@ -2867,13 +2867,13 @@
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
-                    <h4 id="info-tone-curve" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Tone curve</h4>
+                    <h4 id="info-tone-curve" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Tone Curve</h4>
                     <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A <strong>luminance</strong> response curve with two draggable control points (smooth PCHIP interpolation). It shapes how shadows and highlights map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
-                    <h4 id="info-look-filters" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Look filter presets</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Under <strong>Camera → Filters</strong>, pick a thumbnail preset (Studio, Noir, Golden, etc.) for a one-tap look: color grade, tone curve, bloom, grain, chromatic aberration, and more are applied together. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</p>
+                    <h4 id="info-look-filters" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Look Filter Presets</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Under <strong>Camera → Look Filters</strong>, pick a thumbnail preset (Studio, Noir, Golden, etc.) for a one-tap look: color grade, tone curve, bloom, grain, chromatic aberration, and more are applied together. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
@@ -2883,7 +2883,7 @@
                   
                   <div>
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Scene Settings</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Copy and paste all your settings (lighting, camera, effects, materials, tone curve, look filter selection, histogram/curve panel toggles, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Copy and paste all your settings (lighting, camera, effects, materials, tone curve, Look Filter selection, histogram/curve panel toggles, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
                   </div>
                 </div>
               </div>
@@ -2909,37 +2909,40 @@
               <div class="panel-block" id="info-transparency">
                 <div class="block-title">
                   <i class="fa-solid fa-droplet" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
-                  Transparency &amp; glass (the short version)
+                  Transparency &amp; Glass Issues
                 </div>
                 <div class="about-content">
-                  <p style="margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
-                    If you work with <span class="about-highlight">glTF / GLB</span> for the web, this is familiar: <strong>transparent and blended surfaces are hard in real time</strong>. Orby is built on WebGL and Three.js, like many product viewers—rules below apply broadly, not only here.
-                  </p>
-                  <ul style="list-style: none; padding: 0; margin: 0 0 0.75rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
-                    <li style="margin-bottom: 0.5rem;">
-                      <span class="about-highlight">Sorting.</span> Engines usually sort <strong>draws</strong> (meshes, batches), not <strong>every triangle</strong>. Many blended pixels in a <strong>single</strong> mesh and material can’t be ordered perfectly. That’s why you can see “see-through” layers, flicker, or a visor fighting with a face when everything shares one <strong>BLEND</strong> atlas—common in downloads from marketplaces.
-                    </li>
-                    <li style="margin-bottom: 0.5rem;">
-                      <span class="about-highlight">Sketchfab vs your tab.</span> The Sketchfab site uses a <strong>tuned</strong> viewer for their content. The file is still standard glTF, but <strong>another app won’t match it pixel-for-pixel</strong> unless it makes similar rendering tradeoffs.
-                    </li>
-                    <li style="margin-bottom: 0.5rem;">
-                      <span class="about-highlight">“Real” glass in glTF.</span> Thin, refractive panes often use the <span class="about-highlight">KHR_materials_transmission</span> extension. Orby <strong>keeps those materials’ own roughness and similar inputs</strong> when the environment updates, so transmission glass is meant to track the file more closely than a single global roughness/metalness slider.
-                    </li>
-                    <li style="margin-bottom: 0.5rem;">
-                      <span class="about-highlight">Orby’s Mesh → Advanced.</span> <strong>Transparency mode</strong> and <strong>Stabilize layered transparency</strong> only change <strong>how</strong> blended surfaces are drawn (trade sorting stability vs grain). They cannot rewrite an asset that packs unrelated surfaces into one blended material—authors often <strong>split meshes or materials</strong>, use mask vs blend where appropriate, or transmission where it’s supported.
-                    </li>
-                  </ul>
-                  <p style="margin: 0 0 0.5rem 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
-                    Further reading (external):
-                  </p>
-                  <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
-                    <li style="margin-bottom: 0.35rem;">
-                      • Khronos — <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#material-alphamode" target="_blank" rel="noreferrer">glTF 2.0 material alpha modes</a> (OPAQUE, MASK, BLEND)
-                    </li>
-                    <li>
-                      • Three.js — <a href="https://threejs.org/manual/en/transparency.html" target="_blank" rel="noreferrer">Transparency</a> (sorting, double-sided, tradeoffs)
-                    </li>
-                  </ul>
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Why do transparent surfaces look wrong, flicker, or show “see-through” layers?</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This is a known challenge in real-time 3D rendering for <span class="about-highlight">glTF / GLB</span> files on the web. Most web-based 3D viewers are built on WebGL and Three.js, so these limitations apply broadly.</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Why does this happen?</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Real-time engines sort draw calls (meshes or batches) — not individual triangles. When transparent surfaces share a single mesh and material, they can’t be perfectly ordered, causing artifacts like flickering, “see-through” layers, or surfaces fighting each other. This is especially common with marketplace downloads, where unrelated transparent surfaces are often packed into one blended atlas.</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Why does the same file look different in other viewers?</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Dedicated platforms use tuned, proprietary renderers optimized for their own content. Other viewers won’t match them pixel-for-pixel unless they make the same rendering tradeoffs.</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">What about refractive glass?</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Thin glass panes in glTF typically use the <span class="about-highlight">KHR_materials_transmission</span> extension. When supported, this glass reads directly from the file’s own material properties rather than being overridden by global scene settings.</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Are there settings I can adjust?</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Under <span class="about-highlight">Mesh → Advanced</span>, <strong>Transparency Mode</strong> and <strong>Stabilize Layered Transparency</strong> change how blended surfaces are drawn — but they can’t fix assets where unrelated surfaces are packed into a single blended material. For best results, authors should split meshes, use <strong>MASK</strong> over <strong>BLEND</strong> where possible, and use <span class="about-highlight">KHR_materials_transmission</span> for proper glass.</p>
+                  </div>
+                  <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Further reading</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">
+                      <li style="margin-bottom: 0.35rem;">
+                        • Khronos — <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#material-alphamode" target="_blank" rel="noreferrer">glTF 2.0 alpha modes</a>
+                      </li>
+                      <li style="margin-bottom: 0;">
+                        • Three.js — <a href="https://threejs.org/manual/en/transparency.html" target="_blank" rel="noreferrer">Transparency</a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
@@ -3050,7 +3053,7 @@
               <div class="panel-block" id="info-changelog">
                 <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look Filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 

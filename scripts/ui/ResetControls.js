@@ -630,7 +630,7 @@ export class ResetControls {
             this.eventBus.emit('camera:fisheye');
             this.eventBus.emit('camera:fov');
             this.ui.syncUIFromState();
-            this.helpers.showToast('Fisheye lens reset');
+            this.helpers.showToast('Fisheye Lens reset');
             break;
           }
 

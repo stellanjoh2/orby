@@ -9,7 +9,7 @@
  *
  * Env (Vercel → Settings → Environment Variables):
  *   RESEND_API_KEY       — from resend.com
- *   BUG_REPORT_TO        — your private inbox
+ *   BUG_REPORT_TO        — recipient inbox (e.g. orby-admin@proton.me); must match Vercel env in production
  *   RESEND_FROM          — e.g. "Orby <onboarding@resend.dev>" (test) or a verified domain sender
  *   BUG_REPORT_ALLOWED_ORIGINS — optional, comma list (e.g. https://orby.studio,http://localhost:3000).
  *                                If unset, only the request Origin that matches /^https?:\\/\\// is echoed (permissive).

@@ -26,6 +26,8 @@ export class AutoExposureController {
     this.max = 2.5; // Maximum exposure value
     this.smooth = 0.12; // Smoothing factor for lerp
     this.brightThreshold = 0.65; // Luminance threshold for aggressive response (lowered to kick in earlier)
+    /** How much to amplify deviation from neutral exposure 1.0 (1.25² ≈ 56% vs raw; feels stronger in bright/dark views). */
+    this.responseGain = 1.5625;
 
     // Luminance sampling setup
     this.sampleSize = 8;
@@ -178,6 +180,11 @@ export class AutoExposureController {
       // Normal response for typical scenes
       targetExposure = this.target / luminance;
     }
+
+    // Stronger response when aimed at bright vs dark areas: scale how far we move from 1.0
+    const neutralExposure = 1.0;
+    targetExposure =
+      neutralExposure + (targetExposure - neutralExposure) * this.responseGain;
 
     targetExposure = THREE.MathUtils.clamp(targetExposure, this.min, this.max);
 
