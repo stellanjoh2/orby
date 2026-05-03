@@ -248,9 +248,8 @@ uniform float fade;
 uniform float sharpness;
 uniform vec2 resolution;
 uniform float bypass;
-uniform vec2 toneP1;
-uniform vec2 toneP2;
-uniform vec4 toneDydx; // f'(0), f'(x1), f'(x2), f'(1) — PCHIP, CPU
+uniform sampler2D toneCurveLut; // 256×1 RGBA, R = output luma; CPU-baked Catmull–Rom spline
+uniform float toneHdrTailSlope; // dy/dx at x=1 for HDR extrapolation
 uniform float toneCurveIdentity;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
@@ -369,43 +368,11 @@ vec3 applyFade(vec3 color, float amount) {
   return mix(color, vec3(0.5), fadeAmount * (1.0 - dot(color, LUMA)));
 }
 
-// Master luminance remapping: monotone PCHIP (smooth) through (0,0)–p1–p2–(1,1)
-float hermite1dLuma(float tLocal, float h, float y0, float y1, float m0, float m1) {
-  if (h < 0.0001) {
-    return mix(y0, y1, 0.5);
-  }
-  float u = tLocal / h;
-  float u2 = u * u;
-  float u3 = u2 * u;
-  return (2.0 * u3 - 3.0 * u2 + 1.0) * y0
-       + (u3 - 2.0 * u2 + u) * (h * m0)
-       + (-2.0 * u3 + 3.0 * u2) * y1
-       + (u3 - u2) * (h * m1);
-}
-
-float evalToneCurve(float t) {
-  float x1 = toneP1.x;
-  float y1 = toneP1.y;
-  float x2 = toneP2.x;
-  float y2 = toneP2.y;
-  float m0 = toneDydx.x;
-  float m1 = toneDydx.y;
-  float m2 = toneDydx.z;
-  float m3 = toneDydx.w;
-  t = clamp(t, 0.0, 1.0);
-  if (t < 0.00001) {
-    return 0.0;
-  }
-  if (t > 0.99999) {
-    return 1.0;
-  }
-  if (t <= x1) {
-    return hermite1dLuma(t, x1, 0.0, y1, m0, m1);
-  } else if (t <= x2) {
-    return hermite1dLuma(t - x1, x2 - x1, y1, y2, m1, m2);
-  } else {
-    return hermite1dLuma(t - x2, 1.0 - x2, y2, 1.0, m2, m3);
-  }
+// Master luminance remapping: baked 256-entry LUT (CPU spline), nearest sample + HDR tail
+float sampleToneLut(float x) {
+  x = clamp(x, 0.0, 1.0);
+  float u = (floor(x * 255.0) + 0.5) / 256.0;
+  return texture2D(toneCurveLut, vec2(u, 0.5)).r;
 }
 
 vec3 applyLumaToneCurve(vec3 c) {
@@ -416,16 +383,13 @@ vec3 applyLumaToneCurve(vec3 c) {
   if (l < 1e-5) {
     return c;
   }
-  // evalToneCurve() clamps input to [0,1], so l > 1 used to map every HDR pixel to l2=1
-  // (scale 1/l), which crushed highlights and conflicted with toneCurveIdentity bypass —
-  // a visible 1-frame pop when |x−y| crossed TONE_IDENTITY_EPS (~neutral curve).
-  // Extrapolate past white using PCHIP slope at t=1 (toneDydx.w) so HDR stays continuous.
   float l2;
   if (l <= 1.0) {
-    l2 = evalToneCurve(l);
+    l2 = sampleToneLut(l);
   } else {
-    float dEnd = max(toneDydx.w, 0.0);
-    l2 = 1.0 + (l - 1.0) * dEnd;
+    float y1 = sampleToneLut(1.0);
+    float dEnd = max(toneHdrTailSlope, 0.0);
+    l2 = y1 + (l - 1.0) * dEnd;
   }
   return clamp(c * (l2 / l), 0.0, 4.0);
 }
@@ -502,9 +466,8 @@ export const ColorAdjustShader = {
     sharpness: { value: 0.0 },
     resolution: { value: new THREE.Vector2(1, 1) },
     bypass: { value: 1.0 },
-    toneP1: { value: new THREE.Vector2(0.25, 0.25) },
-    toneP2: { value: new THREE.Vector2(0.75, 0.75) },
-    toneDydx: { value: new THREE.Vector4(1.0, 1.0, 1.0, 1.0) },
+    toneCurveLut: { value: null },
+    toneHdrTailSlope: { value: 1.0 },
     toneCurveIdentity: { value: 1.0 },
   },
   vertexShader: colorAdjustVertex,

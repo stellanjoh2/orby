@@ -2,6 +2,7 @@
  * Look filter (Camera & FX) presets: Instagram-style one-tap grades + post stack.
  * Presets only override grading and post keys; FOV, tilt, and orbit are preserved from current state.
  */
+import { normalizeToneCurve } from '../math/toneCurvePchip.js';
 import { deepClone } from '../utils/deepClone.js';
 
 const GRADING_KEYS = [
@@ -331,16 +332,33 @@ export function mergeLookFilterState(presetId, defaults, current) {
     autoExposure:
       spec.autoExposure !== undefined ? spec.autoExposure : current.autoExposure,
     toneCurve: spec.toneCurve
-      ? {
-          p1: mergeObject(
-            { ...(d.toneCurve?.p1 ?? { x: 0.25, y: 0.25 }) },
-            spec.toneCurve.p1 ?? {},
-          ),
-          p2: mergeObject(
-            { ...(d.toneCurve?.p2 ?? { x: 0.75, y: 0.75 }) },
-            spec.toneCurve.p2 ?? {},
-          ),
-        }
+      ? normalizeToneCurve((() => {
+          const raw = {
+            blackY: spec.toneCurve.blackY ?? d.toneCurve?.blackY,
+            whiteY: spec.toneCurve.whiteY ?? d.toneCurve?.whiteY,
+            p1: mergeObject(
+              { ...(d.toneCurve?.p1 ?? { x: 1 / 3, y: 1 / 3 }) },
+              spec.toneCurve.p1 ?? {},
+            ),
+            p2: mergeObject(
+              { ...(d.toneCurve?.p2 ?? { x: 2 / 3, y: 2 / 3 }) },
+              spec.toneCurve.p2 ?? {},
+            ),
+          };
+          if (spec.toneCurve.p3) {
+            raw.p3 = mergeObject(
+              { ...(d.toneCurve?.p3 ?? { x: 0.5, y: 0.5 }) },
+              spec.toneCurve.p3,
+            );
+          }
+          if (spec.toneCurve.p4) {
+            raw.p4 = mergeObject(
+              { ...(d.toneCurve?.p4 ?? { x: 0.5, y: 0.5 }) },
+              spec.toneCurve.p4,
+            );
+          }
+          return raw;
+        })())
       : deepClone(d.toneCurve),
     toneMapping: spec.toneMapping !== undefined ? spec.toneMapping : current.toneMapping,
     lensDirt: mergeObject(deepClone(d.lensDirt), spec.lensDirt),

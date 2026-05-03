@@ -1709,8 +1709,8 @@
                         <canvas
                           id="toneCurveCanvas"
                           class="tone-curve-canvas"
-                          width="320"
-                          height="180"
+                          width="400"
+                          height="400"
                           aria-label="Tone Curve"
                         ></canvas>
                       </div>
@@ -2806,7 +2806,7 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, film grain, chromatic aberration, lens dirt, and full color &amp; tone grading for cinematic results</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Look Filter Presets</span> — One-tap style presets in Camera (thumbnail grid) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance Tone Curve</span> — Two-point curve editor (smooth PCHIP) for response shaping, with optional fold-out next to the histogram</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance Tone Curve</span> — Four draggable handles (black, two mids, white); smooth spline + baked 256-step LUT for response shaping, optional fold-out next to the histogram</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Histogram &amp; exposure tools</span> — Live luminance histogram (optional), auto exposure, and manual exposure for predictable brightness</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
@@ -2868,7 +2868,7 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 id="info-tone-curve" style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Tone Curve</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A <strong>luminance</strong> response curve with two draggable control points (smooth PCHIP interpolation). It shapes how shadows and highlights map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A <strong>luminance</strong> response curve with four draggable handles—output at black, two mid-tones, and output at white (Catmull–Rom-style tangents, baked lookup table in the grade). It shapes how tones map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">

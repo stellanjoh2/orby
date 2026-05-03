@@ -7,6 +7,7 @@ import {
   DEFAULT_PODIUM_GLASS_BRIGHTNESS,
 } from './constants.js';
 import { defaultAberration } from './render/chromaticAberration.js';
+import { normalizeToneCurve } from './math/toneCurvePchip.js';
 import { deepClone } from './utils/deepClone.js';
 
 export class StateStore {
@@ -193,8 +194,10 @@ export class StateStore {
       histogramEnabled: false,
       toneCurveOpen: false,
       toneCurve: {
-        p1: { x: 0.25, y: 0.25 },
-        p2: { x: 0.75, y: 0.75 },
+        blackY: 0,
+        whiteY: 1,
+        p1: { x: 1 / 3, y: 1 / 3 },
+        p2: { x: 2 / 3, y: 2 / 3 },
       },
       antiAliasing: 'fxaa',
       renderQuality: 'medium',
@@ -257,7 +260,8 @@ export class StateStore {
   }
 
   set(path, value) {
-    this._writePath(path, value);
+    const v = path === 'toneCurve' ? normalizeToneCurve(value) : value;
+    this._writePath(path, v);
     this._notifyIfIdle();
   }
 
@@ -293,7 +297,8 @@ export class StateStore {
     const keys = Object.keys(partial);
     if (keys.length === 0) return;
     for (const key of keys) {
-      this.state[key] = partial[key];
+      const val = key === 'toneCurve' ? normalizeToneCurve(partial[key]) : partial[key];
+      this.state[key] = val;
     }
     this._notifyIfIdle();
   }

@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
 import { ColorAdjustShader } from '../shaders/index.js';
-import { pchipDydx4 } from '../math/toneCurvePchip.js';
+import {
+  buildToneCurveLutBytes,
+  normalizeToneCurve,
+} from '../math/toneCurvePchip.js';
 
 const DEFAULTS = {
   contrast: 1.0,
@@ -13,13 +16,24 @@ const DEFAULTS = {
   clarity: 0.0,
   fade: 0.0,
   sharpness: 0.0,
-  toneP1x: 0.25,
-  toneP1y: 0.25,
-  toneP2x: 0.75,
-  toneP2y: 0.75,
+  toneBlackY: 0.0,
+  toneWhiteY: 1.0,
+  toneP1x: 1 / 3,
+  toneP1y: 1 / 3,
+  toneP2x: 2 / 3,
+  toneP2y: 2 / 3,
 };
 
 const TONE_IDENTITY_EPS = 0.002;
+
+function defaultToneCurveObject() {
+  return {
+    blackY: DEFAULTS.toneBlackY,
+    whiteY: DEFAULTS.toneWhiteY,
+    p1: { x: DEFAULTS.toneP1x, y: DEFAULTS.toneP1y },
+    p2: { x: DEFAULTS.toneP2x, y: DEFAULTS.toneP2y },
+  };
+}
 
 export class ColorAdjustController {
   constructor(renderer) {
@@ -28,8 +42,11 @@ export class ColorAdjustController {
     this.pass.renderToScreen = false;
     this.pass.enabled = true;
     this.renderer = renderer;
+    /** @type {THREE.DataTexture | null} */
+    this._toneLutTexture = null;
+    /** @type {{ blackY: number, whiteY: number, p1: {x:number,y:number}, p2: {x:number,y:number} }} */
+    this._curveNorm = defaultToneCurveObject();
     this.reset();
-    // Initialize resolution
     if (renderer) {
       const size = new THREE.Vector2();
       renderer.getSize(size);
@@ -41,27 +58,58 @@ export class ColorAdjustController {
     return this.pass;
   }
 
+  _disposeToneLut() {
+    if (this._toneLutTexture) {
+      this._toneLutTexture.dispose();
+      this._toneLutTexture = null;
+    }
+  }
+
+  _uploadToneLut(c) {
+    this._disposeToneLut();
+    const { data, width, height, tailSlope } = buildToneCurveLutBytes(c);
+    const tex = new THREE.DataTexture(
+      data,
+      width,
+      height,
+      THREE.RGBAFormat,
+      THREE.UnsignedByteType,
+    );
+    tex.needsUpdate = true;
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.generateMipmaps = false;
+    tex.flipY = false;
+    tex.unpackAlignment = 1;
+    this._toneLutTexture = tex;
+    if (this.uniforms.toneCurveLut) {
+      this.uniforms.toneCurveLut.value = tex;
+    }
+    if (this.uniforms.toneHdrTailSlope) {
+      this.uniforms.toneHdrTailSlope.value = tailSlope;
+    }
+  }
+
   reset() {
     Object.entries(DEFAULTS).forEach(([key, value]) => {
-      if (key === 'toneP1x' || key === 'toneP1y' || key === 'toneP2x' || key === 'toneP2y') {
+      if (
+        key === 'toneBlackY'
+        || key === 'toneWhiteY'
+        || key === 'toneP1x'
+        || key === 'toneP1y'
+        || key === 'toneP2x'
+        || key === 'toneP2y'
+      ) {
         return;
       }
       if (this.uniforms[key] && key !== 'resolution') {
         this.uniforms[key].value = value;
       }
     });
-    if (this.uniforms.toneP1 && this.uniforms.toneP2) {
-      this.uniforms.toneP1.value.set(
-        DEFAULTS.toneP1x,
-        DEFAULTS.toneP1y,
-      );
-      this.uniforms.toneP2.value.set(
-        DEFAULTS.toneP2x,
-        DEFAULTS.toneP2y,
-      );
-    }
-    this._setToneDydxUniform();
-    // Ensure resolution is set correctly after reset
+    this._curveNorm = defaultToneCurveObject();
+    this._uploadToneLut(this._curveNorm);
     if (this.renderer) {
       const size = new THREE.Vector2();
       this.renderer.getSize(size);
@@ -111,25 +159,16 @@ export class ColorAdjustController {
   }
 
   /**
-   * @param {{ p1: { x: number, y: number }, p2: { x: number, y: number } }} curve
+   * @param {object} curve — `blackY`, `whiteY`, `p1`, `p2`; normalized upstream.
    */
   setToneCurve(curve) {
-    if (!this.uniforms.toneP1 || !this.uniforms.toneP2) return;
-    const p1 = curve?.p1 ?? { x: 0.25, y: 0.25 };
-    const p2 = curve?.p2 ?? { x: 0.75, y: 0.75 };
-    this.uniforms.toneP1.value.set(p1.x, p1.y);
-    this.uniforms.toneP2.value.set(p2.x, p2.y);
-    this._setToneDydxUniform();
+    if (!this.uniforms.toneCurveLut) {
+      return;
+    }
+    this._curveNorm = normalizeToneCurve(curve);
+    this._uploadToneLut(this._curveNorm);
     this._updateToneCurveIdentity();
     this._updateBypass();
-  }
-
-  _setToneDydxUniform() {
-    if (!this.uniforms.toneDydx) return;
-    const p1 = this.uniforms.toneP1.value;
-    const p2 = this.uniforms.toneP2.value;
-    const m = pchipDydx4(p1.x, p1.y, p2.x, p2.y);
-    this.uniforms.toneDydx.value.set(m[0], m[1], m[2], m[3]);
   }
 
   setResolution(width, height) {
@@ -145,32 +184,35 @@ export class ColorAdjustController {
   }
 
   _updateToneCurveIdentity() {
-    if (!this.uniforms.toneCurveIdentity || !this.uniforms.toneP1 || !this.uniforms.toneP2) {
+    if (!this.uniforms.toneCurveIdentity) {
       return;
     }
-    const p1 = this.uniforms.toneP1.value;
-    const p2 = this.uniforms.toneP2.value;
+    const c = this._curveNorm;
     const onDiag =
-      Math.abs(p1.x - p1.y) < TONE_IDENTITY_EPS &&
-      Math.abs(p2.x - p2.y) < TONE_IDENTITY_EPS;
+      Math.abs(c.blackY) < TONE_IDENTITY_EPS
+      && Math.abs(c.whiteY - 1.0) < TONE_IDENTITY_EPS
+      && Math.abs(c.p1.x - c.p1.y) < TONE_IDENTITY_EPS
+      && Math.abs(c.p2.x - c.p2.y) < TONE_IDENTITY_EPS;
     this.uniforms.toneCurveIdentity.value = onDiag ? 1.0 : 0.0;
   }
 
   _updateBypass() {
     if (!this.uniforms.bypass) return;
     this._updateToneCurveIdentity();
-    // Check all defaults except resolution (which is always set)
+    const c = this._curveNorm;
     const isDefault = Object.entries(DEFAULTS).every(([key, def]) => {
+      if (key === 'toneBlackY') {
+        return Math.abs(c.blackY - def) < 0.001;
+      }
+      if (key === 'toneWhiteY') {
+        return Math.abs(c.whiteY - def) < 0.001;
+      }
       if (key === 'toneP1x' || key === 'toneP1y') {
-        const u = this.uniforms.toneP1?.value;
-        if (!u) return true;
-        const v = key === 'toneP1x' ? u.x : u.y;
+        const v = key === 'toneP1x' ? c.p1.x : c.p1.y;
         return Math.abs(v - def) < 0.001;
       }
       if (key === 'toneP2x' || key === 'toneP2y') {
-        const u = this.uniforms.toneP2?.value;
-        if (!u) return true;
-        const v = key === 'toneP2x' ? u.x : u.y;
+        const v = key === 'toneP2x' ? c.p2.x : c.p2.y;
         return Math.abs(v - def) < 0.001;
       }
       const uniform = this.uniforms[key];
@@ -180,4 +222,3 @@ export class ColorAdjustController {
     this.uniforms.bypass.value = isDefault ? 1.0 : 0.0;
   }
 }
-

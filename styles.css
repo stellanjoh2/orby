@@ -3521,7 +3521,7 @@ body.ui-hidden .shelf {
 }
 
 .tone-curve-foldout--expanded {
-  max-height: 200px;
+  max-height: min(90vh, 640px); /* full-width square canvas; taller than old 400px cap */
   opacity: 1;
 }
 
@@ -3647,20 +3647,22 @@ body.ui-hidden .shelf {
 }
 
 .tone-curve-canvas-wrap {
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
+  width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.35);
+  background: #000000;
 }
 
 .tone-curve-canvas {
   display: block;
   width: 100%;
-  height: 140px;
+  aspect-ratio: 1 / 1;
+  height: auto;
   cursor: crosshair;
   touch-action: none;
   vertical-align: top;
-  background: #0a0a0f;
+  background: #000000;
 }
 
 .histogram-warning {

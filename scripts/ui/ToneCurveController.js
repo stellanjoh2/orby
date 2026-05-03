@@ -1,51 +1,70 @@
-import { evalTonePchip, pchipDydx4 } from '../math/toneCurvePchip.js';
+import { evalToneCurveAt, normalizeToneCurve } from '../math/toneCurvePchip.js';
 
 /**
- * Minimal 2-point luminance tone curve: smooth PCHIP + canvas editor + state sync.
- * Control points are constrained so x1 < x2 (shadows / highlights regions).
+ * Four-handle luminance curve: (0, blackY), p1, p2, (1, whiteY), Catmull–Rom-style spline.
+ * Plot uses the canvas edge-to-edge aside from a thin margin sized for corner knob stroke.
  */
 const MIN_GAP = 0.06;
-const MIN_CSS_W = 200;
-const MIN_CSS_H = 120;
+const MIN_CSS_W = 220;
+const MIN_CSS_H = 220;
 const BRAND = '#c4ff00';
-const BG = '#0a0a0f';
+const BG = '#000000';
+const GRID_ALPHA = 0.2; // reads on #000; diagonal unchanged below
+const DIAG_ALPHA = 0.225;
 const MARGIN = 0.02;
-
-const DEFAULTS = {
-  p1: { x: 0.25, y: 0.25 },
-  p2: { x: 0.75, y: 0.75 },
-};
 
 function clamp(n, a, b) {
   return Math.min(b, Math.max(a, n));
 }
 
 function copyCurve(toneCurve) {
-  const t = toneCurve ?? {};
-  return {
-    p1: {
-      x: typeof t.p1?.x === 'number' ? t.p1.x : DEFAULTS.p1.x,
-      y: typeof t.p1?.y === 'number' ? t.p1.y : DEFAULTS.p1.y,
-    },
-    p2: {
-      x: typeof t.p2?.x === 'number' ? t.p2.x : DEFAULTS.p2.x,
-      y: typeof t.p2?.y === 'number' ? t.p2.y : DEFAULTS.p2.y,
-    },
-  };
+  return normalizeToneCurve(toneCurve);
 }
 
-function constrainOrder(c) {
-  let { p1, p2 } = c;
-  p1 = { ...p1, x: clamp(p1.x, MARGIN, 1 - MARGIN), y: clamp(p1.y, 0, 1) };
-  p2 = { ...p2, x: clamp(p2.x, MARGIN, 1 - MARGIN), y: clamp(p2.y, 0, 1) };
-  if (p1.x > p2.x - MIN_GAP) {
-    const mid = (p1.x + p2.x) * 0.5;
-    p1 = { ...p1, x: mid - MIN_GAP * 0.5 };
-    p2 = { ...p2, x: mid + MIN_GAP * 0.5 };
+function constrainInteriorX(c) {
+  let a = {
+    x: clamp(c.p1.x, MARGIN, 1 - MARGIN),
+    y: clamp(c.p1.y, 0, 1),
+  };
+  let b = {
+    x: clamp(c.p2.x, MARGIN, 1 - MARGIN),
+    y: clamp(c.p2.y, 0, 1),
+  };
+  if (a.x > b.x) {
+    const t = a;
+    a = b;
+    b = t;
   }
-  p1.x = clamp(p1.x, MARGIN, p2.x - MIN_GAP);
-  p2.x = clamp(p2.x, p1.x + MIN_GAP, 1 - MARGIN);
-  return { p1, p2 };
+  for (let iter = 0; iter < 12; iter += 1) {
+    a.x = clamp(a.x, MARGIN, b.x - MIN_GAP);
+    b.x = clamp(b.x, a.x + MIN_GAP, 1 - MARGIN);
+  }
+  return { blackY: c.blackY, whiteY: c.whiteY, p1: a, p2: b };
+}
+
+/** Non-decreasing output y; backward pass then forward pass (repeat) so endpoints can move past interiors. */
+function constrainMonotoneY(c) {
+  const out = constrainInteriorX(c);
+  const ys = [
+    clamp(out.blackY, 0, 1),
+    clamp(out.p1.y, 0, 1),
+    clamp(out.p2.y, 0, 1),
+    clamp(out.whiteY, 0, 1),
+  ];
+  for (let iter = 0; iter < 14; iter += 1) {
+    for (let i = 2; i >= 0; i -= 1) {
+      ys[i] = Math.min(ys[i], ys[i + 1]);
+    }
+    for (let i = 1; i <= 3; i += 1) {
+      ys[i] = Math.max(ys[i], ys[i - 1]);
+    }
+  }
+  return {
+    blackY: ys[0],
+    whiteY: ys[3],
+    p1: { x: out.p1.x, y: ys[1] },
+    p2: { x: out.p2.x, y: ys[2] },
+  };
 }
 
 export class ToneCurveController {
@@ -63,9 +82,22 @@ export class ToneCurveController {
   }
 
   _getPad() {
-    const w = this.w;
-    if (w < 8) return 4;
-    return Math.min(16, Math.max(6, w * 0.05));
+    return 0;
+  }
+
+  /** Half knob + stroke so corner handles stay inside the canvas (no %-based shrink). */
+  _plotEdgeInsetPx() {
+    const r0 = 6 * this.dpr;
+    const strokeHalf = 2 * this.dpr;
+    return Math.ceil(r0 * 1.333 + strokeHalf) + 1;
+  }
+
+  _chartXInsetPx() {
+    return this._plotEdgeInsetPx();
+  }
+
+  _chartYInsetPx() {
+    return this._plotEdgeInsetPx();
   }
 
   bind() {
@@ -102,7 +134,6 @@ export class ToneCurveController {
     if (!this.canvas) return;
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    // getBoundingClientRect() can be 0 before layout / in hidden tabs; keep a real bitmap size
     const cssW = Math.max(MIN_CSS_W, rect.width || 0, this.canvas.clientWidth || 0);
     const cssH = Math.max(MIN_CSS_H, rect.height || 0, this.canvas.clientHeight || 0);
     this.canvas.width = Math.max(1, Math.floor(cssW * this.dpr));
@@ -113,36 +144,54 @@ export class ToneCurveController {
 
   toNorm(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
-    const u = (clientX - rect.left) / Math.max(rect.width, 1);
-    const v = 1 - (clientY - rect.top) / Math.max(rect.height, 1);
+    const sx = this.canvas.width / Math.max(rect.width, 1);
+    const sy = this.canvas.height / Math.max(rect.height, 1);
+    const cx = (clientX - rect.left) * sx;
+    const cy = (clientY - rect.top) * sy;
+    const pad = this._getPad();
+    const xInset = this._chartXInsetPx();
+    const yInset = this._chartYInsetPx();
+    const chartW = Math.max(1, this.w - 2 * pad - 2 * xInset);
+    const chartH = Math.max(1, this.h - 2 * pad - 2 * yInset);
+    const u = (cx - pad - xInset) / chartW;
+    const v = 1 - (cy - pad - yInset) / chartH;
     return { x: clamp(u, 0, 1), y: clamp(v, 0, 1) };
   }
 
   fromNormToPix(p) {
     const pad = this._getPad();
-    const innerW = Math.max(1, this.w - 2 * pad);
-    const innerH = Math.max(1, this.h - 2 * pad);
+    const xInset = this._chartXInsetPx();
+    const yInset = this._chartYInsetPx();
+    const chartW = Math.max(1, this.w - 2 * pad - 2 * xInset);
+    const chartH = Math.max(1, this.h - 2 * pad - 2 * yInset);
     return {
-      x: pad + p.x * innerW,
-      y: pad + (1 - p.y) * innerH,
+      x: pad + xInset + p.x * chartW,
+      y: pad + yInset + (1 - p.y) * chartH,
     };
   }
 
   _hit(pn, c) {
-    const a = this.fromNormToPix(c.p1);
-    const b = this.fromNormToPix(c.p2);
     const pa = this.fromNormToPix(pn);
-    const d1 = (pa.x - a.x) ** 2 + (pa.y - a.y) ** 2;
-    const d2 = (pa.x - b.x) ** 2 + (pa.y - b.y) ** 2;
     const th = 12 * this.dpr;
-    if (d1 < th * th) return 'p1';
-    if (d2 < th * th) return 'p2';
+    const th2 = th * th;
+
+    const Pblack = this.fromNormToPix({ x: 0, y: c.blackY });
+    if ((pa.x - Pblack.x) ** 2 + (pa.y - Pblack.y) ** 2 < th2) return 'pBlack';
+
+    const Pwhite = this.fromNormToPix({ x: 1, y: c.whiteY });
+    if ((pa.x - Pwhite.x) ** 2 + (pa.y - Pwhite.y) ** 2 < th2) return 'pWhite';
+
+    for (const key of ['p1', 'p2']) {
+      const P = this.fromNormToPix(c[key]);
+      const d = (pa.x - P.x) ** 2 + (pa.y - P.y) ** 2;
+      if (d < th2) return key;
+    }
     return null;
   }
 
   _onPointerDown(e) {
     const state = this.stateStore.getState();
-    const c = copyCurve(state.toneCurve);
+    const c = constrainMonotoneY(copyCurve(state.toneCurve));
     const pn = this.toNorm(e.clientX, e.clientY);
     const hit = this._hit(pn, c);
     if (!hit) return;
@@ -154,7 +203,7 @@ export class ToneCurveController {
   _onPointerMove(e) {
     const pn = this.toNorm(e.clientX, e.clientY);
     const state = this.stateStore.getState();
-    const cCurve = constrainOrder(copyCurve(state.toneCurve));
+    const cCurve = constrainMonotoneY(copyCurve(state.toneCurve));
 
     if (!this.drag) {
       const h = this._hit(pn, cCurve);
@@ -166,14 +215,15 @@ export class ToneCurveController {
     }
 
     const c0 = copyCurve(state.toneCurve);
-    if (this.drag === 'p1') {
-      c0.p1.x = pn.x;
-      c0.p1.y = pn.y;
+    if (this.drag === 'pBlack') {
+      c0.blackY = pn.y;
+    } else if (this.drag === 'pWhite') {
+      c0.whiteY = pn.y;
     } else {
-      c0.p2.x = pn.x;
-      c0.p2.y = pn.y;
+      c0[this.drag].x = pn.x;
+      c0[this.drag].y = pn.y;
     }
-    const c = constrainOrder(c0);
+    const c = constrainMonotoneY(c0);
     const prevLook = this.stateStore.getState().lookFilterPreset;
     this.stateStore.set('toneCurve', c);
     if (prevLook !== 'custom') {
@@ -206,44 +256,39 @@ export class ToneCurveController {
   _draw() {
     if (!this.ctx) return;
     const state = this.stateStore.getState();
-    const c = constrainOrder(copyCurve(state.toneCurve));
+    const c = constrainMonotoneY(copyCurve(state.toneCurve));
     const ctx = this.ctx;
     const w = this.w;
     const h = this.h;
-    const pad = this._getPad();
-    const innerW = w - 2 * pad;
-    const innerH = h - 2 * pad;
 
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, w, h);
 
-    const p0 = { x: 0, y: 0 };
-    const p1 = c.p1;
-    const p2 = c.p2;
-    const p3 = { x: 1, y: 1 };
-    const A = this.fromNormToPix(p0);
-    const B = this.fromNormToPix(p1);
-    const C = this.fromNormToPix(p2);
-    const D = this.fromNormToPix(p3);
-
-    // Subtle grid
-    ctx.strokeStyle = 'rgba(196, 255, 0, 0.07)';
+    ctx.strokeStyle = `rgba(196, 255, 0, ${GRID_ALPHA})`;
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i += 1) {
-      const gx = pad + (i / 4) * innerW;
-      const gy = pad + (i / 4) * innerH;
+      const gx = (i / 4) * w;
+      const gy = (i / 4) * h;
       ctx.beginPath();
-      ctx.moveTo(gx, pad);
-      ctx.lineTo(gx, h - pad);
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, h);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(pad, gy);
-      ctx.lineTo(w - pad, gy);
+      ctx.moveTo(0, gy);
+      ctx.lineTo(w, gy);
       ctx.stroke();
     }
 
-    // Identity
-    ctx.strokeStyle = 'rgba(196, 255, 0, 0.18)';
+    const pDiag0 = { x: 0, y: 0 };
+    const pDiag1 = { x: 1, y: 1 };
+    const A = this.fromNormToPix(pDiag0);
+    const D = this.fromNormToPix(pDiag1);
+    const B = this.fromNormToPix(c.p1);
+    const C = this.fromNormToPix(c.p2);
+    const K0 = this.fromNormToPix({ x: 0, y: c.blackY });
+    const K5 = this.fromNormToPix({ x: 1, y: c.whiteY });
+
+    ctx.strokeStyle = `rgba(196, 255, 0, ${DIAG_ALPHA})`;
     ctx.setLineDash([3 * this.dpr, 4 * this.dpr]);
     ctx.lineWidth = 1 * this.dpr;
     ctx.beginPath();
@@ -252,17 +297,14 @@ export class ToneCurveController {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const p1n = c.p1;
-    const p2n = c.p2;
-    const m = pchipDydx4(p1n.x, p1n.y, p2n.x, p2n.y);
-    const steps = 100;
+    const steps = 120;
     ctx.strokeStyle = BRAND;
     ctx.lineWidth = 2 * this.dpr;
     ctx.lineJoin = 'round';
     ctx.beginPath();
     for (let i = 0; i <= steps; i += 1) {
-      const t = (i / steps);
-      const yn = evalTonePchip(t, p1n.x, p1n.y, p2n.x, p2n.y, m);
+      const t = i / steps;
+      const yn = evalToneCurveAt(t, c);
       const P = this.fromNormToPix({ x: t, y: yn });
       if (i === 0) ctx.moveTo(P.x, P.y);
       else ctx.lineTo(P.x, P.y);
@@ -285,6 +327,8 @@ export class ToneCurveController {
       ctx.lineWidth = 2 * this.dpr;
       ctx.stroke();
     };
+    drawKnob(K0, knobScale('pBlack'));
+    drawKnob(K5, knobScale('pWhite'));
     drawKnob(B, knobScale('p1'));
     drawKnob(C, knobScale('p2'));
   }

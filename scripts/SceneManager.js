@@ -1029,14 +1029,7 @@ export class SceneManager {
   }
 
   setToneCurve(curve) {
-    const c =
-      curve?.p1 && curve?.p2
-        ? curve
-        : {
-            p1: { x: 0.25, y: 0.25 },
-            p2: { x: 0.75, y: 0.75 },
-          };
-    this.postPipeline?.setToneCurve(c);
+    this.postPipeline?.setToneCurve(curve);
   }
 
   setTemperature(kelvin) {

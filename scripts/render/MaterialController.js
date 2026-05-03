@@ -1269,28 +1269,44 @@ export class MaterialController {
         const radius = settings.radius || 2.0;
         uniforms.power.value = Math.max(0.1, 5.5 - radius);
         // Ensure onBeforeCompile hook is still set (in case material was recompiled elsewhere)
-        // If hook is missing or different, restore it from stored reference
         if (!material.userData.fresnelOnBeforeCompile) {
-          // Hook was lost, need to re-patch - fall through to re-patching code
+          // Stored hook ref lost but uniforms lingered: restore the base hook, drop stale uniform
+          // refs, and full repatch below. Never delete originalOnBeforeCompile here — if we do, the
+          // next patch can treat the old Fresnel closure as "original", call it from the new hook,
+          // and double-inject GLSL (duplicate uniforms → shader compile failure, Fresnel "dies").
+          const base = material.userData.originalOnBeforeCompile;
+          material.onBeforeCompile = typeof base === 'function' ? base : (() => {});
           delete material.userData.fresnelPatched;
-          delete material.userData.originalOnBeforeCompile;
+          delete material.userData.fresnelUniforms;
         } else if (!material.onBeforeCompile || material.onBeforeCompile !== material.userData.fresnelOnBeforeCompile) {
-          // Hook exists but material lost it, restore it and trigger recompilation
           material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
-          material.needsUpdate = true; // Force recompilation to apply the hook
+          material.needsUpdate = true;
+          return;
+        } else {
+          return;
         }
-        // Don't force recompilation on normal uniform updates - uniforms update in real-time
-        return;
+      } else {
+        // Uniform bag broken: restore base compile hook before full repatch
+        const savedOriginal = material.userData.originalOnBeforeCompile;
+        material.onBeforeCompile = typeof savedOriginal === 'function' ? savedOriginal : (() => {});
+        delete material.userData.fresnelPatched;
+        delete material.userData.fresnelUniforms;
+        delete material.userData.fresnelOnBeforeCompile;
+        delete material.userData.originalOnBeforeCompile;
       }
-      // If uniforms are missing, clear flag and re-patch
-      delete material.userData.fresnelPatched;
-      delete material.userData.originalOnBeforeCompile;
-      delete material.userData.fresnelOnBeforeCompile;
     }
 
     // Create new patch - this handles both new materials and re-patching
     // Only store original if we haven't stored it before (to preserve the true original)
-    const original = material.userData.originalOnBeforeCompile || material.onBeforeCompile;
+    let original = material.userData.originalOnBeforeCompile;
+    if (typeof original !== 'function') {
+      const live = material.onBeforeCompile;
+      if (typeof live === 'function' && !live.__orbyFresnelShaderPatch) {
+        original = live;
+      } else {
+        original = () => {};
+      }
+    }
     if (!material.userData.originalOnBeforeCompile) {
       material.userData.originalOnBeforeCompile = original;
     }
@@ -1343,7 +1359,8 @@ export class MaterialController {
       // Ensure uniforms are stored after shader compilation
       material.userData.fresnelUniforms = fresnelUniforms;
     };
-    
+    fresnelOnBeforeCompile.__orbyFresnelShaderPatch = true;
+
     material.onBeforeCompile = fresnelOnBeforeCompile;
     material.userData.fresnelOnBeforeCompile = fresnelOnBeforeCompile; // Store reference for restoration
     material.userData.fresnelPatched = true;
