@@ -9,8 +9,7 @@ const MIN_CSS_W = 220;
 const MIN_CSS_H = 220;
 const BRAND = '#c4ff00';
 const BG = '#000000';
-const GRID_ALPHA = 0.2; // reads on #000; diagonal unchanged below
-const DIAG_ALPHA = 0.225;
+const DIAG_ALPHA = 0.28125; // identity reference (solid), visible on #000
 const MARGIN = 0.02;
 
 function clamp(n, a, b) {
@@ -264,21 +263,6 @@ export class ToneCurveController {
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = `rgba(196, 255, 0, ${GRID_ALPHA})`;
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 4; i += 1) {
-      const gx = (i / 4) * w;
-      const gy = (i / 4) * h;
-      ctx.beginPath();
-      ctx.moveTo(gx, 0);
-      ctx.lineTo(gx, h);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, gy);
-      ctx.lineTo(w, gy);
-      ctx.stroke();
-    }
-
     const pDiag0 = { x: 0, y: 0 };
     const pDiag1 = { x: 1, y: 1 };
     const A = this.fromNormToPix(pDiag0);
@@ -289,13 +273,11 @@ export class ToneCurveController {
     const K5 = this.fromNormToPix({ x: 1, y: c.whiteY });
 
     ctx.strokeStyle = `rgba(196, 255, 0, ${DIAG_ALPHA})`;
-    ctx.setLineDash([3 * this.dpr, 4 * this.dpr]);
     ctx.lineWidth = 1 * this.dpr;
     ctx.beginPath();
     ctx.moveTo(A.x, A.y);
     ctx.lineTo(D.x, D.y);
     ctx.stroke();
-    ctx.setLineDash([]);
 
     const steps = 120;
     ctx.strokeStyle = BRAND;

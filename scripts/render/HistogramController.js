@@ -2,6 +2,13 @@
  * HistogramController - Visualizes exposure levels and detects overexposure
  * Reads pixel data from WebGL canvas and creates a luminance histogram
  */
+
+/** Flat 1-bit palette: solid fills only, no per-frame getComputedStyle */
+const HIST_BG = '#000000';
+const HIST_BAR = '#c4ff00';
+const HIST_BAR_WARN = '#ff9632';
+const HIST_BAR_SEVERE = '#ff6464';
+
 export class HistogramController {
   constructor(renderer, canvas, containerElement, composer = null) {
     this.renderer = renderer;
@@ -9,15 +16,16 @@ export class HistogramController {
     this.containerElement = containerElement;
     this.composer = composer; // Optional: if post-processing is used
     this.enabled = false;
-    
-    // Create canvas for histogram rendering
+    this._resizeObserver = null;
+
+    // Create canvas — layout 16:9 in CSS (~25% shorter than 4:3); bitmap tracks DPR
     this.histogramCanvas = document.createElement('canvas');
-    this.histogramCanvas.width = 256;
-    this.histogramCanvas.height = 80;
+    this.histogramCanvas.width = 320;
+    this.histogramCanvas.height = 180;
     this.histogramCanvas.style.width = '100%';
-    this.histogramCanvas.style.height = '80px';
+    this.histogramCanvas.style.height = 'auto';
     this.histogramCanvas.style.display = 'block';
-    this.histogramCtx = this.histogramCanvas.getContext('2d');
+    this.histogramCtx = this.histogramCanvas.getContext('2d', { alpha: false });
     
     // Create warning elements
     this.warningElement = document.createElement('div');
@@ -35,6 +43,13 @@ export class HistogramController {
       this.containerElement.appendChild(this.histogramCanvas);
       this.containerElement.appendChild(this.warningElement);
       this.containerElement.appendChild(this.warningCloseElement);
+      if (typeof ResizeObserver !== 'undefined') {
+        this._resizeObserver = new ResizeObserver(() => {
+          this._syncHistogramCanvasSize();
+        });
+        this._resizeObserver.observe(this.histogramCanvas);
+      }
+      requestAnimationFrame(() => this._syncHistogramCanvasSize());
     }
     
     // Histogram data
@@ -59,7 +74,26 @@ export class HistogramController {
       this.setEnabled(false);
     }
   }
-  
+
+  _syncHistogramCanvasSize() {
+    const el = this.histogramCanvas;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    let cssW = rect.width;
+    let cssH = rect.height;
+    if (cssW < 8) return;
+    if (cssH < 4) {
+      cssH = (cssW * 9) / 16;
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const bw = Math.max(1, Math.floor(cssW * dpr));
+    const bh = Math.max(1, Math.floor(cssH * dpr));
+    if (el.width !== bw || el.height !== bh) {
+      el.width = bw;
+      el.height = bh;
+    }
+  }
+
   setEnabled(enabled) {
     this.enabled = !!enabled;
     if (this.containerElement) {
@@ -68,6 +102,8 @@ export class HistogramController {
     }
     if (!this.enabled && this.histogramCtx && this.histogramCanvas) {
       this.histogramCtx.clearRect(0, 0, this.histogramCanvas.width, this.histogramCanvas.height);
+    } else if (this.enabled) {
+      requestAnimationFrame(() => this._syncHistogramCanvasSize());
     }
   }
   
@@ -96,7 +132,9 @@ export class HistogramController {
     const height = this.canvas.height;
     
     if (width === 0 || height === 0) return;
-    
+
+    this._syncHistogramCanvasSize();
+
     // Read pixels from the WebGL canvas
     // For performance, we'll sample a smaller region
     try {
@@ -228,40 +266,30 @@ export class HistogramController {
     const ctx = this.histogramCtx;
     const width = this.histogramCanvas.width;
     const height = this.histogramCanvas.height;
-    
-    // Clear canvas with a subtle dark background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+
+    ctx.imageSmoothingEnabled = false;
+
+    ctx.fillStyle = HIST_BG;
     ctx.fillRect(0, 0, width, height);
-    
-    // Determine bar color based on warning level
-    let barColor;
+
+    let barColor = HIST_BAR;
     if (warningLevel === 2) {
-      // Overexposed - red (keep same)
-      barColor = 'rgba(255, 100, 100, 0.8)';
+      barColor = HIST_BAR_SEVERE;
     } else if (warningLevel === 1) {
-      // Close to overexposing - orange (keep same)
-      barColor = 'rgba(255, 150, 50, 0.8)';
-    } else {
-      // Normal - primary brand color (neon yellow/green) at full opacity
-      // Get brand color from CSS variable, fallback to #c4ff00
-      const brandColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--accent')
-        .trim() || '#c4ff00';
-      barColor = brandColor; // Use at opacity 1.0 (full opacity)
+      barColor = HIST_BAR_WARN;
     }
     
-    // Draw histogram bars
-    const barWidth = width / this.bins;
-    const maxBarHeight = height - 4; // Leave some padding
-    
+    // Integer column bands so bars touch edge-to-edge (no dark gaps from float fillRect)
+    const padY = 2;
+    const maxBarHeight = height - padY * 2;
     ctx.fillStyle = barColor;
-    
-    for (let i = 0; i < this.bins; i++) {
+    for (let i = 0; i < this.bins; i += 1) {
+      const x0 = Math.floor((i * width) / this.bins);
+      const x1 = i === this.bins - 1 ? width : Math.floor(((i + 1) * width) / this.bins);
+      const barPixW = Math.max(1, x1 - x0);
       const barHeight = this.histogramData[i] * maxBarHeight;
-      const x = i * barWidth;
-      const y = height - barHeight - 2;
-      
-      ctx.fillRect(x, y, barWidth, barHeight);
+      const y = height - barHeight - padY;
+      ctx.fillRect(x0, y, barPixW, barHeight);
     }
   }
   
@@ -269,11 +297,19 @@ export class HistogramController {
    * Clean up
    */
   dispose() {
+    if (this._resizeObserver && this.histogramCanvas) {
+      this._resizeObserver.unobserve(this.histogramCanvas);
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
     if (this.histogramCanvas && this.histogramCanvas.parentNode) {
       this.histogramCanvas.parentNode.removeChild(this.histogramCanvas);
     }
     if (this.warningElement && this.warningElement.parentNode) {
       this.warningElement.parentNode.removeChild(this.warningElement);
+    }
+    if (this.warningCloseElement && this.warningCloseElement.parentNode) {
+      this.warningCloseElement.parentNode.removeChild(this.warningCloseElement);
     }
   }
 }

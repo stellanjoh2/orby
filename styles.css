@@ -3498,8 +3498,21 @@ body.ui-hidden .shelf {
 }
 
 .histogram-container--expanded {
-  max-height: 120px;
+  /* Tall enough for 16:9 canvas at full panel width (column layout shelf = 100% vw);
+   * fixed 320px used to clip the canvas bottom when width × 9/16 > 320. */
+  max-height: min(60vh, 640px);
   opacity: 1;
+}
+
+@supports (container-type: inline-size) {
+  .histogram-container {
+    container-type: inline-size;
+  }
+
+  .histogram-container--expanded {
+    /* Match canvas aspect-ratio + a few px for rounding; vh cap for very short viewports */
+    max-height: min(calc((100cqw * 9) / 16 + 8px), 92vh);
+  }
 }
 
 .histogram-container--collapsed {
@@ -3635,10 +3648,12 @@ body.ui-hidden .shelf {
 }
 
 .histogram-container canvas {
+  display: block;
   width: 100%;
-  height: 80px;
+  height: auto;
+  aspect-ratio: 16 / 9; /* ~25% less height than 4:3 at the same width */
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.2);
+  background: #000000;
 }
 
 /* Tone curve block — divider above handles spacing from Histogram */
@@ -3679,11 +3694,11 @@ body.ui-hidden .shelf {
 }
 
 .histogram-warning--overexposed {
-  background: rgba(255, 100, 100, 0.9);
+  background: #ff6464;
 }
 
 .histogram-warning--close {
-  background: rgba(255, 150, 50, 0.9);
+  background: #ff9632;
 }
 
 /* Landing notice (shown only inside mobile splash layout — see html.mobile-landing rules) */
