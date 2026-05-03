@@ -300,6 +300,10 @@ export class UIManager {
       fresnelStrength: q('#fresnelStrength'),
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
+      fisheyeEnabled: q('#fisheyeEnabled'),
+      fisheyeHorizontalFOV: q('#fisheyeHorizontalFOV'),
+      fisheyeStrength: q('#fisheyeStrength'),
+      fisheyeCylindricalRatio: q('#fisheyeCylindricalRatio'),
       cameraTilt: q('#cameraTilt'),
       exposure: q('#exposure'),
       autoExposure: q('#autoExposure'),
@@ -1038,6 +1042,19 @@ export class UIManager {
         );
       }
 
+      if (payload.fisheye) {
+        this.stateStore.set('fisheye', payload.fisheye);
+        this.eventBus.emit('camera:fisheye');
+        this.setEffectControlsDisabled(
+          [
+            'fisheyeHorizontalFOV',
+            'fisheyeStrength',
+            'fisheyeCylindricalRatio',
+          ],
+          !payload.fisheye.enabled,
+        );
+      }
+
       if (payload.renderQuality !== undefined) {
         const q = payload.renderQuality;
         this.stateStore.set(
@@ -1659,8 +1676,35 @@ export class UIManager {
     
     // Camera & Exposure
     const cam = state.camera ?? {};
+    const fe = state.fisheye ?? {};
+    const feOn = !!fe.enabled;
+    if (this.inputs.cameraFov) {
+      this.inputs.cameraFov.disabled = feOn;
+    }
     this.inputs.cameraFov.value = cam.fov ?? 50;
     this.updateValueLabel('cameraFov', cam.fov ?? 50, 'angle');
+    if (this.inputs.fisheyeEnabled) {
+      this.inputs.fisheyeEnabled.checked = feOn;
+    }
+    if (this.inputs.fisheyeHorizontalFOV) {
+      const h = fe.horizontalFOVDeg ?? 131;
+      this.inputs.fisheyeHorizontalFOV.value = h;
+      this.updateValueLabel('fisheyeHorizontalFOV', h, 'angle');
+    }
+    if (this.inputs.fisheyeStrength) {
+      const s = fe.strength ?? 0.37;
+      this.inputs.fisheyeStrength.value = s;
+      this.updateValueLabel('fisheyeStrength', s, 'decimal');
+    }
+    if (this.inputs.fisheyeCylindricalRatio) {
+      const c = fe.cylindricalRatio ?? 4;
+      this.inputs.fisheyeCylindricalRatio.value = c;
+      this.updateValueLabel('fisheyeCylindricalRatio', c, 'decimal');
+    }
+    this.setEffectControlsDisabled(
+      ['fisheyeHorizontalFOV', 'fisheyeStrength', 'fisheyeCylindricalRatio'],
+      !feOn,
+    );
     if (this.inputs.cameraTilt) {
       const tilt = cam.tilt ?? 0;
       this.inputs.cameraTilt.value = tilt;

@@ -152,6 +152,13 @@ export class StateStore {
         quality: 'medium',
         color: '#000000',
       },
+      /** Wide-angle lens distortion (de Carpentier); post-process after full grading stack. */
+      fisheye: {
+        enabled: false,
+        horizontalFOVDeg: 131,
+        strength: 0.37,
+        cylindricalRatio: 4,
+      },
       camera: {
         fov: 50,
         tilt: 0,

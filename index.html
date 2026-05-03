@@ -1564,6 +1564,65 @@
                     </label>
                   </div>
                 </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Post-process barrel / fisheye (Giliam de Carpentier). Renders after full grading stack.">Fisheye lens</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button
+                        type="button"
+                        class="block-reset-btn"
+                        data-reset="fisheye"
+                        aria-label="Reset Fisheye lens"
+                        data-tooltip="Reset fisheye lens to defaults"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable lens distortion (uses horizontal FOV + strength + cylindrical ratio)">
+                        <input type="checkbox" id="fisheyeEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable fisheye lens</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Target horizontal field of view; vertical FOV is derived so the shader matches the projection (avoids black edges)">Horiz. FOV</span>
+                    <input
+                      id="fisheyeHorizontalFOV"
+                      type="range"
+                      min="5"
+                      max="160"
+                      value="131"
+                      step="1"
+                    />
+                    <span class="value" data-output="fisheyeHorizontalFOV">131°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="0 = no distortion, 1 = full stereographic-style remapping">Strength</span>
+                    <input
+                      id="fisheyeStrength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.37"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="fisheyeStrength">0.37</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="1 = spherical; higher bends verticals less (anamorphic-like)">Cylindrical</span>
+                    <input
+                      id="fisheyeCylindricalRatio"
+                      type="range"
+                      min="0.25"
+                      max="4"
+                      value="4"
+                      step="0.025"
+                    />
+                    <span class="value" data-output="fisheyeCylindricalRatio">4.00</span>
+                  </label>
+                </div>
                 </div>
               </div>
 
@@ -2102,8 +2161,8 @@
                   <label class="select-line">
                     <span>Quality</span>
                     <select id="lensFlareQuality">
-                      <option value="maximum" selected>Maximum</option>
                       <option value="optimized">Optimized</option>
+                      <option value="maximum" selected>Maximum</option>
                     </select>
                   </label>
                 </div>
@@ -2290,10 +2349,10 @@
                 <label class="select-line">
                   <span>Tone Mapping</span>
                   <select id="toneMapping">
-                    <option value="aces-filmic" selected>ACES Filmic</option>
-                    <option value="reinhard">Reinhard</option>
-                    <option value="linear">Linear</option>
                     <option value="none">None</option>
+                    <option value="linear">Linear</option>
+                    <option value="reinhard">Reinhard</option>
+                    <option value="aces-filmic" selected>ACES Filmic</option>
                   </select>
                 </label>
               </div>
@@ -2343,8 +2402,8 @@
                   <div class="export-option-group">
                     <label class="export-label">Transparent</label>
                     <div class="export-button-group">
-                      <button data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
                       <button data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
+                      <button data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
                     </div>
                   </div>
                   <div class="export-option-group">
@@ -3019,25 +3078,25 @@
                 aria-labelledby="bugReportSeverityLabel"
                 hidden
               >
-                <li role="option" data-value="blocker" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
-                  <span class="bug-report-severity-dot" data-severity="blocker" aria-hidden="true"></span>
-                  <span>Blocker — can’t use the app or it crashes</span>
-                </li>
-                <li role="option" data-value="major" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
-                  <span class="bug-report-severity-dot" data-severity="major" aria-hidden="true"></span>
-                  <span>Major — important feature broken</span>
-                </li>
-                <li role="option" data-value="moderate" class="bug-report-severity-list-option" aria-selected="true" tabindex="-1">
-                  <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
-                  <span>Moderate — noticeable issue, workaround possible</span>
+                <li role="option" data-value="cosmetic" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="cosmetic" aria-hidden="true"></span>
+                  <span>Low — visual issue or polish</span>
                 </li>
                 <li role="option" data-value="minor" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
                   <span class="bug-report-severity-dot" data-severity="minor" aria-hidden="true"></span>
                   <span>Minor — minor glitch</span>
                 </li>
-                <li role="option" data-value="cosmetic" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
-                  <span class="bug-report-severity-dot" data-severity="cosmetic" aria-hidden="true"></span>
-                  <span>Low — visual issue or polish</span>
+                <li role="option" data-value="moderate" class="bug-report-severity-list-option" aria-selected="true" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
+                  <span>Moderate — noticeable issue, workaround possible</span>
+                </li>
+                <li role="option" data-value="major" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="major" aria-hidden="true"></span>
+                  <span>Major — important feature broken</span>
+                </li>
+                <li role="option" data-value="blocker" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                  <span class="bug-report-severity-dot" data-severity="blocker" aria-hidden="true"></span>
+                  <span>Blocker — can’t use the app or it crashes</span>
                 </li>
               </ul>
             </div>

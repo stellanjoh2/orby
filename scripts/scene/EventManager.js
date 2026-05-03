@@ -110,9 +110,11 @@ export class EventManager {
 
     // Camera events
     eventBus.on('camera:preset', (preset) => s.applyCameraPreset(preset));
-    eventBus.on('camera:fov', (value) => {
-      s.camera.fov = value;
-      s.camera.updateProjectionMatrix();
+    eventBus.on('camera:fov', () => {
+      s.syncPerspectiveCameraFovAndLens();
+    });
+    eventBus.on('camera:fisheye', () => {
+      s.syncPerspectiveCameraFovAndLens();
     });
     eventBus.on('camera:auto-orbit', (value) => s.setCameraAutoOrbit(value));
     eventBus.on('camera:handheld', (value) => s.setCameraHandheld(value));

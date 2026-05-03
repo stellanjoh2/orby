@@ -146,6 +146,7 @@ export class SceneSettingsManager {
       aberration: state.aberration,
       ambientOcclusion: state.ambientOcclusion,
       lensDirt: state.lensDirt,
+      fisheye: state.fisheye,
       antiAliasing: state.antiAliasing,
       renderQuality: state.renderQuality,
       toneMapping: state.toneMapping,
@@ -891,6 +892,20 @@ export class SceneSettingsManager {
           this.uiHelper.setEffectControlsDisabled(
             ['lensDirtStrength'],
             !payload.lensDirt.enabled,
+          );
+        }
+      }
+      if (payload.fisheye) {
+        this.stateStore.set('fisheye', payload.fisheye);
+        this.eventBus.emit('camera:fisheye');
+        if (this.uiHelper?.setEffectControlsDisabled) {
+          this.uiHelper.setEffectControlsDisabled(
+            [
+              'fisheyeHorizontalFOV',
+              'fisheyeStrength',
+              'fisheyeCylindricalRatio',
+            ],
+            !payload.fisheye.enabled,
           );
         }
       }

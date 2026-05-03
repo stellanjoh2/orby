@@ -14,6 +14,7 @@ import {
   ExposureShader,
   ToneMappingShader,
   LensDirtShader,
+  LensDistortionShader,
 } from '../shaders/index.js';
 import { ColorAdjustController } from './ColorAdjustController.js';
 import {
@@ -87,7 +88,12 @@ export class PostProcessingPipeline {
     this.colorAdjustPass = this.colorAdjust.getPass();
 
     this.toneMappingPass = new ShaderPass(ToneMappingShader);
-    this.toneMappingPass.renderToScreen = true;
+    this.toneMappingPass.renderToScreen = false;
+
+    /** Full-frame lens distortion / fisheye (runs after tone mapping + grading). */
+    this.lensDistortionPass = new ShaderPass(LensDistortionShader);
+    this.lensDistortionPass.enabled = false;
+    this.lensDistortionPass.renderToScreen = true;
 
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.n8aoPass);
@@ -102,6 +108,7 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.exposurePass);
     this.composer.addPass(this.colorAdjustPass);
     this.composer.addPass(this.toneMappingPass);
+    this.composer.addPass(this.lensDistortionPass);
   }
 
   /**

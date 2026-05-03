@@ -595,6 +595,54 @@ export class SceneManager {
     this.groundController?.resizePodiumReflector?.(width, height);
   }
 
+  /**
+   * Keeps Three.js vertical FOV and the lens-distortion pass in lockstep (same as the
+   * de Carpentier WebGL sample) so the warped sample stays inside the render and avoids
+   * black edges. When fisheye is off, uses `camera.fov` from state.
+   */
+  syncPerspectiveCameraFovAndLens() {
+    const state = this.stateStore.getState();
+    const fe = state.fisheye;
+    const pass = this.postPipeline?.lensDistortionPass;
+    if (!pass) {
+      this.camera.fov = state.camera?.fov ?? 50;
+      this.camera.updateProjectionMatrix();
+      return;
+    }
+    if (!fe?.enabled) {
+      pass.enabled = false;
+      this.camera.fov = state.camera?.fov ?? 50;
+      this.camera.updateProjectionMatrix();
+      return;
+    }
+    const hFovDeg = THREE.MathUtils.clamp(
+      fe.horizontalFOVDeg ?? 131,
+      5,
+      160,
+    );
+    const strength = THREE.MathUtils.clamp(fe.strength ?? 0, 0, 1);
+    const cylindricalRatio = THREE.MathUtils.clamp(
+      fe.cylindricalRatio ?? 1,
+      0.25,
+      4,
+    );
+    const aspect = Math.max(0.01, this.camera.aspect);
+    const heightUniform =
+      Math.tan(THREE.MathUtils.degToRad(hFovDeg) / 2) / aspect;
+    const verticalFovDeg = THREE.MathUtils.radToDeg(
+      Math.atan(heightUniform) * 2,
+    );
+
+    this.camera.fov = verticalFovDeg;
+    this.camera.updateProjectionMatrix();
+
+    pass.enabled = true;
+    pass.uniforms.strength.value = strength;
+    pass.uniforms.height.value = heightUniform;
+    pass.uniforms.aspectRatio.value = aspect;
+    pass.uniforms.cylindricalRatio.value = cylindricalRatio;
+  }
+
 
 
   // registerEvents() - Moved to EventManager.js
@@ -635,8 +683,7 @@ export class SceneManager {
     if (this.baseHdriStrength === undefined) {
       this.baseHdriStrength = (state.hdriStrength ?? 2) * state.exposure;
     }
-    this.camera.fov = state.camera.fov;
-    this.camera.updateProjectionMatrix();
+    this.syncPerspectiveCameraFovAndLens();
     this.cameraController?.setTilt(state.camera.tilt ?? 0);
     this.lightsEnabled = state.lightsEnabled ?? true;
     this.lightsMaster = state.lightsMaster ?? 0.30;
@@ -2399,10 +2446,10 @@ export class SceneManager {
         this.canvas.style.height = '100%';
       }
       
-      // Update camera aspect ratio and projection matrix
+      // Update camera aspect ratio; FOV + lens pass must match (fisheye)
       this.camera.aspect = finalWidth / finalHeight;
-      this.camera.updateProjectionMatrix();
-      
+      this.syncPerspectiveCameraFovAndLens();
+
       this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
     });
   }

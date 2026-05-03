@@ -4,6 +4,7 @@
  */
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import { deepClone } from '../utils/deepClone.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
 
 export class ResetControls {
@@ -254,6 +255,7 @@ export class ResetControls {
       this.stateStore.set('aberration', defaults.aberration);
       this.stateStore.set('ambientOcclusion', defaults.ambientOcclusion);
       this.stateStore.set('fresnel', defaults.fresnel);
+      this.stateStore.set('fisheye', defaults.fisheye);
       this.stateStore.set('camera', defaults.camera);
       this.stateStore.set('exposure', defaults.exposure);
       this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
@@ -285,6 +287,7 @@ export class ResetControls {
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.ui.setEffectControlsDisabled(['fresnelColor', 'fresnelRadius', 'fresnelStrength'], !defaults.fresnel.enabled);
       this.eventBus.emit('camera:fov', defaults.camera.fov);
+      this.eventBus.emit('camera:fisheye');
       this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
       this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
       this.eventBus.emit('scene:exposure', defaults.exposure);
@@ -315,12 +318,11 @@ export class ResetControls {
   }
 
   bindLocalResetButtons() {
-    const defaults = this.stateStore.getDefaults();
-    
     document.querySelectorAll('[data-reset]').forEach((button) => {
       button.addEventListener('click', () => {
-        const resetType = button.dataset.reset;
-        
+        const defaults = this.stateStore.getDefaults();
+        const resetType = (button.dataset.reset ?? '').trim();
+
         switch (resetType) {
           case 'material':
             this.stateStore.batch(() => {
@@ -565,6 +567,7 @@ export class ResetControls {
             this.stateStore.batch(() => {
               this.stateStore.set('lookFilterPreset', 'custom');
               this.stateStore.set('camera.fov', defaults.camera.fov);
+              this.stateStore.set('fisheye', defaults.fisheye);
               this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
               this.stateStore.set('camera.handheld', defaults.camera.handheld ?? 'off');
               this.stateStore.set('exposure', defaults.exposure);
@@ -575,6 +578,7 @@ export class ResetControls {
             });
             // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
+            this.eventBus.emit('camera:fisheye');
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
             this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);
@@ -584,6 +588,22 @@ export class ResetControls {
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
             break;
+
+          case 'fisheye': {
+            const feDefault =
+              defaults.fisheye ?? {
+                enabled: false,
+                horizontalFOVDeg: 131,
+                strength: 0.37,
+                cylindricalRatio: 4,
+              };
+            this.stateStore.set('fisheye', deepClone(feDefault));
+            this.eventBus.emit('camera:fisheye');
+            this.eventBus.emit('camera:fov');
+            this.ui.syncUIFromState();
+            this.helpers.showToast('Fisheye lens reset');
+            break;
+          }
 
           case 'color-correction':
             this.stateStore.batch(() => {
