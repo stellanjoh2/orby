@@ -896,6 +896,99 @@ body.dropzone-visible #webgl {
   font-size: 0.82rem;
 }
 
+.bug-report-status-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.bug-report-status-text {
+  min-width: 0;
+}
+
+.bug-report-status--sending {
+  min-height: 2.35rem;
+}
+
+.bug-report-status--sending .bug-report-status-text {
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--brand-primary);
+  text-shadow: 0 0 20px color-mix(in srgb, var(--brand-primary) 28%, transparent);
+}
+
+.bug-report-status-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bug-report-status-spinner img {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: block;
+}
+
+.bug-report-status--sending .bug-report-status-spinner img {
+  animation: bug-report-logo-spin 0.88s linear infinite;
+}
+
+.bug-report-status-progress-line {
+  display: block;
+  width: 100%;
+  max-width: 15rem;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-top: 0.55rem;
+  overflow: hidden;
+}
+
+.bug-report-status-progress-fill {
+  display: block;
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--brand-primary) 40%, transparent),
+    var(--brand-primary)
+  );
+  animation: bug-report-progress-slide 1.08s ease-in-out infinite;
+}
+
+@keyframes bug-report-logo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bug-report-progress-slide {
+  0% {
+    transform: translateX(-130%);
+  }
+
+  100% {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bug-report-status--sending .bug-report-status-spinner img,
+  .bug-report-status-progress-fill {
+    animation: none;
+  }
+
+  .bug-report-status-progress-fill {
+    width: 100%;
+    opacity: 0.45;
+    transform: none;
+  }
+}
+
 .bug-report-actions {
   display: flex;
   flex-direction: row;

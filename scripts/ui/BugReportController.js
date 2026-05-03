@@ -61,6 +61,9 @@ export class BugReportController {
     this.submitBtn = document.querySelector('#submitBugReport');
     this.honeypot = this.form.querySelector('input[name="honeypot"]');
     this.statusEl = this.modal.querySelector('.bug-report-status');
+    this.statusTextEl = this.modal.querySelector('.bug-report-status-text');
+    this.statusSpinnerEl = this.modal.querySelector('.bug-report-status-spinner');
+    this.statusProgressEl = this.modal.querySelector('.bug-report-status-progress-line');
     this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
     this.thankYouLayer = document.querySelector('#bugReportThankYouLayer');
     this.thankYouMessageEl = document.querySelector('#bugReportThankYouMessage');
@@ -490,10 +493,38 @@ export class BugReportController {
     });
   }
 
-  setStatus(text, isError = false) {
+  /**
+   * @param {string} text
+   * @param {boolean} [isError]
+   * @param {{ sending?: boolean }} [options]
+   */
+  setStatus(text, isError = false, options = {}) {
+    const sending = options.sending === true;
     if (!this.statusEl) return;
-    this.statusEl.textContent = text;
-    this.statusEl.style.color = isError ? 'var(--danger, #f87171)' : 'var(--text-dim)';
+
+    if (this.statusTextEl) {
+      this.statusTextEl.textContent = text;
+    } else {
+      this.statusEl.textContent = text;
+    }
+
+    if (this.statusSpinnerEl && this.statusProgressEl) {
+      if (sending) {
+        this.statusEl.classList.add('bug-report-status--sending');
+        this.statusSpinnerEl.removeAttribute('hidden');
+        this.statusProgressEl.removeAttribute('hidden');
+      } else {
+        this.statusEl.classList.remove('bug-report-status--sending');
+        this.statusSpinnerEl.setAttribute('hidden', '');
+        this.statusProgressEl.setAttribute('hidden', '');
+      }
+    }
+
+    if (sending) {
+      this.statusEl.style.color = '';
+    } else {
+      this.statusEl.style.color = isError ? 'var(--danger, #f87171)' : 'var(--text-dim)';
+    }
   }
 
   async submit() {
@@ -530,7 +561,7 @@ export class BugReportController {
 
     this._sending = true;
     this.submitBtn.disabled = true;
-    this.setStatus('Sending…');
+    this.setStatus('Sending…', false, { sending: true });
 
     const apiUrl = this.getApiUrl();
 
@@ -555,9 +586,18 @@ export class BugReportController {
       }
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+        const raw = await res.text();
+        let err = {};
+        try {
+          err = raw ? JSON.parse(raw) : {};
+        } catch {
+          err = {};
+        }
+        const detail = typeof err.detail === 'string' ? err.detail.trim() : '';
         let msg;
-        if (res.status === 429) {
+        if (detail) {
+          msg = detail;
+        } else if (res.status === 429) {
           const sec = typeof err.retryAfter === 'number' ? err.retryAfter : null;
           const short =
             sec != null && sec > 0
@@ -573,8 +613,15 @@ export class BugReportController {
         } else if (err.code === 'turnstile_failed' || err.code === 'turnstile_required') {
           msg = err.error || 'Security check failed. Try again.';
           this._resetTurnstile();
+        } else if (typeof err.error === 'string' && err.error.trim() !== '') {
+          msg = err.error.trim();
+        } else if (raw && raw.length > 0 && raw.length < 500 && !raw.trim().startsWith('<')) {
+          msg = raw.trim();
+        } else if (res.status === 502) {
+          msg =
+            'Email send failed (502). In Vercel set RESEND_FROM to an address on a domain verified in Resend (not @proton.me), and ensure BUG_REPORT_TO / API key env vars apply to this deployment (Preview vs Production). Check Vercel → Logs for “Resend error”.';
         } else {
-          msg = err.error || 'Could not submit. Try again later.';
+          msg = 'Could not submit. Try again later.';
         }
         this.setStatus(msg, true);
         this._sending = false;

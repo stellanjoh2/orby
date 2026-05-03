@@ -129,6 +129,22 @@ function clampStr(s, max) {
   return t.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 }
 
+/** Best-effort parse of Resend JSON error body for operator-visible detail */
+function parseResendErrorDetail(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return '';
+  try {
+    const j = JSON.parse(raw);
+    if (typeof j.message === 'string') return j.message.slice(0, 500);
+    if (typeof j.error === 'string') return j.error.slice(0, 500);
+    if (j.error && typeof j.error.message === 'string') return j.error.message.slice(0, 500);
+    const first = Array.isArray(j.errors) ? j.errors[0] : null;
+    if (first && typeof first.message === 'string') return first.message.slice(0, 500);
+  } catch {
+    /* ignore */
+  }
+  return raw.trim().slice(0, 500);
+}
+
 function clientIp(req) {
   const xff = req.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.trim() !== '') {
@@ -180,9 +196,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const key = process.env.RESEND_API_KEY;
-  const to = process.env.BUG_REPORT_TO;
-  const from = process.env.RESEND_FROM;
+  const key = process.env.RESEND_API_KEY?.trim();
+  const to = process.env.BUG_REPORT_TO?.trim();
+  const from = process.env.RESEND_FROM?.trim();
   if (!key || !to || !from) {
     return res.status(503).json({ error: 'Issue reporting is not configured' });
   }
@@ -190,19 +206,34 @@ export default async function handler(req, res) {
   const ip = clientIp(req);
   const limiters = getRateLimiters();
   if (limiters) {
-    const [h, b] = await Promise.all([limiters.hourly.limit(ip), limiters.burst.limit(ip)]);
-    const hit = !h.success ? h : !b.success ? b : null;
-    if (hit) {
-      const retryAfter = Math.max(1, Math.ceil((hit.reset - Date.now()) / 1000));
-      res.setHeader('Retry-After', String(retryAfter));
-      return res.status(429).json({
-        error: 'Too many reports from this network. Try again later.',
-        retryAfter,
-      });
+    try {
+      const [h, b] = await Promise.all([limiters.hourly.limit(ip), limiters.burst.limit(ip)]);
+      const hit = !h.success ? h : !b.success ? b : null;
+      if (hit) {
+        const retryAfter = Math.max(1, Math.ceil((hit.reset - Date.now()) / 1000));
+        res.setHeader('Retry-After', String(retryAfter));
+        return res.status(429).json({
+          error: 'Too many reports from this network. Try again later.',
+          retryAfter,
+        });
+      }
+    } catch (e) {
+      console.error('bug-report rate limit error (fail open)', e);
     }
   }
 
-  const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
+  let body =
+    typeof req.body === 'object' && req.body !== null && !Array.isArray(req.body)
+      ? req.body
+      : {};
+  if (typeof req.body === 'string' && req.body.trim() !== '') {
+    try {
+      const parsed = JSON.parse(req.body);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) body = parsed;
+    } catch {
+      /* ignore */
+    }
+  }
   if (body.honeypot) {
     return res.status(204).end();
   }
@@ -259,14 +290,20 @@ export default async function handler(req, res) {
         text,
       }),
     });
-  } catch {
-    return res.status(502).json({ error: 'Email send failed' });
+  } catch (e) {
+    console.error('Resend fetch error', e);
+    return res.status(502).json({ error: 'Email send failed', detail: 'Could not reach email provider.' });
   }
 
   if (!resendRes.ok) {
     const errText = await resendRes.text().catch(() => '');
     console.error('Resend error', resendRes.status, errText);
-    return res.status(502).json({ error: 'Email send failed' });
+    const parsed = parseResendErrorDetail(errText);
+    const detail = parsed || `Resend HTTP ${resendRes.status} (see Vercel logs for body)`;
+    return res.status(502).json({
+      error: 'Email send failed',
+      detail,
+    });
   }
 
   return res.status(200).json({ ok: true });
