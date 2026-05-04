@@ -911,17 +911,14 @@ export class SceneManager {
 
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
-    
-    // Update environment controller's fallback color (for when HDRI is completely off)
+
     const bgColor = this.backgroundController?.getColor() ?? '#000000';
     this.environmentController?.setFallbackColor(bgColor);
-    
-    // Set background enabled on environment controller
+
     this.environmentController?.setBackgroundEnabled(enabled);
-    
-    // Notify background controller of HDRI background state
+
     this.backgroundController?.setHdriBackgroundEnabled(enabled);
-    
+
     this.applyHdriMood(this.currentHdri);
   }
 

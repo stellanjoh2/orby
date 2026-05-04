@@ -465,14 +465,15 @@ export class GlobalControls {
         }
       }
 
-      // B - Toggle HDRI background
+      // B - Toggle render backdrop (same as Render Backdrop control)
       if (key === 'b') {
         event.preventDefault();
         const current = this.stateStore.getState().hdriBackground;
-        this.stateStore.set('hdriBackground', !current);
-        this.eventBus.emit('studio:hdri-background', !current);
+        const next = !current;
+        this.stateStore.set('hdriBackground', next);
+        this.eventBus.emit('studio:hdri-background', next);
         if (this.ui.inputs.hdriBackground) {
-          this.ui.inputs.hdriBackground.checked = !current;
+          this.ui.inputs.hdriBackground.checked = next;
         }
       }
 

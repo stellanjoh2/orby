@@ -952,18 +952,6 @@
                     />
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Vertical position of the grid">Y Position</span>
-                    <input
-                      id="gridY"
-                      type="range"
-                      min="-2"
-                      max="2"
-                      step="0.01"
-                      value="0"
-                    />
-                    <span class="value" data-output="gridY">0.00m</span>
-                  </label>
-                  <label class="slider-line">
                     <span>Opacity</span>
                     <input
                       id="groundWireOpacity"
@@ -974,6 +962,18 @@
                       step="0.01"
                     />
                     <span class="value" data-output="groundWireOpacity">0.45</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical position of the grid">Y Position</span>
+                    <input
+                      id="gridY"
+                      type="range"
+                      min="-2"
+                      max="2"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="gridY">0.00m</span>
                   </label>
                   <label class="slider-line">
                     <span>Scale</span>
@@ -1061,6 +1061,10 @@
                   </button>
                 </div>
               </div>
+              <div class="info-version-tag">v0.5.331 · 2026-05-03 19:54:31 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
             </section>
 
             <h2 class="panel-header-title" data-header="studio">Studio</h2>
@@ -1138,11 +1142,11 @@
                   <span class="value" data-output="hdriRotation">0°</span>
                 </label>
                 <label class="slider-line">
-                  <span>Show In Background</span>
+                  <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only Background Color (below) is shown; HDRI still lights the model.">Render Backdrop</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriBackground" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
-                    <span class="sr-only">Show HDRI in background</span>
+                    <span class="sr-only">Render HDRI as viewport backdrop</span>
                   </label>
                 </label>
               </div>
@@ -1513,6 +1517,10 @@
                   </button>
                 </div>
               </div>
+              <div class="info-version-tag">v0.5.331 · 2026-05-03 19:54:31 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
             </section>
 
             <h2 class="panel-header-title" data-header="render">Camera</h2>
@@ -2454,6 +2462,10 @@
                   </button>
                 </div>
               </div>
+              <div class="info-version-tag">v0.5.331 · 2026-05-03 19:54:31 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
             </section>
 
             <h2 class="panel-header-title" data-header="export">Export</h2>
@@ -2491,8 +2503,8 @@
                   Vector output derived from the current framing—great for logos, precision edges, and scaling without pixels. Silhouette traces a single outline; Color builds flat filled regions from the render.
                 </p>
                 <label class="select-line">
-                  <span data-tooltip="Low: fewer colors and coarser paths (smaller files). Medium: balanced. High: maximum colors and trace detail (larger files).">Color vector detail</span>
-                  <select id="exportSvgColorDetail" aria-label="SVG color export detail">
+                  <span data-tooltip="Low: fewer colors and coarser paths (smaller files). Medium: balanced. High: maximum colors and trace detail (larger files).">Detail Level</span>
+                  <select id="exportSvgColorDetail" aria-label="SVG export detail level">
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high" selected>High</option>
@@ -2511,7 +2523,7 @@
               </div>
 
               <div class="panel-block">
-                <h3 class="export-format-headline">.GLB</h3>
+                <h3 class="export-format-headline">GLB</h3>
                 <p class="export-format-sub">
                   Turn extruded logos, icons, or other vector graphics into a .GLB for other 3D tools and AR. Only when you started from an imported SVG. Tip: dial in extrusion and materials before exporting.
                 </p>
@@ -2522,6 +2534,10 @@
                   </button>
                 </div>
               </div>
+              <div class="info-version-tag">v0.5.331 · 2026-05-03 19:54:31 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
             </section>
 
             <h2 class="panel-header-title" data-header="info">Information</h2>
@@ -2655,7 +2671,7 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Toggle HDRI background visibility</span>
+                    <span class="shortcut-action">Toggle render backdrop (on / solid color only)</span>
                     <span class="shortcut-keys"><kbd>B</kbd></span>
                   </div>
                   
@@ -3051,13 +3067,16 @@
               </div>
 
               <div class="panel-block" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 4):</div>
                 <div class="about-content">
                   <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look Filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 
               <div class="info-version-tag">v0.5.331 · 2026-05-03 19:54:31 UTC</div>
+              <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
+                <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
+              </button>
             </section>
           </div>
         </aside>
@@ -3106,6 +3125,9 @@
         </div>
         <p id="messageAlertBody" class="message-alert-body"></p>
         <div class="load-settings-actions message-alert-actions" id="messageAlertActions">
+          <button type="button" id="messageAlertCancel" class="ghost-btn" hidden>
+            No
+          </button>
           <button type="button" id="messageAlertOk" class="accent-action-btn">OK</button>
         </div>
       </div>
@@ -3148,10 +3170,10 @@
           <div class="bug-report-field">
             <label for="bugReportCategory">Category</label>
             <select id="bugReportCategory" name="category" required aria-required="true">
-              <option value="crash">Crash / freeze</option>
-              <option value="rendering" selected>Rendering / display</option>
-              <option value="loaded-mesh-materials">Loaded mesh / materials</option>
-              <option value="ui">UI / controls</option>
+              <option value="crash">Crash / Freeze</option>
+              <option value="rendering" selected>Rendering / Display</option>
+              <option value="loaded-mesh-materials">Loaded Mesh / Materials</option>
+              <option value="ui">UI / Controls</option>
               <option value="export">Export</option>
               <option value="performance">Performance</option>
               <option value="other">Other</option>
@@ -3171,9 +3193,10 @@
               >
                 <span class="bug-report-severity-trigger-inner">
                   <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
-                  <span class="bug-report-severity-trigger-text" id="bugReportSeverityTriggerText">
-                    Moderate — noticeable issue, workaround possible
-                  </span>
+                  <span class="bug-report-severity-trigger-text" id="bugReportSeverityTriggerText"
+                    ><span class="bug-report-severity-level">Moderate</span
+                    ><span class="bug-report-severity-desc"> — Noticeable issue</span></span
+                  >
                 </span>
               </button>
               <ul
@@ -3186,23 +3209,38 @@
               >
                 <li role="option" data-value="cosmetic" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
                   <span class="bug-report-severity-dot" data-severity="cosmetic" aria-hidden="true"></span>
-                  <span>Low — visual issue or polish</span>
+                  <span class="bug-report-severity-label"
+                    ><span class="bug-report-severity-level">Low</span
+                    ><span class="bug-report-severity-desc"> — Visual issue or polish</span></span
+                  >
                 </li>
                 <li role="option" data-value="minor" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
                   <span class="bug-report-severity-dot" data-severity="minor" aria-hidden="true"></span>
-                  <span>Minor — minor glitch</span>
+                  <span class="bug-report-severity-label"
+                    ><span class="bug-report-severity-level">Minor</span
+                    ><span class="bug-report-severity-desc"> — Minor glitch</span></span
+                  >
                 </li>
                 <li role="option" data-value="moderate" class="bug-report-severity-list-option" aria-selected="true" tabindex="-1">
                   <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
-                  <span>Moderate — noticeable issue, workaround possible</span>
+                  <span class="bug-report-severity-label"
+                    ><span class="bug-report-severity-level">Moderate</span
+                    ><span class="bug-report-severity-desc"> — Noticeable issue</span></span
+                  >
                 </li>
                 <li role="option" data-value="major" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
                   <span class="bug-report-severity-dot" data-severity="major" aria-hidden="true"></span>
-                  <span>Major — important feature broken</span>
+                  <span class="bug-report-severity-label"
+                    ><span class="bug-report-severity-level">Major</span
+                    ><span class="bug-report-severity-desc"> — Important feature broken</span></span
+                  >
                 </li>
                 <li role="option" data-value="blocker" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
                   <span class="bug-report-severity-dot" data-severity="blocker" aria-hidden="true"></span>
-                  <span>Blocker — can’t use the app or it crashes</span>
+                  <span class="bug-report-severity-label"
+                    ><span class="bug-report-severity-level">Blocker</span
+                    ><span class="bug-report-severity-desc"> — Can’t use the app or it crashes</span></span
+                  >
                 </li>
               </ul>
             </div>
@@ -3244,6 +3282,33 @@
             <button type="submit" id="submitBugReport" class="accent-action-btn bug-report-modal-btn">Send</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Same full-screen treatment as bug-report thank-you (Cal Sans, blur scrim, fade-up) -->
+    <div
+      id="orbyFullscreenPrompt"
+      class="bug-report-thank-you-layer"
+      hidden
+      aria-hidden="true"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="orbyFullscreenPromptMessage"
+    >
+      <div class="bug-report-thank-you-stack orby-fullscreen-prompt-stack" id="orbyFullscreenPromptStack">
+        <p class="bug-report-thank-you-message" id="orbyFullscreenPromptMessage"></p>
+        <div class="orby-fullscreen-prompt-actions" id="orbyFullscreenPromptActions">
+          <button
+            type="button"
+            id="orbyFullscreenPromptNo"
+            class="orby-fullscreen-prompt-btn orby-fullscreen-prompt-btn--ghost"
+          >
+            Stay
+          </button>
+          <button type="button" id="orbyFullscreenPromptYes" class="bug-report-thank-you-ok">
+            Go Home
+          </button>
+        </div>
       </div>
     </div>
 

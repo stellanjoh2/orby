@@ -24,11 +24,15 @@ import { ResetControls } from './ui/ResetControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
 import { BugReportController } from './ui/BugReportController.js';
-import { animateModalOpen, snapModalHidden } from './ui/modalReveal.js';
+import { animateModalOpen, prefersReducedMotion, snapModalHidden } from './ui/modalReveal.js';
 import { mergeAberrationSettings } from './render/chromaticAberration.js';
 
 /** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
 export const LONG_TOAST_CHAR_THRESHOLD = 110;
+
+/** Full-screen prompt — match BugReportController thank-you scrim */
+const ORBY_FULLSCREEN_SCRIM_IN = 0.22;
+const ORBY_DROP_FADE_UP_CLASS = 'orby-drop-fade-up-playing';
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -40,6 +44,10 @@ export class UIManager {
     this.currentAnimationDuration = 0;
     this.animationPlaying = false;
     this.shelfRevealed = false;
+    /** Ref-count: full-screen prompts (home confirm, bug thank-you) that hide the settings shelf. */
+    this._shelfOverlaySuppressDepth = 0;
+    /** When the first suppress runs, whether to remove `is-shelf-hidden` after all overlays end. */
+    this._shelfOverlayRestorePending = false;
     /** Set while a coalesced post-sync slider-fill rAF is pending (see scheduleAllRangeSliderFills). */
     this._rangeSliderFillRafId = null;
     /** Nested loads (model + HDRI) toggle #viewportLoadSpinner while depth > 0 */
@@ -173,8 +181,14 @@ export class UIManager {
     this.dom.messageAlertTitle = q('#messageAlertTitle');
     this.dom.messageAlertBody = q('#messageAlertBody');
     this.dom.messageAlertOk = q('#messageAlertOk');
+    this.dom.messageAlertCancel = q('#messageAlertCancel');
     this.dom.messageAlertActions = q('#messageAlertActions');
     this.dom.messageAlertClose = q('#messageAlertClose');
+    this.dom.fullscreenPrompt = q('#orbyFullscreenPrompt');
+    this.dom.fullscreenPromptMessage = q('#orbyFullscreenPromptMessage');
+    this.dom.fullscreenPromptStack = q('#orbyFullscreenPromptStack');
+    this.dom.fullscreenPromptNo = q('#orbyFullscreenPromptNo');
+    this.dom.fullscreenPromptYes = q('#orbyFullscreenPromptYes');
     this.dom.stats = q('#meshStats');
     this.dom.fbxMapSlotsDivider = q('#fbxMapSlotsDivider');
     this.dom.svgExtrudePanelBlock = q('#svgExtrudePanelBlock');
@@ -426,41 +440,295 @@ export class UIManager {
 
     this.setupPanelsScrollbarReveal();
     this.bindMessageAlert();
+    this.bindFullscreenPrompt();
+    this.bindHomeOrbyMark();
   }
 
   getMessageAlertPanel() {
     return this.dom.messageAlertModal?.querySelector('.message-alert-content');
   }
 
+  /**
+   * Hide the settings shelf (same transition as V / is-shelf-hidden) while a full-screen overlay is up.
+   * Ref-counted for nested safety; pair with {@link #endShelfOverlaySuppression}.
+   */
+  beginShelfOverlaySuppression() {
+    const shelf = this.dom.shelf;
+    if (!shelf) return;
+
+    if (this._shelfOverlaySuppressDepth === 0) {
+      const visible =
+        this.shelfRevealed && !this.uiHidden && !shelf.classList.contains('is-shelf-hidden');
+      this._shelfOverlayRestorePending = visible;
+      if (visible) {
+        shelf.classList.add('is-shelf-hidden');
+      }
+    }
+    this._shelfOverlaySuppressDepth++;
+  }
+
+  /**
+   * After overlay teardown; restores the shelf when it was visible before (and UI is still shown).
+   * When the start screen is up (`body.dropzone-visible`), the shelf stays hidden.
+   */
+  endShelfOverlaySuppression() {
+    if (this._shelfOverlaySuppressDepth <= 0) return;
+    this._shelfOverlaySuppressDepth--;
+    if (this._shelfOverlaySuppressDepth > 0) return;
+
+    const wantedRestore = this._shelfOverlayRestorePending;
+    this._shelfOverlayRestorePending = false;
+    if (!wantedRestore || !this.dom.shelf) return;
+    const onStartScreen =
+      typeof document !== 'undefined' && document.body.classList.contains('dropzone-visible');
+    if (onStartScreen) return;
+    requestAnimationFrame(() => {
+      if (!this.uiHidden && this.shelfRevealed && this.dom.shelf) {
+        this.dom.shelf.classList.remove('is-shelf-hidden');
+      }
+    });
+  }
+
   bindMessageAlert() {
     const modal = this.dom.messageAlertModal;
     if (!modal) return;
 
-    this._closeMessageAlert = () => {
-      if (this._messageAlertKeydownHandler) {
-        document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
-        this._messageAlertKeydownHandler = null;
+    this.dom.messageAlertOk?.addEventListener('click', () => this._messageAlertPrimaryClose());
+    this.dom.messageAlertCancel?.addEventListener('click', () => this._messageAlertCancelClose());
+    this.dom.messageAlertClose?.addEventListener('click', () => this._messageAlertHeaderClose());
+    modal.addEventListener('click', (event) => {
+      if (event.target !== modal) return;
+      this._messageAlertBackdropClose();
+    });
+  }
+
+  /** OK / Yes — runs optional `onConfirm`, then closes. */
+  _messageAlertPrimaryClose() {
+    this._messageAlertOnConfirm?.();
+    this._messageAlertCleanupAndClose();
+  }
+
+  /** No / Cancel path — runs optional `onCancel`, then closes. */
+  _messageAlertCancelClose() {
+    this._messageAlertOnCancel?.();
+    this._messageAlertCleanupAndClose();
+  }
+
+  /** Close button — confirm dialogs behave like No; single-button dialogs dismiss without callbacks. */
+  _messageAlertHeaderClose() {
+    if (this._messageAlertPendingConfirm) {
+      this._messageAlertOnCancel?.();
+    }
+    this._messageAlertCleanupAndClose();
+  }
+
+  /** Backdrop — same as header for both modes. */
+  _messageAlertBackdropClose() {
+    this._messageAlertHeaderClose();
+  }
+
+  _messageAlertCleanupAndClose() {
+    if (this._messageAlertKeydownHandler) {
+      document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
+      this._messageAlertKeydownHandler = null;
+    }
+    this._messageAlertPendingConfirm = false;
+    this._messageAlertOnConfirm = null;
+    this._messageAlertOnCancel = null;
+    const modal = this.dom.messageAlertModal;
+    if (modal) snapModalHidden(modal, this.getMessageAlertPanel());
+  }
+
+  bindFullscreenPrompt() {
+    const layer = this.dom.fullscreenPrompt;
+    const stack = this.dom.fullscreenPromptStack;
+    if (!layer) return;
+
+    stack?.addEventListener('click', (e) => e.stopPropagation());
+    layer.addEventListener('click', () => this._dismissFullscreenPrompt('cancel'));
+    this.dom.fullscreenPromptNo?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._dismissFullscreenPrompt('cancel');
+    });
+    this.dom.fullscreenPromptYes?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._dismissFullscreenPrompt('confirm');
+    });
+  }
+
+  /**
+   * Full-screen confirm — same visual language as bug-report thank-you (blur scrim, Cal Sans, fade-up, lime primary).
+   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void }} opts — `messageHtml` is trusted app copy only.
+   */
+  showFullscreenPrompt(opts) {
+    const layer = this.dom.fullscreenPrompt;
+    const msg = this.dom.fullscreenPromptMessage;
+    const noBtn = this.dom.fullscreenPromptNo;
+    const yesBtn = this.dom.fullscreenPromptYes;
+    if (!layer || !msg || !noBtn || !yesBtn) return;
+
+    const messageHtml = typeof opts?.messageHtml === 'string' ? opts.messageHtml : '';
+    const cancelLabel =
+      typeof opts?.cancelLabel === 'string' && opts.cancelLabel.trim() ? opts.cancelLabel.trim() : 'No';
+    const confirmLabel =
+      typeof opts?.confirmLabel === 'string' && opts.confirmLabel.trim()
+        ? opts.confirmLabel.trim()
+        : 'Yes';
+
+    this._fullscreenPromptOnConfirm = typeof opts?.onConfirm === 'function' ? opts.onConfirm : null;
+    this._fullscreenPromptOnCancel = typeof opts?.onCancel === 'function' ? opts.onCancel : null;
+
+    this._removeFullscreenPromptKeydown();
+    this._fullscreenPromptKeydownHandler = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        this._dismissFullscreenPrompt('cancel');
       }
-      snapModalHidden(modal, this.getMessageAlertPanel());
+    };
+    document.addEventListener('keydown', this._fullscreenPromptKeydownHandler, true);
+
+    msg.innerHTML = messageHtml;
+    msg.removeAttribute('aria-hidden');
+    noBtn.textContent = cancelLabel;
+    yesBtn.textContent = confirmLabel;
+
+    const plain = msg.textContent?.trim() ?? '';
+    if (plain) layer.setAttribute('aria-label', plain);
+
+    this.beginShelfOverlaySuppression();
+    this._openFullscreenPromptAnimate();
+
+    requestAnimationFrame(() => {
+      noBtn.focus();
+    });
+  }
+
+  _removeFullscreenPromptKeydown() {
+    if (this._fullscreenPromptKeydownHandler) {
+      document.removeEventListener('keydown', this._fullscreenPromptKeydownHandler, true);
+      this._fullscreenPromptKeydownHandler = null;
+    }
+  }
+
+  _openFullscreenPromptAnimate() {
+    const layer = this.dom.fullscreenPrompt;
+    const msg = this.dom.fullscreenPromptMessage;
+    const noBtn = this.dom.fullscreenPromptNo;
+    const yesBtn = this.dom.fullscreenPromptYes;
+    if (!layer || !msg || !noBtn || !yesBtn) return;
+
+    gsap.killTweensOf([layer, msg, noBtn, yesBtn]);
+
+    layer.removeAttribute('hidden');
+    layer.style.display = 'flex';
+    layer.setAttribute('aria-hidden', 'false');
+
+    if (prefersReducedMotion()) {
+      gsap.killTweensOf(layer);
+      gsap.set(layer, { opacity: 1 });
+      gsap.set([msg, noBtn, yesBtn], { opacity: 1, y: 0, clearProps: 'transform' });
+      [msg, noBtn, yesBtn].forEach((el) => el.classList.remove(ORBY_DROP_FADE_UP_CLASS));
+      return;
+    }
+
+    gsap.set(layer, { opacity: 0 });
+    gsap.to(layer, { opacity: 1, duration: ORBY_FULLSCREEN_SCRIM_IN, ease: 'power2.out' });
+
+    [msg, noBtn, yesBtn].forEach((el) => {
+      el.classList.remove(ORBY_DROP_FADE_UP_CLASS);
+    });
+    void msg.offsetWidth;
+    [msg, noBtn, yesBtn].forEach((el) => el.classList.add(ORBY_DROP_FADE_UP_CLASS));
+  }
+
+  /**
+   * @param {'confirm' | 'cancel'} result
+   */
+  _dismissFullscreenPrompt(result) {
+    const layer = this.dom.fullscreenPrompt;
+    const msg = this.dom.fullscreenPromptMessage;
+    const noBtn = this.dom.fullscreenPromptNo;
+    const yesBtn = this.dom.fullscreenPromptYes;
+    if (!layer?.isConnected) return;
+
+    gsap.killTweensOf([layer, msg, noBtn, yesBtn].filter(Boolean));
+
+    [msg, noBtn, yesBtn].forEach((el) => el?.classList.remove(ORBY_DROP_FADE_UP_CLASS));
+
+    const fast = prefersReducedMotion();
+    const done = () => {
+      this._removeFullscreenPromptKeydown();
+      if (result === 'confirm') {
+        this._fullscreenPromptOnConfirm?.();
+      } else {
+        this._fullscreenPromptOnCancel?.();
+      }
+      this._fullscreenPromptOnConfirm = null;
+      this._fullscreenPromptOnCancel = null;
+
+      layer.removeAttribute('aria-label');
+      layer.setAttribute('hidden', '');
+      layer.style.display = '';
+      layer.setAttribute('aria-hidden', 'true');
+      msg.innerHTML = '';
+      msg.removeAttribute('aria-hidden');
+      gsap.set(msg, { clearProps: 'all' });
+      gsap.set(layer, { clearProps: 'opacity' });
+      if (noBtn) gsap.set(noBtn, { clearProps: 'opacity,transform' });
+      if (yesBtn) gsap.set(yesBtn, { clearProps: 'opacity,transform' });
+      this.endShelfOverlaySuppression();
     };
 
-    this.dom.messageAlertOk?.addEventListener('click', () => this._closeMessageAlert?.());
-    this.dom.messageAlertClose?.addEventListener('click', () => this._closeMessageAlert?.());
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) this._closeMessageAlert?.();
+    gsap.to(layer, {
+      opacity: 0,
+      duration: fast ? 0.14 : 0.34,
+      ease: fast ? 'power1.in' : 'power2.inOut',
+      onComplete: done,
+    });
+  }
+
+  bindHomeOrbyMark() {
+    this.dom.shelf?.addEventListener('click', (event) => {
+      const trigger = event.target.closest('.info-orby-mark');
+      if (!trigger) return;
+      event.preventDefault();
+      this.showFullscreenPrompt({
+        messageHtml:
+          '<span class="brand-highlight">Return home?</span> Leave the studio and return to the start screen.',
+        cancelLabel: 'Stay',
+        confirmLabel: 'Go Home',
+        onConfirm: () => this.setDropzoneVisible(true),
+      });
     });
   }
 
   /**
    * Modal with OK — for long errors/warnings that need time to read. Short messages use showToast().
-   * @param {{ okLabel?: string }} [options] — e.g. `{ okLabel: 'CONTINUE' }` for full-width primary CTA styling.
+   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, onConfirm?: () => void, onCancel?: () => void }} [options]
+   *        Use `confirm: true` with No/Yes and callbacks for confirmations (e.g. `{ cancelLabel: 'No', okLabel: 'Yes', onConfirm }`).
    */
   showMessageAlert(message, title = 'Message', options = {}) {
     if (!this.dom.messageAlertModal || !this.dom.messageAlertBody) return;
 
     const text = typeof message === 'string' ? message : String(message ?? '');
-    const okLabel =
-      typeof options?.okLabel === 'string' && options.okLabel.trim() ? options.okLabel.trim() : 'OK';
+    const confirm = !!options?.confirm;
+    this._messageAlertPendingConfirm = confirm;
+    this._messageAlertOnConfirm = typeof options?.onConfirm === 'function' ? options.onConfirm : null;
+    this._messageAlertOnCancel = typeof options?.onCancel === 'function' ? options.onCancel : null;
+
+    const okLabel = confirm
+      ? typeof options?.okLabel === 'string' && options.okLabel.trim()
+        ? options.okLabel.trim()
+        : 'Yes'
+      : typeof options?.okLabel === 'string' && options.okLabel.trim()
+        ? options.okLabel.trim()
+        : 'OK';
+
+    const cancelLabel =
+      typeof options?.cancelLabel === 'string' && options.cancelLabel.trim()
+        ? options.cancelLabel.trim()
+        : 'No';
 
     if (this.dom.messageAlertTitle) {
       this.dom.messageAlertTitle.textContent = title;
@@ -470,7 +738,13 @@ export class UIManager {
     if (this.dom.messageAlertOk) {
       this.dom.messageAlertOk.textContent = okLabel;
     }
-    this.dom.messageAlertActions?.classList.toggle('message-alert-actions--wide', okLabel !== 'OK');
+    if (this.dom.messageAlertCancel) {
+      this.dom.messageAlertCancel.hidden = !confirm;
+      this.dom.messageAlertCancel.textContent = cancelLabel;
+    }
+
+    const wide = !confirm && okLabel !== 'OK';
+    this.dom.messageAlertActions?.classList.toggle('message-alert-actions--wide', wide);
 
     if (this._messageAlertKeydownHandler) {
       document.removeEventListener('keydown', this._messageAlertKeydownHandler, true);
@@ -480,13 +754,17 @@ export class UIManager {
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        this._closeMessageAlert?.();
+        this._messageAlertBackdropClose();
       }
     };
     document.addEventListener('keydown', this._messageAlertKeydownHandler, true);
 
     void animateModalOpen(this.dom.messageAlertModal, this.getMessageAlertPanel()).then(() => {
-      this.dom.messageAlertOk?.focus();
+      if (confirm) {
+        this.dom.messageAlertCancel?.focus();
+      } else {
+        this.dom.messageAlertOk?.focus();
+      }
     });
   }
 
@@ -855,12 +1133,15 @@ export class UIManager {
   }
 
   revealShelf() {
-    if (this.shelfRevealed || !this.dom.shelf) return;
+    if (!this.dom.shelf) return;
     this.shelfRevealed = true;
+    const apply = () => {
+      if (!this.dom.shelf || this.uiHidden) return;
+      this.dom.shelf.classList.remove('is-shelf-hidden');
+    };
+    // Dropzone hide uses rAF — double rAF lands after that layout so the shelf reveal always applies.
     requestAnimationFrame(() => {
-      if (!this.uiHidden) {
-        this.dom.shelf.classList.remove('is-shelf-hidden');
-      }
+      requestAnimationFrame(apply);
     });
   }
 
@@ -1372,7 +1653,7 @@ export class UIManager {
       this.updateValueLabel('hdriRotation', rotation, 'angle');
     }
     this.inputs.hdriBackground.checked = state.hdriBackground;
-    // Background color input is always enabled - color is visible when HDRI background is off
+    // Background color input is always enabled - color shows when render backdrop is off
     this.inputs.backgroundColor.value = state.background;
     
     // Lens Flare

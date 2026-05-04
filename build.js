@@ -23,7 +23,7 @@ function injectVersionIntoHtml(html) {
   const banner = formatVersionBanner(line);
   return html
     .replace(
-      /<div class="info-version-tag">[^<]+<\/div>/,
+      /<div class="info-version-tag">[^<]+<\/div>/g,
       `<div class="info-version-tag">${banner}</div>`,
     )
     .replace(

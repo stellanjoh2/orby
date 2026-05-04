@@ -36,6 +36,7 @@ export class BugReportController {
    * @param {import('./UIManager.js').UIManager} ui
    */
   constructor(ui) {
+    this.ui = ui;
     /** @type {boolean} */
     this._sending = false;
     /** @type {string} */
@@ -144,12 +145,19 @@ export class BugReportController {
     const v = this.severityHidden?.value?.trim() ?? '';
     if (!v || !this.severityListbox) return;
     const opt = this.severityListbox.querySelector(`[role="option"][data-value="${CSS.escape(v)}"]`);
-    const label = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? '';
+    const labelEl = opt?.querySelector('.bug-report-severity-label');
+    const labelPlain = opt?.textContent?.replace(/\s+/g, ' ')?.trim() ?? '';
     if (this.severityTrigger) {
       const dot = this.severityTrigger.querySelector('.bug-report-severity-dot');
       if (dot) dot.setAttribute('data-severity', v);
       const textEl = this.severityTrigger.querySelector('.bug-report-severity-trigger-text');
-      if (textEl && label) textEl.textContent = label;
+      if (textEl) {
+        if (labelEl) {
+          textEl.innerHTML = labelEl.innerHTML;
+        } else if (labelPlain) {
+          textEl.textContent = labelPlain;
+        }
+      }
     }
     this.severityListbox.querySelectorAll('[role="option"]').forEach((el) => {
       const sel = el.getAttribute('data-value') === v;
@@ -328,6 +336,7 @@ export class BugReportController {
   open() {
     if (!this.modal) return;
     this._teardownBugReportThankYouQuiet();
+    this.ui?.beginShelfOverlaySuppression?.();
     this._sending = false;
     this._bugBackdropDown = false;
     this.setStatus('');
@@ -356,6 +365,7 @@ export class BugReportController {
       panel,
       () => {
         this._resetBugModalAfterClose();
+        this.ui?.endShelfOverlaySuppression?.();
         if (typeof onAfterCleanup === 'function') queueMicrotask(() => onAfterCleanup());
       },
       preserveBackdrop,
@@ -402,6 +412,7 @@ export class BugReportController {
     gsap.set(this.thankYouMessageEl, { clearProps: 'all' });
     gsap.set(this.thankYouLayer, { clearProps: 'opacity' });
     if (this.thankYouOkBtn) gsap.set(this.thankYouOkBtn, { clearProps: 'opacity,transform' });
+    this.ui.endShelfOverlaySuppression?.();
   }
 
   /**
@@ -432,6 +443,8 @@ export class BugReportController {
     layer.removeAttribute('hidden');
     layer.style.display = 'flex';
     layer.setAttribute('aria-hidden', 'false');
+
+    this.ui.beginShelfOverlaySuppression?.();
 
     if (prefersReducedMotion()) {
       gsap.killTweensOf(layer);
@@ -484,6 +497,7 @@ export class BugReportController {
       gsap.set(layer, { clearProps: 'opacity' });
       if (ok) gsap.set(ok, { clearProps: 'opacity,transform' });
       this._unmaskBugModalBehindThankYou();
+      this.ui.endShelfOverlaySuppression?.();
     };
 
     gsap.to(layer, {

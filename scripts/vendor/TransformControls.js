@@ -857,23 +857,25 @@ class TransformControlsGizmo extends Object3D {
 		const matGray = gizmoMaterial.clone();
 		matGray.color.setHex( 0x787878 );
 
-		// reusable geometry
+		// reusable geometry (tube/stem radii 50% of stock three.js gizmo for a lighter look)
 
-		const arrowGeometry = new CylinderGeometry( 0, 0.04, 0.1, 12 );
+		const GIZMO_TUBE = 0.00375;
+
+		const arrowGeometry = new CylinderGeometry( 0, 0.02, 0.1, 12 );
 		arrowGeometry.translate( 0, 0.05, 0 );
 
-		const scaleHandleGeometry = new BoxGeometry( 0.08, 0.08, 0.08 );
-		scaleHandleGeometry.translate( 0, 0.04, 0 );
+		const scaleHandleGeometry = new BoxGeometry( 0.04, 0.04, 0.04 );
+		scaleHandleGeometry.translate( 0, 0.02, 0 );
 
 		const lineGeometry = new BufferGeometry();
 		lineGeometry.setAttribute( 'position', new Float32BufferAttribute( [ 0, 0, 0,	1, 0, 0 ], 3 ) );
 
-		const lineGeometry2 = new CylinderGeometry( 0.0075, 0.0075, 0.5, 3 );
+		const lineGeometry2 = new CylinderGeometry( GIZMO_TUBE, GIZMO_TUBE, 0.5, 3 );
 		lineGeometry2.translate( 0, 0.25, 0 );
 
 		function CircleGeometry( radius, arc ) {
 
-			const geometry = new TorusGeometry( radius, 0.0075, 3, 64, arc * Math.PI * 2 );
+			const geometry = new TorusGeometry( radius, GIZMO_TUBE, 3, 64, arc * Math.PI * 2 );
 			geometry.rotateY( Math.PI / 2 );
 			geometry.rotateX( Math.PI / 2 );
 			return geometry;
@@ -911,16 +913,16 @@ class TransformControlsGizmo extends Object3D {
 				[ new Mesh( lineGeometry2, matBlue ), null, [ Math.PI / 2, 0, 0 ]]
 			],
 			XYZ: [
-				[ new Mesh( new OctahedronGeometry( 0.1, 0 ), matWhiteTransparent.clone() ), [ 0, 0, 0 ]]
+				[ new Mesh( new OctahedronGeometry( 0.05, 0 ), matWhiteTransparent.clone() ), [ 0, 0, 0 ]]
 			],
 			XY: [
-				[ new Mesh( new BoxGeometry( 0.15, 0.15, 0.01 ), matBlueTransparent.clone() ), [ 0.15, 0.15, 0 ]]
+				[ new Mesh( new BoxGeometry( 0.075, 0.075, 0.005 ), matBlueTransparent.clone() ), [ 0.15, 0.15, 0 ]]
 			],
 			YZ: [
-				[ new Mesh( new BoxGeometry( 0.15, 0.15, 0.01 ), matRedTransparent.clone() ), [ 0, 0.15, 0.15 ], [ 0, Math.PI / 2, 0 ]]
+				[ new Mesh( new BoxGeometry( 0.075, 0.075, 0.005 ), matRedTransparent.clone() ), [ 0, 0.15, 0.15 ], [ 0, Math.PI / 2, 0 ]]
 			],
 			XZ: [
-				[ new Mesh( new BoxGeometry( 0.15, 0.15, 0.01 ), matGreenTransparent.clone() ), [ 0.15, 0, 0.15 ], [ - Math.PI / 2, 0, 0 ]]
+				[ new Mesh( new BoxGeometry( 0.075, 0.075, 0.005 ), matGreenTransparent.clone() ), [ 0.15, 0, 0.15 ], [ - Math.PI / 2, 0, 0 ]]
 			]
 		};
 
@@ -953,10 +955,10 @@ class TransformControlsGizmo extends Object3D {
 
 		const helperTranslate = {
 			START: [
-				[ new Mesh( new OctahedronGeometry( 0.01, 2 ), matHelper ), null, null, null, 'helper' ]
+				[ new Mesh( new OctahedronGeometry( 0.005, 2 ), matHelper ), null, null, null, 'helper' ]
 			],
 			END: [
-				[ new Mesh( new OctahedronGeometry( 0.01, 2 ), matHelper ), null, null, null, 'helper' ]
+				[ new Mesh( new OctahedronGeometry( 0.005, 2 ), matHelper ), null, null, null, 'helper' ]
 			],
 			DELTA: [
 				[ new Line( TranslateHelperGeometry(), matHelper ), null, null, null, 'helper' ]
@@ -1031,16 +1033,16 @@ class TransformControlsGizmo extends Object3D {
 				[ new Mesh( scaleHandleGeometry, matBlue ), [ 0, 0, - 0.5 ], [ - Math.PI / 2, 0, 0 ]]
 			],
 			XY: [
-				[ new Mesh( new BoxGeometry( 0.15, 0.15, 0.01 ), matBlueTransparent ), [ 0.15, 0.15, 0 ]]
+				[ new Mesh( new BoxGeometry( 0.075, 0.075, 0.005 ), matBlueTransparent ), [ 0.15, 0.15, 0 ]]
 			],
 			YZ: [
-				[ new Mesh( new BoxGeometry( 0.15, 0.15, 0.01 ), matRedTransparent ), [ 0, 0.15, 0.15 ], [ 0, Math.PI / 2, 0 ]]
+				[ new Mesh( new BoxGeometry( 0.075, 0.075, 0.005 ), matRedTransparent ), [ 0, 0.15, 0.15 ], [ 0, Math.PI / 2, 0 ]]
 			],
 			XZ: [
-				[ new Mesh( new BoxGeometry( 0.15, 0.15, 0.01 ), matGreenTransparent ), [ 0.15, 0, 0.15 ], [ - Math.PI / 2, 0, 0 ]]
+				[ new Mesh( new BoxGeometry( 0.075, 0.075, 0.005 ), matGreenTransparent ), [ 0.15, 0, 0.15 ], [ - Math.PI / 2, 0, 0 ]]
 			],
 			XYZ: [
-				[ new Mesh( new BoxGeometry( 0.1, 0.1, 0.1 ), matWhiteTransparent.clone() ) ],
+				[ new Mesh( new BoxGeometry( 0.05, 0.05, 0.05 ), matWhiteTransparent.clone() ) ],
 			]
 		};
 

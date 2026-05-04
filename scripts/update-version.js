@@ -33,7 +33,12 @@ try {
   const now = new Date();
   const utcDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
   const utcTime = now.toISOString().split('T')[1].split('.')[0] + ' UTC'; // HH:MM:SS UTC
-  
+  const changelogDateLabel = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(now);
+
   // Format: v0.5.1 · 2025-01-15 14:30:00 UTC
   const versionString = `v${newVersion} · ${utcDate} ${utcTime}`;
   
@@ -121,9 +126,9 @@ try {
   // Read index.html
   const htmlPath = './index.html';
   let html = readFileSync(htmlPath, 'utf-8');
-  
-  // Replace version tags (both info page and dropzone)
-  const infoVersionRegex = /<div class="info-version-tag">[^<]+<\/div>/;
+
+  // Replace version tags (shelf footers on every tab + dropzone if present)
+  const infoVersionPattern = /<div class="info-version-tag">[^<]+<\/div>/g;
   const dropzoneVersionRegex = /<div class="dropzone-version-tag">[^<]+<\/div>/;
   const newInfoVersionTag = `<div class="info-version-tag">${versionString}</div>`;
   const newDropzoneVersionTag = `<div class="dropzone-version-tag">${versionString}</div>`;
@@ -131,8 +136,8 @@ try {
   let foundInfo = false;
   let foundDropzone = false;
   
-  if (infoVersionRegex.test(html)) {
-    html = html.replace(infoVersionRegex, newInfoVersionTag);
+  if (/<div class="info-version-tag">/.test(html)) {
+    html = html.replace(infoVersionPattern, newInfoVersionTag);
     foundInfo = true;
   }
   
@@ -154,10 +159,19 @@ try {
     console.warn('⚠ Could not find dropzone version tag');
   }
   
+  // Latest Changes heading — date suffix like "Latest Changes (May 30):"
+  const latestChangesTitleRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>)Latest Changes(?: \([^)]*\))?:?(<\/div>)/;
+  if (latestChangesTitleRegex.test(html)) {
+    html = html.replace(
+      latestChangesTitleRegex,
+      `$1Latest Changes (${changelogDateLabel}):$2`,
+    );
+  }
+
   // Update changelog in its own "Latest Changes" section
   // Find and replace the content inside the existing "Latest Changes" panel-block
-  const changelogRegex = /(<div class="panel-block">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[^<]*(<\/div>\s*<\/div>\s*<\/div>)/;
-  
+  const changelogRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes(?: \([^)]*\))?:?<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[^<]*(<\/div>\s*<\/div>\s*<\/div>)/;
+
   if (changelogRegex.test(html)) {
     html = html.replace(changelogRegex, `$1${changelogText}$2`);
   } else {
@@ -166,8 +180,8 @@ try {
     if (creditsEndRegex.test(html)) {
       html = html.replace(creditsEndRegex, `$1
 
-              <div class="panel-block">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes</div>
+              <div class="panel-block" id="info-changelog">
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (${changelogDateLabel}):</div>
                 <div class="about-content">
                   <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">${changelogText}</div>
                 </div>

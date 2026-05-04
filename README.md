@@ -128,7 +128,7 @@ Perfect for models exported from:
 | Toggle grid | `G` |
 | Toggle 3-point lighting | `L` |
 | Toggle podium | `P` |
-| Toggle HDRI background | `B` |
+| Toggle render backdrop | `B` |
 | Toggle auto-rotate | `A` |
 | Cycle HDRI presets | `[` / `]` |
 
@@ -345,8 +345,8 @@ Ground grid for alignment and perspective:
 - **Snap to Bottom** - Automatically position at model bottom
 
 #### Background
-HDRI background controls:
-- **Toggle** - Show/hide HDRI background
+Render backdrop (HDRI):
+- **Render Backdrop** - When on (default), the environment image is drawn behind the scene. When off, only solid Background Color shows; HDRI still lights the scene (`B` toggles).
 - **Color** - Background color override
 
 ### Scene Settings
