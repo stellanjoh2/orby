@@ -6,11 +6,10 @@ import gsap from 'gsap';
 import { animateModalClose, animateModalOpen, prefersReducedMotion } from './modalReveal.js';
 
 /** Minimum usable detail — keep in sync with api/bug-report.js */
-const MIN_BUG_MESSAGE_CHARS = 50;
-const MIN_BUG_MESSAGE_WORDS = 10;
+const MIN_BUG_MESSAGE_WORDS = 5;
 
 function bugReportMessagePassesDetailBar(trimmed) {
-  if (trimmed.length < MIN_BUG_MESSAGE_CHARS) return false;
+  if (!trimmed) return false;
   const words = trimmed.split(/\s+/).filter(Boolean).length;
   return words >= MIN_BUG_MESSAGE_WORDS;
 }
@@ -65,6 +64,9 @@ export class BugReportController {
     this.statusTextEl = this.modal.querySelector('.bug-report-status-text');
     this.messageStage = this.form.querySelector('.bug-report-message-stage');
     this.messageOverlay = this.form.querySelector('.bug-report-message-sending-overlay');
+    this.wordMeter = this.form.querySelector('#bugReportWordMeter');
+    this.wordMeterFill = this.form.querySelector('#bugReportWordMeterFill');
+    this.submitSendWrap = this.form.querySelector('#bugReportSubmitWrap');
     this.turnstileHost = this.form.querySelector('#bug-report-turnstile');
     this.thankYouLayer = document.querySelector('#bugReportThankYouLayer');
     this.thankYouMessageEl = document.querySelector('#bugReportThankYouMessage');
@@ -110,6 +112,7 @@ export class BugReportController {
     });
 
     this.setStatus('');
+    this.wordMeter?.setAttribute('aria-valuemax', String(MIN_BUG_MESSAGE_WORDS));
     this.syncSendButton();
   }
 
@@ -291,12 +294,39 @@ export class BugReportController {
     }
   }
 
+  _syncBugReportWordMeter() {
+    const track = this.wordMeter;
+    const fill = this.wordMeterFill;
+    if (!track || !fill || !this.form) return;
+    const raw = this.form.querySelector('#bugReportMessage')?.value ?? '';
+    const t = raw.trim();
+    const words = t ? t.split(/\s+/).filter(Boolean).length : 0;
+    const denom = Math.max(MIN_BUG_MESSAGE_WORDS, 1);
+    const p = Math.min(words / denom, 1);
+    fill.style.width = `${p * 100}%`;
+    track.setAttribute('aria-valuenow', String(Math.min(words, MIN_BUG_MESSAGE_WORDS)));
+  }
+
   syncSendButton() {
-    if (!this.submitBtn || !this.form || this._sending) return;
+    this._syncBugReportWordMeter();
+    if (!this.submitBtn || !this.form) return;
+    if (this._sending) {
+      this.submitBtn.disabled = true;
+      this.submitSendWrap?.removeAttribute('title');
+      return;
+    }
     const message = this.form.querySelector('#bugReportMessage')?.value?.trim() ?? '';
     const severity = this.form.querySelector('input[name="severity"]')?.value?.trim() ?? '';
-    const valid = bugReportMessagePassesDetailBar(message) && Boolean(severity);
+    const detailOk = bugReportMessagePassesDetailBar(message);
+    const valid = detailOk && Boolean(severity);
     this.submitBtn.disabled = !valid;
+    if (this.submitSendWrap) {
+      if (this.submitBtn.disabled && !detailOk) {
+        this.submitSendWrap.title = 'Please describe the issue with more words LOL';
+      } else {
+        this.submitSendWrap.removeAttribute('title');
+      }
+    }
   }
 
   getApiUrl() {
@@ -560,7 +590,7 @@ export class BugReportController {
     }
     if (!bugReportMessagePassesDetailBar(message)) {
       this.setStatus(
-        `Add a bit more detail — at least ${MIN_BUG_MESSAGE_WORDS} words and ${MIN_BUG_MESSAGE_CHARS} characters. Steps to reproduce and browser/OS really help.`,
+        `Add a bit more detail — at least ${MIN_BUG_MESSAGE_WORDS} words. Steps to reproduce and browser/OS really help.`,
         true,
       );
       return;
@@ -580,7 +610,7 @@ export class BugReportController {
     }
 
     this._sending = true;
-    this.submitBtn.disabled = true;
+    this.syncSendButton();
     this.setStatus('', false, { sending: true });
 
     const apiUrl = this.getApiUrl();

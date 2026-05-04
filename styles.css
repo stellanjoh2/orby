@@ -759,6 +759,11 @@ body.dropzone-visible #webgl {
   gap: 0.75rem;
 }
 
+/* Pull actions block one step closer to the word meter (one flex-gap less) */
+.bug-report-content .bug-report-field:has(#bugReportMessage) {
+  margin-bottom: -0.75rem;
+}
+
 .bug-report-content textarea {
   min-height: 12.5rem; /* ~20% taller than prior ~168px */
   box-shadow: none;
@@ -818,12 +823,49 @@ body.dropzone-visible #webgl {
   background-size: 12px 12px;
 }
 
+.bug-report-message-block {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .bug-report-message-stage {
   position: relative;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: none;
   filter: none;
+}
+
+.bug-report-word-meter {
+  width: 100%;
+  height: 4px;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.bug-report-word-meter-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  /* Blocker red → Orby orange → brand primary (lime) as the bar grows */
+  background: linear-gradient(
+    90deg,
+    var(--warning) 0%,
+    var(--brand-secondary) 50%,
+    var(--brand-primary) 100%
+  );
+  transition: width 0.22s ease;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bug-report-word-meter-fill {
+    transition: none;
+  }
 }
 
 .bug-report-field textarea,
@@ -1092,6 +1134,19 @@ body.dropzone-visible #webgl {
   gap: 0.75rem;
   margin-top: 0;
   width: 100%;
+}
+
+/* Wrapper so native tooltip works on disabled Send (hover target isn’t the disabled button) */
+.bug-report-submit-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.bug-report-submit-wrap .bug-report-modal-btn {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
 }
 
 .bug-report-modal-btn {
@@ -1786,7 +1841,7 @@ html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
   --shelf-rhythm: 0.75rem;
   --shelf-g: calc(var(--shelf-rhythm) / 2);
   /* Match show ↔ hide: opacity/transform animate; visibility must not flip until the hide finishes */
-  --shelf-reveal-dur: 0.6s;
+  --shelf-reveal-dur: 0.45s;
   --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
   width: clamp(320px, 23vw, 380px);
   background: var(--shelf-bg);

@@ -3247,21 +3247,34 @@
           </div>
           <div class="bug-report-field">
             <label for="bugReportMessage" id="bugReportMessageLabel">Details</label>
-            <div class="bug-report-message-stage">
-              <textarea
-                id="bugReportMessage"
-                class="bug-report-message-textarea"
-                name="message"
-                rows="6"
-                maxlength="8000"
-                required
-                placeholder="About 10+ words: steps to reproduce, browser/OS, what you expected…"
-                aria-labelledby="bugReportMessageLabel"
-              ></textarea>
-              <div class="bug-report-message-sending-overlay" hidden aria-hidden="true">
-                <div class="bug-report-message-sending-bar-track">
-                  <div class="bug-report-message-sending-bar-fill"></div>
+            <div class="bug-report-message-block">
+              <div class="bug-report-message-stage">
+                <textarea
+                  id="bugReportMessage"
+                  class="bug-report-message-textarea"
+                  name="message"
+                  rows="6"
+                  maxlength="8000"
+                  required
+                  placeholder="About 5+ words: steps to reproduce, browser/OS, what you expected…"
+                  aria-labelledby="bugReportMessageLabel"
+                ></textarea>
+                <div class="bug-report-message-sending-overlay" hidden aria-hidden="true">
+                  <div class="bug-report-message-sending-bar-track">
+                    <div class="bug-report-message-sending-bar-fill"></div>
+                  </div>
                 </div>
+              </div>
+              <div
+                class="bug-report-word-meter"
+                id="bugReportWordMeter"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="5"
+                aria-valuenow="0"
+                aria-label="Words of detail"
+              >
+                <div class="bug-report-word-meter-fill" id="bugReportWordMeterFill"></div>
               </div>
             </div>
           </div>
@@ -3279,7 +3292,9 @@
           </p>
           <div class="load-settings-actions bug-report-actions">
             <button type="button" id="cancelBugReport" class="ghost-btn bug-report-modal-btn">Cancel</button>
-            <button type="submit" id="submitBugReport" class="accent-action-btn bug-report-modal-btn">Send</button>
+            <span class="bug-report-submit-wrap" id="bugReportSubmitWrap">
+              <button type="submit" id="submitBugReport" class="accent-action-btn bug-report-modal-btn">Send</button>
+            </span>
           </div>
         </form>
       </div>

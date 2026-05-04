@@ -58,14 +58,13 @@ const SEVERITY_LABELS = {
   cosmetic: 'Low',
 };
 
-/** Matches client BugReportController (`MIN_BUG_MESSAGE_*` + word split) */
-const MIN_BUG_MESSAGE_CHARS = 50;
-const MIN_BUG_MESSAGE_WORDS = 10;
+/** Matches client BugReportController (`MIN_BUG_MESSAGE_WORDS` + word split) */
+const MIN_BUG_MESSAGE_WORDS = 5;
 
 function isValidBugReportMessageBody(message) {
   if (typeof message !== 'string') return false;
   const t = message.trim();
-  if (t.length < MIN_BUG_MESSAGE_CHARS) return false;
+  if (!t) return false;
   const words = t.split(/\s+/).filter(Boolean).length;
   return words >= MIN_BUG_MESSAGE_WORDS;
 }
