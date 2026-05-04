@@ -58,7 +58,7 @@ function createReferenceSphereMeshes(group, totalW, totalH) {
   /** Diameter ≈ ½ card height → radius = ¼ totalH */
   const ballR = totalH * 0.25;
   /** Air gap between card top and sphere bottoms (scales with chart) */
-  const liftY = totalH * 0.048;
+  const liftY = totalH * 0.056;
   const cy = topEdge + ballR + liftY;
   /** Push chrome/white outward past the side edges — widens center-to-center spacing */
   const xOut = totalW * 0.06;
@@ -119,7 +119,8 @@ export function createColorCheckerMeshGroup() {
   const cols = 6;
   const patch = 1;
   const gutter = 0.045;
-  const depth = 0.028;
+  /** Slightly thicker than the original 0.028 so the card reads as a solid slab */
+  const depth = 0.04;
   const frameW = 0.11;
   const cornerMark = 0.07;
   const cornerTh = 0.006;
@@ -140,22 +141,22 @@ export function createColorCheckerMeshGroup() {
     color: new THREE.Color().setStyle('#e8e8e8'),
   });
 
-  // Back plate (full card)
-  const backGeo = new THREE.BoxGeometry(totalW + 0.02, totalH + 0.02, depth * 0.35);
+  // Back plate (full card) — plain box, a bit deeper than early builds for extra physical thickness
+  const backGeo = new THREE.BoxGeometry(totalW + 0.02, totalH + 0.02, depth * 0.42);
   const backMesh = new THREE.Mesh(backGeo, backMat);
-  backMesh.position.z = -depth * 0.55;
+  backMesh.position.z = -depth * 0.56;
   group.add(backMesh);
 
   // Frame rails (outer ring)
   const topBotH = frameW;
-  const topBotGeo = new THREE.BoxGeometry(totalW, topBotH, depth * 0.5);
+  const topBotGeo = new THREE.BoxGeometry(totalW, topBotH, depth * 0.52);
   const top = new THREE.Mesh(topBotGeo, frameMat);
   top.position.set(0, innerH / 2 + frameW / 2, -depth * 0.12);
   const bot = top.clone();
   bot.position.set(0, -innerH / 2 - frameW / 2, -depth * 0.12);
   group.add(top, bot);
 
-  const sideGeo = new THREE.BoxGeometry(frameW, innerH, depth * 0.5);
+  const sideGeo = new THREE.BoxGeometry(frameW, innerH, depth * 0.52);
   const left = new THREE.Mesh(sideGeo, frameMat);
   left.position.set(-innerW / 2 - frameW / 2, 0, -depth * 0.12);
   const right = left.clone();
@@ -164,7 +165,7 @@ export function createColorCheckerMeshGroup() {
 
   // Inner gutter dividers (thin — cosmetic)
   const divThin = 0.018;
-  const divZ = depth * 0.35;
+  const divZ = depth * 0.38;
   const divMat = frameMat;
   for (let c = 1; c < cols; c++) {
     const x = -innerW / 2 + c * (patch + gutter) - gutter / 2;
