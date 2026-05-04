@@ -847,11 +847,12 @@ body.dropzone-visible #webgl {
 }
 
 .bug-report-word-meter-fill {
+  position: relative;
   display: block;
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  /* Blocker red → Orby orange → brand primary (lime) as the bar grows */
+  /* Blocker red → Orby orange → lime hint while filling; solid lime fades on at 5 words */
   background: linear-gradient(
     90deg,
     var(--warning) 0%,
@@ -862,8 +863,27 @@ body.dropzone-visible #webgl {
   box-shadow: none;
 }
 
+.bug-report-word-meter-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--brand-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.bug-report-word-meter-fill.bug-report-word-meter-fill--complete::after {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bug-report-word-meter-fill {
+    transition: none;
+  }
+
+  .bug-report-word-meter-fill::after {
     transition: none;
   }
 }

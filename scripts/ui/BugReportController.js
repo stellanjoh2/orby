@@ -304,6 +304,8 @@ export class BugReportController {
     const denom = Math.max(MIN_BUG_MESSAGE_WORDS, 1);
     const p = Math.min(words / denom, 1);
     fill.style.width = `${p * 100}%`;
+    const ready = words >= MIN_BUG_MESSAGE_WORDS;
+    fill.classList.toggle('bug-report-word-meter-fill--complete', ready);
     track.setAttribute('aria-valuenow', String(Math.min(words, MIN_BUG_MESSAGE_WORDS)));
   }
 
