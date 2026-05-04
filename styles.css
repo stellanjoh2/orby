@@ -1136,11 +1136,19 @@ body.dropzone-visible #webgl {
   width: 100%;
 }
 
-/* Wrapper so native tooltip works on disabled Send (hover target isn’t the disabled button) */
+/* Wrapper so native tooltip works on disabled Send (hover hits the span, not the dead button) */
 .bug-report-submit-wrap {
   flex: 1;
   min-width: 0;
   display: flex;
+}
+
+.bug-report-submit-wrap .bug-report-modal-btn:disabled {
+  pointer-events: none;
+}
+
+.bug-report-submit-wrap:has(.bug-report-modal-btn:disabled) {
+  cursor: not-allowed;
 }
 
 .bug-report-submit-wrap .bug-report-modal-btn {

@@ -322,7 +322,7 @@ export class BugReportController {
     this.submitBtn.disabled = !valid;
     if (this.submitSendWrap) {
       if (this.submitBtn.disabled && !detailOk) {
-        this.submitSendWrap.title = 'Please describe the issue with more words LOL';
+        this.submitSendWrap.title = 'Please write some more!';
       } else {
         this.submitSendWrap.removeAttribute('title');
       }
