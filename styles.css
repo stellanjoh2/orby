@@ -852,13 +852,8 @@ body.dropzone-visible #webgl {
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  /* Blocker red → Orby orange → lime hint while filling; solid lime fades on at 5 words */
-  background: linear-gradient(
-    90deg,
-    var(--warning) 0%,
-    var(--brand-secondary) 50%,
-    var(--brand-primary) 100%
-  );
+  /* Red → Moderate amber (same as severity dot); lime only when 5 words via ::after */
+  background: linear-gradient(90deg, var(--warning) 0%, #ca8a04 100%);
   transition: width 0.22s ease;
   box-shadow: none;
 }
