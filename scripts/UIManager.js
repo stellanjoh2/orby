@@ -342,6 +342,12 @@ export class UIManager {
       antiAliasing: q('#antiAliasing'),
       renderQuality: q('#renderQuality'),
       toneMapping: q('#toneMapping'),
+      colorCheckerEnabled: q('#colorCheckerEnabled'),
+      colorCheckerDistance: q('#colorCheckerDistance'),
+      colorCheckerRotate: q('#colorCheckerRotate'),
+      colorCheckerHeight: q('#colorCheckerHeight'),
+      colorCheckerScale: q('#colorCheckerScale'),
+      colorCheckerRawToggle: q('#colorCheckerRawToggle'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
       fbxMapFileInput: q('#fbxMapFileInput'),
       fbxMapInvertNormalY: q('#fbxMapInvertNormalY'),
@@ -1063,6 +1069,17 @@ export class UIManager {
           ],
           !payload.fisheye.enabled,
         );
+      }
+
+      if (payload.colorChecker !== undefined) {
+        const base = this.stateStore.getDefaults().colorChecker;
+        this.stateStore.set('colorChecker', {
+          ...base,
+          ...(payload.colorChecker && typeof payload.colorChecker === 'object'
+            ? payload.colorChecker
+            : {}),
+        });
+        this.eventBus.emit('scene:color-checker');
       }
 
       if (payload.renderQuality !== undefined) {
@@ -1952,6 +1969,8 @@ export class UIManager {
     
     // Aberration block - only muted if aberration.enabled is false
     this.setBlockMuted('aberration', !currentState.aberration?.enabled);
+
+    this.setBlockMuted('color-checker', !currentState.colorChecker?.enabled);
 
     this.setBlockMuted(
       'ambient-occlusion',

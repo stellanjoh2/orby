@@ -307,6 +307,13 @@ export class EventManager {
     
     // App events
     eventBus.on('app:reset', () => s.applyStateSnapshot(s.stateStore.getState()));
+
+    eventBus.on('scene:color-checker', () => {
+      s.applyColorCheckerFromState(s.stateStore.getState());
+    });
+    eventBus.on('scene:color-checker-reference-shading', () => {
+      s.applyColorCheckerReferenceShading();
+    });
   }
 
   /**

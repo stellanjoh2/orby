@@ -1286,6 +1286,15 @@ body.dropzone-visible #webgl {
   filter: brightness(0.95);
 }
 
+/* ColorChecker “Reference colors” — full-width toggle; On = filled accent like hover */
+.color-checker-raw-toggle.color-checker-raw-toggle--on {
+  opacity: 1;
+  background: var(--accent);
+  color: var(--brand-text);
+  border-color: var(--accent);
+  box-shadow: var(--ui-accent-outer-glow);
+}
+
 /* Accent action button icons - smaller size (12px) */
 .accent-action-btn i {
   font-size: 12px !important;

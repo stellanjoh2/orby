@@ -38,6 +38,7 @@ import { ImageExporter } from './render/ImageExporter.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
+import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
 import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
 
@@ -142,6 +143,15 @@ export class SceneManager {
 
     this.modelRoot = new THREE.Group();
     this.scene.add(this.modelRoot);
+    this.colorCheckerRoot = createColorCheckerMeshGroup();
+    this.colorCheckerRoot.visible = false;
+    this.colorCheckerRoot.name = 'ColorCheckerRoot';
+    this.scene.add(this.colorCheckerRoot);
+    /** When Reference colors is on, shading we restore when turning it off (Display mode before Unlit). */
+    this._colorCheckerRestoreShading = null;
+    /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
+    this._colorCheckerHorizRef = new THREE.Vector3();
+    this._colorCheckerTowardCam = new THREE.Vector3();
     this.scene.environmentIntensity = this.hdriStrength;
 
     // Initialize background controller (manages solid background color independently from HDRI)
@@ -821,6 +831,127 @@ export class SceneManager {
     this.lensFlareController?.applyStateSnapshot(state);
     await this.setHdriPreset(state.hdri);
     this.applyRenderQualitySettings();
+    this.applyColorCheckerFromState(state);
+    this._ensureColorCheckerReferenceShadingConsistency();
+  }
+
+  /**
+   * Match visibility to settings (pose is updated every frame when enabled).
+   */
+  applyColorCheckerFromState(state) {
+    const cc = state?.colorChecker ?? this.stateStore.getDefaults().colorChecker;
+    if (this.colorCheckerRoot) {
+      this.colorCheckerRoot.visible = !!cc?.enabled;
+      if (cc?.enabled) {
+        this._syncColorCheckerReferenceProbes(this.scene.environment, this.hdriStrength);
+      }
+    }
+  }
+
+  _updateColorCheckerPose() {
+    const ccRaw = this.stateStore.getState().colorChecker;
+    const defaults = this.stateStore.getDefaults().colorChecker;
+    const cc = { ...defaults, ...(ccRaw && typeof ccRaw === 'object' ? ccRaw : {}) };
+    if (cc.rotation != null && cc.rotate === undefined) {
+      cc.rotate = cc.rotation;
+    }
+
+    if (!this.colorCheckerRoot || !cc.enabled) {
+      if (this.colorCheckerRoot) this.colorCheckerRoot.visible = false;
+      return;
+    }
+    this.colorCheckerRoot.visible = true;
+
+    const anchor = this.controls.target;
+    const camPos = this.camera.position;
+
+    // Same yaw composition as LightsController.updateLightPosition: global + individual on XZ.
+    let horiz = this._colorCheckerHorizRef.set(camPos.x - anchor.x, 0, camPos.z - anchor.z);
+    if (horiz.lengthSq() < 1e-10) {
+      horiz.set(0, 0, 1);
+    } else {
+      horiz.normalize();
+    }
+
+    const globalRad = THREE.MathUtils.degToRad(this.stateStore.getState().lightsRotation ?? 0);
+    const individualRad = THREE.MathUtils.degToRad(cc.rotate ?? 0);
+    const yRad = globalRad + individualRad;
+    const cos = Math.cos(yRad);
+    const sin = Math.sin(yRad);
+    const rx = horiz.x * cos + horiz.z * sin;
+    const rz = -horiz.x * sin + horiz.z * cos;
+    const orbitDir = new THREE.Vector3(rx, 0, rz).normalize();
+
+    const d = Math.max(0.05, cc.distance ?? 0.6);
+    const h = cc.height ?? 0;
+
+    // Keep the chart at the mesh’s vertical level when we have bounds — orbit-target Y (pans) won’t yank it as much.
+    const bounds = this.cameraController?.getModelBounds();
+    const baseY =
+      bounds?.center && bounds?.box && !bounds.box.isEmpty() ? bounds.center.y : anchor.y;
+
+    this.colorCheckerRoot.position.set(
+      anchor.x + orbitDir.x * d,
+      baseY + h,
+      anchor.z + orbitDir.z * d,
+    );
+
+    // Upright “billboard”: only yaw toward the camera in XZ — no pitch tilt from mouse up/down, so it doesn’t appear to jump vertically.
+    const flat = this._colorCheckerTowardCam.subVectors(camPos, this.colorCheckerRoot.position);
+    flat.y = 0;
+    if (flat.lengthSq() < 1e-10) {
+      flat.set(0, 0, 1);
+    } else {
+      flat.normalize();
+    }
+    this.colorCheckerRoot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flat);
+
+    const sc = Math.max(0.01, Math.min(20, cc.scale ?? 1));
+    this.colorCheckerRoot.scale.setScalar(sc);
+  }
+
+  /**
+   * Reference colors is a shortcut to Display → Unlit (textures): same path as the mesh tab Unlit icon.
+   */
+  applyColorCheckerReferenceShading() {
+    const cc = this.stateStore.getState().colorChecker ?? {};
+    const defaults = this.stateStore.getDefaults().colorChecker;
+    const merged = { ...defaults, ...(typeof cc === 'object' ? cc : {}) };
+    const on = !!merged.rawColors;
+
+    if (on) {
+      const sh = this.stateStore.getState().shading;
+      this._colorCheckerRestoreShading = sh;
+      if (sh !== 'textures') {
+        this.stateStore.set('shading', 'textures');
+        this.setShading('textures');
+      }
+      this.ui?.syncUIFromState?.();
+      return;
+    }
+
+    if (this._colorCheckerRestoreShading != null) {
+      const back = this._colorCheckerRestoreShading;
+      this._colorCheckerRestoreShading = null;
+      this.stateStore.set('shading', back);
+      this.setShading(back);
+    }
+    this.ui?.syncUIFromState?.();
+  }
+
+  /**
+   * After loading scene JSON: Reference on implies Display → Unlit (textures).
+   * Uses direct material path so we don’t clear `rawColors` via `setShading`.
+   */
+  _ensureColorCheckerReferenceShadingConsistency() {
+    const st = this.stateStore.getState();
+    if (!st.colorChecker?.rawColors || st.shading === 'textures') return;
+    this._colorCheckerRestoreShading = st.shading;
+    this.stateStore.set('shading', 'textures');
+    this.materialController.setShading('textures');
+    this.unlitMode = this.materialController.getUnlitMode();
+    this.setReverseNormals(this.reverseNormalsEnabled);
+    this.ui?.syncUIFromState?.();
   }
 
   /**
@@ -903,6 +1034,29 @@ export class SceneManager {
       intensity,
       this.hdriBlurriness,
     );
+    this._syncColorCheckerReferenceProbes(envTexture, intensity);
+  }
+
+  /**
+   * Chrome / grey / white reference spheres use their own fixed metalness — not the mesh slider.
+   * Env maps are assigned here (they are not under `currentModel`, so MaterialController skips them).
+   */
+  _syncColorCheckerReferenceProbes(envTexture, intensity) {
+    const mats = this.colorCheckerRoot?.userData?.referenceProbeMaterials;
+    if (!mats?.length) return;
+    const tex = envTexture ?? this.scene.environment ?? null;
+    const envInt = Math.max(
+      0,
+      Number.isFinite(intensity) ? intensity : this.hdriStrength ?? 0,
+    );
+    for (const mat of mats) {
+      if (!mat?.userData?.meshglReferenceProbe) continue;
+      mat.envMap = tex;
+      if (mat.envMapIntensity !== undefined) {
+        mat.envMapIntensity = envInt;
+      }
+      mat.needsUpdate = true;
+    }
   }
 
   forceRestoreClaySettings() {
@@ -2326,10 +2480,19 @@ export class SceneManager {
   }
 
   setShading(mode) {
+    const clearReference =
+      !!this.stateStore.getState().colorChecker?.rawColors && mode !== 'textures';
+    if (clearReference) {
+      this.stateStore.set('colorChecker.rawColors', false);
+      this._colorCheckerRestoreShading = null;
+    }
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
     // Material instances are recreated when shading changes; reapply reverse mode.
     this.setReverseNormals(this.reverseNormalsEnabled);
+    if (clearReference) {
+      this.ui?.syncUIFromState?.();
+    }
   }
 
   clearBoneHelpers() {
@@ -2373,6 +2536,7 @@ export class SceneManager {
       this.cameraController.updateAutoOrbit(delta);
     }
     this.cameraController.applyHandheldMotion(delta);
+    this._updateColorCheckerPose();
     this.diagnosticsController.update(delta);
     if (!this.panelsShelfScrolling) {
       this.postPipeline?.updateGrainTime(delta);
@@ -2447,6 +2611,7 @@ export class SceneManager {
       this.renderer.toneMappingExposure = 1;
       const bgColor = this.backgroundController?.getColor() ?? '#000000';
       this.renderer.setClearColor(new THREE.Color(bgColor), 1);
+      this._resetRendererViewportToCanvas();
       this.renderer.render(this.scene, this.camera);
       this.renderer.setClearColor(previousColor, previousAlpha);
       this.renderer.toneMappingExposure = previousExposure;

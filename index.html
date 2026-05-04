@@ -2398,6 +2398,85 @@
                     </span>
                   </label>
                 </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="color-checker">
+                  <div class="block-title has-toggle">
+                    <span>ColorChecker</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button type="button" class="block-reset-btn" data-reset="color-checker" aria-label="Reset ColorChecker" data-tooltip="Reset ColorChecker placement">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show or hide the ColorChecker chart in the viewport">
+                        <input type="checkbox" id="colorCheckerEnabled" aria-describedby="colorCheckerHint" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Show ColorChecker chart</span>
+                      </label>
+                    </div>
+                  </div>
+                  <p id="colorCheckerHint" class="subsection-hint" style="margin: 0 0 0.75rem; font-size: 0.85rem; opacity: 0.85; line-height: 1.35;">
+                    Classic 24-patch chart in manufacturer sRGB (D65), Chrome, 18% grey, and white spheres for checking exposure and clipping. Toggle between key 2 and 1 to review Unlit.
+                  </p>
+                  <button
+                    type="button"
+                    id="colorCheckerRawToggle"
+                    class="accent-action-btn color-checker-raw-toggle"
+                    style="margin-bottom: 0.75rem;"
+                    aria-pressed="false"
+                    data-tooltip="Same as Display → Unlit on the Object tab: neutral mesh view for comparing grade + chart. Toggle off restores your previous display mode."
+                  >
+                    <i class="fa-solid fa-palette" aria-hidden="true"></i>
+                    <span class="color-checker-raw-toggle__label">Reference colors — Off</span>
+                  </button>
+                  <label class="slider-line">
+                    <span data-tooltip="Radius of the orbit around the orbit target in the horizontal plane (scene units).">Distance</span>
+                    <input
+                      id="colorCheckerDistance"
+                      type="range"
+                      min="0.1"
+                      max="6"
+                      value="0.6"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="colorCheckerDistance">0.60m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Yaw around the vertical axis through the target — combined with global Lights → Rotate (same idea as Key / Fill / Rim rotate).">Rotate</span>
+                    <input
+                      id="colorCheckerRotate"
+                      type="range"
+                      min="0"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="colorCheckerRotate">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical offset from the orbit target (same as directional light height).">Height</span>
+                    <input
+                      id="colorCheckerHeight"
+                      type="range"
+                      min="-3"
+                      max="10"
+                      value="0"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="colorCheckerHeight">0.00m</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Uniform size of the chart (1× = default).">Scale</span>
+                    <input
+                      id="colorCheckerScale"
+                      type="range"
+                      min="0.02"
+                      max="4"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="colorCheckerScale">1.00×</span>
+                  </label>
+                </div>
               </div>
 
               <div class="panel-block">

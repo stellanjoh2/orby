@@ -151,6 +151,7 @@ export class SceneSettingsManager {
       ambientOcclusion: state.ambientOcclusion,
       lensDirt: state.lensDirt,
       fisheye: state.fisheye,
+      colorChecker: state.colorChecker,
       antiAliasing: state.antiAliasing,
       renderQuality: state.renderQuality,
       toneMapping: state.toneMapping,
@@ -939,6 +940,16 @@ export class SceneSettingsManager {
             !payload.fisheye.enabled,
           );
         }
+      }
+      if (payload.colorChecker !== undefined) {
+        const base = this.stateStore.getDefaults().colorChecker;
+        this.stateStore.set('colorChecker', {
+          ...base,
+          ...(payload.colorChecker && typeof payload.colorChecker === 'object'
+            ? payload.colorChecker
+            : {}),
+        });
+        this.eventBus.emit('scene:color-checker');
       }
       if (payload.antiAliasing !== undefined) {
         this.stateStore.set('antiAliasing', payload.antiAliasing);

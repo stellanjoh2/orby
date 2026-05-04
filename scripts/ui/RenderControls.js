@@ -21,6 +21,18 @@ export class RenderControls {
     this.toneCurveController = null;
   }
 
+  _syncColorCheckerRawToggleUi(rawOn) {
+    const btn = this.ui.inputs.colorCheckerRawToggle;
+    if (!btn) return;
+    const on = !!rawOn;
+    btn.classList.toggle('color-checker-raw-toggle--on', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const label = btn.querySelector('.color-checker-raw-toggle__label');
+    if (label) {
+      label.textContent = on ? 'Reference colors — On' : 'Reference colors — Off';
+    }
+  }
+
   bind() {
     const touchLookFilterCustom = () => {
       if (this.stateStore.getState().lookFilterPreset !== 'custom') {
@@ -557,6 +569,73 @@ export class RenderControls {
       });
     });
 
+    const setColorCheckerControlsDisabled = (muted) => {
+      this.ui.setEffectControlsDisabled(
+        [
+          'colorCheckerDistance',
+          'colorCheckerRotate',
+          'colorCheckerHeight',
+          'colorCheckerScale',
+          'colorCheckerRawToggle',
+        ],
+        muted,
+      );
+    };
+
+    if (this.ui.inputs.colorCheckerEnabled) {
+      this.ui.inputs.colorCheckerEnabled.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('colorChecker.enabled', enabled);
+        setColorCheckerControlsDisabled(!enabled);
+        this.eventBus.emit('scene:color-checker');
+      });
+    }
+    if (this.ui.inputs.colorCheckerDistance) {
+      this.ui.inputs.colorCheckerDistance.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        this.stateStore.set('colorChecker.distance', value);
+        this.helpers.updateValueLabel('colorCheckerDistance', value, 'distance');
+        this.eventBus.emit('scene:color-checker');
+      });
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.colorCheckerDistance);
+    }
+    if (this.ui.inputs.colorCheckerRotate) {
+      this.ui.inputs.colorCheckerRotate.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        this.stateStore.set('colorChecker.rotate', value);
+        this.helpers.updateValueLabel('colorCheckerRotate', value, 'angle');
+        this.eventBus.emit('scene:color-checker');
+      });
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.colorCheckerRotate);
+    }
+    if (this.ui.inputs.colorCheckerHeight) {
+      this.ui.inputs.colorCheckerHeight.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        this.stateStore.set('colorChecker.height', value);
+        this.helpers.updateValueLabel('colorCheckerHeight', value, 'distance');
+        this.eventBus.emit('scene:color-checker');
+      });
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.colorCheckerHeight);
+    }
+    if (this.ui.inputs.colorCheckerScale) {
+      this.ui.inputs.colorCheckerScale.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        this.stateStore.set('colorChecker.scale', value);
+        this.helpers.updateValueLabel('colorCheckerScale', value, 'multiplier');
+        this.eventBus.emit('scene:color-checker');
+      });
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.colorCheckerScale);
+    }
+    if (this.ui.inputs.colorCheckerRawToggle) {
+      this.ui.inputs.colorCheckerRawToggle.addEventListener('click', () => {
+        const next = !this.stateStore.getState().colorChecker?.rawColors;
+        this.stateStore.set('colorChecker.rawColors', next);
+        this._syncColorCheckerRawToggleUi(next);
+        this.eventBus.emit('scene:color-checker-reference-shading');
+        this.eventBus.emit('scene:color-checker');
+      });
+    }
+
     this.toneCurveController = new ToneCurveController(
       this.eventBus,
       this.stateStore,
@@ -882,6 +961,50 @@ export class RenderControls {
         el.setAttribute('aria-pressed', sel ? 'true' : 'false');
       }
     });
+
+    const ccDefaults = this.stateStore.getDefaults().colorChecker;
+    const cc = {
+      ...ccDefaults,
+      ...(state.colorChecker && typeof state.colorChecker === 'object' ? state.colorChecker : {}),
+    };
+    if (cc.rotation != null && cc.rotate === undefined) {
+      cc.rotate = cc.rotation;
+    }
+    if (this.ui.inputs.colorCheckerEnabled) {
+      this.ui.inputs.colorCheckerEnabled.checked = !!cc.enabled;
+    }
+    if (this.ui.inputs.colorCheckerDistance) {
+      const d = cc.distance ?? ccDefaults.distance;
+      this.ui.inputs.colorCheckerDistance.value = d;
+      this.helpers.updateValueLabel('colorCheckerDistance', d, 'distance');
+    }
+    if (this.ui.inputs.colorCheckerRotate) {
+      const r = cc.rotate ?? ccDefaults.rotate ?? 0;
+      this.ui.inputs.colorCheckerRotate.value = r;
+      this.helpers.updateValueLabel('colorCheckerRotate', r, 'angle');
+    }
+    if (this.ui.inputs.colorCheckerHeight) {
+      const y = cc.height ?? ccDefaults.height ?? 0;
+      this.ui.inputs.colorCheckerHeight.value = y;
+      this.helpers.updateValueLabel('colorCheckerHeight', y, 'distance');
+    }
+    if (this.ui.inputs.colorCheckerScale) {
+      const sc = cc.scale ?? ccDefaults.scale ?? 1;
+      this.ui.inputs.colorCheckerScale.value = sc;
+      this.helpers.updateValueLabel('colorCheckerScale', sc, 'multiplier');
+    }
+    this._syncColorCheckerRawToggleUi(!!cc.rawColors);
+    this.ui.setEffectControlsDisabled(
+      [
+        'colorCheckerDistance',
+        'colorCheckerRotate',
+        'colorCheckerHeight',
+        'colorCheckerScale',
+        'colorCheckerRawToggle',
+      ],
+      !cc.enabled,
+    );
+
     this.toneCurveController?.syncFromState(state);
   }
 }

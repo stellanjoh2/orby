@@ -566,6 +566,14 @@ export class ResetControls {
             this.ui.syncUIFromState();
             break;
 
+          case 'color-checker':
+            this.stateStore.set('colorChecker', deepClone(defaults.colorChecker));
+            this.eventBus.emit('scene:color-checker-reference-shading');
+            this.eventBus.emit('scene:color-checker');
+            this.ui.syncUIFromState();
+            this.helpers.showToast('ColorChecker reset');
+            break;
+
           case 'ambient-occlusion':
             this.stateStore.batch(() => {
               this.stateStore.set('lookFilterPreset', 'custom');

@@ -207,6 +207,23 @@ export class StateStore {
       lookFilterPresetsOpen: false,
       /** 'low' | 'medium' | 'high' — color SVG (ImageTracer) trace fidelity */
       svgColorDetail: 'high',
+      /**
+       * ColorChecker Classic (24 swatches) — reference sRGB from Wikipedia / manufacturer data.
+       * Placement matches studio lights: orbit around orbit target in XZ at `distance`, `height` on Y,
+       * azimuth = global lights rotation + `rotate` (same yaw formula as directional lights).
+       */
+      colorChecker: {
+        enabled: false,
+        distance: 0.6,
+        /** Orbit azimuth in degrees (added to global Lights → Rotate). */
+        rotate: 0,
+        /** Vertical offset from orbit target (scene units), like Key → Height. */
+        height: 0,
+        /** Uniform scale of the chart group (1 = default built-in size). */
+        scale: 1,
+        /** Shortcut to Object → Display → Unlit (textures); restores prior display mode when turned off. */
+        rawColors: false,
+      },
     };
     this.state = deepClone(this.defaults);
     this.subscribers = new Set();
