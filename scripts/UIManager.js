@@ -48,6 +48,8 @@ export class UIManager {
     this._shelfOverlaySuppressDepth = 0;
     /** When the first suppress runs, whether to remove `is-shelf-hidden` after all overlays end. */
     this._shelfOverlayRestorePending = false;
+    /** Deferred shelf reveal from {@link #endShelfOverlaySuppression} — cancel when a new overlay begins same tick (e.g. bug form → thank-you). */
+    this._shelfOverlayRestoreRafId = null;
     /** Set while a coalesced post-sync slider-fill rAF is pending (see scheduleAllRangeSliderFills). */
     this._rangeSliderFillRafId = null;
     /** Nested loads (model + HDRI) toggle #viewportLoadSpinner while depth > 0 */
@@ -456,10 +458,18 @@ export class UIManager {
     const shelf = this.dom.shelf;
     if (!shelf) return;
 
+    if (this._shelfOverlayRestoreRafId != null) {
+      cancelAnimationFrame(this._shelfOverlayRestoreRafId);
+      this._shelfOverlayRestoreRafId = null;
+    }
+
     if (this._shelfOverlaySuppressDepth === 0) {
-      const visible =
-        this.shelfRevealed && !this.uiHidden && !shelf.classList.contains('is-shelf-hidden');
-      this._shelfOverlayRestorePending = visible;
+      const notHidden = !shelf.classList.contains('is-shelf-hidden');
+      const chromeWantsShelf = this.shelfRevealed && !this.uiHidden;
+      const visible = chromeWantsShelf && notHidden;
+      /** Form modal → thank-you: shelf stays hidden; still restore when the stack ends. */
+      const chainedOverlay = chromeWantsShelf && !notHidden;
+      this._shelfOverlayRestorePending = visible || chainedOverlay;
       if (visible) {
         shelf.classList.add('is-shelf-hidden');
       }
@@ -482,7 +492,8 @@ export class UIManager {
     const onStartScreen =
       typeof document !== 'undefined' && document.body.classList.contains('dropzone-visible');
     if (onStartScreen) return;
-    requestAnimationFrame(() => {
+    this._shelfOverlayRestoreRafId = requestAnimationFrame(() => {
+      this._shelfOverlayRestoreRafId = null;
       if (!this.uiHidden && this.shelfRevealed && this.dom.shelf) {
         this.dom.shelf.classList.remove('is-shelf-hidden');
       }
