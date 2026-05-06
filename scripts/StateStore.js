@@ -106,7 +106,7 @@ export class StateStore {
       },
       wireframe: {
         alwaysOn: false,
-        color: '#c8c8c8',
+        color: '#c4ff00',
         onlyVisibleFaces: true,
         hideMesh: false,
       },

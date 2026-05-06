@@ -530,6 +530,126 @@ export class MeshControls {
         });
       });
     });
+
+    const updatePngTransparentUi = () => {
+      const wrap = this.ui.inputs.exportPngTransparentSettings;
+      if (!wrap) return;
+      const enabled = this.ui.exportSettings.video?.format === 'png';
+      wrap.classList.toggle('is-muted', !enabled);
+      wrap.querySelectorAll('[data-video-mov-transparent]').forEach((el) => {
+        if ('disabled' in el) el.disabled = !enabled;
+        if (el.classList) el.classList.toggle('is-disabled', !enabled);
+      });
+    };
+    const updateMp4Ui = () => {
+      const wrap = this.ui.inputs.exportMp4Settings;
+      if (!wrap) return;
+      const f = this.ui.exportSettings.video?.format;
+      const showCompression = f === 'mp4' || f === 'mov';
+      wrap.hidden = !showCompression;
+      wrap.classList.toggle('is-muted', !showCompression);
+      wrap.querySelectorAll('[data-video-mp4-quality]').forEach((btn) => {
+        if ('disabled' in btn) btn.disabled = !showCompression;
+        btn.classList.toggle('is-disabled', !showCompression);
+      });
+    };
+
+    document.querySelectorAll('[data-video-mode]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.disabled) return;
+        const mode = button.dataset.videoMode;
+        if (mode !== 'turntable' && mode !== 'dolly') return;
+        this.ui.exportSettings.video.mode = mode;
+        document.querySelectorAll('[data-video-mode]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-video-format]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const format = button.dataset.videoFormat;
+        if (format !== 'mp4' && format !== 'mov' && format !== 'png') return;
+        this.ui.exportSettings.video.format = format;
+        document.querySelectorAll('[data-video-format]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+        updatePngTransparentUi();
+        updateMp4Ui();
+      });
+    });
+
+    document.querySelectorAll('[data-video-duration]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const duration = parseInt(button.dataset.videoDuration, 10);
+        if (!Number.isFinite(duration)) return;
+        this.ui.exportSettings.video.durationSec = duration;
+        document.querySelectorAll('[data-video-duration]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-video-fps]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const fps = parseInt(button.dataset.videoFps, 10);
+        if (fps !== 24 && fps !== 30 && fps !== 60) return;
+        this.ui.exportSettings.video.fps = fps;
+        document.querySelectorAll('[data-video-fps]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-video-spins]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const spins = parseInt(button.dataset.videoSpins, 10);
+        if (spins !== 1 && spins !== 2) return;
+        this.ui.exportSettings.video.spins = spins;
+        document.querySelectorAll('[data-video-spins]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-video-resolution]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const resolution = button.dataset.videoResolution;
+        if (
+          resolution !== '1080p'
+          && resolution !== '1440p'
+          && resolution !== '2160p'
+        ) return;
+        this.ui.exportSettings.video.resolution = resolution;
+        document.querySelectorAll('[data-video-resolution]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-video-mov-transparent]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const transparent = button.dataset.videoMovTransparent === 'true';
+        this.ui.exportSettings.video.movTransparent = transparent;
+        document.querySelectorAll('[data-video-mov-transparent]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-video-mp4-quality]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const quality = button.dataset.videoMp4Quality;
+        if (quality !== 'low' && quality !== 'medium' && quality !== 'high') return;
+        this.ui.exportSettings.video.mp4Quality = quality;
+        document.querySelectorAll('[data-video-mp4-quality]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+      });
+    });
+
+    updatePngTransparentUi();
+    updateMp4Ui();
   }
 
   refreshAdvancedGlassControls(state) {

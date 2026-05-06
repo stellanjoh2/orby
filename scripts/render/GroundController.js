@@ -444,7 +444,8 @@ export class GroundController {
       mat.transparent = true;
       mat.opacity = this.wireOpacity;
       mat.depthWrite = false;
-      mat.toneMapped = false;
+      // Keep GridHelper color response consistent with mesh wireframe overlays.
+      mat.toneMapped = true;
       if (mat.color) mat.color.set(this.wireColor);
     });
     this.grid.visible = this.wireEnabled;

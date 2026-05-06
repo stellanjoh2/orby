@@ -304,6 +304,7 @@ export class EventManager {
       ),
     );
     eventBus.on('export:svg-glb', () => s.exportSvgGlb());
+    eventBus.on('export:video', (payload) => s.exportVideo(payload));
     
     // App events
     eventBus.on('app:reset', () => s.applyStateSnapshot(s.stateStore.getState()));

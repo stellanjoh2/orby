@@ -62,7 +62,7 @@ export class MaterialController {
     this.wireframeSettings = {
       ...(initialState.wireframe || {
         alwaysOn: false,
-        color: '#9fb7ff',
+        color: '#c4ff00',
         onlyVisibleFaces: true,
         hideMesh: false,
       }),

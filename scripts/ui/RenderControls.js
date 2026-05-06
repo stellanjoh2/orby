@@ -540,6 +540,9 @@ export class RenderControls {
     this.ui.buttons.exportSvgGlb?.addEventListener('click', () => {
       this.eventBus.emit('export:svg-glb');
     });
+    this.ui.buttons.exportVideo?.addEventListener('click', () => {
+      this.eventBus.emit('export:video', { ...(this.ui.exportSettings.video || {}) });
+    });
 
     if (this.ui.inputs.lookFilterPresetsOpen) {
       const updateLookFilterGrid = (open) => {

@@ -457,7 +457,7 @@
                       type="color"
                       id="wireframeColor"
                       class="color-chip"
-                      value="#c8c8c8"
+                      value="#c4ff00"
                     />
                   </label>
                 </div>
@@ -1061,7 +1061,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.354 · 2026-05-04 11:01:53 UTC</div>
+              <div class="info-version-tag">v0.5.355 · 2026-05-06 12:58:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1517,7 +1517,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.354 · 2026-05-04 11:01:53 UTC</div>
+              <div class="info-version-tag">v0.5.355 · 2026-05-06 12:58:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2541,7 +2541,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.354 · 2026-05-04 11:01:53 UTC</div>
+              <div class="info-version-tag">v0.5.355 · 2026-05-06 12:58:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2613,7 +2613,83 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.354 · 2026-05-04 11:01:53 UTC</div>
+              <div class="panel-block">
+                <h3 class="export-format-headline">Video</h3>
+                <p class="export-format-sub">
+                  Turntable spins the mesh 360 degrees from the exact framing and transforms in your viewport. Dolly is planned next.
+                </p>
+                <div class="export-controls">
+                  <div class="export-option-group">
+                    <label class="export-label">Mode</label>
+                    <div class="export-button-group">
+                      <button data-video-mode="turntable" class="export-option-btn active" data-tooltip="Rotate mesh 360 degrees in place">TURNTABLE</button>
+                      <button data-video-mode="dolly" class="export-option-btn is-disabled" disabled data-tooltip="Not available yet">DOLLY</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Format</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button data-video-format="mp4" class="export-option-btn active" data-tooltip="Encoded .MP4 export">.MP4</button>
+                      <button data-video-format="mov" class="export-option-btn" data-tooltip="QuickTime .MOV (H.264, same record path as MP4 + in-browser remux)">.MOV</button>
+                      <button data-video-format="png" class="export-option-btn" data-tooltip="Numbered PNG sequence">.PNG</button>
+                    </div>
+                  </div>
+                  <div id="exportPngTransparentSettings" class="export-png-transparent is-muted">
+                    <div class="export-option-group">
+                      <label class="export-label">Transparent Background</label>
+                      <div class="export-button-group">
+                        <button type="button" data-video-mov-transparent="false" class="export-option-btn active" disabled data-tooltip="Solid background">NO</button>
+                        <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent PNG sequence for compositing">YES</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="exportMp4Settings" class="export-video-foldout export-video-foldout--borderless">
+                    <div class="export-option-group">
+                      <label class="export-label">Compression</label>
+                      <div class="export-button-group export-button-group--triple">
+                        <button data-video-mp4-quality="low" class="export-option-btn" data-tooltip="Smaller file, lower quality">LOW</button>
+                        <button data-video-mp4-quality="medium" class="export-option-btn active" data-tooltip="Balanced quality and size">MEDIUM</button>
+                        <button data-video-mp4-quality="high" class="export-option-btn" data-tooltip="Higher quality, larger file">HIGH</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Time</label>
+                    <div class="export-button-group">
+                      <button data-video-duration="5" class="export-option-btn active" data-tooltip="5 second turntable">5s</button>
+                      <button data-video-duration="10" class="export-option-btn" data-tooltip="10 second turntable">10s</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Spins</label>
+                    <div class="export-button-group">
+                      <button data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360 degree turn">1</button>
+                      <button data-video-spins="2" class="export-option-btn" data-tooltip="Two full turns (helps avoid edge timing glitches)">2</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">FPS</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button data-video-fps="24" class="export-option-btn active" data-tooltip="Cinematic motion">24</button>
+                      <button data-video-fps="30" class="export-option-btn" data-tooltip="Smoother standard video">30</button>
+                      <button data-video-fps="60" class="export-option-btn" data-tooltip="Very smooth motion, larger files">60</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Resolution</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button data-video-resolution="1080p" class="export-option-btn active" data-tooltip="1920 × 1080">1080p</button>
+                      <button data-video-resolution="1440p" class="export-option-btn" data-tooltip="2560 × 1440">1440p</button>
+                      <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
+                    </div>
+                  </div>
+                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Turntable MP4, MOV (remux), or PNG sequence">
+                    <i class="fa-solid fa-film"></i>
+                    Export Video
+                  </button>
+                </div>
+              </div>
+              <div class="info-version-tag">v0.5.355 · 2026-05-06 12:58:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3146,13 +3222,13 @@
               </div>
 
               <div class="panel-block" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 4):</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 6):</div>
                 <div class="about-content">
                   <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look Filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.354 · 2026-05-04 11:01:53 UTC</div>
+              <div class="info-version-tag">v0.5.355 · 2026-05-06 12:58:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

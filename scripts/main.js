@@ -37,6 +37,18 @@ function shouldShowMobileLanding() {
   return isForcedMobileLandingDebug() || isMobileDevice();
 }
 
+/**
+ * Safari has heavier repaint/compositing cost for large animated blur layers.
+ * Detect Safari (desktop+iOS) but exclude Chromium/Gecko shells.
+ */
+function isSafariBrowser() {
+  const ua = navigator.userAgent;
+  const isWebKitSafari = /Safari/i.test(ua) && /Apple Computer/i.test(navigator.vendor || '');
+  const excludedShells =
+    /Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(ua);
+  return isWebKitSafari && !excludedShells;
+}
+
 /** Helps mobile browsers/iOS tint the toolbar and status chrome true black (#000). */
 function setMobileSplashChromeMetaTags() {
   const ensureContentMeta = (name, content) => {
@@ -61,6 +73,10 @@ if (shouldShowMobileLanding()) {
   }
   document.documentElement.classList.add('mobile-landing');
   setMobileSplashChromeMetaTags();
+}
+
+if (isSafariBrowser()) {
+  document.documentElement.classList.add('safari-browser');
 }
 
 const eventBus = new EventBus();

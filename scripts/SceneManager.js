@@ -35,6 +35,7 @@ import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { ImageExporter } from './render/ImageExporter.js';
+import { VideoExporter } from './render/VideoExporter.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
@@ -601,6 +602,29 @@ export class SceneManager {
     if (szComposer.x > 0 && szComposer.y > 0) {
       this.syncPostProcessingForLogicalSize(szComposer.x, szComposer.y);
     }
+
+    this.videoExporter = new VideoExporter({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      composer: this.composer,
+      imageExporter: this.imageExporter,
+      backgroundController: this.backgroundController,
+      stateStore: this.stateStore,
+      ui: this.ui,
+      syncPostProcessingForLogicalSize: (w, h) =>
+        this.syncPostProcessingForLogicalSize(w, h),
+      syncPerspectiveProjection: () => this.syncPerspectiveCameraFovAndLens(),
+      ensureComposerBuffersMatchRenderer: () =>
+        this._ensureComposerBuffersMatchRenderer(),
+      resetRendererViewportToCanvas: () => this._resetRendererViewportToCanvas(),
+      setRotationY: (value) => this.setRotationY(value),
+      getCurrentModel: () => this.currentModel,
+      getCurrentFile: () => this.currentFile,
+      getCurrentAssetMetadata: () => this.currentAssetMetadata,
+      getHdriBackgroundEnabled: () => this.hdriBackgroundEnabled,
+      handleResize: () => this.handleResize(),
+    });
   }
 
   /**
@@ -2926,6 +2950,10 @@ export class SceneManager {
       console.error('SVG GLB export failed', error);
       this.ui?.showToast?.('SVG .GLB export failed');
     }
+  }
+
+  async exportVideo(settings = {}) {
+    await this.videoExporter?.exportVideo(settings);
   }
 }
 

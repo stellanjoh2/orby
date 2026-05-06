@@ -349,6 +349,8 @@ export class UIManager {
       colorCheckerScale: q('#colorCheckerScale'),
       colorCheckerRawToggle: q('#colorCheckerRawToggle'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
+      exportPngTransparentSettings: q('#exportPngTransparentSettings'),
+      exportMp4Settings: q('#exportMp4Settings'),
       fbxMapFileInput: q('#fbxMapFileInput'),
       fbxMapInvertNormalY: q('#fbxMapInvertNormalY'),
       fbxMapPbrUvChannel: q('#fbxMapPbrUvChannel'),
@@ -360,6 +362,7 @@ export class UIManager {
       exportSvg: q('#exportSvgButton'),
       exportSvgColor: q('#exportSvgColorButton'),
       exportSvgGlb: q('#exportSvgGlbButton'),
+      exportVideo: q('#exportVideoButton'),
       copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
       loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
       saveOrbyButtons: document.querySelectorAll('.save-orby-scene'),
@@ -380,6 +383,16 @@ export class UIManager {
     this.exportSettings = {
       transparent: true,
       size: 2,
+      video: {
+        mode: 'turntable',
+        format: 'mp4',
+        durationSec: 5,
+        spins: 1,
+        fps: 24,
+        resolution: '1080p',
+        mp4Quality: 'medium',
+        movTransparent: false,
+      },
     };
 
     this.dom.blocks = {};
