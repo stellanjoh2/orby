@@ -552,14 +552,13 @@ export class UIManager {
 
   /**
    * Full-screen confirm — same visual language as bug-report thank-you.
-   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void, modalTone?: 'caution' | 'notification' | 'none', noModalToneSound?: boolean }} opts
+   * Audio: shelf show/hide via overlay only (podium-style up/down), no notification/caution stack.
+   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void }} opts
    */
   showFullscreenPrompt(opts = {}) {
-    const { modalTone = 'notification', noModalToneSound, ...rest } = opts;
-    if (!noModalToneSound) {
-      if (modalTone === 'notification') this.uiSounds?.playNotification();
-      else if (modalTone === 'caution') this.uiSounds?.playCaution();
-    }
+    const rest = { ...opts };
+    delete rest.modalTone;
+    delete rest.noModalToneSound;
     this.modalOverlays?.showFullscreenPrompt(rest);
   }
 

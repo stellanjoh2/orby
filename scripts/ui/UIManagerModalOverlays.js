@@ -263,6 +263,8 @@ export class UIManagerModalOverlays {
     const yesBtn = this._ui.dom.fullscreenPromptYes;
     if (!layer?.isConnected) return;
 
+    this._ui.uiSounds?.playShelfHide();
+
     gsap.killTweensOf([layer, msg, noBtn, yesBtn].filter(Boolean));
 
     [msg, noBtn, yesBtn].forEach((el) => el?.classList.remove(ORBY_DROP_FADE_UP_CLASS));
@@ -335,7 +337,6 @@ export class UIManagerModalOverlays {
           '<span class="brand-highlight">Return home?</span> Leave the studio and return to the start screen.',
         cancelLabel: 'Stay',
         confirmLabel: 'Go Home',
-        modalTone: 'caution',
         onConfirm: () => this._ui.setDropzoneVisible(true),
       });
     });
