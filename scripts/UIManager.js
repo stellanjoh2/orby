@@ -23,11 +23,43 @@ import { StartMenuController } from './ui/StartMenuController.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
 import { BugReportController } from './ui/BugReportController.js';
 import { ShelfOverlaySuppression } from './ui/ShelfOverlaySuppression.js';
+import { UISounds } from './ui/UISounds.js';
 import { UIManagerModalOverlays } from './ui/UIManagerModalOverlays.js';
 import { mergeAberrationSettings } from './render/chromaticAberration.js';
 
 /** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
 export const LONG_TOAST_CHAR_THRESHOLD = 110;
+
+/** Match user-facing warnings/errors for automatic caution SFX (override with `caution: false` on showToast). */
+function inferToastCaution(text) {
+  const s = String(text).toLowerCase();
+  return (
+    /\bunsupported\b|\bunrecognized\b|\binvalid\b|\bcouldn't\b|\bcould not\b|\bfailed\b|\bnot supported\b|\bno supported\b|\berror\b|\bwarning\b/.test(s)
+    || /not available yet/.test(s)
+    || /\bunable\b/.test(s)
+    || /\bload a mesh\b/.test(s)
+    || /\bno model\b/.test(s)
+  );
+}
+
+/** Match success / neutral-positive feedback for notification SFX (does not override caution when both match). */
+function inferToastPositive(text) {
+  if (inferToastCaution(text)) return false;
+  const s = String(text).toLowerCase();
+  return (
+    /\bloaded\b|\bcopied\b|\bexported\b|\bexport complete\b|\bsaved\b|\bsuccess\b|\bcomplete\b|\bconnected\b|\bthanks\b|\brestored\b|\bapplied\b|\bsnapped\b/.test(s)
+    || /\bcopied to clipboard\b/.test(s)
+    || /\bsettings reset\b/.test(s)
+    || /^model loaded\b/.test(s.trim())
+    || /^folder loaded\b/.test(s.trim())
+  );
+}
+
+/** Long modals and alerts without explicit tone — caution for errors, notification otherwise. */
+function inferModalTone(text) {
+  if (inferToastCaution(text)) return 'caution';
+  return 'notification';
+}
 
 export class UIManager {
   constructor(eventBus, stateStore) {
@@ -43,6 +75,8 @@ export class UIManager {
     this.shelfOverlay = null;
     /** @type {import('./ui/UIManagerModalOverlays.js').UIManagerModalOverlays | null} */
     this.modalOverlays = null;
+    /** @type {UISounds | null} */
+    this.uiSounds = null;
     /** Set while a coalesced post-sync slider-fill rAF is pending (see scheduleAllRangeSliderFills). */
     this._rangeSliderFillRafId = null;
     /** Nested loads (model + HDRI) toggle #viewportLoadSpinner while depth > 0 */
@@ -51,6 +85,10 @@ export class UIManager {
 
   init() {
     this.cacheDom();
+    this.uiSounds = new UISounds();
+    if (this.dom.uiSoundsEnabled) {
+      this.dom.uiSoundsEnabled.checked = this.uiSounds.enabled;
+    }
     this.shelfOverlay = new ShelfOverlaySuppression(this);
     this.modalOverlays = new UIManagerModalOverlays(this);
 
@@ -167,6 +205,8 @@ export class UIManager {
     this.dom.helpOverlay = q('#helpOverlay');
     this.dom.closeHelp = q('#closeHelp');
     this.dom.toggleUi = q('#toggleUi');
+    this.dom.uiSoundsEnabled = q('#uiSoundsEnabled');
+    this.dom.uiSoundsVolume = q('#uiSoundsVolume');
     this.dom.shelf = q('#shelf');
     this.dom.shelf?.classList.add('is-shelf-hidden');
     this.dom.topBar = document.querySelector('.top-bar');
@@ -456,6 +496,29 @@ export class UIManager {
 
     this.setupPanelsScrollbarReveal();
     this.modalOverlays.bind();
+    this.bindUiSoundsPreference();
+  }
+
+  bindUiSoundsPreference() {
+    const toggle = this.dom.uiSoundsEnabled;
+    const volumeSlider = this.dom.uiSoundsVolume;
+    if (toggle) {
+      toggle.addEventListener('change', () => {
+        this.uiSounds?.setEnabled(!!toggle.checked);
+      });
+    }
+    const syncVolumeUi = () => {
+      if (!volumeSlider || !this.uiSounds) return;
+      this.uiSounds.setMasterVolume(Number(volumeSlider.value) / 100);
+      const label = document.querySelector('[data-output="uiSoundsVolume"]');
+      if (label) label.textContent = `${volumeSlider.value}%`;
+      this.updateSliderFill(volumeSlider);
+    };
+    if (volumeSlider && this.uiSounds) {
+      volumeSlider.value = String(Math.round(this.uiSounds.getMasterVolume() * 100));
+      volumeSlider.addEventListener('input', syncVolumeUi);
+      syncVolumeUi();
+    }
   }
 
   /** @see ShelfOverlaySuppression */
@@ -474,18 +537,30 @@ export class UIManager {
 
   /**
    * Modal with OK — for long errors/warnings that need time to read. Short messages use showToast().
-   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, onConfirm?: () => void, onCancel?: () => void }} [options]
+   * @param {{ okLabel?: string, confirm?: boolean, cancelLabel?: string, onConfirm?: () => void, onCancel?: () => void, noCautionSound?: boolean, modalTone?: 'caution' | 'notification' | 'none' }} [options]
    */
   showMessageAlert(message, title = 'Message', options = {}) {
-    this.modalOverlays?.showMessageAlert(message, title, options);
+    const { noCautionSound, modalTone, ...alertOptions } = options;
+    const text = typeof message === 'string' ? message : String(message ?? '');
+    const tone = modalTone ?? inferModalTone(text);
+    if (!noCautionSound) {
+      if (tone === 'notification') this.uiSounds?.playNotification();
+      else if (tone === 'caution') this.uiSounds?.playCaution();
+    }
+    this.modalOverlays?.showMessageAlert(message, title, alertOptions);
   }
 
   /**
    * Full-screen confirm — same visual language as bug-report thank-you.
-   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void }} opts
+   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void, modalTone?: 'caution' | 'notification' | 'none', noModalToneSound?: boolean }} opts
    */
-  showFullscreenPrompt(opts) {
-    this.modalOverlays?.showFullscreenPrompt(opts);
+  showFullscreenPrompt(opts = {}) {
+    const { modalTone = 'notification', noModalToneSound, ...rest } = opts;
+    if (!noModalToneSound) {
+      if (modalTone === 'notification') this.uiSounds?.playNotification();
+      else if (modalTone === 'caution') this.uiSounds?.playCaution();
+    }
+    this.modalOverlays?.showFullscreenPrompt(rest);
   }
 
   /**
@@ -549,10 +624,13 @@ export class UIManager {
     if (this.shelfRevealed && this.dom.shelf) {
       if (this.uiHidden) {
         this.dom.shelf.classList.add('is-shelf-hidden');
+        this.uiSounds?.playShelfHide();
       } else {
-        requestAnimationFrame(() =>
-          this.dom.shelf.classList.remove('is-shelf-hidden'),
-        );
+        requestAnimationFrame(() => {
+          if (!this.dom.shelf || this.uiHidden) return;
+          this.dom.shelf.classList.remove('is-shelf-hidden');
+          this.uiSounds?.playShelfShow();
+        });
       }
     }
     // Update start menu visibility when UI is toggled (refresh with current intended state)
@@ -852,12 +930,18 @@ export class UIManager {
     }
   }
 
-  revealShelf() {
+  /**
+   * @param {{ skipSound?: boolean }} [opts] Skip shelf-open SFX (e.g. first studio entrance so it does not stack on scene open).
+   */
+  revealShelf(opts = {}) {
     if (!this.dom.shelf) return;
     this.shelfRevealed = true;
+    const wasHidden = this.dom.shelf.classList.contains('is-shelf-hidden');
+    const skipSound = opts.skipSound === true;
     const apply = () => {
       if (!this.dom.shelf || this.uiHidden) return;
       this.dom.shelf.classList.remove('is-shelf-hidden');
+      if (wasHidden && !skipSound) this.uiSounds?.playShelfShow();
     };
     // Dropzone hide uses rAF — double rAF lands after that layout so the shelf reveal always applies.
     requestAnimationFrame(() => {
@@ -865,12 +949,27 @@ export class UIManager {
     });
   }
 
-  showToast(message, durationMs = 3200) {
+  /**
+   * @param {{ caution?: boolean, notification?: boolean, modalTone?: 'caution' | 'notification' | 'none' }} [toastOptions] `caution` / `notification` override inference when set to true; `false` disables that cue.
+   */
+  showToast(message, durationMs = 3200, toastOptions = {}) {
     const text = typeof message === 'string' ? message : String(message ?? '');
     if (text.length > LONG_TOAST_CHAR_THRESHOLD) {
-      this.showMessageAlert(text, 'Message');
+      const tone =
+        toastOptions?.modalTone ?? (inferToastCaution(text) ? 'caution' : 'notification');
+      this.showMessageAlert(text, 'Message', { modalTone: tone });
       return;
     }
+    const wantCaution =
+      toastOptions?.caution === true
+      || (toastOptions?.caution !== false && inferToastCaution(text));
+    const wantNotification =
+      !wantCaution
+      && (toastOptions?.notification === true
+        || (toastOptions?.notification !== false && inferToastPositive(text)));
+    if (wantCaution) this.uiSounds?.playCaution();
+    else if (wantNotification) this.uiSounds?.playNotification();
+
     const template = this.dom.toastTemplate?.content?.firstElementChild;
     if (!template) return;
     const toast = template.cloneNode(true);
@@ -898,7 +997,7 @@ export class UIManager {
     };
     write()
       .then(() => this.showToast(message))
-      .catch(() => this.showToast('Copy failed'));
+      .catch(() => this.showToast('Copy failed', 3200, { caution: true }));
   }
 
   loadRenderSettingsFromText(text) {

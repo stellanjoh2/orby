@@ -21,11 +21,15 @@ export class GlobalControls {
     this.bindToggleUi();
     this.bindKeyboardShortcuts();
     this.bindTabs();
+    this.bindSegmentedSelectSounds();
+    this.bindExportOptionSelectSounds();
+    this.bindEffectToggleSounds();
     this.bindHdriLightsRotation();
   }
 
   bindResetAll() {
     this.ui.dom.resetAll?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
       const snapshot = this.stateStore.reset();
       this.ui.syncControls(snapshot);
       this.eventBus.emit('app:reset');
@@ -44,6 +48,7 @@ export class GlobalControls {
         };
         this.ui.dom.helpButton.addEventListener('click', () => {
           this.ui.dom.helpOverlay.hidden = false;
+          this.ui.uiSounds?.playNotification();
           gsap.fromTo(
             this.ui.dom.helpOverlay.querySelector('.help-card'),
             { scale: 0.95, autoAlpha: 0 },
@@ -75,6 +80,7 @@ export class GlobalControls {
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
         if (target === this.ui.activeTab) return;
+        this.ui.uiSounds?.playSelect();
         this.ui.activeTab = target;
         this.ui.dom.tabs.forEach((button) => {
           const isActive = button.dataset.tab === target;
@@ -101,6 +107,55 @@ export class GlobalControls {
           document.querySelector(`.panel-header-title[data-header="${target}"]`),
         );
       });
+    });
+  }
+
+  /** Segmented controls (e.g. Auto Rotate, Auto Orbit, Handheld) — randomized tap sounds. */
+  bindSegmentedSelectSounds() {
+    const shelf = this.ui.dom.shelf;
+    if (!shelf) return;
+    shelf.querySelectorAll('.segmented input[type="radio"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        if (!input.checked) return;
+        this.ui.uiSounds?.playSelect();
+      });
+    });
+  }
+
+  /**
+   * Export panel mutually-exclusive buttons (`.export-option-btn`) — same randomized taps as tabs.
+   * Capture phase runs before MeshControls toggles `active`, so we only fire when switching option.
+   */
+  bindExportOptionSelectSounds() {
+    const shelf = this.ui.dom.shelf;
+    if (!shelf) return;
+    shelf.addEventListener(
+      'click',
+      (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('.export-option-btn') : null;
+        if (!btn || !shelf.contains(btn)) return;
+        if (btn.disabled || btn.classList.contains('is-disabled')) return;
+        if (btn.classList.contains('active')) return;
+        this.ui.uiSounds?.playSelect();
+      },
+      true,
+    );
+  }
+
+  /**
+   * `.effect-toggle` checkboxes (lights on/off, HDRI toggle, FX toggles, …) — SND toggle on/off.
+   * Skips podium / glass (shelf up/down sounds) and the “UI sounds” preference itself.
+   */
+  bindEffectToggleSounds() {
+    const shelf = this.ui.dom.shelf;
+    if (!shelf) return;
+    const skipIds = new Set(['groundSolid', 'podiumGlassSurface', 'uiSoundsEnabled']);
+    shelf.addEventListener('change', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || t.type !== 'checkbox') return;
+      if (!t.closest('.effect-toggle') || !shelf.contains(t)) return;
+      if (skipIds.has(t.id)) return;
+      this.ui.uiSounds?.playEffectToggle(t.checked);
     });
   }
 
@@ -243,6 +298,7 @@ export class GlobalControls {
         if (modes[modeIndex]) {
           const prev = this.stateStore.getState().shading;
           const next = modes[modeIndex];
+          if (next !== prev) this.ui.uiSounds?.playSelect();
           this.stateStore.set('shading', next);
           applyWireframeOnlyVisibleOnEnter(prev, next, this.stateStore, this.eventBus, this.ui);
           this.eventBus.emit('mesh:shading', next);
@@ -462,10 +518,13 @@ export class GlobalControls {
       if (key === 'p') {
         event.preventDefault();
         const current = this.stateStore.getState().groundSolid;
-        this.stateStore.set('groundSolid', !current);
-        this.eventBus.emit('studio:ground-solid', !current);
+        const next = !current;
+        if (next) this.ui.uiSounds?.playShelfShow();
+        else this.ui.uiSounds?.playShelfHide();
+        this.stateStore.set('groundSolid', next);
+        this.eventBus.emit('studio:ground-solid', next);
         if (this.ui.inputs.groundSolid) {
-          this.ui.inputs.groundSolid.checked = !current;
+          this.ui.inputs.groundSolid.checked = next;
         }
       }
 

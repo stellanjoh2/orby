@@ -735,8 +735,10 @@ export class StartMenuController {
       const blob = await response.blob();
       const file = new File([blob], fileName, { type: 'model/gltf-binary' });
       
-      // Emit file:selected event to load it
-      this.eventBus.emit('file:selected', file);
+      this.eventBus.emit('file:selected', {
+        file,
+        suppressSuccessToastSound: true,
+      });
     } catch (error) {
       console.error('Failed to load test object:', error);
       this.ui.showToast('Could not load test object');

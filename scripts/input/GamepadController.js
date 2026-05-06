@@ -339,6 +339,7 @@ export class GamepadController {
     const currentIndex = modes.indexOf(current);
     const nextMode =
       currentIndex === -1 ? modes[0] : modes[(currentIndex + 1) % modes.length];
+    if (nextMode !== current) this.ui?.uiSounds?.playSelect();
     applyWireframeOnlyVisibleOnEnter(current, nextMode, this.stateStore, this.eventBus, this.ui);
     this.stateStore.set('shading', nextMode);
     this.eventBus.emit('mesh:shading', nextMode);

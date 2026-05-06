@@ -29,6 +29,7 @@ export class UIManagerModalOverlays {
     this._bindMessageAlert();
     this._bindFullscreenPrompt();
     this._bindHomeOrbyMark();
+    this._bindModalTapSounds();
   }
 
   getMessageAlertPanel() {
@@ -41,6 +42,8 @@ export class UIManagerModalOverlays {
    */
   showMessageAlert(message, title = 'Message', options = {}) {
     if (!this._ui.dom.messageAlertModal || !this._ui.dom.messageAlertBody) return;
+
+    this._ui.uiSounds?.playShelfShow();
 
     const text = typeof message === 'string' ? message : String(message ?? '');
     const confirm = !!options?.confirm;
@@ -109,6 +112,8 @@ export class UIManagerModalOverlays {
     const noBtn = this._ui.dom.fullscreenPromptNo;
     const yesBtn = this._ui.dom.fullscreenPromptYes;
     if (!layer || !msg || !noBtn || !yesBtn) return;
+
+    this._ui.uiSounds?.playShelfShow();
 
     const messageHtml = typeof opts?.messageHtml === 'string' ? opts.messageHtml : '';
     const cancelLabel =
@@ -294,16 +299,43 @@ export class UIManagerModalOverlays {
     });
   }
 
+  /** Random tap clips on primary buttons inside clip-path / fullscreen-style modals. */
+  _bindModalTapSounds() {
+    const selectors = [
+      '#messageAlertModal',
+      '#loadSceneSettingsModal',
+      '#bugReportModal',
+      '#orbyFullscreenPrompt',
+    ];
+    for (const sel of selectors) {
+      const modal = document.querySelector(sel);
+      if (!modal) continue;
+      modal.addEventListener(
+        'click',
+        (e) => {
+          const t = e.target;
+          if (!(t instanceof Element)) return;
+          const btn = t.closest('button');
+          if (!btn || !modal.contains(btn)) return;
+          if (btn.disabled || btn.hasAttribute('disabled')) return;
+          this._ui.uiSounds?.playSelect();
+        },
+        true,
+      );
+    }
+  }
+
   _bindHomeOrbyMark() {
     this._ui.dom.shelf?.addEventListener('click', (event) => {
       const trigger = event.target.closest('.info-orby-mark');
       if (!trigger) return;
       event.preventDefault();
-      this.showFullscreenPrompt({
+      this._ui.showFullscreenPrompt({
         messageHtml:
           '<span class="brand-highlight">Return home?</span> Leave the studio and return to the start screen.',
         cancelLabel: 'Stay',
         confirmLabel: 'Go Home',
+        modalTone: 'caution',
         onConfirm: () => this._ui.setDropzoneVisible(true),
       });
     });

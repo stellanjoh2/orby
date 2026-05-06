@@ -809,13 +809,20 @@ html.orby-gate-unlocked .orby-entry-gate {
   cursor: pointer;
   box-shadow: none;
   transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
     filter 0.15s ease,
     transform 0.15s ease,
     box-shadow 0.2s ease;
 }
 
-.bug-report-thank-you-ok:hover {
-  filter: brightness(1.06);
+.bug-report-thank-you-ok:hover,
+.bug-report-thank-you-ok:focus-visible {
+  background: #fff;
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand-primary) 48%, #ffffff);
+  filter: none;
   box-shadow: var(--ui-accent-outer-glow);
 }
 

@@ -24,6 +24,8 @@ export class StudioControls {
     this.ui.inputs.hdriButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const preset = button.dataset.hdri;
+        const current = this.stateStore.getState().hdri;
+        if (preset !== current) this.ui.uiSounds?.playSelect();
         this.ui.setHdriActive(preset);
         this.stateStore.set('hdri', preset);
         this.eventBus.emit('studio:hdri', preset);
@@ -93,6 +95,8 @@ export class StudioControls {
     // Ground/Podium
     this.ui.inputs.groundSolid.addEventListener('change', (event) => {
       const enabled = event.target.checked;
+      if (enabled) this.ui.uiSounds?.playShelfShow();
+      else this.ui.uiSounds?.playShelfHide();
       this.stateStore.set('groundSolid', enabled);
       this.eventBus.emit('studio:ground-solid', enabled);
     });
@@ -145,6 +149,11 @@ export class StudioControls {
     });
     this.ui.inputs.podiumGlassSurface?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
+      const podiumUp = !!this.stateStore.getState().groundSolid;
+      if (podiumUp) {
+        if (enabled) this.ui.uiSounds?.playShelfShow();
+        else this.ui.uiSounds?.playShelfHide();
+      }
       this.stateStore.set('podiumGlassSurface', enabled);
       this.eventBus.emit('studio:podium-glass-surface', enabled);
       this.ui.applyBlockStates?.(this.stateStore.getState());

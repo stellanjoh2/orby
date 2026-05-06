@@ -2834,7 +2834,7 @@
                   </div>
                   <div id="exportPngTransparentSettings" class="export-png-transparent is-muted">
                     <div class="export-option-group">
-                      <label class="export-label">Transparent Background</label>
+                      <label class="export-label">Transparent</label>
                       <div class="export-button-group">
                         <button type="button" data-video-mov-transparent="false" class="export-option-btn active" disabled data-tooltip="Solid background">NO</button>
                         <button type="button" data-video-mov-transparent="true" class="export-option-btn is-disabled" disabled data-tooltip="Transparent PNG sequence for compositing">YES</button>
@@ -2843,7 +2843,7 @@
                   </div>
                   <div id="exportMp4Settings" class="export-video-foldout export-video-foldout--borderless">
                     <div class="export-option-group">
-                      <label class="export-label">Compression</label>
+                      <label class="export-label">Quality</label>
                       <div class="export-button-group export-button-group--triple">
                         <button data-video-mp4-quality="low" class="export-option-btn" data-tooltip="Smaller file, lower quality">LOW</button>
                         <button data-video-mp4-quality="medium" class="export-option-btn active" data-tooltip="Balanced quality and size">MEDIUM</button>
@@ -2852,10 +2852,11 @@
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Time</label>
-                    <div class="export-button-group">
+                    <label class="export-label">Length</label>
+                    <div class="export-button-group export-button-group--triple">
                       <button data-video-duration="5" class="export-option-btn active" data-tooltip="5 second turntable">5s</button>
                       <button data-video-duration="10" class="export-option-btn" data-tooltip="10 second turntable">10s</button>
+                      <button data-video-duration="15" class="export-option-btn" data-tooltip="15 second turntable">15s</button>
                     </div>
                   </div>
                   <div class="export-option-group">
@@ -2913,6 +2914,34 @@
                   Tell us what happened
                 </button>
               </div>
+
+              <div class="panel-block" id="info-sounds">
+                <div class="block-title has-toggle">
+                  <span>
+                    <i class="fa-solid fa-volume-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                    UI Sounds
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="uiSoundsEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">UI sounds on</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Volume</span>
+                  <input
+                    id="uiSoundsVolume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="100"
+                  />
+                  <span class="value" data-output="uiSoundsVolume">100%</span>
+                </label>
+              </div>
               
               <!-- Quick Navigation for Information tab -->
               <div class="panel-block">
@@ -2921,6 +2950,7 @@
                   Quick Navigation
                 </div>
                 <nav class="info-quicknav" style="display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; font-size: 0.85rem; color: var(--text-dim);">
+                  <a href="#info-sounds">UI Sounds</a>
                   <a href="#info-shortcuts">Shortcuts</a>
                   <a href="#info-mouse">Mouse</a>
                   <a href="#info-gamepad">Gamepad</a>
@@ -3415,7 +3445,13 @@
                     <li style="margin-bottom: 0.5rem;">
                       • <a href="https://fontawesome.com/" target="_blank" rel="noreferrer" class="about-highlight">Font Awesome</a> — Icon library
                     </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      • <a href="https://snd.dev/" target="_blank" rel="noreferrer" class="about-highlight">SND</a> — UI interaction sounds (SND01 “sine” kit) · <span class="about-highlight">Yasuhiro Tsuchiya</span>, Sound Designer / Researcher
+                    </li>
                   </ul>
+                  <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.55; margin: 0.75rem 0 0 0;">
+                    <strong>Note:</strong> HDRI environment maps from <a href="https://www.maxroz.com/hdri" target="_blank" rel="noreferrer" class="about-highlight">Maxime Roz</a> were purchased through <a href="https://www.maxroz.com/hdri" target="_blank" rel="noreferrer">maxroz.com/hdri</a>. They are <strong>not</strong> covered by Orby’s MIT License — see <a href="./ASSETS_LICENSE.md">ASSETS_LICENSE.md</a>.
+                  </p>
                 </div>
               </div>
 

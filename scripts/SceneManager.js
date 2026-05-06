@@ -249,7 +249,6 @@ export class SceneManager {
     this.diagnosticsController = new MeshDiagnosticsController({
       scene: this.scene,
       modelRoot: this.modelRoot,
-      ui: this.ui,
     });
 
     this.currentShading = initialState.shading;
@@ -1770,9 +1769,13 @@ export class SceneManager {
         if (isFbx) {
           this.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
             okLabel: 'CONTINUE',
+            modalTone:
+              options.suppressSuccessToastSound === true ? 'none' : 'notification',
           });
         } else {
-          this.ui.showToast('Model loaded');
+          this.ui.showToast('Model loaded', 3200, {
+            notification: options.suppressSuccessToastSound === true ? false : undefined,
+          });
         }
       }
       this.eventBus.emit('scene:model-load-complete', { success: true, file });
@@ -1826,6 +1829,7 @@ export class SceneManager {
       if (isFbx) {
         this.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
           okLabel: 'CONTINUE',
+          modalTone: 'notification',
         });
       } else {
         this.ui.showToast('Folder loaded');
@@ -2063,7 +2067,7 @@ export class SceneManager {
     });
     
     this.ui.setDropzoneVisible(false);
-    this.ui.revealShelf?.();
+    this.ui.revealShelf?.({ skipSound: wasFirstLoad });
     
     // Fade in mesh opacity from 0 to 1 over 2 seconds with spin-in animation
     // Animate object rotation relative to modelRoot (which may have saved rotation)
@@ -2868,12 +2872,14 @@ export class SceneManager {
     this._suppressResizeForExport = true;
     try {
       if (transparent) {
-        await this.imageExporter.exportTransparentPng(
+        if (!this.currentModel) return;
+        const ok = await this.imageExporter.exportTransparentPng(
           this.currentModel,
           this.currentFile,
           this.cameraController,
           size,
         );
+        if (ok) this.ui?.uiSounds?.playRenderFinished();
       } else {
         const originalSize = new THREE.Vector2();
         this.renderer.getSize(originalSize);
@@ -2885,6 +2891,7 @@ export class SceneManager {
           originalPixelRatio,
           size,
         );
+        this.ui?.uiSounds?.playRenderFinished();
       }
     } finally {
       this._suppressResizeForExport = false;
@@ -2904,7 +2911,8 @@ export class SceneManager {
         this.currentFile,
         this.cameraController,
       );
-      this.ui?.showToast?.('SVG silhouette exported');
+      this.ui?.uiSounds?.playRenderFinished();
+      this.ui?.showToast?.('SVG silhouette exported', 3200, { notification: false });
     } catch (error) {
       console.error('SVG export failed', error);
       this.ui?.showToast?.('SVG export failed');
@@ -2925,7 +2933,8 @@ export class SceneManager {
         this.currentFile,
         level,
       );
-      this.ui?.showToast?.('SVG (color) exported');
+      this.ui?.uiSounds?.playRenderFinished();
+      this.ui?.showToast?.('SVG (color) exported', 3200, { notification: false });
     } catch (error) {
       console.error('SVG (color) export failed', error);
       this.ui?.showToast?.('SVG (color) export failed');
@@ -2945,7 +2954,8 @@ export class SceneManager {
       this.ui?.showToast?.('Exporting .GLB…');
       const sourceName = this.currentFile?.name || this.currentAssetMetadata?.assetName || 'svg-extrude';
       await this.svgGlbExporter.exportFromModelRoot(this.modelRoot, sourceName);
-      this.ui?.showToast?.('.GLB exported');
+      this.ui?.uiSounds?.playRenderFinished();
+      this.ui?.showToast?.('.GLB exported', 3200, { notification: false });
     } catch (error) {
       console.error('SVG GLB export failed', error);
       this.ui?.showToast?.('SVG .GLB export failed');

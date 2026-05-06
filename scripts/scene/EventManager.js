@@ -275,7 +275,17 @@ export class EventManager {
     eventBus.on('camera:auto-exposure', (enabled) => s.autoExposureController?.setEnabled(enabled));
 
     // File loading events
-    eventBus.on('file:selected', (file) => s.loadFile(file));
+    eventBus.on('file:selected', (payload) => {
+      let file;
+      const loadOpts = {};
+      if (payload instanceof File) {
+        file = payload;
+      } else if (payload && typeof payload === 'object') {
+        file = payload.file;
+        if (payload.suppressSuccessToastSound) loadOpts.suppressSuccessToastSound = true;
+      }
+      if (file instanceof File) s.loadFile(file, loadOpts);
+    });
     eventBus.on('file:bundle', (bundle) => s.loadFileBundle(bundle));
     eventBus.on('file:reload', () => {
       if (s.currentFile) {

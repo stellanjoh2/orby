@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 export class MeshDiagnosticsController {
-  constructor({ scene, modelRoot, ui }) {
+  constructor({ scene, modelRoot }) {
     this.scene = scene;
     this.modelRoot = modelRoot;
-    this.ui = ui;
 
     this.boneHelpers = [];
-    this.lastBoneToastTime = 0;
     this.currentModel = null;
     this.currentShading = null;
   }
@@ -23,7 +21,6 @@ export class MeshDiagnosticsController {
       return;
     }
 
-    let found = false;
     this.currentModel.traverse((child) => {
       if (child.isSkinnedMesh && child.skeleton) {
         const helper = new THREE.SkeletonHelper(child);
@@ -31,17 +28,8 @@ export class MeshDiagnosticsController {
         helper.material.color.set('#66ccff');
         this.scene.add(helper);
         this.boneHelpers.push(helper);
-        found = true;
       }
     });
-
-    if (!found) {
-      const now = performance.now();
-      if (now - this.lastBoneToastTime > 2000) {
-        this.ui?.showToast?.('No bones/skeleton detected in this mesh');
-        this.lastBoneToastTime = now;
-      }
-    }
   }
 
   clearBoneHelpers() {

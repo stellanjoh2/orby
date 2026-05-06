@@ -238,7 +238,7 @@ export class ImageExporter {
   async exportTransparentPng(currentModel, currentFile, cameraController, size = 2) {
     if (!currentModel) {
       console.warn('No model loaded to export');
-      return;
+      return false;
     }
 
     // Save current state
@@ -253,7 +253,7 @@ export class ImageExporter {
     if (!cropInfo) {
       console.warn('Could not calculate mesh bounds');
       this._restoreState(state);
-      return;
+      return false;
     }
     
     // Render to render target with transparency
@@ -268,6 +268,7 @@ export class ImageExporter {
     // Clean up and restore state
     renderTarget.dispose();
     this._restoreState(state);
+    return true;
   }
 
   /**

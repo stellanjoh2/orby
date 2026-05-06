@@ -92,6 +92,7 @@ export class MeshControls {
       input.addEventListener('change', () => {
         if (input.checked) {
           const prev = this.stateStore.getState().shading;
+          if (input.value !== prev) this.ui.uiSounds?.playSelect();
           this.stateStore.set('shading', input.value);
           applyWireframeOnlyVisibleOnEnter(
             prev,

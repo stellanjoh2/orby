@@ -12,6 +12,7 @@ export class AnimationControls {
   bind() {
     this.ui.dom.animationBlock.hidden = true;
     this.ui.dom.playPause.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
       this.eventBus.emit('animation:toggle');
     });
     this.ui.dom.animationScrub.addEventListener('input', (event) => {
@@ -19,6 +20,7 @@ export class AnimationControls {
       this.eventBus.emit('animation:scrub', value);
     });
     this.ui.dom.animationSelect.addEventListener('change', (event) => {
+      this.ui.uiSounds?.playSelect();
       const index = parseInt(event.target.value, 10);
       this.eventBus.emit('animation:select', index);
     });

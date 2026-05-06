@@ -8,6 +8,13 @@ import { animateModalClose, animateModalOpen, prefersReducedMotion } from './mod
 /** Minimum usable detail — keep in sync with api/bug-report.js */
 const MIN_BUG_MESSAGE_WORDS = 5;
 
+/** Keys that insert text or a newline in the bug message field (typewriter taps). */
+function bugReportTypingKeyForTap(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return false;
+  if (e.key === 'Enter') return true;
+  return e.key.length === 1;
+}
+
 function bugReportMessagePassesDetailBar(trimmed) {
   if (!trimmed) return false;
   const words = trimmed.split(/\s+/).filter(Boolean).length;
@@ -89,6 +96,11 @@ export class BugReportController {
     for (const ev of ['input', 'change']) {
       messageInput?.addEventListener(ev, () => this.syncSendButton());
     }
+    messageInput?.addEventListener('keydown', (e) => {
+      if (e.isComposing) return;
+      if (!bugReportTypingKeyForTap(e)) return;
+      this.ui.uiSounds?.playBugReportTap();
+    });
     this.severityCombo = this.form.querySelector('#bugReportSeverityCombo');
     this.severityTrigger = this.form.querySelector('#bugReportSeverityTrigger');
     this.severityListbox = this.form.querySelector('#bugReportSeverityListbox');
@@ -171,6 +183,8 @@ export class BugReportController {
 
   _setBugReportSeverity(value) {
     if (!this.severityHidden || !value) return;
+    const prev = this.severityHidden.value;
+    if (value !== prev) this.ui.uiSounds?.playSelect();
     this.severityHidden.value = value;
     this.syncSeverityFromHidden();
   }
@@ -367,6 +381,8 @@ export class BugReportController {
 
   open() {
     if (!this.modal) return;
+    /* Same “up” clip as podium / studio shelf reveal. */
+    this.ui?.uiSounds?.playShelfShow();
     this._teardownBugReportThankYouQuiet();
     this.ui?.beginShelfOverlaySuppression?.();
     this._sending = false;
@@ -389,6 +405,8 @@ export class BugReportController {
   close(onAfterCleanup, opts = {}) {
     if (!this.modal || !this.form) return;
     if (this.modal.style.display === 'none') return;
+    /* Same “down” clip as podium / shelf hide. */
+    this.ui?.uiSounds?.playShelfHide();
     this._closeSeverityListbox();
     const panel = this.modal.querySelector('.load-settings-content');
     const preserveBackdrop = opts.preserveViewportBackdrop === true;
@@ -464,6 +482,8 @@ export class BugReportController {
       bridgedBackdrop || (!layer.hasAttribute('hidden') && layer.style.display === 'flex');
 
     this._maskBugModalBehindThankYou();
+
+    this.ui?.uiSounds?.playNotification();
 
     gsap.killTweensOf([msg, ok]);
     if (!skipBackdropReveal) gsap.killTweensOf(layer);

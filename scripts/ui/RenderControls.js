@@ -568,6 +568,8 @@ export class RenderControls {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-look-filter');
         if (!id) return;
+        const current = this.stateStore.getState().lookFilterPreset ?? 'none';
+        if (id !== current) this.ui.uiSounds?.playSelect();
         this.eventBus.emit('render:look-filter', id);
       });
     });

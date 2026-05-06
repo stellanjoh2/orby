@@ -56,6 +56,8 @@ export class ResetControls {
         const text = this.ui.buttons.loadSceneText;
         if (!modal) return;
         const panel = modal.querySelector('.load-settings-content');
+        this.ui.uiSounds?.playShelfShow();
+        this.ui.uiSounds?.playNotification();
         void animateModalOpen(modal, panel).then(() => {
           if (text) {
             text.focus();
@@ -107,6 +109,7 @@ export class ResetControls {
 
     // Reset buttons (Mesh, Studio, Render)
     const resetMesh = () => {
+      this.ui.uiSounds?.playSelect();
       const defaults = this.stateStore.getDefaults();
       this.stateStore.batch(() => {
       this.stateStore.set('shading', defaults.shading);
@@ -195,6 +198,7 @@ export class ResetControls {
     };
 
     const resetStudio = () => {
+      this.ui.uiSounds?.playSelect();
       const defaults = this.stateStore.getDefaults();
       this.stateStore.batch(() => {
       this.stateStore.set('hdri', defaults.hdri);
@@ -260,6 +264,7 @@ export class ResetControls {
     };
 
     const resetRender = () => {
+      this.ui.uiSounds?.playSelect();
       const defaults = this.stateStore.getDefaults();
       this.stateStore.batch(() => {
       this.stateStore.set('dof', defaults.dof);
@@ -341,6 +346,7 @@ export class ResetControls {
   bindLocalResetButtons() {
     document.querySelectorAll('[data-reset]').forEach((button) => {
       button.addEventListener('click', () => {
+        this.ui.uiSounds?.playSelect();
         const defaults = this.stateStore.getDefaults();
         const resetType = (button.dataset.reset ?? '').trim();
 

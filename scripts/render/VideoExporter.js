@@ -549,7 +549,10 @@ export class VideoExporter {
       settings?.format === 'mov' || settings?.format === 'png'
         ? settings.format
         : 'mp4';
-    const durationSec = settings?.durationSec === 10 ? 10 : 5;
+    const allowedDurations = [5, 10, 15];
+    const durationSec = allowedDurations.includes(settings?.durationSec)
+      ? settings.durationSec
+      : 5;
     const mp4Quality =
       settings?.mp4Quality === 'low' || settings?.mp4Quality === 'high'
         ? settings.mp4Quality
@@ -604,7 +607,10 @@ export class VideoExporter {
             quality: mp4Quality,
             spins,
           });
-          if (success) this.ui?.showToast?.('MP4 exported');
+          if (success) {
+            this.ui?.uiSounds?.playRenderFinished();
+            this.ui?.showToast?.('MP4 exported', 3200, { notification: false });
+          }
           else this.ui?.showToast?.('MP4 export failed');
         } catch (error) {
           console.error('MP4 export failed', error);
@@ -643,7 +649,8 @@ export class VideoExporter {
               movBlob,
               `${safeBase}_turntable_${durationSec}s_${fps}fps.mov`,
             );
-            this.ui?.showToast?.('MOV exported');
+            this.ui?.uiSounds?.playRenderFinished();
+            this.ui?.showToast?.('MOV exported', 3200, { notification: false });
           }
         } catch (error) {
           console.error('MOV export failed', error);
@@ -701,7 +708,10 @@ export class VideoExporter {
           }
         }
 
-        this.ui?.showToast?.(`Video sequence exported (${totalFrames} PNG frames)`);
+        this.ui?.uiSounds?.playRenderFinished();
+        this.ui?.showToast?.(`Video sequence exported (${totalFrames} PNG frames)`, 3200, {
+          notification: false,
+        });
       } catch (error) {
         console.error('Video export failed', error);
         this.ui?.showToast?.('Video export failed');
