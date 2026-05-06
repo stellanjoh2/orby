@@ -327,6 +327,106 @@ body.dropzone-visible #webgl {
   cursor: not-allowed;
 }
 
+/* Site entry gate — solid black full-screen veil until access phrase (see index.html) */
+.orby-entry-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 4vw, 2rem);
+  margin: 0;
+  box-sizing: border-box;
+  background: #000;
+  pointer-events: auto;
+}
+
+.orby-entry-gate__panel {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.75rem 1.5rem;
+  border-radius: var(--app-settings-chrome-radius);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--brand-primary) 12%, transparent),
+    0 12px 48px rgba(0, 0, 0, 0.55),
+    0 0 80px color-mix(in srgb, var(--brand-primary) 8%, transparent);
+}
+
+.orby-entry-gate__title {
+  font-family: 'Cal Sans', system-ui, -apple-system, sans-serif;
+  margin: 0 0 0.35rem 0;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.orby-entry-gate__hint {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.orby-entry-gate__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.orby-entry-gate__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 255, 0.55);
+}
+
+.orby-entry-gate__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: var(--panel-alt);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.orby-entry-gate__input:focus {
+  border-color: color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent);
+}
+
+.orby-entry-gate__error {
+  margin: 0;
+  min-height: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--danger);
+}
+
+.orby-entry-gate__submit {
+  margin-top: 0.35rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.orby-entry-gate .accent-action-btn {
+  opacity: 1;
+}
+
+html.orby-gate-unlocked .orby-entry-gate {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Load Settings Modal */
 .load-settings-modal {
   position: fixed;
