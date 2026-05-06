@@ -400,13 +400,13 @@ export class BugReportController {
 
   /**
    * @param {() => void} [onAfterCleanup] runs after modal is hidden
-   * @param {{ preserveViewportBackdrop?: boolean }} [opts] keep full-modal dim scrim until hidden (thank-you path)
+   * @param {{ preserveViewportBackdrop?: boolean, skipShelfHideSound?: boolean }} [opts] keep full-modal dim scrim until hidden (thank-you path); skip shelf-hide SFX when transitioning to thank-you (tap + notification only)
    */
   close(onAfterCleanup, opts = {}) {
     if (!this.modal || !this.form) return;
     if (this.modal.style.display === 'none') return;
-    /* Same “down” clip as podium / shelf hide. */
-    this.ui?.uiSounds?.playShelfHide();
+    /* Same “down” clip as podium / shelf hide — omit on success→thank-you so we don’t stack with notification. */
+    if (!opts.skipShelfHideSound) this.ui?.uiSounds?.playShelfHide();
     this._closeSeverityListbox();
     const panel = this.modal.querySelector('.load-settings-content');
     const preserveBackdrop = opts.preserveViewportBackdrop === true;
@@ -707,7 +707,7 @@ export class BugReportController {
           this.thankYouLayer?.classList.remove('bug-report-thank-you-layer--under-modal');
           void this._playBugReportThankYou();
         },
-        { preserveViewportBackdrop: true },
+        { preserveViewportBackdrop: true, skipShelfHideSound: true },
       );
     } catch {
       this.setStatus('Network error. Check your connection.', true);
