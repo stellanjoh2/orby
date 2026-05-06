@@ -6,6 +6,7 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
   MATERIAL_EMISSIVE_SLIDER_MAX,
 } from '../constants.js';
+import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -90,7 +91,15 @@ export class MeshControls {
     this.ui.inputs.shading.forEach((input) => {
       input.addEventListener('change', () => {
         if (input.checked) {
+          const prev = this.stateStore.getState().shading;
           this.stateStore.set('shading', input.value);
+          applyWireframeOnlyVisibleOnEnter(
+            prev,
+            input.value,
+            this.stateStore,
+            this.eventBus,
+            this.ui,
+          );
           this.eventBus.emit('mesh:shading', input.value);
         }
       });

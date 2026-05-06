@@ -107,7 +107,7 @@ export class StateStore {
       wireframe: {
         alwaysOn: false,
         color: '#c8c8c8',
-        onlyVisibleFaces: false,
+        onlyVisibleFaces: true,
         hideMesh: false,
       },
       fresnel: {
@@ -209,18 +209,18 @@ export class StateStore {
       svgColorDetail: 'high',
       /**
        * ColorChecker Classic (24 swatches) — reference sRGB from Wikipedia / manufacturer data.
-       * Placement matches studio lights: orbit around orbit target in XZ at `distance`, `height` on Y,
-       * azimuth = global lights rotation + `rotate` (same yaw formula as directional lights).
+       * Default placement (distance / rotate / height / scale) is a tuned “spawn” preset; `enabled` stays
+       * false until the user shows the chart.
        */
       colorChecker: {
         enabled: false,
-        distance: 0.6,
+        distance: 2,
         /** Orbit azimuth in degrees (added to global Lights → Rotate). */
-        rotate: 0,
+        rotate: 333,
         /** Vertical offset from orbit target (scene units), like Key → Height. */
-        height: 0,
+        height: -0.5,
         /** Uniform scale of the chart group (1 = default built-in size). */
-        scale: 1,
+        scale: 0.17,
         /** Shortcut to Object → Display → Unlit (textures); restores prior display mode when turned off. */
         rawColors: false,
       },

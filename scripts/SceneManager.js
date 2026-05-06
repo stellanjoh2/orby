@@ -39,6 +39,10 @@ import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
 import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
+import {
+  createToggleScaleContext,
+  stepToggleScaleAnimation,
+} from './scene/toggleScaleAnimation.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
 import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
 
@@ -152,6 +156,11 @@ export class SceneManager {
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     this._colorCheckerHorizRef = new THREE.Vector3();
     this._colorCheckerTowardCam = new THREE.Vector3();
+    /** Shared scale-in/out state for Reference colors (same curves as podium). */
+    this._ccToggleCtx = createToggleScaleContext();
+    this._podiumToggleCtx = createToggleScaleContext();
+    this._podiumGlassToggleCtx = createToggleScaleContext();
+    this._groundGridBottomAlignRaf = 0;
     this.scene.environmentIntensity = this.hdriStrength;
 
     // Initialize background controller (manages solid background color independently from HDRI)
@@ -302,6 +311,12 @@ export class SceneManager {
     this.textureLoader = new THREE.TextureLoader();
     this.setupLights();
     this.setupGround();
+    const bootGround = this.stateStore.getState();
+    this._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
+    this._podiumToggleCtx.prevEnabled = !!bootGround.groundSolid;
+    this._podiumGlassToggleCtx.prevEnabled = !!(
+      bootGround.groundSolid && (bootGround.podiumGlassSurface ?? bootGround.podiumReflectMesh ?? false)
+    );
     this.setupMoodController();
     this.setupEnvironment(initialState);
     this.setupComposer();
@@ -840,11 +855,8 @@ export class SceneManager {
    */
   applyColorCheckerFromState(state) {
     const cc = state?.colorChecker ?? this.stateStore.getDefaults().colorChecker;
-    if (this.colorCheckerRoot) {
-      this.colorCheckerRoot.visible = !!cc?.enabled;
-      if (cc?.enabled) {
-        this._syncColorCheckerReferenceProbes(this.scene.environment, this.hdriStrength);
-      }
+    if (this.colorCheckerRoot && cc?.enabled) {
+      this._syncColorCheckerReferenceProbes(this.scene.environment, this.hdriStrength);
     }
   }
 
@@ -856,11 +868,17 @@ export class SceneManager {
       cc.rotate = cc.rotation;
     }
 
-    if (!this.colorCheckerRoot || !cc.enabled) {
-      if (this.colorCheckerRoot) this.colorCheckerRoot.visible = false;
-      return;
-    }
-    this.colorCheckerRoot.visible = true;
+    if (!this.colorCheckerRoot) return;
+
+    const r = stepToggleScaleAnimation(
+      this._ccToggleCtx,
+      performance.now(),
+      !!cc.enabled,
+    );
+    this.colorCheckerRoot.visible = r.visible;
+    if (r.skipRest) return;
+
+    const animMul = r.animMul;
 
     const anchor = this.controls.target;
     const camPos = this.camera.position;
@@ -882,8 +900,8 @@ export class SceneManager {
     const rz = -horiz.x * sin + horiz.z * cos;
     const orbitDir = new THREE.Vector3(rx, 0, rz).normalize();
 
-    const d = Math.max(0.05, cc.distance ?? 0.6);
-    const h = cc.height ?? 0;
+    const d = Math.max(0.05, cc.distance ?? defaults.distance);
+    const h = cc.height ?? defaults.height;
 
     // Keep the chart at the mesh’s vertical level when we have bounds — orbit-target Y (pans) won’t yank it as much.
     const bounds = this.cameraController?.getModelBounds();
@@ -906,8 +924,43 @@ export class SceneManager {
     }
     this.colorCheckerRoot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flat);
 
-    const sc = Math.max(0.01, Math.min(20, cc.scale ?? 1));
-    this.colorCheckerRoot.scale.setScalar(sc);
+    const sc = Math.max(0.01, Math.min(20, cc.scale ?? defaults.scale));
+    this.colorCheckerRoot.scale.setScalar(sc * animMul);
+  }
+
+  /** Ground solid / podium — same scale curves as Reference colors (see toggleScaleAnimation.js). */
+  _updatePodiumAppearAnimation() {
+    const podium = this.groundController?.podium;
+    if (!podium) return;
+
+    const groundSolid = !!this.stateStore.getState().groundSolid;
+    const r = stepToggleScaleAnimation(
+      this._podiumToggleCtx,
+      performance.now(),
+      groundSolid,
+    );
+    podium.visible = r.visible;
+    podium.scale.setScalar(r.animMul);
+  }
+
+  /** Podium glass on the podium top — uses same shared scale curves as podium toggles. */
+  _updatePodiumGlassAppearAnimation() {
+    const reflector = this.groundController?.podiumReflector;
+    const st = this.stateStore.getState();
+    const glassOn = !!(st.groundSolid && st.podiumGlassSurface);
+
+    if (!reflector) {
+      this._podiumGlassToggleCtx.prevEnabled = glassOn;
+      return;
+    }
+
+    const r = stepToggleScaleAnimation(
+      this._podiumGlassToggleCtx,
+      performance.now(),
+      glassOn,
+    );
+    reflector.visible = r.visible;
+    reflector.scale.setScalar(r.animMul);
   }
 
   /**
@@ -1314,6 +1367,101 @@ export class SceneManager {
 
   setGridY(value) {
     this.groundController?.setGridY(value);
+  }
+
+  /**
+   * Align podium + grid Y to the current model bottom without forcing visibility changes.
+   * Used for first-load QoL so toggling them on starts at the correct vertical placement.
+   */
+
+  _alignGroundAndGridToCurrentModelBottom({
+    updateState = true,
+    includePodium = true,
+    includeGrid = true,
+  } = {}) {
+    if (!this.currentModel) return null;
+    const bounds = new THREE.Box3().setFromObject(this.currentModel);
+    if (!bounds || !isFinite(bounds.min.y)) return null;
+
+    const podiumY = includePodium ? this.groundController?.snapPodiumToBounds(bounds) : null;
+    const gridY = includeGrid ? this.groundController?.snapGridToBounds(bounds) : null;
+
+    if (updateState) {
+      if (includePodium && podiumY !== null && podiumY !== undefined) {
+        this.stateStore.set('groundY', podiumY);
+      }
+      if (includeGrid && gridY !== null && gridY !== undefined) {
+        this.stateStore.set('gridY', gridY);
+      }
+    }
+    return {
+      podiumY,
+      gridY,
+    };
+  }
+
+  _cancelGroundGridBottomAlignAnimation() {
+    if (this._groundGridBottomAlignRaf) {
+      cancelAnimationFrame(this._groundGridBottomAlignRaf);
+      this._groundGridBottomAlignRaf = 0;
+    }
+  }
+
+  _animateGroundAndGridToCurrentModelBottom({ durationMs = 420 } = {}) {
+    const snap = this._alignGroundAndGridToCurrentModelBottom({
+      updateState: false,
+      includePodium: true,
+      includeGrid: true,
+    });
+    if (!snap) return false;
+
+    const targetGroundY = Number.isFinite(snap.podiumY) ? snap.podiumY : null;
+    const targetGridY = Number.isFinite(snap.gridY) ? snap.gridY : null;
+    if (targetGroundY === null && targetGridY === null) return false;
+
+    const startGroundYRaw = this.groundController?.getGroundY?.();
+    const startGridYRaw = this.groundController?.getGridY?.();
+    const startGroundY = Number.isFinite(startGroundYRaw) ? startGroundYRaw : targetGroundY;
+    const startGridY = Number.isFinite(startGridYRaw) ? startGridYRaw : targetGridY;
+
+    const groundDelta =
+      targetGroundY === null || startGroundY === null ? 0 : Math.abs(targetGroundY - startGroundY);
+    const gridDelta =
+      targetGridY === null || startGridY === null ? 0 : Math.abs(targetGridY - startGridY);
+    if (groundDelta < 1e-5 && gridDelta < 1e-5) {
+      if (targetGroundY !== null) this.stateStore.set('groundY', targetGroundY);
+      if (targetGridY !== null) this.stateStore.set('gridY', targetGridY);
+      return true;
+    }
+
+    this._cancelGroundGridBottomAlignAnimation();
+    const start = performance.now();
+    const easeOutCubic = (t) => 1 - (1 - t) ** 3;
+
+    const tick = () => {
+      const t = Math.min(1, (performance.now() - start) / Math.max(1, durationMs));
+      const e = easeOutCubic(t);
+
+      if (targetGroundY !== null && startGroundY !== null) {
+        const y = startGroundY + (targetGroundY - startGroundY) * e;
+        this.groundController?.setGroundY(y);
+      }
+      if (targetGridY !== null && startGridY !== null) {
+        const y = startGridY + (targetGridY - startGridY) * e;
+        this.groundController?.setGridY(y);
+      }
+
+      if (t < 1) {
+        this._groundGridBottomAlignRaf = requestAnimationFrame(tick);
+      } else {
+        this._groundGridBottomAlignRaf = 0;
+        if (targetGroundY !== null) this.stateStore.set('groundY', targetGroundY);
+        if (targetGridY !== null) this.stateStore.set('gridY', targetGridY);
+      }
+    };
+
+    this._groundGridBottomAlignRaf = requestAnimationFrame(tick);
+    return true;
   }
 
   snapPodiumToBottom() {
@@ -1852,6 +2000,10 @@ export class SceneManager {
     }
     // Apply transform state from StateStore
     this.transformController?.applyState(state);
+    if (wasFirstLoad) {
+      this._cancelGroundGridBottomAlignAnimation();
+      this._alignGroundAndGridToCurrentModelBottom();
+    }
     this.materialController.setModel(object, state.shading, {
       clay: state.clay,
       fresnel: state.fresnel,
@@ -2537,6 +2689,8 @@ export class SceneManager {
     }
     this.cameraController.applyHandheldMotion(delta);
     this._updateColorCheckerPose();
+    this._updatePodiumAppearAnimation();
+    this._updatePodiumGlassAppearAnimation();
     this.diagnosticsController.update(delta);
     if (!this.panelsShelfScrolling) {
       this.postPipeline?.updateGrainTime(delta);

@@ -1,4 +1,5 @@
 import { HDRI_PRESETS, HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import { applyWireframeOnlyVisibleOnEnter } from '../ui/wireframeEnterDefaults.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const DEADZONE = 0.15;
@@ -338,6 +339,7 @@ export class GamepadController {
     const currentIndex = modes.indexOf(current);
     const nextMode =
       currentIndex === -1 ? modes[0] : modes[(currentIndex + 1) % modes.length];
+    applyWireframeOnlyVisibleOnEnter(current, nextMode, this.stateStore, this.eventBus, this.ui);
     this.stateStore.set('shading', nextMode);
     this.eventBus.emit('mesh:shading', nextMode);
   }

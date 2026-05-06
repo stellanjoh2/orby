@@ -5,6 +5,7 @@
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { revealShelfPanelHeadline } from './panelHeadlineReveal.js';
+import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 
 export class GlobalControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -240,9 +241,12 @@ export class GlobalControls {
         const modes = ['shaded', 'textures', 'clay', 'wireframe'];
         const modeIndex = parseInt(key) - 1;
         if (modes[modeIndex]) {
-          this.stateStore.set('shading', modes[modeIndex]);
-          this.eventBus.emit('mesh:shading', modes[modeIndex]);
-          const radio = document.querySelector(`input[name="shading"][value="${modes[modeIndex]}"]`);
+          const prev = this.stateStore.getState().shading;
+          const next = modes[modeIndex];
+          this.stateStore.set('shading', next);
+          applyWireframeOnlyVisibleOnEnter(prev, next, this.stateStore, this.eventBus, this.ui);
+          this.eventBus.emit('mesh:shading', next);
+          const radio = document.querySelector(`input[name="shading"][value="${next}"]`);
           if (radio) radio.checked = true;
         }
       }

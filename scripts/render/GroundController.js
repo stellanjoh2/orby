@@ -360,7 +360,9 @@ export class GroundController {
 
   setPodiumGlassSurface(enabled) {
     this.podiumGlassSurface = !!enabled;
-    this.rebuildPodiumReflector();
+    if (this.podiumGlassSurface && !this.podiumReflector) {
+      this.rebuildPodiumReflector();
+    }
   }
 
   setPodiumGlassBlur(value) {
@@ -458,9 +460,7 @@ export class GroundController {
       this.buildDefaultPodium();
     }
 
-    if (this.podium) {
-      this.podium.visible = this.solidEnabled;
-    }
+    // Podium visibility + animated scale are driven each frame from SceneManager (`toggleScaleAnimation`).
   }
 
   setWireEnabled(enabled) {
