@@ -180,9 +180,15 @@ export class RenderControls {
       this.eventBus.emit('render:ambient-occlusion', this.stateStore.getState().ambientOcclusion);
     if (this.ui.inputs.toggleAmbientOcclusion) {
       this.ui.inputs.toggleAmbientOcclusion.addEventListener('change', (event) => {
-        touchLookFilterCustom();
         const enabled = event.target.checked;
-        this.stateStore.set('ambientOcclusion.enabled', enabled);
+        // Capture the checked state before any notify-driven UI sync and commit
+        // both state updates together so the first click cannot be overwritten.
+        this.stateStore.batch(() => {
+          this.stateStore.set('ambientOcclusion.enabled', enabled);
+          if (this.stateStore.getState().lookFilterPreset !== 'custom') {
+            this.stateStore.set('lookFilterPreset', 'custom');
+          }
+        });
         this.ui.setEffectControlsDisabled(
           [
             'ambientOcclusionIntensity',

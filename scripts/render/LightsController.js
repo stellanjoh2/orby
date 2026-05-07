@@ -4,7 +4,21 @@ const SHADOW_QUALITY_MAP_SIZE = {
   low: 512,
   medium: 1024,
   high: 2048,
-  ultra: 3072,
+  ultra: 4096,
+};
+const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
+const MIN_SHADOW_BOUNDS_RADIUS = 0.5;
+const SHADOW_BOUNDS_PADDING_BY_QUALITY = {
+  low: 2.4,
+  medium: 2.0,
+  high: 1.6,
+  ultra: 1.2,
+};
+const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
+  low: 10,
+  medium: 8,
+  high: 6,
+  ultra: 4.5,
 };
 
 export class LightsController {
@@ -53,17 +67,22 @@ export class LightsController {
       if (!light) return;
       if ('castShadow' in light && light.shadow) {
         light.castShadow = true;
-        light.shadow.radius = this.shadowSoftness;
         light.shadow.mapSize.set(
           SHADOW_QUALITY_MAP_SIZE[this.shadowQuality],
           SHADOW_QUALITY_MAP_SIZE[this.shadowQuality],
         );
         light.shadow.bias = this.shadowContactOffset;
+        light.shadow.normalBias = 0.015;
       } else {
         light.castShadow = false;
       }
+      if (light.isDirectionalLight && light.target && !light.target.parent) {
+        this.scene.add(light.target);
+      }
       this.scene.add(light);
     });
+    this._applyShadowCameraBounds();
+    this._applyShadowSoftnessToLights();
   }
 
   _normalizeShadowQuality(quality) {
@@ -84,12 +103,61 @@ export class LightsController {
     return Math.min(4, Math.max(0, raw));
   }
 
+  _applyShadowSoftnessToLights() {
+    const currentSize =
+      SHADOW_QUALITY_MAP_SIZE[this.shadowQuality] ?? SHADOW_QUALITY_MAP_SIZE.medium;
+    const referenceSize = SHADOW_QUALITY_MAP_SIZE[SHADOW_SOFTNESS_REFERENCE_QUALITY];
+    // Radius is in shadow texels; scale it with map resolution to preserve visual softness.
+    const effectiveRadius = this.shadowSoftness * (currentSize / referenceSize);
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (light?.isDirectionalLight && light.shadow) {
+        light.shadow.radius = effectiveRadius;
+        if ('blurSamples' in light.shadow) {
+          light.shadow.blurSamples = this.shadowQuality === 'ultra' ? 32 : 8;
+        }
+      }
+    });
+  }
+
+  _applyShadowCameraBounds() {
+    const center = this.modelBounds?.center;
+    const radius = Number.isFinite(this.modelBounds?.radius)
+      ? Math.max(MIN_SHADOW_BOUNDS_RADIUS, this.modelBounds.radius)
+      : 3;
+    const padding =
+      SHADOW_BOUNDS_PADDING_BY_QUALITY[this.shadowQuality]
+      ?? SHADOW_BOUNDS_PADDING_BY_QUALITY.medium;
+    const farMultiplier =
+      SHADOW_FAR_MULTIPLIER_BY_QUALITY[this.shadowQuality]
+      ?? SHADOW_FAR_MULTIPLIER_BY_QUALITY.medium;
+    const extent = radius * padding;
+    const farPlane = Math.max(20, radius * farMultiplier);
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (!light?.isDirectionalLight || !light.shadow?.camera) return;
+      if (center && light.target) {
+        light.target.position.copy(center);
+        light.target.updateMatrixWorld();
+      }
+      const cam = light.shadow.camera;
+      cam.left = -extent;
+      cam.right = extent;
+      cam.top = extent;
+      cam.bottom = -extent;
+      cam.near = 0.1;
+      cam.far = farPlane;
+      cam.updateProjectionMatrix();
+    });
+  }
+
   getLights() {
     return this.lights;
   }
 
   setModelBounds(bounds) {
     this.modelBounds = bounds;
+    this._applyShadowCameraBounds();
     if (this.showIndicators) {
       this.createIndicators();
     }
@@ -274,6 +342,7 @@ export class LightsController {
     ['key', 'fill', 'rim'].forEach((id) => {
       this.updateLightPosition(id);
     });
+    this._applyShadowCameraBounds();
     this.updateIndicators();
     return normalized;
   }
@@ -296,6 +365,7 @@ export class LightsController {
       this.updateLightPosition(id);
     });
 
+    this._applyShadowCameraBounds();
     this.updateIndicators();
   }
 
@@ -314,25 +384,28 @@ export class LightsController {
         }
       }
     });
+    this._applyShadowSoftnessToLights();
   }
 
   setShadowQuality(quality) {
-    this.shadowQuality = this._normalizeShadowQuality(quality);
+    const normalized = this._normalizeShadowQuality(quality);
+    if (normalized === this.shadowQuality) return;
+    this.shadowQuality = normalized;
     this.setShadowMapResolution(SHADOW_QUALITY_MAP_SIZE[this.shadowQuality]);
+    this._applyShadowSoftnessToLights();
   }
 
   setShadowSoftness(value) {
-    this.shadowSoftness = this._normalizeShadowSoftness(value);
-    ['key', 'fill', 'rim'].forEach((lightId) => {
-      const light = this.lights[lightId];
-      if (light?.isDirectionalLight && light.shadow) {
-        light.shadow.radius = this.shadowSoftness;
-      }
-    });
+    const normalized = this._normalizeShadowSoftness(value);
+    if (normalized === this.shadowSoftness) return;
+    this.shadowSoftness = normalized;
+    this._applyShadowSoftnessToLights();
   }
 
   setShadowContactOffset(offset) {
-    this.shadowContactOffset = this._normalizeShadowContactOffset(offset);
+    const normalized = this._normalizeShadowContactOffset(offset);
+    if (normalized === this.shadowContactOffset) return;
+    this.shadowContactOffset = normalized;
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
       if (light?.isDirectionalLight && light.shadow) {
@@ -342,16 +415,18 @@ export class LightsController {
   }
 
   setCastShadows(enabled) {
+    const target = !!enabled;
     // Apply to all directional lights (key, fill, rim)
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
       if (light && light.isDirectionalLight && light.shadow) {
-        light.castShadow = enabled;
+        if (light.castShadow === target) return;
+        light.castShadow = target;
         // Also update individual property to keep in sync
         if (!this.individualProperties[lightId]) {
           this.individualProperties[lightId] = {};
         }
-        this.individualProperties[lightId].castShadows = enabled;
+        this.individualProperties[lightId].castShadows = target;
       }
     });
   }

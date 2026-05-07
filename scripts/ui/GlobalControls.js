@@ -149,7 +149,12 @@ export class GlobalControls {
   bindEffectToggleSounds() {
     const shelf = this.ui.dom.shelf;
     if (!shelf) return;
-    const skipIds = new Set(['groundSolid', 'podiumGlassSurface', 'uiSoundsEnabled']);
+    const skipIds = new Set([
+      'groundSolid',
+      'podiumGlassSurface',
+      'uiSoundsEnabled',
+      'backdropEnabled',
+    ]);
     shelf.addEventListener('change', (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement) || t.type !== 'checkbox') return;
@@ -288,13 +293,25 @@ export class GlobalControls {
         this.eventBus.emit('mesh:scale-widget-enabled', newScaleState);
       }
 
-      // Display modes: 1/2/3/4
-      if (key === '1' || key === '2' || key === '3' || key === '4') {
+      // Display modes: 1/2/3/4 (supports top row and numpad keys)
+      const displayModeByCode = {
+        Numpad1: '1',
+        Numpad2: '2',
+        Numpad3: '3',
+        Numpad4: '4',
+      };
+      const displayModeKey = displayModeByCode[event.code] ?? key;
+      if (
+        displayModeKey === '1'
+        || displayModeKey === '2'
+        || displayModeKey === '3'
+        || displayModeKey === '4'
+      ) {
         event.preventDefault();
         // Match UI order:
         // 1: Shaded, 2: Unlit, 3: Clay, 4: Wireframe
         const modes = ['shaded', 'textures', 'clay', 'wireframe'];
-        const modeIndex = parseInt(key) - 1;
+        const modeIndex = parseInt(displayModeKey) - 1;
         if (modes[modeIndex]) {
           const prev = this.stateStore.getState().shading;
           const next = modes[modeIndex];

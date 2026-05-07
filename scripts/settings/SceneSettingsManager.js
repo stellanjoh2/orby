@@ -3,6 +3,7 @@ import {
   sanitizeAmbientOcclusion,
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
+import { HDRI_MOODS } from '../config/hdri.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 
 /**
@@ -35,6 +36,8 @@ export class SceneSettingsManager {
    */
   async buildSceneSettingsPayload() {
     const state = this.stateStore.getState();
+    const activeMoodPodiumColor = HDRI_MOODS[state.hdri]?.podiumColor;
+    const effectivePodiumColor = activeMoodPodiumColor ?? state.groundSolidColor;
     
     // Get camera position and target
     const cameraState = await this.getCameraState();
@@ -96,6 +99,7 @@ export class SceneSettingsManager {
       groundSolid: state.groundSolid,
       groundWire: state.groundWire,
       groundSolidColor: state.groundSolidColor,
+      podiumColor: effectivePodiumColor,
       groundWireColor: state.groundWireColor,
       groundWireOpacity: state.groundWireOpacity,
       groundY: state.groundY,
@@ -109,6 +113,14 @@ export class SceneSettingsManager {
       podiumGlassBlur: state.podiumGlassBlur,
       podiumGlassAmount: state.podiumGlassAmount,
       podiumGlassBrightness: state.podiumGlassBrightness,
+      backdropEnabled: !!state.backdropEnabled,
+      backdropScale: state.backdropScale,
+      backdropWidth: state.backdropWidth,
+      backdropColor: state.backdropColor,
+      backdropRotation: state.backdropRotation,
+      backdropY: state.backdropY,
+      backdropTextureEnabled: !!state.backdropTextureEnabled,
+      backdropTextureScale: state.backdropTextureScale,
       gridScale: state.gridScale,
       lights: state.lights,
       lightsEnabled: state.lightsEnabled,
@@ -604,9 +616,10 @@ export class SceneSettingsManager {
         this.stateStore.set('groundWire', payload.groundWire);
         this.eventBus.emit('studio:ground-wire', payload.groundWire);
       }
-      if (payload.groundSolidColor !== undefined) {
-        this.stateStore.set('groundSolidColor', payload.groundSolidColor);
-        this.eventBus.emit('studio:ground-solid-color', payload.groundSolidColor);
+      const restoredPodiumColor = payload.podiumColor ?? payload.groundSolidColor;
+      if (restoredPodiumColor !== undefined) {
+        this.stateStore.set('groundSolidColor', restoredPodiumColor);
+        this.eventBus.emit('studio:ground-solid-color', restoredPodiumColor);
       }
       if (payload.groundWireColor !== undefined) {
         this.stateStore.set('groundWireColor', payload.groundWireColor);
@@ -662,6 +675,39 @@ export class SceneSettingsManager {
       if (payload.podiumGlassBrightness !== undefined) {
         this.stateStore.set('podiumGlassBrightness', payload.podiumGlassBrightness);
         this.eventBus.emit('studio:podium-glass-brightness', payload.podiumGlassBrightness);
+      }
+      if (payload.backdropEnabled !== undefined) {
+        this.stateStore.set('backdropEnabled', !!payload.backdropEnabled);
+        this.eventBus.emit('studio:backdrop-enabled', !!payload.backdropEnabled);
+      }
+      if (payload.backdropScale !== undefined) {
+        this.stateStore.set('backdropScale', payload.backdropScale);
+        this.eventBus.emit('studio:backdrop-scale', payload.backdropScale);
+      }
+      if (payload.backdropWidth !== undefined) {
+        this.stateStore.set('backdropWidth', payload.backdropWidth);
+        this.eventBus.emit('studio:backdrop-width', payload.backdropWidth);
+      }
+      if (payload.backdropColor !== undefined) {
+        this.stateStore.set('backdropColor', payload.backdropColor);
+        this.eventBus.emit('studio:backdrop-color', payload.backdropColor);
+      }
+      if (payload.backdropRotation !== undefined) {
+        this.stateStore.set('backdropRotation', payload.backdropRotation);
+        this.eventBus.emit('studio:backdrop-rotation', payload.backdropRotation);
+      }
+      if (payload.backdropY !== undefined) {
+        this.stateStore.set('backdropY', payload.backdropY);
+        this.eventBus.emit('studio:backdrop-y', payload.backdropY);
+      }
+      if (payload.backdropTextureEnabled !== undefined) {
+        const on = !!payload.backdropTextureEnabled;
+        this.stateStore.set('backdropTextureEnabled', on);
+        this.eventBus.emit('studio:backdrop-texture-enabled', on);
+      }
+      if (payload.backdropTextureScale !== undefined) {
+        this.stateStore.set('backdropTextureScale', payload.backdropTextureScale);
+        this.eventBus.emit('studio:backdrop-texture-scale', payload.backdropTextureScale);
       }
       if (payload.gridScale !== undefined) {
         this.stateStore.set('gridScale', payload.gridScale);
@@ -748,29 +794,36 @@ export class SceneSettingsManager {
       }
       if (payload.lightsCastShadows !== undefined) {
         this.stateStore.set('lightsCastShadows', payload.lightsCastShadows);
-        this.eventBus.emit('lights:cast-shadows', payload.lightsCastShadows);
       }
       if (payload.lightsShadowQuality !== undefined) {
         this.stateStore.set('lightsShadowQuality', payload.lightsShadowQuality);
-        this.eventBus.emit('lights:shadow-quality', payload.lightsShadowQuality);
       }
       if (payload.lightsShadowSoftness !== undefined) {
         this.stateStore.set('lightsShadowSoftness', payload.lightsShadowSoftness);
-        this.eventBus.emit('lights:shadow-softness', payload.lightsShadowSoftness);
       }
       if (payload.lightsShadowContactOffset !== undefined) {
         this.stateStore.set(
           'lightsShadowContactOffset',
           payload.lightsShadowContactOffset,
         );
-        this.eventBus.emit(
-          'lights:shadow-contact-offset',
-          payload.lightsShadowContactOffset,
-        );
       }
       if (payload.lightsShadowTwoSided !== undefined) {
         this.stateStore.set('lightsShadowTwoSided', payload.lightsShadowTwoSided);
-        this.eventBus.emit('lights:shadow-two-sided', payload.lightsShadowTwoSided);
+      }
+      if (
+        payload.lightsCastShadows !== undefined
+        || payload.lightsShadowQuality !== undefined
+        || payload.lightsShadowSoftness !== undefined
+        || payload.lightsShadowContactOffset !== undefined
+        || payload.lightsShadowTwoSided !== undefined
+      ) {
+        this.eventBus.emit('lights:shadow-settings', {
+          castShadows: payload.lightsCastShadows,
+          quality: payload.lightsShadowQuality,
+          softness: payload.lightsShadowSoftness,
+          contactOffset: payload.lightsShadowContactOffset,
+          twoSided: payload.lightsShadowTwoSided,
+        });
       }
 
       if (payload.moveWidgetEnabled !== undefined) {

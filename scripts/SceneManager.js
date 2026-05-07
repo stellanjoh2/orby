@@ -57,7 +57,7 @@ const LIGHT_SHADOW_MAP_SIZE = {
   low: 512,
   medium: 1024,
   high: 2048,
-  ultra: 3072,
+  ultra: 4096,
 };
 
 function normalizeLightShadowQuality(quality) {
@@ -186,6 +186,7 @@ export class SceneManager {
     this._ccToggleCtx = createToggleScaleContext();
     this._podiumToggleCtx = createToggleScaleContext();
     this._podiumGlassToggleCtx = createToggleScaleContext();
+    this._backdropToggleCtx = createToggleScaleContext();
     this._groundGridBottomAlignRaf = 0;
     this.scene.environmentIntensity = this.hdriStrength;
 
@@ -342,6 +343,7 @@ export class SceneManager {
     this._podiumGlassToggleCtx.prevEnabled = !!(
       bootGround.groundSolid && (bootGround.podiumGlassSurface ?? bootGround.podiumReflectMesh ?? false)
     );
+    this._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
     this.setupMoodController();
     this.setupEnvironment(initialState);
     this.setupComposer();
@@ -561,6 +563,15 @@ export class SceneManager {
       podiumGlassBlur: state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR,
       podiumGlassAmount: state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT,
       podiumGlassBrightness: state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+      backdropEnabled: !!state.backdropEnabled,
+      backdropScale: state.backdropScale ?? 1,
+      backdropWidth: state.backdropWidth ?? 1,
+      backdropColor: state.backdropColor ?? '#808080',
+      backdropRotation: state.backdropRotation ?? 0,
+      backdropY: state.backdropY ?? 0,
+      backdropTextureEnabled: !!state.backdropTextureEnabled,
+      backdropTextureScale: state.backdropTextureScale ?? 1.8,
+      debugWireframeEnabled: !!state.wireframe?.alwaysOn,
     });
   }
 
@@ -772,6 +783,15 @@ export class SceneManager {
     this.setPodiumGlassBrightness(state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS, {
       updateState: false,
     });
+    this.setBackdropEnabled(!!state.backdropEnabled, { updateState: false });
+    this.setBackdropScale(state.backdropScale ?? 1, { updateState: false });
+    this.setBackdropWidth(state.backdropWidth ?? 1, { updateState: false });
+    this.setBackdropColor(state.backdropColor ?? '#808080', { updateState: false });
+    this.setBackdropRotation(state.backdropRotation ?? 0, { updateState: false });
+    this.setBackdropY(state.backdropY ?? 0, { updateState: false });
+    this.setBackdropTextureEnabled(!!state.backdropTextureEnabled, { updateState: false });
+    this.setBackdropTextureScale(state.backdropTextureScale ?? 1.8, { updateState: false });
+    this.setSceneGeometryWireframe(!!state.wireframe?.alwaysOn);
     this.setGridScale(state.gridScale ?? 1);
     this.autoExposureController?.applyStateSnapshot(state);
     // Initialize base HDRI strength if not already set
@@ -1018,6 +1038,18 @@ export class SceneManager {
     reflector.scale.setScalar(r.animMul);
   }
 
+  _updateBackdropAppearAnimation() {
+    const backdrop = this.groundController?.backdrop;
+    if (!backdrop) return;
+    const enabled = !!this.stateStore.getState().backdropEnabled;
+    const r = stepToggleScaleAnimation(
+      this._backdropToggleCtx,
+      performance.now(),
+      enabled,
+    );
+    this.groundController?.setBackdropAnimationState(r.animMul, r.visible);
+  }
+
   /**
    * Reference colors is a shortcut to Display → Unlit (textures): same path as the mesh tab Unlit icon.
    */
@@ -1111,9 +1143,14 @@ export class SceneManager {
       LIGHT_SHADOW_MAP_SIZE[normalizeLightShadowQuality(this.lightsShadowQuality)]
       ?? tier.shadowMapSize;
     this.lightsController?.setShadowMapResolution(shadowSize);
-    this.renderer.shadowMap.type = tier.softShadowMap
-      ? (this.lightsShadowSoftness <= 0.05 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap)
-      : THREE.PCFShadowMap;
+    const isUltraShadowQuality = normalizeLightShadowQuality(this.lightsShadowQuality) === 'ultra';
+    if (isUltraShadowQuality) {
+      this.renderer.shadowMap.type = THREE.VSMShadowMap;
+    } else {
+      this.renderer.shadowMap.type = tier.softShadowMap
+        ? (this.lightsShadowSoftness <= 0.05 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap)
+        : THREE.PCFShadowMap;
+    }
   }
 
   async setHdriPreset(preset) {
@@ -1623,6 +1660,75 @@ export class SceneManager {
     if (updateState) this.stateStore.set('podiumGlassBrightness', value);
   }
 
+  setBackdropEnabled(enabled, { updateState = true } = {}) {
+    const on = !!enabled;
+    this.groundController?.setBackdropEnabled(on);
+    if (updateState) this.stateStore.set('backdropEnabled', on);
+  }
+
+  setBackdropScale(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropScale(value);
+    if (updateState) this.stateStore.set('backdropScale', value);
+  }
+
+  setBackdropWidth(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropWidth(value);
+    if (updateState) this.stateStore.set('backdropWidth', value);
+  }
+
+  setBackdropColor(color, { updateState = true } = {}) {
+    this.groundController?.setBackdropColor(color);
+    if (updateState) this.stateStore.set('backdropColor', color);
+  }
+
+  setBackdropRotation(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropRotation(value);
+    if (updateState) this.stateStore.set('backdropRotation', value);
+  }
+
+  setBackdropY(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropY(value);
+    if (updateState) this.stateStore.set('backdropY', value);
+  }
+
+  setBackdropTextureEnabled(enabled, { updateState = true } = {}) {
+    const on = !!enabled;
+    this.groundController?.setBackdropTextureEnabled(on);
+    if (updateState) this.stateStore.set('backdropTextureEnabled', on);
+  }
+
+  setBackdropTextureScale(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropTextureScale(value);
+    if (updateState) this.stateStore.set('backdropTextureScale', value);
+  }
+
+  snapBackdropToBottom() {
+    if (!this.currentModel) {
+      this.ui?.showToast?.('Load a mesh before snapping the backdrop');
+      return;
+    }
+    const bounds = new THREE.Box3().setFromObject(this.currentModel);
+    if (!bounds || !isFinite(bounds.min.y)) {
+      this.ui?.showToast?.('Unable to determine mesh bottom');
+      return;
+    }
+    const backdropY = this.groundController?.snapBackdropToBounds(bounds);
+    if (backdropY === null || backdropY === undefined) {
+      this.ui?.showToast?.('Unable to determine mesh bottom');
+      return;
+    }
+    this.stateStore.set('backdropY', backdropY);
+    if (!this.stateStore.getState().backdropEnabled) {
+      this.setBackdropEnabled(true);
+      this.stateStore.set('backdropEnabled', true);
+    }
+    this.ui?.showToast?.('Backdrop floor snapped to mesh bottom');
+  }
+
+  setSceneGeometryWireframe(enabled) {
+    this.groundController?.setDebugWireframeEnabled(!!enabled);
+  }
+
   applyLightSettings(lightsState) {
     if (!lightsState) return;
     this.lightsController?.applySettings(lightsState);
@@ -1690,7 +1796,12 @@ export class SceneManager {
   }
 
   setLightsCastShadows(enabled) {
-    this.lightsController?.setCastShadows(enabled);
+    const next = !!enabled;
+    this.lightsCastShadows = next;
+    if (this.stateStore.getState().lightsCastShadows !== next) {
+      this.stateStore.set('lightsCastShadows', next);
+    }
+    this.lightsController?.setCastShadows(next);
   }
 
   setLightsShadowQuality(quality) {
@@ -1712,7 +1823,9 @@ export class SceneManager {
   }
 
   setLightsShadowTwoSided(enabled) {
-    this.lightsShadowTwoSided = !!enabled;
+    const next = !!enabled;
+    if (this.lightsShadowTwoSided === next) return;
+    this.lightsShadowTwoSided = next;
     if (!this.currentModel) return;
     this.currentModel.traverse((child) => {
       if (!child?.isMesh) return;
@@ -1722,6 +1835,21 @@ export class SceneManager {
         mat.shadowSide = this.lightsShadowTwoSided ? THREE.DoubleSide : null;
       });
     });
+  }
+
+  setLightsShadowSettings(settings = {}) {
+    const currentState = this.stateStore.getState();
+    const cast = settings.castShadows ?? settings.enabled ?? currentState.lightsCastShadows;
+    const quality = settings.quality ?? this.lightsShadowQuality;
+    const softness = settings.softness ?? this.lightsShadowSoftness;
+    const contactOffset = settings.contactOffset ?? this.lightsShadowContactOffset;
+    const twoSided = settings.twoSided ?? this.lightsShadowTwoSided;
+
+    this.setLightsCastShadows(cast);
+    this.setLightsShadowQuality(quality);
+    this.setLightsShadowContactOffset(contactOffset);
+    this.setLightsShadowTwoSided(twoSided);
+    this.setLightsShadowSoftness(softness);
   }
 
   setLightsAutoRotate(enabled) {
@@ -2304,10 +2432,13 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setShading(this.currentShading);
       const svgState = this.stateStore.getState().svgExtrude || {};
-      const overrideEnabled = !!svgState.colorOverride;
-      if (overrideEnabled) {
-        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
-      }
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!svgState.colorOverride,
+          color: svgState.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -2326,10 +2457,13 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setShading(this.currentShading);
       const svgState = this.stateStore.getState().svgExtrude || {};
-      const overrideEnabled = !!svgState.colorOverride;
-      if (overrideEnabled) {
-        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
-      }
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!svgState.colorOverride,
+          color: svgState.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -2360,10 +2494,13 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setShading(this.currentShading);
       const svgState = this.stateStore.getState().svgExtrude || {};
-      const overrideEnabled = !!svgState.colorOverride;
-      if (overrideEnabled) {
-        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
-      }
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!svgState.colorOverride,
+          color: svgState.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -2410,10 +2547,13 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setShading(this.currentShading);
       const svgState = this.stateStore.getState().svgExtrude || {};
-      const overrideEnabled = !!svgState.colorOverride;
-      if (overrideEnabled) {
-        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
-      }
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!svgState.colorOverride,
+          color: svgState.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -2451,10 +2591,13 @@ export class SceneManager {
       this.materialController.prepareMesh(this.currentModel);
       this.setShading(this.currentShading);
       const svgState = this.stateStore.getState().svgExtrude || {};
-      const overrideEnabled = !!svgState.colorOverride;
-      if (overrideEnabled) {
-        this.setSvgExtrudeColorOverride(svgState, { updateState: false });
-      }
+      this.setSvgExtrudeColorOverride(
+        {
+          enabled: !!svgState.colorOverride,
+          color: svgState.overrideColor ?? '#7ed321',
+        },
+        { updateState: false },
+      );
       this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
       this.refreshBoneHelpers();
       if (this.currentFile) {
@@ -2597,11 +2740,23 @@ export class SceneManager {
       this.stateStore,
       this.currentShading,
     );
+    const svgState = this.stateStore.getState().svgExtrude || {};
+    this.setSvgExtrudeColorOverride(
+      {
+        enabled: !!svgState.colorOverride,
+        color: svgState.overrideColor ?? '#7ed321',
+      },
+      { updateState: false },
+    );
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {
     const { updateState = true } = options;
-    const enabled = !!(settings.enabled ?? settings.colorOverride);
+    const enabled = settings.colorOverride !== undefined
+      ? !!settings.colorOverride
+      : (settings.enabled !== undefined && settings.availableColors === undefined
+        ? !!settings.enabled
+        : false);
     const color = settings.color || settings.overrideColor || '#7ed321';
     if (updateState) {
       this.stateStore.set('svgExtrude.colorOverride', enabled);
@@ -2786,6 +2941,7 @@ export class SceneManager {
     this._updateColorCheckerPose();
     this._updatePodiumAppearAnimation();
     this._updatePodiumGlassAppearAnimation();
+    this._updateBackdropAppearAnimation();
     this.diagnosticsController.update(delta);
     if (!this.panelsShelfScrolling) {
       this.postPipeline?.updateGrainTime(delta);

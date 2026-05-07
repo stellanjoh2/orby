@@ -62,6 +62,12 @@ function applyPodiumGlassReflectorShader(material, reflection01, surfaceBrightne
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
 const clamp01 = (value) => Math.min(1, Math.max(0, Number(value) || 0));
+const clampBackdropTextureScale = (value) => Math.min(12, Math.max(0.25, Number(value) || 1));
+const clampDegrees = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return ((n % 360) + 360) % 360;
+};
 
 function effectiveRoughnessWithHdriBlur(baseRoughness, hdriBlurriness) {
   const r = clamp01(baseRoughness);
@@ -107,6 +113,193 @@ function createPodiumLatheGeometry(baseRadius, topRadius, height, radialSegments
   return geo;
 }
 
+function createSeamlessBackdropGeometry({
+  width = 6,
+  wallHeight = 4,
+  curveRadius = 1.4,
+  floorDepth = 4,
+  widthSegments = 24,
+  profileSegments = 56,
+} = {}) {
+  const clampedWidthSegments = Math.max(2, Math.floor(widthSegments));
+  const clampedProfileSegments = Math.max(16, Math.floor(profileSegments));
+  const curveLen = Math.PI * 0.5 * curveRadius;
+  const totalLen = wallHeight + curveLen + floorDepth;
+  // Target ~2x profile density, but concentrate it into the bend.
+  const targetProfileSegments = Math.max(24, clampedProfileSegments * 2);
+  const curveBias = 3.5;
+  const weightedTotal = wallHeight + floorDepth + (curveLen * curveBias);
+  let wallProfileSegments = Math.max(
+    4,
+    Math.round((targetProfileSegments * wallHeight) / weightedTotal),
+  );
+  let floorProfileSegments = Math.max(
+    4,
+    Math.round((targetProfileSegments * floorDepth) / weightedTotal),
+  );
+  let curveProfileSegments = targetProfileSegments - wallProfileSegments - floorProfileSegments;
+  // Further reduce flat-area density: another ~50% cut vs current flat sections.
+  const flatReductionRatio = 0.25;
+  wallProfileSegments = Math.max(2, Math.round(wallProfileSegments * flatReductionRatio));
+  floorProfileSegments = Math.max(2, Math.round(floorProfileSegments * flatReductionRatio));
+  curveProfileSegments = targetProfileSegments - wallProfileSegments - floorProfileSegments;
+  if (curveProfileSegments < 16) {
+    const deficit = 16 - curveProfileSegments;
+    curveProfileSegments = 16;
+    const wallGive = Math.min(wallProfileSegments - 2, Math.ceil(deficit * 0.5));
+    wallProfileSegments -= Math.max(0, wallGive);
+    floorProfileSegments -= Math.max(0, deficit - Math.max(0, wallGive));
+    floorProfileSegments = Math.max(2, floorProfileSegments);
+  }
+  const assignedTotal =
+    wallProfileSegments + curveProfileSegments + floorProfileSegments;
+  if (assignedTotal !== targetProfileSegments) {
+    curveProfileSegments += targetProfileSegments - assignedTotal;
+  }
+
+  const profileDistances = [];
+  const pushSection = (startS, endS, segments, includeStart) => {
+    const segs = Math.max(1, Math.floor(segments));
+    for (let i = includeStart ? 0 : 1; i <= segs; i += 1) {
+      const t = i / segs;
+      profileDistances.push(startS + ((endS - startS) * t));
+    }
+  };
+  pushSection(0, wallHeight, wallProfileSegments, true);
+  pushSection(wallHeight, wallHeight + curveLen, curveProfileSegments, false);
+  pushSection(wallHeight + curveLen, totalLen, floorProfileSegments, false);
+
+  const vertsPerRow = clampedWidthSegments + 1;
+  const profileRows = profileDistances.length;
+  const vertices = new Float32Array(profileRows * vertsPerRow * 3);
+  const indices = [];
+
+  let vi = 0;
+  for (let i = 0; i < profileRows; i += 1) {
+    const s = profileDistances[i];
+    let y = 0;
+    let z = 0;
+
+    if (s <= wallHeight) {
+      y = wallHeight - s;
+      z = 0;
+    } else if (s <= wallHeight + curveLen) {
+      const arcLen = s - wallHeight;
+      const a = arcLen / curveRadius;
+      y = -curveRadius * Math.sin(a);
+      z = curveRadius * (1 - Math.cos(a));
+    } else {
+      const floorLen = s - wallHeight - curveLen;
+      y = -curveRadius;
+      z = curveRadius + floorLen;
+    }
+
+    for (let j = 0; j <= clampedWidthSegments; j += 1) {
+      const u = j / clampedWidthSegments;
+      const x = (u - 0.5) * width;
+      vertices[vi] = x;
+      vertices[vi + 1] = y;
+      vertices[vi + 2] = z;
+      vi += 3;
+    }
+  }
+
+  for (let i = 0; i < profileRows - 1; i += 1) {
+    for (let j = 0; j < clampedWidthSegments; j += 1) {
+      const a = i * vertsPerRow + j;
+      const b = a + vertsPerRow;
+      const c = b + 1;
+      const d = a + 1;
+      indices.push(a, b, d, b, c, d);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createProceduralBackdropTexture(size = 512) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const imageData = ctx.createImageData(size, size);
+  const data = imageData.data;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const i = (y * size + x) * 4;
+      const base = 188 + Math.floor((Math.random() - 0.5) * 24);
+      const fiberA = Math.sin((x * 0.1) + (y * 0.017)) * 8;
+      const fiberB = Math.sin((x * 0.021) - (y * 0.13)) * 5;
+      const speck = Math.random() > 0.985 ? -16 : 0;
+      const v = Math.max(120, Math.min(236, Math.round(base + fiberA + fiberB + speck)));
+      data[i] = v;
+      data[i + 1] = v;
+      data[i + 2] = v;
+      data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createProceduralBackdropNormalTexture(size = 512) {
+  const noise = new Float32Array(size * size);
+  for (let i = 0; i < noise.length; i += 1) {
+    noise[i] = Math.random();
+  }
+  // Smooth once so normals read like paper fibers instead of harsh pixel noise.
+  for (let y = 1; y < size - 1; y += 1) {
+    for (let x = 1; x < size - 1; x += 1) {
+      const i = y * size + x;
+      noise[i] = (
+        noise[i]
+        + noise[i - 1]
+        + noise[i + 1]
+        + noise[i - size]
+        + noise[i + size]
+      ) / 5;
+    }
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const imageData = ctx.createImageData(size, size);
+  const data = imageData.data;
+  const strength = 3.5;
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const i = y * size + x;
+      const l = noise[y * size + ((x - 1 + size) % size)];
+      const r = noise[y * size + ((x + 1) % size)];
+      const u = noise[((y - 1 + size) % size) * size + x];
+      const d = noise[((y + 1) % size) * size + x];
+      const dx = (r - l) * strength;
+      const dy = (d - u) * strength;
+      const nx = -dx;
+      const ny = -dy;
+      const nz = 1;
+      const invLen = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+      const ri = i * 4;
+      data[ri] = Math.round((nx * invLen * 0.5 + 0.5) * 255);
+      data[ri + 1] = Math.round((ny * invLen * 0.5 + 0.5) * 255);
+      data[ri + 2] = Math.round((nz * invLen * 0.5 + 0.5) * 255);
+      data[ri + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return new THREE.CanvasTexture(canvas);
+}
+
 function disposeObjectGpuResources(root) {
   if (!root) return;
   root.traverse((child) => {
@@ -127,7 +320,7 @@ export class GroundController {
     this.solidEnabled = options.solidEnabled ?? false;
     this.wireEnabled = options.wireEnabled ?? false;
     this.solidColor = options.solidColor ?? '#31363f';
-    this.wireColor = options.wireColor ?? '#e1e1e1';
+    this.wireColor = options.wireColor ?? '#c4ff00';
     this.wireOpacity = options.wireOpacity ?? 1.0;
     this.groundY = options.groundY ?? 0;
     this.gridY = options.gridY ?? 0;
@@ -169,13 +362,29 @@ export class GroundController {
     this.podium = null;
     this.podiumReflector = null;
     this._glassSepBlur = null;
+    this.backdropEnabled = !!options.backdropEnabled;
+    this.backdropScale = clampScale(options.backdropScale ?? 1);
+    this.backdropWidth = clampScale(options.backdropWidth ?? 1);
+    this.backdropColor = options.backdropColor ?? '#808080';
+    this.backdropRotation = clampDegrees(options.backdropRotation ?? 0);
+    this.backdropY = options.backdropY ?? 0;
+    this.backdropCurveRadius = 1.4;
+    this.backdropSpawnZ = -(this.backdropCurveRadius + 1.6);
+    this.backdropTextureEnabled = !!options.backdropTextureEnabled;
+    this.backdropTextureScale = clampBackdropTextureScale(options.backdropTextureScale ?? 1.8);
+    this.backdropTexture = null;
+    this.backdropNormalTexture = null;
+    this.debugWireframeEnabled = !!options.debugWireframeEnabled;
+    this.backdrop = null;
 
     this.grid = null;
     this.gridMaterials = null;
 
     this.buildGrid();
     this.buildDefaultPodium();
+    this.buildDefaultBackdrop();
     this.setSolidEnabled(this.solidEnabled);
+    this.setBackdropEnabled(this.backdropEnabled);
     this.setWireEnabled(this.wireEnabled);
   }
 
@@ -217,8 +426,16 @@ export class GroundController {
     this.gridMaterials = null;
   }
 
+  disposeBackdrop() {
+    if (!this.backdrop) return;
+    this.scene.remove(this.backdrop);
+    disposeObjectGpuResources(this.backdrop);
+    this.backdrop = null;
+  }
+
   disposeMeshes() {
     this.disposePodium();
+    this.disposeBackdrop();
     this.disposeGrid();
   }
 
@@ -256,6 +473,7 @@ export class GroundController {
 
     this.podium = new THREE.Mesh(podiumGeo, solidMat);
     this.podium.receiveShadow = true;
+    this.podium.material.wireframe = this.debugWireframeEnabled;
     this.podium.visible = this.solidEnabled;
     this.scene.add(this.podium);
 
@@ -267,6 +485,28 @@ export class GroundController {
 
     this.setGroundY(this.groundY);
     this.rebuildPodiumReflector();
+  }
+
+  buildDefaultBackdrop() {
+    this.disposeBackdrop();
+    const geometry = createSeamlessBackdropGeometry({
+      curveRadius: this.backdropCurveRadius,
+    });
+    const material = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(this.backdropColor),
+      metalness: 0.02,
+      roughness: 0.9,
+      side: THREE.DoubleSide,
+    });
+    this.backdrop = new THREE.Mesh(geometry, material);
+    this.backdrop.receiveShadow = true;
+    this.backdrop.castShadow = false;
+    this.backdrop.visible = this.backdropEnabled;
+    this.backdrop.position.z = this.backdropSpawnZ;
+    this.scene.add(this.backdrop);
+    this._applyBackdropTransform();
+    this.setDebugWireframeEnabled(this.debugWireframeEnabled);
+    this._applyBackdropTextureSettings();
   }
 
   /**
@@ -520,6 +760,15 @@ export class GroundController {
     return bottomY;
   }
 
+  snapBackdropToBounds(bounds) {
+    if (!bounds || !isFinite(bounds.min.y)) return null;
+    const bottomY = bounds.min.y;
+    const localFloorY = -this.backdropCurveRadius * this.backdropScale;
+    const nextBackdropY = bottomY - localFloorY;
+    this.setBackdropY(nextBackdropY);
+    return nextBackdropY;
+  }
+
   setPodiumScale(value) {
     this.podiumScale = clampScale(value ?? this.podiumScale);
 
@@ -559,6 +808,137 @@ export class GroundController {
     this.disposeGrid();
     this.buildGrid();
     this.setWireEnabled(wasVisible);
+  }
+
+  setBackdropEnabled(enabled) {
+    this.backdropEnabled = !!enabled;
+    if (!this.backdrop) this.buildDefaultBackdrop();
+  }
+
+  setBackdropY(value) {
+    this.backdropY = Number.isFinite(value) ? value : 0;
+    this._applyBackdropTransform();
+  }
+
+  setBackdropColor(color) {
+    if (!color) return;
+    this.backdropColor = color;
+    if (this.backdrop?.material?.color) {
+      this.backdrop.material.color.set(color);
+    }
+  }
+
+  setBackdropScale(value) {
+    this.backdropScale = clampScale(value ?? this.backdropScale);
+    this._applyBackdropTransform();
+  }
+
+  setBackdropWidth(value) {
+    this.backdropWidth = clampScale(value ?? this.backdropWidth);
+    this._applyBackdropTransform();
+  }
+
+  setBackdropRotation(value) {
+    this.backdropRotation = clampDegrees(value);
+    this._applyBackdropTransform();
+  }
+
+  setBackdropTextureEnabled(enabled) {
+    this.backdropTextureEnabled = !!enabled;
+    this._applyBackdropTextureSettings();
+  }
+
+  setBackdropTextureScale(value) {
+    this.backdropTextureScale = clampBackdropTextureScale(value);
+    this._applyBackdropTextureSettings();
+  }
+
+  _applyBackdropTransform() {
+    if (!this.backdrop) return;
+    this.backdrop.position.y = this.backdropY;
+    this.backdrop.rotation.y = THREE.MathUtils.degToRad(this.backdropRotation);
+    const sx = this.backdropWidth * this.backdropScale;
+    const sy = this.backdropScale;
+    const sz = this.backdropScale;
+    this.backdrop.scale.set(sx, sy, sz);
+    this.backdrop.userData.backdropBaseScale = { x: sx, y: sy, z: sz };
+  }
+
+  setBackdropAnimationState(animMul, visible) {
+    if (!this.backdrop) return;
+    const base = this.backdrop.userData?.backdropBaseScale;
+    const bx = base?.x ?? (this.backdropWidth * this.backdropScale);
+    const by = base?.y ?? this.backdropScale;
+    const bz = base?.z ?? this.backdropScale;
+    const m = Number.isFinite(animMul) ? Math.max(0, animMul) : 1;
+    this.backdrop.visible = !!visible;
+    this.backdrop.scale.set(bx * m, by * m, bz * m);
+    // Anchor reveal/hide to the floor edge (bottom vertices), not the mesh center.
+    // Keep the world-space floor contact at backdropY while scaling.
+    this.backdrop.position.y = this.backdropY + (this.backdropCurveRadius * by * (m - 1));
+  }
+
+  _ensureBackdropTexture(onReady) {
+    if (this.backdropTexture) {
+      onReady(this.backdropTexture);
+      return;
+    }
+    const texture = createProceduralBackdropTexture(512);
+    if (!texture) return;
+    this.backdropTexture = texture;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    const normalTexture = createProceduralBackdropNormalTexture(512);
+    if (normalTexture) {
+      this.backdropNormalTexture = normalTexture;
+      normalTexture.wrapS = THREE.RepeatWrapping;
+      normalTexture.wrapT = THREE.RepeatWrapping;
+      normalTexture.colorSpace = THREE.NoColorSpace;
+    }
+    onReady(texture);
+  }
+
+  _applyBackdropTextureSettings() {
+    const material = this.backdrop?.material;
+    if (!material) return;
+    const applyMap = (texture) => {
+      if (!material) return;
+      texture.repeat.set(this.backdropTextureScale, this.backdropTextureScale);
+      if (this.backdropNormalTexture) {
+        this.backdropNormalTexture.repeat.set(
+          this.backdropTextureScale,
+          this.backdropTextureScale,
+        );
+      }
+      // Keep albedo purely from user color; texture only adds physical surface detail.
+      material.map = null;
+      material.roughnessMap = this.backdropTextureEnabled ? texture : null;
+      material.bumpMap = null;
+      material.bumpScale = 0;
+      material.normalMap = this.backdropTextureEnabled ? this.backdropNormalTexture : null;
+      material.normalScale.setScalar(this.backdropTextureEnabled ? 0.9 : 0);
+      material.roughness = 0.9;
+      material.needsUpdate = true;
+    };
+    if (!this.backdropTextureEnabled) {
+      material.map = null;
+      material.bumpMap = null;
+      material.bumpScale = 0;
+      material.normalMap = null;
+      material.normalScale.setScalar(0);
+      material.roughnessMap = null;
+      material.roughness = 0.9;
+      material.needsUpdate = true;
+      return;
+    }
+    this._ensureBackdropTexture(applyMap);
+  }
+
+  setDebugWireframeEnabled(enabled) {
+    this.debugWireframeEnabled = !!enabled;
+    if (this.podium?.material) this.podium.material.wireframe = this.debugWireframeEnabled;
+    if (this.backdrop?.material) this.backdrop.material.wireframe = this.debugWireframeEnabled;
   }
 
   getSolidColor() {

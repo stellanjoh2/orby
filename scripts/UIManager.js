@@ -304,6 +304,15 @@ export class UIManager {
       podiumGlassBrightness: q('#podiumGlassBrightness'),
       podiumGlassBlur: q('#podiumGlassBlur'),
       podiumGlassAmount: q('#podiumGlassAmount'),
+      backdropEnabled: q('#backdropEnabled'),
+      backdropColor: q('#backdropColor'),
+      backdropTextureEnabled: q('#backdropTextureEnabled'),
+      backdropTextureScale: q('#backdropTextureScale'),
+      backdropScale: q('#backdropScale'),
+      backdropWidth: q('#backdropWidth'),
+      backdropRotation: q('#backdropRotation'),
+      backdropY: q('#backdropY'),
+      backdropSnap: q('#backdropSnap'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
@@ -2061,6 +2070,26 @@ export class UIManager {
     this.setControlDisabled('podiumGlassBrightness', !glassOn);
     this.setControlDisabled('podiumGlassBlur', !glassOn);
     this.setControlDisabled('podiumGlassAmount', !glassOn);
+
+    const backdropOn = !!currentState.backdropEnabled;
+    this.setBlockMuted('backdrop', !backdropOn);
+    this.setControlDisabled(
+      [
+        'backdropColor',
+        'backdropTextureEnabled',
+        'backdropTextureScale',
+        'backdropScale',
+        'backdropWidth',
+        'backdropRotation',
+        'backdropY',
+        'backdropSnap',
+      ],
+      !backdropOn,
+    );
+    this.setControlDisabled(
+      'backdropTextureScale',
+      !(backdropOn && !!currentState.backdropTextureEnabled),
+    );
 
     // Grid block - only muted if groundWire is false
     const gridOn = !!currentState.groundWire;

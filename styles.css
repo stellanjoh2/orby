@@ -3048,7 +3048,26 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 #svgExtrudeColorDepths .slider-line {
+  grid-template-columns: 90px 1fr 58px;
   margin-bottom: 0.45rem;
+  column-gap: 0.3rem;
+}
+
+#svgExtrudeColorDepths .svg-extrude-inline-number {
+  grid-column: 3;
+  width: 58px;
+  padding: 0.18rem 0.3rem;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  background: rgba(20, 16, 34, 0.9);
+  color: var(--text);
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+#svgExtrudeColorDepths .svg-extrude-inline-number:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .svg-extrude-note {
@@ -3319,6 +3338,16 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   border-radius: 3px;
 }
 
+#svgExtrudeColorDepths .color-chip {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
 
 .control-row {
   display: flex;
@@ -3465,6 +3494,13 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 /* Export Controls */
 .export-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Scene footer controls in Studio tab (same spacing, no export-specific nesting semantics). */
+.scene-controls {
   display: flex;
   flex-direction: column;
   gap: 1rem;

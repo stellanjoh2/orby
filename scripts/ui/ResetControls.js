@@ -58,14 +58,22 @@ export class ResetControls {
         const panel = modal.querySelector('.load-settings-content');
         this.ui.uiSounds?.playShelfShow();
         this.ui.uiSounds?.playNotification();
-        void animateModalOpen(modal, panel).then(() => {
-          if (text) {
-            text.focus();
-            navigator.clipboard?.readText().then((clip) => {
-              if (this.ui.buttons.loadSceneText) {
-                this.ui.buttons.loadSceneText.value = clip;
-              }
-            }).catch(() => {});
+        void animateModalOpen(modal, panel).then(async () => {
+          if (!text) return;
+          text.focus();
+          // Only auto-prefill when clipboard-read is already granted. Calling readText() on
+          // a 'prompt' state shows the permission prompt; if dismissed several times Chromium
+          // auto-blocks the permission and logs a ClipboardReadWrite warning to the console.
+          // Cmd-V into the focused textarea still works in every case.
+          try {
+            const perm = await navigator.permissions?.query?.({ name: 'clipboard-read' });
+            if (perm?.state !== 'granted') return;
+            const clip = await navigator.clipboard?.readText?.();
+            if (typeof clip === 'string' && this.ui.buttons.loadSceneText) {
+              this.ui.buttons.loadSceneText.value = clip;
+            }
+          } catch (_e) {
+            // Permissions API unsupported, query rejected, or read failed — skip silently.
           }
         });
       });
@@ -211,6 +219,14 @@ export class ResetControls {
       this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
       this.stateStore.set('groundY', defaults.groundY);
       this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
+      this.stateStore.set('backdropEnabled', defaults.backdropEnabled ?? false);
+      this.stateStore.set('backdropScale', defaults.backdropScale ?? 1);
+      this.stateStore.set('backdropWidth', defaults.backdropWidth ?? 1);
+      this.stateStore.set('backdropColor', defaults.backdropColor ?? '#808080');
+      this.stateStore.set('backdropRotation', defaults.backdropRotation ?? 0);
+      this.stateStore.set('backdropY', defaults.backdropY ?? 0);
+      this.stateStore.set('backdropTextureEnabled', defaults.backdropTextureEnabled ?? false);
+      this.stateStore.set('backdropTextureScale', defaults.backdropTextureScale ?? 1.8);
       this.stateStore.set('groundWireColor', defaults.groundWireColor);
       this.stateStore.set('background', defaults.background);
       this.stateStore.set('lights', defaults.lights);
@@ -252,6 +268,20 @@ export class ResetControls {
       this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
       this.eventBus.emit('studio:ground-y', defaults.groundY);
       this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
+      this.eventBus.emit('studio:backdrop-enabled', defaults.backdropEnabled ?? false);
+      this.eventBus.emit('studio:backdrop-scale', defaults.backdropScale ?? 1);
+      this.eventBus.emit('studio:backdrop-width', defaults.backdropWidth ?? 1);
+      this.eventBus.emit('studio:backdrop-color', defaults.backdropColor ?? '#808080');
+      this.eventBus.emit('studio:backdrop-rotation', defaults.backdropRotation ?? 0);
+      this.eventBus.emit('studio:backdrop-y', defaults.backdropY ?? 0);
+      this.eventBus.emit(
+        'studio:backdrop-texture-enabled',
+        defaults.backdropTextureEnabled ?? false,
+      );
+      this.eventBus.emit(
+        'studio:backdrop-texture-scale',
+        defaults.backdropTextureScale ?? 1.8,
+      );
       this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
       this.eventBus.emit('scene:background', defaults.background);
       
@@ -266,17 +296,13 @@ export class ResetControls {
       this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.ui.setLightsRotationDisabled(defaults.lightsAutoRotate);
-      this.eventBus.emit('lights:cast-shadows', defaults.lightsCastShadows);
-      this.eventBus.emit('lights:shadow-quality', defaults.lightsShadowQuality ?? 'medium');
-      this.eventBus.emit('lights:shadow-softness', defaults.lightsShadowSoftness ?? 4);
-      this.eventBus.emit(
-        'lights:shadow-contact-offset',
-        defaults.lightsShadowContactOffset ?? -0.0001,
-      );
-      this.eventBus.emit(
-        'lights:shadow-two-sided',
-        defaults.lightsShadowTwoSided ?? false,
-      );
+      this.eventBus.emit('lights:shadow-settings', {
+        castShadows: defaults.lightsCastShadows,
+        quality: defaults.lightsShadowQuality ?? 'medium',
+        softness: defaults.lightsShadowSoftness ?? 4,
+        contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
+        twoSided: defaults.lightsShadowTwoSided ?? false,
+      });
       this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
       
       this.ui.syncUIFromState();
@@ -481,18 +507,38 @@ export class ResetControls {
             this.eventBus.emit('lights:master', defaults.lightsMaster);
             this.eventBus.emit('lights:rotate', defaults.lightsRotation);
             this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
-            this.eventBus.emit('lights:shadow-quality', defaults.lightsShadowQuality ?? 'medium');
-            this.eventBus.emit('lights:shadow-softness', defaults.lightsShadowSoftness ?? 4);
-            this.eventBus.emit(
-              'lights:shadow-contact-offset',
-              defaults.lightsShadowContactOffset ?? -0.0001,
-            );
-            this.eventBus.emit(
-              'lights:shadow-two-sided',
-              defaults.lightsShadowTwoSided ?? false,
-            );
+            this.eventBus.emit('lights:shadow-settings', {
+              quality: defaults.lightsShadowQuality ?? 'medium',
+              softness: defaults.lightsShadowSoftness ?? 4,
+              contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
+              twoSided: defaults.lightsShadowTwoSided ?? false,
+            });
             this.ui.syncUIFromState();
             break;
+          case 'lights-shadows':
+            {
+              const castShadows = defaults.lightsCastShadows ?? true;
+              const shadowQuality = defaults.lightsShadowQuality ?? 'medium';
+              const shadowSoftness = defaults.lightsShadowSoftness ?? 4;
+              const shadowContactOffset = defaults.lightsShadowContactOffset ?? -0.0001;
+              const shadowTwoSided = defaults.lightsShadowTwoSided ?? false;
+              this.stateStore.batch(() => {
+                this.stateStore.set('lightsCastShadows', castShadows);
+                this.stateStore.set('lightsShadowQuality', shadowQuality);
+                this.stateStore.set('lightsShadowSoftness', shadowSoftness);
+                this.stateStore.set('lightsShadowContactOffset', shadowContactOffset);
+                this.stateStore.set('lightsShadowTwoSided', shadowTwoSided);
+              });
+              this.eventBus.emit('lights:shadow-settings', {
+                castShadows,
+                quality: shadowQuality,
+                softness: shadowSoftness,
+                contactOffset: shadowContactOffset,
+                twoSided: shadowTwoSided,
+              });
+              this.ui.syncUIFromState();
+              break;
+            }
           case 'keyLight':
             this.ui.resetIndividualLight('key', defaults.lights.key);
             break;
@@ -537,6 +583,34 @@ export class ResetControls {
             this.eventBus.emit('studio:podium-glass-brightness', defaults.podiumGlassBrightness);
             this.eventBus.emit('studio:podium-glass-blur', defaults.podiumGlassBlur);
             this.eventBus.emit('studio:podium-glass-amount', defaults.podiumGlassAmount);
+            this.ui.syncControls(this.stateStore.getState());
+            break;
+
+          case 'backdrop':
+            this.stateStore.batch(() => {
+              this.stateStore.set('backdropEnabled', defaults.backdropEnabled ?? false);
+              this.stateStore.set('backdropScale', defaults.backdropScale ?? 1);
+              this.stateStore.set('backdropWidth', defaults.backdropWidth ?? 1);
+              this.stateStore.set('backdropColor', defaults.backdropColor ?? '#808080');
+              this.stateStore.set('backdropRotation', defaults.backdropRotation ?? 0);
+              this.stateStore.set('backdropY', defaults.backdropY ?? 0);
+              this.stateStore.set('backdropTextureEnabled', defaults.backdropTextureEnabled ?? false);
+              this.stateStore.set('backdropTextureScale', defaults.backdropTextureScale ?? 1.8);
+            });
+            this.eventBus.emit('studio:backdrop-enabled', defaults.backdropEnabled ?? false);
+            this.eventBus.emit('studio:backdrop-scale', defaults.backdropScale ?? 1);
+            this.eventBus.emit('studio:backdrop-width', defaults.backdropWidth ?? 1);
+            this.eventBus.emit('studio:backdrop-color', defaults.backdropColor ?? '#808080');
+            this.eventBus.emit('studio:backdrop-rotation', defaults.backdropRotation ?? 0);
+            this.eventBus.emit('studio:backdrop-y', defaults.backdropY ?? 0);
+            this.eventBus.emit(
+              'studio:backdrop-texture-enabled',
+              defaults.backdropTextureEnabled ?? false,
+            );
+            this.eventBus.emit(
+              'studio:backdrop-texture-scale',
+              defaults.backdropTextureScale ?? 1.8,
+            );
             this.ui.syncControls(this.stateStore.getState());
             break;
             

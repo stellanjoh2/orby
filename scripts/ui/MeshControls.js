@@ -298,9 +298,9 @@ export class MeshControls {
         ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
         : (Number.isFinite(value) ? Math.max(0.01, Math.min(1.0, value)) : 0.2);
       const sliderLine = input.closest('.slider-line');
-      const output = sliderLine?.querySelector('.value');
-      if (output) {
-        output.textContent = this.ui.formatSliderValue(clampedValue, 'decimal');
+      const numberInput = sliderLine?.querySelector('input[type="number"]');
+      if (numberInput) {
+        numberInput.value = clampedValue.toFixed(2);
       }
       if (kind === 'offset') {
         const currentOffsets = {
@@ -329,6 +329,40 @@ export class MeshControls {
         this.svgColorDebounceTimers.delete(timerKey);
       }, 50);
       this.svgColorDebounceTimers.set(timerKey, timer);
+    });
+    this.ui.inputs.svgExtrudeColorDepths?.addEventListener('change', (event) => {
+      const input = event.target;
+      if (!input || input.tagName !== 'INPUT' || input.type !== 'number') return;
+      const color = input.dataset.color;
+      const kind = input.dataset.kind || 'depth';
+      if (!color) return;
+      const value = parseFloat(input.value);
+      const clampedValue = kind === 'offset'
+        ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
+        : (Number.isFinite(value) ? Math.max(0.01, Math.min(1.0, value)) : 0.2);
+      input.value = clampedValue.toFixed(2);
+      const sliderLine = input.closest('.slider-line');
+      const rangeInput = sliderLine?.querySelector('input[type="range"]');
+      if (rangeInput) rangeInput.value = String(clampedValue);
+
+      if (kind === 'offset') {
+        const currentOffsets = {
+          ...(this.stateStore.getState().svgExtrude?.colorOffsets || {}),
+          [color]: clampedValue,
+        };
+        this.stateStore.set('svgExtrude.colorOffsets', currentOffsets);
+      } else {
+        const currentDepths = {
+          ...(this.stateStore.getState().svgExtrude?.colorDepths || {}),
+          [color]: clampedValue,
+        };
+        this.stateStore.set('svgExtrude.colorDepths', currentDepths);
+      }
+      if (kind === 'offset') {
+        this.eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: clampedValue });
+      } else {
+        this.eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
+      }
     });
 
     // Transform controls
@@ -923,15 +957,15 @@ export class MeshControls {
     Depth ${index + 1}
   </span>
   <input type="range" min="0.01" max="1" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
-  <span class="value">${this.ui.formatSliderValue(safeDepth, 'decimal')}</span>
+  <input type="number" min="0.01" max="1" step="0.01" class="svg-extrude-inline-number" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth value ${index + 1} (${color.toUpperCase()})" />
 </label>
 <label class="slider-line">
   <span>
-    <span class="color-chip" style="background:${color}; pointer-events:none; opacity:0.6;" title="${color.toUpperCase()}"></span>
+    <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
     Position ${index + 1}
   </span>
   <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position ${index + 1} (${color.toUpperCase()})" title="Position for ${color.toUpperCase()}" />
-  <span class="value">${this.ui.formatSliderValue(safeOffset, 'decimal')}</span>
+  <input type="number" min="-1" max="1" step="0.01" class="svg-extrude-inline-number" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position value ${index + 1} (${color.toUpperCase()})" />
 </label>`;
       })
       .join('');

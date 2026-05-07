@@ -41,7 +41,11 @@ export class EventManager {
     eventBus.on('mesh:rotationX', (value) => s.setRotationX(value));
     eventBus.on('mesh:rotationY', (value) => s.setRotationY(value));
     eventBus.on('mesh:rotationZ', (value) => s.setRotationZ(value));
-    eventBus.on('mesh:shading', (mode) => s.setShading(mode));
+    eventBus.on('mesh:shading', (mode) => {
+      s.setShading(mode);
+      const alwaysOn = !!s.stateStore.getState().wireframe?.alwaysOn;
+      s.setSceneGeometryWireframe(alwaysOn || mode === 'wireframe');
+    });
     eventBus.on('mesh:auto-rotate', (speed) => {
       s.autoRotateSpeed = speed;
     });
@@ -83,6 +87,7 @@ export class EventManager {
     });
     eventBus.on('mesh:wireframe-always-on', (value) => {
       s.setWireframeSettings({ alwaysOn: value });
+      s.setSceneGeometryWireframe(value);
     });
     eventBus.on('mesh:wireframe-color', (value) => {
       s.setWireframeSettings({ color: value });
@@ -247,6 +252,15 @@ export class EventManager {
     eventBus.on('studio:podium-glass-blur', (value) => s.setPodiumGlassBlur(value));
     eventBus.on('studio:podium-glass-amount', (value) => s.setPodiumGlassAmount(value));
     eventBus.on('studio:podium-glass-brightness', (value) => s.setPodiumGlassBrightness(value));
+    eventBus.on('studio:backdrop-enabled', (enabled) => s.setBackdropEnabled(enabled));
+    eventBus.on('studio:backdrop-scale', (value) => s.setBackdropScale(value));
+    eventBus.on('studio:backdrop-width', (value) => s.setBackdropWidth(value));
+    eventBus.on('studio:backdrop-color', (color) => s.setBackdropColor(color));
+    eventBus.on('studio:backdrop-rotation', (value) => s.setBackdropRotation(value));
+    eventBus.on('studio:backdrop-y', (value) => s.setBackdropY(value));
+    eventBus.on('studio:backdrop-texture-enabled', (enabled) => s.setBackdropTextureEnabled(enabled));
+    eventBus.on('studio:backdrop-texture-scale', (value) => s.setBackdropTextureScale(value));
+    eventBus.on('studio:backdrop-snap', () => s.snapBackdropToBottom());
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
     eventBus.on('studio:podium-snap', () => s.snapPodiumToBottom());
     eventBus.on('studio:grid-snap', () => s.snapGridToBottom());
@@ -269,6 +283,9 @@ export class EventManager {
     );
     eventBus.on('lights:shadow-two-sided', (enabled) =>
       s.setLightsShadowTwoSided(enabled),
+    );
+    eventBus.on('lights:shadow-settings', (settings) =>
+      s.setLightsShadowSettings(settings),
     );
 
     // Scene/Background events

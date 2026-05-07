@@ -191,6 +191,54 @@ export class StudioControls {
       this.stateStore.set('gridScale', value);
       this.eventBus.emit('studio:grid-scale', value);
     });
+    this.ui.inputs.backdropEnabled?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      if (enabled) this.ui.uiSounds?.playShelfShow();
+      else this.ui.uiSounds?.playShelfHide();
+      this.stateStore.set('backdropEnabled', enabled);
+      this.eventBus.emit('studio:backdrop-enabled', enabled);
+      this.ui.applyBlockStates?.(this.stateStore.getState());
+    });
+    this.helpers.bindColorInput('backdropColor', 'backdropColor', 'studio:backdrop-color');
+    this.ui.inputs.backdropTextureEnabled?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('backdropTextureEnabled', enabled);
+      this.eventBus.emit('studio:backdrop-texture-enabled', enabled);
+      this.ui.applyBlockStates?.(this.stateStore.getState());
+    });
+    this.ui.inputs.backdropTextureScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('backdropTextureScale', value, 'decimal');
+      this.stateStore.set('backdropTextureScale', value);
+      this.eventBus.emit('studio:backdrop-texture-scale', value);
+    });
+    this.ui.inputs.backdropScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('backdropScale', value, 'decimal');
+      this.stateStore.set('backdropScale', value);
+      this.eventBus.emit('studio:backdrop-scale', value);
+    });
+    this.ui.inputs.backdropWidth?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('backdropWidth', value, 'decimal');
+      this.stateStore.set('backdropWidth', value);
+      this.eventBus.emit('studio:backdrop-width', value);
+    });
+    this.ui.inputs.backdropRotation?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('backdropRotation', value, 'angle');
+      this.stateStore.set('backdropRotation', value);
+      this.eventBus.emit('studio:backdrop-rotation', value);
+    });
+    this.ui.inputs.backdropY?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('backdropY', value, 'distance');
+      this.stateStore.set('backdropY', value);
+      this.eventBus.emit('studio:backdrop-y', value);
+    });
+    this.ui.inputs.backdropSnap?.addEventListener('click', () => {
+      this.eventBus.emit('studio:backdrop-snap');
+    });
     this.ui.inputs.podiumSnap?.addEventListener('click', () => {
       this.eventBus.emit('studio:podium-snap');
     });
@@ -525,6 +573,40 @@ export class StudioControls {
     if (this.ui.inputs.gridScale) {
       this.ui.inputs.gridScale.value = state.gridScale ?? 1;
       this.helpers.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');
+    }
+    if (this.ui.inputs.backdropEnabled) {
+      this.ui.inputs.backdropEnabled.checked = !!state.backdropEnabled;
+    }
+    if (this.ui.inputs.backdropColor) {
+      this.ui.inputs.backdropColor.value = state.backdropColor ?? '#808080';
+    }
+    if (this.ui.inputs.backdropTextureEnabled) {
+      this.ui.inputs.backdropTextureEnabled.checked = !!state.backdropTextureEnabled;
+    }
+    if (this.ui.inputs.backdropTextureScale) {
+      const v = state.backdropTextureScale ?? 1.8;
+      this.ui.inputs.backdropTextureScale.value = v;
+      this.helpers.updateValueLabel('backdropTextureScale', v, 'decimal');
+    }
+    if (this.ui.inputs.backdropScale) {
+      const v = state.backdropScale ?? 1;
+      this.ui.inputs.backdropScale.value = v;
+      this.helpers.updateValueLabel('backdropScale', v, 'decimal');
+    }
+    if (this.ui.inputs.backdropWidth) {
+      const v = state.backdropWidth ?? 1;
+      this.ui.inputs.backdropWidth.value = v;
+      this.helpers.updateValueLabel('backdropWidth', v, 'decimal');
+    }
+    if (this.ui.inputs.backdropRotation) {
+      const v = state.backdropRotation ?? 0;
+      this.ui.inputs.backdropRotation.value = v;
+      this.helpers.updateValueLabel('backdropRotation', v, 'angle');
+    }
+    if (this.ui.inputs.backdropY) {
+      const v = state.backdropY ?? 0;
+      this.ui.inputs.backdropY.value = v;
+      this.helpers.updateValueLabel('backdropY', v, 'distance');
     }
     
     // Lights

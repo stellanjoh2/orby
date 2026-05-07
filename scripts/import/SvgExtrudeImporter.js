@@ -11,6 +11,7 @@ const MIN_NORMAL_ANGLE_DEG = 0;
 const MAX_NORMAL_ANGLE_DEG = 180;
 const MIN_COLOR_OFFSET = -1.0;
 const MAX_COLOR_OFFSET = 1.0;
+const COLOR_GROUP_QUANTIZE_STEP = 24;
 const DENSIFY_MIN_SEGMENTS = 40;
 const DENSIFY_MAX_SEGMENTS = 120;
 const DENSIFY_MAX_POINTS_PER_RING = 3000;
@@ -82,6 +83,16 @@ const ringPerimeter = (ring) => {
     total += a.distanceTo(b);
   }
   return total;
+};
+
+const quantizeColorChannel = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  const clamped = Math.max(0, Math.min(255, Math.round(n)));
+  return Math.max(
+    0,
+    Math.min(255, Math.round(clamped / COLOR_GROUP_QUANTIZE_STEP) * COLOR_GROUP_QUANTIZE_STEP),
+  );
 };
 
 export class SvgExtrudeImporter {
@@ -261,10 +272,17 @@ export class SvgExtrudeImporter {
       if (!shapes?.length) continue;
 
       const baseColor = path.color?.isColor ? path.color.clone() : new THREE.Color(0xffffff);
-      const baseHex = `#${baseColor.getHexString().toLowerCase()}`;
-      colorPaletteSet.add(baseHex);
-      const perColorDepth = this.currentColorDepths?.[baseHex];
-      const perColorOffset = this.currentColorOffsets?.[baseHex];
+      const exactHex = `#${baseColor.getHexString().toLowerCase()}`;
+      const groupedColor = new THREE.Color(
+        quantizeColorChannel(baseColor.r * 255) / 255,
+        quantizeColorChannel(baseColor.g * 255) / 255,
+        quantizeColorChannel(baseColor.b * 255) / 255,
+      );
+      const groupedHex = `#${groupedColor.getHexString().toLowerCase()}`;
+      colorPaletteSet.add(groupedHex);
+      // Prefer grouped values, but preserve compatibility with previously saved exact color keys.
+      const perColorDepth = this.currentColorDepths?.[groupedHex] ?? this.currentColorDepths?.[exactHex];
+      const perColorOffset = this.currentColorOffsets?.[groupedHex] ?? this.currentColorOffsets?.[exactHex];
       const effectiveDepth = Number.isFinite(perColorDepth)
         ? clampDepth(perColorDepth)
         : depth;
@@ -294,6 +312,7 @@ export class SvgExtrudeImporter {
         mesh.userData.orbySvgEffectiveDepth = effectiveDepth;
         mesh.userData.orbySvgColorOffset = effectiveOffset;
         mesh.userData.orbySvgBaseColor = `#${baseColor.getHexString()}`;
+        mesh.userData.orbySvgGroupedColor = groupedHex;
         mesh.userData.orbySvgBaseColorLinear = {
           r: baseColor.r,
           g: baseColor.g,
