@@ -7,9 +7,9 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
+  ANAMORPHIC_BLOOM_SPREAD_MAX,
   normalizeAnamorphicBloomQualityId,
   RENDER_QUALITY_DEFAULT,
-  resolveAnamorphicBloomQualityTier,
   sanitizeAmbientOcclusion,
 } from '../constants.js';
 import { ToneCurveController } from './ToneCurveController.js';
@@ -148,12 +148,8 @@ export class RenderControls {
     if (this.ui.inputs.anamorphicBloomSpread) {
       this.ui.inputs.anamorphicBloomSpread.addEventListener('input', (event) => {
         touchLookFilterCustom();
-        const q = normalizeAnamorphicBloomQualityId(
-          this.stateStore.getState().lensFlare?.anamorphicBloom?.quality,
-        );
-        const tier = resolveAnamorphicBloomQualityTier(q);
         let value = parseFloat(event.target.value);
-        value = Math.min(tier.spreadMax, Math.max(0, value));
+        value = Math.min(ANAMORPHIC_BLOOM_SPREAD_MAX, Math.max(0, value));
         if (value !== parseFloat(event.target.value)) {
           event.target.value = String(value);
         }
@@ -191,8 +187,7 @@ export class RenderControls {
         const q = normalizeAnamorphicBloomQualityId(event.target.value);
         this.stateStore.set('lensFlare.anamorphicBloom.quality', q);
         const spread = this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.2;
-        const tier = resolveAnamorphicBloomQualityTier(q);
-        const clamped = Math.min(tier.spreadMax, Math.max(0, spread));
+        const clamped = Math.min(ANAMORPHIC_BLOOM_SPREAD_MAX, Math.max(0, spread));
         if (clamped !== spread) {
           this.stateStore.set('lensFlare.anamorphicBloom.spread', clamped);
           if (this.ui.inputs.anamorphicBloomSpread) {

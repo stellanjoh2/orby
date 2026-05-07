@@ -54,11 +54,13 @@ export function resolveBloomQualityTier(id) {
 
 /** Horizontal streak quality after bloom (tap count ~ 2×sampleRadius+1). */
 export const ANAMORPHIC_BLOOM_QUALITY_DEFAULT = /** @type {const} */ ('medium');
+/** Spread slider / pipeline clamp — same at every quality tier (tier only changes sample count). */
+export const ANAMORPHIC_BLOOM_SPREAD_MAX = 1.68;
 export const ANAMORPHIC_BLOOM_QUALITY = {
-  low: { sampleRadius: 16, spreadMax: 0.42 },
-  medium: { sampleRadius: 24, spreadMax: 0.72 },
-  high: { sampleRadius: 40, spreadMax: 1.12 },
-  ultra: { sampleRadius: 64, spreadMax: 1.68 },
+  low: { sampleRadius: 16 },
+  medium: { sampleRadius: 24 },
+  high: { sampleRadius: 40 },
+  ultra: { sampleRadius: 64 },
 };
 
 /**

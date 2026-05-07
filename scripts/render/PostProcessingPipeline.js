@@ -29,6 +29,7 @@ import {
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  ANAMORPHIC_BLOOM_SPREAD_MAX,
   resolveAmbientOcclusionQualityTier,
   resolveAnamorphicBloomQualityTier,
 } from '../constants.js';
@@ -220,7 +221,7 @@ export class PostProcessingPipeline {
         ? settings.spread
         : 0.2,
       0,
-      tier.spreadMax,
+      ANAMORPHIC_BLOOM_SPREAD_MAX,
     );
     const u = this.anamorphicBloomPass.uniforms;
     u.threshold.value =
