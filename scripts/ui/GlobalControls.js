@@ -504,7 +504,7 @@ export class GlobalControls {
       if (key === 'a') {
         event.preventDefault();
         const current = this.stateStore.getState().autoRotate;
-        const speeds = [0, 0.2, 0.5, 1];
+        const speeds = [0, 0.2, 0.5];
         const currentIndex = speeds.indexOf(current);
         const nextIndex = (currentIndex + 1) % speeds.length;
         const newSpeed = speeds[nextIndex];

@@ -274,7 +274,7 @@ export class GamepadController {
   }
 
   cycleAutoRotate() {
-    const speeds = [0, 0.2, 0.5, 1];
+    const speeds = [0, 0.2, 0.5];
     const current = this.stateStore.getState().autoRotate ?? 0;
     const currentIndex = speeds.indexOf(current);
     const nextIndex = (currentIndex + 1) % speeds.length;
