@@ -24,6 +24,8 @@ const BokehShaderMeshgl = {
     nearClip: { value: 1.0 },
     farClip: { value: 1000.0 },
     uHalfTexel: { value: null },
+    depthBleedBias: { value: 1.25 },
+    depthBleedMinWeight: { value: 0.18 },
   },
 
   vertexShader: /* glsl */ `
@@ -53,6 +55,8 @@ const BokehShaderMeshgl = {
 		uniform float focus;
 		uniform float aspect;
 		uniform vec2 uHalfTexel;
+		uniform float depthBleedBias;
+		uniform float depthBleedMinWeight;
 
 		#include <packing>
 
@@ -77,6 +81,20 @@ const BokehShaderMeshgl = {
 			return texture2D( tColor, t );
 		}
 
+		vec4 sampleColorDepthAware( const in vec2 uv, const in float centerViewZ, const in float centerCoc ) {
+			vec2 t = clamp( uv, uHalfTexel, vec2( 1.0 ) - uHalfTexel );
+			vec4 c = texture2D( tColor, t );
+			float sampleViewZ = getViewZ( getDepth( t ) );
+			float depthDelta = centerViewZ - sampleViewZ;
+			float reject = depthDelta > 0.0
+				? smoothstep( 0.0, max( depthBleedBias, 0.0001 ), depthDelta )
+				: 0.0;
+			float rejectStrength = mix( 1.0, 0.35, clamp( centerCoc, 0.0, 1.0 ) );
+			float w = 1.0 - reject * rejectStrength;
+			w = max( w, clamp( depthBleedMinWeight, 0.0, 0.95 ) );
+			return vec4( c.rgb * w, w );
+		}
+
 		void main() {
 
 			vec2 aspectcorrect = vec2( 1.0, aspect );
@@ -86,59 +104,62 @@ const BokehShaderMeshgl = {
 			float factor = ( focus + viewZ );
 
 			vec2 dofblur = vec2 ( clamp( factor * aperture, -maxblur, maxblur ) );
+			float centerCoc = clamp( length( dofblur ) / max( maxblur, 0.0001 ), 0.0, 1.0 );
 
 			vec2 dofblur9 = dofblur * 0.9;
 			vec2 dofblur7 = dofblur * 0.7;
 			vec2 dofblur4 = dofblur * 0.4;
 
 			vec4 col = vec4( 0.0 );
+			float totalWeight = 0.0;
+			vec4 s;
 
-			col += textureColorClamped( vUv.xy );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.15,  0.37 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.37,  0.15 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.40,  0.0  ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.37, -0.15 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.29, -0.29 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.15, -0.37 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.0,  -0.4  ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.15,  0.37 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.29,  0.29 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.37,  0.15 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.4,   0.0  ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.37, -0.15 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.15, -0.37 ) * aspectcorrect ) * dofblur );
+			s = sampleColorDepthAware( vUv.xy, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.15,  0.37 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.37,  0.15 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.40,  0.0  ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.37, -0.15 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.29, -0.29 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.15, -0.37 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.0,  -0.4  ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.15,  0.37 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.29,  0.29 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.37,  0.15 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.4,   0.0  ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.37, -0.15 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.15, -0.37 ) * aspectcorrect ) * dofblur, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
 
-			col += textureColorClamped( vUv.xy + ( vec2(  0.15,  0.37 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.37,  0.15 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.37, -0.15 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.15, -0.37 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.15,  0.37 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.37,  0.15 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.37, -0.15 ) * aspectcorrect ) * dofblur9 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.15, -0.37 ) * aspectcorrect ) * dofblur9 );
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.15,  0.37 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.37,  0.15 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.37, -0.15 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.15, -0.37 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.15,  0.37 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.37,  0.15 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.37, -0.15 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.15, -0.37 ) * aspectcorrect ) * dofblur9, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
 
-			col += textureColorClamped( vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.40,  0.0  ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.29, -0.29 ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.0,  -0.4  ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.29,  0.29 ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.4,   0.0  ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur7 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur7 );
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.40,  0.0  ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.29, -0.29 ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.0,  -0.4  ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.29,  0.29 ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.4,   0.0  ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur7, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
 
-			col += textureColorClamped( vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.4,   0.0  ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.29, -0.29 ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.0,  -0.4  ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.29,  0.29 ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.4,   0.0  ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur4 );
-			col += textureColorClamped( vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur4 );
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.4,   0.0  ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.29, -0.29 ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.0,  -0.4  ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.29,  0.29 ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.4,   0.0  ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
+			s = sampleColorDepthAware( vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur4, viewZ, centerCoc ); col += vec4( s.rgb, 0.0 ); totalWeight += s.a;
 
-			gl_FragColor = col / 41.0;
+			gl_FragColor = vec4( col.rgb / max( totalWeight, 0.0001 ), 1.0 );
 			gl_FragColor.a = 1.0;
 
 		}`,
