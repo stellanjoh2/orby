@@ -258,6 +258,13 @@ export class UIManager {
       lensFlareHeight: q('#lensFlareHeight'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
+      anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
+      anamorphicBloomStrength: q('#anamorphicBloomStrength'),
+      anamorphicBloomSpread: q('#anamorphicBloomSpread'),
+      anamorphicBloomThreshold: q('#anamorphicBloomThreshold'),
+      anamorphicBloomSoften: q('#anamorphicBloomSoften'),
+      anamorphicBloomStreakTint: q('#anamorphicBloomStreakTint'),
+      anamorphicBloomQuality: q('#anamorphicBloomQuality'),
       materialBrightness: q('#materialBrightness'),
       materialMetalness: q('#materialMetalness'),
       materialRoughness: q('#materialRoughness'),
@@ -1515,7 +1522,7 @@ export class UIManager {
       this.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'maximum';
     }
     this.updateLensFlareControlsDisabled();
-    
+
     // Ground/Podium
     this.inputs.groundSolid.checked = state.groundSolid;
     this.inputs.groundWire.checked = state.groundWire;
@@ -2081,6 +2088,11 @@ export class UIManager {
     
     // Bloom block - only muted if bloom.enabled is false
     this.setBlockMuted('bloom', !currentState.bloom?.enabled);
+
+    this.setBlockMuted(
+      'anamorphic-lens-flare',
+      !(currentState.bloom?.enabled && (currentState.bloom?.strength ?? 0) > 0.0001),
+    );
 
     // Lens dirt block - only muted if lens dirt disabled
     this.setBlockMuted('lens-dirt', !currentState.lensDirt?.enabled);

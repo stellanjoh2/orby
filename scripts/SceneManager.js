@@ -620,6 +620,9 @@ export class SceneManager {
       this.postPipeline.aberrationPass.uniforms.aspectRatio.value =
         height > 0 ? width / height : 1;
     }
+    if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution) {
+      this.postPipeline.anamorphicBloomPass.uniforms.resolution.set(width, height);
+    }
     this.groundController?.resizePodiumReflector?.(width, height);
   }
 
@@ -1035,6 +1038,24 @@ export class SceneManager {
         this.postPipeline.bloomTintPass.enabled = false;
       }
     }
+    this.syncAnamorphicBloomFromState();
+  }
+
+  syncAnamorphicBloomFromState() {
+    const state = this.stateStore.getState();
+    const tier = resolveRenderQualityTier(state.renderQuality);
+    const bloom = state.bloom ?? {};
+    const bloomOk =
+      bloom.enabled !== false &&
+      (bloom.strength ?? 0) > 0.0001 &&
+      !tier.forceBloomOff;
+    const defaults = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
+    const raw = state.lensFlare?.anamorphicBloom ?? {};
+    const merged = {
+      ...defaults,
+      ...(raw && typeof raw === 'object' ? raw : {}),
+    };
+    this.postPipeline?.updateAnamorphicBloom(merged, { forceOff: !bloomOk });
   }
 
   /**
@@ -1818,11 +1839,13 @@ export class SceneManager {
   updateBloom(settings) {
     this.postPipeline?.updateBloom(settings);
     const qualityId = settings?.quality ?? 'medium';
-    if (this._bloomQualityApplied === qualityId) return;
-    this._bloomQualityApplied = qualityId;
-    const size = new THREE.Vector2();
-    this.renderer.getSize(size);
-    this.syncPostProcessingForLogicalSize(size.x, size.y);
+    if (this._bloomQualityApplied !== qualityId) {
+      this._bloomQualityApplied = qualityId;
+      const size = new THREE.Vector2();
+      this.renderer.getSize(size);
+      this.syncPostProcessingForLogicalSize(size.x, size.y);
+    }
+    this.syncAnamorphicBloomFromState();
   }
 
   updateGrain(settings) {

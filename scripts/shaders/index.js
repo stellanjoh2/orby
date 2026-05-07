@@ -30,6 +30,65 @@ void main() {
 }
 `;
 
+/**
+ * Horizontal gaussian streak on bright areas (runs after bloom + bloom tint).
+ * `sampleRadius` is baked into the shader source so the blur loop is compile-time bounded.
+ * @param {number} sampleRadius
+ */
+export function buildAnamorphicBloomShader(sampleRadius) {
+  const R = Math.max(1, Math.min(64, Math.floor(sampleRadius)));
+  const fragmentShader = `
+#define SAMPLE_RADIUS ${R}
+varying vec2 vUv;
+uniform sampler2D tDiffuse;
+uniform vec2 resolution;
+uniform float threshold;
+uniform float soften;
+uniform float strength;
+uniform float spread;
+uniform vec3 streakTint;
+
+float linLum(vec3 c) {
+  return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+void main() {
+  vec4 base = texture2D(tDiffuse, vUv);
+  vec2 px = vec2(1.0 / max(resolution.x, 1.0), 1.0 / max(resolution.y, 1.0));
+  float sigma = float(SAMPLE_RADIUS) * 0.45 + 1.0e-4;
+  float wsum = 0.0;
+  float maskBlur = 0.0;
+  for (int i = -SAMPLE_RADIUS; i <= SAMPLE_RADIUS; i++) {
+    float fi = float(i);
+    float w = exp(-(fi * fi) / (2.0 * sigma * sigma));
+    vec2 off = vec2(fi * spread * px.x, 0.0);
+    vec4 s = texture2D(tDiffuse, vUv + off);
+    float lu = linLum(s.rgb);
+    float h = smoothstep(threshold - soften, threshold + soften, lu);
+    maskBlur += h * w;
+    wsum += w;
+  }
+  maskBlur /= max(wsum, 1.0e-5);
+  vec3 streak = streakTint * maskBlur * strength;
+  gl_FragColor = vec4(base.rgb + streak, base.a);
+}
+`;
+
+  return {
+    uniforms: {
+      tDiffuse: { value: null },
+      resolution: { value: new THREE.Vector2(1, 1) },
+      threshold: { value: 0.7 },
+      soften: { value: 0.12 },
+      strength: { value: 1.0 },
+      spread: { value: 0.15 },
+      streakTint: { value: new THREE.Color('#7ec8ff') },
+    },
+    vertexShader: bloomTintVertex,
+    fragmentShader,
+  };
+}
+
 const grainTintVertex = `
 varying vec2 vUv;
 void main() {

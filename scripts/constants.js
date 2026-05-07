@@ -52,6 +52,36 @@ export function resolveBloomQualityTier(id) {
   return BLOOM_QUALITY.medium;
 }
 
+/** Horizontal streak quality after bloom (tap count ~ 2×sampleRadius+1). */
+export const ANAMORPHIC_BLOOM_QUALITY_DEFAULT = /** @type {const} */ ('medium');
+export const ANAMORPHIC_BLOOM_QUALITY = {
+  low: { sampleRadius: 16, spreadMax: 0.42 },
+  medium: { sampleRadius: 24, spreadMax: 0.72 },
+  high: { sampleRadius: 40, spreadMax: 1.12 },
+  ultra: { sampleRadius: 64, spreadMax: 1.68 },
+};
+
+/**
+ * @param {string | undefined} id
+ */
+export function normalizeAnamorphicBloomQualityId(id) {
+  if (id === 'optimized') return 'low';
+  if (id === 'maximum') return 'ultra';
+  if (id === 'low' || id === 'medium' || id === 'high' || id === 'ultra') {
+    return id;
+  }
+  return 'medium';
+}
+
+/**
+ * @param {string | undefined} id
+ * @returns {typeof ANAMORPHIC_BLOOM_QUALITY['medium']}
+ */
+export function resolveAnamorphicBloomQualityTier(id) {
+  const k = normalizeAnamorphicBloomQualityId(id);
+  return ANAMORPHIC_BLOOM_QUALITY[k] ?? ANAMORPHIC_BLOOM_QUALITY.medium;
+}
+
 /** Minimum focus distance (meters) for depth of field — matches camera near plane. */
 export const DOF_FOCUS_MIN_M = 0.1;
 

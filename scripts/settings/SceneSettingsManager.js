@@ -601,12 +601,22 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:hdri-background', payload.hdriBackground);
       }
       if (payload.lensFlare) {
-        this.stateStore.set('lensFlare', payload.lensFlare);
-        this.eventBus.emit('studio:lens-flare-enabled', payload.lensFlare.enabled);
-        this.eventBus.emit('studio:lens-flare-rotation', payload.lensFlare.rotation);
-        this.eventBus.emit('studio:lens-flare-height', payload.lensFlare.height);
-        this.eventBus.emit('studio:lens-flare-color', payload.lensFlare.color);
-        this.eventBus.emit('studio:lens-flare-quality', payload.lensFlare.quality);
+        const d = this.stateStore.getDefaults().lensFlare;
+        const merged = {
+          ...d,
+          ...payload.lensFlare,
+          anamorphicBloom: {
+            ...d.anamorphicBloom,
+            ...(payload.lensFlare.anamorphicBloom ?? {}),
+          },
+        };
+        this.stateStore.set('lensFlare', merged);
+        this.eventBus.emit('studio:lens-flare-enabled', merged.enabled);
+        this.eventBus.emit('studio:lens-flare-rotation', merged.rotation);
+        this.eventBus.emit('studio:lens-flare-height', merged.height);
+        this.eventBus.emit('studio:lens-flare-color', merged.color);
+        this.eventBus.emit('studio:lens-flare-quality', merged.quality);
+        this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       }
       if (payload.groundSolid !== undefined) {
         this.stateStore.set('groundSolid', payload.groundSolid);

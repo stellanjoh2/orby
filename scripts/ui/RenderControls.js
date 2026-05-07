@@ -7,10 +7,22 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
+  normalizeAnamorphicBloomQualityId,
   RENDER_QUALITY_DEFAULT,
+  resolveAnamorphicBloomQualityTier,
   sanitizeAmbientOcclusion,
 } from '../constants.js';
 import { ToneCurveController } from './ToneCurveController.js';
+
+const ANAMORPHIC_BLOOM_INPUT_KEYS = [
+  'anamorphicBloomEnabled',
+  'anamorphicBloomStrength',
+  'anamorphicBloomSpread',
+  'anamorphicBloomThreshold',
+  'anamorphicBloomSoften',
+  'anamorphicBloomStreakTint',
+  'anamorphicBloomQuality',
+];
 
 export class RenderControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -74,7 +86,14 @@ export class RenderControls {
       const enabled = event.target.checked;
       this.stateStore.set('bloom.enabled', enabled);
       this.ui.setEffectControlsDisabled(
-        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+        [
+          'bloomThreshold',
+          'bloomStrength',
+          'bloomRadius',
+          'bloomColor',
+          'bloomQuality',
+          ...ANAMORPHIC_BLOOM_INPUT_KEYS,
+        ],
         !enabled,
       );
       emitBloom();
@@ -104,6 +123,84 @@ export class RenderControls {
             : 'medium';
         this.stateStore.set('bloom.quality', quality);
         emitBloom();
+      });
+    }
+
+    const emitAnamorphicBloom = () => {
+      this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
+    };
+    if (this.ui.inputs.anamorphicBloomEnabled) {
+      this.ui.inputs.anamorphicBloomEnabled.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        this.stateStore.set('lensFlare.anamorphicBloom.enabled', event.target.checked);
+        emitAnamorphicBloom();
+      });
+    }
+    if (this.ui.inputs.anamorphicBloomStrength) {
+      this.ui.inputs.anamorphicBloomStrength.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        const value = parseFloat(event.target.value);
+        this.helpers.updateValueLabel('anamorphicBloomStrength', value, 'decimal');
+        this.stateStore.set('lensFlare.anamorphicBloom.strength', value);
+        emitAnamorphicBloom();
+      });
+    }
+    if (this.ui.inputs.anamorphicBloomSpread) {
+      this.ui.inputs.anamorphicBloomSpread.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        const q = normalizeAnamorphicBloomQualityId(
+          this.stateStore.getState().lensFlare?.anamorphicBloom?.quality,
+        );
+        const tier = resolveAnamorphicBloomQualityTier(q);
+        let value = parseFloat(event.target.value);
+        value = Math.min(tier.spreadMax, Math.max(0, value));
+        if (value !== parseFloat(event.target.value)) {
+          event.target.value = String(value);
+        }
+        this.helpers.updateValueLabel('anamorphicBloomSpread', value, 'decimal');
+        this.stateStore.set('lensFlare.anamorphicBloom.spread', value);
+        emitAnamorphicBloom();
+      });
+    }
+    if (this.ui.inputs.anamorphicBloomThreshold) {
+      this.ui.inputs.anamorphicBloomThreshold.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        const value = parseFloat(event.target.value);
+        this.helpers.updateValueLabel('anamorphicBloomThreshold', value, 'decimal');
+        this.stateStore.set('lensFlare.anamorphicBloom.threshold', value);
+        emitAnamorphicBloom();
+      });
+    }
+    if (this.ui.inputs.anamorphicBloomSoften) {
+      this.ui.inputs.anamorphicBloomSoften.addEventListener('input', (event) => {
+        touchLookFilterCustom();
+        const value = parseFloat(event.target.value);
+        this.helpers.updateValueLabel('anamorphicBloomSoften', value, 'decimal');
+        this.stateStore.set('lensFlare.anamorphicBloom.soften', value);
+        emitAnamorphicBloom();
+      });
+    }
+    this.helpers.bindColorInput(
+      'anamorphicBloomStreakTint',
+      'lensFlare.anamorphicBloom.streakTint',
+      'studio:lens-flare-anamorphic-bloom',
+    );
+    if (this.ui.inputs.anamorphicBloomQuality) {
+      this.ui.inputs.anamorphicBloomQuality.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        const q = normalizeAnamorphicBloomQualityId(event.target.value);
+        this.stateStore.set('lensFlare.anamorphicBloom.quality', q);
+        const spread = this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.15;
+        const tier = resolveAnamorphicBloomQualityTier(q);
+        const clamped = Math.min(tier.spreadMax, Math.max(0, spread));
+        if (clamped !== spread) {
+          this.stateStore.set('lensFlare.anamorphicBloom.spread', clamped);
+          if (this.ui.inputs.anamorphicBloomSpread) {
+            this.ui.inputs.anamorphicBloomSpread.value = clamped;
+            this.helpers.updateValueLabel('anamorphicBloomSpread', clamped, 'decimal');
+          }
+        }
+        emitAnamorphicBloom();
       });
     }
 
@@ -675,9 +772,46 @@ export class RenderControls {
     }
     this.ui.inputs.toggleBloom.checked = !!state.bloom.enabled;
     this.ui.setEffectControlsDisabled(
-      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+      [
+        'bloomThreshold',
+        'bloomStrength',
+        'bloomRadius',
+        'bloomColor',
+        'bloomQuality',
+        ...ANAMORPHIC_BLOOM_INPUT_KEYS,
+      ],
       !state.bloom.enabled,
     );
+
+    const abDef = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
+    const ab = { ...abDef, ...(state.lensFlare?.anamorphicBloom ?? {}) };
+    if (this.ui.inputs.anamorphicBloomEnabled) {
+      this.ui.inputs.anamorphicBloomEnabled.checked = !!ab.enabled;
+    }
+    if (this.ui.inputs.anamorphicBloomStrength) {
+      this.ui.inputs.anamorphicBloomStrength.value = ab.strength ?? 1;
+      this.helpers.updateValueLabel('anamorphicBloomStrength', ab.strength ?? 1, 'decimal');
+    }
+    if (this.ui.inputs.anamorphicBloomSpread) {
+      this.ui.inputs.anamorphicBloomSpread.value = ab.spread ?? 0.15;
+      this.helpers.updateValueLabel('anamorphicBloomSpread', ab.spread ?? 0.15, 'decimal');
+    }
+    if (this.ui.inputs.anamorphicBloomThreshold) {
+      this.ui.inputs.anamorphicBloomThreshold.value = ab.threshold ?? 0.7;
+      this.helpers.updateValueLabel('anamorphicBloomThreshold', ab.threshold ?? 0.7, 'decimal');
+    }
+    if (this.ui.inputs.anamorphicBloomSoften) {
+      this.ui.inputs.anamorphicBloomSoften.value = ab.soften ?? 0.12;
+      this.helpers.updateValueLabel('anamorphicBloomSoften', ab.soften ?? 0.12, 'decimal');
+    }
+    if (this.ui.inputs.anamorphicBloomStreakTint && ab.streakTint) {
+      this.ui.inputs.anamorphicBloomStreakTint.value = ab.streakTint;
+    }
+    if (this.ui.inputs.anamorphicBloomQuality) {
+      const qid = ab.quality ?? 'medium';
+      this.ui.inputs.anamorphicBloomQuality.value =
+        qid === 'low' || qid === 'high' || qid === 'ultra' ? qid : 'medium';
+    }
 
     // Lens Dirt
     if (this.ui.inputs.lensDirtStrength && state.lensDirt) {

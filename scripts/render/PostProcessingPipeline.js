@@ -9,6 +9,7 @@ import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/
 import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js';
 import {
   BloomTintShader,
+  buildAnamorphicBloomShader,
   GrainTintShader,
   ExposureShader,
   ToneMappingShader,
@@ -23,11 +24,13 @@ import { ColorAdjustController } from './ColorAdjustController.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
   AMBIENT_OCCLUSION_INTENSITY_MIN,
+  ANAMORPHIC_BLOOM_QUALITY_DEFAULT,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
   resolveAmbientOcclusionQualityTier,
+  resolveAnamorphicBloomQualityTier,
 } from '../constants.js';
 
 export class PostProcessingPipeline {
@@ -68,6 +71,12 @@ export class PostProcessingPipeline {
     this.filmPass = new FilmPass(0.0, 0.0, 648, false);
     this.filmPass.enabled = false;
     this.bloomTintPass = new ShaderPass(BloomTintShader);
+    const abTier0 = resolveAnamorphicBloomQualityTier(ANAMORPHIC_BLOOM_QUALITY_DEFAULT);
+    this._anamorphicBloomSampleRadius = abTier0.sampleRadius;
+    this.anamorphicBloomPass = new ShaderPass(
+      buildAnamorphicBloomShader(abTier0.sampleRadius),
+    );
+    this.anamorphicBloomPass.enabled = false;
     this.grainTintPass = new ShaderPass(GrainTintShader);
     this.grainTintPass.enabled = false;
     this.grainTime = 0;
@@ -109,6 +118,7 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.bokehPass);
     this.composer.addPass(this.bloomPass);
     this.composer.addPass(this.bloomTintPass);
+    this.composer.addPass(this.anamorphicBloomPass);
     this.composer.addPass(this.lensDirtPass);
     this.composer.addPass(this.filmPass);
     this.composer.addPass(this.grainTintPass);
@@ -174,6 +184,64 @@ export class PostProcessingPipeline {
     // 200% stronger = 3x multiplier (was 2.5, now 7.5)
     const tintStrength = THREE.MathUtils.clamp(settings.strength * 7.5, 0, 15.0);
     this.bloomTintPass.uniforms.strength.value = tintStrength;
+  }
+
+  _ensureAnamorphicBloomShaderSampleRadius(sampleRadius) {
+    if (!this.anamorphicBloomPass) return;
+    const r = Math.max(1, Math.min(64, Math.floor(sampleRadius)));
+    if (r === this._anamorphicBloomSampleRadius) return;
+    this._anamorphicBloomSampleRadius = r;
+    const shader = buildAnamorphicBloomShader(r);
+    const u = this.anamorphicBloomPass.uniforms;
+    this.anamorphicBloomPass.material.dispose();
+    this.anamorphicBloomPass.material = new THREE.ShaderMaterial({
+      name: 'AnamorphicBloomPass',
+      uniforms: u,
+      vertexShader: shader.vertexShader,
+      fragmentShader: shader.fragmentShader,
+    });
+  }
+
+  /**
+   * Streak highlights horizontally (after Unreal bloom + bloom tint).
+   * @param {object} settings
+   * @param {{ forceOff?: boolean }} [opts]
+   */
+  updateAnamorphicBloom(settings, { forceOff = false } = {}) {
+    if (!this.anamorphicBloomPass) return;
+    if (forceOff || !settings?.enabled) {
+      this.anamorphicBloomPass.enabled = false;
+      return;
+    }
+    const tier = resolveAnamorphicBloomQualityTier(settings.quality);
+    this._ensureAnamorphicBloomShaderSampleRadius(tier.sampleRadius);
+    const spread = THREE.MathUtils.clamp(
+      typeof settings.spread === 'number' && !Number.isNaN(settings.spread)
+        ? settings.spread
+        : 0.15,
+      0,
+      tier.spreadMax,
+    );
+    const u = this.anamorphicBloomPass.uniforms;
+    u.threshold.value =
+      typeof settings.threshold === 'number' && !Number.isNaN(settings.threshold)
+        ? settings.threshold
+        : 0.7;
+    u.soften.value =
+      typeof settings.soften === 'number' && !Number.isNaN(settings.soften)
+        ? Math.max(1e-4, settings.soften)
+        : 0.12;
+    u.strength.value =
+      typeof settings.strength === 'number' && !Number.isNaN(settings.strength)
+        ? Math.max(0, settings.strength)
+        : 1.0;
+    u.spread.value = spread;
+    const hex =
+      typeof settings.streakTint === 'string' && settings.streakTint.trim().length > 0
+        ? settings.streakTint.trim()
+        : '#7ec8ff';
+    u.streakTint.value.set(hex);
+    this.anamorphicBloomPass.enabled = true;
   }
 
   /**

@@ -185,6 +185,7 @@ export class EventManager {
     eventBus.on('studio:lens-flare-height', (value) => s.setLensFlareHeight(value));
     eventBus.on('studio:lens-flare-color', (value) => s.setLensFlareColor(value));
     eventBus.on('studio:lens-flare-quality', (value) => s.setLensFlareQuality(value));
+    eventBus.on('studio:lens-flare-anamorphic-bloom', () => s.syncAnamorphicBloomFromState());
     eventBus.on('mesh:clay-normal-map', (enabled) => s.setClayNormalMap(enabled));
 
     // Render/Post-processing events

@@ -151,6 +151,15 @@ export class StateStore {
         height: 15,
         color: '#d28756',
         quality: 'maximum',
+        anamorphicBloom: {
+          enabled: false,
+          quality: 'medium',
+          strength: 1.0,
+          spread: 0.15,
+          threshold: 0.7,
+          soften: 0.12,
+          streakTint: '#7ec8ff',
+        },
       },
       dof: {
         enabled: false,

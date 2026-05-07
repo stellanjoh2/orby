@@ -263,6 +263,7 @@ export class ResetControls {
       this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
       this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
       this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
+      this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
       this.eventBus.emit('studio:ground-wire', defaults.groundWire);
       this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
@@ -334,7 +335,20 @@ export class ResetControls {
       this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
       this.eventBus.emit('render:bloom', defaults.bloom);
       this.ui.setEffectControlsDisabled(
-        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+        [
+          'bloomThreshold',
+          'bloomStrength',
+          'bloomRadius',
+          'bloomColor',
+          'bloomQuality',
+          'anamorphicBloomEnabled',
+          'anamorphicBloomStrength',
+          'anamorphicBloomSpread',
+          'anamorphicBloomThreshold',
+          'anamorphicBloomSoften',
+          'anamorphicBloomStreakTint',
+          'anamorphicBloomQuality',
+        ],
         !defaults.bloom.enabled,
       );
       this.eventBus.emit('render:grain', defaults.grain);
@@ -455,6 +469,7 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
+            this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;
           
@@ -465,6 +480,7 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
+            this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;
             
@@ -649,9 +665,32 @@ export class ResetControls {
             });
             this.eventBus.emit('render:bloom', defaults.bloom);
             this.ui.setEffectControlsDisabled(
-              ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+              [
+                'bloomThreshold',
+                'bloomStrength',
+                'bloomRadius',
+                'bloomColor',
+                'bloomQuality',
+                'anamorphicBloomEnabled',
+                'anamorphicBloomStrength',
+                'anamorphicBloomSpread',
+                'anamorphicBloomThreshold',
+                'anamorphicBloomSoften',
+                'anamorphicBloomStreakTint',
+                'anamorphicBloomQuality',
+              ],
               !defaults.bloom.enabled,
             );
+            this.ui.syncUIFromState();
+            break;
+
+          case 'anamorphic-bloom':
+            this.stateStore.set('lookFilterPreset', 'custom');
+            this.stateStore.set(
+              'lensFlare.anamorphicBloom',
+              defaults.lensFlare.anamorphicBloom,
+            );
+            this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;
 

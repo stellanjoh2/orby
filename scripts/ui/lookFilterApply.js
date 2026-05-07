@@ -59,7 +59,20 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
       !b.dof.enabled,
     );
     ui.setEffectControlsDisabled(
-      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+      [
+        'bloomThreshold',
+        'bloomStrength',
+        'bloomRadius',
+        'bloomColor',
+        'bloomQuality',
+        'anamorphicBloomEnabled',
+        'anamorphicBloomStrength',
+        'anamorphicBloomSpread',
+        'anamorphicBloomThreshold',
+        'anamorphicBloomSoften',
+        'anamorphicBloomStreakTint',
+        'anamorphicBloomQuality',
+      ],
       !b.bloom.enabled,
     );
     ui.setEffectControlsDisabled(['grainIntensity'], !b.grain.enabled);
