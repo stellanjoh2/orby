@@ -124,6 +124,11 @@ export class StateStore {
         radius: 2,
         strength: 0.3,
       },
+      /** MeshPhysicalMaterial transmission — wax / jade–style translucency (Shaded + Clay). */
+      subsurface: {
+        translucency: 0,
+        scatterTint: '#ffd4b8',
+      },
       lights: {
         key: { color: '#ffdfc9', intensity: 1.28, height: 5, rotate: 0, enabled: true, castShadows: true },
         fill: { color: '#b0c7ff', intensity: 0.8, height: 3, rotate: 0, enabled: true, castShadows: true },
@@ -155,7 +160,7 @@ export class StateStore {
           enabled: false,
           quality: 'medium',
           strength: 1.0,
-          spread: 0.15,
+          spread: 0.2,
           threshold: 0.7,
           soften: 0.12,
           streakTint: '#7ec8ff',

@@ -190,7 +190,7 @@ export class RenderControls {
         touchLookFilterCustom();
         const q = normalizeAnamorphicBloomQualityId(event.target.value);
         this.stateStore.set('lensFlare.anamorphicBloom.quality', q);
-        const spread = this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.15;
+        const spread = this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.2;
         const tier = resolveAnamorphicBloomQualityTier(q);
         const clamped = Math.min(tier.spreadMax, Math.max(0, spread));
         if (clamped !== spread) {
@@ -793,8 +793,8 @@ export class RenderControls {
       this.helpers.updateValueLabel('anamorphicBloomStrength', ab.strength ?? 1, 'decimal');
     }
     if (this.ui.inputs.anamorphicBloomSpread) {
-      this.ui.inputs.anamorphicBloomSpread.value = ab.spread ?? 0.15;
-      this.helpers.updateValueLabel('anamorphicBloomSpread', ab.spread ?? 0.15, 'decimal');
+      this.ui.inputs.anamorphicBloomSpread.value = ab.spread ?? 0.2;
+      this.helpers.updateValueLabel('anamorphicBloomSpread', ab.spread ?? 0.2, 'decimal');
     }
     if (this.ui.inputs.anamorphicBloomThreshold) {
       this.ui.inputs.anamorphicBloomThreshold.value = ab.threshold ?? 0.7;

@@ -218,7 +218,7 @@ export class PostProcessingPipeline {
     const spread = THREE.MathUtils.clamp(
       typeof settings.spread === 'number' && !Number.isNaN(settings.spread)
         ? settings.spread
-        : 0.15,
+        : 0.2,
       0,
       tier.spreadMax,
     );

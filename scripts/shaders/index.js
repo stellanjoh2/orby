@@ -39,6 +39,7 @@ export function buildAnamorphicBloomShader(sampleRadius) {
   const R = Math.max(1, Math.min(64, Math.floor(sampleRadius)));
   const fragmentShader = `
 #define SAMPLE_RADIUS ${R}
+#define STREAK_LENGTH_SCALE 6.0
 varying vec2 vUv;
 uniform sampler2D tDiffuse;
 uniform vec2 resolution;
@@ -55,13 +56,14 @@ float linLum(vec3 c) {
 void main() {
   vec4 base = texture2D(tDiffuse, vUv);
   vec2 px = vec2(1.0 / max(resolution.x, 1.0), 1.0 / max(resolution.y, 1.0));
-  float sigma = float(SAMPLE_RADIUS) * 0.45 + 1.0e-4;
+  // Without STREAK_LENGTH_SCALE, spread×radius only spans ~10–20px — flat, not cinematic.
+  float sigma = float(SAMPLE_RADIUS) * 0.58 + 1.0e-4;
   float wsum = 0.0;
   float maskBlur = 0.0;
   for (int i = -SAMPLE_RADIUS; i <= SAMPLE_RADIUS; i++) {
     float fi = float(i);
     float w = exp(-(fi * fi) / (2.0 * sigma * sigma));
-    vec2 off = vec2(fi * spread * px.x, 0.0);
+    vec2 off = vec2(fi * spread * STREAK_LENGTH_SCALE * px.x, 0.0);
     vec4 s = texture2D(tDiffuse, vUv + off);
     float lu = linLum(s.rgb);
     float h = smoothstep(threshold - soften, threshold + soften, lu);
@@ -81,7 +83,7 @@ void main() {
       threshold: { value: 0.7 },
       soften: { value: 0.12 },
       strength: { value: 1.0 },
-      spread: { value: 0.15 },
+      spread: { value: 0.2 },
       streakTint: { value: new THREE.Color('#7ec8ff') },
     },
     vertexShader: bloomTintVertex,

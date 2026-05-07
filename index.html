@@ -617,6 +617,37 @@
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="subsurface">
+                  <div class="block-title has-reset">
+                    <span>Subsurface</span>
+                    <button class="block-reset-btn" data-reset="subsurface" aria-label="Reset Subsurface" data-tooltip="Reset Subsurface settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Volume translucency (MeshPhysicalMaterial transmission) — best in Shaded or Clay with HDRI lighting">Translucency</span>
+                    <input
+                      id="subsurfaceTranslucency"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0"
+                    />
+                    <span class="value" data-output="subsurfaceTranslucency">0.00</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Scatter tint</span>
+                    <input
+                      type="color"
+                      id="subsurfaceScatterTint"
+                      class="color-chip"
+                      value="#ffd4b8"
+                    />
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="wireframe">
                   <div class="block-title has-reset">
                     <span>Wireframe</span>
@@ -1125,7 +1156,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.394 · 2026-05-07 19:46:11 UTC</div>
+              <div class="info-version-tag">v0.5.395 · 2026-05-07 22:12:26 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1863,7 +1894,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.394 · 2026-05-07 19:46:11 UTC</div>
+              <div class="info-version-tag">v0.5.395 · 2026-05-07 22:12:26 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2550,10 +2581,10 @@
                       type="range"
                       min="0"
                       max="1.68"
-                      value="0.15"
+                      value="0.2"
                       step="0.01"
                     />
-                    <span class="value" data-output="anamorphicBloomSpread">0.15</span>
+                    <span class="value" data-output="anamorphicBloomSpread">0.20</span>
                   </label>
                   <label class="slider-line">
                     <span>Threshold</span>
@@ -2938,7 +2969,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.394 · 2026-05-07 19:46:11 UTC</div>
+              <div class="info-version-tag">v0.5.395 · 2026-05-07 22:12:26 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3087,7 +3118,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.394 · 2026-05-07 19:46:11 UTC</div>
+              <div class="info-version-tag">v0.5.395 · 2026-05-07 22:12:26 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3661,7 +3692,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.394 · 2026-05-07 19:46:11 UTC</div>
+              <div class="info-version-tag">v0.5.395 · 2026-05-07 22:12:26 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
