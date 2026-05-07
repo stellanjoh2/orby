@@ -1501,7 +1501,11 @@ export class SceneManager {
       this.stateStore.set('groundSolid', true);
     }
 
-    this.ui?.showToast?.('Podium snapped to mesh bottom');
+    this.ui?.showToast?.(
+      'Podium snapped to mesh bottom',
+      3200,
+      { notification: false },
+    );
   }
 
   snapGridToBottom() {
@@ -1522,7 +1526,11 @@ export class SceneManager {
       return;
     }
     this.stateStore.set('gridY', bottomY);
-    this.ui?.showToast?.('Grid snapped to mesh bottom');
+    this.ui?.showToast?.(
+      'Grid snapped to mesh bottom',
+      3200,
+      { notification: false },
+    );
   }
 
   setPodiumScale(value, { updateState = true } = {}) {
@@ -1639,7 +1647,11 @@ export class SceneManager {
       this.setBackdropEnabled(true);
       this.stateStore.set('backdropEnabled', true);
     }
-    this.ui?.showToast?.('Backdrop floor snapped to mesh bottom');
+    this.ui?.showToast?.(
+      'Backdrop floor snapped to mesh bottom',
+      3200,
+      { notification: false },
+    );
   }
 
   setSceneGeometryWireframe(enabled) {

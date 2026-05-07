@@ -68,7 +68,11 @@ export class StudioControls {
       this.stateStore.set('lensFlare.enabled', enabled);
       this.eventBus.emit('studio:lens-flare-enabled', enabled);
       if (enabled) {
-        this.helpers.showToast('WARNING: LENS FLARES IS AN EXPERIMENTAL (UNOPTIMIZED) FEATURE');
+        this.helpers.showToast(
+          'WARNING: LENS FLARES IS AN EXPERIMENTAL (UNOPTIMIZED) FEATURE',
+          3200,
+          { caution: false, notification: false },
+        );
       }
       this.ui.updateLensFlareControlsDisabled();
     });
@@ -237,12 +241,15 @@ export class StudioControls {
       this.eventBus.emit('studio:backdrop-y', value);
     });
     this.ui.inputs.backdropSnap?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:backdrop-snap');
     });
     this.ui.inputs.podiumSnap?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:podium-snap');
     });
     this.ui.inputs.gridSnap?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:grid-snap');
     });
 
