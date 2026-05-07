@@ -10,6 +10,7 @@ import {
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  resolveBloomQualityTier,
   resolveRenderQualityTier,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
@@ -43,6 +44,8 @@ import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
 import {
   createToggleScaleContext,
+  easeOutExpo,
+  SCALE_TOGGLE_IN_MS,
   stepToggleScaleAnimation,
 } from './scene/toggleScaleAnimation.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
@@ -592,8 +595,10 @@ export class SceneManager {
     this.composer.setPixelRatio(pr);
     this.composer.setSize(width, height);
 
-    const tier = resolveRenderQualityTier(this.stateStore.getState().renderQuality);
-    const bloomScale = tier.bloomResolutionScale;
+    const state = this.stateStore.getState();
+    const tier = resolveRenderQualityTier(state.renderQuality);
+    const bloomQuality = resolveBloomQualityTier(state.bloom?.quality);
+    const bloomScale = tier.bloomResolutionScale * bloomQuality.resolutionScale;
     const bloomW = Math.max(1, Math.floor(width * bloomScale));
     const bloomH = Math.max(1, Math.floor(height * bloomScale));
     if (this.postPipeline?.bloomPass) {
@@ -1812,6 +1817,12 @@ export class SceneManager {
 
   updateBloom(settings) {
     this.postPipeline?.updateBloom(settings);
+    const qualityId = settings?.quality ?? 'medium';
+    if (this._bloomQualityApplied === qualityId) return;
+    this._bloomQualityApplied = qualityId;
+    const size = new THREE.Vector2();
+    this.renderer.getSize(size);
+    this.syncPostProcessingForLogicalSize(size.x, size.y);
   }
 
   updateGrain(settings) {
@@ -2192,9 +2203,8 @@ export class SceneManager {
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.({ skipSound: wasFirstLoad });
     
-    // Fade in mesh opacity from 0 to 1 over 2 seconds with spin-in animation
-    // Animate object rotation relative to modelRoot (which may have saved rotation)
-    this._fadeInMeshOpacity(object);
+    // Keep the mesh hidden until camera framing has sampled its full-size bounds.
+    object.visible = false;
     
     // Smoothly animate camera to focus on the new mesh
     // Use a small delay to ensure everything is set up
@@ -2233,7 +2243,8 @@ export class SceneManager {
           }
           
           // Smoothly animate camera to focus on the mesh (for both first and subsequent loads)
-          this.cameraController?.focusOnObjectAnimated(this.currentModel, 2.0);
+          this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
+          this._scaleInMeshOnSpawn(object);
         }
       });
     });
@@ -2254,103 +2265,43 @@ export class SceneManager {
     this.eventBus.emit('ui:advanced-glass-visible', { visible: hasHeuristicGlass });
   }
 
+  _scaleInMeshOnSpawn(object) {
+    if (!object || this.currentModel !== object) return;
+    if (this._meshSpawnScaleRaf) {
+      cancelAnimationFrame(this._meshSpawnScaleRaf);
+      this._meshSpawnScaleRaf = null;
+    }
 
-  _fadeInMeshOpacity(object) {
-    // Collect all materials from the mesh
-    const materials = [];
-    const originalMaterialStates = new Map();
-    object.traverse((child) => {
-      if (child.isMesh && child.material) {
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        mats.forEach((mat) => {
-          if (mat && !materials.includes(mat)) {
-            materials.push(mat);
-            originalMaterialStates.set(mat, {
-              transparent: !!mat.transparent,
-              opacity: Number.isFinite(mat.opacity) ? mat.opacity : 1,
-              depthWrite: mat.depthWrite !== false,
-            });
-          }
-        });
-      }
-    });
-
-    if (materials.length === 0) return;
-
-    // Set initial opacity to 0 and enable transparency (skip KHR transmission — animating opacity breaks it)
-    materials.forEach((mat) => {
-      if (mat) {
-        const isTransmission =
-          mat.isMeshPhysicalMaterial &&
-          (Number(mat.transmission) > 0.01 || mat.transmissionMap);
-        if (isTransmission) {
-          return;
-        }
-        mat.transparent = true;
-        mat.opacity = 0;
-        // During fade we disable depth writes to avoid temporary sorting artifacts.
-        mat.depthWrite = false;
-      }
-    });
-
-    // Set initial rotation to -90 degrees on Y axis (spins in from the left)
-    // This is relative to modelRoot, which may have its own rotation from transform controller
-    const startRotationY = -90;
-    const targetRotationY = 0;
-    object.rotation.y = THREE.MathUtils.degToRad(startRotationY);
-
-    // Animate opacity and rotation from 0 to 1 and -90° to 0° over 2 seconds
-    const duration = 2000; // 2 seconds
+    const targetScale = object.scale.clone();
+    const duration = Math.min(SCALE_TOGGLE_IN_MS, 320);
     const startTime = performance.now();
 
-    const fadeIn = () => {
-      const elapsed = performance.now() - startTime;
-      const progress = Math.min(1, elapsed / duration);
-      // Use smooth ease-out curve (quadratic) - starts fast, gradually slows
-      const easedProgress = 1 - Math.pow(1 - progress, 2);
-      const opacity = easedProgress;
-      
-      // Animate rotation from -90° to 0° (synced with fade, relative to modelRoot)
-      const rotationY = startRotationY + (targetRotationY - startRotationY) * easedProgress;
-      object.rotation.y = THREE.MathUtils.degToRad(rotationY);
+    object.visible = true;
+    object.scale.set(
+      targetScale.x * 0.001,
+      targetScale.y * 0.001,
+      targetScale.z * 0.001,
+    );
 
-      materials.forEach((mat) => {
-        if (mat) {
-          const isTransmission =
-            mat.isMeshPhysicalMaterial &&
-            (Number(mat.transmission) > 0.01 || mat.transmissionMap);
-          if (isTransmission) {
-            return;
-          }
-          const original = originalMaterialStates.get(mat);
-          const targetOpacity = original ? original.opacity : 1;
-          mat.opacity = targetOpacity * opacity;
-        }
-      });
+    const tick = () => {
+      if (this.currentModel !== object) return;
+      const t = Math.min(1, (performance.now() - startTime) / duration);
+      const m = easeOutExpo(t);
+      object.scale.set(
+        targetScale.x * m,
+        targetScale.y * m,
+        targetScale.z * m,
+      );
 
-      if (progress < 1) {
-        requestAnimationFrame(fadeIn);
+      if (t < 1) {
+        this._meshSpawnScaleRaf = requestAnimationFrame(tick);
       } else {
-        // Ensure we end at exact opacity 1 and rotation 0° (relative to modelRoot)
-        materials.forEach((mat) => {
-          if (mat) {
-            const original = originalMaterialStates.get(mat);
-            if (original) {
-              mat.opacity = original.opacity;
-              mat.transparent = original.transparent;
-              mat.depthWrite = original.depthWrite;
-            } else {
-              mat.opacity = 1;
-              mat.transparent = false;
-              mat.depthWrite = true;
-            }
-          }
-        });
-        object.rotation.y = THREE.MathUtils.degToRad(targetRotationY);
+        object.scale.copy(targetScale);
+        this._meshSpawnScaleRaf = null;
       }
     };
 
-    requestAnimationFrame(fadeIn);
+    this._meshSpawnScaleRaf = requestAnimationFrame(tick);
   }
 
   setSvgExtrudeDepth(depth) {
@@ -2905,7 +2856,7 @@ export class SceneManager {
 
   /**
    * EffectComposer RTs use `logical × composer._pixelRatio`. If that drifts from
-   * `renderer.getPixelRatio()` (async resize, Epic/Medium toggle), podium blur restores the
+   * `renderer.getPixelRatio()` (async resize, Ultra/Medium toggle), podium blur restores the
    * viewport with `rtWidth / rendererPR` and undershoots (~¾ frame + L-shaped black bars).
    */
   _ensureComposerBuffersMatchRenderer() {

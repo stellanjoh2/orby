@@ -33,6 +33,24 @@ export const MATERIAL_EMISSIVE_SLIDER_MAX = 4;
 
 export const BLOOM_LUMINANCE_THRESHOLD_MIN = 0.6;
 export const BLOOM_LUMINANCE_THRESHOLD_MAX = 1.2;
+export const BLOOM_QUALITY_DEFAULT = /** @type {const} */ ('medium');
+export const BLOOM_QUALITY = {
+  low: { resolutionScale: 0.5 },
+  medium: { resolutionScale: 0.75 },
+  high: { resolutionScale: 1.0 },
+  ultra: { resolutionScale: 1.25 },
+};
+
+/**
+ * @param {string | undefined} id
+ * @returns {typeof BLOOM_QUALITY['medium']}
+ */
+export function resolveBloomQualityTier(id) {
+  if (id === 'low' || id === 'high' || id === 'ultra') {
+    return BLOOM_QUALITY[id];
+  }
+  return BLOOM_QUALITY.medium;
+}
 
 /** Minimum focus distance (meters) for depth of field — matches camera near plane. */
 export const DOF_FOCUS_MIN_M = 0.1;
@@ -41,7 +59,7 @@ export const DOF_FOCUS_MIN_M = 0.1;
 export const AMBIENT_OCCLUSION_INTENSITY_MIN = 0.25;
 export const AMBIENT_OCCLUSION_INTENSITY_MAX = 20;
 
-/** Matches scene render-quality naming: low / medium / max (Epic). */
+/** Matches scene render-quality naming: low / medium / max (Ultra). */
 export const AMBIENT_OCCLUSION_QUALITY_DEFAULT = /** @type {const} */ ('medium');
 
 /**
@@ -84,7 +102,7 @@ export function sanitizeAmbientOcclusion(ao) {
       : '#000000';
   let quality =
     typeof ao.quality === 'string' ? ao.quality.trim().toLowerCase() : '';
-  if (quality === 'epic' || quality === 'high') quality = 'max';
+  if (quality === 'ultra' || quality === 'high') quality = 'max';
   if (quality !== 'low' && quality !== 'medium' && quality !== 'max') {
     if (typeof ao.halfRes === 'boolean') {
       quality = ao.halfRes ? 'medium' : 'max';
@@ -167,7 +185,7 @@ export function resolveRenderQualityTier(id) {
 
 /**
  * Anti-aliasing select: medium/low tiers force FXAA off in the GPU while keeping
- * `state.antiAliasing` for when the user returns to Epic — use this for display + disabled.
+ * `state.antiAliasing` for when the user returns to Ultra — use this for display + disabled.
  * @param {string | undefined} renderQuality
  * @param {string | undefined} storedAntiAliasing
  */

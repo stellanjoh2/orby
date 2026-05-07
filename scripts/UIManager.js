@@ -350,15 +350,13 @@ export class UIManager {
       bloomStrength: q('#bloomStrength'),
       bloomRadius: q('#bloomRadius'),
       bloomColor: q('#bloomColor'),
+      bloomQuality: q('#bloomQuality'),
       toggleBloom: q('#toggleBloom'),
       lensDirtEnabled: q('#lensDirtEnabled'),
       lensDirtStrength: q('#lensDirtStrength'),
       grainIntensity: q('#grainIntensity'),
       toggleGrain: q('#toggleGrain'),
-      aberrationLook: q('#aberrationLook'),
-      aberrationDirection: q('#aberrationDirection'),
-      aberrationOffset: q('#aberrationOffset'),
-      aberrationStrength: q('#aberrationStrength'),
+      aberrationAmount: q('#aberrationAmount'),
       toggleAberration: q('#toggleAberration'),
       toggleAmbientOcclusion: q('#toggleAmbientOcclusion'),
       ambientOcclusionIntensity: q('#ambientOcclusionIntensity'),
@@ -1051,7 +1049,7 @@ export class UIManager {
         this.stateStore.set('bloom', payload.bloom);
         this.eventBus.emit('render:bloom', payload.bloom);
         this.setEffectControlsDisabled(
-          ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
+          ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
           !payload.bloom.enabled,
         );
       }
@@ -1069,12 +1067,7 @@ export class UIManager {
         this.stateStore.set('aberration', ab);
         this.eventBus.emit('render:aberration', ab);
         this.setEffectControlsDisabled(
-          [
-            'aberrationLook',
-            'aberrationDirection',
-            'aberrationOffset',
-            'aberrationStrength',
-          ],
+          ['aberrationAmount'],
           !payload.aberration.enabled,
         );
       }
@@ -1715,9 +1708,16 @@ export class UIManager {
     if (this.inputs.bloomColor && state.bloom.color) {
       this.inputs.bloomColor.value = state.bloom.color;
     }
+    if (this.inputs.bloomQuality) {
+      const quality = state.bloom?.quality;
+      this.inputs.bloomQuality.value =
+        quality === 'low' || quality === 'high' || quality === 'ultra'
+          ? quality
+          : 'medium';
+    }
     this.inputs.toggleBloom.checked = !!state.bloom.enabled;
     this.setEffectControlsDisabled(
-      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
+      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
       !state.bloom.enabled,
     );
 
@@ -1743,34 +1743,11 @@ export class UIManager {
     this.setEffectControlsDisabled(['grainIntensity'], !state.grain.enabled);
     
     // Aberration
-    this.inputs.aberrationOffset.value = state.aberration.offset;
-    this.updateValueLabel('aberrationOffset', state.aberration.offset, 'decimal', 3);
-    this.inputs.aberrationStrength.value = state.aberration.strength;
-    this.updateValueLabel('aberrationStrength', state.aberration.strength, 'decimal');
+    this.inputs.aberrationAmount.value = state.aberration.amount;
+    this.updateValueLabel('aberrationAmount', state.aberration.amount, 'decimal', 4);
     this.inputs.toggleAberration.checked = !!state.aberration.enabled;
-    if (this.inputs.aberrationLook) {
-      const lk = state.aberration.look ?? 'classic';
-      if ([...this.inputs.aberrationLook.options].some((o) => o.value === lk)) {
-        this.inputs.aberrationLook.value = lk;
-      } else {
-        this.inputs.aberrationLook.value = 'classic';
-      }
-    }
-    if (this.inputs.aberrationDirection) {
-      const dk = state.aberration.direction ?? 'radial';
-      if ([...this.inputs.aberrationDirection.options].some((o) => o.value === dk)) {
-        this.inputs.aberrationDirection.value = dk;
-      } else {
-        this.inputs.aberrationDirection.value = 'radial';
-      }
-    }
     this.setEffectControlsDisabled(
-      [
-        'aberrationLook',
-        'aberrationDirection',
-        'aberrationOffset',
-        'aberrationStrength',
-      ],
+      ['aberrationAmount'],
       !state.aberration.enabled,
     );
 

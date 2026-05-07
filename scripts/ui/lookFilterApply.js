@@ -59,17 +59,12 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
       !b.dof.enabled,
     );
     ui.setEffectControlsDisabled(
-      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
+      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
       !b.bloom.enabled,
     );
     ui.setEffectControlsDisabled(['grainIntensity'], !b.grain.enabled);
     ui.setEffectControlsDisabled(
-      [
-        'aberrationLook',
-        'aberrationDirection',
-        'aberrationOffset',
-        'aberrationStrength',
-      ],
+      ['aberrationAmount'],
       !b.aberration.enabled,
     );
     ui.setEffectControlsDisabled(

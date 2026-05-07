@@ -78,7 +78,7 @@ export const LOOK_FILTER_CATALOG = [
  * Only include fields that differ from defaults; nested objects are shallow-merged with defaults for that key.
  *
  * Film grain: `grain.intensity` is the stored value (UI slider 0–1 maps ×0.15, so 0.15 = slider max / “1.0” strength).
- * Chromatic aberration: `aberration` merges with defaults; set `enabled: false` for none. When on, `offset` / `strength` match the Film Grain section UI ranges.
+ * Chromatic aberration: `aberration` merges with defaults; set `enabled: false` for none. When on, `amount` is the radial channel-separation magnitude (0..0.02 typical).
  */
 const PRESET_SPECS = {
   studio: {
@@ -113,7 +113,7 @@ const PRESET_SPECS = {
       p2: { x: 0.78, y: 0.74 },
     },
     /* Heavy CA — old lens, high-contrast B&W */
-    aberration: { enabled: true, offset: 0.0032, strength: 0.4 },
+    aberration: { enabled: true, amount: 0.00128 },
   },
   golden: {
     camera: {
@@ -133,7 +133,7 @@ const PRESET_SPECS = {
     },
     grain: { enabled: true, intensity: 0.045, color: '#fff0d4' },
     /* Very light — warm haze, not a defect look */
-    aberration: { enabled: true, offset: 0.0015, strength: 0.17 },
+    aberration: { enabled: true, amount: 0.000255 },
   },
   frost: {
     camera: {
@@ -152,7 +152,7 @@ const PRESET_SPECS = {
     },
     grain: { enabled: true, intensity: 0.032, color: '#b8c8d8' },
     /* Barely there — clean digital cold look */
-    aberration: { enabled: true, offset: 0.0012, strength: 0.12 },
+    aberration: { enabled: true, amount: 0.000144 },
   },
   vintage: {
     camera: {
@@ -169,7 +169,7 @@ const PRESET_SPECS = {
       p2: { x: 0.74, y: 0.78 },
     },
     /* Medium — aged optics / home film */
-    aberration: { enabled: true, offset: 0.0027, strength: 0.33 },
+    aberration: { enabled: true, amount: 0.000891 },
   },
   cinema: {
     camera: {
@@ -196,7 +196,7 @@ const PRESET_SPECS = {
       p2: { x: 0.8, y: 0.78 },
     },
     /* Subtle scope / anamorphic edge */
-    aberration: { enabled: true, offset: 0.0019, strength: 0.21 },
+    aberration: { enabled: true, amount: 0.000399 },
   },
   mood: {
     exposure: 0.9,
@@ -235,7 +235,7 @@ const PRESET_SPECS = {
     },
     grain: { enabled: true, intensity: 0.038, color: '#e0dce8' },
     /* Soft prism / veil */
-    aberration: { enabled: true, offset: 0.0024, strength: 0.29 },
+    aberration: { enabled: true, amount: 0.000696 },
   },
   neon: {
     camera: {
@@ -251,7 +251,7 @@ const PRESET_SPECS = {
       color: '#ff66ee',
     },
     /* Strong — max stylized; pairs with CA UI near top of range */
-    aberration: { enabled: true, offset: 0.0042, strength: 0.58 },
+    aberration: { enabled: true, amount: 0.002436 },
     grain: { enabled: true, intensity: 0.05, color: '#e0b0ff' },
   },
 };

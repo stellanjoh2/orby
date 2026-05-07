@@ -132,7 +132,7 @@ void main() {
     } finally {
       renderer.setRenderTarget(prevTarget);
       // Match WebGL backing store (same idea as ImageExporter._ensureFullDrawingBufferViewport).
-      // getSize() alone can drift vs canvas dimensions during Epic/DPR/export and leaves a
+      // getSize() alone can drift vs canvas dimensions during Ultra/DPR/export and leaves a
       // half‑size viewport (quarter‑frame black) after blur passes.
       const db = new THREE.Vector2();
       renderer.getDrawingBufferSize(db);

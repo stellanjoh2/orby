@@ -25,7 +25,7 @@ export class ImageExporter {
     syncPerspectiveProjection,
     /**
      * Same EffectComposer + viewport sequence as interactive `SceneManager.render()` (minus
-     * per-frame clay/exposure). Using this for PNG export fixes partial-frame readback on Epic
+     * per-frame clay/exposure). Using this for PNG export fixes partial-frame readback on Ultra
      * when `composer.render()` alone leaves a sub-viewport.
      */
     renderComposerPassForExport,
@@ -86,7 +86,7 @@ export class ImageExporter {
   /**
    * Read the composer's final ping-pong buffer (after `renderToScreen: false` render) into a PNG
    * data URL. Avoids `canvas.toDataURL`, which can capture a wrong viewport on the default FBO
-   * (Epic / 2× exports showed a quarter-frame in the top-left).
+   * (Ultra / 2× exports showed a quarter-frame in the top-left).
    */
   _captureComposerOutputAsPngDataUrl(targetWidth, targetHeight) {
     const r = this.renderer;
@@ -159,7 +159,7 @@ export class ImageExporter {
 
     this._ensureComposerMatchesDrawingBuffer();
 
-    // Epic (max) keeps FXAA on when selected; Medium forces it off. FXAA's fullscreen pass
+    // Ultra (max) keeps FXAA on when selected; Medium forces it off. FXAA's fullscreen pass
     // combined with DPR>1 / composer ping-pong has consistently produced a quarter-frame
     // viewport on PNG readback — skip FXAA for this single capture only, then restore.
     const fxaaPass = this.postPipeline?.fxaaPass;
@@ -170,7 +170,7 @@ export class ImageExporter {
     const prevComposerRenderToScreen = this.composer?.renderToScreen;
     if (this.composer) {
       // Last pass must render into ping-pong RTs, not the canvas; canvas readback then misses
-      // the correct viewport at 2× / Epic. Final color is copied from `readBuffer` in
+      // the correct viewport at 2× / Ultra. Final color is copied from `readBuffer` in
       // `_captureComposerOutputAsPngDataUrl`.
       this.composer.renderToScreen = false;
     }

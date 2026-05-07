@@ -73,7 +73,10 @@ export class RenderControls {
       touchLookFilterCustom();
       const enabled = event.target.checked;
       this.stateStore.set('bloom.enabled', enabled);
-      this.ui.setEffectControlsDisabled(['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'], !enabled);
+      this.ui.setEffectControlsDisabled(
+        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+        !enabled,
+      );
       emitBloom();
     });
     [['bloomThreshold', 'threshold'], ['bloomStrength', 'strength'], ['bloomRadius', 'radius']].forEach(([inputKey, property]) => {
@@ -91,6 +94,18 @@ export class RenderControls {
       this.stateStore.set('bloom.color', value);
       emitBloom();
     });
+    if (this.ui.inputs.bloomQuality) {
+      this.ui.inputs.bloomQuality.addEventListener('change', (event) => {
+        touchLookFilterCustom();
+        const raw = event.target.value;
+        const quality =
+          raw === 'low' || raw === 'high' || raw === 'ultra'
+            ? raw
+            : 'medium';
+        this.stateStore.set('bloom.quality', quality);
+        emitBloom();
+      });
+    }
 
     // Lens Dirt
     const emitLensDirt = () => this.eventBus.emit('render:lens-dirt', this.stateStore.getState().lensDirt);
@@ -137,42 +152,16 @@ export class RenderControls {
       const enabled = event.target.checked;
       this.stateStore.set('aberration.enabled', enabled);
       this.ui.setEffectControlsDisabled(
-        [
-          'aberrationLook',
-          'aberrationDirection',
-          'aberrationOffset',
-          'aberrationStrength',
-        ],
+        ['aberrationAmount'],
         !enabled,
       );
       emitAberration();
     });
-    if (this.ui.inputs.aberrationLook) {
-      this.ui.inputs.aberrationLook.addEventListener('change', (event) => {
-        touchLookFilterCustom();
-        this.stateStore.set('aberration.look', event.target.value);
-        emitAberration();
-      });
-    }
-    if (this.ui.inputs.aberrationDirection) {
-      this.ui.inputs.aberrationDirection.addEventListener('change', (event) => {
-        touchLookFilterCustom();
-        this.stateStore.set('aberration.direction', event.target.value);
-        emitAberration();
-      });
-    }
-    this.ui.inputs.aberrationOffset.addEventListener('input', (event) => {
+    this.ui.inputs.aberrationAmount.addEventListener('input', (event) => {
       touchLookFilterCustom();
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('aberrationOffset', value, 'decimal', 3);
-      this.stateStore.set('aberration.offset', value);
-      emitAberration();
-    });
-    this.ui.inputs.aberrationStrength.addEventListener('input', (event) => {
-      touchLookFilterCustom();
-      const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('aberrationStrength', value, 'decimal');
-      this.stateStore.set('aberration.strength', value);
+      this.helpers.updateValueLabel('aberrationAmount', value, 'decimal', 4);
+      this.stateStore.set('aberration.amount', value);
       emitAberration();
     });
 
@@ -493,7 +482,7 @@ export class RenderControls {
             : RENDER_QUALITY_DEFAULT;
         // Batch with look-filter touch: calling touchLookFilterCustom() before set() used to
         // notify subscribers while renderQuality was still the old tier, so syncControls reset
-        // this <select> to Medium and Epic didn't apply until a second change.
+        // this <select> to Medium and Ultra didn't apply until a second change.
         this.stateStore.batch(() => {
           this.stateStore.set('renderQuality', value);
           if (this.stateStore.getState().lookFilterPreset !== 'custom') {
@@ -677,8 +666,18 @@ export class RenderControls {
     if (this.ui.inputs.bloomColor && state.bloom.color) {
       this.ui.inputs.bloomColor.value = state.bloom.color;
     }
+    if (this.ui.inputs.bloomQuality) {
+      const quality = state.bloom.quality;
+      this.ui.inputs.bloomQuality.value =
+        quality === 'low' || quality === 'high' || quality === 'ultra'
+          ? quality
+          : 'medium';
+    }
     this.ui.inputs.toggleBloom.checked = !!state.bloom.enabled;
-    this.ui.setEffectControlsDisabled(['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'], !state.bloom.enabled);
+    this.ui.setEffectControlsDisabled(
+      ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+      !state.bloom.enabled,
+    );
 
     // Lens Dirt
     if (this.ui.inputs.lensDirtStrength && state.lensDirt) {
@@ -705,34 +704,11 @@ export class RenderControls {
     this.ui.setEffectControlsDisabled(['grainIntensity'], !state.grain.enabled);
     
     // Aberration
-    this.ui.inputs.aberrationOffset.value = state.aberration.offset;
-    this.helpers.updateValueLabel('aberrationOffset', state.aberration.offset, 'decimal', 3);
-    this.ui.inputs.aberrationStrength.value = state.aberration.strength;
-    this.helpers.updateValueLabel('aberrationStrength', state.aberration.strength, 'decimal');
+    this.ui.inputs.aberrationAmount.value = state.aberration.amount;
+    this.helpers.updateValueLabel('aberrationAmount', state.aberration.amount, 'decimal', 4);
     this.ui.inputs.toggleAberration.checked = !!state.aberration.enabled;
-    if (this.ui.inputs.aberrationLook) {
-      const lk = state.aberration.look ?? 'classic';
-      if ([...this.ui.inputs.aberrationLook.options].some((o) => o.value === lk)) {
-        this.ui.inputs.aberrationLook.value = lk;
-      } else {
-        this.ui.inputs.aberrationLook.value = 'classic';
-      }
-    }
-    if (this.ui.inputs.aberrationDirection) {
-      const dk = state.aberration.direction ?? 'radial';
-      if ([...this.ui.inputs.aberrationDirection.options].some((o) => o.value === dk)) {
-        this.ui.inputs.aberrationDirection.value = dk;
-      } else {
-        this.ui.inputs.aberrationDirection.value = 'radial';
-      }
-    }
     this.ui.setEffectControlsDisabled(
-      [
-        'aberrationLook',
-        'aberrationDirection',
-        'aberrationOffset',
-        'aberrationStrength',
-      ],
+      ['aberrationAmount'],
       !state.aberration.enabled,
     );
 

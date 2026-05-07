@@ -333,17 +333,15 @@ export class ResetControls {
       this.eventBus.emit('render:dof', defaults.dof);
       this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
       this.eventBus.emit('render:bloom', defaults.bloom);
-      this.ui.setEffectControlsDisabled(['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'], !defaults.bloom.enabled);
+      this.ui.setEffectControlsDisabled(
+        ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+        !defaults.bloom.enabled,
+      );
       this.eventBus.emit('render:grain', defaults.grain);
       this.ui.setEffectControlsDisabled(['grainIntensity'], !defaults.grain.enabled);
       this.eventBus.emit('render:aberration', defaults.aberration);
       this.ui.setEffectControlsDisabled(
-        [
-          'aberrationLook',
-          'aberrationDirection',
-          'aberrationOffset',
-          'aberrationStrength',
-        ],
+        ['aberrationAmount'],
         !defaults.aberration.enabled,
       );
       this.eventBus.emit('render:ambient-occlusion', defaults.ambientOcclusion);
@@ -650,7 +648,10 @@ export class ResetControls {
               this.stateStore.set('bloom', defaults.bloom);
             });
             this.eventBus.emit('render:bloom', defaults.bloom);
-            this.ui.setEffectControlsDisabled(['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'], !defaults.bloom.enabled);
+            this.ui.setEffectControlsDisabled(
+              ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
+              !defaults.bloom.enabled,
+            );
             this.ui.syncUIFromState();
             break;
 
@@ -681,12 +682,7 @@ export class ResetControls {
             });
             this.eventBus.emit('render:aberration', defaults.aberration);
             this.ui.setEffectControlsDisabled(
-              [
-                'aberrationLook',
-                'aberrationDirection',
-                'aberrationOffset',
-                'aberrationStrength',
-              ],
+              ['aberrationAmount'],
               !defaults.aberration.enabled,
             );
             this.ui.syncUIFromState();

@@ -66,8 +66,10 @@ export class PostProcessingPipeline {
     );
 
     this.filmPass = new FilmPass(0.0, 0.0, 648, false);
+    this.filmPass.enabled = false;
     this.bloomTintPass = new ShaderPass(BloomTintShader);
     this.grainTintPass = new ShaderPass(GrainTintShader);
+    this.grainTintPass.enabled = false;
     this.grainTime = 0;
     this.grainTintPass.uniforms.time.value = 0;
 
@@ -182,29 +184,24 @@ export class PostProcessingPipeline {
     if (!settings) return;
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
-    
-    // Always keep passes enabled to prevent exposure pop
-    // Instead, set intensity to 0 when disabled
     const intensity = wants ? (settings.intensity || 0) : 0;
+    const active = intensity > 0.0001;
     
     if (this.filmPass) {
+      this.filmPass.enabled = active;
       // FilmPass uses material.uniforms, not direct uniforms
       const material = this.filmPass.material;
       if (material && material.uniforms) {
-        // Keep FilmPass enabled but set intensity to 0 when disabled
-        this.filmPass.enabled = true;
         if (material.uniforms.nIntensity) {
           material.uniforms.nIntensity.value = intensity * 0.5;
         }
-        // Also set sIntensity (scanline intensity) to 0 to fully disable FilmPass grain
         if (material.uniforms.sIntensity) {
           material.uniforms.sIntensity.value = intensity * 0.5;
         }
       }
     }
     if (this.grainTintPass) {
-      // Keep GrainTintPass enabled but set intensity to 0 when disabled
-      this.grainTintPass.enabled = true;
+      this.grainTintPass.enabled = active;
       if (this.grainTintPass.uniforms?.intensity) {
         this.grainTintPass.uniforms.intensity.value = intensity;
       }
@@ -297,7 +294,10 @@ export class PostProcessingPipeline {
    * @param {number} delta - Time delta in seconds
    */
   updateGrainTime(delta) {
-    if (this.grainTintPass && this.grainTintPass.uniforms?.time) {
+    if (
+      this.grainTintPass?.enabled &&
+      this.grainTintPass.uniforms?.time
+    ) {
       this.grainTime += delta * 60;
       this.grainTintPass.uniforms.time.value = this.grainTime;
     }

@@ -570,8 +570,6 @@ export const LensDistortionShader = {
 };
 
 export {
-  ABERRATION_DIRECTION_IDS,
-  ABERRATION_LOOK_IDS,
   AberrationShader,
   applyChromaticAberrationToPass,
   defaultAberration,

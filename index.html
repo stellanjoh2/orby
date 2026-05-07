@@ -2505,6 +2505,15 @@
                     <span>Color</span>
                     <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
                   </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="bloomQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens-flare">
@@ -2559,7 +2568,7 @@
                     <span>Quality</span>
                     <select id="lensFlareQuality">
                       <option value="optimized">Optimized</option>
-                      <option value="maximum" selected>Maximum</option>
+                      <option value="maximum" selected>Ultra</option>
                     </select>
                   </label>
                 </div>
@@ -2671,11 +2680,11 @@
                     />
                   </label>
                   <label class="select-line">
-                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Epic: full resolution + Ultra N8AO preset.">AO Quality</span>
+                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Ultra: full resolution + Ultra N8AO preset.">AO Quality</span>
                     <select id="ambientOcclusionQuality" aria-label="Ambient Occlusion quality">
                       <option value="low">Low</option>
                       <option value="medium" selected>Medium</option>
-                      <option value="max">Epic</option>
+                      <option value="max">Ultra</option>
                     </select>
                   </label>
                 </div>
@@ -2695,53 +2704,17 @@
                       </label>
                     </div>
                   </div>
-                  <label class="select-line">
-                    <span data-tooltip="How RGB separates — Classic matches real lateral lens CA (red vs blue). Other picks are stylized.">Look</span>
-                    <select id="aberrationLook" aria-label="Chromatic aberration look">
-                      <option value="classic">Red / Blue (Classic)</option>
-                      <option value="redCyan">Red / Cyan (Complementary)</option>
-                      <option value="magentaGreen">Magenta / Green (Horror)</option>
-                      <option value="prismatic">RGB Split (Prismatic)</option>
-                      <option value="yellowViolet">Yellow / Violet (Cinematic)</option>
-                      <option value="orangeTeal">Orange / Teal (Blockbuster)</option>
-                      <option value="vhs">VHS chroma bleed</option>
-                    </select>
-                  </label>
-                  <label class="select-line">
-                    <span data-tooltip="Radial follows the optical axis (most lens-like). Horizontal is typical scan-line glitch. Zoom scales channels slightly — very subtle.">Direction</span>
-                    <select id="aberrationDirection" aria-label="Chromatic aberration direction">
-                      <option value="radial">Radial (from center)</option>
-                      <option value="horizontal">Horizontal</option>
-                      <option value="vertical">Vertical</option>
-                      <option value="diagonal">Diagonal</option>
-                      <option value="zoom">Zoom / scale</option>
-                    </select>
-                  </label>
                   <label class="slider-line">
-                    <span>Offset</span>
+                    <span data-tooltip="Overall radial red/blue channel separation magnitude.">Amount</span>
                     <input
-                      id="aberrationOffset"
+                      id="aberrationAmount"
                       type="range"
                       min="0"
                       max="0.02"
-                      value="0.0025"
+                      value="0.0006"
                       step="0.0001"
                     />
-                    <span class="value" data-output="aberrationOffset">0.003</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Strength</span>
-                    <input
-                      id="aberrationStrength"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.24"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="aberrationStrength">
-                      0.24
-                    </span>
+                    <span class="value" data-output="aberrationAmount">0.0006</span>
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -2830,11 +2803,11 @@
                   <span>Quality</span>
                 </div>
                 <label class="select-line">
-                  <span data-tooltip="Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Epic: full quality.">Render Quality</span>
+                  <span data-tooltip="Low: no bloom, no depth of field, no FXAA, plus 1K shadows and 1× DPR — your settings stay saved. Medium: lower DPR, 1K shadows, half-res bloom, no FXAA (depth of field still works if on). Ultra: full quality.">Render Quality</span>
                   <select id="renderQuality" aria-label="Render Quality">
                     <option value="low">Low</option>
                     <option value="medium" selected>Medium</option>
-                    <option value="max">Epic</option>
+                    <option value="max">Ultra</option>
                   </select>
                 </label>
                 <label class="select-line">

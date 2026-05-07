@@ -952,7 +952,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('render:bloom', payload.bloom);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
-            ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor'],
+            ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
             !payload.bloom.enabled,
           );
         }
@@ -970,12 +970,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('render:aberration', ab);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
-            [
-              'aberrationLook',
-              'aberrationDirection',
-              'aberrationOffset',
-              'aberrationStrength',
-            ],
+            ['aberrationAmount'],
             !payload.aberration.enabled,
           );
         }

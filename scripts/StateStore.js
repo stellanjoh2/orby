@@ -163,6 +163,7 @@ export class StateStore {
         strength: 0.2,
         radius: 0.75,
         color: '#ffe9cc',
+        quality: 'medium',
       },
       lensDirt: {
         enabled: false,
