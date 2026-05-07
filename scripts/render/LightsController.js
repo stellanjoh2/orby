@@ -1,5 +1,12 @@
 import * as THREE from 'three';
 
+const SHADOW_QUALITY_MAP_SIZE = {
+  low: 512,
+  medium: 1024,
+  high: 2048,
+  ultra: 3072,
+};
+
 export class LightsController {
   constructor(scene, options = {}) {
     this.scene = scene;
@@ -11,6 +18,11 @@ export class LightsController {
     this.modelBounds = null;
     this.showIndicators = false;
     this.lightIndicators = null;
+    this.shadowQuality = this._normalizeShadowQuality(options.shadowQuality);
+    this.shadowSoftness = this._normalizeShadowSoftness(options.shadowSoftness);
+    this.shadowContactOffset = this._normalizeShadowContactOffset(
+      options.shadowContactOffset,
+    );
 
     this.lights = {
       key: new THREE.DirectionalLight('#ffffff', 4),
@@ -41,14 +53,35 @@ export class LightsController {
       if (!light) return;
       if ('castShadow' in light && light.shadow) {
         light.castShadow = true;
-        light.shadow.radius = 4;
-        light.shadow.mapSize.set(1024, 1024);
-        light.shadow.bias = -0.0001;
+        light.shadow.radius = this.shadowSoftness;
+        light.shadow.mapSize.set(
+          SHADOW_QUALITY_MAP_SIZE[this.shadowQuality],
+          SHADOW_QUALITY_MAP_SIZE[this.shadowQuality],
+        );
+        light.shadow.bias = this.shadowContactOffset;
       } else {
         light.castShadow = false;
       }
       this.scene.add(light);
     });
+  }
+
+  _normalizeShadowQuality(quality) {
+    return quality === 'low' || quality === 'high' || quality === 'ultra'
+      ? quality
+      : 'medium';
+  }
+
+  _normalizeShadowContactOffset(offset) {
+    const raw = Number(offset);
+    if (!Number.isFinite(raw)) return -0.0001;
+    return Math.min(0.0005, Math.max(-0.001, raw));
+  }
+
+  _normalizeShadowSoftness(value) {
+    const raw = Number(value);
+    if (!Number.isFinite(raw)) return 4;
+    return Math.min(4, Math.max(0, raw));
   }
 
   getLights() {
@@ -270,14 +303,40 @@ export class LightsController {
    * @param {number} size - Shadow map width/height (square, e.g. 1024)
    */
   setShadowMapResolution(size) {
+    const safe = Math.max(128, Math.round(Number(size) || 1024));
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
       if (light?.isDirectionalLight && light.shadow) {
-        light.shadow.mapSize.set(size, size);
+        light.shadow.mapSize.set(safe, safe);
         if (light.shadow.map) {
           light.shadow.map.dispose();
           light.shadow.map = null;
         }
+      }
+    });
+  }
+
+  setShadowQuality(quality) {
+    this.shadowQuality = this._normalizeShadowQuality(quality);
+    this.setShadowMapResolution(SHADOW_QUALITY_MAP_SIZE[this.shadowQuality]);
+  }
+
+  setShadowSoftness(value) {
+    this.shadowSoftness = this._normalizeShadowSoftness(value);
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (light?.isDirectionalLight && light.shadow) {
+        light.shadow.radius = this.shadowSoftness;
+      }
+    });
+  }
+
+  setShadowContactOffset(offset) {
+    this.shadowContactOffset = this._normalizeShadowContactOffset(offset);
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (light?.isDirectionalLight && light.shadow) {
+        light.shadow.bias = this.shadowContactOffset;
       }
     });
   }

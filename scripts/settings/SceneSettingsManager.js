@@ -118,6 +118,10 @@ export class SceneSettingsManager {
       lightsAutoRotate: state.lightsAutoRotate,
       showLightIndicators: state.showLightIndicators,
       lightsCastShadows: state.lightsCastShadows,
+      lightsShadowQuality: state.lightsShadowQuality,
+      lightsShadowSoftness: state.lightsShadowSoftness,
+      lightsShadowContactOffset: state.lightsShadowContactOffset,
+      lightsShadowTwoSided: state.lightsShadowTwoSided,
       background: state.background,
       // Camera/Render settings
       camera: {
@@ -745,6 +749,28 @@ export class SceneSettingsManager {
       if (payload.lightsCastShadows !== undefined) {
         this.stateStore.set('lightsCastShadows', payload.lightsCastShadows);
         this.eventBus.emit('lights:cast-shadows', payload.lightsCastShadows);
+      }
+      if (payload.lightsShadowQuality !== undefined) {
+        this.stateStore.set('lightsShadowQuality', payload.lightsShadowQuality);
+        this.eventBus.emit('lights:shadow-quality', payload.lightsShadowQuality);
+      }
+      if (payload.lightsShadowSoftness !== undefined) {
+        this.stateStore.set('lightsShadowSoftness', payload.lightsShadowSoftness);
+        this.eventBus.emit('lights:shadow-softness', payload.lightsShadowSoftness);
+      }
+      if (payload.lightsShadowContactOffset !== undefined) {
+        this.stateStore.set(
+          'lightsShadowContactOffset',
+          payload.lightsShadowContactOffset,
+        );
+        this.eventBus.emit(
+          'lights:shadow-contact-offset',
+          payload.lightsShadowContactOffset,
+        );
+      }
+      if (payload.lightsShadowTwoSided !== undefined) {
+        this.stateStore.set('lightsShadowTwoSided', payload.lightsShadowTwoSided);
+        this.eventBus.emit('lights:shadow-two-sided', payload.lightsShadowTwoSided);
       }
 
       if (payload.moveWidgetEnabled !== undefined) {

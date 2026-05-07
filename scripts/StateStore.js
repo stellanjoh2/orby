@@ -129,6 +129,14 @@ export class StateStore {
       lightsAutoRotate: false,
       showLightIndicators: false,
       lightsCastShadows: true,
+      /** 3-point light shadow map quality preset. */
+      lightsShadowQuality: 'medium',
+      /** Directional shadow softness radius (0 = harder edges, 4 = soft default). */
+      lightsShadowSoftness: 4,
+      /** Directional-light shadow bias; lower (more negative) tightens contact. */
+      lightsShadowContactOffset: -0.0001,
+      /** Cast shadows from both sides (useful for thin single-surface meshes). */
+      lightsShadowTwoSided: false,
       lensFlare: {
         enabled: false,
         rotation: 0,

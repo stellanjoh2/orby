@@ -223,6 +223,16 @@ export class ResetControls {
       this.stateStore.set('lensFlare', defaults.lensFlare);
       this.stateStore.set('lensFlare.enabled', defaults.lensFlare.enabled);
       this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
+      this.stateStore.set('lightsShadowQuality', defaults.lightsShadowQuality ?? 'medium');
+      this.stateStore.set('lightsShadowSoftness', defaults.lightsShadowSoftness ?? 4);
+      this.stateStore.set(
+        'lightsShadowContactOffset',
+        defaults.lightsShadowContactOffset ?? -0.0001,
+      );
+      this.stateStore.set(
+        'lightsShadowTwoSided',
+        defaults.lightsShadowTwoSided ?? false,
+      );
       });
       this.ui.setHdriActive(defaults.hdri);
       this.eventBus.emit('studio:hdri', defaults.hdri);
@@ -257,6 +267,16 @@ export class ResetControls {
       this.eventBus.emit('lights:auto-rotate', defaults.lightsAutoRotate);
       this.ui.setLightsRotationDisabled(defaults.lightsAutoRotate);
       this.eventBus.emit('lights:cast-shadows', defaults.lightsCastShadows);
+      this.eventBus.emit('lights:shadow-quality', defaults.lightsShadowQuality ?? 'medium');
+      this.eventBus.emit('lights:shadow-softness', defaults.lightsShadowSoftness ?? 4);
+      this.eventBus.emit(
+        'lights:shadow-contact-offset',
+        defaults.lightsShadowContactOffset ?? -0.0001,
+      );
+      this.eventBus.emit(
+        'lights:shadow-two-sided',
+        defaults.lightsShadowTwoSided ?? false,
+      );
       this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
       
       this.ui.syncUIFromState();
@@ -430,6 +450,22 @@ export class ResetControls {
               this.stateStore.set('lightsMaster', defaults.lightsMaster);
               this.stateStore.set('lightsRotation', defaults.lightsRotation);
               this.stateStore.set('lightsHeight', defaults.lightsHeight ?? 5);
+              this.stateStore.set(
+                'lightsShadowQuality',
+                defaults.lightsShadowQuality ?? 'medium',
+              );
+              this.stateStore.set(
+                'lightsShadowSoftness',
+                defaults.lightsShadowSoftness ?? 4,
+              );
+              this.stateStore.set(
+                'lightsShadowContactOffset',
+                defaults.lightsShadowContactOffset ?? -0.0001,
+              );
+              this.stateStore.set(
+                'lightsShadowTwoSided',
+                defaults.lightsShadowTwoSided ?? false,
+              );
             });
             Object.keys(defaults.lights).forEach((lightId) => {
               const light = defaults.lights[lightId];
@@ -445,6 +481,16 @@ export class ResetControls {
             this.eventBus.emit('lights:master', defaults.lightsMaster);
             this.eventBus.emit('lights:rotate', defaults.lightsRotation);
             this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
+            this.eventBus.emit('lights:shadow-quality', defaults.lightsShadowQuality ?? 'medium');
+            this.eventBus.emit('lights:shadow-softness', defaults.lightsShadowSoftness ?? 4);
+            this.eventBus.emit(
+              'lights:shadow-contact-offset',
+              defaults.lightsShadowContactOffset ?? -0.0001,
+            );
+            this.eventBus.emit(
+              'lights:shadow-two-sided',
+              defaults.lightsShadowTwoSided ?? false,
+            );
             this.ui.syncUIFromState();
             break;
           case 'keyLight':

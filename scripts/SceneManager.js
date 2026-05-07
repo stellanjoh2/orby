@@ -53,6 +53,19 @@ const FBX_IMPORT_WIP_ALERT_BODY =
   '(UV sets, packed maps, and how external textures resolve are all unfinished). ' +
   'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
 
+const LIGHT_SHADOW_MAP_SIZE = {
+  low: 512,
+  medium: 1024,
+  high: 2048,
+  ultra: 3072,
+};
+
+function normalizeLightShadowQuality(quality) {
+  return quality === 'low' || quality === 'high' || quality === 'ultra'
+    ? quality
+    : 'medium';
+}
+
 export class SceneManager {
   constructor(eventBus, stateStore, uiManager) {
     this.eventBus = eventBus;
@@ -92,6 +105,18 @@ export class SceneManager {
       5 * HDRI_STRENGTH_UNIT,
       Math.max(0, initialState.hdriStrength ?? 2),
     );
+    this.lightsShadowQuality = normalizeLightShadowQuality(
+      initialState.lightsShadowQuality,
+    );
+    this.lightsShadowSoftness = Number.isFinite(initialState.lightsShadowSoftness)
+      ? initialState.lightsShadowSoftness
+      : 4;
+    this.lightsShadowContactOffset = Number.isFinite(
+      initialState.lightsShadowContactOffset,
+    )
+      ? initialState.lightsShadowContactOffset
+      : -0.0001;
+    this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
     // Disable tone mapping on renderer - we'll apply it as a post-processing pass instead
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -508,6 +533,9 @@ export class SceneManager {
       master: this.lightsMaster,
       rotation: this.lightsRotation,
       autoRotateSpeed: this.lightsAutoRotateSpeed,
+      shadowQuality: this.lightsShadowQuality,
+      shadowSoftness: this.lightsShadowSoftness,
+      shadowContactOffset: this.lightsShadowContactOffset,
     });
     this.lights = this.lightsController.getLights();
   }
@@ -766,6 +794,10 @@ export class SceneManager {
     this.setShowLightIndicators(state.showLightIndicators ?? false);
     this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
     this.setLightsCastShadows(state.lightsCastShadows ?? true);
+    this.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');
+    this.setLightsShadowSoftness(state.lightsShadowSoftness ?? 4);
+    this.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0001);
+    this.setLightsShadowTwoSided(state.lightsShadowTwoSided ?? false);
     
     // Apply individual light properties
     if (state.lights) {
@@ -1075,9 +1107,12 @@ export class SceneManager {
       this.fxaaPass.enabled =
         !tier.forceFxaaOff && (state.antiAliasing ?? 'none') === 'fxaa';
     }
-    this.lightsController?.setShadowMapResolution(tier.shadowMapSize);
+    const shadowSize =
+      LIGHT_SHADOW_MAP_SIZE[normalizeLightShadowQuality(this.lightsShadowQuality)]
+      ?? tier.shadowMapSize;
+    this.lightsController?.setShadowMapResolution(shadowSize);
     this.renderer.shadowMap.type = tier.softShadowMap
-      ? THREE.PCFSoftShadowMap
+      ? (this.lightsShadowSoftness <= 0.05 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap)
       : THREE.PCFShadowMap;
   }
 
@@ -1656,6 +1691,37 @@ export class SceneManager {
 
   setLightsCastShadows(enabled) {
     this.lightsController?.setCastShadows(enabled);
+  }
+
+  setLightsShadowQuality(quality) {
+    this.lightsShadowQuality = normalizeLightShadowQuality(quality);
+    this.lightsController?.setShadowQuality(this.lightsShadowQuality);
+  }
+
+  setLightsShadowSoftness(value) {
+    const raw = Number(value);
+    this.lightsShadowSoftness = Number.isFinite(raw) ? Math.min(4, Math.max(0, raw)) : 4;
+    this.lightsController?.setShadowSoftness(this.lightsShadowSoftness);
+    this.applyRenderQualitySettings();
+  }
+
+  setLightsShadowContactOffset(value) {
+    const raw = Number(value);
+    this.lightsShadowContactOffset = Number.isFinite(raw) ? raw : -0.0001;
+    this.lightsController?.setShadowContactOffset(this.lightsShadowContactOffset);
+  }
+
+  setLightsShadowTwoSided(enabled) {
+    this.lightsShadowTwoSided = !!enabled;
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (!child?.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((mat) => {
+        if (!mat) return;
+        mat.shadowSide = this.lightsShadowTwoSided ? THREE.DoubleSide : null;
+      });
+    });
   }
 
   setLightsAutoRotate(enabled) {
@@ -2668,6 +2734,7 @@ export class SceneManager {
     }
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
+    this.setLightsShadowTwoSided(this.lightsShadowTwoSided);
     // Material instances are recreated when shading changes; reapply reverse mode.
     this.setReverseNormals(this.reverseNormalsEnabled);
     if (clearReference) {

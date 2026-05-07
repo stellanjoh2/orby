@@ -222,6 +222,10 @@ export class StudioControls {
       const enabled = event.target.checked;
       this.stateStore.set('lightsCastShadows', enabled);
       this.eventBus.emit('lights:cast-shadows', enabled);
+      this._syncLightShadowControlDisabledState(
+        enabled,
+        this.stateStore.getState().lightsEnabled !== false,
+      );
       ['key', 'fill', 'rim'].forEach((lightId) => {
         this.stateStore.set(`lights.${lightId}.castShadows`, enabled);
         this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: enabled });
@@ -263,6 +267,7 @@ export class StudioControls {
         this.stateStore.set('lightsCastShadows', false);
         this.eventBus.emit('lights:cast-shadows', false);
         if (this.ui.inputs.lightsCastShadows) this.ui.inputs.lightsCastShadows.checked = false;
+        this._syncLightShadowControlDisabledState(false, false);
       } else {
         ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
           this.stateStore.set(`lights.${lightId}.enabled`, true);
@@ -270,21 +275,46 @@ export class StudioControls {
           const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
           if (enabledInput) enabledInput.checked = true;
         });
-        ['key', 'fill', 'rim'].forEach((lightId) => {
-          this.stateStore.set(`lights.${lightId}.castShadows`, true);
-          this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: true });
-          const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
-          if (castShadowsInput) castShadowsInput.checked = true;
-        });
         this.stateStore.set('showLightIndicators', true);
         this.eventBus.emit('lights:show-indicators', true);
         if (this.ui.inputs.showLightIndicators) this.ui.inputs.showLightIndicators.checked = true;
-        this.stateStore.set('lightsCastShadows', true);
-        this.eventBus.emit('lights:cast-shadows', true);
-        if (this.ui.inputs.lightsCastShadows) this.ui.inputs.lightsCastShadows.checked = true;
+        this._syncLightShadowControlDisabledState(
+          this.stateStore.getState().lightsCastShadows !== false,
+          true,
+        );
       }
       this.ui.updateLightSliderStates();
     });
+    this.ui.inputs.lightsShadowQuality?.addEventListener('change', (event) => {
+      const raw = event.target.value;
+      const quality =
+        raw === 'low' || raw === 'high' || raw === 'ultra' ? raw : 'medium';
+      this.stateStore.set('lightsShadowQuality', quality);
+      this.eventBus.emit('lights:shadow-quality', quality);
+    });
+    this.ui.inputs.lightsShadowSoftness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('lightsShadowSoftness', value, 'decimal', 2);
+      this.stateStore.set('lightsShadowSoftness', value);
+      this.eventBus.emit('lights:shadow-softness', value);
+    });
+    this.ui.inputs.lightsShadowContactOffset?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('lightsShadowContactOffset', value, 'decimal', 4);
+      this.stateStore.set('lightsShadowContactOffset', value);
+      this.eventBus.emit('lights:shadow-contact-offset', value);
+    });
+    this.ui.inputs.lightsShadowTwoSided?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lightsShadowTwoSided', enabled);
+      this.eventBus.emit('lights:shadow-two-sided', enabled);
+    });
+    if (this.ui.inputs.lightsShadowSoftness) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsShadowSoftness);
+    }
+    if (this.ui.inputs.lightsShadowContactOffset) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsShadowContactOffset);
+    }
     this.ui.inputs.lightsRotation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
       this.helpers.updateValueLabel('lightsRotation', value, 'angle');
@@ -522,6 +552,36 @@ export class StudioControls {
     if (this.ui.inputs.lightsCastShadows) {
       this.ui.inputs.lightsCastShadows.checked = !!state.lightsCastShadows;
     }
+    const shadowQuality =
+      state.lightsShadowQuality === 'low'
+      || state.lightsShadowQuality === 'high'
+      || state.lightsShadowQuality === 'ultra'
+        ? state.lightsShadowQuality
+        : 'medium';
+    if (this.ui.inputs.lightsShadowQuality) {
+      this.ui.inputs.lightsShadowQuality.value = shadowQuality;
+    }
+    if (this.ui.inputs.lightsShadowSoftness) {
+      const softness = Number.isFinite(state.lightsShadowSoftness)
+        ? state.lightsShadowSoftness
+        : 4;
+      this.ui.inputs.lightsShadowSoftness.value = softness;
+      this.helpers.updateValueLabel('lightsShadowSoftness', softness, 'decimal', 2);
+    }
+    if (this.ui.inputs.lightsShadowContactOffset) {
+      const contact = Number.isFinite(state.lightsShadowContactOffset)
+        ? state.lightsShadowContactOffset
+        : -0.0001;
+      this.ui.inputs.lightsShadowContactOffset.value = contact;
+      this.helpers.updateValueLabel('lightsShadowContactOffset', contact, 'decimal', 4);
+    }
+    if (this.ui.inputs.lightsShadowTwoSided) {
+      this.ui.inputs.lightsShadowTwoSided.checked = !!state.lightsShadowTwoSided;
+    }
+    this._syncLightShadowControlDisabledState(
+      !!state.lightsCastShadows,
+      !!state.lightsEnabled,
+    );
     if (this.ui.inputs.lightsEnabled) {
       this.ui.inputs.lightsEnabled.checked = !!state.lightsEnabled;
     }
@@ -581,6 +641,15 @@ export class StudioControls {
     if (enabledInput) {
       enabledInput.checked = lightState.enabled !== false;
     }
+  }
+
+  _syncLightShadowControlDisabledState(shadowsEnabled, lightsEnabled = true) {
+    const mute = !(!!shadowsEnabled && !!lightsEnabled);
+    this.ui.setControlDisabled('lightsShadowQuality', mute);
+    this.ui.setControlDisabled('lightsShadowSoftness', mute);
+    this.ui.setControlDisabled('lightsShadowContactOffset', mute);
+    this.ui.setControlDisabled('lightsShadowTwoSided', mute);
+    this.ui.setBlockMuted('lightsShadows', mute);
   }
 }
 

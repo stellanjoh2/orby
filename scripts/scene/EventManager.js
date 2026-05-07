@@ -262,6 +262,14 @@ export class EventManager {
     eventBus.on('lights:auto-rotate', (enabled) => s.setLightsAutoRotate(enabled));
     eventBus.on('lights:show-indicators', (enabled) => s.setShowLightIndicators(enabled));
     eventBus.on('lights:cast-shadows', (enabled) => s.setLightsCastShadows(enabled));
+    eventBus.on('lights:shadow-quality', (quality) => s.setLightsShadowQuality(quality));
+    eventBus.on('lights:shadow-softness', (value) => s.setLightsShadowSoftness(value));
+    eventBus.on('lights:shadow-contact-offset', (value) =>
+      s.setLightsShadowContactOffset(value),
+    );
+    eventBus.on('lights:shadow-two-sided', (enabled) =>
+      s.setLightsShadowTwoSided(enabled),
+    );
 
     // Scene/Background events
     eventBus.on('scene:background', (color) => s.backgroundController?.setColor(color));

@@ -1259,7 +1259,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.377 · 2026-05-06 21:25:14 UTC</div>
+              <div class="info-version-tag">v0.5.380 · 2026-05-06 21:38:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1438,13 +1438,60 @@
                       <span class="sr-only">Show spotlights</span>
                     </label>
                   </label>
+                  <div class="panel-block-divider"></div>
+                  <div class="subsection" data-subsection="lightsShadows">
+                    <div class="block-title has-toggle">
+                      <span>Shadows</span>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label class="effect-toggle" data-tooltip="Enable/disable shadow casting from 3-point lights">
+                          <input type="checkbox" id="lightsCastShadows" checked />
+                          <span class="effect-indicator" aria-hidden="true"></span>
+                          <span class="sr-only">Enable shadows</span>
+                        </label>
+                      </div>
+                    </div>
+                  <label class="select-line">
+                    <span data-tooltip="Shadow map resolution for 3-point lights">Quality</span>
+                    <select id="lightsShadowQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                    <span class="value" aria-hidden="true"></span>
+                  </label>
                   <label class="slider-line">
-                    <span data-tooltip="Enable shadow casting from lights">Cast Shadows</span>
-                    <label class="effect-toggle" data-tooltip="Enable/disable shadow casting">
-                      <input type="checkbox" id="lightsCastShadows" checked />
+                    <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra (current default).">Softness</span>
+                    <input
+                      id="lightsShadowSoftness"
+                      type="range"
+                      min="0"
+                      max="4"
+                      step="0.05"
+                      value="4"
+                    />
+                    <span class="value" data-output="lightsShadowSoftness">4.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Negative values pull shadows tighter to contact points; too low can add acne artifacts">Offset</span>
+                    <input
+                      id="lightsShadowContactOffset"
+                      type="range"
+                      min="-0.0005"
+                      max="0.0002"
+                      step="0.00001"
+                      value="-0.0001"
+                    />
+                    <span class="value" data-output="lightsShadowContactOffset">-0.0001</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="For thin single-surface meshes (foliage/cards), cast shadows from both sides to reduce holes.">Two-Sided Cast</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lightsShadowTwoSided" />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Cast shadows</span>
+                      <span class="sr-only">Enable two-sided shadow casting</span>
                     </label>
+                    <span class="value" aria-hidden="true"></span>
                   </label>
                 </div>
 
@@ -1715,7 +1762,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.377 · 2026-05-06 21:25:14 UTC</div>
+              <div class="info-version-tag">v0.5.380 · 2026-05-06 21:38:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2739,7 +2786,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.377 · 2026-05-06 21:25:14 UTC</div>
+              <div class="info-version-tag">v0.5.380 · 2026-05-06 21:38:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2888,7 +2935,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.377 · 2026-05-06 21:25:14 UTC</div>
+              <div class="info-version-tag">v0.5.380 · 2026-05-06 21:38:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3462,7 +3509,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.377 · 2026-05-06 21:25:14 UTC</div>
+              <div class="info-version-tag">v0.5.380 · 2026-05-06 21:38:36 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
