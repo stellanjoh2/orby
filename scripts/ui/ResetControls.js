@@ -131,6 +131,7 @@ export class ResetControls {
       this.stateStore.set('autoRotate', defaults.autoRotate);
       this.stateStore.set('clay', defaults.clay);
       this.stateStore.set('fresnel', defaults.fresnel);
+      this.stateStore.set('subsurface', defaults.subsurface);
       this.stateStore.set('svgExtrude.depth', defaults.svgExtrude?.depth ?? 0.2);
       this.stateStore.set('svgExtrude.normalAngle', defaults.svgExtrude?.normalAngle ?? 45);
       this.stateStore.set('svgExtrude.colorDepths', defaults.svgExtrude?.colorDepths ?? {});
@@ -184,6 +185,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
       this.eventBus.emit('render:fresnel', defaults.fresnel);
+      this.eventBus.emit('mesh:subsurface', defaults.subsurface);
       this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
       this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
       this.eventBus.emit('mesh:svg-extrude-color-depths', defaults.svgExtrude?.colorDepths ?? {});
@@ -428,6 +430,14 @@ export class ResetControls {
             this.eventBus.emit('mesh:clay-color', defaults.clay.color);
             this.ui.syncUIFromState();
             break;
+
+          /* Subsurface block reset — UI disabled (SUBSURFACE_FEATURE_ENABLED).
+          case 'subsurface':
+            this.stateStore.set('subsurface', defaults.subsurface);
+            this.eventBus.emit('mesh:subsurface', defaults.subsurface);
+            this.ui.syncUIFromState();
+            break;
+          */
             
           case 'wireframe':
             this.stateStore.set('wireframe', defaults.wireframe);

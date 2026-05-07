@@ -12,6 +12,12 @@ import {
 /** BLEND materials at/above this opacity are treated as fully opaque (optional alpha-hash + force-opaque modes). */
 const GLTF_FULL_OPACITY_BLEND_THRESHOLD = 0.989;
 
+/** User subsurface / translucency via MeshPhysicalMaterial.transmission (distinct from webgl_materials_subsurface_scattering ShaderMaterial demo). */
+/** Set `true` to re-enable subsurface UI + shader path (see commented blocks in index.html, MeshControls, UIManager, EventManager). */
+export const SUBSURFACE_FEATURE_ENABLED = false;
+const SUBSURFACE_EPS = 0.001;
+const DEFAULT_SUBSURFACE_SCATTER_TINT = '#ffd4b8';
+
 /** Ensure fresnel color uniform stays a THREE.Color (Three may replace .value on recompile). */
 function setFresnelColorUniform(uniform, cssColor) {
   const hex = cssColor || '#ffffff';
@@ -45,6 +51,11 @@ export class MaterialController {
     // Settings
     this.claySettings = {};
     this.fresnelSettings = {};
+    this.subsurfaceSettings = {
+      enabled: false,
+      translucency: 0,
+      scatterTint: DEFAULT_SUBSURFACE_SCATTER_TINT,
+    };
     this.wireframeSettings = {};
     this.materialSettings = {
       brightness: 1.0,
@@ -59,6 +70,11 @@ export class MaterialController {
     this.currentShading = shading;
     this.claySettings = { ...(initialState.clay || {}) };
     this.fresnelSettings = { ...(initialState.fresnel || {}) };
+    this.subsurfaceSettings = {
+      enabled: initialState.subsurface?.enabled === true,
+      translucency: initialState.subsurface?.translucency ?? 0,
+      scatterTint: initialState.subsurface?.scatterTint ?? DEFAULT_SUBSURFACE_SCATTER_TINT,
+    };
     this.wireframeSettings = {
       ...(initialState.wireframe || {
         alwaysOn: false,
@@ -296,6 +312,101 @@ export class MaterialController {
     }
     this.applyGlassAppearanceFromState(object);
     this.applyGlassOrientationFromState(object);
+  }
+
+  _subsurfaceTranslucency() {
+    const t = Number(this.subsurfaceSettings?.translucency);
+    return Number.isFinite(t) ? Math.min(1, Math.max(0, t)) : 0;
+  }
+
+  /** Transmission path active only when the UI switch is on and translucency > 0. */
+  _isSubsurfaceActive() {
+    if (!SUBSURFACE_FEATURE_ENABLED) return false;
+    return this.subsurfaceSettings?.enabled === true && this._subsurfaceTranslucency() > SUBSURFACE_EPS;
+  }
+
+  /**
+   * `MeshPhysicalMaterial.copy(source)` assumes Physical-like sources. Plain MeshStandardMaterial
+   * lacks several Vector2/Color fields → `.copy(undefined)` throws (e.g. clearcoatNormalScale).
+   */
+  _patchStandardMaterialForPhysicalCopy(src) {
+    if (!src || src.isMeshPhysicalMaterial) return;
+    if (!src.normalScale) src.normalScale = new THREE.Vector2(1, 1);
+    if (!src.envMapRotation) src.envMapRotation = new THREE.Euler();
+    if (!src.clearcoatNormalScale) src.clearcoatNormalScale = new THREE.Vector2(1, 1);
+    if (!src.iridescenceThicknessRange) src.iridescenceThicknessRange = [100, 400];
+    if (!src.sheenColor) src.sheenColor = new THREE.Color(0x000000);
+    if (!src.attenuationColor) src.attenuationColor = new THREE.Color(1, 1, 1);
+    if (!src.specularColor) src.specularColor = new THREE.Color(1, 1, 1);
+  }
+
+  _upgradeStandardMaterialToPhysical(srcMat) {
+    this._patchStandardMaterialForPhysicalCopy(srcMat);
+    const phys = new THREE.MeshPhysicalMaterial();
+    phys.copy(srcMat);
+    srcMat.dispose?.();
+    return phys;
+  }
+
+  /**
+   * Physically-based transmission + attenuation (MeshPhysicalMaterial).
+   * Differs from three.js `webgl_materials_subsurface_scattering` (Blinn-Phong + thickness map shader).
+   */
+  _applySubsurfacePhysicalParams(mat, sliderT) {
+    if (!mat?.isMeshPhysicalMaterial) return;
+    const raw = Math.min(1, Math.max(0, sliderT));
+    const t = Math.min(1, Math.pow(raw, 0.78));
+    mat.userData.orbySubsurface = true;
+    mat.transmission = t;
+    // Thickness in world units — keep bounded so transmission RT isn’t “infinitely thick mud”.
+    mat.thickness = THREE.MathUtils.lerp(1.2, 6.5, t);
+    const tint = this.subsurfaceSettings?.scatterTint || DEFAULT_SUBSURFACE_SCATTER_TINT;
+    mat.attenuationColor.set(tint);
+    // IMPORTANT: distance must stay well above ~1 or Beer–Lambert absorption reads as fully opaque
+    // at high transmission (previous `6*(1-t)+0.15` hit ~0.15 at t≈1 → “nothing visible”).
+    mat.attenuationDistance = THREE.MathUtils.lerp(24.0, 4.5, t);
+    mat.ior = 1.5;
+    // Wax / skin reads satin — not mirror chrome (avoid spec 1 + ultra-low roughness).
+    if ('specularIntensity' in mat) {
+      mat.specularIntensity = THREE.MathUtils.lerp(0.62, 0.82, 1 - t);
+    }
+    mat.transparent = t > SUBSURFACE_EPS;
+    const userM = Number(this.materialSettings?.metalness ?? 0);
+    mat.metalness = Math.max(0, userM * (1 - 0.92 * t));
+    const userR = Number(this.materialSettings?.roughness ?? 0.5);
+    // Do not lerp toward ~0.18 roughness — that + boosted env reads as polished metal/glass.
+    const waxRoughTarget = Math.max(0.38, Math.min(userR + 0.22 * t, 0.82));
+    mat.roughness = THREE.MathUtils.lerp(Math.min(userR, 0.98), waxRoughTarget, t);
+    mat.side = THREE.DoubleSide;
+    mat.depthWrite = t < 0.985;
+    mat.needsUpdate = true;
+  }
+
+  setSubsurfaceSettings(settings = {}) {
+    const prev = { ...this.subsurfaceSettings };
+    this.subsurfaceSettings = {
+      enabled:
+        settings.enabled !== undefined ? !!settings.enabled : prev.enabled ?? false,
+      translucency:
+        settings.translucency !== undefined ? settings.translucency : prev.translucency ?? 0,
+      scatterTint:
+        settings.scatterTint !== undefined
+          ? settings.scatterTint
+          : prev.scatterTint ?? DEFAULT_SUBSURFACE_SCATTER_TINT,
+    };
+    const tn = Number(this.subsurfaceSettings.translucency);
+    this.subsurfaceSettings.translucency = Number.isFinite(tn)
+      ? Math.min(1, Math.max(0, tn))
+      : 0;
+    if (typeof this.subsurfaceSettings.scatterTint !== 'string') {
+      this.subsurfaceSettings.scatterTint = DEFAULT_SUBSURFACE_SCATTER_TINT;
+    }
+    if (
+      this.currentModel &&
+      (this.currentShading === 'shaded' || this.currentShading === 'clay')
+    ) {
+      this.setShading(this.currentShading);
+    }
   }
 
   /**
@@ -699,12 +810,22 @@ export class MaterialController {
         // Use material settings for roughness and metalness (unified controls)
         const createClay = (originalMat) => {
           const clayColor = this.getClayColorWithBrightness();
-          const clay = new THREE.MeshStandardMaterial({
-            color: clayColor,
-            roughness: this.materialSettings.roughness,
-            metalness: this.materialSettings.metalness,
-            side: THREE.DoubleSide,
-          });
+          const tSub =
+            this._isSubsurfaceActive() ? this._subsurfaceTranslucency() : 0;
+          const clay =
+            tSub > SUBSURFACE_EPS
+              ? new THREE.MeshPhysicalMaterial({
+                  color: clayColor,
+                  roughness: this.materialSettings.roughness,
+                  metalness: this.materialSettings.metalness,
+                  side: THREE.DoubleSide,
+                })
+              : new THREE.MeshStandardMaterial({
+                  color: clayColor,
+                  roughness: this.materialSettings.roughness,
+                  metalness: this.materialSettings.metalness,
+                  side: THREE.DoubleSide,
+                });
           // Preserve normal map from original material only if enabled
           const normalMapEnabled =
             this.stateStore.getState().clay?.normalMap !== false;
@@ -715,6 +836,9 @@ export class MaterialController {
             if (originalMat.normalScale) {
               clay.normalScale = originalMat.normalScale.clone();
             }
+          }
+          if (tSub > SUBSURFACE_EPS && clay.isMeshPhysicalMaterial) {
+            this._applySubsurfacePhysicalParams(clay, tSub);
           }
           return clay;
         };
@@ -755,7 +879,7 @@ export class MaterialController {
         // But apply diffuse brightness to them
         const createShadedMaterial = (mat, isGlass = false) => {
           if (!mat) return mat;
-          const cloned = mat.clone ? mat.clone() : mat;
+          let cloned = mat.clone ? mat.clone() : mat;
           // Don't apply brightness/metalness/roughness to glass materials
           if (isGlass) {
             // Glass materials should keep their properties
@@ -800,6 +924,19 @@ export class MaterialController {
               }
             }
             cloned.needsUpdate = true;
+          }
+          const tSub =
+            !isGlass && this._isSubsurfaceActive()
+              ? this._subsurfaceTranslucency()
+              : 0;
+          if (!isGlass && tSub > SUBSURFACE_EPS && cloned) {
+            if (cloned.isMeshStandardMaterial && !cloned.isMeshPhysicalMaterial) {
+              cloned = this._upgradeStandardMaterialToPhysical(cloned);
+            }
+            if (cloned.isMeshPhysicalMaterial) {
+              delete cloned.userData.orbySubsurface;
+              this._applySubsurfacePhysicalParams(cloned, tSub);
+            }
           }
           if (cloned) {
             cloned.wireframe = false;
@@ -868,25 +1005,24 @@ export class MaterialController {
 
           if (isClayMaterial) {
             const tintedClayColor = this.getClayColorWithBrightness();
-            // This is a clay material, update it directly
+            const tClay = this._isSubsurfaceActive()
+              ? this._subsurfaceTranslucency()
+              : 0;
+            const patchClay = (mat) => {
+              if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
+              mat.color.copy(tintedClayColor);
+              mat.roughness = this.materialSettings.roughness;
+              mat.metalness = this.materialSettings.metalness;
+              if (tClay > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
+                delete mat.userData.orbySubsurface;
+                this._applySubsurfacePhysicalParams(mat, tClay);
+              }
+              mat.needsUpdate = true;
+            };
             if (Array.isArray(material)) {
-              material.forEach((mat) => {
-                if (mat && mat.isMeshStandardMaterial) {
-                  mat.color.copy(tintedClayColor);
-                  // Roughness and metalness are now controlled by Material settings, not clay settings
-                  // Always use material settings for roughness and metalness
-                  mat.roughness = this.materialSettings.roughness;
-                  mat.metalness = this.materialSettings.metalness;
-                  mat.needsUpdate = true;
-                }
-              });
-            } else if (material.isMeshStandardMaterial) {
-              material.color.copy(tintedClayColor);
-              // Roughness and metalness are now controlled by Material settings, not clay settings
-              // Always use material settings for roughness and metalness
-              material.roughness = this.materialSettings.roughness;
-              material.metalness = this.materialSettings.metalness;
-              material.needsUpdate = true;
+              material.forEach(patchClay);
+            } else {
+              patchClay(material);
             }
           }
         });
@@ -948,22 +1084,24 @@ export class MaterialController {
            !material.every((mat, idx) => mat === original[idx]));
         
         if (this.currentShading === 'clay' && isClayMaterial) {
-          // For clay materials, only update roughness and metalness (color is controlled by clay.color)
           const tintedClayColor = this.getClayColorWithBrightness();
+          const tClay = this._isSubsurfaceActive()
+            ? this._subsurfaceTranslucency()
+            : 0;
+          const patchClayMat = (mat) => {
+            if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
+            mat.roughness = this.materialSettings.roughness;
+            mat.metalness = this.materialSettings.metalness;
+            mat.color.copy(tintedClayColor);
+            if (tClay > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
+              this._applySubsurfacePhysicalParams(mat, tClay);
+            }
+            mat.needsUpdate = true;
+          };
           if (Array.isArray(material)) {
-            material.forEach((mat) => {
-              if (mat && mat.isMeshStandardMaterial) {
-                mat.roughness = this.materialSettings.roughness;
-                mat.metalness = this.materialSettings.metalness;
-                mat.color.copy(tintedClayColor);
-                  mat.needsUpdate = true;
-                }
-              });
-          } else if (material && material.isMeshStandardMaterial) {
-            material.roughness = this.materialSettings.roughness;
-            material.metalness = this.materialSettings.metalness;
-            material.color.copy(tintedClayColor);
-            material.needsUpdate = true;
+            material.forEach(patchClayMat);
+          } else {
+            patchClayMat(material);
           }
         } else if (this.currentShading === 'textures') {
           // For unlit/textures mode (MeshBasicMaterial), only update brightness
@@ -995,57 +1133,79 @@ export class MaterialController {
         } else if (this.currentShading === 'shaded') {
           // For shaded mode, update brightness, metalness, and roughness
           if (!original) return;
-          
+
+          const tSub = this._isSubsurfaceActive()
+            ? this._subsurfaceTranslucency()
+            : 0;
+
           const getOriginalColor = (orig, idx = 0) => {
             if (Array.isArray(orig)) {
               return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
             }
             return orig?.color?.clone() ?? new THREE.Color('#ffffff');
           };
-          
+
           if (Array.isArray(material) && Array.isArray(original)) {
             material.forEach((mat, idx) => {
               if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
+                let m = mat;
+                if (tSub > SUBSURFACE_EPS && m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) {
+                  m = this._upgradeStandardMaterialToPhysical(m);
+                  material[idx] = m;
+                }
                 const originalColor = getOriginalColor(original, idx);
                 const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-                mat.color.copy(adjustedColor);
-                mat.metalness = this.materialSettings.metalness;
-                mat.roughness = this.materialSettings.roughness;
+                m.color.copy(adjustedColor);
+                m.metalness = this.materialSettings.metalness;
+                m.roughness = this.materialSettings.roughness;
                 const origMat = Array.isArray(original) ? original[idx] : original;
                 this._applyUserEmissiveOrRestoreImport(
-                  mat,
+                  m,
                   origMat,
                   adjustedColor,
                   this.materialSettings.emissive || 0.0,
                 );
-                if ('metalnessMap' in mat) {
-                  mat.metalnessMap = null;
+                if ('metalnessMap' in m) {
+                  m.metalnessMap = null;
                 }
-                if ('roughnessMap' in mat) {
-                  mat.roughnessMap = null;
+                if ('roughnessMap' in m) {
+                  m.roughnessMap = null;
                 }
-                mat.needsUpdate = true;
+                if (tSub > SUBSURFACE_EPS && m.isMeshPhysicalMaterial) {
+                  delete m.userData.orbySubsurface;
+                  this._applySubsurfacePhysicalParams(m, tSub);
+                }
+                m.needsUpdate = true;
               }
             });
           } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+            let mat = material;
+            if (tSub > SUBSURFACE_EPS && mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) {
+              mat = this._upgradeStandardMaterialToPhysical(mat);
+              child.material = mat;
+            }
             const originalColor = getOriginalColor(original);
             const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
-            material.color.copy(adjustedColor);
-            material.metalness = this.materialSettings.metalness;
-            material.roughness = this.materialSettings.roughness;
+            mat.color.copy(adjustedColor);
+            mat.metalness = this.materialSettings.metalness;
+            mat.roughness = this.materialSettings.roughness;
             this._applyUserEmissiveOrRestoreImport(
-              material,
+              mat,
               original,
               adjustedColor,
               this.materialSettings.emissive || 0.0,
             );
-            if ('metalnessMap' in material) {
-              material.metalnessMap = null;
+            if ('metalnessMap' in mat) {
+              mat.metalnessMap = null;
             }
-            if ('roughnessMap' in material) {
-              material.roughnessMap = null;
+            if ('roughnessMap' in mat) {
+              mat.roughnessMap = null;
             }
-            material.needsUpdate = true;
+            if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
+              delete mat.userData.orbySubsurface;
+              this._applySubsurfacePhysicalParams(mat, tSub);
+            }
+            mat.needsUpdate = true;
           }
         }
       });
@@ -1460,9 +1620,17 @@ export class MaterialController {
           if (material.envMapIntensity !== undefined) {
             const glassBoost =
               this.isWindowMesh(child) || usesTransmission;
-            material.envMapIntensity = glassBoost
-              ? intensity * glassEnvMul
-              : intensity;
+            const userSubsurface = material.userData?.orbySubsurface === true;
+            let envMul = intensity;
+            if (glassBoost) {
+              if (userSubsurface) {
+                // Full glass multiplier on curved organic meshes reads as chrome; keep env reflections subtle.
+                envMul = intensity * Math.min(1.52, 1.08 + glassEnvMul * 0.2);
+              } else {
+                envMul = intensity * glassEnvMul;
+              }
+            }
+            material.envMapIntensity = envMul;
           }
 
           // glTF KHR_materials_transmission — preserve imported roughness/metalness/IOR; crushing them
@@ -1524,7 +1692,7 @@ export class MaterialController {
         if (isClayMaterial) {
           const materials = Array.isArray(material) ? material : [material];
           materials.forEach((mat) => {
-            if (mat && mat.isMeshStandardMaterial) {
+            if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
               let dirty = false;
               if (mat.roughness === 0 || Math.abs(mat.roughness - targetRoughness) > 0.01) {
                 mat.roughness = targetRoughness;
@@ -1536,6 +1704,14 @@ export class MaterialController {
               }
               if (!mat.color.equals(tintedClayColor)) {
                 mat.color.copy(tintedClayColor);
+                dirty = true;
+              }
+              const tSub = this._isSubsurfaceActive()
+                ? this._subsurfaceTranslucency()
+                : 0;
+              if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
+                delete mat.userData.orbySubsurface;
+                this._applySubsurfacePhysicalParams(mat, tSub);
                 dirty = true;
               }
               if (dirty) mat.needsUpdate = true;
@@ -2007,6 +2183,10 @@ export class MaterialController {
 
   getFresnelSettings() {
     return { ...this.fresnelSettings };
+  }
+
+  getSubsurfaceSettings() {
+    return { ...this.subsurfaceSettings };
   }
 
   getWireframeSettings() {

@@ -62,6 +62,7 @@ export class SceneSettingsManager {
       clay: state.clay,
       wireframe: state.wireframe,
       fresnel: state.fresnel,
+      subsurface: state.subsurface,
       svgExtrude: {
         enabled: !!state.svgExtrude?.enabled,
         availableColors: Array.isArray(state.svgExtrude?.availableColors)
@@ -451,6 +452,21 @@ export class SceneSettingsManager {
             !payload.fresnel.enabled,
           );
         }
+      }
+      /* Subsurface paste — events disabled; state kept for when feature is re-enabled (SUBSURFACE_FEATURE_ENABLED).
+      if (payload.subsurface) {
+        this.stateStore.set('subsurface', payload.subsurface);
+        this.eventBus.emit('mesh:subsurface', payload.subsurface);
+        if (this.uiHelper?.setEffectControlsDisabled) {
+          this.uiHelper.setEffectControlsDisabled(
+            ['subsurfaceTranslucency', 'subsurfaceScatterTint'],
+            !payload.subsurface.enabled,
+          );
+        }
+      }
+      */
+      if (payload.subsurface) {
+        this.stateStore.set('subsurface', payload.subsurface);
       }
       if (payload.svgExtrude?.enabled !== undefined) {
         this.stateStore.set('svgExtrude.enabled', !!payload.svgExtrude.enabled);

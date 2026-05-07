@@ -620,8 +620,8 @@ export class SceneManager {
       this.postPipeline.aberrationPass.uniforms.aspectRatio.value =
         height > 0 ? width / height : 1;
     }
-    if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution) {
-      this.postPipeline.anamorphicBloomPass.uniforms.resolution.set(width, height);
+    if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution?.value) {
+      this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
     this.groundController?.resizePodiumReflector?.(width, height);
   }
@@ -780,6 +780,9 @@ export class SceneManager {
     }
     if (state.fresnel) {
       this.materialController.setFresnelSettings(state.fresnel);
+    }
+    if (state.subsurface) {
+      this.setSubsurfaceSettings(state.subsurface);
     }
     if (state.wireframe) {
       this.materialController.setWireframeSettings(state.wireframe);
@@ -1820,6 +1823,20 @@ export class SceneManager {
     this.materialController.setFresnelSettings(settings);
   }
 
+  setSubsurfaceSettings(patch = {}) {
+    const cur = this.stateStore.getState().subsurface ?? {};
+    this.materialController.setSubsurfaceSettings({
+      enabled:
+        patch.enabled !== undefined ? !!patch.enabled : cur.enabled ?? false,
+      translucency:
+        patch.translucency !== undefined ? patch.translucency : cur.translucency ?? 0,
+      scatterTint:
+        patch.scatterTint !== undefined
+          ? patch.scatterTint
+          : cur.scatterTint ?? '#ffd4b8',
+    });
+  }
+
   applyHdriMood(preset) {
     const style = HDRI_MOODS[preset];
     this.hdriMood?.apply(style, {
@@ -2192,6 +2209,7 @@ export class SceneManager {
     this.materialController.setModel(object, state.shading, {
       clay: state.clay,
       fresnel: state.fresnel,
+      subsurface: state.subsurface,
       wireframe: state.wireframe,
       material: state.material ?? {
         brightness: state.diffuseBrightness ?? 1.0,

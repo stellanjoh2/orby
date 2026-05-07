@@ -290,6 +290,9 @@ export class UIManager {
       advancedGlassControls: q('#advancedGlassControls'),
       clayColor: q('#clayColor'),
       clayNormalMap: q('#clayNormalMap'),
+      toggleSubsurface: q('#toggleSubsurface'),
+      subsurfaceTranslucency: q('#subsurfaceTranslucency'),
+      subsurfaceScatterTint: q('#subsurfaceScatterTint'),
       wireframeAlwaysOn: q('#wireframeAlwaysOn'),
       wireframeColor: q('#wireframeColor'),
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
@@ -1439,6 +1442,31 @@ export class UIManager {
     if (this.inputs.clayNormalMap) {
       this.inputs.clayNormalMap.checked = state.clay.normalMap !== false;
     }
+    /* Subsurface UI sync — enable with SUBSURFACE_FEATURE_ENABLED + index.html subsection.
+    if (this.inputs.toggleSubsurface) {
+      this.inputs.toggleSubsurface.checked = !!state.subsurface?.enabled;
+    }
+    if (this.inputs.subsurfaceTranslucency) {
+      const tr = Math.min(1, Math.max(0, Number(state.subsurface?.translucency ?? 0)));
+      const trSafe = Number.isFinite(tr) ? tr : 0;
+      if (document.activeElement !== this.inputs.subsurfaceTranslucency) {
+        this.inputs.subsurfaceTranslucency.value = trSafe;
+        this.updateValueLabel('subsurfaceTranslucency', trSafe, 'decimal');
+      }
+    }
+    if (this.inputs.subsurfaceScatterTint) {
+      const st = state.subsurface?.scatterTint ?? '#ffd4b8';
+      const valid =
+        typeof st === 'string' && /^#[0-9A-Fa-f]{6}$/.test(st) ? st : '#ffd4b8';
+      if (document.activeElement !== this.inputs.subsurfaceScatterTint) {
+        this.inputs.subsurfaceScatterTint.value = valid;
+      }
+    }
+    this.setEffectControlsDisabled(
+      ['subsurfaceTranslucency', 'subsurfaceScatterTint'],
+      !state.subsurface?.enabled,
+    );
+    */
     if (state.wireframe) {
       if (this.inputs.wireframeColor) {
         this.inputs.wireframeColor.value = state.wireframe.color;

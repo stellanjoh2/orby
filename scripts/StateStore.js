@@ -124,8 +124,9 @@ export class StateStore {
         radius: 2,
         strength: 0.3,
       },
-      /** MeshPhysicalMaterial transmission — wax / jade–style translucency (Shaded + Clay). */
+      /** MeshPhysicalMaterial transmission — volumetric translucency (Shaded + Clay), not the older SubsurfaceScatteringShader demo. */
       subsurface: {
+        enabled: false,
         translucency: 0,
         scatterTint: '#ffd4b8',
       },

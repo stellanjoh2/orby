@@ -64,6 +64,19 @@ export class EventManager {
     eventBus.on('mesh:material-emissive', (emissive) => {
       s.materialController?.setMaterialEmissive(emissive);
     });
+    /* Subsurface events — enable with SUBSURFACE_FEATURE_ENABLED in MaterialController.js.
+    eventBus.on('mesh:subsurface-translucency', (value) => {
+      s.setSubsurfaceSettings({ translucency: value });
+    });
+    eventBus.on('mesh:subsurface-scatter-tint', (value) => {
+      s.setSubsurfaceSettings({ scatterTint: value });
+    });
+    eventBus.on('mesh:subsurface', (settings) => {
+      if (settings && typeof settings === 'object') {
+        s.setSubsurfaceSettings(settings);
+      }
+    });
+    */
     eventBus.on('mesh:fbx-map-slot', (payload) => {
       void s.applyFbxMapSlot(payload);
     });

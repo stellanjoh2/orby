@@ -441,6 +441,48 @@ export class MeshControls {
       this.eventBus.emit('mesh:clay-normal-map', enabled);
     });
 
+    /* Subsurface UI — enable with SUBSURFACE_FEATURE_ENABLED in MaterialController.js + uncomment index.html subsection.
+    const emitSubsurface = () => {
+      this.eventBus.emit('mesh:subsurface', this.stateStore.getState().subsurface ?? {});
+    };
+    if (this.ui.inputs.toggleSubsurface) {
+      this.ui.inputs.toggleSubsurface.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('subsurface.enabled', enabled);
+        if (enabled) {
+          const tr = Number(this.stateStore.getState().subsurface?.translucency ?? 0);
+          if (!Number.isFinite(tr) || tr < 0.04) {
+            this.stateStore.set('subsurface.translucency', 0.55);
+            if (this.ui.inputs.subsurfaceTranslucency) {
+              this.ui.inputs.subsurfaceTranslucency.value = '0.55';
+              this.helpers.updateValueLabel('subsurfaceTranslucency', 0.55, 'decimal');
+            }
+          }
+        }
+        this.ui.setEffectControlsDisabled(
+          ['subsurfaceTranslucency', 'subsurfaceScatterTint'],
+          !enabled,
+        );
+        emitSubsurface();
+      });
+    }
+    this.ui.inputs.subsurfaceTranslucency?.addEventListener('input', (event) => {
+      const raw = parseFloat(event.target.value);
+      const value = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0;
+      this.helpers.updateValueLabel('subsurfaceTranslucency', value, 'decimal');
+      this.stateStore.set('subsurface.translucency', value);
+      this.eventBus.emit('mesh:subsurface-translucency', value);
+    });
+    if (this.ui.inputs.subsurfaceTranslucency) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.subsurfaceTranslucency);
+    }
+    this.helpers.bindColorInput(
+      'subsurfaceScatterTint',
+      'subsurface.scatterTint',
+      'mesh:subsurface-scatter-tint',
+    );
+    */
+
     // Wireframe controls
     this.ui.inputs.wireframeAlwaysOn?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -885,6 +927,32 @@ export class MeshControls {
     if (this.ui.inputs.clayNormalMap) {
       this.ui.inputs.clayNormalMap.checked = state.clay.normalMap !== false;
     }
+    /* Subsurface UI sync — pair with MeshControls binding block above.
+    if (this.ui.inputs.toggleSubsurface) {
+      this.ui.inputs.toggleSubsurface.checked = !!state.subsurface?.enabled;
+    }
+    if (this.ui.inputs.subsurfaceTranslucency) {
+      const tr = Math.min(1, Math.max(0, Number(state.subsurface?.translucency ?? 0)));
+      const trSafe = Number.isFinite(tr) ? tr : 0;
+      const active = document.activeElement === this.ui.inputs.subsurfaceTranslucency;
+      if (!active) {
+        this.ui.inputs.subsurfaceTranslucency.value = trSafe;
+        this.helpers.updateValueLabel('subsurfaceTranslucency', trSafe, 'decimal');
+      }
+    }
+    if (this.ui.inputs.subsurfaceScatterTint) {
+      const st = state.subsurface?.scatterTint ?? '#ffd4b8';
+      const valid =
+        typeof st === 'string' && /^#[0-9A-Fa-f]{6}$/.test(st) ? st : '#ffd4b8';
+      if (document.activeElement !== this.ui.inputs.subsurfaceScatterTint) {
+        this.ui.inputs.subsurfaceScatterTint.value = valid;
+      }
+    }
+    this.ui.setEffectControlsDisabled(
+      ['subsurfaceTranslucency', 'subsurfaceScatterTint'],
+      !state.subsurface?.enabled,
+    );
+    */
     if (state.wireframe) {
       if (this.ui.inputs.wireframeColor) {
         this.ui.inputs.wireframeColor.value = state.wireframe.color;

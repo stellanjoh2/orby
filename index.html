@@ -616,17 +616,25 @@
                     </label>
                   </label>
                 </div>
+                <!-- Subsurface: temporarily disabled — set SUBSURFACE_FEATURE_ENABLED in MaterialController.js and uncomment MeshControls / UIManager / EventManager blocks to restore.
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="subsurface">
-                  <div class="block-title has-reset">
+                  <div class="block-title has-toggle">
                     <span>Subsurface</span>
-                    <button class="block-reset-btn" data-reset="subsurface" aria-label="Reset Subsurface" data-tooltip="Reset Subsurface settings">
-                      <i class="fa-solid fa-rotate-left"></i>
-                      <span class="sr-only">Reset</span>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="subsurface" aria-label="Reset Subsurface" data-tooltip="Reset Subsurface settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable volumetric translucency (PBR transmission — needs Studio HDRI for best results; differs from three.js SubsurfaceScatteringShader demo)">
+                        <input type="checkbox" id="toggleSubsurface" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable subsurface translucency</span>
+                      </label>
+                    </div>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Volume translucency (MeshPhysicalMaterial transmission) — best in Shaded or Clay with HDRI lighting">Translucency</span>
+                    <span data-tooltip="Transmission strength — use Shaded or Clay mode; rotate lighting / HDRI to see light through the volume">Translucency</span>
                     <input
                       id="subsurfaceTranslucency"
                       type="range"
@@ -647,6 +655,7 @@
                     />
                   </label>
                 </div>
+                -->
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="wireframe">
                   <div class="block-title has-reset">
