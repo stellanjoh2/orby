@@ -1,8 +1,7 @@
 #!/bin/sh
 # Bump VERSION + index.html tags/changelog into the tip commit (amend), so one push
-# = one Pages deploy. Requires: git config core.hooksPath .githooks
-# Disable any post-push hook that also runs scripts/update-version.js or you will get
-# a second commit and duplicate workflow runs.
+# = one Pages deploy. Requires: npm run setup-hooks (sets core.hooksPath .githooks).
+# Legacy .git/hooks/pre-push without amend left staged files — see scripts/setup-git-hooks.mjs
 
 set -e
 
