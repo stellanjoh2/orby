@@ -39,6 +39,7 @@ import { VideoExporter } from './render/VideoExporter.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
+import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
 import {
   createToggleScaleContext,
@@ -423,98 +424,14 @@ export class SceneManager {
   }
 
   setupMeshClickDetection() {
-    // Raycaster for detecting mesh clicks
-    this.raycaster = new THREE.Raycaster();
-    
-    // Track mouse state to distinguish clicks from drags
-    this.mouseDownPos = null;
-    this.mouseDownTime = null;
-    this.mouseDownOnCanvas = false;
-    const CLICK_THRESHOLD = 5; // pixels
-    const CLICK_TIME_THRESHOLD = 200; // milliseconds
-    
-    const handleMouseDown = (event) => {
-      // Only handle left mouse button
-      if (event.button !== 0) return;
-      
-      const target = event.target;
-      const clickedOnCanvas = target === this.canvas || this.canvas.contains(target);
-      
-      if (clickedOnCanvas) {
-        this.mouseDownOnCanvas = true;
-        this.mouseDownPos = {
-          x: event.clientX,
-          y: event.clientY,
-        };
-        this.mouseDownTime = performance.now();
-      }
-    };
-    
-    const handleMouseUp = (event) => {
-      // Only handle left mouse button
-      if (event.button !== 0) return;
-      
-      const target = event.target;
-      const clickedOnCanvas = target === this.canvas || this.canvas.contains(target);
-      
-      // If click started on canvas, check if it was a click or drag
-      if (this.mouseDownOnCanvas && this.mouseDownPos && this.mouseDownTime) {
-        // Check if this was a click (not a drag)
-        const mouseMove = Math.sqrt(
-          Math.pow(event.clientX - this.mouseDownPos.x, 2) +
-          Math.pow(event.clientY - this.mouseDownPos.y, 2)
-        );
-        const mouseTime = performance.now() - this.mouseDownTime;
-        
-        const wasClick = mouseMove < CLICK_THRESHOLD && mouseTime < CLICK_TIME_THRESHOLD;
-        
-        if (wasClick && this.currentModel && clickedOnCanvas) {
-          // Convert mouse position to normalized device coordinates
-          const rect = this.canvas.getBoundingClientRect();
-          const mouse = new THREE.Vector2();
-          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-          
-          // Raycast to check if we hit the mesh
-          this.raycaster.setFromCamera(mouse, this.camera);
-          const intersects = this.raycaster.intersectObject(this.currentModel, true);
-          
-          if (intersects.length > 0) {
-            // Clicked on mesh - enable rotate widget, disable other widgets
-            this.stateStore.set('moveWidgetEnabled', false);
-            this.stateStore.set('rotateWidgetEnabled', true);
-            this.stateStore.set('scaleWidgetEnabled', false);
-            this.eventBus.emit('mesh:move-widget-enabled', false);
-            this.eventBus.emit('mesh:rotate-widget-enabled', true);
-            this.eventBus.emit('mesh:scale-widget-enabled', false);
-          } else {
-            // Clicked on canvas but outside mesh - disable all widgets
-            this.stateStore.set('moveWidgetEnabled', false);
-            this.stateStore.set('rotateWidgetEnabled', false);
-            this.stateStore.set('scaleWidgetEnabled', false);
-            this.eventBus.emit('mesh:move-widget-enabled', false);
-            this.eventBus.emit('mesh:rotate-widget-enabled', false);
-            this.eventBus.emit('mesh:scale-widget-enabled', false);
-          }
-        }
-      } else if (!clickedOnCanvas) {
-        // Clicked outside canvas (e.g., on UI) - disable all widgets
-        this.stateStore.set('moveWidgetEnabled', false);
-        this.stateStore.set('rotateWidgetEnabled', false);
-        this.stateStore.set('scaleWidgetEnabled', false);
-        this.eventBus.emit('mesh:move-widget-enabled', false);
-        this.eventBus.emit('mesh:rotate-widget-enabled', false);
-        this.eventBus.emit('mesh:scale-widget-enabled', false);
-      }
-      
-      // Reset tracking
-      this.mouseDownPos = null;
-      this.mouseDownTime = null;
-      this.mouseDownOnCanvas = false;
-    };
-    
-    this.canvas.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mouseup', handleMouseUp);
+    this.meshClickHandler = new SceneMeshClickHandler({
+      canvas: this.canvas,
+      camera: this.camera,
+      getCurrentModel: () => this.currentModel,
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+    });
+    this.meshClickHandler.attach();
   }
 
   async init() {
