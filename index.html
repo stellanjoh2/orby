@@ -6,6 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0HJC40N3N3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-0HJC40N3N3');
+    </script>
     <style>html{background:#000}</style>
     
     <!-- Open Graph / Facebook -->
@@ -164,6 +172,26 @@
         </form>
       </div>
     </div>
+    <section
+      id="orbyNotFoundPage"
+      class="orby-not-found-page"
+      hidden
+      aria-hidden="true"
+      role="alert"
+      aria-labelledby="orbyNotFoundTitle"
+    >
+      <div class="orby-not-found-copy">
+        <h1 id="orbyNotFoundTitle" class="orby-not-found-title">404</h1>
+        <p class="orby-not-found-message">
+          You've drifted beyond the scene bounds.<br />
+          There's nothing out here — no geometry, no light, no ground.<br />
+          Just void.
+        </p>
+        <button type="button" id="orbyNotFoundReturnBtn" class="accent-action-btn orby-not-found-btn">
+          Return home screen
+        </button>
+      </div>
+    </section>
     <script>
       (function () {
         var STORAGE_KEY = 'orby_site_gate_verified';
@@ -331,7 +359,7 @@
                 Load Scene
               </button>
             </div>
-            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">.gltf</strong>/<strong class="brand-highlight">.glb</strong>, and supports <strong class="brand-highlight">svg</strong> extrusion. Files stay local and private.<br>For the best experience, go full screen. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
+            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">.gltf</strong>/<strong class="brand-highlight">.glb</strong>, and supports <strong class="brand-highlight">svg</strong> extrusion. Files stay local and private.<br>For the best experience, go full screen. <a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a></p>
             <div class="quick-start-guide">
               <span><strong>V</strong> — Hide UI</span>
               <span><strong>F</strong> — Focus camera</span>
@@ -3738,7 +3766,7 @@
       class="sr-only"
       accept=".orby,application/json"
     />
-    <script type="module" src="./scripts/main.js"></script>
+    <script type="module" src="./scripts/entry.js"></script>
     
     <!-- Long messages: stay open until OK (e.g. unsupported USDZ); short text still uses toast -->
     <div

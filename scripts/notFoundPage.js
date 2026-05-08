@@ -1,0 +1,434 @@
+import './main.js';
+
+const NOT_FOUND_PRESET = {
+  shading: 'shaded',
+  material: {
+    brightness: 1.45,
+    metalness: 0.04,
+    roughness: 0.32,
+    emissive: 0.34,
+  },
+  scale: 2.75,
+  xOffset: 0,
+  yOffset: 0,
+  zOffset: 0,
+  rotationX: 0,
+  rotationY: 0,
+  rotationZ: 0,
+  autoRotate: 0.2,
+  clay: {
+    color: '#808080',
+    normalMap: true,
+  },
+  wireframe: {
+    alwaysOn: false,
+    color: '#c4ff00',
+    onlyVisibleFaces: true,
+    hideMesh: false,
+  },
+  fresnel: {
+    enabled: false,
+    color: '#808080',
+    radius: 2,
+    strength: 0.3,
+  },
+  subsurface: {
+    enabled: false,
+    translucency: 0,
+    scatterTint: '#ffd4b8',
+  },
+  svgExtrude: {
+    enabled: true,
+    availableColors: ['#c6d400'],
+    depth: 0.2,
+    normalAngle: 45,
+    colorDepths: {},
+    colorOffsets: {},
+    flipDirection: false,
+    colorOverride: false,
+    overrideColor: '#7ed321',
+    surfacePreset: 'none',
+    surfaceScale: 1,
+  },
+  advanced: {
+    reverseNormals: false,
+    transparencyFix: 'default',
+    glassOpacity: 0.45,
+    glassReflection: 2,
+    glassTint: '#ffffff',
+    glassBody: 0,
+    blendSortingMitigation: true,
+    flipGlassNormalMapY: false,
+    glassFrontFacesOnly: false,
+  },
+  hdri: 'congress',
+  hdriEnabled: true,
+  hdriStrength: 1.6,
+  hdriBlurriness: 0.55,
+  hdriRotation: 0,
+  hdriBackground: false,
+  lensFlare: {
+    enabled: false,
+    rotation: 0,
+    height: 15,
+    color: '#d28756',
+    quality: 'maximum',
+    anamorphicBloom: {
+      enabled: false,
+      quality: 'medium',
+      strength: 1,
+      spread: 0.2,
+      threshold: 0.7,
+      soften: 0.12,
+      streakTint: '#7ec8ff',
+    },
+  },
+  groundSolid: false,
+  groundWire: false,
+  groundSolidColor: '#808080',
+  podiumColor: '#e8e8e8',
+  groundWireColor: '#c4ff00',
+  groundWireOpacity: 1,
+  groundY: -0.28860217332839966,
+  gridY: -0.28860217332839966,
+  podiumScale: 1,
+  podiumMetalness: 0.08,
+  podiumRoughness: 0.5,
+  podiumReflection: 1,
+  podiumClearcoat: 0,
+  podiumGlassSurface: false,
+  podiumGlassBlur: 0.1,
+  podiumGlassAmount: 0.5,
+  podiumGlassBrightness: 0.1,
+  backdropEnabled: false,
+  backdropScale: 1,
+  backdropWidth: 1,
+  backdropColor: '#808080',
+  backdropRotation: 0,
+  backdropY: 0,
+  backdropTextureEnabled: false,
+  backdropTextureScale: 1.8,
+  gridScale: 1,
+  lights: {
+    key: {
+      color: '#ffdfc9',
+      intensity: 1.28,
+      height: 5,
+      rotate: 0,
+      enabled: true,
+      castShadows: true,
+    },
+    fill: {
+      color: '#b0c7ff',
+      intensity: 0.8,
+      height: 3,
+      rotate: 0,
+      enabled: true,
+      castShadows: true,
+    },
+    rim: {
+      color: '#a0eaf9',
+      intensity: 0.96,
+      height: 4,
+      rotate: 0,
+      enabled: true,
+      castShadows: true,
+    },
+    ambient: {
+      color: '#7c8ca6',
+      intensity: 0.48,
+      enabled: true,
+    },
+  },
+  lightsEnabled: true,
+  lightsMaster: 0.3,
+  lightsRotation: 0,
+  lightsHeight: 5,
+  lightsAutoRotate: false,
+  showLightIndicators: false,
+  lightsCastShadows: true,
+  lightsShadowQuality: 'medium',
+  lightsShadowSoftness: 4,
+  lightsShadowContactOffset: -0.0001,
+  lightsShadowTwoSided: false,
+  background: '#000000',
+  camera: {
+    fov: 50,
+    tilt: -15,
+    position: {
+      x: 0.3617021953002032,
+      y: 0.2305411801700339,
+      z: 0.195141930055061,
+    },
+    target: {
+      x: -0.04892023526093361,
+      y: 0.00401737816845487,
+      z: -0.0678428721570484,
+    },
+    contrast: 1,
+    temperature: 6000,
+    tint: 0,
+    highlights: 0,
+    shadows: 0,
+    saturation: 1.72,
+    clarity: 0,
+    fade: 0,
+    sharpness: 0,
+    vignette: 0.69,
+    vignetteColor: '#000000',
+    autoOrbit: 'slow',
+    handheld: 'off',
+  },
+  exposure: 1,
+  autoExposure: false,
+  histogramEnabled: false,
+  toneCurveOpen: false,
+  toneCurve: {
+    blackY: 0,
+    whiteY: 1,
+    p1: {
+      x: 0.3333333333333333,
+      y: 0.3333333333333333,
+    },
+    p2: {
+      x: 0.6666666666666666,
+      y: 0.6666666666666666,
+    },
+  },
+  dof: {
+    enabled: false,
+    focus: 1.5,
+    aperture: 0.003,
+  },
+  bloom: {
+    enabled: true,
+    threshold: 1,
+    strength: 0.2,
+    radius: 0.75,
+    color: '#f0f4f8',
+    quality: 'medium',
+  },
+  grain: {
+    enabled: false,
+    intensity: 0.03,
+    color: '#ffffff',
+  },
+  aberration: {
+    enabled: true,
+    amount: 0.0049,
+  },
+  ambientOcclusion: {
+    enabled: true,
+    intensity: 1.25,
+    radius: 0.3,
+    quality: 'medium',
+    color: '#213f08',
+  },
+  lensDirt: {
+    enabled: false,
+    strength: 0.8,
+    minLuminance: 0.55,
+    maxLuminance: 0.95,
+    sensitivity: 0.55,
+  },
+  fisheye: {
+    enabled: true,
+    horizontalFOVDeg: 131,
+    strength: 0.37,
+    cylindricalRatio: 4,
+  },
+  colorChecker: {
+    enabled: false,
+    distance: 2,
+    rotate: 333,
+    height: -0.5,
+    scale: 0.17,
+    rawColors: false,
+  },
+  antiAliasing: 'fxaa',
+  renderQuality: 'medium',
+  toneMapping: 'aces-filmic',
+  lookFilterPreset: 'custom',
+  lookFilterPresetsOpen: false,
+  moveWidgetEnabled: false,
+  rotateWidgetEnabled: false,
+  scaleWidgetEnabled: false,
+};
+
+const NOT_FOUND_MESH_URL = '/assets/3D-assets/404.glb';
+const NOT_FOUND_MESH_NAME = '404.glb';
+const NOT_FOUND_MESSAGE_HTML = `
+  <img
+    src="/assets/images/favicon.svg"
+    alt=""
+    aria-hidden="true"
+    class="orby-not-found-symbol"
+  />
+  <br />
+  You've drifted beyond
+  <br />
+  the scene bounds.
+`;
+
+function waitForOrby() {
+  return new Promise((resolve) => {
+    const maxWaitMs = 7000;
+    const start = performance.now();
+    const poll = () => {
+      if (window.orby?.eventBus && window.orby?.stateStore && window.orby?.ui && window.orby?.scene) {
+        resolve(window.orby);
+        return;
+      }
+      if (performance.now() - start >= maxWaitMs) {
+        resolve(window.orby ?? null);
+        return;
+      }
+      requestAnimationFrame(poll);
+    };
+    poll();
+  });
+}
+
+function applyNotFoundUiState() {
+  document.body.classList.add('orby-not-found-active');
+  const legacyOverlay = document.getElementById('orbyNotFoundPage');
+  if (legacyOverlay) {
+    legacyOverlay.hidden = true;
+    legacyOverlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openFullscreenNotFoundPrompt(orby) {
+  if (typeof orby.ui?.showFullscreenPrompt !== 'function') return;
+  orby.ui.showFullscreenPrompt({
+    messageHtml: NOT_FOUND_MESSAGE_HTML,
+    cancelLabel: 'Stay',
+    confirmLabel: 'Return home',
+    onConfirm: () => {
+      window.location.href = '/';
+    },
+    onCancel: () => {},
+  });
+}
+
+function preventBackdropDismissFor404(orby) {
+  const layer = orby.ui?.dom?.fullscreenPrompt;
+  if (!layer || layer.__orby404BackdropGuard) return;
+  layer.__orby404BackdropGuard = true;
+  layer.addEventListener(
+    'click',
+    (event) => {
+      if (event.target !== layer) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    },
+    true,
+  );
+}
+
+async function fetchNotFoundMesh() {
+  const absoluteUrl = new URL(NOT_FOUND_MESH_URL, window.location.origin).toString();
+  const response = await fetch(absoluteUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to load 404 mesh (${response.status}) from ${absoluteUrl}`);
+  }
+  const blob = await response.blob();
+  return new File([blob], NOT_FOUND_MESH_NAME, { type: 'model/gltf-binary' });
+}
+
+function enforceBlackBackground(orby) {
+  if (typeof orby.stateStore?.set === 'function') {
+    orby.stateStore.set('background', '#000000');
+    orby.stateStore.set('hdriBackground', false);
+    orby.stateStore.set('hdriEnabled', false);
+  }
+  if (typeof orby.scene?.setHdriEnabled === 'function') {
+    orby.scene.setHdriEnabled(false);
+  }
+  if (typeof orby.scene?.setHdriBackground === 'function') {
+    orby.scene.setHdriBackground(false);
+  }
+  orby.scene?.backgroundController?.setColor?.('#000000');
+}
+
+function pushCameraCloserFor404(orby) {
+  const camera = orby.scene?.camera;
+  const controls = orby.scene?.controls;
+  const cameraController = orby.scene?.cameraController;
+  if (!camera || !controls) return;
+  const target = controls.target.clone();
+  const offset = camera.position.clone().sub(target);
+  if (offset.lengthSq() < 1e-10) return;
+  // Force a close hero framing for the 404 mesh.
+  offset.multiplyScalar(0.38);
+  camera.position.copy(target.clone().add(offset));
+  controls.update();
+  // Re-seed auto-orbit from this closer camera pose.
+  if (typeof cameraController?.setAutoOrbit === 'function') {
+    cameraController.setAutoOrbit('slow');
+  }
+}
+
+function configureNoPopSpawnFor404(orby) {
+  const scene = orby.scene;
+  const cameraController = scene?.cameraController;
+  if (!scene || !cameraController) return;
+  if (scene.__orby404NoPopConfigured) return;
+  scene.__orby404NoPopConfigured = true;
+
+  // Stop tiny->full spawn pop; show model at final authored scale immediately.
+  scene._scaleInMeshOnSpawn = (object) => {
+    if (!object) return;
+    object.visible = true;
+  };
+
+  // Keep regular "asset loaded" flow, but avoid 1s animated camera jump/glitch.
+  cameraController.focusOnObjectAnimated = (object) => {
+    if (!object) return;
+    if (typeof cameraController.fitCameraToObject === 'function') {
+      cameraController.fitCameraToObject(object);
+    }
+    pushCameraCloserFor404(orby);
+  };
+}
+
+async function setupNotFoundExperience() {
+  applyNotFoundUiState();
+
+  const orby = await waitForOrby();
+  if (!orby) return;
+
+  if (typeof orby.ui.toggleUi === 'function') {
+    orby.ui.toggleUi(true);
+  }
+  if (typeof orby.ui.setDropzoneVisible === 'function') {
+    orby.ui.setDropzoneVisible(false);
+  }
+  openFullscreenNotFoundPrompt(orby);
+  preventBackdropDismissFor404(orby);
+  configureNoPopSpawnFor404(orby);
+
+  orby.stateStore.setTopLevelBundle(NOT_FOUND_PRESET);
+  orby.eventBus.emit('app:reset');
+  enforceBlackBackground(orby);
+
+  const onLoaded = ({ success }) => {
+    if (!success) return;
+    enforceBlackBackground(orby);
+    orby.eventBus.off('scene:model-load-complete', onLoaded);
+  };
+  orby.eventBus.on('scene:model-load-complete', onLoaded);
+
+  try {
+    const file = await fetchNotFoundMesh();
+    orby.eventBus.emit('file:selected', {
+      file,
+      suppressSuccessToastSound: true,
+    });
+  } catch (error) {
+    console.error('Failed to load 404 mesh', error);
+  }
+}
+
+void setupNotFoundExperience();
