@@ -62,7 +62,7 @@ const NOT_FOUND_PRESET = {
     glassFrontFacesOnly: false,
   },
   hdri: 'congress',
-  hdriEnabled: true,
+  hdriEnabled: false,
   hdriStrength: 1.6,
   hdriBlurriness: 0.55,
   hdriRotation: 0,
