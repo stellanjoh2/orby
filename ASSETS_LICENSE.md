@@ -18,6 +18,13 @@ The HDRI files in this repository are excluded from the MIT license and are subj
 
 All other assets in this repository (icons, images, animations, etc.) are included in the MIT license unless otherwise specified.
 
+## Typeface: Mattone
+
+`assets/fonts/Mattone-Bold.ttf` is sourced from [Collletttivo](https://www.collletttivo.it/), and is licensed under the SIL Open Font License 1.1 (OFL).
+
+- Upstream license copy: `assets/fonts/Mattone-LICENSE.txt`
+- Original source package (local import path used): `~/Downloads/mattone-main/`
+
 ---
 
 **Note**: If you are forking or cloning this repository, you should remove the HDRI files from `assets/hdris/` and replace them with your own licensed HDRI maps, or the application will not function correctly with HDRI environments.

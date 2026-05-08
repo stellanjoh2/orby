@@ -43,7 +43,7 @@
       crossorigin
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Cal+Sans:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -322,7 +322,7 @@
                 This app is not optimized for mobile devices. Please use a <span class="brand-highlight">desktop browser</span> for the best experience.
               </p>
             </div>
-            <p class="drop-primary">Drag and drop your <span class="brand-highlight">GLB</span> or <span class="brand-highlight">SVG</span> here</p>
+            <p class="drop-primary"><span class="drop-primary-line">Drag and drop your <span class="brand-highlight">GLB</span></span><span class="drop-primary-line drop-primary-line--second">or <span class="brand-highlight">SVG</span> file here</span></p>
             <div class="dropzone-actions">
               <button id="browseButton" class="dropzone-btn">
                 Browse Files
@@ -331,7 +331,7 @@
                 Load Scene
               </button>
             </div>
-            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">.gltf</strong>/<strong class="brand-highlight">.glb</strong>, and supports <strong class="brand-highlight">svg</strong> extrusion. Files stay local and private. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
+            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">.gltf</strong>/<strong class="brand-highlight">.glb</strong>, and supports <strong class="brand-highlight">svg</strong> extrusion. Files stay local and private.<br>For the best experience, go full screen. <a href="#" id="loadTestLink" class="drop-link">Load test object</a></p>
             <div class="quick-start-guide">
               <span><strong>V</strong> — Hide UI</span>
               <span><strong>F</strong> — Focus camera</span>
@@ -3685,6 +3685,9 @@
                       • <a href="https://fontawesome.com/" target="_blank" rel="noreferrer" class="about-highlight">Font Awesome</a> — Icon library
                     </li>
                     <li style="margin-bottom: 0.5rem;">
+                      • <a href="https://www.collletttivo.it/" target="_blank" rel="noreferrer" class="about-highlight">Collletttivo</a> — Mattone typeface source (headline brand font, SIL OFL 1.1)
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
                       • <a href="https://snd.dev/" target="_blank" rel="noreferrer" class="about-highlight">SND</a> — UI interaction sounds (SND01 “sine” kit) · <span class="about-highlight">Yasuhiro Tsuchiya</span>, Sound Designer / Researcher
                     </li>
                   </ul>
@@ -3928,7 +3931,7 @@
       </div>
     </div>
 
-    <!-- Same full-screen treatment as bug-report thank-you (Cal Sans, blur scrim, fade-up) -->
+    <!-- Same full-screen treatment as bug-report thank-you (brand headline font, blur scrim, fade-up) -->
     <div
       id="orbyFullscreenPrompt"
       class="bug-report-thank-you-layer"
