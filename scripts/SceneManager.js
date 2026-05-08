@@ -19,6 +19,7 @@ import {
   DEFAULT_PODIUM_GLASS_AMOUNT,
   DEFAULT_PODIUM_GLASS_BRIGHTNESS,
   sanitizeAmbientOcclusion,
+  effectiveVignetteIntensity,
 } from './constants.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
@@ -54,8 +55,8 @@ import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
 const FBX_IMPORT_WIP_ALERT_BODY =
-  'FBX import is still a work in progress. Materials and textures may not match what you see in your DCC ' +
-  '(UV sets, packed maps, and how external textures resolve are all unfinished). ' +
+  'FBX import is still a work in progress. Phong/Lambert materials are converted to PBR so mesh sliders behave like GLB; ' +
+  'UV sets, packed maps, and external textures may still differ from your DCC. ' +
   'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
 
 const LIGHT_SHADOW_MAP_SIZE = {
@@ -837,7 +838,8 @@ export class SceneManager {
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
     this.setShadows((state.camera?.shadows ?? 0) / 50);
-    this.setVignette(state.camera?.vignette ?? 0);
+    const defaultCam = this.stateStore.getDefaults().camera ?? {};
+    this.setVignette(effectiveVignetteIntensity(state.camera, defaultCam));
     this.setVignetteColor(state.camera?.vignetteColor ?? '#000000');
     // Initialize clay normal map setting
     if (state.clay?.normalMap !== undefined) {

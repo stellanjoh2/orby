@@ -2,6 +2,8 @@ import {
   sanitizeDof,
   sanitizeAmbientOcclusion,
   DEFAULT_MATERIAL_ROUGHNESS,
+  effectiveVignetteIntensity,
+  isVignetteUiEnabled,
 } from '../constants.js';
 import { HDRI_MOODS } from '../config/hdri.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
@@ -151,6 +153,7 @@ export class SceneSettingsManager {
         clarity: state.camera?.clarity,
         fade: state.camera?.fade,
         sharpness: state.camera?.sharpness,
+        vignetteEnabled: state.camera?.vignetteEnabled,
         vignette: state.camera?.vignette,
         vignetteColor: state.camera?.vignetteColor,
         autoOrbit: state.camera?.autoOrbit,
@@ -932,6 +935,9 @@ export class SceneSettingsManager {
           this.eventBus.emit('render:sharpness', payload.camera.sharpness);
         }
         // Store vignette values but don't apply yet - will be applied at the very end
+        if (payload.camera.vignetteEnabled !== undefined) {
+          this.stateStore.set('camera.vignetteEnabled', !!payload.camera.vignetteEnabled);
+        }
         if (payload.camera.vignette !== undefined) {
           this.stateStore.set('camera.vignette', payload.camera.vignette);
         }
@@ -1087,14 +1093,29 @@ export class SceneSettingsManager {
 
       // Apply vignette LAST - after all other settings to ensure it's not overridden
       const finalState = this.stateStore.getState();
-      const vignetteIntensity = finalState.camera?.vignette ?? 0;
-      const vignetteColor = finalState.camera?.vignetteColor ?? '#000000';
+      const defaultCam = this.stateStore.getDefaults().camera ?? {};
+      const fsCam = finalState.camera ?? {};
+      const vignetteIntensity = effectiveVignetteIntensity(fsCam, defaultCam);
+      const vignetteColor = fsCam.vignetteColor ?? '#000000';
       this.eventBus.emit('render:vignette', vignetteIntensity);
       this.eventBus.emit('render:vignette-color', vignetteColor);
+      if (this.uiHelper?.setEffectControlsDisabled) {
+        this.uiHelper.setEffectControlsDisabled(
+          ['vignetteIntensity', 'vignetteColor'],
+          !isVignetteUiEnabled(fsCam),
+        );
+      }
       // Re-emit on next frame to ensure post-processing uniforms update even if pipeline reinitialized
       requestAnimationFrame(() => {
-        this.eventBus.emit('render:vignette', this.stateStore.getState().camera?.vignette ?? 0);
-        this.eventBus.emit('render:vignette-color', this.stateStore.getState().camera?.vignetteColor ?? '#000000');
+        const cam = this.stateStore.getState().camera ?? {};
+        this.eventBus.emit(
+          'render:vignette',
+          effectiveVignetteIntensity(cam, defaultCam),
+        );
+        this.eventBus.emit(
+          'render:vignette-color',
+          cam.vignetteColor ?? '#000000',
+        );
       });
 
       this.eventBus.emit('render:apply-performance');

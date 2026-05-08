@@ -174,6 +174,7 @@ const NOT_FOUND_PRESET = {
     clarity: 0,
     fade: 0,
     sharpness: 0,
+    vignetteEnabled: true,
     vignette: 0.69,
     vignetteColor: '#000000',
     autoOrbit: 'slow',

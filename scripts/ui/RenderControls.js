@@ -6,7 +6,9 @@ import {
   AMBIENT_OCCLUSION_INTENSITY_MIN,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  effectiveVignetteIntensity,
   getAntiAliasingUiState,
+  isVignetteUiEnabled,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
   normalizeAnamorphicBloomQualityId,
   RENDER_QUALITY_DEFAULT,
@@ -561,12 +563,41 @@ export class RenderControls {
     if (this.ui.inputs.cameraSharpness) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraSharpness);
 
     // Vignette
+    const emitVignetteFromState = () => {
+      const cam = this.stateStore.getState().camera ?? {};
+      const defCam = this.stateStore.getDefaults().camera ?? {};
+      this.eventBus.emit(
+        'render:vignette',
+        effectiveVignetteIntensity(cam, defCam),
+      );
+    };
+    this.ui.inputs.toggleVignette?.addEventListener('change', (event) => {
+      touchLookFilterCustom();
+      const enabled = event.target.checked;
+      this.stateStore.set('camera.vignetteEnabled', enabled);
+      if (enabled) {
+        const cur = Number(this.stateStore.getState().camera?.vignette ?? 0);
+        if (cur === 0) {
+          const defV = this.stateStore.getDefaults().camera?.vignette ?? 0.5;
+          this.stateStore.set('camera.vignette', defV);
+          if (this.ui.inputs.vignetteIntensity) {
+            this.ui.inputs.vignetteIntensity.value = String(defV);
+            this.helpers.updateValueLabel('vignetteIntensity', defV, 'decimal');
+          }
+        }
+      }
+      this.ui.setEffectControlsDisabled(
+        ['vignetteIntensity', 'vignetteColor'],
+        !enabled,
+      );
+      emitVignetteFromState();
+    });
     this.ui.inputs.vignetteIntensity?.addEventListener('input', (event) => {
       touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, 0, 1, 0);
       this.stateStore.set('camera.vignette', value);
       this.helpers.updateValueLabel('vignetteIntensity', value, 'decimal');
-      this.eventBus.emit('render:vignette', value);
+      emitVignetteFromState();
     });
     if (this.ui.inputs.vignetteIntensity) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.vignetteIntensity);
 
@@ -924,6 +955,7 @@ export class RenderControls {
     
     // Camera & Exposure
     const cam = state.camera ?? {};
+    const defCam = this.stateStore.getDefaults().camera ?? {};
     const fe = state.fisheye ?? {};
     const feOn = !!fe.enabled;
     if (this.ui.inputs.cameraFov) {
@@ -1019,15 +1051,23 @@ export class RenderControls {
       this.ui.inputs.cameraSharpness.value = sharpness;
       this.helpers.updateValueLabel('cameraSharpness', sharpness, 'integer');
     }
+    if (this.ui.inputs.toggleVignette) {
+      this.ui.inputs.toggleVignette.checked = isVignetteUiEnabled(cam);
+    }
     if (this.ui.inputs.vignetteIntensity) {
-      const vignette = state.camera?.vignette ?? 0;
+      const vignette = cam.vignette ?? defCam.vignette ?? 0.5;
       this.ui.inputs.vignetteIntensity.value = vignette;
       this.helpers.updateValueLabel('vignetteIntensity', vignette, 'decimal');
     }
     if (this.ui.inputs.vignetteColor) {
-      const vignetteColor = state.camera?.vignetteColor ?? '#000000';
+      const vignetteColor = cam.vignetteColor ?? '#000000';
       this.ui.inputs.vignetteColor.value = vignetteColor;
     }
+    const vignetteOn = isVignetteUiEnabled(cam);
+    this.ui.setEffectControlsDisabled(
+      ['vignetteIntensity', 'vignetteColor'],
+      !vignetteOn,
+    );
     if (this.ui.inputs.histogramEnabled) {
       const enabled = state.histogramEnabled ?? false;
       this.ui.inputs.histogramEnabled.checked = enabled;

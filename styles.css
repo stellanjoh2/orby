@@ -312,7 +312,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-not-found-symbol {
   display: block;
   width: 144px;
   height: 144px;
-  margin: 0 auto;
+  margin: 0 auto -25px auto;
   animation: orbyNotFoundSymbolSpin 36s linear infinite;
 }
 

@@ -264,3 +264,23 @@ export const CAMERA_TEMPERATURE_MIN_K = 2000;
 export const CAMERA_TEMPERATURE_MAX_K = 10000;
 export const CAMERA_TEMPERATURE_NEUTRAL_K = 6000;
 
+/**
+ * Intensity sent to the post shader: legacy snapshots omit `vignetteEnabled` and apply `vignette` directly.
+ * @param {object | undefined} camera
+ * @param {object | undefined} defaultsCamera `defaults.camera` from StateStore
+ */
+export function effectiveVignetteIntensity(camera, defaultsCamera) {
+  const c = camera ?? {};
+  const d = defaultsCamera ?? {};
+  if (c.vignetteEnabled === false) return 0;
+  if (c.vignetteEnabled === true) return c.vignette ?? d.vignette ?? 0.5;
+  return c.vignette ?? 0;
+}
+
+/** Whether the vignette subsection toggle should read as “on” (includes legacy state). */
+export function isVignetteUiEnabled(camera) {
+  const c = camera ?? {};
+  if (c.vignetteEnabled === true) return true;
+  if (c.vignetteEnabled === false) return false;
+  return (c.vignette ?? 0) > 0;
+}

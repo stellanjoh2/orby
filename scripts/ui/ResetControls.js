@@ -2,7 +2,11 @@
  * ResetControls - Handles all reset button logic
  * Manages copy/paste scene settings, and local/section reset buttons
  */
-import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import {
+  CAMERA_TEMPERATURE_NEUTRAL_K,
+  DEFAULT_MATERIAL_ROUGHNESS,
+  effectiveVignetteIntensity,
+} from '../constants.js';
 import { deepClone } from '../utils/deepClone.js';
 import { deepEqual } from '../utils/deepEqual.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
@@ -65,7 +69,7 @@ const RESET_DIRTY_PATHS = {
   camera: [
     'camera.fov', 'fisheye', 'camera.tilt', 'camera.handheld',
     'exposure', 'autoExposure',
-    'camera.vignette', 'camera.vignetteColor',
+    'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
   ],
   fisheye: ['fisheye'],
   'color-correction': [
@@ -73,7 +77,7 @@ const RESET_DIRTY_PATHS = {
     'camera.highlights', 'camera.shadows', 'camera.saturation',
     'camera.clarity', 'camera.fade', 'camera.sharpness',
   ],
-  vignette: ['camera.vignette', 'camera.vignetteColor'],
+  vignette: ['camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor'],
   'tone-curve': ['toneCurve'],
   transform: [
     'scale', 'xOffset', 'yOffset', 'zOffset',
@@ -201,6 +205,15 @@ export class ResetControls {
     document.addEventListener('click', handleClick, true);
 
     this.stateStore.subscribe((state) => this.updateResetVisibility(state));
+
+    /** Canvas/pointer editors (e.g. tone curve) don't emit input/change; mark section touched explicitly. */
+    this.eventBus.on('ui:reset-section-touched', (type) => {
+      const t = typeof type === 'string' ? type.trim() : '';
+      if (!t) return;
+      this._touchedResetTypes.add(t);
+      this.updateResetVisibility(this.stateStore.getState());
+    });
+
     this.updateResetVisibility(this.stateStore.getState());
   }
 
@@ -600,7 +613,10 @@ export class ResetControls {
       this.eventBus.emit('render:clarity', defaults.camera.clarity ?? 0);
       this.eventBus.emit('render:fade', defaults.camera.fade ?? 0);
       this.eventBus.emit('render:sharpness', defaults.camera.sharpness ?? 0);
-      this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
+      this.eventBus.emit(
+        'render:vignette',
+        effectiveVignetteIntensity(defaults.camera, defaults.camera),
+      );
       this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
       this.eventBus.emit('render:tone-curve', defaults.toneCurve);
@@ -987,7 +1003,8 @@ export class ResetControls {
               this.stateStore.set('exposure', defaults.exposure);
               this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
               // Also reset vignette (camera/post-processing effect)
-              this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
+              this.stateStore.set('camera.vignetteEnabled', defaults.camera.vignetteEnabled ?? false);
+              this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0.5);
               this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
             });
             // Emit events to update the scene
@@ -997,7 +1014,10 @@ export class ResetControls {
             this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
-            this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
+            this.eventBus.emit(
+              'render:vignette',
+              effectiveVignetteIntensity(defaults.camera, defaults.camera),
+            );
             this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
@@ -1050,10 +1070,14 @@ export class ResetControls {
           case 'vignette':
             this.stateStore.batch(() => {
               this.stateStore.set('lookFilterPreset', 'custom');
-              this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0);
+              this.stateStore.set('camera.vignetteEnabled', defaults.camera.vignetteEnabled ?? false);
+              this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0.5);
               this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
             });
-            this.eventBus.emit('render:vignette', defaults.camera.vignette ?? 0);
+            this.eventBus.emit(
+              'render:vignette',
+              effectiveVignetteIntensity(defaults.camera, defaults.camera),
+            );
             this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
             this.ui.syncControls(this.stateStore.getState());
             break;

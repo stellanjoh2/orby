@@ -228,6 +228,7 @@ export class ToneCurveController {
     if (prevLook !== 'custom') {
       this.stateStore.set('lookFilterPreset', 'custom');
     }
+    this.eventBus.emit('ui:reset-section-touched', 'tone-curve');
     this.eventBus.emit('render:tone-curve', c);
     this._draw();
   }

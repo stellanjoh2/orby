@@ -890,7 +890,13 @@ export class MaterialController {
           }
           // Apply material brightness multiplier to color (which multiplies the texture map)
           // The material's color property multiplies the texture map, so this brightens the diffuse map
-          if (cloned && (cloned.isMeshStandardMaterial || cloned.isMeshPhysicalMaterial || cloned.isMeshPhongMaterial)) {
+          if (
+            cloned &&
+            (cloned.isMeshStandardMaterial ||
+              cloned.isMeshPhysicalMaterial ||
+              cloned.isMeshPhongMaterial ||
+              cloned.isMeshLambertMaterial)
+          ) {
             const originalColor = mat.color ? mat.color.clone() : new THREE.Color('#ffffff');
             const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
             cloned.color.copy(adjustedColor);
@@ -1176,6 +1182,12 @@ export class MaterialController {
                   this._applySubsurfacePhysicalParams(m, tSub);
                 }
                 m.needsUpdate = true;
+              } else if (mat && (mat.isMeshPhongMaterial || mat.isMeshLambertMaterial)) {
+                // FBX (e.g. Mixamo) often loads as Phong/Lambert — brightness must still apply live.
+                const originalColor = getOriginalColor(original, idx);
+                const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+                mat.color.copy(adjustedColor);
+                mat.needsUpdate = true;
               }
             });
           } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
@@ -1206,6 +1218,14 @@ export class MaterialController {
               this._applySubsurfacePhysicalParams(mat, tSub);
             }
             mat.needsUpdate = true;
+          } else if (
+            material &&
+            (material.isMeshPhongMaterial || material.isMeshLambertMaterial)
+          ) {
+            const originalColor = getOriginalColor(original);
+            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            material.color.copy(adjustedColor);
+            material.needsUpdate = true;
           }
         }
       });

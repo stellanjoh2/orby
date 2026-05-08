@@ -6,10 +6,92 @@ import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
+import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
 
 const FBX_TARGET_MAX_DIMENSION = 2.0;
 const FBX_SCALE_NORMALIZE_THRESHOLD = 20.0;
+/** Mixamo / FBX Phong shininess is usually 0–100; map to PBR roughness. */
+const FBX_PHONG_SHININESS_ROUGHNESS_RANGE = 100;
+
+/**
+ * FBXLoader emits MeshPhongMaterial / MeshLambertMaterial. Orby’s mesh sliders and Fresnel target
+ * MeshStandardMaterial — promote early so FBX gets “basic” parity without a full FBX material stack.
+ */
+function shininessToRoughnessPhong(shininess) {
+  if (!Number.isFinite(shininess)) return DEFAULT_MATERIAL_ROUGHNESS;
+  const s = Math.min(Math.max(shininess, 0), FBX_PHONG_SHININESS_ROUGHNESS_RANGE);
+  return Math.min(1, Math.max(0, 1 - s / FBX_PHONG_SHININESS_ROUGHNESS_RANGE));
+}
+
+function promoteFbxClassicMaterialToStandard(material) {
+  if (!material) return material;
+  if (!material.isMeshPhongMaterial && !material.isMeshLambertMaterial) {
+    return material;
+  }
+
+  const roughness = material.isMeshPhongMaterial
+    ? shininessToRoughnessPhong(material.shininess)
+    : DEFAULT_MATERIAL_ROUGHNESS;
+
+  const std = new THREE.MeshStandardMaterial({
+    name: material.name || '',
+    color: material.color.clone(),
+    roughness,
+    metalness: 0,
+    map: material.map ?? null,
+    lightMap: material.lightMap ?? null,
+    lightMapIntensity: material.lightMapIntensity ?? 1,
+    normalMap: material.normalMap ?? null,
+    normalScale: material.normalScale?.clone?.() ?? new THREE.Vector2(1, 1),
+    bumpMap: material.bumpMap ?? null,
+    bumpScale: material.bumpScale ?? 1,
+    emissive: material.emissive?.clone?.() ?? new THREE.Color(0, 0, 0),
+    emissiveIntensity: Number.isFinite(material.emissiveIntensity) ? material.emissiveIntensity : 1,
+    emissiveMap: material.emissiveMap ?? null,
+    alphaMap: material.alphaMap ?? null,
+    aoMap: material.aoMap ?? null,
+    aoMapIntensity: material.aoMapIntensity ?? 1,
+    envMap: material.envMap ?? null,
+    envMapIntensity: material.envMapIntensity ?? 1,
+    displacementMap: material.displacementMap ?? null,
+    displacementScale: material.displacementScale ?? 1,
+    displacementBias: material.displacementBias ?? 0,
+    transparent: material.transparent,
+    opacity: material.opacity,
+    alphaTest: material.alphaTest ?? 0,
+    side: material.side,
+    vertexColors: !!material.vertexColors,
+    wireframe: material.wireframe,
+    flatShading: material.flatShading,
+    depthWrite: material.depthWrite,
+    depthTest: material.depthTest,
+    toneMapped: material.toneMapped !== false,
+    premultipliedAlpha: !!material.premultipliedAlpha,
+    skinning: !!material.skinning,
+    morphTargets: !!material.morphTargets,
+    morphNormals: !!material.morphNormals,
+  });
+
+  if (material.userData && typeof material.userData === 'object') {
+    std.userData = { ...material.userData };
+  }
+
+  material.dispose();
+  return std;
+}
+
+function promoteFbxClassicMaterialsToPbr(object) {
+  if (!object) return;
+  object.traverse((child) => {
+    if (!child?.isMesh || !child.material) return;
+    if (Array.isArray(child.material)) {
+      child.material = child.material.map((m) => promoteFbxClassicMaterialToStandard(m));
+    } else {
+      child.material = promoteFbxClassicMaterialToStandard(child.material);
+    }
+  });
+}
 
 function countMeshes(root) {
   let n = 0;
@@ -364,6 +446,7 @@ export class ModelLoader {
     const object = loader.parse(buffer, '');
     this.normalizeFbxScale(object);
     this.applyFbxVertexColorFallback(object);
+    promoteFbxClassicMaterialsToPbr(object);
     return { object, animations: object.animations ?? [], sourceFile: file };
   }
 
@@ -374,6 +457,7 @@ export class ModelLoader {
         const object = this.fbxLoader.parse(buffer, '');
         this.normalizeFbxScale(object);
         this.applyFbxVertexColorFallback(object);
+        promoteFbxClassicMaterialsToPbr(object);
         resolve({ object, animations: object.animations ?? [] });
       } catch (error) {
         reject(error);

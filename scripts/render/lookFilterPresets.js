@@ -15,6 +15,7 @@ const GRADING_KEYS = [
   'clarity',
   'fade',
   'sharpness',
+  'vignetteEnabled',
   'vignette',
   'vignetteColor',
 ];
@@ -102,6 +103,7 @@ const PRESET_SPECS = {
       tint: -6,
       highlights: -28,
       shadows: 10,
+      vignetteEnabled: true,
       vignette: 0.5,
       vignetteColor: '#000000',
     },
@@ -179,6 +181,7 @@ const PRESET_SPECS = {
       contrast: 0.9,
       highlights: -12,
       shadows: 8,
+      vignetteEnabled: true,
       vignette: 0.44,
       vignetteColor: '#0a0c12',
       clarity: 6,
@@ -203,6 +206,7 @@ const PRESET_SPECS = {
     camera: {
       saturation: 0.55,
       contrast: 1.22,
+      vignetteEnabled: true,
       vignette: 0.64,
       temperature: 5000,
       highlights: -36,

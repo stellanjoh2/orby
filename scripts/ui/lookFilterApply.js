@@ -1,4 +1,8 @@
-import { sanitizeDof } from '../constants.js';
+import {
+  effectiveVignetteIntensity,
+  isVignetteUiEnabled,
+  sanitizeDof,
+} from '../constants.js';
 import { mergeLookFilterState } from '../render/lookFilterPresets.js';
 
 /**
@@ -38,7 +42,11 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
   eventBus.emit('render:clarity', cam.clarity ?? 0);
   eventBus.emit('render:fade', cam.fade ?? 0);
   eventBus.emit('render:sharpness', cam.sharpness ?? 0);
-  eventBus.emit('render:vignette', cam.vignette ?? 0);
+  const defaultCam = defaults.camera ?? {};
+  eventBus.emit(
+    'render:vignette',
+    effectiveVignetteIntensity(cam, defaultCam),
+  );
   eventBus.emit('render:vignette-color', cam.vignetteColor ?? '#000000');
 
   eventBus.emit('scene:exposure', b.exposure);
@@ -78,6 +86,10 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
       !b.lensDirt?.enabled,
     );
     ui.setEffectControlsDisabled(['exposure'], b.autoExposure);
+    ui.setEffectControlsDisabled(
+      ['vignetteIntensity', 'vignetteColor'],
+      !isVignetteUiEnabled(b.camera ?? {}),
+    );
   }
 
   eventBus.emit('render:apply-performance');

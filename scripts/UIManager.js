@@ -11,6 +11,8 @@ import {
   isBloomPipelineActive,
   sanitizeDof,
   sanitizeAmbientOcclusion,
+  effectiveVignetteIntensity,
+  isVignetteUiEnabled,
 } from './constants.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
@@ -398,6 +400,7 @@ export class UIManager {
       cameraSharpness: q('#cameraSharpness'),
       vignetteIntensity: q('#vignetteIntensity'),
       vignetteColor: q('#vignetteColor'),
+      toggleVignette: q('#toggleVignette'),
       histogramEnabled: q('#histogramEnabled'),
       toneCurveOpen: q('#toneCurveOpen'),
       lookFilterPresetsOpen: q('#lookFilterPresetsOpen'),
@@ -1143,13 +1146,26 @@ export class UIManager {
           this.stateStore.set('camera.saturation', payload.camera.saturation);
           this.eventBus.emit('render:saturation', payload.camera.saturation);
         }
+        const defaultCam = this.stateStore.getDefaults().camera ?? {};
+        if (payload.camera.vignetteEnabled !== undefined) {
+          this.stateStore.set('camera.vignetteEnabled', !!payload.camera.vignetteEnabled);
+        }
         if (payload.camera.vignette !== undefined) {
           this.stateStore.set('camera.vignette', payload.camera.vignette);
-          this.eventBus.emit('render:vignette', payload.camera.vignette);
         }
         if (payload.camera.vignetteColor !== undefined) {
           this.stateStore.set('camera.vignetteColor', payload.camera.vignetteColor);
           this.eventBus.emit('render:vignette-color', payload.camera.vignetteColor);
+        }
+        if (
+          payload.camera.vignetteEnabled !== undefined
+          || payload.camera.vignette !== undefined
+        ) {
+          const cam = this.stateStore.getState().camera ?? {};
+          this.eventBus.emit(
+            'render:vignette',
+            effectiveVignetteIntensity(cam, defaultCam),
+          );
         }
         if (payload.camera.handheld !== undefined) {
           let h = payload.camera.handheld;
@@ -1942,15 +1958,24 @@ export class UIManager {
       this.inputs.cameraSharpness.value = sharpness;
       this.updateValueLabel('cameraSharpness', sharpness, 'integer');
     }
+    const vignetteCam = state.camera ?? {};
+    const vignetteDefaults = this.stateStore.getDefaults().camera ?? {};
+    if (this.inputs.toggleVignette) {
+      this.inputs.toggleVignette.checked = isVignetteUiEnabled(vignetteCam);
+    }
     if (this.inputs.vignetteIntensity) {
-      const vignette = state.camera?.vignette ?? 0;
+      const vignette = vignetteCam.vignette ?? vignetteDefaults.vignette ?? 0.5;
       this.inputs.vignetteIntensity.value = vignette;
       this.updateValueLabel('vignetteIntensity', vignette, 'decimal');
     }
     if (this.inputs.vignetteColor) {
-      const vignetteColor = state.camera?.vignetteColor ?? '#000000';
+      const vignetteColor = vignetteCam.vignetteColor ?? '#000000';
       this.inputs.vignetteColor.value = vignetteColor;
     }
+    this.setEffectControlsDisabled(
+      ['vignetteIntensity', 'vignetteColor'],
+      !isVignetteUiEnabled(vignetteCam),
+    );
     if (this.inputs.antiAliasing) {
       const aa = getAntiAliasingUiState(
         state.renderQuality,
@@ -2114,6 +2139,13 @@ export class UIManager {
     
     // DOF block - only muted if dof.enabled is false
     this.setBlockMuted('dof', !currentState.dof?.enabled);
+
+    this.setBlockMuted(
+      'vignette',
+      !isVignetteUiEnabled(currentState.camera ?? {}),
+    );
+
+    this.setBlockMuted('fisheye', !currentState.fisheye?.enabled);
     
     // Bloom block - only muted if bloom.enabled is false
     this.setBlockMuted('bloom', !currentState.bloom?.enabled);
