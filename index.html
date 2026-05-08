@@ -1192,7 +1192,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.407 · 2026-05-08 17:22:08 UTC</div>
+              <div class="info-version-tag">v0.5.408 · 2026-05-08 19:15:41 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1930,7 +1930,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.407 · 2026-05-08 17:22:08 UTC</div>
+              <div class="info-version-tag">v0.5.408 · 2026-05-08 19:15:41 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2029,7 +2029,7 @@
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection">
+                <div class="subsection" data-subsection="fisheye">
                   <div class="block-title has-toggle">
                     <span data-tooltip="Post-process barrel / fisheye (Giliam de Carpentier). Renders after full grading stack.">Fisheye Lens</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -2446,12 +2446,19 @@
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="vignette">
-                  <div class="block-title has-reset">
+                  <div class="block-title has-toggle">
                     <span>Vignette</span>
-                    <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette" data-tooltip="Reset Vignette settings">
-                      <i class="fa-solid fa-rotate-left"></i>
-                      <span class="sr-only">Reset</span>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette" data-tooltip="Reset Vignette settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable vignette darkening at frame edges">
+                        <input type="checkbox" id="toggleVignette" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Vignette</span>
+                      </label>
+                    </div>
                   </div>
                   <label class="slider-line">
                     <span>Intensity</span>
@@ -2460,10 +2467,10 @@
                       type="range"
                       min="0"
                       max="1"
-                      value="0"
+                      value="0.5"
                       step="0.01"
                     />
-                    <span class="value" data-output="vignetteIntensity">0.00</span>
+                    <span class="value" data-output="vignetteIntensity">0.50</span>
                   </label>
                   <label class="color-line">
                     <span>Color</span>
@@ -3002,7 +3009,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.407 · 2026-05-08 17:22:08 UTC</div>
+              <div class="info-version-tag">v0.5.408 · 2026-05-08 19:15:41 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3151,7 +3158,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.407 · 2026-05-08 17:22:08 UTC</div>
+              <div class="info-version-tag">v0.5.408 · 2026-05-08 19:15:41 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3727,7 +3734,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.407 · 2026-05-08 17:22:08 UTC</div>
+              <div class="info-version-tag">v0.5.408 · 2026-05-08 19:15:41 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
