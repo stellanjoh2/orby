@@ -2719,6 +2719,15 @@ a.about-highlight:focus-visible {
   transition: color 0.2s, stroke 0.2s;
 }
 
+/* Optical nudge: the reset arrow glyph reads 1px low inside its bounding box,
+   both in per-section `.block-reset-btn` icons and in the footer Reset
+   Object/Studio/Camera buttons. Lift it 1px so it sits visually centered. */
+.block-reset-btn .fa-rotate-left,
+.accent-action-btn .fa-rotate-left {
+  position: relative;
+  top: -1px;
+}
+
 .block-reset-btn:hover i {
   color: var(--accent);
   stroke: var(--accent);
