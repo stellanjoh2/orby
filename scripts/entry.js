@@ -9,7 +9,7 @@ const forceNotFoundDebug = (() => {
 })();
 
 if (isHomePath && !forceNotFoundDebug) {
-  await import('./main.js');
+  import('./main.js');
 } else {
-  await import('./notFoundPage.js');
+  import('./notFoundPage.js');
 }

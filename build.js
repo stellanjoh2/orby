@@ -63,13 +63,13 @@ if (existsSync(distDir)) {
 // Build JavaScript bundle
 // Note: Three.js is kept external (loaded via import map in HTML)
 await esbuild.build({
-  entryPoints: ['scripts/main.js'],
+  entryPoints: ['scripts/entry.js'],
   bundle: true,
   minify: true,
   sourcemap: false,
   format: 'esm',
   target: ['es2020'],
-  outfile: 'dist/scripts/main.js',
+  outfile: 'dist/scripts/entry.js',
   external: ['three'], // Keep Three.js external (loaded via import map)
   treeShaking: true,
   legalComments: 'none',
