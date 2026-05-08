@@ -216,6 +216,20 @@ export function resolveRenderQualityTier(id) {
 }
 
 /**
+ * True when selective bloom passes can produce output — matches SceneManager anamorphic gating.
+ * @param {{ bloom?: { enabled?: boolean, strength?: number }, renderQuality?: string }} state
+ */
+export function isBloomPipelineActive(state) {
+  const bloom = state.bloom && typeof state.bloom === 'object' ? state.bloom : {};
+  const tier = resolveRenderQualityTier(state.renderQuality);
+  return (
+    bloom.enabled !== false &&
+    Number(bloom.strength ?? 0) > 0.0001 &&
+    !tier.forceBloomOff
+  );
+}
+
+/**
  * Anti-aliasing select: medium/low tiers force FXAA off in the GPU while keeping
  * `state.antiAliasing` for when the user returns to Ultra — use this for display + disabled.
  * @param {string | undefined} renderQuality

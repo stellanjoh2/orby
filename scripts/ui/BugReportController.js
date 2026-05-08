@@ -3,6 +3,7 @@
  * API URL: meta[name="orby-bug-report-api"] or "/api/bug-report"; Turnstile: meta orby-turnstile-site-key + server secret.
  */
 import gsap from 'gsap';
+import { createBigMessageRevealTimeline, killBigMessageRevealTweens } from './bigMessageHeadlineReveal.js';
 import { animateModalClose, animateModalOpen, prefersReducedMotion } from './modalReveal.js';
 
 /** Minimum usable detail — keep in sync with api/bug-report.js */
@@ -34,8 +35,6 @@ const BUG_REPORT_THANK_YOU_FULL_TEXT = BUG_REPORT_THANK_YOU_PREFIX + BUG_REPORT_
 
 /** Backdrop fades in briefly before content (matches prior feel vs full 1s line reveal) */
 const THANK_YOU_SCRIM_IN = 0.22;
-
-const ORBY_DROP_FADE_UP_PLAYING_CLASS = 'orby-drop-fade-up-playing';
 
 export class BugReportController {
   /**
@@ -451,8 +450,7 @@ export class BugReportController {
     this.thankYouLayer?.classList.remove('bug-report-thank-you-layer--under-modal');
     if (!this.thankYouLayer || !this.thankYouMessageEl) return;
     gsap.killTweensOf([this.thankYouLayer, this.thankYouMessageEl, this.thankYouOkBtn]);
-    this.thankYouMessageEl.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-    this.thankYouOkBtn?.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    killBigMessageRevealTweens(this.thankYouMessageEl, [this.thankYouOkBtn]);
     this.thankYouLayer.removeAttribute('aria-label');
     this.thankYouMessageEl.textContent = '';
     this.thankYouMessageEl.removeAttribute('aria-hidden');
@@ -486,6 +484,7 @@ export class BugReportController {
     this.ui?.uiSounds?.playNotification();
 
     gsap.killTweensOf([msg, ok]);
+    killBigMessageRevealTweens(msg, [ok]);
     if (!skipBackdropReveal) gsap.killTweensOf(layer);
 
     msg.innerHTML = `${escapeHtmlMinimal(BUG_REPORT_THANK_YOU_PREFIX)}<span class="brand-highlight">${escapeHtmlMinimal(BUG_REPORT_THANK_YOU_ACCENT_TAIL)}</span>`;
@@ -501,24 +500,22 @@ export class BugReportController {
     if (prefersReducedMotion()) {
       gsap.killTweensOf(layer);
       gsap.set(layer, { opacity: 1 });
-      gsap.set([msg, ok], { opacity: 1, y: 0, clearProps: 'transform' });
-      msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-      ok.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+      createBigMessageRevealTimeline(msg, [ok]);
       return;
     }
 
     if (skipBackdropReveal) {
       gsap.set(layer, { opacity: 1 });
-    } else {
-      gsap.set(layer, { opacity: 0 });
-      gsap.to(layer, { opacity: 1, duration: THANK_YOU_SCRIM_IN, ease: 'power2.out' });
+      createBigMessageRevealTimeline(msg, [ok]);
+      return;
     }
 
-    msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-    ok.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-    void msg.offsetWidth;
-    msg.classList.add(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-    ok.classList.add(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    gsap.set(layer, { opacity: 0 });
+    const contentTl = createBigMessageRevealTimeline(msg, [ok]);
+    gsap
+      .timeline()
+      .to(layer, { opacity: 1, duration: THANK_YOU_SCRIM_IN, ease: 'power2.out' })
+      .add(contentTl, `-=${Math.min(0.1, THANK_YOU_SCRIM_IN * 0.45)}`);
   }
 
   _dismissBugReportThankYou() {
@@ -528,9 +525,7 @@ export class BugReportController {
     if (!layer?.isConnected) return;
 
     gsap.killTweensOf([layer, msg, ok]);
-
-    msg.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
-    ok?.classList.remove(ORBY_DROP_FADE_UP_PLAYING_CLASS);
+    killBigMessageRevealTweens(msg, [ok]);
 
     const fast = prefersReducedMotion();
     const done = () => {

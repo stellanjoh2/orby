@@ -2,10 +2,108 @@
  * ResetControls - Handles all reset button logic
  * Manages copy/paste scene settings, and local/section reset buttons
  */
-import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { CAMERA_TEMPERATURE_NEUTRAL_K, DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { deepClone } from '../utils/deepClone.js';
+import { deepEqual } from '../utils/deepEqual.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
+
+/**
+ * For each `data-reset` value in the markup, the set of state paths whose
+ * values are restored by that reset button. The same paths are read by
+ * `updateResetVisibility` to decide whether the section currently differs
+ * from defaults — when combined with `_touchedResetTypes` (the user has
+ * actually changed something in this section), the reset icon shows.
+ *
+ * Paths use dot notation (e.g. `material.brightness`). Bare top-level keys
+ * (e.g. `clay`) compare the whole subtree.
+ *
+ * Keep this map in sync with the corresponding `case` blocks in
+ * `bindLocalResetButtons`: every path written there should appear here.
+ */
+const RESET_DIRTY_PATHS = {
+  material: ['material.brightness', 'material.metalness', 'material.roughness', 'material.emissive'],
+  clay: ['clay'],
+  subsurface: ['subsurface'],
+  wireframe: ['wireframe'],
+  hdri: ['hdri', 'hdriStrength', 'hdriBlurriness', 'hdriRotation', 'hdriBackground', 'lensFlare'],
+  'lens-flare': ['lensFlare'],
+  lights: [
+    'lights', 'lightsMaster', 'lightsRotation', 'lightsHeight',
+    'lightsShadowQuality', 'lightsShadowSoftness',
+    'lightsShadowContactOffset', 'lightsShadowTwoSided',
+  ],
+  'lights-shadows': [
+    'lightsCastShadows', 'lightsShadowQuality', 'lightsShadowSoftness',
+    'lightsShadowContactOffset', 'lightsShadowTwoSided',
+  ],
+  keyLight: ['lights.key'],
+  fillLight: ['lights.fill'],
+  rimLight: ['lights.rim'],
+  ambientLight: ['lights.ambient'],
+  podium: [
+    'groundSolidColor', 'groundY', 'podiumScale',
+    'podiumMetalness', 'podiumRoughness', 'podiumReflection', 'podiumClearcoat',
+  ],
+  'podium-glass': [
+    'podiumGlassSurface', 'podiumGlassBrightness', 'podiumGlassBlur', 'podiumGlassAmount',
+  ],
+  backdrop: [
+    'backdropEnabled', 'backdropScale', 'backdropWidth', 'backdropColor',
+    'backdropRotation', 'backdropY', 'backdropTextureEnabled', 'backdropTextureScale',
+  ],
+  background: ['background'],
+  grid: ['groundWireColor', 'groundWireOpacity', 'gridY', 'gridScale'],
+  dof: ['dof'],
+  bloom: ['bloom'],
+  'anamorphic-bloom': ['lensFlare.anamorphicBloom'],
+  'lens-dirt': ['lensDirt'],
+  grain: ['grain'],
+  aberration: ['aberration'],
+  'color-checker': ['colorChecker'],
+  'ambient-occlusion': ['ambientOcclusion'],
+  fresnel: ['fresnel'],
+  camera: [
+    'camera.fov', 'fisheye', 'camera.tilt', 'camera.handheld',
+    'exposure', 'autoExposure',
+    'camera.vignette', 'camera.vignetteColor',
+  ],
+  fisheye: ['fisheye'],
+  'color-correction': [
+    'camera.contrast', 'camera.temperature', 'camera.tint',
+    'camera.highlights', 'camera.shadows', 'camera.saturation',
+    'camera.clarity', 'camera.fade', 'camera.sharpness',
+  ],
+  vignette: ['camera.vignette', 'camera.vignetteColor'],
+  'tone-curve': ['toneCurve'],
+  transform: [
+    'scale', 'xOffset', 'yOffset', 'zOffset',
+    'rotationX', 'rotationY', 'rotationZ',
+  ],
+  'svg-extrude': [
+    'svgExtrude.depth', 'svgExtrude.normalAngle',
+    'svgExtrude.colorDepths', 'svgExtrude.colorOffsets',
+    'svgExtrude.flipDirection', 'svgExtrude.colorOverride',
+    'svgExtrude.overrideColor', 'svgExtrude.surfacePreset', 'svgExtrude.surfaceScale',
+  ],
+  advanced: [
+    'advanced.reverseNormals', 'advanced.transparencyFix',
+    'advanced.glassOpacity', 'advanced.glassReflection',
+    'advanced.glassTint', 'advanced.glassBody',
+    'advanced.blendSortingMitigation',
+    'advanced.flipGlassNormalMapY', 'advanced.glassFrontFacesOnly',
+  ],
+};
+
+function getAtPath(obj, path) {
+  if (!path) return obj;
+  const segments = path.split('.');
+  let current = obj;
+  for (const seg of segments) {
+    if (current == null) return undefined;
+    current = current[seg];
+  }
+  return current;
+}
 
 export class ResetControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -13,11 +111,133 @@ export class ResetControls {
     this.stateStore = stateStore;
     this.ui = uiManager;
     this.helpers = helpers;
+    /** Reset types whose section the user has interacted with this session. */
+    this._touchedResetTypes = new Set();
+    /** Per reset button: { type, scope, button }. `scope` is the DOM ancestor
+     *  whose descendants count as "this section's controls" for touch
+     *  detection. We resolve it once at bind time. */
+    this._resetScopes = [];
   }
 
   bind() {
     this.bindCopyButtons();
     this.bindLocalResetButtons();
+    this.bindResetVisibility();
+  }
+
+  /**
+   * Reset icons are hidden by default. They appear once the user actually
+   * interacts with a control inside that section — sliders, color pickers,
+   * checkboxes, dropdowns, or `<button>` clicks like "Snap to Mesh".
+   *
+   * Comparing state against `getDefaults()` directly is not enough because
+   * the app does plenty of automatic startup normalization (HDRI mood
+   * tinting Bloom, model-bottom alignment moving Grid/Podium/Backdrop Y,
+   * etc.) before the user touches anything. Those automatic mutations
+   * should not light up reset icons.
+   *
+   * Per-section "touched" tracking sidesteps all of that timing: the icon
+   * stays hidden until the user explicitly changes something in that
+   * section, regardless of what happens to state in the meantime.
+   */
+  bindResetVisibility() {
+    this._resetButtons = Array.from(document.querySelectorAll('[data-reset]'));
+    this._resetScopes = this._resetButtons
+      .map((button) => {
+        const type = (button.dataset.reset ?? '').trim();
+        if (!type) return null;
+        // Closest container that holds this section's controls. Subsections
+        // are most specific; fall back to a `[data-block]` panel block (used
+        // by the top-level Lights reset which lives directly under
+        // `.panel-block.lights`); finally the panel block itself.
+        const scope =
+          button.closest('[data-subsection]') ||
+          button.closest('[data-block]') ||
+          button.closest('.panel-block') ||
+          button.parentElement;
+        return { type, scope, button };
+      })
+      .filter(Boolean);
+
+    // Defaults are immutable in StateStore; cache once instead of cloning
+    // them on every state change (slider drags fire many notifications/sec).
+    this._cachedDefaults = this.stateStore.getDefaults();
+
+    const markTouched = (target) => {
+      if (!(target instanceof Element)) return false;
+      // Clicks/inputs on the reset button itself don't count as touching
+      // the section — that's the user undoing changes, not making new ones.
+      if (target.closest('[data-reset]')) return false;
+      // Anything inside `.block-title` is a meta-control of the section
+      // (the title text, the reset button, or the master enable toggle that
+      // mutes/unmutes the whole section). Flipping the master toggle should
+      // not count as a "change" the user can undo with reset — the section's
+      // settings haven't actually moved away from defaults yet.
+      if (target.closest('.block-title')) return false;
+      for (const { type, scope } of this._resetScopes) {
+        if (scope?.contains(target)) {
+          this._touchedResetTypes.add(type);
+        }
+      }
+      // No need to update visibility here — the bound input/click handler
+      // will trigger a `stateStore.set`, which fires our subscriber below
+      // and re-evaluates with fresh state.
+    };
+
+    const handleControlChange = (event) => markTouched(event.target);
+    document.addEventListener('input', handleControlChange, true);
+    document.addEventListener('change', handleControlChange, true);
+
+    // Some controls are plain buttons (e.g. "Snap to Mesh") that don't fire
+    // input/change. Pick those up via click — but ignore the reset button
+    // itself, which is excluded by `markTouched`.
+    const handleClick = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest('button');
+      if (!button) return;
+      markTouched(button);
+    };
+    document.addEventListener('click', handleClick, true);
+
+    this.stateStore.subscribe((state) => this.updateResetVisibility(state));
+    this.updateResetVisibility(this.stateStore.getState());
+  }
+
+  /**
+   * Mark a section as untouched so its reset icon hides again. Called after
+   * the user clicks a section's reset button — the section is now back at
+   * defaults and should behave like a fresh, untouched section.
+   */
+  clearResetTouched(type) {
+    if (!type) return;
+    this._touchedResetTypes.delete(type);
+  }
+
+  updateResetVisibility(state) {
+    if (!this._resetButtons || this._resetButtons.length === 0) return;
+    // Lazy fallback if visibility is asked for before bindResetVisibility ran.
+    const defaults = this._cachedDefaults ?? this.stateStore.getDefaults();
+    for (const button of this._resetButtons) {
+      const type = (button.dataset.reset ?? '').trim();
+      if (!this._touchedResetTypes.has(type)) {
+        button.classList.remove('is-dirty');
+        continue;
+      }
+      const paths = RESET_DIRTY_PATHS[type];
+      let dirty = false;
+      if (paths) {
+        for (const path of paths) {
+          if (!deepEqual(getAtPath(state, path), getAtPath(defaults, path))) {
+            dirty = true;
+            break;
+          }
+        }
+      } else {
+        dirty = true;
+      }
+      button.classList.toggle('is-dirty', dirty);
+    }
   }
 
   bindCopyButtons() {
@@ -343,13 +563,6 @@ export class ResetControls {
           'bloomRadius',
           'bloomColor',
           'bloomQuality',
-          'anamorphicBloomEnabled',
-          'anamorphicBloomStrength',
-          'anamorphicBloomSpread',
-          'anamorphicBloomThreshold',
-          'anamorphicBloomSoften',
-          'anamorphicBloomStreakTint',
-          'anamorphicBloomQuality',
         ],
         !defaults.bloom.enabled,
       );
@@ -681,13 +894,6 @@ export class ResetControls {
                 'bloomRadius',
                 'bloomColor',
                 'bloomQuality',
-                'anamorphicBloomEnabled',
-                'anamorphicBloomStrength',
-                'anamorphicBloomSpread',
-                'anamorphicBloomThreshold',
-                'anamorphicBloomSoften',
-                'anamorphicBloomStreakTint',
-                'anamorphicBloomQuality',
               ],
               !defaults.bloom.enabled,
             );
@@ -941,6 +1147,10 @@ export class ResetControls {
             this.ui.syncUIFromState();
             break;
         }
+        // The user just reset this section; treat it as freshly untouched
+        // so its icon stays hidden until they interact with it again.
+        this.clearResetTouched(resetType);
+        this.updateResetVisibility(this.stateStore.getState());
       });
     });
   }

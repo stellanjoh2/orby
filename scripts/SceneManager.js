@@ -11,6 +11,7 @@ import {
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   resolveBloomQualityTier,
+  isBloomPipelineActive,
   resolveRenderQualityTier,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
@@ -1046,12 +1047,7 @@ export class SceneManager {
 
   syncAnamorphicBloomFromState() {
     const state = this.stateStore.getState();
-    const tier = resolveRenderQualityTier(state.renderQuality);
-    const bloom = state.bloom ?? {};
-    const bloomOk =
-      bloom.enabled !== false &&
-      (bloom.strength ?? 0) > 0.0001 &&
-      !tier.forceBloomOff;
+    const bloomOk = isBloomPipelineActive(state);
     const defaults = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
     const raw = state.lensFlare?.anamorphicBloom ?? {};
     const merged = {
@@ -1513,13 +1509,13 @@ export class SceneManager {
 
     const bounds = new THREE.Box3().setFromObject(this.currentModel);
     if (!bounds || !isFinite(bounds.min.y)) {
-      this.ui?.showToast?.('Unable to determine mesh bottom');
+      this.ui?.showToast?.('Unable to align to mesh');
       return;
     }
 
     const bottomY = this.groundController?.snapPodiumToBounds(bounds);
     if (bottomY === null || bottomY === undefined) {
-      this.ui?.showToast?.('Unable to determine mesh bottom');
+      this.ui?.showToast?.('Unable to align to mesh');
       return;
     }
     this.stateStore.set('groundY', bottomY);
@@ -1531,7 +1527,7 @@ export class SceneManager {
     }
 
     this.ui?.showToast?.(
-      'Podium snapped to mesh bottom',
+      'Podium snapped to mesh',
       3200,
       { notification: false },
     );
@@ -1545,18 +1541,18 @@ export class SceneManager {
 
     const bounds = new THREE.Box3().setFromObject(this.currentModel);
     if (!bounds || !isFinite(bounds.min.y)) {
-      this.ui?.showToast?.('Unable to determine mesh bottom');
+      this.ui?.showToast?.('Unable to align to mesh');
       return;
     }
 
     const bottomY = this.groundController?.snapGridToBounds(bounds);
     if (bottomY === null || bottomY === undefined) {
-      this.ui?.showToast?.('Unable to determine mesh bottom');
+      this.ui?.showToast?.('Unable to align to mesh');
       return;
     }
     this.stateStore.set('gridY', bottomY);
     this.ui?.showToast?.(
-      'Grid snapped to mesh bottom',
+      'Grid snapped to mesh',
       3200,
       { notification: false },
     );
@@ -1663,12 +1659,12 @@ export class SceneManager {
     }
     const bounds = new THREE.Box3().setFromObject(this.currentModel);
     if (!bounds || !isFinite(bounds.min.y)) {
-      this.ui?.showToast?.('Unable to determine mesh bottom');
+      this.ui?.showToast?.('Unable to align to mesh');
       return;
     }
     const backdropY = this.groundController?.snapBackdropToBounds(bounds);
     if (backdropY === null || backdropY === undefined) {
-      this.ui?.showToast?.('Unable to determine mesh bottom');
+      this.ui?.showToast?.('Unable to align to mesh');
       return;
     }
     this.stateStore.set('backdropY', backdropY);
@@ -1677,7 +1673,7 @@ export class SceneManager {
       this.stateStore.set('backdropEnabled', true);
     }
     this.ui?.showToast?.(
-      'Backdrop floor snapped to mesh bottom',
+      'Backdrop snapped to mesh',
       3200,
       { notification: false },
     );

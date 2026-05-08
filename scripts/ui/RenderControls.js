@@ -23,6 +23,9 @@ const ANAMORPHIC_BLOOM_INPUT_KEYS = [
   'anamorphicBloomStreakTint',
   'anamorphicBloomQuality',
 ];
+const ANAMORPHIC_BLOOM_SLIDER_KEYS = ANAMORPHIC_BLOOM_INPUT_KEYS.filter(
+  (id) => id !== 'anamorphicBloomEnabled',
+);
 
 export class RenderControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -31,6 +34,16 @@ export class RenderControls {
     this.ui = uiManager;
     this.helpers = helpers;
     this.toneCurveController = null;
+  }
+
+  /** Anamorphic bloom: toggle follows master Bloom; sliders follow this toggle (like Lens dirt). */
+  _syncAnamorphicBloomControlsDisabled(state) {
+    const bloomOn = !!state.bloom?.enabled;
+    const abDef = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
+    const ab = { ...abDef, ...(state.lensFlare?.anamorphicBloom ?? {}) };
+    const abOn = !!ab.enabled;
+    this.ui.setEffectControlsDisabled('anamorphicBloomEnabled', !bloomOn);
+    this.ui.setEffectControlsDisabled(ANAMORPHIC_BLOOM_SLIDER_KEYS, !bloomOn || !abOn);
   }
 
   _syncColorCheckerRawToggleUi(rawOn) {
@@ -92,7 +105,6 @@ export class RenderControls {
           'bloomRadius',
           'bloomColor',
           'bloomQuality',
-          ...ANAMORPHIC_BLOOM_INPUT_KEYS,
         ],
         !enabled,
       );
@@ -773,7 +785,6 @@ export class RenderControls {
         'bloomRadius',
         'bloomColor',
         'bloomQuality',
-        ...ANAMORPHIC_BLOOM_INPUT_KEYS,
       ],
       !state.bloom.enabled,
     );
@@ -807,6 +818,7 @@ export class RenderControls {
       this.ui.inputs.anamorphicBloomQuality.value =
         qid === 'low' || qid === 'high' || qid === 'ultra' ? qid : 'medium';
     }
+    this._syncAnamorphicBloomControlsDisabled(state);
 
     // Lens Dirt
     if (this.ui.inputs.lensDirtStrength && state.lensDirt) {

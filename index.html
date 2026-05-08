@@ -183,9 +183,8 @@
       <div class="orby-not-found-copy">
         <h1 id="orbyNotFoundTitle" class="orby-not-found-title">404</h1>
         <p class="orby-not-found-message">
-          You've drifted beyond the scene bounds.<br />
-          There's nothing out here — no geometry, no light, no ground.<br />
-          Just void.
+          <span class="orby-not-found-emphasis">Nothing to see here.</span> You've drifted beyond the scene bounds.
+          There's nothing out here — no geometry, no light, no ground. Just void.
         </p>
         <button type="button" id="orbyNotFoundReturnBtn" class="accent-action-btn orby-not-found-btn">
           Return home screen
@@ -1120,7 +1119,7 @@
                     <span class="value" data-output="gridScale">1.00</span>
                   </label>
                   <button id="gridSnap" class="ghost-btn small" type="button">
-                    Snap To Bottom
+                    Snap to Mesh
                   </button>
                 </div>
               </div>
@@ -1375,8 +1374,8 @@
                     />
                     <span class="value" data-output="podiumRoughness">0.50</span>
                   </label>
-                  <button id="podiumSnap" class="ghost-btn small" type="button" data-tooltip="Position podium at the bottom of the object">
-                    Snap To Bottom
+                  <button id="podiumSnap" class="ghost-btn small" type="button" data-tooltip="Align podium to mesh base">
+                    Snap to Mesh
                   </button>
                 </div>
                 <div id="studioPodiumGlassPanel" hidden>
@@ -1527,8 +1526,8 @@
                     />
                     <span class="value" data-output="backdropY">0.00m</span>
                   </label>
-                  <button id="backdropSnap" class="ghost-btn small" type="button" data-tooltip="Position backdrop floor at the bottom of the object">
-                    Snap To Bottom
+                  <button id="backdropSnap" class="ghost-btn small" type="button" data-tooltip="Align backdrop floor to mesh base">
+                    Snap to Mesh
                   </button>
                 </div>
               </div>
@@ -3015,7 +3014,7 @@
             <h2 class="panel-header-title" data-header="export">Export</h2>
             <section class="panel" data-panel="export">
               <div class="panel-block">
-                <h3 class="export-format-headline">PNG</h3>
+                <div class="block-title">PNG</div>
                 <p class="export-format-sub">
                   Raster snapshot of the current view—lighting, materials, and post effects included. Toggle transparency to drop the background; size is relative to the viewer—1× matches your current screen resolution, 2× exports at double that (larger file, more detail).
                 </p>
@@ -3042,7 +3041,7 @@
               </div>
 
               <div class="panel-block">
-                <h3 class="export-format-headline">SVG</h3>
+                <div class="block-title">SVG</div>
                 <p class="export-format-sub">
                   Vector output derived from the current framing—great for logos, precision edges, and scaling without pixels. Silhouette traces a single outline; Color builds flat filled regions from the render.
                 </p>
@@ -3067,7 +3066,7 @@
               </div>
 
               <div class="panel-block">
-                <h3 class="export-format-headline">GLB</h3>
+                <div class="block-title">GLB</div>
                 <p class="export-format-sub">
                   Turn extruded logos, icons, or other vector graphics into a .GLB for other 3D tools and AR. Only when you started from an imported SVG. Tip: dial in extrusion and materials before exporting.
                 </p>
@@ -3079,7 +3078,7 @@
                 </div>
               </div>
               <div class="panel-block">
-                <h3 class="export-format-headline">Video</h3>
+                <div class="block-title">Video</div>
                 <p class="export-format-sub">
                   Turntable spins the mesh 360 degrees from the exact framing and transforms in your viewport. Dolly is planned next.
                 </p>
@@ -3161,7 +3160,6 @@
               </button>
             </section>
 
-            <h2 class="panel-header-title" data-header="info">Information</h2>
             <section class="panel" data-panel="info">
               <!-- Logotype Animation -->
               <div class="info-logotype-container">
@@ -3182,34 +3180,6 @@
                 </button>
               </div>
 
-              <div class="panel-block" id="info-sounds">
-                <div class="block-title has-toggle">
-                  <span>
-                    <i class="fa-solid fa-volume-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
-                    UI Sounds
-                  </span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="uiSoundsEnabled" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">UI sounds on</span>
-                    </label>
-                  </div>
-                </div>
-                <label class="slider-line">
-                  <span>Volume</span>
-                  <input
-                    id="uiSoundsVolume"
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value="100"
-                  />
-                  <span class="value" data-output="uiSoundsVolume">100%</span>
-                </label>
-              </div>
-              
               <!-- Quick Navigation for Information tab -->
               <div class="panel-block">
                 <div class="block-title">
@@ -3217,8 +3187,8 @@
                   Quick Navigation
                 </div>
                 <nav class="info-quicknav" style="display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; font-size: 0.85rem; color: var(--text-dim);">
-                  <a href="#info-sounds">UI Sounds</a>
                   <a href="#info-shortcuts">Shortcuts</a>
+                  <a href="#info-sounds">UI Sounds</a>
                   <a href="#info-mouse">Mouse</a>
                   <a href="#info-gamepad">Gamepad</a>
                   <a href="#info-about">About Orby</a>
@@ -3345,6 +3315,34 @@
                     <span class="shortcut-keys"><kbd>Esc</kbd></span>
                   </div>
                 </div>
+              </div>
+
+              <div class="panel-block" id="info-sounds">
+                <div class="block-title has-toggle">
+                  <span>
+                    <i class="fa-solid fa-volume-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                    UI Sounds
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="uiSoundsEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">UI sounds on</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Volume</span>
+                  <input
+                    id="uiSoundsVolume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="100"
+                  />
+                  <span class="value" data-output="uiSoundsVolume">100%</span>
+                </label>
               </div>
 
               <div class="panel-block" id="info-mouse">

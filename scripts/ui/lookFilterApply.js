@@ -65,13 +65,6 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
         'bloomRadius',
         'bloomColor',
         'bloomQuality',
-        'anamorphicBloomEnabled',
-        'anamorphicBloomStrength',
-        'anamorphicBloomSpread',
-        'anamorphicBloomThreshold',
-        'anamorphicBloomSoften',
-        'anamorphicBloomStreakTint',
-        'anamorphicBloomQuality',
       ],
       !b.bloom.enabled,
     );

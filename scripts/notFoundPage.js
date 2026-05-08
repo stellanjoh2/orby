@@ -265,9 +265,7 @@ const NOT_FOUND_MESSAGE_HTML = `
     class="orby-not-found-symbol"
   />
   <br />
-  You've drifted beyond
-  <br />
-  the scene bounds.
+  <span class="orby-not-found-emphasis">Nothing to see here.</span> You've drifted beyond the scene bounds.
 `;
 
 function waitForOrby() {
@@ -291,6 +289,13 @@ function waitForOrby() {
 
 function applyNotFoundUiState() {
   document.body.classList.add('orby-not-found-active');
+  document.body.classList.remove('orby-not-found-fade-ready');
+  // Trigger a route-local fade from black into the 404 scene/UI.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.body.classList.add('orby-not-found-fade-ready');
+    });
+  });
   const legacyOverlay = document.getElementById('orbyNotFoundPage');
   if (legacyOverlay) {
     legacyOverlay.hidden = true;
@@ -350,6 +355,22 @@ function enforceBlackBackground(orby) {
     orby.scene.setHdriBackground(false);
   }
   orby.scene?.backgroundController?.setColor?.('#000000');
+  // Hard clamp renderer output to opaque black (avoids gray startup frames).
+  const renderer = orby.scene?.renderer;
+  if (renderer?.setClearColor) {
+    renderer.setClearColor('#000000', 1);
+  }
+  if (renderer?.setClearAlpha) {
+    renderer.setClearAlpha(1);
+  }
+}
+
+function enforceBlackBackgroundHard(orby) {
+  enforceBlackBackground(orby);
+  // Some post FX/controllers re-apply state on initial frames; pin black briefly.
+  window.setTimeout(() => enforceBlackBackground(orby), 120);
+  window.setTimeout(() => enforceBlackBackground(orby), 400);
+  window.setTimeout(() => enforceBlackBackground(orby), 900);
 }
 
 function pushCameraCloserFor404(orby) {
@@ -411,21 +432,28 @@ async function setupNotFoundExperience() {
 
   orby.stateStore.setTopLevelBundle(NOT_FOUND_PRESET);
   orby.eventBus.emit('app:reset');
-  enforceBlackBackground(orby);
+  enforceBlackBackgroundHard(orby);
 
   const onLoaded = ({ success }) => {
     if (!success) return;
-    enforceBlackBackground(orby);
+    enforceBlackBackgroundHard(orby);
     orby.eventBus.off('scene:model-load-complete', onLoaded);
   };
   orby.eventBus.on('scene:model-load-complete', onLoaded);
 
   try {
     const file = await fetchNotFoundMesh();
-    orby.eventBus.emit('file:selected', {
-      file,
-      suppressSuccessToastSound: true,
-    });
+    if (typeof orby.scene?.loadFile === 'function') {
+      await orby.scene.loadFile(file, {
+        silent: true,
+        suppressSuccessToastSound: true,
+      });
+    } else {
+      orby.eventBus.emit('file:selected', {
+        file,
+        suppressSuccessToastSound: true,
+      });
+    }
   } catch (error) {
     console.error('Failed to load 404 mesh', error);
   }

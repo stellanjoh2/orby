@@ -334,7 +334,7 @@ Customizable platform for product presentations:
 - **Color** - Customizable podium color
 - **Scale** - Adjust podium size
 - **Position** - Vertical position control
-- **Snap to Bottom** - Automatically position at model bottom
+- **Snap to Mesh** - Automatically position at mesh base
 
 #### Grid
 Ground grid for alignment and perspective:
@@ -342,7 +342,7 @@ Ground grid for alignment and perspective:
 - **Opacity** - Grid visibility control
 - **Scale** - Grid cell size
 - **Position** - Vertical position control
-- **Snap to Bottom** - Automatically position at model bottom
+- **Snap to Mesh** - Automatically position at mesh base
 
 #### Background
 Render backdrop (HDRI):

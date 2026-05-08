@@ -41,6 +41,12 @@
   --app-settings-chrome-radius: 18px;
   /* Object shelf Scene / Export pills, modal footers — keep in sync */
   --ui-accent-action-font-size: 0.8rem;
+  /* Home dropzone + fullscreen prompt / thank-you primary pills — single spec (do not drift) */
+  --ui-hero-pill-font-size: calc(var(--ui-accent-action-font-size) * 1.2);
+  --ui-hero-pill-pad-block: calc(0.52rem * 1.2);
+  --ui-hero-pill-pad-inline: calc(1.9rem * 1.2);
+  /* Multiply caption opacity inside muted .subsection / .panel-block (two ×~25% steps vs full captions) */
+  --muted-section-text-scale: 0.5625;
 }
 
 .brand-font-headline {
@@ -208,8 +214,13 @@ body.orby-not-found-active #demoLogotype {
 }
 
 body.orby-not-found-active #webgl {
-  opacity: 1 !important;
+  opacity: 0 !important;
   pointer-events: none !important;
+  transition: opacity 2000ms ease;
+}
+
+body.orby-not-found-active.orby-not-found-fade-ready #webgl {
+  opacity: 1 !important;
 }
 
 .orby-not-found-page {
@@ -260,8 +271,14 @@ body.orby-not-found-active #webgl {
 .orby-not-found-message {
   margin: 0;
   font-size: clamp(0.92rem, 2.2vw, 1.05rem);
-  line-height: 1.5;
+  line-height: 1.2;
   color: rgba(245, 241, 255, 0.92);
+}
+
+.orby-not-found-message .orby-not-found-emphasis,
+.bug-report-thank-you-message .orby-not-found-emphasis {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .orby-not-found-btn {
@@ -282,17 +299,21 @@ body.orby-not-found-active #orbyFullscreenPrompt {
 body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-stack {
   /* About 20% wider measure on large displays. */
   max-width: min(69.6rem, 96vw);
+  transform: scale(1.25);
+  transform-origin: center center;
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-message {
   max-width: 100%;
+  line-height: 1.2;
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .orby-not-found-symbol {
   display: block;
-  width: 192px;
-  height: 192px;
+  width: 144px;
+  height: 144px;
   margin: 0 auto;
+  animation: orbyNotFoundSymbolSpin 36s linear infinite;
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions > button {
@@ -300,9 +321,34 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   white-space: nowrap;
 }
 
+body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptNo {
+  display: none !important;
+}
+
+body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions {
+  grid-template-columns: 1fr;
+  width: min(100%, 12rem);
+  justify-content: center;
+}
+
 body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--ghost:focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+@keyframes orbyNotFoundSymbolSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.orby-not-found-active #orbyFullscreenPrompt .orby-not-found-symbol {
+    animation: none;
+  }
 }
 
 
@@ -360,20 +406,19 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 /* Secondary buttons - transparent style */
 .ghost-btn {
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   padding: 0.75rem 1.25rem;
   font-family: inherit;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border 0.2s;
+  transition: background 0.2s, color 0.2s;
   width: 100%;
 }
 
 .ghost-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ghost-btn.small {
@@ -382,9 +427,26 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
   width: auto;
 }
 
+/* Same dim label tone as Reset Studio (.accent-action-btn at rest) / secondary UI */
+#gridSnap.ghost-btn,
+#podiumSnap.ghost-btn,
+#backdropSnap.ghost-btn {
+  color: var(--text-dim);
+  /* Match .ghost-btn / .accent-action-btn 0.2s; opacity eases mute ↔ unmute */
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s ease;
+}
+
+/* Match bottom settings accent CTAs on hover — full lime fill + dark label */
+#gridSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#podiumSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#backdropSnap.ghost-btn:hover:not(:disabled):not(.is-disabled) {
+  background: var(--accent);
+  color: var(--brand-text);
+  box-shadow: var(--ui-accent-outer-glow);
+}
+
 .ghost-btn.active {
   background: var(--accent-muted);
-  border-color: var(--accent);
   color: var(--accent);
 }
 
@@ -428,7 +490,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 50%;
-  border: 1px solid var(--stroke);
+  border: none;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
   display: inline-flex;
@@ -436,11 +498,10 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
   justify-content: center;
   font-size: 1rem;
   cursor: pointer;
-  transition: border 0.2s, background 0.2s, color 0.2s, opacity 0.2s;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
 }
 
 .animation-play-btn:hover:not(:disabled) {
-  border-color: var(--accent);
   color: var(--accent);
   background: rgba(255, 255, 255, 0.12);
 }
@@ -812,7 +873,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   flex-direction: column;
   align-items: center;
   gap: 2.25rem;
-  max-width: min(58rem, 96vw);
+  max-width: min(64rem, 96vw);
   pointer-events: none;
   cursor: default;
 }
@@ -832,8 +893,12 @@ html.orby-gate-unlocked .orby-entry-gate {
 }
 
 .orby-fullscreen-prompt-btn--ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--stroke) 88%, transparent);
+  border: none;
   padding: 0.52rem 1.9rem;
   font-family: inherit;
   font-size: var(--ui-accent-action-font-size);
@@ -845,38 +910,15 @@ html.orby-gate-unlocked .orby-entry-gate {
   box-shadow: none;
   transition:
     filter 0.15s ease,
-    transform 0.15s ease,
-    border-color 0.15s ease;
+    transform 0.15s ease;
 }
 
 .orby-fullscreen-prompt-btn--ghost:hover {
   filter: brightness(1.08);
-  border-color: color-mix(in srgb, var(--text-dim) 50%, transparent);
 }
 
 .orby-fullscreen-prompt-btn--ghost:active {
   transform: scale(0.98);
-}
-
-.orby-fullscreen-prompt-stack .bug-report-thank-you-message.orby-drop-fade-up-playing {
-  --orby-fade-delay: 0s;
-}
-
-.orby-fullscreen-prompt-stack .orby-fullscreen-prompt-btn--ghost.orby-drop-fade-up-playing {
-  --orby-fade-delay: 0.12s;
-}
-
-.orby-fullscreen-prompt-stack .orby-fullscreen-prompt-actions .bug-report-thank-you-ok.orby-drop-fade-up-playing {
-  --orby-fade-delay: 0.24s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .orby-fullscreen-prompt-stack .orby-fullscreen-prompt-btn--ghost.orby-drop-fade-up-playing,
-  .orby-fullscreen-prompt-stack .orby-fullscreen-prompt-actions .bug-report-thank-you-ok.orby-drop-fade-up-playing {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
 }
 
 .bug-report-thank-you-message {
@@ -885,45 +927,26 @@ html.orby-gate-unlocked .orby-entry-gate {
   text-align: center;
   /* Match landing .drop-primary */
   font-family: var(--brand-font-headline);
-  font-size: clamp(1.9rem, 4.4vw, 3.6rem);
+  font-size: clamp(2.28rem, 5.28vw, 4.32rem);
   font-weight: 400;
   letter-spacing: 0.04em;
   line-height: 1.1;
   color: var(--text);
-  text-wrap: balance;
+  text-wrap: wrap;
   pointer-events: none;
 }
 
-/*
- * Same fade-up as landing `.drop-primary` (dropReveal + cubic-bezier).
- * Toggle class per play so dev replay restarts cleanly.
- */
-.orby-drop-fade-up-playing {
-  opacity: 0;
-  transform: translateY(-15px);
-  animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) var(--orby-fade-delay, 0s) forwards;
-}
-
-.bug-report-thank-you-stack .bug-report-thank-you-message.orby-drop-fade-up-playing {
-  --orby-fade-delay: 0s;
-}
-
-.bug-report-thank-you-stack .bug-report-thank-you-ok.orby-drop-fade-up-playing {
-  --orby-fade-delay: 0.12s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bug-report-thank-you-message.orby-drop-fade-up-playing,
-  .bug-report-thank-you-ok.orby-drop-fade-up-playing {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
+.bug-report-thank-you-message .orby-stagger-word {
+  display: inline-block;
 }
 
 .bug-report-thank-you-ok {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--brand-primary) 72%, transparent);
+  border: none;
   padding: 0.52rem 1.9rem;
   font-family: inherit;
   font-size: var(--ui-accent-action-font-size);
@@ -935,7 +958,6 @@ html.orby-gate-unlocked .orby-entry-gate {
   box-shadow: none;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease,
     color 0.15s ease,
     filter 0.15s ease,
     transform 0.15s ease,
@@ -946,7 +968,6 @@ html.orby-gate-unlocked .orby-entry-gate {
 .bug-report-thank-you-ok:focus-visible {
   background: #fff;
   color: var(--brand-text);
-  border-color: color-mix(in srgb, var(--brand-primary) 48%, #ffffff);
   filter: none;
   box-shadow: var(--ui-accent-outer-glow);
 }
@@ -955,12 +976,12 @@ html.orby-gate-unlocked .orby-entry-gate {
   transform: scale(0.98);
 }
 
-/* Home confirm + bug thank-you: larger pill CTAs (~20%) — same full-radius pill */
+/* Home confirm + bug thank-you: larger pill CTAs (~20%); tokens shared with .dropzone-btn */
 #orbyFullscreenPrompt .bug-report-thank-you-ok,
 #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--ghost,
 #bugReportThankYouLayer .bug-report-thank-you-ok {
-  font-size: calc(var(--ui-accent-action-font-size) * 1.2);
-  padding: calc(0.52rem * 1.2) calc(1.9rem * 1.2);
+  font-size: var(--ui-hero-pill-font-size);
+  padding: var(--ui-hero-pill-pad-block) var(--ui-hero-pill-pad-inline);
   border-radius: 999px;
 }
 
@@ -1420,13 +1441,12 @@ html.orby-gate-unlocked .orby-entry-gate {
   flex: 1;
   min-width: 0;
   padding: 0.5rem 1rem;
-  border: 1px solid var(--stroke);
+  border: none;
   background: rgba(255, 255, 255, 0.1);
   color: var(--text);
 }
 
 .bug-report-content .bug-report-modal-btn.ghost-btn:hover {
-  border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--stroke));
   background: rgba(255, 255, 255, 0.14);
   color: var(--text);
 }
@@ -1436,7 +1456,6 @@ html.orby-gate-unlocked .orby-entry-gate {
     opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
     background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
     color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
     filter 0.2s ease;
 }
@@ -1451,7 +1470,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   opacity: 1;
   background: var(--brand-primary);
   color: var(--brand-text);
-  border-color: color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  border: none;
   box-shadow: none;
 }
 
@@ -1465,13 +1484,13 @@ html.orby-gate-unlocked .orby-entry-gate {
   opacity: 0.48;
   cursor: not-allowed;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   box-shadow: none;
   color: var(--text-dim);
 }
 
 .primary-btn {
-  border-color: transparent;
+  border: none;
   background: linear-gradient(120deg, var(--accent), var(--accent-strong));
   color: var(--brand-text);
   font-weight: 700;
@@ -1488,14 +1507,14 @@ html.orby-gate-unlocked .orby-entry-gate {
   width: 100%;
   padding: 0.5rem 1rem;
   border-radius: 999px; /* Fully rounded */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-family: inherit;
   font-size: var(--ui-accent-action-font-size);
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1509,7 +1528,6 @@ html.orby-gate-unlocked .orby-entry-gate {
 .accent-action-btn:hover {
   background: var(--accent);
   color: var(--brand-text);
-  border-color: var(--accent);
   box-shadow: var(--ui-accent-outer-glow);
   opacity: 1;
 }
@@ -1523,7 +1541,6 @@ html.orby-gate-unlocked .orby-entry-gate {
   opacity: 1;
   background: var(--accent);
   color: var(--brand-text);
-  border-color: var(--accent);
   box-shadow: var(--ui-accent-outer-glow);
 }
 
@@ -1543,18 +1560,21 @@ html.orby-gate-unlocked .orby-entry-gate {
 }
 
 .dropzone-btn {
-  padding: calc(0.52rem * 1.2) calc(1.9rem * 1.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: var(--ui-hero-pill-pad-block) var(--ui-hero-pill-pad-inline);
   border-radius: 999px; /* Fully rounded like accent-action-btn */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   background: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-family: inherit;
-  font-size: calc(var(--ui-accent-action-font-size) * 1.2);
+  font-size: var(--ui-hero-pill-font-size);
   font-weight: 700;
   letter-spacing: 0.02em;
-  line-height: 1;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
   opacity: 0;
   transform: translateY(-15px);
   animation: dropRevealButton 1s cubic-bezier(0.16, 1, 0.3, 1) 1.05s forwards;
@@ -1627,7 +1647,6 @@ html.orby-gate-unlocked .orby-entry-gate {
 .dropzone-btn:hover {
   background: var(--accent) !important;
   color: var(--brand-text) !important;
-  border-color: var(--accent) !important;
   box-shadow: var(--ui-accent-outer-glow) !important;
   opacity: 1 !important;
 }
@@ -2453,6 +2472,10 @@ a.about-highlight:focus-visible {
 
 .panels {
   flex: 1;
+  /* Column flex items default min-width:auto — long unbroken mesh metadata can widen
+     past the shelf, break scrolling, and make the accent scrollbar paint as a solid block. */
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
   padding: var(--shelf-g) var(--shelf-g) 3rem var(--shelf-g);
@@ -2520,6 +2543,7 @@ a.about-highlight:focus-visible {
   position: relative;
 }
 
+/* Tab name only (Object, Studio, …). Do not use --brand-font-headline for in-panel section labels — those are .block-title. */
 .panel-header-title {
   font-family: var(--brand-font-headline);
   display: none;
@@ -2583,6 +2607,7 @@ a.about-highlight:focus-visible {
 
 /* Muted UI logic removed - will be reimplemented later */
 
+/* Shelf section headings (all tabs): body font stack. Never use --brand-font-headline here—that is only for .panel-header-title and dropzone/marketing headlines. */
 .block-title {
   font-size: 1.0rem;
   letter-spacing: 0.05em;
@@ -2591,11 +2616,55 @@ a.about-highlight:focus-visible {
   font-weight: 400;
 }
 
-/* Muted blocks: reduce headline opacity */
-.is-muted .block-title {
-  opacity: 0.75;
-  /* Also desaturate the accent color when muted */
+/*
+ * Muted .subsection / .panel-block — captions use --muted-section-text-scale; .block-title text stays opacity 1.
+ * Heading color stays the muted blend (25% accent / 75% text-dim). Scope avoids export foldout double-dimming.
+ * No opacity on the whole .block-title so .effect-toggle stays visually full strength.
+ */
+:is(.subsection, .panel-block).is-muted .block-title {
+  opacity: 1;
   color: color-mix(in srgb, var(--accent) 25%, var(--text-dim) 75%);
+}
+
+:is(.subsection, .panel-block).is-muted .block-title:not(:has(> span)) {
+  opacity: 1;
+}
+
+:is(.subsection, .panel-block).is-muted .block-title > span:first-child {
+  opacity: 1;
+}
+
+/* Only dim the reset icon while muted *if it is currently shown* (`.is-dirty`).
+   Without `.is-dirty` this selector would otherwise win over `.block-reset-btn`'s
+   default `opacity: 0`, leaking the icon through on every muted section at
+   startup (Fresnel, Grid, Podium, Backdrop, DoF, Bloom, …) before the user
+   has touched anything. */
+:is(.subsection, .panel-block).is-muted
+  .block-title
+  .block-reset-btn.is-dirty:not(:disabled):not(.is-disabled) {
+  opacity: calc(0.75 * var(--muted-section-text-scale));
+}
+
+:is(.subsection, .panel-block).is-muted .slider-line > span:first-child,
+:is(.subsection, .panel-block).is-muted .slider-line .value,
+:is(.subsection, .panel-block).is-muted .color-line > span:first-child,
+:is(.subsection, .panel-block).is-muted .select-line > span:first-child,
+:is(.subsection, .panel-block).is-muted .select-line select,
+:is(.subsection, .panel-block).is-muted .ghost-btn:not(:disabled):not(.is-disabled),
+:is(.subsection, .panel-block).is-muted .panel-hint,
+:is(.subsection, .panel-block).is-muted .map-slot-row > span:first-child,
+:is(.subsection, .panel-block).is-muted .map-slot-name,
+:is(.subsection, .panel-block).is-muted .advanced-import-details summary,
+:is(.subsection, .panel-block).is-muted .svg-extrude-note,
+:is(.subsection, .panel-block).is-muted .look-filter-tile__label {
+  opacity: var(--muted-section-text-scale);
+}
+
+/* Snap-to-mesh CTAs: dimmer than other muted captions (−25% vs --muted-section-text-scale) */
+:is(.subsection, .panel-block).is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
+:is(.subsection, .panel-block).is-muted #podiumSnap.ghost-btn:not(:disabled):not(.is-disabled),
+:is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled) {
+  opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
 
 .block-title.has-toggle {
@@ -2613,34 +2682,67 @@ a.about-highlight:focus-visible {
 
 .block-reset-btn {
   border: none;
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text);
+  background: transparent;
+  color: var(--text-dim);
   width: 26px;
   height: 22px;
-  border-radius: 4px;
+  padding: 0 0 1px 0;
+  border-radius: 0;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: flex-end;
   cursor: pointer;
-  transition: background 0.2s;
   font-family: inherit;
+  /* Hidden until the section has drifted from defaults; ResetControls
+     toggles `.is-dirty`. We keep layout space (no display: none) so the
+     title row never reflows when the icon appears. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, color 0.2s;
+}
+
+.block-reset-btn.is-dirty {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .block-reset-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--accent);
 }
 
 .block-reset-btn i {
   width: 16px;
   height: 16px;
-  color: var(--text-dim);
-  stroke: var(--text-dim);
+  color: inherit;
+  stroke: currentColor;
+  transition: color 0.2s, stroke 0.2s;
+}
+
+.block-reset-btn:hover i {
+  color: var(--accent);
+  stroke: var(--accent);
 }
 
 .block-reset-btn:disabled,
 .block-reset-btn.is-disabled {
-  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.block-reset-btn.is-dirty:disabled,
+.block-reset-btn.is-dirty.is-disabled {
+  opacity: 0.6;
+}
+
+.block-reset-btn:disabled:hover,
+.block-reset-btn.is-disabled:hover {
+  color: var(--text-dim);
+}
+
+.block-reset-btn:disabled:hover i,
+.block-reset-btn.is-disabled:hover i {
+  color: var(--text-dim);
+  stroke: var(--text-dim);
 }
 
 /* Toggle base - always isolated, never affected by muting */
@@ -2751,7 +2853,7 @@ a.about-highlight:focus-visible {
 }
 
 .segmented label {
-  border: 1px solid var(--stroke);
+  border: none;
   padding: 0.5rem 0.4rem;
   border-radius: 999px;
   text-align: center;
@@ -2760,7 +2862,7 @@ a.about-highlight:focus-visible {
   letter-spacing: -0.01em;
   color: var(--text);
   background: rgba(255, 255, 255, 0.15);
-  transition: border 0.2s, color 0.2s, background 0.2s, opacity 0.2s, box-shadow 0.2s ease;
+  transition: color 0.2s, background 0.2s, opacity 0.2s, box-shadow 0.2s ease;
   opacity: 0.6;
   display: flex;
   align-items: center;
@@ -2769,10 +2871,9 @@ a.about-highlight:focus-visible {
   min-height: 2.5rem; /* Match other pill buttons */
 }
 
-/* Unselected hover: same “outlined / muted lime” look the selected state used before */
+/* Unselected hover: muted lime wash; label text goes brand lime (not white) */
 .segmented label:hover:not(:has(input:checked)) {
-  border-color: var(--accent);
-  color: var(--text);
+  color: var(--brand-primary);
   background: var(--accent-muted);
   opacity: 1;
   box-shadow: none;
@@ -2790,7 +2891,7 @@ a.about-highlight:focus-visible {
 
 .segmented input:checked + span,
 .segmented label:has(input:checked) {
-  border: 1px solid transparent;
+  border: none;
   background: var(--accent);
   color: var(--brand-text);
   box-shadow: none !important;
@@ -3294,7 +3395,7 @@ input[type='range']:disabled::-moz-range-thumb {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  border: 1px solid var(--stroke);
+  border: none;
   background: rgba(0, 0, 0, 0.5);
   color: var(--text-dim);
   display: none;
@@ -3306,7 +3407,6 @@ input[type='range']:disabled::-moz-range-thumb {
   opacity: 0.75;
   transition:
     background 0.2s,
-    border-color 0.2s,
     color 0.2s,
     box-shadow 0.2s,
     transform 0.2s,
@@ -3320,7 +3420,6 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .viewport-fullscreen-btn:hover {
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--brand-text);
   box-shadow: var(--ui-accent-outer-glow);
   opacity: 1;
@@ -3515,8 +3614,12 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 .stats-block dl {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
+}
+
+.stats-block dl > div {
+  min-width: 0;
 }
 
 .stats-block dt {
@@ -3529,6 +3632,8 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   margin: 0.2rem 0 0;
   font-size: 1rem;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .animation-controls {
@@ -3552,7 +3657,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 .select-line select {
   grid-column: span 1;
-  border: 1px solid var(--stroke);
+  border: none;
   border-radius: 999px;
   padding: 0.35rem 1.6rem 0.35rem 0.7rem;
   color: var(--text);
@@ -3562,6 +3667,11 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.6rem center;
+}
+
+.select-line select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
 .hdri-grid {
@@ -3631,17 +3741,6 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   transform: scale(1.1);
 }
 
-/* Export format sections (Export tab) */
-.export-format-headline {
-  font-family: var(--brand-font-headline);
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  color: var(--brand-primary);
-  margin: 0 0 0.4rem 0;
-}
-
 .export-format-sub {
   margin: 0 0 1rem 0;
   font-size: 0.8rem;
@@ -3692,7 +3791,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 /* Export buttons use same styling as HDRI buttons */
 .export-option-btn {
-  border: 1px solid var(--stroke);
+  border: none;
   border-radius: 999px;
   padding: 0.5rem 0.4rem;
   letter-spacing: -0.01em;
@@ -3700,7 +3799,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   color: var(--text);
   background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
-  transition: border 0.2s, box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
+  transition: box-shadow 0.2s, color 0.2s, opacity 0.2s, background 0.2s;
   text-align: center;
   opacity: 0.6;
   display: flex;
@@ -3711,16 +3810,13 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 }
 
 .export-option-btn:hover:not(:disabled):not(.is-disabled):not(.active) {
-  border-color: var(--accent);
   color: var(--text);
   background: var(--accent-muted);
   opacity: 1;
 }
 
 .export-option-btn.active {
-  /* Transparent border keeps 1px layout; fill paints through it so no lime-on-lime fringe
-     (reads as a halo next to shelf backdrop-filter + subpixel AA) */
-  border: 1px solid transparent;
+  border: none;
   color: var(--brand-text);
   background: var(--accent);
   box-shadow: none !important;
@@ -3867,7 +3963,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   transform: translateX(-50%);
   padding: 0.75rem 1.25rem;
   background: rgba(6, 12, 24, 0.8);
-  border: 1px solid var(--accent);
+  border: none;
   border-radius: 999px;
   letter-spacing: -0.01em;
   font-size: 0.8rem;
@@ -4205,7 +4301,7 @@ body.ui-hidden .shelf {
   align-items: stretch;
   margin: 0;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   border-radius: 5px;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.2);
@@ -4217,21 +4313,18 @@ body.ui-hidden .shelf {
   cursor: pointer;
   text-align: center;
   transition:
-    border-color 0.15s ease,
-    border 0.15s ease,
     color 0.15s ease,
     background 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .look-filter-tile:hover {
-  border-color: rgba(255, 255, 255, 0.2);
   color: var(--text, #e8e8e8);
   background: rgba(255, 255, 255, 0.04);
 }
 
 .look-filter-tile.is-selected {
-  border: 1px solid var(--accent);
+  border: none;
   color: var(--text, #e8e8e8);
   box-shadow: none;
   background: var(--accent-muted);

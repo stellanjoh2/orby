@@ -8,6 +8,7 @@ import {
   DEFAULT_PODIUM_GLASS_BRIGHTNESS,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
+  isBloomPipelineActive,
   sanitizeDof,
   sanitizeAmbientOcclusion,
 } from './constants.js';
@@ -2117,9 +2118,10 @@ export class UIManager {
     // Bloom block - only muted if bloom.enabled is false
     this.setBlockMuted('bloom', !currentState.bloom?.enabled);
 
+    const abOn = !!currentState.lensFlare?.anamorphicBloom?.enabled;
     this.setBlockMuted(
       'anamorphic-lens-flare',
-      !(currentState.bloom?.enabled && (currentState.bloom?.strength ?? 0) > 0.0001),
+      !(isBloomPipelineActive(currentState) && abOn),
     );
 
     // Lens dirt block - only muted if lens dirt disabled

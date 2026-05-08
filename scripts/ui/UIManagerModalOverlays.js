@@ -5,10 +5,13 @@
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 
 import { animateModalOpen, prefersReducedMotion, snapModalHidden } from './modalReveal.js';
+import {
+  createBigMessageRevealTimeline,
+  killBigMessageRevealTweens,
+} from './bigMessageHeadlineReveal.js';
 
 /** Full-screen prompt — match BugReportController thank-you scrim */
 const ORBY_FULLSCREEN_SCRIM_IN = 0.22;
-const ORBY_DROP_FADE_UP_CLASS = 'orby-drop-fade-up-playing';
 
 export class UIManagerModalOverlays {
   /**
@@ -230,6 +233,7 @@ export class UIManagerModalOverlays {
     if (!layer || !msg || !noBtn || !yesBtn) return;
 
     gsap.killTweensOf([layer, msg, noBtn, yesBtn]);
+    killBigMessageRevealTweens(msg, [noBtn, yesBtn]);
 
     layer.removeAttribute('hidden');
     layer.style.display = 'flex';
@@ -238,19 +242,16 @@ export class UIManagerModalOverlays {
     if (prefersReducedMotion()) {
       gsap.killTweensOf(layer);
       gsap.set(layer, { opacity: 1 });
-      gsap.set([msg, noBtn, yesBtn], { opacity: 1, y: 0, clearProps: 'transform' });
-      [msg, noBtn, yesBtn].forEach((el) => el.classList.remove(ORBY_DROP_FADE_UP_CLASS));
+      createBigMessageRevealTimeline(msg, [noBtn, yesBtn]);
       return;
     }
 
     gsap.set(layer, { opacity: 0 });
-    gsap.to(layer, { opacity: 1, duration: ORBY_FULLSCREEN_SCRIM_IN, ease: 'power2.out' });
-
-    [msg, noBtn, yesBtn].forEach((el) => {
-      el.classList.remove(ORBY_DROP_FADE_UP_CLASS);
-    });
-    void msg.offsetWidth;
-    [msg, noBtn, yesBtn].forEach((el) => el.classList.add(ORBY_DROP_FADE_UP_CLASS));
+    const contentTl = createBigMessageRevealTimeline(msg, [noBtn, yesBtn]);
+    gsap
+      .timeline()
+      .to(layer, { opacity: 1, duration: ORBY_FULLSCREEN_SCRIM_IN, ease: 'power2.out' })
+      .add(contentTl, `-=${Math.min(0.1, ORBY_FULLSCREEN_SCRIM_IN * 0.45)}`);
   }
 
   /**
@@ -266,8 +267,7 @@ export class UIManagerModalOverlays {
     this._ui.uiSounds?.playShelfHide();
 
     gsap.killTweensOf([layer, msg, noBtn, yesBtn].filter(Boolean));
-
-    [msg, noBtn, yesBtn].forEach((el) => el?.classList.remove(ORBY_DROP_FADE_UP_CLASS));
+    killBigMessageRevealTweens(msg, [noBtn, yesBtn]);
 
     const fast = prefersReducedMotion();
     const done = () => {
