@@ -82,6 +82,9 @@ await esbuild.build({
 const indexHtml = readFileSync('index.html', 'utf-8');
 const updatedHtml = injectTurnstileSiteKey(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml)));
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
+// GitHub Pages SPA fallback: serve app shell for unknown paths so route-aware
+// client entry (scripts/entry.js) can render the in-app 404 experience.
+writeFileSync(join(distDir, '404.html'), updatedHtml);
 
 // Copy assets
 cpSync('assets', join(distDir, 'assets'), { recursive: true });
