@@ -10,6 +10,7 @@ import {
 import { deepClone } from '../utils/deepClone.js';
 import { deepEqual } from '../utils/deepEqual.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
+import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 
 /**
  * For each `data-reset` value in the markup, the set of state paths whose
@@ -29,6 +30,7 @@ const RESET_DIRTY_PATHS = {
   clay: ['clay'],
   subsurface: ['subsurface'],
   wireframe: ['wireframe'],
+  'creative-look': ['creativeLook'],
   hdri: ['hdri', 'hdriStrength', 'hdriBlurriness', 'hdriRotation', 'hdriBackground', 'lensFlare'],
   'lens-flare': ['lensFlare'],
   lights: [
@@ -686,6 +688,19 @@ export class ResetControls {
             this.eventBus.emit('mesh:wireframe-color', defaults.wireframe.color);
             this.eventBus.emit('mesh:wireframe-only-visible-faces', defaults.wireframe.onlyVisibleFaces);
             this.eventBus.emit('mesh:wireframe-hide-mesh', defaults.wireframe.hideMesh);
+            this.ui.syncUIFromState();
+            break;
+
+          case 'creative-look':
+            this.stateStore.set('creativeLook', defaults.creativeLook);
+            if (this.ui.inputs.creativeLookEnabled) {
+              this.ui.inputs.creativeLookEnabled.checked = !!defaults.creativeLook?.enabled;
+            }
+            this.ui.setCreativeLookActive(
+              normalizeCreativeLookPreset(defaults.creativeLook?.preset),
+            );
+            this.ui.toggleCreativeLookGrid(!!defaults.creativeLook?.enabled);
+            this.eventBus.emit('mesh:creative-look');
             this.ui.syncUIFromState();
             break;
             

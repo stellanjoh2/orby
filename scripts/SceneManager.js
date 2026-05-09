@@ -81,6 +81,8 @@ export class SceneManager {
     this.panelsShelfScrolling = false;
     /** Skip rAF resize while PNG/export pipeline mutates renderer size (avoids composer/canvas mismatch). */
     this._suppressResizeForExport = false;
+    /** Bloom passes were disabled while creative look was on; restore from state when toggling off. */
+    this._creativeBloomWasSuppressed = false;
     this.eventBus.on('ui:panels-scrolling', (payload) => {
       this.setPanelsShelfScrolling(!!payload?.active);
     });
@@ -100,7 +102,11 @@ export class SceneManager {
       canvas: this.canvas,
       antialias: true,
       alpha: true,
-      preserveDrawingBuffer: true,
+      // `true` preserves the drawing buffer for synchronous canvas readbacks; it also tends to
+      // cause visible black flashes with EffectComposer + custom shaders on some GPUs/browsers.
+      // PNG export uses render-target readback (`ImageExporter`); silhouette flow may still call
+      // toDataURL after an explicit render.
+      preserveDrawingBuffer: false,
     });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -324,6 +330,16 @@ export class SceneManager {
     this.materialController = new MaterialController({
       stateStore: this.stateStore,
       modelRoot: this.modelRoot,
+      getCreativeLookKeyLightDir: (out) => this._getCreativeLookKeyLightDir(out),
+      afterCreativeLookMaterialRebuild: () => {
+        if (
+          typeof this.renderer?.compile === 'function' &&
+          this.scene &&
+          this.camera
+        ) {
+          this.renderer.compile(this.scene, this.camera);
+        }
+      },
       onShadingChanged: (mode) => {
         this.currentShading = mode;
         this.diagnosticsController.setModel(this.currentModel, mode);
@@ -788,6 +804,11 @@ export class SceneManager {
     }
     if (state.wireframe) {
       this.materialController.setWireframeSettings(state.wireframe);
+    }
+    if (state.creativeLook) {
+      this.materialController.setCreativeLookSettings(state.creativeLook, {
+        skipStateStore: true,
+      });
     }
     if (state.svgExtrude?.depth !== undefined) {
       this.setSvgExtrudeDepth(state.svgExtrude.depth);
@@ -2209,6 +2230,7 @@ export class SceneManager {
       fresnel: state.fresnel,
       subsurface: state.subsurface,
       wireframe: state.wireframe,
+      creativeLook: state.creativeLook,
       material: state.material ?? {
         brightness: state.diffuseBrightness ?? 1.0,
         metalness: 0.0,
@@ -2857,6 +2879,7 @@ export class SceneManager {
       this.cameraController.updateAutoOrbit(delta);
     }
     this.cameraController.applyHandheldMotion(delta);
+    this.materialController.updateCreativeLookTime(this.clock.elapsedTime);
     this._updateColorCheckerPose();
     this._updatePodiumAppearAnimation();
     this._updatePodiumGlassAppearAnimation();
@@ -2894,6 +2917,29 @@ export class SceneManager {
   }
 
   /**
+   * World-space direction from surface toward the 3-point **key** light (for creative toon).
+   * Matches shading rig when lights are off — falls back to the shader’s original fixed axis.
+   * @param {THREE.Vector3} [out]
+   */
+  _getCreativeLookKeyLightDir(out) {
+    const v = out ?? new THREE.Vector3();
+    const lc = this.lightsController;
+    const key = lc?.lights?.key;
+    if (!key) {
+      return v.set(0.35, 0.92, 0.42).normalize();
+    }
+    const keyOn =
+      lc.lightsEnabled !== false &&
+      lc.individualProperties?.key?.enabled !== false &&
+      key.intensity > 1e-6;
+    if (!keyOn) {
+      return v.set(0.35, 0.92, 0.42).normalize();
+    }
+    key.getWorldDirection(v);
+    return v.negate().normalize();
+  }
+
+  /**
    * EffectComposer RTs use `logical × composer._pixelRatio`. If that drifts from
    * `renderer.getPixelRatio()` (async resize, Ultra/Medium toggle), podium blur restores the
    * viewport with `rtWidth / rendererPR` and undershoots (~¾ frame + L-shaped black bars).
@@ -2923,6 +2969,26 @@ export class SceneManager {
     }
   }
 
+  /**
+   * Bloom / several ShaderPasses temporarily set clear alpha (e.g. 0). If that lingers in Three's
+   * tracked clear state, the next frame's RenderPass can snapshot a bad `oldClearAlpha` and clear
+   * the scene RT wrong → random black behind the HDRI. Reset before EffectComposer each frame.
+   */
+  _syncRendererClearForSceneBackground() {
+    const r = this.renderer;
+    const bg = this.scene.background;
+    if (bg == null) {
+      const hex = this.backgroundController?.getColor() ?? '#000000';
+      r.setClearColor(new THREE.Color(hex), 1);
+      return;
+    }
+    if (bg.isColor) {
+      r.setClearColor(bg, 1);
+      return;
+    }
+    r.setClearColor(0x000000, 1);
+  }
+
   render() {
     // Continuously protect clay settings during render to prevent any resets
     // This runs every frame to ensure values NEVER go to 0
@@ -2944,9 +3010,29 @@ export class SceneManager {
     this.autoExposureController?.update(this.unlitMode);
     // Update lens dirt exposure factor from auto-exposure luminance
     this.lensDirtController?.updateExposureFactor();
+
+    // UnrealBloomPass + bloom tint + anamorphic streak aggressively rewrite clear color / RT state.
+    // That stack is the main remaining source of intermittent black frames with stylized ShaderMaterials.
+    const creativeLookOn =
+      this.materialController?.getCreativeLookSettings?.()?.enabled === true;
+
+    if (creativeLookOn && this.postPipeline) {
+      if (this.postPipeline.bloomPass) this.postPipeline.bloomPass.enabled = false;
+      if (this.postPipeline.bloomTintPass) this.postPipeline.bloomTintPass.enabled = false;
+      if (this.postPipeline.anamorphicBloomPass) {
+        this.postPipeline.anamorphicBloomPass.enabled = false;
+      }
+      this._creativeBloomWasSuppressed = true;
+    } else if (this._creativeBloomWasSuppressed) {
+      this._creativeBloomWasSuppressed = false;
+      this.updateBloom(this.stateStore.getState().bloom);
+      this.applyRenderQualityVisualOverrides();
+    }
+
     if (this.composer) {
       this._ensureComposerBuffersMatchRenderer();
       this._resetRendererViewportToCanvas();
+      this._syncRendererClearForSceneBackground();
       this.composer.render();
       this._resetRendererViewportToCanvas();
     } else {

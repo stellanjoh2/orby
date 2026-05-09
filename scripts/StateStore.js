@@ -118,6 +118,17 @@ export class StateStore {
         onlyVisibleFaces: true,
         hideMesh: false,
       },
+      /** Stylized ShaderMaterial overrides for imported meshes (non-glass); off restores GLB materials. */
+      creativeLook: {
+        enabled: false,
+        preset: 'neon-edge',
+        /** When true, flow-field / plasma / holographic `uTime` stops advancing. */
+        pauseShaderAnimations: false,
+        /** Multiplier on shader `uTime` for animated presets (0–2); same scale for flow, plasma, holographic, spectral storm. */
+        shaderAnimationSpeed: 1,
+        /** World-space pattern size multiplier for procedural creative looks. 1 = preset default. */
+        patternScale: 1,
+      },
       fresnel: {
         enabled: false,
         color: '#808080',
@@ -174,9 +185,9 @@ export class StateStore {
       },
       bloom: {
         enabled: true,
-        threshold: 1,
+        threshold: 1.0,
         strength: 0.2,
-        radius: 0.75,
+        radius: 0.2,
         color: '#ffe9cc',
         quality: 'medium',
       },
@@ -238,6 +249,8 @@ export class StateStore {
       background: '#000000',
       lookFilterPreset: 'none',
       lookFilterPresetsOpen: false,
+      /** Object tab — fold-out for Creative shaders (presets, bloom, animation). */
+      creativeLookSectionOpen: false,
       /** 'low' | 'medium' | 'high' — color SVG (ImageTracer) trace fidelity */
       svgColorDetail: 'high',
       /**

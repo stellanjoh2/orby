@@ -152,14 +152,18 @@ export class HistogramController {
       // Convert from top-left origin to bottom-left origin
       const y = height - yFromTop - sampleHeight;
       
-      // Ensure we're reading from the default framebuffer (the canvas)
-      // The composer should have rendered to screen by now
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      
-      // Read pixels - WebGL returns data in bottom-to-top order
+      // Bind default framebuffer through Three so internal GL state stays in sync
+      // with the next EffectComposer frame (raw gl.bindFramebuffer can cause rare black flashes).
+      const prevRenderTarget = this.renderer.getRenderTarget();
+      this.renderer.setRenderTarget(null);
+
       const pixels = new Uint8Array(sampleWidth * sampleHeight * 4);
-      gl.readPixels(x, y, sampleWidth, sampleHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      
+      try {
+        gl.readPixels(x, y, sampleWidth, sampleHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      } finally {
+        this.renderer.setRenderTarget(prevRenderTarget);
+      }
+
       // Flip the pixel data vertically since readPixels returns bottom-to-top
       // but we want to process top-to-bottom
       const flippedPixels = new Uint8Array(sampleWidth * sampleHeight * 4);

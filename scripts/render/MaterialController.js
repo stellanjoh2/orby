@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+  createCreativeLookMaterial,
+  normalizeCreativeLookPreset,
+} from './CreativeLookMaterials.js';
 import { reapplySvgExtrudeProceduralFromState } from './SvgExtrudeSurfaceShader.js';
 import {
   WIREFRAME_OFFSET,
@@ -35,11 +39,17 @@ export class MaterialController {
     modelRoot,
     onShadingChanged = null,
     onMaterialUpdate = null,
+    /** Optional `(out?: THREE.Vector3) => THREE.Vector3` — world-space direction **toward** key light for creative **toon**. */
+    getCreativeLookKeyLightDir = null,
+    /** Called after creative ShaderMaterials are (re)built — e.g. `renderer.compile(scene, camera)` to avoid first-draw hitches. */
+    afterCreativeLookMaterialRebuild = null,
   }) {
     this.stateStore = stateStore;
     this.modelRoot = modelRoot;
     this.onShadingChanged = onShadingChanged;
     this.onMaterialUpdate = onMaterialUpdate;
+    this.getCreativeLookKeyLightDir = getCreativeLookKeyLightDir;
+    this.afterCreativeLookMaterialRebuild = afterCreativeLookMaterialRebuild;
 
     this.currentModel = null;
     this.currentShading = null;
@@ -57,6 +67,20 @@ export class MaterialController {
       scatterTint: DEFAULT_SUBSURFACE_SCATTER_TINT,
     };
     this.wireframeSettings = {};
+    /** When enabled, replaces non-glass mesh materials with creative ShaderMaterials (restored when off). */
+    this.creativeLookSettings = {
+      enabled: false,
+      preset: 'neon-edge',
+      pauseShaderAnimations: false,
+      shaderAnimationSpeed: 1,
+      patternScale: 1,
+    };
+    /** Clock time (seconds) for animated presets (flow-field, plasma). */
+    this._creativeLookTime = 0;
+    /** Wall-clock snapshot when `pauseShaderAnimations` is on (frozen `uTime`). */
+    this._creativeLookPausedAt = null;
+    /** Reused when syncing toon `uLightDir` from scene key light. */
+    this._creativeToonKeyDirScratch = new THREE.Vector3();
     this.materialSettings = {
       brightness: 1.0,
       metalness: 0.0,
@@ -82,6 +106,20 @@ export class MaterialController {
         onlyVisibleFaces: true,
         hideMesh: false,
       }),
+    };
+    const icl = initialState.creativeLook ?? {};
+    this.creativeLookSettings = {
+      enabled: icl.enabled === true,
+      preset: normalizeCreativeLookPreset(icl.preset),
+      pauseShaderAnimations: icl.pauseShaderAnimations === true,
+      shaderAnimationSpeed: (() => {
+        const sp = Number(icl.shaderAnimationSpeed);
+        return Number.isFinite(sp) ? THREE.MathUtils.clamp(sp, 0, 2) : 1;
+      })(),
+      patternScale: (() => {
+        const ps = Number(icl.patternScale);
+        return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.1, 5) : 1;
+      })(),
     };
     this.materialSettings = {
       brightness: initialState.material?.brightness ?? initialState.diffuseBrightness ?? 1.0,
@@ -969,7 +1007,8 @@ export class MaterialController {
     this.updateWireframeOverlay();
     this.applyFresnelToModel(this.currentModel);
     reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, mode);
-    
+    this._applyCreativeLookOverride();
+
     // After recreating shaded materials, either apply user emissive glow or re-sync file emissive
     // (microtask so hooks like Fresnel/SVG run first; import textures may also finish binding).
     if (mode === 'shaded') {
@@ -988,6 +1027,218 @@ export class MaterialController {
     if (this.onMaterialUpdate) {
       this.onMaterialUpdate();
     }
+  }
+
+  _disposeTransientMeshMaterials(mesh) {
+    const original = this.originalMaterials.get(mesh);
+    const material = mesh.material;
+    if (!material) return;
+    const sameReference =
+      material === original ||
+      (Array.isArray(material) &&
+        Array.isArray(original) &&
+        material.length === original.length &&
+        material.every((mat, idx) => mat === original[idx]));
+    if (sameReference) return;
+    if (Array.isArray(material)) {
+      material.forEach((mat) => mat?.dispose?.());
+    } else {
+      material?.dispose?.();
+    }
+  }
+
+  _applyCreativeLookOverride() {
+    if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+
+    const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      if (this.isWindowMesh(child)) return;
+
+      const importOriginal = this.originalMaterials.get(child);
+      if (!importOriginal) return;
+
+      this._disposeTransientMeshMaterials(child);
+
+      const mk = (origMat) => {
+        const rawOp = origMat?.opacity;
+        const opacity = Number.isFinite(Number(rawOp))
+          ? Math.min(1, Math.max(0, Number(rawOp)))
+          : 1;
+        // GLTF often sets transparent:true with opacity 0.999… — that path uses per-frame
+        // transparent sorting and flickers badly when orbiting/zooming. Align with
+        // GLTF_FULL_OPACITY_BLEND_THRESHOLD (near-opaque = opaque draw order).
+        const useTransparentSort =
+          !!origMat?.transparent && opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD;
+        return createCreativeLookMaterial(preset, {
+          transparent: useTransparentSort,
+          opacity,
+          side: origMat?.side ?? THREE.FrontSide,
+          time: this._creativeLookTime,
+          patternScale: this.creativeLookSettings.patternScale,
+        });
+      };
+
+      if (Array.isArray(importOriginal)) {
+        child.material = importOriginal.map((om) => mk(om));
+      } else {
+        child.material = mk(importOriginal);
+      }
+      // Custom ShaderMaterials rarely participate cleanly in shadow-map passes; casting/receiving
+      // with incomplete depth programs correlates with intermittent black-frame GL stalls on some GPUs.
+      child.castShadow = false;
+      child.receiveShadow = false;
+    });
+
+    if (this.onMaterialUpdate) {
+      this.onMaterialUpdate();
+    }
+    if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
+      this.afterCreativeLookMaterialRebuild();
+    }
+  }
+
+  /** Restore default shadow flags after creative look (matches prepareMesh). */
+  _restoreMeshShadowDefaults() {
+    if (!this.currentModel) return;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      child.castShadow = true;
+      child.receiveShadow = true;
+    });
+  }
+
+  /**
+   * @param {object} patch
+   * @param {{ skipStateStore?: boolean }} [options]
+   */
+  setCreativeLookSettings(patch, options = {}) {
+    const prevEnabled = this.creativeLookSettings.enabled;
+    const prevPreset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+
+    this.creativeLookSettings = {
+      ...this.creativeLookSettings,
+      ...patch,
+    };
+    this.creativeLookSettings.enabled = !!this.creativeLookSettings.enabled;
+    this.creativeLookSettings.pauseShaderAnimations =
+      !!this.creativeLookSettings.pauseShaderAnimations;
+    const sp = Number(this.creativeLookSettings.shaderAnimationSpeed);
+    this.creativeLookSettings.shaderAnimationSpeed = Number.isFinite(sp)
+      ? THREE.MathUtils.clamp(sp, 0, 2)
+      : 1;
+    const ps = Number(this.creativeLookSettings.patternScale);
+    this.creativeLookSettings.patternScale = Number.isFinite(ps)
+      ? THREE.MathUtils.clamp(ps, 0.1, 5)
+      : 1;
+    this.creativeLookSettings.preset = normalizeCreativeLookPreset(
+      this.creativeLookSettings.preset,
+    );
+
+    if (!options.skipStateStore && this.stateStore) {
+      this.stateStore.set('creativeLook', this.creativeLookSettings);
+    }
+
+    if (!this.currentModel) {
+      if (this.onMaterialUpdate) this.onMaterialUpdate();
+      return;
+    }
+
+    if (!this.creativeLookSettings.enabled) {
+      this.setShading(this.currentShading);
+      this._restoreMeshShadowDefaults();
+      return;
+    }
+
+    // Rebuilding every ShaderMaterial disposes GPU programs; redundant applies (duplicate events /
+    // same state) caused visible black flashes. Only rebuild when enabled preset actually changes.
+    const redundant =
+      prevEnabled &&
+      this.creativeLookSettings.enabled &&
+      prevPreset === this.creativeLookSettings.preset;
+    if (redundant) {
+      return;
+    }
+
+    this._applyCreativeLookOverride();
+  }
+
+  updateCreativeLookTime(elapsedSeconds) {
+    const cl = this.stateStore?.getState()?.creativeLook ?? {};
+    let animSpeed = Number(cl.shaderAnimationSpeed);
+    if (!Number.isFinite(animSpeed)) animSpeed = 1;
+    animSpeed = THREE.MathUtils.clamp(animSpeed, 0, 2);
+    let patternScale = Number(cl.patternScale);
+    if (!Number.isFinite(patternScale)) patternScale = 1;
+    patternScale = THREE.MathUtils.clamp(patternScale, 0.1, 5);
+
+    const scaledClock = elapsedSeconds * animSpeed;
+
+    const paused = cl.pauseShaderAnimations === true;
+    if (paused) {
+      if (this._creativeLookPausedAt === null) {
+        this._creativeLookPausedAt = scaledClock;
+      }
+    } else {
+      this._creativeLookPausedAt = null;
+    }
+    const effectiveTime =
+      paused && this._creativeLookPausedAt !== null
+        ? this._creativeLookPausedAt
+        : scaledClock;
+    this._creativeLookTime = effectiveTime;
+
+    if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+
+    if (preset === 'toon' && typeof this.getCreativeLookKeyLightDir === 'function') {
+      const dir = this.getCreativeLookKeyLightDir(this._creativeToonKeyDirScratch);
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (
+            m?.userData?.orbyCreativeLook === 'toon' &&
+            m.uniforms?.uLightDir
+          ) {
+            m.uniforms.uLightDir.value.copy(dir);
+          }
+        }
+      });
+    }
+
+    if (
+      preset !== 'flow-field' &&
+      preset !== 'plasma' &&
+      preset !== 'holographic' &&
+      preset !== 'spectral-storm'
+    ) {
+      return;
+    }
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        const tag = m?.userData?.orbyCreativeLook;
+        if (
+          (tag === 'flow-field' ||
+            tag === 'plasma' ||
+            tag === 'holographic' ||
+            tag === 'spectral-storm') &&
+          m.uniforms?.uTime
+        ) {
+          m.uniforms.uTime.value = effectiveTime;
+          if (m.uniforms.uPatternScale) {
+            m.uniforms.uPatternScale.value = patternScale;
+          }
+        }
+      }
+    });
+  }
+
+  getCreativeLookSettings() {
+    return { ...this.creativeLookSettings };
   }
 
   setClaySettings(patch) {

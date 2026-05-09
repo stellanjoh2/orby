@@ -111,6 +111,16 @@ export class EventManager {
     eventBus.on('mesh:wireframe-hide-mesh', (value) => {
       s.setWireframeSettings({ hideMesh: value });
     });
+    eventBus.on('mesh:creative-look', () => {
+      const cl = s.stateStore.getState().creativeLook ?? {
+        enabled: false,
+        preset: 'neon-edge',
+        pauseShaderAnimations: false,
+        shaderAnimationSpeed: 1,
+        patternScale: 1,
+      };
+      s.materialController.setCreativeLookSettings(cl, { skipStateStore: true });
+    });
     eventBus.on('mesh:reset-transform', () => {
       s.transformController?.setRotationY(0);
     });

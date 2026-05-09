@@ -122,6 +122,8 @@ export class UIManager {
       this.stateStore,
       {
         setHdriActive: (hdri) => this.setHdriActive(hdri),
+        setCreativeLookActive: (preset) => this.setCreativeLookActive(preset),
+        toggleCreativeLookGrid: (enabled) => this.toggleCreativeLookGrid(enabled),
         toggleHdriControls: (enabled) => this.toggleHdriControls(enabled),
         setLightColorControlsDisabled: (disabled) => this.setLightColorControlsDisabled(disabled),
         setLightsRotationDisabled: (disabled) => this.setLightsRotationDisabled(disabled),
@@ -300,6 +302,11 @@ export class UIManager {
       wireframeColor: q('#wireframeColor'),
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
       wireframeHideMesh: q('#wireframeHideMesh'),
+      creativeLookEnabled: q('#creativeLookEnabled'),
+      creativeLookPauseAnimations: q('#creativeLookPauseAnimations'),
+      creativeLookShaderAnimationSpeed: q('#creativeLookShaderAnimationSpeed'),
+      creativeLookPatternScale: q('#creativeLookPatternScale'),
+      creativeLookButtons: document.querySelectorAll('[data-creative-look]'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
       groundSolidColor: q('#groundSolidColor'),
@@ -909,6 +916,21 @@ export class UIManager {
   setHdriActive(preset) {
     this.inputs.hdriButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.hdri === preset);
+    });
+  }
+
+  setCreativeLookActive(preset) {
+    if (!this.inputs.creativeLookButtons?.forEach) return;
+    this.inputs.creativeLookButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.creativeLook === preset);
+    });
+  }
+
+  toggleCreativeLookGrid(enabled) {
+    if (!this.inputs.creativeLookButtons?.forEach) return;
+    this.inputs.creativeLookButtons.forEach((button) => {
+      button.disabled = !enabled;
+      button.classList.toggle('is-disabled', !enabled);
     });
   }
 
@@ -2075,6 +2097,8 @@ export class UIManager {
     
     // HDRI block - only muted if hdriEnabled is false
     this.setBlockMuted('hdri', !currentState.hdriEnabled);
+
+    this.setBlockMuted('creative-look', !currentState.creativeLook?.enabled);
     
     // Lens flare block - requires both HDRI and lens flare to be enabled
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;

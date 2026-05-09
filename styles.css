@@ -430,7 +430,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 /* Same dim label tone as Reset Studio (.accent-action-btn at rest) / secondary UI */
 #gridSnap.ghost-btn,
 #podiumSnap.ghost-btn,
-#backdropSnap.ghost-btn {
+#backdropSnap.ghost-btn,
+#creativeLookPauseAnimations.ghost-btn {
   color: var(--text-dim);
   /* Match .ghost-btn / .accent-action-btn 0.2s; opacity eases mute ↔ unmute */
   transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s ease;
@@ -439,7 +440,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 /* Match bottom settings accent CTAs on hover — full lime fill + dark label */
 #gridSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #podiumSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
-#backdropSnap.ghost-btn:hover:not(:disabled):not(.is-disabled) {
+#backdropSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled) {
   background: var(--accent);
   color: var(--brand-text);
   box-shadow: var(--ui-accent-outer-glow);
@@ -2663,7 +2665,8 @@ a.about-highlight:focus-visible {
 /* Snap-to-mesh CTAs: dimmer than other muted captions (−25% vs --muted-section-text-scale) */
 :is(.subsection, .panel-block).is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #podiumSnap.ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled) {
+:is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
+:is(.subsection, .panel-block).is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
 
@@ -4296,6 +4299,45 @@ body.ui-hidden .shelf {
   opacity: 0;
   margin-top: 0;
   margin-bottom: -0.2rem;
+}
+
+/* Object tab — Creative shaders fold-out (matches Look Filters behavior) */
+.creative-look-foldout {
+  margin-top: 0.45rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.creative-look-foldout--expanded {
+  max-height: 56rem;
+  opacity: 1;
+}
+
+.creative-look-foldout--collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: -0.2rem;
+}
+
+.creative-look-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.creative-look-foldout-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Same intrinsic width as Snap to Mesh ghost CTAs — avoid column stretch from .ghost-btn */
+.creative-look-foldout-body > .creative-look-pause-btn {
+  align-self: flex-start;
+  margin-top: 0.65rem;
 }
 
 .look-filter-grid {
