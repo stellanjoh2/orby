@@ -7,6 +7,10 @@ import {
   MATERIAL_EMISSIVE_SLIDER_MAX,
 } from '../constants.js';
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
+import {
+  CREATIVE_LOOK_PRESETS,
+  normalizeCreativeLookPreset,
+} from '../render/CreativeLookMaterials.js';
 
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -501,6 +505,70 @@ export class MeshControls {
       this.eventBus.emit('mesh:wireframe-hide-mesh', enabled);
     });
 
+    const updateCreativeLookFoldout = (open) => {
+      const container = document.querySelector('#creativeLookSectionContainer');
+      if (!container) return;
+      container.classList.toggle('creative-look-foldout--collapsed', !open);
+      container.classList.toggle('creative-look-foldout--expanded', open);
+    };
+    updateCreativeLookFoldout(!!this.stateStore.getState().creativeLook?.enabled);
+
+    this.ui.inputs.creativeLookEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.batch(() => {
+        this.stateStore.set('creativeLook.enabled', enabled);
+        this.stateStore.set('creativeLookSectionOpen', enabled);
+      });
+      updateCreativeLookFoldout(enabled);
+      this.eventBus.emit('mesh:creative-look');
+    });
+    this.ui.inputs.creativeLookShaderAnimationSpeed?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('creativeLookShaderAnimationSpeed', value, 'decimal');
+      this.stateStore.set('creativeLook.shaderAnimationSpeed', value);
+    });
+    if (this.ui.inputs.creativeLookShaderAnimationSpeed) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookShaderAnimationSpeed);
+    }
+    this.ui.inputs.creativeLookPatternScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      const scale = Math.max(0.1, Math.min(5, value));
+      this.helpers.updateValueLabel('creativeLookPatternScale', scale, 'multiplier');
+      this.stateStore.set('creativeLook.patternScale', scale);
+    });
+    if (this.ui.inputs.creativeLookPatternScale) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookPatternScale);
+    }
+    this.ui.inputs.creativeLookPauseAnimations?.addEventListener('click', () => {
+      const cl = this.stateStore.getState().creativeLook || {};
+      const next = !cl.pauseShaderAnimations;
+      this.stateStore.set('creativeLook.pauseShaderAnimations', next);
+    });
+    this.ui.inputs.creativeLookButtons?.forEach?.((button) => {
+      button.addEventListener('click', () => {
+        const preset = button.dataset.creativeLook;
+        if (!CREATIVE_LOOK_PRESETS.includes(preset)) return;
+        if (button.disabled) return;
+        const state = this.stateStore.getState().creativeLook || {};
+        const prev = normalizeCreativeLookPreset(state.preset);
+        if (preset !== prev) this.ui.uiSounds?.playSelect();
+        this.stateStore.batch(() => {
+          this.stateStore.set('creativeLook.preset', preset);
+          this.stateStore.set('creativeLook.enabled', true);
+          this.stateStore.set('creativeLookSectionOpen', true);
+        });
+        updateCreativeLookFoldout(true);
+        if (this.ui.inputs.creativeLookEnabled) {
+          this.ui.inputs.creativeLookEnabled.checked = true;
+        }
+        this.ui.setCreativeLookActive(preset);
+        this.ui.toggleCreativeLookGrid(true);
+        this.eventBus.emit('mesh:creative-look');
+      });
+    });
+
     // Fresnel (moved from bindRenderControls since it's now in Object tab)
     const emitFresnel = () => {
       const state = this.stateStore.getState();
@@ -967,6 +1035,67 @@ export class MeshControls {
         this.ui.inputs.wireframeHideMesh.checked = !!state.wireframe.hideMesh;
       }
     }
+
+    {
+      const open = !!state.creativeLook?.enabled;
+      const container = document.querySelector('#creativeLookSectionContainer');
+      if (container) {
+        container.classList.toggle('creative-look-foldout--collapsed', !open);
+        container.classList.toggle('creative-look-foldout--expanded', open);
+      }
+    }
+
+    if (this.ui.inputs.creativeLookEnabled) {
+      this.ui.inputs.creativeLookEnabled.checked = !!state.creativeLook?.enabled;
+    }
+    if (this.ui.inputs.creativeLookPauseAnimations) {
+      const paused = !!state.creativeLook?.pauseShaderAnimations;
+      this.ui.inputs.creativeLookPauseAnimations.classList.toggle('active', paused);
+      this.ui.inputs.creativeLookPauseAnimations.textContent = paused
+        ? 'Resume shader animations'
+        : 'Pause shader animations';
+      this.ui.setControlDisabled(
+        'creativeLookPauseAnimations',
+        !state.creativeLook?.enabled,
+      );
+    }
+    if (this.ui.inputs.creativeLookShaderAnimationSpeed) {
+      const rawSp = Number(state.creativeLook?.shaderAnimationSpeed);
+      const sp = Number.isFinite(rawSp) ? Math.min(2, Math.max(0, rawSp)) : 1;
+      const active =
+        document.activeElement === this.ui.inputs.creativeLookShaderAnimationSpeed;
+      if (!active) {
+        this.ui.inputs.creativeLookShaderAnimationSpeed.value = sp;
+        this.helpers.updateValueLabel('creativeLookShaderAnimationSpeed', sp, 'decimal');
+      }
+      this.ui.setControlDisabled(
+        'creativeLookShaderAnimationSpeed',
+        !state.creativeLook?.enabled,
+      );
+    }
+    if (this.ui.inputs.creativeLookPatternScale) {
+      const rawScale = Number(state.creativeLook?.patternScale);
+      const patternScale = Number.isFinite(rawScale)
+        ? Math.min(5, Math.max(0.1, rawScale))
+        : 1;
+      const active =
+        document.activeElement === this.ui.inputs.creativeLookPatternScale;
+      if (!active) {
+        this.ui.inputs.creativeLookPatternScale.value = patternScale;
+        this.helpers.updateValueLabel(
+          'creativeLookPatternScale',
+          patternScale,
+          'multiplier',
+        );
+      }
+      this.ui.setControlDisabled(
+        'creativeLookPatternScale',
+        !state.creativeLook?.enabled,
+      );
+    }
+    const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
+    this.ui.setCreativeLookActive?.(clPreset);
+    this.ui.toggleCreativeLookGrid?.(!!state.creativeLook?.enabled);
     
     // Radio buttons
     this.ui.inputs.autoRotate.forEach((input) => {

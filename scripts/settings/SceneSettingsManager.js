@@ -7,6 +7,7 @@ import {
 } from '../constants.js';
 import { HDRI_MOODS } from '../config/hdri.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
+import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 
 /**
  * SceneSettingsManager
@@ -63,6 +64,7 @@ export class SceneSettingsManager {
       autoRotate: state.autoRotate,
       clay: state.clay,
       wireframe: state.wireframe,
+      creativeLook: state.creativeLook,
       fresnel: state.fresnel,
       subsurface: state.subsurface,
       svgExtrude: {
@@ -177,6 +179,7 @@ export class SceneSettingsManager {
       toneMapping: state.toneMapping,
       lookFilterPreset: state.lookFilterPreset,
       lookFilterPresetsOpen: state.lookFilterPresetsOpen,
+      creativeLookSectionOpen: state.creativeLookSectionOpen,
       moveWidgetEnabled: !!state.moveWidgetEnabled,
       rotateWidgetEnabled: !!state.rotateWidgetEnabled,
       scaleWidgetEnabled: !!state.scaleWidgetEnabled,
@@ -445,6 +448,17 @@ export class SceneSettingsManager {
         if (payload.wireframe.hideMesh !== undefined) {
           this.eventBus.emit('mesh:wireframe-hide-mesh', payload.wireframe.hideMesh);
         }
+      }
+      if (payload.creativeLook) {
+        this.stateStore.set('creativeLook', payload.creativeLook);
+        const preset = normalizeCreativeLookPreset(payload.creativeLook.preset);
+        if (this.uiHelper?.setCreativeLookActive) {
+          this.uiHelper.setCreativeLookActive(preset);
+        }
+        if (this.uiHelper?.toggleCreativeLookGrid) {
+          this.uiHelper.toggleCreativeLookGrid(!!payload.creativeLook.enabled);
+        }
+        this.eventBus.emit('mesh:creative-look');
       }
       if (payload.fresnel) {
         this.stateStore.set('fresnel', payload.fresnel);
@@ -1084,6 +1098,12 @@ export class SceneSettingsManager {
         this.stateStore.set(
           'lookFilterPresetsOpen',
           !!payload.lookFilterPresetsOpen,
+        );
+      }
+      if (payload.creativeLookSectionOpen !== undefined) {
+        this.stateStore.set(
+          'creativeLookSectionOpen',
+          !!payload.creativeLookSectionOpen,
         );
       }
       if (payload.background !== undefined) {

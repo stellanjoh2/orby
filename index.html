@@ -726,6 +726,87 @@
                     />
                   </label>
                 </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="creative-look" data-block="creative-look">
+                  <div class="block-title has-toggle creative-look-heading">
+                    <span>Creative shaders</span>
+                    <div class="creative-look-heading-actions">
+                      <button
+                        class="block-reset-btn"
+                        data-reset="creative-look"
+                        aria-label="Reset Creative shaders"
+                        data-tooltip="Reset Creative shaders"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Replace mesh materials with stylized shaders (original GLB materials return when off)">
+                        <input type="checkbox" id="creativeLookEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable creative shaders</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    id="creativeLookSectionContainer"
+                    class="creative-look-foldout creative-look-foldout--collapsed"
+                  >
+                    <div class="creative-look-foldout-body">
+                      <div class="hdri-grid" id="creativeLookGrid">
+                    <button type="button" data-creative-look="neon-edge" class="hdri-icon active" data-tooltip="Neon edge — dark core with cyan rim glow">
+                      <img src="./assets/images/creative-look-neon-edge.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow field — animated color drift in world space">
+                      <img src="./assets/images/creative-look-flow-field.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="plasma" class="hdri-icon" data-tooltip="Plasma — psychedelic animated interference pattern">
+                      <img src="./assets/images/creative-look-plasma.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="toon" class="hdri-icon" data-tooltip="Toon — stepped cel shading with rim">
+                      <img src="./assets/images/creative-look-toon.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
+                      <img src="./assets/images/creative-look-holographic.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="spectral-storm" class="hdri-icon" data-tooltip="Spectral storm — very slow BW plasma, extreme contrast (mostly pure black/white), strobing rim">
+                      <img src="./assets/images/creative-look-spectral-storm.svg" alt="" width="64" height="64" />
+                    </button>
+                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Speed for all animated creative shaders (flow field, plasma, holographic, spectral storm). One shared clock: 1 = baseline, 2 = double, 0 = still. Pause overrides motion.">Anim Speed</span>
+                    <input
+                      type="range"
+                      id="creativeLookShaderAnimationSpeed"
+                      min="0"
+                      max="2"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="creativeLookShaderAnimationSpeed">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Scales the world-space pattern size for procedural creative shaders. Larger values make the shader pattern bigger on the mesh.">Scale</span>
+                    <input
+                      type="range"
+                      id="creativeLookPatternScale"
+                      min="0.1"
+                      max="5"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="creativeLookPatternScale">1.00×</span>
+                  </label>
+                  <button
+                    type="button"
+                    id="creativeLookPauseAnimations"
+                    class="ghost-btn small creative-look-pause-btn"
+                    data-tooltip="Freeze animated creative shaders (flow field, plasma, holographic, spectral storm). Lighting-driven presets keep updating."
+                  >
+                    Pause shader animations
+                  </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="panel-block" id="svgExtrudePanelBlock" hidden>
@@ -2570,10 +2651,10 @@
                       type="range"
                       min="0"
                       max="1"
-                      value="0.75"
+                      value="0.2"
                       step="0.01"
                     />
-                    <span class="value" data-output="bloomRadius">0.75</span>
+                    <span class="value" data-output="bloomRadius">0.20</span>
                   </label>
                   <label class="color-line">
                     <span>Color</span>
