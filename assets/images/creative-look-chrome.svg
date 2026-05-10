@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="chromeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a2e38"/>
+      <stop offset="45%" stop-color="#0c0d10"/>
+      <stop offset="100%" stop-color="#1a1e26"/>
+    </linearGradient>
+    <linearGradient id="chromeHi" x1="20%" y1="15%" x2="80%" y2="85%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="28%" stop-color="#c8ced8" stop-opacity="0.5"/>
+      <stop offset="55%" stop-color="#1a1d24" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#chromeBg)"/>
+  <circle cx="32" cy="32" r="30" fill="url(#chromeHi)"/>
+  <ellipse cx="24" cy="22" rx="10" ry="5" fill="#ffffff" opacity="0.45" transform="rotate(-32 24 22)"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#6a7488" stroke-width="1" opacity="0.45"/>
+</svg>

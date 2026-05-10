@@ -358,6 +358,14 @@ export class RenderControls {
       updateHistogramUi(this.stateStore.getState().histogramEnabled ?? false);
     }
 
+    if (this.ui.inputs.compositionGridEnabled) {
+      this.ui.inputs.compositionGridEnabled.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('camera.compositionGridEnabled', enabled);
+        this.eventBus.emit('camera:composition-grid', enabled);
+      });
+    }
+
     if (this.ui.inputs.toneCurveOpen) {
       const updateToneCurveFoldout = (open) => {
         const el = document.querySelector('#toneCurveContainer');
@@ -1076,6 +1084,11 @@ export class RenderControls {
         container.classList.toggle('histogram-container--collapsed', !enabled);
         container.classList.toggle('histogram-container--expanded', enabled);
       }
+    }
+    if (this.ui.inputs.compositionGridEnabled) {
+      const gridOn = !!(state.camera?.compositionGridEnabled);
+      this.ui.inputs.compositionGridEnabled.checked = gridOn;
+      this.eventBus.emit('camera:composition-grid', gridOn);
     }
     if (this.ui.inputs.toneCurveOpen) {
       const open = state.toneCurveOpen ?? false;

@@ -179,6 +179,7 @@ const NOT_FOUND_PRESET = {
     vignetteColor: '#000000',
     autoOrbit: 'slow',
     handheld: 'off',
+    compositionGridEnabled: false,
   },
   exposure: 1,
   autoExposure: false,

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 
 /** σ≈1.5 Gaussian, 5 taps — weights sum to ~0.859; we normalize in shader. */
 const GAUSS_W0 = 0.227027027;
@@ -131,13 +132,9 @@ void main() {
       }
     } finally {
       renderer.setRenderTarget(prevTarget);
-      // Match WebGL backing store (same idea as ImageExporter._ensureFullDrawingBufferViewport).
-      // getSize() alone can drift vs canvas dimensions during Ultra/DPR/export and leaves a
-      // half‑size viewport (quarter‑frame black) after blur passes.
-      const db = new THREE.Vector2();
-      renderer.getDrawingBufferSize(db);
-      const pr = Math.max(1e-6, renderer.getPixelRatio());
-      renderer.setViewport(0, 0, db.x / pr, db.y / pr);
+      // Restore full framebuffer; prefer GL drawing-buffer size over Three's cache (export/DPR drift).
+      const v = fullViewportLogicalSize(renderer);
+      renderer.setViewport(0, 0, v.x, v.y);
       if (typeof renderer.setScissorTest === 'function') {
         renderer.setScissorTest(false);
       }

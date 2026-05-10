@@ -534,7 +534,7 @@ export class MeshControls {
     this.ui.inputs.creativeLookPatternScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       if (!Number.isFinite(value)) return;
-      const scale = Math.max(0.1, Math.min(5, value));
+      const scale = Math.max(0.02, Math.min(5, value));
       this.helpers.updateValueLabel('creativeLookPatternScale', scale, 'multiplier');
       this.stateStore.set('creativeLook.patternScale', scale);
     });
@@ -1061,7 +1061,7 @@ export class MeshControls {
     }
     if (this.ui.inputs.creativeLookShaderAnimationSpeed) {
       const rawSp = Number(state.creativeLook?.shaderAnimationSpeed);
-      const sp = Number.isFinite(rawSp) ? Math.min(2, Math.max(0, rawSp)) : 1;
+      const sp = Number.isFinite(rawSp) ? Math.min(2, Math.max(0, rawSp)) : 0.4;
       const active =
         document.activeElement === this.ui.inputs.creativeLookShaderAnimationSpeed;
       if (!active) {
@@ -1076,7 +1076,7 @@ export class MeshControls {
     if (this.ui.inputs.creativeLookPatternScale) {
       const rawScale = Number(state.creativeLook?.patternScale);
       const patternScale = Number.isFinite(rawScale)
-        ? Math.min(5, Math.max(0.1, rawScale))
+        ? Math.min(5, Math.max(0.02, rawScale))
         : 1;
       const active =
         document.activeElement === this.ui.inputs.creativeLookPatternScale;
@@ -1096,7 +1096,7 @@ export class MeshControls {
     const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
     this.ui.setCreativeLookActive?.(clPreset);
     this.ui.toggleCreativeLookGrid?.(!!state.creativeLook?.enabled);
-    
+
     // Radio buttons
     this.ui.inputs.autoRotate.forEach((input) => {
       input.checked = parseFloat(input.value) === state.autoRotate;

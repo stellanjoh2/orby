@@ -160,6 +160,7 @@ export class SceneSettingsManager {
         vignetteColor: state.camera?.vignetteColor,
         autoOrbit: state.camera?.autoOrbit,
         handheld: state.camera?.handheld,
+        compositionGridEnabled: state.camera?.compositionGridEnabled,
       },
       exposure: state.exposure,
       autoExposure: state.autoExposure,
@@ -957,6 +958,16 @@ export class SceneSettingsManager {
         }
         if (payload.camera.vignetteColor !== undefined) {
           this.stateStore.set('camera.vignetteColor', payload.camera.vignetteColor);
+        }
+        if (payload.camera.compositionGridEnabled !== undefined) {
+          this.stateStore.set(
+            'camera.compositionGridEnabled',
+            !!payload.camera.compositionGridEnabled,
+          );
+          this.eventBus.emit(
+            'camera:composition-grid',
+            !!payload.camera.compositionGridEnabled,
+          );
         }
       }
 

@@ -14,6 +14,8 @@ export class VideoExporter {
     syncPerspectiveProjection,
     ensureComposerBuffersMatchRenderer,
     resetRendererViewportToCanvas,
+    /** Same clear + bloom guard as interactive `SceneManager.render()` before composer captures. */
+    prepareComposerCapture,
     setRotationY,
     getCurrentModel,
     getCurrentFile,
@@ -33,6 +35,7 @@ export class VideoExporter {
     this.syncPerspectiveProjection = syncPerspectiveProjection;
     this.ensureComposerBuffersMatchRenderer = ensureComposerBuffersMatchRenderer;
     this.resetRendererViewportToCanvas = resetRendererViewportToCanvas;
+    this.prepareComposerCapture = prepareComposerCapture;
     this.setRotationY = setRotationY;
     this.getCurrentModel = getCurrentModel;
     this.getCurrentFile = getCurrentFile;
@@ -137,6 +140,7 @@ export class VideoExporter {
     if (this.composer) {
       this.ensureComposerBuffersMatchRenderer?.();
       this.resetRendererViewportToCanvas?.();
+      this.prepareComposerCapture?.();
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
       try {
@@ -167,6 +171,7 @@ export class VideoExporter {
     if (this.composer) {
       this.ensureComposerBuffersMatchRenderer?.();
       this.resetRendererViewportToCanvas?.();
+      this.prepareComposerCapture?.();
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
       try {

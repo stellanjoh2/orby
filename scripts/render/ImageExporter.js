@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
 
@@ -50,10 +51,8 @@ export class ImageExporter {
   _ensureFullDrawingBufferViewport() {
     const r = this.renderer;
     r.setRenderTarget(null);
-    const db = new THREE.Vector2();
-    r.getDrawingBufferSize(db);
-    const pr = Math.max(1e-6, r.getPixelRatio());
-    r.setViewport(0, 0, db.x / pr, db.y / pr);
+    const v = fullViewportLogicalSize(r);
+    r.setViewport(0, 0, v.x, v.y);
     if (typeof r.setScissorTest === 'function') {
       r.setScissorTest(false);
     }
@@ -65,14 +64,23 @@ export class ImageExporter {
   _ensureComposerMatchesDrawingBuffer() {
     const composer = this.composer;
     if (!composer?.renderTarget1) return;
-    const db = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(db);
+    const gl = this.renderer.getContext();
+    let bw;
+    let bh;
+    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+      bw = gl.drawingBufferWidth;
+      bh = gl.drawingBufferHeight;
+    } else {
+      const db = new THREE.Vector2();
+      this.renderer.getDrawingBufferSize(db);
+      bw = db.x;
+      bh = db.y;
+    }
     const rt = composer.renderTarget1;
-    if (Math.abs(rt.width - db.x) <= 2 && Math.abs(rt.height - db.y) <= 2) {
+    if (Math.abs(rt.width - bw) <= 2 && Math.abs(rt.height - bh) <= 2) {
       return;
     }
-    const logical = new THREE.Vector2();
-    this.renderer.getSize(logical);
+    const logical = fullViewportLogicalSize(this.renderer);
     if (logical.x <= 0 || logical.y <= 0) return;
     if (this.syncPostProcessingForLogicalSize) {
       this.syncPostProcessingForLogicalSize(logical.x, logical.y);
@@ -84,13 +92,41 @@ export class ImageExporter {
   }
 
   /**
+   * After `setSize`, the backing store may be smaller than requested (browser/GPU canvas caps).
+   * Three.js can keep stale `_width`/`_height`, so `getDrawingBufferSize()` lies and the GL viewport
+   * no longer covers the real framebuffer — common symptom: a clean horizontal black band on 2× PNG export.
+   */
+  _syncRendererInternalSizeToCanvasBackingStore() {
+    const canvas = this.renderer.domElement;
+    const cw = Math.max(1, canvas.width | 0);
+    const ch = Math.max(1, canvas.height | 0);
+    const logical = new THREE.Vector2();
+    this.renderer.getSize(logical);
+    const pr = Math.max(1e-6, this.renderer.getPixelRatio());
+    const lx = Math.round(logical.x);
+    const ly = Math.round(logical.y);
+    if (lx !== cw || ly !== ch) {
+      if (typeof this.renderer.setDrawingBufferSize === 'function') {
+        this.renderer.setDrawingBufferSize(cw, ch, pr);
+      } else {
+        this.renderer.setSize(cw, ch, false);
+      }
+    }
+    return { width: cw, height: ch };
+  }
+
+  /**
    * Read the composer's final ping-pong buffer (after `renderToScreen: false` render) into a PNG
    * data URL. Avoids `canvas.toDataURL`, which can capture a wrong viewport on the default FBO
    * (Ultra / 2× exports showed a quarter-frame in the top-left).
+   * Uses `readBuffer.{width,height}` so copy/readback matches the half-float RT exactly.
    */
-  _captureComposerOutputAsPngDataUrl(targetWidth, targetHeight) {
+  _captureComposerOutputAsPngDataUrl(fallbackWidth, fallbackHeight) {
     const r = this.renderer;
     const composer = this.composer;
+    const rb = composer?.readBuffer;
+    const targetWidth = Math.max(1, rb?.width ?? fallbackWidth ?? 1);
+    const targetHeight = Math.max(1, rb?.height ?? fallbackHeight ?? 1);
     const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
       type: THREE.UnsignedByteType,
       format: THREE.RGBAFormat,
@@ -145,13 +181,16 @@ export class ImageExporter {
     // Use pixel ratio of 1 for exact resolution control
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(targetWidth, targetHeight, false);
-    this.camera.aspect = targetWidth / Math.max(1e-6, targetHeight);
+    const { width: exportW, height: exportH } =
+      this._syncRendererInternalSizeToCanvasBackingStore();
+
+    this.camera.aspect = exportW / Math.max(1e-6, exportH);
     this.camera.updateProjectionMatrix();
     if (this.syncPostProcessingForLogicalSize) {
-      this.syncPostProcessingForLogicalSize(targetWidth, targetHeight);
+      this.syncPostProcessingForLogicalSize(exportW, exportH);
     } else if (this.composer) {
       this.composer.setPixelRatio(1);
-      this.composer.setSize(targetWidth, targetHeight);
+      this.composer.setSize(exportW, exportH);
     }
     if (this.syncPerspectiveProjection) {
       this.syncPerspectiveProjection();
@@ -159,14 +198,10 @@ export class ImageExporter {
 
     this._ensureComposerMatchesDrawingBuffer();
 
-    // Ultra (max) keeps FXAA on when selected; Medium forces it off. FXAA's fullscreen pass
-    // combined with DPR>1 / composer ping-pong has consistently produced a quarter-frame
-    // viewport on PNG readback — skip FXAA for this single capture only, then restore.
-    const fxaaPass = this.postPipeline?.fxaaPass;
-    const fxaaWasEnabled = fxaaPass?.enabled === true;
-    if (fxaaWasEnabled) {
-      fxaaPass.enabled = false;
-    }
+    // Export forces `pixelRatio` to 1 and reads pixels from `composer.readBuffer` (not the
+    // canvas). Disabling FXAA here used to work around canvas/DPR readback bugs but it removes a
+    // full-screen pass from the chain vs interactive rendering and produced large black regions
+    // (wrong RT/viewport state) on 2× PNG captures with Shader Lab materials.
     const prevComposerRenderToScreen = this.composer?.renderToScreen;
     if (this.composer) {
       // Last pass must render into ping-pong RTs, not the canvas; canvas readback then misses
@@ -179,7 +214,10 @@ export class ImageExporter {
       // EffectComposer buffers (half canvas → quarter-frame at 2×). Sizes above already used
       // syncPostProcessingForLogicalSize(targetWidth, targetHeight).
       this._ensureComposerMatchesDrawingBuffer();
-      this.renderer.setViewport(0, 0, targetWidth, targetHeight);
+      {
+        const v = fullViewportLogicalSize(this.renderer);
+        this.renderer.setViewport(0, 0, v.x, v.y);
+      }
       if (typeof this.renderer.setScissorTest === 'function') {
         this.renderer.setScissorTest(false);
       }
@@ -194,9 +232,6 @@ export class ImageExporter {
         this.renderer.render(this.scene, this.camera);
       }
     } finally {
-      if (fxaaWasEnabled) {
-        fxaaPass.enabled = true;
-      }
       if (this.composer && prevComposerRenderToScreen !== undefined) {
         this.composer.renderToScreen = prevComposerRenderToScreen;
       }
@@ -207,8 +242,14 @@ export class ImageExporter {
       gl.finish();
     }
 
+    const dbFinal = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(dbFinal);
+
     const dataUrl = this.composer
-      ? this._captureComposerOutputAsPngDataUrl(targetWidth, targetHeight)
+      ? this._captureComposerOutputAsPngDataUrl(
+          Math.max(1, Math.round(dbFinal.x)),
+          Math.max(1, Math.round(dbFinal.y)),
+        )
       : canvas.toDataURL('image/png');
     this._downloadImage(dataUrl, currentFile, 'orby.png');
 

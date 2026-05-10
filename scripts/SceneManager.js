@@ -21,6 +21,7 @@ import {
   sanitizeAmbientOcclusion,
   effectiveVignetteIntensity,
 } from './constants.js';
+import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
@@ -408,7 +409,12 @@ export class SceneManager {
       const histogramState = this.stateStore.getState();
       this.histogramController.setEnabled(histogramState.histogramEnabled ?? false);
     }
-    
+
+    this.compositionGridOverlayEl = document.getElementById('compositionGridOverlay');
+    this.setCompositionGridOverlayVisible(
+      !!this.stateStore.getState().camera?.compositionGridEnabled,
+    );
+
     // Initialize event manager and register all event listeners
     this.eventManager = new EventManager(this);
     this.eventManager.register();
@@ -442,6 +448,17 @@ export class SceneManager {
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+  }
+
+  /** 16×9 letterboxed composition overlay (thirds, center cross, diagonals, circle). */
+  setCompositionGridOverlayVisible(enabled) {
+    const el =
+      this.compositionGridOverlayEl ??
+      document.getElementById('compositionGridOverlay');
+    if (!el) return;
+    this.compositionGridOverlayEl = el;
+    el.hidden = !enabled;
+    el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
   }
 
   setupMeshClickDetection() {
@@ -566,8 +583,10 @@ export class SceneManager {
         this.syncPostProcessingForLogicalSize(w, h),
       syncPerspectiveProjection: () => this.syncPerspectiveCameraFovAndLens(),
       renderComposerPassForExport: () => {
+        this._applyCreativeLookBloomSuppression();
         this._ensureComposerBuffersMatchRenderer();
         this._resetRendererViewportToCanvas();
+        this._syncRendererClearForSceneBackground();
         this.composer.render();
         this._resetRendererViewportToCanvas();
       },
@@ -594,6 +613,10 @@ export class SceneManager {
       ensureComposerBuffersMatchRenderer: () =>
         this._ensureComposerBuffersMatchRenderer(),
       resetRendererViewportToCanvas: () => this._resetRendererViewportToCanvas(),
+      prepareComposerCapture: () => {
+        this._applyCreativeLookBloomSuppression();
+        this._syncRendererClearForSceneBackground();
+      },
       setRotationY: (value) => this.setRotationY(value),
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
@@ -875,6 +898,7 @@ export class SceneManager {
     this.applyRenderQualitySettings();
     this.applyColorCheckerFromState(state);
     this._ensureColorCheckerReferenceShadingConsistency();
+    this.setCompositionGridOverlayVisible(!!state.camera?.compositionGridEnabled);
   }
 
   /**
@@ -2946,24 +2970,31 @@ export class SceneManager {
    */
   _ensureComposerBuffersMatchRenderer() {
     if (!this.composer?.renderTarget1) return;
-    const sz = new THREE.Vector2();
-    this.renderer.getSize(sz);
-    const db = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(db);
-    const rt = this.composer.renderTarget1;
-    // Composer RTs should match the canvas backing store when PR + logical size are in sync.
-    if (Math.abs(rt.width - db.x) > 2 || Math.abs(rt.height - db.y) > 2) {
-      this.syncPostProcessingForLogicalSize(sz.x, sz.y);
+    const gl = this.renderer.getContext();
+    let bw;
+    let bh;
+    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+      bw = gl.drawingBufferWidth;
+      bh = gl.drawingBufferHeight;
+    } else {
+      const db = new THREE.Vector2();
+      this.renderer.getDrawingBufferSize(db);
+      bw = db.x;
+      bh = db.y;
     }
+    const rt = this.composer.renderTarget1;
+    if (Math.abs(rt.width - bw) <= 2 && Math.abs(rt.height - bh) <= 2) {
+      return;
+    }
+    const logical = fullViewportLogicalSize(this.renderer);
+    this.syncPostProcessingForLogicalSize(logical.x, logical.y);
   }
 
   /** Reset logical viewport + scissor around the post stack (passes may leave partial viewport). */
   _resetRendererViewportToCanvas() {
     const r = this.renderer;
-    const db = new THREE.Vector2();
-    r.getDrawingBufferSize(db);
-    const pr = Math.max(1e-6, r.getPixelRatio());
-    r.setViewport(0, 0, db.x / pr, db.y / pr);
+    const v = fullViewportLogicalSize(r);
+    r.setViewport(0, 0, v.x, v.y);
     if (typeof r.setScissorTest === 'function') {
       r.setScissorTest(false);
     }
@@ -2989,6 +3020,29 @@ export class SceneManager {
     r.setClearColor(0x000000, 1);
   }
 
+  /**
+   * UnrealBloomPass / tint / anamorphic aggressively rewrite clear alpha and RT state; combined with
+   * Shader Lab materials that causes intermittent black regions. Same logic must run before any
+   * EffectComposer capture path (interactive render, PNG export, video frames).
+   */
+  _applyCreativeLookBloomSuppression() {
+    const creativeLookOn =
+      this.materialController?.getCreativeLookSettings?.()?.enabled === true;
+
+    if (creativeLookOn && this.postPipeline) {
+      if (this.postPipeline.bloomPass) this.postPipeline.bloomPass.enabled = false;
+      if (this.postPipeline.bloomTintPass) this.postPipeline.bloomTintPass.enabled = false;
+      if (this.postPipeline.anamorphicBloomPass) {
+        this.postPipeline.anamorphicBloomPass.enabled = false;
+      }
+      this._creativeBloomWasSuppressed = true;
+    } else if (this._creativeBloomWasSuppressed) {
+      this._creativeBloomWasSuppressed = false;
+      this.updateBloom(this.stateStore.getState().bloom);
+      this.applyRenderQualityVisualOverrides();
+    }
+  }
+
   render() {
     // Continuously protect clay settings during render to prevent any resets
     // This runs every frame to ensure values NEVER go to 0
@@ -3011,23 +3065,7 @@ export class SceneManager {
     // Update lens dirt exposure factor from auto-exposure luminance
     this.lensDirtController?.updateExposureFactor();
 
-    // UnrealBloomPass + bloom tint + anamorphic streak aggressively rewrite clear color / RT state.
-    // That stack is the main remaining source of intermittent black frames with stylized ShaderMaterials.
-    const creativeLookOn =
-      this.materialController?.getCreativeLookSettings?.()?.enabled === true;
-
-    if (creativeLookOn && this.postPipeline) {
-      if (this.postPipeline.bloomPass) this.postPipeline.bloomPass.enabled = false;
-      if (this.postPipeline.bloomTintPass) this.postPipeline.bloomTintPass.enabled = false;
-      if (this.postPipeline.anamorphicBloomPass) {
-        this.postPipeline.anamorphicBloomPass.enabled = false;
-      }
-      this._creativeBloomWasSuppressed = true;
-    } else if (this._creativeBloomWasSuppressed) {
-      this._creativeBloomWasSuppressed = false;
-      this.updateBloom(this.stateStore.getState().bloom);
-      this.applyRenderQualityVisualOverrides();
-    }
+    this._applyCreativeLookBloomSuppression();
 
     if (this.composer) {
       this._ensureComposerBuffersMatchRenderer();

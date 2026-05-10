@@ -408,6 +408,7 @@ export class UIManager {
       vignetteIntensity: q('#vignetteIntensity'),
       vignetteColor: q('#vignetteColor'),
       toggleVignette: q('#toggleVignette'),
+      compositionGridEnabled: q('#compositionGridEnabled'),
       histogramEnabled: q('#histogramEnabled'),
       toneCurveOpen: q('#toneCurveOpen'),
       lookFilterPresetsOpen: q('#lookFilterPresetsOpen'),
@@ -1194,6 +1195,16 @@ export class UIManager {
           if (h === 'medium') h = 'high';
           this.stateStore.set('camera.handheld', h);
           this.eventBus.emit('camera:handheld', h);
+        }
+        if (payload.camera.compositionGridEnabled !== undefined) {
+          this.stateStore.set(
+            'camera.compositionGridEnabled',
+            !!payload.camera.compositionGridEnabled,
+          );
+          this.eventBus.emit(
+            'camera:composition-grid',
+            !!payload.camera.compositionGridEnabled,
+          );
         }
       }
 
@@ -2099,7 +2110,19 @@ export class UIManager {
     this.setBlockMuted('hdri', !currentState.hdriEnabled);
 
     this.setBlockMuted('creative-look', !currentState.creativeLook?.enabled);
-    
+
+    const creativeLookLocksMaterial = !!currentState.creativeLook?.enabled;
+    this.setBlockMuted('material', creativeLookLocksMaterial);
+    this.setControlDisabled(
+      [
+        'materialBrightness',
+        'materialMetalness',
+        'materialRoughness',
+        'materialEmissive',
+      ],
+      creativeLookLocksMaterial,
+    );
+
     // Lens flare block - requires both HDRI and lens flare to be enabled
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
     this.setBlockMuted('lens-flare', !lensEnabled);

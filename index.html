@@ -342,6 +342,41 @@
       <main class="workspace">
         <section class="viewport">
           <canvas id="webgl" tabindex="0"></canvas>
+          <div
+            id="compositionGridOverlay"
+            class="composition-grid-overlay"
+            hidden
+            aria-hidden="true"
+          >
+            <!-- Inner frame keeps true 16×9; scales whenever the viewport panel is resized -->
+            <div class="composition-grid-overlay__frame">
+            <svg
+              class="composition-grid-overlay__svg"
+              viewBox="0 0 160 90"
+              preserveAspectRatio="xMidYMid meet"
+              width="100%"
+              height="100%"
+              role="presentation"
+              focusable="false"
+            >
+              <g class="composition-grid-overlay__lines">
+                <!-- Rule of thirds -->
+                <line x1="53.333333" y1="0" x2="53.333333" y2="90" />
+                <line x1="106.666667" y1="0" x2="106.666667" y2="90" />
+                <line x1="0" y1="30" x2="160" y2="30" />
+                <line x1="0" y1="60" x2="160" y2="60" />
+                <!-- Center crosshair -->
+                <line x1="80" y1="0" x2="80" y2="90" />
+                <line x1="0" y1="45" x2="160" y2="45" />
+                <!-- Diagonals -->
+                <line x1="0" y1="0" x2="160" y2="90" />
+                <line x1="160" y1="0" x2="0" y2="90" />
+                <!-- Center circle (~10% of frame height) -->
+                <circle cx="80" cy="45" r="4.5" />
+              </g>
+            </svg>
+            </div>
+          </div>
           <div class="dropzone" id="dropzone">
             <div id="logotypeAnimation" class="drop-logo"></div>
             <div class="mobile-warning" id="mobileWarning" aria-hidden="true">
@@ -729,21 +764,21 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="creative-look" data-block="creative-look">
                   <div class="block-title has-toggle creative-look-heading">
-                    <span>Creative shaders</span>
+                    <span>Shader Lab</span>
                     <div class="creative-look-heading-actions">
                       <button
                         class="block-reset-btn"
                         data-reset="creative-look"
-                        aria-label="Reset Creative shaders"
-                        data-tooltip="Reset Creative shaders"
+                        aria-label="Reset Shader Lab"
+                        data-tooltip="Reset Shader Lab"
                       >
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Replace mesh materials with stylized shaders (original GLB materials return when off)">
+                      <label class="effect-toggle" data-tooltip="Replace mesh materials with stylized Shader Lab presets (original GLB materials return when off)">
                         <input type="checkbox" id="creativeLookEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable creative shaders</span>
+                        <span class="sr-only">Enable Shader Lab</span>
                       </label>
                     </div>
                   </div>
@@ -765,33 +800,42 @@
                     <button type="button" data-creative-look="toon" class="hdri-icon" data-tooltip="Toon — stepped cel shading with rim">
                       <img src="./assets/images/creative-look-toon.svg" alt="" width="64" height="64" />
                     </button>
+                    <button type="button" data-creative-look="ordered-dither" class="hdri-icon" data-tooltip="Ordered dither — fixed Bayer 4×4 grid in screen space; mid-tone from mesh color. Scale = pixel block size">
+                      <img src="./assets/images/creative-look-ordered-dither.svg" alt="" width="64" height="64" />
+                    </button>
                     <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
                       <img src="./assets/images/creative-look-holographic.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
+                      <img src="./assets/images/creative-look-chrome.svg" alt="" width="64" height="64" />
+                    </button>
+                    <button type="button" data-creative-look="glass" class="hdri-icon" data-tooltip="Glass — physical transmission &amp; refraction (Three.js); HDRI + scene. Scale = slab thickness / frost">
+                      <img src="./assets/images/creative-look-glass.svg" alt="" width="64" height="64" />
                     </button>
                     <button type="button" data-creative-look="spectral-storm" class="hdri-icon" data-tooltip="Spectral storm — very slow BW plasma, extreme contrast (mostly pure black/white), strobing rim">
                       <img src="./assets/images/creative-look-spectral-storm.svg" alt="" width="64" height="64" />
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for all animated creative shaders (flow field, plasma, holographic, spectral storm). One shared clock: 1 = baseline, 2 = double, 0 = still. Pause overrides motion.">Anim Speed</span>
+                    <span data-tooltip="Speed for animated Shader Lab presets (flow field, plasma, holographic, spectral storm). Chrome / plain glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
                       min="0"
                       max="2"
                       step="0.05"
-                      value="1"
+                      value="0.4"
                     />
-                    <span class="value" data-output="creativeLookShaderAnimationSpeed">1.00</span>
+                    <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Scales the world-space pattern size for procedural creative shaders. Larger values make the shader pattern bigger on the mesh.">Scale</span>
+                    <span data-tooltip="Pattern scale (flow, plasma, holographic, spectral storm). Ordered dither: finer detail toward the left (min 0.02×). Chrome: reflection sharpness. Plain glass: thickness &amp; frost.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
-                      min="0.1"
+                      min="0.02"
                       max="5"
-                      step="0.05"
+                      step="0.02"
                       value="1"
                     />
                     <span class="value" data-output="creativeLookPatternScale">1.00×</span>
@@ -800,7 +844,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated creative shaders (flow field, plasma, holographic, spectral storm). Lighting-driven presets keep updating."
+                    data-tooltip="Freeze animated Shader Lab presets (flow field, plasma, holographic, spectral storm). True chrome and toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>
@@ -1273,7 +1317,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.410 · 2026-05-09 10:38:03 UTC</div>
+              <div class="info-version-tag">v0.5.412 · 2026-05-10 10:43:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2011,7 +2055,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.410 · 2026-05-09 10:38:03 UTC</div>
+              <div class="info-version-tag">v0.5.412 · 2026-05-10 10:43:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3029,6 +3073,22 @@
               </div>
 
               <div class="panel-block">
+                <div class="subsection">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Rule of thirds, center cross, diagonals, and center circle — fitted to 16×9 in the viewport">Composition grid</span>
+                    <label class="effect-toggle" data-tooltip="Show composition overlay in the viewport">
+                      <input type="checkbox" id="compositionGridEnabled" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show composition grid</span>
+                    </label>
+                  </div>
+                  <p class="panel-hint composition-grid-hint">
+                    16×9 letterbox — matches typical video framing. Works best fullscreen on a 16×9 display.
+                  </p>
+                </div>
+              </div>
+
+              <div class="panel-block">
                 <div class="block-title">
                   <span>Quality</span>
                 </div>
@@ -3090,7 +3150,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.410 · 2026-05-09 10:38:03 UTC</div>
+              <div class="info-version-tag">v0.5.412 · 2026-05-10 10:43:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3239,7 +3299,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.410 · 2026-05-09 10:38:03 UTC</div>
+              <div class="info-version-tag">v0.5.412 · 2026-05-10 10:43:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3809,13 +3869,13 @@
               </div>
 
               <div class="panel-block" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 9):</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 10):</div>
                 <div class="about-content">
                   <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look Filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.410 · 2026-05-09 10:38:03 UTC</div>
+              <div class="info-version-tag">v0.5.412 · 2026-05-10 10:43:49 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

@@ -124,9 +124,9 @@ export class StateStore {
         preset: 'neon-edge',
         /** When true, flow-field / plasma / holographic `uTime` stops advancing. */
         pauseShaderAnimations: false,
-        /** Multiplier on shader `uTime` for animated presets (0–2); same scale for flow, plasma, holographic, spectral storm. */
-        shaderAnimationSpeed: 1,
-        /** World-space pattern size multiplier for procedural creative looks. 1 = preset default. */
+        /** Multiplier on shader `uTime` for animated presets (0–2); same scale for flow, plasma, holographic, spectral storm. Default tuned for spectral storm pacing. */
+        shaderAnimationSpeed: 0.4,
+        /** World-space pattern size multiplier for Shader Lab presets. 1 = preset default. */
         patternScale: 1,
       },
       fresnel: {
@@ -218,6 +218,8 @@ export class StateStore {
       camera: {
         fov: 50,
         tilt: 0,
+        /** Rule-of-thirds / crosshair / diagonal overlay in viewport (16×9 letterbox). */
+        compositionGridEnabled: false,
         autoOrbit: 'off',
         handheld: 'off',
         contrast: 1.0,
@@ -249,7 +251,7 @@ export class StateStore {
       background: '#000000',
       lookFilterPreset: 'none',
       lookFilterPresetsOpen: false,
-      /** Object tab — fold-out for Creative shaders (presets, bloom, animation). */
+      /** Object tab — fold-out for Shader Lab (stylized materials). */
       creativeLookSectionOpen: false,
       /** 'low' | 'medium' | 'high' — color SVG (ImageTracer) trace fidelity */
       svgColorDetail: 'high',

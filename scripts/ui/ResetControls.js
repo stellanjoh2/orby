@@ -72,6 +72,7 @@ const RESET_DIRTY_PATHS = {
     'camera.fov', 'fisheye', 'camera.tilt', 'camera.handheld',
     'exposure', 'autoExposure',
     'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
+    'camera.compositionGridEnabled',
   ],
   fisheye: ['fisheye'],
   'color-correction': [
@@ -624,7 +625,11 @@ export class ResetControls {
       this.eventBus.emit('render:tone-curve', defaults.toneCurve);
       this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
       this.eventBus.emit('render:apply-performance');
-      
+      this.eventBus.emit(
+        'camera:composition-grid',
+        !!(defaults.camera.compositionGridEnabled ?? false),
+      );
+
       this.ui.syncUIFromState();
       this.helpers.showToast('FX settings reset');
     };
@@ -1021,6 +1026,10 @@ export class ResetControls {
               this.stateStore.set('camera.vignetteEnabled', defaults.camera.vignetteEnabled ?? false);
               this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0.5);
               this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+              this.stateStore.set(
+                'camera.compositionGridEnabled',
+                defaults.camera.compositionGridEnabled ?? false,
+              );
             });
             // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
@@ -1034,6 +1043,10 @@ export class ResetControls {
               effectiveVignetteIntensity(defaults.camera, defaults.camera),
             );
             this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
+            this.eventBus.emit(
+              'camera:composition-grid',
+              !!(defaults.camera.compositionGridEnabled ?? false),
+            );
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
             break;

@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import {
+  CREATIVE_CHROME_BASE_HEX,
   createCreativeLookMaterial,
+  creativeChromeRoughness,
+  creativeGlassParams,
+  creativeOrderedDitherPixelScale,
   normalizeCreativeLookPreset,
 } from './CreativeLookMaterials.js';
 import { reapplySvgExtrudeProceduralFromState } from './SvgExtrudeSurfaceShader.js';
@@ -72,7 +76,7 @@ export class MaterialController {
       enabled: false,
       preset: 'neon-edge',
       pauseShaderAnimations: false,
-      shaderAnimationSpeed: 1,
+      shaderAnimationSpeed: 0.4,
       patternScale: 1,
     };
     /** Clock time (seconds) for animated presets (flow-field, plasma). */
@@ -114,11 +118,11 @@ export class MaterialController {
       pauseShaderAnimations: icl.pauseShaderAnimations === true,
       shaderAnimationSpeed: (() => {
         const sp = Number(icl.shaderAnimationSpeed);
-        return Number.isFinite(sp) ? THREE.MathUtils.clamp(sp, 0, 2) : 1;
+        return Number.isFinite(sp) ? THREE.MathUtils.clamp(sp, 0, 2) : 0.4;
       })(),
       patternScale: (() => {
         const ps = Number(icl.patternScale);
-        return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.1, 5) : 1;
+        return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
       })(),
     };
     this.materialSettings = {
@@ -1071,12 +1075,18 @@ export class MaterialController {
         // GLTF_FULL_OPACITY_BLEND_THRESHOLD (near-opaque = opaque draw order).
         const useTransparentSort =
           !!origMat?.transparent && opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD;
+        const state = this.stateStore?.getState();
+        const hdriBlur = Number(state?.hdriBlurriness ?? 0);
         return createCreativeLookMaterial(preset, {
           transparent: useTransparentSort,
           opacity,
           side: origMat?.side ?? THREE.FrontSide,
           time: this._creativeLookTime,
           patternScale: this.creativeLookSettings.patternScale,
+          hdriBlurriness: Number.isFinite(hdriBlur)
+            ? THREE.MathUtils.clamp(hdriBlur, 0, 1)
+            : 0,
+          diffuseTint: origMat?.color?.clone?.() ?? undefined,
         });
       };
 
@@ -1127,10 +1137,10 @@ export class MaterialController {
     const sp = Number(this.creativeLookSettings.shaderAnimationSpeed);
     this.creativeLookSettings.shaderAnimationSpeed = Number.isFinite(sp)
       ? THREE.MathUtils.clamp(sp, 0, 2)
-      : 1;
+      : 0.4;
     const ps = Number(this.creativeLookSettings.patternScale);
     this.creativeLookSettings.patternScale = Number.isFinite(ps)
-      ? THREE.MathUtils.clamp(ps, 0.1, 5)
+      ? THREE.MathUtils.clamp(ps, 0.02, 5)
       : 1;
     this.creativeLookSettings.preset = normalizeCreativeLookPreset(
       this.creativeLookSettings.preset,
@@ -1167,11 +1177,11 @@ export class MaterialController {
   updateCreativeLookTime(elapsedSeconds) {
     const cl = this.stateStore?.getState()?.creativeLook ?? {};
     let animSpeed = Number(cl.shaderAnimationSpeed);
-    if (!Number.isFinite(animSpeed)) animSpeed = 1;
+    if (!Number.isFinite(animSpeed)) animSpeed = 0.4;
     animSpeed = THREE.MathUtils.clamp(animSpeed, 0, 2);
     let patternScale = Number(cl.patternScale);
     if (!Number.isFinite(patternScale)) patternScale = 1;
-    patternScale = THREE.MathUtils.clamp(patternScale, 0.1, 5);
+    patternScale = THREE.MathUtils.clamp(patternScale, 0.02, 5);
 
     const scaledClock = elapsedSeconds * animSpeed;
 
@@ -1192,14 +1202,18 @@ export class MaterialController {
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
 
-    if (preset === 'toon' && typeof this.getCreativeLookKeyLightDir === 'function') {
+    if (
+      (preset === 'toon' || preset === 'ordered-dither') &&
+      typeof this.getCreativeLookKeyLightDir === 'function'
+    ) {
       const dir = this.getCreativeLookKeyLightDir(this._creativeToonKeyDirScratch);
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           if (
-            m?.userData?.orbyCreativeLook === 'toon' &&
+            (m?.userData?.orbyCreativeLook === 'toon' ||
+              m?.userData?.orbyCreativeLook === 'ordered-dither') &&
             m.uniforms?.uLightDir
           ) {
             m.uniforms.uLightDir.value.copy(dir);
@@ -1208,33 +1222,84 @@ export class MaterialController {
       });
     }
 
-    if (
-      preset !== 'flow-field' &&
-      preset !== 'plasma' &&
-      preset !== 'holographic' &&
-      preset !== 'spectral-storm'
-    ) {
-      return;
-    }
-    this.currentModel.traverse((child) => {
-      if (!child.isMesh) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      for (const m of mats) {
-        const tag = m?.userData?.orbyCreativeLook;
-        if (
-          (tag === 'flow-field' ||
-            tag === 'plasma' ||
-            tag === 'holographic' ||
-            tag === 'spectral-storm') &&
-          m.uniforms?.uTime
-        ) {
-          m.uniforms.uTime.value = effectiveTime;
-          if (m.uniforms.uPatternScale) {
-            m.uniforms.uPatternScale.value = patternScale;
+    const animPreset =
+      preset === 'flow-field' ||
+      preset === 'plasma' ||
+      preset === 'holographic' ||
+      preset === 'spectral-storm';
+    if (animPreset) {
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          const tag = m?.userData?.orbyCreativeLook;
+          if (
+            (tag === 'flow-field' ||
+              tag === 'plasma' ||
+              tag === 'holographic' ||
+              tag === 'spectral-storm') &&
+            m.uniforms?.uTime
+          ) {
+            m.uniforms.uTime.value = effectiveTime;
+            if (m.uniforms.uPatternScale) {
+              m.uniforms.uPatternScale.value = patternScale;
+            }
           }
         }
-      }
-    });
+      });
+    }
+
+    if (preset === 'ordered-dither') {
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (
+            m?.userData?.orbyCreativeLook === 'ordered-dither' &&
+            m.uniforms?.uPixelScale
+          ) {
+            m.uniforms.uPixelScale.value =
+              creativeOrderedDitherPixelScale(patternScale);
+          }
+        }
+      });
+    }
+
+    if (preset === 'chrome') {
+      const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
+      const rough = creativeChromeRoughness(
+        patternScale,
+        Number.isFinite(blur) ? blur : 0,
+      );
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (m?.userData?.orbyCreativeLook === 'chrome' && m.isMeshPhysicalMaterial) {
+            m.roughness = rough;
+          }
+        }
+      });
+    }
+
+    if (preset === 'glass') {
+      const blur = Number(this.stateStore?.getState()?.hdriBlurriness ?? 0);
+      const { thickness, roughness } = creativeGlassParams(
+        patternScale,
+        Number.isFinite(blur) ? blur : 0,
+      );
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (m?.userData?.orbyCreativeLook === 'glass' && m.isMeshPhysicalMaterial) {
+            m.thickness = thickness;
+            m.roughness = roughness;
+          }
+        }
+      });
+    }
+
   }
 
   getCreativeLookSettings() {
@@ -1346,6 +1411,7 @@ export class MaterialController {
             ? this._subsurfaceTranslucency()
             : 0;
           const patchClayMat = (mat) => {
+            if (mat?.userData?.orbyCreativeLook) return;
             if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
             mat.roughness = this.materialSettings.roughness;
             mat.metalness = this.materialSettings.metalness;
@@ -1374,6 +1440,7 @@ export class MaterialController {
           
           if (Array.isArray(material) && Array.isArray(original)) {
             material.forEach((mat, idx) => {
+              if (mat?.userData?.orbyCreativeLook) return;
               if (mat && mat.isMeshBasicMaterial) {
                 const originalColor = getOriginalColor(original, idx);
                 const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
@@ -1382,6 +1449,7 @@ export class MaterialController {
               }
             });
           } else if (material && material.isMeshBasicMaterial) {
+            if (material.userData?.orbyCreativeLook) return;
             const originalColor = getOriginalColor(original);
             const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
             material.color.copy(adjustedColor);
@@ -1404,6 +1472,7 @@ export class MaterialController {
 
           if (Array.isArray(material) && Array.isArray(original)) {
             material.forEach((mat, idx) => {
+              if (mat?.userData?.orbyCreativeLook) return;
               if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
                 let m = mat;
                 if (tSub > SUBSURFACE_EPS && m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) {
@@ -1434,6 +1503,7 @@ export class MaterialController {
                 }
                 m.needsUpdate = true;
               } else if (mat && (mat.isMeshPhongMaterial || mat.isMeshLambertMaterial)) {
+                if (mat?.userData?.orbyCreativeLook) return;
                 // FBX (e.g. Mixamo) often loads as Phong/Lambert — brightness must still apply live.
                 const originalColor = getOriginalColor(original, idx);
                 const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
@@ -1442,6 +1512,7 @@ export class MaterialController {
               }
             });
           } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+            if (material.userData?.orbyCreativeLook) return;
             let mat = material;
             if (tSub > SUBSURFACE_EPS && mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) {
               mat = this._upgradeStandardMaterialToPhysical(mat);
@@ -1473,6 +1544,7 @@ export class MaterialController {
             material &&
             (material.isMeshPhongMaterial || material.isMeshLambertMaterial)
           ) {
+            if (material.userData?.orbyCreativeLook) return;
             const originalColor = getOriginalColor(original);
             const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
             material.color.copy(adjustedColor);
@@ -1876,6 +1948,26 @@ export class MaterialController {
 
       materials.forEach((material) => {
         if (!material) return;
+
+        if (material.userData?.orbyCreativeLook === 'chrome') {
+          if (!material.isMeshPhysicalMaterial) return;
+          material.envMap = envTexture;
+          if (material.envMapIntensity !== undefined) {
+            material.envMapIntensity = intensity;
+          }
+          material.metalness = 1.0;
+          material.color.setHex(CREATIVE_CHROME_BASE_HEX);
+          const ps = Number(state?.creativeLook?.patternScale);
+          const patternScale = Number.isFinite(ps)
+            ? THREE.MathUtils.clamp(ps, 0.02, 5)
+            : 1;
+          material.roughness = creativeChromeRoughness(
+            patternScale,
+            hdriBlurriness,
+          );
+          material.needsUpdate = true;
+          return;
+        }
 
         if (
           material.isMeshStandardMaterial ||

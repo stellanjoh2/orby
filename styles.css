@@ -1714,6 +1714,68 @@ html.orby-dropzone-shell-pending .workspace {
   outline: none;
 }
 
+/* 16×9 composition aid — thirds, center cross, diagonals, center circle */
+.composition-grid-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  /* Definite size for cqw/cqh so the frame tracks viewport panel resizes */
+  container-type: size;
+  container-name: composition-grid;
+}
+
+/* Only when visible: `display: flex` must not apply while `[hidden]` or it overrides UA display:none */
+.composition-grid-overlay:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Largest 16×9 rectangle that fits inside the viewport (letterbox / pillarbox outside this). */
+.composition-grid-overlay__frame {
+  flex-shrink: 0;
+  aspect-ratio: 16 / 9;
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Older engines without container query units: SVG still letterboxes inside full overlay */
+@supports not (width: 1cqw) {
+  .composition-grid-overlay__frame {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: unset;
+  }
+}
+
+.composition-grid-overlay__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Axis-aligned lines stay sharp; diagonals still anti-alias normally */
+  shape-rendering: geometricPrecision;
+}
+
+/* Hairline strokes in screen px (not viewBox units — avoids “fat” lines when scaled). */
+.composition-grid-overlay__lines line,
+.composition-grid-overlay__lines circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.52);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+.composition-grid-hint {
+  margin-top: 0.35rem;
+}
+
 .dropzone {
   position: absolute;
   inset: 0;
@@ -4301,7 +4363,7 @@ body.ui-hidden .shelf {
   margin-bottom: -0.2rem;
 }
 
-/* Object tab — Creative shaders fold-out (matches Look Filters behavior) */
+/* Object tab — Shader Lab fold-out (matches Look Filters behavior) */
 .creative-look-foldout {
   margin-top: 0.45rem;
   max-height: 0;

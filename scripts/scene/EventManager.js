@@ -116,7 +116,7 @@ export class EventManager {
         enabled: false,
         preset: 'neon-edge',
         pauseShaderAnimations: false,
-        shaderAnimationSpeed: 1,
+        shaderAnimationSpeed: 0.4,
         patternScale: 1,
       };
       s.materialController.setCreativeLookSettings(cl, { skipStateStore: true });
@@ -254,6 +254,9 @@ export class EventManager {
       if (s.histogramController) {
         s.histogramController.setEnabled(enabled);
       }
+    });
+    eventBus.on('camera:composition-grid', (enabled) => {
+      s.setCompositionGridOverlayVisible(!!enabled);
     });
     eventBus.on('render:look-filter', (presetId) => {
       s.applyLookFilter(presetId);

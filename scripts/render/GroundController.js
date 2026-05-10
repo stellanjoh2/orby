@@ -13,6 +13,7 @@ import {
   DEFAULT_MATERIAL_METALNESS,
 } from '../constants.js';
 import { PodiumGlassSeparableBlur } from './PodiumGlassSeparableBlur.js';
+import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 
 /** Glass reflection FS: single projected sample — blur is separable H/V on the RT (see PodiumGlassSeparableBlur). */
 function buildPodiumGlassReflectorFragmentShader() {
@@ -558,12 +559,10 @@ export class GroundController {
     reflector.onBeforeRender = function podiumGlassOnBeforeRender(renderer, scene, camera) {
       originalBeforeRender.call(reflector, renderer, scene, camera);
       // Reflector restores the framebuffer via setRenderTarget but does not align Three's
-      // logical viewport with the full canvas. Use drawing-buffer size so viewport matches
-      // the backing store (getSize() can drift vs getDrawingBufferSize at DPR/export boundaries).
-      const db = new THREE.Vector2();
-      renderer.getDrawingBufferSize(db);
-      const pr = Math.max(1e-6, renderer.getPixelRatio?.() ?? 1);
-      renderer.setViewport(0, 0, db.x / pr, db.y / pr);
+      // logical viewport with the full canvas. Use GL drawing-buffer dims — cached getDrawingBufferSize
+      // can drift during export resize (partial viewport → black bands).
+      const v = fullViewportLogicalSize(renderer);
+      renderer.setViewport(0, 0, v.x, v.y);
       if (typeof renderer.setScissorTest === 'function') {
         renderer.setScissorTest(false);
       }
