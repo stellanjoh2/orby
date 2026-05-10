@@ -11,8 +11,9 @@
  *   RESEND_API_KEY       — from resend.com
  *   BUG_REPORT_TO        — recipient inbox (e.g. orby-admin@proton.me); must match Vercel env in production
  *   RESEND_FROM          — e.g. "Orby <onboarding@resend.dev>" (test) or a verified domain sender
- *   BUG_REPORT_ALLOWED_ORIGINS — optional, comma list (e.g. https://orby.studio,http://localhost:3000).
- *                                If unset, only the request Origin that matches /^https?:\\/\\// is echoed (permissive).
+ *   BUG_REPORT_ALLOWED_ORIGINS — optional, comma-separated exact origins (e.g. https://orby.studio,http://localhost:5173).
+ *                                Recommended in production: list only your real site (and local dev if needed).
+ *                                If unset, any browser Origin matching /^https?:\\/\\// is echoed (permissive; fine for dev).
  *
  * Abuse protection (recommended for production):
  *   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — from upstash.com; per-IP sliding windows: 1 req/min, 4 req/h.
@@ -291,17 +292,19 @@ export default async function handler(req, res) {
     });
   } catch (e) {
     console.error('Resend fetch error', e);
-    return res.status(502).json({ error: 'Email send failed', detail: 'Could not reach email provider.' });
+    return res.status(502).json({
+      error: 'Email send failed',
+      detail: 'Email could not be sent. Please try again later.',
+    });
   }
 
   if (!resendRes.ok) {
     const errText = await resendRes.text().catch(() => '');
-    console.error('Resend error', resendRes.status, errText);
     const parsed = parseResendErrorDetail(errText);
-    const detail = parsed || `Resend HTTP ${resendRes.status} (see Vercel logs for body)`;
+    console.error('Resend error', resendRes.status, errText, parsed ? `(parsed: ${parsed})` : '');
     return res.status(502).json({
       error: 'Email send failed',
-      detail,
+      detail: 'Email could not be sent. Please try again later.',
     });
   }
 
