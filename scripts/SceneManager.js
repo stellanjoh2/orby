@@ -416,7 +416,9 @@ export class SceneManager {
     const cam0 = this.stateStore.getState().camera ?? {};
     this.setCompositionGridOverlayVisible(!!cam0.compositionGridEnabled);
     this.setCompositionGuidesInverted(!!cam0.compositionGuidesInverted);
-    this.setCinematicLetterbox219Visible(!!cam0.cinematicLetterbox219);
+    this.setCinematicLetterbox219Visible(!!cam0.cinematicLetterbox219, {
+      animate: false,
+    });
 
     // Initialize event manager and register all event listeners
     this.eventManager = new EventManager(this);
@@ -475,14 +477,54 @@ export class SceneManager {
   }
 
   /** Viewport-only 21∶9 mattes (Camera → 21∶9 letterbox). */
-  setCinematicLetterbox219Visible(enabled) {
+  setCinematicLetterbox219Visible(enabled, { animate = false } = {}) {
     const el =
       this.cinematicLetterbox219El ??
       document.getElementById('viewportLetterbox219');
     if (!el) return;
     this.cinematicLetterbox219El = el;
-    el.hidden = !enabled;
-    el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+
+    const prefersReducedMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const useAnimate = animate && !prefersReducedMotion;
+
+    if (this._cinematicLetterbox219HideTimeout != null) {
+      clearTimeout(this._cinematicLetterbox219HideTimeout);
+      this._cinematicLetterbox219HideTimeout = null;
+    }
+    if (this._cinematicLetterbox219EnterRaf != null) {
+      cancelAnimationFrame(this._cinematicLetterbox219EnterRaf);
+      this._cinematicLetterbox219EnterRaf = null;
+    }
+
+    if (!useAnimate) {
+      el.hidden = !enabled;
+      el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+      el.classList.toggle('viewport-letterbox--shown', !!enabled);
+      return;
+    }
+
+    const LETTERBOX_MS = 250;
+
+    if (enabled) {
+      el.hidden = false;
+      el.setAttribute('aria-hidden', 'false');
+      el.classList.remove('viewport-letterbox--shown');
+      this._cinematicLetterbox219EnterRaf = requestAnimationFrame(() => {
+        this._cinematicLetterbox219EnterRaf = requestAnimationFrame(() => {
+          this._cinematicLetterbox219EnterRaf = null;
+          el.classList.add('viewport-letterbox--shown');
+        });
+      });
+    } else {
+      el.classList.remove('viewport-letterbox--shown');
+      this._cinematicLetterbox219HideTimeout = window.setTimeout(() => {
+        this._cinematicLetterbox219HideTimeout = null;
+        el.hidden = true;
+        el.setAttribute('aria-hidden', 'true');
+      }, LETTERBOX_MS);
+    }
   }
 
   setupMeshClickDetection() {
@@ -933,7 +975,9 @@ export class SceneManager {
     this._ensureColorCheckerReferenceShadingConsistency();
     this.setCompositionGridOverlayVisible(!!state.camera?.compositionGridEnabled);
     this.setCompositionGuidesInverted(!!state.camera?.compositionGuidesInverted);
-    this.setCinematicLetterbox219Visible(!!state.camera?.cinematicLetterbox219);
+    this.setCinematicLetterbox219Visible(!!state.camera?.cinematicLetterbox219, {
+      animate: false,
+    });
   }
 
   /**

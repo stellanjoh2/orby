@@ -410,7 +410,10 @@ export class RenderControls {
       this.ui.inputs.cinematicLetterbox219.addEventListener('change', (event) => {
         const enabled = event.target.checked;
         this.stateStore.set('camera.cinematicLetterbox219', enabled);
-        this.eventBus.emit('camera:cinematic-letterbox-219', enabled);
+        this.eventBus.emit('camera:cinematic-letterbox-219', {
+          enabled,
+          animate: true,
+        });
       });
     }
 
