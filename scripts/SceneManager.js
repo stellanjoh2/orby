@@ -630,6 +630,15 @@ export class SceneManager {
         this._syncRendererClearForSceneBackground();
       },
       setRotationY: (value) => this.setRotationY(value),
+      beginExportOrbitDrive: () => this.cameraController?.beginExportOrbitDrive?.(),
+      applyExportOrbitDriveFrame: (t, spins) =>
+        this.cameraController?.applyExportOrbitDriveFrame?.(t, spins),
+      endExportOrbitDrive: () => {
+        this.cameraController?.endExportOrbitDrive?.();
+        if (this.cameraAutoOrbit !== 'off') {
+          this.setCameraAutoOrbit(this.cameraAutoOrbit);
+        }
+      },
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
       getCurrentAssetMetadata: () => this.currentAssetMetadata,

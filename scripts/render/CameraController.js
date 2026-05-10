@@ -82,6 +82,11 @@ export class CameraController {
     this.autoOrbitTime = 0; // Time accumulator for smooth orbit
     this.autoOrbitBaseSpherical = null; // Store initial orbit position
 
+    /** Video export: timed horizontal orbit matching current framing (orbit target + spherical pose). */
+    this._exportOrbitDriveActive = false;
+    this._exportOrbitSnapshot = null;
+    this._preExportOrbitControls = null;
+
     this.altRightDragging = false;
     this.altLeftDragging = false;
     this.altLeftTargetSet = false;
@@ -128,6 +133,7 @@ export class CameraController {
    * @param {number} delta seconds
    */
   applyHandheldMotion(delta) {
+    if (this._exportOrbitDriveActive) return;
     if (this.handheldMode === 'off') return;
     const d = typeof delta === 'number' ? delta : 0;
     if (!Number.isFinite(d) || d <= 0 || d > 0.25) return;
@@ -339,6 +345,68 @@ export class CameraController {
   }
 
   /**
+   * Begin timed export orbit (camera circles orbit target; polar distance & height match current shot).
+   */
+  beginExportOrbitDrive() {
+    if (!this.controls) return;
+    this._preExportOrbitControls = {
+      pan: this.controls.enablePan,
+      rotate: this.controls.enableRotate,
+      zoom: this.controls.enableZoom,
+      damping: this.controls.enableDamping,
+    };
+    const target = this.controls.target ?? new THREE.Vector3();
+    this._orbitOffset.copy(this.camera.position).sub(target);
+    this._orbitSpherical.setFromVector3(this._orbitOffset);
+    this._exportOrbitSnapshot = new THREE.Spherical().copy(this._orbitSpherical);
+    this._exportOrbitDriveActive = true;
+    this.controls.enablePan = false;
+    this.controls.enableRotate = false;
+    this.controls.enableZoom = false;
+    this.controls.enableDamping = false;
+  }
+
+  /**
+   * @param {number} t — progress in [0, 1] over export duration
+   * @param {number} spins — full 360° laps (same semantics as turntable spins)
+   */
+  applyExportOrbitDriveFrame(t, spins = 1) {
+    if (!this._exportOrbitDriveActive || !this._exportOrbitSnapshot || !this.controls?.target) {
+      return;
+    }
+    const target = this.controls.target;
+    const sn = this._exportOrbitSnapshot;
+    const u = THREE.MathUtils.clamp(typeof t === 'number' ? t : 0, 0, 1);
+    const nSpins = spins === 2 ? 2 : 1;
+    const theta = sn.theta + nSpins * Math.PI * 2 * u;
+    this._orbitSpherical.set(sn.radius, sn.phi, theta);
+    this._orbitOffset.setFromSpherical(this._orbitSpherical);
+    this.camera.position.copy(target).add(this._orbitOffset);
+    this._applyTilt();
+  }
+
+  endExportOrbitDrive() {
+    if (!this._exportOrbitDriveActive) return;
+    this._exportOrbitDriveActive = false;
+    this._exportOrbitSnapshot = null;
+    if (this._preExportOrbitControls && this.controls) {
+      this.controls.enablePan = this._preExportOrbitControls.pan;
+      this.controls.enableRotate = this._preExportOrbitControls.rotate;
+      this.controls.enableZoom = this._preExportOrbitControls.zoom;
+      this.controls.enableDamping = this._preExportOrbitControls.damping;
+    }
+    this._preExportOrbitControls = null;
+    this.controls?.update?.();
+    if (this.autoOrbitMode === 'off') {
+      this._applyTilt();
+    }
+  }
+
+  isExportOrbitDriving() {
+    return !!this._exportOrbitDriveActive;
+  }
+
+  /**
    * Set auto-orbit mode
    * @param {string} mode - 'off', 'slow', or 'fast'
    */
@@ -377,6 +445,7 @@ export class CameraController {
    * @param {number} delta - Time delta in seconds
    */
   updateAutoOrbit(delta) {
+    if (this._exportOrbitDriveActive) return;
     if (this.autoOrbitMode === 'off' || !this.autoOrbitBaseSpherical) return;
 
     // Speed multipliers
@@ -427,6 +496,7 @@ export class CameraController {
   }
 
   update() {
+    if (this._exportOrbitDriveActive) return;
     // Only update controls if auto-orbit is off (to prevent interference)
     // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {

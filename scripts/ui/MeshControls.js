@@ -710,7 +710,7 @@ export class MeshControls {
       button.addEventListener('click', () => {
         if (button.disabled) return;
         const mode = button.dataset.videoMode;
-        if (mode !== 'turntable' && mode !== 'dolly') return;
+        if (mode !== 'turntable' && mode !== 'orbit') return;
         this.ui.exportSettings.video.mode = mode;
         document.querySelectorAll('[data-video-mode]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
