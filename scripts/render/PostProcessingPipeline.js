@@ -109,7 +109,7 @@ export class PostProcessingPipeline {
     this.toneMappingPass = new ShaderPass(ToneMappingShader);
     this.toneMappingPass.renderToScreen = false;
 
-    /** Full-frame lens distortion / fisheye (runs after tone mapping + grading). */
+    /** Full-frame lens distortion / fisheye (after CA — aberration runs post-grade so saturation does not kill fringes). */
     this.lensDistortionPass = new ShaderPass(LensDistortionShader);
     this.lensDistortionPass.enabled = false;
     this.lensDistortionPass.renderToScreen = true;
@@ -123,11 +123,12 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.lensDirtPass);
     this.composer.addPass(this.filmPass);
     this.composer.addPass(this.grainTintPass);
-    this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.fxaaPass);
     this.composer.addPass(this.exposurePass);
     this.composer.addPass(this.colorAdjustPass);
     this.composer.addPass(this.toneMappingPass);
+    // Chromatic aberration after grading + tone map so low-saturation looks (e.g. Noir) keep visible channel separation.
+    this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.lensDistortionPass);
   }
 

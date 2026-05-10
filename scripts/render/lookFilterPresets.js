@@ -228,9 +228,9 @@ const PRESET_SPECS = {
     },
     bloom: {
       enabled: true,
-      strength: 0.46,
+      strength: 0.15,
       threshold: 0.78,
-      radius: 0.86,
+      radius: 0.15,
       color: '#ffffff',
     },
     toneCurve: {
