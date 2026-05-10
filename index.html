@@ -6,14 +6,6 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0HJC40N3N3"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() { dataLayer.push(arguments); }
-      gtag('js', new Date());
-      gtag('config', 'G-0HJC40N3N3');
-    </script>
     <style>html{background:#000}</style>
     
     <!-- Open Graph / Facebook -->
@@ -40,19 +32,6 @@
       rel="icon"
       type="image/svg+xml"
       href="./assets/images/favicon.svg"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
-      rel="stylesheet"
     />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -3336,8 +3315,8 @@
                   Quick Navigation
                 </div>
                 <nav class="info-quicknav" style="display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; font-size: 0.85rem; color: var(--text-dim);">
-                  <a href="#info-shortcuts">Shortcuts</a>
                   <a href="#info-sounds">UI Sounds</a>
+                  <a href="#info-shortcuts">Shortcuts</a>
                   <a href="#info-mouse">Mouse</a>
                   <a href="#info-gamepad">Gamepad</a>
                   <a href="#info-about">About Orby</a>
@@ -3354,6 +3333,34 @@
                   <a href="#info-credits">Credits</a>
                   <a href="#info-changelog">Latest Changes</a>
                 </nav>
+              </div>
+
+              <div class="panel-block" id="info-sounds">
+                <div class="block-title has-toggle">
+                  <span>
+                    <i class="fa-solid fa-volume-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
+                    UI Sounds
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="uiSoundsEnabled" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">UI sounds on</span>
+                    </label>
+                  </div>
+                </div>
+                <label class="slider-line">
+                  <span>Volume</span>
+                  <input
+                    id="uiSoundsVolume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="100"
+                  />
+                  <span class="value" data-output="uiSoundsVolume">100%</span>
+                </label>
               </div>
 
               <div class="panel-block" id="info-shortcuts">
@@ -3452,46 +3459,18 @@
                   <div class="shortcut-row">
                     <span class="shortcut-action">Cycle through tabs</span>
                     <span class="shortcut-keys"><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></span>
-                </div>
-                  
+                  </div>
+
                   <div class="shortcut-row">
                     <span class="shortcut-action">Apply studio preset</span>
                     <span class="shortcut-keys"><kbd>X</kbd></span>
-              </div>
+                  </div>
 
                   <div class="shortcut-row">
                     <span class="shortcut-action">Exit Auto Orbit</span>
                     <span class="shortcut-keys"><kbd>Esc</kbd></span>
                   </div>
                 </div>
-              </div>
-
-              <div class="panel-block" id="info-sounds">
-                <div class="block-title has-toggle">
-                  <span>
-                    <i class="fa-solid fa-volume-high" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
-                    UI Sounds
-                  </span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="uiSoundsEnabled" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">UI sounds on</span>
-                    </label>
-                  </div>
-                </div>
-                <label class="slider-line">
-                  <span>Volume</span>
-                  <input
-                    id="uiSoundsVolume"
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value="100"
-                  />
-                  <span class="value" data-output="uiSoundsVolume">100%</span>
-                </label>
               </div>
 
               <div class="panel-block" id="info-mouse">
@@ -3590,7 +3569,7 @@
                 <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
                 <div class="about-content">
                   <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It's perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
-                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio with <span class="about-highlight">HDR environments</span>, <span class="about-highlight">Look Filter Presets</span>, <span class="about-highlight">a Luminance Tone Curve</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
+                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio: <span class="about-highlight">HDR environments</span>, <span class="about-highlight">Look Filter Presets</span>, <span class="about-highlight">a Luminance Tone Curve</span>, <span class="about-highlight">Shader Lab</span> stylized materials, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, exports from stills and vectors to <span class="about-highlight">turntable video</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
                 <p style="margin-top: 1rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
                 </div>
               </div>
@@ -3614,19 +3593,20 @@
                 <div class="about-content">
                   <ul style="list-style: none; padding: 0; margin: 0;">
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Real-time 3D model viewer</span> — Load and view GLB, GLTF, OBJ, FBX, and more with instant preview and smooth interactions</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, Auto Orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional transform widgets</span> — Interactive gizmos (W=Move, E=Rotate, Q=Scale) for precise object manipulation with click-to-select</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Shader Lab</span> — Go beyond standard glTF materials: enable stylized presets (metallic chrome, physical glass, animated FX, and more) that temporarily replace the mesh materials—tune motion and scale, then switch off to restore your original look</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and Auto Rotate</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, film grain, chromatic aberration, lens dirt, and full color &amp; tone grading for cinematic results</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Look Filter Presets</span> — One-tap style presets in Camera (thumbnail grid) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance Tone Curve</span> — Four draggable handles (black, two mids, white); smooth spline + baked 256-step LUT for response shaping, optional fold-out next to the histogram</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Histogram &amp; exposure tools</span> — Live luminance histogram (optional), auto exposure, and manual exposure for predictable brightness</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance Tone Curve</span> — Four draggable handles (black, two mids, white); smooth spline + baked 256-step LUT for response shaping, optional fold-out next to the histogram</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and Auto Rotate</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">High-quality export</span> — Export PNG images at 1x or 2x resolution with transparent background support</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, Auto Orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Deep export toolkit</span> — PNG stills (1×/2×, optional transparency); vector SVG (silhouette or flat filled color); GLB from SVG extrusions for other apps and AR; turntable <strong>video</strong> as MP4 or MOV (H.264, with ffmpeg-backed packaging where needed), plus numbered PNG sequences in a zip—control length, spins, FPS, resolution, and encode quality for deliverables and social-ready clips</li>
                   </ul>
                 </div>
               </div>
@@ -3861,6 +3841,9 @@
                     </li>
                     <li style="margin-bottom: 0.5rem;">
                       • <a href="https://www.collletttivo.it/" target="_blank" rel="noreferrer" class="about-highlight">Collletttivo</a> — Mattone typeface source (headline brand font, SIL OFL 1.1)
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      • <a href="https://vercel.com/font" target="_blank" rel="noreferrer" class="about-highlight">Vercel</a> — Geist Sans &amp; Geist Mono (UI fonts, self-hosted <code style="font-size: 0.88em;">woff2</code>, SIL OFL 1.1)
                     </li>
                     <li style="margin-bottom: 0.5rem;">
                       • <a href="https://snd.dev/" target="_blank" rel="noreferrer" class="about-highlight">SND</a> — UI interaction sounds (SND01 “sine” kit) · <span class="about-highlight">Yasuhiro Tsuchiya</span>, Sound Designer / Researcher

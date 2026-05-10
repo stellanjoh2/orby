@@ -29,11 +29,77 @@
   font-display: swap;
 }
 
+/* Geist UI (SIL OFL) — Light default, Regular for emphasis; weights 500–700 reuse Regular */
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Regular.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Regular.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Regular.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/fonts/GeistMono-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/fonts/GeistMono-Light.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/fonts/GeistMono-Light.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+  font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
-  --brand-font-headline: 'Mattone Bold', 'Cal Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
+  --brand-font-headline: 'Mattone Bold', 'Cal Sans', 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --danger: #ff7b7b;
   /* Critical alerts — matches bug-report severity “blocker” dot */
   --warning: #dc2626;
@@ -51,6 +117,7 @@
 
 .brand-font-headline {
   font-family: var(--brand-font-headline);
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -261,6 +328,7 @@ body.orby-not-found-active.orby-not-found-fade-ready #webgl {
 .orby-not-found-title {
   margin: 0 0 0.5rem 0;
   font-family: var(--brand-font-headline);
+  font-weight: 700;
   font-size: clamp(2rem, 8vw, 4.2rem);
   line-height: 0.9;
   letter-spacing: 0.02em;
@@ -738,7 +806,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   border: 1px solid var(--stroke);
   border-radius: 8px;
   color: var(--text);
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
   font-size: 0.8rem;
   line-height: 1.6;
   resize: vertical;
@@ -930,7 +998,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   /* Match landing .drop-primary */
   font-family: var(--brand-font-headline);
   font-size: clamp(2.28rem, 5.28vw, 4.32rem);
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1.1;
   color: var(--text);
@@ -2111,6 +2179,7 @@ html.orby-window-resizing body.dropzone-visible .dropzone::after {
 
 .drop-primary {
   font-family: var(--brand-font-headline);
+  font-weight: 700;
   font-size: clamp(1.9rem, 4.4vw, 3.6rem);
   letter-spacing: 0.04em;
   opacity: 0;
@@ -2415,7 +2484,7 @@ html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
   border: 1px solid var(--stroke);
   border-radius: 4px;
   color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+  font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1;
@@ -2532,7 +2601,7 @@ a.about-highlight:focus-visible {
   padding: 0.15em 0.4em;
   border-radius: 3px;
   font-size: 0.9em;
-  font-family: 'Inter', monospace;
+  font-family: 'Geist Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
 }
 
 .panels {

@@ -25,6 +25,12 @@ All other assets in this repository (icons, images, animations, etc.) are includ
 - Upstream license copy: `assets/fonts/Mattone-LICENSE.txt`
 - Original source package (local import path used): `~/Downloads/mattone-main/`
 
+## Typeface: Geist
+
+UI fonts `assets/fonts/Geist-Light.woff2`, `assets/fonts/Geist-Regular.woff2`, and `assets/fonts/GeistMono-Light.woff2` are from [Geist](https://vercel.com/font) by Vercel, licensed under the SIL Open Font License 1.1 (OFL).
+
+- Upstream license copy: `assets/fonts/Geist-OFL.txt`
+
 ---
 
 **Note**: If you are forking or cloning this repository, you should remove the HDRI files from `assets/hdris/` and replace them with your own licensed HDRI maps, or the application will not function correctly with HDRI environments.

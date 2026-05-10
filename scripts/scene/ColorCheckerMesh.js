@@ -76,6 +76,8 @@ function createReferenceSphereMeshes(group, totalW, totalH) {
   });
   chromeMat.userData.meshglReferenceProbe = true;
   chromeMat.userData.referenceRole = 'chrome';
+  /** Restored when HDRI blurriness is 0; blurred via same formula as main mesh / podium. */
+  chromeMat.userData.referenceBaseRoughness = chromeMat.roughness;
 
   const greyMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color().setRGB(0.18, 0.18, 0.18),
@@ -85,6 +87,7 @@ function createReferenceSphereMeshes(group, totalW, totalH) {
   });
   greyMat.userData.meshglReferenceProbe = true;
   greyMat.userData.referenceRole = 'grey';
+  greyMat.userData.referenceBaseRoughness = greyMat.roughness;
 
   const whiteMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -94,6 +97,7 @@ function createReferenceSphereMeshes(group, totalW, totalH) {
   });
   whiteMat.userData.meshglReferenceProbe = true;
   whiteMat.userData.referenceRole = 'white';
+  whiteMat.userData.referenceBaseRoughness = whiteMat.roughness;
 
   const mats = [chromeMat, greyMat, whiteMat];
   const meshNames = ['ReferenceSphere_chrome', 'ReferenceSphere_grey', 'ReferenceSphere_white'];

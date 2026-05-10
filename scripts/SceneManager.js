@@ -920,7 +920,11 @@ export class SceneManager {
   applyColorCheckerFromState(state) {
     const cc = state?.colorChecker ?? this.stateStore.getDefaults().colorChecker;
     if (this.colorCheckerRoot && cc?.enabled) {
-      this._syncColorCheckerReferenceProbes(this.scene.environment, this.hdriStrength);
+      this._syncColorCheckerReferenceProbes(
+        this.scene.environment,
+        this.hdriStrength,
+        this.hdriBlurriness,
+      );
     }
   }
 
@@ -1183,14 +1187,15 @@ export class SceneManager {
       intensity,
       this.hdriBlurriness,
     );
-    this._syncColorCheckerReferenceProbes(envTexture, intensity);
+    this._syncColorCheckerReferenceProbes(envTexture, intensity, this.hdriBlurriness);
   }
 
   /**
    * Chrome / grey / white reference spheres use their own fixed metalness — not the mesh slider.
    * Env maps are assigned here (they are not under `currentModel`, so MaterialController skips them).
+   * Roughness tracks HDRI blurriness like the main mesh / podium so probe reflections match the dome.
    */
-  _syncColorCheckerReferenceProbes(envTexture, intensity) {
+  _syncColorCheckerReferenceProbes(envTexture, intensity, hdriBlurriness) {
     const mats = this.colorCheckerRoot?.userData?.referenceProbeMaterials;
     if (!mats?.length) return;
     const tex = envTexture ?? this.scene.environment ?? null;
@@ -1198,11 +1203,24 @@ export class SceneManager {
       0,
       Number.isFinite(intensity) ? intensity : this.hdriStrength ?? 0,
     );
+    const rawBlur =
+      hdriBlurriness !== undefined ? Number(hdriBlurriness) : this.hdriBlurriness ?? 0;
+    const blur = Number.isFinite(rawBlur)
+      ? Math.min(1, Math.max(0, rawBlur))
+      : 0;
     for (const mat of mats) {
       if (!mat?.userData?.meshglReferenceProbe) continue;
       mat.envMap = tex;
       if (mat.envMapIntensity !== undefined) {
         mat.envMapIntensity = envInt;
+      }
+      const baseR = mat.userData?.referenceBaseRoughness;
+      if (baseR !== undefined && mat.roughness !== undefined) {
+        if (blur > 0) {
+          mat.roughness = Math.min(1, baseR + (1 - baseR) * blur);
+        } else {
+          mat.roughness = baseR;
+        }
       }
       mat.needsUpdate = true;
     }
