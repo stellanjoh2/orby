@@ -481,7 +481,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
   font-family: inherit;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, opacity 0.2s ease, filter 0.2s ease;
   width: 100%;
 }
 
@@ -2750,6 +2750,10 @@ a.about-highlight:focus-visible {
   font-weight: 400;
 }
 
+:is(.subsection, .panel-block) .block-title {
+  transition: color 0.2s ease;
+}
+
 /*
  * Muted .subsection / .panel-block — captions use --muted-section-text-scale; .block-title text stays opacity 1.
  * Heading color stays the muted blend (25% accent / 75% text-dim). Scope avoids export foldout double-dimming.
@@ -2782,6 +2786,7 @@ a.about-highlight:focus-visible {
 :is(.subsection, .panel-block).is-muted .slider-line > span:first-child,
 :is(.subsection, .panel-block).is-muted .slider-line .value,
 :is(.subsection, .panel-block).is-muted .color-line > span:first-child,
+:is(.subsection, .panel-block).is-muted .color-line input.color-chip:not(.is-disabled-handle),
 :is(.subsection, .panel-block).is-muted .select-line > span:first-child,
 :is(.subsection, .panel-block).is-muted .select-line select,
 :is(.subsection, .panel-block).is-muted .ghost-btn:not(:disabled):not(.is-disabled),
@@ -2790,7 +2795,7 @@ a.about-highlight:focus-visible {
 :is(.subsection, .panel-block).is-muted .map-slot-name,
 :is(.subsection, .panel-block).is-muted .advanced-import-details summary,
 :is(.subsection, .panel-block).is-muted .svg-extrude-note,
-:is(.subsection, .panel-block).is-muted .look-filter-tile__label {
+:is(.subsection, .panel-block).is-muted .look-filter-tile {
   opacity: var(--muted-section-text-scale);
 }
 
@@ -3250,6 +3255,22 @@ button.advanced-info-doc-btn {
   color: var(--text-dim);
 }
 
+/* Smooth mute ↔ unmute for all controls that dim inside Studio subsections / panel blocks */
+:is(.subsection, .panel-block) :where(
+  .slider-line > span:first-child,
+  .slider-line .value,
+  .color-line > span:first-child,
+  .select-line > span:first-child,
+  .select-line select,
+  .panel-hint,
+  .map-slot-row > span:first-child,
+  .map-slot-name,
+  .advanced-import-details summary,
+  .svg-extrude-note
+) {
+  transition: opacity 0.2s ease, color 0.2s ease, filter 0.2s ease;
+}
+
 /* Removed - all toggles now use .effect-toggle system */
 
 .slider-line input[type='range'] {
@@ -3266,6 +3287,8 @@ button.advanced-info-doc-btn {
   background: transparent;
   /* Focus ring: track highlight only (see :focus-visible on runnable-track), not browser outline */
   outline: none;
+  /* Pairs with :disabled opacity + mute orchestration — avoids one-frame pops */
+  transition: opacity 0.2s ease;
 }
 
 /* WebKit slider track with fill effect */
@@ -3282,7 +3305,7 @@ button.advanced-info-doc-btn {
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
-  transition: background 0.15s ease;
+  transition: background 0.2s ease;
 }
 
 /* Active drag or keyboard focus: brighter track (no focus outline on the input) */
@@ -3339,7 +3362,7 @@ button.advanced-info-doc-btn {
     rgba(255, 255, 255, 0.15) 100%
   );
   border: none;
-  transition: background 0.15s ease;
+  transition: background 0.2s ease;
 }
 
 /* Active drag or keyboard focus */
@@ -3722,33 +3745,49 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 }
 
 .color-chip {
-  width: 88px;
+  --color-chip-w: 92px;
+  width: var(--color-chip-w);
   max-width: 100%;
-  height: 14px;
-  border-radius: 3px;
+  height: 12px;
+  padding: 0;
   border: none;
+  border-radius: 9999px;
   background: transparent;
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   overflow: hidden;
   cursor: pointer;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1);
   flex-shrink: 1;
+}
+
+input.color-chip {
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* Grid aligns chips to the end of the row — extra width grows left (expand toward the label). */
+input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
+  width: calc(var(--color-chip-w) + 8px);
 }
 
 .color-chip::-webkit-color-swatch {
   border: none;
-  border-radius: 3px;
+  border-radius: inherit;
   padding: 0;
 }
 
 .color-chip::-webkit-color-swatch-wrapper {
   padding: 0;
-  border-radius: 3px;
+  border-radius: inherit;
+  background: transparent;
 }
 
 .color-chip::-moz-color-swatch {
   border: none;
-  border-radius: 3px;
+  border-radius: inherit;
 }
 
 #svgExtrudeColorDepths .color-chip {
@@ -3849,7 +3888,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   background: none;
   padding: 0;
   margin: 0;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
   transform-origin: center center;
 }
 
@@ -4001,9 +4040,6 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 }
 
 .light-chip {
-  width: 88px;
-  max-width: 100%;
-  height: 14px;
   flex-shrink: 1;
   min-width: 0;
 }
@@ -4012,7 +4048,6 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   opacity: 0.5;
   pointer-events: none;
   filter: saturate(0.35);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 .export-block {
@@ -4321,7 +4356,7 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
     width: clamp(280px, 30vw, 340px);
   }
   .color-chip {
-    width: 70px;
+    --color-chip-w: 73px;
   }
 }
 
@@ -4338,7 +4373,7 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
     min-height: 0;
   }
   .color-chip {
-    width: 60px;
+    --color-chip-w: 63px;
   }
 }
 
@@ -4510,7 +4545,8 @@ body.ui-hidden .shelf {
   transition:
     color 0.15s ease,
     background 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    opacity 0.2s ease;
 }
 
 .look-filter-tile:hover {

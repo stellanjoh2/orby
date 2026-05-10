@@ -218,12 +218,78 @@ export class MaterialController {
   }
 
   /**
-   * User Emissive slider > 0: tint-based glow (existing behavior).
+   * Whether ANY material in the current model has emissive baseline (import or live, e.g. user-added
+   * FBX emissive slot map). Used to gate the legacy diffuse-tint fallback so plain non-emissive
+   * materials in a model that already contains emissive parts don't get globally lit when the slider
+   * is raised. Computed on demand and cheap (one traversal); callers should compute once per
+   * top-level update and pass through to {@link #_applyUserEmissiveOrRestoreImport}.
+   */
+  _modelHasAnyEmissiveBaseline() {
+    if (!this.currentModel) return false;
+    let found = false;
+    this.currentModel.traverse((child) => {
+      if (found || !child.isMesh) return;
+      const original = this.originalMaterials?.get(child);
+      const live = child.material;
+      const liveArr = Array.isArray(live) ? live : [live];
+      const origArr = Array.isArray(original) ? original : [original];
+      for (let i = 0; i < liveArr.length; i++) {
+        if (this._importMaterialHasEmissiveBaseline(origArr[i], liveArr[i])) {
+          found = true;
+          return;
+        }
+      }
+    });
+    return found;
+  }
+
+  /**
+   * User Emissive slider > 0:
+   * - Materials that already had glTF/FBX emissive content: boost authored emissive (map + factor) via
+   *   intensity × (1 + slider) so only emissive channels brighten — diffuse is never copied into emissive.
+   * - Materials with no import emissive, in a model that has *some* emissive parts: leave non-emissive
+   *   (don't smear diffuse-tinted glow over plates/bodies that the artist authored as non-glowing).
+   * - Materials with no import emissive, in a model that has *no* emissive at all: legacy tint-based
+   *   glow using the brightness-adjusted diffuse color (so the slider remains useful for plain models).
    * Slider at 0: keep file emissive + map so glTF emissive textures are not wiped by updateMaterials / setShading.
    */
-  _applyUserEmissiveOrRestoreImport(target, importMat, adjustedColor, userEmissive) {
+  _applyUserEmissiveOrRestoreImport(target, importMat, adjustedColor, userEmissive, modelHasEmissive = false) {
     const slider = userEmissive > 0 ? userEmissive : 0;
     if (slider > 0) {
+      if (this._importMaterialHasEmissiveBaseline(importMat, target)) {
+        const map = importMat?.emissiveMap || target?.emissiveMap;
+        if (map) target.emissiveMap = map;
+
+        if (importMat?.emissive) {
+          target.emissive.copy(importMat.emissive);
+        } else if (map) {
+          target.emissive.setRGB(1, 1, 1);
+        } else {
+          target.emissive.set(0, 0, 0);
+        }
+        if (
+          map &&
+          target.emissive.r === 0 &&
+          target.emissive.g === 0 &&
+          target.emissive.b === 0
+        ) {
+          target.emissive.setRGB(1, 1, 1);
+        }
+        const ei = importMat?.emissiveIntensity;
+        let baseIntensity;
+        if (map && (!Number.isFinite(ei) || ei <= 0)) {
+          baseIntensity = 1;
+        } else {
+          baseIntensity = Number.isFinite(ei) && ei >= 0 ? ei : 1;
+        }
+        target.emissiveIntensity = baseIntensity * (1 + slider);
+        return;
+      }
+      if (modelHasEmissive) {
+        target.emissive.set(0, 0, 0);
+        target.emissiveIntensity = 0;
+        return;
+      }
       target.emissive.copy(adjustedColor).multiplyScalar(slider);
       target.emissiveIntensity = slider;
       return;
@@ -263,20 +329,22 @@ export class MaterialController {
    */
   resyncEmissiveFromImportedMaterials() {
     if (!this.currentModel || this.currentShading !== 'shaded') return;
+
+    const userEm = this.materialSettings.emissive ?? 0;
+    const bright = this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
+    const modelHasEmissive = this._modelHasAnyEmissiveBaseline();
+
+    const getOrigColor = (orig, idx = 0) => {
+      if (Array.isArray(orig)) {
+        return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
+      }
+      return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+    };
+
     this.currentModel.traverse((child) => {
       if (!child.isMesh || this.isWindowMesh(child)) return;
       const original = this.originalMaterials.get(child);
       if (!original) return;
-
-      const getOrigColor = (orig, idx = 0) => {
-        if (Array.isArray(orig)) {
-          return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
-        }
-        return orig?.color?.clone() ?? new THREE.Color('#ffffff');
-      };
-
-      const userEm = this.materialSettings.emissive ?? 0;
-      const bright = this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
 
       const patch = (mat, idx) => {
         if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
@@ -286,7 +354,7 @@ export class MaterialController {
           mat.emissiveMap = origMat.emissiveMap;
         }
         const adjustedColor = getOrigColor(original, idx).multiplyScalar(bright);
-        this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm);
+        this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
         mat.needsUpdate = true;
       };
 
@@ -809,6 +877,7 @@ export class MaterialController {
   setShading(mode) {
     if (!this.currentModel) return;
     this.currentShading = mode;
+    const modelHasEmissive = this._modelHasAnyEmissiveBaseline();
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
       
@@ -954,6 +1023,7 @@ export class MaterialController {
               mat,
               adjustedColor,
               this.materialSettings.emissive || 0.0,
+              modelHasEmissive,
             );
             // Disable original metalness/roughness maps so sliders behave consistently — unless the user
             // assigned FBX slot textures (manual maps).
@@ -1394,6 +1464,8 @@ export class MaterialController {
     // Update existing materials in all modes (except wireframe which has its own color)
     // Material controls now apply to both Color/Textures modes AND Clay mode
     if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
+      const modelHasEmissive =
+        this.currentShading === 'shaded' ? this._modelHasAnyEmissiveBaseline() : false;
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const original = this.originalMaterials.get(child);
@@ -1494,6 +1566,7 @@ export class MaterialController {
                   origMat,
                   adjustedColor,
                   this.materialSettings.emissive || 0.0,
+                  modelHasEmissive,
                 );
                 if ('metalnessMap' in m) {
                   m.metalnessMap = null;
@@ -1532,6 +1605,7 @@ export class MaterialController {
               original,
               adjustedColor,
               this.materialSettings.emissive || 0.0,
+              modelHasEmissive,
             );
             if ('metalnessMap' in mat) {
               mat.metalnessMap = null;

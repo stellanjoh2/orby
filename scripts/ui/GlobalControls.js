@@ -282,49 +282,45 @@ export class GlobalControls {
         this.eventBus.emit('camera:focus');
       }
 
-      // W - Toggle Move widget
+      // Transform tools: W move, E scale, R rotate (Blender-style), Q select / exit tool
       if (key === 'w') {
         event.preventDefault();
-        const currentMove = this.stateStore.getState().moveWidgetEnabled ?? false;
-        const newMoveState = !currentMove;
-        if (newMoveState) {
-          this.stateStore.set('rotateWidgetEnabled', false);
-          this.stateStore.set('scaleWidgetEnabled', false);
-          this.eventBus.emit('mesh:rotate-widget-enabled', false);
-          this.eventBus.emit('mesh:scale-widget-enabled', false);
-        }
-        this.stateStore.set('moveWidgetEnabled', newMoveState);
-        this.eventBus.emit('mesh:move-widget-enabled', newMoveState);
+        this.stateStore.set('rotateWidgetEnabled', false);
+        this.stateStore.set('scaleWidgetEnabled', false);
+        this.stateStore.set('moveWidgetEnabled', true);
+        this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        this.eventBus.emit('mesh:scale-widget-enabled', false);
+        this.eventBus.emit('mesh:move-widget-enabled', true);
       }
 
-      // E - Toggle Rotate widget
       if (key === 'e') {
         event.preventDefault();
-        const currentRotate = this.stateStore.getState().rotateWidgetEnabled ?? false;
-        const newRotateState = !currentRotate;
-        if (newRotateState) {
-          this.stateStore.set('moveWidgetEnabled', false);
-          this.stateStore.set('scaleWidgetEnabled', false);
-          this.eventBus.emit('mesh:move-widget-enabled', false);
-          this.eventBus.emit('mesh:scale-widget-enabled', false);
-        }
-        this.stateStore.set('rotateWidgetEnabled', newRotateState);
-        this.eventBus.emit('mesh:rotate-widget-enabled', newRotateState);
+        this.stateStore.set('moveWidgetEnabled', false);
+        this.stateStore.set('rotateWidgetEnabled', false);
+        this.stateStore.set('scaleWidgetEnabled', true);
+        this.eventBus.emit('mesh:move-widget-enabled', false);
+        this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        this.eventBus.emit('mesh:scale-widget-enabled', true);
       }
 
-      // Q - Toggle Scale widget
+      if (key === 'r' && !isCtrl && !isShift) {
+        event.preventDefault();
+        this.stateStore.set('moveWidgetEnabled', false);
+        this.stateStore.set('scaleWidgetEnabled', false);
+        this.stateStore.set('rotateWidgetEnabled', true);
+        this.eventBus.emit('mesh:move-widget-enabled', false);
+        this.eventBus.emit('mesh:scale-widget-enabled', false);
+        this.eventBus.emit('mesh:rotate-widget-enabled', true);
+      }
+
       if (key === 'q' && !isCtrl && !isShift) {
         event.preventDefault();
-        const currentScale = this.stateStore.getState().scaleWidgetEnabled ?? false;
-        const newScaleState = !currentScale;
-        if (newScaleState) {
-          this.stateStore.set('moveWidgetEnabled', false);
-          this.stateStore.set('rotateWidgetEnabled', false);
-          this.eventBus.emit('mesh:move-widget-enabled', false);
-          this.eventBus.emit('mesh:rotate-widget-enabled', false);
-        }
-        this.stateStore.set('scaleWidgetEnabled', newScaleState);
-        this.eventBus.emit('mesh:scale-widget-enabled', newScaleState);
+        this.stateStore.set('moveWidgetEnabled', false);
+        this.stateStore.set('rotateWidgetEnabled', false);
+        this.stateStore.set('scaleWidgetEnabled', false);
+        this.eventBus.emit('mesh:move-widget-enabled', false);
+        this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        this.eventBus.emit('mesh:scale-widget-enabled', false);
       }
 
       // Display modes: 1/2/3/4 (supports top row and numpad keys)

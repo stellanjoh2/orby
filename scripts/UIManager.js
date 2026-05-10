@@ -1490,7 +1490,7 @@ export class UIManager {
       this.inputs.rotationZ.value = state.rotationZ ?? 0;
       this.updateValueLabel('rotationZ', state.rotationZ ?? 0, 'angle');
     }
-    // Widget states are managed via keyboard shortcuts (W/E), no UI sync needed
+    // Widget states are managed via keyboard shortcuts (Q/W/E/R), no UI sync needed
     if (this.inputs.materialBrightness) {
       const brightness = state.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
       this.inputs.materialBrightness.value = brightness;

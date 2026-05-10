@@ -106,9 +106,10 @@ Perfect for models exported from:
 
 | Action | Shortcut | Description |
 |--------|----------|-------------|
-| Toggle Move widget | `W` | Position gizmo |
-| Toggle Rotate widget | `E` | Rotation gizmo |
-| Toggle Scale widget | `Q` | Scale gizmo |
+| Select (exit transform tools) | `Q` | Hides move / rotate / scale gizmos |
+| Move (translate) | `W` | Position gizmo |
+| Scale | `E` | Scale gizmo |
+| Rotate | `R` | Rotation gizmo (same as Blender) |
 | Reset scale to 1 | `S` | Reset scale |
 | Reset position offsets | `Y` | Reset X/Y/Z position |
 | Reset all transforms | `0` | Reset scale, position, rotation |
