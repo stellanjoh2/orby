@@ -934,7 +934,8 @@ export class SceneManager {
     const anchor = this.controls.target;
     const camPos = this.camera.position;
 
-    // Same yaw composition as LightsController.updateLightPosition: global + individual on XZ.
+    // Orbit yaw from ColorChecker → Rotate only — not studio lights / HDRI global rotation,
+    // so lighting tweaks don’t swing the chart around the target.
     let horiz = this._colorCheckerHorizRef.set(camPos.x - anchor.x, 0, camPos.z - anchor.z);
     if (horiz.lengthSq() < 1e-10) {
       horiz.set(0, 0, 1);
@@ -942,9 +943,7 @@ export class SceneManager {
       horiz.normalize();
     }
 
-    const globalRad = THREE.MathUtils.degToRad(this.stateStore.getState().lightsRotation ?? 0);
-    const individualRad = THREE.MathUtils.degToRad(cc.rotate ?? 0);
-    const yRad = globalRad + individualRad;
+    const yRad = THREE.MathUtils.degToRad(cc.rotate ?? 0);
     const cos = Math.cos(yRad);
     const sin = Math.sin(yRad);
     const rx = horiz.x * cos + horiz.z * sin;

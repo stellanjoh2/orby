@@ -61,45 +61,53 @@ export class RenderControls {
   }
 
   bind() {
-    const touchLookFilterCustom = () => {
-      if (this.stateStore.getState().lookFilterPreset !== 'custom') {
-        this.stateStore.set('lookFilterPreset', 'custom');
-      }
+    /** Batches primary control writes with look-filter preset so syncControls never runs between them (avoids first-click checkbox resets). */
+    const commitLookFilterTouchWith = (fn) => {
+      this.stateStore.batch(() => {
+        fn();
+        if (this.stateStore.getState().lookFilterPreset !== 'custom') {
+          this.stateStore.set('lookFilterPreset', 'custom');
+        }
+      });
     };
     // DOF
     const emitDof = () => this.eventBus.emit('render:dof', this.stateStore.getState().dof);
     this.ui.inputs.toggleDof.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const enabled = event.target.checked;
-      this.stateStore.set('dof.enabled', enabled);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('dof.enabled', enabled);
+      });
       this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !enabled);
       emitDof();
     });
     this.ui.inputs.dofFocus.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const raw = parseFloat(event.target.value);
       const value = Math.max(DOF_FOCUS_MIN_M, raw);
       if (value !== raw) {
         event.target.value = String(value);
       }
       this.helpers.updateValueLabel('dofFocus', value, 'distance');
-      this.stateStore.set('dof.focus', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('dof.focus', value);
+      });
       emitDof();
     });
     this.ui.inputs.dofAperture.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('dofAperture', value, 'decimal', 3);
-      this.stateStore.set('dof.aperture', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('dof.aperture', value);
+      });
       emitDof();
     });
 
     // Bloom
     const emitBloom = () => this.eventBus.emit('render:bloom', this.stateStore.getState().bloom);
     this.ui.inputs.toggleBloom.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const enabled = event.target.checked;
-      this.stateStore.set('bloom.enabled', enabled);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('bloom.enabled', enabled);
+      });
       this.ui.setEffectControlsDisabled(
         [
           'bloomThreshold',
@@ -114,28 +122,31 @@ export class RenderControls {
     });
     [['bloomThreshold', 'threshold'], ['bloomStrength', 'strength'], ['bloomRadius', 'radius']].forEach(([inputKey, property]) => {
       this.ui.inputs[inputKey].addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const value = parseFloat(event.target.value);
         this.helpers.updateValueLabel(inputKey, value, 'decimal');
-        this.stateStore.set(`bloom.${property}`, value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set(`bloom.${property}`, value);
+        });
         emitBloom();
       });
     });
     this.ui.inputs.bloomColor.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = event.target.value;
-      this.stateStore.set('bloom.color', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('bloom.color', value);
+      });
       emitBloom();
     });
     if (this.ui.inputs.bloomQuality) {
       this.ui.inputs.bloomQuality.addEventListener('change', (event) => {
-        touchLookFilterCustom();
         const raw = event.target.value;
         const quality =
           raw === 'low' || raw === 'high' || raw === 'ultra'
             ? raw
             : 'medium';
-        this.stateStore.set('bloom.quality', quality);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('bloom.quality', quality);
+        });
         emitBloom();
       });
     }
@@ -145,48 +156,54 @@ export class RenderControls {
     };
     if (this.ui.inputs.anamorphicBloomEnabled) {
       this.ui.inputs.anamorphicBloomEnabled.addEventListener('change', (event) => {
-        touchLookFilterCustom();
-        this.stateStore.set('lensFlare.anamorphicBloom.enabled', event.target.checked);
+        const checked = event.target.checked;
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.enabled', checked);
+        });
         emitAnamorphicBloom();
       });
     }
     if (this.ui.inputs.anamorphicBloomStrength) {
       this.ui.inputs.anamorphicBloomStrength.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const value = parseFloat(event.target.value);
         this.helpers.updateValueLabel('anamorphicBloomStrength', value, 'decimal');
-        this.stateStore.set('lensFlare.anamorphicBloom.strength', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.strength', value);
+        });
         emitAnamorphicBloom();
       });
     }
     if (this.ui.inputs.anamorphicBloomSpread) {
       this.ui.inputs.anamorphicBloomSpread.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         let value = parseFloat(event.target.value);
         value = Math.min(ANAMORPHIC_BLOOM_SPREAD_MAX, Math.max(0, value));
         if (value !== parseFloat(event.target.value)) {
           event.target.value = String(value);
         }
         this.helpers.updateValueLabel('anamorphicBloomSpread', value, 'decimal');
-        this.stateStore.set('lensFlare.anamorphicBloom.spread', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.spread', value);
+        });
         emitAnamorphicBloom();
       });
     }
     if (this.ui.inputs.anamorphicBloomThreshold) {
       this.ui.inputs.anamorphicBloomThreshold.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const value = parseFloat(event.target.value);
         this.helpers.updateValueLabel('anamorphicBloomThreshold', value, 'decimal');
-        this.stateStore.set('lensFlare.anamorphicBloom.threshold', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.threshold', value);
+        });
         emitAnamorphicBloom();
       });
     }
     if (this.ui.inputs.anamorphicBloomSoften) {
       this.ui.inputs.anamorphicBloomSoften.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const value = parseFloat(event.target.value);
         this.helpers.updateValueLabel('anamorphicBloomSoften', value, 'decimal');
-        this.stateStore.set('lensFlare.anamorphicBloom.soften', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.soften', value);
+        });
         emitAnamorphicBloom();
       });
     }
@@ -197,17 +214,20 @@ export class RenderControls {
     );
     if (this.ui.inputs.anamorphicBloomQuality) {
       this.ui.inputs.anamorphicBloomQuality.addEventListener('change', (event) => {
-        touchLookFilterCustom();
         const q = normalizeAnamorphicBloomQualityId(event.target.value);
-        this.stateStore.set('lensFlare.anamorphicBloom.quality', q);
-        const spread = this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.2;
-        const clamped = Math.min(ANAMORPHIC_BLOOM_SPREAD_MAX, Math.max(0, spread));
-        if (clamped !== spread) {
-          this.stateStore.set('lensFlare.anamorphicBloom.spread', clamped);
-          if (this.ui.inputs.anamorphicBloomSpread) {
-            this.ui.inputs.anamorphicBloomSpread.value = clamped;
-            this.helpers.updateValueLabel('anamorphicBloomSpread', clamped, 'decimal');
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.quality', q);
+          const spread = this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.2;
+          const clamped = Math.min(ANAMORPHIC_BLOOM_SPREAD_MAX, Math.max(0, spread));
+          if (clamped !== spread) {
+            this.stateStore.set('lensFlare.anamorphicBloom.spread', clamped);
           }
+        });
+        const spreadAfter =
+          this.stateStore.getState().lensFlare?.anamorphicBloom?.spread ?? 0.2;
+        if (this.ui.inputs.anamorphicBloomSpread) {
+          this.ui.inputs.anamorphicBloomSpread.value = spreadAfter;
+          this.helpers.updateValueLabel('anamorphicBloomSpread', spreadAfter, 'decimal');
         }
         emitAnamorphicBloom();
       });
@@ -217,19 +237,21 @@ export class RenderControls {
     const emitLensDirt = () => this.eventBus.emit('render:lens-dirt', this.stateStore.getState().lensDirt);
     if (this.ui.inputs.lensDirtEnabled) {
       this.ui.inputs.lensDirtEnabled.addEventListener('change', (event) => {
-        touchLookFilterCustom();
         const enabled = event.target.checked;
-        this.stateStore.set('lensDirt.enabled', enabled);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensDirt.enabled', enabled);
+        });
         this.ui.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
         emitLensDirt();
       });
     }
     if (this.ui.inputs.lensDirtStrength) {
       this.ui.inputs.lensDirtStrength.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const value = parseFloat(event.target.value);
         this.helpers.updateValueLabel('lensDirtStrength', value, 'decimal');
-        this.stateStore.set('lensDirt.strength', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensDirt.strength', value);
+        });
         emitLensDirt();
       });
     }
@@ -237,26 +259,29 @@ export class RenderControls {
     // Grain
     const emitGrain = () => this.eventBus.emit('render:grain', this.stateStore.getState().grain);
     this.ui.inputs.toggleGrain.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const enabled = event.target.checked;
-      this.stateStore.set('grain.enabled', enabled);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('grain.enabled', enabled);
+      });
       this.ui.setEffectControlsDisabled(['grainIntensity'], !enabled);
       emitGrain();
     });
     this.ui.inputs.grainIntensity.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = parseFloat(event.target.value) * 0.15;
       this.helpers.updateValueLabel('grainIntensity', value / 0.15, 'decimal');
-      this.stateStore.set('grain.intensity', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('grain.intensity', value);
+      });
       emitGrain();
     });
 
     // Aberration
     const emitAberration = () => this.eventBus.emit('render:aberration', this.stateStore.getState().aberration);
     this.ui.inputs.toggleAberration.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const enabled = event.target.checked;
-      this.stateStore.set('aberration.enabled', enabled);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('aberration.enabled', enabled);
+      });
       this.ui.setEffectControlsDisabled(
         ['aberrationAmount'],
         !enabled,
@@ -264,10 +289,11 @@ export class RenderControls {
       emitAberration();
     });
     this.ui.inputs.aberrationAmount.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('aberrationAmount', value, 'decimal', 4);
-      this.stateStore.set('aberration.amount', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('aberration.amount', value);
+      });
       emitAberration();
     });
 
@@ -276,13 +302,8 @@ export class RenderControls {
     if (this.ui.inputs.toggleAmbientOcclusion) {
       this.ui.inputs.toggleAmbientOcclusion.addEventListener('change', (event) => {
         const enabled = event.target.checked;
-        // Capture the checked state before any notify-driven UI sync and commit
-        // both state updates together so the first click cannot be overwritten.
-        this.stateStore.batch(() => {
+        commitLookFilterTouchWith(() => {
           this.stateStore.set('ambientOcclusion.enabled', enabled);
-          if (this.stateStore.getState().lookFilterPreset !== 'custom') {
-            this.stateStore.set('lookFilterPreset', 'custom');
-          }
         });
         this.ui.setEffectControlsDisabled(
           [
@@ -298,40 +319,44 @@ export class RenderControls {
     }
     if (this.ui.inputs.ambientOcclusionIntensity) {
       this.ui.inputs.ambientOcclusionIntensity.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const raw = parseFloat(event.target.value);
         const value = Math.max(AMBIENT_OCCLUSION_INTENSITY_MIN, raw);
         if (value !== raw) {
           event.target.value = String(value);
         }
         this.helpers.updateValueLabel('ambientOcclusionIntensity', value, 'decimal');
-        this.stateStore.set('ambientOcclusion.intensity', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('ambientOcclusion.intensity', value);
+        });
         emitAmbientOcclusion();
       });
     }
     if (this.ui.inputs.ambientOcclusionRadius) {
       this.ui.inputs.ambientOcclusionRadius.addEventListener('input', (event) => {
-        touchLookFilterCustom();
         const value = parseFloat(event.target.value);
         this.helpers.updateValueLabel('ambientOcclusionRadius', value, 'decimal');
-        this.stateStore.set('ambientOcclusion.radius', value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('ambientOcclusion.radius', value);
+        });
         emitAmbientOcclusion();
       });
     }
     if (this.ui.inputs.ambientOcclusionQuality) {
       this.ui.inputs.ambientOcclusionQuality.addEventListener('change', (event) => {
-        touchLookFilterCustom();
         const value = event.target.value;
         const normalized =
           value === 'low' || value === 'medium' ? value : 'max';
-        this.stateStore.set('ambientOcclusion.quality', normalized);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('ambientOcclusion.quality', normalized);
+        });
         emitAmbientOcclusion();
       });
     }
     if (this.ui.inputs.ambientOcclusionColor) {
       this.ui.inputs.ambientOcclusionColor.addEventListener('input', (event) => {
-        touchLookFilterCustom();
-        this.stateStore.set('ambientOcclusion.color', event.target.value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('ambientOcclusion.color', event.target.value);
+        });
         emitAmbientOcclusion();
       });
     }
@@ -470,18 +495,20 @@ export class RenderControls {
 
     // Exposure
     this.ui.inputs.exposure.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0);
       this.helpers.updateValueLabel('exposure', value, 'decimal');
-      this.stateStore.set('exposure', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('exposure', value);
+      });
       this.eventBus.emit('scene:exposure', value);
     });
     this.helpers.enableSliderKeyboardStepping(this.ui.inputs.exposure);
     if (this.ui.inputs.autoExposure) {
       this.ui.inputs.autoExposure.addEventListener('change', (event) => {
-        touchLookFilterCustom();
         const enabled = event.target.checked;
-        this.stateStore.set('autoExposure', enabled);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('autoExposure', enabled);
+        });
         this.ui.setEffectControlsDisabled(['exposure'], enabled);
         this.eventBus.emit('camera:auto-exposure', enabled);
       });
@@ -489,82 +516,91 @@ export class RenderControls {
 
     // Color & Tone
     this.ui.inputs.cameraContrast?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0);
-      this.stateStore.set('camera.contrast', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.contrast', value);
+      });
       this.helpers.updateValueLabel('cameraContrast', value, 'decimal');
       this.eventBus.emit('render:contrast', value);
     });
     if (this.ui.inputs.cameraContrast) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraContrast);
 
     this.ui.inputs.cameraTemperature?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const parsed = this.helpers.applySnapToCenter(event.target, 2000, 10000, 6000);
       const kelvin = Number.isFinite(parsed) ? parsed : CAMERA_TEMPERATURE_NEUTRAL_K;
-      this.stateStore.set('camera.temperature', kelvin);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.temperature', kelvin);
+      });
       this.helpers.updateValueLabel('cameraTemperature', kelvin, 'kelvin');
       this.eventBus.emit('render:temperature', kelvin);
     });
     if (this.ui.inputs.cameraTemperature) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTemperature);
 
     this.ui.inputs.cameraTint?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0) || 0;
-      this.stateStore.set('camera.tint', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.tint', value);
+      });
       this.helpers.updateValueLabel('cameraTint', value, 'integer');
       this.eventBus.emit('render:tint', value / 100);
     });
     if (this.ui.inputs.cameraTint) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTint);
 
     this.ui.inputs.cameraHighlights?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0) || 0;
-      this.stateStore.set('camera.highlights', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.highlights', value);
+      });
       this.helpers.updateValueLabel('cameraHighlights', value, 'integer');
       this.eventBus.emit('render:highlights', value / 100);
     });
     if (this.ui.inputs.cameraHighlights) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraHighlights);
 
     this.ui.inputs.cameraShadows?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, -50, 50, 0) || 0;
-      this.stateStore.set('camera.shadows', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.shadows', value);
+      });
       this.helpers.updateValueLabel('cameraShadows', value, 'integer');
       this.eventBus.emit('render:shadows', value / 50);
     });
     if (this.ui.inputs.cameraShadows) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraShadows);
 
     this.ui.inputs.cameraSaturation?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0);
-      this.stateStore.set('camera.saturation', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.saturation', value);
+      });
       this.helpers.updateValueLabel('cameraSaturation', value, 'decimal');
       this.eventBus.emit('render:saturation', value);
     });
     if (this.ui.inputs.cameraSaturation) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraSaturation);
 
     this.ui.inputs.cameraClarity?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0);
-      this.stateStore.set('camera.clarity', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.clarity', value);
+      });
       this.helpers.updateValueLabel('cameraClarity', value, 'integer');
       this.eventBus.emit('render:clarity', value);
     });
     if (this.ui.inputs.cameraClarity) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraClarity);
 
     this.ui.inputs.cameraFade?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = parseFloat(event.target.value) || 0;
-      this.stateStore.set('camera.fade', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.fade', value);
+      });
       this.helpers.updateValueLabel('cameraFade', value, 'integer');
       this.eventBus.emit('render:fade', value);
     });
     if (this.ui.inputs.cameraFade) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraFade);
 
     this.ui.inputs.cameraSharpness?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = parseFloat(event.target.value) || 0;
-      this.stateStore.set('camera.sharpness', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.sharpness', value);
+      });
       this.helpers.updateValueLabel('cameraSharpness', value, 'integer');
       this.eventBus.emit('render:sharpness', value);
     });
@@ -580,20 +616,17 @@ export class RenderControls {
       );
     };
     this.ui.inputs.toggleVignette?.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const enabled = event.target.checked;
-      this.stateStore.set('camera.vignetteEnabled', enabled);
-      if (enabled) {
-        const cur = Number(this.stateStore.getState().camera?.vignette ?? 0);
-        if (cur === 0) {
-          const defV = this.stateStore.getDefaults().camera?.vignette ?? 0.5;
-          this.stateStore.set('camera.vignette', defV);
-          if (this.ui.inputs.vignetteIntensity) {
-            this.ui.inputs.vignetteIntensity.value = String(defV);
-            this.helpers.updateValueLabel('vignetteIntensity', defV, 'decimal');
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.vignetteEnabled', enabled);
+        if (enabled) {
+          const cur = Number(this.stateStore.getState().camera?.vignette ?? 0);
+          if (cur === 0) {
+            const defV = this.stateStore.getDefaults().camera?.vignette ?? 0.5;
+            this.stateStore.set('camera.vignette', defV);
           }
         }
-      }
+      });
       this.ui.setEffectControlsDisabled(
         ['vignetteIntensity', 'vignetteColor'],
         !enabled,
@@ -601,18 +634,20 @@ export class RenderControls {
       emitVignetteFromState();
     });
     this.ui.inputs.vignetteIntensity?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = this.helpers.applySnapToCenter(event.target, 0, 1, 0);
-      this.stateStore.set('camera.vignette', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.vignette', value);
+      });
       this.helpers.updateValueLabel('vignetteIntensity', value, 'decimal');
       emitVignetteFromState();
     });
     if (this.ui.inputs.vignetteIntensity) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.vignetteIntensity);
 
     this.ui.inputs.vignetteColor?.addEventListener('input', (event) => {
-      touchLookFilterCustom();
       const value = event.target.value;
-      this.stateStore.set('camera.vignetteColor', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('camera.vignetteColor', value);
+      });
       this.eventBus.emit('render:vignette-color', value);
     });
 
@@ -623,14 +658,8 @@ export class RenderControls {
           raw === 'medium' || raw === 'low' || raw === 'max'
             ? raw
             : RENDER_QUALITY_DEFAULT;
-        // Batch with look-filter touch: calling touchLookFilterCustom() before set() used to
-        // notify subscribers while renderQuality was still the old tier, so syncControls reset
-        // this <select> to Medium and Ultra didn't apply until a second change.
-        this.stateStore.batch(() => {
+        commitLookFilterTouchWith(() => {
           this.stateStore.set('renderQuality', value);
-          if (this.stateStore.getState().lookFilterPreset !== 'custom') {
-            this.stateStore.set('lookFilterPreset', 'custom');
-          }
         });
         this.eventBus.emit('render:apply-performance');
       });
@@ -638,15 +667,17 @@ export class RenderControls {
 
     // Anti-aliasing & Tone Mapping
     this.ui.inputs.antiAliasing.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const value = event.target.value;
-      this.stateStore.set('antiAliasing', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('antiAliasing', value);
+      });
       this.eventBus.emit('render:anti-aliasing', value);
     });
     this.ui.inputs.toneMapping.addEventListener('change', (event) => {
-      touchLookFilterCustom();
       const value = event.target.value;
-      this.stateStore.set('toneMapping', value);
+      commitLookFilterTouchWith(() => {
+        this.stateStore.set('toneMapping', value);
+      });
       this.eventBus.emit('render:tone-mapping', value);
     });
 
