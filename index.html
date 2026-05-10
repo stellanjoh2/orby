@@ -338,29 +338,43 @@
             hidden
             aria-hidden="true"
           >
-            <!-- Inner frame keeps true 16×9; scales whenever the viewport panel is resized -->
+            <!-- Full-viewport cross + diagonals (true panel corners; not clipped to the 16×9 frame) -->
+            <svg
+              class="composition-grid-overlay__viewport-guides"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              width="100%"
+              height="100%"
+              role="presentation"
+              focusable="false"
+              aria-hidden="true"
+            >
+              <line x1="50" y1="0" x2="50" y2="100" />
+              <line x1="0" y1="50" x2="100" y2="50" />
+              <line x1="0" y1="0" x2="100" y2="100" />
+              <line x1="100" y1="0" x2="0" y2="100" />
+            </svg>
+            <!-- Horizontal thirds: full panel width (inner SVG can letterbox X on wide views) -->
+            <div class="composition-grid-overlay__thirds-horizontal" aria-hidden="true">
+              <span class="composition-grid-overlay__thirds-horizontal-line composition-grid-overlay__thirds-horizontal-line--upper"></span>
+              <span class="composition-grid-overlay__thirds-horizontal-line composition-grid-overlay__thirds-horizontal-line--lower"></span>
+            </div>
+            <!-- Inner frame: largest 16×9 — vertical thirds + center circle -->
             <div class="composition-grid-overlay__frame">
             <svg
               class="composition-grid-overlay__svg"
               viewBox="0 0 160 90"
               preserveAspectRatio="xMidYMid meet"
+              overflow="visible"
               width="100%"
               height="100%"
               role="presentation"
               focusable="false"
             >
               <g class="composition-grid-overlay__lines">
-                <!-- Rule of thirds -->
+                <!-- Rule of thirds (vertical only — horizontals are full-bleed above) -->
                 <line x1="53.333333" y1="0" x2="53.333333" y2="90" />
                 <line x1="106.666667" y1="0" x2="106.666667" y2="90" />
-                <line x1="0" y1="30" x2="160" y2="30" />
-                <line x1="0" y1="60" x2="160" y2="60" />
-                <!-- Center crosshair -->
-                <line x1="80" y1="0" x2="80" y2="90" />
-                <line x1="0" y1="45" x2="160" y2="45" />
-                <!-- Diagonals -->
-                <line x1="0" y1="0" x2="160" y2="90" />
-                <line x1="160" y1="0" x2="0" y2="90" />
                 <!-- Center circle (~10% of frame height) -->
                 <circle cx="80" cy="45" r="4.5" />
               </g>

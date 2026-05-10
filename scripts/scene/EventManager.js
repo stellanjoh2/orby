@@ -261,8 +261,21 @@ export class EventManager {
     eventBus.on('camera:composition-guides-inverted', (inverted) => {
       s.setCompositionGuidesInverted(!!inverted);
     });
-    eventBus.on('camera:cinematic-letterbox-219', (enabled) => {
-      s.setCinematicLetterbox219Visible(!!enabled);
+    eventBus.on('camera:cinematic-letterbox-219', (payload) => {
+      let enabled;
+      let animate = false;
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        !Array.isArray(payload) &&
+        Object.prototype.hasOwnProperty.call(payload, 'enabled')
+      ) {
+        enabled = !!payload.enabled;
+        animate = !!payload.animate;
+      } else {
+        enabled = !!payload;
+      }
+      s.setCinematicLetterbox219Visible(enabled, { animate });
     });
     eventBus.on('render:look-filter', (presetId) => {
       s.applyLookFilter(presetId);
