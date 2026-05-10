@@ -405,7 +405,7 @@ export class StartMenuController {
 
   /**
    * Desktop start menu after logo: word stagger on headline only, then legacy-style block fades.
-   * Order: 1 logo (CSS before this) → 2 headline → 3 buttons → 4 secondary → 5 legend.
+   * Order: 1 logo (CSS before this) → 2 headline → 3 buttons → 4 footer copy (shortcuts + info).
    */
   revealDesktopDropzoneIntroText() {
     if (document.documentElement.classList.contains('mobile-landing')) return;
@@ -414,10 +414,9 @@ export class StartMenuController {
 
     const primary = this.dropPrimary;
     const secondary = this.dropSecondary;
-    const guide = this.dropzone?.querySelector('.quick-start-guide');
     const buttons = this.dropzone?.querySelectorAll('.dropzone-btn');
 
-    const killTargets = [primary, secondary, guide].filter(Boolean);
+    const killTargets = [primary, secondary].filter(Boolean);
     if (buttons?.length) killTargets.push(...buttons);
     gsap.killTweensOf(killTargets);
 
@@ -431,7 +430,7 @@ export class StartMenuController {
     const blockEase = 'power3.out';
     const headWordDur = 0.42;
     const headStagger = 0.035;
-    /** Start next block tween this many seconds before the previous block tween ends (buttons / info / legend only) */
+    /** Start next block tween this many seconds before the previous block tween ends (buttons / footer copy only) */
     const blockOverlap = 0.2;
 
     if (prefersReducedMotion()) {
@@ -447,7 +446,6 @@ export class StartMenuController {
       }
       if (secondary)
         gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
-      if (guide) gsap.set(guide, { opacity: 1, y: 0, clearProps: 'transform' });
       return;
     }
 
@@ -481,7 +479,7 @@ export class StartMenuController {
     }
 
     const blockAfterHead = headRan ? '>' : 0;
-    /* 3 Buttons before info + legend — matches classic dropRevealButton end state */
+    /* 3 Buttons before footer copy — matches classic dropRevealButton end state */
     if (buttons?.length) {
       tl.fromTo(
         [...buttons],
@@ -503,19 +501,6 @@ export class StartMenuController {
         { opacity: 0, y: -10 },
         { opacity: 1, y: 0, duration: blockDur, ease: blockEase },
         buttons?.length ? `>-=${blockOverlap}` : blockAfterHead,
-      );
-    }
-
-    if (guide) {
-      tl.fromTo(
-        guide,
-        { opacity: 0, y: -10 },
-        { opacity: 1, y: 0, duration: blockDur, ease: blockEase },
-        secondary
-          ? `>-=${blockOverlap}`
-          : buttons?.length
-            ? `>-=${blockOverlap}`
-            : blockAfterHead,
       );
     }
   }

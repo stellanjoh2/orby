@@ -2228,30 +2228,18 @@ html.orby-window-resizing body.dropzone-visible .dropzone::after {
   /* Responsive font size: scales down on smaller screens */
   font-size: clamp(0.75rem, 1.2vw, 0.9rem);
   letter-spacing: -0.01em;
-  line-height: 1.35;
+  line-height: 1.5;
   opacity: 0;
   transform: translateY(-10px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.15s forwards;
+  margin-top: calc(clamp(0.65rem, 2vmin, 1.1rem) + 1.5em);
+  margin-top: calc(clamp(0.65rem, 2vmin, 1.1rem) + 1lh);
   /* Responsive margin: scales down on smaller screens */
   margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  max-width: min(52rem, 92vw);
 }
 
-.quick-start-guide {
-  display: flex;
-  /* Responsive gap: scales down on smaller screens */
-  gap: clamp(1rem, 2.5vw, 2rem);
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  color: var(--text-dim);
-  /* Responsive font size: scales down on smaller screens */
-  font-size: clamp(0.75rem, 1.2vw, 0.9rem);
-  opacity: 0;
-  transform: translateY(-10px);
-  animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
-}
-
-.quick-start-guide strong {
+.drop-shortcuts-inline strong {
   color: var(--accent);
   font-weight: 700;
 }
@@ -2270,7 +2258,7 @@ html.orby-window-resizing body.dropzone-visible .dropzone::after {
   line-height: 1.5;
 }
 
-body:not(.dropzone-visible) .quick-start-guide {
+body:not(.dropzone-visible) .drop-secondary {
   opacity: 0;
   pointer-events: none;
 }
@@ -2298,16 +2286,10 @@ html:not(.mobile-landing) .dropzone-btn {
   transform: translateY(-15px);
 }
 
-html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
-  animation: none !important;
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
 /* Narrow or short desktop windows: hide keyboard legend; less bottom margin on secondary
    so logo + copy stay visually centered in the dropzone */
 @media (max-width: 1140px), (max-height: 950px) {
-  html:not(.mobile-landing) body.dropzone-visible .quick-start-guide {
+  html:not(.mobile-landing) body.dropzone-visible .drop-shortcuts-row {
     display: none !important;
   }
 
@@ -4769,8 +4751,7 @@ html.mobile-landing #mobileWarning {
 
 html.mobile-landing .drop-primary,
 html.mobile-landing .dropzone-actions,
-html.mobile-landing .drop-secondary,
-html.mobile-landing .quick-start-guide {
+html.mobile-landing .drop-secondary {
   display: none !important;
 }
 
