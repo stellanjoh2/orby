@@ -406,6 +406,14 @@ export class RenderControls {
       });
     }
 
+    if (this.ui.inputs.cinematicLetterbox219) {
+      this.ui.inputs.cinematicLetterbox219.addEventListener('change', (event) => {
+        const enabled = event.target.checked;
+        this.stateStore.set('camera.cinematicLetterbox219', enabled);
+        this.eventBus.emit('camera:cinematic-letterbox-219', enabled);
+      });
+    }
+
     if (this.ui.inputs.toneCurveOpen) {
       const updateToneCurveFoldout = (open) => {
         const el = document.querySelector('#toneCurveContainer');
@@ -1151,6 +1159,11 @@ export class RenderControls {
       const inverted = !!(state.camera?.compositionGuidesInverted);
       this.ui.inputs.compositionGuidesColor.value = inverted ? 'dark' : 'light';
       this.eventBus.emit('camera:composition-guides-inverted', inverted);
+    }
+    if (this.ui.inputs.cinematicLetterbox219) {
+      const lb = !!(state.camera?.cinematicLetterbox219);
+      this.ui.inputs.cinematicLetterbox219.checked = lb;
+      this.eventBus.emit('camera:cinematic-letterbox-219', lb);
     }
     if (this.ui.inputs.toneCurveOpen) {
       const open = state.toneCurveOpen ?? false;

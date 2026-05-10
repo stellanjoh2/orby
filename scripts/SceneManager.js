@@ -416,6 +416,7 @@ export class SceneManager {
     const cam0 = this.stateStore.getState().camera ?? {};
     this.setCompositionGridOverlayVisible(!!cam0.compositionGridEnabled);
     this.setCompositionGuidesInverted(!!cam0.compositionGuidesInverted);
+    this.setCinematicLetterbox219Visible(!!cam0.cinematicLetterbox219);
 
     // Initialize event manager and register all event listeners
     this.eventManager = new EventManager(this);
@@ -471,6 +472,17 @@ export class SceneManager {
     if (!el) return;
     this.compositionGridOverlayEl = el;
     el.classList.toggle('composition-grid-overlay--inverted', !!inverted);
+  }
+
+  /** Viewport-only 21∶9 mattes (Camera → 21∶9 letterbox). */
+  setCinematicLetterbox219Visible(enabled) {
+    const el =
+      this.cinematicLetterbox219El ??
+      document.getElementById('viewportLetterbox219');
+    if (!el) return;
+    this.cinematicLetterbox219El = el;
+    el.hidden = !enabled;
+    el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
   }
 
   setupMeshClickDetection() {
@@ -921,6 +933,7 @@ export class SceneManager {
     this._ensureColorCheckerReferenceShadingConsistency();
     this.setCompositionGridOverlayVisible(!!state.camera?.compositionGridEnabled);
     this.setCompositionGuidesInverted(!!state.camera?.compositionGuidesInverted);
+    this.setCinematicLetterbox219Visible(!!state.camera?.cinematicLetterbox219);
   }
 
   /**

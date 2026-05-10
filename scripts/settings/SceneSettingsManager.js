@@ -164,6 +164,7 @@ export class SceneSettingsManager {
         handheld: state.camera?.handheld,
         compositionGridEnabled: state.camera?.compositionGridEnabled,
         compositionGuidesInverted: state.camera?.compositionGuidesInverted,
+        cinematicLetterbox219: state.camera?.cinematicLetterbox219,
       },
       exposure: state.exposure,
       autoExposure: state.autoExposure,
@@ -983,6 +984,16 @@ export class SceneSettingsManager {
           this.eventBus.emit(
             'camera:composition-guides-inverted',
             !!payload.camera.compositionGuidesInverted,
+          );
+        }
+        if (payload.camera.cinematicLetterbox219 !== undefined) {
+          this.stateStore.set(
+            'camera.cinematicLetterbox219',
+            !!payload.camera.cinematicLetterbox219,
+          );
+          this.eventBus.emit(
+            'camera:cinematic-letterbox-219',
+            !!payload.camera.cinematicLetterbox219,
           );
         }
       }

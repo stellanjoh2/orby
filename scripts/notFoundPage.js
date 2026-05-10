@@ -182,6 +182,7 @@ const NOT_FOUND_PRESET = {
     handheld: 'off',
     compositionGridEnabled: false,
     compositionGuidesInverted: false,
+    cinematicLetterbox219: false,
   },
   exposure: 1,
   autoExposure: false,

@@ -322,6 +322,17 @@
         <section class="viewport">
           <canvas id="webgl" tabindex="0"></canvas>
           <div
+            id="viewportLetterbox219"
+            class="viewport-letterbox"
+            hidden
+            aria-hidden="true"
+          >
+            <div class="viewport-letterbox__bar viewport-letterbox__bar--top"></div>
+            <div class="viewport-letterbox__bar viewport-letterbox__bar--bottom"></div>
+            <div class="viewport-letterbox__bar viewport-letterbox__bar--left"></div>
+            <div class="viewport-letterbox__bar viewport-letterbox__bar--right"></div>
+          </div>
+          <div
             id="compositionGridOverlay"
             class="composition-grid-overlay"
             hidden
@@ -3062,6 +3073,17 @@
                       <option value="dark">Dark</option>
                     </select>
                   </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="cinematic-letterbox">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Black bars matting the viewport to a 21∶9 picture area (common on 16∶9 displays). Does not change export resolution.">21∶9 Letterbox</span>
+                    <label class="effect-toggle" data-tooltip="Show cinematic widescreen mattes in the viewport">
+                      <input type="checkbox" id="cinematicLetterbox219" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show 21∶9 Letterbox</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 

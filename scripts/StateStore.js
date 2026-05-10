@@ -223,6 +223,8 @@ export class StateStore {
         compositionGridEnabled: false,
         /** Dark strokes instead of light — for bright scenes. */
         compositionGuidesInverted: false,
+        /** Viewport-only 21∶9 mattes (letterbox / pillarbox) for framing. */
+        cinematicLetterbox219: false,
         autoOrbit: 'off',
         handheld: 'off',
         contrast: 1.0,

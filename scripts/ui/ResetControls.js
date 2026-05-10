@@ -76,6 +76,7 @@ const RESET_DIRTY_PATHS = {
     'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
     'camera.compositionGridEnabled',
     'camera.compositionGuidesInverted',
+    'camera.cinematicLetterbox219',
   ],
   fisheye: ['fisheye'],
   'color-correction': [
@@ -639,6 +640,10 @@ export class ResetControls {
         'camera:composition-guides-inverted',
         !!(defaults.camera.compositionGuidesInverted ?? false),
       );
+      this.eventBus.emit(
+        'camera:cinematic-letterbox-219',
+        !!(defaults.camera.cinematicLetterbox219 ?? false),
+      );
 
       this.ui.syncUIFromState();
       this.helpers.showToast('FX settings reset');
@@ -1044,6 +1049,10 @@ export class ResetControls {
                 'camera.compositionGuidesInverted',
                 defaults.camera.compositionGuidesInverted ?? false,
               );
+              this.stateStore.set(
+                'camera.cinematicLetterbox219',
+                defaults.camera.cinematicLetterbox219 ?? false,
+              );
             });
             // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
@@ -1064,6 +1073,10 @@ export class ResetControls {
             this.eventBus.emit(
               'camera:composition-guides-inverted',
               !!(defaults.camera.compositionGuidesInverted ?? false),
+            );
+            this.eventBus.emit(
+              'camera:cinematic-letterbox-219',
+              !!(defaults.camera.cinematicLetterbox219 ?? false),
             );
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());

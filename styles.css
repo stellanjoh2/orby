@@ -1764,6 +1764,49 @@ html.orby-dropzone-shell-pending .workspace {
   /* Clip dropzone paints (blur / shadows); inset(0) reinforces overflow in WebKit. */
   overflow: hidden;
   clip-path: inset(0);
+  container-type: size;
+  container-name: orby-viewport;
+}
+
+/* 21∶9 “cinema” mattes — fits largest 21∶9 rect in viewport (letterbox on 16∶9). */
+.viewport-letterbox {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.viewport-letterbox__bar {
+  position: absolute;
+  background: #000;
+}
+
+.viewport-letterbox__bar--top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: max(0px, calc((100cqh - 100cqw * 9 / 21) / 2));
+}
+
+.viewport-letterbox__bar--bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: max(0px, calc((100cqh - 100cqw * 9 / 21) / 2));
+}
+
+.viewport-letterbox__bar--left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: max(0px, calc((100cqw - 100cqh * 21 / 9) / 2));
+}
+
+.viewport-letterbox__bar--right {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: max(0px, calc((100cqw - 100cqh * 21 / 9) / 2));
 }
 
 #webgl {
@@ -2966,6 +3009,27 @@ a.about-highlight:focus-visible {
 
 .effect-toggle:hover .effect-indicator {
   background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Muted blocks: checked toggles stay readable but not full lime (guides off + letterbox on, etc.). */
+:is(.subsection, .panel-block).is-muted .effect-toggle input:checked + .effect-indicator {
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary) 40%,
+    rgba(255, 255, 255, 0.24)
+  ) !important;
+}
+
+:is(.subsection, .panel-block).is-muted .effect-toggle:hover input:checked + .effect-indicator {
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary) 48%,
+    rgba(255, 255, 255, 0.28)
+  ) !important;
+}
+
+:is(.subsection, .panel-block).is-muted .effect-toggle:hover input:not(:checked) + .effect-indicator {
+  background-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 .effect-toggle input:focus-visible + .effect-indicator {

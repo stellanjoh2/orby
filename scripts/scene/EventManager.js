@@ -261,6 +261,9 @@ export class EventManager {
     eventBus.on('camera:composition-guides-inverted', (inverted) => {
       s.setCompositionGuidesInverted(!!inverted);
     });
+    eventBus.on('camera:cinematic-letterbox-219', (enabled) => {
+      s.setCinematicLetterbox219Visible(!!enabled);
+    });
     eventBus.on('render:look-filter', (presetId) => {
       s.applyLookFilter(presetId);
     });

@@ -413,6 +413,7 @@ export class UIManager {
       toggleVignette: q('#toggleVignette'),
       compositionGridEnabled: q('#compositionGridEnabled'),
       compositionGuidesColor: q('#compositionGuidesColor'),
+      cinematicLetterbox219: q('#cinematicLetterbox219'),
       histogramEnabled: q('#histogramEnabled'),
       toneCurveOpen: q('#toneCurveOpen'),
       lookFilterPresetsOpen: q('#lookFilterPresetsOpen'),
@@ -1227,6 +1228,16 @@ export class UIManager {
           this.eventBus.emit(
             'camera:composition-guides-inverted',
             !!payload.camera.compositionGuidesInverted,
+          );
+        }
+        if (payload.camera.cinematicLetterbox219 !== undefined) {
+          this.stateStore.set(
+            'camera.cinematicLetterbox219',
+            !!payload.camera.cinematicLetterbox219,
+          );
+          this.eventBus.emit(
+            'camera:cinematic-letterbox-219',
+            !!payload.camera.cinematicLetterbox219,
           );
         }
       }
@@ -2240,6 +2251,12 @@ export class UIManager {
     this.setBlockMuted(
       'composition-guides',
       !currentState.camera?.compositionGridEnabled,
+    );
+
+    this.setBlockMuted(
+      'cinematic-letterbox',
+      !currentState.camera?.compositionGridEnabled ||
+        !currentState.camera?.cinematicLetterbox219,
     );
 
     this.setBlockMuted(
