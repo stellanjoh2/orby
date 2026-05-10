@@ -258,6 +258,9 @@ export class EventManager {
     eventBus.on('camera:composition-grid', (enabled) => {
       s.setCompositionGridOverlayVisible(!!enabled);
     });
+    eventBus.on('camera:composition-guides-inverted', (inverted) => {
+      s.setCompositionGuidesInverted(!!inverted);
+    });
     eventBus.on('render:look-filter', (presetId) => {
       s.applyLookFilter(presetId);
     });

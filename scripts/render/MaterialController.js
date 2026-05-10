@@ -14,6 +14,7 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
 
@@ -86,7 +87,7 @@ export class MaterialController {
     /** Reused when syncing toon `uLightDir` from scene key light. */
     this._creativeToonKeyDirScratch = new THREE.Vector3();
     this.materialSettings = {
-      brightness: 1.0,
+      brightness: DEFAULT_MATERIAL_BRIGHTNESS,
       metalness: 0.0,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       emissive: 0.0,
@@ -126,7 +127,10 @@ export class MaterialController {
       })(),
     };
     this.materialSettings = {
-      brightness: initialState.material?.brightness ?? initialState.diffuseBrightness ?? 1.0,
+      brightness:
+        initialState.material?.brightness ??
+        initialState.diffuseBrightness ??
+        DEFAULT_MATERIAL_BRIGHTNESS,
       metalness: initialState.material?.metalness ?? 0.0,
       roughness: initialState.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
       emissive: initialState.material?.emissive ?? 0.0,
@@ -272,7 +276,7 @@ export class MaterialController {
       };
 
       const userEm = this.materialSettings.emissive ?? 0;
-      const bright = this.materialSettings.brightness ?? 1;
+      const bright = this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
 
       const patch = (mat, idx) => {
         if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
@@ -1377,7 +1381,7 @@ export class MaterialController {
 
   getClayColorWithBrightness() {
     const baseColorHex = this.claySettings?.color ?? '#808080';
-    const brightness = this.materialSettings?.brightness ?? 1.0;
+    const brightness = this.materialSettings?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
     const baseColor = new THREE.Color(baseColorHex);
     const tinted = baseColor.multiplyScalar(brightness);
     tinted.r = Math.min(1, Math.max(0, tinted.r));

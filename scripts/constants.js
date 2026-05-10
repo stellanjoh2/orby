@@ -28,6 +28,30 @@ export const NORMALS_HELPER_COLOR = '#4db3ff';
 /** Neutral PBR default on load (glTF often ~0.5; 0.8 read overly chalky under HDR). */
 export const DEFAULT_MATERIAL_ROUGHNESS = 0.5;
 export const DEFAULT_MATERIAL_METALNESS = 0.08;
+/** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
+export const DEFAULT_MATERIAL_BRIGHTNESS = 1.5;
+
+/** Camera → Shadows UI — symmetric around 0 so the thumb sits centered at default; maps via {@link cameraShadowsUiToShader}. */
+export const CAMERA_SHADOWS_UI_MIN = -50;
+export const CAMERA_SHADOWS_UI_MAX = 50;
+/** Added before dividing by scale — former neutral “0” maps like old UI value +10. */
+export const CAMERA_SHADOWS_UI_OFFSET = 10;
+export const CAMERA_SHADOWS_UI_SCALE = 50;
+
+/** Clamp loaded or computed UI integers to the slider range (legacy saves may exceed ±50). */
+export function clampCameraShadowsUi(ui) {
+  const n = Number(ui);
+  const raw = Number.isFinite(n) ? n : 0;
+  return Math.min(CAMERA_SHADOWS_UI_MAX, Math.max(CAMERA_SHADOWS_UI_MIN, raw));
+}
+
+/**
+ * Maps Camera tab Shadows slider (integer) to the ColorAdjust pass uniform (approx −1…1).
+ */
+export function cameraShadowsUiToShader(ui) {
+  const v = clampCameraShadowsUi(ui);
+  return (v + CAMERA_SHADOWS_UI_OFFSET) / CAMERA_SHADOWS_UI_SCALE;
+}
 /** Upper bound for Mesh → Material emissive slider (also `index.html` #materialEmissive max). */
 export const MATERIAL_EMISSIVE_SLIDER_MAX = 4;
 

@@ -1,9 +1,10 @@
 import './main.js';
+import { DEFAULT_MATERIAL_BRIGHTNESS } from './constants.js';
 
 const NOT_FOUND_PRESET = {
   shading: 'shaded',
   material: {
-    brightness: 1.45,
+    brightness: DEFAULT_MATERIAL_BRIGHTNESS,
     metalness: 0.04,
     roughness: 0.32,
     emissive: 0.34,
@@ -180,6 +181,7 @@ const NOT_FOUND_PRESET = {
     autoOrbit: 'slow',
     handheld: 'off',
     compositionGridEnabled: false,
+    compositionGuidesInverted: false,
   },
   exposure: 1,
   autoExposure: false,

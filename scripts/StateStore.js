@@ -1,5 +1,6 @@
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_PODIUM_GLASS_BLUR,
@@ -26,7 +27,7 @@ export class StateStore {
       rotateWidgetEnabled: false,
       scaleWidgetEnabled: false,
       material: {
-        brightness: 1.0,
+        brightness: DEFAULT_MATERIAL_BRIGHTNESS,
         metalness: 0.0,
         roughness: DEFAULT_MATERIAL_ROUGHNESS,
         emissive: 0.0,
@@ -220,6 +221,8 @@ export class StateStore {
         tilt: 0,
         /** Rule-of-thirds / crosshair / diagonal overlay in viewport (16×9 letterbox). */
         compositionGridEnabled: false,
+        /** Dark strokes instead of light — for bright scenes. */
+        compositionGuidesInverted: false,
         autoOrbit: 'off',
         handheld: 'off',
         contrast: 1.0,

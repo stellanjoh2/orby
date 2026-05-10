@@ -3,6 +3,7 @@
  * Manages shading, materials, transforms, clay, wireframe, fresnel, and export settings
  */
 import {
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   MATERIAL_EMISSIVE_SLIDER_MAX,
 } from '../constants.js';
@@ -112,7 +113,13 @@ export class MeshControls {
 
     // Material controls
     this.ui.inputs.materialBrightness?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 5, 1.0);
+      const value = this.helpers.applySnapToCenter(
+        event.target,
+        0,
+        5,
+        DEFAULT_MATERIAL_BRIGHTNESS,
+        event,
+      );
       this.helpers.updateValueLabel('materialBrightness', value, 'decimal');
       this.stateStore.set('material.brightness', value);
       this.eventBus.emit('mesh:material-brightness', value);
@@ -847,7 +854,7 @@ export class MeshControls {
       this.helpers.updateValueLabel('rotationZ', state.rotationZ ?? 0, 'angle');
     }
     if (this.ui.inputs.materialBrightness) {
-      const brightness = state.material?.brightness ?? 1.0;
+      const brightness = state.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
       this.ui.inputs.materialBrightness.value = brightness;
       this.helpers.updateValueLabel('materialBrightness', brightness, 'decimal');
     }

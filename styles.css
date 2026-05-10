@@ -1772,8 +1772,9 @@ html.orby-dropzone-shell-pending .workspace {
   stroke-linejoin: miter;
 }
 
-.composition-grid-hint {
-  margin-top: 0.35rem;
+.composition-grid-overlay--inverted .composition-grid-overlay__lines line,
+.composition-grid-overlay--inverted .composition-grid-overlay__lines circle {
+  stroke: rgba(0, 0, 0, 0.52);
 }
 
 .dropzone {
@@ -3194,6 +3195,8 @@ button.advanced-info-doc-btn {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
+  /* Focus ring: track highlight only (see :focus-visible on runnable-track), not browser outline */
+  outline: none;
 }
 
 /* WebKit slider track with fill effect */
@@ -3213,8 +3216,8 @@ button.advanced-info-doc-btn {
   transition: background 0.15s ease;
 }
 
-/* Active/dragging state: 0.5 opacity for visual feedback */
-.slider-line input[type='range']:active::-webkit-slider-runnable-track {
+/* Active drag or keyboard focus: brighter track (no focus outline on the input) */
+.slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -3239,8 +3242,8 @@ button.advanced-info-doc-btn {
   );
 }
 
-/* Muted blocks: active state with full opacity gray */
-.is-muted .slider-line input[type='range']:active::-webkit-slider-runnable-track {
+/* Muted blocks: active / keyboard focus */
+.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -3270,8 +3273,8 @@ button.advanced-info-doc-btn {
   transition: background 0.15s ease;
 }
 
-/* Active/dragging state: 0.5 opacity for visual feedback */
-.slider-line input[type='range']:active::-moz-range-track {
+/* Active drag or keyboard focus */
+.slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -3296,8 +3299,8 @@ button.advanced-info-doc-btn {
   );
 }
 
-/* Muted blocks: active state with full opacity gray */
-.is-muted .slider-line input[type='range']:active::-moz-range-track {
+/* Muted blocks: active / keyboard focus */
+.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -3324,6 +3327,17 @@ button.advanced-info-doc-btn {
 
 .slider-line--tint input[type='range']::-moz-range-track {
   background: linear-gradient(90deg, #36d681, #f6f2ff, #d56bff);
+}
+
+/* Temperature / tint: keyboard focus brightens the track (no thumb-only focus ring) */
+.slider-line--temperature input[type='range']:focus-visible::-webkit-slider-runnable-track,
+.slider-line--tint input[type='range']:focus-visible::-webkit-slider-runnable-track {
+  filter: brightness(1.14);
+}
+
+.slider-line--temperature input[type='range']:focus-visible::-moz-range-track,
+.slider-line--tint input[type='range']:focus-visible::-moz-range-track {
+  filter: brightness(1.14);
 }
 
 /* Disabled sliders */
@@ -4141,6 +4155,7 @@ input[type='range'] {
   height: 2px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.15);
+  outline: none;
 }
 
 input[type='range']::-webkit-slider-thumb {
@@ -4200,8 +4215,7 @@ input[type='range']:disabled::-moz-range-thumb {
   cursor: not-allowed;
 }
 
-input[type='range']:hover::-webkit-slider-thumb,
-input[type='range']:focus-visible::-webkit-slider-thumb {
+input[type='range']:hover::-webkit-slider-thumb {
   transform: scale(1.083); /* 13px / 12px */
   box-shadow: var(--ui-accent-outer-glow-compact);
 }
@@ -4211,8 +4225,7 @@ input[type='range']:active::-webkit-slider-thumb {
   box-shadow: var(--ui-accent-outer-glow-compact);
 }
 
-input[type='range']:hover::-moz-range-thumb,
-input[type='range']:focus-visible::-moz-range-thumb {
+input[type='range']:hover::-moz-range-thumb {
   transform: scale(1.083); /* 13px / 12px */
   box-shadow: var(--ui-accent-outer-glow-compact);
 }

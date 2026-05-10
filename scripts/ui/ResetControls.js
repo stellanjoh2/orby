@@ -4,6 +4,8 @@
  */
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  cameraShadowsUiToShader,
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   effectiveVignetteIntensity,
 } from '../constants.js';
@@ -73,6 +75,7 @@ const RESET_DIRTY_PATHS = {
     'exposure', 'autoExposure',
     'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
     'camera.compositionGridEnabled',
+    'camera.compositionGuidesInverted',
   ],
   fisheye: ['fisheye'],
   'color-correction': [
@@ -399,7 +402,7 @@ export class ResetControls {
         defaults.advanced?.glassFrontFacesOnly ?? false,
       );
       // Reset material properties
-      this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
+      this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
       this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
@@ -416,7 +419,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
       this.eventBus.emit('mesh:clay-normal-map', defaults.clay.normalMap);
       // Emit material reset events
-      this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
+      this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
       this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
       this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
@@ -611,7 +614,10 @@ export class ResetControls {
       this.eventBus.emit('render:temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
       this.eventBus.emit('render:tint', (defaults.camera.tint ?? 0) / 100);
       this.eventBus.emit('render:highlights', (defaults.camera.highlights ?? 0) / 100);
-      this.eventBus.emit('render:shadows', (defaults.camera.shadows ?? 0) / 100);
+      this.eventBus.emit(
+        'render:shadows',
+        cameraShadowsUiToShader(defaults.camera.shadows ?? 0),
+      );
       this.eventBus.emit('render:saturation', defaults.camera.saturation);
       this.eventBus.emit('render:clarity', defaults.camera.clarity ?? 0);
       this.eventBus.emit('render:fade', defaults.camera.fade ?? 0);
@@ -628,6 +634,10 @@ export class ResetControls {
       this.eventBus.emit(
         'camera:composition-grid',
         !!(defaults.camera.compositionGridEnabled ?? false),
+      );
+      this.eventBus.emit(
+        'camera:composition-guides-inverted',
+        !!(defaults.camera.compositionGuidesInverted ?? false),
       );
 
       this.ui.syncUIFromState();
@@ -649,12 +659,12 @@ export class ResetControls {
         switch (resetType) {
           case 'material':
             this.stateStore.batch(() => {
-              this.stateStore.set('material.brightness', defaults.material?.brightness ?? 1.0);
+              this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
               this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
               this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
               this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
             });
-            this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? 1.0);
+            this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
             this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
             this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
@@ -1030,6 +1040,10 @@ export class ResetControls {
                 'camera.compositionGridEnabled',
                 defaults.camera.compositionGridEnabled ?? false,
               );
+              this.stateStore.set(
+                'camera.compositionGuidesInverted',
+                defaults.camera.compositionGuidesInverted ?? false,
+              );
             });
             // Emit events to update the scene
             this.eventBus.emit('camera:fov', defaults.camera.fov);
@@ -1046,6 +1060,10 @@ export class ResetControls {
             this.eventBus.emit(
               'camera:composition-grid',
               !!(defaults.camera.compositionGridEnabled ?? false),
+            );
+            this.eventBus.emit(
+              'camera:composition-guides-inverted',
+              !!(defaults.camera.compositionGuidesInverted ?? false),
             );
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
@@ -1084,7 +1102,10 @@ export class ResetControls {
             this.eventBus.emit('render:temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
             this.eventBus.emit('render:tint', (defaults.camera.tint ?? 0) / 100);
             this.eventBus.emit('render:highlights', (defaults.camera.highlights ?? 0) / 100);
-            this.eventBus.emit('render:shadows', (defaults.camera.shadows ?? 0) / 100);
+            this.eventBus.emit(
+              'render:shadows',
+              cameraShadowsUiToShader(defaults.camera.shadows ?? 0),
+            );
             this.eventBus.emit('render:saturation', defaults.camera.saturation);
             this.eventBus.emit('render:clarity', defaults.camera.clarity ?? 0);
             this.eventBus.emit('render:fade', defaults.camera.fade ?? 0);

@@ -1,4 +1,5 @@
 import {
+  cameraShadowsUiToShader,
   effectiveVignetteIntensity,
   isVignetteUiEnabled,
   sanitizeDof,
@@ -37,7 +38,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
   eventBus.emit('render:temperature', cam.temperature);
   eventBus.emit('render:tint', (cam.tint ?? 0) / 100);
   eventBus.emit('render:highlights', (cam.highlights ?? 0) / 100);
-  eventBus.emit('render:shadows', (cam.shadows ?? 0) / 50);
+  eventBus.emit('render:shadows', cameraShadowsUiToShader(cam.shadows ?? 0));
   eventBus.emit('render:saturation', cam.saturation);
   eventBus.emit('render:clarity', cam.clarity ?? 0);
   eventBus.emit('render:fade', cam.fade ?? 0);

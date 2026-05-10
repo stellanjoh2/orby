@@ -13,6 +13,7 @@ import {
   resolveBloomQualityTier,
   isBloomPipelineActive,
   resolveRenderQualityTier,
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_PODIUM_GLASS_BLUR,
@@ -20,6 +21,7 @@ import {
   DEFAULT_PODIUM_GLASS_BRIGHTNESS,
   sanitizeAmbientOcclusion,
   effectiveVignetteIntensity,
+  cameraShadowsUiToShader,
 } from './constants.js';
 import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
@@ -411,9 +413,9 @@ export class SceneManager {
     }
 
     this.compositionGridOverlayEl = document.getElementById('compositionGridOverlay');
-    this.setCompositionGridOverlayVisible(
-      !!this.stateStore.getState().camera?.compositionGridEnabled,
-    );
+    const cam0 = this.stateStore.getState().camera ?? {};
+    this.setCompositionGridOverlayVisible(!!cam0.compositionGridEnabled);
+    this.setCompositionGuidesInverted(!!cam0.compositionGuidesInverted);
 
     // Initialize event manager and register all event listeners
     this.eventManager = new EventManager(this);
@@ -459,6 +461,16 @@ export class SceneManager {
     this.compositionGridOverlayEl = el;
     el.hidden = !enabled;
     el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+  }
+
+  /** Light vs dark guide strokes (see Camera → Composition Guides → Invert color). */
+  setCompositionGuidesInverted(inverted) {
+    const el =
+      this.compositionGridOverlayEl ??
+      document.getElementById('compositionGridOverlay');
+    if (!el) return;
+    this.compositionGridOverlayEl = el;
+    el.classList.toggle('composition-grid-overlay--inverted', !!inverted);
   }
 
   setupMeshClickDetection() {
@@ -881,7 +893,7 @@ export class SceneManager {
     this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
     this.setTint((state.camera?.tint ?? 0) / 100);
     this.setHighlights((state.camera?.highlights ?? 0) / 100);
-    this.setShadows((state.camera?.shadows ?? 0) / 50);
+    this.setShadows(cameraShadowsUiToShader(state.camera?.shadows ?? 0));
     const defaultCam = this.stateStore.getDefaults().camera ?? {};
     this.setVignette(effectiveVignetteIntensity(state.camera, defaultCam));
     this.setVignetteColor(state.camera?.vignetteColor ?? '#000000');
@@ -899,6 +911,7 @@ export class SceneManager {
     this.applyColorCheckerFromState(state);
     this._ensureColorCheckerReferenceShadingConsistency();
     this.setCompositionGridOverlayVisible(!!state.camera?.compositionGridEnabled);
+    this.setCompositionGuidesInverted(!!state.camera?.compositionGuidesInverted);
   }
 
   /**
@@ -2255,7 +2268,7 @@ export class SceneManager {
       wireframe: state.wireframe,
       creativeLook: state.creativeLook,
       material: state.material ?? {
-        brightness: state.diffuseBrightness ?? 1.0,
+        brightness: state.diffuseBrightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
         metalness: 0.0,
         roughness: DEFAULT_MATERIAL_ROUGHNESS,
       },

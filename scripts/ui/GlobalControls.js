@@ -168,14 +168,27 @@ export class GlobalControls {
     const { hasHelpOverlay, hideHelp } = this.bindHelpOverlay();
     const HDRI_PRESETS = ['noir-studio', 'luminous-sky', 'sunset-cove', 'steel-lab', 'cyberpunk'];
 
-    // Handle arrow keys for range inputs at document level
+    // Handle arrow keys for range inputs at document level (includes ↑/↓ for granular tweaks)
     document.addEventListener('keydown', (event) => {
       const key = event.key;
       const code = event.code;
-      const isLeft = key === 'ArrowLeft' || code === 'ArrowLeft';
-      const isRight = key === 'ArrowRight' || code === 'ArrowRight';
-      
-      if (!isLeft && !isRight) return;
+      // Include numpad codes: Num Lock on/off still uses Numpad4 etc.; key may be "4" or "ArrowLeft".
+      const isDecrease =
+        key === 'ArrowLeft'
+        || code === 'ArrowLeft'
+        || key === 'ArrowDown'
+        || code === 'ArrowDown'
+        || code === 'Numpad4'
+        || code === 'Numpad2';
+      const isIncrease =
+        key === 'ArrowRight'
+        || code === 'ArrowRight'
+        || key === 'ArrowUp'
+        || code === 'ArrowUp'
+        || code === 'Numpad6'
+        || code === 'Numpad8';
+
+      if (!isDecrease && !isIncrease) return;
       
       const target = event.target;
       const activeElement = document.activeElement;
@@ -191,12 +204,15 @@ export class GlobalControls {
         event.stopImmediatePropagation();
         
         const currentValue = parseFloat(slider.value) || 0;
-        const step = parseFloat(slider.step) || 0.01;
+        // Normal arrows: one increment per the slider’s configured step (e.g. ±1, ±0.01).
+        // Shift+arrows: same logic but step ×10 for faster coarse adjustments.
+        const baseStep = parseFloat(slider.step) || 0.01;
+        const step = event.shiftKey ? baseStep * 10 : baseStep;
         const min = parseFloat(slider.min) || 0;
         const max = parseFloat(slider.max) || 100;
         
         let newValue;
-        if (isLeft) {
+        if (isDecrease) {
           newValue = Math.max(min, currentValue - step);
         } else {
           newValue = Math.min(max, currentValue + step);
@@ -224,6 +240,24 @@ export class GlobalControls {
         target.tagName === 'SELECT' ||
         target.isContentEditable
       ) {
+        if (event.key === 'Escape') {
+          if (this.ui.bugReport?.isOpen?.()) {
+            event.preventDefault();
+            this.ui.bugReport.close();
+            return;
+          }
+          if (hasHelpOverlay && hideHelp && this.ui.dom.helpOverlay && !this.ui.dom.helpOverlay.hidden) {
+            event.preventDefault();
+            hideHelp();
+          }
+        }
+        return;
+      }
+
+      // Range sliders are adjusted by the capture listener above. This bubble listener used to run
+      // afterward anyway (stopImmediatePropagation does not skip other phases) and ArrowLeft/Right
+      // were treated as animation scrub + preventDefault — blocking normal arrow stepping.
+      if (target.tagName === 'INPUT' && target.type === 'range') {
         if (event.key === 'Escape') {
           if (this.ui.bugReport?.isOpen?.()) {
             event.preventDefault();

@@ -560,9 +560,9 @@
                       min="0"
                       max="5"
                       step="0.01"
-                      value="1"
+                      value="1.5"
                     />
-                    <span class="value" data-output="materialBrightness">1.00</span>
+                    <span class="value" data-output="materialBrightness">1.50</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="Control metallic appearance (0 = dielectric, 1 = metal)">Metalness</span>
@@ -599,6 +599,14 @@
                       value="0"
                     />
                     <span class="value" data-output="materialEmissive">0.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Normal Map</span>
+                    <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
+                      <input type="checkbox" id="clayNormalMap" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
+                    </label>
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -668,14 +676,6 @@
                       class="color-chip"
                       value="#808080"
                     />
-                  </label>
-                  <label class="slider-line">
-                    <span>Normal Map</span>
-                    <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
-                      <input type="checkbox" id="clayNormalMap" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
-                    </label>
                   </label>
                 </div>
                 <!-- Subsurface: temporarily disabled — set SUBSURFACE_FEATURE_ENABLED in MaterialController.js and uncomment MeshControls / UIManager / EventManager blocks to restore.
@@ -2717,16 +2717,16 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="anamorphic-lens-flare">
                   <div class="block-title has-toggle">
-                    <span>Anamorphic bloom</span>
+                    <span>Anamorphic Bloom</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="anamorphic-bloom" aria-label="Reset Anamorphic bloom" data-tooltip="Reset Anamorphic bloom settings">
+                      <button class="block-reset-btn" data-reset="anamorphic-bloom" aria-label="Reset Anamorphic Bloom" data-tooltip="Reset Anamorphic Bloom settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle" data-tooltip="Horizontal streak on bright areas (requires Bloom on)">
                         <input type="checkbox" id="anamorphicBloomEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Anamorphic bloom</span>
+                        <span class="sr-only">Enable Anamorphic Bloom</span>
                       </label>
                     </div>
                   </div>
@@ -2994,7 +2994,9 @@
                     <span class="value" data-output="aberrationAmount">0.0006</span>
                   </label>
                 </div>
-                <div class="panel-block-divider"></div>
+              </div>
+
+              <div class="panel-block">
                 <div class="subsection" data-subsection="color-checker">
                   <div class="block-title has-toggle">
                     <span>ColorChecker</span>
@@ -3004,7 +3006,7 @@
                         <span class="sr-only">Reset</span>
                       </button>
                       <label class="effect-toggle" data-tooltip="Show or hide the ColorChecker chart in the viewport">
-                        <input type="checkbox" id="colorCheckerEnabled" aria-describedby="colorCheckerHint" />
+                        <input type="checkbox" id="colorCheckerEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Show ColorChecker chart</span>
                       </label>
@@ -3070,21 +3072,23 @@
                     <span class="value" data-output="colorCheckerScale">0.17×</span>
                   </label>
                 </div>
-              </div>
-
-              <div class="panel-block">
-                <div class="subsection">
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="composition-guides">
                   <div class="block-title has-toggle">
-                    <span data-tooltip="Rule of thirds, center cross, diagonals, and center circle — fitted to 16×9 in the viewport">Composition grid</span>
-                    <label class="effect-toggle" data-tooltip="Show composition overlay in the viewport">
+                    <span data-tooltip="Rule of thirds, center cross, diagonals, and center circle — fitted to 16×9 in the viewport">Composition Guides</span>
+                    <label class="effect-toggle" data-tooltip="Show composition overlays in the viewport">
                       <input type="checkbox" id="compositionGridEnabled" />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Show composition grid</span>
+                      <span class="sr-only">Show composition guides</span>
                     </label>
                   </div>
-                  <p class="panel-hint composition-grid-hint">
-                    16×9 letterbox — matches typical video framing. Works best fullscreen on a 16×9 display.
-                  </p>
+                  <label class="select-line">
+                    <span data-tooltip="Light lines suit dark footage; dark lines suit bright scenes.">Colour</span>
+                    <select id="compositionGuidesColor" aria-label="Composition guides colour">
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
+                    </select>
+                  </label>
                 </div>
               </div>
 

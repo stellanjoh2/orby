@@ -4,8 +4,12 @@
  */
 import {
   AMBIENT_OCCLUSION_INTENSITY_MIN,
+  CAMERA_SHADOWS_UI_MAX,
+  CAMERA_SHADOWS_UI_MIN,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  cameraShadowsUiToShader,
+  clampCameraShadowsUi,
   effectiveVignetteIntensity,
   getAntiAliasingUiState,
   isVignetteUiEnabled,
@@ -38,7 +42,7 @@ export class RenderControls {
     this.toneCurveController = null;
   }
 
-  /** Anamorphic bloom: toggle follows master Bloom; sliders follow this toggle (like Lens dirt). */
+  /** Anamorphic Bloom: toggle follows master Bloom; sliders follow this toggle (like Lens Dirt). */
   _syncAnamorphicBloomControlsDisabled(state) {
     const bloomOn = !!state.bloom?.enabled;
     const abDef = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
@@ -388,6 +392,17 @@ export class RenderControls {
         const enabled = event.target.checked;
         this.stateStore.set('camera.compositionGridEnabled', enabled);
         this.eventBus.emit('camera:composition-grid', enabled);
+        this.ui.setEffectControlsDisabled(
+          ['compositionGuidesColor'],
+          !enabled,
+        );
+      });
+    }
+    if (this.ui.inputs.compositionGuidesColor) {
+      this.ui.inputs.compositionGuidesColor.addEventListener('change', (event) => {
+        const inverted = event.target.value === 'dark';
+        this.stateStore.set('camera.compositionGuidesInverted', inverted);
+        this.eventBus.emit('camera:composition-guides-inverted', inverted);
       });
     }
 
@@ -495,7 +510,7 @@ export class RenderControls {
 
     // Exposure
     this.ui.inputs.exposure.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0);
+      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
       this.helpers.updateValueLabel('exposure', value, 'decimal');
       commitLookFilterTouchWith(() => {
         this.stateStore.set('exposure', value);
@@ -516,7 +531,7 @@ export class RenderControls {
 
     // Color & Tone
     this.ui.inputs.cameraContrast?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0);
+      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.contrast', value);
       });
@@ -526,7 +541,7 @@ export class RenderControls {
     if (this.ui.inputs.cameraContrast) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraContrast);
 
     this.ui.inputs.cameraTemperature?.addEventListener('input', (event) => {
-      const parsed = this.helpers.applySnapToCenter(event.target, 2000, 10000, 6000);
+      const parsed = this.helpers.applySnapToCenter(event.target, 2000, 10000, 6000, event);
       const kelvin = Number.isFinite(parsed) ? parsed : CAMERA_TEMPERATURE_NEUTRAL_K;
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.temperature', kelvin);
@@ -537,7 +552,7 @@ export class RenderControls {
     if (this.ui.inputs.cameraTemperature) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTemperature);
 
     this.ui.inputs.cameraTint?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0) || 0;
+      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0, event) || 0;
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.tint', value);
       });
@@ -547,7 +562,7 @@ export class RenderControls {
     if (this.ui.inputs.cameraTint) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTint);
 
     this.ui.inputs.cameraHighlights?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0) || 0;
+      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0, event) || 0;
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.highlights', value);
       });
@@ -557,17 +572,24 @@ export class RenderControls {
     if (this.ui.inputs.cameraHighlights) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraHighlights);
 
     this.ui.inputs.cameraShadows?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -50, 50, 0) || 0;
+      const value =
+        this.helpers.applySnapToCenter(
+          event.target,
+          CAMERA_SHADOWS_UI_MIN,
+          CAMERA_SHADOWS_UI_MAX,
+          0,
+          event,
+        ) || 0;
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.shadows', value);
       });
       this.helpers.updateValueLabel('cameraShadows', value, 'integer');
-      this.eventBus.emit('render:shadows', value / 50);
+      this.eventBus.emit('render:shadows', cameraShadowsUiToShader(value));
     });
     if (this.ui.inputs.cameraShadows) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraShadows);
 
     this.ui.inputs.cameraSaturation?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0);
+      const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.saturation', value);
       });
@@ -577,7 +599,7 @@ export class RenderControls {
     if (this.ui.inputs.cameraSaturation) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraSaturation);
 
     this.ui.inputs.cameraClarity?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0);
+      const value = this.helpers.applySnapToCenter(event.target, -100, 100, 0, event);
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.clarity', value);
       });
@@ -634,7 +656,7 @@ export class RenderControls {
       emitVignetteFromState();
     });
     this.ui.inputs.vignetteIntensity?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(event.target, 0, 1, 0);
+      const value = this.helpers.applySnapToCenter(event.target, 0, 1, 0, event);
       commitLookFilterTouchWith(() => {
         this.stateStore.set('camera.vignette', value);
       });
@@ -1066,7 +1088,7 @@ export class RenderControls {
       this.helpers.updateValueLabel('cameraHighlights', highlights, 'integer');
     }
     if (this.ui.inputs.cameraShadows) {
-      const shadows = state.camera?.shadows ?? 0;
+      const shadows = clampCameraShadowsUi(state.camera?.shadows ?? 0);
       this.ui.inputs.cameraShadows.value = shadows;
       this.helpers.updateValueLabel('cameraShadows', shadows, 'integer');
     }
@@ -1120,6 +1142,15 @@ export class RenderControls {
       const gridOn = !!(state.camera?.compositionGridEnabled);
       this.ui.inputs.compositionGridEnabled.checked = gridOn;
       this.eventBus.emit('camera:composition-grid', gridOn);
+      this.ui.setEffectControlsDisabled(
+        ['compositionGuidesColor'],
+        !gridOn,
+      );
+    }
+    if (this.ui.inputs.compositionGuidesColor) {
+      const inverted = !!(state.camera?.compositionGuidesInverted);
+      this.ui.inputs.compositionGuidesColor.value = inverted ? 'dark' : 'light';
+      this.eventBus.emit('camera:composition-guides-inverted', inverted);
     }
     if (this.ui.inputs.toneCurveOpen) {
       const open = state.toneCurveOpen ?? false;

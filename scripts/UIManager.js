@@ -1,6 +1,7 @@
 import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_PODIUM_GLASS_BLUR,
@@ -13,6 +14,8 @@ import {
   sanitizeAmbientOcclusion,
   effectiveVignetteIntensity,
   isVignetteUiEnabled,
+  cameraShadowsUiToShader,
+  clampCameraShadowsUi,
 } from './constants.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
@@ -409,6 +412,7 @@ export class UIManager {
       vignetteColor: q('#vignetteColor'),
       toggleVignette: q('#toggleVignette'),
       compositionGridEnabled: q('#compositionGridEnabled'),
+      compositionGuidesColor: q('#compositionGuidesColor'),
       histogramEnabled: q('#histogramEnabled'),
       toneCurveOpen: q('#toneCurveOpen'),
       lookFilterPresetsOpen: q('#lookFilterPresetsOpen'),
@@ -806,23 +810,29 @@ export class UIManager {
    * @param {number} min - Minimum slider value
    * @param {number} max - Maximum slider value
    * @param {number} centerValue - The center/default value to snap to
+   * @param {Event|null} [inputEvent] - Original input event; when non-trusted (e.g. synthetic `input` from keyboard stepping), snap is skipped.
    * @param {number} thresholdPercent - Threshold as percentage of range (default: 3%)
    * @returns {number} - The value (snapped if within threshold, otherwise original)
    */
-  applySnapToCenter(slider, min, max, centerValue, thresholdPercent = 3) {
+  applySnapToCenter(slider, min, max, centerValue, inputEvent = null, thresholdPercent = 3) {
     if (!slider) return parseFloat(slider.value);
-    
+
     const currentValue = parseFloat(slider.value);
+
+    if (inputEvent != null && inputEvent.isTrusted === false) {
+      return Number.isFinite(currentValue) ? currentValue : centerValue;
+    }
+
     const range = max - min;
     const threshold = (range * thresholdPercent) / 100;
     const distanceFromCenter = Math.abs(currentValue - centerValue);
-    
+
     // If within threshold, snap to center
     if (distanceFromCenter <= threshold) {
       slider.value = centerValue;
       return centerValue;
     }
-    
+
     return currentValue;
   }
 
@@ -1163,7 +1173,10 @@ export class UIManager {
         }
         if (payload.camera.shadows !== undefined) {
           this.stateStore.set('camera.shadows', payload.camera.shadows);
-          this.eventBus.emit('render:shadows', payload.camera.shadows / 50);
+          this.eventBus.emit(
+            'render:shadows',
+            cameraShadowsUiToShader(payload.camera.shadows),
+          );
         }
         if (payload.camera.saturation !== undefined) {
           this.stateStore.set('camera.saturation', payload.camera.saturation);
@@ -1204,6 +1217,16 @@ export class UIManager {
           this.eventBus.emit(
             'camera:composition-grid',
             !!payload.camera.compositionGridEnabled,
+          );
+        }
+        if (payload.camera.compositionGuidesInverted !== undefined) {
+          this.stateStore.set(
+            'camera.compositionGuidesInverted',
+            !!payload.camera.compositionGuidesInverted,
+          );
+          this.eventBus.emit(
+            'camera:composition-guides-inverted',
+            !!payload.camera.compositionGuidesInverted,
           );
         }
       }
@@ -1469,7 +1492,7 @@ export class UIManager {
     }
     // Widget states are managed via keyboard shortcuts (W/E), no UI sync needed
     if (this.inputs.materialBrightness) {
-      const brightness = state.material?.brightness ?? 1.0;
+      const brightness = state.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
       this.inputs.materialBrightness.value = brightness;
       this.updateValueLabel('materialBrightness', brightness, 'decimal');
     }
@@ -1967,7 +1990,7 @@ export class UIManager {
       this.updateValueLabel('cameraHighlights', highlights, 'integer');
     }
     if (this.inputs.cameraShadows) {
-      const shadows = state.camera?.shadows ?? 0;
+      const shadows = clampCameraShadowsUi(state.camera?.shadows ?? 0);
       this.inputs.cameraShadows.value = shadows;
       this.updateValueLabel('cameraShadows', shadows, 'integer');
     }
@@ -2213,6 +2236,11 @@ export class UIManager {
     this.setBlockMuted('aberration', !currentState.aberration?.enabled);
 
     this.setBlockMuted('color-checker', !currentState.colorChecker?.enabled);
+
+    this.setBlockMuted(
+      'composition-guides',
+      !currentState.camera?.compositionGridEnabled,
+    );
 
     this.setBlockMuted(
       'ambient-occlusion',

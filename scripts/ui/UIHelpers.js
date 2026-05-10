@@ -133,23 +133,30 @@ export class UIHelpers {
    * @param {number} min - Minimum slider value
    * @param {number} max - Maximum slider value
    * @param {number} centerValue - The center/default value to snap to
+   * @param {Event|null} [inputEvent] - Original input event; when non-trusted (e.g. synthetic `input` from keyboard stepping), snap is skipped so small nudges aren’t pulled to center.
    * @param {number} thresholdPercent - Threshold as percentage of range (default: 3%)
    * @returns {number} - The value (snapped if within threshold, otherwise original)
    */
-  applySnapToCenter(slider, min, max, centerValue, thresholdPercent = 3) {
+  applySnapToCenter(slider, min, max, centerValue, inputEvent = null, thresholdPercent = 3) {
     if (!slider) return parseFloat(slider.value);
-    
+
     const currentValue = parseFloat(slider.value);
+
+    // Snap is for real pointer drags (trusted `input`). Keyboard code dispatches synthetic events (isTrusted === false).
+    if (inputEvent != null && inputEvent.isTrusted === false) {
+      return Number.isFinite(currentValue) ? currentValue : centerValue;
+    }
+
     const range = max - min;
     const threshold = (range * thresholdPercent) / 100;
     const distanceFromCenter = Math.abs(currentValue - centerValue);
-    
+
     // If within threshold, snap to center
     if (distanceFromCenter <= threshold) {
       slider.value = centerValue;
       return centerValue;
     }
-    
+
     return currentValue;
   }
 

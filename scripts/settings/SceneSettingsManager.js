@@ -1,9 +1,11 @@
 import {
   sanitizeDof,
   sanitizeAmbientOcclusion,
+  DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   effectiveVignetteIntensity,
   isVignetteUiEnabled,
+  cameraShadowsUiToShader,
 } from '../constants.js';
 import { HDRI_MOODS } from '../config/hdri.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
@@ -49,7 +51,7 @@ export class SceneSettingsManager {
       // Mesh settings (including transforms)
       shading: state.shading,
       material: state.material ?? {
-        brightness: 1.0,
+        brightness: DEFAULT_MATERIAL_BRIGHTNESS,
         metalness: 0.0,
         roughness: DEFAULT_MATERIAL_ROUGHNESS,
         emissive: 0.0,
@@ -161,6 +163,7 @@ export class SceneSettingsManager {
         autoOrbit: state.camera?.autoOrbit,
         handheld: state.camera?.handheld,
         compositionGridEnabled: state.camera?.compositionGridEnabled,
+        compositionGuidesInverted: state.camera?.compositionGuidesInverted,
       },
       exposure: state.exposure,
       autoExposure: state.autoExposure,
@@ -931,7 +934,10 @@ export class SceneSettingsManager {
         }
         if (payload.camera.shadows !== undefined) {
           this.stateStore.set('camera.shadows', payload.camera.shadows);
-          this.eventBus.emit('render:shadows', payload.camera.shadows / 50);
+          this.eventBus.emit(
+            'render:shadows',
+            cameraShadowsUiToShader(payload.camera.shadows),
+          );
         }
         if (payload.camera.saturation !== undefined) {
           this.stateStore.set('camera.saturation', payload.camera.saturation);
@@ -967,6 +973,16 @@ export class SceneSettingsManager {
           this.eventBus.emit(
             'camera:composition-grid',
             !!payload.camera.compositionGridEnabled,
+          );
+        }
+        if (payload.camera.compositionGuidesInverted !== undefined) {
+          this.stateStore.set(
+            'camera.compositionGuidesInverted',
+            !!payload.camera.compositionGuidesInverted,
+          );
+          this.eventBus.emit(
+            'camera:composition-guides-inverted',
+            !!payload.camera.compositionGuidesInverted,
           );
         }
       }
