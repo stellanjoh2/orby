@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -332,6 +333,16 @@ export class SvgExtrudeImporter {
 
     this._normalizeGeometrySpace(group);
     this._applyDirectionOffset(group, this.currentFlipDirection);
+
+    group.traverse((child) => {
+      if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
+      const nextGeom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
+      if (nextGeom !== child.geometry) {
+        child.geometry.dispose();
+        child.geometry = nextGeom;
+      }
+    });
+
     return group;
   }
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/exporters/GLTFExporter.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { fixExtrudedSvgCapFaceOrientations } from '../import/svgExtrudeCapNormals.js';
 
 const sanitizeBaseName = (name) => {
   const raw = String(name || 'svg-extrude')
@@ -24,43 +25,6 @@ const resolveSvgNormalAngleDeg = (node, fallback = 45) => {
     current = current.parent || null;
   }
   return fallback;
-};
-
-const flipGeometryNormals = (geometry) => {
-  const normalAttr = geometry?.attributes?.normal;
-  if (!normalAttr) return;
-  for (let i = 0; i < normalAttr.count; i += 1) {
-    normalAttr.setXYZ(
-      i,
-      -normalAttr.getX(i),
-      -normalAttr.getY(i),
-      -normalAttr.getZ(i),
-    );
-  }
-  normalAttr.needsUpdate = true;
-};
-
-const alignNormalDirectionToSource = (sourceGeometry, targetGeometry) => {
-  const sourceNormals = sourceGeometry?.attributes?.normal;
-  const targetNormals = targetGeometry?.attributes?.normal;
-  if (!sourceNormals || !targetNormals) return;
-  const count = Math.min(sourceNormals.count, targetNormals.count);
-  for (let i = 0; i < count; i += 1) {
-    const sx = sourceNormals.getX(i);
-    const sy = sourceNormals.getY(i);
-    const sz = sourceNormals.getZ(i);
-    const tx = targetNormals.getX(i);
-    const ty = targetNormals.getY(i);
-    const tz = targetNormals.getZ(i);
-    const sourceLenSq = sx * sx + sy * sy + sz * sz;
-    const targetLenSq = tx * tx + ty * ty + tz * tz;
-    if (sourceLenSq < 1e-8 || targetLenSq < 1e-8) continue;
-    const dot = sx * tx + sy * ty + sz * tz;
-    if (dot < 0) {
-      flipGeometryNormals(targetGeometry);
-    }
-    return;
-  }
 };
 
 const forceOpaqueMaterialForExport = (material) => {
@@ -105,7 +69,11 @@ const cloneExportNode = (object3d) => {
         clonedMesh.geometry?.dispose?.();
         clonedMesh.geometry = creased;
       }
-      alignNormalDirectionToSource(sourceMesh.geometry, clonedMesh.geometry);
+      const capped = fixExtrudedSvgCapFaceOrientations(clonedMesh.geometry, angleRad);
+      if (capped !== clonedMesh.geometry) {
+        clonedMesh.geometry?.dispose?.();
+        clonedMesh.geometry = capped;
+      }
       const applyDoubleSided = (mat) => {
         if (!mat) return;
         mat.side = THREE.DoubleSide;
