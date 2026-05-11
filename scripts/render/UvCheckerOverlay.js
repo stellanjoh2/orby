@@ -11,6 +11,13 @@ import * as THREE from 'three';
  * lazy-loaded once and cloned per material so each clone's `repeat` can be adjusted
  * independently if we ever add per-mesh tiling.
  *
+ * Seamless style swaps: when the overlay is first enabled we kick off a background
+ * preload of every entry in `TEXTURE_URLS` so the alternate styles are ready in cache
+ * before the user toggles them. `rebuild()` also keeps the previously-visible overlay
+ * meshes alive until the new texture is ready and the new clones are parented — only
+ * then do we dispose the old set. A generation token guards against stale async
+ * callbacks landing after `clear()` or a newer rebuild has superseded them.
+ *
  * Lifecycle:
  *   - {@link setModel} attaches a model root (call with `null` on unload).
  *   - {@link applySettings} / {@link setEnabled} / {@link setScale} mutate state and rebuild
@@ -64,6 +71,12 @@ export class UvCheckerOverlay {
     this._textureCache = new Map();
     /** @type {THREE.Object3D|null} Attached model root (set via `setModel`). */
     this._model = null;
+    /**
+     * Monotonic generation counter. Bumped on every {@link rebuild} and {@link clear} so
+     * in-flight async texture callbacks can detect when they've been superseded and bail
+     * out instead of mutating overlay state owned by a newer build.
+     */
+    this._rebuildToken = 0;
   }
 
   /**
@@ -129,22 +142,25 @@ export class UvCheckerOverlay {
   }
 
   rebuild() {
-    if (!this._model) {
+    if (!this._model || !this.enabled) {
       this.clear();
       return;
     }
-    if (!this.enabled) {
-      this.clear();
-      return;
-    }
-    this.clear();
+    // Warm the cache for sibling styles so the next style toggle has no network wait.
+    this._preloadAllStyles();
+
+    const myToken = ++this._rebuildToken;
     const styleAtRequest = this.style;
+
     this._ensureTexture(styleAtRequest, (sourceTexture) => {
-      // Style may have flipped during async load — discard stale callbacks.
+      // A newer rebuild (or clear) has superseded us — bail without touching state.
+      if (myToken !== this._rebuildToken) return;
+      // Defensive: state may have flipped between the bump above and the callback firing.
       if (!this.enabled || !this._model || this.style !== styleAtRequest) return;
-      if (this.overlayMeshes?.length) return;
-      this.overlayMeshes = [];
+
+      const previousMeshes = this.overlayMeshes;
       const repeat = clampScale(this.scale);
+      const newMeshes = [];
 
       this._model.traverse((child) => {
         if (
@@ -194,17 +210,32 @@ export class UvCheckerOverlay {
         } else {
           this._model.add(overlay);
         }
-        this.overlayMeshes.push(overlay);
+        newMeshes.push(overlay);
       });
+
+      // Atomic swap: the new clones are parented and ready to render before we tear down
+      // the previous set, so style changes never expose a blank frame.
+      this.overlayMeshes = newMeshes;
+      this._disposeMeshes(previousMeshes);
     });
   }
 
   clear() {
-    const meshes = this.overlayMeshes;
-    if (!meshes || !meshes.length) {
-      this.overlayMeshes = null;
-      return;
-    }
+    // Bump the token so any in-flight rebuild callback no-ops instead of resurrecting
+    // overlay meshes we're about to dispose.
+    this._rebuildToken += 1;
+    this._disposeMeshes(this.overlayMeshes);
+    this.overlayMeshes = null;
+  }
+
+  /**
+   * Dispose a set of overlay clones (materials, owned textures, parent detach). Safe to
+   * call with `null`/empty. Kept separate from {@link clear} so {@link rebuild} can hand
+   * off the old set after an atomic swap without invalidating the rebuild token.
+   * @param {THREE.Mesh[]|null|undefined} meshes
+   */
+  _disposeMeshes(meshes) {
+    if (!meshes?.length) return;
     for (const child of meshes) {
       if (!child.isMesh) continue;
       if (child.material) {
@@ -218,7 +249,6 @@ export class UvCheckerOverlay {
       }
       child.parent?.remove(child);
     }
-    this.overlayMeshes = null;
   }
 
   updateTransforms() {
@@ -246,6 +276,21 @@ export class UvCheckerOverlay {
     }
     this._textureCache.clear();
     this._model = null;
+  }
+
+  /**
+   * Kick off background fetches for every style we haven't loaded yet. Idempotent — cached
+   * and in-flight entries are skipped, so this is safe to call from `rebuild()` on every
+   * toggle. The result is that once the user enables UV Checker, every alternate style
+   * starts downloading immediately and subsequent style toggles hit the cache fast-path.
+   */
+  _preloadAllStyles() {
+    for (const style of Object.keys(TEXTURE_URLS)) {
+      const entry = this._textureCache.get(style);
+      if (entry?.texture || entry?.loading) continue;
+      // Empty callback — we only care about populating `entry.texture` here.
+      this._ensureTexture(style, () => {});
+    }
   }
 
   /**

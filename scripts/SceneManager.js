@@ -3202,11 +3202,15 @@ export class SceneManager {
         this.renderer.getSize(originalSize);
         const originalPixelRatio = this.renderer.getPixelRatio();
 
+        const cinematicLetterbox219 = !!this.stateStore
+          .getState()
+          .camera?.cinematicLetterbox219;
         await this.imageExporter.exportPng(
           this.currentFile,
           originalSize,
           originalPixelRatio,
           size,
+          cinematicLetterbox219,
         );
         this.ui?.uiSounds?.playRenderFinished();
       }

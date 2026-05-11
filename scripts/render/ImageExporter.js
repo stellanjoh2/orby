@@ -121,7 +121,58 @@ export class ImageExporter {
    * (Ultra / 2× exports showed a quarter-frame in the top-left).
    * Uses `readBuffer.{width,height}` so copy/readback matches the half-float RT exactly.
    */
-  _captureComposerOutputAsPngDataUrl(fallbackWidth, fallbackHeight) {
+  /**
+   * Black mattes for the largest 21∶9 picture area inside the viewport — matches
+   * `.viewport-letterbox` (container-query) geometry in styles.css.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} w
+   * @param {number} h
+   */
+  _fillCinematicLetterbox219Mattes(ctx, w, h) {
+    if (w <= 0 || h <= 0) return;
+    const r219 = 21 / 9;
+    const ar = w / h;
+    ctx.fillStyle = '#000';
+    if (ar >= r219) {
+      const innerW = h * r219;
+      const gap = w - innerW;
+      const left = Math.floor(gap / 2);
+      const right = gap - left;
+      ctx.fillRect(0, 0, left, h);
+      ctx.fillRect(w - right, 0, right, h);
+    } else {
+      const innerH = (w * 9) / 21;
+      const gap = h - innerH;
+      const top = Math.floor(gap / 2);
+      const bottom = gap - top;
+      ctx.fillRect(0, 0, w, top);
+      ctx.fillRect(0, h - bottom, w, bottom);
+    }
+  }
+
+  async _compositeCinematicLetterbox219OntoPngDataUrl(dataUrl, w, h) {
+    const img = new Image();
+    const ok = await new Promise((resolve) => {
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = dataUrl;
+    });
+    if (!ok) return dataUrl;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, w, h);
+    this._fillCinematicLetterbox219Mattes(ctx, w, h);
+    return canvas.toDataURL('image/png');
+  }
+
+  _captureComposerOutputAsPngDataUrl(
+    fallbackWidth,
+    fallbackHeight,
+    { cinematicLetterbox219 = false } = {},
+  ) {
     const r = this.renderer;
     const composer = this.composer;
     const rb = composer?.readBuffer;
@@ -157,6 +208,9 @@ export class ImageExporter {
       const imageData = ctx.createImageData(targetWidth, targetHeight);
       imageData.data.set(flipped);
       ctx.putImageData(imageData, 0, 0);
+      if (cinematicLetterbox219) {
+        this._fillCinematicLetterbox219Mattes(ctx, targetWidth, targetHeight);
+      }
       return exportCanvas.toDataURL('image/png');
     } finally {
       byteRT.dispose();
@@ -167,7 +221,16 @@ export class ImageExporter {
    * Export scene as PNG (with background)
    * Captures the full viewport at the current aspect ratio
    */
-  async exportPng(currentFile, originalSize, originalPixelRatio, size = 1) {
+  /**
+   * @param {boolean} [cinematicLetterbox219] — when true, paint 21∶9 mattes like the viewport overlay.
+   */
+  async exportPng(
+    currentFile,
+    originalSize,
+    originalPixelRatio,
+    size = 1,
+    cinematicLetterbox219 = false,
+  ) {
     const scale = Math.max(0.25, Number(size) || 1);
     // Authoritative pre-export pixel size (matches Three's backing store, including rounding).
     const db = new THREE.Vector2();
@@ -245,12 +308,14 @@ export class ImageExporter {
     const dbFinal = new THREE.Vector2();
     this.renderer.getDrawingBufferSize(dbFinal);
 
-    const dataUrl = this.composer
-      ? this._captureComposerOutputAsPngDataUrl(
-          Math.max(1, Math.round(dbFinal.x)),
-          Math.max(1, Math.round(dbFinal.y)),
-        )
+    const tw = Math.max(1, Math.round(dbFinal.x));
+    const th = Math.max(1, Math.round(dbFinal.y));
+    let dataUrl = this.composer
+      ? this._captureComposerOutputAsPngDataUrl(tw, th, { cinematicLetterbox219 })
       : canvas.toDataURL('image/png');
+    if (!this.composer && cinematicLetterbox219) {
+      dataUrl = await this._compositeCinematicLetterbox219OntoPngDataUrl(dataUrl, tw, th);
+    }
     this._downloadImage(dataUrl, currentFile, 'orby.png');
 
     // Restore original settings
