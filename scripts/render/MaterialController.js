@@ -886,6 +886,71 @@ export class MaterialController {
     return isWindowByName || isWindowByMaterial;
   }
 
+  /**
+   * Build a fresh `MeshStandardMaterial` from a `MeshBasicMaterial` (typically an import
+   * tagged `KHR_materials_unlit` — Sketchfab `materialmerger.gles` bakes are the common
+   * source) so Shaded-mode sliders (Brightness, Metalness, Roughness, Emissive) have a
+   * surface to write to. The diffuse map and base color carry over; lighting now affects
+   * the result instead of being baked-in only. Subsurface translucency, when active, is
+   * applied by upgrading to `MeshPhysicalMaterial` at the end.
+   *
+   * Called from {@link setShading}'s `createShadedMaterial` factory for non-glass meshes.
+   *
+   * @param {THREE.MeshBasicMaterial} basicMat — the imported unlit material
+   * @param {boolean} modelHasEmissive — propagated from {@link _modelHasAnyEmissiveBaseline}
+   * @returns {THREE.MeshStandardMaterial|THREE.MeshPhysicalMaterial}
+   */
+  _promoteBasicToStandardForShaded(basicMat, modelHasEmissive) {
+    const baseColor = basicMat.color
+      ? basicMat.color.clone()
+      : new THREE.Color('#ffffff');
+    const adjustedColor = baseColor.clone().multiplyScalar(
+      this.materialSettings.brightness,
+    );
+    const standard = new THREE.MeshStandardMaterial({
+      color: adjustedColor,
+      map: basicMat.map ?? null,
+      transparent: !!basicMat.transparent,
+      opacity: typeof basicMat.opacity === 'number' ? basicMat.opacity : 1,
+      alphaTest: typeof basicMat.alphaTest === 'number' ? basicMat.alphaTest : 0,
+      side: basicMat.side ?? THREE.FrontSide,
+      vertexColors: !!basicMat.vertexColors,
+      metalness: this.materialSettings.metalness,
+      roughness: this.materialSettings.roughness,
+    });
+    if (basicMat.name) standard.name = basicMat.name;
+    if (basicMat.aoMap) {
+      standard.aoMap = basicMat.aoMap;
+      if (Number.isFinite(basicMat.aoMapIntensity)) {
+        standard.aoMapIntensity = basicMat.aoMapIntensity;
+      }
+    }
+    if (basicMat.lightMap) {
+      standard.lightMap = basicMat.lightMap;
+      if (Number.isFinite(basicMat.lightMapIntensity)) {
+        standard.lightMapIntensity = basicMat.lightMapIntensity;
+      }
+    }
+    this._applyUserEmissiveOrRestoreImport(
+      standard,
+      basicMat,
+      adjustedColor,
+      this.materialSettings.emissive || 0.0,
+      modelHasEmissive,
+    );
+    standard.wireframe = false;
+    standard.needsUpdate = true;
+
+    const tSub = this._isSubsurfaceActive() ? this._subsurfaceTranslucency() : 0;
+    if (tSub > SUBSURFACE_EPS) {
+      const physical = this._upgradeStandardMaterialToPhysical(standard);
+      delete physical.userData.orbySubsurface;
+      this._applySubsurfacePhysicalParams(physical, tSub);
+      return physical;
+    }
+    return standard;
+  }
+
   setShading(mode) {
     if (!this.currentModel) return;
     this.currentShading = mode;
@@ -1006,6 +1071,14 @@ export class MaterialController {
         // But apply diffuse brightness to them
         const createShadedMaterial = (mat, isGlass = false) => {
           if (!mat) return mat;
+          // glTF `KHR_materials_unlit` imports as `MeshBasicMaterial`, which has no
+          // metalness/roughness/emissive surface and therefore silently ignores every
+          // Shaded-mode slider. Promote it here so Brightness, Metalness, Roughness, and
+          // Emissive behave the same as on a regular PBR import. Subsurface upgrade to
+          // Physical (if active) happens further down in the existing flow.
+          if (!isGlass && mat.isMeshBasicMaterial) {
+            return this._promoteBasicToStandardForShaded(mat, modelHasEmissive);
+          }
           let cloned = mat.clone ? mat.clone() : mat;
           // Don't apply brightness/metalness/roughness to glass materials
           if (isGlass) {
