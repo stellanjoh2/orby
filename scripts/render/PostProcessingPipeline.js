@@ -242,14 +242,23 @@ export class PostProcessingPipeline {
       ANAMORPHIC_BLOOM_SPREAD_MAX,
     );
     const u = this.anamorphicBloomPass.uniforms;
-    u.threshold.value =
+    const rawThreshold =
       typeof settings.threshold === 'number' && !Number.isNaN(settings.threshold)
         ? settings.threshold
         : 0.7;
-    u.soften.value =
+    const threshold = THREE.MathUtils.clamp(rawThreshold, 0, 2);
+    let soften =
       typeof settings.soften === 'number' && !Number.isNaN(settings.soften)
         ? Math.max(1e-4, settings.soften)
         : 0.12;
+    // After Unreal bloom, linear luminance spikes on speculars/emissive can swing frame-to-frame.
+    // At high thresholds (~1.5–2) the smoothstep band is otherwise too narrow → visible strobing.
+    if (threshold > 1.0) {
+      soften += (threshold - 1.0) * 0.72;
+    }
+    soften = Math.min(soften, 2.5);
+    u.threshold.value = threshold;
+    u.soften.value = soften;
     u.strength.value =
       typeof settings.strength === 'number' && !Number.isNaN(settings.strength)
         ? Math.max(0, settings.strength)

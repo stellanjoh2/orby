@@ -83,7 +83,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
       !b.aberration.enabled,
     );
     ui.setEffectControlsDisabled(
-      ['lensDirtStrength'],
+      ['lensDirtStrength', 'lensDirtTintColor'],
       !b.lensDirt?.enabled,
     );
     ui.setEffectControlsDisabled(['exposure'], b.autoExposure);

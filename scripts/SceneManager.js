@@ -2005,8 +2005,8 @@ export class SceneManager {
   updateAmbientOcclusion(settings) {
     const defaults = {
       enabled: false,
-      intensity: 5,
-      radius: 5,
+      intensity: 3,
+      radius: 1,
       quality: 'medium',
       color: '#000000',
     };

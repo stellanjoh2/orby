@@ -270,7 +270,7 @@ export class RenderControls {
         commitLookFilterTouchWith(() => {
           this.stateStore.set('lensDirt.enabled', enabled);
         });
-        this.ui.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
+        this.ui.setEffectControlsDisabled(['lensDirtStrength', 'lensDirtTintColor'], !enabled);
         emitLensDirt();
       });
     }
@@ -280,6 +280,15 @@ export class RenderControls {
         this.helpers.updateValueLabel('lensDirtStrength', value, 'decimal');
         commitLookFilterTouchWith(() => {
           this.stateStore.set('lensDirt.strength', value);
+        });
+        emitLensDirt();
+      });
+    }
+    if (this.ui.inputs.lensDirtTintColor) {
+      this.ui.inputs.lensDirtTintColor.addEventListener('input', (event) => {
+        const value = event.target.value;
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensDirt.tintColor', value);
         });
         emitLensDirt();
       });
@@ -968,10 +977,14 @@ export class RenderControls {
       this.ui.inputs.lensDirtStrength.value = state.lensDirt.strength;
       this.helpers.updateValueLabel('lensDirtStrength', state.lensDirt.strength, 'decimal');
     }
+    if (this.ui.inputs.lensDirtTintColor && state.lensDirt) {
+      this.ui.inputs.lensDirtTintColor.value =
+        state.lensDirt.tintColor ?? this.stateStore.getDefaults().lensDirt.tintColor;
+    }
     if (this.ui.inputs.lensDirtEnabled) {
       const enabled = !!state.lensDirt?.enabled;
       this.ui.inputs.lensDirtEnabled.checked = enabled;
-      this.ui.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
+      this.ui.setEffectControlsDisabled(['lensDirtStrength', 'lensDirtTintColor'], !enabled);
     }
 
     // Auto Exposure
@@ -998,8 +1011,8 @@ export class RenderControls {
 
     const aoRaw = state.ambientOcclusion ?? {
       enabled: false,
-      intensity: 5,
-      radius: 5,
+      intensity: 3,
+      radius: 1,
       quality: 'medium',
       color: '#000000',
     };

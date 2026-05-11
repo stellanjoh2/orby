@@ -53,7 +53,7 @@ export class AutoExposureController {
     this.manualExposure = initialState.exposure ?? 1.0;
     this.currentExposure = this.manualExposure;
     this.autoExposureValue = this.manualExposure;
-    this.enabled = initialState.autoExposure ?? false;
+    this.enabled = initialState.autoExposure ?? true;
 
     // Set initial exposure
     if (this.exposurePass) {
@@ -252,7 +252,7 @@ export class AutoExposureController {
   applyStateSnapshot(state) {
     this.manualExposure = state.exposure ?? 1.0;
     this.autoExposureValue = this.manualExposure;
-    this.setEnabled(state.autoExposure ?? false);
+    this.setEnabled(state.autoExposure ?? true);
     if (!this.enabled) {
       this.setExposure(this.manualExposure);
     }

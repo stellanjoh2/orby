@@ -995,7 +995,7 @@ export class ResetControls {
               this.stateStore.set('lensDirt', defaults.lensDirt);
             });
             this.eventBus.emit('render:lens-dirt', defaults.lensDirt);
-            this.ui.setEffectControlsDisabled(['lensDirtStrength'], !defaults.lensDirt.enabled);
+            this.ui.setEffectControlsDisabled(['lensDirtStrength', 'lensDirtTintColor'], !defaults.lensDirt.enabled);
             this.ui.syncControls(this.stateStore.getState());
             break;
             

@@ -383,6 +383,7 @@ export class UIManager {
       toggleBloom: q('#toggleBloom'),
       lensDirtEnabled: q('#lensDirtEnabled'),
       lensDirtStrength: q('#lensDirtStrength'),
+      lensDirtTintColor: q('#lensDirtTintColor'),
       grainIntensity: q('#grainIntensity'),
       toggleGrain: q('#toggleGrain'),
       aberrationAmount: q('#aberrationAmount'),
@@ -1270,7 +1271,7 @@ export class UIManager {
         this.stateStore.set('lensDirt', payload.lensDirt);
         this.eventBus.emit('render:lens-dirt', payload.lensDirt);
         this.setEffectControlsDisabled(
-          ['lensDirtStrength'],
+          ['lensDirtStrength', 'lensDirtTintColor'],
           !payload.lensDirt.enabled,
         );
       }
@@ -1860,10 +1861,14 @@ export class UIManager {
       this.inputs.lensDirtStrength.value = state.lensDirt.strength;
       this.updateValueLabel('lensDirtStrength', state.lensDirt.strength, 'decimal');
     }
+    if (this.inputs.lensDirtTintColor && state.lensDirt) {
+      this.inputs.lensDirtTintColor.value =
+        state.lensDirt.tintColor ?? this.stateStore.getDefaults().lensDirt.tintColor;
+    }
     if (this.inputs.lensDirtEnabled) {
       const enabled = !!state.lensDirt?.enabled;
       this.inputs.lensDirtEnabled.checked = enabled;
-      this.setEffectControlsDisabled(['lensDirtStrength'], !enabled);
+      this.setEffectControlsDisabled(['lensDirtStrength', 'lensDirtTintColor'], !enabled);
     }
     if (this.inputs.autoExposure) {
       const enabled = !!state.autoExposure;
@@ -1888,8 +1893,8 @@ export class UIManager {
 
     const aoRaw = state.ambientOcclusion ?? {
       enabled: false,
-      intensity: 5,
-      radius: 5,
+      intensity: 3,
+      radius: 1,
       quality: 'medium',
       color: '#000000',
     };

@@ -217,14 +217,16 @@ export class StateStore {
         minLuminance: 0.55,
         maxLuminance: 0.95,
         sensitivity: 0.55,
+        /** Multiplies lens dirt texture; #ffffff keeps the texture’s original colour. */
+        tintColor: '#ffffff',
       },
       grain: { enabled: false, intensity: 0.03, color: '#ffffff' },
       aberration: { ...defaultAberration },
       /** Screen-space AO (N8AO); off by default — GPU-heavy when enabled. */
       ambientOcclusion: {
         enabled: false,
-        intensity: 5,
-        radius: 5,
+        intensity: 3,
+        radius: 1,
         quality: 'medium',
         color: '#000000',
       },
@@ -260,7 +262,8 @@ export class StateStore {
         vignetteColor: '#000000',
       },
       exposure: 1.0,
-      autoExposure: false,
+      /** On by default so first load adapts exposure to scene brightness; manual slider still available when off. */
+      autoExposure: true,
       histogramEnabled: false,
       toneCurveOpen: false,
       toneCurve: {

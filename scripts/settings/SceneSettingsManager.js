@@ -1105,7 +1105,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('render:lens-dirt', payload.lensDirt);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
-            ['lensDirtStrength'],
+            ['lensDirtStrength', 'lensDirtTintColor'],
             !payload.lensDirt.enabled,
           );
         }

@@ -186,7 +186,7 @@ const NOT_FOUND_PRESET = {
     cinematicLetterbox219: false,
   },
   exposure: 1,
-  autoExposure: false,
+  autoExposure: true,
   histogramEnabled: false,
   toneCurveOpen: false,
   toneCurve: {
@@ -237,6 +237,7 @@ const NOT_FOUND_PRESET = {
     minLuminance: 0.55,
     maxLuminance: 0.95,
     sensitivity: 0.55,
+    tintColor: '#ffffff',
   },
   fisheye: {
     enabled: true,

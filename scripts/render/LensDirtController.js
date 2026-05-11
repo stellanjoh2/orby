@@ -104,6 +104,9 @@ export class LensDirtController {
     this.lensDirtPass.uniforms.sensitivity.value =
       current.sensitivity ?? defaults.sensitivity ?? 1.0;
 
+    const tintHex = current.tintColor ?? defaults.tintColor ?? '#ffffff';
+    this.lensDirtPass.uniforms.tintColor.value.set(tintHex);
+
     // Update exposure factor from auto-exposure luminance
     this.updateExposureFactor();
   }

@@ -191,7 +191,7 @@ export function sanitizeAmbientOcclusion(ao) {
   let intensity =
     typeof ao.intensity === 'number' && !Number.isNaN(ao.intensity)
       ? ao.intensity
-      : 5;
+      : 3;
   intensity = Math.min(
     AMBIENT_OCCLUSION_INTENSITY_MAX,
     Math.max(AMBIENT_OCCLUSION_INTENSITY_MIN, intensity),

@@ -556,13 +556,15 @@ uniform float minLuminance;
 uniform float maxLuminance;
 uniform float sensitivity;
 uniform float exposureFactor;
+uniform vec3 tintColor;
 
 void main() {
   vec4 base = texture2D(tDiffuse, vUv);
   vec4 dirt = texture2D(tDirt, vUv);
   float ramp = smoothstep(minLuminance, maxLuminance, exposureFactor);
   float amount = pow(ramp, sensitivity) * strength;
-  vec3 result = base.rgb + dirt.rgb * amount;
+  vec3 dirtTinted = dirt.rgb * tintColor;
+  vec3 result = base.rgb + dirtTinted * amount;
   gl_FragColor = vec4(result, base.a);
 }
 `;
@@ -578,6 +580,7 @@ export const LensDirtShader = {
     maxLuminance: { value: 0.5 },
     sensitivity: { value: 1.0 },
     exposureFactor: { value: 1.0 },
+    tintColor: { value: new THREE.Color(0xffffff) },
   },
   vertexShader: lensDirtVertex,
   fragmentShader: lensDirtFragment,
