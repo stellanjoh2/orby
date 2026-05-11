@@ -89,6 +89,12 @@ export class StudioControls {
       this.stateStore.set('lensFlare.height', value);
       this.eventBus.emit('studio:lens-flare-height', value);
     });
+    this.ui.inputs.lensFlareHalo?.addEventListener('input', (event) => {
+      const value = Math.min(5, Math.max(0, parseFloat(event.target.value) || 0));
+      this.helpers.updateValueLabel('lensFlareHalo', value, 'multiplier');
+      this.stateStore.set('lensFlare.haloIntensity', value);
+      this.eventBus.emit('studio:lens-flare-halo', value);
+    });
     this.helpers.bindColorInput('lensFlareColor', 'lensFlare.color', 'studio:lens-flare-color');
     this.ui.inputs.lensFlareQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
@@ -519,6 +525,11 @@ export class StudioControls {
       const height = Math.min(90, Math.max(0, state.lensFlare?.height ?? 0));
       this.ui.inputs.lensFlareHeight.value = height;
       this.helpers.updateValueLabel('lensFlareHeight', height, 'angle');
+    }
+    if (this.ui.inputs.lensFlareHalo) {
+      const halo = Math.min(5, Math.max(0, state.lensFlare?.haloIntensity ?? 1));
+      this.ui.inputs.lensFlareHalo.value = halo;
+      this.helpers.updateValueLabel('lensFlareHalo', halo, 'multiplier');
     }
     if (this.ui.inputs.lensFlareColor && state.lensFlare?.color) {
       this.ui.inputs.lensFlareColor.value = state.lensFlare.color;

@@ -524,6 +524,7 @@ export class ResetControls {
       this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
       this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
       this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
+      this.eventBus.emit('studio:lens-flare-halo', defaults.lensFlare.haloIntensity);
       this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
       this.eventBus.emit('studio:ground-wire', defaults.groundWire);
@@ -765,6 +766,7 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
+            this.eventBus.emit('studio:lens-flare-halo', defaults.lensFlare.haloIntensity);
             this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;
@@ -776,6 +778,7 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
+            this.eventBus.emit('studio:lens-flare-halo', defaults.lensFlare.haloIntensity);
             this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;

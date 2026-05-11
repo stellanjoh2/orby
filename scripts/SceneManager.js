@@ -1269,6 +1269,10 @@ export class SceneManager {
     this.lensFlareController?.setQuality(mode);
   }
 
+  setLensFlareHaloIntensity(value) {
+    this.lensFlareController?.setHaloIntensity(value);
+  }
+
   setClayNormalMap(enabled) {
     if (!this.currentModel) return;
 

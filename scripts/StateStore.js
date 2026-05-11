@@ -183,6 +183,7 @@ export class StateStore {
         height: 15,
         color: '#d28756',
         quality: 'maximum',
+        haloIntensity: 1.0,
         anamorphicBloom: {
           enabled: false,
           quality: 'medium',

@@ -678,6 +678,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-height', merged.height);
         this.eventBus.emit('studio:lens-flare-color', merged.color);
         this.eventBus.emit('studio:lens-flare-quality', merged.quality);
+        this.eventBus.emit('studio:lens-flare-halo', merged.haloIntensity);
         this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       }
       if (payload.groundSolid !== undefined) {

@@ -38,6 +38,7 @@ export class LensFlareController {
       height: safeHeight,
       color: state.color ?? defaults?.color ?? '#d28756',
       quality: state.quality ?? 'maximum',
+      haloIntensity: state.haloIntensity ?? defaults?.haloIntensity ?? 1.0,
     });
 
     this.camera.add(this.lensFlare);
@@ -129,6 +130,18 @@ export class LensFlareController {
   }
 
   /**
+   * Set the rainbow-halo intensity of the lens flare.
+   * 1.0 matches the original subtle look; higher values push the rainbow
+   * ring brighter and slightly wider.
+   * @param {number} value - Halo intensity (0–5)
+   */
+  setHaloIntensity(value) {
+    if (this.lensFlare && Number.isFinite(value)) {
+      this.lensFlare.setHaloIntensity(value);
+    }
+  }
+
+  /**
    * Apply a state snapshot (used when loading saved state)
    * @param {Object} state - Full state object
    */
@@ -143,6 +156,7 @@ export class LensFlareController {
     this.setColor(lensState.color ?? '#d28756');
     this.setQuality(lensState.quality ?? 'maximum');
     this.setRotation(lensState.rotation ?? 0);
+    this.setHaloIntensity(lensState.haloIntensity ?? 1.0);
     this.setEnabled(lensState.enabled ?? false);
   }
 

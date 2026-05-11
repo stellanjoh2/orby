@@ -264,6 +264,7 @@ export class UIManager {
       lensFlareEnabled: q('#lensFlareEnabled'),
       lensFlareRotation: q('#lensFlareRotation'),
       lensFlareHeight: q('#lensFlareHeight'),
+      lensFlareHalo: q('#lensFlareHalo'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
@@ -980,7 +981,7 @@ export class UIManager {
     
     // Disable lens flare controls if not enabled
     this.setControlDisabled(
-      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareColor', 'lensFlareQuality'],
+      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareHalo', 'lensFlareColor', 'lensFlareQuality'],
       !enabled,
     );
     
@@ -1631,6 +1632,11 @@ export class UIManager {
       );
       this.inputs.lensFlareHeight.value = height;
       this.updateValueLabel('lensFlareHeight', height, 'angle');
+    }
+    if (this.inputs.lensFlareHalo) {
+      const halo = Math.min(5, Math.max(0, state.lensFlare?.haloIntensity ?? 1));
+      this.inputs.lensFlareHalo.value = halo;
+      this.updateValueLabel('lensFlareHalo', halo, 'multiplier');
     }
     if (this.inputs.lensFlareColor && state.lensFlare?.color) {
       this.inputs.lensFlareColor.value = state.lensFlare.color;

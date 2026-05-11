@@ -30,6 +30,7 @@ const fragmentShader = `
     uniform float uHaloWidth;
     uniform float uDistortion;
     uniform float uBrightDark;
+    uniform float uHaloIntensity;
     varying vec2 vUv;
 
     vec2 vTexCoord;
@@ -315,8 +316,11 @@ const fragmentShader = `
         vec2 texCoord = vec2(1.0) - vTexCoord; 
         vec2 ghostVec = (vec2(0.5) - texCoord) * uDispersal - lensPosition;
         vec2 ghostVecAspectNormalized = normalize(ghostVec * vec2(1.0)) * vec2(1.0);
-        vec2 haloVec = normalize(ghostVec) * uHaloWidth;
-        vec2 haloVecAspectNormalized = ghostVecAspectNormalized * uHaloWidth;
+        // Let the rainbow halo spread further as intensity is pushed up,
+        // so the ring visibly expands rather than just brightening in place.
+        float widenedHaloWidth = uHaloWidth * (1.0 + max(uHaloIntensity - 1.0, 0.0) * 0.35);
+        vec2 haloVec = normalize(ghostVec) * widenedHaloWidth;
+        vec2 haloVecAspectNormalized = ghostVecAspectNormalized * widenedHaloWidth;
         vec2 texelSize = vec2(1.0) / vec2(iResolution.xy);
         vec3 distortion = vec3(-(texelSize.x * uDistortion), 0.2, texelSize.x * uDistortion);
         vec4 c = vec4(0.0);
@@ -397,7 +401,19 @@ const fragmentShader = `
             vec2 lensStarTexCoord = (mat2(cos(lensStarRotationAngle), -sin(lensStarRotationAngle), sin(lensStarRotationAngle), cos(lensStarRotationAngle)) * vTexCoord);
             lensMod += getLensStar(lensStarTexCoord) * 2.;
             
-            finalColor += clamp((lensMod.rgb * getStartBurst().rgb ), 0.01, 1.0);
+            // Boost the rainbow halo with uHaloIntensity: at 1.0 we match the
+            // original look (clamped 0.01–1.0). Higher values push the ring
+            // brighter while keeping its rainbow character before saturation.
+            vec3 startBurst = getStartBurst().rgb;
+            // Pull the halo toward chromatic rainbow colours so it doesn't
+            // visually merge with the warm flare tint from colorGain. The
+            // boost scales gently with intensity so cranking the slider
+            // delivers a more saturated, "prism" rainbow ring.
+            float burstLuma = dot(startBurst, vec3(0.299, 0.587, 0.114));
+            float satBoost = 1.7 + max(uHaloIntensity - 1.0, 0.0) * 0.35;
+            startBurst = mix(vec3(burstLuma), startBurst, satBoost);
+            vec3 burst = clamp((lensMod.rgb * startBurst), 0.0, 1.0);
+            finalColor += burst * uHaloIntensity;
         }
 
         // enabled check already done at top, so we can just output here
@@ -460,6 +476,7 @@ export class LensFlareEffect extends THREE.Mesh {
       uHaloWidth: { value: 0.6 },
       uDistortion: { value: 1.5 },
       uBrightDark: { value: 0.5 },
+      uHaloIntensity: { value: options.haloIntensity ?? 1.0 },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -717,6 +734,12 @@ export class LensFlareEffect extends THREE.Mesh {
     if (!Number.isFinite(value)) return;
     this.distance = Math.max(1, Math.min(200, value));
     this.updateAnchorPosition();
+  }
+
+  setHaloIntensity(value) {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(0, Math.min(5, value));
+    this.material.uniforms.uHaloIntensity.value = clamped;
   }
 
   dispose() {
