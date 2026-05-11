@@ -198,10 +198,16 @@ export class LightsController {
       // Apply individual height and rotate for directional lights
       if (light.isDirectionalLight) {
         if (config.height !== undefined) {
-          this.individualProperties[id].height = config.height;
+          const h = Number(config.height);
+          if (Number.isFinite(h)) {
+            this.individualProperties[id].height = h;
+          }
         }
         if (config.rotate !== undefined) {
-          this.individualProperties[id].rotate = config.rotate;
+          const r = Number(config.rotate);
+          if (Number.isFinite(r)) {
+            this.individualProperties[id].rotate = r;
+          }
         }
         this.updateLightPosition(id);
       }
@@ -276,14 +282,16 @@ export class LightsController {
       light.intensity = isLightEnabled ? effectiveIntensity : 0;
     } else if (property === 'height') {
       // Store individual height
-      this.individualProperties[lightId].height = value ?? 5;
+      const h = Number(value);
+      this.individualProperties[lightId].height = Number.isFinite(h) ? h : 5;
       // Update light position Y
       if (light.isDirectionalLight) {
         this.updateLightPosition(lightId);
       }
     } else if (property === 'rotate') {
       // Store individual rotation
-      this.individualProperties[lightId].rotate = value ?? 0;
+      const r = Number(value);
+      this.individualProperties[lightId].rotate = Number.isFinite(r) ? r : 0;
       // Update light position
       if (light.isDirectionalLight) {
         this.updateLightPosition(lightId);
@@ -328,8 +336,9 @@ export class LightsController {
     const rotatedX = base.x * cos + base.z * sin;
     const rotatedZ = -base.x * sin + base.z * cos;
     
-    // Use individual height or global height
-    const height = props.height ?? this.lightsHeight ?? base.y;
+    // Use individual height or global height (ignore non-finite so strength/master sync never snaps Y)
+    const rawY = props.height ?? this.lightsHeight ?? base.y;
+    const height = Number.isFinite(Number(rawY)) ? Number(rawY) : base.y;
     
     // Set final position
     light.position.set(rotatedX, height, rotatedZ);
@@ -457,7 +466,7 @@ export class LightsController {
       const position = center.clone().add(direction.multiplyScalar(baseDistance));
 
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(0.15, 0.3, 8),
+        new THREE.ConeGeometry(0.15, 0.3, 28, 1),
         new THREE.MeshBasicMaterial({
           color: light.color,
           transparent: true,

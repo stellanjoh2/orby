@@ -174,7 +174,10 @@ export class SceneManager {
       onAltLightHeightEnd: () => {
         // Get current height from lights controller and sync to state/UI
         const currentHeight = this.lightsController?.lightsHeight ?? this.stateStore.getState().lightsHeight ?? 5;
-        this.stateStore.set('lightsHeight', currentHeight);
+        this.stateStore.batch(() => {
+          this.stateStore.set('lightsHeight', currentHeight);
+          this._syncDirectionalLightHeightsFromControllerToState();
+        });
         this.ui?.syncControls?.(this.stateStore.getState());
       },
       onModelBoundsChanged: (bounds) => {
@@ -1848,11 +1851,31 @@ export class SceneManager {
     this.updateLightIndicators();
   }
 
+  /**
+   * After {@link LightsController#setHeight}, per-light Y values live in the controller but the
+   * global `lightsHeight` slider only touched top-level state — leaving `lights.*.height` stale.
+   * Stale heights then overwrote the rig when {@link LightsController#applySettings} ran (e.g. master
+   * strength). Keep the store aligned whenever the controller mutates directional light heights.
+   */
+  _syncDirectionalLightHeightsFromControllerToState() {
+    const lc = this.lightsController;
+    if (!lc?.individualProperties) return;
+    ['key', 'fill', 'rim'].forEach((id) => {
+      const h = lc.individualProperties[id]?.height;
+      if (Number.isFinite(h)) {
+        this.stateStore.set(`lights.${id}.height`, h);
+      }
+    });
+  }
+
   setLightsHeight(value, { updateUi = true, updateState = true } = {}) {
     if (!this.lightsController) return;
     this.lightsController.setHeight(value);
     if (updateState) {
-      this.stateStore.set('lightsHeight', value);
+      this.stateStore.batch(() => {
+        this.stateStore.set('lightsHeight', value);
+        this._syncDirectionalLightHeightsFromControllerToState();
+      });
     }
     if (updateUi) {
       this.ui?.syncControls?.(this.stateStore.getState());
