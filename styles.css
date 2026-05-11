@@ -4349,7 +4349,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .tooltip {
   position: absolute;
   padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(0, 0, 0);
   border: none;
   border-radius: 6px;
   color: var(--text);
