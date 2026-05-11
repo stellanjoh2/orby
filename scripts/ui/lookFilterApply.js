@@ -64,7 +64,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
 
   if (ui?.setEffectControlsDisabled) {
     ui.setEffectControlsDisabled(
-      ['dofFocus', 'dofAperture'],
+      ['dofFocus', 'dofAperture', 'dofQuality'],
       !b.dof.enabled,
     );
     ui.setEffectControlsDisabled(

@@ -269,6 +269,7 @@ export class UIManager {
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
       anamorphicBloomStrength: q('#anamorphicBloomStrength'),
       anamorphicBloomSpread: q('#anamorphicBloomSpread'),
+      anamorphicBloomStreakAngle: q('#anamorphicBloomStreakAngle'),
       anamorphicBloomThreshold: q('#anamorphicBloomThreshold'),
       anamorphicBloomSoften: q('#anamorphicBloomSoften'),
       anamorphicBloomStreakTint: q('#anamorphicBloomStreakTint'),
@@ -286,6 +287,9 @@ export class UIManager {
       svgExtrudeSurfacePreset: q('#svgExtrudeSurfacePreset'),
       svgExtrudeSurfaceScale: q('#svgExtrudeSurfaceScale'),
       reverseNormals: q('#reverseNormals'),
+      uvChecker: q('#uvChecker'),
+      uvCheckerStyle: q('#uvCheckerStyle'),
+      uvCheckerScale: q('#uvCheckerScale'),
       advancedAlphaControls: q('#advancedAlphaControls'),
       transparencyFix: q('#transparencyFix'),
       blendSortingMitigation: q('#blendSortingMitigation'),
@@ -368,6 +372,7 @@ export class UIManager {
       rimLightCastShadows: q('#rimLightCastShadows'),
       dofFocus: q('#dofFocus'),
       dofAperture: q('#dofAperture'),
+      dofQuality: q('#dofQuality'),
       toggleDof: q('#toggleDof'),
       bloomThreshold: q('#bloomThreshold'),
       bloomStrength: q('#bloomStrength'),
@@ -1087,7 +1092,7 @@ export class UIManager {
         this.stateStore.set('dof', dof);
         this.eventBus.emit('render:dof', dof);
         this.setEffectControlsDisabled(
-          ['dofFocus', 'dofAperture'],
+          ['dofFocus', 'dofAperture', 'dofQuality'],
           !payload.dof.enabled,
         );
       }
@@ -1812,8 +1817,13 @@ export class UIManager {
     this.inputs.dofAperture.value = state.dof.aperture;
     this.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
     this.inputs.toggleDof.checked = !!state.dof.enabled;
+    if (this.inputs.dofQuality) {
+      const dq = state.dof?.quality;
+      this.inputs.dofQuality.value =
+        dq === 'low' || dq === 'medium' || dq === 'ultra' ? dq : 'high';
+    }
     this.setEffectControlsDisabled(
-      ['dofFocus', 'dofAperture'],
+      ['dofFocus', 'dofAperture', 'dofQuality'],
       !state.dof.enabled,
     );
     

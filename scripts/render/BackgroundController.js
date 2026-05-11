@@ -44,7 +44,12 @@ export class BackgroundController {
     const sphere = new THREE.Mesh(geometry, material);
     sphere.position.set(0, 0, -5000);
     sphere.renderOrder = -1000; // Render first, behind everything
-    
+    // Camera sits inside this large sphere; flip winding so FrontSide (and MeshDepthMaterial prepass)
+    // rasterizes the inward-facing shell — otherwise the sphere is fully back-face culled and writes
+    // no depth for DOF.
+    sphere.scale.set(-1, 1, 1);
+    sphere.userData.meshglDofDepthProxy = true;
+
     return sphere;
   }
   
@@ -95,7 +100,8 @@ export class BackgroundController {
   _applyClearColor() {
     // If HDRI background is on, don't show solid color (HDRI texture will show)
     if (this.hdriBackgroundEnabled && this.hdriEnabled) {
-      // Hide background sphere - HDRI texture will show
+      /* Sphere stays hidden for the beauty pass so `scene.background` shows the HDRI.
+         MeshglBokehPass turns it on only for the DOF depth prepass so depth matches color. */
       if (this.backgroundSphere) {
         this.backgroundSphere.visible = false;
       }

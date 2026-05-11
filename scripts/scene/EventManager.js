@@ -91,6 +91,9 @@ export class EventManager {
     eventBus.on('mesh:svg-extrude-flip-direction', (enabled) => s.setSvgExtrudeFlipDirection(enabled));
     eventBus.on('mesh:svg-extrude-surface', (payload) => s.setSvgExtrudeSurface(payload ?? {}));
     eventBus.on('mesh:reverse-normals', (enabled) => s.setReverseNormals(enabled));
+    eventBus.on('mesh:uv-checker', (enabled) => s.setUvCheckerEnabled(enabled));
+    eventBus.on('mesh:uv-checker-scale', (scale) => s.setUvCheckerScale(scale));
+    eventBus.on('mesh:uv-checker-style', (style) => s.setUvCheckerStyle(style));
     eventBus.on('mesh:transparency-fix', () => s.applyTransparencyFixFromState());
     eventBus.on('mesh:glass-appearance', () => s.applyGlassAppearanceFromState());
     eventBus.on('mesh:svg-extrude-color-override', (settings) => s.setSvgExtrudeColorOverride(settings));
@@ -255,8 +258,21 @@ export class EventManager {
         s.histogramController.setEnabled(enabled);
       }
     });
-    eventBus.on('camera:composition-grid', (enabled) => {
-      s.setCompositionGridOverlayVisible(!!enabled);
+    eventBus.on('camera:composition-grid', (payload) => {
+      let enabled;
+      let animate = false;
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        !Array.isArray(payload) &&
+        Object.prototype.hasOwnProperty.call(payload, 'enabled')
+      ) {
+        enabled = !!payload.enabled;
+        animate = !!payload.animate;
+      } else {
+        enabled = !!payload;
+      }
+      s.setCompositionGridOverlayVisible(enabled, { animate });
     });
     eventBus.on('camera:composition-guides-inverted', (inverted) => {
       s.setCompositionGuidesInverted(!!inverted);

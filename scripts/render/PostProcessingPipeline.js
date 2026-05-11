@@ -29,13 +29,22 @@ import {
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  normalizeDofQualityId,
+  resolveDofBokehMaxBlurMul,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
+  foldAnamorphicStreakAngleDeg,
   resolveAmbientOcclusionQualityTier,
   resolveAnamorphicBloomQualityTier,
 } from '../constants.js';
 
 export class PostProcessingPipeline {
-  constructor(renderer, scene, camera) {
+  /**
+   * @param {import('three').WebGLRenderer} renderer
+   * @param {import('three').Scene} scene
+   * @param {import('three').Camera} camera
+   * @param {{ getDofDepthProxy?: () => import('three').Object3D | null }} [opts]
+   */
+  constructor(renderer, scene, camera, opts = {}) {
     this.renderer = renderer;
     const size = new THREE.Vector2();
     this.renderer.getSize(size);
@@ -60,6 +69,7 @@ export class PostProcessingPipeline {
       focus: 10,
       aperture: 0.003,
       maxblur: 0.01,
+      getDofDepthProxy: opts.getDofDepthProxy,
     });
 
     this.bloomPass = new UnrealBloomPass(
@@ -138,6 +148,7 @@ export class PostProcessingPipeline {
    */
   updateDof(settings) {
     if (!settings) return;
+    const qualityId = normalizeDofQualityId(settings.quality);
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
     // Use aperture to determine if DOF should be active (very small aperture = minimal blur)
@@ -158,7 +169,8 @@ export class PostProcessingPipeline {
     // Very conservative maxblur range (0.01-0.04) for smooth, camera-like DOF
     // This prevents harsh edges and ghosting artifacts, especially on backgrounds
     // Real camera DOF is subtle and smooth, not aggressive
-    const maxblur = Math.min(0.04, Math.max(0.01, settings.aperture * 15));
+    const mul = resolveDofBokehMaxBlurMul(qualityId);
+    const maxblur = Math.min(0.04, Math.max(0.01, settings.aperture * 15 * mul));
     this.bokehPass.uniforms.maxblur.value = maxblur;
   }
 
@@ -195,6 +207,11 @@ export class PostProcessingPipeline {
     this._anamorphicBloomSampleRadius = r;
     const shader = buildAnamorphicBloomShader(r);
     const u = this.anamorphicBloomPass.uniforms;
+    for (const key of Object.keys(shader.uniforms)) {
+      if (!Object.prototype.hasOwnProperty.call(u, key)) {
+        u[key] = shader.uniforms[key];
+      }
+    }
     this.anamorphicBloomPass.material.dispose();
     this.anamorphicBloomPass.material = new THREE.ShaderMaterial({
       name: 'AnamorphicBloomPass',
@@ -205,7 +222,7 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Streak highlights horizontally (after Unreal bloom + bloom tint).
+   * Streak highlights along a rotatable axis (after Unreal bloom + bloom tint).
    * @param {object} settings
    * @param {{ forceOff?: boolean }} [opts]
    */
@@ -243,6 +260,15 @@ export class PostProcessingPipeline {
         ? settings.streakTint.trim()
         : '#7ec8ff';
     u.streakTint.value.set(hex);
+    if (u.streakDir) {
+      const angleDeg = foldAnamorphicStreakAngleDeg(
+        typeof settings.streakAngle === 'number' && !Number.isNaN(settings.streakAngle)
+          ? settings.streakAngle
+          : 0,
+      );
+      const rad = THREE.MathUtils.degToRad(angleDeg);
+      u.streakDir.value.set(Math.cos(rad), Math.sin(rad));
+    }
     this.anamorphicBloomPass.enabled = true;
   }
 

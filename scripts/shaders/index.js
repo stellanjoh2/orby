@@ -31,7 +31,8 @@ void main() {
 `;
 
 /**
- * Horizontal gaussian streak on bright areas (runs after bloom + bloom tint).
+ * Oriented gaussian streak on bright areas (runs after bloom + bloom tint).
+ * `streakDir` is unit direction in UV space; (1,0) = horizontal (classic anamorphic).
  * `sampleRadius` is baked into the shader source so the blur loop is compile-time bounded.
  * @param {number} sampleRadius
  */
@@ -43,6 +44,7 @@ export function buildAnamorphicBloomShader(sampleRadius) {
 varying vec2 vUv;
 uniform sampler2D tDiffuse;
 uniform vec2 resolution;
+uniform vec2 streakDir;
 uniform float threshold;
 uniform float soften;
 uniform float strength;
@@ -56,6 +58,7 @@ float linLum(vec3 c) {
 void main() {
   vec4 base = texture2D(tDiffuse, vUv);
   vec2 px = vec2(1.0 / max(resolution.x, 1.0), 1.0 / max(resolution.y, 1.0));
+  vec2 duv = vec2(streakDir.x * px.x, streakDir.y * px.y);
   // Without STREAK_LENGTH_SCALE, spread×radius only spans ~10–20px — flat, not cinematic.
   float sigma = float(SAMPLE_RADIUS) * 0.58 + 1.0e-4;
   float wsum = 0.0;
@@ -63,7 +66,7 @@ void main() {
   for (int i = -SAMPLE_RADIUS; i <= SAMPLE_RADIUS; i++) {
     float fi = float(i);
     float w = exp(-(fi * fi) / (2.0 * sigma * sigma));
-    vec2 off = vec2(fi * spread * STREAK_LENGTH_SCALE * px.x, 0.0);
+    vec2 off = duv * (fi * spread * STREAK_LENGTH_SCALE);
     vec4 s = texture2D(tDiffuse, vUv + off);
     float lu = linLum(s.rgb);
     float h = smoothstep(threshold - soften, threshold + soften, lu);
@@ -80,6 +83,7 @@ void main() {
     uniforms: {
       tDiffuse: { value: null },
       resolution: { value: new THREE.Vector2(1, 1) },
+      streakDir: { value: new THREE.Vector2(1, 0) },
       threshold: { value: 0.7 },
       soften: { value: 0.12 },
       strength: { value: 1.0 },

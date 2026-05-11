@@ -601,7 +601,7 @@ export class StudioControls {
       this.helpers.updateValueLabel('backdropScale', v, 'decimal');
     }
     if (this.ui.inputs.backdropWidth) {
-      const v = state.backdropWidth ?? 1;
+      const v = state.backdropWidth ?? 2;
       this.ui.inputs.backdropWidth.value = v;
       this.helpers.updateValueLabel('backdropWidth', v, 'decimal');
     }

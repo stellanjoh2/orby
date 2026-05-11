@@ -1774,24 +1774,49 @@ html.orby-dropzone-shell-pending .workspace {
   inset: 0;
   z-index: 8;
   pointer-events: none;
+  /* Durations: exit synced from CSS in ViewportFramingOverlays (getComputedStyle). */
+  --viewport-lb-in-duration: 0.25s;
+  --viewport-lb-out-duration: calc(0.25s / 1.5);
 }
 
 .viewport-letterbox__bar {
   position: absolute;
   background: #000;
+  transition-property: transform;
+  transition-timing-function: ease-out;
+  transition-duration: var(--viewport-lb-in-duration);
 }
 
-.viewport-letterbox__bar--top,
-.viewport-letterbox__bar--bottom {
-  transition: transform 0.25s ease-out;
+/* Exit: 50% faster than enter (1.5× speed → 2/3 duration) */
+.viewport-letterbox.viewport-letterbox--exiting .viewport-letterbox__bar--top,
+.viewport-letterbox.viewport-letterbox--exiting .viewport-letterbox__bar--bottom,
+.viewport-letterbox.viewport-letterbox--exiting .viewport-letterbox__bar--left,
+.viewport-letterbox.viewport-letterbox--exiting .viewport-letterbox__bar--right {
+  transition-duration: var(--viewport-lb-out-duration);
+}
+
+/* Explicit rest + off-screen poses (translate3d) so left/right interpolate like top/bottom. */
+.viewport-letterbox.viewport-letterbox--shown .viewport-letterbox__bar--top,
+.viewport-letterbox.viewport-letterbox--shown .viewport-letterbox__bar--bottom,
+.viewport-letterbox.viewport-letterbox--shown .viewport-letterbox__bar--left,
+.viewport-letterbox.viewport-letterbox--shown .viewport-letterbox__bar--right {
+  transform: translate3d(0, 0, 0);
 }
 
 .viewport-letterbox:not(.viewport-letterbox--shown) .viewport-letterbox__bar--top {
-  transform: translateY(-100%);
+  transform: translate3d(0, -100%, 0);
 }
 
 .viewport-letterbox:not(.viewport-letterbox--shown) .viewport-letterbox__bar--bottom {
-  transform: translateY(100%);
+  transform: translate3d(0, 100%, 0);
+}
+
+.viewport-letterbox:not(.viewport-letterbox--shown) .viewport-letterbox__bar--left {
+  transform: translate3d(-100%, 0, 0);
+}
+
+.viewport-letterbox:not(.viewport-letterbox--shown) .viewport-letterbox__bar--right {
+  transform: translate3d(100%, 0, 0);
 }
 
 .viewport-letterbox__bar--top {
@@ -1849,6 +1874,8 @@ html.orby-dropzone-shell-pending .workspace {
   container-name: composition-grid;
   /* Picture height (largest 16×9 in panel) — matches .composition-grid-overlay__frame math */
   --comp-pic-h: min(100cqh, calc(100cqw * 9 / 16));
+  /* Opacity fade only (no stroke trim). JS reads this for hide timeout. */
+  --composition-grid-fade-duration: 0.1s;
 }
 
 /* Only when visible: `display: flex` must not apply while `[hidden]` or it overrides UA display:none */
@@ -1856,6 +1883,16 @@ html.orby-dropzone-shell-pending .workspace {
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  transition: opacity var(--composition-grid-fade-duration) ease-out;
+}
+
+.composition-grid-overlay--fade-in:not([hidden]) {
+  opacity: 1;
+}
+
+.composition-grid-overlay--instant:not([hidden]) {
+  transition: none !important;
 }
 
 /* Cross + diagonals: normalized viewBox stretched to panel — corners track window aspect ratio. */

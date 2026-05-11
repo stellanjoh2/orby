@@ -76,6 +76,20 @@ export class StateStore {
         flipGlassNormalMapY: false,
         /** Transmission / window meshes: draw front faces only (single-sided shell). */
         glassFrontFacesOnly: false,
+        /**
+         * UV Checker overlay — tiles a checker map across mesh UVs so 3D artists can spot stretching
+         * and seam issues at a glance. Renders as a translucent clone of the model so original
+         * materials/shading are untouched.
+         */
+        uvChecker: false,
+        /** Tiling multiplier for the UV checker overlay (1 = one tile per UV island). */
+        uvCheckerScale: 1,
+        /**
+         * Checker pattern style. `vibrant` = Atlux color UV map; `monochrome` = grayscale variant
+         * (better for reading shading + checker pattern together on textured meshes).
+         * @type {'vibrant' | 'monochrome'}
+         */
+        uvCheckerStyle: 'vibrant',
       },
       hdri: 'beach',
       hdriEnabled: true,
@@ -101,7 +115,7 @@ export class StateStore {
       podiumGlassBrightness: DEFAULT_PODIUM_GLASS_BRIGHTNESS,
       backdropEnabled: false,
       backdropScale: 1,
-      backdropWidth: 1,
+      backdropWidth: 2,
       backdropColor: '#808080',
       backdropRotation: 0,
       backdropY: 0,
@@ -174,6 +188,8 @@ export class StateStore {
           quality: 'medium',
           strength: 1.0,
           spread: 0.2,
+          /** Streak axis in degrees (0–180); 0 = horizontal (classic anamorphic). */
+          streakAngle: 0,
           threshold: 0.7,
           soften: 0.12,
           streakTint: '#7ec8ff',
@@ -183,6 +199,7 @@ export class StateStore {
         enabled: false,
         focus: 1.5, // Very close focus for tight asset viewing
         aperture: 0.003, // Moderate aperture for subtle DOF
+        quality: 'high',
       },
       bloom: {
         enabled: true,

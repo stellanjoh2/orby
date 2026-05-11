@@ -76,7 +76,7 @@ export function resolveBloomQualityTier(id) {
   return BLOOM_QUALITY.medium;
 }
 
-/** Horizontal streak quality after bloom (tap count ~ 2×sampleRadius+1). */
+/** Anamorphic streak quality after bloom (tap count ~ 2×sampleRadius+1). */
 export const ANAMORPHIC_BLOOM_QUALITY_DEFAULT = /** @type {const} */ ('medium');
 /** Spread slider / pipeline clamp — same at every quality tier (tier only changes sample count). */
 export const ANAMORPHIC_BLOOM_SPREAD_MAX = 1.68;
@@ -108,8 +108,52 @@ export function resolveAnamorphicBloomQualityTier(id) {
   return ANAMORPHIC_BLOOM_QUALITY[k] ?? ANAMORPHIC_BLOOM_QUALITY.medium;
 }
 
+/**
+ * Streak axis in degrees for UI + shader: fold to [0, 180] (line has π symmetry; 180° stays 180°).
+ * @param {number} raw
+ */
+export function foldAnamorphicStreakAngleDeg(raw) {
+  let a = typeof raw === 'number' && !Number.isNaN(raw) ? raw : 0;
+  a = ((a % 360) + 360) % 360;
+  if (a > 180) a -= 180;
+  return a;
+}
+
 /** Minimum focus distance (meters) for depth of field — matches camera near plane. */
 export const DOF_FOCUS_MIN_M = 0.1;
+
+/** DOF quality tier (UI); stock BokehPass uses it only to scale clamped `maxblur`. */
+export const DOF_QUALITY_DEFAULT = /** @type {const} */ ('high');
+
+/**
+ * @param {string | undefined} id
+ * @returns {'low' | 'medium' | 'high' | 'ultra'}
+ */
+export function normalizeDofQualityId(id) {
+  const s = typeof id === 'string' ? id.trim().toLowerCase() : '';
+  if (s === 'low' || s === 'medium' || s === 'high' || s === 'ultra') return s;
+  if (s === 'max') return 'ultra';
+  return 'high';
+}
+
+/**
+ * Three.js BokehPass uses a fixed tap count; quality scales the clamped `maxblur` uniform slightly.
+ */
+export const DOF_BOKEH_QUALITY_MAXBLUR_MUL = {
+  low: 0.9,
+  medium: 0.96,
+  high: 1.0,
+  ultra: 1.06,
+};
+
+/**
+ * @param {string | undefined} tier
+ * @returns {number}
+ */
+export function resolveDofBokehMaxBlurMul(tier) {
+  const k = normalizeDofQualityId(tier);
+  return DOF_BOKEH_QUALITY_MAXBLUR_MUL[k] ?? DOF_BOKEH_QUALITY_MAXBLUR_MUL.high;
+}
 
 /** N8AO intensity slider / pipeline floor (zero reads as “AO off” visually). */
 export const AMBIENT_OCCLUSION_INTENSITY_MIN = 0.25;
@@ -178,10 +222,12 @@ export function sanitizeDof(dof) {
   if (!dof || typeof dof.focus !== 'number' || Number.isNaN(dof.focus)) {
     return dof;
   }
-  if (dof.focus >= DOF_FOCUS_MIN_M) {
+  const focus = dof.focus >= DOF_FOCUS_MIN_M ? dof.focus : DOF_FOCUS_MIN_M;
+  const quality = normalizeDofQualityId(dof.quality);
+  if (focus === dof.focus && quality === dof.quality) {
     return dof;
   }
-  return { ...dof, focus: DOF_FOCUS_MIN_M };
+  return { ...dof, focus, quality };
 }
 
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */

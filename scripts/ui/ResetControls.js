@@ -102,6 +102,7 @@ const RESET_DIRTY_PATHS = {
     'advanced.glassTint', 'advanced.glassBody',
     'advanced.blendSortingMitigation',
     'advanced.flipGlassNormalMapY', 'advanced.glassFrontFacesOnly',
+    'advanced.uvChecker', 'advanced.uvCheckerScale', 'advanced.uvCheckerStyle',
   ],
 };
 
@@ -402,6 +403,15 @@ export class ResetControls {
         'advanced.glassFrontFacesOnly',
         defaults.advanced?.glassFrontFacesOnly ?? false,
       );
+      this.stateStore.set('advanced.uvChecker', defaults.advanced?.uvChecker ?? false);
+      this.stateStore.set(
+        'advanced.uvCheckerScale',
+        defaults.advanced?.uvCheckerScale ?? 1,
+      );
+      this.stateStore.set(
+        'advanced.uvCheckerStyle',
+        defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+      );
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
@@ -442,6 +452,15 @@ export class ResetControls {
       this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
       this.eventBus.emit('mesh:transparency-fix');
       this.eventBus.emit('mesh:glass-appearance');
+      this.eventBus.emit('mesh:uv-checker', defaults.advanced?.uvChecker ?? false);
+      this.eventBus.emit(
+        'mesh:uv-checker-scale',
+        defaults.advanced?.uvCheckerScale ?? 1,
+      );
+      this.eventBus.emit(
+        'mesh:uv-checker-style',
+        defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+      );
 
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset');
@@ -463,7 +482,7 @@ export class ResetControls {
       this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
       this.stateStore.set('backdropEnabled', defaults.backdropEnabled ?? false);
       this.stateStore.set('backdropScale', defaults.backdropScale ?? 1);
-      this.stateStore.set('backdropWidth', defaults.backdropWidth ?? 1);
+      this.stateStore.set('backdropWidth', defaults.backdropWidth ?? 2);
       this.stateStore.set('backdropColor', defaults.backdropColor ?? '#808080');
       this.stateStore.set('backdropRotation', defaults.backdropRotation ?? 0);
       this.stateStore.set('backdropY', defaults.backdropY ?? 0);
@@ -513,7 +532,7 @@ export class ResetControls {
       this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
       this.eventBus.emit('studio:backdrop-enabled', defaults.backdropEnabled ?? false);
       this.eventBus.emit('studio:backdrop-scale', defaults.backdropScale ?? 1);
-      this.eventBus.emit('studio:backdrop-width', defaults.backdropWidth ?? 1);
+      this.eventBus.emit('studio:backdrop-width', defaults.backdropWidth ?? 2);
       this.eventBus.emit('studio:backdrop-color', defaults.backdropColor ?? '#808080');
       this.eventBus.emit('studio:backdrop-rotation', defaults.backdropRotation ?? 0);
       this.eventBus.emit('studio:backdrop-y', defaults.backdropY ?? 0);
@@ -574,7 +593,10 @@ export class ResetControls {
       this.stateStore.set('lookFilterPreset', 'none');
       });
       this.eventBus.emit('render:dof', defaults.dof);
-      this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
+      this.ui.setEffectControlsDisabled(
+        ['dofFocus', 'dofAperture', 'dofQuality'],
+        !defaults.dof.enabled,
+      );
       this.eventBus.emit('render:bloom', defaults.bloom);
       this.ui.setEffectControlsDisabled(
         [
@@ -878,7 +900,7 @@ export class ResetControls {
             this.stateStore.batch(() => {
               this.stateStore.set('backdropEnabled', defaults.backdropEnabled ?? false);
               this.stateStore.set('backdropScale', defaults.backdropScale ?? 1);
-              this.stateStore.set('backdropWidth', defaults.backdropWidth ?? 1);
+              this.stateStore.set('backdropWidth', defaults.backdropWidth ?? 2);
               this.stateStore.set('backdropColor', defaults.backdropColor ?? '#808080');
               this.stateStore.set('backdropRotation', defaults.backdropRotation ?? 0);
               this.stateStore.set('backdropY', defaults.backdropY ?? 0);
@@ -887,7 +909,7 @@ export class ResetControls {
             });
             this.eventBus.emit('studio:backdrop-enabled', defaults.backdropEnabled ?? false);
             this.eventBus.emit('studio:backdrop-scale', defaults.backdropScale ?? 1);
-            this.eventBus.emit('studio:backdrop-width', defaults.backdropWidth ?? 1);
+            this.eventBus.emit('studio:backdrop-width', defaults.backdropWidth ?? 2);
             this.eventBus.emit('studio:backdrop-color', defaults.backdropColor ?? '#808080');
             this.eventBus.emit('studio:backdrop-rotation', defaults.backdropRotation ?? 0);
             this.eventBus.emit('studio:backdrop-y', defaults.backdropY ?? 0);
@@ -928,7 +950,10 @@ export class ResetControls {
               this.stateStore.set('dof', defaults.dof);
             });
             this.eventBus.emit('render:dof', defaults.dof);
-            this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !defaults.dof.enabled);
+            this.ui.setEffectControlsDisabled(
+              ['dofFocus', 'dofAperture', 'dofQuality'],
+              !defaults.dof.enabled,
+            );
             this.ui.syncUIFromState();
             break;
             
@@ -1227,9 +1252,27 @@ export class ResetControls {
               'advanced.glassFrontFacesOnly',
               defaults.advanced?.glassFrontFacesOnly ?? false,
             );
+            this.stateStore.set('advanced.uvChecker', defaults.advanced?.uvChecker ?? false);
+            this.stateStore.set(
+              'advanced.uvCheckerScale',
+              defaults.advanced?.uvCheckerScale ?? 1,
+            );
+            this.stateStore.set(
+              'advanced.uvCheckerStyle',
+              defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+            );
             this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
             this.eventBus.emit('mesh:transparency-fix');
             this.eventBus.emit('mesh:glass-appearance');
+            this.eventBus.emit('mesh:uv-checker', defaults.advanced?.uvChecker ?? false);
+            this.eventBus.emit(
+              'mesh:uv-checker-scale',
+              defaults.advanced?.uvCheckerScale ?? 1,
+            );
+            this.eventBus.emit(
+              'mesh:uv-checker-style',
+              defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+            );
             this.ui.syncUIFromState();
             break;
         }

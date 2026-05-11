@@ -14,7 +14,9 @@ import {
   getAntiAliasingUiState,
   isVignetteUiEnabled,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
+  foldAnamorphicStreakAngleDeg,
   normalizeAnamorphicBloomQualityId,
+  normalizeDofQualityId,
   RENDER_QUALITY_DEFAULT,
   sanitizeAmbientOcclusion,
 } from '../constants.js';
@@ -24,6 +26,7 @@ const ANAMORPHIC_BLOOM_INPUT_KEYS = [
   'anamorphicBloomEnabled',
   'anamorphicBloomStrength',
   'anamorphicBloomSpread',
+  'anamorphicBloomStreakAngle',
   'anamorphicBloomThreshold',
   'anamorphicBloomSoften',
   'anamorphicBloomStreakTint',
@@ -81,7 +84,10 @@ export class RenderControls {
       commitLookFilterTouchWith(() => {
         this.stateStore.set('dof.enabled', enabled);
       });
-      this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !enabled);
+      this.ui.setEffectControlsDisabled(
+        ['dofFocus', 'dofAperture', 'dofQuality'],
+        !enabled,
+      );
       emitDof();
     });
     this.ui.inputs.dofFocus.addEventListener('input', (event) => {
@@ -104,6 +110,15 @@ export class RenderControls {
       });
       emitDof();
     });
+    if (this.ui.inputs.dofQuality) {
+      this.ui.inputs.dofQuality.addEventListener('change', (event) => {
+        const quality = normalizeDofQualityId(event.target.value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('dof.quality', quality);
+        });
+        emitDof();
+      });
+    }
 
     // Bloom
     const emitBloom = () => this.eventBus.emit('render:bloom', this.stateStore.getState().bloom);
@@ -187,6 +202,16 @@ export class RenderControls {
         this.helpers.updateValueLabel('anamorphicBloomSpread', value, 'decimal');
         commitLookFilterTouchWith(() => {
           this.stateStore.set('lensFlare.anamorphicBloom.spread', value);
+        });
+        emitAnamorphicBloom();
+      });
+    }
+    if (this.ui.inputs.anamorphicBloomStreakAngle) {
+      this.ui.inputs.anamorphicBloomStreakAngle.addEventListener('input', (event) => {
+        const value = Math.min(180, Math.max(0, parseFloat(event.target.value)));
+        this.helpers.updateValueLabel('anamorphicBloomStreakAngle', value, 'angle');
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('lensFlare.anamorphicBloom.streakAngle', value);
         });
         emitAnamorphicBloom();
       });
@@ -391,7 +416,10 @@ export class RenderControls {
       this.ui.inputs.compositionGridEnabled.addEventListener('change', (event) => {
         const enabled = event.target.checked;
         this.stateStore.set('camera.compositionGridEnabled', enabled);
-        this.eventBus.emit('camera:composition-grid', enabled);
+        this.eventBus.emit('camera:composition-grid', {
+          enabled,
+          animate: true,
+        });
         this.ui.setEffectControlsDisabled(
           ['compositionGuidesColor'],
           !enabled,
@@ -861,7 +889,14 @@ export class RenderControls {
     this.ui.inputs.dofAperture.value = state.dof.aperture;
     this.helpers.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
     this.ui.inputs.toggleDof.checked = !!state.dof.enabled;
-    this.ui.setEffectControlsDisabled(['dofFocus', 'dofAperture'], !state.dof.enabled);
+    if (this.ui.inputs.dofQuality) {
+      const dq = normalizeDofQualityId(state.dof?.quality);
+      this.ui.inputs.dofQuality.value = dq;
+    }
+    this.ui.setEffectControlsDisabled(
+      ['dofFocus', 'dofAperture', 'dofQuality'],
+      !state.dof.enabled,
+    );
     
     // Bloom
     this.ui.inputs.bloomThreshold.value = state.bloom.threshold;
@@ -904,6 +939,11 @@ export class RenderControls {
     if (this.ui.inputs.anamorphicBloomSpread) {
       this.ui.inputs.anamorphicBloomSpread.value = ab.spread ?? 0.2;
       this.helpers.updateValueLabel('anamorphicBloomSpread', ab.spread ?? 0.2, 'decimal');
+    }
+    if (this.ui.inputs.anamorphicBloomStreakAngle) {
+      const ang = foldAnamorphicStreakAngleDeg(ab.streakAngle ?? 0);
+      this.ui.inputs.anamorphicBloomStreakAngle.value = ang;
+      this.helpers.updateValueLabel('anamorphicBloomStreakAngle', ang, 'angle');
     }
     if (this.ui.inputs.anamorphicBloomThreshold) {
       this.ui.inputs.anamorphicBloomThreshold.value = ab.threshold ?? 0.7;
@@ -1152,7 +1192,8 @@ export class RenderControls {
     if (this.ui.inputs.compositionGridEnabled) {
       const gridOn = !!(state.camera?.compositionGridEnabled);
       this.ui.inputs.compositionGridEnabled.checked = gridOn;
-      this.eventBus.emit('camera:composition-grid', gridOn);
+      // Do not emit `camera:composition-grid` here — same reason as letterbox (sync runs inside
+      // the checkbox `change` handler before `{ animate: true }` is emitted).
       this.ui.setEffectControlsDisabled(
         ['compositionGuidesColor'],
         !gridOn,
@@ -1166,7 +1207,9 @@ export class RenderControls {
     if (this.ui.inputs.cinematicLetterbox219) {
       const lb = !!(state.camera?.cinematicLetterbox219);
       this.ui.inputs.cinematicLetterbox219.checked = lb;
-      this.eventBus.emit('camera:cinematic-letterbox-219', lb);
+      // Do not emit here: `stateStore.set` from the checkbox `change` handler runs
+      // `syncControls` synchronously before that handler emits `{ animate: true }`. A boolean
+      // payload is interpreted as `animate: false` and aborts the letterbox transition.
     }
     if (this.ui.inputs.toneCurveOpen) {
       const open = state.toneCurveOpen ?? false;

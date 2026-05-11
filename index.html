@@ -952,6 +952,33 @@
                       <span class="sr-only">Reverse normal direction</span>
                     </label>
                   </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Tile a UV checker map across the model so you can spot stretching and seams. Texture by Atlux.">UV Checker</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="uvChecker" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle UV checker overlay</span>
+                    </label>
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Pick the checker pattern. Vibrant uses Atlux's colored map; Monochrome is grayscale and reads better on already-colored meshes.">UV Checker Style</span>
+                    <select id="uvCheckerStyle" aria-label="UV Checker Style">
+                      <option value="vibrant">Vibrant</option>
+                      <option value="monochrome">Monochrome</option>
+                    </select>
+                  </label>
+                  <label class="slider-line slider-line--track-short">
+                    <span data-tooltip="How many times the checker pattern tiles across each UV island. 1 = one full tile per island.">UV Checker Repeat</span>
+                    <input
+                      id="uvCheckerScale"
+                      type="range"
+                      min="0.25"
+                      max="8"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="uvCheckerScale">1.00</span>
+                  </label>
                   <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
                   <p class="panel-hint advanced-import-hint">
                     Blended transparent surfaces are sorted per mesh in WebGL—not like Sketchfab’s viewer. The two controls below usually matter most;
@@ -1315,7 +1342,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.426 · 2026-05-10 23:48:31 UTC</div>
+              <div class="info-version-tag">v0.5.429 · 2026-05-11 10:48:31 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1621,9 +1648,9 @@
                       min="0.5"
                       max="3"
                       step="0.01"
-                      value="1"
+                      value="2"
                     />
-                    <span class="value" data-output="backdropWidth">1.00</span>
+                    <span class="value" data-output="backdropWidth">2.00</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="Rotate backdrop around scene center">Rotation</span>
@@ -2053,7 +2080,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.426 · 2026-05-10 23:48:31 UTC</div>
+              <div class="info-version-tag">v0.5.429 · 2026-05-11 10:48:31 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2645,6 +2672,15 @@
                     />
                     <span class="value" data-output="dofAperture">0.003</span>
                   </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="dofQuality" data-tooltip="Three.js BokehPass (same approach as threejsdemos Depth of Field Gallery). Quality scales blur strength; Low is a bit gentler on GPU.">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high" selected>High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="bloom">
@@ -2721,7 +2757,7 @@
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Horizontal streak on bright areas (requires Bloom on)">
+                      <label class="effect-toggle" data-tooltip="Streak on bright areas; angle control below (requires Bloom on)">
                         <input type="checkbox" id="anamorphicBloomEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Anamorphic Bloom</span>
@@ -2751,6 +2787,18 @@
                       step="0.01"
                     />
                     <span class="value" data-output="anamorphicBloomSpread">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="0° = horizontal (classic anamorphic); 180° flips the streak axis — enough for lens / flare direction">Streak angle</span>
+                    <input
+                      id="anamorphicBloomStreakAngle"
+                      type="range"
+                      min="0"
+                      max="180"
+                      value="0"
+                      step="1"
+                    />
+                    <span class="value" data-output="anamorphicBloomStreakAngle">0°</span>
                   </label>
                   <label class="slider-line">
                     <span>Threshold</span>
@@ -3163,7 +3211,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.426 · 2026-05-10 23:48:31 UTC</div>
+              <div class="info-version-tag">v0.5.429 · 2026-05-11 10:48:31 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3250,9 +3298,8 @@
                   </div>
                   <div class="export-option-group">
                     <label class="export-label">Format</label>
-                    <div class="export-button-group export-button-group--triple">
+                    <div class="export-button-group">
                       <button data-video-format="mp4" class="export-option-btn active" data-tooltip="Encoded .MP4 export">.MP4</button>
-                      <button data-video-format="mov" class="export-option-btn" data-tooltip="QuickTime .MOV (H.264, same record path as MP4 + in-browser remux)">.MOV</button>
                       <button data-video-format="png" class="export-option-btn" data-tooltip="Numbered PNG sequence">.PNG</button>
                     </div>
                   </div>
@@ -3306,13 +3353,13 @@
                       <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
                     </div>
                   </div>
-                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4, MOV (remux), or PNG sequence—turntable or orbit camera">
+                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence—turntable or orbit camera">
                     <i class="fa-solid fa-film"></i>
                     Export Video
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.426 · 2026-05-10 23:48:31 UTC</div>
+              <div class="info-version-tag">v0.5.429 · 2026-05-11 10:48:31 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3641,7 +3688,7 @@
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Luminance Tone Curve</span> — Four draggable handles (black, two mids, white); smooth spline + baked 256-step LUT for response shaping, optional fold-out next to the histogram</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Deep export toolkit</span> — PNG stills (1×/2×, optional transparency); vector SVG (silhouette or flat filled color); GLB from SVG extrusions for other apps and AR; turntable <strong>video</strong> as MP4 or MOV (H.264, with ffmpeg-backed packaging where needed), plus numbered PNG sequences in a zip—control length, spins, FPS, resolution, and encode quality for deliverables and social-ready clips</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Deep export toolkit</span> — PNG stills (1×/2×, optional transparency); vector SVG (silhouette or flat filled color); GLB from SVG extrusions for other apps and AR; turntable <strong>video</strong> as MP4 (H.264), plus numbered PNG sequences in a zip—control length, spins, FPS, resolution, and encode quality for deliverables and social-ready clips</li>
                   </ul>
                 </div>
               </div>
@@ -3883,6 +3930,9 @@
                     <li style="margin-bottom: 0.5rem;">
                       • <a href="https://snd.dev/" target="_blank" rel="noreferrer" class="about-highlight">SND</a> — UI interaction sounds (SND01 “sine” kit) · <span class="about-highlight">Yasuhiro Tsuchiya</span>, Sound Designer / Researcher
                     </li>
+                    <li style="margin-bottom: 0.5rem;">
+                      • <a href="https://uvchecker.atlux.one/" target="_blank" rel="noreferrer" class="about-highlight">Atlux</a> — UV Checker Map (by Jorge Valle Hurtado)
+                    </li>
                   </ul>
                   <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.55; margin: 0.75rem 0 0 0;">
                     <strong>Note:</strong> HDRI environment maps from <a href="https://www.maxroz.com/hdri" target="_blank" rel="noreferrer" class="about-highlight">Maxime Roz</a> were purchased through <a href="https://www.maxroz.com/hdri" target="_blank" rel="noreferrer">maxroz.com/hdri</a>. They are <strong>not</strong> covered by Orby’s MIT License — see <a href="./ASSETS_LICENSE.md">ASSETS_LICENSE.md</a>.
@@ -3891,13 +3941,13 @@
               </div>
 
               <div class="panel-block" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 10):</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 11):</div>
                 <div class="about-content">
                   <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Recent Camera work: <strong>Look Filter</strong> presets (thumbnail grid, “None” to reset), <strong>luminance tone curve</strong> editor with optional fold-out, histogram/curve layout cleanup, and faster preset application. Copy/Paste scene JSON includes look-filter and UI fold states where relevant. Film grain, chromatic aberration, and other FX are tuned per preset.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.426 · 2026-05-10 23:48:31 UTC</div>
+              <div class="info-version-tag">v0.5.429 · 2026-05-11 10:48:31 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

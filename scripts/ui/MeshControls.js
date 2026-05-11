@@ -231,6 +231,28 @@ export class MeshControls {
       this.stateStore.set('advanced.reverseNormals', enabled);
       this.eventBus.emit('mesh:reverse-normals', enabled);
     });
+    this.ui.inputs.uvChecker?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('advanced.uvChecker', enabled);
+      this.eventBus.emit('mesh:uv-checker', enabled);
+    });
+    this.ui.inputs.uvCheckerStyle?.addEventListener('change', (event) => {
+      const allowed = ['vibrant', 'monochrome'];
+      const value = event.target.value;
+      const style = allowed.includes(value) ? value : 'vibrant';
+      this.stateStore.set('advanced.uvCheckerStyle', style);
+      this.eventBus.emit('mesh:uv-checker-style', style);
+    });
+    this.ui.inputs.uvCheckerScale?.addEventListener('input', (event) => {
+      const raw = parseFloat(event.target.value);
+      const scale = Number.isFinite(raw) ? Math.max(0.25, Math.min(8, raw)) : 1;
+      this.helpers.updateValueLabel('uvCheckerScale', scale, 'decimal');
+      this.stateStore.set('advanced.uvCheckerScale', scale);
+      this.eventBus.emit('mesh:uv-checker-scale', scale);
+    });
+    if (this.ui.inputs.uvCheckerScale) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.uvCheckerScale);
+    }
     this.ui.inputs.transparencyFix?.addEventListener('change', (event) => {
       const value = event.target.value || 'default';
       const allowed = ['default', 'opaqueBlend', 'frontFace', 'opaqueAndFrontFace'];
@@ -522,11 +544,21 @@ export class MeshControls {
 
     this.ui.inputs.creativeLookEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
+      // Shader Lab replaces mesh materials with ShaderMaterials and is mutually exclusive with the
+      // UV checker overlay (which assumes the originals are intact). Force the overlay off so the
+      // shader preview stays clean.
+      const uvCheckerWasOn = enabled && !!this.stateStore.getState().advanced?.uvChecker;
       this.stateStore.batch(() => {
         this.stateStore.set('creativeLook.enabled', enabled);
         this.stateStore.set('creativeLookSectionOpen', enabled);
+        if (uvCheckerWasOn) {
+          this.stateStore.set('advanced.uvChecker', false);
+        }
       });
       updateCreativeLookFoldout(enabled);
+      if (uvCheckerWasOn) {
+        this.eventBus.emit('mesh:uv-checker', false);
+      }
       this.eventBus.emit('mesh:creative-look');
     });
     this.ui.inputs.creativeLookShaderAnimationSpeed?.addEventListener('input', (event) => {
@@ -561,10 +593,16 @@ export class MeshControls {
         const state = this.stateStore.getState().creativeLook || {};
         const prev = normalizeCreativeLookPreset(state.preset);
         if (preset !== prev) this.ui.uiSounds?.playSelect();
+        // See `creativeLookEnabled` handler — Shader Lab and UV Checker overlay are mutually
+        // exclusive. Disable the overlay before the shader takes over.
+        const uvCheckerWasOn = !!this.stateStore.getState().advanced?.uvChecker;
         this.stateStore.batch(() => {
           this.stateStore.set('creativeLook.preset', preset);
           this.stateStore.set('creativeLook.enabled', true);
           this.stateStore.set('creativeLookSectionOpen', true);
+          if (uvCheckerWasOn) {
+            this.stateStore.set('advanced.uvChecker', false);
+          }
         });
         updateCreativeLookFoldout(true);
         if (this.ui.inputs.creativeLookEnabled) {
@@ -572,6 +610,9 @@ export class MeshControls {
         }
         this.ui.setCreativeLookActive(preset);
         this.ui.toggleCreativeLookGrid(true);
+        if (uvCheckerWasOn) {
+          this.eventBus.emit('mesh:uv-checker', false);
+        }
         this.eventBus.emit('mesh:creative-look');
       });
     });
@@ -697,7 +738,7 @@ export class MeshControls {
       const wrap = this.ui.inputs.exportMp4Settings;
       if (!wrap) return;
       const f = this.ui.exportSettings.video?.format;
-      const showCompression = f === 'mp4' || f === 'mov';
+      const showCompression = f === 'mp4';
       wrap.hidden = !showCompression;
       wrap.classList.toggle('is-muted', !showCompression);
       wrap.querySelectorAll('[data-video-mp4-quality]').forEach((btn) => {
@@ -721,7 +762,7 @@ export class MeshControls {
     document.querySelectorAll('[data-video-format]').forEach((button) => {
       button.addEventListener('click', () => {
         const format = button.dataset.videoFormat;
-        if (format !== 'mp4' && format !== 'mov' && format !== 'png') return;
+        if (format !== 'mp4' && format !== 'png') return;
         this.ui.exportSettings.video.format = format;
         document.querySelectorAll('[data-video-format]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
@@ -922,6 +963,25 @@ export class MeshControls {
     }
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
+    }
+    if (this.ui.inputs.uvChecker) {
+      this.ui.inputs.uvChecker.checked = !!state.advanced?.uvChecker;
+    }
+    if (this.ui.inputs.uvCheckerStyle) {
+      const allowed = ['vibrant', 'monochrome'];
+      const raw = state.advanced?.uvCheckerStyle;
+      this.ui.inputs.uvCheckerStyle.value = allowed.includes(raw) ? raw : 'vibrant';
+      this.ui.setControlDisabled('uvCheckerStyle', !state.advanced?.uvChecker);
+    }
+    if (this.ui.inputs.uvCheckerScale) {
+      const rawUv = Number(state.advanced?.uvCheckerScale ?? 1);
+      const uvScale = Number.isFinite(rawUv) ? Math.max(0.25, Math.min(8, rawUv)) : 1;
+      const active = document.activeElement === this.ui.inputs.uvCheckerScale;
+      if (!active) {
+        this.ui.inputs.uvCheckerScale.value = uvScale;
+        this.helpers.updateValueLabel('uvCheckerScale', uvScale, 'decimal');
+      }
+      this.ui.setControlDisabled('uvCheckerScale', !state.advanced?.uvChecker);
     }
     if (this.ui.inputs.fbxMapInvertNormalY) {
       const fbxOn = !!state.fbxMapSlots?.enabled;

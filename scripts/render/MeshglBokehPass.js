@@ -1,77 +1,26 @@
-import {
-  Color,
-  HalfFloatType,
-  MeshDepthMaterial,
-  NearestFilter,
-  NoBlending,
-  RGBADepthPacking,
-  ShaderMaterial,
-  UniformsUtils,
-  Vector2,
-  WebGLRenderTarget,
-} from 'three';
-import { Pass, FullScreenQuad } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/Pass.js';
-import { BokehShaderMeshgl } from '../shaders/BokehShaderMeshgl.js';
+import { BokehPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js';
 
 /**
- * BokehPass using BokehShaderMeshgl (edge-safe color taps for high FOV / strong blur).
+ * Three.js stock {@link BokehPass} (same family as
+ * [Depth of Field Gallery](https://threejsdemos.com/demos/lighting/depth-gallery)) with mesh-only
+ * extras: optional far-depth proxy during the depth prepass, and lens-flare exclusions from depth.
  */
-class MeshglBokehPass extends Pass {
-  constructor(scene, camera, params) {
-    super();
-
-    this.scene = scene;
-    this.camera = camera;
-
-    const focus = params.focus !== undefined ? params.focus : 1.0;
-    const aperture = params.aperture !== undefined ? params.aperture : 0.025;
-    const maxblur = params.maxblur !== undefined ? params.maxblur : 1.0;
-
-    this.renderTargetDepth = new WebGLRenderTarget(1, 1, {
-      minFilter: NearestFilter,
-      magFilter: NearestFilter,
-      type: HalfFloatType,
+class MeshglBokehPass extends BokehPass {
+  constructor(scene, camera, params = {}) {
+    super(scene, camera, {
+      focus: params.focus !== undefined ? params.focus : 1.0,
+      aperture: params.aperture !== undefined ? params.aperture : 0.025,
+      maxblur: params.maxblur !== undefined ? params.maxblur : 0.01,
     });
-
-    this.renderTargetDepth.texture.name = 'MeshglBokehPass.depth';
-
-    this.materialDepth = new MeshDepthMaterial();
-    this.materialDepth.depthPacking = RGBADepthPacking;
-    this.materialDepth.blending = NoBlending;
-
-    const bokehUniforms = UniformsUtils.clone(BokehShaderMeshgl.uniforms);
-
-    bokehUniforms.tDepth.value = this.renderTargetDepth.texture;
-
-    bokehUniforms.focus.value = focus;
-    bokehUniforms.aspect.value = camera.aspect;
-    bokehUniforms.aperture.value = aperture;
-    bokehUniforms.maxblur.value = maxblur;
-    bokehUniforms.nearClip.value = camera.near;
-    bokehUniforms.farClip.value = camera.far;
-    bokehUniforms.uHalfTexel.value = new Vector2(0.5, 0.5);
-
-    this.materialBokeh = new ShaderMaterial({
-      defines: { ...BokehShaderMeshgl.defines },
-      uniforms: bokehUniforms,
-      vertexShader: BokehShaderMeshgl.vertexShader,
-      fragmentShader: BokehShaderMeshgl.fragmentShader,
-    });
-
-    this.uniforms = bokehUniforms;
-
-    this.fsQuad = new FullScreenQuad(this.materialBokeh);
-
-    this._oldClearColor = new Color();
+    this.getDofDepthProxy =
+      typeof params.getDofDepthProxy === 'function' ? params.getDofDepthProxy : null;
     /** @type {import('three').Object3D[]} */
     this._bokehDepthHideStack = [];
   }
 
-  /**
-   * Screen-space / camera-attached FX (e.g. lens flare) must not write into the DOF depth
-   * prepass: they sit near the camera and would stamp near depth over the center of the buffer,
-   * killing blur there while the color buffer still shows the flare.
-   */
+  /** Pipeline compatibility; quality only affects `maxblur` in {@link PostProcessingPipeline#updateDof}. */
+  setDofQualityTier() {}
+
   _beginBokehDepthExclusions() {
     this._bokehDepthHideStack.length = 0;
     this.scene.traverse((obj) => {
@@ -90,7 +39,14 @@ class MeshglBokehPass extends Pass {
     this._bokehDepthHideStack.length = 0;
   }
 
-  render(renderer, writeBuffer, readBuffer) {
+  render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+    const depthProxy = this.getDofDepthProxy?.() ?? null;
+    let restoreDepthProxy = false;
+    if (depthProxy && depthProxy.visible === false) {
+      depthProxy.visible = true;
+      restoreDepthProxy = true;
+    }
+
     this.scene.overrideMaterial = this.materialDepth;
 
     renderer.getClearColor(this._oldClearColor);
@@ -110,10 +66,13 @@ class MeshglBokehPass extends Pass {
       this._endBokehDepthExclusions();
     }
 
+    if (restoreDepthProxy) {
+      depthProxy.visible = false;
+    }
+
     this.uniforms.tColor.value = readBuffer.texture;
     this.uniforms.nearClip.value = this.camera.near;
     this.uniforms.farClip.value = this.camera.far;
-    this.uniforms.aspect.value = this.camera.aspect;
 
     if (this.renderToScreen) {
       renderer.setRenderTarget(null);
@@ -128,21 +87,6 @@ class MeshglBokehPass extends Pass {
     renderer.setClearColor(this._oldClearColor);
     renderer.setClearAlpha(oldClearAlpha);
     renderer.autoClear = oldAutoClear;
-  }
-
-  setSize(width, height) {
-    const w = Math.max(1, width);
-    const h = Math.max(1, height);
-    this.materialBokeh.uniforms.aspect.value = w / h;
-    this.materialBokeh.uniforms.uHalfTexel.value.set(0.5 / w, 0.5 / h);
-    this.renderTargetDepth.setSize(w, h);
-  }
-
-  dispose() {
-    this.renderTargetDepth.dispose();
-    this.materialDepth.dispose();
-    this.materialBokeh.dispose();
-    this.fsQuad.dispose();
   }
 }
 

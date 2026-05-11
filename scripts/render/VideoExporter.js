@@ -561,10 +561,7 @@ export class VideoExporter {
 
     const mode = settings?.mode === 'orbit' ? 'orbit' : 'turntable';
 
-    const format =
-      settings?.format === 'mov' || settings?.format === 'png'
-        ? settings.format
-        : 'mp4';
+    const format = settings?.format === 'png' ? 'png' : 'mp4';
     const allowedDurations = [5, 10, 15];
     const durationSec = allowedDurations.includes(settings?.durationSec)
       ? settings.durationSec
@@ -637,53 +634,6 @@ export class VideoExporter {
         } catch (error) {
           console.error('MP4 export failed', error);
           this.ui?.showToast?.('MP4 export failed');
-        } finally {
-          if (mode === 'orbit') {
-            this.endExportOrbitDrive?.();
-          }
-          this.setRotationY(startRotationY);
-          this.stateStore.set('rotationY', startRotationY);
-          this._restoreVideoExportSize(sizeSnapshot);
-          this.handleResize?.();
-        }
-        return;
-      }
-
-      if (format === 'mov') {
-        const modeLabel = mode === 'orbit' ? 'orbit' : 'turntable';
-        this.ui?.showToast?.(
-          `Recording for MOV (${durationSec}s, ${fps}fps, ${resolution}, ${mp4Quality}, ${modeLabel}, ${spins} spin${spins > 1 ? 's' : ''})…`,
-        );
-        try {
-          const mp4Blob = await this._recordTurntableToMp4Blob({
-            durationSec,
-            fps,
-            startRotationY,
-            quality: mp4Quality,
-            spins,
-            mode,
-          });
-          if (!mp4Blob?.size) {
-            this.ui?.showToast?.('MOV export failed (recording)');
-          } else {
-            this.ui?.showToast?.(
-              'Packaging QuickTime (.mov); first run may download ffmpeg wasm from CDN…',
-            );
-            const { remuxMp4BlobToMov } = await import('./remuxMp4ToMov.js');
-            const movBlob = await remuxMp4BlobToMov(mp4Blob);
-            const safeBase = (baseName || 'orby').replace(/\.[a-z0-9]+$/i, '');
-            this._downloadBlob(
-              movBlob,
-              `${safeBase}_${mode}_${durationSec}s_${fps}fps.mov`,
-            );
-            this.ui?.uiSounds?.playRenderFinished();
-            this.ui?.showToast?.('MOV exported', 3200, { notification: false });
-          }
-        } catch (error) {
-          console.error('MOV export failed', error);
-          this.ui?.showToast?.(
-            'MOV export failed — try MP4, or allow CDN load for the encoder.',
-          );
         } finally {
           if (mode === 'orbit') {
             this.endExportOrbitDrive?.();

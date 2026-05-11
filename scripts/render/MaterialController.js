@@ -8,6 +8,7 @@ import {
   normalizeCreativeLookPreset,
 } from './CreativeLookMaterials.js';
 import { reapplySvgExtrudeProceduralFromState } from './SvgExtrudeSurfaceShader.js';
+import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import {
   WIREFRAME_OFFSET,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
@@ -61,6 +62,8 @@ export class MaterialController {
     this.originalMaterials = new WeakMap();
     /** @type {THREE.Mesh[]|null} Wire overlay meshes (parented next to their source mesh for correct hierarchy). */
     this.wireframeOverlayMeshes = null;
+    /** UV Checker overlay (Atlux map) — extracted to keep this controller focused on materials/shading. */
+    this.uvCheckerOverlay = new UvCheckerOverlay();
     this.unlitMode = false;
 
     // Settings
@@ -112,6 +115,15 @@ export class MaterialController {
         hideMesh: false,
       }),
     };
+    {
+      const adv = initialState.advanced ?? {};
+      this.uvCheckerOverlay.applySettings({
+        enabled: adv.uvChecker === true,
+        scale: adv.uvCheckerScale,
+        style: adv.uvCheckerStyle,
+      });
+      this.uvCheckerOverlay.setModel(model);
+    }
     const icl = initialState.creativeLook ?? {};
     this.creativeLookSettings = {
       enabled: icl.enabled === true,
@@ -1083,6 +1095,7 @@ export class MaterialController {
 
     this.unlitMode = mode === 'textures';
     this.updateWireframeOverlay();
+    this.uvCheckerOverlay.rebuild();
     this.applyFresnelToModel(this.currentModel);
     reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, mode);
     this._applyCreativeLookOverride();
@@ -1680,8 +1693,12 @@ export class MaterialController {
     // Update mesh visibility based on hideMesh setting
     const { hideMesh } = this.wireframeSettings;
     this.currentModel.traverse((child) => {
-      if (child.isMesh && !child.userData.isWireframeOverlay) {
-        // Hide mesh if hideMesh is enabled (but keep wireframe overlay visible)
+      if (
+        child.isMesh
+        && !child.userData.isWireframeOverlay
+        && !child.userData.isUvCheckerOverlay
+      ) {
+        // Hide mesh if hideMesh is enabled (but keep wireframe + uv checker overlays visible)
         child.visible = !hideMesh;
       }
     });
@@ -1718,7 +1735,12 @@ export class MaterialController {
       // (position/rotation/scale) stay correct — a single overlay group under the model root
       // would misapply nested locals and produce huge offsets / wrong scale (common on GLB).
       this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.geometry || child.userData.isWireframeOverlay) return;
+        if (
+          !child.isMesh
+          || !child.geometry
+          || child.userData.isWireframeOverlay
+          || child.userData.isUvCheckerOverlay
+        ) return;
         // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
         if (child.isInstancedMesh) return;
 
@@ -1791,6 +1813,28 @@ export class MaterialController {
         wireMesh.matrixAutoUpdate = false;
       }
     }
+  }
+
+  /** Delegating wrappers — UV Checker logic lives in {@link UvCheckerOverlay}. */
+  setUvCheckerSettings(partial) {
+    this.uvCheckerOverlay.applySettings(partial);
+  }
+
+  setUvCheckerScale(scale) {
+    this.uvCheckerOverlay.setScale(scale);
+  }
+
+  setUvCheckerStyle(style) {
+    this.uvCheckerOverlay.setStyle(style);
+  }
+
+  clearUvCheckerOverlay() {
+    this.uvCheckerOverlay.clear();
+  }
+
+  updateUvCheckerOverlayTransforms() {
+    if (!this.uvCheckerOverlay.enabled) return;
+    this.uvCheckerOverlay.updateTransforms();
   }
 
   setFresnelSettings(settings) {
@@ -2613,6 +2657,7 @@ export class MaterialController {
   clear() {
     this.disposeFbxUserTextures(this.currentModel);
     this.clearWireframeOverlay();
+    this.uvCheckerOverlay.setModel(null);
     this.currentModel = null;
     this.currentShading = null;
     this.originalMaterials = new WeakMap();

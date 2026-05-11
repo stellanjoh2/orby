@@ -46,6 +46,7 @@ import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
+import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
 import {
   createToggleScaleContext,
@@ -412,12 +413,11 @@ export class SceneManager {
       this.histogramController.setEnabled(histogramState.histogramEnabled ?? false);
     }
 
-    this.compositionGridOverlayEl = document.getElementById('compositionGridOverlay');
+    this.viewportFramingOverlays = new ViewportFramingOverlays();
     const cam0 = this.stateStore.getState().camera ?? {};
-    this.setCompositionGridOverlayVisible(!!cam0.compositionGridEnabled);
-    this.setCompositionGuidesInverted(!!cam0.compositionGuidesInverted);
-    this.setCinematicLetterbox219Visible(!!cam0.cinematicLetterbox219, {
-      animate: false,
+    this.viewportFramingOverlays.syncFromCamera(cam0, {
+      letterboxAnimate: false,
+      compositionGridAnimate: false,
     });
 
     // Initialize event manager and register all event listeners
@@ -455,76 +455,19 @@ export class SceneManager {
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
   }
 
-  /** 16×9 letterboxed composition overlay (thirds, center cross, diagonals, circle). */
-  setCompositionGridOverlayVisible(enabled) {
-    const el =
-      this.compositionGridOverlayEl ??
-      document.getElementById('compositionGridOverlay');
-    if (!el) return;
-    this.compositionGridOverlayEl = el;
-    el.hidden = !enabled;
-    el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+  /** @see ViewportFramingOverlays#setCompositionGridOverlayVisible */
+  setCompositionGridOverlayVisible(enabled, options) {
+    this.viewportFramingOverlays.setCompositionGridOverlayVisible(enabled, options);
   }
 
-  /** Light vs dark guide strokes (see Camera → Composition Guides → Invert color). */
+  /** @see ViewportFramingOverlays#setCompositionGuidesInverted */
   setCompositionGuidesInverted(inverted) {
-    const el =
-      this.compositionGridOverlayEl ??
-      document.getElementById('compositionGridOverlay');
-    if (!el) return;
-    this.compositionGridOverlayEl = el;
-    el.classList.toggle('composition-grid-overlay--inverted', !!inverted);
+    this.viewportFramingOverlays.setCompositionGuidesInverted(inverted);
   }
 
-  /** Viewport-only 21∶9 mattes (Camera → 21∶9 letterbox). */
-  setCinematicLetterbox219Visible(enabled, { animate = false } = {}) {
-    const el =
-      this.cinematicLetterbox219El ??
-      document.getElementById('viewportLetterbox219');
-    if (!el) return;
-    this.cinematicLetterbox219El = el;
-
-    const prefersReducedMotion =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const useAnimate = animate && !prefersReducedMotion;
-
-    if (this._cinematicLetterbox219HideTimeout != null) {
-      clearTimeout(this._cinematicLetterbox219HideTimeout);
-      this._cinematicLetterbox219HideTimeout = null;
-    }
-    if (this._cinematicLetterbox219EnterRaf != null) {
-      cancelAnimationFrame(this._cinematicLetterbox219EnterRaf);
-      this._cinematicLetterbox219EnterRaf = null;
-    }
-
-    if (!useAnimate) {
-      el.hidden = !enabled;
-      el.setAttribute('aria-hidden', enabled ? 'false' : 'true');
-      el.classList.toggle('viewport-letterbox--shown', !!enabled);
-      return;
-    }
-
-    const LETTERBOX_MS = 250;
-
-    if (enabled) {
-      el.hidden = false;
-      el.setAttribute('aria-hidden', 'false');
-      el.classList.remove('viewport-letterbox--shown');
-      this._cinematicLetterbox219EnterRaf = requestAnimationFrame(() => {
-        this._cinematicLetterbox219EnterRaf = requestAnimationFrame(() => {
-          this._cinematicLetterbox219EnterRaf = null;
-          el.classList.add('viewport-letterbox--shown');
-        });
-      });
-    } else {
-      el.classList.remove('viewport-letterbox--shown');
-      this._cinematicLetterbox219HideTimeout = window.setTimeout(() => {
-        this._cinematicLetterbox219HideTimeout = null;
-        el.hidden = true;
-        el.setAttribute('aria-hidden', 'true');
-      }, LETTERBOX_MS);
-    }
+  /** @see ViewportFramingOverlays#setCinematicLetterbox219Visible */
+  setCinematicLetterbox219Visible(enabled, options) {
+    this.viewportFramingOverlays.setCinematicLetterbox219Visible(enabled, options);
   }
 
   setupMeshClickDetection() {
@@ -586,7 +529,7 @@ export class SceneManager {
       podiumGlassBrightness: state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS,
       backdropEnabled: !!state.backdropEnabled,
       backdropScale: state.backdropScale ?? 1,
-      backdropWidth: state.backdropWidth ?? 1,
+      backdropWidth: state.backdropWidth ?? 2,
       backdropColor: state.backdropColor ?? '#808080',
       backdropRotation: state.backdropRotation ?? 0,
       backdropY: state.backdropY ?? 0,
@@ -627,11 +570,9 @@ export class SceneManager {
   }
 
   setupComposer() {
-    this.postPipeline = new PostProcessingPipeline(
-      this.renderer,
-      this.scene,
-      this.camera,
-    );
+    this.postPipeline = new PostProcessingPipeline(this.renderer, this.scene, this.camera, {
+      getDofDepthProxy: () => this.backgroundController?.getBackgroundSphere?.() ?? null,
+    });
     this.composer = this.postPipeline.composer;
     this.lensDirtPass = this.postPipeline.lensDirtPass;
     this.fxaaPass = this.postPipeline.fxaaPass;
@@ -826,7 +767,7 @@ export class SceneManager {
     });
     this.setBackdropEnabled(!!state.backdropEnabled, { updateState: false });
     this.setBackdropScale(state.backdropScale ?? 1, { updateState: false });
-    this.setBackdropWidth(state.backdropWidth ?? 1, { updateState: false });
+    this.setBackdropWidth(state.backdropWidth ?? 2, { updateState: false });
     this.setBackdropColor(state.backdropColor ?? '#808080', { updateState: false });
     this.setBackdropRotation(state.backdropRotation ?? 0, { updateState: false });
     this.setBackdropY(state.backdropY ?? 0, { updateState: false });
@@ -973,10 +914,9 @@ export class SceneManager {
     this.applyRenderQualitySettings();
     this.applyColorCheckerFromState(state);
     this._ensureColorCheckerReferenceShadingConsistency();
-    this.setCompositionGridOverlayVisible(!!state.camera?.compositionGridEnabled);
-    this.setCompositionGuidesInverted(!!state.camera?.compositionGuidesInverted);
-    this.setCinematicLetterbox219Visible(!!state.camera?.cinematicLetterbox219, {
-      animate: false,
+    this.viewportFramingOverlays.syncFromCamera(state.camera ?? {}, {
+      letterboxAnimate: false,
+      compositionGridAnimate: false,
     });
   }
 
@@ -1507,6 +1447,29 @@ export class SceneManager {
 
   updateWireframeOverlayTransforms() {
     this.materialController.updateWireframeOverlayTransforms();
+  }
+
+  setUvCheckerEnabled(enabled) {
+    const on = !!enabled;
+    this.stateStore.set('advanced.uvChecker', on);
+    this.materialController?.setUvCheckerSettings({ enabled: on });
+  }
+
+  setUvCheckerScale(scale) {
+    const safe = Number.isFinite(scale) ? Math.max(0.05, Math.min(64, scale)) : 1;
+    this.stateStore.set('advanced.uvCheckerScale', safe);
+    this.materialController?.setUvCheckerScale(safe);
+  }
+
+  setUvCheckerStyle(style) {
+    const allowed = ['vibrant', 'monochrome'];
+    const safe = allowed.includes(style) ? style : 'vibrant';
+    this.stateStore.set('advanced.uvCheckerStyle', safe);
+    this.materialController?.setUvCheckerStyle(safe);
+  }
+
+  updateUvCheckerOverlayTransforms() {
+    this.materialController?.updateUvCheckerOverlayTransforms();
   }
 
   setGroundSolid(enabled) {
@@ -2351,6 +2314,7 @@ export class SceneManager {
       subsurface: state.subsurface,
       wireframe: state.wireframe,
       creativeLook: state.creativeLook,
+      advanced: state.advanced,
       material: state.material ?? {
         brightness: state.diffuseBrightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
         metalness: 0.0,
@@ -3009,6 +2973,7 @@ export class SceneManager {
       this.postPipeline?.updateGrainTime(delta);
     }
     this.updateWireframeOverlayTransforms();
+    this.updateUvCheckerOverlayTransforms();
     this._updateBackgroundSphere();
     this.render();
     
@@ -3023,17 +2988,7 @@ export class SceneManager {
    * This ensures it's always behind everything for proper DOF depth
    */
   _updateBackgroundSphere() {
-    if (!this.backgroundSphere || !this.backgroundSphere.visible) return;
-    
-    // Position sphere far behind the camera in its view direction
-    const cameraDirection = new THREE.Vector3();
-    this.camera.getWorldDirection(cameraDirection);
-    
-    // Position sphere very far behind (5000 units) to ensure it's at maximum depth
-    // This gives DOF proper depth information for smooth background blur
-    const distance = 5000;
-    this.backgroundSphere.position.copy(this.camera.position);
-    this.backgroundSphere.position.addScaledVector(cameraDirection, -distance);
+    this.backgroundController?.updateSpherePosition();
   }
 
   /**

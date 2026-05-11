@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
+import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js';
 import {
   PODIUM_TOP_RADIUS_OFFSET,
   PODIUM_SEGMENTS,
@@ -365,7 +365,7 @@ export class GroundController {
     this._glassSepBlur = null;
     this.backdropEnabled = !!options.backdropEnabled;
     this.backdropScale = clampScale(options.backdropScale ?? 1);
-    this.backdropWidth = clampScale(options.backdropWidth ?? 1);
+    this.backdropWidth = clampScale(options.backdropWidth ?? 2);
     this.backdropColor = options.backdropColor ?? '#808080';
     this.backdropRotation = clampDegrees(options.backdropRotation ?? 0);
     this.backdropY = options.backdropY ?? 0;

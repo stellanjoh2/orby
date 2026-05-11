@@ -94,6 +94,9 @@ export class SceneSettingsManager {
         blendSortingMitigation: state.advanced?.blendSortingMitigation !== false,
         flipGlassNormalMapY: !!state.advanced?.flipGlassNormalMapY,
         glassFrontFacesOnly: !!state.advanced?.glassFrontFacesOnly,
+        uvChecker: !!state.advanced?.uvChecker,
+        uvCheckerScale: state.advanced?.uvCheckerScale ?? 1,
+        uvCheckerStyle: state.advanced?.uvCheckerStyle ?? 'vibrant',
       },
       // Studio settings
       hdri: state.hdri,
@@ -606,6 +609,27 @@ export class SceneSettingsManager {
         }
         this.eventBus.emit('mesh:glass-appearance');
       }
+      if (payload.advanced?.uvChecker !== undefined) {
+        const enabled = !!payload.advanced.uvChecker;
+        this.stateStore.set('advanced.uvChecker', enabled);
+        this.eventBus.emit('mesh:uv-checker', enabled);
+      }
+      if (payload.advanced?.uvCheckerScale !== undefined) {
+        const raw = Number(payload.advanced.uvCheckerScale);
+        if (Number.isFinite(raw)) {
+          const scale = Math.max(0.05, Math.min(64, raw));
+          this.stateStore.set('advanced.uvCheckerScale', scale);
+          this.eventBus.emit('mesh:uv-checker-scale', scale);
+        }
+      }
+      if (payload.advanced?.uvCheckerStyle !== undefined) {
+        const allowed = ['vibrant', 'monochrome'];
+        const style = allowed.includes(payload.advanced.uvCheckerStyle)
+          ? payload.advanced.uvCheckerStyle
+          : 'vibrant';
+        this.stateStore.set('advanced.uvCheckerStyle', style);
+        this.eventBus.emit('mesh:uv-checker-style', style);
+      }
 
       // Apply Studio settings
       if (payload.hdri !== undefined) {
@@ -1026,7 +1050,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('render:dof', dof);
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
-            ['dofFocus', 'dofAperture'],
+            ['dofFocus', 'dofAperture', 'dofQuality'],
             !payload.dof.enabled,
           );
         }
