@@ -170,7 +170,8 @@ try {
 
   // Update changelog in its own "Latest Changes" section
   // Find and replace the content inside the existing "Latest Changes" panel-block
-  const changelogRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes(?: \([^)]*\))?:?<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[^<]*(<\/div>\s*<\/div>\s*<\/div>)/;
+  // Inner body may include <strong> etc.; [^<]* wrongly skipped updates when markup was present.
+  const changelogRegex = /(<div class="panel-block" id="info-changelog">\s*<div class="block-title"><i class="fa-solid fa-code"[^>]*><\/i>Latest Changes(?: \([^)]*\))?:?<\/div>\s*<div class="about-content">\s*<div style="color: var\(--text-dim\); font-size: 0\.9rem; line-height: 1\.5;">)[\s\S]*?(<\/div>\s*<\/div>\s*<\/div>)/;
 
   if (changelogRegex.test(html)) {
     html = html.replace(changelogRegex, `$1${changelogText}$2`);
