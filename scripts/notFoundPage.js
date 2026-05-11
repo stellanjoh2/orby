@@ -142,7 +142,7 @@ const NOT_FOUND_PRESET = {
       enabled: true,
     },
   },
-  lightsEnabled: true,
+  lightsEnabled: false,
   lightsMaster: 0.3,
   lightsRotation: 0,
   lightsHeight: 5,

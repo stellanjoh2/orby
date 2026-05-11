@@ -162,7 +162,8 @@ export class StateStore {
         rim: { color: '#a0eaf9', intensity: 0.96, height: 4, rotate: 0, enabled: true, castShadows: true },
         ambient: { color: '#7c8ca6', intensity: 0.48, enabled: true },
       },
-      lightsEnabled: true,
+      /** Off by default: HDRI already lights the scene; turn on for 3-point rig + directional shadows. */
+      lightsEnabled: false,
       lightsMaster: 0.30,
       lightsRotation: 0,
       lightsHeight: 5,
