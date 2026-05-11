@@ -146,7 +146,7 @@ body[data-theme='violet'] {
   --bg: #050112;
   --panel: #0d081f;
   --panel-alt: #160c2f;
-  --shelf-bg: rgba(7, 2, 20, 0.50);
+  --shelf-bg: rgba(10, 10, 10, 0.5);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
@@ -199,7 +199,7 @@ body[data-theme='aqua'] {
   --bg: #04060c;
   --panel: #0d111c;
   --panel-alt: #121726;
-  --shelf-bg: rgba(0, 0, 0, 0.6);
+  --shelf-bg: rgba(10, 10, 10, 0.6);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
@@ -601,7 +601,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
   max-width: 420px;
   padding: 1.75rem 1.5rem;
   border-radius: var(--app-settings-chrome-radius);
-  background: var(--panel);
+  background: rgb(10, 10, 10);
   border: 1px solid var(--stroke);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--brand-primary) 12%, transparent),
@@ -646,7 +646,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
   border: 1px solid var(--stroke);
-  background: var(--panel-alt);
+  background: rgb(22, 22, 22);
   color: var(--text);
   font-family: inherit;
   font-size: 1rem;
@@ -709,7 +709,7 @@ html.orby-gate-unlocked .orby-entry-gate {
 }
 
 .load-settings-content {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 10, 10, 0.6);
   border: none;
   border-radius: var(--app-settings-chrome-radius);
   padding: 1.2rem;
@@ -2860,7 +2860,7 @@ a.about-highlight:focus-visible {
   border-radius: 6px;
   padding: 1.2rem;
   margin-bottom: var(--shelf-rhythm);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 10, 10, 0.6);
 }
 
 /* Subtle divider line within panel blocks - only spans content width */
@@ -4828,7 +4828,7 @@ body.ui-hidden .shelf {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10000;
-  background: var(--panel);
+  background: rgba(10, 10, 10, 0.85);
   border: 1px solid var(--stroke);
   border-radius: 8px;
   padding: 1.5rem 2rem;
