@@ -128,7 +128,7 @@ Perfect for models exported from:
 |--------|----------|
 | Toggle grid | `G` |
 | Toggle 3-point lighting | `L` |
-| Toggle podium | `P` |
+| Toggle base (solid ground) | `P` |
 | Toggle render backdrop | `B` |
 | Toggle auto-rotate | `A` |
 | Cycle HDRI presets | `[` / `]` |
@@ -330,10 +330,10 @@ Real-time exposure histogram showing brightness distribution:
 
 ### Ground & Studio
 
-#### Podium
+#### Base
 Customizable platform for product presentations:
-- **Color** - Customizable podium color
-- **Scale** - Adjust podium size
+- **Color** - Customizable base color
+- **Scale** - Adjust base size
 - **Position** - Vertical position control
 - **Snap to Mesh** - Automatically position at mesh base
 
@@ -403,7 +403,7 @@ Orby is built with a modular, controller-based architecture for maintainability 
 - **`ModelLoader.js`** - Model loading and parsing (GLB, GLTF, OBJ, FBX, STL, USD)
 - **`AnimationController.js`** - Animation playback and scrubbing
 - **`TransformController.js`** - Model transforms (scale, position, rotation)
-- **`GroundController.js`** - Ground plane, podium, and grid
+- **`GroundController.js`** - Ground plane, base platform, and grid
 - **`MeshDiagnosticsController.js`** - Mesh diagnostics and helpers
 - **`SceneObjectsController.js`** - Multi-object scene management
 
