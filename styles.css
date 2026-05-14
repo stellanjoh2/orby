@@ -2384,6 +2384,12 @@ html.orby-window-resizing body.dropzone-visible .dropzone::after {
   font-weight: 700;
 }
 
+/* Construction notice on dropzone secondary copy */
+.drop-secondary .drop-under-construction {
+  color: #ca8a04;
+  font-weight: 700;
+}
+
 .drop-secondary {
   color: var(--text-dim);
   /* Responsive font size: scales down on smaller screens */
