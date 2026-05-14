@@ -186,7 +186,7 @@ const NOT_FOUND_PRESET = {
     cinematicLetterbox219: false,
   },
   exposure: 1,
-  autoExposure: true,
+  autoExposure: false,
   histogramEnabled: false,
   toneCurveOpen: false,
   toneCurve: {

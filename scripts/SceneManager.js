@@ -787,13 +787,11 @@ export class SceneManager {
     this.cameraController?.setTilt(state.camera.tilt ?? 0);
     this.lightsEnabled = state.lightsEnabled ?? true;
     this.lightsMaster = state.lightsMaster ?? 0.30;
-    this.applyLightSettings(state.lights);
-    if (!this.lightsEnabled) {
-      Object.values(this.lights).forEach((light) => {
-        if (!light) return;
-        light.intensity = 0;
-      });
-    }
+    // Keep LightsController.lightsEnabled / lightsMaster aligned with state before any
+    // per-light updates. Otherwise applySettings + updateLightProperty can disagree with
+    // SceneManager.lightsEnabled (e.g. 404 preset with lights off) and flash studio lights.
+    this.lightsController?.setMaster(this.lightsMaster, state.lights);
+    this.lightsController?.setEnabled(this.lightsEnabled, state.lights);
     this.setLightsRotation(state.lightsRotation ?? 0);
     this.setLightsHeight(state.lightsHeight ?? 5);
     this.setShowLightIndicators(state.showLightIndicators ?? false);
