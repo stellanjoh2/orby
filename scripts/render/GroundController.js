@@ -6,17 +6,17 @@ import {
   PODIUM_BEVEL_EDGE_SEGMENTS,
   PODIUM_REFLECTOR_Y_EPS,
   PODIUM_REFLECTOR_RES_SCALE,
-  DEFAULT_PODIUM_GLASS_BLUR,
-  DEFAULT_PODIUM_GLASS_AMOUNT,
-  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+  DEFAULT_BASE_GLASS_BLUR,
+  DEFAULT_BASE_GLASS_AMOUNT,
+  DEFAULT_BASE_GLASS_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
 } from '../constants.js';
-import { PodiumGlassSeparableBlur } from './PodiumGlassSeparableBlur.js';
+import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 
-/** Glass reflection FS: single projected sample — blur is separable H/V on the RT (see PodiumGlassSeparableBlur). */
-function buildPodiumGlassReflectorFragmentShader() {
+/** Glass reflection FS: single projected sample — blur is separable H/V on the RT (see BaseGlassSeparableBlur). */
+function buildBaseGlassReflectorFragmentShader() {
   return /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform float reflectionAmount;
@@ -43,7 +43,7 @@ void main() {
 `;
 }
 
-function applyPodiumGlassReflectorShader(material, reflection01, surfaceBrightness01) {
+function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness01) {
   if (!material?.uniforms) return;
   const ra = clamp01(reflection01);
   const sb = clamp01(surfaceBrightness01);
@@ -57,7 +57,7 @@ function applyPodiumGlassReflectorShader(material, reflection01, surfaceBrightne
   } else {
     material.uniforms.surfaceBrightness.value = sb;
   }
-  material.fragmentShader = buildPodiumGlassReflectorFragmentShader();
+  material.fragmentShader = buildBaseGlassReflectorFragmentShader();
   material.needsUpdate = true;
 }
 
@@ -325,39 +325,48 @@ export class GroundController {
     this.wireOpacity = options.wireOpacity ?? 1.0;
     this.groundY = options.groundY ?? 0;
     this.gridY = options.gridY ?? 0;
-    this.podiumScale = clampScale(options.podiumScale ?? 1);
+    this.podiumScale = clampScale(options.baseScale ?? options.podiumScale ?? 1);
     this.gridScale = clampScale(options.gridScale ?? 1);
     this.groundHeight = options.groundHeight ?? 0.1;
     this.podiumBaseRadius = 2;
 
-    this.podiumMetalness = clamp01(options.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS);
-    this.podiumRoughness = clamp01(options.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS);
-    /** Multiplier on HDRI env intensity for the podium only (highlights HDRI reflections). */
-    const pr = Number(options.podiumReflection);
+    this.podiumMetalness = clamp01(options.baseMetalness ?? options.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS);
+    this.podiumRoughness = clamp01(options.baseRoughness ?? options.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS);
+    /** Multiplier on HDRI env intensity for the solid base only (highlights HDRI reflections). */
+    const pr = Number(options.baseReflection ?? options.podiumReflection);
     this.podiumReflection = Math.min(
       3,
       Math.max(0, Number.isFinite(pr) ? pr : 1),
     );
-    this.podiumClearcoat = clamp01(options.podiumClearcoat ?? 0);
+    this.podiumClearcoat = clamp01(options.baseClearcoat ?? options.podiumClearcoat ?? 0);
 
     this._lastEnvTexture = null;
     this._lastHdriIntensity = 1;
     this._lastHdriBlurriness = 0;
 
-    /** WebGLRenderer — required for planar mesh reflection on the podium top. */
+    /** WebGLRenderer — required for planar mesh reflection on the base top. */
     this.renderer = options.renderer ?? null;
     /** Planar “glass surface” reflection (realtime scene mesh; optional toggle). */
-    this.podiumGlassSurface =
-      options.podiumGlassSurface !== undefined
-        ? !!options.podiumGlassSurface
-        : options.podiumReflectMesh !== false;
+    const glassFromState =
+      options.baseGlassSurface !== undefined
+        ? !!options.baseGlassSurface
+        : options.podiumGlassSurface !== undefined
+          ? !!options.podiumGlassSurface
+          : options.podiumReflectMesh !== false;
+    this.podiumGlassSurface = glassFromState;
     /** 0–1 softness for glass reflection (multi-tap blur in shader). */
-    this.podiumGlassBlur = clamp01(options.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR);
+    this.podiumGlassBlur = clamp01(
+      options.baseGlassBlur ?? options.podiumGlassBlur ?? DEFAULT_BASE_GLASS_BLUR,
+    );
     /** 0–1 strength of reflection vs muted tinted base (lower = less “mirror”). */
-    this.podiumGlassAmount = clamp01(options.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT);
+    this.podiumGlassAmount = clamp01(
+      options.baseGlassAmount ?? options.podiumGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT,
+    );
     /** 0–1 base tone under reflection — black to white (mid gray default). */
     this.podiumGlassBrightness = clamp01(
-      options.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+      options.baseGlassBrightness ??
+        options.podiumGlassBrightness ??
+        DEFAULT_BASE_GLASS_BRIGHTNESS,
     );
 
     this.podium = null;
@@ -382,7 +391,7 @@ export class GroundController {
     this.gridMaterials = null;
 
     this.buildGrid();
-    this.buildDefaultPodium();
+    this.buildDefaultBase();
     this.buildDefaultBackdrop();
     this.setSolidEnabled(this.solidEnabled);
     this.setBackdropEnabled(this.backdropEnabled);
@@ -394,7 +403,7 @@ export class GroundController {
     this._glassSepBlur = null;
   }
 
-  disposePodiumReflector() {
+  disposeBaseReflector() {
     this._disposeGlassSepBlur();
     if (!this.podiumReflector) return;
     if (this.podiumReflector.parent) {
@@ -407,8 +416,8 @@ export class GroundController {
     this.podiumReflector = null;
   }
 
-  disposePodium() {
-    this.disposePodiumReflector();
+  disposeBase() {
+    this.disposeBaseReflector();
     if (!this.podium) return;
     this.scene.remove(this.podium);
     disposeObjectGpuResources(this.podium);
@@ -435,13 +444,13 @@ export class GroundController {
   }
 
   disposeMeshes() {
-    this.disposePodium();
+    this.disposeBase();
     this.disposeBackdrop();
     this.disposeGrid();
   }
 
-  buildDefaultPodium() {
-    this.disposePodium();
+  buildDefaultBase() {
+    this.disposeBase();
 
     const baseRadius = this.podiumBaseRadius * this.podiumScale;
     const height = this.groundHeight;
@@ -478,14 +487,14 @@ export class GroundController {
     this.podium.visible = this.solidEnabled;
     this.scene.add(this.podium);
 
-    this.applyPodiumEnvironment(
+    this.applyBaseEnvironment(
       this._lastEnvTexture ?? this.scene.environment,
       this._lastHdriIntensity,
       this._lastHdriBlurriness,
     );
 
     this.setGroundY(this.groundY);
-    this.rebuildPodiumReflector();
+    this.rebuildBaseReflector();
   }
 
   buildDefaultBackdrop() {
@@ -514,8 +523,8 @@ export class GroundController {
    * Planar Reflector on the podium top — renders the scene (including the loaded mesh) each frame.
    * HDRI env reflections alone cannot show other objects.
    */
-  rebuildPodiumReflector() {
-    this.disposePodiumReflector();
+  rebuildBaseReflector() {
+    this.disposeBaseReflector();
     if (!this.podium || !this.renderer || !this.podiumGlassSurface) return;
 
     const topRadius =
@@ -552,7 +561,7 @@ export class GroundController {
     this.podium.add(reflector);
     this.podiumReflector = reflector;
 
-    this._glassSepBlur = new PodiumGlassSeparableBlur(this.renderer, rw, rh);
+    this._glassSepBlur = new BaseGlassSeparableBlur(this.renderer, rw, rh);
 
     const scope = this;
     const originalBeforeRender = reflector.onBeforeRender;
@@ -577,7 +586,7 @@ export class GroundController {
       }
     };
 
-    applyPodiumGlassReflectorShader(
+    applyBaseGlassReflectorShader(
       reflector.material,
       this.podiumGlassAmount,
       this.podiumGlassBrightness,
@@ -585,7 +594,7 @@ export class GroundController {
   }
 
   /** Call from SceneManager on resize so the reflector render target stays sharp enough without wasting pixels. */
-  resizePodiumReflector(width, height) {
+  resizeBaseReflector(width, height) {
     if (!this.renderer) return;
     const logical = new THREE.Vector2();
     this.renderer.getSize(logical);
@@ -594,27 +603,27 @@ export class GroundController {
     const dpr = Math.max(1e-6, this.renderer.getPixelRatio?.() ?? 1);
     this._reflectorTexW = Math.max(256, Math.floor(w * dpr * PODIUM_REFLECTOR_RES_SCALE));
     this._reflectorTexH = Math.max(256, Math.floor(h * dpr * PODIUM_REFLECTOR_RES_SCALE));
-    if (this.podium && this.podiumGlassSurface) this.rebuildPodiumReflector();
+    if (this.podium && this.podiumGlassSurface) this.rebuildBaseReflector();
   }
 
-  setPodiumGlassSurface(enabled) {
+  setBaseGlassSurface(enabled) {
     this.podiumGlassSurface = !!enabled;
     if (this.podiumGlassSurface && !this.podiumReflector) {
-      this.rebuildPodiumReflector();
+      this.rebuildBaseReflector();
     }
   }
 
-  setPodiumGlassBlur(value) {
+  setBaseGlassBlur(value) {
     this.podiumGlassBlur = clamp01(value);
   }
 
-  setPodiumGlassAmount(value) {
+  setBaseGlassAmount(value) {
     this.podiumGlassAmount = clamp01(value);
     const u = this.podiumReflector?.material?.uniforms?.reflectionAmount;
     if (u) u.value = this.podiumGlassAmount;
   }
 
-  setPodiumGlassBrightness(value) {
+  setBaseGlassBrightness(value) {
     this.podiumGlassBrightness = clamp01(value);
     const u = this.podiumReflector?.material?.uniforms?.surfaceBrightness;
     if (u) u.value = this.podiumGlassBrightness;
@@ -623,7 +632,7 @@ export class GroundController {
   /**
    * Keeps podium env/reflections in sync with the HDRI (same path as the loaded model).
    */
-  applyPodiumEnvironment(envTexture, hdriIntensity, hdriBlurriness = 0) {
+  applyBaseEnvironment(envTexture, hdriIntensity, hdriBlurriness = 0) {
     const intensity = Math.max(0, hdriIntensity ?? 1);
     const blur = clamp01(hdriBlurriness);
     this._lastEnvTexture = envTexture ?? null;
@@ -645,25 +654,25 @@ export class GroundController {
     mat.needsUpdate = true;
   }
 
-  setPodiumMetalness(value) {
+  setBaseMetalness(value) {
     this.podiumMetalness = clamp01(value);
-    this.applyPodiumEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
   }
 
-  setPodiumRoughness(value) {
+  setBaseRoughness(value) {
     this.podiumRoughness = clamp01(value);
-    this.applyPodiumEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
   }
 
-  setPodiumReflection(value) {
+  setBaseReflection(value) {
     const v = Number(value);
     this.podiumReflection = Math.min(3, Math.max(0, Number.isFinite(v) ? v : 1));
-    this.applyPodiumEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
   }
 
-  setPodiumClearcoat(value) {
+  setBaseClearcoat(value) {
     this.podiumClearcoat = clamp01(value);
-    this.applyPodiumEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+    this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
   }
 
   buildGrid() {
@@ -697,7 +706,7 @@ export class GroundController {
 
     if (!this.podium) {
       console.warn('[GroundController] Podium missing, rebuilding default…');
-      this.buildDefaultPodium();
+      this.buildDefaultBase();
     }
 
     // Podium visibility + animated scale are driven each frame from SceneManager (`toggleScaleAnimation`).
@@ -745,7 +754,7 @@ export class GroundController {
     if (this.grid) this.grid.position.y = this.gridY;
   }
 
-  snapPodiumToBounds(bounds) {
+  snapBaseToBounds(bounds) {
     if (!bounds || !isFinite(bounds.min.y)) return null;
     const bottomY = bounds.min.y;
     this.setGroundY(bottomY);
@@ -768,7 +777,7 @@ export class GroundController {
     return nextBackdropY;
   }
 
-  setPodiumScale(value) {
+  setBaseScale(value) {
     this.podiumScale = clampScale(value ?? this.podiumScale);
 
     const wasVisible = this.solidEnabled;
@@ -784,7 +793,7 @@ export class GroundController {
       return this.groundY;
     }
 
-    this.buildDefaultPodium();
+    this.buildDefaultBase();
     this.setSolidEnabled(wasVisible);
     this.setSolidColor(currentColor);
     this.groundY = topFaceY - this.groundHeight / 2;
@@ -952,7 +961,7 @@ export class GroundController {
     return this.gridY;
   }
 
-  getPodiumScale() {
+  getBaseScale() {
     return this.podiumScale;
   }
 

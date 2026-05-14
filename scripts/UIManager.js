@@ -4,9 +4,9 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
-  DEFAULT_PODIUM_GLASS_BLUR,
-  DEFAULT_PODIUM_GLASS_AMOUNT,
-  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+  DEFAULT_BASE_GLASS_BLUR,
+  DEFAULT_BASE_GLASS_AMOUNT,
+  DEFAULT_BASE_GLASS_BRIGHTNESS,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
   isBloomPipelineActive,
@@ -237,7 +237,7 @@ export class UIManager {
     this.dom.stats = q('#meshStats');
     this.dom.fbxMapSlotsDivider = q('#fbxMapSlotsDivider');
     this.dom.svgExtrudePanelBlock = q('#svgExtrudePanelBlock');
-    this.dom.studioPodiumGlassPanel = q('#studioPodiumGlassPanel');
+    this.dom.studioBaseGlassPanel = q('#studioBaseGlassPanel');
     this.dom.animationBlock = q('#animationBlock');
     this.dom.animationSelect = q('#animationSelect');
     this.dom.playPause = q('#playPause');
@@ -322,16 +322,16 @@ export class UIManager {
       groundWireOpacity: q('#groundWireOpacity'),
       groundY: q('#groundY'),
       gridY: q('#gridY'),
-      podiumSnap: q('#podiumSnap'),
+      baseSnap: q('#baseSnap'),
       gridSnap: q('#gridSnap'),
       gridScale: q('#gridScale'),
-      podiumScale: q('#podiumScale'),
-      podiumMetalness: q('#podiumMetalness'),
-      podiumRoughness: q('#podiumRoughness'),
-      podiumGlassSurface: q('#podiumGlassSurface'),
-      podiumGlassBrightness: q('#podiumGlassBrightness'),
-      podiumGlassBlur: q('#podiumGlassBlur'),
-      podiumGlassAmount: q('#podiumGlassAmount'),
+      baseScale: q('#baseScale'),
+      baseMetalness: q('#baseMetalness'),
+      baseRoughness: q('#baseRoughness'),
+      baseGlassSurface: q('#baseGlassSurface'),
+      baseGlassBrightness: q('#baseGlassBrightness'),
+      baseGlassBlur: q('#baseGlassBlur'),
+      baseGlassAmount: q('#baseGlassAmount'),
       backdropEnabled: q('#backdropEnabled'),
       backdropColor: q('#backdropColor'),
       backdropTextureEnabled: q('#backdropTextureEnabled'),
@@ -1660,41 +1660,41 @@ export class UIManager {
       this.inputs.gridY.value = state.gridY ?? 0;
       this.updateValueLabel('gridY', state.gridY ?? 0, 'distance');
     }
-    if (this.inputs.podiumScale) {
-      this.inputs.podiumScale.value = state.podiumScale ?? 1;
-      this.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
+    if (this.inputs.baseScale) {
+      this.inputs.baseScale.value = state.baseScale ?? 1;
+      this.updateValueLabel('baseScale', state.baseScale ?? 1, 'decimal');
     }
-    if (this.inputs.podiumMetalness) {
-      const vm = state.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS;
-      this.inputs.podiumMetalness.value = vm;
-      this.updateValueLabel('podiumMetalness', vm, 'decimal');
+    if (this.inputs.baseMetalness) {
+      const vm = state.baseMetalness ?? DEFAULT_MATERIAL_METALNESS;
+      this.inputs.baseMetalness.value = vm;
+      this.updateValueLabel('baseMetalness', vm, 'decimal');
     }
-    if (this.inputs.podiumRoughness) {
-      const vr = state.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS;
-      this.inputs.podiumRoughness.value = vr;
-      this.updateValueLabel('podiumRoughness', vr, 'decimal');
+    if (this.inputs.baseRoughness) {
+      const vr = state.baseRoughness ?? DEFAULT_MATERIAL_ROUGHNESS;
+      this.inputs.baseRoughness.value = vr;
+      this.updateValueLabel('baseRoughness', vr, 'decimal');
     }
-    if (this.inputs.podiumGlassSurface) {
-      this.inputs.podiumGlassSurface.checked = !!(
-        state.podiumGlassSurface ??
+    if (this.inputs.baseGlassSurface) {
+      this.inputs.baseGlassSurface.checked = !!(
+        state.baseGlassSurface ??
         state.podiumReflectMesh ??
         false
       );
     }
-    if (this.inputs.podiumGlassBrightness) {
-      const br = state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS;
-      this.inputs.podiumGlassBrightness.value = br;
-      this.updateValueLabel('podiumGlassBrightness', br, 'decimal');
+    if (this.inputs.baseGlassBrightness) {
+      const br = state.baseGlassBrightness ?? DEFAULT_BASE_GLASS_BRIGHTNESS;
+      this.inputs.baseGlassBrightness.value = br;
+      this.updateValueLabel('baseGlassBrightness', br, 'decimal');
     }
-    if (this.inputs.podiumGlassBlur) {
-      const vb = state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR;
-      this.inputs.podiumGlassBlur.value = vb;
-      this.updateValueLabel('podiumGlassBlur', vb, 'decimal');
+    if (this.inputs.baseGlassBlur) {
+      const vb = state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR;
+      this.inputs.baseGlassBlur.value = vb;
+      this.updateValueLabel('baseGlassBlur', vb, 'decimal');
     }
-    if (this.inputs.podiumGlassAmount) {
-      const va = state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT;
-      this.inputs.podiumGlassAmount.value = va;
-      this.updateValueLabel('podiumGlassAmount', va, 'decimal');
+    if (this.inputs.baseGlassAmount) {
+      const va = state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT;
+      this.inputs.baseGlassAmount.value = va;
+      this.updateValueLabel('baseGlassAmount', va, 'decimal');
     }
     if (this.inputs.gridScale) {
       this.inputs.gridScale.value = state.gridScale ?? 1;
@@ -2188,28 +2188,28 @@ export class UIManager {
     // Podium platform — muted when disabled; Glass panel only exists once podium is enabled
     const podiumOn = !!currentState.groundSolid;
     const glassOn = !!(
-      currentState.podiumGlassSurface ??
+      currentState.baseGlassSurface ??
       currentState.podiumReflectMesh ??
       false
     );
-    if (this.dom.studioPodiumGlassPanel) {
-      this.dom.studioPodiumGlassPanel.hidden = !podiumOn;
+    if (this.dom.studioBaseGlassPanel) {
+      this.dom.studioBaseGlassPanel.hidden = !podiumOn;
     }
-    this.setBlockMuted('podium', !podiumOn);
+    this.setBlockMuted('base', !podiumOn);
     this.setControlDisabled(
       [
         'groundSolidColor',
         'groundY',
-        'podiumScale',
-        'podiumMetalness',
-        'podiumRoughness',
-        'podiumSnap',
+        'baseScale',
+        'baseMetalness',
+        'baseRoughness',
+        'baseSnap',
       ],
       !podiumOn,
     );
-    this.setControlDisabled('podiumGlassBrightness', !glassOn);
-    this.setControlDisabled('podiumGlassBlur', !glassOn);
-    this.setControlDisabled('podiumGlassAmount', !glassOn);
+    this.setControlDisabled('baseGlassBrightness', !glassOn);
+    this.setControlDisabled('baseGlassBlur', !glassOn);
+    this.setControlDisabled('baseGlassAmount', !glassOn);
 
     const backdropOn = !!currentState.backdropEnabled;
     this.setBlockMuted('backdrop', !backdropOn);

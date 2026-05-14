@@ -306,15 +306,15 @@ export class EventManager {
     eventBus.on('studio:ground-wire-opacity', (value) => s.setGroundWireOpacity(value));
     eventBus.on('studio:ground-y', (value) => s.setGroundY(value));
     eventBus.on('studio:grid-y', (value) => s.setGridY(value));
-    eventBus.on('studio:podium-scale', (value) => s.setPodiumScale(value));
-    eventBus.on('studio:podium-metalness', (value) => s.setPodiumMetalness(value));
-    eventBus.on('studio:podium-roughness', (value) => s.setPodiumRoughness(value));
-    eventBus.on('studio:podium-reflection', (value) => s.setPodiumReflection(value));
-    eventBus.on('studio:podium-clearcoat', (value) => s.setPodiumClearcoat(value));
-    eventBus.on('studio:podium-glass-surface', (enabled) => s.setPodiumGlassSurface(enabled));
-    eventBus.on('studio:podium-glass-blur', (value) => s.setPodiumGlassBlur(value));
-    eventBus.on('studio:podium-glass-amount', (value) => s.setPodiumGlassAmount(value));
-    eventBus.on('studio:podium-glass-brightness', (value) => s.setPodiumGlassBrightness(value));
+    eventBus.on('studio:base-scale', (value) => s.setBaseScale(value));
+    eventBus.on('studio:base-metalness', (value) => s.setBaseMetalness(value));
+    eventBus.on('studio:base-roughness', (value) => s.setBaseRoughness(value));
+    eventBus.on('studio:base-reflection', (value) => s.setBaseReflection(value));
+    eventBus.on('studio:base-clearcoat', (value) => s.setBaseClearcoat(value));
+    eventBus.on('studio:base-glass-surface', (enabled) => s.setBaseGlassSurface(enabled));
+    eventBus.on('studio:base-glass-blur', (value) => s.setBaseGlassBlur(value));
+    eventBus.on('studio:base-glass-amount', (value) => s.setBaseGlassAmount(value));
+    eventBus.on('studio:base-glass-brightness', (value) => s.setBaseGlassBrightness(value));
     eventBus.on('studio:backdrop-enabled', (enabled) => s.setBackdropEnabled(enabled));
     eventBus.on('studio:backdrop-scale', (value) => s.setBackdropScale(value));
     eventBus.on('studio:backdrop-width', (value) => s.setBackdropWidth(value));
@@ -325,7 +325,7 @@ export class EventManager {
     eventBus.on('studio:backdrop-texture-scale', (value) => s.setBackdropTextureScale(value));
     eventBus.on('studio:backdrop-snap', () => s.snapBackdropToBottom());
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
-    eventBus.on('studio:podium-snap', () => s.snapPodiumToBottom());
+    eventBus.on('studio:base-snap', () => s.snapBaseToBottom());
     eventBus.on('studio:grid-snap', () => s.snapGridToBottom());
 
     // Lights events

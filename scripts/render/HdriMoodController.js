@@ -38,8 +38,8 @@ export class HdriMoodController {
       return;
     }
 
-    if (style.podiumColor) {
-      this.groundController?.setSolidColor(style.podiumColor);
+    if (style.baseColor ?? style.podiumColor) {
+      this.groundController?.setSolidColor(style.baseColor ?? style.podiumColor);
     }
 
     if (style.background && (!hdriBackgroundEnabled || !hdriEnabled)) {

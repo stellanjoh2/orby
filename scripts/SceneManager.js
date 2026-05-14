@@ -16,9 +16,9 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
-  DEFAULT_PODIUM_GLASS_BLUR,
-  DEFAULT_PODIUM_GLASS_AMOUNT,
-  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+  DEFAULT_BASE_GLASS_BLUR,
+  DEFAULT_BASE_GLASS_AMOUNT,
+  DEFAULT_BASE_GLASS_BRIGHTNESS,
   sanitizeAmbientOcclusion,
   effectiveVignetteIntensity,
   cameraShadowsUiToShader,
@@ -203,8 +203,8 @@ export class SceneManager {
     this._colorCheckerTowardCam = new THREE.Vector3();
     /** Shared scale-in/out state for Reference colors (same curves as podium). */
     this._ccToggleCtx = createToggleScaleContext();
-    this._podiumToggleCtx = createToggleScaleContext();
-    this._podiumGlassToggleCtx = createToggleScaleContext();
+    this._baseToggleCtx = createToggleScaleContext();
+    this._baseGlassToggleCtx = createToggleScaleContext();
     this._backdropToggleCtx = createToggleScaleContext();
     this._groundGridBottomAlignRaf = 0;
     this.scene.environmentIntensity = this.hdriStrength;
@@ -368,9 +368,9 @@ export class SceneManager {
     this.setupGround();
     const bootGround = this.stateStore.getState();
     this._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
-    this._podiumToggleCtx.prevEnabled = !!bootGround.groundSolid;
-    this._podiumGlassToggleCtx.prevEnabled = !!(
-      bootGround.groundSolid && (bootGround.podiumGlassSurface ?? bootGround.podiumReflectMesh ?? false)
+    this._baseToggleCtx.prevEnabled = !!bootGround.groundSolid;
+    this._baseGlassToggleCtx.prevEnabled = !!(
+      bootGround.groundSolid && (bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false)
     );
     this._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
     this.setupMoodController();
@@ -490,7 +490,7 @@ export class SceneManager {
       const container = this.viewport || this.canvas?.parentElement;
       const rect = container?.getBoundingClientRect?.();
       if (rect?.width > 0 && rect?.height > 0) {
-        this.groundController?.resizePodiumReflector?.(rect.width, rect.height);
+        this.groundController?.resizeBaseReflector?.(rect.width, rect.height);
       }
     });
     this.animate();
@@ -519,17 +519,17 @@ export class SceneManager {
       wireOpacity: state.groundWireOpacity,
       groundY: state.groundY,
       gridY: state.gridY,
-      podiumScale: state.podiumScale,
+      baseScale: state.baseScale,
       gridScale: state.gridScale,
-      podiumMetalness: state.podiumMetalness,
-      podiumRoughness: state.podiumRoughness,
-      podiumReflection: state.podiumReflection,
-      podiumClearcoat: state.podiumClearcoat,
+      baseMetalness: state.baseMetalness,
+      baseRoughness: state.baseRoughness,
+      baseReflection: state.baseReflection,
+      baseClearcoat: state.baseClearcoat,
       renderer: this.renderer,
-      podiumGlassSurface: !!(state.podiumGlassSurface ?? state.podiumReflectMesh ?? false),
-      podiumGlassBlur: state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR,
-      podiumGlassAmount: state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT,
-      podiumGlassBrightness: state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+      baseGlassSurface: !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
+      baseGlassBlur: state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR,
+      baseGlassAmount: state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT,
+      baseGlassBrightness: state.baseGlassBrightness ?? DEFAULT_BASE_GLASS_BRIGHTNESS,
       backdropEnabled: !!state.backdropEnabled,
       backdropScale: state.backdropScale ?? 1,
       backdropWidth: state.backdropWidth ?? 2,
@@ -683,7 +683,7 @@ export class SceneManager {
     if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution?.value) {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
-    this.groundController?.resizePodiumReflector?.(width, height);
+    this.groundController?.resizeBaseReflector?.(width, height);
   }
 
   /**
@@ -750,22 +750,22 @@ export class SceneManager {
     this.setGroundWireColor(state.groundWireColor);
     this.setGroundWireOpacity(state.groundWireOpacity);
     this.setGridY(state.gridY ?? 0);
-    this.setPodiumScale(state.podiumScale ?? 1, { updateState: false });
-    this.setPodiumMetalness(state.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS, { updateState: false });
-    this.setPodiumRoughness(state.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS, { updateState: false });
-    this.setPodiumReflection(state.podiumReflection ?? 1, { updateState: false });
-    this.setPodiumClearcoat(state.podiumClearcoat ?? 0, { updateState: false });
-    this.setPodiumGlassSurface(
-      !!(state.podiumGlassSurface ?? state.podiumReflectMesh ?? false),
+    this.setBaseScale(state.baseScale ?? 1, { updateState: false });
+    this.setBaseMetalness(state.baseMetalness ?? DEFAULT_MATERIAL_METALNESS, { updateState: false });
+    this.setBaseRoughness(state.baseRoughness ?? DEFAULT_MATERIAL_ROUGHNESS, { updateState: false });
+    this.setBaseReflection(state.baseReflection ?? 1, { updateState: false });
+    this.setBaseClearcoat(state.baseClearcoat ?? 0, { updateState: false });
+    this.setBaseGlassSurface(
+      !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
       { updateState: false },
     );
-    this.setPodiumGlassBlur(state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR, {
+    this.setBaseGlassBlur(state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR, {
       updateState: false,
     });
-    this.setPodiumGlassAmount(state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT, {
+    this.setBaseGlassAmount(state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT, {
       updateState: false,
     });
-    this.setPodiumGlassBrightness(state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS, {
+    this.setBaseGlassBrightness(state.baseGlassBrightness ?? DEFAULT_BASE_GLASS_BRIGHTNESS, {
       updateState: false,
     });
     this.setBackdropEnabled(!!state.backdropEnabled, { updateState: false });
@@ -1003,13 +1003,13 @@ export class SceneManager {
   }
 
   /** Ground solid / podium — same scale curves as Reference colors (see toggleScaleAnimation.js). */
-  _updatePodiumAppearAnimation() {
+  _updateBaseAppearAnimation() {
     const podium = this.groundController?.podium;
     if (!podium) return;
 
     const groundSolid = !!this.stateStore.getState().groundSolid;
     const r = stepToggleScaleAnimation(
-      this._podiumToggleCtx,
+      this._baseToggleCtx,
       performance.now(),
       groundSolid,
     );
@@ -1018,18 +1018,18 @@ export class SceneManager {
   }
 
   /** Podium glass on the podium top — uses same shared scale curves as podium toggles. */
-  _updatePodiumGlassAppearAnimation() {
+  _updateBaseGlassAppearAnimation() {
     const reflector = this.groundController?.podiumReflector;
     const st = this.stateStore.getState();
-    const glassOn = !!(st.groundSolid && st.podiumGlassSurface);
+    const glassOn = !!(st.groundSolid && st.baseGlassSurface);
 
     if (!reflector) {
-      this._podiumGlassToggleCtx.prevEnabled = glassOn;
+      this._baseGlassToggleCtx.prevEnabled = glassOn;
       return;
     }
 
     const r = stepToggleScaleAnimation(
-      this._podiumGlassToggleCtx,
+      this._baseGlassToggleCtx,
       performance.now(),
       glassOn,
     );
@@ -1189,7 +1189,7 @@ export class SceneManager {
       intensity,
       this.hdriBlurriness,
     );
-    this.groundController?.applyPodiumEnvironment(
+    this.groundController?.applyBaseEnvironment(
       envTexture,
       intensity,
       this.hdriBlurriness,
@@ -1531,7 +1531,7 @@ export class SceneManager {
     const bounds = new THREE.Box3().setFromObject(this.currentModel);
     if (!bounds || !isFinite(bounds.min.y)) return null;
 
-    const podiumY = includePodium ? this.groundController?.snapPodiumToBounds(bounds) : null;
+    const podiumY = includePodium ? this.groundController?.snapBaseToBounds(bounds) : null;
     const gridY = includeGrid ? this.groundController?.snapGridToBounds(bounds) : null;
 
     if (updateState) {
@@ -1612,9 +1612,9 @@ export class SceneManager {
     return true;
   }
 
-  snapPodiumToBottom() {
+  snapBaseToBottom() {
     if (!this.currentModel) {
-      this.ui?.showToast?.('Load a mesh before snapping the podium');
+      this.ui?.showToast?.('Load a mesh before snapping the base');
       return;
     }
 
@@ -1624,7 +1624,7 @@ export class SceneManager {
       return;
     }
 
-    const bottomY = this.groundController?.snapPodiumToBounds(bounds);
+    const bottomY = this.groundController?.snapBaseToBounds(bounds);
     if (bottomY === null || bottomY === undefined) {
       this.ui?.showToast?.('Unable to align to mesh');
       return;
@@ -1638,7 +1638,7 @@ export class SceneManager {
     }
 
     this.ui?.showToast?.(
-      'Podium snapped to mesh',
+      'Base snapped to mesh',
       3200,
       { notification: false },
     );
@@ -1669,8 +1669,8 @@ export class SceneManager {
     );
   }
 
-  setPodiumScale(value, { updateState = true } = {}) {
-    const newGroundY = this.groundController?.setPodiumScale(value);
+  setBaseScale(value, { updateState = true } = {}) {
+    const newGroundY = this.groundController?.setBaseScale(value);
     if (updateState && typeof newGroundY === 'number') {
       this.stateStore.set('groundY', newGroundY);
     }
@@ -1680,45 +1680,45 @@ export class SceneManager {
     this.groundController?.setGridScale(value);
   }
 
-  setPodiumMetalness(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumMetalness(value);
-    if (updateState) this.stateStore.set('podiumMetalness', value);
+  setBaseMetalness(value, { updateState = true } = {}) {
+    this.groundController?.setBaseMetalness(value);
+    if (updateState) this.stateStore.set('baseMetalness', value);
   }
 
-  setPodiumRoughness(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumRoughness(value);
-    if (updateState) this.stateStore.set('podiumRoughness', value);
+  setBaseRoughness(value, { updateState = true } = {}) {
+    this.groundController?.setBaseRoughness(value);
+    if (updateState) this.stateStore.set('baseRoughness', value);
   }
 
-  setPodiumReflection(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumReflection(value);
-    if (updateState) this.stateStore.set('podiumReflection', value);
+  setBaseReflection(value, { updateState = true } = {}) {
+    this.groundController?.setBaseReflection(value);
+    if (updateState) this.stateStore.set('baseReflection', value);
   }
 
-  setPodiumClearcoat(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumClearcoat(value);
-    if (updateState) this.stateStore.set('podiumClearcoat', value);
+  setBaseClearcoat(value, { updateState = true } = {}) {
+    this.groundController?.setBaseClearcoat(value);
+    if (updateState) this.stateStore.set('baseClearcoat', value);
   }
 
-  setPodiumGlassSurface(enabled, { updateState = true } = {}) {
+  setBaseGlassSurface(enabled, { updateState = true } = {}) {
     const on = !!enabled;
-    this.groundController?.setPodiumGlassSurface(on);
-    if (updateState) this.stateStore.set('podiumGlassSurface', on);
+    this.groundController?.setBaseGlassSurface(on);
+    if (updateState) this.stateStore.set('baseGlassSurface', on);
   }
 
-  setPodiumGlassBlur(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumGlassBlur(value);
-    if (updateState) this.stateStore.set('podiumGlassBlur', value);
+  setBaseGlassBlur(value, { updateState = true } = {}) {
+    this.groundController?.setBaseGlassBlur(value);
+    if (updateState) this.stateStore.set('baseGlassBlur', value);
   }
 
-  setPodiumGlassAmount(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumGlassAmount(value);
-    if (updateState) this.stateStore.set('podiumGlassAmount', value);
+  setBaseGlassAmount(value, { updateState = true } = {}) {
+    this.groundController?.setBaseGlassAmount(value);
+    if (updateState) this.stateStore.set('baseGlassAmount', value);
   }
 
-  setPodiumGlassBrightness(value, { updateState = true } = {}) {
-    this.groundController?.setPodiumGlassBrightness(value);
-    if (updateState) this.stateStore.set('podiumGlassBrightness', value);
+  setBaseGlassBrightness(value, { updateState = true } = {}) {
+    this.groundController?.setBaseGlassBrightness(value);
+    if (updateState) this.stateStore.set('baseGlassBrightness', value);
   }
 
   setBackdropEnabled(enabled, { updateState = true } = {}) {
@@ -2990,8 +2990,8 @@ export class SceneManager {
     this.cameraController.applyHandheldMotion(delta);
     this.materialController.updateCreativeLookTime(this.clock.elapsedTime);
     this._updateColorCheckerPose();
-    this._updatePodiumAppearAnimation();
-    this._updatePodiumGlassAppearAnimation();
+    this._updateBaseAppearAnimation();
+    this._updateBaseGlassAppearAnimation();
     this._updateBackdropAppearAnimation();
     this.diagnosticsController.update(delta);
     if (!this.panelsShelfScrolling) {

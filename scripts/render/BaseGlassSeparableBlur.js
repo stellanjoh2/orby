@@ -8,10 +8,10 @@ const GAUSS_W2 = 0.1216216216;
 const GAUSS_SUM = GAUSS_W0 + 2 * GAUSS_W1 + 2 * GAUSS_W2;
 
 /**
- * Two-pass separable blur (H then V) for podium glass — avoids multi-tap ghosting in one projected pass.
+ * Two-pass separable blur (H then V) for base glass — avoids multi-tap ghosting in one projected pass.
  * Blur radius scales with blur01 (glass blur slider).
  */
-export class PodiumGlassSeparableBlur {
+export class BaseGlassSeparableBlur {
   constructor(renderer, width, height) {
     const type =
       renderer?.capabilities?.isWebGL2 === true ? THREE.HalfFloatType : THREE.UnsignedByteType;

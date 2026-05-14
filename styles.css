@@ -497,7 +497,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 
 /* Same dim label tone as Reset Studio (.accent-action-btn at rest) / secondary UI */
 #gridSnap.ghost-btn,
-#podiumSnap.ghost-btn,
+#baseSnap.ghost-btn,
 #backdropSnap.ghost-btn,
 #creativeLookPauseAnimations.ghost-btn {
   color: var(--text-dim);
@@ -507,7 +507,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 
 /* Match bottom settings accent CTAs on hover — full lime fill + dark label */
 #gridSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
-#podiumSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#baseSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #backdropSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled) {
   background: var(--accent);
@@ -2924,7 +2924,7 @@ a.about-highlight:focus-visible {
 /* Only dim the reset icon while muted *if it is currently shown* (`.is-dirty`).
    Without `.is-dirty` this selector would otherwise win over `.block-reset-btn`'s
    default `opacity: 0`, leaking the icon through on every muted section at
-   startup (Fresnel, Grid, Podium, Backdrop, DoF, Bloom, …) before the user
+   startup (Fresnel, Grid, Base, Backdrop, DoF, Bloom, …) before the user
    has touched anything. */
 :is(.subsection, .panel-block).is-muted
   .block-title
@@ -2950,7 +2950,7 @@ a.about-highlight:focus-visible {
 
 /* Snap-to-mesh CTAs: dimmer than other muted captions (−25% vs --muted-section-text-scale) */
 :is(.subsection, .panel-block).is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted #podiumSnap.ghost-btn:not(:disabled):not(.is-disabled),
+:is(.subsection, .panel-block).is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);

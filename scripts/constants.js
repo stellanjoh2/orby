@@ -15,12 +15,12 @@ export const PODIUM_BEVEL_EDGE_SEGMENTS = 28;
 export const PODIUM_REFLECTOR_Y_EPS = 0.003;
 /** Render-target scale vs canvas for podium Reflector (performance vs sharpness). */
 export const PODIUM_REFLECTOR_RES_SCALE = 0.45;
-/** Default softness for planar podium glass (0 = sharp, 1 = max blur taps). */
-export const DEFAULT_PODIUM_GLASS_BLUR = 0.1;
+/** Default softness for planar base (solid platform) glass (0 = sharp, 1 = max blur taps). */
+export const DEFAULT_BASE_GLASS_BLUR = 0.1;
 /** How much of the realtime reflection shows through vs muted base (0 = subtle, 1 = full mirror). */
-export const DEFAULT_PODIUM_GLASS_AMOUNT = 0.5;
+export const DEFAULT_BASE_GLASS_AMOUNT = 0.5;
 /** Base tone under the planar reflection — 0 black … 1 white (mid gray is neutral). */
-export const DEFAULT_PODIUM_GLASS_BRIGHTNESS = 0.1;
+export const DEFAULT_BASE_GLASS_BRIGHTNESS = 0.1;
 
 export const NORMALS_HELPER_SIZE = 0.08;
 export const NORMALS_HELPER_COLOR = '#4db3ff';

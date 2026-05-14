@@ -3,13 +3,14 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
-  DEFAULT_PODIUM_GLASS_BLUR,
-  DEFAULT_PODIUM_GLASS_AMOUNT,
-  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+  DEFAULT_BASE_GLASS_BLUR,
+  DEFAULT_BASE_GLASS_AMOUNT,
+  DEFAULT_BASE_GLASS_BRIGHTNESS,
 } from './constants.js';
 import { defaultAberration } from './render/chromaticAberration.js';
 import { normalizeToneCurve } from './math/toneCurvePchip.js';
 import { deepClone } from './utils/deepClone.js';
+import { migrateLegacyGroundKeys } from './state/migrateLegacyGroundKeys.js';
 
 export class StateStore {
   constructor() {
@@ -102,17 +103,17 @@ export class StateStore {
       groundWireOpacity: 1.0,
       groundY: 0,
       gridY: 0,
-      podiumScale: 1,
+      baseScale: 1,
       gridScale: 1,
-      podiumMetalness: DEFAULT_MATERIAL_METALNESS,
-      podiumRoughness: DEFAULT_MATERIAL_ROUGHNESS,
-      podiumReflection: 1,
-      podiumClearcoat: 0,
-      /** Planar glass reflection on podium top — off until user enables Glass (requires podium). */
-      podiumGlassSurface: false,
-      podiumGlassBlur: DEFAULT_PODIUM_GLASS_BLUR,
-      podiumGlassAmount: DEFAULT_PODIUM_GLASS_AMOUNT,
-      podiumGlassBrightness: DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+      baseMetalness: DEFAULT_MATERIAL_METALNESS,
+      baseRoughness: DEFAULT_MATERIAL_ROUGHNESS,
+      baseReflection: 1,
+      baseClearcoat: 0,
+      /** Planar glass reflection on solid base top — off until user enables Glass (requires base). */
+      baseGlassSurface: false,
+      baseGlassBlur: DEFAULT_BASE_GLASS_BLUR,
+      baseGlassAmount: DEFAULT_BASE_GLASS_AMOUNT,
+      baseGlassBrightness: DEFAULT_BASE_GLASS_BRIGHTNESS,
       backdropEnabled: false,
       backdropScale: 1,
       backdropWidth: 2,
@@ -386,6 +387,7 @@ export class StateStore {
    */
   setTopLevelBundle(partial) {
     if (!partial || typeof partial !== 'object') return;
+    migrateLegacyGroundKeys(partial);
     const keys = Object.keys(partial);
     if (keys.length === 0) return;
     for (const key of keys) {

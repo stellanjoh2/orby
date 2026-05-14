@@ -1452,18 +1452,18 @@
               </div>
 
               <div class="panel-block">
-                <div class="subsection" data-subsection="podium">
+                <div class="subsection" data-subsection="base">
                   <div class="block-title has-toggle">
-                    <span>Podium</span>
+                    <span>Base</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="podium" aria-label="Reset Podium" data-tooltip="Reset Podium settings">
+                      <button class="block-reset-btn" data-reset="base" aria-label="Reset Base" data-tooltip="Reset Base settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Show/hide podium platform">
+                      <label class="effect-toggle" data-tooltip="Show/hide solid base platform">
                         <input type="checkbox" id="groundSolid" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable podium</span>
+                        <span class="sr-only">Enable base</span>
                       </label>
                     </div>
                   </div>
@@ -1477,7 +1477,7 @@
                     />
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Vertical position of the podium">Y Position</span>
+                    <span data-tooltip="Vertical position of the base">Y Position</span>
                     <input
                       id="groundY"
                       type="range"
@@ -1489,97 +1489,97 @@
                     <span class="value" data-output="groundY">0.00m</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Size of the podium">Scale</span>
+                    <span data-tooltip="Size of the base">Scale</span>
                     <input
-                      id="podiumScale"
+                      id="baseScale"
                       type="range"
                       min="0.5"
                       max="3"
                       step="0.01"
                       value="1"
                     />
-                    <span class="value" data-output="podiumScale">1.00</span>
+                    <span class="value" data-output="baseScale">1.00</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="PBR metalness — higher reads more like metal">Metalness</span>
                     <input
-                      id="podiumMetalness"
+                      id="baseMetalness"
                       type="range"
                       min="0"
                       max="1"
                       step="0.01"
                       value="0.08"
                     />
-                    <span class="value" data-output="podiumMetalness">0.08</span>
+                    <span class="value" data-output="baseMetalness">0.08</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="Lower roughness = glossier surface">Roughness</span>
                     <input
-                      id="podiumRoughness"
+                      id="baseRoughness"
                       type="range"
                       min="0"
                       max="1"
                       step="0.01"
                       value="0.50"
                     />
-                    <span class="value" data-output="podiumRoughness">0.50</span>
+                    <span class="value" data-output="baseRoughness">0.50</span>
                   </label>
-                  <button id="podiumSnap" class="ghost-btn small" type="button" data-tooltip="Align podium to mesh base">
+                  <button id="baseSnap" class="ghost-btn small" type="button" data-tooltip="Align base to mesh bottom">
                     Snap to Mesh
                   </button>
                 </div>
-                <div id="studioPodiumGlassPanel" hidden>
+                <div id="studioBaseGlassPanel" hidden>
                   <div class="panel-block-divider"></div>
-                  <div class="subsection" data-subsection="podium-glass">
+                  <div class="subsection" data-subsection="base-glass">
                     <div class="block-title has-toggle">
-                      <span>Podium Glass</span>
+                      <span>Base Glass</span>
                       <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <button class="block-reset-btn" data-reset="podium-glass" aria-label="Reset Podium Glass" data-tooltip="Reset Podium Glass settings">
+                        <button class="block-reset-btn" data-reset="base-glass" aria-label="Reset Base Glass" data-tooltip="Reset Base Glass settings">
                           <i class="fa-solid fa-rotate-left"></i>
                           <span class="sr-only">Reset</span>
                         </button>
-                        <label class="effect-toggle" data-tooltip="Realtime planar reflection of the loaded mesh on the podium top (extra GPU). Turn off for HDRI-only highlights.">
-                          <input type="checkbox" id="podiumGlassSurface" />
+                        <label class="effect-toggle" data-tooltip="Realtime planar reflection of the loaded mesh on the base top (extra GPU). Turn off for HDRI-only highlights.">
+                          <input type="checkbox" id="baseGlassSurface" />
                           <span class="effect-indicator" aria-hidden="true"></span>
-                          <span class="sr-only">Enable planar reflection on the podium top</span>
+                          <span class="sr-only">Enable planar reflection on the base top</span>
                         </label>
                       </div>
                     </div>
                     <label class="slider-line">
                       <span data-tooltip="Base tone under the reflection — black to white (mid gray is neutral).">Brightness</span>
                       <input
-                        id="podiumGlassBrightness"
+                        id="baseGlassBrightness"
                         type="range"
                         min="0"
                         max="1"
                         step="0.01"
                         value="0.1"
                       />
-                      <span class="value" data-output="podiumGlassBrightness">0.10</span>
+                      <span class="value" data-output="baseGlassBrightness">0.10</span>
                     </label>
                     <label class="slider-line">
-                      <span data-tooltip="Progressive softness — blur spreads wider as you increase. Disabled when Podium Glass reflection is off.">Blur</span>
+                      <span data-tooltip="Progressive softness — blur spreads wider as you increase. Disabled when Base Glass reflection is off.">Blur</span>
                       <input
-                        id="podiumGlassBlur"
+                        id="baseGlassBlur"
                         type="range"
                         min="0"
                         max="1"
                         step="0.01"
                         value="0.1"
                       />
-                      <span class="value" data-output="podiumGlassBlur">0.10</span>
+                      <span class="value" data-output="baseGlassBlur">0.10</span>
                     </label>
                     <label class="slider-line">
                       <span data-tooltip="How strong the reflection is vs the base tone (lower = subtler, less mirror-like).">Amount</span>
                       <input
-                        id="podiumGlassAmount"
+                        id="baseGlassAmount"
                         type="range"
                         min="0"
                         max="1"
                         step="0.01"
                         value="0.5"
                       />
-                      <span class="value" data-output="podiumGlassAmount">0.50</span>
+                      <span class="value" data-output="baseGlassAmount">0.50</span>
                     </label>
                   </div>
                 </div>
@@ -3543,7 +3543,7 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Toggle podium on/off</span>
+                    <span class="shortcut-action">Toggle base on/off</span>
                     <span class="shortcut-keys"><kbd>P</kbd></span>
                   </div>
                   
@@ -3772,8 +3772,8 @@
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">
-                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Podium & Grid</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Add a platform (podium) or grid floor to your scene. Great for product presentations or architectural renders. The podium can be scaled and colored, and the grid helps with alignment and perspective.</p>
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Base &amp; Grid</h4>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Add a solid base platform or grid floor to your scene. Great for product presentations or architectural renders. The base can be scaled and colored, and the grid helps with alignment and perspective.</p>
                   </div>
                   
                   <div>

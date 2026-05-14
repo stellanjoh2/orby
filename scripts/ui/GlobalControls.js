@@ -151,7 +151,7 @@ export class GlobalControls {
     if (!shelf) return;
     const skipIds = new Set([
       'groundSolid',
-      'podiumGlassSurface',
+      'baseGlassSurface',
       'uiSoundsEnabled',
       'backdropEnabled',
     ]);

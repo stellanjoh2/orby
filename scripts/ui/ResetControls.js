@@ -48,12 +48,12 @@ const RESET_DIRTY_PATHS = {
   fillLight: ['lights.fill'],
   rimLight: ['lights.rim'],
   ambientLight: ['lights.ambient'],
-  podium: [
-    'groundSolidColor', 'groundY', 'podiumScale',
-    'podiumMetalness', 'podiumRoughness', 'podiumReflection', 'podiumClearcoat',
+  base: [
+    'groundSolidColor', 'groundY', 'baseScale',
+    'baseMetalness', 'baseRoughness', 'baseReflection', 'baseClearcoat',
   ],
-  'podium-glass': [
-    'podiumGlassSurface', 'podiumGlassBrightness', 'podiumGlassBlur', 'podiumGlassAmount',
+  'base-glass': [
+    'baseGlassSurface', 'baseGlassBrightness', 'baseGlassBlur', 'baseGlassAmount',
   ],
   backdrop: [
     'backdropEnabled', 'backdropScale', 'backdropWidth', 'backdropColor',
@@ -865,37 +865,37 @@ export class ResetControls {
             this.ui.resetIndividualLight('ambient', defaults.lights.ambient);
             break;
             
-          case 'podium':
+          case 'base':
             this.stateStore.batch(() => {
               this.stateStore.set('groundSolidColor', defaults.groundSolidColor);
               this.stateStore.set('groundY', defaults.groundY);
-              this.stateStore.set('podiumScale', defaults.podiumScale);
-              this.stateStore.set('podiumMetalness', defaults.podiumMetalness);
-              this.stateStore.set('podiumRoughness', defaults.podiumRoughness);
-              this.stateStore.set('podiumReflection', defaults.podiumReflection);
-              this.stateStore.set('podiumClearcoat', defaults.podiumClearcoat);
+              this.stateStore.set('baseScale', defaults.baseScale);
+              this.stateStore.set('baseMetalness', defaults.baseMetalness);
+              this.stateStore.set('baseRoughness', defaults.baseRoughness);
+              this.stateStore.set('baseReflection', defaults.baseReflection);
+              this.stateStore.set('baseClearcoat', defaults.baseClearcoat);
             });
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
-            this.eventBus.emit('studio:podium-scale', defaults.podiumScale);
-            this.eventBus.emit('studio:podium-metalness', defaults.podiumMetalness);
-            this.eventBus.emit('studio:podium-roughness', defaults.podiumRoughness);
-            this.eventBus.emit('studio:podium-reflection', defaults.podiumReflection);
-            this.eventBus.emit('studio:podium-clearcoat', defaults.podiumClearcoat);
+            this.eventBus.emit('studio:base-scale', defaults.baseScale);
+            this.eventBus.emit('studio:base-metalness', defaults.baseMetalness);
+            this.eventBus.emit('studio:base-roughness', defaults.baseRoughness);
+            this.eventBus.emit('studio:base-reflection', defaults.baseReflection);
+            this.eventBus.emit('studio:base-clearcoat', defaults.baseClearcoat);
             this.eventBus.emit('studio:ground-y', defaults.groundY);
             this.ui.syncControls(this.stateStore.getState());
             break;
 
-          case 'podium-glass':
+          case 'base-glass':
             this.stateStore.batch(() => {
-              this.stateStore.set('podiumGlassSurface', defaults.podiumGlassSurface);
-              this.stateStore.set('podiumGlassBrightness', defaults.podiumGlassBrightness);
-              this.stateStore.set('podiumGlassBlur', defaults.podiumGlassBlur);
-              this.stateStore.set('podiumGlassAmount', defaults.podiumGlassAmount);
+              this.stateStore.set('baseGlassSurface', defaults.baseGlassSurface);
+              this.stateStore.set('baseGlassBrightness', defaults.baseGlassBrightness);
+              this.stateStore.set('baseGlassBlur', defaults.baseGlassBlur);
+              this.stateStore.set('baseGlassAmount', defaults.baseGlassAmount);
             });
-            this.eventBus.emit('studio:podium-glass-surface', defaults.podiumGlassSurface);
-            this.eventBus.emit('studio:podium-glass-brightness', defaults.podiumGlassBrightness);
-            this.eventBus.emit('studio:podium-glass-blur', defaults.podiumGlassBlur);
-            this.eventBus.emit('studio:podium-glass-amount', defaults.podiumGlassAmount);
+            this.eventBus.emit('studio:base-glass-surface', defaults.baseGlassSurface);
+            this.eventBus.emit('studio:base-glass-brightness', defaults.baseGlassBrightness);
+            this.eventBus.emit('studio:base-glass-blur', defaults.baseGlassBlur);
+            this.eventBus.emit('studio:base-glass-amount', defaults.baseGlassAmount);
             this.ui.syncControls(this.stateStore.getState());
             break;
 

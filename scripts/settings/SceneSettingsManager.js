@@ -8,6 +8,7 @@ import {
   cameraShadowsUiToShader,
 } from '../constants.js';
 import { HDRI_MOODS } from '../config/hdri.js';
+import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 
@@ -41,8 +42,8 @@ export class SceneSettingsManager {
    */
   async buildSceneSettingsPayload() {
     const state = this.stateStore.getState();
-    const activeMoodPodiumColor = HDRI_MOODS[state.hdri]?.podiumColor;
-    const effectivePodiumColor = activeMoodPodiumColor ?? state.groundSolidColor;
+    const activeMoodBaseColor = HDRI_MOODS[state.hdri]?.baseColor;
+    const effectiveBaseColor = activeMoodBaseColor ?? state.groundSolidColor;
     
     // Get camera position and target
     const cameraState = await this.getCameraState();
@@ -109,20 +110,20 @@ export class SceneSettingsManager {
       groundSolid: state.groundSolid,
       groundWire: state.groundWire,
       groundSolidColor: state.groundSolidColor,
-      podiumColor: effectivePodiumColor,
+      baseColor: effectiveBaseColor,
       groundWireColor: state.groundWireColor,
       groundWireOpacity: state.groundWireOpacity,
       groundY: state.groundY,
       gridY: state.gridY,
-      podiumScale: state.podiumScale,
-      podiumMetalness: state.podiumMetalness,
-      podiumRoughness: state.podiumRoughness,
-      podiumReflection: state.podiumReflection,
-      podiumClearcoat: state.podiumClearcoat,
-      podiumGlassSurface: state.podiumGlassSurface ?? state.podiumReflectMesh,
-      podiumGlassBlur: state.podiumGlassBlur,
-      podiumGlassAmount: state.podiumGlassAmount,
-      podiumGlassBrightness: state.podiumGlassBrightness,
+      baseScale: state.baseScale,
+      baseMetalness: state.baseMetalness,
+      baseRoughness: state.baseRoughness,
+      baseReflection: state.baseReflection,
+      baseClearcoat: state.baseClearcoat,
+      baseGlassSurface: state.baseGlassSurface ?? state.podiumReflectMesh,
+      baseGlassBlur: state.baseGlassBlur,
+      baseGlassAmount: state.baseGlassAmount,
+      baseGlassBrightness: state.baseGlassBrightness,
       backdropEnabled: !!state.backdropEnabled,
       backdropScale: state.backdropScale,
       backdropWidth: state.backdropWidth,
@@ -369,7 +370,8 @@ export class SceneSettingsManager {
   loadFromText(text) {
     try {
       const payload = JSON.parse(text);
-      
+      migrateLegacyGroundKeys(payload);
+
       // Validate that it looks like scene settings
       const expectedKeys = ['shading', 'hdri', 'camera', 'dof', 'bloom', 'lights'];
       const hasExpectedKeys = expectedKeys.some(key => key in payload);
@@ -689,10 +691,10 @@ export class SceneSettingsManager {
         this.stateStore.set('groundWire', payload.groundWire);
         this.eventBus.emit('studio:ground-wire', payload.groundWire);
       }
-      const restoredPodiumColor = payload.podiumColor ?? payload.groundSolidColor;
-      if (restoredPodiumColor !== undefined) {
-        this.stateStore.set('groundSolidColor', restoredPodiumColor);
-        this.eventBus.emit('studio:ground-solid-color', restoredPodiumColor);
+      const restoredBaseColor = payload.baseColor ?? payload.podiumColor ?? payload.groundSolidColor;
+      if (restoredBaseColor !== undefined) {
+        this.stateStore.set('groundSolidColor', restoredBaseColor);
+        this.eventBus.emit('studio:ground-solid-color', restoredBaseColor);
       }
       if (payload.groundWireColor !== undefined) {
         this.stateStore.set('groundWireColor', payload.groundWireColor);
@@ -710,44 +712,44 @@ export class SceneSettingsManager {
         this.stateStore.set('gridY', payload.gridY);
         this.eventBus.emit('studio:grid-y', payload.gridY);
       }
-      if (payload.podiumScale !== undefined) {
-        this.stateStore.set('podiumScale', payload.podiumScale);
-        this.eventBus.emit('studio:podium-scale', payload.podiumScale);
+      if (payload.baseScale !== undefined) {
+        this.stateStore.set('baseScale', payload.baseScale);
+        this.eventBus.emit('studio:base-scale', payload.baseScale);
       }
-      if (payload.podiumMetalness !== undefined) {
-        this.stateStore.set('podiumMetalness', payload.podiumMetalness);
-        this.eventBus.emit('studio:podium-metalness', payload.podiumMetalness);
+      if (payload.baseMetalness !== undefined) {
+        this.stateStore.set('baseMetalness', payload.baseMetalness);
+        this.eventBus.emit('studio:base-metalness', payload.baseMetalness);
       }
-      if (payload.podiumRoughness !== undefined) {
-        this.stateStore.set('podiumRoughness', payload.podiumRoughness);
-        this.eventBus.emit('studio:podium-roughness', payload.podiumRoughness);
+      if (payload.baseRoughness !== undefined) {
+        this.stateStore.set('baseRoughness', payload.baseRoughness);
+        this.eventBus.emit('studio:base-roughness', payload.baseRoughness);
       }
-      if (payload.podiumReflection !== undefined) {
-        this.stateStore.set('podiumReflection', payload.podiumReflection);
-        this.eventBus.emit('studio:podium-reflection', payload.podiumReflection);
+      if (payload.baseReflection !== undefined) {
+        this.stateStore.set('baseReflection', payload.baseReflection);
+        this.eventBus.emit('studio:base-reflection', payload.baseReflection);
       }
-      if (payload.podiumClearcoat !== undefined) {
-        this.stateStore.set('podiumClearcoat', payload.podiumClearcoat);
-        this.eventBus.emit('studio:podium-clearcoat', payload.podiumClearcoat);
+      if (payload.baseClearcoat !== undefined) {
+        this.stateStore.set('baseClearcoat', payload.baseClearcoat);
+        this.eventBus.emit('studio:base-clearcoat', payload.baseClearcoat);
       }
-      if (payload.podiumGlassSurface !== undefined) {
-        this.stateStore.set('podiumGlassSurface', payload.podiumGlassSurface);
-        this.eventBus.emit('studio:podium-glass-surface', payload.podiumGlassSurface);
+      if (payload.baseGlassSurface !== undefined) {
+        this.stateStore.set('baseGlassSurface', payload.baseGlassSurface);
+        this.eventBus.emit('studio:base-glass-surface', payload.baseGlassSurface);
       } else if (payload.podiumReflectMesh !== undefined) {
-        this.stateStore.set('podiumGlassSurface', payload.podiumReflectMesh);
-        this.eventBus.emit('studio:podium-glass-surface', payload.podiumReflectMesh);
+        this.stateStore.set('baseGlassSurface', payload.podiumReflectMesh);
+        this.eventBus.emit('studio:base-glass-surface', payload.podiumReflectMesh);
       }
-      if (payload.podiumGlassBlur !== undefined) {
-        this.stateStore.set('podiumGlassBlur', payload.podiumGlassBlur);
-        this.eventBus.emit('studio:podium-glass-blur', payload.podiumGlassBlur);
+      if (payload.baseGlassBlur !== undefined) {
+        this.stateStore.set('baseGlassBlur', payload.baseGlassBlur);
+        this.eventBus.emit('studio:base-glass-blur', payload.baseGlassBlur);
       }
-      if (payload.podiumGlassAmount !== undefined) {
-        this.stateStore.set('podiumGlassAmount', payload.podiumGlassAmount);
-        this.eventBus.emit('studio:podium-glass-amount', payload.podiumGlassAmount);
+      if (payload.baseGlassAmount !== undefined) {
+        this.stateStore.set('baseGlassAmount', payload.baseGlassAmount);
+        this.eventBus.emit('studio:base-glass-amount', payload.baseGlassAmount);
       }
-      if (payload.podiumGlassBrightness !== undefined) {
-        this.stateStore.set('podiumGlassBrightness', payload.podiumGlassBrightness);
-        this.eventBus.emit('studio:podium-glass-brightness', payload.podiumGlassBrightness);
+      if (payload.baseGlassBrightness !== undefined) {
+        this.stateStore.set('baseGlassBrightness', payload.baseGlassBrightness);
+        this.eventBus.emit('studio:base-glass-brightness', payload.baseGlassBrightness);
       }
       if (payload.backdropEnabled !== undefined) {
         this.stateStore.set('backdropEnabled', !!payload.backdropEnabled);

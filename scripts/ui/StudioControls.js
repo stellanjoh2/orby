@@ -6,9 +6,9 @@ import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import {
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
-  DEFAULT_PODIUM_GLASS_BLUR,
-  DEFAULT_PODIUM_GLASS_AMOUNT,
-  DEFAULT_PODIUM_GLASS_BRIGHTNESS,
+  DEFAULT_BASE_GLASS_BLUR,
+  DEFAULT_BASE_GLASS_AMOUNT,
+  DEFAULT_BASE_GLASS_BRIGHTNESS,
 } from '../constants.js';
 
 export class StudioControls {
@@ -139,61 +139,61 @@ export class StudioControls {
     if (this.ui.inputs.gridY) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.gridY);
     }
-    this.ui.inputs.podiumScale?.addEventListener('input', (event) => {
+    this.ui.inputs.baseScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumScale', value, 'decimal');
-      this.stateStore.set('podiumScale', value);
-      this.eventBus.emit('studio:podium-scale', value);
+      this.helpers.updateValueLabel('baseScale', value, 'decimal');
+      this.stateStore.set('baseScale', value);
+      this.eventBus.emit('studio:base-scale', value);
     });
-    this.ui.inputs.podiumMetalness?.addEventListener('input', (event) => {
+    this.ui.inputs.baseMetalness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumMetalness', value, 'decimal');
-      this.stateStore.set('podiumMetalness', value);
-      this.eventBus.emit('studio:podium-metalness', value);
+      this.helpers.updateValueLabel('baseMetalness', value, 'decimal');
+      this.stateStore.set('baseMetalness', value);
+      this.eventBus.emit('studio:base-metalness', value);
     });
-    this.ui.inputs.podiumRoughness?.addEventListener('input', (event) => {
+    this.ui.inputs.baseRoughness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumRoughness', value, 'decimal');
-      this.stateStore.set('podiumRoughness', value);
-      this.eventBus.emit('studio:podium-roughness', value);
+      this.helpers.updateValueLabel('baseRoughness', value, 'decimal');
+      this.stateStore.set('baseRoughness', value);
+      this.eventBus.emit('studio:base-roughness', value);
     });
-    this.ui.inputs.podiumGlassSurface?.addEventListener('change', (event) => {
+    this.ui.inputs.baseGlassSurface?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       const podiumUp = !!this.stateStore.getState().groundSolid;
       if (podiumUp) {
         if (enabled) this.ui.uiSounds?.playShelfShow();
         else this.ui.uiSounds?.playShelfHide();
       }
-      this.stateStore.set('podiumGlassSurface', enabled);
-      this.eventBus.emit('studio:podium-glass-surface', enabled);
+      this.stateStore.set('baseGlassSurface', enabled);
+      this.eventBus.emit('studio:base-glass-surface', enabled);
       this.ui.applyBlockStates?.(this.stateStore.getState());
     });
-    this.ui.inputs.podiumGlassBrightness?.addEventListener('input', (event) => {
+    this.ui.inputs.baseGlassBrightness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumGlassBrightness', value, 'decimal');
-      this.stateStore.set('podiumGlassBrightness', value);
-      this.eventBus.emit('studio:podium-glass-brightness', value);
+      this.helpers.updateValueLabel('baseGlassBrightness', value, 'decimal');
+      this.stateStore.set('baseGlassBrightness', value);
+      this.eventBus.emit('studio:base-glass-brightness', value);
     });
-    if (this.ui.inputs.podiumGlassBrightness) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumGlassBrightness);
+    if (this.ui.inputs.baseGlassBrightness) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.baseGlassBrightness);
     }
-    this.ui.inputs.podiumGlassBlur?.addEventListener('input', (event) => {
+    this.ui.inputs.baseGlassBlur?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumGlassBlur', value, 'decimal');
-      this.stateStore.set('podiumGlassBlur', value);
-      this.eventBus.emit('studio:podium-glass-blur', value);
+      this.helpers.updateValueLabel('baseGlassBlur', value, 'decimal');
+      this.stateStore.set('baseGlassBlur', value);
+      this.eventBus.emit('studio:base-glass-blur', value);
     });
-    if (this.ui.inputs.podiumGlassBlur) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumGlassBlur);
+    if (this.ui.inputs.baseGlassBlur) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.baseGlassBlur);
     }
-    this.ui.inputs.podiumGlassAmount?.addEventListener('input', (event) => {
+    this.ui.inputs.baseGlassAmount?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('podiumGlassAmount', value, 'decimal');
-      this.stateStore.set('podiumGlassAmount', value);
-      this.eventBus.emit('studio:podium-glass-amount', value);
+      this.helpers.updateValueLabel('baseGlassAmount', value, 'decimal');
+      this.stateStore.set('baseGlassAmount', value);
+      this.eventBus.emit('studio:base-glass-amount', value);
     });
-    if (this.ui.inputs.podiumGlassAmount) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.podiumGlassAmount);
+    if (this.ui.inputs.baseGlassAmount) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.baseGlassAmount);
     }
     this.ui.inputs.gridScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -250,9 +250,9 @@ export class StudioControls {
       this.ui.uiSounds?.playSelect();
       this.eventBus.emit('studio:backdrop-snap');
     });
-    this.ui.inputs.podiumSnap?.addEventListener('click', () => {
+    this.ui.inputs.baseSnap?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
-      this.eventBus.emit('studio:podium-snap');
+      this.eventBus.emit('studio:base-snap');
     });
     this.ui.inputs.gridSnap?.addEventListener('click', () => {
       this.ui.uiSounds?.playSelect();
@@ -552,41 +552,41 @@ export class StudioControls {
       this.ui.inputs.gridY.value = state.gridY ?? 0;
       this.helpers.updateValueLabel('gridY', state.gridY ?? 0, 'distance');
     }
-    if (this.ui.inputs.podiumScale) {
-      this.ui.inputs.podiumScale.value = state.podiumScale ?? 1;
-      this.helpers.updateValueLabel('podiumScale', state.podiumScale ?? 1, 'decimal');
+    if (this.ui.inputs.baseScale) {
+      this.ui.inputs.baseScale.value = state.baseScale ?? 1;
+      this.helpers.updateValueLabel('baseScale', state.baseScale ?? 1, 'decimal');
     }
-    if (this.ui.inputs.podiumMetalness) {
-      const v = state.podiumMetalness ?? DEFAULT_MATERIAL_METALNESS;
-      this.ui.inputs.podiumMetalness.value = v;
-      this.helpers.updateValueLabel('podiumMetalness', v, 'decimal');
+    if (this.ui.inputs.baseMetalness) {
+      const v = state.baseMetalness ?? DEFAULT_MATERIAL_METALNESS;
+      this.ui.inputs.baseMetalness.value = v;
+      this.helpers.updateValueLabel('baseMetalness', v, 'decimal');
     }
-    if (this.ui.inputs.podiumRoughness) {
-      const v = state.podiumRoughness ?? DEFAULT_MATERIAL_ROUGHNESS;
-      this.ui.inputs.podiumRoughness.value = v;
-      this.helpers.updateValueLabel('podiumRoughness', v, 'decimal');
+    if (this.ui.inputs.baseRoughness) {
+      const v = state.baseRoughness ?? DEFAULT_MATERIAL_ROUGHNESS;
+      this.ui.inputs.baseRoughness.value = v;
+      this.helpers.updateValueLabel('baseRoughness', v, 'decimal');
     }
-    if (this.ui.inputs.podiumGlassSurface) {
-      this.ui.inputs.podiumGlassSurface.checked = !!(
-        state.podiumGlassSurface ??
+    if (this.ui.inputs.baseGlassSurface) {
+      this.ui.inputs.baseGlassSurface.checked = !!(
+        state.baseGlassSurface ??
         state.podiumReflectMesh ??
         false
       );
     }
-    if (this.ui.inputs.podiumGlassBrightness) {
-      const br = state.podiumGlassBrightness ?? DEFAULT_PODIUM_GLASS_BRIGHTNESS;
-      this.ui.inputs.podiumGlassBrightness.value = br;
-      this.helpers.updateValueLabel('podiumGlassBrightness', br, 'decimal');
+    if (this.ui.inputs.baseGlassBrightness) {
+      const br = state.baseGlassBrightness ?? DEFAULT_BASE_GLASS_BRIGHTNESS;
+      this.ui.inputs.baseGlassBrightness.value = br;
+      this.helpers.updateValueLabel('baseGlassBrightness', br, 'decimal');
     }
-    if (this.ui.inputs.podiumGlassBlur) {
-      const vb = state.podiumGlassBlur ?? DEFAULT_PODIUM_GLASS_BLUR;
-      this.ui.inputs.podiumGlassBlur.value = vb;
-      this.helpers.updateValueLabel('podiumGlassBlur', vb, 'decimal');
+    if (this.ui.inputs.baseGlassBlur) {
+      const vb = state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR;
+      this.ui.inputs.baseGlassBlur.value = vb;
+      this.helpers.updateValueLabel('baseGlassBlur', vb, 'decimal');
     }
-    if (this.ui.inputs.podiumGlassAmount) {
-      const va = state.podiumGlassAmount ?? DEFAULT_PODIUM_GLASS_AMOUNT;
-      this.ui.inputs.podiumGlassAmount.value = va;
-      this.helpers.updateValueLabel('podiumGlassAmount', va, 'decimal');
+    if (this.ui.inputs.baseGlassAmount) {
+      const va = state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT;
+      this.ui.inputs.baseGlassAmount.value = va;
+      this.helpers.updateValueLabel('baseGlassAmount', va, 'decimal');
     }
     if (this.ui.inputs.gridScale) {
       this.ui.inputs.gridScale.value = state.gridScale ?? 1;
