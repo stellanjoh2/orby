@@ -43,6 +43,7 @@ export class ModelLifecycleManager {
 
   clearModel() {
     const s = this.scene;
+    if (!s.modelRoot) return;
     s.stateStore.set('fbxMapSlots.enabled', false);
     s.stateStore.set('fbxMapSlots.invertNormalY', false);
     s.stateStore.set('fbxMapSlots.pbrUvChannel', 0);
@@ -305,6 +306,7 @@ export class ModelLifecycleManager {
   async loadFile(file, options = {}) {
     const s = this.scene;
     if (!file) return;
+    await s.ensureStudioReady();
     const previousFile = s.currentFile;
     const hadExistingModel = !!s.currentModel;
 
@@ -312,6 +314,8 @@ export class ModelLifecycleManager {
     s.ui.updateTitle(file.name);
     s.ui.updateTopBarDetail(`${file.name} — Loading…`);
     s.ui.setDropzoneVisible(false);
+    await s.syncViewportSize();
+    s.startRenderLoop();
 
     const isFirstLoad = s.isFirstModelLoad;
     if (isFirstLoad) {
@@ -368,6 +372,7 @@ export class ModelLifecycleManager {
         s.ui.updateTitle(label);
         s.ui.updateTopBarDetail(`${label} — Idle`);
       } else {
+        await s.shutdownStudio();
         s.ui.setDropzoneVisible(true);
       }
       s.eventBus.emit('scene:model-load-complete', { success: false, file, error });
@@ -379,6 +384,10 @@ export class ModelLifecycleManager {
   async loadFileBundle(files) {
     const s = this.scene;
     if (!files?.length) return;
+    await s.ensureStudioReady();
+    s.ui.setDropzoneVisible(false);
+    await s.syncViewportSize();
+    s.startRenderLoop();
     s.ui.beginLoadSpinner();
     try {
       const asset = await s.modelLoader.loadFileBundle(files);

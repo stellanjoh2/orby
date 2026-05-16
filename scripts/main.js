@@ -93,10 +93,21 @@ const gamepad = new GamepadController({
 });
 
 ui.init();
-scene.init().catch((error) => {
-  console.error('Orby failed to initialize', error);
-  ui.showToast('Scene init failed');
-});
+// WebGL studio boots on first model load (see SceneManager.ensureStudioReady).
 
 window.orby = { eventBus, stateStore, ui, scene, gamepad, tooltips };
+
+if (!document.documentElement.classList.contains('mobile-landing')) {
+  const scheduleMarketing =
+    typeof window.requestIdleCallback === 'function'
+      ? window.requestIdleCallback.bind(window)
+      : (cb) => window.setTimeout(cb, 1600);
+  scheduleMarketing(() => {
+    import('./marketing/orbyMarketingPage.js')
+      .then((mod) => mod.initOrbyMarketingPage())
+      .catch((err) => {
+        console.warn('[Orby] Marketing page module failed to load', err);
+      });
+  });
+}
 

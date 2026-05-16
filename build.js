@@ -1,5 +1,5 @@
 import * as esbuild from 'esbuild';
-import { readFileSync, writeFileSync, cpSync, existsSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, cpSync, existsSync, rmSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -94,6 +94,10 @@ if (existsSync(join(__dirname, 'scripts', 'vendor'))) {
   });
 }
 cpSync('styles.css', join(distDir, 'styles.css'));
+if (existsSync(join(__dirname, 'styles', 'orby-marketing.css'))) {
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(join(__dirname, 'styles', 'orby-marketing.css'), join(distDir, 'styles', 'orby-marketing.css'));
+}
 cpSync('LICENSE', join(distDir, 'LICENSE'));
 cpSync('ASSETS_LICENSE.md', join(distDir, 'ASSETS_LICENSE.md'));
 if (existsSync(join(__dirname, 'legal'))) {

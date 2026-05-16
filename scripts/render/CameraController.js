@@ -96,6 +96,10 @@ export class CameraController {
       rotate: this.controls.enableRotate,
     };
 
+    /** @type {gsap.core.Timeline | null} */
+    this._focusTimeline = null;
+    this._focusGeneration = 0;
+
     this._bindAltInteractions();
   }
 
@@ -562,6 +566,23 @@ export class CameraController {
     }
   }
 
+  _cancelFocusAnimation() {
+    if (this._focusTimeline) {
+      this._focusTimeline.kill();
+      this._focusTimeline = null;
+    }
+    this._restoreFocusOrbitControls();
+  }
+
+  _restoreFocusOrbitControls() {
+    const pan = this.originalControlState?.pan;
+    const rotate = this.originalControlState?.rotate;
+    this.controls.enablePan = pan ?? true;
+    this.controls.enableRotate = rotate ?? true;
+    this.controls.enabled = true;
+    this.controls.update();
+  }
+
   /**
    * Smoothly animate camera to focus on an object
    * @param {THREE.Object3D} object - The object to focus on
@@ -569,76 +590,78 @@ export class CameraController {
    */
   focusOnObjectAnimated(object, duration = 1.0) {
     const box = new THREE.Box3().setFromObject(object);
-    if (!box.isEmpty()) {
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      this.modelBounds = { box, size, center, radius: size.length() / 2 };
-      
-      // Notify other systems that model bounds have changed
-      this.callbacks.onModelBoundsChanged?.(this.modelBounds);
-      
-      // Calculate target position and target point
-      // Adjust target point downward so mesh appears higher in frame (less bottom-heavy)
-      // Moving target DOWN makes the mesh appear HIGHER in the frame
-      const adjustedCenter = center.clone();
-      adjustedCenter.y -= size.y * 0.05; // Negative Y = down, which makes mesh appear higher
-      
-      const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
-      const direction = defaultModelViewDirection();
-      const targetPosition = adjustedCenter.clone().add(direction.multiplyScalar(distance));
-      const targetPoint = adjustedCenter.clone();
-      
-      // Store current values for animation
-      const startPosition = this.camera.position.clone();
-      const startTarget = this.controls.target.clone();
-      
-      // Temporarily disable controls during animation
-      const wasPanEnabled = this.controls.enablePan;
-      const wasRotateEnabled = this.controls.enableRotate;
-      this.controls.enablePan = false;
-      this.controls.enableRotate = false;
-      
-      // Create temporary objects for GSAP animation
-      const positionObj = { x: startPosition.x, y: startPosition.y, z: startPosition.z };
-      const targetObj = { x: startTarget.x, y: startTarget.y, z: startTarget.z };
-      
-      // Animate camera position and target together
-      gsap.to(positionObj, {
+    if (box.isEmpty()) return;
+
+    this._cancelFocusAnimation();
+
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    this.modelBounds = { box, size, center, radius: size.length() / 2 };
+
+    this.callbacks.onModelBoundsChanged?.(this.modelBounds);
+
+    const adjustedCenter = center.clone();
+    adjustedCenter.y -= size.y * 0.05;
+
+    const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
+    const direction = defaultModelViewDirection();
+    const targetPosition = adjustedCenter.clone().add(direction.multiplyScalar(distance));
+    const targetPoint = adjustedCenter.clone();
+
+    const startPosition = this.camera.position.clone();
+    const startTarget = this.controls.target.clone();
+
+    this.controls.enablePan = false;
+    this.controls.enableRotate = false;
+
+    const positionObj = { x: startPosition.x, y: startPosition.y, z: startPosition.z };
+    const targetObj = { x: startTarget.x, y: startTarget.y, z: startTarget.z };
+
+    const generation = ++this._focusGeneration;
+    this._focusTimeline = gsap.timeline({
+      onComplete: () => {
+        if (generation !== this._focusGeneration) return;
+        this._focusTimeline = null;
+        this.camera.near = Math.max(0.01, distance / 200);
+        this.camera.far = distance * 50;
+        this.camera.updateProjectionMatrix();
+        this._restoreFocusOrbitControls();
+        if (this.autoOrbitMode === 'off') {
+          this._applyTilt();
+        }
+      },
+    });
+
+    this._focusTimeline.to(
+      positionObj,
+      {
         x: targetPosition.x,
         y: targetPosition.y,
         z: targetPosition.z,
-        duration: duration,
+        duration,
         ease: 'power2.inOut',
         onUpdate: () => {
           this.camera.position.set(positionObj.x, positionObj.y, positionObj.z);
         },
-      });
-      
-      // Animate controls target
-      gsap.to(targetObj, {
+      },
+      0,
+    );
+
+    this._focusTimeline.to(
+      targetObj,
+      {
         x: targetPoint.x,
         y: targetPoint.y,
         z: targetPoint.z,
-        duration: duration,
+        duration,
         ease: 'power2.inOut',
         onUpdate: () => {
           this.controls.target.set(targetObj.x, targetObj.y, targetObj.z);
           this._applyTilt();
         },
-        onComplete: () => {
-          // Update camera near/far planes and restore controls
-          this.camera.near = Math.max(0.01, distance / 200);
-          this.camera.far = distance * 50;
-          this.camera.updateProjectionMatrix();
-          this.controls.enablePan = wasPanEnabled;
-          this.controls.enableRotate = wasRotateEnabled;
-          this.controls.update();
-          if (this.autoOrbitMode === 'off') {
-            this._applyTilt();
-          }
-        },
-      });
-    }
+      },
+      0,
+    );
   }
 
   /**
@@ -673,6 +696,7 @@ export class CameraController {
   }
 
   dispose() {
+    this._cancelFocusAnimation();
     this.controls.dispose();
     this._unbindAltInteractions();
   }

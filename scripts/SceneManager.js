@@ -54,6 +54,10 @@ import {
 } from './scene/SvgExtrudeSceneOps.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
+import {
+  ensureStudioActive,
+  shutdownStudio as shutdownStudioLifecycle,
+} from './scene/StudioLifecycle.js';
 import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
 import {
   createToggleScaleContext,
@@ -100,6 +104,136 @@ export class SceneManager {
 
     this.canvas = document.querySelector('#webgl');
     this.viewport = document.querySelector('.viewport');
+    this._studioReady = false;
+    this._studioBootPromise = null;
+    this._studioResizeTeardown = null;
+
+    const initialState = this.stateStore.getState();
+    this._initStudioShell(initialState);
+
+    this.renderLoop = new RenderLoopController(this);
+    this.eventManager = new EventManager(this);
+    this.eventManager.register();
+  }
+
+  get isStudioReady() {
+    return !!this._studioReady;
+  }
+
+  async ensureStudioReady() {
+    return ensureStudioActive(this);
+  }
+
+  async shutdownStudio() {
+    return shutdownStudioLifecycle(this);
+  }
+
+  /** Lightweight shell — no WebGL until the first model load. */
+  _initStudioShell(initialState) {
+    this.currentShading = initialState.shading;
+    this.autoRotateSpeed = 0;
+    this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
+    this.cameraHandheld = initialState.camera?.handheld ?? 'off';
+    this.lightsMaster = initialState.lightsMaster ?? 0.30;
+    this.lightsEnabled = initialState.lightsEnabled ?? true;
+    this.lightsRotation = initialState.lightsRotation ?? 0;
+    this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
+    this.lightsAutoRotateSpeed = 30;
+    this.currentFile = null;
+    this.currentModel = null;
+    this.currentAssetMetadata = null;
+    this.svgExtrudeImporter = null;
+    this.isSvgExtrudeModel = false;
+    this.isStlModel = false;
+    this.stlRawByMesh = new Map();
+    this._pivotCenterDelta = null;
+    this.reverseNormalsEnabled = initialState.advanced?.reverseNormals ?? false;
+    this.originalGeometryIndices = new WeakMap();
+    this.originalGeometryAttributes = new WeakMap();
+    this.originalMaterialSides = new WeakMap();
+    this.isFirstModelLoad = true;
+    this.unlitMode = false;
+    this.hdriEnabled = initialState.hdriEnabled ?? true;
+    this.hdriBackgroundEnabled = initialState.hdriBackground;
+    this.hdriBlurriness = initialState.hdriBlurriness ?? 0;
+    this.hdriRotation = initialState.hdriRotation ?? 0;
+    this.currentHdri = initialState.hdri ?? 'beach';
+    this.hdriStrength = Math.min(
+      5 * HDRI_STRENGTH_UNIT,
+      Math.max(0, initialState.hdriStrength ?? 2),
+    );
+    this.lightsShadowQuality = normalizeLightShadowQuality(
+      initialState.lightsShadowQuality,
+    );
+    this.lightsShadowSoftness = Number.isFinite(initialState.lightsShadowSoftness)
+      ? initialState.lightsShadowSoftness
+      : 4;
+    this.lightsShadowContactOffset = Number.isFinite(
+      initialState.lightsShadowContactOffset,
+    )
+      ? initialState.lightsShadowContactOffset
+      : -0.0001;
+    this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
+
+    this.modelLoader = new ModelLoader();
+    this.modelLifecycle = new ModelLifecycleManager(this);
+    this.svgGlbExporter = new SvgGlbExporter();
+    this.animationController = new AnimationController({
+      onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
+      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
+      onTimeUpdate: (current, duration) =>
+        this.ui.updateAnimationTime(current, duration),
+      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
+      getFileName: () => this.currentFile?.name ?? 'model.glb',
+    });
+
+    this._ccToggleCtx = createToggleScaleContext();
+    this._baseToggleCtx = createToggleScaleContext();
+    this._baseGlassToggleCtx = createToggleScaleContext();
+    this._backdropToggleCtx = createToggleScaleContext();
+    const bootGround = this.stateStore.getState();
+    this._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
+    this._baseToggleCtx.prevEnabled = !!bootGround.groundSolid;
+    this._baseGlassToggleCtx.prevEnabled = !!(
+      bootGround.groundSolid && (bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false)
+    );
+    this._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
+
+    this.viewportFramingOverlays = new ViewportFramingOverlays();
+    const cam0 = this.stateStore.getState().camera ?? {};
+    this.viewportFramingOverlays.syncFromCamera(cam0, {
+      letterboxAnimate: false,
+      compositionGridAnimate: false,
+    });
+  }
+
+  /**
+   * Fresh #webgl canvas — required after GPU teardown (forceContextLoss poisons the node)
+   * and so WebGL init is not attempted while the canvas is display:none.
+   */
+  _refreshWebglCanvas() {
+    const parent =
+      this.canvas?.parentElement ?? document.querySelector('.viewport');
+    if (!parent) return;
+    const next = document.createElement('canvas');
+    next.id = 'webgl';
+    next.tabIndex = 0;
+    if (this.canvas?.isConnected) {
+      this.canvas.replaceWith(next);
+    } else {
+      parent.appendChild(next);
+    }
+    this.canvas = next;
+  }
+
+  async _bootstrapStudio() {
+    if (this._studioReady) return;
+
+    try {
+    document.documentElement.classList.add('orby-studio-active');
+    this._refreshWebglCanvas();
+
+    const initialState = this.stateStore.getState();
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
@@ -122,28 +256,9 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const initialState = this.stateStore.getState();
-    // Auto-exposure will be initialized after setupComposer
-    this.hdriStrength = Math.min(
-      5 * HDRI_STRENGTH_UNIT,
-      Math.max(0, initialState.hdriStrength ?? 2),
-    );
-    this.lightsShadowQuality = normalizeLightShadowQuality(
-      initialState.lightsShadowQuality,
-    );
-    this.lightsShadowSoftness = Number.isFinite(initialState.lightsShadowSoftness)
-      ? initialState.lightsShadowSoftness
-      : 4;
-    this.lightsShadowContactOffset = Number.isFinite(
-      initialState.lightsShadowContactOffset,
-    )
-      ? initialState.lightsShadowContactOffset
-      : -0.0001;
-    this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
     // Disable tone mapping on renderer - we'll apply it as a post-processing pass instead
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMappingExposure = 1;
     // Opaque first, then transparent (back-to-front) — important for glTF glass / blend materials.
     this.renderer.sortObjects = true;
@@ -208,11 +323,6 @@ export class SceneManager {
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     this._colorCheckerHorizRef = new THREE.Vector3();
     this._colorCheckerTowardCam = new THREE.Vector3();
-    /** Shared scale-in/out state for Reference colors (same curves as podium). */
-    this._ccToggleCtx = createToggleScaleContext();
-    this._baseToggleCtx = createToggleScaleContext();
-    this._baseGlassToggleCtx = createToggleScaleContext();
-    this._backdropToggleCtx = createToggleScaleContext();
     this._groundGridBottomAlignRaf = 0;
     this.scene.environmentIntensity = this.hdriStrength;
 
@@ -303,48 +413,6 @@ export class SceneManager {
       modelRoot: this.modelRoot,
     });
 
-    this.currentShading = initialState.shading;
-    this.autoRotateSpeed = 0;
-    this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
-    this.cameraHandheld = initialState.camera?.handheld ?? 'off';
-    this.lightsMaster = initialState.lightsMaster ?? 0.30;
-    this.lightsEnabled = initialState.lightsEnabled ?? true;
-    this.lightsRotation = initialState.lightsRotation ?? 0;
-    this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
-    this.lightsAutoRotateSpeed = 30; // degrees per second
-    this.currentFile = null;
-    this.currentModel = null;
-    this.currentAssetMetadata = null;
-    this.svgExtrudeImporter = null;
-    this.isSvgExtrudeModel = false;
-    this.isStlModel = false;
-    this.stlRawByMesh = new Map();
-    /** Position deltas from the last center-pivot apply (for toggle-off restore). */
-    this._pivotCenterDelta = null;
-    this.reverseNormalsEnabled = initialState.advanced?.reverseNormals ?? false;
-    this.originalGeometryIndices = new WeakMap();
-    this.originalGeometryAttributes = new WeakMap();
-    this.originalMaterialSides = new WeakMap();
-    this.isFirstModelLoad = true; // Track if this is the first model load
-    this.svgGlbExporter = new SvgGlbExporter();
-    this.animationController = new AnimationController({
-      onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
-      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
-      onTimeUpdate: (current, duration) =>
-        this.ui.updateAnimationTime(current, duration),
-      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
-      getFileName: () => this.currentFile?.name ?? 'model.glb',
-    });
-    this.unlitMode = false;
-    const defaults = this.stateStore.getDefaults();
-
-    this.hdriEnabled = initialState.hdriEnabled ?? true;
-    this.hdriBackgroundEnabled = initialState.hdriBackground;
-    this.hdriBlurriness = initialState.hdriBlurriness ?? 0;
-    this.hdriRotation = initialState.hdriRotation ?? 0;
-    this.currentHdri = initialState.hdri ?? 'beach';
-    // Lens dirt will be initialized after setupComposer
-
     this.materialController = new MaterialController({
       stateStore: this.stateStore,
       modelRoot: this.modelRoot,
@@ -373,8 +441,6 @@ export class SceneManager {
       },
     });
 
-    this.modelLoader = new ModelLoader();
-    this.modelLifecycle = new ModelLifecycleManager(this);
     this.textureLoader = new THREE.TextureLoader();
     this.setupLights();
     this.setupGround();
@@ -428,49 +494,164 @@ export class SceneManager {
       this.histogramController.setEnabled(histogramState.histogramEnabled ?? false);
     }
 
-    this.viewportFramingOverlays = new ViewportFramingOverlays();
-    const cam0 = this.stateStore.getState().camera ?? {};
-    this.viewportFramingOverlays.syncFromCamera(cam0, {
-      letterboxAnimate: false,
-      compositionGridAnimate: false,
-    });
-
-    this.renderLoop = new RenderLoopController(this);
     this.stateApplier = new SceneStateApplier(this);
-
-    // Initialize event manager and register all event listeners
-    this.eventManager = new EventManager(this);
-    this.eventManager.register();
     this.setupMeshClickDetection();
-    this.handleResize();
-    
-    // Debounce resize handler to prevent excessive calls
+    this._attachViewportResizeObserver();
+
     let resizeTimeout;
     const debouncedResize = () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
         this.handleResize();
-      }, 16); // ~1 frame debounce (16ms at 60fps)
+      }, 16);
     };
-    
-    window.addEventListener('resize', debouncedResize);
-    
-    // Handle fullscreen changes explicitly
+
     const handleFullscreenChange = () => {
-      // Use requestAnimationFrame to ensure fullscreen transition completes
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          // Double RAF to ensure layout is complete
           this.handleResize();
           this.ui?.syncFullscreenToggle?.();
         });
       });
     };
-    
+
+    window.addEventListener('resize', debouncedResize);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    this._studioResizeTeardown = () => {
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', debouncedResize);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+
+    await this.applyStateSnapshot(this.stateStore.getState());
+    this._studioReady = true;
+    // Render loop starts after shelf layout settles (see loadFile / startRenderLoop).
+    } catch (error) {
+      this._teardownStudioGpu();
+      throw error;
+    }
+  }
+
+  startRenderLoop() {
+    if (!this._studioReady || !this.renderer) return;
+    this.renderLoop.start();
+  }
+
+  /**
+   * After shelf / dropzone layout changes (no window `resize` event).
+   * @returns {Promise<void>}
+   */
+  syncViewportSize() {
+    if (!this.isStudioReady || !this.renderer) return Promise.resolve();
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this._applyViewportSizeFromLayout();
+          resolve();
+        });
+      });
+    });
+  }
+
+  _attachViewportResizeObserver() {
+    if (typeof ResizeObserver === 'undefined' || !this.viewport) return;
+    this._viewportResizeObserver?.disconnect();
+    this._viewportResizeObserver = new ResizeObserver(() => {
+      this.handleResize();
+    });
+    this._viewportResizeObserver.observe(this.viewport);
+  }
+
+  _teardownStudioGpu() {
+    this.renderLoop?.stop();
+    this._viewportResizeObserver?.disconnect();
+    this._viewportResizeObserver = null;
+    this._studioResizeTeardown?.();
+    this._studioResizeTeardown = null;
+
+    this.modelLifecycle?.clearModel();
+    this.currentFile = null;
+    this.isFirstModelLoad = true;
+    this.ui?.updateTitle?.('Orby');
+    this.ui?.updateTopBarDetail?.('');
+    this.animationController = new AnimationController({
+      onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
+      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
+      onTimeUpdate: (current, duration) =>
+        this.ui.updateAnimationTime(current, duration),
+      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
+      getFileName: () => this.currentFile?.name ?? 'model.glb',
+    });
+
+    this.meshClickHandler?.detach?.();
+
+    this.transformControlsTranslate?.dispose?.();
+    this.transformControlsRotate?.dispose?.();
+    this.transformControlsScale?.dispose?.();
+    this.transformControlsTranslate = null;
+    this.transformControlsRotate = null;
+    this.transformControlsScale = null;
+
+    this.histogramController?.dispose?.();
+    this.histogramController = null;
+    this.lensFlareController?.dispose?.();
+    this.lensFlareController = null;
+    this.lensDirtController?.dispose?.();
+    this.lensDirtController = null;
+    this.autoExposureController?.dispose?.();
+    this.autoExposureController = null;
+    this.environmentController?.dispose?.();
+    this.environmentController = null;
+    this.groundController?.disposeMeshes?.();
+    this.backgroundController?.dispose?.();
+    this.backgroundController = null;
+    this.materialController?.clear?.();
+
+    if (this.composer?.renderTarget1) {
+      this.composer.renderTarget1.dispose?.();
+      this.composer.renderTarget2?.dispose?.();
+    }
+    this.composer = null;
+    this.postPipeline = null;
+    this.composerLifecycle = null;
+    this.imageExporter = null;
+    this.videoExporter = null;
+    this.exposurePass = null;
+    this.lensDirtPass = null;
+    this.fxaaPass = null;
+
+    this.cameraController?.dispose?.();
+    this.cameraController = null;
+    this.controls = null;
+
+    if (this.renderer) {
+      this.renderer.dispose();
+    }
+    this.renderer = null;
+    this.scene = null;
+    this.camera = null;
+    this.modelRoot = null;
+    this.colorCheckerRoot = null;
+    this.clock = null;
+    this.diagnosticsController = null;
+    this.materialController = null;
+    this.lightsController = null;
+    this.lights = null;
+    this.groundController = null;
+    this.hdriMood = null;
+    this.transformController = null;
+    this.textureLoader = null;
+    this.stateApplier = null;
+
+    this._studioReady = false;
+    document.documentElement.classList.remove('orby-studio-active');
   }
 
   /** @see ViewportFramingOverlays#setCompositionGridOverlayVisible */
@@ -499,16 +680,9 @@ export class SceneManager {
     this.meshClickHandler.attach();
   }
 
+  /** @deprecated Studio boots on first model load; kept for callers that await scene.init(). */
   async init() {
-    await this.applyStateSnapshot(this.stateStore.getState());
-    requestAnimationFrame(() => {
-      const container = this.viewport || this.canvas?.parentElement;
-      const rect = container?.getBoundingClientRect?.();
-      if (rect?.width > 0 && rect?.height > 0) {
-        this.groundController?.resizeBaseReflector?.(rect.width, rect.height);
-      }
-    });
-    this.renderLoop.start();
+    /* no-op — WebGL starts in ensureStudioReady() */
   }
 
   setupLights() {
@@ -768,10 +942,13 @@ export class SceneManager {
   }
 
   /**
-   * Match visibility to settings (pose is updated every frame when enabled).
+   * Sync visibility / scale animation and probes from settings.
    */
   applyColorCheckerFromState(state) {
     const cc = state?.colorChecker ?? this.stateStore.getDefaults().colorChecker;
+    if (this.colorCheckerRoot) {
+      this._updateColorCheckerPose();
+    }
     if (this.colorCheckerRoot && cc?.enabled) {
       this._syncColorCheckerReferenceProbes(
         this.scene.environment,
@@ -2502,6 +2679,7 @@ export class SceneManager {
   }
 
   render() {
+    if (!this.isStudioReady || !this.renderer) return;
     if (this.unlitMode) {
       const previousExposure = this.renderer.toneMappingExposure;
       const previousColor = this.renderer.getClearColor(new THREE.Color()).clone();
@@ -2527,58 +2705,52 @@ export class SceneManager {
   }
 
   handleResize() {
-    // Use requestAnimationFrame to ensure DOM has updated before reading dimensions
-    requestAnimationFrame(() => {
-      if (this._suppressResizeForExport) {
-        return;
-      }
-      // Get dimensions from the viewport container (parent of canvas)
-      // This is more reliable since the canvas is absolutely positioned with inset: 0
-      const container = this.viewport || this.canvas.parentElement;
-      const containerRect = container ? container.getBoundingClientRect() : null;
-      const canvasRect = this.canvas.getBoundingClientRect();
-      
-      // Prefer container dimensions, fallback to canvas, then window
-      const width = containerRect 
-        ? Math.floor(containerRect.width) 
-        : (Math.floor(canvasRect.width) || window.innerWidth);
-      const height = containerRect 
-        ? Math.floor(containerRect.height) 
-        : (Math.floor(canvasRect.height) || window.innerHeight);
-      
-      // Ensure we have valid dimensions
-      if (width <= 0 || height <= 0) {
-        console.warn('Invalid dimensions during resize, skipping');
-        return;
-      }
-      
-      // Check if we're in fullscreen mode
-      const isFullscreen = !!(document.fullscreenElement || 
-                              document.webkitFullscreenElement || 
-                              document.mozFullScreenElement || 
-                              document.msFullscreenElement);
-      
-      // In fullscreen, use window dimensions to ensure we fill the entire screen
-      const finalWidth = isFullscreen ? window.innerWidth : width;
-      const finalHeight = isFullscreen ? window.innerHeight : height;
-      
-      // Update renderer size
-      // Pass false to prevent Three.js from setting canvas width/height attributes
-      // (CSS handles the display size, we just need renderer internal size to match)
-      this.renderer.setSize(finalWidth, finalHeight, false);
-      
-      // Ensure canvas element matches (for absolutely positioned elements)
-      if (this.canvas.style.width !== '100%' || this.canvas.style.height !== '100%') {
-        this.canvas.style.width = '100%';
-        this.canvas.style.height = '100%';
-      }
-      
-      // Update camera aspect ratio; FOV + lens pass must match (fisheye)
-      this.camera.aspect = finalWidth / finalHeight;
-      this.syncPerspectiveCameraFovAndLens();
+    if (!this.isStudioReady || !this.renderer) return;
+    requestAnimationFrame(() => this._applyViewportSizeFromLayout());
+  }
 
-      this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
-    });
+  _applyViewportSizeFromLayout() {
+    if (this._suppressResizeForExport || !this.isStudioReady || !this.renderer) {
+      return;
+    }
+    const container = this.viewport || this.canvas?.parentElement;
+    const containerRect = container?.getBoundingClientRect?.() ?? null;
+    const canvasRect = this.canvas?.getBoundingClientRect?.() ?? null;
+
+    const width = containerRect
+      ? Math.floor(containerRect.width)
+      : Math.floor(canvasRect?.width) || window.innerWidth;
+    const height = containerRect
+      ? Math.floor(containerRect.height)
+      : Math.floor(canvasRect?.height) || window.innerHeight;
+
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    const isFullscreen = !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+
+    const finalWidth = isFullscreen ? window.innerWidth : width;
+    const finalHeight = isFullscreen ? window.innerHeight : height;
+
+    this.renderer.setSize(finalWidth, finalHeight, false);
+
+    if (
+      this.canvas &&
+      (this.canvas.style.width !== '100%' || this.canvas.style.height !== '100%')
+    ) {
+      this.canvas.style.width = '100%';
+      this.canvas.style.height = '100%';
+    }
+
+    this.camera.aspect = finalWidth / finalHeight;
+    this.syncPerspectiveCameraFovAndLens();
+    this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
   }
 
   async exportPng(settings = {}) {

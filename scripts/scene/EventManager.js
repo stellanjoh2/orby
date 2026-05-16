@@ -407,7 +407,11 @@ export class EventManager {
     eventBus.on('export:video', (payload) => s.exportVideo(payload));
     
     // App events
-    eventBus.on('app:reset', () => s.applyStateSnapshot(s.stateStore.getState()));
+    eventBus.on('app:reset', () => {
+      if (s.isStudioReady) {
+        void s.applyStateSnapshot(s.stateStore.getState());
+      }
+    });
 
     eventBus.on('scene:color-checker', () => {
       s.applyColorCheckerFromState(s.stateStore.getState());

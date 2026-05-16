@@ -334,10 +334,12 @@ export class UIManagerModalOverlays {
       event.preventDefault();
       this._ui.showFullscreenPrompt({
         messageHtml:
-          '<span class="brand-highlight">Return home?</span> Leave the studio and return to the start screen.',
+          '<span class="brand-highlight">Return home?</span> This ends your session and resets the studio.',
         cancelLabel: 'Stay',
         confirmLabel: 'Go Home',
-        onConfirm: () => this._ui.setDropzoneVisible(true),
+        onConfirm: () => {
+          void this._ui.returnToHome();
+        },
       });
     });
   }

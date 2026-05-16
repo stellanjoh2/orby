@@ -82,6 +82,11 @@ export class GamepadController {
       return;
     }
 
+    if (!this.scene?.isStudioReady) {
+      this.animationFrame = requestAnimationFrame(this.poll);
+      return;
+    }
+
     const delta =
       this.lastTimestamp != null ? (timestamp - this.lastTimestamp) / 1000 : 0;
     this.lastTimestamp = timestamp;

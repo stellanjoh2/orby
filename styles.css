@@ -268,6 +268,13 @@ body.dropzone-visible #webgl {
   pointer-events: none;
 }
 
+/* No WebGL surface until the studio boots on first model load */
+html:not(.orby-studio-active) #webgl {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 body.orby-not-found-active {
   background: #000;
 }

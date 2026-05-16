@@ -998,9 +998,32 @@ export class UIManager {
   }
 
   setDropzoneVisible(visible) {
+    if (!visible) {
+      document.documentElement.classList.remove('orby-home-scroll');
+    }
     if (this.startMenuController) {
       this.startMenuController.setVisible(visible);
     }
+  }
+
+  /**
+   * Full session reset: tear down WebGL, restore defaults, return to the marketing home.
+   */
+  async returnToHome() {
+    const scene = window.orby?.scene;
+    if (scene?.isStudioReady) {
+      await scene.shutdownStudio();
+    }
+    const snapshot = this.stateStore.reset();
+    this.syncControls(snapshot);
+    this.eventBus.emit('app:reset');
+    this.activeTab = 'mesh';
+    this.shelfRevealed = false;
+    if (this.dom.shelf) {
+      this.dom.shelf.classList.add('is-shelf-hidden');
+    }
+    this.setDropzoneVisible(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /**
@@ -1018,7 +1041,10 @@ export class UIManager {
     };
     // Dropzone hide uses rAF — double rAF lands after that layout so the shelf reveal always applies.
     requestAnimationFrame(() => {
-      requestAnimationFrame(apply);
+      requestAnimationFrame(() => {
+        apply();
+        window.orby?.scene?.handleResize?.();
+      });
     });
   }
 

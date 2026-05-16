@@ -13,15 +13,15 @@ function toggleScaleAnimActive(ctx) {
  */
 function buildFrameContext(scene) {
   const state = scene.stateStore.getState();
-  const cc = state.colorChecker ?? {};
   return {
     panelsShelfScrolling: !!scene.panelsShelfScrolling,
     histogramEnabled:
       !!scene.histogramController && !!state.histogramEnabled,
     grainActive: !!scene.postPipeline?.grainTintPass?.enabled,
     creativeLookEnabled: !!scene.materialController?.creativeLookSettings?.enabled,
+    /** Root always exists; pose step must run while scale-out after `enabled` flips off. */
     colorCheckerActive:
-      !!cc.enabled || toggleScaleAnimActive(scene._ccToggleCtx),
+      !!scene.colorCheckerRoot || toggleScaleAnimActive(scene._ccToggleCtx),
     /** Run while mesh exists so scale-out still runs after state flips off (same frame). */
     baseAppearActive:
       !!scene.groundController?.podium ||
@@ -51,6 +51,23 @@ export class RenderLoopController {
     this.scene = scene;
     this._running = false;
     this._frameId = 0;
+    this._pausedByVisibility = false;
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (this._running) {
+            this._pausedByVisibility = true;
+            this.stop();
+          }
+          return;
+        }
+        if (this._pausedByVisibility && this.scene?.isStudioReady) {
+          this._pausedByVisibility = false;
+          this.start();
+        }
+      });
+    }
 
     /** @type {Array<{ id: string, when?: (ctx: ReturnType<typeof buildFrameContext>, scene: import('../SceneManager.js').SceneManager) => boolean, run: (delta: number, scene: import('../SceneManager.js').SceneManager) => void }>} */
     this._updateSteps = [
@@ -190,7 +207,7 @@ export class RenderLoopController {
   }
 
   _tick() {
-    if (!this._running) return;
+    if (!this._running || !this.scene?.isStudioReady) return;
     this._scheduleFrame();
 
     const scene = this.scene;
