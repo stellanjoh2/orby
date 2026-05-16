@@ -60,7 +60,7 @@ export const MARKETING_SECTIONS = [
       'Shader Lab stylized materials when you want to push beyond PBR',
     ],
     layout: 'media-left',
-    imageSrc: './assets/images/orby-lookfilter-cinema.png',
+    imageSrc: './assets/marketing/present-cinema-look.png',
     imageAlt: 'Cinematic look filter preset in Orby',
   },
   {
@@ -76,7 +76,7 @@ export const MARKETING_SECTIONS = [
       'SVG silhouette or flat color, plus GLB from SVG extrude',
     ],
     layout: 'media-right',
-    imageSrc: './assets/images/orby-lookfilter-golden.png',
+    imageSrc: './assets/marketing/export-golden-look.png',
     imageAlt: 'Golden hour look on a product render',
   },
   {
