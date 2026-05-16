@@ -2952,7 +2952,6 @@ a.about-highlight:focus-visible {
 :is(.subsection, .panel-block).is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted #cameraAutoOrbitReverse.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
@@ -4787,7 +4786,7 @@ body.ui-hidden .shelf {
     opacity 0.2s ease;
 }
 
-.lens-preset-btn:hover:not(:disabled) {
+.lens-preset-btn:hover:not(:disabled):not(.is-selected) {
   color: var(--brand-primary);
   background: var(--accent-muted);
 }
@@ -4824,46 +4823,6 @@ body.ui-hidden .shelf {
 
 :is(.subsection, .panel-block).is-muted .lens-preset-btn {
   opacity: 0.45;
-}
-
-/* Camera → Auto Orbit: reverse direction slides out when SLOW/FAST is active */
-.auto-orbit-foldout {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  margin-top: 0;
-  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
-}
-
-.auto-orbit-foldout--expanded {
-  margin-top: 0.45rem;
-  max-height: 2.75rem;
-  opacity: 1;
-}
-
-.auto-orbit-foldout--collapsed {
-  max-height: 0;
-  opacity: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-/* Auto Orbit — toggle pill (matches Snap to Mesh; solid lime when on) */
-#cameraAutoOrbitReverse.ghost-btn {
-  color: var(--text-dim);
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s ease;
-}
-
-#cameraAutoOrbitReverse.ghost-btn:hover:not(:disabled):not(.is-disabled) {
-  background: var(--accent);
-  color: var(--brand-text);
-  box-shadow: var(--ui-accent-outer-glow);
-}
-
-#cameraAutoOrbitReverse.ghost-btn.active {
-  background: var(--accent);
-  color: var(--brand-text);
-  box-shadow: var(--ui-accent-outer-glow);
 }
 
 /* Information tab quick navigation */

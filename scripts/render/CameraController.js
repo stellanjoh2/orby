@@ -79,7 +79,6 @@ export class CameraController {
 
     // Auto-orbit state
     this.autoOrbitMode = 'off'; // 'off', 'slow', 'fast'
-    this.autoOrbitReverse = false;
     this.autoOrbitTime = 0; // Time accumulator for smooth orbit
     this.autoOrbitBaseSpherical = null; // Store initial orbit position
 
@@ -411,10 +410,6 @@ export class CameraController {
    * Set auto-orbit mode
    * @param {string} mode - 'off', 'slow', or 'fast'
    */
-  setAutoOrbitReverse(reverse) {
-    this.autoOrbitReverse = !!reverse;
-  }
-
   setAutoOrbit(mode) {
     this.autoOrbitMode = mode;
     const isActive = mode !== 'off';
@@ -460,8 +455,7 @@ export class CameraController {
     };
     const speed = speeds[this.autoOrbitMode] || 0;
 
-    const dir = this.autoOrbitReverse ? -1 : 1;
-    this.autoOrbitTime += delta * speed * dir;
+    this.autoOrbitTime += delta * speed;
 
     // Use current controls target (where we're orbiting around)
     // This stays consistent with where we started orbiting from

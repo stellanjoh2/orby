@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 
 export class VideoExporter {
   constructor({
@@ -209,7 +210,7 @@ export class VideoExporter {
           this.composer.copyPass.render(
             this.renderer,
             byteRT,
-            this.composer.readBuffer,
+            getComposerOutputRenderTarget(this.composer),
             0,
             false,
           );

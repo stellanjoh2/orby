@@ -73,7 +73,7 @@ const RESET_DIRTY_PATHS = {
   lens: ['camera.fov', 'camera.lensFocalMm', 'camera.lensSensorId'],
   camera: [
     'camera.tilt',
-    'camera.autoOrbit', 'camera.autoOrbitReverse', 'camera.handheld',
+    'camera.autoOrbit', 'camera.handheld',
     'exposure', 'autoExposure',
     'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
     'camera.compositionGridEnabled',
@@ -1088,10 +1088,6 @@ export class ResetControls {
               this.stateStore.set('lookFilterPreset', 'custom');
               this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
               this.stateStore.set('camera.autoOrbit', defaults.camera.autoOrbit ?? 'off');
-              this.stateStore.set(
-                'camera.autoOrbitReverse',
-                defaults.camera.autoOrbitReverse ?? false,
-              );
               this.stateStore.set('camera.handheld', defaults.camera.handheld ?? 'off');
               this.stateStore.set('exposure', defaults.exposure);
               this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
@@ -1115,10 +1111,6 @@ export class ResetControls {
             // Emit events to update the scene
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
             this.eventBus.emit('camera:auto-orbit', defaults.camera.autoOrbit ?? 'off');
-            this.eventBus.emit(
-              'camera:auto-orbit-reverse',
-              defaults.camera.autoOrbitReverse ?? false,
-            );
             this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);

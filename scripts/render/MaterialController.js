@@ -7,7 +7,12 @@ import {
   creativeOrderedDitherPixelScale,
   normalizeCreativeLookPreset,
 } from './CreativeLookMaterials.js';
-import { reapplySvgExtrudeProceduralFromState } from './SvgExtrudeSurfaceShader.js';
+import {
+  applySvgExtrudeProceduralToMaterial,
+  isFresnelLinkedInSvgSurfaceChain,
+  reapplySvgExtrudeProceduralFromState,
+  removeSvgExtrudeProceduralFromMaterial,
+} from './SvgExtrudeSurfaceShader.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import {
   WIREFRAME_OFFSET,
@@ -1474,32 +1479,11 @@ export class MaterialController {
         this.currentModel.traverse((child) => {
           if (!child.isMesh) return;
           const material = child.material;
-          // Check if this is a clay material (not an original material)
-          const original = this.originalMaterials.get(child);
-          const isClayMaterial =
-            material &&
-            original &&
-            material !== original &&
-            (!Array.isArray(material) ||
-              !Array.isArray(original) ||
-              material.length !== original.length ||
-              !material.every((mat, idx) => mat === original[idx]));
-
-          if (isClayMaterial) {
-            const tintedClayColor = this.getClayColorWithBrightness();
-            const tClay = this._isSubsurfaceActive()
-              ? this._subsurfaceTranslucency()
-              : 0;
+          if (this._isClayMesh(child)) {
             const patchClay = (mat) => {
-              if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
-              mat.color.copy(tintedClayColor);
-              mat.roughness = this.materialSettings.roughness;
-              mat.metalness = this.materialSettings.metalness;
-              if (tClay > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
-                delete mat.userData.orbySubsurface;
-                this._applySubsurfacePhysicalParams(mat, tClay);
+              if (this._syncClayMaterialSurface(mat)) {
+                mat.needsUpdate = true;
               }
-              mat.needsUpdate = true;
             };
             if (Array.isArray(material)) {
               material.forEach(patchClay);
@@ -1561,27 +1545,12 @@ export class MaterialController {
         const isGlass = this.isWindowMesh(child);
         if (isGlass) return;
         
-        // Check if this is a clay material
-        const isClayMaterial = original && material !== original && 
-          (!Array.isArray(material) || !Array.isArray(original) || 
-           material.length !== original.length || 
-           !material.every((mat, idx) => mat === original[idx]));
-        
-        if (this.currentShading === 'clay' && isClayMaterial) {
-          const tintedClayColor = this.getClayColorWithBrightness();
-          const tClay = this._isSubsurfaceActive()
-            ? this._subsurfaceTranslucency()
-            : 0;
+        if (this.currentShading === 'clay' && this._isClayMesh(child)) {
           const patchClayMat = (mat) => {
             if (mat?.userData?.orbyCreativeLook) return;
-            if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
-            mat.roughness = this.materialSettings.roughness;
-            mat.metalness = this.materialSettings.metalness;
-            mat.color.copy(tintedClayColor);
-            if (tClay > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
-              this._applySubsurfacePhysicalParams(mat, tClay);
+            if (this._syncClayMaterialSurface(mat)) {
+              mat.needsUpdate = true;
             }
-            mat.needsUpdate = true;
           };
           if (Array.isArray(material)) {
             material.forEach(patchClayMat);
@@ -1921,6 +1890,7 @@ export class MaterialController {
       Math.min(5.0, this.fresnelSettings.radius || 1),
     );
     this.applyFresnelToModel(this.currentModel);
+    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
   }
 
   applyFresnelToModel(root) {
@@ -1931,6 +1901,79 @@ export class MaterialController {
         ? child.material
         : [child.material];
       materials.forEach((mat) => this.applyFresnelToMaterial(mat));
+    });
+    // Fresnel repatch sets needsUpdate and can reset clay roughness/metalness on recompile.
+    if (this.currentShading === 'clay') {
+      this._restoreClayMaterialSurfaces();
+    }
+  }
+
+  /** Transient clay material on a mesh (not the imported original). */
+  _isClayMesh(child) {
+    if (!child?.isMesh || !child.material) return false;
+    const original = this.originalMaterials.get(child);
+    const material = child.material;
+    if (!original) return false;
+    return (
+      material !== original &&
+      (!Array.isArray(material) ||
+        !Array.isArray(original) ||
+        material.length !== original.length ||
+        !material.every((mat, idx) => mat === original[idx]))
+    );
+  }
+
+  /**
+   * Sync clay roughness, metalness, and tint from sliders. Returns true if anything changed.
+   * @param {THREE.Material} mat
+   */
+  _syncClayMaterialSurface(mat) {
+    if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) {
+      return false;
+    }
+    let dirty = false;
+    const targetRoughness = this.materialSettings.roughness;
+    const targetMetalness = this.materialSettings.metalness;
+    const tintedClayColor = this.getClayColorWithBrightness();
+    if (mat.roughness === 0 || Math.abs(mat.roughness - targetRoughness) > 0.01) {
+      mat.roughness = targetRoughness;
+      dirty = true;
+    }
+    if (mat.metalness === 0 || Math.abs(mat.metalness - targetMetalness) > 0.01) {
+      mat.metalness = targetMetalness;
+      dirty = true;
+    }
+    if (!mat.color.equals(tintedClayColor)) {
+      mat.color.copy(tintedClayColor);
+      dirty = true;
+    }
+    const tSub = this._isSubsurfaceActive() ? this._subsurfaceTranslucency() : 0;
+    if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
+      delete mat.userData.orbySubsurface;
+      this._applySubsurfacePhysicalParams(mat, tSub);
+      dirty = true;
+    }
+    return dirty;
+  }
+
+  /**
+   * Re-apply clay PBR surface after env-map assignment or Fresnel shader work.
+   * Event-driven only — not called from the render loop.
+   */
+  _restoreClayMaterialSurfaces() {
+    if (this.currentShading !== 'clay' || !this.claySettings || !this.currentModel) {
+      return;
+    }
+    this.currentModel.traverse((child) => {
+      if (!this._isClayMesh(child)) return;
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      materials.forEach((mat) => {
+        if (this._syncClayMaterialSurface(mat)) {
+          mat.needsUpdate = true;
+        }
+      });
     });
   }
 
@@ -1944,13 +1987,26 @@ export class MaterialController {
 
     if (!needsFresnel) {
       if (material?.userData?.fresnelPatched) {
-        material.onBeforeCompile =
-          material.userData.originalOnBeforeCompile || (() => {});
+        const svgIdx = material.userData.svgExtrudeProceduralPresetIndex;
+        const svgScale = material.userData.svgExtrudeProceduralScale;
+        const hadSvg = !!material.userData.svgExtrudeProceduralPatched;
+        const base = material.userData.originalOnBeforeCompile || (() => {});
+        if (hadSvg) {
+          removeSvgExtrudeProceduralFromMaterial(material);
+        }
+        material.onBeforeCompile = typeof base === 'function' ? base : (() => {});
         delete material.userData.originalOnBeforeCompile;
         delete material.userData.fresnelPatched;
         delete material.userData.fresnelUniforms;
         delete material.userData.fresnelOnBeforeCompile;
-        material.needsUpdate = true;
+        if (hadSvg && svgIdx >= 1) {
+          applySvgExtrudeProceduralToMaterial(material, {
+            presetIndex: svgIdx,
+            scale: svgScale ?? 1,
+          });
+        } else {
+          material.needsUpdate = true;
+        }
       }
       return;
     }
@@ -1977,6 +2033,21 @@ export class MaterialController {
           delete material.userData.fresnelPatched;
           delete material.userData.fresnelUniforms;
         } else if (!material.onBeforeCompile || material.onBeforeCompile !== material.userData.fresnelOnBeforeCompile) {
+          if (
+            material.userData?.svgExtrudeProceduralPatched &&
+            !isFresnelLinkedInSvgSurfaceChain(material)
+          ) {
+            const idx = material.userData.svgExtrudeProceduralPresetIndex;
+            const scale = material.userData.svgExtrudeProceduralScale ?? 1;
+            removeSvgExtrudeProceduralFromMaterial(material);
+            if (idx >= 1) {
+              applySvgExtrudeProceduralToMaterial(material, { presetIndex: idx, scale });
+            }
+            return;
+          }
+          if (material.userData?.svgExtrudeProceduralPatched) {
+            return;
+          }
           material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
           material.needsUpdate = true;
           return;
@@ -2073,49 +2144,38 @@ export class MaterialController {
       return;
     }
 
-    // If we're in clay mode, handle clay materials separately and skip the rest
+    // Clay: env map only; surface props restored after Fresnel (or immediately if Fresnel off).
     if (this.currentShading === 'clay') {
-      const targetRoughness = this.materialSettings.roughness;
-      const targetMetalness = this.materialSettings.metalness;
-      const tintedClayColor = this.getClayColorWithBrightness();
-
       this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        const isClayMaterial = !this.originalMaterials.has(child);
-
-        if (isClayMaterial) {
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-
-          materials.forEach((material) => {
-            if (!material || !material.isMeshStandardMaterial) return;
-
-            // ONLY set envMap and intensity - NEVER touch roughness/metalness
-            material.envMap = envTexture;
-            if (material.envMapIntensity !== undefined) {
-              material.envMapIntensity = intensity;
-            }
-
-            // CRITICAL: Always restore roughness and metalness immediately after setting envMap
-            // Setting envMap might trigger Three.js internal updates that reset these values
-            material.roughness = targetRoughness;
-            material.metalness = targetMetalness;
-            material.color.copy(tintedClayColor);
-
+        if (!this._isClayMesh(child)) return;
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        materials.forEach((material) => {
+          if (!material?.isMeshStandardMaterial && !material?.isMeshPhysicalMaterial) {
+            return;
+          }
+          const envChanged = material.envMap !== envTexture;
+          const nextIntensity = intensity;
+          const intChanged =
+            material.envMapIntensity !== undefined &&
+            material.envMapIntensity !== nextIntensity;
+          material.envMap = envTexture;
+          if (material.envMapIntensity !== undefined) {
+            material.envMapIntensity = nextIntensity;
+          }
+          if (envChanged || intChanged) {
             material.needsUpdate = true;
-          });
-        }
+          }
+        });
       });
-      
-      // CRITICAL: Reapply Fresnel after material updates
-      // Material updates trigger shader recompilation which can lose the onBeforeCompile hook
+
       if (this.fresnelSettings?.enabled) {
         this.applyFresnelToModel(this.currentModel);
+      } else {
+        this._restoreClayMaterialSurfaces();
       }
       reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
-
-      // Don't process non-clay materials when in clay mode
       return;
     }
 
@@ -2228,56 +2288,6 @@ export class MaterialController {
       this.applyFresnelToModel(this.currentModel);
     }
     reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
-  }
-
-  forceRestoreClaySettings() {
-    // Simple restoration - just set the values directly from claySettings
-    if (this.currentShading === 'clay' && this.claySettings && this.currentModel) {
-      const targetRoughness = this.materialSettings.roughness;
-      const targetMetalness = this.materialSettings.metalness;
-      const tintedClayColor = this.getClayColorWithBrightness();
-
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        const material = child.material;
-        const isClayMaterial = !this.originalMaterials.has(child) ||
-          (material !== this.originalMaterials.get(child) &&
-            (!Array.isArray(material) ||
-              !Array.isArray(this.originalMaterials.get(child)) ||
-              material.length !== this.originalMaterials.get(child).length ||
-              !material.every((mat, idx) => mat === this.originalMaterials.get(child)[idx])));
-
-        if (isClayMaterial) {
-          const materials = Array.isArray(material) ? material : [material];
-          materials.forEach((mat) => {
-            if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
-              let dirty = false;
-              if (mat.roughness === 0 || Math.abs(mat.roughness - targetRoughness) > 0.01) {
-                mat.roughness = targetRoughness;
-                dirty = true;
-              }
-              if (mat.metalness === 0 || Math.abs(mat.metalness - targetMetalness) > 0.01) {
-                mat.metalness = targetMetalness;
-                dirty = true;
-              }
-              if (!mat.color.equals(tintedClayColor)) {
-                mat.color.copy(tintedClayColor);
-                dirty = true;
-              }
-              const tSub = this._isSubsurfaceActive()
-                ? this._subsurfaceTranslucency()
-                : 0;
-              if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
-                delete mat.userData.orbySubsurface;
-                this._applySubsurfacePhysicalParams(mat, tSub);
-                dirty = true;
-              }
-              if (dirty) mat.needsUpdate = true;
-            }
-          });
-        }
-      });
-    }
   }
 
   /**

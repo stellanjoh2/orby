@@ -256,7 +256,6 @@ export class StateStore {
         /** Viewport-only 21∶9 mattes (letterbox / pillarbox) for framing. */
         cinematicLetterbox219: false,
         autoOrbit: 'off',
-        autoOrbitReverse: false,
         handheld: 'off',
         contrast: 1.0,
         temperature: CAMERA_TEMPERATURE_NEUTRAL_K,

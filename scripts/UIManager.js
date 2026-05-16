@@ -257,7 +257,6 @@ export class UIManager {
       rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       cameraAutoOrbit: document.querySelectorAll('input[name="cameraAutoOrbit"]'),
-      cameraAutoOrbitReverse: q('#cameraAutoOrbitReverse'),
       cameraHandheld: document.querySelectorAll('input[name="cameraHandheld"]'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
@@ -1596,14 +1595,6 @@ export class UIManager {
         radio.checked = radio.value === autoOrbitValue;
       });
     }
-    if (this.inputs.cameraAutoOrbitReverse) {
-      const reverse = !!state.camera?.autoOrbitReverse;
-      this.inputs.cameraAutoOrbitReverse.classList.toggle('active', reverse);
-      this.inputs.cameraAutoOrbitReverse.setAttribute(
-        'aria-pressed',
-        reverse ? 'true' : 'false',
-      );
-    }
     if (this.inputs.cameraHandheld) {
       let handheldValue = state.camera?.handheld ?? 'off';
       if (handheldValue === 'medium') handheldValue = 'high';
@@ -2204,7 +2195,7 @@ export class UIManager {
     // Lights block - only muted if lightsEnabled is false
     this.setBlockMuted('lights', !currentState.lightsEnabled);
     
-    // Podium platform — muted when disabled; Glass panel only exists once podium is enabled
+    // Base platform — muted when disabled; Base Glass panel only exists once base is enabled
     const podiumOn = !!currentState.groundSolid;
     const glassOn = !!(
       currentState.baseGlassSurface ??
@@ -2215,6 +2206,7 @@ export class UIManager {
       this.dom.studioBaseGlassPanel.hidden = !podiumOn;
     }
     this.setBlockMuted('base', !podiumOn);
+    this.setBlockMuted('base-glass', !glassOn);
     this.setControlDisabled(
       [
         'groundSolidColor',

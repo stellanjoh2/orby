@@ -45,15 +45,6 @@ export class RenderControls {
     this.toneCurveController = null;
   }
 
-  _syncAutoOrbitReverseFoldout(mode) {
-    const el = this._autoOrbitReverseFoldout;
-    if (!el) return;
-    const on = mode === 'slow' || mode === 'fast';
-    el.classList.toggle('auto-orbit-foldout--expanded', on);
-    el.classList.toggle('auto-orbit-foldout--collapsed', !on);
-    el.setAttribute('aria-hidden', on ? 'false' : 'true');
-  }
-
   /** Anamorphic Bloom: toggle follows master Bloom; sliders follow this toggle (like Lens Dirt). */
   _syncAnamorphicBloomControlsDisabled(state) {
     const bloomOn = !!state.bloom?.enabled;
@@ -492,32 +483,13 @@ export class RenderControls {
     if (this.ui.inputs.cameraTilt) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTilt);
     
     // Camera Auto-Orbit
-    this._autoOrbitReverseFoldout = document.getElementById('autoOrbitReverseFoldout');
     this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
       radio.addEventListener('change', (event) => {
         const value = event.target.value;
         this.stateStore.set('camera.autoOrbit', value);
         this.eventBus.emit('camera:auto-orbit', value);
-        this._syncAutoOrbitReverseFoldout(value);
       });
     });
-    this._syncAutoOrbitReverseFoldout(
-      this.stateStore.getState().camera?.autoOrbit ?? 'off',
-    );
-    this.eventBus.on('camera:auto-orbit', (value) => {
-      this._syncAutoOrbitReverseFoldout(value);
-    });
-
-    if (this.ui.inputs.cameraAutoOrbitReverse) {
-      const btn = this.ui.inputs.cameraAutoOrbitReverse;
-      btn.addEventListener('click', () => {
-        const reverse = !btn.classList.contains('active');
-        btn.classList.toggle('active', reverse);
-        btn.setAttribute('aria-pressed', reverse ? 'true' : 'false');
-        this.stateStore.set('camera.autoOrbitReverse', reverse);
-        this.eventBus.emit('camera:auto-orbit-reverse', reverse);
-      });
-    }
 
     if (this.ui.inputs.cameraHandheld) {
       this.ui.inputs.cameraHandheld.forEach((radio) => {
@@ -1136,15 +1108,6 @@ export class RenderControls {
       this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
         radio.checked = radio.value === autoOrbitValue;
       });
-      this._syncAutoOrbitReverseFoldout(autoOrbitValue);
-    }
-    if (this.ui.inputs.cameraAutoOrbitReverse) {
-      const reverse = !!cam.autoOrbitReverse;
-      this.ui.inputs.cameraAutoOrbitReverse.classList.toggle('active', reverse);
-      this.ui.inputs.cameraAutoOrbitReverse.setAttribute(
-        'aria-pressed',
-        reverse ? 'true' : 'false',
-      );
     }
     if (this.ui.inputs.cameraHandheld) {
       let handheldValue = cam.handheld ?? 'off';

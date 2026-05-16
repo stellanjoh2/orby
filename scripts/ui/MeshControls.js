@@ -55,7 +55,7 @@ export class MeshControls {
       const visible = !!(payload?.visible ?? payload);
       const wrap = this.ui.inputs.stlSmoothingControls;
       if (wrap) wrap.hidden = !visible;
-      this.syncUIFromState();
+      this.ui.syncUIFromState();
     });
     this.eventBus.on('ui:center-pivot-enabled', (payload) => {
       const enabled = !!(payload?.enabled ?? payload);

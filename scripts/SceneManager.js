@@ -7,9 +7,6 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
-  CAMERA_TEMPERATURE_MIN_K,
-  CAMERA_TEMPERATURE_MAX_K,
-  CAMERA_TEMPERATURE_NEUTRAL_K,
   resolveBloomQualityTier,
   isBloomPipelineActive,
   resolveRenderQualityTier,
@@ -20,10 +17,7 @@ import {
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
   sanitizeAmbientOcclusion,
-  effectiveVignetteIntensity,
-  cameraShadowsUiToShader,
 } from './constants.js';
-import { fullViewportLogicalSize } from './render/fullViewportLogicalSize.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
 import { GroundController } from './render/GroundController.js';
@@ -45,6 +39,19 @@ import { VideoExporter } from './render/VideoExporter.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
+import { RenderLoopController } from './scene/RenderLoopController.js';
+import { ComposerLifecycle } from './scene/ComposerLifecycle.js';
+import { SceneStateApplier } from './scene/SceneStateApplier.js';
+import { ModelLifecycleManager } from './scene/ModelLifecycleManager.js';
+import {
+  isFisheyeEnabledInState,
+  showFisheyePngExportBlockedAlert,
+} from './export/fisheyeExportAlert.js';
+import {
+  runSvgExtrudeImporterMutation,
+  sanitizeSvgExtrudeColorDepths,
+  sanitizeSvgExtrudeColorOffsets,
+} from './scene/SvgExtrudeSceneOps.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { createColorCheckerMeshGroup } from './scene/ColorCheckerMesh.js';
@@ -55,7 +62,6 @@ import {
   stepToggleScaleAnimation,
 } from './scene/toggleScaleAnimation.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
-import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
 import {
   applyStlNormalSmoothing,
   cloneStlSourceGeometry,
@@ -65,12 +71,6 @@ import {
   captureAndApplyCenterPivot,
   undoCenterPivot,
 } from './scene/centerModelPivot.js';
-
-/** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
-const FBX_IMPORT_WIP_ALERT_BODY =
-  'FBX import is still a work in progress. Phong/Lambert materials are converted to PBR so mesh sliders behave like GLB; ' +
-  'UV sets, packed maps, and external textures may still differ from your DCC. ' +
-  'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
 
 const LIGHT_SHADOW_MAP_SIZE = {
   low: 512,
@@ -94,8 +94,6 @@ export class SceneManager {
     this.panelsShelfScrolling = false;
     /** Skip rAF resize while PNG/export pipeline mutates renderer size (avoids composer/canvas mismatch). */
     this._suppressResizeForExport = false;
-    /** Bloom passes were disabled while creative look was on; restore from state when toggling off. */
-    this._creativeBloomWasSuppressed = false;
     this.eventBus.on('ui:panels-scrolling', (payload) => {
       this.setPanelsShelfScrolling(!!payload?.active);
     });
@@ -308,7 +306,6 @@ export class SceneManager {
     this.currentShading = initialState.shading;
     this.autoRotateSpeed = 0;
     this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
-    this.cameraAutoOrbitReverse = !!initialState.camera?.autoOrbitReverse;
     this.cameraHandheld = initialState.camera?.handheld ?? 'off';
     this.lightsMaster = initialState.lightsMaster ?? 0.30;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
@@ -377,6 +374,7 @@ export class SceneManager {
     });
 
     this.modelLoader = new ModelLoader();
+    this.modelLifecycle = new ModelLifecycleManager(this);
     this.textureLoader = new THREE.TextureLoader();
     this.setupLights();
     this.setupGround();
@@ -436,6 +434,9 @@ export class SceneManager {
       letterboxAnimate: false,
       compositionGridAnimate: false,
     });
+
+    this.renderLoop = new RenderLoopController(this);
+    this.stateApplier = new SceneStateApplier(this);
 
     // Initialize event manager and register all event listeners
     this.eventManager = new EventManager(this);
@@ -507,7 +508,7 @@ export class SceneManager {
         this.groundController?.resizeBaseReflector?.(rect.width, rect.height);
       }
     });
-    this.animate();
+    this.renderLoop.start();
   }
 
   setupLights() {
@@ -581,7 +582,6 @@ export class SceneManager {
       fallbackColor: this.backgroundController?.getColor() ?? '#000000',
       onEnvironmentMapUpdated: (texture, intensity) => {
         this.updateMaterialsEnvironment(texture, intensity);
-        this.forceRestoreClaySettings();
       },
     });
   }
@@ -594,7 +594,23 @@ export class SceneManager {
     this.lensDirtPass = this.postPipeline.lensDirtPass;
     this.fxaaPass = this.postPipeline.fxaaPass;
     this.exposurePass = this.postPipeline.exposurePass;
-    
+
+    this.composerLifecycle = new ComposerLifecycle({
+      renderer: this.renderer,
+      scene: this.scene,
+      composer: this.composer,
+      postPipeline: this.postPipeline,
+      backgroundController: this.backgroundController,
+      getCreativeLookEnabled: () =>
+        this.materialController?.getCreativeLookSettings?.()?.enabled === true,
+      syncPostProcessingForLogicalSize: (w, h) =>
+        this.syncPostProcessingForLogicalSize(w, h),
+      onRestoreBloomAfterCreativeLook: () => {
+        this.updateBloom(this.stateStore.getState().bloom);
+        this.applyRenderQualityVisualOverrides();
+      },
+    });
+
     // Initialize image exporter (needs composer)
     this.imageExporter = new ImageExporter({
       renderer: this.renderer,
@@ -602,18 +618,13 @@ export class SceneManager {
       camera: this.camera,
       composer: this.composer,
       postPipeline: this.postPipeline,
+      isLensDistortionActive: () =>
+        this.postPipeline?.lensDistortionPass?.enabled === true,
       backgroundController: this.backgroundController,
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
-      syncPerspectiveProjection: () => this.syncPerspectiveCameraFovAndLens(),
-      renderComposerPassForExport: () => {
-        this._applyCreativeLookBloomSuppression();
-        this._ensureComposerBuffersMatchRenderer();
-        this._resetRendererViewportToCanvas();
-        this._syncRendererClearForSceneBackground();
-        this.composer.render();
-        this._resetRendererViewportToCanvas();
-      },
+      syncPerspectiveProjection: (opts) => this.syncPerspectiveCameraFovAndLens(opts),
+      renderComposerPassForExport: () => this.composerLifecycle.renderComposerPassForExport(),
     });
 
     const szComposer = new THREE.Vector2();
@@ -633,14 +644,12 @@ export class SceneManager {
       ui: this.ui,
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
-      syncPerspectiveProjection: () => this.syncPerspectiveCameraFovAndLens(),
+      syncPerspectiveProjection: (opts) => this.syncPerspectiveCameraFovAndLens(opts),
       ensureComposerBuffersMatchRenderer: () =>
-        this._ensureComposerBuffersMatchRenderer(),
-      resetRendererViewportToCanvas: () => this._resetRendererViewportToCanvas(),
-      prepareComposerCapture: () => {
-        this._applyCreativeLookBloomSuppression();
-        this._syncRendererClearForSceneBackground();
-      },
+        this.composerLifecycle.ensureComposerBuffersMatchRenderer(),
+      resetRendererViewportToCanvas: () =>
+        this.composerLifecycle.resetRendererViewportToCanvas(),
+      prepareComposerCapture: () => this.composerLifecycle.prepareComposerCapture(),
       setRotationY: (value) => this.setRotationY(value),
       beginExportOrbitDrive: () => this.cameraController?.beginExportOrbitDrive?.(),
       applyExportOrbitDriveFrame: (t, spins) =>
@@ -698,6 +707,7 @@ export class SceneManager {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
     this.groundController?.resizeBaseReflector?.(width, height);
+    this.syncPerspectiveCameraFovAndLens();
   }
 
   /**
@@ -705,18 +715,19 @@ export class SceneManager {
    * de Carpentier WebGL sample) so the warped sample stays inside the render and avoids
    * black edges. When fisheye is off, uses `camera.fov` from state.
    */
-  syncPerspectiveCameraFovAndLens() {
+  syncPerspectiveCameraFovAndLens(options = {}) {
     const state = this.stateStore.getState();
     const fe = state.fisheye;
     const pass = this.postPipeline?.lensDistortionPass;
+    const fovScale = THREE.MathUtils.clamp(Number(options.fovScale) || 1, 1, 1.12);
     if (!pass) {
-      this.camera.fov = state.camera?.fov ?? 45;
+      this.camera.fov = (state.camera?.fov ?? 45) * fovScale;
       this.camera.updateProjectionMatrix();
       return;
     }
     if (!fe?.enabled) {
       pass.enabled = false;
-      this.camera.fov = state.camera?.fov ?? 45;
+      this.camera.fov = (state.camera?.fov ?? 45) * fovScale;
       this.camera.updateProjectionMatrix();
       return;
     }
@@ -738,7 +749,7 @@ export class SceneManager {
       Math.atan(heightUniform) * 2,
     );
 
-    this.camera.fov = verticalFovDeg;
+    this.camera.fov = verticalFovDeg * fovScale;
     this.camera.updateProjectionMatrix();
 
     pass.enabled = true;
@@ -753,187 +764,7 @@ export class SceneManager {
   // registerEvents() - Moved to EventManager.js
 
   async applyStateSnapshot(state) {
-    this.transformController?.applyState(state);
-    this.setShading(state.shading);
-    this.autoRotateSpeed = state.autoRotate;
-    this.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off');
-    this.setCameraAutoOrbitReverse(!!state.camera?.autoOrbitReverse);
-    this.setCameraHandheld(state.camera?.handheld ?? 'off');
-    this.setGroundSolid(state.groundSolid);
-    this.setGroundWire(state.groundWire);
-    this.setGroundSolidColor(state.groundSolidColor);
-    this.setGroundWireColor(state.groundWireColor);
-    this.setGroundWireOpacity(state.groundWireOpacity);
-    this.setGridY(state.gridY ?? 0);
-    this.setBaseScale(state.baseScale ?? 1, { updateState: false });
-    this.setBaseMetalness(state.baseMetalness ?? DEFAULT_MATERIAL_METALNESS, { updateState: false });
-    this.setBaseRoughness(state.baseRoughness ?? DEFAULT_MATERIAL_ROUGHNESS, { updateState: false });
-    this.setBaseReflection(state.baseReflection ?? 1, { updateState: false });
-    this.setBaseClearcoat(state.baseClearcoat ?? 0, { updateState: false });
-    this.setBaseGlassSurface(
-      !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
-      { updateState: false },
-    );
-    this.setBaseGlassBlur(state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR, {
-      updateState: false,
-    });
-    this.setBaseGlassAmount(state.baseGlassAmount ?? DEFAULT_BASE_GLASS_AMOUNT, {
-      updateState: false,
-    });
-    this.setBaseGlassBrightness(state.baseGlassBrightness ?? DEFAULT_BASE_GLASS_BRIGHTNESS, {
-      updateState: false,
-    });
-    this.setBackdropEnabled(!!state.backdropEnabled, { updateState: false });
-    this.setBackdropScale(state.backdropScale ?? 1, { updateState: false });
-    this.setBackdropWidth(state.backdropWidth ?? 2, { updateState: false });
-    this.setBackdropColor(state.backdropColor ?? '#808080', { updateState: false });
-    this.setBackdropRotation(state.backdropRotation ?? 0, { updateState: false });
-    this.setBackdropY(state.backdropY ?? 0, { updateState: false });
-    this.setBackdropTextureEnabled(!!state.backdropTextureEnabled, { updateState: false });
-    this.setBackdropTextureScale(state.backdropTextureScale ?? 1.8, { updateState: false });
-    this.setSceneGeometryWireframe(!!state.wireframe?.alwaysOn);
-    this.setGridScale(state.gridScale ?? 1);
-    this.autoExposureController?.applyStateSnapshot(state);
-    // Initialize base HDRI strength if not already set
-    if (this.baseHdriStrength === undefined) {
-      this.baseHdriStrength = (state.hdriStrength ?? 2) * state.exposure;
-    }
-    this.syncPerspectiveCameraFovAndLens();
-    this.cameraController?.setTilt(state.camera.tilt ?? 0);
-    this.lightsEnabled = state.lightsEnabled ?? true;
-    this.lightsMaster = state.lightsMaster ?? 0.30;
-    // Keep LightsController.lightsEnabled / lightsMaster aligned with state before any
-    // per-light updates. Otherwise applySettings + updateLightProperty can disagree with
-    // SceneManager.lightsEnabled (e.g. 404 preset with lights off) and flash studio lights.
-    this.lightsController?.setMaster(this.lightsMaster, state.lights);
-    this.lightsController?.setEnabled(this.lightsEnabled, state.lights);
-    this.setLightsRotation(state.lightsRotation ?? 0);
-    this.setLightsHeight(state.lightsHeight ?? 5);
-    this.setShowLightIndicators(state.showLightIndicators ?? false);
-    this.setLightsAutoRotate(state.lightsAutoRotate ?? false);
-    this.setLightsCastShadows(state.lightsCastShadows ?? true);
-    this.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');
-    this.setLightsShadowSoftness(state.lightsShadowSoftness ?? 4);
-    this.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0001);
-    this.setLightsShadowTwoSided(state.lightsShadowTwoSided ?? false);
-    
-    // Apply individual light properties
-    if (state.lights) {
-      Object.entries(state.lights).forEach(([lightId, config]) => {
-        if (config.intensity !== undefined) {
-          this.lightsController?.updateLightProperty(lightId, 'intensity', config.intensity);
-        }
-        if (config.height !== undefined) {
-          this.lightsController?.updateLightProperty(lightId, 'height', config.height);
-        }
-        if (config.rotate !== undefined) {
-          this.lightsController?.updateLightProperty(lightId, 'rotate', config.rotate);
-        }
-      });
-    }
-    // Update material controller settings
-    if (state.material?.brightness !== undefined) {
-      this.materialController.setMaterialBrightness(state.material.brightness);
-    }
-    if (state.material?.metalness !== undefined) {
-      this.materialController.setMaterialMetalness(state.material.metalness);
-    }
-    if (state.material?.roughness !== undefined) {
-      this.materialController.setMaterialRoughness(state.material.roughness);
-    }
-    if (state.material?.emissive !== undefined) {
-      this.materialController.setMaterialEmissive(state.material.emissive);
-    }
-    // Legacy support
-    if (state.diffuseBrightness !== undefined && state.material?.brightness === undefined) {
-      this.materialController.setMaterialBrightness(state.diffuseBrightness);
-    }
-    if (state.clay) {
-      this.materialController.setClaySettings(state.clay);
-    }
-    if (state.fresnel) {
-      this.materialController.setFresnelSettings(state.fresnel);
-    }
-    if (state.subsurface) {
-      this.setSubsurfaceSettings(state.subsurface);
-    }
-    if (state.wireframe) {
-      this.materialController.setWireframeSettings(state.wireframe);
-    }
-    if (state.creativeLook) {
-      this.materialController.setCreativeLookSettings(state.creativeLook, {
-        skipStateStore: true,
-      });
-    }
-    if (state.svgExtrude?.depth !== undefined) {
-      this.setSvgExtrudeDepth(state.svgExtrude.depth);
-    }
-    if (state.svgExtrude?.normalAngle !== undefined) {
-      this.setSvgExtrudeNormalAngle(state.svgExtrude.normalAngle);
-    }
-    if (state.svgExtrude?.colorDepths !== undefined) {
-      this.setSvgExtrudeColorDepths(state.svgExtrude.colorDepths, { updateState: false });
-    }
-    if (state.svgExtrude?.colorOffsets !== undefined) {
-      this.setSvgExtrudeColorOffsets(state.svgExtrude.colorOffsets, { updateState: false });
-    }
-    if (state.svgExtrude?.flipDirection !== undefined) {
-      this.setSvgExtrudeFlipDirection(state.svgExtrude.flipDirection, { updateState: false });
-    }
-    if (state.svgExtrude) {
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!state.svgExtrude.colorOverride,
-          color: state.svgExtrude.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-      this.setSvgExtrudeSurface(
-        {
-          preset: state.svgExtrude.surfacePreset,
-          scale: state.svgExtrude.surfaceScale,
-        },
-        { updateState: false },
-      );
-    }
-    this.setReverseNormals(state.advanced?.reverseNormals ?? false);
-    this.lensDirtController?.updateSettings(state.lensDirt);
-    this.updateGrain(state.grain);
-    this.updateAberration(state.aberration);
-    this.backgroundController?.setColor(state.background);
-    this.setToneMapping(state.toneMapping ?? 'aces-filmic');
-    this.setHdriStrength(state.hdriStrength ?? 2);
-    // Initialize color adjustment settings
-    this.setContrast(state.camera?.contrast ?? 1.0);
-    this.setSaturation(state.camera?.saturation ?? 1.0);
-    this.setClarity(state.camera?.clarity ?? 0);
-    this.setFade(state.camera?.fade ?? 0);
-    this.setSharpness(state.camera?.sharpness ?? 0);
-    this.setToneCurve(state.toneCurve);
-    this.setTemperature(state.camera?.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
-    this.setTint((state.camera?.tint ?? 0) / 100);
-    this.setHighlights((state.camera?.highlights ?? 0) / 100);
-    this.setShadows(cameraShadowsUiToShader(state.camera?.shadows ?? 0));
-    const defaultCam = this.stateStore.getDefaults().camera ?? {};
-    this.setVignette(effectiveVignetteIntensity(state.camera, defaultCam));
-    this.setVignetteColor(state.camera?.vignetteColor ?? '#000000');
-    // Initialize clay normal map setting
-    if (state.clay?.normalMap !== undefined) {
-      this.setClayNormalMap(state.clay.normalMap);
-    }
-    this.setHdriBlurriness(state.hdriBlurriness ?? 0);
-    this.setHdriRotation(state.hdriRotation ?? 0);
-    this.setHdriEnabled(state.hdriEnabled);
-    this.setHdriBackground(state.hdriBackground);
-    this.lensFlareController?.applyStateSnapshot(state);
-    await this.setHdriPreset(state.hdri);
-    this.applyRenderQualitySettings();
-    this.applyColorCheckerFromState(state);
-    this._ensureColorCheckerReferenceShadingConsistency();
-    this.viewportFramingOverlays.syncFromCamera(state.camera ?? {}, {
-      letterboxAnimate: false,
-      compositionGridAnimate: false,
-    });
+    await this.stateApplier.apply(state);
   }
 
   /**
@@ -1032,11 +863,14 @@ export class SceneManager {
     podium.scale.setScalar(r.animMul);
   }
 
-  /** Podium glass on the podium top — uses same shared scale curves as podium toggles. */
+  /** Base glass on the base top — same shared scale curves as base toggles. */
   _updateBaseGlassAppearAnimation() {
     const reflector = this.groundController?.podiumReflector;
     const st = this.stateStore.getState();
-    const glassOn = !!(st.groundSolid && st.baseGlassSurface);
+    const glassOn = !!(
+      st.groundSolid &&
+      (st.baseGlassSurface ?? st.podiumReflectMesh ?? false)
+    );
 
     if (!reflector) {
       this._baseGlassToggleCtx.prevEnabled = glassOn;
@@ -1050,6 +884,14 @@ export class SceneManager {
     );
     reflector.visible = r.visible;
     reflector.scale.setScalar(r.animMul);
+    if (
+      !glassOn &&
+      !r.visible &&
+      this._baseGlassToggleCtx.phase === 'idle' &&
+      this.groundController?.podiumReflector
+    ) {
+      this.groundController.disposeBaseReflector();
+    }
   }
 
   _updateBackdropAppearAnimation() {
@@ -1246,10 +1088,6 @@ export class SceneManager {
       }
       mat.needsUpdate = true;
     }
-  }
-
-  forceRestoreClaySettings() {
-    this.materialController.forceRestoreClaySettings();
   }
 
   setHdriBackground(enabled) {
@@ -1494,6 +1332,9 @@ export class SceneManager {
 
   setGroundSolid(enabled) {
     this.groundController?.setSolidEnabled(enabled);
+    this._updateBaseAppearAnimation();
+    this._updateBaseGlassAppearAnimation();
+    this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
   setGroundWire(enabled) {
@@ -1515,11 +1356,6 @@ export class SceneManager {
   setCameraAutoOrbit(mode) {
     this.cameraAutoOrbit = mode ?? 'off';
     this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
-  }
-
-  setCameraAutoOrbitReverse(reverse) {
-    this.cameraAutoOrbitReverse = !!reverse;
-    this.cameraController?.setAutoOrbitReverse(this.cameraAutoOrbitReverse);
   }
 
   setCameraHandheld(mode) {
@@ -1724,6 +1560,8 @@ export class SceneManager {
     const on = !!enabled;
     this.groundController?.setBaseGlassSurface(on);
     if (updateState) this.stateStore.set('baseGlassSurface', on);
+    this._updateBaseGlassAppearAnimation();
+    this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
   setBaseGlassBlur(value, { updateState = true } = {}) {
@@ -1745,6 +1583,8 @@ export class SceneManager {
     const on = !!enabled;
     this.groundController?.setBackdropEnabled(on);
     if (updateState) this.stateStore.set('backdropEnabled', on);
+    this._updateBackdropAppearAnimation();
+    this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
   setBackdropScale(value, { updateState = true } = {}) {
@@ -2047,163 +1887,23 @@ export class SceneManager {
    */
 
   async loadFile(file, options = {}) {
-    if (!file) return;
-    const previousFile = this.currentFile;
-    const hadExistingModel = !!this.currentModel;
-
-    this.currentFile = file;
-    this.ui.updateTitle(file.name);
-    this.ui.updateTopBarDetail(`${file.name} — Loading…`);
-    this.ui.setDropzoneVisible(false);
-
-    // On first load, start with low exposure and fade in
-    const isFirstLoad = this.isFirstModelLoad;
-    const targetExposure = this.stateStore.getState().exposure ?? 1.0;
-    
-    if (isFirstLoad) {
-      // Set exposure to very low value initially
-      const startExposure = 0.1;
-      this.autoExposureController?.setExposure(startExposure);
-      this.eventBus.emit('scene:exposure', startExposure);
-    }
-
-    this.ui.beginLoadSpinner();
-    try {
-      const svgExtrudeState = this.stateStore.getState()?.svgExtrude || {};
-      const asset = await this.modelLoader.loadFile(file, {
-        svgExtrudeDepth: svgExtrudeState.depth,
-        svgExtrudeNormalAngle: svgExtrudeState.normalAngle,
-        svgExtrudeColorDepths: svgExtrudeState.colorDepths || {},
-        svgExtrudeColorOffsets: svgExtrudeState.colorOffsets || {},
-        svgExtrudeFlipDirection: !!svgExtrudeState.flipDirection,
-      });
-      this.setModel(asset.object, asset.animations ?? []);
-      this._applyAssetMetadata(asset);
-      const isFbx = typeof file?.name === 'string' && file.name.toLowerCase().endsWith('.fbx');
-      this.stateStore.set('fbxMapSlots.enabled', isFbx);
-      if (isFbx) {
-        this.eventBus.emit('scene:fbx-map-slots-reset');
-      }
-      this.updateStatsUI(file, asset.object, asset.gltfMetadata);
-      this.ui.updateTopBarDetail(`${file.name} — Idle`);
-      if (!options.silent) {
-        if (isFbx) {
-          this.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
-            okLabel: 'CONTINUE',
-            modalTone:
-              options.suppressSuccessToastSound === true ? 'none' : 'notification',
-          });
-        } else {
-          this.ui.showToast('Model loaded', 3200, {
-            notification: options.suppressSuccessToastSound === true ? false : undefined,
-          });
-        }
-      }
-      this.eventBus.emit('scene:model-load-complete', { success: true, file });
-    } catch (error) {
-      console.error('Failed to load model', error);
-      const msg =
-        error && typeof error.message === 'string' && error.message.trim().length > 0
-          ? error.message.trim()
-          : 'Could not load model';
-      if (msg.length > LONG_TOAST_CHAR_THRESHOLD) {
-        this.ui.showMessageAlert(msg, 'Couldn’t load model');
-      } else {
-        this.ui.showToast(msg);
-      }
-
-      if (hadExistingModel) {
-        // Keep the viewer visible with the mesh that was already loaded — do not reopen the dark start screen over it.
-        this.currentFile = previousFile ?? null;
-        this.ui.setDropzoneVisible(false);
-        const label = previousFile?.name ?? 'Model';
-        this.ui.updateTitle(label);
-        this.ui.updateTopBarDetail(`${label} — Idle`);
-      } else {
-        this.ui.setDropzoneVisible(true);
-      }
-      this.eventBus.emit('scene:model-load-complete', { success: false, file, error });
-    } finally {
-      this.ui.endLoadSpinner();
-    }
+    return this.modelLifecycle.loadFile(file, options);
   }
 
   async loadFileBundle(files) {
-    if (!files?.length) return;
-    this.ui.beginLoadSpinner();
-    try {
-      const asset = await this.modelLoader.loadFileBundle(files);
-      const sourceFile = asset.sourceFile ?? files[0]?.file;
-      if (sourceFile) {
-        this.currentFile = sourceFile;
-        this.ui.updateTitle(sourceFile.name);
-      }
-      this.setModel(asset.object, asset.animations ?? []);
-      this._applyAssetMetadata(asset);
-      const isFbx =
-        typeof sourceFile?.name === 'string' && sourceFile.name.toLowerCase().endsWith('.fbx');
-      this.stateStore.set('fbxMapSlots.enabled', isFbx);
-      if (isFbx) {
-        this.eventBus.emit('scene:fbx-map-slots-reset');
-      }
-      this.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
-      if (isFbx) {
-        this.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
-          okLabel: 'CONTINUE',
-          modalTone: 'notification',
-        });
-      } else {
-        this.ui.showToast('Folder loaded');
-      }
-      this.eventBus.emit('scene:model-load-complete', { success: true, file: sourceFile });
-    } catch (error) {
-        console.error('Folder load failed', error);
-      const raw = error?.message || 'Folder load failed';
-      const msg = typeof raw === 'string' ? raw.trim() : String(raw);
-      if (msg.length > LONG_TOAST_CHAR_THRESHOLD) {
-        this.ui.showMessageAlert(msg, 'Couldn’t load folder');
-      } else {
-        this.ui.showToast(msg);
-      }
-      this.eventBus.emit('scene:model-load-complete', { success: false, error });
-    } finally {
-      this.ui.endLoadSpinner();
-    }
+    return this.modelLifecycle.loadFileBundle(files);
   }
 
   clearModel() {
-    this.stateStore.set('fbxMapSlots.enabled', false);
-    this.stateStore.set('fbxMapSlots.invertNormalY', false);
-    this.stateStore.set('fbxMapSlots.pbrUvChannel', 0);
-    this.diagnosticsController.clearBoneHelpers();
-    this.materialController.clear();
-    this.modelLoader.disposeObjectUrls();
-    while (this.modelRoot.children.length) {
-      const child = this.modelRoot.children[0];
-      this.disposeNode(child);
-      this.modelRoot.remove(child);
-    }
-    this.currentModel = null;
-    // Detach transform controls when model is cleared
-    this.transformControlsTranslate?.detach();
-    this.transformControlsRotate?.detach();
-    this.transformControlsScale?.detach();
-    // Clear occlusion check objects when model is removed
-    this.lensFlareController?.setModelRoot(null);
-    this.animationController.dispose();
-    this.currentAssetMetadata = null;
-    this.svgExtrudeImporter = null;
-    this.isSvgExtrudeModel = false;
-    this.isStlModel = false;
-    this._pivotCenterDelta = null;
-    this._disposeStlRawCaches();
-    this.originalGeometryIndices = new WeakMap();
-    this.originalGeometryAttributes = new WeakMap();
-    this.originalMaterialSides = new WeakMap();
-    this.eventBus.emit('ui:advanced-alpha-visible', { visible: false });
-    this.eventBus.emit('ui:advanced-glass-visible', { visible: false });
-    this._emitStlSmoothingControlsVisibility();
-    this.eventBus.emit('ui:center-pivot-enabled', { enabled: false });
+    this.modelLifecycle.clearModel();
+  }
+
+  disposeNode(object) {
+    this.modelLifecycle.disposeNode(object);
+  }
+
+  setModel(object, animations) {
+    this.modelLifecycle.setModel(object, animations);
   }
 
   /**
@@ -2244,214 +1944,6 @@ export class SceneManager {
     this.materialController?.applyFbxPbrUvChannelsFromState?.();
   }
 
-  _applyAssetMetadata(asset = {}) {
-    this.currentAssetMetadata = asset?.gltfMetadata || null;
-    const svgExtrude = asset?.svgExtrude || null;
-    const isSvgExtrude = !!svgExtrude?.enabled;
-    this.svgExtrudeImporter = isSvgExtrude ? svgExtrude.importer : null;
-    this.isSvgExtrudeModel = isSvgExtrude;
-    this.stateStore.set('svgExtrude.enabled', isSvgExtrude);
-    if (!isSvgExtrude) {
-      this.stateStore.set('svgExtrude.availableColors', []);
-      this.stateStore.set('svgExtrude.colorDepths', {});
-      this.stateStore.set('svgExtrude.colorOffsets', {});
-      this.stateStore.set('svgExtrude.flipDirection', false);
-      return;
-    }
-    if (isSvgExtrude) {
-      const nextDepth = svgExtrude.depth ?? this.stateStore.getState()?.svgExtrude?.depth ?? 0.2;
-      this.stateStore.set('svgExtrude.depth', nextDepth);
-      const nextNormalAngle = svgExtrude.normalAngle ?? this.stateStore.getState()?.svgExtrude?.normalAngle ?? 45;
-      this.stateStore.set('svgExtrude.normalAngle', nextNormalAngle);
-      const flipDirection = !!(svgExtrude.flipDirection ?? this.stateStore.getState()?.svgExtrude?.flipDirection);
-      this.stateStore.set('svgExtrude.flipDirection', flipDirection);
-      const availableColors = Array.isArray(svgExtrude.colors) ? svgExtrude.colors : [];
-      this.stateStore.set('svgExtrude.availableColors', availableColors);
-      const existingColorDepths =
-        svgExtrude.colorDepths ??
-        this.stateStore.getState()?.svgExtrude?.colorDepths ??
-        {};
-      const existingColorOffsets =
-        svgExtrude.colorOffsets ??
-        this.stateStore.getState()?.svgExtrude?.colorOffsets ??
-        {};
-      const nextColorDepths = {};
-      const nextColorOffsets = {};
-      availableColors.forEach((color) => {
-        if (existingColorDepths[color] !== undefined) {
-          nextColorDepths[color] = existingColorDepths[color];
-        }
-        if (existingColorOffsets[color] !== undefined) {
-          nextColorOffsets[color] = existingColorOffsets[color];
-        }
-      });
-      this.stateStore.set('svgExtrude.colorDepths', nextColorDepths);
-      this.stateStore.set('svgExtrude.colorOffsets', nextColorOffsets);
-      this.setSvgExtrudeColorDepths(nextColorDepths, { updateState: false });
-      this.setSvgExtrudeColorOffsets(nextColorOffsets, { updateState: false });
-      this.setSvgExtrudeFlipDirection(flipDirection, { updateState: false });
-      const svgState = this.stateStore.getState().svgExtrude || {};
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!svgState.colorOverride,
-          color: svgState.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-    }
-  }
-
-  disposeNode(object) {
-    object.traverse?.((node) => {
-      if (node.isMesh) {
-        if (node.geometry) node.geometry.dispose();
-        const material = node.material;
-        if (Array.isArray(material)) {
-          material.forEach((mat) => mat?.dispose?.());
-        } else {
-          material?.dispose?.();
-        }
-      }
-      if (node.isTexture) {
-        node.dispose();
-      }
-    });
-  }
-
-  setModel(object, animations) {
-    this.clearModel();
-    this.currentModel = object;
-    
-    // Reset transforms before adding new model
-    this.transformController?.reset();
-    this.modelRoot.add(object);
-    
-    // Update lens flare occlusion check to only check the model (much more performant)
-    this.lensFlareController?.setModelRoot(this.modelRoot);
-    
-    this.prepareMesh(object);
-    this._setupStlSmoothingForModel(object);
-    this._applyCenterPivotFromState();
-
-    // Track if this is the first model load
-    const wasFirstLoad = this.isFirstModelLoad;
-    if (this.isFirstModelLoad) {
-      // Mark that we've loaded the first model
-      this.isFirstModelLoad = false;
-    }
-    const state = this.stateStore.getState();
-    
-    // Attach transform controls to modelRoot based on widget visibility states
-    if (state.moveWidgetEnabled && this.transformControlsTranslate) {
-      this.transformControlsTranslate.attach(this.modelRoot);
-      this.transformControlsTranslate.visible = true;
-    }
-    if (state.rotateWidgetEnabled && this.transformControlsRotate) {
-      this.transformControlsRotate.attach(this.modelRoot);
-      this.transformControlsRotate.visible = true;
-    }
-    if (state.scaleWidgetEnabled && this.transformControlsScale) {
-      this.transformControlsScale.attach(this.modelRoot);
-      this.transformControlsScale.visible = true;
-    }
-    // Apply transform state from StateStore
-    this.transformController?.applyState(state);
-    if (wasFirstLoad) {
-      this._cancelGroundGridBottomAlignAnimation();
-      this._alignGroundAndGridToCurrentModelBottom();
-    }
-    this.materialController.setModel(object, state.shading, {
-      clay: state.clay,
-      fresnel: state.fresnel,
-      subsurface: state.subsurface,
-      wireframe: state.wireframe,
-      creativeLook: state.creativeLook,
-      advanced: state.advanced,
-      material: state.material ?? {
-        brightness: state.diffuseBrightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
-        metalness: 0.0,
-        roughness: DEFAULT_MATERIAL_ROUGHNESS,
-      },
-    });
-    this.setShading(state.shading);
-    this._emitAdvancedAlphaPanelVisibility();
-    this.setReverseNormals(state.advanced?.reverseNormals ?? false);
-    this.diagnosticsController.setModel(object, state.shading);
-    this.refreshBoneHelpers();
-    // Apply Fresnel settings if enabled
-    if (state.fresnel?.enabled) {
-      this.setFresnelSettings(state.fresnel);
-    }
-    // Apply current HDRI environment settings to the new model
-    if (this.scene.environment) {
-      const intensity = Math.max(0, this.hdriStrength);
-      this.updateMaterialsEnvironment(this.scene.environment, intensity);
-    }
-    this.animationController.setModel(this.currentModel, animations);
-    
-    // Re-apply ground/podium state after model load to ensure visibility is correct
-    // Use a small delay to ensure ground meshes are fully initialized
-    requestAnimationFrame(() => {
-      this.setGroundSolid(state.groundSolid);
-      this.setGroundWire(state.groundWire);
-      this.materialController?.resyncEmissiveFromImportedMaterials?.();
-    });
-    
-    this.ui.setDropzoneVisible(false);
-    this.ui.revealShelf?.({ skipSound: wasFirstLoad });
-    this.eventBus.emit('ui:center-pivot-enabled', { enabled: true });
-    
-    // Keep the mesh hidden until camera framing has sampled its full-size bounds.
-    object.visible = false;
-    
-    // Smoothly animate camera to focus on the new mesh
-    // Use a small delay to ensure everything is set up
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        // Double RAF ensures model is fully rendered before animating
-        if (this.currentModel) {
-          if (wasFirstLoad) {
-            // First load: fade in exposure and animate camera
-            const targetExposure = this.stateStore.getState().exposure ?? 1.0;
-            const startExposure = 0.1;
-            const duration = 2000; // 2 seconds
-            const startTime = performance.now();
-            
-            const fadeExposure = () => {
-              const elapsed = performance.now() - startTime;
-              const progress = Math.min(1, elapsed / duration);
-              // Use smooth ease-out curve (quadratic) - starts fast, gradually slows
-              const easedProgress = 1 - Math.pow(1 - progress, 2);
-              const currentExposure = startExposure + (targetExposure - startExposure) * easedProgress;
-              
-              this.autoExposureController?.setExposure(currentExposure);
-              this.eventBus.emit('scene:exposure', currentExposure);
-              
-              if (progress < 1) {
-                requestAnimationFrame(fadeExposure);
-              } else {
-                // Ensure we end at exact target value
-                this.autoExposureController?.setExposure(targetExposure);
-                this.eventBus.emit('scene:exposure', targetExposure);
-              }
-            };
-            
-            // Start exposure fade-in
-            fadeExposure();
-          }
-          
-          // Smoothly animate camera to focus on the mesh (for both first and subsequent loads)
-          this.cameraController?.focusOnObjectAnimated(this.currentModel, 1.0);
-          this._scaleInMeshOnSpawn(object);
-        }
-      });
-    });
-  }
-
-  prepareMesh(object) {
-    this.materialController.prepareMesh(object);
-  }
-
   /** After shading/material setup, sync Advanced → Alpha UI from import materials (originalMaterials). */
   _emitAdvancedAlphaPanelVisibility() {
     if (!this.currentModel) return;
@@ -2463,131 +1955,39 @@ export class SceneManager {
     this.eventBus.emit('ui:advanced-glass-visible', { visible: hasHeuristicGlass });
   }
 
-  _scaleInMeshOnSpawn(object) {
-    if (!object || this.currentModel !== object) return;
-    if (this._meshSpawnScaleRaf) {
-      cancelAnimationFrame(this._meshSpawnScaleRaf);
-      this._meshSpawnScaleRaf = null;
-    }
-
-    const targetScale = object.scale.clone();
-    const duration = Math.min(SCALE_TOGGLE_IN_MS, 320);
-    const startTime = performance.now();
-
-    object.visible = true;
-    object.scale.set(
-      targetScale.x * 0.001,
-      targetScale.y * 0.001,
-      targetScale.z * 0.001,
-    );
-
-    const tick = () => {
-      if (this.currentModel !== object) return;
-      const t = Math.min(1, (performance.now() - startTime) / duration);
-      const m = easeOutExpo(t);
-      object.scale.set(
-        targetScale.x * m,
-        targetScale.y * m,
-        targetScale.z * m,
-      );
-
-      if (t < 1) {
-        this._meshSpawnScaleRaf = requestAnimationFrame(tick);
-      } else {
-        object.scale.copy(targetScale);
-        this._meshSpawnScaleRaf = null;
-      }
-    };
-
-    this._meshSpawnScaleRaf = requestAnimationFrame(tick);
-  }
-
   setSvgExtrudeDepth(depth) {
-    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
-    try {
-      this.svgExtrudeImporter.setDepth(depth);
-      // Register rebuilt meshes as originals so material controls keep working.
-      this.materialController.prepareMesh(this.currentModel);
-      this.setShading(this.currentShading);
-      const svgState = this.stateStore.getState().svgExtrude || {};
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!svgState.colorOverride,
-          color: svgState.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
-      this.refreshBoneHelpers();
-      if (this.currentFile) {
-        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
-      }
-    } catch (error) {
-      console.error('Failed to update SVG extrusion depth', error);
-      this.ui?.showToast?.('Could not update SVG depth');
-    }
+    runSvgExtrudeImporterMutation(this, () => this.svgExtrudeImporter.setDepth(depth), {
+      logLabel: 'update SVG extrusion depth',
+      toastOnError: 'Could not update SVG depth',
+    });
   }
 
   setSvgExtrudeNormalAngle(normalAngle) {
-    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
-    try {
-      this.svgExtrudeImporter.setNormalAngleDeg(normalAngle);
-      this.materialController.prepareMesh(this.currentModel);
-      this.setShading(this.currentShading);
-      const svgState = this.stateStore.getState().svgExtrude || {};
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!svgState.colorOverride,
-          color: svgState.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
-      this.refreshBoneHelpers();
-      if (this.currentFile) {
-        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
-      }
-    } catch (error) {
-      console.error('Failed to update SVG normal angle', error);
-      this.ui?.showToast?.('Could not update SVG angle');
-    }
+    runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setNormalAngleDeg(normalAngle),
+      {
+        logLabel: 'update SVG normal angle',
+        toastOnError: 'Could not update SVG angle',
+      },
+    );
   }
 
   setSvgExtrudeColorDepths(colorDepths = {}, options = {}) {
     const { updateState = true } = options;
     if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
-    const availableColors = this.stateStore.getState()?.svgExtrude?.availableColors || [];
-    const sanitized = {};
-    Object.entries(colorDepths || {}).forEach(([color, value]) => {
-      if (!availableColors.includes(color)) return;
-      const numeric = Number(value);
-      if (!Number.isFinite(numeric)) return;
-      sanitized[color] = Math.max(0.01, Math.min(1.0, numeric));
-    });
+    const sanitized = sanitizeSvgExtrudeColorDepths(colorDepths, this.stateStore);
     if (updateState) {
       this.stateStore.set('svgExtrude.colorDepths', sanitized);
     }
-    try {
-      this.svgExtrudeImporter.setColorDepths(sanitized);
-      this.materialController.prepareMesh(this.currentModel);
-      this.setShading(this.currentShading);
-      const svgState = this.stateStore.getState().svgExtrude || {};
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!svgState.colorOverride,
-          color: svgState.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
-      this.refreshBoneHelpers();
-      if (this.currentFile) {
-        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
-      }
-    } catch (error) {
-      console.error('Failed to update SVG color depths', error);
-      this.ui?.showToast?.('Could not update SVG color depths');
-    }
+    runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setColorDepths(sanitized),
+      {
+        logLabel: 'update SVG color depths',
+        toastOnError: 'Could not update SVG color depths',
+      },
+    );
   }
 
   setSvgExtrudeColorDepth({ color, depth } = {}) {
@@ -2609,38 +2009,18 @@ export class SceneManager {
   setSvgExtrudeColorOffsets(colorOffsets = {}, options = {}) {
     const { updateState = true } = options;
     if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
-    const availableColors = this.stateStore.getState()?.svgExtrude?.availableColors || [];
-    const sanitized = {};
-    Object.entries(colorOffsets || {}).forEach(([color, value]) => {
-      if (!availableColors.includes(color)) return;
-      const numeric = Number(value);
-      if (!Number.isFinite(numeric)) return;
-      sanitized[color] = Math.max(-1.0, Math.min(1.0, numeric));
-    });
+    const sanitized = sanitizeSvgExtrudeColorOffsets(colorOffsets, this.stateStore);
     if (updateState) {
       this.stateStore.set('svgExtrude.colorOffsets', sanitized);
     }
-    try {
-      this.svgExtrudeImporter.setColorOffsets(sanitized);
-      this.materialController.prepareMesh(this.currentModel);
-      this.setShading(this.currentShading);
-      const svgState = this.stateStore.getState().svgExtrude || {};
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!svgState.colorOverride,
-          color: svgState.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
-      this.refreshBoneHelpers();
-      if (this.currentFile) {
-        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
-      }
-    } catch (error) {
-      console.error('Failed to update SVG color offsets', error);
-      this.ui?.showToast?.('Could not update SVG color offsets');
-    }
+    runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setColorOffsets(sanitized),
+      {
+        logLabel: 'update SVG color offsets',
+        toastOnError: 'Could not update SVG color offsets',
+      },
+    );
   }
 
   setSvgExtrudeColorOffset({ color, offset } = {}) {
@@ -2663,28 +2043,14 @@ export class SceneManager {
     if (updateState) {
       this.stateStore.set('svgExtrude.flipDirection', flipDirection);
     }
-    if (!this.currentModel || !this.svgExtrudeImporter || !this.isSvgExtrudeModel) return;
-    try {
-      this.svgExtrudeImporter.setFlipDirection(flipDirection);
-      this.materialController.prepareMesh(this.currentModel);
-      this.setShading(this.currentShading);
-      const svgState = this.stateStore.getState().svgExtrude || {};
-      this.setSvgExtrudeColorOverride(
-        {
-          enabled: !!svgState.colorOverride,
-          color: svgState.overrideColor ?? '#7ed321',
-        },
-        { updateState: false },
-      );
-      this.setReverseNormals(this.stateStore.getState().advanced?.reverseNormals ?? false);
-      this.refreshBoneHelpers();
-      if (this.currentFile) {
-        this.updateStatsUI(this.currentFile, this.currentModel, this.currentAssetMetadata);
-      }
-    } catch (error) {
-      console.error('Failed to update SVG extrude direction', error);
-      this.ui?.showToast?.('Could not update SVG direction');
-    }
+    runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setFlipDirection(flipDirection),
+      {
+        logLabel: 'update SVG extrude direction',
+        toastOnError: 'Could not update SVG direction',
+      },
+    );
   }
 
   _disposeStlRawCaches() {
@@ -2933,14 +2299,6 @@ export class SceneManager {
       this.stateStore,
       this.currentShading,
     );
-    const svgState = this.stateStore.getState().svgExtrude || {};
-    this.setSvgExtrudeColorOverride(
-      {
-        enabled: !!svgState.colorOverride,
-        color: svgState.overrideColor ?? '#7ed321',
-      },
-      { updateState: false },
-    );
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {
@@ -3112,45 +2470,6 @@ export class SceneManager {
     this.lensFlareController?.setTimeAnimationPaused(on);
   }
 
-  animate() {
-    requestAnimationFrame(() => this.animate());
-    const delta = this.clock.getDelta();
-    this.animationController.update(delta);
-    if (this.autoRotateSpeed && this.currentModel) {
-      this.modelRoot.rotation.y += delta * this.autoRotateSpeed;
-    }
-    if (this.lightsAutoRotate) {
-      const deltaDegrees = this.lightsAutoRotateSpeed * delta;
-      // During auto-rotate, skip StateStore updates to avoid triggering full UI sync every frame
-      // StateStore will be synced when auto-rotate stops (in setLightsAutoRotate)
-      this.setLightsRotation(this.lightsRotation + deltaDegrees, { updateState: false });
-    }
-    this.cameraController.update();
-    // Update camera auto-orbit
-    if (this.cameraAutoOrbit !== 'off') {
-      this.cameraController.updateAutoOrbit(delta);
-    }
-    this.cameraController.applyHandheldMotion(delta);
-    this.materialController.updateCreativeLookTime(this.clock.elapsedTime);
-    this._updateColorCheckerPose();
-    this._updateBaseAppearAnimation();
-    this._updateBaseGlassAppearAnimation();
-    this._updateBackdropAppearAnimation();
-    this.diagnosticsController.update(delta);
-    if (!this.panelsShelfScrolling) {
-      this.postPipeline?.updateGrainTime(delta);
-    }
-    this.updateWireframeOverlayTransforms();
-    this.updateUvCheckerOverlayTransforms();
-    this._updateBackgroundSphere();
-    this.render();
-    
-    // Update histogram after rendering (skip during shelf scroll to avoid readPixels stall)
-    if (this.histogramController && !this.panelsShelfScrolling) {
-      this.histogramController.update();
-    }
-  }
-
   /**
    * Update background sphere position to follow camera
    * This ensures it's always behind everything for proper DOF depth
@@ -3182,91 +2501,7 @@ export class SceneManager {
     return v.negate().normalize();
   }
 
-  /**
-   * EffectComposer RTs use `logical × composer._pixelRatio`. If that drifts from
-   * `renderer.getPixelRatio()` (async resize, Ultra/Medium toggle), podium blur restores the
-   * viewport with `rtWidth / rendererPR` and undershoots (~¾ frame + L-shaped black bars).
-   */
-  _ensureComposerBuffersMatchRenderer() {
-    if (!this.composer?.renderTarget1) return;
-    const gl = this.renderer.getContext();
-    let bw;
-    let bh;
-    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
-      bw = gl.drawingBufferWidth;
-      bh = gl.drawingBufferHeight;
-    } else {
-      const db = new THREE.Vector2();
-      this.renderer.getDrawingBufferSize(db);
-      bw = db.x;
-      bh = db.y;
-    }
-    const rt = this.composer.renderTarget1;
-    if (Math.abs(rt.width - bw) <= 2 && Math.abs(rt.height - bh) <= 2) {
-      return;
-    }
-    const logical = fullViewportLogicalSize(this.renderer);
-    this.syncPostProcessingForLogicalSize(logical.x, logical.y);
-  }
-
-  /** Reset logical viewport + scissor around the post stack (passes may leave partial viewport). */
-  _resetRendererViewportToCanvas() {
-    const r = this.renderer;
-    const v = fullViewportLogicalSize(r);
-    r.setViewport(0, 0, v.x, v.y);
-    if (typeof r.setScissorTest === 'function') {
-      r.setScissorTest(false);
-    }
-  }
-
-  /**
-   * Bloom / several ShaderPasses temporarily set clear alpha (e.g. 0). If that lingers in Three's
-   * tracked clear state, the next frame's RenderPass can snapshot a bad `oldClearAlpha` and clear
-   * the scene RT wrong → random black behind the HDRI. Reset before EffectComposer each frame.
-   */
-  _syncRendererClearForSceneBackground() {
-    const r = this.renderer;
-    const bg = this.scene.background;
-    if (bg == null) {
-      const hex = this.backgroundController?.getColor() ?? '#000000';
-      r.setClearColor(new THREE.Color(hex), 1);
-      return;
-    }
-    if (bg.isColor) {
-      r.setClearColor(bg, 1);
-      return;
-    }
-    r.setClearColor(0x000000, 1);
-  }
-
-  /**
-   * UnrealBloomPass / tint / anamorphic aggressively rewrite clear alpha and RT state; combined with
-   * Shader Lab materials that causes intermittent black regions. Same logic must run before any
-   * EffectComposer capture path (interactive render, PNG export, video frames).
-   */
-  _applyCreativeLookBloomSuppression() {
-    const creativeLookOn =
-      this.materialController?.getCreativeLookSettings?.()?.enabled === true;
-
-    if (creativeLookOn && this.postPipeline) {
-      if (this.postPipeline.bloomPass) this.postPipeline.bloomPass.enabled = false;
-      if (this.postPipeline.bloomTintPass) this.postPipeline.bloomTintPass.enabled = false;
-      if (this.postPipeline.anamorphicBloomPass) {
-        this.postPipeline.anamorphicBloomPass.enabled = false;
-      }
-      this._creativeBloomWasSuppressed = true;
-    } else if (this._creativeBloomWasSuppressed) {
-      this._creativeBloomWasSuppressed = false;
-      this.updateBloom(this.stateStore.getState().bloom);
-      this.applyRenderQualityVisualOverrides();
-    }
-  }
-
   render() {
-    // Continuously protect clay settings during render to prevent any resets
-    // This runs every frame to ensure values NEVER go to 0
-    this.materialController.forceRestoreClaySettings();
-    
     if (this.unlitMode) {
       const previousExposure = this.renderer.toneMappingExposure;
       const previousColor = this.renderer.getClearColor(new THREE.Color()).clone();
@@ -3274,7 +2509,7 @@ export class SceneManager {
       this.renderer.toneMappingExposure = 1;
       const bgColor = this.backgroundController?.getColor() ?? '#000000';
       this.renderer.setClearColor(new THREE.Color(bgColor), 1);
-      this._resetRendererViewportToCanvas();
+      this.composerLifecycle?.resetRendererViewportToCanvas();
       this.renderer.render(this.scene, this.camera);
       this.renderer.setClearColor(previousColor, previousAlpha);
       this.renderer.toneMappingExposure = previousExposure;
@@ -3284,14 +2519,8 @@ export class SceneManager {
     // Update lens dirt exposure factor from auto-exposure luminance
     this.lensDirtController?.updateExposureFactor();
 
-    this._applyCreativeLookBloomSuppression();
-
     if (this.composer) {
-      this._ensureComposerBuffersMatchRenderer();
-      this._resetRendererViewportToCanvas();
-      this._syncRendererClearForSceneBackground();
-      this.composer.render();
-      this._resetRendererViewportToCanvas();
+      this.composerLifecycle.renderComposerPass();
     } else {
       this.renderer.render(this.scene, this.camera);
     }
@@ -3353,6 +2582,10 @@ export class SceneManager {
   }
 
   async exportPng(settings = {}) {
+    if (isFisheyeEnabledInState(this.stateStore)) {
+      showFisheyePngExportBlockedAlert(this.ui);
+      return;
+    }
     const { transparent = false, size = 2 } = settings;
     this._suppressResizeForExport = true;
     try {
@@ -3452,6 +2685,10 @@ export class SceneManager {
   }
 
   async exportVideo(settings = {}) {
+    if (settings?.format === 'png' && isFisheyeEnabledInState(this.stateStore)) {
+      showFisheyePngExportBlockedAlert(this.ui);
+      return;
+    }
     await this.videoExporter?.exportVideo(settings);
   }
 }

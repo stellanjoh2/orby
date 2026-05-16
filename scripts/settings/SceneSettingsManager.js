@@ -170,7 +170,6 @@ export class SceneSettingsManager {
         vignette: state.camera?.vignette,
         vignetteColor: state.camera?.vignetteColor,
         autoOrbit: state.camera?.autoOrbit,
-        autoOrbitReverse: state.camera?.autoOrbitReverse,
         handheld: state.camera?.handheld,
         compositionGridEnabled: state.camera?.compositionGridEnabled,
         compositionGuidesInverted: state.camera?.compositionGuidesInverted,
@@ -965,10 +964,6 @@ export class SceneSettingsManager {
         if (payload.camera.autoOrbit !== undefined) {
           this.stateStore.set('camera.autoOrbit', payload.camera.autoOrbit);
           this.eventBus.emit('camera:auto-orbit', payload.camera.autoOrbit);
-        }
-        if (payload.camera.autoOrbitReverse !== undefined) {
-          this.stateStore.set('camera.autoOrbitReverse', !!payload.camera.autoOrbitReverse);
-          this.eventBus.emit('camera:auto-orbit-reverse', !!payload.camera.autoOrbitReverse);
         }
         if (payload.camera.handheld !== undefined) {
           let h = payload.camera.handheld;
