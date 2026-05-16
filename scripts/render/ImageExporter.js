@@ -313,7 +313,7 @@ export class ImageExporter {
 
     const tw = exportW;
     const th = exportH;
-    const dataUrl = this.composer
+    let dataUrl = this.composer
       ? this._captureComposerOutputAsPngDataUrl(tw, th, { cinematicLetterbox219 })
       : canvas.toDataURL('image/png');
     if (!this.composer && cinematicLetterbox219) {
