@@ -98,6 +98,9 @@ export class SceneSettingsManager {
         uvChecker: !!state.advanced?.uvChecker,
         uvCheckerScale: state.advanced?.uvCheckerScale ?? 1,
         uvCheckerStyle: state.advanced?.uvCheckerStyle ?? 'vibrant',
+        stlSmoothShading: state.advanced?.stlSmoothShading !== false,
+        stlSmoothingAngle: state.advanced?.stlSmoothingAngle ?? 40,
+        centerPivot: !!state.advanced?.centerPivot,
       },
       // Studio settings
       hdri: state.hdri,
@@ -631,6 +634,29 @@ export class SceneSettingsManager {
           : 'vibrant';
         this.stateStore.set('advanced.uvCheckerStyle', style);
         this.eventBus.emit('mesh:uv-checker-style', style);
+      }
+      if (
+        payload.advanced?.stlSmoothShading !== undefined ||
+        payload.advanced?.stlSmoothingAngle !== undefined
+      ) {
+        if (payload.advanced?.stlSmoothShading !== undefined) {
+          this.stateStore.set('advanced.stlSmoothShading', !!payload.advanced.stlSmoothShading);
+        }
+        if (payload.advanced?.stlSmoothingAngle !== undefined) {
+          const raw = Number(payload.advanced.stlSmoothingAngle);
+          if (Number.isFinite(raw)) {
+            this.stateStore.set(
+              'advanced.stlSmoothingAngle',
+              Math.max(0, Math.min(180, raw)),
+            );
+          }
+        }
+        this.eventBus.emit('mesh:stl-smoothing');
+      }
+      if (payload.advanced?.centerPivot !== undefined) {
+        const enabled = !!payload.advanced.centerPivot;
+        this.stateStore.set('advanced.centerPivot', enabled);
+        this.eventBus.emit('mesh:center-pivot', enabled);
       }
 
       // Apply Studio settings

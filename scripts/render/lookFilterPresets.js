@@ -20,57 +20,57 @@ const GRADING_KEYS = [
   'vignetteColor',
 ];
 
-/** UI metadata + 64px preview asset (SVG placeholder). */
+/** UI metadata + 192px preview asset (center-cropped from orby-lookfilter-* sources). Grid order: natural → muted/film → color → stylized. */
 export const LOOK_FILTER_CATALOG = [
   {
     id: 'none',
     label: 'None',
-    thumb: './assets/images/look-filters/none.svg',
+    thumb: './assets/images/look-filters/none.png',
   },
   {
     id: 'studio',
     label: 'Studio',
-    thumb: './assets/images/look-filters/studio.svg',
+    thumb: './assets/images/look-filters/studio.png',
   },
   {
     id: 'noir',
     label: 'Noir',
-    thumb: './assets/images/look-filters/noir.svg',
-  },
-  {
-    id: 'golden',
-    label: 'Golden',
-    thumb: './assets/images/look-filters/golden.svg',
-  },
-  {
-    id: 'frost',
-    label: 'Frost',
-    thumb: './assets/images/look-filters/frost.svg',
-  },
-  {
-    id: 'vintage',
-    label: 'Vintage',
-    thumb: './assets/images/look-filters/vintage.svg',
-  },
-  {
-    id: 'cinema',
-    label: 'Cinema',
-    thumb: './assets/images/look-filters/cinema.svg',
+    thumb: './assets/images/look-filters/noir.png',
   },
   {
     id: 'mood',
     label: 'Mood',
-    thumb: './assets/images/look-filters/mood.svg',
+    thumb: './assets/images/look-filters/mood.png',
+  },
+  {
+    id: 'vintage',
+    label: 'Vintage',
+    thumb: './assets/images/look-filters/vintage.png',
+  },
+  {
+    id: 'cinema',
+    label: 'Cinema',
+    thumb: './assets/images/look-filters/cinema.png',
+  },
+  {
+    id: 'frost',
+    label: 'Frost',
+    thumb: './assets/images/look-filters/frost.png',
+  },
+  {
+    id: 'golden',
+    label: 'Golden',
+    thumb: './assets/images/look-filters/golden.png',
   },
   {
     id: 'dream',
     label: 'Dream',
-    thumb: './assets/images/look-filters/dream.svg',
+    thumb: './assets/images/look-filters/dream.png',
   },
   {
     id: 'neon',
     label: 'Neon',
-    thumb: './assets/images/look-filters/neon.svg',
+    thumb: './assets/images/look-filters/neon.png',
   },
 ];
 

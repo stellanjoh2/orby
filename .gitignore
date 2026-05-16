@@ -13,6 +13,11 @@ dist/
 # Test assets - keep locally only
 TEMP/
 
+# Look/creative preview sources (large); commit optimized thumbs only
+assets/images/creative-look-*-source.png
+assets/images/creative-look-source-unused-*.png
+assets/images/orby-lookfilter-*.png
+
 # macOS
 .DS_Store
 **/.DS_Store

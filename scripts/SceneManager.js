@@ -56,6 +56,15 @@ import {
 } from './scene/toggleScaleAnimation.js';
 import { applyLookFilterPreset } from './ui/lookFilterApply.js';
 import { LONG_TOAST_CHAR_THRESHOLD } from './UIManager.js';
+import {
+  applyStlNormalSmoothing,
+  cloneStlSourceGeometry,
+  modelHasStlImport,
+} from './import/stlNormalSmoothing.js';
+import {
+  captureAndApplyCenterPivot,
+  undoCenterPivot,
+} from './scene/centerModelPivot.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
 const FBX_IMPORT_WIP_ALERT_BODY =
@@ -310,6 +319,10 @@ export class SceneManager {
     this.currentAssetMetadata = null;
     this.svgExtrudeImporter = null;
     this.isSvgExtrudeModel = false;
+    this.isStlModel = false;
+    this.stlRawByMesh = new Map();
+    /** Position deltas from the last center-pivot apply (for toggle-off restore). */
+    this._pivotCenterDelta = null;
     this.reverseNormalsEnabled = initialState.advanced?.reverseNormals ?? false;
     this.originalGeometryIndices = new WeakMap();
     this.originalGeometryAttributes = new WeakMap();
@@ -2174,11 +2187,16 @@ export class SceneManager {
     this.currentAssetMetadata = null;
     this.svgExtrudeImporter = null;
     this.isSvgExtrudeModel = false;
+    this.isStlModel = false;
+    this._pivotCenterDelta = null;
+    this._disposeStlRawCaches();
     this.originalGeometryIndices = new WeakMap();
     this.originalGeometryAttributes = new WeakMap();
     this.originalMaterialSides = new WeakMap();
     this.eventBus.emit('ui:advanced-alpha-visible', { visible: false });
     this.eventBus.emit('ui:advanced-glass-visible', { visible: false });
+    this._emitStlSmoothingControlsVisibility();
+    this.eventBus.emit('ui:center-pivot-enabled', { enabled: false });
   }
 
   /**
@@ -2305,6 +2323,8 @@ export class SceneManager {
     this.lensFlareController?.setModelRoot(this.modelRoot);
     
     this.prepareMesh(object);
+    this._setupStlSmoothingForModel(object);
+    this._applyCenterPivotFromState();
 
     // Track if this is the first model load
     const wasFirstLoad = this.isFirstModelLoad;
@@ -2372,6 +2392,7 @@ export class SceneManager {
     
     this.ui.setDropzoneVisible(false);
     this.ui.revealShelf?.({ skipSound: wasFirstLoad });
+    this.eventBus.emit('ui:center-pivot-enabled', { enabled: true });
     
     // Keep the mesh hidden until camera framing has sampled its full-size bounds.
     object.visible = false;
@@ -2657,6 +2678,121 @@ export class SceneManager {
       console.error('Failed to update SVG extrude direction', error);
       this.ui?.showToast?.('Could not update SVG direction');
     }
+  }
+
+  _disposeStlRawCaches() {
+    this.stlRawByMesh.forEach((geometry) => geometry.dispose());
+    this.stlRawByMesh.clear();
+  }
+
+  _emitStlSmoothingControlsVisibility() {
+    this.eventBus.emit('ui:stl-smoothing-visible', { visible: !!this.isStlModel });
+  }
+
+  _currentFileIsStl() {
+    const name = this.currentFile?.name;
+    return typeof name === 'string' && name.toLowerCase().endsWith('.stl');
+  }
+
+  _setupStlSmoothingForModel(object) {
+    this._disposeStlRawCaches();
+    this.isStlModel = modelHasStlImport(object) || this._currentFileIsStl();
+    this._emitStlSmoothingControlsVisibility();
+    if (!this.isStlModel || !object) return;
+
+    object.traverse((child) => {
+      if (!child.isMesh || !child.geometry) return;
+      if (!child.userData?.orbyStlImport && !this._currentFileIsStl()) return;
+      if (!this.stlRawByMesh.has(child.uuid)) {
+        child.userData.orbyStlImport = true;
+        this.stlRawByMesh.set(child.uuid, cloneStlSourceGeometry(child.geometry));
+      }
+    });
+
+    this.applyStlSmoothingFromState();
+  }
+
+  _applyCenterPivotFromState() {
+    const wantCentered = !!this.stateStore.getState()?.advanced?.centerPivot;
+    if (wantCentered === !!this._pivotCenterDelta) return;
+    this.setCenterPivot(wantCentered, { updateState: false });
+  }
+
+  /**
+   * @param {boolean} enabled
+   * @param {{ updateState?: boolean }} [options]
+   */
+  setCenterPivot(enabled, options = {}) {
+    const wantCentered = !!enabled;
+    if (!this.currentModel || !this.modelRoot) {
+      if (options.updateState !== false) {
+        this.stateStore.set('advanced.centerPivot', false);
+      }
+      return false;
+    }
+
+    if (wantCentered) {
+      if (this._pivotCenterDelta) {
+        return true;
+      }
+      const delta = captureAndApplyCenterPivot(this.modelRoot, this.currentModel);
+      if (!delta) {
+        this.ui?.showToast?.('Could not center pivot');
+        if (options.updateState !== false) {
+          this.stateStore.set('advanced.centerPivot', false);
+          this.ui?.syncUIFromState?.();
+        }
+        return false;
+      }
+      this._pivotCenterDelta = delta;
+    } else {
+      if (!this._pivotCenterDelta) {
+        return true;
+      }
+      undoCenterPivot(this.modelRoot, this.currentModel, this._pivotCenterDelta);
+      this._pivotCenterDelta = null;
+    }
+
+    if (options.updateState !== false) {
+      this.stateStore.set('advanced.centerPivot', wantCentered);
+    }
+
+    this._afterPivotChange();
+    return true;
+  }
+
+  _afterPivotChange() {
+    if (!this.currentModel) return;
+    this.currentModel.updateMatrixWorld(true);
+    this.modelRoot.updateMatrixWorld(true);
+    this.cameraController?.refreshModelBounds(this.currentModel);
+    this.updateWireframeOverlayTransforms();
+    this.updateUvCheckerOverlayTransforms();
+    this._syncTransformFromGizmo();
+    this.transformControlsTranslate?.updateMatrixWorld?.();
+    this.transformControlsRotate?.updateMatrixWorld?.();
+    this.transformControlsScale?.updateMatrixWorld?.();
+  }
+
+  applyStlSmoothingFromState() {
+    if (!this.isStlModel || !this.currentModel) return;
+
+    const advanced = this.stateStore.getState()?.advanced ?? {};
+    const options = {
+      smoothShading: advanced.stlSmoothShading !== false,
+      angleDeg: advanced.stlSmoothingAngle,
+    };
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.geometry) return;
+      const raw = this.stlRawByMesh.get(child.uuid);
+      if (!raw) return;
+      applyStlNormalSmoothing(child, raw, options);
+    });
+
+    this.originalGeometryIndices = new WeakMap();
+    this.originalGeometryAttributes = new WeakMap();
+    this.setReverseNormals(this.reverseNormalsEnabled);
   }
 
   setReverseNormals(enabled) {

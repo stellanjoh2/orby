@@ -103,6 +103,8 @@ const RESET_DIRTY_PATHS = {
     'advanced.blendSortingMitigation',
     'advanced.flipGlassNormalMapY', 'advanced.glassFrontFacesOnly',
     'advanced.uvChecker', 'advanced.uvCheckerScale', 'advanced.uvCheckerStyle',
+    'advanced.stlSmoothShading', 'advanced.stlSmoothingAngle',
+    'advanced.centerPivot',
   ],
 };
 
@@ -412,6 +414,15 @@ export class ResetControls {
         'advanced.uvCheckerStyle',
         defaults.advanced?.uvCheckerStyle ?? 'vibrant',
       );
+      this.stateStore.set(
+        'advanced.stlSmoothShading',
+        defaults.advanced?.stlSmoothShading !== false,
+      );
+      this.stateStore.set(
+        'advanced.stlSmoothingAngle',
+        defaults.advanced?.stlSmoothingAngle ?? 40,
+      );
+      this.stateStore.set('advanced.centerPivot', defaults.advanced?.centerPivot ?? false);
       // Reset material properties
       this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
       this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
@@ -461,6 +472,8 @@ export class ResetControls {
         'mesh:uv-checker-style',
         defaults.advanced?.uvCheckerStyle ?? 'vibrant',
       );
+      this.eventBus.emit('mesh:stl-smoothing');
+      this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
 
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset');
@@ -1264,6 +1277,18 @@ export class ResetControls {
               'advanced.uvCheckerStyle',
               defaults.advanced?.uvCheckerStyle ?? 'vibrant',
             );
+            this.stateStore.set(
+              'advanced.stlSmoothShading',
+              defaults.advanced?.stlSmoothShading !== false,
+            );
+            this.stateStore.set(
+              'advanced.stlSmoothingAngle',
+              defaults.advanced?.stlSmoothingAngle ?? 40,
+            );
+            this.stateStore.set(
+              'advanced.centerPivot',
+              defaults.advanced?.centerPivot ?? false,
+            );
             this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
             this.eventBus.emit('mesh:transparency-fix');
             this.eventBus.emit('mesh:glass-appearance');
@@ -1276,6 +1301,8 @@ export class ResetControls {
               'mesh:uv-checker-style',
               defaults.advanced?.uvCheckerStyle ?? 'vibrant',
             );
+            this.eventBus.emit('mesh:stl-smoothing');
+            this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
             this.ui.syncUIFromState();
             break;
         }

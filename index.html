@@ -800,36 +800,36 @@
                   >
                     <div class="creative-look-foldout-body">
                       <div class="hdri-grid" id="creativeLookGrid">
-                    <button type="button" data-creative-look="neon-edge" class="hdri-icon active" data-tooltip="Neon edge — dark core with cyan rim glow">
-                      <img src="./assets/images/creative-look-neon-edge.svg" alt="" width="64" height="64" />
+                    <button type="button" data-creative-look="neon-edge" class="hdri-icon active" data-tooltip="Neon Edge — dark core with cyan rim glow">
+                      <img src="./assets/images/creative-look-neon-edge.png" alt="Neon Edge" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow field — animated color drift in world space">
-                      <img src="./assets/images/creative-look-flow-field.svg" alt="" width="64" height="64" />
+                    <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow Field — animated color drift in world space">
+                      <img src="./assets/images/creative-look-flow-field.png" alt="Flow Field" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="plasma" class="hdri-icon" data-tooltip="Plasma — psychedelic animated interference pattern">
-                      <img src="./assets/images/creative-look-plasma.svg" alt="" width="64" height="64" />
+                      <img src="./assets/images/creative-look-plasma.png" alt="Plasma" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="toon" class="hdri-icon" data-tooltip="Toon — stepped cel shading with rim">
-                      <img src="./assets/images/creative-look-toon.svg" alt="" width="64" height="64" />
+                      <img src="./assets/images/creative-look-toon.png" alt="Toon" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="ordered-dither" class="hdri-icon" data-tooltip="Ordered dither — fixed Bayer 4×4 grid in screen space; mid-tone from mesh color. Scale = pixel block size">
-                      <img src="./assets/images/creative-look-ordered-dither.svg" alt="" width="64" height="64" />
+                    <button type="button" data-creative-look="ordered-dither" class="hdri-icon" data-tooltip="Ordered Dither — fixed Bayer 4×4 grid in screen space; mid-tone from mesh color. Scale = pixel block size">
+                      <img src="./assets/images/creative-look-ordered-dither.png" alt="Ordered Dither" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
-                      <img src="./assets/images/creative-look-holographic.svg" alt="" width="64" height="64" />
+                      <img src="./assets/images/creative-look-holographic.png" alt="Holographic" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
-                      <img src="./assets/images/creative-look-chrome.svg" alt="" width="64" height="64" />
+                    <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True Chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
+                      <img src="./assets/images/creative-look-chrome.png" alt="True Chrome" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="glass" class="hdri-icon" data-tooltip="Glass — physical transmission &amp; refraction (Three.js); HDRI + scene. Scale = slab thickness / frost">
-                      <img src="./assets/images/creative-look-glass.svg" alt="" width="64" height="64" />
+                      <img src="./assets/images/creative-look-glass.png" alt="Glass" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="spectral-storm" class="hdri-icon" data-tooltip="Spectral storm — very slow BW plasma, extreme contrast (mostly pure black/white), strobing rim">
-                      <img src="./assets/images/creative-look-spectral-storm.svg" alt="" width="64" height="64" />
+                    <button type="button" data-creative-look="spectral-storm" class="hdri-icon" data-tooltip="Spectral Storm — very slow BW plasma, extreme contrast (mostly pure black/white), strobing rim">
+                      <img src="./assets/images/creative-look-spectral-storm.png" alt="Spectral Storm" width="192" height="192" />
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for animated Shader Lab presets (flow field, plasma, holographic, spectral storm). Chrome / plain glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
@@ -841,7 +841,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pattern scale (flow, plasma, holographic, spectral storm). Ordered dither: finer detail toward the left (min 0.02×). Chrome: reflection sharpness. Plain glass: thickness &amp; frost.">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Spectral Storm). Ordered Dither: finer detail toward the left (min 0.02×). True Chrome: reflection sharpness. Glass: thickness &amp; frost.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -856,7 +856,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated Shader Lab presets (flow field, plasma, holographic, spectral storm). True chrome and toon keep following the scene / HDRI."
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>
@@ -966,6 +966,36 @@
                       <span class="sr-only">Reverse normal direction</span>
                     </label>
                   </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Move the mesh so its bounding-box center sits on the transform origin. Keeps the model in place on screen; fixes off-axis auto-rotate. Turn off to restore the file's original pivot.">Center Pivot</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="centerPivot" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Center pivot on geometry</span>
+                    </label>
+                  </label>
+                  <div id="stlSmoothingControls" hidden>
+                    <label class="slider-line">
+                      <span data-tooltip="Average STL face normals at corners. STL files only store triangle facets — smoothing is computed on import and can be adjusted here.">Smooth Shading</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="stlSmoothShading" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Toggle STL smooth shading</span>
+                      </label>
+                    </label>
+                    <label class="slider-line slider-line--track-short">
+                      <span data-tooltip="Controls how sharply creases stay faceted (0 = all facets, higher = smoother curved areas). Only applies when Smooth Shading is on.">Smoothing Angle</span>
+                      <input
+                        id="stlSmoothingAngle"
+                        type="range"
+                        min="0"
+                        max="180"
+                        step="1"
+                        value="40"
+                      />
+                      <span class="value" data-output="stlSmoothingAngle">40°</span>
+                    </label>
+                  </div>
                   <label class="slider-line">
                     <span data-tooltip="Tile a UV checker map across the model so you can spot stretching and seams. Texture by Atlux.">UV Checker</span>
                     <label class="effect-toggle">
@@ -2151,7 +2181,7 @@
                 <label class="slider-line">
                   <span>Auto Exposure</span>
                   <label class="effect-toggle" data-tooltip="Automatically adjust exposure for optimal brightness">
-                    <input type="checkbox" id="autoExposure" checked />
+                    <input type="checkbox" id="autoExposure" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable auto exposure</span>
                   </label>
@@ -2326,7 +2356,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/none.svg"
+                          src="./assets/images/look-filters/none.png"
                           alt=""
                           width="64"
                           height="64"
@@ -2343,7 +2373,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/studio.svg"
+                          src="./assets/images/look-filters/studio.png"
                           alt=""
                           width="64"
                           height="64"
@@ -2360,7 +2390,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/noir.svg"
+                          src="./assets/images/look-filters/noir.png"
                           alt=""
                           width="64"
                           height="64"
@@ -2371,36 +2401,19 @@
                       <button
                         type="button"
                         class="look-filter-tile"
-                        data-look-filter="golden"
+                        data-look-filter="mood"
                         role="listitem"
                         aria-pressed="false"
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/golden.svg"
+                          src="./assets/images/look-filters/mood.png"
                           alt=""
                           width="64"
                           height="64"
                           loading="lazy"
                         />
-                        <span class="look-filter-tile__label">Golden</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="look-filter-tile"
-                        data-look-filter="frost"
-                        role="listitem"
-                        aria-pressed="false"
-                      >
-                        <img
-                          class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/frost.svg"
-                          alt=""
-                          width="64"
-                          height="64"
-                          loading="lazy"
-                        />
-                        <span class="look-filter-tile__label">Frost</span>
+                        <span class="look-filter-tile__label">Mood</span>
                       </button>
                       <button
                         type="button"
@@ -2411,7 +2424,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/vintage.svg"
+                          src="./assets/images/look-filters/vintage.png"
                           alt=""
                           width="64"
                           height="64"
@@ -2428,7 +2441,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/cinema.svg"
+                          src="./assets/images/look-filters/cinema.png"
                           alt=""
                           width="64"
                           height="64"
@@ -2439,19 +2452,36 @@
                       <button
                         type="button"
                         class="look-filter-tile"
-                        data-look-filter="mood"
+                        data-look-filter="frost"
                         role="listitem"
                         aria-pressed="false"
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/mood.svg"
+                          src="./assets/images/look-filters/frost.png"
                           alt=""
                           width="64"
                           height="64"
                           loading="lazy"
                         />
-                        <span class="look-filter-tile__label">Mood</span>
+                        <span class="look-filter-tile__label">Frost</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="look-filter-tile"
+                        data-look-filter="golden"
+                        role="listitem"
+                        aria-pressed="false"
+                      >
+                        <img
+                          class="look-filter-tile__thumb"
+                          src="./assets/images/look-filters/golden.png"
+                          alt=""
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                        />
+                        <span class="look-filter-tile__label">Golden</span>
                       </button>
                       <button
                         type="button"
@@ -2462,7 +2492,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/dream.svg"
+                          src="./assets/images/look-filters/dream.png"
                           alt=""
                           width="64"
                           height="64"
@@ -2479,7 +2509,7 @@
                       >
                         <img
                           class="look-filter-tile__thumb"
-                          src="./assets/images/look-filters/neon.svg"
+                          src="./assets/images/look-filters/neon.png"
                           alt=""
                           width="64"
                           height="64"

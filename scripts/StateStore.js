@@ -91,6 +91,11 @@ export class StateStore {
          * @type {'vibrant' | 'monochrome'}
          */
         uvCheckerStyle: 'vibrant',
+        /** STL imports: smooth vertex normals with a crease angle (see Object → Advanced). */
+        stlSmoothShading: true,
+        stlSmoothingAngle: 40,
+        /** Move mesh pivot to bounding-box center (see centerModelPivot.js). */
+        centerPivot: false,
       },
       hdri: 'beach',
       hdriEnabled: true,
@@ -263,8 +268,8 @@ export class StateStore {
         vignetteColor: '#000000',
       },
       exposure: 1.0,
-      /** On by default so first load adapts exposure to scene brightness; manual slider still available when off. */
-      autoExposure: true,
+      /** Off by default; enable to adapt exposure to scene brightness automatically. */
+      autoExposure: false,
       histogramEnabled: false,
       toneCurveOpen: false,
       toneCurve: {

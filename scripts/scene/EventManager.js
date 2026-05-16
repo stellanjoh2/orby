@@ -91,6 +91,8 @@ export class EventManager {
     eventBus.on('mesh:svg-extrude-flip-direction', (enabled) => s.setSvgExtrudeFlipDirection(enabled));
     eventBus.on('mesh:svg-extrude-surface', (payload) => s.setSvgExtrudeSurface(payload ?? {}));
     eventBus.on('mesh:reverse-normals', (enabled) => s.setReverseNormals(enabled));
+    eventBus.on('mesh:stl-smoothing', () => s.applyStlSmoothingFromState());
+    eventBus.on('mesh:center-pivot', (enabled) => s.setCenterPivot(!!enabled));
     eventBus.on('mesh:uv-checker', (enabled) => s.setUvCheckerEnabled(enabled));
     eventBus.on('mesh:uv-checker-scale', (scale) => s.setUvCheckerScale(scale));
     eventBus.on('mesh:uv-checker-style', (style) => s.setUvCheckerStyle(style));

@@ -514,6 +514,22 @@ export class CameraController {
   }
 
   /**
+   * Recompute cached model bounds without moving the camera (e.g. after center pivot).
+   * @param {THREE.Object3D} object
+   * @returns {Object|null}
+   */
+  refreshModelBounds(object) {
+    if (!object) return null;
+    const box = new THREE.Box3().setFromObject(object);
+    if (box.isEmpty()) return null;
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    this.modelBounds = { box, size, center, radius: size.length() / 2 };
+    this.callbacks.onModelBoundsChanged?.(this.modelBounds);
+    return this.modelBounds;
+  }
+
+  /**
    * Fit camera to an object, calculating bounds and positioning camera
    * @param {THREE.Object3D} object - The object to fit the camera to
    */

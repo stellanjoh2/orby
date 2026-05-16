@@ -565,14 +565,19 @@ export class ModelLoader {
     const buffer = await this.fileReaders.buffer(file);
     return new Promise((resolve, reject) => {
       try {
-        const geometry = this.stlLoader.parse(buffer, { invert: true });
+        const geometry = this.stlLoader.parse(buffer);
         const material = new THREE.MeshStandardMaterial({
           color: '#d0d0d0',
           roughness: 0.35,
           metalness: 0.05,
         });
         const mesh = new THREE.Mesh(geometry, material);
-        resolve({ object: mesh, animations: [] });
+        mesh.userData.orbyStlImport = true;
+        resolve({
+          object: mesh,
+          animations: [],
+          sourceFormat: 'stl',
+        });
       } catch (error) {
         reject(error);
       }

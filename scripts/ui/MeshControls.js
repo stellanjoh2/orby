@@ -34,6 +34,7 @@ export class MeshControls {
     };
     this.svgDepthDebounceTimer = null;
     this.svgNormalDebounceTimer = null;
+    this.stlSmoothingDebounceTimer = null;
     this.svgColorDebounceTimers = new Map();
   }
 
@@ -49,6 +50,18 @@ export class MeshControls {
       const wrap = this.ui.inputs.advancedGlassControls;
       if (wrap) wrap.hidden = !visible;
       this.refreshAdvancedGlassControls(this.stateStore.getState());
+    });
+    this.eventBus.on('ui:stl-smoothing-visible', (payload) => {
+      const visible = !!(payload?.visible ?? payload);
+      const wrap = this.ui.inputs.stlSmoothingControls;
+      if (wrap) wrap.hidden = !visible;
+      this.syncUIFromState();
+    });
+    this.eventBus.on('ui:center-pivot-enabled', (payload) => {
+      const enabled = !!(payload?.enabled ?? payload);
+      if (this.ui.inputs.centerPivot) {
+        this.ui.inputs.centerPivot.disabled = !enabled;
+      }
     });
 
     this._pendingFbxMapSlot = null;
@@ -231,6 +244,31 @@ export class MeshControls {
       this.stateStore.set('advanced.reverseNormals', enabled);
       this.eventBus.emit('mesh:reverse-normals', enabled);
     });
+    this.ui.inputs.centerPivot?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('advanced.centerPivot', enabled);
+      this.eventBus.emit('mesh:center-pivot', enabled);
+    });
+    this.ui.inputs.stlSmoothShading?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      this.stateStore.set('advanced.stlSmoothShading', enabled);
+      this.eventBus.emit('mesh:stl-smoothing');
+    });
+    this.ui.inputs.stlSmoothingAngle?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(180, value)) : 40;
+      this.helpers.updateValueLabel('stlSmoothingAngle', clampedValue, 'angle');
+      this.stateStore.set('advanced.stlSmoothingAngle', clampedValue);
+      if (this.stlSmoothingDebounceTimer) {
+        clearTimeout(this.stlSmoothingDebounceTimer);
+      }
+      this.stlSmoothingDebounceTimer = setTimeout(() => {
+        this.eventBus.emit('mesh:stl-smoothing');
+      }, 45);
+    });
+    if (this.ui.inputs.stlSmoothingAngle) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.stlSmoothingAngle);
+    }
     this.ui.inputs.uvChecker?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       this.stateStore.set('advanced.uvChecker', enabled);
@@ -963,6 +1001,28 @@ export class MeshControls {
     }
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
+    }
+    if (this.ui.inputs.centerPivot) {
+      this.ui.inputs.centerPivot.checked = !!state.advanced?.centerPivot;
+    }
+    const stlControlsVisible = this.ui.inputs.stlSmoothingControls
+      ? !this.ui.inputs.stlSmoothingControls.hidden
+      : false;
+    if (this.ui.inputs.stlSmoothShading) {
+      const smoothOn = state.advanced?.stlSmoothShading !== false;
+      this.ui.inputs.stlSmoothShading.checked = smoothOn;
+      this.ui.setControlDisabled('stlSmoothShading', !stlControlsVisible);
+    }
+    if (this.ui.inputs.stlSmoothingAngle) {
+      const rawAngle = Number(state.advanced?.stlSmoothingAngle ?? 40);
+      const angle = Number.isFinite(rawAngle) ? Math.max(0, Math.min(180, rawAngle)) : 40;
+      const smoothOn = state.advanced?.stlSmoothShading !== false;
+      const angleActive = document.activeElement === this.ui.inputs.stlSmoothingAngle;
+      if (!angleActive) {
+        this.ui.inputs.stlSmoothingAngle.value = angle;
+        this.helpers.updateValueLabel('stlSmoothingAngle', angle, 'angle');
+      }
+      this.ui.setControlDisabled('stlSmoothingAngle', !stlControlsVisible || !smoothOn);
     }
     if (this.ui.inputs.uvChecker) {
       this.ui.inputs.uvChecker.checked = !!state.advanced?.uvChecker;
