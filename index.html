@@ -7,6 +7,10 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
     <style>html{background:#000}</style>
+    <!-- Entry gate: false = open site immediately (HTML + phrase logic stay in this file). true = require access phrase + periodic re-check. -->
+    <script>
+      window.__ORBY_ENTRY_GATE_ENABLED__ = false;
+    </script>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -38,6 +42,10 @@
     <link rel="stylesheet" href="./styles.css" />
     <script>
       (function () {
+        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
+          document.documentElement.classList.add('orby-gate-unlocked');
+          return;
+        }
         try {
           var VERIFIED_KEY = 'orby_site_gate_verified';
           var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
@@ -307,7 +315,13 @@
           });
         }
 
-        if (sessionOk()) {
+        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
+          document.documentElement.classList.add('orby-gate-unlocked');
+          if (gateEl) {
+            gateEl.setAttribute('hidden', '');
+            gateEl.removeAttribute('style');
+          }
+        } else if (sessionOk()) {
           unlockUI();
         } else {
           initGuards();
@@ -1342,7 +1356,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.439 · 2026-05-14 22:00:41 UTC</div>
+              <div class="info-version-tag">v0.5.440 · 2026-05-16 00:31:25 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2080,7 +2094,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.439 · 2026-05-14 22:00:41 UTC</div>
+              <div class="info-version-tag">v0.5.440 · 2026-05-16 00:31:25 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3230,7 +3244,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.439 · 2026-05-14 22:00:41 UTC</div>
+              <div class="info-version-tag">v0.5.440 · 2026-05-16 00:31:25 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3378,7 +3392,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.439 · 2026-05-14 22:00:41 UTC</div>
+              <div class="info-version-tag">v0.5.440 · 2026-05-16 00:31:25 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3962,13 +3976,13 @@
               </div>
 
               <div class="panel-block" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 14):</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 16):</div>
                 <div class="about-content">
-                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Refactor(ui): rename Podium to Base across app and scene state canonical state keys baseScale/baseMetalness/baseGlass*; HDRI moods use baseColor. migrateLegacyGroundKeys() for older.orby JSON (podium* + podiumReflectMesh).</div>
+                  <div style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.5;">Disable site entry gate behind a single flag. set __ORBY_ENTRY_GATE_ENABLED__ to true to restore the access phrase flow without re-adding code. co-authored-by: Cursor <cursoragent@cursor.com>.</div>
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.439 · 2026-05-14 22:00:41 UTC</div>
+              <div class="info-version-tag">v0.5.440 · 2026-05-16 00:31:25 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
