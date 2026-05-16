@@ -2143,18 +2143,6 @@
                     </button>
                 </div>
                 <label class="slider-line">
-                  <span data-tooltip="Field of view (camera angle)">FOV</span>
-                  <input
-                    id="cameraFov"
-                    type="range"
-                    min="45"
-                    max="120"
-                    value="50"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraFov">50°</span>
-                </label>
-                <label class="slider-line">
                   <span data-tooltip="Camera tilt angle">Tilt</span>
                   <input
                     id="cameraTilt"
@@ -2187,40 +2175,78 @@
                   </label>
                 </label>
                 <div class="panel-block-divider"></div>
-                <div class="subsection">
-                  <div class="block-title">Auto Orbit</div>
-                  <div class="segmented compact">
-                    <label>
-                      <input type="radio" name="cameraAutoOrbit" value="off" checked />
-                      OFF
-                    </label>
-                    <label>
-                      <input type="radio" name="cameraAutoOrbit" value="slow" />
-                      SLOW
-                    </label>
-                    <label>
-                      <input type="radio" name="cameraAutoOrbit" value="fast" />
-                      FAST
-                    </label>
+                <div class="subsection" data-subsection="lens">
+                  <div class="block-title has-reset">
+                    <span>Lens</span>
+                    <button
+                      class="block-reset-btn"
+                      data-reset="lens"
+                      aria-label="Reset Lens"
+                      data-tooltip="Reset Lens settings"
+                    >
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
                   </div>
-                </div>
-                <div class="panel-block-divider"></div>
-                <div class="subsection">
-                  <div class="block-title" data-tooltip="Procedural shake on top of orbit; does not affect controls">Handheld</div>
-                  <div class="segmented compact">
-                    <label>
-                      <input type="radio" name="cameraHandheld" value="off" checked />
-                      OFF
-                    </label>
-                    <label>
-                      <input type="radio" name="cameraHandheld" value="low" />
-                      SUBTLE
-                    </label>
-                    <label>
-                      <input type="radio" name="cameraHandheld" value="high" />
-                      STRONG
-                    </label>
+                  <div
+                    class="lens-preset-grid"
+                    role="group"
+                    aria-label="Focal length presets"
+                  >
+                    <button type="button" class="lens-preset-btn" data-lens-focal="14" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">14mm</span>
+                      <span class="lens-preset-btn__label">Ultra wide</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="24" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">24mm</span>
+                      <span class="lens-preset-btn__label">Wide</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="35" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">35mm</span>
+                      <span class="lens-preset-btn__label">Wide</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="50" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">50mm</span>
+                      <span class="lens-preset-btn__label">Standard</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="85" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">85mm</span>
+                      <span class="lens-preset-btn__label">Portrait</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="100" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">100mm</span>
+                      <span class="lens-preset-btn__label">Macro</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="135" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">135mm</span>
+                      <span class="lens-preset-btn__label">Tele</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-lens-focal="200" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">200mm</span>
+                      <span class="lens-preset-btn__label">Tele</span>
+                    </button>
                   </div>
+                  <label class="select-line">
+                    <span data-tooltip="Sensor size used to convert focal length to field of view">Sensor</span>
+                    <select id="lensSensor" aria-label="Camera sensor format">
+                      <option value="full-frame">Full frame (36mm)</option>
+                      <option value="aps-c" selected>APS-C (23.5mm)</option>
+                      <option value="m43">Micro Four Thirds (17.3mm)</option>
+                      <option value="super-35">Super 35 (24.9mm)</option>
+                    </select>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Vertical field of view — fine-tune after choosing a focal length preset">Manual FOV</span>
+                    <input
+                      id="cameraFov"
+                      type="range"
+                      min="10"
+                      max="120"
+                      value="45"
+                      step="1"
+                    />
+                    <span class="value" data-output="cameraFov">45°</span>
+                  </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fisheye">
@@ -2280,6 +2306,57 @@
                     />
                     <span class="value" data-output="fisheyeCylindricalRatio">4.00</span>
                   </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="auto-orbit">
+                  <div class="block-title">Auto Orbit</div>
+                  <div class="segmented compact">
+                    <label>
+                      <input type="radio" name="cameraAutoOrbit" value="off" checked />
+                      OFF
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraAutoOrbit" value="slow" />
+                      SLOW
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraAutoOrbit" value="fast" />
+                      FAST
+                    </label>
+                  </div>
+                  <div
+                    id="autoOrbitReverseFoldout"
+                    class="auto-orbit-foldout auto-orbit-foldout--collapsed"
+                    aria-hidden="true"
+                  >
+                    <button
+                      type="button"
+                      id="cameraAutoOrbitReverse"
+                      class="ghost-btn small"
+                      aria-pressed="false"
+                      data-tooltip="Orbit the other way"
+                    >
+                      Reverse direction
+                    </button>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="handheld">
+                  <div class="block-title" data-tooltip="Procedural shake on top of orbit; does not affect controls">Handheld</div>
+                  <div class="segmented compact">
+                    <label>
+                      <input type="radio" name="cameraHandheld" value="off" checked />
+                      OFF
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraHandheld" value="low" />
+                      SUBTLE
+                    </label>
+                    <label>
+                      <input type="radio" name="cameraHandheld" value="high" />
+                      STRONG
+                    </label>
+                  </div>
                 </div>
                 </div>
               </div>

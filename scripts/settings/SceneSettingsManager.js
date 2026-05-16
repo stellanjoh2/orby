@@ -152,6 +152,8 @@ export class SceneSettingsManager {
       // Camera/Render settings
       camera: {
         fov: state.camera?.fov,
+        lensFocalMm: state.camera?.lensFocalMm,
+        lensSensorId: state.camera?.lensSensorId,
         tilt: state.camera?.tilt,
         position: cameraState?.position,
         target: cameraState?.target,
@@ -168,6 +170,7 @@ export class SceneSettingsManager {
         vignette: state.camera?.vignette,
         vignetteColor: state.camera?.vignetteColor,
         autoOrbit: state.camera?.autoOrbit,
+        autoOrbitReverse: state.camera?.autoOrbitReverse,
         handheld: state.camera?.handheld,
         compositionGridEnabled: state.camera?.compositionGridEnabled,
         compositionGuidesInverted: state.camera?.compositionGuidesInverted,
@@ -949,6 +952,12 @@ export class SceneSettingsManager {
           this.stateStore.set('camera.fov', payload.camera.fov);
           this.eventBus.emit('camera:fov', payload.camera.fov);
         }
+        if (payload.camera.lensFocalMm !== undefined) {
+          this.stateStore.set('camera.lensFocalMm', payload.camera.lensFocalMm);
+        }
+        if (payload.camera.lensSensorId !== undefined) {
+          this.stateStore.set('camera.lensSensorId', payload.camera.lensSensorId);
+        }
         if (payload.camera.tilt !== undefined) {
           this.stateStore.set('camera.tilt', payload.camera.tilt);
           this.eventBus.emit('camera:tilt', payload.camera.tilt);
@@ -956,6 +965,10 @@ export class SceneSettingsManager {
         if (payload.camera.autoOrbit !== undefined) {
           this.stateStore.set('camera.autoOrbit', payload.camera.autoOrbit);
           this.eventBus.emit('camera:auto-orbit', payload.camera.autoOrbit);
+        }
+        if (payload.camera.autoOrbitReverse !== undefined) {
+          this.stateStore.set('camera.autoOrbitReverse', !!payload.camera.autoOrbitReverse);
+          this.eventBus.emit('camera:auto-orbit-reverse', !!payload.camera.autoOrbitReverse);
         }
         if (payload.camera.handheld !== undefined) {
           let h = payload.camera.handheld;

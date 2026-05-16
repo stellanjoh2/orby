@@ -2952,6 +2952,7 @@ a.about-highlight:focus-visible {
 :is(.subsection, .panel-block).is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
+:is(.subsection, .panel-block).is-muted #cameraAutoOrbitReverse.ghost-btn:not(:disabled):not(.is-disabled),
 :is(.subsection, .panel-block).is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
@@ -4754,6 +4755,115 @@ body.ui-hidden .shelf {
   padding: 0.3rem 0.2rem 0.32rem;
   flex: 0 0 auto;
   background: rgba(0, 0, 0, 0.2);
+}
+
+/* Camera → Lens: compact focal-length preset grid */
+.lens-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.lens-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  min-height: 2.65rem;
+  margin: 0;
+  padding: 0.38rem 0.25rem;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    opacity 0.2s ease;
+}
+
+.lens-preset-btn:hover:not(:disabled) {
+  color: var(--brand-primary);
+  background: var(--accent-muted);
+}
+
+.lens-preset-btn.is-selected {
+  background: var(--accent);
+  color: var(--brand-text);
+}
+
+.lens-preset-btn.is-selected .lens-preset-btn__label {
+  color: var(--brand-text);
+  opacity: 0.85;
+}
+
+.lens-preset-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lens-preset-btn__focal {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.lens-preset-btn__label {
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  opacity: 0.9;
+}
+
+:is(.subsection, .panel-block).is-muted .lens-preset-btn {
+  opacity: 0.45;
+}
+
+/* Camera → Auto Orbit: reverse direction slides out when SLOW/FAST is active */
+.auto-orbit-foldout {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+}
+
+.auto-orbit-foldout--expanded {
+  margin-top: 0.45rem;
+  max-height: 2.75rem;
+  opacity: 1;
+}
+
+.auto-orbit-foldout--collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Auto Orbit — toggle pill (matches Snap to Mesh; solid lime when on) */
+#cameraAutoOrbitReverse.ghost-btn {
+  color: var(--text-dim);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s ease;
+}
+
+#cameraAutoOrbitReverse.ghost-btn:hover:not(:disabled):not(.is-disabled) {
+  background: var(--accent);
+  color: var(--brand-text);
+  box-shadow: var(--ui-accent-outer-glow);
+}
+
+#cameraAutoOrbitReverse.ghost-btn.active {
+  background: var(--accent);
+  color: var(--brand-text);
+  box-shadow: var(--ui-accent-outer-glow);
 }
 
 /* Information tab quick navigation */

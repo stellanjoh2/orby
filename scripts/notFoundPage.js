@@ -155,7 +155,7 @@ const NOT_FOUND_PRESET = {
   lightsShadowTwoSided: false,
   background: '#000000',
   camera: {
-    fov: 50,
+    fov: 45,
     tilt: -15,
     position: {
       x: 0.3617021953002032,

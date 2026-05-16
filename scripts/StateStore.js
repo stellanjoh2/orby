@@ -244,7 +244,10 @@ export class StateStore {
         cylindricalRatio: 4,
       },
       camera: {
-        fov: 50,
+        fov: 45,
+        /** Active focal-length preset (mm), or null when FOV was adjusted manually. */
+        lensFocalMm: null,
+        lensSensorId: 'aps-c',
         tilt: 0,
         /** Rule-of-thirds / crosshair / diagonal overlay in viewport (16×9 letterbox). */
         compositionGridEnabled: false,
@@ -253,6 +256,7 @@ export class StateStore {
         /** Viewport-only 21∶9 mattes (letterbox / pillarbox) for framing. */
         cinematicLetterbox219: false,
         autoOrbit: 'off',
+        autoOrbitReverse: false,
         handheld: 'off',
         contrast: 1.0,
         temperature: CAMERA_TEMPERATURE_NEUTRAL_K,

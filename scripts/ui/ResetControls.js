@@ -70,8 +70,10 @@ const RESET_DIRTY_PATHS = {
   'color-checker': ['colorChecker'],
   'ambient-occlusion': ['ambientOcclusion'],
   fresnel: ['fresnel'],
+  lens: ['camera.fov', 'camera.lensFocalMm', 'camera.lensSensorId'],
   camera: [
-    'camera.fov', 'fisheye', 'camera.tilt', 'camera.handheld',
+    'camera.tilt',
+    'camera.autoOrbit', 'camera.autoOrbitReverse', 'camera.handheld',
     'exposure', 'autoExposure',
     'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
     'camera.compositionGridEnabled',
@@ -1068,13 +1070,28 @@ export class ResetControls {
             this.ui.syncUIFromState();
             break;
             
+          case 'lens':
+            this.stateStore.batch(() => {
+              this.stateStore.set('camera.fov', defaults.camera.fov);
+              this.stateStore.set('camera.lensFocalMm', defaults.camera.lensFocalMm ?? null);
+              this.stateStore.set('camera.lensSensorId', defaults.camera.lensSensorId ?? 'aps-c');
+            });
+            this.eventBus.emit('camera:fov', defaults.camera.fov);
+            this.ui.lensControls?.sync(this.stateStore.getState());
+            this.ui.syncUIFromState();
+            this.helpers.showToast('Lens reset');
+            break;
+
           case 'camera':
-            // Reset basic camera settings (FOV, Tilt, Exposure, Auto Exposure)
+            // Reset basic camera settings (Tilt, Exposure, Auto Exposure, orbit, vignette)
             this.stateStore.batch(() => {
               this.stateStore.set('lookFilterPreset', 'custom');
-              this.stateStore.set('camera.fov', defaults.camera.fov);
-              this.stateStore.set('fisheye', defaults.fisheye);
               this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
+              this.stateStore.set('camera.autoOrbit', defaults.camera.autoOrbit ?? 'off');
+              this.stateStore.set(
+                'camera.autoOrbitReverse',
+                defaults.camera.autoOrbitReverse ?? false,
+              );
               this.stateStore.set('camera.handheld', defaults.camera.handheld ?? 'off');
               this.stateStore.set('exposure', defaults.exposure);
               this.stateStore.set('autoExposure', defaults.autoExposure ?? false);
@@ -1096,9 +1113,12 @@ export class ResetControls {
               );
             });
             // Emit events to update the scene
-            this.eventBus.emit('camera:fov', defaults.camera.fov);
-            this.eventBus.emit('camera:fisheye');
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
+            this.eventBus.emit('camera:auto-orbit', defaults.camera.autoOrbit ?? 'off');
+            this.eventBus.emit(
+              'camera:auto-orbit-reverse',
+              defaults.camera.autoOrbitReverse ?? false,
+            );
             this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);

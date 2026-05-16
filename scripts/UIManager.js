@@ -22,6 +22,7 @@ import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
 import { StudioControls } from './ui/StudioControls.js';
 import { RenderControls } from './ui/RenderControls.js';
+import { LensControls } from './ui/LensControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { ResetControls } from './ui/ResetControls.js';
@@ -106,6 +107,7 @@ export class UIManager {
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
@@ -255,6 +257,7 @@ export class UIManager {
       rotationZ: q('#rotationZControl'),
       autoRotate: document.querySelectorAll('input[name="autorotate"]'),
       cameraAutoOrbit: document.querySelectorAll('input[name="cameraAutoOrbit"]'),
+      cameraAutoOrbitReverse: q('#cameraAutoOrbitReverse'),
       cameraHandheld: document.querySelectorAll('input[name="cameraHandheld"]'),
       hdriEnabled: q('#hdriEnabled'),
       hdriStrength: q('#hdriStrength'),
@@ -403,6 +406,7 @@ export class UIManager {
       fresnelStrength: q('#fresnelStrength'),
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
+      lensSensor: q('#lensSensor'),
       fisheyeEnabled: q('#fisheyeEnabled'),
       fisheyeHorizontalFOV: q('#fisheyeHorizontalFOV'),
       fisheyeStrength: q('#fisheyeStrength'),
@@ -508,6 +512,7 @@ export class UIManager {
     this.meshControls.bind();
     this.studioControls.bind();
     this.renderControls.bind();
+    this.lensControls.bind();
     this.animationControls.bind();
     this.resetControls.bind();
     
@@ -1163,6 +1168,12 @@ export class UIManager {
           this.stateStore.set('camera.fov', payload.camera.fov);
           this.eventBus.emit('camera:fov', payload.camera.fov);
         }
+        if (payload.camera.lensFocalMm !== undefined) {
+          this.stateStore.set('camera.lensFocalMm', payload.camera.lensFocalMm);
+        }
+        if (payload.camera.lensSensorId !== undefined) {
+          this.stateStore.set('camera.lensSensorId', payload.camera.lensSensorId);
+        }
         if (payload.camera.tilt !== undefined) {
           this.stateStore.set('camera.tilt', payload.camera.tilt);
           this.eventBus.emit('camera:tilt', payload.camera.tilt);
@@ -1585,6 +1596,14 @@ export class UIManager {
         radio.checked = radio.value === autoOrbitValue;
       });
     }
+    if (this.inputs.cameraAutoOrbitReverse) {
+      const reverse = !!state.camera?.autoOrbitReverse;
+      this.inputs.cameraAutoOrbitReverse.classList.toggle('active', reverse);
+      this.inputs.cameraAutoOrbitReverse.setAttribute(
+        'aria-pressed',
+        reverse ? 'true' : 'false',
+      );
+    }
     if (this.inputs.cameraHandheld) {
       let handheldValue = state.camera?.handheld ?? 'off';
       if (handheldValue === 'medium') handheldValue = 'high';
@@ -1971,11 +1990,6 @@ export class UIManager {
     const cam = state.camera ?? {};
     const fe = state.fisheye ?? {};
     const feOn = !!fe.enabled;
-    if (this.inputs.cameraFov) {
-      this.inputs.cameraFov.disabled = feOn;
-    }
-    this.inputs.cameraFov.value = cam.fov ?? 50;
-    this.updateValueLabel('cameraFov', cam.fov ?? 50, 'angle');
     if (this.inputs.fisheyeEnabled) {
       this.inputs.fisheyeEnabled.checked = feOn;
     }
@@ -2094,6 +2108,7 @@ export class UIManager {
     this.meshControls.sync(state);
     this.studioControls.sync(state);
     this.renderControls.sync(state);
+    this.lensControls.sync(state);
     this.applyBlockStates(state);
     this.scheduleAllRangeSliderFills();
   }

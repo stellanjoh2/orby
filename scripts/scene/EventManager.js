@@ -150,6 +150,7 @@ export class EventManager {
       s.syncPerspectiveCameraFovAndLens();
     });
     eventBus.on('camera:auto-orbit', (value) => s.setCameraAutoOrbit(value));
+    eventBus.on('camera:auto-orbit-reverse', (value) => s.setCameraAutoOrbitReverse(value));
     eventBus.on('camera:handheld', (value) => s.setCameraHandheld(value));
     eventBus.on('camera:tilt', (value) => {
       s.cameraController?.setTilt(value);

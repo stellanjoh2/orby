@@ -105,7 +105,7 @@ export class SceneManager {
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
-      60,
+      45,
       window.innerWidth / window.innerHeight,
       0.1,
       5000,
@@ -308,6 +308,7 @@ export class SceneManager {
     this.currentShading = initialState.shading;
     this.autoRotateSpeed = 0;
     this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
+    this.cameraAutoOrbitReverse = !!initialState.camera?.autoOrbitReverse;
     this.cameraHandheld = initialState.camera?.handheld ?? 'off';
     this.lightsMaster = initialState.lightsMaster ?? 0.30;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
@@ -709,13 +710,13 @@ export class SceneManager {
     const fe = state.fisheye;
     const pass = this.postPipeline?.lensDistortionPass;
     if (!pass) {
-      this.camera.fov = state.camera?.fov ?? 50;
+      this.camera.fov = state.camera?.fov ?? 45;
       this.camera.updateProjectionMatrix();
       return;
     }
     if (!fe?.enabled) {
       pass.enabled = false;
-      this.camera.fov = state.camera?.fov ?? 50;
+      this.camera.fov = state.camera?.fov ?? 45;
       this.camera.updateProjectionMatrix();
       return;
     }
@@ -756,6 +757,7 @@ export class SceneManager {
     this.setShading(state.shading);
     this.autoRotateSpeed = state.autoRotate;
     this.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off');
+    this.setCameraAutoOrbitReverse(!!state.camera?.autoOrbitReverse);
     this.setCameraHandheld(state.camera?.handheld ?? 'off');
     this.setGroundSolid(state.groundSolid);
     this.setGroundWire(state.groundWire);
@@ -1513,6 +1515,11 @@ export class SceneManager {
   setCameraAutoOrbit(mode) {
     this.cameraAutoOrbit = mode ?? 'off';
     this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
+  }
+
+  setCameraAutoOrbitReverse(reverse) {
+    this.cameraAutoOrbitReverse = !!reverse;
+    this.cameraController?.setAutoOrbitReverse(this.cameraAutoOrbitReverse);
   }
 
   setCameraHandheld(mode) {
