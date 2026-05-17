@@ -2371,6 +2371,7 @@ export class MaterialController {
             material.isMeshPhysicalMaterial &&
             (Number(material.transmission) > 1e-4 || !!material.transmissionMap);
 
+          const envChanged = material.envMap !== envTexture;
           material.envMap = envTexture;
           if (material.envMapIntensity !== undefined) {
             const glassBoost =
@@ -2385,7 +2386,13 @@ export class MaterialController {
                 envMul = intensity * glassEnvMul;
               }
             }
+            const intChanged = material.envMapIntensity !== envMul;
             material.envMapIntensity = envMul;
+            if (!envChanged && !intChanged) {
+              return;
+            }
+          } else if (!envChanged) {
+            return;
           }
 
           // glTF KHR_materials_transmission — preserve imported roughness/metalness/IOR; crushing them

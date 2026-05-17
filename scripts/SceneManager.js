@@ -1237,19 +1237,22 @@ export class SceneManager {
 
   async setHdriPreset(preset) {
     if (!preset || !HDRI_PRESETS[preset]) return;
-        this.currentHdri = preset;
-    this.ui.beginLoadSpinner();
+    this.currentHdri = preset;
+    const alreadyCached = this.environmentController?.cache?.has?.(preset);
+    if (!alreadyCached) {
+      this.ui.beginLoadSpinner();
+    }
     try {
       await this.environmentController?.setPreset(preset);
-        this.applyHdriMood(preset);
-      // Reset auto-exposure luminance state when HDRI changes
-      // This allows it to quickly adapt to the new scene brightness
+      this.applyHdriMood(preset);
       this.autoExposureController?.resetLuminance();
     } catch (error) {
       console.error('Failed to apply HDRI preset', preset, error);
       this.ui.showToast('Failed to load HDRI');
     } finally {
-      this.ui.endLoadSpinner();
+      if (!alreadyCached) {
+        this.ui.endLoadSpinner();
+      }
     }
   }
 

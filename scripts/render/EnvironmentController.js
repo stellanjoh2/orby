@@ -35,23 +35,28 @@ export class EnvironmentController {
     this.pmremGenerator.compileEquirectangularShader();
 
     this.cache = new Map();
-    this.lowResCache = new Map();
+    this.pmremCache = new Map(); // preset -> PMREM render target (rotation 0)
     this.currentPreset = initialPreset ?? null;
     this.currentEnvironmentTexture = null;
     this.currentLowResTexture = null;
     this.environmentRenderTarget = null;
-    this.lowResEnvironmentRenderTarget = null; // Keep low-res PMREM during transition
+    this.lowResEnvironmentRenderTarget = null;
     this.rotationRenderTarget = null;
-    this.fadeProgress = 1.0; // 0 = low-res visible, 1 = full-res visible
-    this.isFading = false;
-    this.fullResPmremReady = false; // Track when full-res PMREM is ready
+    this._lastNotifiedEnvTexture = null;
+    this._presetLoadId = 0;
+    this._fadeFrameId = null;
   }
 
   dispose() {
-    if (this.environmentRenderTarget) {
-      this.environmentRenderTarget.dispose();
-      this.environmentRenderTarget = null;
+    this._cancelFade();
+    for (const target of this.pmremCache.values()) {
+      target?.dispose?.();
     }
+    this.pmremCache.clear();
+    if (this.environmentRenderTarget && !this.pmremCache.has(this.currentPreset)) {
+      this.environmentRenderTarget.dispose();
+    }
+    this.environmentRenderTarget = null;
     if (this.lowResEnvironmentRenderTarget) {
       this.lowResEnvironmentRenderTarget.dispose();
       this.lowResEnvironmentRenderTarget = null;
@@ -76,68 +81,59 @@ export class EnvironmentController {
 
   async setPreset(preset) {
     if (!preset || !this.presets[preset]) return null;
-    
-    // If texture is already cached, use it immediately (no lazy loading)
+
+    const loadId = ++this._presetLoadId;
+    this._cancelFade();
+
+    // Cached texture + PMREM: swap in one apply (no fade, no main-thread PMREM rebuild).
     if (this.cache.has(preset)) {
       this.currentEnvironmentTexture = this.cache.get(preset);
       this.currentLowResTexture = null;
-      this.fadeProgress = 1.0;
       this.currentPreset = preset;
-      this._applyEnvironment();
+      this.environmentRenderTarget =
+        this.pmremCache.get(preset)
+        ?? this._getOrCreatePmrem(preset, this.currentEnvironmentTexture);
+      this._applyEnvironment(true);
       return this.moods?.[preset] ?? null;
     }
-    
-    // First time loading - use lazy loading with low-res preview
+
+    // First load: optional low-res placeholder, then single cut to full-res PMREM.
+    this.currentEnvironmentTexture = null;
     try {
-      // Load low-res version first
       const lowResTexture = await this._loadHdriTextureLowRes(this.presets[preset]);
+      if (loadId !== this._presetLoadId) return null;
+
       if (lowResTexture) {
+        this._disposeLowResPreview();
         this.currentLowResTexture = lowResTexture;
-        this.fadeProgress = 0.0;
         this.currentPreset = preset;
-        
-        // Pre-generate low-res PMREM immediately so it's ready
-        // NOTE: Don't apply rotation during fade - rotation will be applied after fade completes
-        // This prevents PMREM regeneration during transition
-        if (this.pmremGenerator && this.currentLowResTexture) {
-          this.lowResEnvironmentRenderTarget = this.pmremGenerator.fromEquirectangular(this.currentLowResTexture);
+        if (this.pmremGenerator) {
+          this.lowResEnvironmentRenderTarget?.dispose?.();
+          this.lowResEnvironmentRenderTarget = this.pmremGenerator.fromEquirectangular(
+            this.currentLowResTexture,
+          );
         }
-        
-        this._applyEnvironment(); // Show low-res immediately
+        this._applyEnvironment(true);
       }
 
-      // Then load full resolution
       try {
         const texture = await this._loadHdriTexture(this.presets[preset]);
+        if (loadId !== this._presetLoadId) return null;
         if (!texture) throw new Error('HDRI texture failed to load');
+
         this.cache.set(preset, texture);
         this.currentPreset = preset;
         this.currentEnvironmentTexture = texture;
-        this.fullResPmremReady = false;
-        
-        // Pre-generate PMREM for full-res texture BEFORE starting fade
-        // This is critical to prevent pop - both PMREM targets must be ready
-        // NOTE: Don't apply rotation during fade - rotation will be applied after fade completes
-        // This prevents PMREM regeneration during transition
-        if (this.pmremGenerator && this.currentEnvironmentTexture) {
-          // Generate and store the full-res PMREM target (without rotation)
-          const fullResTarget = this.pmremGenerator.fromEquirectangular(this.currentEnvironmentTexture);
-          this.environmentRenderTarget = fullResTarget;
-          this.fullResPmremReady = true;
-        } else {
-          this.fullResPmremReady = true;
-        }
-        
-        // Fade in the full resolution
-        this._fadeInFullRes();
+        this.environmentRenderTarget = this._getOrCreatePmrem(preset, texture);
+        this._disposeLowResPreview();
+        this._applyEnvironment(true);
         return this.moods?.[preset] ?? null;
       } catch (fullResError) {
         console.error('Failed to load full-res HDRI texture', preset, fullResError);
-        // Keep low-res visible if full-res fails
+        if (loadId !== this._presetLoadId) return null;
         if (this.currentLowResTexture) {
           this.currentEnvironmentTexture = this.currentLowResTexture;
-          this.fadeProgress = 1.0;
-          this._applyEnvironment();
+          this._applyEnvironment(true);
         }
         return this.moods?.[preset] ?? null;
       }
@@ -182,7 +178,37 @@ export class EnvironmentController {
     return this.moods?.[preset] ?? null;
   }
 
+  _cancelFade() {
+    if (this._fadeFrameId != null) {
+      cancelAnimationFrame(this._fadeFrameId);
+      this._fadeFrameId = null;
+    }
+  }
+
+  _disposeLowResPreview() {
+    if (this.currentLowResTexture) {
+      this.currentLowResTexture.dispose();
+      this.currentLowResTexture = null;
+    }
+    if (this.lowResEnvironmentRenderTarget) {
+      this.lowResEnvironmentRenderTarget.dispose();
+      this.lowResEnvironmentRenderTarget = null;
+    }
+  }
+
+  _getOrCreatePmrem(preset, texture) {
+    if (!this.pmremGenerator || !texture) return null;
+    if (this.pmremCache.has(preset)) {
+      return this.pmremCache.get(preset);
+    }
+    const target = this.pmremGenerator.fromEquirectangular(texture);
+    this.pmremCache.set(preset, target);
+    return target;
+  }
+
   _notifyEnvironmentMapUpdated(texture, intensity) {
+    if (texture === this._lastNotifiedEnvTexture) return;
+    this._lastNotifiedEnvTexture = texture;
     if (typeof this.onEnvironmentMapUpdated === 'function') {
       this.onEnvironmentMapUpdated(texture, intensity);
     }
@@ -263,136 +289,72 @@ export class EnvironmentController {
     return texture;
   }
 
-  _fadeInFullRes() {
-    if (this.isFading) return;
-    this.isFading = true;
-    
-    // Wait for PMREM to be ready, then start smooth fade
-    const checkAndFade = () => {
-      if (!this.fullResPmremReady) {
-        requestAnimationFrame(checkAndFade);
-        return;
-      }
-      
-      const duration = 2000; // 2s fade for ultra-smooth transition
-      const startTime = performance.now();
-      const startProgress = this.fadeProgress;
-
-      const animate = () => {
-        const elapsed = performance.now() - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        // Use very smooth ease-out curve to prevent any pop
-        const easedProgress = 1 - Math.pow(1 - progress, 4); // Higher power = smoother
-        this.fadeProgress = startProgress + (1 - startProgress) * easedProgress;
-        this._applyEnvironment();
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          this.isFading = false;
-          // Switch to full-res texture
-          this.fadeProgress = 1.0;
-          // Dispose low-res texture and its PMREM after transition completes
-          setTimeout(() => {
-            if (this.currentLowResTexture) {
-              this.currentLowResTexture.dispose();
-              this.currentLowResTexture = null;
-            }
-            if (this.lowResEnvironmentRenderTarget) {
-              this.lowResEnvironmentRenderTarget.dispose();
-              this.lowResEnvironmentRenderTarget = null;
-            }
-          }, 300);
-          this._applyEnvironment(); // Final update with full-res
-        }
-      };
-      animate();
-    };
-    
-    // Small delay to ensure texture is ready, then check PMREM
-    setTimeout(() => {
-      checkAndFade();
-    }, 100);
-  }
-
-  _applyEnvironment() {
-    // During fade, gradually transition from low-res to full-res
-    // Keep low-res visible almost until the end to prevent pop
-    const isFading = this.currentLowResTexture && this.fadeProgress < 1.0;
-    const useLowRes = isFading && this.fadeProgress < 0.98; // Switch at 98% for ultra-smooth
-    const activeTexture = useLowRes ? this.currentLowResTexture : (this.currentEnvironmentTexture || this.currentLowResTexture);
+  _applyEnvironment(forceMaterialSync = false) {
+    const usingLowResPreview =
+      this.currentLowResTexture &&
+      !this.currentEnvironmentTexture;
+    const activeTexture =
+      usingLowResPreview
+        ? this.currentLowResTexture
+        : (this.currentEnvironmentTexture || this.currentLowResTexture);
     const hdriActive = this.enabled && activeTexture;
 
     if (!hdriActive) {
       this.scene.environment = null;
       this.scene.environmentIntensity = 0;
       this.scene.background = null;
-      // BackgroundController will handle clear color - don't set it here
+      if (forceMaterialSync) {
+        this._lastNotifiedEnvTexture = null;
+      }
       this._notifyEnvironmentMapUpdated(null, 0);
       return;
     }
 
     let envTexture = null;
     if (this.pmremGenerator) {
-      // During fade, ALWAYS use pre-generated PMREM targets to prevent regeneration pop
-      // DO NOT create rotated textures during fade - use the pre-generated PMREM directly
-      if (isFading) {
-        // During fade, use pre-generated PMREM based on fade progress
-        if (useLowRes && this.lowResEnvironmentRenderTarget) {
-          // Use pre-generated low-res PMREM
-          envTexture = this.lowResEnvironmentRenderTarget.texture;
-        } else if (this.environmentRenderTarget && this.fullResPmremReady) {
-          // Use pre-generated full-res PMREM
-          envTexture = this.environmentRenderTarget.texture;
-        } else {
-          // Fallback during fade - should not happen if pre-generation worked
-          const sourceTexture = useLowRes ? this.currentLowResTexture : this.currentEnvironmentTexture;
-          const renderTarget = this.pmremGenerator.fromEquirectangular(sourceTexture);
-          if (useLowRes) {
-            this.lowResEnvironmentRenderTarget = renderTarget;
-          } else {
-            this.environmentRenderTarget = renderTarget;
-          }
-          envTexture = renderTarget.texture;
-        }
-        envTexture.minFilter = THREE.LinearMipmapLinearFilter;
-        envTexture.magFilter = THREE.LinearFilter;
+      if (usingLowResPreview && this.lowResEnvironmentRenderTarget) {
+        envTexture = this.lowResEnvironmentRenderTarget.texture;
+      } else if (this.rotation === 0 && this.environmentRenderTarget) {
+        envTexture = this.environmentRenderTarget.texture;
       } else {
-        // Not fading - normal path with rotation support
         let sourceTexture = activeTexture;
         if (this.rotation !== 0) {
           sourceTexture = this._createRotatedTexture(activeTexture, this.rotation);
         }
         const renderTarget = this.pmremGenerator.fromEquirectangular(sourceTexture);
-        this.environmentRenderTarget = renderTarget;
+        if (this.rotation === 0 && this.currentPreset) {
+          const cached = this.pmremCache.get(this.currentPreset);
+          if (cached && cached !== renderTarget) {
+            cached.dispose();
+          }
+          this.pmremCache.set(this.currentPreset, renderTarget);
+          this.environmentRenderTarget = renderTarget;
+        }
         envTexture = renderTarget.texture;
+      }
+      if (envTexture) {
         envTexture.minFilter = THREE.LinearMipmapLinearFilter;
         envTexture.magFilter = THREE.LinearFilter;
       }
     } else {
-      // No PMREM generator - use texture directly
       let sourceTexture = activeTexture;
-      if (this.rotation !== 0 && !isFading) {
+      if (this.rotation !== 0) {
         sourceTexture = this._createRotatedTexture(activeTexture, this.rotation);
       }
       envTexture = sourceTexture;
     }
 
-    // Keep intensity at full strength throughout to avoid black frames
-    // The quality improvement from low-res to full-res provides the visual transition
     const envIntensity = this.strength;
     this.scene.environment = envTexture;
     this.scene.environmentIntensity = envIntensity;
+    if (forceMaterialSync) {
+      this._lastNotifiedEnvTexture = null;
+    }
     this._notifyEnvironmentMapUpdated(envTexture, envIntensity);
 
     if (this.backgroundEnabled && activeTexture) {
       let bgTexture = activeTexture;
-      // During fade, don't apply rotation to background to prevent pop
-      // Use the same texture that's being used for environment
-      if (isFading) {
-        // During fade, use the same texture as environment (no rotation)
-        bgTexture = activeTexture;
-      } else if (this.rotation !== 0) {
+      if (this.rotation !== 0) {
         bgTexture = this._createRotatedTexture(activeTexture, this.rotation);
       }
       if (this.blurriness > 0 && envTexture) {
@@ -401,18 +363,14 @@ export class EnvironmentController {
       this.scene.background = bgTexture;
       if ('backgroundBlurriness' in this.scene) {
         this.scene.backgroundBlurriness = this.blurriness;
-        // Keep background intensity at full strength throughout
         this.scene.backgroundIntensity = this.strength;
       }
     } else {
-      // HDRI background is disabled - BackgroundController will handle clear color
-      // CRITICAL: scene.background MUST be null for clear color to show
       this.scene.background = null;
       if ('backgroundBlurriness' in this.scene) {
         this.scene.backgroundBlurriness = 0;
         this.scene.backgroundIntensity = 1;
       }
-      // BackgroundController will set the clear color - don't set it here
     }
   }
 
