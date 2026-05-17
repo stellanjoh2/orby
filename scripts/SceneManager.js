@@ -54,6 +54,7 @@ import {
 } from './scene/SvgExtrudeSceneOps.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
+import { normalizeIsometricState } from './camera/isometricPresets.js';
 import {
   ensureStudioActive,
   shutdownStudio as shutdownStudioLifecycle,
@@ -174,6 +175,10 @@ export class SceneManager {
       ? initialState.lightsShadowContactOffset
       : -0.0001;
     this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
+    this.lightsShadowColor = initialState.lightsShadowColor ?? '#000000';
+    this.lightsShadowOpacity = Number.isFinite(initialState.lightsShadowOpacity)
+      ? Math.min(1, Math.max(0, initialState.lightsShadowOpacity))
+      : 0.25;
 
     this.modelLoader = new ModelLoader();
     this.modelLifecycle = new ModelLifecycleManager(this);
@@ -281,6 +286,20 @@ export class SceneManager {
       onAltLightRotateEnd: () => {
         this.stateStore.set('lightsRotation', this.lightsRotation);
         this.ui?.setLightsRotation?.(this.lightsRotation);
+      },
+      onShiftHdriRotate: (deltaDegrees) => {
+        const currentRotation = this.hdriRotation ?? 0;
+        this.setHdriRotation(currentRotation + deltaDegrees, {
+          updateState: false,
+          updateUi: false,
+        });
+      },
+      onShiftHdriRotateEnd: () => {
+        this.stateStore.set('hdriRotation', this.hdriRotation);
+        if (this.ui?.inputs?.hdriRotation) {
+          this.ui.inputs.hdriRotation.value = this.hdriRotation;
+          this.ui.updateValueLabel('hdriRotation', this.hdriRotation, 'angle');
+        }
       },
       onAltLightHeight: (deltaHeight) => {
         // Get current height from lights controller (source of truth)
@@ -727,7 +746,7 @@ export class SceneManager {
       backdropY: state.backdropY ?? 0,
       backdropTextureEnabled: !!state.backdropTextureEnabled,
       backdropTextureScale: state.backdropTextureScale ?? 1.8,
-      debugWireframeEnabled: !!state.wireframe?.alwaysOn,
+      debugWireframeEnabled: false,
     });
   }
 
@@ -890,7 +909,15 @@ export class SceneManager {
    * black edges. When fisheye is off, uses `camera.fov` from state.
    */
   syncPerspectiveCameraFovAndLens(options = {}) {
+    if (!this.camera?.isPerspectiveCamera) return;
     const state = this.stateStore.getState();
+    if (state.camera?.isometric?.enabled) {
+      const pass = this.postPipeline?.lensDistortionPass;
+      if (pass) pass.enabled = false;
+      this.camera.fov = state.camera?.fov ?? 45;
+      this.camera.updateProjectionMatrix();
+      return;
+    }
     const fe = state.fisheye;
     const pass = this.postPipeline?.lensDistortionPass;
     const fovScale = THREE.MathUtils.clamp(Number(options.fovScale) || 1, 1, 1.12);
@@ -1456,12 +1483,17 @@ export class SceneManager {
     this.environmentController?.setBlurriness(this.hdriBlurriness);
   }
 
-  setHdriRotation(value) {
-    this.hdriRotation = Math.min(360, Math.max(0, value));
-    this.stateStore.set('hdriRotation', this.hdriRotation);
+  setHdriRotation(value, { updateState = true, updateUi = false } = {}) {
+    const normalized = ((value % 360) + 360) % 360;
+    this.hdriRotation = normalized;
+    if (updateState) {
+      this.stateStore.set('hdriRotation', this.hdriRotation);
+    }
     this.environmentController?.setRotation(this.hdriRotation);
-    // Also rotate lights to stay in sync (without updating HDRI again to avoid loop)
-    this.setLightsRotation(this.hdriRotation, { updateUi: true, updateHdri: false });
+    if (updateUi && this.ui?.inputs?.hdriRotation) {
+      this.ui.inputs.hdriRotation.value = this.hdriRotation;
+      this.ui.updateValueLabel('hdriRotation', this.hdriRotation, 'angle');
+    }
   }
 
   setClaySettings(patch) {
@@ -1828,7 +1860,9 @@ export class SceneManager {
   }
 
   setSceneGeometryWireframe(enabled) {
-    this.groundController?.setDebugWireframeEnabled(!!enabled);
+    // Wireframe display mode targets the loaded mesh overlay only.
+    if (enabled) return;
+    this.groundController?.setDebugWireframeEnabled(false);
   }
 
   applyLightSettings(lightsState) {
@@ -1840,6 +1874,36 @@ export class SceneManager {
     this.lightsEnabled = !!enabled;
     const lightsState = this.stateStore.getState().lights;
     this.lightsController?.setEnabled(this.lightsEnabled, lightsState);
+
+    if (this.lightsEnabled) {
+      ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
+        const on = lightsState?.[lightId]?.enabled !== false;
+        this.lightsController?.updateLightProperty(lightId, 'enabled', on);
+      });
+    } else {
+      ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
+        this.lightsController?.updateLightProperty(lightId, 'enabled', false);
+      });
+    }
+
+    this._syncEffectiveCastShadows();
+    this._applyShadowTintToScene();
+  }
+
+  _isShadowTintActive() {
+    return !!this.lightsEnabled && this.lightsCastShadows !== false;
+  }
+
+  _syncEffectiveCastShadows() {
+    const cast = this._isShadowTintActive();
+    this.lightsController?.setCastShadows(cast);
+    const lightsState = this.stateStore.getState().lights;
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      this.lightsController?.updateLightProperty(lightId, 'castShadows', cast);
+      if (lightsState?.[lightId]) {
+        this.stateStore.set(`lights.${lightId}.castShadows`, cast);
+      }
+    });
   }
 
   setLightsMaster(value) {
@@ -1862,22 +1926,11 @@ export class SceneManager {
     this.lightsController?.updateIndicators();
   }
 
-  setLightsRotation(value, { updateUi = true, updateHdri = false, updateState = true } = {}) {
+  setLightsRotation(value, { updateUi = true, updateState = true } = {}) {
     this.lightsRotation = this.lightsController?.setRotation(value) ?? value;
     // Update StateStore to keep it in sync (especially important for auto-rotate)
     if (updateState) {
       this.stateStore.set('lightsRotation', this.lightsRotation);
-    }
-    // Also rotate HDRI with lights (unless we're being called from setHdriRotation to avoid loop)
-    if (updateHdri) {
-      this.hdriRotation = this.lightsRotation;
-      this.stateStore.set('hdriRotation', this.hdriRotation);
-      this.environmentController?.setRotation(this.hdriRotation);
-      // Update HDRI rotation slider in UI
-      if (this.ui?.inputs?.hdriRotation) {
-        this.ui.inputs.hdriRotation.value = this.hdriRotation;
-        this.ui.updateValueLabel('hdriRotation', this.hdriRotation, 'angle');
-      }
     }
     if (updateUi) {
       this.ui?.setLightsRotation?.(this.lightsRotation);
@@ -1923,7 +1976,8 @@ export class SceneManager {
     if (this.stateStore.getState().lightsCastShadows !== next) {
       this.stateStore.set('lightsCastShadows', next);
     }
-    this.lightsController?.setCastShadows(next);
+    this._syncEffectiveCastShadows();
+    this._applyShadowTintToScene();
   }
 
   setLightsShadowQuality(quality) {
@@ -1942,6 +1996,39 @@ export class SceneManager {
     const raw = Number(value);
     this.lightsShadowContactOffset = Number.isFinite(raw) ? raw : -0.0001;
     this.lightsController?.setShadowContactOffset(this.lightsShadowContactOffset);
+  }
+
+  setLightsShadowColor(color) {
+    const next = color ?? '#000000';
+    this.lightsShadowColor = next;
+    if (this.stateStore.getState().lightsShadowColor !== next) {
+      this.stateStore.set('lightsShadowColor', next);
+    }
+    this._applyShadowTintToScene();
+  }
+
+  setLightsShadowOpacity(value) {
+    const raw = Number(value);
+    this.lightsShadowOpacity = Number.isFinite(raw)
+      ? Math.min(1, Math.max(0, raw))
+      : 0.25;
+    if (this.stateStore.getState().lightsShadowOpacity !== this.lightsShadowOpacity) {
+      this.stateStore.set('lightsShadowOpacity', this.lightsShadowOpacity);
+    }
+    this._applyShadowTintToScene();
+  }
+
+  _applyShadowTintToScene() {
+    const color = this.lightsShadowColor ?? '#000000';
+    const strength = this._isShadowTintActive() ? 1 : 0;
+    const opacity = this.lightsShadowOpacity ?? 0.25;
+    this.materialController?.setShadowTintSettings({ color, strength, opacity });
+    const ground = this.groundController;
+    const tintOpts = { color, strength, opacity };
+    if (ground?.podium) this.materialController?.applyShadowTintToObject(ground.podium, tintOpts);
+    if (ground?.backdrop) {
+      this.materialController?.clearShadowTintFromObject(ground.backdrop);
+    }
   }
 
   setLightsShadowTwoSided(enabled) {
@@ -1965,6 +2052,8 @@ export class SceneManager {
     const quality = settings.quality ?? this.lightsShadowQuality;
     const softness = settings.softness ?? this.lightsShadowSoftness;
     const contactOffset = settings.contactOffset ?? this.lightsShadowContactOffset;
+    const shadowColor = settings.color ?? this.lightsShadowColor;
+    const shadowOpacity = settings.opacity ?? this.lightsShadowOpacity;
     const twoSided = settings.twoSided ?? this.lightsShadowTwoSided;
 
     this.setLightsCastShadows(cast);
@@ -1972,6 +2061,8 @@ export class SceneManager {
     this.setLightsShadowContactOffset(contactOffset);
     this.setLightsShadowTwoSided(twoSided);
     this.setLightsShadowSoftness(softness);
+    this.setLightsShadowColor(shadowColor);
+    this.setLightsShadowOpacity(shadowOpacity);
   }
 
   setLightsAutoRotate(enabled) {
@@ -2617,6 +2708,7 @@ export class SceneManager {
     }
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
+    this._applyShadowTintToScene();
     this.setLightsShadowTwoSided(this.lightsShadowTwoSided);
     // Material instances are recreated when shading changes; reapply reverse mode.
     this.setReverseNormals(this.reverseNormalsEnabled);
@@ -2635,6 +2727,36 @@ export class SceneManager {
 
   applyCameraPreset(preset) {
     this.cameraController?.applyCameraPreset(preset);
+  }
+
+  /**
+   * Isometric mode replaces lens orbit: when on, camera snaps to RTS-style pose and
+   * lens / fisheye / tilt are bypassed until turned off.
+   */
+  applyIsometricCamera(rawSettings) {
+    const iso = normalizeIsometricState(rawSettings);
+    const cc = this.cameraController;
+
+    if (!iso.enabled) {
+      cc?.exitIsometricMode?.();
+      this.syncPerspectiveCameraFovAndLens();
+      this.ui?.applyBlockStates?.(this.stateStore.getState());
+      return;
+    }
+
+    if (!cc?.isIsometricModeActive?.()) {
+      cc?.beginIsometricMode?.();
+    }
+
+    const focus = cc?.getModelBounds?.()?.center ?? cc?.getControls?.()?.target;
+    if (focus) {
+      cc.getControls().target.copy(focus);
+    }
+
+    cc?.applyIsometricAngles(iso.horizontalDeg, iso.verticalDeg, focus);
+
+    this.syncPerspectiveCameraFovAndLens();
+    this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
   /**
@@ -2748,7 +2870,7 @@ export class SceneManager {
       this.canvas.style.height = '100%';
     }
 
-    this.camera.aspect = finalWidth / finalHeight;
+    this.camera.aspect = finalWidth / Math.max(1, finalHeight);
     this.syncPerspectiveCameraFovAndLens();
     this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
   }

@@ -73,6 +73,7 @@ export class LightsController {
         );
         light.shadow.bias = this.shadowContactOffset;
         light.shadow.normalBias = 0.015;
+        light.shadow.intensity = 1;
       } else {
         light.castShadow = false;
       }

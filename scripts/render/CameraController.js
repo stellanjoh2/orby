@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
+import { setCameraOrbitFromAngles } from '../camera/isometricView.js';
 
 function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
@@ -27,6 +28,8 @@ export class CameraController {
       onAltLightRotateEnd = null,
       onAltLightHeight = null,
       onAltLightHeightEnd = null,
+      onShiftHdriRotate = null,
+      onShiftHdriRotateEnd = null,
       altLightRotateSensitivity = 0.5,
       altLightHeightSensitivity = 0.1,
       onModelBoundsChanged = null,
@@ -40,6 +43,8 @@ export class CameraController {
       onAltLightRotateEnd,
       onAltLightHeight,
       onAltLightHeightEnd,
+      onShiftHdriRotate,
+      onShiftHdriRotateEnd,
       onModelBoundsChanged,
     };
     this.altLightRotateSensitivity = altLightRotateSensitivity;
@@ -88,6 +93,7 @@ export class CameraController {
     this._preExportOrbitControls = null;
 
     this.altRightDragging = false;
+    this.shiftRightDragging = false;
     this.altLeftDragging = false;
     this.altLeftTargetSet = false;
     this.lastMouseX = 0;
@@ -100,7 +106,15 @@ export class CameraController {
     this._focusTimeline = null;
     this._focusGeneration = 0;
 
+    this._isometricModeActive = false;
+    /** @type {{ position: THREE.Vector3, target: THREE.Vector3, tilt: number, minPolar: number, maxPolar: number, minAzimuth: number, maxAzimuth: number, enableRotate: boolean, enablePan: boolean } | null} */
+    this._isometricRestoreSnapshot = null;
+
     this._bindAltInteractions();
+  }
+
+  isIsometricModeActive() {
+    return !!this._isometricModeActive;
   }
 
   getControls() {
@@ -112,6 +126,7 @@ export class CameraController {
    * @param {number} degrees - Tilt angle in degrees (-45 to 45)
    */
   setTilt(degrees) {
+    if (this._isometricModeActive) return;
     const n = typeof degrees === 'number' ? degrees : Number(degrees);
     this.currentTilt = Number.isFinite(n) ? n : 0;
     this._applyTilt();
@@ -132,12 +147,112 @@ export class CameraController {
   }
 
   /**
+   * Save orbit pose before isometric mode; disables orbit and pan (zoom still works).
+   */
+  beginIsometricMode() {
+    if (this._isometricModeActive || !this.controls) return;
+    this._isometricRestoreSnapshot = {
+      position: this.camera.position.clone(),
+      target: this.controls.target.clone(),
+      tilt: this.currentTilt,
+      minPolar: this.controls.minPolarAngle,
+      maxPolar: this.controls.maxPolarAngle,
+      minAzimuth: this.controls.minAzimuthAngle,
+      maxAzimuth: this.controls.maxAzimuthAngle,
+      enableRotate: this.controls.enableRotate,
+      enablePan: this.controls.enablePan,
+    };
+    this._isometricModeActive = true;
+    this.currentTilt = 0;
+    this.controls.enableRotate = false;
+    this.controls.enablePan = false;
+  }
+
+  /**
+   * Restore the pre-isometric orbit pose.
+   */
+  exitIsometricMode() {
+    if (!this._isometricModeActive) return;
+    const sn = this._isometricRestoreSnapshot;
+    if (sn && this.controls) {
+      this.camera.position.copy(sn.position);
+      this.controls.target.copy(sn.target);
+      this.currentTilt = sn.tilt;
+      this.controls.minPolarAngle = sn.minPolar;
+      this.controls.maxPolarAngle = sn.maxPolar;
+      this.controls.minAzimuthAngle = sn.minAzimuth;
+      this.controls.maxAzimuthAngle = sn.maxAzimuth;
+      this.controls.enableRotate = sn.enableRotate;
+      this.controls.enablePan = sn.enablePan;
+    }
+    this._isometricModeActive = false;
+    this._isometricRestoreSnapshot = null;
+    this.controls?.update?.();
+    this._applyTilt();
+  }
+
+  /**
+   * Aim at `target` with classic isometric yaw (Y) + elevation above ground (X tilt).
+   */
+  applyIsometricAngles(horizontalDeg, verticalDeg, target = null) {
+    const orbitTarget = target ?? this.controls?.target;
+    if (!orbitTarget || !this.controls) return;
+
+    let distance = this.getTargetDistance();
+    if (this.modelBounds?.radius > 0) {
+      distance = Math.max(distance, this.modelBounds.radius * 2.2);
+    }
+    distance = Math.max(0.5, distance);
+
+    // Release prior preset locks so OrbitControls does not snap back to the old pose.
+    this._releaseIsometricOrbitLimits();
+
+    setCameraOrbitFromAngles(
+      this.camera,
+      orbitTarget,
+      distance,
+      horizontalDeg,
+      verticalDeg,
+    );
+    this.controls.target.copy(orbitTarget);
+
+    if (this.controls.sphericalDelta) {
+      this.controls.sphericalDelta.set(0, 0, 0);
+    }
+    this.controls.update();
+    this._lockIsometricOrbitPose();
+  }
+
+  _releaseIsometricOrbitLimits() {
+    if (!this.controls) return;
+    this.controls.minPolarAngle = 0;
+    this.controls.maxPolarAngle = Math.PI;
+    this.controls.minAzimuthAngle = -Infinity;
+    this.controls.maxAzimuthAngle = Infinity;
+  }
+
+  /** Freeze azimuth and elevation — no gimbal while isometric mode is active. */
+  _lockIsometricOrbitPose() {
+    if (!this._isometricModeActive || !this.controls?.target) return;
+    const target = this.controls.target;
+    const offset = new THREE.Vector3().subVectors(this.camera.position, target);
+    const spherical = new THREE.Spherical().setFromVector3(offset);
+    this.controls.minPolarAngle = spherical.phi;
+    this.controls.maxPolarAngle = spherical.phi;
+    this.controls.minAzimuthAngle = spherical.theta;
+    this.controls.maxAzimuthAngle = spherical.theta;
+    this.controls.enableRotate = false;
+    this.controls.enablePan = false;
+  }
+
+  /**
    * Apply procedural handheld offset to the current camera pose. Orbit math stays unaware;
    * this runs once per frame after OrbitControls and tilt.
    * @param {number} delta seconds
    */
   applyHandheldMotion(delta) {
     if (this._exportOrbitDriveActive) return;
+    if (this._isometricModeActive) return;
     if (this.handheldMode === 'off') return;
     const d = typeof delta === 'number' ? delta : 0;
     if (!Number.isFinite(d) || d <= 0 || d > 0.25) return;
@@ -256,7 +371,7 @@ export class CameraController {
   }
 
   orbit(deltaAzimuth, deltaPolar) {
-    if (!this.controls) return;
+    if (!this.controls || this._isometricModeActive) return;
     if (Math.abs(deltaAzimuth) > 1e-4) {
       if (typeof this.controls.rotateLeft === 'function') {
         this.controls.rotateLeft(deltaAzimuth);
@@ -282,7 +397,7 @@ export class CameraController {
   }
 
   pan(deltaX, deltaY) {
-    if (!this.controls) return;
+    if (!this.controls || this._isometricModeActive) return;
     if (Math.abs(deltaX) < 1e-5 && Math.abs(deltaY) < 1e-5) return;
     if (typeof this.controls.pan === 'function') {
       this.controls.pan(deltaX, deltaY);
@@ -435,8 +550,13 @@ export class CameraController {
       this.controls.enableDamping = false; // Disable damping to prevent interference
     } else {
       // Restore normal controls when auto-orbit is off
-      this.controls.enablePan = true;
-      this.controls.enableRotate = true;
+      if (this._isometricModeActive) {
+        this.controls.enablePan = false;
+        this.controls.enableRotate = false;
+      } else {
+        this.controls.enablePan = true;
+        this.controls.enableRotate = true;
+      }
       this.controls.enableZoom = true; // Re-enable zoom
       this.controls.enableDamping = true;
       this.autoOrbitBaseSpherical = null;
@@ -450,6 +570,7 @@ export class CameraController {
    */
   updateAutoOrbit(delta) {
     if (this._exportOrbitDriveActive) return;
+    if (this._isometricModeActive) return;
     if (this.autoOrbitMode === 'off' || !this.autoOrbitBaseSpherical) return;
 
     // Speed multipliers
@@ -505,7 +626,9 @@ export class CameraController {
     // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {
       this.controls.update();
-      this._applyTilt();
+      if (!this._isometricModeActive) {
+        this._applyTilt();
+      }
     }
   }
 
@@ -575,10 +698,15 @@ export class CameraController {
   }
 
   _restoreFocusOrbitControls() {
-    const pan = this.originalControlState?.pan;
-    const rotate = this.originalControlState?.rotate;
-    this.controls.enablePan = pan ?? true;
-    this.controls.enableRotate = rotate ?? true;
+    if (this._isometricModeActive) {
+      this.controls.enablePan = false;
+      this.controls.enableRotate = false;
+    } else {
+      const pan = this.originalControlState?.pan;
+      const rotate = this.originalControlState?.rotate;
+      this.controls.enablePan = pan ?? true;
+      this.controls.enableRotate = rotate ?? true;
+    }
     this.controls.enabled = true;
     this.controls.update();
   }
@@ -697,12 +825,25 @@ export class CameraController {
 
   dispose() {
     this._cancelFocusAnimation();
+    this._isometricModeActive = false;
+    this._isometricRestoreSnapshot = null;
     this.controls.dispose();
     this._unbindAltInteractions();
   }
 
   _bindAltInteractions() {
     this.mousedownHandler = (event) => {
+      if (event.shiftKey && !event.altKey && event.button === 2) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.shiftRightDragging = true;
+        this.lastMouseX = event.clientX;
+        this._storeControlState();
+        this.controls.enablePan = false;
+        this.controls.enableRotate = false;
+        return;
+      }
+
       if (!event.altKey) return;
 
       if (event.button === 2) {
@@ -724,7 +865,14 @@ export class CameraController {
     };
 
     this.mousemoveHandler = (event) => {
-      if (this.altRightDragging) {
+      if (this.shiftRightDragging) {
+        const deltaX = event.clientX - this.lastMouseX;
+        this.lastMouseX = event.clientX;
+        if (Math.abs(deltaX) > 0) {
+          const deltaDegrees = deltaX * this.altLightRotateSensitivity;
+          this.callbacks.onShiftHdriRotate?.(deltaDegrees);
+        }
+      } else if (this.altRightDragging) {
         const deltaX = event.clientX - this.lastMouseX;
         const deltaY = event.clientY - this.lastMouseY;
         this.lastMouseX = event.clientX;
@@ -747,7 +895,11 @@ export class CameraController {
     };
 
     this.mouseupHandler = (event) => {
-      if (this.altRightDragging && event.button === 2) {
+      if (this.shiftRightDragging && event.button === 2) {
+        this.shiftRightDragging = false;
+        this._restoreControlState();
+        this.callbacks.onShiftHdriRotateEnd?.();
+      } else if (this.altRightDragging && event.button === 2) {
         this.altRightDragging = false;
         this._restoreControlState();
         this.callbacks.onAltLightRotateEnd?.();
@@ -759,6 +911,11 @@ export class CameraController {
     };
 
     this.mouseleaveHandler = () => {
+      if (this.shiftRightDragging) {
+        this.shiftRightDragging = false;
+        this._restoreControlState();
+        this.callbacks.onShiftHdriRotateEnd?.();
+      }
       if (this.altRightDragging) {
         this.altRightDragging = false;
         this._restoreControlState();
@@ -772,7 +929,7 @@ export class CameraController {
     };
 
     this.contextMenuHandler = (event) => {
-      if (event.altKey) {
+      if (event.altKey || event.shiftKey) {
         event.preventDefault();
       }
     };
@@ -800,6 +957,11 @@ export class CameraController {
   }
 
   _restoreControlState() {
+    if (this._isometricModeActive) {
+      this.controls.enablePan = false;
+      this.controls.enableRotate = false;
+      return;
+    }
     if (this.originalControlState) {
       this.controls.enablePan =
         this.originalControlState.pan ?? this.controls.enablePan;

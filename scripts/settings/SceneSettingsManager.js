@@ -146,6 +146,8 @@ export class SceneSettingsManager {
       lightsCastShadows: state.lightsCastShadows,
       lightsShadowQuality: state.lightsShadowQuality,
       lightsShadowSoftness: state.lightsShadowSoftness,
+      lightsShadowColor: state.lightsShadowColor,
+      lightsShadowOpacity: state.lightsShadowOpacity,
       lightsShadowContactOffset: state.lightsShadowContactOffset,
       lightsShadowTwoSided: state.lightsShadowTwoSided,
       background: state.background,
@@ -174,6 +176,7 @@ export class SceneSettingsManager {
         compositionGridEnabled: state.camera?.compositionGridEnabled,
         compositionGuidesInverted: state.camera?.compositionGuidesInverted,
         cinematicLetterbox219: state.camera?.cinematicLetterbox219,
+        isometric: state.camera?.isometric,
       },
       exposure: state.exposure,
       autoExposure: state.autoExposure,
@@ -904,6 +907,12 @@ export class SceneSettingsManager {
       if (payload.lightsShadowSoftness !== undefined) {
         this.stateStore.set('lightsShadowSoftness', payload.lightsShadowSoftness);
       }
+      if (payload.lightsShadowColor !== undefined) {
+        this.stateStore.set('lightsShadowColor', payload.lightsShadowColor);
+      }
+      if (payload.lightsShadowOpacity !== undefined) {
+        this.stateStore.set('lightsShadowOpacity', payload.lightsShadowOpacity);
+      }
       if (payload.lightsShadowContactOffset !== undefined) {
         this.stateStore.set(
           'lightsShadowContactOffset',
@@ -917,6 +926,8 @@ export class SceneSettingsManager {
         payload.lightsCastShadows !== undefined
         || payload.lightsShadowQuality !== undefined
         || payload.lightsShadowSoftness !== undefined
+        || payload.lightsShadowColor !== undefined
+        || payload.lightsShadowOpacity !== undefined
         || payload.lightsShadowContactOffset !== undefined
         || payload.lightsShadowTwoSided !== undefined
       ) {
@@ -924,6 +935,8 @@ export class SceneSettingsManager {
           castShadows: payload.lightsCastShadows,
           quality: payload.lightsShadowQuality,
           softness: payload.lightsShadowSoftness,
+          color: payload.lightsShadowColor,
+          opacity: payload.lightsShadowOpacity ?? 0.25,
           contactOffset: payload.lightsShadowContactOffset,
           twoSided: payload.lightsShadowTwoSided,
         });
@@ -1056,6 +1069,10 @@ export class SceneSettingsManager {
             'camera:cinematic-letterbox-219',
             !!payload.camera.cinematicLetterbox219,
           );
+        }
+        if (payload.camera.isometric !== undefined) {
+          this.stateStore.set('camera.isometric', payload.camera.isometric);
+          this.eventBus.emit('camera:isometric', payload.camera.isometric);
         }
       }
 

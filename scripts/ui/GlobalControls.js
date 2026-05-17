@@ -24,7 +24,6 @@ export class GlobalControls {
     this.bindSegmentedSelectSounds();
     this.bindExportOptionSelectSounds();
     this.bindEffectToggleSounds();
-    this.bindHdriLightsRotation();
   }
 
   bindResetAll() {
@@ -282,7 +281,7 @@ export class GlobalControls {
         this.eventBus.emit('camera:focus');
       }
 
-      // Transform tools: W move, E scale, R rotate (Blender-style), Q select / exit tool
+      // Transform tools: W translate, E rotate, R scale (Blender-style), Q select / exit tool
       if (key === 'w') {
         event.preventDefault();
         this.stateStore.set('rotateWidgetEnabled', false);
@@ -296,21 +295,21 @@ export class GlobalControls {
       if (key === 'e') {
         event.preventDefault();
         this.stateStore.set('moveWidgetEnabled', false);
-        this.stateStore.set('rotateWidgetEnabled', false);
-        this.stateStore.set('scaleWidgetEnabled', true);
-        this.eventBus.emit('mesh:move-widget-enabled', false);
-        this.eventBus.emit('mesh:rotate-widget-enabled', false);
-        this.eventBus.emit('mesh:scale-widget-enabled', true);
-      }
-
-      if (key === 'r' && !isCtrl && !isShift) {
-        event.preventDefault();
-        this.stateStore.set('moveWidgetEnabled', false);
         this.stateStore.set('scaleWidgetEnabled', false);
         this.stateStore.set('rotateWidgetEnabled', true);
         this.eventBus.emit('mesh:move-widget-enabled', false);
         this.eventBus.emit('mesh:scale-widget-enabled', false);
         this.eventBus.emit('mesh:rotate-widget-enabled', true);
+      }
+
+      if (key === 'r' && !isCtrl && !isShift) {
+        event.preventDefault();
+        this.stateStore.set('moveWidgetEnabled', false);
+        this.stateStore.set('rotateWidgetEnabled', false);
+        this.stateStore.set('scaleWidgetEnabled', true);
+        this.eventBus.emit('mesh:move-widget-enabled', false);
+        this.eventBus.emit('mesh:rotate-widget-enabled', false);
+        this.eventBus.emit('mesh:scale-widget-enabled', true);
       }
 
       if (key === 'q' && !isCtrl && !isShift) {
@@ -708,75 +707,5 @@ export class GlobalControls {
     this.ui.syncUIFromState();
   }
 
-  bindHdriLightsRotation() {
-    if (!this.ui.dom.canvas) return;
-
-    let isRotating = false;
-    let startX = 0;
-    let startHdriRotation = 0;
-    let startLightsRotation = 0;
-    const rotationSensitivity = 0.5;
-
-    const handleMouseDown = (event) => {
-      if (event.altKey && event.button === 0) {
-        event.preventDefault();
-        isRotating = true;
-        startX = event.clientX;
-        startHdriRotation = this.stateStore.getState().hdriRotation ?? 0;
-        startLightsRotation = this.stateStore.getState().lightsRotation ?? 0;
-        this.ui.dom.canvas.style.cursor = 'grab';
-        this.eventBus.emit('camera:lock-orbit');
-      }
-    };
-
-    const handleMouseMove = (event) => {
-      if (!isRotating) return;
-      event.preventDefault();
-
-      const deltaX = event.clientX - startX;
-      const rotationDelta = deltaX * rotationSensitivity;
-
-      let newHdriRotation = startHdriRotation + rotationDelta;
-      let newLightsRotation = startLightsRotation + rotationDelta;
-
-      newHdriRotation = ((newHdriRotation % 360) + 360) % 360;
-      newLightsRotation = ((newLightsRotation % 360) + 360) % 360;
-
-      this.stateStore.set('hdriRotation', newHdriRotation);
-      this.stateStore.set('lightsRotation', newLightsRotation);
-      this.eventBus.emit('studio:hdri-rotation', newHdriRotation);
-      this.eventBus.emit('lights:rotate', newLightsRotation);
-
-      if (this.ui.inputs.hdriRotation) {
-        this.ui.inputs.hdriRotation.value = newHdriRotation;
-        this.helpers.updateValueLabel('hdriRotation', newHdriRotation, 'angle');
-      }
-      if (this.ui.inputs.lightsRotation) {
-        this.ui.inputs.lightsRotation.value = newLightsRotation;
-        this.helpers.updateValueLabel('lightsRotation', newLightsRotation, 'angle');
-      }
-    };
-
-    const handleMouseUp = (event) => {
-      if (isRotating) {
-        event.preventDefault();
-        isRotating = false;
-        this.ui.dom.canvas.style.cursor = '';
-        this.eventBus.emit('camera:unlock-orbit');
-      }
-    };
-
-    this.ui.dom.canvas.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    this.ui.dom.canvas.addEventListener('mouseleave', () => {
-      if (isRotating) {
-        isRotating = false;
-        this.ui.dom.canvas.style.cursor = '';
-        this.eventBus.emit('camera:unlock-orbit');
-      }
-    });
-  }
 }
 

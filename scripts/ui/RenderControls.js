@@ -512,7 +512,8 @@ export class RenderControls {
           ['fisheyeHorizontalFOV', 'fisheyeStrength', 'fisheyeCylindricalRatio'],
           !enabled,
         );
-        this.ui.lensControls?.setFovDisabled(enabled);
+        const isoOn = !!this.stateStore.getState().camera?.isometric?.enabled;
+        this.ui.lensControls?.setFovDisabled(enabled || isoOn);
         emitFisheye();
       });
     }

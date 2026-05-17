@@ -520,5 +520,17 @@ export class PostProcessingPipeline {
       this.toneMappingPass.uniforms.vignetteColor.value = new THREE.Color(color);
     }
   }
+
+  /** Swap the main scene camera used by render / AO / DOF passes. */
+  setMainCamera(camera) {
+    if (!camera) return;
+    this.renderPass.camera = camera;
+    if (this.n8aoPass) {
+      this.n8aoPass.camera = camera;
+    }
+    if (this.bokehPass) {
+      this.bokehPass.camera = camera;
+    }
+  }
 }
 

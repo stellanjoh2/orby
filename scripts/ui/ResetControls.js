@@ -37,12 +37,12 @@ const RESET_DIRTY_PATHS = {
   'lens-flare': ['lensFlare'],
   lights: [
     'lights', 'lightsMaster', 'lightsRotation', 'lightsHeight',
-    'lightsShadowQuality', 'lightsShadowSoftness',
+    'lightsShadowQuality', 'lightsShadowSoftness', 'lightsShadowColor', 'lightsShadowOpacity',
     'lightsShadowContactOffset', 'lightsShadowTwoSided',
   ],
   'lights-shadows': [
     'lightsCastShadows', 'lightsShadowQuality', 'lightsShadowSoftness',
-    'lightsShadowContactOffset', 'lightsShadowTwoSided',
+    'lightsShadowColor', 'lightsShadowOpacity', 'lightsShadowContactOffset', 'lightsShadowTwoSided',
   ],
   keyLight: ['lights.key'],
   fillLight: ['lights.fill'],
@@ -71,6 +71,7 @@ const RESET_DIRTY_PATHS = {
   'ambient-occlusion': ['ambientOcclusion'],
   fresnel: ['fresnel'],
   lens: ['camera.fov', 'camera.lensFocalMm', 'camera.lensSensorId'],
+  isometric: ['camera.isometric'],
   camera: [
     'camera.tilt',
     'camera.autoOrbit', 'camera.handheld',
@@ -517,6 +518,8 @@ export class ResetControls {
       this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
       this.stateStore.set('lightsShadowQuality', defaults.lightsShadowQuality ?? 'medium');
       this.stateStore.set('lightsShadowSoftness', defaults.lightsShadowSoftness ?? 4);
+      this.stateStore.set('lightsShadowColor', defaults.lightsShadowColor ?? '#000000');
+      this.stateStore.set('lightsShadowOpacity', defaults.lightsShadowOpacity ?? 0.25);
       this.stateStore.set(
         'lightsShadowContactOffset',
         defaults.lightsShadowContactOffset ?? -0.0001,
@@ -578,6 +581,8 @@ export class ResetControls {
         castShadows: defaults.lightsCastShadows,
         quality: defaults.lightsShadowQuality ?? 'medium',
         softness: defaults.lightsShadowSoftness ?? 4,
+        color: defaults.lightsShadowColor ?? '#000000',
+        opacity: defaults.lightsShadowOpacity ?? 0.25,
         contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
         twoSided: defaults.lightsShadowTwoSided ?? false,
       });
@@ -813,6 +818,14 @@ export class ResetControls {
                 defaults.lightsShadowSoftness ?? 4,
               );
               this.stateStore.set(
+                'lightsShadowColor',
+                defaults.lightsShadowColor ?? '#000000',
+              );
+              this.stateStore.set(
+                'lightsShadowOpacity',
+                defaults.lightsShadowOpacity ?? 0.25,
+              );
+              this.stateStore.set(
                 'lightsShadowContactOffset',
                 defaults.lightsShadowContactOffset ?? -0.0001,
               );
@@ -838,6 +851,8 @@ export class ResetControls {
             this.eventBus.emit('lights:shadow-settings', {
               quality: defaults.lightsShadowQuality ?? 'medium',
               softness: defaults.lightsShadowSoftness ?? 4,
+              color: defaults.lightsShadowColor ?? '#000000',
+              opacity: defaults.lightsShadowOpacity ?? 0.25,
               contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
               twoSided: defaults.lightsShadowTwoSided ?? false,
             });
@@ -848,12 +863,16 @@ export class ResetControls {
               const castShadows = defaults.lightsCastShadows ?? true;
               const shadowQuality = defaults.lightsShadowQuality ?? 'medium';
               const shadowSoftness = defaults.lightsShadowSoftness ?? 4;
+              const shadowColor = defaults.lightsShadowColor ?? '#000000';
+              const shadowOpacity = defaults.lightsShadowOpacity ?? 0.25;
               const shadowContactOffset = defaults.lightsShadowContactOffset ?? -0.0001;
               const shadowTwoSided = defaults.lightsShadowTwoSided ?? false;
               this.stateStore.batch(() => {
                 this.stateStore.set('lightsCastShadows', castShadows);
                 this.stateStore.set('lightsShadowQuality', shadowQuality);
                 this.stateStore.set('lightsShadowSoftness', shadowSoftness);
+                this.stateStore.set('lightsShadowColor', shadowColor);
+                this.stateStore.set('lightsShadowOpacity', shadowOpacity);
                 this.stateStore.set('lightsShadowContactOffset', shadowContactOffset);
                 this.stateStore.set('lightsShadowTwoSided', shadowTwoSided);
               });
@@ -861,6 +880,8 @@ export class ResetControls {
                 castShadows,
                 quality: shadowQuality,
                 softness: shadowSoftness,
+                color: shadowColor,
+                opacity: shadowOpacity,
                 contactOffset: shadowContactOffset,
                 twoSided: shadowTwoSided,
               });
@@ -1134,6 +1155,21 @@ export class ResetControls {
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
             break;
+
+          case 'isometric': {
+            const isoDefault = defaults.camera?.isometric ?? {
+              enabled: false,
+              presetId: 'true-isometric',
+              horizontalDeg: 45,
+              verticalDeg: 35.264,
+            };
+            this.stateStore.set('camera.isometric', deepClone(isoDefault));
+            this.eventBus.emit('camera:isometric', isoDefault);
+            this.ui.isometricControls?.sync(this.stateStore.getState());
+            this.ui.syncUIFromState();
+            this.helpers.showToast('Isometric Camera reset');
+            break;
+          }
 
           case 'fisheye': {
             const feDefault =

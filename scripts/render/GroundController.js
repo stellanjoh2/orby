@@ -509,8 +509,8 @@ export class GroundController {
       side: THREE.DoubleSide,
     });
     this.backdrop = new THREE.Mesh(geometry, material);
-    this.backdrop.receiveShadow = true;
-    this.backdrop.castShadow = false;
+    this.backdrop.userData.orbyStudioBackdrop = true;
+    this._syncBackdropShadowFlags();
     this.backdrop.visible = this.backdropEnabled;
     this.backdrop.position.z = this.backdropSpawnZ;
     this.scene.add(this.backdrop);
@@ -861,8 +861,15 @@ export class GroundController {
     this._applyBackdropTextureSettings();
   }
 
+  _syncBackdropShadowFlags() {
+    if (!this.backdrop) return;
+    this.backdrop.castShadow = false;
+    this.backdrop.receiveShadow = true;
+  }
+
   _applyBackdropTransform() {
     if (!this.backdrop) return;
+    this._syncBackdropShadowFlags();
     this.backdrop.position.y = this.backdropY;
     this.backdrop.rotation.y = THREE.MathUtils.degToRad(this.backdropRotation);
     const sx = this.backdropWidth * this.backdropScale;

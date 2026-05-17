@@ -411,7 +411,7 @@
                 Load Scene
               </button>
             </div>
-            <p class="drop-secondary"><span class="drop-shortcuts-row"><span class="drop-shortcuts-inline"><strong>V</strong> — Hide UI · <strong>F</strong> — Focus camera · <strong>Q/W/E/R</strong> — Select / move / scale / rotate · <strong>1/2/3/4</strong> — Display modes</span><br /><br /></span>Orby is optimized for <strong class="brand-highlight">glTF</strong>/<strong class="brand-highlight">GLB</strong> and <strong class="brand-highlight">SVG</strong> extrusion. Your files stay local and private and will never be trained on AI. Read more on our&nbsp;<a href="./legal/privacy-policy.html" class="drop-link">privacy policy</a>&nbsp;page. For the best experience, go full screen. This site is still <span class="drop-under-construction">under construction</span> and bugs may occur.<br /><a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a></p>
+            <p class="drop-secondary"><span class="drop-shortcuts-row"><span class="drop-shortcuts-inline"><strong>V</strong> — Hide UI · <strong>F</strong> — Focus camera · <strong>Q/W/E/R</strong> — Select / move / rotate / scale · <strong>1/2/3/4</strong> — Display modes</span><br /><br /></span>Orby is optimized for <strong class="brand-highlight">glTF</strong>/<strong class="brand-highlight">GLB</strong> and <strong class="brand-highlight">SVG</strong> extrusion. Your files stay local and private and will never be trained on AI. Read more on our&nbsp;<a href="./legal/privacy-policy.html" class="drop-link">privacy policy</a>&nbsp;page. For the best experience, go full screen. This site is still <span class="drop-under-construction">under construction</span> and bugs may occur.<br /><a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a></p>
           </div>
           <input
             type="file"
@@ -1834,6 +1834,22 @@
                     />
                     <span class="value" data-output="lightsShadowSoftness">4.00</span>
                   </label>
+                  <label class="color-line">
+                    <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
+                    <input type="color" id="lightsShadowColor" class="color-chip" value="#000000" />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="How strong the shadow tint is. Lower for softer, less solid shadows.">Opacity</span>
+                    <input
+                      id="lightsShadowOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.25"
+                    />
+                    <span class="value" data-output="lightsShadowOpacity">0.25</span>
+                  </label>
                   <label class="slider-line">
                     <span data-tooltip="Negative values pull shadows tighter to contact points; too low can add acne artifacts">Offset</span>
                     <input
@@ -2247,6 +2263,50 @@
                     />
                     <span class="value" data-output="cameraFov">45°</span>
                   </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="isometric">
+                  <div class="block-title has-toggle has-reset">
+                    <span data-tooltip="RTS isometric view — locks orbit and pan; zoom still works. Disables lens until turned off.">Isometric camera</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button
+                        class="block-reset-btn"
+                        data-reset="isometric"
+                        aria-label="Reset Isometric camera"
+                        data-tooltip="Reset Isometric camera settings"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable isometric camera (disables lens controls)">
+                        <input type="checkbox" id="isometricEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable isometric camera</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="iso-preset-grid"
+                    role="group"
+                    aria-label="Isometric camera presets"
+                  >
+                    <button type="button" class="iso-preset-btn" data-iso-preset="true-isometric" aria-pressed="false">
+                      <span class="iso-preset-btn__title">True iso</span>
+                      <span class="iso-preset-btn__subtitle">45° / 35.26°</span>
+                    </button>
+                    <button type="button" class="iso-preset-btn" data-iso-preset="dimetric" aria-pressed="false">
+                      <span class="iso-preset-btn__title">Dimetric</span>
+                      <span class="iso-preset-btn__subtitle">45° / 30° — RTS</span>
+                    </button>
+                    <button type="button" class="iso-preset-btn" data-iso-preset="high-oblique" aria-pressed="false">
+                      <span class="iso-preset-btn__title">High oblique</span>
+                      <span class="iso-preset-btn__subtitle">45° / 60° — city</span>
+                    </button>
+                    <button type="button" class="iso-preset-btn" data-iso-preset="pixel-2-1" aria-pressed="false">
+                      <span class="iso-preset-btn__title">2:1 pixel</span>
+                      <span class="iso-preset-btn__subtitle">Pixel-perfect</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fisheye">
@@ -3579,12 +3639,12 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Scale</span>
+                    <span class="shortcut-action">Rotate</span>
                     <span class="shortcut-keys"><kbd>E</kbd></span>
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Rotate</span>
+                    <span class="shortcut-action">Scale</span>
                     <span class="shortcut-keys"><kbd>R</kbd></span>
                   </div>
                   
@@ -3705,7 +3765,15 @@
                   
                   <div class="shortcut-row">
                     <span class="shortcut-action">
-                      Rotate lighting setup / HDRI
+                      Rotate HDRI dome
+                      <span class="shortcut-note">(horizontal drag)</span>
+                    </span>
+                    <span class="shortcut-keys"><kbd>Shift</kbd> + <kbd>Right Click</kbd> + drag</span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">
+                      Rotate lighting setup
                       <span class="shortcut-note">(horizontal drag)</span>
                     </span>
                     <span class="shortcut-keys"><kbd>Alt</kbd> + <kbd>Right Click</kbd> + drag</span>
@@ -3802,7 +3870,7 @@
                   <ul style="list-style: none; padding: 0; margin: 0;">
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Real-time 3D model viewer</span> — Load and view GLB, GLTF, OBJ, FBX, and more with instant preview and smooth interactions</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, Auto Orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
-                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional transform widgets</span> — Interactive gizmos (W=Move, E=Rotate, Q=Scale) for precise object manipulation with click-to-select</li>
+                    <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Professional transform widgets</span> — Interactive gizmos (W=Move, E=Rotate, R=Scale, Q=Select) for precise object manipulation with click-to-select</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
                     <li style="margin-bottom: 0.5rem;">• <span class="about-highlight">Shader Lab</span> — Go beyond standard glTF materials: enable stylized presets (metallic chrome, physical glass, animated FX, and more) that temporarily replace the mesh materials—tune motion and scale, then switch off to restore your original look</li>
@@ -3824,7 +3892,7 @@
                 <div class="about-content">
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">Transform Widgets</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Move, rotate, and scale your 3D model with visual gizmos. Click the mesh to show the rotate gizmo, or use shortcuts: <kbd>W</kbd> move, <kbd>E</kbd> scale, <kbd>R</kbd> rotate (same as Blender), and <kbd>Q</kbd> to exit tools (select). Only one transform tool is active at a time.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">Move, rotate, and scale your 3D model with visual gizmos. Click the mesh to show the rotate gizmo, or use shortcuts: <kbd>W</kbd> translate, <kbd>E</kbd> rotate, <kbd>R</kbd> scale (same as Blender), and <kbd>Q</kbd> to exit tools (select). Only one transform tool is active at a time.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">

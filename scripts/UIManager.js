@@ -23,6 +23,7 @@ import { MeshControls } from './ui/MeshControls.js';
 import { StudioControls } from './ui/StudioControls.js';
 import { RenderControls } from './ui/RenderControls.js';
 import { LensControls } from './ui/LensControls.js';
+import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { ResetControls } from './ui/ResetControls.js';
@@ -108,6 +109,12 @@ export class UIManager {
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
     this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.isometricControls = new IsometricControls(
+      this.eventBus,
+      this.stateStore,
+      this,
+      this.helpers,
+    );
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
@@ -358,6 +365,8 @@ export class UIManager {
       lightsCastShadows: q('#lightsCastShadows'),
       lightsShadowQuality: q('#lightsShadowQuality'),
       lightsShadowSoftness: q('#lightsShadowSoftness'),
+      lightsShadowColor: q('#lightsShadowColor'),
+      lightsShadowOpacity: q('#lightsShadowOpacity'),
       lightsShadowContactOffset: q('#lightsShadowContactOffset'),
       lightsShadowTwoSided: q('#lightsShadowTwoSided'),
       keyLightStrength: q('#keyLightStrength'),
@@ -406,6 +415,7 @@ export class UIManager {
       backgroundColor: q('#backgroundColor'),
       cameraFov: q('#cameraFov'),
       lensSensor: q('#lensSensor'),
+      isometricEnabled: q('#isometricEnabled'),
       fisheyeEnabled: q('#fisheyeEnabled'),
       fisheyeHorizontalFOV: q('#fisheyeHorizontalFOV'),
       fisheyeStrength: q('#fisheyeStrength'),
@@ -512,6 +522,7 @@ export class UIManager {
     this.studioControls.bind();
     this.renderControls.bind();
     this.lensControls.bind();
+    this.isometricControls.bind();
     this.animationControls.bind();
     this.resetControls.bind();
     
@@ -2126,6 +2137,7 @@ export class UIManager {
     this.studioControls.sync(state);
     this.renderControls.sync(state);
     this.lensControls.sync(state);
+    this.isometricControls.sync(state);
     this.applyBlockStates(state);
     this.scheduleAllRangeSliderFills();
   }
@@ -2214,9 +2226,16 @@ export class UIManager {
       creativeLookLocksMaterial,
     );
 
+    const isoOn = !!currentState.camera?.isometric?.enabled;
+    const fisheyeOn = !!currentState.fisheye?.enabled;
+
+    this.setBlockMuted('lens', isoOn);
+    this.lensControls?.setFovDisabled?.(isoOn || fisheyeOn);
+    this.setControlDisabled('cameraTilt', isoOn);
+
     // Lens flare block - requires both HDRI and lens flare to be enabled
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
-    this.setBlockMuted('lens-flare', !lensEnabled);
+    this.setBlockMuted('lens-flare', !lensEnabled || isoOn);
     
     // Lights block - only muted if lightsEnabled is false
     this.setBlockMuted('lights', !currentState.lightsEnabled);
@@ -2284,7 +2303,7 @@ export class UIManager {
       !isVignetteUiEnabled(currentState.camera ?? {}),
     );
 
-    this.setBlockMuted('fisheye', !currentState.fisheye?.enabled);
+    this.setBlockMuted('fisheye', !fisheyeOn || isoOn);
     
     // Bloom block - only muted if bloom.enabled is false
     this.setBlockMuted('bloom', !currentState.bloom?.enabled);
@@ -2403,89 +2422,6 @@ export class UIManager {
       if (!input) return;
       input.disabled = !masterEnabled;
       input.classList.toggle('is-disabled-handle', !masterEnabled);
-    });
-  }
-
-  bindHdriLightsRotation() {
-    if (!this.dom.canvas) return;
-
-    let isRotating = false;
-    let startX = 0;
-    let startHdriRotation = 0;
-    let startLightsRotation = 0;
-    // Rotation sensitivity: pixels to degrees (1 pixel = 0.5 degrees)
-    const rotationSensitivity = 0.5;
-
-    const handleMouseDown = (event) => {
-      // Check for Alt (Windows/Linux) or Option (Mac) + left mouse button
-      // Note: Option key on Mac triggers altKey, not metaKey
-      if (event.altKey && event.button === 0) {
-        event.preventDefault();
-        isRotating = true;
-        startX = event.clientX;
-        startHdriRotation = this.stateStore.getState().hdriRotation ?? 0;
-        startLightsRotation = this.stateStore.getState().lightsRotation ?? 0;
-        this.dom.canvas.style.cursor = 'grab';
-        // Lock camera orbit controls during HDRI rotation
-        this.eventBus.emit('camera:lock-orbit');
-      }
-    };
-
-    const handleMouseMove = (event) => {
-      if (!isRotating) return;
-      event.preventDefault();
-
-      const deltaX = event.clientX - startX;
-      const rotationDelta = deltaX * rotationSensitivity;
-
-      // Calculate new rotations
-      let newHdriRotation = startHdriRotation + rotationDelta;
-      let newLightsRotation = startLightsRotation + rotationDelta;
-
-      // Normalize to 0-360 range
-      newHdriRotation = ((newHdriRotation % 360) + 360) % 360;
-      newLightsRotation = ((newLightsRotation % 360) + 360) % 360;
-
-      // Update state and emit events
-      this.stateStore.set('hdriRotation', newHdriRotation);
-      this.stateStore.set('lightsRotation', newLightsRotation);
-      this.eventBus.emit('studio:hdri-rotation', newHdriRotation);
-      this.eventBus.emit('lights:rotate', newLightsRotation);
-
-      // Update UI controls
-      if (this.inputs.hdriRotation) {
-        this.inputs.hdriRotation.value = newHdriRotation;
-        this.updateValueLabel('hdriRotation', newHdriRotation, 'angle');
-      }
-      if (this.inputs.lightsRotation) {
-        this.inputs.lightsRotation.value = newLightsRotation;
-        this.updateValueLabel('lightsRotation', newLightsRotation, 'angle');
-      }
-    };
-
-    const handleMouseUp = (event) => {
-      if (isRotating) {
-        event.preventDefault();
-        isRotating = false;
-        this.dom.canvas.style.cursor = '';
-        // Unlock camera orbit controls
-        this.eventBus.emit('camera:unlock-orbit');
-      }
-    };
-
-    // Add event listeners
-    this.dom.canvas.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    // Also handle when mouse leaves canvas while dragging
-    this.dom.canvas.addEventListener('mouseleave', () => {
-      if (isRotating) {
-        isRotating = false;
-        this.dom.canvas.style.cursor = '';
-        // Unlock camera orbit controls
-        this.eventBus.emit('camera:unlock-orbit');
-      }
     });
   }
 

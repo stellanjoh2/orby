@@ -43,8 +43,7 @@ export class EventManager {
     eventBus.on('mesh:rotationZ', (value) => s.setRotationZ(value));
     eventBus.on('mesh:shading', (mode) => {
       s.setShading(mode);
-      const alwaysOn = !!s.stateStore.getState().wireframe?.alwaysOn;
-      s.setSceneGeometryWireframe(alwaysOn || mode === 'wireframe');
+      s.setSceneGeometryWireframe(false);
     });
     eventBus.on('mesh:auto-rotate', (speed) => {
       s.autoRotateSpeed = speed;
@@ -105,7 +104,7 @@ export class EventManager {
     });
     eventBus.on('mesh:wireframe-always-on', (value) => {
       s.setWireframeSettings({ alwaysOn: value });
-      s.setSceneGeometryWireframe(value);
+      s.setSceneGeometryWireframe(false);
     });
     eventBus.on('mesh:wireframe-color', (value) => {
       s.setWireframeSettings({ color: value });
@@ -153,6 +152,9 @@ export class EventManager {
     eventBus.on('camera:handheld', (value) => s.setCameraHandheld(value));
     eventBus.on('camera:tilt', (value) => {
       s.cameraController?.setTilt(value);
+    });
+    eventBus.on('camera:isometric', (settings) => {
+      s.applyIsometricCamera?.(settings);
     });
     eventBus.on('camera:focus', () => {
       if (s.currentModel) {
@@ -343,6 +345,8 @@ export class EventManager {
     eventBus.on('lights:cast-shadows', (enabled) => s.setLightsCastShadows(enabled));
     eventBus.on('lights:shadow-quality', (quality) => s.setLightsShadowQuality(quality));
     eventBus.on('lights:shadow-softness', (value) => s.setLightsShadowSoftness(value));
+    eventBus.on('lights:shadow-color', (value) => s.setLightsShadowColor(value));
+    eventBus.on('lights:shadow-opacity', (value) => s.setLightsShadowOpacity(value));
     eventBus.on('lights:shadow-contact-offset', (value) =>
       s.setLightsShadowContactOffset(value),
     );

@@ -307,8 +307,7 @@ export class StudioControls {
     this.ui.inputs.lightsEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('lightsEnabled', enabled);
-      this.eventBus.emit('lights:enabled', enabled);
-      
+
       if (!enabled) {
         ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
           this.stateStore.set(`lights.${lightId}.enabled`, false);
@@ -336,14 +335,19 @@ export class StudioControls {
           const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
           if (enabledInput) enabledInput.checked = true;
         });
-        this.stateStore.set('showLightIndicators', true);
-        this.eventBus.emit('lights:show-indicators', true);
-        if (this.ui.inputs.showLightIndicators) this.ui.inputs.showLightIndicators.checked = true;
-        this._syncLightShadowControlDisabledState(
-          this.stateStore.getState().lightsCastShadows !== false,
-          true,
-        );
+        this.stateStore.set('lightsCastShadows', true);
+        ['key', 'fill', 'rim'].forEach((lightId) => {
+          this.stateStore.set(`lights.${lightId}.castShadows`, true);
+          const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
+          if (castShadowsInput) castShadowsInput.checked = true;
+        });
+        if (this.ui.inputs.lightsCastShadows) {
+          this.ui.inputs.lightsCastShadows.checked = true;
+        }
+        this._syncLightShadowControlDisabledState(true, true);
       }
+
+      this.eventBus.emit('lights:enabled', enabled);
       this.ui.updateLightSliderStates();
     });
     this.ui.inputs.lightsShadowQuality?.addEventListener('change', (event) => {
@@ -359,6 +363,16 @@ export class StudioControls {
       this.stateStore.set('lightsShadowSoftness', value);
       this.eventBus.emit('lights:shadow-softness', value);
     });
+    this.helpers.bindColorInput('lightsShadowColor', 'lightsShadowColor', 'lights:shadow-color');
+    this.ui.inputs.lightsShadowOpacity?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('lightsShadowOpacity', value, 'decimal', 2);
+      this.stateStore.set('lightsShadowOpacity', value);
+      this.eventBus.emit('lights:shadow-opacity', value);
+    });
+    if (this.ui.inputs.lightsShadowOpacity) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsShadowOpacity);
+    }
     this.ui.inputs.lightsShadowContactOffset?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('lightsShadowContactOffset', value, 'decimal', 4);
@@ -668,6 +682,16 @@ export class StudioControls {
       this.ui.inputs.lightsShadowSoftness.value = softness;
       this.helpers.updateValueLabel('lightsShadowSoftness', softness, 'decimal', 2);
     }
+    if (this.ui.inputs.lightsShadowColor) {
+      this.ui.inputs.lightsShadowColor.value = state.lightsShadowColor ?? '#000000';
+    }
+    if (this.ui.inputs.lightsShadowOpacity) {
+      const opacity = Number.isFinite(state.lightsShadowOpacity)
+        ? state.lightsShadowOpacity
+        : 0.25;
+      this.ui.inputs.lightsShadowOpacity.value = opacity;
+      this.helpers.updateValueLabel('lightsShadowOpacity', opacity, 'decimal', 2);
+    }
     if (this.ui.inputs.lightsShadowContactOffset) {
       const contact = Number.isFinite(state.lightsShadowContactOffset)
         ? state.lightsShadowContactOffset
@@ -747,6 +771,8 @@ export class StudioControls {
     const mute = !(!!shadowsEnabled && !!lightsEnabled);
     this.ui.setControlDisabled('lightsShadowQuality', mute);
     this.ui.setControlDisabled('lightsShadowSoftness', mute);
+    this.ui.setControlDisabled('lightsShadowColor', mute);
+    this.ui.setControlDisabled('lightsShadowOpacity', mute);
     this.ui.setControlDisabled('lightsShadowContactOffset', mute);
     this.ui.setControlDisabled('lightsShadowTwoSided', mute);
     this.ui.setBlockMuted('lightsShadows', mute);

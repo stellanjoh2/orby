@@ -151,6 +151,8 @@ const NOT_FOUND_PRESET = {
   lightsCastShadows: true,
   lightsShadowQuality: 'medium',
   lightsShadowSoftness: 4,
+  lightsShadowColor: '#000000',
+  lightsShadowOpacity: 0.25,
   lightsShadowContactOffset: -0.0001,
   lightsShadowTwoSided: false,
   background: '#000000',

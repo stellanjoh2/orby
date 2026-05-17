@@ -4827,6 +4827,74 @@ body.ui-hidden .shelf {
   opacity: 0.45;
 }
 
+/* Camera → Isometric: 2×2 preset grid */
+.iso-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.iso-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.1rem;
+  min-height: 3.35rem;
+  margin: 0;
+  padding: 0.42rem 0.45rem 0.38rem;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    opacity 0.2s ease;
+}
+
+.iso-preset-btn:hover:not(:disabled):not(.is-selected) {
+  color: var(--brand-primary);
+  background: var(--accent-muted);
+}
+
+.iso-preset-btn.is-selected {
+  background: var(--accent);
+  color: var(--brand-text);
+}
+
+.iso-preset-btn.is-selected .iso-preset-btn__subtitle {
+  color: var(--brand-text);
+  opacity: 0.88;
+}
+
+.iso-preset-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.iso-preset-btn__title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.iso-preset-btn__subtitle {
+  font-size: 0.6rem;
+  font-weight: 500;
+  line-height: 1.25;
+  opacity: 0.88;
+}
+
+:is(.subsection, .panel-block).is-muted .iso-preset-btn {
+  opacity: 0.45;
+}
+
 /* Information tab quick navigation */
 .info-quicknav {
   display: block !important;

@@ -180,6 +180,10 @@ export class StateStore {
       lightsShadowQuality: 'medium',
       /** Directional shadow softness radius (0 = harder edges, 4 = soft default). */
       lightsShadowSoftness: 4,
+      /** Tint color for shadowed areas (black = darkest shadows). */
+      lightsShadowColor: '#000000',
+      /** How strongly the shadow tint is applied (0 = none, 1 = full). */
+      lightsShadowOpacity: 0.25,
       /** Directional-light shadow bias; lower (more negative) tightens contact. */
       lightsShadowContactOffset: -0.0001,
       /** Cast shadows from both sides (useful for thin single-surface meshes). */
@@ -269,6 +273,13 @@ export class StateStore {
         vignetteEnabled: false,
         vignette: 0.5,
         vignetteColor: '#000000',
+        /** RTS / isometric framing — optional; does not override lens FOV until used. */
+        isometric: {
+          enabled: false,
+          presetId: 'true-isometric',
+          horizontalDeg: 45,
+          verticalDeg: (Math.atan(1 / Math.sqrt(2)) * 180) / Math.PI,
+        },
       },
       exposure: 1.0,
       /** Off by default; enable to adapt exposure to scene brightness automatically. */

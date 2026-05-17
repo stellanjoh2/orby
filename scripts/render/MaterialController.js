@@ -15,6 +15,11 @@ import {
 } from './SvgExtrudeSurfaceShader.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import {
+  applyShadowTintToObject as patchShadowTintOnObject,
+  clearShadowTintFromObject as patchClearShadowTintFromObject,
+  DEFAULT_SHADOW_OPACITY,
+} from './ShadowTint.js';
+import {
   WIREFRAME_OFFSET,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
   WIREFRAME_POLYGON_OFFSET_UNITS,
@@ -80,6 +85,10 @@ export class MaterialController {
       scatterTint: DEFAULT_SUBSURFACE_SCATTER_TINT,
     };
     this.wireframeSettings = {};
+    this.shadowTintColor = stateStore?.getState()?.lightsShadowColor ?? '#000000';
+    this.shadowTintStrength = 0;
+    this.shadowTintOpacity =
+      stateStore?.getState()?.lightsShadowOpacity ?? DEFAULT_SHADOW_OPACITY;
     /** When enabled, replaces non-glass mesh materials with creative ShaderMaterials (restored when off). */
     this.creativeLookSettings = {
       enabled: false,
@@ -1906,6 +1915,40 @@ export class MaterialController {
     if (this.currentShading === 'clay') {
       this._restoreClayMaterialSurfaces();
     }
+    if (this.shadowTintStrength > 0) {
+      this.applyShadowTintToObject(root);
+    }
+  }
+
+  setShadowTintSettings({ color, strength, opacity } = {}) {
+    if (color !== undefined) {
+      this.shadowTintColor = color;
+    }
+    if (strength !== undefined) {
+      this.shadowTintStrength = Math.min(1, Math.max(0, Number(strength) || 0));
+    }
+    if (opacity !== undefined) {
+      const o = Number(opacity);
+      this.shadowTintOpacity = Number.isFinite(o)
+        ? Math.min(1, Math.max(0, o))
+        : DEFAULT_SHADOW_OPACITY;
+    }
+    if (this.currentModel) {
+      this.applyShadowTintToObject(this.currentModel);
+    }
+  }
+
+  applyShadowTintToObject(object, options = {}) {
+    const color = options.color ?? this.shadowTintColor ?? '#000000';
+    const strength =
+      options.strength !== undefined ? options.strength : this.shadowTintStrength;
+    const opacity =
+      options.opacity !== undefined ? options.opacity : this.shadowTintOpacity;
+    patchShadowTintOnObject(object, { color, strength, opacity });
+  }
+
+  clearShadowTintFromObject(object) {
+    patchClearShadowTintFromObject(object);
   }
 
   /** Transient clay material on a mesh (not the imported original). */

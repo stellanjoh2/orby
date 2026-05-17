@@ -140,7 +140,8 @@ export class LensControls {
     try {
       const cam = state.camera ?? {};
       const feOn = !!state.fisheye?.enabled;
-      this.setFovDisabled(feOn);
+      const isoOn = !!state.camera?.isometric?.enabled;
+      this.setFovDisabled(feOn || isoOn);
 
       const sensorId = cam.lensSensorId ?? DEFAULT_LENS_SENSOR_ID;
       if (this.ui.inputs.lensSensor) {

@@ -103,7 +103,7 @@ function createStateApplySteps() {
     {
       id: 'wireframe-grid',
       apply: (s, state) => {
-        s.setSceneGeometryWireframe(!!state.wireframe?.alwaysOn);
+        s.setSceneGeometryWireframe(false);
         s.setGridScale(state.gridScale ?? 1);
       },
     },
@@ -129,12 +129,19 @@ function createStateApplySteps() {
       },
     },
     {
+      id: 'camera-isometric',
+      apply: (s, state) => {
+        const iso = state.camera?.isometric;
+        if (!iso) return;
+        s.applyIsometricCamera?.(iso);
+      },
+    },
+    {
       id: 'lights',
       apply: (s, state) => {
-        s.lightsEnabled = state.lightsEnabled ?? true;
         s.lightsMaster = state.lightsMaster ?? 0.30;
         s.lightsController?.setMaster(s.lightsMaster, state.lights);
-        s.lightsController?.setEnabled(s.lightsEnabled, state.lights);
+        s.setLightsEnabled(state.lightsEnabled ?? false);
         s.setLightsRotation(state.lightsRotation ?? 0);
         s.setLightsHeight(state.lightsHeight ?? 5);
         s.setShowLightIndicators(state.showLightIndicators ?? false);
@@ -142,6 +149,8 @@ function createStateApplySteps() {
         s.setLightsCastShadows(state.lightsCastShadows ?? true);
         s.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');
         s.setLightsShadowSoftness(state.lightsShadowSoftness ?? 4);
+        s.setLightsShadowColor(state.lightsShadowColor ?? '#000000');
+        s.setLightsShadowOpacity(state.lightsShadowOpacity ?? 0.25);
         s.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0001);
         s.setLightsShadowTwoSided(state.lightsShadowTwoSided ?? false);
         if (state.lights) {
