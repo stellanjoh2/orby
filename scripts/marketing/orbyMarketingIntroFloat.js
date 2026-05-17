@@ -1,40 +1,43 @@
 /**
- * Intro + footer hero PNGs — subtle scroll parallax on the decorative bears.
+ * Intro + footer hero PNGs — scroll-linked parallax (moves with scroll, slower than content).
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
 
 /**
  * @param {HTMLElement} section
  * @param {HTMLElement} asset
- * @param {number} strength
+ * @param {number} strength Fraction of scroll delta applied (e.g. 0.18 = 18% lag).
  * @returns {() => void}
  */
 function bindSectionParallax(section, asset, strength) {
   if (!section || !asset) return () => {};
 
-  let raf = 0;
+  let sectionDocTop = 0;
 
-  const update = () => {
-    raf = 0;
-    const rect = section.getBoundingClientRect();
-    const vh = window.innerHeight || 1;
-    const centerDelta = rect.top + rect.height * 0.5 - vh * 0.5;
-    const parallaxY = `${-centerDelta * strength}px`;
-    asset.style.setProperty('--orby-intro-parallax-y', parallaxY);
+  const updateSectionDocTop = () => {
+    sectionDocTop = section.getBoundingClientRect().top + window.scrollY;
   };
 
-  const onScroll = () => {
-    if (!raf) raf = requestAnimationFrame(update);
+  const applyParallax = () => {
+    // Scroll down → negative Y → asset drifts up within the section (classic parallax).
+    const y = (sectionDocTop - window.scrollY) * strength;
+    asset.style.setProperty('--orby-intro-parallax-y', `${y}px`);
   };
 
-  document.addEventListener('scroll', onScroll, { passive: true, capture: true });
-  window.addEventListener('resize', onScroll, { passive: true });
-  update();
+  const onResize = () => {
+    updateSectionDocTop();
+    applyParallax();
+  };
+
+  updateSectionDocTop();
+  applyParallax();
+
+  document.addEventListener('scroll', applyParallax, { passive: true, capture: true });
+  window.addEventListener('resize', onResize, { passive: true });
 
   return () => {
-    document.removeEventListener('scroll', onScroll, { capture: true });
-    window.removeEventListener('resize', onScroll);
-    if (raf) cancelAnimationFrame(raf);
+    document.removeEventListener('scroll', applyParallax, { capture: true });
+    window.removeEventListener('resize', onResize);
     asset.style.removeProperty('--orby-intro-parallax-y');
   };
 }

@@ -404,20 +404,30 @@
             </div>
             <p class="drop-primary"><span class="drop-primary-line">Drag and drop your <span class="brand-highlight">GLB</span></span><span class="drop-primary-line drop-primary-line--second">or <span class="brand-highlight">SVG</span> file here</span></p>
             <div class="dropzone-actions">
-              <button id="browseButton" class="dropzone-btn">
-                Browse Files
-              </button>
-              <button class="dropzone-btn load-orby-scene" data-tooltip="Load entire scene and model from .orby file">
-                Load Scene
+              <button
+                id="browseButton"
+                type="button"
+                class="orby-magic-btn dropzone-btn"
+                data-tooltip="Open a 3D file (GLB, SVG, …) or a saved .orby scene"
+              >
+                <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+                <span class="orby-magic-btn__inner">
+                  <span class="orby-magic-btn__label">Browse</span>
+                  <span class="orby-magic-btn__arrow" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                </span>
               </button>
             </div>
-            <p class="drop-secondary"><span class="drop-shortcuts-row"><span class="drop-shortcuts-inline"><strong>V</strong> — Hide UI · <strong>F</strong> — Focus camera · <strong>Q/W/E/R</strong> — Select / move / rotate / scale · <strong>1/2/3/4</strong> — Display modes</span><br /><br /></span>Orby is optimized for <strong class="brand-highlight">glTF</strong>/<strong class="brand-highlight">GLB</strong> and <strong class="brand-highlight">SVG</strong> extrusion. Your files stay local and private and will never be trained on AI. Read more on our&nbsp;<a href="./legal/privacy-policy.html" class="drop-link">privacy policy</a>&nbsp;page. For the best experience, go full screen. This site is still <span class="drop-under-construction">under construction</span> and bugs may occur.<br /><a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a></p>
+            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">glTF</strong>/<strong class="brand-highlight">GLB</strong> and <strong class="brand-highlight">SVG</strong> extrusion. Your files stay local and private and will never be trained on AI. Read more on our&nbsp;<a href="./legal/privacy-policy.html" class="drop-link">privacy policy</a>&nbsp;page. For the best experience, go full screen. This site is still <span class="drop-under-construction">under construction</span> and bugs may occur.<br /><a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a><br /><br /><span class="drop-shortcuts-row"><span class="drop-shortcuts-inline"><strong>V</strong> — Hide UI · <strong>F</strong> — Focus camera · <strong>Q/W/E/R</strong> — Select / move / rotate / scale · <strong>1/2/3/4</strong> — Display modes</span></span></p>
           </div>
           <input
             type="file"
             id="fileInput"
             class="sr-only"
-            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg"
+            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg,.orby"
           />
           <button
             id="fullscreenToggle"
@@ -4203,12 +4213,6 @@
         }
       }
     </script>
-    <input
-      type="file"
-      id="orbyFileInput"
-      class="sr-only"
-      accept=".orby,application/json"
-    />
     <script type="module" src="./scripts/entry.js"></script>
     
     <!-- Long messages: stay open until OK (e.g. unsupported USDZ); short text still uses toast -->
@@ -4418,12 +4422,32 @@
           <button
             type="button"
             id="orbyFullscreenPromptNo"
-            class="orby-fullscreen-prompt-btn orby-fullscreen-prompt-btn--ghost"
+            class="orby-magic-btn orby-magic-btn--dialog orby-magic-btn--dialog-ghost"
           >
-            Stay
+            <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+            <span class="orby-magic-btn__inner">
+              <span class="orby-magic-btn__label">Stay</span>
+              <span class="orby-magic-btn__arrow" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </span>
           </button>
-          <button type="button" id="orbyFullscreenPromptYes" class="bug-report-thank-you-ok">
-            Go Home
+          <button
+            type="button"
+            id="orbyFullscreenPromptYes"
+            class="orby-magic-btn orby-magic-btn--dialog orby-magic-btn--dialog-ghost"
+          >
+            <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+            <span class="orby-magic-btn__inner">
+              <span class="orby-magic-btn__label">Go Home</span>
+              <span class="orby-magic-btn__arrow" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </span>
           </button>
         </div>
       </div>
@@ -4432,8 +4456,19 @@
     <div id="bugReportThankYouLayer" class="bug-report-thank-you-layer" hidden aria-hidden="true" role="status">
       <div class="bug-report-thank-you-stack" id="bugReportThankYouStack">
         <p class="bug-report-thank-you-message" id="bugReportThankYouMessage"></p>
-        <button type="button" id="bugReportThankYouOk" class="bug-report-thank-you-ok">
-          Keep Orbing
+        <button
+          type="button"
+          id="bugReportThankYouOk"
+          class="orby-magic-btn orby-magic-btn--dialog orby-magic-btn--dialog-accent bug-report-thank-you-ok"
+        >
+          <span class="orby-magic-btn__inner">
+            <span class="orby-magic-btn__label">Keep Orbing</span>
+            <span class="orby-magic-btn__arrow" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </span>
         </button>
       </div>
     </div>

@@ -284,18 +284,8 @@ export class ResetControls {
     });
     this.ui.buttons.loadOrbyButtons?.forEach((button) => {
       button.addEventListener('click', () => {
-        this.ui.buttons.orbyFileInput?.click();
+        this.ui.buttons.fileInput?.click();
       });
-    });
-    this.ui.buttons.orbyFileInput?.addEventListener('change', async (event) => {
-      const file = event.target?.files?.[0];
-      if (!file) return;
-      const result = await this.ui.sceneSettingsManager.loadOrbyFromFile(file);
-      if (result.success) {
-        this.ui.syncControls(this.stateStore.getState());
-      }
-      this.helpers.showToast(result.message);
-      event.target.value = '';
     });
 
     // Paste scene settings — show modal

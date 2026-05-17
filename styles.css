@@ -408,8 +408,8 @@ body.orby-not-found-active #orbyFullscreenPrompt {
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-stack {
-  /* About 20% wider measure on large displays. */
-  max-width: min(69.6rem, 96vw);
+  /* About 20% wider measure on large displays (kept in step with default prompt width). */
+  max-width: min(78rem, 96vw);
   transform: scale(1.25);
   transform-origin: center center;
 }
@@ -427,12 +427,12 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-not-found-symbol {
   animation: orbyNotFoundSymbolSpin 36s linear infinite;
 }
 
-body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions > button {
+body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog {
   /* Reuse prompt button style without awkward label wrapping. */
   white-space: nowrap;
 }
 
-body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptNo {
+body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptNo.orby-magic-btn--dialog-ghost {
   display: none !important;
 }
 
@@ -442,7 +442,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   justify-content: center;
 }
 
-body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--ghost:focus-visible {
+body.orby-not-found-active #orbyFullscreenPrompt .orby-magic-btn--dialog-ghost:focus-visible {
   outline: none;
   box-shadow: none;
 }
@@ -993,9 +993,12 @@ html.orby-gate-unlocked .orby-entry-gate {
   cursor: default;
 }
 
-.bug-report-thank-you-stack .bug-report-thank-you-ok {
+.bug-report-thank-you-stack .bug-report-thank-you-ok.orby-magic-btn--dialog {
   pointer-events: auto;
   cursor: pointer;
+  padding: 0;
+  border: none;
+  box-shadow: none;
 }
 
 .orby-fullscreen-prompt-stack .orby-fullscreen-prompt-actions {
@@ -1091,34 +1094,28 @@ html.orby-gate-unlocked .orby-entry-gate {
   transform: scale(0.98);
 }
 
-/* Home confirm + bug thank-you: larger pill CTAs (~20%); tokens shared with .dropzone-btn */
-#orbyFullscreenPrompt .bug-report-thank-you-ok,
-#orbyFullscreenPrompt .orby-fullscreen-prompt-btn--ghost,
-#bugReportThankYouLayer .bug-report-thank-you-ok {
-  font-size: var(--ui-hero-pill-font-size);
-  padding: var(--ui-hero-pill-pad-block) var(--ui-hero-pill-pad-inline);
-  border-radius: 999px;
+/* Slightly wider measure — ~one extra word per line at headline sizes */
+#orbyFullscreenPrompt .orby-fullscreen-prompt-stack {
+  max-width: min(72rem, 96vw);
+  /* Drop it in gap − one notch */
+  gap: calc(clamp(1.25rem, 2.5vh, 1.75rem) + clamp(1rem, 2vh, 1.5rem));
 }
 
 #orbyFullscreenPrompt .orby-fullscreen-prompt-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  width: min(100%, 22rem);
+  width: min(100%, 32rem);
   max-width: 100%;
   margin-inline: auto;
-  gap: calc(1rem * 1.2);
+  gap: clamp(0.65rem, 1.8vw, 1rem);
   justify-content: stretch;
   align-items: stretch;
 }
 
-#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > button {
+#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog,
+#bugReportThankYouLayer .orby-magic-btn--dialog {
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
 }
 
 .bug-report-content #bugReportForm {
@@ -1674,13 +1671,416 @@ html.orby-gate-unlocked .orby-entry-gate {
   margin-top: 0.5rem;
 }
 
-.dropzone-btn {
+/* Orby magic pill — default CTA on dark backgrounds (dropzone + marketing) */
+@property --orby-magic-btn-rotate {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.orby-magic-btn {
+  --orby-magic-btn-spin: 12s;
+  --orby-magic-btn-spin-hover: 8s;
+  --orby-magic-btn-bleed: 6px;
+  --orby-magic-btn-glow-blur: 10px;
+  --orby-magic-btn-rim-a: 5px;
+  --orby-magic-btn-rim-b: 10px;
+  --orby-magic-btn-rim-c: 16px;
+  --orby-magic-btn-stroke: 1.5px;
+  --orby-magic-btn-fill-speed: 0.16s;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  min-width: 15.25rem;
+  min-height: 3.65rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--brand-primary, #c4ff00);
+  font-family: inherit;
+  font-size: clamp(0.9rem, 1.1vw, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  line-height: 1.1;
+  cursor: pointer;
+  isolation: isolate;
+  z-index: 2;
+  opacity: 1;
+  transform: none;
+  animation: none;
+  box-shadow: none;
+  transition: color var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn__fill {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--brand-primary, #c4ff00);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn__inner {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 1.08rem 2.65rem;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn__label {
+  display: block;
+  line-height: 1.1;
+  pointer-events: none;
+}
+
+.orby-magic-btn__arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: inherit;
+  transform: translateX(0);
+  transition:
+    color var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn__arrow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.orby-magic-btn::after {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  inset: calc(-1 * var(--orby-magic-btn-bleed));
+  border-radius: 999px;
+  background-image:
+    radial-gradient(
+      ellipse 175% 115% at 50% 108%,
+      color-mix(in srgb, var(--text-link) 34%, transparent) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      var(--orby-magic-btn-rotate),
+      var(--brand-primary) 0%,
+      var(--text-link) 32%,
+      transparent 40%,
+      transparent 46%,
+      transparent 51%,
+      transparent 58%,
+      var(--brand-primary) 100%
+    );
+  filter: blur(var(--orby-magic-btn-glow-blur));
+  opacity: 0.4;
+  pointer-events: none;
+  animation: orbyMagicBtnSpin var(--orby-magic-btn-spin) linear infinite;
+  transition:
+    opacity 0.28s ease,
+    filter 0.28s ease,
+    animation-duration 0.22s ease;
+}
+
+.orby-magic-btn::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--orby-magic-btn-stroke) solid transparent;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(
+        var(--orby-magic-btn-rotate),
+        var(--brand-primary) 0%,
+        var(--text-link) 32%,
+        transparent 40%,
+        transparent 46%,
+        transparent 51%,
+        transparent 58%,
+        var(--brand-primary) 100%
+      )
+      border-box;
+  background-origin: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  pointer-events: none;
+  animation: orbyMagicBtnSpin var(--orby-magic-btn-spin) linear infinite;
+  box-shadow:
+    0 0 var(--orby-magic-btn-rim-a) color-mix(in srgb, var(--brand-primary) 30%, transparent),
+    0 0 var(--orby-magic-btn-rim-b) color-mix(in srgb, var(--text-link) 16%, transparent),
+    0 0 var(--orby-magic-btn-rim-c) color-mix(in srgb, var(--text-link) 9%, transparent);
+  transition:
+    box-shadow 0.28s ease,
+    animation-duration 0.22s ease;
+}
+
+@keyframes orbyMagicBtnSpin {
+  to {
+    --orby-magic-btn-rotate: 360deg;
+  }
+}
+
+.orby-magic-btn:hover,
+.orby-magic-btn:focus-visible {
+  --orby-magic-btn-spin: var(--orby-magic-btn-spin-hover);
+  color: var(--brand-text, #02030a);
+  outline: none;
+}
+
+.orby-magic-btn:hover .orby-magic-btn__fill,
+.orby-magic-btn:focus-visible .orby-magic-btn__fill {
+  opacity: 1;
+}
+
+.orby-magic-btn:hover .orby-magic-btn__inner,
+.orby-magic-btn:focus-visible .orby-magic-btn__inner {
+  transform: translateX(4px);
+}
+
+.orby-magic-btn:hover .orby-magic-btn__arrow,
+.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
+  transform: translateX(9px);
+}
+
+.orby-magic-btn:hover::before,
+.orby-magic-btn:focus-visible::before {
+  box-shadow:
+    0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
+      color-mix(in srgb, var(--brand-primary) 48%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
+      color-mix(in srgb, var(--text-link) 26%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
+      color-mix(in srgb, var(--text-link) 14%, transparent);
+}
+
+.orby-magic-btn:hover::after,
+.orby-magic-btn:focus-visible::after {
+  opacity: 0.68;
+  filter: blur(calc(var(--orby-magic-btn-glow-blur) * 1.3)) saturate(1.08);
+}
+
+.orby-magic-btn:active {
+  filter: brightness(0.96);
+}
+
+html.safari-browser .orby-magic-btn {
+  --orby-magic-btn-spin: 18s;
+  --orby-magic-btn-spin-hover: 12s;
+  --orby-magic-btn-glow-blur: 6px;
+}
+
+html.safari-browser .orby-magic-btn::before {
+  box-shadow:
+    0 0 calc(var(--orby-magic-btn-rim-a) * 0.65)
+      color-mix(in srgb, var(--brand-primary) 30%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-b) * 0.65)
+      color-mix(in srgb, var(--text-link) 16%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-magic-btn::before,
+  .orby-magic-btn::after {
+    animation: none !important;
+  }
+
+  .orby-magic-btn__inner,
+  .orby-magic-btn__arrow {
+    transform: none !important;
+  }
+
+  .orby-magic-btn__fill {
+    transition: none !important;
+  }
+}
+
+/* Flat inverted pills on lime marketing surfaces — same shell as magic btn, no glow */
+.orby-magic-btn--on-lime::before,
+.orby-magic-btn--on-lime::after {
+  display: none;
+  content: none;
+}
+
+.orby-magic-btn--on-lime .orby-magic-btn__fill {
+  display: none;
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--solid-lime {
+  background: var(--brand-text, #02030a);
+  color: var(--brand-primary, #c4ff00);
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--solid-lime:hover,
+.orby-magic-btn--on-lime.orby-magic-btn--solid-lime:focus-visible {
+  background: color-mix(in srgb, var(--brand-text, #02030a) 86%, white);
+  color: var(--brand-primary, #c4ff00);
+  outline: none;
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime {
+  background: transparent;
+  color: var(--brand-text, #02030a);
+  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, #02030a);
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime:hover,
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime:focus-visible {
+  background: var(--brand-text, #02030a);
+  color: var(--brand-primary, #c4ff00);
+  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, #02030a);
+  outline: none;
+}
+
+.orby-magic-btn--on-lime:hover .orby-magic-btn__inner,
+.orby-magic-btn--on-lime:focus-visible .orby-magic-btn__inner {
+  transform: translateX(4px);
+}
+
+.orby-magic-btn--on-lime:hover .orby-magic-btn__arrow,
+.orby-magic-btn--on-lime:focus-visible .orby-magic-btn__arrow {
+  transform: translateX(9px);
+}
+
+.orby-magic-btn--on-lime:active {
+  filter: brightness(0.96);
+}
+
+/* Dialog / full-screen confirm — same shell as magic btn, existing flat colors, no glow */
+.orby-magic-btn--dialog::before,
+.orby-magic-btn--dialog::after {
+  display: none;
+  content: none;
+}
+
+.orby-magic-btn--dialog-accent .orby-magic-btn__fill {
+  display: none;
+}
+
+.orby-magic-btn--dialog-ghost {
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--brand-primary, #c4ff00);
+  transition: color var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--dialog-ghost .orby-magic-btn__fill {
+  display: block;
+  opacity: 0;
+  transition: opacity var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--dialog-ghost:hover,
+.orby-magic-btn--dialog-ghost:focus-visible {
+  color: var(--brand-text, #02030a);
+  filter: none;
+  outline: none;
+}
+
+.orby-magic-btn--dialog-ghost:hover .orby-magic-btn__fill,
+.orby-magic-btn--dialog-ghost:focus-visible .orby-magic-btn__fill {
+  opacity: 1;
+}
+
+.orby-magic-btn--dialog-ghost:active {
+  filter: none;
+}
+
+.orby-magic-btn--dialog-ghost:active .orby-magic-btn__fill {
+  background: color-mix(in srgb, var(--brand-primary, #c4ff00) 92%, #000);
+}
+
+.orby-magic-btn--dialog-accent {
+  background: var(--brand-primary, #c4ff00);
+  color: var(--brand-text, #02030a);
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--dialog-accent:hover,
+.orby-magic-btn--dialog-accent:focus-visible {
+  background: #fff;
+  color: var(--brand-text, #02030a);
+  box-shadow: none;
+  outline: none;
+}
+
+.orby-magic-btn--dialog:hover .orby-magic-btn__inner,
+.orby-magic-btn--dialog:focus-visible .orby-magic-btn__inner {
+  transform: translateX(4px);
+}
+
+.orby-magic-btn--dialog:hover .orby-magic-btn__arrow,
+.orby-magic-btn--dialog:focus-visible .orby-magic-btn__arrow {
+  transform: translateX(9px);
+}
+
+.orby-magic-btn--dialog:active {
+  filter: brightness(0.96);
+}
+
+.orby-magic-btn--dialog-accent:active {
+  filter: none;
+  transform: scale(0.98);
+}
+
+#orbyFullscreenPrompt .orby-magic-btn--dialog,
+#bugReportThankYouLayer .orby-magic-btn--dialog {
+  min-width: 0;
+  width: 100%;
+}
+
+.dropzone-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.65rem, 1.8vw, 1rem);
+  flex-wrap: wrap;
+}
+
+.dropzone-actions .orby-magic-btn {
+  flex: 0 0 auto;
+  min-width: 12.5rem;
+  opacity: 0;
+  transform: translateY(-15px);
+  animation: none;
+}
+
+/* Legacy gray pill — footer on lime, etc. */
+.dropzone-btn:not(.orby-magic-btn) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   padding: var(--ui-hero-pill-pad-block) var(--ui-hero-pill-pad-inline);
-  border-radius: 999px; /* Fully rounded like accent-action-btn */
+  border-radius: 999px;
   border: none;
   background: rgba(255, 255, 255, 0.15);
   color: var(--text);
@@ -1696,18 +2096,10 @@ html.orby-gate-unlocked .orby-entry-gate {
   min-height: auto;
   box-shadow: none;
   position: relative;
-  z-index: 2; /* Ensure button is above dropzone background */
+  z-index: 2;
 }
 
-.dropzone-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(0.5rem, 1.5vw, 0.8rem);
-  flex-wrap: wrap;
-}
-
-.dropzone-actions .dropzone-btn {
+.dropzone-actions .dropzone-btn:not(.orby-magic-btn) {
   width: 12rem;
   justify-content: center;
 }
@@ -1759,7 +2151,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   }
 }
 
-.dropzone-btn:hover {
+.dropzone-btn:not(.orby-magic-btn):hover {
   background: var(--accent) !important;
   color: var(--brand-text) !important;
   box-shadow: var(--ui-accent-outer-glow) !important;
@@ -1781,7 +2173,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   text-decoration: underline;
 }
 
-.dropzone-btn:active {
+.dropzone-btn:not(.orby-magic-btn):active {
   filter: brightness(0.95);
 }
 
@@ -2451,7 +2843,8 @@ html:not(.mobile-landing) .drop-secondary {
   animation: none !important;
 }
 
-html:not(.mobile-landing) .dropzone-btn {
+html:not(.mobile-landing) .dropzone-actions .orby-magic-btn,
+html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   animation: none !important;
   opacity: 0;
   transform: translateY(-15px);

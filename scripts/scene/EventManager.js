@@ -1,4 +1,5 @@
 import { resolveRenderQualityTier } from '../constants.js';
+import { isOrbySceneFile } from '../import/dispatchImportFile.js';
 
 /**
  * EventManager - Handles all eventBus event listeners for SceneManager
@@ -7,6 +8,18 @@ import { resolveRenderQualityTier } from '../constants.js';
 export class EventManager {
   constructor(sceneManager) {
     this.scene = sceneManager;
+  }
+
+  /** @param {import('../SceneManager.js').SceneManager} s */
+  async loadOrbySceneFromUserFile(s, file) {
+    const result = await s.ui?.sceneSettingsManager?.loadOrbyFromFile(file);
+    if (result?.success) {
+      s.ui.syncControls?.(s.stateStore.getState());
+    }
+    if (result?.message) {
+      s.ui.showToast(result.message);
+    }
+    return result;
   }
 
   /**
@@ -370,8 +383,8 @@ export class EventManager {
     });
     eventBus.on('camera:auto-exposure', (enabled) => s.autoExposureController?.setEnabled(enabled));
 
-    // File loading events
-    eventBus.on('file:selected', (payload) => {
+    // File loading events (.orby scenes are restored via SceneSettingsManager)
+    eventBus.on('file:selected', async (payload) => {
       let file;
       const loadOpts = {};
       if (payload instanceof File) {
@@ -380,9 +393,26 @@ export class EventManager {
         file = payload.file;
         if (payload.suppressSuccessToastSound) loadOpts.suppressSuccessToastSound = true;
       }
-      if (file instanceof File) s.loadFile(file, loadOpts);
+      if (!(file instanceof File)) return;
+
+      if (isOrbySceneFile(file)) {
+        await this.loadOrbySceneFromUserFile(s, file);
+        return;
+      }
+
+      s.loadFile(file, loadOpts);
     });
-    eventBus.on('file:bundle', (bundle) => s.loadFileBundle(bundle));
+    eventBus.on('file:bundle', async (bundle) => {
+      if (Array.isArray(bundle) && bundle.length === 1) {
+        const entry = bundle[0];
+        const file = entry instanceof File ? entry : entry?.file;
+        if (file instanceof File && isOrbySceneFile(file)) {
+          await this.loadOrbySceneFromUserFile(s, file);
+          return;
+        }
+      }
+      s.loadFileBundle(bundle);
+    });
     eventBus.on('file:reload', () => {
       if (s.currentFile) {
         s.loadFile(s.currentFile, { silent: true });

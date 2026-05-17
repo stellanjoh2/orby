@@ -485,6 +485,10 @@ export class RenderControls {
     // Camera Auto-Orbit
     this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
       radio.addEventListener('change', (event) => {
+        if (this.stateStore.getState().camera?.isometric?.enabled) {
+          event.target.checked = event.target.value === 'off';
+          return;
+        }
         const value = event.target.value;
         this.stateStore.set('camera.autoOrbit', value);
         this.eventBus.emit('camera:auto-orbit', value);
@@ -494,6 +498,10 @@ export class RenderControls {
     if (this.ui.inputs.cameraHandheld) {
       this.ui.inputs.cameraHandheld.forEach((radio) => {
         radio.addEventListener('change', (event) => {
+          if (this.stateStore.getState().camera?.isometric?.enabled) {
+            event.target.checked = event.target.value === 'off';
+            return;
+          }
           const value = event.target.value;
           this.stateStore.set('camera.handheld', value);
           this.eventBus.emit('camera:handheld', value);

@@ -29,7 +29,6 @@ html.orby-home-scroll {
   overflow-x: hidden;
   overflow-y: auto;
   height: auto;
-  scroll-snap-type: y proximity;
 }
 
 html.orby-home-scroll body {
@@ -241,6 +240,10 @@ html.orby-home-scroll #orby-marketing[hidden] {
   background: var(--orby-marketing-headline);
 }
 
+.orby-marketing__split-cta {
+  margin-top: calc(clamp(1.25rem, 2.5vh, 1.75rem) + var(--orby-marketing-space-sm));
+}
+
 .orby-marketing__inner {
   width: min(var(--orby-marketing-site-max), 100%);
   margin-inline: auto;
@@ -285,13 +288,13 @@ html.orby-home-scroll #orby-marketing[hidden] {
 }
 
 .orby-marketing__figure {
+  --orby-media-radius: clamp(12px, 1.5vw, 20px);
   margin: 0;
   width: 100%;
   max-width: 100%;
-  border-radius: clamp(12px, 1.5vw, 20px);
+  border-radius: var(--orby-media-radius);
   overflow: hidden;
   background: #000;
-  --orby-media-ph-opacity: 1;
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.55),
     0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -304,19 +307,18 @@ html.orby-home-scroll #orby-marketing[hidden] {
   width: 100%;
   aspect-ratio: 16 / 9;
   height: auto;
+  border-radius: inherit;
   background: #000;
-  --orby-media-ph-opacity: 1;
 }
 
-.orby-marketing__figure-mask::before,
-.orby-marketing__showcase-mask::before {
-  content: '';
+.orby-marketing__media-ph {
   position: absolute;
-  inset: 0;
+  inset: 1px;
   z-index: 0;
   border-radius: inherit;
   background: var(--orby-marketing-headline);
-  opacity: var(--orby-media-ph-opacity, 1);
+  opacity: 1;
+  visibility: visible;
   pointer-events: none;
 }
 
@@ -367,7 +369,8 @@ html.orby-home-scroll #orby-marketing[hidden] {
   }
 
   .orby-marketing__split-bleed--media-right .orby-marketing__figure {
-    border-radius: clamp(12px, 1.2vw, 20px) 0 0 clamp(12px, 1.2vw, 20px);
+    --orby-media-radius: clamp(12px, 1.2vw, 20px);
+    border-radius: var(--orby-media-radius) 0 0 var(--orby-media-radius);
   }
 
   .orby-marketing__split-bleed--media-left .orby-marketing__split-media {
@@ -386,8 +389,10 @@ html.orby-home-scroll #orby-marketing[hidden] {
   }
 
   .orby-marketing__split-bleed--media-left .orby-marketing__figure {
-    border-radius: 0 clamp(12px, 1.2vw, 20px) clamp(12px, 1.2vw, 20px) 0;
+    --orby-media-radius: clamp(12px, 1.2vw, 20px);
+    border-radius: 0 var(--orby-media-radius) var(--orby-media-radius) 0;
   }
+
 }
 
 @media (max-width: 899px) {
@@ -421,6 +426,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
 
 /* Full-bleed breakout: wider than --orby-marketing-site-max, small side gutters only */
 .orby-marketing__showcase-figure {
+  --orby-media-radius: clamp(12px, 1.5vw, 20px);
   box-sizing: border-box;
   position: relative;
   left: 50%;
@@ -429,9 +435,8 @@ html.orby-home-scroll #orby-marketing[hidden] {
   margin: 0;
   transform: translateX(-50%);
   overflow: hidden;
-  border-radius: clamp(12px, 1.5vw, 20px);
+  border-radius: var(--orby-media-radius);
   background: #000;
-  --orby-media-ph-opacity: 1;
   isolation: isolate;
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.55),
@@ -445,7 +450,6 @@ html.orby-home-scroll #orby-marketing[hidden] {
   aspect-ratio: 16 / 9;
   border-radius: inherit;
   background: #000;
-  --orby-media-ph-opacity: 1;
 }
 
 .orby-marketing__showcase-img {
@@ -604,8 +608,6 @@ html.orby-home-scroll #orby-marketing[hidden] {
   overflow: visible;
   background: var(--brand-primary, #c4ff00);
   color: var(--brand-text, #02030a);
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
 }
 
 /* Stage bleeds above the lime edge so the bear isn’t clipped at the black band */
@@ -660,62 +662,13 @@ html.orby-home-scroll #orby-marketing[hidden] {
   max-width: none;
 }
 
-.orby-marketing__cta {
-  width: auto;
-  margin: 0;
-  opacity: 1;
-}
-
-/* Footer pills — wider than hero, shorter height, always in one row */
-.orby-marketing__footer-actions .orby-marketing__cta.dropzone-btn {
-  display: inline-flex;
+.orby-marketing__footer-actions .orby-marketing__cta {
   flex: 0 0 auto;
-  width: 12rem;
-  min-width: 12rem;
-  min-height: 0;
+  margin: 0;
   opacity: 1;
   transform: none;
   animation: none;
-  font-size: calc(var(--ui-hero-pill-font-size) * 1.2);
-  padding: calc(var(--ui-hero-pill-pad-block) * 1.05) calc(var(--ui-hero-pill-pad-inline) * 1.15);
-  letter-spacing: 0.02em;
-  text-transform: none;
-  line-height: 1.1;
   white-space: nowrap;
-  text-align: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
-.orby-marketing__cta--on-lime {
-  background: var(--brand-text, #02030a);
-  color: var(--brand-primary, #c4ff00);
-  opacity: 1;
-  box-shadow: none;
-}
-
-.orby-marketing__cta--on-lime.dropzone-btn:hover,
-.orby-marketing__cta--on-lime.dropzone-btn:focus-visible {
-  background: color-mix(in srgb, var(--brand-text, #02030a) 88%, white) !important;
-  color: var(--brand-primary, #c4ff00) !important;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--brand-text, #02030a) 18%, transparent);
-  opacity: 1 !important;
-}
-
-.orby-marketing__cta--outline {
-  background: transparent;
-  color: var(--brand-text, #02030a);
-  border: 2px solid var(--brand-text, #02030a);
-  box-shadow: none;
-}
-
-.orby-marketing__cta--outline.dropzone-btn:hover,
-.orby-marketing__cta--outline.dropzone-btn:focus-visible {
-  background: color-mix(in srgb, var(--brand-text, #02030a) 10%, transparent) !important;
-  color: var(--brand-text, #02030a) !important;
-  border-color: var(--brand-text, #02030a) !important;
-  box-shadow: none;
-  opacity: 1 !important;
 }
 
 .orby-marketing__section--pending {
@@ -727,9 +680,21 @@ html.orby-home-scroll #orby-marketing[hidden] {
   .orby-marketing__figure-media,
   .orby-marketing__showcase-img,
   .orby-marketing__list li,
-  .orby-marketing__cta {
+  .orby-marketing__cta,
+  .orby-magic-btn:not(.orby-magic-btn--on-lime)::before,
+  .orby-magic-btn:not(.orby-magic-btn--on-lime)::after {
     opacity: 1 !important;
     transform: none !important;
+    animation: none !important;
+  }
+
+  .orby-magic-btn__inner,
+  .orby-magic-btn__arrow {
+    transform: none !important;
+  }
+
+  .orby-magic-btn__fill {
+    transition: none !important;
   }
 
   .orby-marketing__intro-asset {

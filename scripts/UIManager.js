@@ -472,7 +472,7 @@ export class UIManager {
       loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
       saveOrbyButtons: document.querySelectorAll('.save-orby-scene'),
       loadOrbyButtons: document.querySelectorAll('.load-orby-scene'),
-      orbyFileInput: q('#orbyFileInput'),
+      fileInput: q('#fileInput'),
       loadSceneModal: q('#loadSceneSettingsModal'),
       loadSceneText: q('#loadSceneSettingsText'),
       applySceneSettings: q('#applySceneSettings'),
@@ -921,6 +921,15 @@ export class UIManager {
     if (applyBlockMute && blockKey) {
       this.setBlockMuted(blockKey, disabled);
     }
+  }
+
+  /** @param {NodeListOf<HTMLInputElement> | HTMLInputElement[] | undefined} radios */
+  setRadioGroupDisabled(radios, disabled) {
+    if (!radios?.forEach) return;
+    radios.forEach((radio) => {
+      radio.disabled = disabled;
+      radio.classList.toggle('is-disabled-handle', disabled);
+    });
   }
 
   /**
@@ -2234,6 +2243,18 @@ export class UIManager {
     this.setControlDisabled('cameraTilt', isoOn);
     this.setControlDisabled('fisheyeEnabled', isoOn);
     this.setBlockMuted('isometric', !isoOn);
+    this.setBlockMuted('auto-orbit', isoOn);
+    this.setBlockMuted('handheld', isoOn);
+    this.setRadioGroupDisabled(this.inputs.cameraAutoOrbit, isoOn);
+    this.setRadioGroupDisabled(this.inputs.cameraHandheld, isoOn);
+    if (isoOn) {
+      this.inputs.cameraAutoOrbit?.forEach((radio) => {
+        radio.checked = radio.value === 'off';
+      });
+      this.inputs.cameraHandheld?.forEach((radio) => {
+        radio.checked = radio.value === 'off';
+      });
+    }
 
     // Lens flare block - requires both HDRI and lens flare to be enabled
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;

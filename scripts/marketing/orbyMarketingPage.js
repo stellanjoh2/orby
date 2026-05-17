@@ -3,6 +3,8 @@
  * Kept separate from the studio runtime: lazy DOM, lazy CSS, no Three.js coupling.
  */
 
+import { orbyMagicButtonHtml, orbyMagicButtonOnLimeHtml } from '../ui/orbyMagicButton.js';
+
 const MARKETING_ROOT_ID = 'orby-marketing';
 const STYLES_HREF = './styles/orby-marketing.css';
 const SCROLL_CLASS = 'orby-home-scroll';
@@ -50,6 +52,22 @@ function renderBulletList(items) {
     .join('')}</ul>`;
 }
 
+function renderMagicCta(section) {
+  if (!section.ctaLabel) return '';
+  const actionAttr =
+    section.ctaAction === 'browse'
+      ? 'data-orby-marketing-browse'
+      : section.ctaAction === 'load-sample'
+        ? 'data-orby-marketing-load-sample'
+        : 'data-orby-marketing-scroll-top';
+  return `<div class="orby-marketing__split-cta">
+      ${orbyMagicButtonHtml(escapeHtml(section.ctaLabel), {
+        extraClass: 'orby-marketing__cta',
+        attrs: actionAttr,
+      })}
+    </div>`;
+}
+
 function renderFigure(imageSrc, imageAlt, revealDir, videoSrc = '') {
   if (!imageSrc && !videoSrc) return '';
   const posterAttr =
@@ -59,6 +77,7 @@ function renderFigure(imageSrc, imageAlt, revealDir, videoSrc = '') {
     : `<img class="orby-marketing__figure-media orby-marketing__figure-img" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(imageAlt || '')}" decoding="async" />`;
   return `<figure class="orby-marketing__figure">
       <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
+        <span class="orby-marketing__media-ph" aria-hidden="true"></span>
         ${media}
       </div>
     </figure>`;
@@ -80,6 +99,7 @@ function renderSplitSection(section) {
           <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
           <p class="orby-marketing__lede">${escapeHtml(section.lede)}</p>
           ${renderBulletList(section.bullets)}
+          ${renderMagicCta(section)}
         </div>
       </div>
       <div class="orby-marketing__split-media">
@@ -149,6 +169,7 @@ function renderShowcaseSection(section) {
     </div>
     <figure class="orby-marketing__showcase-figure">
       <div class="orby-marketing__showcase-mask" data-orby-marketing-showcase-gallery data-orby-marketing-reveal="media" data-reveal-dir="ltr">
+        <span class="orby-marketing__media-ph" aria-hidden="true"></span>
         ${renderShowcaseSlides(section)}
         <p class="orby-marketing__showcase-credit" data-orby-marketing-showcase-credit hidden></p>
         ${video}
@@ -210,9 +231,17 @@ function renderFooterSection(section) {
           ? `<p class="orby-marketing__lede orby-marketing__lede--footer" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>`
           : ''
       }
-      <div class="orby-marketing__footer-actions">
-        <button type="button" class="orby-marketing__cta orby-marketing__cta--primary orby-marketing__cta--on-lime dropzone-btn" data-orby-marketing-browse>${escapeHtml(section.ctaLabel || 'Browse Files')}</button>
-        <button type="button" class="orby-marketing__cta orby-marketing__cta--outline dropzone-btn" data-orby-marketing-load-sample>${escapeHtml(section.secondaryCtaLabel || 'Load Sample')}</button>
+      <motion class="orby-marketing__footer-actions">
+        ${orbyMagicButtonOnLimeHtml(escapeHtml(section.ctaLabel || 'Browse Files'), {
+          extraClass: 'orby-marketing__cta',
+          attrs: 'data-orby-marketing-browse',
+          variant: 'solid',
+        })}
+        ${orbyMagicButtonOnLimeHtml(escapeHtml(section.secondaryCtaLabel || 'Load Sample'), {
+          extraClass: 'orby-marketing__cta',
+          attrs: 'data-orby-marketing-load-sample',
+          variant: 'outline',
+        })}
       </div>
     </div>
   </footer>`;

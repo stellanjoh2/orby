@@ -9,6 +9,7 @@ import {
   createBigMessageRevealTimeline,
   killBigMessageRevealTweens,
 } from './bigMessageHeadlineReveal.js';
+import { setOrbyMagicButtonLabel } from './orbyMagicButton.js';
 
 /** Full-screen prompt — match BugReportController thank-you scrim */
 const ORBY_FULLSCREEN_SCRIM_IN = 0.22;
@@ -141,8 +142,8 @@ export class UIManagerModalOverlays {
 
     msg.innerHTML = messageHtml;
     msg.removeAttribute('aria-hidden');
-    noBtn.textContent = cancelLabel;
-    yesBtn.textContent = confirmLabel;
+    setOrbyMagicButtonLabel(noBtn, cancelLabel);
+    setOrbyMagicButtonLabel(yesBtn, confirmLabel);
 
     const plain = msg.textContent?.trim() ?? '';
     if (plain) layer.setAttribute('aria-label', plain);

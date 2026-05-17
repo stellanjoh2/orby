@@ -265,6 +265,9 @@ function prepareSplitSection(sectionEl) {
 
   if (list) gsap.set(list.querySelectorAll('li'), { opacity: 0, y: 12 });
 
+  const magicBtn = sectionEl.querySelector('.orby-magic-btn');
+  if (magicBtn) gsap.set(magicBtn, { opacity: 0, y: 12 });
+
   sectionEl.querySelectorAll('[data-orby-marketing-reveal="media"]').forEach(prepareMarketingMask);
 }
 
@@ -361,6 +364,21 @@ function revealSplitSection(sectionEl, tl) {
   revealHeadline(title, tl, `>-=${blockOverlap}`);
   revealBlock(lede, tl, `>-=${blockOverlap}`);
   if (list) revealList(list, tl, `>-=${blockOverlap}`);
+
+  const magicBtn = sectionEl.querySelector('.orby-magic-btn');
+  if (magicBtn) {
+    tl.fromTo(
+      magicBtn,
+      { opacity: 0, y: 12 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.38,
+        ease: mediaEase,
+      },
+      list ? '>-=0.12' : lede ? `>-=${blockOverlap}` : 0,
+    );
+  }
 
   const media = sectionEl.querySelector('[data-orby-marketing-reveal="media"]');
   if (media) revealMedia(media, tl, `-=${0.35}`);

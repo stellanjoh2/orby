@@ -19,6 +19,7 @@
  * @property {{ src: string, alt: string, credit?: string }[]} [gallery]
  * @property {string} [videoSrc]
  * @property {string} [ctaLabel]
+ * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
  */
 
@@ -44,6 +45,8 @@ export const MARKETING_SECTIONS = [
       'Drag-and-drop or browse — plus full .orby scene recall',
       'Client-side only: close the tab and your files are gone',
     ],
+    ctaLabel: 'Load Sample Object',
+    ctaAction: 'load-sample',
     layout: 'media-right',
     videoSrc: './assets/marketing/import-orbit-placeholder.mp4',
     imageSrc: './assets/images/orby-lookfilter-studio.png',
@@ -53,7 +56,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-present',
     eyebrow: '02 — Set the stage',
-    title: 'Light it like a set.',
+    title: 'Your virtual studio, in the browser.',
     lede:
       'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
     bullets: [

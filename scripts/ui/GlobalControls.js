@@ -357,6 +357,7 @@ export class GlobalControls {
       if (key === ' ') {
         event.preventDefault();
         const state = this.stateStore.getState();
+        if (state.camera?.isometric?.enabled) return;
         const currentMode = state.camera?.autoOrbit ?? 'off';
         const modes = ['off', 'slow', 'fast'];
         const currentIndex = modes.indexOf(currentMode);

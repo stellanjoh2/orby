@@ -2760,6 +2760,15 @@ export class SceneManager {
       return;
     }
 
+    if (this.cameraAutoOrbit !== 'off') {
+      this.stateStore.set('camera.autoOrbit', 'off');
+      this.setCameraAutoOrbit('off');
+    }
+    if (this.cameraHandheld !== 'off') {
+      this.stateStore.set('camera.handheld', 'off');
+      this.setCameraHandheld('off');
+    }
+
     if (!cc?.isIsometricModeActive?.()) {
       cc?.beginIsometricMode?.();
     }

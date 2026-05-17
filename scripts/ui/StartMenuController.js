@@ -414,7 +414,7 @@ export class StartMenuController {
 
     const primary = this.dropPrimary;
     const secondary = this.dropSecondary;
-    const buttons = this.dropzone?.querySelectorAll('.dropzone-btn');
+    const buttons = this.dropzone?.querySelectorAll('.dropzone-actions .orby-magic-btn');
 
     const killTargets = [primary, secondary].filter(Boolean);
     if (buttons?.length) killTargets.push(...buttons);
@@ -442,7 +442,7 @@ export class StartMenuController {
         gsap.set(primary, { opacity: 1, clearProps: 'transform' });
       }
       if (buttons?.length) {
-        gsap.set(buttons, { opacity: 0.6, y: 0, clearProps: 'transform' });
+        gsap.set(buttons, { opacity: 1, y: 0, clearProps: 'transform' });
       }
       if (secondary)
         gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
@@ -485,7 +485,7 @@ export class StartMenuController {
         [...buttons],
         { opacity: 0, y: -15 },
         {
-          opacity: 0.6,
+          opacity: 1,
           y: 0,
           duration: blockDur,
           ease: blockEase,

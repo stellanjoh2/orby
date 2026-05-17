@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "product": "Orby",
+    "page": "Homepage landing (dropzone hero + marketing one-pager)",
+    "sourceFiles": [
+      "index.html",
+      "scripts/marketing/orbyMarketingContent.js",
+      "scripts/marketing/orbyMarketingPage.js"
+    ],
+    "exportedFor": "copy review",
+    "notes": [
+      "brand-highlight in UI renders as lime accent, not necessarily bold",
+      "Hero links 'Load test object' and 'Debug 404 (temp)' are likely dev-only",
+      "Return-home modal copy is studio-triggered, not part of scroll landing"
+    ]
+  },
+  "heroDropzone": {
+    "headline": {
+      "line1": "Drag and drop your GLB",
+      "line2": "or SVG file here",
+      "highlightedTerms": ["GLB", "SVG"]
+    },
+    "primaryCta": {
+      "label": "Browse",
+      "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
+    },
+    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur.",
+    "secondaryLinks": [
+      { "label": "privacy policy", "href": "./legal/privacy-policy.html", "type": "policy" },
+      { "label": "Load test object", "href": "#", "type": "dev" },
+      { "label": "Debug 404 (temp)", "href": "/?orby404Debug=1", "type": "dev" }
+    ],
+    "highlightedTermsInSecondary": ["glTF", "GLB", "SVG"],
+    "underConstructionLabel": "under construction",
+    "keyboardShortcuts": "V — Hide UI · F — Focus camera · Q/W/E/R — Select / move / rotate / scale · 1/2/3/4 — Display modes",
+    "mobileWarning": "This app is not optimized for mobile devices. Please use a desktop browser for the best experience."
+  },
+  "scrollCue": {
+    "label": "Explore Orby"
+  },
+  "sections": [
+    {
+      "order": 1,
+      "type": "intro",
+      "id": "orby-marketing-intro",
+      "eyebrow": "Free · Browser · Private",
+      "title": "Drop it in.\nSet the stage.\nSend it.",
+      "titleLines": ["Drop it in.", "Set the stage.", "Send it."],
+      "lede": "Orby is a zero-install studio for GLB, glTF, and SVG — drag a file in, light it like a set, ship stills and video without leaving the tab.",
+      "cta": null
+    },
+    {
+      "order": 2,
+      "type": "split",
+      "id": "orby-marketing-import",
+      "eyebrow": "01 — Drop it in",
+      "title": "Drop in. Start immediately.",
+      "lede": "No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.",
+      "bullets": [
+        "GLB / glTF, OBJ, FBX, STL, USD, and SVG extrusion",
+        "Drag-and-drop or browse — plus full .orby scene recall",
+        "Client-side only: close the tab and your files are gone"
+      ],
+      "cta": {
+        "label": "Load Sample Object",
+        "action": "load-sample"
+      }
+    },
+    {
+      "order": 3,
+      "type": "split",
+      "id": "orby-marketing-present",
+      "eyebrow": "02 — Set the stage",
+      "title": "Your virtual studio, in the browser.",
+      "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
+      "bullets": [
+        "Look Filter presets, luminance curve, and full color grade",
+        "Depth of field, bloom, grain, lens flare, and tone mapping",
+        "Shader Lab stylized materials when you want to push beyond PBR"
+      ],
+      "cta": null
+    },
+    {
+      "order": 4,
+      "type": "split",
+      "id": "orby-marketing-camera",
+      "eyebrow": "03 — Camera & FX",
+      "title": "Pro framing in the viewport.",
+      "lede": "Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.",
+      "bullets": [
+        "FOV, tilt, and camera presets for repeatable shots",
+        "Composition grid and 21∶9 letterbox for cinematic framing",
+        "Auto exposure plus manual grade stack in one tab"
+      ],
+      "cta": null
+    },
+    {
+      "order": 5,
+      "type": "showcase",
+      "id": "orby-marketing-showcase",
+      "eyebrow": "Rendering",
+      "title": "Built to show the work.",
+      "lede": "Full-bleed frames for the moments that matter — product viz, automotive, AI meshes, and game assets at the fidelity your model deserves.",
+      "bullets": null,
+      "galleryCredits": [
+        "Audi e-tron GT · vecarz.com",
+        "Sports car detail · vecarz.com",
+        "Jeep Wrangler Rubicon · vecarz.com",
+        "New Balance 574 · vecarz.com"
+      ],
+      "cta": null
+    },
+    {
+      "order": 6,
+      "type": "split",
+      "id": "orby-marketing-shader-lab",
+      "eyebrow": "04 — Shader Lab",
+      "title": "Stylized looks on demand.",
+      "lede": "Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.",
+      "bullets": [
+        "Non-destructive: your glTF materials return when you disable the preset",
+        "Great for social clips, concept boards, and rapid art direction"
+      ],
+      "cta": null
+    },
+    {
+      "order": 7,
+      "type": "split",
+      "id": "orby-marketing-svg",
+      "eyebrow": "05 — SVG Extrude",
+      "title": "Logos become geometry.",
+      "lede": "Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.",
+      "bullets": [
+        "Per-fill depth and position for layered marks",
+        "Scene settings remember your extrude stack in .orby files"
+      ],
+      "cta": null
+    },
+    {
+      "order": 8,
+      "type": "split",
+      "id": "orby-marketing-export",
+      "eyebrow": "06 — Send it",
+      "title": "Deliverables without a pipeline.",
+      "lede": "Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.",
+      "bullets": [
+        "PNG stills at 1× or 2× with optional transparency",
+        "MP4 turntable video and numbered PNG sequences in a zip",
+        "SVG silhouette or flat color, plus GLB from SVG extrude"
+      ],
+      "cta": null
+    },
+    {
+      "order": 9,
+      "type": "faq",
+      "id": "orby-marketing-faq",
+      "eyebrow": "FAQ",
+      "title": "Questions, answered.",
+      "lede": "Everything you need to know before you drop your first file.",
+      "faq": [
+        {
+          "question": "Who is Orby for?",
+          "answer": "Orby is made for designers who need to present 3D content without really knowing 3D — think AI-generated models, quick client presentations, product visuals, or seeing how a logo looks extruded in 3D with a single drop. It's also for 3D artists who need a fast, clean view without booting up a full DCC. No setup, no pipeline. Just your file and an instant presentation studio."
+        },
+        {
+          "question": "Do I need to create an account?",
+          "answer": "No. No account, no login, no email, no waitlist. Open the browser, drop your file, done."
+        },
+        {
+          "question": "Do my files get uploaded anywhere?",
+          "answer": "Never. Orby runs entirely in your browser — your files don't leave your device, ever. No servers, no cloud, no storage. Close the tab and the model is gone. What you load stays yours."
+        },
+        {
+          "question": "What formats does Orby support?",
+          "answer": "Orby is built and optimized for GLB and glTF — that's where you'll get the full experience. It also supports OBJ, FBX, STL, and USD/USDZ with basic support. For best results, export as GLB."
+        },
+        {
+          "question": "Can I export my renders?",
+          "answer": "Yes. You can export stills and video without leaving the tab. What you see is what you get — post-processing, lighting, materials and all."
+        },
+        {
+          "question": "Does it work on mobile?",
+          "answer": "Not yet. Orby is built for desktop — a proper screen, a mouse, and some GPU headroom. Mobile support is on the roadmap, but for now leave it at your desk."
+        },
+        {
+          "question": "Is it really free?",
+          "answer": "Completely. No hidden tiers, no export limits, no watermarks. Free now, free always."
+        },
+        {
+          "question": "Why does Orby exist?",
+          "answer": "Orby started as a personal learning experiment — I wanted to learn more about code and 3D on the web, and the process of building something on my own. It was never meant to be anything more than that. But it kept growing, and at some point it became something worth sharing. So here it is. I hope it's useful."
+        }
+      ],
+      "cta": null
+    },
+    {
+      "order": 10,
+      "type": "footer",
+      "id": "orby-marketing-footer",
+      "eyebrow": null,
+      "title": "Try it out for free now.",
+      "lede": "",
+      "bullets": null,
+      "cta": {
+        "primary": { "label": "Browse Files", "action": "browse" },
+        "secondary": { "label": "Load Sample", "action": "load-sample" }
+      }
+    }
+  ],
+  "studioOnly": {
+    "returnHomeModal": {
+      "messageHtml": "Return home? This ends your session and resets the studio.",
+      "cancelLabel": "Stay",
+      "confirmLabel": "Go Home"
+    }
+  }
+}
