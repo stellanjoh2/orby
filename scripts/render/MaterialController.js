@@ -379,7 +379,7 @@ export class MaterialController {
         if (origMat.emissiveMap && mat.emissiveMap !== origMat.emissiveMap) {
           mat.emissiveMap = origMat.emissiveMap;
         }
-        const adjustedColor = getOrigColor(original, idx).multiplyScalar(bright);
+        const adjustedColor = this._diffuseColorWithBrightness(getOrigColor(original, idx), bright);
         this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
         mat.needsUpdate = true;
       };
@@ -918,9 +918,7 @@ export class MaterialController {
     const baseColor = basicMat.color
       ? basicMat.color.clone()
       : new THREE.Color('#ffffff');
-    const adjustedColor = baseColor.clone().multiplyScalar(
-      this.materialSettings.brightness,
-    );
+    const adjustedColor = this._diffuseColorWithBrightness(baseColor);
     const standard = new THREE.MeshStandardMaterial({
       color: adjustedColor,
       map: basicMat.map ?? null,
@@ -1056,14 +1054,13 @@ export class MaterialController {
               ? mat.color.clone()
             : new THREE.Color('#ffffff');
           
-          // Apply material brightness multiplier
-          baseColor.multiplyScalar(this.materialSettings.brightness);
-          
+          const brightColor = this._diffuseColorWithBrightness(baseColor);
+
           // Use MeshBasicMaterial for truly unlit rendering - ignores all lighting
           // Note: MeshBasicMaterial only supports map (diffuse), not normalMap, aoMap, etc.
           const basic = new THREE.MeshBasicMaterial({
             map: mat?.map ?? null,
-            color: baseColor,
+            color: brightColor,
             transparent: mat?.transparent ?? false,
             opacity: mat?.opacity ?? 1,
             side: mat?.side ?? THREE.FrontSide,
@@ -1111,8 +1108,9 @@ export class MaterialController {
               cloned.isMeshPhongMaterial ||
               cloned.isMeshLambertMaterial)
           ) {
-            const originalColor = mat.color ? mat.color.clone() : new THREE.Color('#ffffff');
-            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            const adjustedColor = this._diffuseColorWithBrightness(
+              mat.color ? mat.color : new THREE.Color('#ffffff'),
+            );
             cloned.color.copy(adjustedColor);
             // Apply metalness and roughness
             cloned.metalness = this.materialSettings.metalness;
@@ -1508,18 +1506,57 @@ export class MaterialController {
     }
   }
 
+  /**
+   * Brightness-adjusted albedo. Dielectrics may exceed 1.0 (HDR-style diffuse boost).
+   * When metalness is active, clamp to [0, 1] so conductor F0 does not blow out specular.
+   * @param {THREE.Color|string} sourceColor
+   * @param {number} [brightness]
+   * @param {number|null} [metalnessForClamp] — pass `0` for unlit/textures; omit to use slider metalness
+   */
+  _diffuseColorWithBrightness(
+    sourceColor,
+    brightness = this.materialSettings.brightness,
+    metalnessForClamp = undefined,
+  ) {
+    const color =
+      sourceColor?.isColor
+        ? sourceColor.clone()
+        : new THREE.Color(sourceColor ?? '#ffffff');
+    const b = Number(brightness);
+    const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
+    color.multiplyScalar(scale);
+
+    const metalRaw =
+      metalnessForClamp !== undefined
+        ? metalnessForClamp
+        : this.materialSettings.metalness ?? 0;
+    const metal = Number.isFinite(Number(metalRaw)) ? Math.min(1, Math.max(0, Number(metalRaw))) : 0;
+    if (metal > 1e-4) {
+      const clamp = (v) => Math.min(1, Math.max(0, v));
+      color.r = THREE.MathUtils.lerp(color.r, clamp(color.r), metal);
+      color.g = THREE.MathUtils.lerp(color.g, clamp(color.g), metal);
+      color.b = THREE.MathUtils.lerp(color.b, clamp(color.b), metal);
+    }
+    return color;
+  }
+
   setMaterialBrightness(brightness) {
-    this.materialSettings.brightness = brightness;
+    const b = Number(brightness);
+    this.materialSettings.brightness = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
     this.updateMaterials();
   }
 
   setMaterialMetalness(metalness) {
-    this.materialSettings.metalness = metalness;
+    const m = Number(metalness);
+    this.materialSettings.metalness = Number.isFinite(m) ? Math.min(1, Math.max(0, m)) : 0;
     this.updateMaterials();
   }
 
   setMaterialRoughness(roughness) {
-    this.materialSettings.roughness = roughness;
+    const r = Number(roughness);
+    this.materialSettings.roughness = Number.isFinite(r)
+      ? Math.min(1, Math.max(0, r))
+      : DEFAULT_MATERIAL_ROUGHNESS;
     this.updateMaterials();
   }
 
@@ -1530,13 +1567,7 @@ export class MaterialController {
 
   getClayColorWithBrightness() {
     const baseColorHex = this.claySettings?.color ?? '#808080';
-    const brightness = this.materialSettings?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
-    const baseColor = new THREE.Color(baseColorHex);
-    const tinted = baseColor.multiplyScalar(brightness);
-    tinted.r = Math.min(1, Math.max(0, tinted.r));
-    tinted.g = Math.min(1, Math.max(0, tinted.g));
-    tinted.b = Math.min(1, Math.max(0, tinted.b));
-    return tinted;
+    return this._diffuseColorWithBrightness(new THREE.Color(baseColorHex));
   }
 
   updateMaterials() {
@@ -1582,16 +1613,22 @@ export class MaterialController {
             material.forEach((mat, idx) => {
               if (mat?.userData?.orbyCreativeLook) return;
               if (mat && mat.isMeshBasicMaterial) {
-                const originalColor = getOriginalColor(original, idx);
-                const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+                const adjustedColor = this._diffuseColorWithBrightness(
+                  getOriginalColor(original, idx),
+                  undefined,
+                  0,
+                );
                 mat.color.copy(adjustedColor);
                 mat.needsUpdate = true;
               }
             });
           } else if (material && material.isMeshBasicMaterial) {
             if (material.userData?.orbyCreativeLook) return;
-            const originalColor = getOriginalColor(original);
-            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            const adjustedColor = this._diffuseColorWithBrightness(
+              getOriginalColor(original),
+              undefined,
+              0,
+            );
             material.color.copy(adjustedColor);
             material.needsUpdate = true;
           }
@@ -1619,8 +1656,7 @@ export class MaterialController {
                   m = this._upgradeStandardMaterialToPhysical(m);
                   material[idx] = m;
                 }
-                const originalColor = getOriginalColor(original, idx);
-                const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+                const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original, idx));
                 m.color.copy(adjustedColor);
                 m.metalness = this.materialSettings.metalness;
                 m.roughness = this.materialSettings.roughness;
@@ -1646,8 +1682,7 @@ export class MaterialController {
               } else if (mat && (mat.isMeshPhongMaterial || mat.isMeshLambertMaterial)) {
                 if (mat?.userData?.orbyCreativeLook) return;
                 // FBX (e.g. Mixamo) often loads as Phong/Lambert — brightness must still apply live.
-                const originalColor = getOriginalColor(original, idx);
-                const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+                const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original, idx));
                 mat.color.copy(adjustedColor);
                 mat.needsUpdate = true;
               }
@@ -1659,8 +1694,7 @@ export class MaterialController {
               mat = this._upgradeStandardMaterialToPhysical(mat);
               child.material = mat;
             }
-            const originalColor = getOriginalColor(original);
-            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original));
             mat.color.copy(adjustedColor);
             mat.metalness = this.materialSettings.metalness;
             mat.roughness = this.materialSettings.roughness;
@@ -1687,8 +1721,7 @@ export class MaterialController {
             (material.isMeshPhongMaterial || material.isMeshLambertMaterial)
           ) {
             if (material.userData?.orbyCreativeLook) return;
-            const originalColor = getOriginalColor(original);
-            const adjustedColor = originalColor.multiplyScalar(this.materialSettings.brightness);
+            const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original));
             material.color.copy(adjustedColor);
             material.needsUpdate = true;
           }
@@ -2230,10 +2263,16 @@ export class MaterialController {
     const glassEnvMul = Number.isFinite(Number(rawGlassRef))
       ? Math.min(4, Math.max(0, Number(rawGlassRef)))
       : 2;
-    const currentMetalness = state?.material?.metalness ?? this.materialSettings.metalness ?? 0.0;
-    const currentRoughness =
+    const rawMetalness = state?.material?.metalness ?? this.materialSettings.metalness ?? 0.0;
+    const rawRoughness =
       state?.material?.roughness ?? this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
-    
+    const currentMetalness = Number.isFinite(Number(rawMetalness))
+      ? Math.min(1, Math.max(0, Number(rawMetalness)))
+      : 0;
+    const currentRoughness = Number.isFinite(Number(rawRoughness))
+      ? Math.min(1, Math.max(0, Number(rawRoughness)))
+      : DEFAULT_MATERIAL_ROUGHNESS;
+
     // Also update materialSettings to keep them in sync
     this.materialSettings.metalness = currentMetalness;
     this.materialSettings.roughness = currentRoughness;

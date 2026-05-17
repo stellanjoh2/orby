@@ -84,8 +84,8 @@ export class UIHelpers {
   parseNumericInput(text) {
     const cleaned = String(text)
       .trim()
-      .replace(/[°m×%K]/gi, '')
       .replace(/,/g, '.')
+      .replace(/\s*(°|×|%|K|m)$/i, '')
       .trim();
     if (!cleaned || cleaned === '-' || cleaned === '.') return NaN;
     return parseFloat(cleaned);
