@@ -67,10 +67,8 @@ export class StateStore {
         /** 0 = import-like; 1 = crush glTF transmission + darken (less see-through). */
         glassBody: 0,
         /**
-         * When true, uses Three.js alpha-hash on BLEND + double-sided materials.
-         * Default on — Sketchfab often packs skin + visor + gear into one BLEND mesh; without this,
-         * transparent triangles sort incorrectly (see-through helmet, black visor holes). Turn off if
-         * hair/cloth looks too grainy.
+         * When true, promotes mistaken near-opaque BLEND shells to solid draws and uses alpha-hash only
+         * when cutout maps / real layering need it. Turn off if hair/cloth looks too grainy.
          */
         blendSortingMitigation: true,
         /** Transmission / window meshes: negate tangent normal Y if glazing reads inverted vs HDRI. */

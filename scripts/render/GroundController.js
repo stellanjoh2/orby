@@ -719,24 +719,40 @@ export class GroundController {
     this._syncGridLineResolution(width, height);
   }
 
+  /** Full-opacity grid lines write depth so wide Line2 quads do not draw through solid meshes (esp. on ANGLE/WebGL). */
+  _syncGridMaterialDepthState() {
+    if (!this.gridMaterials?.length) return;
+    const opaque = this.wireOpacity >= 1;
+    this.gridMaterials.forEach((mat) => {
+      if (!mat) return;
+      mat.transparent = !opaque;
+      mat.opacity = this.wireOpacity;
+      mat.depthWrite = opaque;
+      mat.needsUpdate = true;
+    });
+    if (this.grid) this.grid.renderOrder = opaque ? -10 : 0;
+  }
+
   buildGrid() {
     this.disposeGrid();
     const baseRadius = this.podiumBaseRadius * this.podiumScale;
     const size = baseRadius * 2 * this.gridScale;
     const geometry = new LineSegmentsGeometry();
     geometry.setPositions(buildGridLinePositions(size, GRID_DIVISIONS));
+    const gridOpaque = this.wireOpacity >= 1;
     const material = new LineMaterial({
       color: new THREE.Color(this.wireColor).getHex(),
       linewidth: gridLineWidthToPixels(this.gridLineWidth),
-      transparent: true,
+      transparent: !gridOpaque,
       opacity: this.wireOpacity,
-      depthWrite: false,
+      depthWrite: gridOpaque,
       toneMapped: true,
       worldUnits: false,
     });
     this.grid = new LineSegments2(geometry, material);
     this.grid.frustumCulled = false;
     this.gridMaterials = [material];
+    this._syncGridMaterialDepthState();
     this._syncGridLineResolution();
     this.grid.visible = this.wireEnabled;
     this.scene.add(this.grid);
@@ -779,11 +795,7 @@ export class GroundController {
 
   setWireOpacity(value) {
     this.wireOpacity = value ?? this.wireOpacity;
-    if (this.gridMaterials) {
-      this.gridMaterials.forEach((mat) => {
-        if (mat) mat.opacity = this.wireOpacity;
-      });
-    }
+    this._syncGridMaterialDepthState();
   }
 
   setGroundY(value) {

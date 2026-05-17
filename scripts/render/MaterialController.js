@@ -601,6 +601,52 @@ export class MaterialController {
   }
 
   /**
+   * Near-opaque BLEND + DoubleSide without cutout maps is a common exporter mistake (opacity 1, no alpha
+   * texture). Alpha-hash dithers the whole surface; prefer forcing an opaque draw instead.
+   */
+  _materialIsFalseBlendShell(m) {
+    if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
+    if (!m.transparent) return false;
+
+    const op = Number.isFinite(m.opacity) ? m.opacity : 1;
+    if (op < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return false;
+    if (m.alphaMap) return false;
+    if (m.alphaTest > 0) return false;
+
+    const gltfMode = m.userData?.alphaMode;
+    if (gltfMode === 'MASK') return false;
+    if (m.isMeshPhysicalMaterial && Number(m.transmission) > 0.01) return false;
+
+    return true;
+  }
+
+  /**
+   * Alpha-hash only when dither actually helps layered cutouts / near-opaque shells — not “BLEND” flags alone.
+   */
+  _materialNeedsAlphaHashMitigation(m) {
+    if (!this._materialImportLooksAlphaRelevant(m)) return false;
+    if (this._materialIsFalseBlendShell(m)) return false;
+
+    if (m.alphaMap) return true;
+    if (m.alphaTest > 0) return true;
+    if (m.userData?.alphaMode === 'MASK') return true;
+
+    const op = Number.isFinite(m.opacity) ? m.opacity : 1;
+    if (op < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return true;
+
+    return false;
+  }
+
+  _forceOpaqueBlendMaterial(m) {
+    m.transparent = false;
+    m.opacity = 1;
+    m.depthWrite = true;
+    if ('alphaHash' in m) m.alphaHash = false;
+    m.userData.orbyBlendMitigation = 'opaque';
+    m.needsUpdate = true;
+  }
+
+  /**
    * True if any mesh uses materials where transparency / alpha matters (import intent).
    * Uses {@link #originalMaterials} when set so behavior stays correct after shaded-mode clones replace mesh.material.
    */
@@ -801,11 +847,20 @@ export class MaterialController {
 
       const op = Number.isFinite(m.opacity) ? m.opacity : 1;
       if (op < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return;
+
+      if (this._materialIsFalseBlendShell(m)) {
+        this._forceOpaqueBlendMaterial(m);
+        return;
+      }
+
       if (m.side !== THREE.DoubleSide) return;
       if (m.alphaTest > 0) return;
 
+      if (!this._materialNeedsAlphaHashMitigation(m)) return;
+
       if ('alphaHash' in m && typeof m.alphaHash === 'boolean') {
         m.alphaHash = true;
+        m.userData.orbyBlendMitigation = 'alphaHash';
         m.needsUpdate = true;
       }
     });
