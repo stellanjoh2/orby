@@ -530,6 +530,7 @@ export class UIManager {
     // Setup slider utilities
     this.helpers.setupSliderKeyboardSupport();
     this.helpers.setupSliderFillUpdates();
+    this.helpers.setupValueLabelInlineEdit();
 
     // Quick Navigation (Information tab) smooth scrolling
     const infoQuicknavLinks = document.querySelectorAll('.info-quicknav a[href^="#"]');
@@ -751,14 +752,7 @@ export class UIManager {
    * @param {number} decimals - Optional override for decimal places
    */
   updateValueLabel(key, value, type = null, decimals = null) {
-    const label = document.querySelector(`[data-output="${key}"]`);
-    if (!label) return;
-    
-    if (typeof value === 'number' && type) {
-      label.textContent = this.formatSliderValue(value, type, decimals);
-    } else {
-      label.textContent = String(value);
-    }
+    this.helpers?.updateValueLabel(key, value, type, decimals);
   }
 
   /**

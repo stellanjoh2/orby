@@ -2869,6 +2869,9 @@ a.about-highlight:focus-visible {
   padding: 1.2rem;
   margin-bottom: var(--shelf-rhythm);
   background: rgba(10, 10, 10, 0.6);
+  /* Skip layout/paint for off-screen blocks while scrolling the shelf */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
 }
 
 /* Subtle divider line within panel blocks - only spans content width */
@@ -3377,7 +3380,7 @@ button.advanced-info-doc-btn {
 }
 
 .slider-line {
-  grid-template-columns: 90px 1fr auto;
+  grid-template-columns: 90px minmax(0, 1fr) 58px;
   column-gap: 0.2rem;
 }
 
@@ -3388,7 +3391,7 @@ button.advanced-info-doc-btn {
  */
 .slider-line.slider-line--track-short {
   --slider-track-short-width: 104px;
-  grid-template-columns: minmax(0, 1fr) var(--slider-track-short-width, 104px) auto;
+  grid-template-columns: minmax(0, 1fr) var(--slider-track-short-width, 104px) 58px;
   column-gap: 0.35rem;
 }
 
@@ -3450,6 +3453,7 @@ button.advanced-info-doc-btn {
   align-self: center;
   justify-self: stretch;
   width: 100%;
+  min-width: 0;
   height: 4px;
   border-radius: 2px;
   position: relative;
@@ -3632,12 +3636,46 @@ input[type='range']:disabled::-moz-range-thumb {
 
 .slider-line .value {
   grid-column: 3;
-  justify-self: end;
+  justify-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   color: var(--text-dim);
   font-size: 0.8rem;
   align-self: center;
   text-align: right;
-  min-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slider-line .value:hover {
+  cursor: text;
+}
+
+.slider-line .value.is-editing {
+  padding: 0;
+}
+
+.slider-line .value-inline-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.18rem 0.3rem;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  background: rgba(20, 16, 34, 0.9);
+  color: var(--text);
+  font-size: 0.76rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider-line .value-inline-input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .slider-line .slider-value-group {

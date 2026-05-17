@@ -45,15 +45,175 @@ export class UIHelpers {
    * @param {string} type - Format type if value is number
    * @param {number} decimals - Optional override for decimal places
    */
+  /** @returns {HTMLElement | undefined} */
+  getValueLabel(key) {
+    if (!this._valueLabels) {
+      this._valueLabels = new Map();
+      document.querySelectorAll('[data-output]').forEach((el) => {
+        const id = el.dataset.output;
+        if (id) this._valueLabels.set(id, el);
+      });
+    }
+    return this._valueLabels.get(key);
+  }
+
   updateValueLabel(key, value, type = null, decimals = null) {
-    const label = document.querySelector(`[data-output="${key}"]`);
-    if (!label) return;
-    
+    const label = this.getValueLabel(key);
+    if (!label || label.classList.contains('is-editing')) return;
+
     if (typeof value === 'number' && type) {
+      label.dataset.format = type;
+      if (decimals !== null) {
+        label.dataset.decimals = String(decimals);
+      } else {
+        delete label.dataset.decimals;
+      }
       label.textContent = this.formatSliderValue(value, type, decimals);
     } else {
+      delete label.dataset.format;
+      delete label.dataset.decimals;
       label.textContent = String(value);
     }
+  }
+
+  /**
+   * Parse typed numeric input (strips display units like °, m, ×, %, K).
+   * @param {string} text
+   * @returns {number}
+   */
+  parseNumericInput(text) {
+    const cleaned = String(text)
+      .trim()
+      .replace(/[°m×%K]/gi, '')
+      .replace(/,/g, '.')
+      .trim();
+    if (!cleaned || cleaned === '-' || cleaned === '.') return NaN;
+    return parseFloat(cleaned);
+  }
+
+  /**
+   * Clamp and snap a value to a range input's min, max, and step.
+   */
+  snapToSliderRange(value, slider) {
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const step = parseFloat(slider.step);
+    const lo = Number.isFinite(min) ? min : 0;
+    const hi = Number.isFinite(max) ? max : 100;
+    let v = Number.isFinite(value) ? value : lo;
+    v = Math.max(lo, Math.min(hi, v));
+    if (Number.isFinite(step) && step > 0) {
+      const steps = Math.round((v - lo) / step);
+      v = lo + steps * step;
+      v = Math.max(lo, Math.min(hi, v));
+    }
+    return v;
+  }
+
+  /**
+   * Resolve the range input tied to a value label.
+   */
+  resolveSliderForValueLabel(label) {
+    if (!label?.dataset?.output) return null;
+    const key = label.dataset.output;
+    const fromInputs = this.ui?.inputs?.[key];
+    if (fromInputs?.type === 'range') return fromInputs;
+    return label.closest('.slider-line')?.querySelector('input[type="range"]') ?? null;
+  }
+
+  /**
+   * Double-click a slider value label to type an exact number; Enter or blur commits.
+   */
+  setupValueLabelInlineEdit() {
+    if (this._valueLabelEditBound) return;
+    this._valueLabelEditBound = true;
+    this._editingValueLabel = null;
+
+    const root = this.ui?.dom?.panelsContainer ?? document;
+    root.addEventListener('dblclick', (event) => {
+      const label = event.target.closest('.value[data-output]');
+      if (!label) return;
+      if (label.closest('#svgExtrudeColorDepths')) return;
+      event.preventDefault();
+      this.startValueLabelEdit(label);
+    });
+  }
+
+  startValueLabelEdit(label) {
+    if (this._editingValueLabel === label) return;
+    if (this._editingValueLabel) this.commitValueLabelEdit();
+
+    const slider = this.resolveSliderForValueLabel(label);
+    if (!slider || slider.disabled) return;
+
+    const current = parseFloat(slider.value);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.className = 'value-inline-input';
+    input.setAttribute('aria-label', `Edit ${label.dataset.output} value`);
+    input.value = Number.isFinite(current) ? String(current) : '';
+
+    label.dataset.editBackup = label.textContent;
+    label.textContent = '';
+    label.classList.add('is-editing');
+    label.appendChild(input);
+    this._editingValueLabel = label;
+    this._editingValueSlider = slider;
+
+    input.focus();
+    input.select();
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.commitValueLabelEdit();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        this.cancelValueLabelEdit();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      requestAnimationFrame(() => {
+        if (this._editingValueLabel === label) {
+          this.commitValueLabelEdit();
+        }
+      });
+    });
+  }
+
+  commitValueLabelEdit() {
+    const label = this._editingValueLabel;
+    const slider = this._editingValueSlider;
+    if (!label || !slider) return;
+
+    const input = label.querySelector('.value-inline-input');
+    const parsed = input ? this.parseNumericInput(input.value) : NaN;
+    const fallback = parseFloat(slider.value);
+    const next = Number.isFinite(parsed)
+      ? this.snapToSliderRange(parsed, slider)
+      : (Number.isFinite(fallback) ? fallback : 0);
+
+    label.classList.remove('is-editing');
+    label.textContent = label.dataset.editBackup ?? label.textContent;
+    delete label.dataset.editBackup;
+    this._editingValueLabel = null;
+    this._editingValueSlider = null;
+
+    slider.value = String(next);
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  cancelValueLabelEdit() {
+    const label = this._editingValueLabel;
+    if (!label) return;
+
+    label.classList.remove('is-editing');
+    label.textContent = label.dataset.editBackup ?? label.textContent;
+    delete label.dataset.editBackup;
+    this._editingValueLabel = null;
+    this._editingValueSlider = null;
   }
 
   /**
