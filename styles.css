@@ -542,6 +542,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 #gridSnap.ghost-btn,
 #baseSnap.ghost-btn,
 #backdropSnap.ghost-btn,
+#isoOrbitStep.ghost-btn,
 #creativeLookPauseAnimations.ghost-btn {
   color: var(--text-dim);
   /* Match .ghost-btn / .accent-action-btn 0.2s; opacity eases mute ↔ unmute */
@@ -552,6 +553,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-btn--gh
 #gridSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #baseSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #backdropSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#isoOrbitStep.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled) {
   background: var(--accent);
   color: var(--brand-text);
@@ -2470,6 +2472,9 @@ html:not(.mobile-landing) .dropzone-btn {
 .shelf {
   /* Inset of panel box from the browser chrome (top / right / bottom) */
   --shelf-inset: 48px;
+  /* Slider rows: fixed label + value gutters so every track ends on the same line */
+  --slider-label-col: 90px;
+  --slider-value-col: 2.5rem; /* ~4 digits at 0.8rem; longer values ellipsize for now */
   /* One rhythm unit: = gap between vertical panel cards; 2× --shelf-g = horizontal inset to card edges */
   --shelf-rhythm: 0.75rem;
   --shelf-g: calc(var(--shelf-rhythm) / 2);
@@ -3380,7 +3385,7 @@ button.advanced-info-doc-btn {
 }
 
 .slider-line {
-  grid-template-columns: 90px minmax(0, 1fr) 54px;
+  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
   column-gap: 0.45rem;
 }
 
@@ -3391,7 +3396,7 @@ button.advanced-info-doc-btn {
  */
 .slider-line.slider-line--track-short {
   --slider-track-short-width: 104px;
-  grid-template-columns: minmax(0, 1fr) var(--slider-track-short-width, 104px) 54px;
+  grid-template-columns: minmax(0, 1fr) var(--slider-track-short-width, 104px) var(--slider-value-col, 2.5rem);
   column-gap: 0.35rem;
 }
 
@@ -3415,12 +3420,32 @@ button.advanced-info-doc-btn {
   font-size: 0.9rem;
   color: var(--text-dim);
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Toggle-only row (no range/value): align switch with the right column like other rows */
+/* Toggle-only rows: label uses full width; switch aligns with slider value column */
+.slider-line:not(:has(input[type='range'])) {
+  grid-template-columns: minmax(0, 1fr) var(--slider-value-col, 2.5rem);
+}
+
+.slider-line:not(:has(input[type='range'])) span:first-child {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.slider-line:not(:has(input[type='range'])) .value {
+  display: none;
+}
+
 .slider-line > .effect-toggle {
   grid-column: 2 / -1;
   justify-self: end;
+}
+
+.slider-line:not(:has(input[type='range'])) > .effect-toggle {
+  grid-column: 2;
 }
 
 .color-line span:first-child,
@@ -4253,11 +4278,11 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .lights .slider-line {
-  grid-template-columns: 90px 1fr auto;
+  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
 }
 
 .rotate-slider {
-  grid-template-columns: 80px minmax(0, 1fr) auto;
+  --slider-label-col: 80px;
 }
 
 .light-chip {
@@ -4876,12 +4901,17 @@ body.ui-hidden .shelf {
   opacity: 0.45;
 }
 
-/* Camera → Isometric: 2×2 preset grid */
-.iso-preset-grid {
+/* Camera → Isometric: 2×3 uniform tile grid (presets + actions) */
+.iso-controls-stack {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
   margin-bottom: 0.65rem;
+}
+
+.iso-preset-grid,
+.iso-action-row {
+  display: contents;
 }
 
 .iso-preset-btn {
@@ -4927,10 +4957,10 @@ body.ui-hidden .shelf {
 }
 
 .iso-preset-btn__title {
-  font-size: 0.76rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.12;
 }
 
 .iso-preset-btn__subtitle {
@@ -4940,8 +4970,44 @@ body.ui-hidden .shelf {
   opacity: 0.88;
 }
 
-:is(.subsection, .panel-block).is-muted .iso-preset-btn {
+:is(.subsection, .panel-block).is-muted .iso-preset-btn,
+:is(.subsection, .panel-block).is-muted .iso-action-row .ghost-btn.small {
   opacity: 0.45;
+}
+
+.iso-action-row .ghost-btn.small {
+  width: 100%;
+  min-height: 3.35rem;
+  margin: 0;
+  padding: 0.42rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+}
+
+#isoPanUnlock.ghost-btn.active {
+  background: var(--accent);
+  color: var(--brand-text);
+  box-shadow: var(--ui-accent-outer-glow);
+}
+
+:is(.subsection, .panel-block).is-muted .iso-preset-btn.is-selected {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  box-shadow: none;
+}
+
+:is(.subsection, .panel-block).is-muted .iso-preset-btn.is-selected .iso-preset-btn__subtitle {
+  color: var(--text-dim);
+  opacity: 0.88;
 }
 
 /* Information tab quick navigation */

@@ -107,6 +107,7 @@ export class CameraController {
     this._focusGeneration = 0;
 
     this._isometricModeActive = false;
+    this._isometricPanUnlocked = false;
     /** @type {{ position: THREE.Vector3, target: THREE.Vector3, tilt: number, minPolar: number, maxPolar: number, minAzimuth: number, maxAzimuth: number, enableRotate: boolean, enablePan: boolean } | null} */
     this._isometricRestoreSnapshot = null;
 
@@ -164,8 +165,20 @@ export class CameraController {
     };
     this._isometricModeActive = true;
     this.currentTilt = 0;
+    this._applyIsometricInteractionLock();
+  }
+
+  setIsometricPanUnlocked(unlocked) {
+    this._isometricPanUnlocked = !!unlocked;
+    if (this._isometricModeActive) {
+      this._applyIsometricInteractionLock();
+    }
+  }
+
+  _applyIsometricInteractionLock() {
+    if (!this._isometricModeActive || !this.controls) return;
     this.controls.enableRotate = false;
-    this.controls.enablePan = false;
+    this.controls.enablePan = !!this._isometricPanUnlocked;
   }
 
   /**
@@ -186,6 +199,7 @@ export class CameraController {
       this.controls.enablePan = sn.enablePan;
     }
     this._isometricModeActive = false;
+    this._isometricPanUnlocked = false;
     this._isometricRestoreSnapshot = null;
     this.controls?.update?.();
     this._applyTilt();
@@ -241,8 +255,7 @@ export class CameraController {
     this.controls.maxPolarAngle = spherical.phi;
     this.controls.minAzimuthAngle = spherical.theta;
     this.controls.maxAzimuthAngle = spherical.theta;
-    this.controls.enableRotate = false;
-    this.controls.enablePan = false;
+    this._applyIsometricInteractionLock();
   }
 
   /**
@@ -397,7 +410,8 @@ export class CameraController {
   }
 
   pan(deltaX, deltaY) {
-    if (!this.controls || this._isometricModeActive) return;
+    if (!this.controls) return;
+    if (this._isometricModeActive && !this._isometricPanUnlocked) return;
     if (Math.abs(deltaX) < 1e-5 && Math.abs(deltaY) < 1e-5) return;
     if (typeof this.controls.pan === 'function') {
       this.controls.pan(deltaX, deltaY);
@@ -551,8 +565,7 @@ export class CameraController {
     } else {
       // Restore normal controls when auto-orbit is off
       if (this._isometricModeActive) {
-        this.controls.enablePan = false;
-        this.controls.enableRotate = false;
+        this._applyIsometricInteractionLock();
       } else {
         this.controls.enablePan = true;
         this.controls.enableRotate = true;
@@ -699,8 +712,7 @@ export class CameraController {
 
   _restoreFocusOrbitControls() {
     if (this._isometricModeActive) {
-      this.controls.enablePan = false;
-      this.controls.enableRotate = false;
+      this._applyIsometricInteractionLock();
     } else {
       const pan = this.originalControlState?.pan;
       const rotate = this.originalControlState?.rotate;
@@ -826,6 +838,7 @@ export class CameraController {
   dispose() {
     this._cancelFocusAnimation();
     this._isometricModeActive = false;
+    this._isometricPanUnlocked = false;
     this._isometricRestoreSnapshot = null;
     this.controls.dispose();
     this._unbindAltInteractions();
@@ -958,8 +971,7 @@ export class CameraController {
 
   _restoreControlState() {
     if (this._isometricModeActive) {
-      this.controls.enablePan = false;
-      this.controls.enableRotate = false;
+      this._applyIsometricInteractionLock();
       return;
     }
     if (this.originalControlState) {

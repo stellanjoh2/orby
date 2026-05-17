@@ -278,6 +278,7 @@ export class StateStore {
           presetId: 'true-isometric',
           horizontalDeg: 45,
           verticalDeg: (Math.atan(1 / Math.sqrt(2)) * 180) / Math.PI,
+          panUnlocked: false,
         },
       },
       exposure: 1.0,

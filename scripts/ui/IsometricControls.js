@@ -1,12 +1,15 @@
 /**
  * IsometricControls — master toggle and presets (Camera → Lens).
- * When enabled, isometric mode owns orbit angles; pan is locked. Focal length stays on Lens.
+ * When enabled, isometric mode owns orbit angles; pan is locked unless unlocked.
+ * Focal length stays on Lens.
  */
 import {
   DEFAULT_ISOMETRIC_STATE,
   ISOMETRIC_PRESETS,
   TRUE_ISOMETRIC_ELEVATION_DEG,
+  inferIsometricPresetId,
   normalizeIsometricState,
+  stepIsometricHorizontalDeg,
 } from '../camera/isometricPresets.js';
 
 export class IsometricControls {
@@ -31,6 +34,14 @@ export class IsometricControls {
         });
       });
     }
+
+    this.ui.inputs.isoOrbitStep?.addEventListener('click', () => {
+      this.stepOrbit45();
+    });
+
+    this.ui.inputs.isoPanUnlock?.addEventListener('click', () => {
+      this.togglePanUnlock();
+    });
 
     if (this.ui.inputs.isometricEnabled) {
       this.ui.inputs.isometricEnabled.addEventListener('change', (event) => {
@@ -78,6 +89,31 @@ export class IsometricControls {
     this._emitIsometric();
   }
 
+  stepOrbit45() {
+    if (!this._isIsoActive()) return;
+    const iso = normalizeIsometricState(
+      this.stateStore.getState().camera?.isometric,
+    );
+    const nextH = stepIsometricHorizontalDeg(iso.horizontalDeg);
+    const matched = inferIsometricPresetId(nextH, iso.verticalDeg);
+    this.stateStore.batch(() => {
+      this.stateStore.set('camera.isometric.horizontalDeg', nextH);
+      this.stateStore.set('camera.isometric.presetId', matched);
+    });
+    this.sync(this.stateStore.getState());
+    this._emitIsometric();
+  }
+
+  togglePanUnlock() {
+    if (!this._isIsoActive()) return;
+    const iso = normalizeIsometricState(
+      this.stateStore.getState().camera?.isometric,
+    );
+    this.stateStore.set('camera.isometric.panUnlocked', !iso.panUnlocked);
+    this.sync(this.stateStore.getState());
+    this._emitIsometric();
+  }
+
   _emitIsometric() {
     const iso = normalizeIsometricState(
       this.stateStore.getState().camera?.isometric,
@@ -105,12 +141,30 @@ export class IsometricControls {
         this.ui.inputs.isometricEnabled.checked = active;
       }
 
+      const actionDisabled = !active;
+      if (this.ui.inputs.isoOrbitStep) {
+        this.ui.inputs.isoOrbitStep.disabled = actionDisabled;
+      }
+      if (this.ui.inputs.isoPanUnlock) {
+        const panBtn = this.ui.inputs.isoPanUnlock;
+        const panOn = active && iso.panUnlocked;
+        panBtn.disabled = actionDisabled;
+        panBtn.classList.toggle('active', panOn);
+        panBtn.setAttribute('aria-pressed', panOn ? 'true' : 'false');
+        panBtn.textContent = panOn ? 'Lock Camera Pan' : 'Unlock Camera Pan';
+        panBtn.setAttribute(
+          'data-tooltip',
+          panOn
+            ? 'Lock right-drag pan; keep the isometric orbit target fixed'
+            : 'Allow right-drag to pan the orbit target while isometric angles stay locked',
+        );
+      }
+
       for (const btn of this._presetButtons) {
         btn.disabled = !active;
       }
 
-      const presetId = iso.presetId ?? (active ? 'true-isometric' : null);
-      this._updatePresetSelection(presetId);
+      this._updatePresetSelection(active ? iso.presetId : null);
     } finally {
       this._syncing = false;
     }

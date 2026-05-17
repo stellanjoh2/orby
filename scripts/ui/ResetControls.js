@@ -1167,6 +1167,7 @@ export class ResetControls {
               presetId: 'true-isometric',
               horizontalDeg: 45,
               verticalDeg: 35.264,
+              panUnlocked: false,
             };
             this.stateStore.set('camera.isometric', deepClone(isoDefault));
             this.eventBus.emit('camera:isometric', isoDefault);

@@ -2769,6 +2769,7 @@ export class SceneManager {
       cc.getControls().target.copy(focus);
     }
 
+    cc?.setIsometricPanUnlocked?.(iso.panUnlocked);
     cc?.applyIsometricAngles(iso.horizontalDeg, iso.verticalDeg, focus);
 
     this.syncPerspectiveCameraFovAndLens();

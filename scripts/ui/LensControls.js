@@ -3,6 +3,8 @@
  */
 import {
   DEFAULT_LENS_SENSOR_ID,
+  FOV_MAX,
+  FOV_MIN,
   LENS_FOCAL_PRESETS,
   LENS_SENSORS,
   clampFovDeg,
@@ -10,9 +12,6 @@ import {
   fovMatchesLensPreset,
   inferPresetFocalFromFov,
 } from '../camera/lensPresets.js';
-
-const FOV_MIN = 10;
-const FOV_MAX = 120;
 
 export class LensControls {
   constructor(eventBus, stateStore, uiManager, helpers) {

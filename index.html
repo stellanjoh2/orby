@@ -2268,10 +2268,10 @@
                     <input
                       id="cameraFov"
                       type="range"
-                      min="10"
+                      min="2"
                       max="120"
                       value="45"
-                      step="1"
+                      step="0.1"
                     />
                     <span class="value" data-output="cameraFov">45°</span>
                   </label>
@@ -2279,7 +2279,7 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="isometric">
                   <div class="block-title has-toggle has-reset">
-                    <span data-tooltip="RTS isometric view — locks orbit and pan; zoom and focal length still work. Tilt and fisheye are disabled until turned off.">Isometric camera</span>
+                    <span data-tooltip="RTS isometric view — locks orbit; pan optional via Unlock. Zoom and focal length still work. Tilt and fisheye are disabled until turned off.">Isometric camera</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button
                         class="block-reset-btn"
@@ -2298,10 +2298,11 @@
                     </div>
                   </div>
                   <div
-                    class="iso-preset-grid"
+                    class="iso-controls-stack"
                     role="group"
                     aria-label="Isometric camera presets"
                   >
+                    <div class="iso-preset-grid">
                     <button type="button" class="iso-preset-btn" data-iso-preset="true-isometric" aria-pressed="false">
                       <span class="iso-preset-btn__title">True iso</span>
                       <span class="iso-preset-btn__subtitle">45° / 35.26°</span>
@@ -2311,13 +2312,33 @@
                       <span class="iso-preset-btn__subtitle">45° / 30° — RTS</span>
                     </button>
                     <button type="button" class="iso-preset-btn" data-iso-preset="high-oblique" aria-pressed="false">
-                      <span class="iso-preset-btn__title">High oblique</span>
-                      <span class="iso-preset-btn__subtitle">45° / 60° — city</span>
+                      <span class="iso-preset-btn__title">High Oblique</span>
+                      <span class="iso-preset-btn__subtitle">45° / 60° — City Builder</span>
                     </button>
                     <button type="button" class="iso-preset-btn" data-iso-preset="pixel-2-1" aria-pressed="false">
                       <span class="iso-preset-btn__title">2:1 pixel</span>
                       <span class="iso-preset-btn__subtitle">Pixel-perfect</span>
                     </button>
+                    </div>
+                    <div class="iso-action-row">
+                    <button
+                      id="isoOrbitStep"
+                      class="ghost-btn small"
+                      type="button"
+                      data-tooltip="Rotate the isometric view 45° around the model (repeats)"
+                    >
+                      Rotate 45°
+                    </button>
+                    <button
+                      id="isoPanUnlock"
+                      class="ghost-btn small"
+                      type="button"
+                      aria-pressed="false"
+                      data-tooltip="Allow right-drag to pan the orbit target while isometric angles stay locked"
+                    >
+                      Unlock Camera Pan
+                    </button>
+                  </div>
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>

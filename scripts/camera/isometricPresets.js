@@ -22,8 +22,8 @@ export const ISOMETRIC_PRESETS = [
   },
   {
     id: 'high-oblique',
-    title: 'High oblique',
-    subtitle: '45° / 60° — city',
+    title: 'High Oblique',
+    subtitle: '45° / 60° — City Builder',
     horizontalDeg: 45,
     verticalDeg: 60,
   },
@@ -40,11 +40,16 @@ export const ISOMETRIC_PRESET_BY_ID = Object.fromEntries(
   ISOMETRIC_PRESETS.map((p) => [p.id, p]),
 );
 
+/** Azimuth step for Camera → Isometric → Rotate 45°. */
+export const ISOMETRIC_ORBIT_STEP_DEG = 45;
+
 export const DEFAULT_ISOMETRIC_STATE = {
   enabled: false,
   presetId: 'true-isometric',
   horizontalDeg: 45,
   verticalDeg: TRUE_ISOMETRIC_ELEVATION_DEG,
+  /** When true, right-drag pans the orbit target while isometric angles stay locked. */
+  panUnlocked: false,
 };
 
 export function normalizeIsometricState(raw = {}) {
@@ -61,18 +66,39 @@ export function normalizeIsometricState(raw = {}) {
   const preset = presetId ? ISOMETRIC_PRESET_BY_ID[presetId] : null;
 
   const horizontalDeg = Number(
-    preset?.horizontalDeg ?? src.horizontalDeg ?? base.horizontalDeg,
+    src.horizontalDeg ?? preset?.horizontalDeg ?? base.horizontalDeg,
   );
   const verticalDeg = Number(
-    preset?.verticalDeg ?? src.verticalDeg ?? base.verticalDeg,
+    src.verticalDeg ?? preset?.verticalDeg ?? base.verticalDeg,
   );
+
+  const h = Number.isFinite(horizontalDeg) ? horizontalDeg : base.horizontalDeg;
+  const v = Number.isFinite(verticalDeg) ? verticalDeg : base.verticalDeg;
+  const matchedPreset = enabled ? inferIsometricPresetId(h, v) : null;
 
   return {
     enabled,
-    presetId: preset ? preset.id : null,
-    horizontalDeg: Number.isFinite(horizontalDeg) ? horizontalDeg : base.horizontalDeg,
-    verticalDeg: Number.isFinite(verticalDeg) ? verticalDeg : base.verticalDeg,
+    presetId: enabled
+      ? matchedPreset
+      : presetId && ISOMETRIC_PRESET_BY_ID[presetId]
+        ? presetId
+        : null,
+    horizontalDeg: h,
+    verticalDeg: v,
+    panUnlocked: !!src.panUnlocked,
   };
+}
+
+/** Advance stored azimuth by one isometric orbit step (degrees). */
+export function stepIsometricHorizontalDeg(
+  currentDeg,
+  stepDeg = ISOMETRIC_ORBIT_STEP_DEG,
+) {
+  const raw = Number(currentDeg);
+  const base = Number.isFinite(raw) ? raw : 0;
+  const step = Number(stepDeg);
+  if (!Number.isFinite(step)) return base;
+  return base + step;
 }
 
 export function isometricAnglesMatchPreset(horizontalDeg, verticalDeg, presetId) {

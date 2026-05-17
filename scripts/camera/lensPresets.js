@@ -24,6 +24,10 @@ export const LENS_SENSORS = {
 
 export const DEFAULT_LENS_SENSOR_ID = 'aps-c';
 
+/** Manual slider + preset clamp (200mm tele on APS-C ≈ 4.5° — must stay below 10). */
+export const FOV_MIN = 2;
+export const FOV_MAX = 120;
+
 const FOV_MATCH_TOLERANCE_DEG = 0.35;
 
 /**
@@ -43,7 +47,7 @@ export function focalLengthToVerticalFovDeg(focalMm, sensorId) {
  * @param {number} min
  * @param {number} max
  */
-export function clampFovDeg(fovDeg, min = 10, max = 120) {
+export function clampFovDeg(fovDeg, min = FOV_MIN, max = FOV_MAX) {
   return Math.min(max, Math.max(min, fovDeg));
 }
 
