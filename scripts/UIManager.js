@@ -338,6 +338,7 @@ export class UIManager {
       baseSnap: q('#baseSnap'),
       gridSnap: q('#gridSnap'),
       gridScale: q('#gridScale'),
+      gridLineWidth: q('#gridLineWidth'),
       baseScale: q('#baseScale'),
       baseMetalness: q('#baseMetalness'),
       baseRoughness: q('#baseRoughness'),
@@ -1751,6 +1752,10 @@ export class UIManager {
       this.inputs.gridScale.value = state.gridScale ?? 1;
       this.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');
     }
+    if (this.inputs.gridLineWidth) {
+      this.inputs.gridLineWidth.value = state.gridLineWidth ?? 1;
+      this.updateValueLabel('gridLineWidth', state.gridLineWidth ?? 1, 'decimal');
+    }
     
     // Lights
     if (this.inputs.lightsRotation) {
@@ -2290,7 +2295,7 @@ export class UIManager {
     const gridOn = !!currentState.groundWire;
     this.setBlockMuted('grid', !gridOn);
     this.setControlDisabled(
-      ['groundWireColor', 'groundWireOpacity', 'gridY', 'gridScale', 'gridSnap'],
+      ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale', 'gridSnap'],
       !gridOn,
     );
     

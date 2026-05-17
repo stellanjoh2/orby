@@ -60,7 +60,7 @@ const RESET_DIRTY_PATHS = {
     'backdropRotation', 'backdropY', 'backdropTextureEnabled', 'backdropTextureScale',
   ],
   background: ['background'],
-  grid: ['groundWireColor', 'groundWireOpacity', 'gridY', 'gridScale'],
+  grid: ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale'],
   dof: ['dof'],
   bloom: ['bloom'],
   'anamorphic-bloom': ['lensFlare.anamorphicBloom'],
@@ -973,11 +973,13 @@ export class ResetControls {
             this.stateStore.batch(() => {
               this.stateStore.set('groundWireColor', defaults.groundWireColor);
               this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
+              this.stateStore.set('gridLineWidth', defaults.gridLineWidth);
               this.stateStore.set('gridY', defaults.gridY);
               this.stateStore.set('gridScale', defaults.gridScale);
             });
             this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
             this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
+            this.eventBus.emit('studio:grid-line-width', defaults.gridLineWidth);
             this.eventBus.emit('studio:grid-y', defaults.gridY);
             this.eventBus.emit('studio:grid-scale', defaults.gridScale);
             this.ui.syncControls(this.stateStore.getState());

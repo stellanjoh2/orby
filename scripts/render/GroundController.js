@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js';
+import { LineSegments2 } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lines/LineMaterial.js';
 import {
   PODIUM_TOP_RADIUS_OFFSET,
   PODIUM_SEGMENTS,
@@ -62,6 +65,25 @@ function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness
 }
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
+const clampGridLineWidth = (value) => Math.min(2.5, Math.max(0.5, Number(value) || 1));
+const GRID_DIVISIONS = 32;
+const DEFAULT_GRID_LINE_WIDTH = 1;
+
+/** Slider value maps to screen-space line width in pixels (LineMaterial). */
+function gridLineWidthToPixels(width) {
+  return clampGridLineWidth(width);
+}
+
+function buildGridLinePositions(size, divisions) {
+  const half = size / 2;
+  const step = size / divisions;
+  const vertices = [];
+  for (let i = 0, k = -half; i <= divisions; i += 1, k += step) {
+    vertices.push(-half, 0, k, half, 0, k);
+    vertices.push(k, 0, -half, k, 0, half);
+  }
+  return vertices;
+}
 const clamp01 = (value) => Math.min(1, Math.max(0, Number(value) || 0));
 const clampBackdropTextureScale = (value) => Math.min(12, Math.max(0.25, Number(value) || 1));
 const clampDegrees = (value) => {
@@ -327,6 +349,7 @@ export class GroundController {
     this.gridY = options.gridY ?? 0;
     this.podiumScale = clampScale(options.baseScale ?? options.podiumScale ?? 1);
     this.gridScale = clampScale(options.gridScale ?? 1);
+    this.gridLineWidth = clampGridLineWidth(options.gridLineWidth ?? DEFAULT_GRID_LINE_WIDTH);
     this.groundHeight = options.groundHeight ?? 0.1;
     this.podiumBaseRadius = 2;
 
@@ -427,6 +450,7 @@ export class GroundController {
   disposeGrid() {
     if (!this.grid) return;
     this.scene.remove(this.grid);
+    this.grid.geometry?.dispose?.();
     if (Array.isArray(this.grid.material)) {
       this.grid.material.forEach((mat) => mat?.dispose?.());
     } else {
@@ -675,27 +699,45 @@ export class GroundController {
     this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
   }
 
+  _syncGridLineResolution(width, height) {
+    if (!this.gridMaterials?.length) return;
+    const logical = new THREE.Vector2();
+    if (this.renderer?.getSize) {
+      this.renderer.getSize(logical);
+    }
+    const w = width ?? (logical.x > 0 ? logical.x : window.innerWidth);
+    const h = height ?? (logical.y > 0 ? logical.y : window.innerHeight);
+    const dpr = Math.max(1e-6, this.renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1);
+    const resX = Math.max(1, Math.floor(w * dpr));
+    const resY = Math.max(1, Math.floor(h * dpr));
+    this.gridMaterials.forEach((mat) => {
+      if (mat?.resolution) mat.resolution.set(resX, resY);
+    });
+  }
+
+  resizeGridLines(width, height) {
+    this._syncGridLineResolution(width, height);
+  }
+
   buildGrid() {
     this.disposeGrid();
     const baseRadius = this.podiumBaseRadius * this.podiumScale;
-    this.grid = new THREE.GridHelper(
-      baseRadius * 2 * this.gridScale,
-      32,
-      this.wireColor,
-      this.wireColor,
-    );
-    this.gridMaterials = Array.isArray(this.grid.material)
-      ? this.grid.material
-      : [this.grid.material];
-    this.gridMaterials.forEach((mat) => {
-      if (!mat) return;
-      mat.transparent = true;
-      mat.opacity = this.wireOpacity;
-      mat.depthWrite = false;
-      // Keep GridHelper color response consistent with mesh wireframe overlays.
-      mat.toneMapped = true;
-      if (mat.color) mat.color.set(this.wireColor);
+    const size = baseRadius * 2 * this.gridScale;
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(buildGridLinePositions(size, GRID_DIVISIONS));
+    const material = new LineMaterial({
+      color: new THREE.Color(this.wireColor).getHex(),
+      linewidth: gridLineWidthToPixels(this.gridLineWidth),
+      transparent: true,
+      opacity: this.wireOpacity,
+      depthWrite: false,
+      toneMapped: true,
+      worldUnits: false,
     });
+    this.grid = new LineSegments2(geometry, material);
+    this.grid.frustumCulled = false;
+    this.gridMaterials = [material];
+    this._syncGridLineResolution();
     this.grid.visible = this.wireEnabled;
     this.scene.add(this.grid);
     this.setGridY(this.gridY);
@@ -816,6 +858,16 @@ export class GroundController {
     this.disposeGrid();
     this.buildGrid();
     this.setWireEnabled(wasVisible);
+  }
+
+  setGridLineWidth(value) {
+    this.gridLineWidth = clampGridLineWidth(value ?? this.gridLineWidth);
+    const pixels = gridLineWidthToPixels(this.gridLineWidth);
+    if (this.gridMaterials) {
+      this.gridMaterials.forEach((mat) => {
+        if (mat) mat.linewidth = pixels;
+      });
+    }
   }
 
   setBackdropEnabled(enabled) {

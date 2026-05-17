@@ -136,6 +136,7 @@ export class SceneSettingsManager {
       backdropTextureEnabled: !!state.backdropTextureEnabled,
       backdropTextureScale: state.backdropTextureScale,
       gridScale: state.gridScale,
+      gridLineWidth: state.gridLineWidth ?? 1,
       lights: state.lights,
       lightsEnabled: state.lightsEnabled,
       lightsMaster: state.lightsMaster,
@@ -818,6 +819,10 @@ export class SceneSettingsManager {
       if (payload.gridScale !== undefined) {
         this.stateStore.set('gridScale', payload.gridScale);
         this.eventBus.emit('studio:grid-scale', payload.gridScale);
+      }
+      if (payload.gridLineWidth !== undefined) {
+        this.stateStore.set('gridLineWidth', payload.gridLineWidth);
+        this.eventBus.emit('studio:grid-line-width', payload.gridLineWidth);
       }
       if (payload.lights) {
         this.stateStore.set('lights', payload.lights);

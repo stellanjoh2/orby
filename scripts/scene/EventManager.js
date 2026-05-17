@@ -329,6 +329,7 @@ export class EventManager {
     eventBus.on('studio:backdrop-texture-scale', (value) => s.setBackdropTextureScale(value));
     eventBus.on('studio:backdrop-snap', () => s.snapBackdropToBottom());
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
+    eventBus.on('studio:grid-line-width', (value) => s.setGridLineWidth(value));
     eventBus.on('studio:base-snap', () => s.snapBaseToBottom());
     eventBus.on('studio:grid-snap', () => s.snapGridToBottom());
 

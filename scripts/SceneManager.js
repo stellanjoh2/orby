@@ -729,6 +729,7 @@ export class SceneManager {
       gridY: state.gridY,
       baseScale: state.baseScale,
       gridScale: state.gridScale,
+      gridLineWidth: state.gridLineWidth ?? 1,
       baseMetalness: state.baseMetalness,
       baseRoughness: state.baseRoughness,
       baseReflection: state.baseReflection,
@@ -900,6 +901,7 @@ export class SceneManager {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
     this.groundController?.resizeBaseReflector?.(width, height);
+    this.groundController?.resizeGridLines?.(width, height);
     this.syncPerspectiveCameraFovAndLens();
   }
 
@@ -1743,6 +1745,10 @@ export class SceneManager {
 
   setGridScale(value) {
     this.groundController?.setGridScale(value);
+  }
+
+  setGridLineWidth(value) {
+    this.groundController?.setGridLineWidth(value);
   }
 
   setBaseMetalness(value, { updateState = true } = {}) {

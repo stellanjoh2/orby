@@ -105,6 +105,7 @@ function createStateApplySteps() {
       apply: (s, state) => {
         s.setSceneGeometryWireframe(false);
         s.setGridScale(state.gridScale ?? 1);
+        s.setGridLineWidth(state.gridLineWidth ?? 1);
       },
     },
     {

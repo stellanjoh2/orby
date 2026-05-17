@@ -123,6 +123,15 @@ export class StudioControls {
       this.stateStore.set('groundWireOpacity', value);
       this.eventBus.emit('studio:ground-wire-opacity', value);
     });
+    this.ui.inputs.gridLineWidth?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('gridLineWidth', value, 'decimal');
+      this.stateStore.set('gridLineWidth', value);
+      this.eventBus.emit('studio:grid-line-width', value);
+    });
+    if (this.ui.inputs.gridLineWidth) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.gridLineWidth);
+    }
     this.ui.inputs.groundY.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('groundY', value, 'distance');
@@ -605,6 +614,10 @@ export class StudioControls {
     if (this.ui.inputs.gridScale) {
       this.ui.inputs.gridScale.value = state.gridScale ?? 1;
       this.helpers.updateValueLabel('gridScale', state.gridScale ?? 1, 'decimal');
+    }
+    if (this.ui.inputs.gridLineWidth) {
+      this.ui.inputs.gridLineWidth.value = state.gridLineWidth ?? 1;
+      this.helpers.updateValueLabel('gridLineWidth', state.gridLineWidth ?? 1, 'decimal');
     }
     if (this.ui.inputs.backdropEnabled) {
       this.ui.inputs.backdropEnabled.checked = !!state.backdropEnabled;

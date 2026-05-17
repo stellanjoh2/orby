@@ -110,6 +110,7 @@ export class StateStore {
       gridY: 0,
       baseScale: 1,
       gridScale: 1,
+      gridLineWidth: 1,
       baseMetalness: DEFAULT_MATERIAL_METALNESS,
       baseRoughness: DEFAULT_MATERIAL_ROUGHNESS,
       baseReflection: 1,
