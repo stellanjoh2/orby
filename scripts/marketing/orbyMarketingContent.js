@@ -3,7 +3,7 @@
  * Swap imageSrc / videoSrc paths as real captures land. videoSrc on split blocks uses imageSrc as poster when both are set.
  */
 
-/** @typedef {'intro' | 'split' | 'showcase' | 'footer'} MarketingSectionType */
+/** @typedef {'intro' | 'split' | 'showcase' | 'faq' | 'footer'} MarketingSectionType */
 
 /**
  * @typedef {Object} MarketingSection
@@ -16,8 +16,10 @@
  * @property {'media-left' | 'media-right'} [layout]
  * @property {string} [imageSrc]
  * @property {string} [imageAlt]
+ * @property {{ src: string, alt: string, credit?: string }[]} [gallery]
  * @property {string} [videoSrc]
  * @property {string} [ctaLabel]
+ * @property {{ question: string, answer: string }[]} [faq]
  */
 
 /** @type {MarketingSection[]} */
@@ -65,34 +67,8 @@ export const MARKETING_SECTIONS = [
   },
   {
     type: 'split',
-    id: 'orby-marketing-export',
-    eyebrow: '03 — Send it',
-    title: 'Deliverables without a pipeline.',
-    lede:
-      'Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.',
-    bullets: [
-      'PNG stills at 1× or 2× with optional transparency',
-      'MP4 turntable video and numbered PNG sequences in a zip',
-      'SVG silhouette or flat color, plus GLB from SVG extrude',
-    ],
-    layout: 'media-right',
-    imageSrc: './assets/marketing/export-golden-look.png',
-    imageAlt: 'Golden hour look on a product render',
-  },
-  {
-    type: 'showcase',
-    id: 'orby-marketing-showcase',
-    eyebrow: 'Rendering',
-    title: 'Built to show the work.',
-    lede:
-      'Full-bleed frames for the moments that matter — product viz, automotive, AI meshes, and game assets at the fidelity your model deserves.',
-    imageSrc: './assets/images/marketing/showcase-render.png',
-    imageAlt: 'High-fidelity automotive render lit in Orby',
-  },
-  {
-    type: 'split',
     id: 'orby-marketing-camera',
-    eyebrow: '04 — Camera & FX',
+    eyebrow: '03 — Camera & FX',
     title: 'Pro framing in the viewport.',
     lede:
       'Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.',
@@ -101,14 +77,44 @@ export const MARKETING_SECTIONS = [
       'Composition grid and 21∶9 letterbox for cinematic framing',
       'Auto exposure plus manual grade stack in one tab',
     ],
-    layout: 'media-left',
+    layout: 'media-right',
     imageSrc: './assets/marketing/feature-ui-placeholder.png',
     imageAlt: 'Orby studio UI with viewport and Camera & FX controls',
   },
   {
+    type: 'showcase',
+    id: 'orby-marketing-showcase',
+    eyebrow: 'Rendering',
+    title: 'Built to show the work.',
+    lede:
+      'Full-bleed frames for the moments that matter — product viz, automotive, AI meshes, and game assets at the fidelity your model deserves.',
+    gallery: [
+      {
+        src: './assets/marketing/showcase/showcase-01-etron-gt.jpg',
+        alt: 'Audi e-tron GT on a reflective platform lit in Orby',
+        credit: 'Audi e-tron GT · vecarz.com',
+      },
+      {
+        src: './assets/marketing/showcase/showcase-02-etron-detail.jpg',
+        alt: 'Close-up headlight detail on a red sports car render',
+        credit: 'Sports car detail · vecarz.com',
+      },
+      {
+        src: './assets/marketing/showcase/showcase-03-jeep-rubicon.jpg',
+        alt: 'Jeep Wrangler Rubicon adventure render with lake backdrop',
+        credit: 'Jeep Wrangler Rubicon · vecarz.com',
+      },
+      {
+        src: './assets/marketing/showcase/showcase-04-new-balance.jpg',
+        alt: 'New Balance 574 product shot on a reflective disc',
+        credit: 'New Balance 574 · vecarz.com',
+      },
+    ],
+  },
+  {
     type: 'split',
     id: 'orby-marketing-shader-lab',
-    eyebrow: '05 — Shader Lab',
+    eyebrow: '04 — Shader Lab',
     title: 'Stylized looks on demand.',
     lede:
       'Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.',
@@ -123,7 +129,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-svg',
-    eyebrow: '06 — SVG Extrude',
+    eyebrow: '05 — SVG Extrude',
     title: 'Logos become geometry.',
     lede:
       'Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.',
@@ -136,10 +142,76 @@ export const MARKETING_SECTIONS = [
     imageAlt: 'Glass stylized surface on extruded geometry',
   },
   {
+    type: 'split',
+    id: 'orby-marketing-export',
+    eyebrow: '06 — Send it',
+    title: 'Deliverables without a pipeline.',
+    lede:
+      'Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.',
+    bullets: [
+      'PNG stills at 1× or 2× with optional transparency',
+      'MP4 turntable video and numbered PNG sequences in a zip',
+      'SVG silhouette or flat color, plus GLB from SVG extrude',
+    ],
+    layout: 'media-right',
+    imageSrc: './assets/marketing/export-golden-look.png',
+    imageAlt: 'Golden hour look on a product render',
+  },
+  {
+    type: 'faq',
+    id: 'orby-marketing-faq',
+    eyebrow: 'FAQ',
+    title: 'Questions, answered.',
+    lede: 'Everything you need to know before you drop your first file.',
+    faq: [
+      {
+        question: 'Who is Orby for?',
+        answer:
+          "Orby is made for designers who need to present 3D content without really knowing 3D — think AI-generated models, quick client presentations, product visuals, or seeing how a logo looks extruded in 3D with a single drop. It's also for 3D artists who need a fast, clean view without booting up a full DCC. No setup, no pipeline. Just your file and an instant presentation studio.",
+      },
+      {
+        question: 'Do I need to create an account?',
+        answer:
+          'No. No account, no login, no email, no waitlist. Open the browser, drop your file, done.',
+      },
+      {
+        question: 'Do my files get uploaded anywhere?',
+        answer:
+          "Never. Orby runs entirely in your browser — your files don't leave your device, ever. No servers, no cloud, no storage. Close the tab and the model is gone. What you load stays yours.",
+      },
+      {
+        question: 'What formats does Orby support?',
+        answer:
+          "Orby is built and optimized for GLB and glTF — that's where you'll get the full experience. It also supports OBJ, FBX, STL, and USD/USDZ with basic support. For best results, export as GLB.",
+      },
+      {
+        question: 'Can I export my renders?',
+        answer:
+          'Yes. You can export stills and video without leaving the tab. What you see is what you get — post-processing, lighting, materials and all.',
+      },
+      {
+        question: 'Does it work on mobile?',
+        answer:
+          'Not yet. Orby is built for desktop — a proper screen, a mouse, and some GPU headroom. Mobile support is on the roadmap, but for now leave it at your desk.',
+      },
+      {
+        question: 'Is it really free?',
+        answer:
+          'Completely. No hidden tiers, no export limits, no watermarks. Free now, free always.',
+      },
+      {
+        question: 'Why does Orby exist?',
+        answer:
+          "Orby started as a personal learning experiment — I wanted to learn more about code and 3D on the web, and the process of building something on my own. It was never meant to be anything more than that. But it kept growing, and at some point it became something worth sharing. So here it is. I hope it's useful.",
+      },
+    ],
+  },
+  {
     type: 'footer',
     id: 'orby-marketing-footer',
-    title: 'Ready when you are.',
-    lede: 'Scroll up, drop a GLB or SVG, and start presenting in seconds.',
-    ctaLabel: 'Back to studio',
+    title: 'Try it out for free now.',
+    lede: '',
+    ctaLabel: 'Browse Files',
+    secondaryCtaLabel: 'Load Sample',
   },
 ];

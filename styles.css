@@ -113,6 +113,42 @@
   --ui-hero-pill-pad-inline: calc(1.9rem * 1.2);
   /* Multiply caption opacity inside muted .subsection / .panel-block (two ×~25% steps vs full captions) */
   --muted-section-text-scale: 0.5625;
+  /*
+   * Home hero frame insets — shared by .dropzone and #orby-marketing so marketing
+   * content width matches the dropzone inner edges (left/right of the frame).
+   */
+  --orby-home-padding: clamp(0.25rem, calc((100vw - 600px) / 15), 20rem);
+  --orby-home-padding-x: var(--orby-home-padding);
+  --orby-home-padding-y: var(--orby-home-padding);
+}
+
+/* Big screens: extra horizontal inset only — vertical inset follows height */
+@media (min-width: 1200px) and (max-width: 1599px) {
+  :root {
+    --orby-home-padding-x: calc(
+      0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
+    );
+    --orby-home-padding-y: min(
+      calc(
+        0.06 * 100vh + 0.8 * clamp(0.35rem, calc((100vh - 500px) / 12), 4.5rem)
+      ),
+      max(0.35rem, calc((100vh - 460px) / 2))
+    );
+  }
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --orby-home-padding-x: calc(
+      0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
+    );
+    --orby-home-padding-y: min(
+      calc(
+        0.1 * 100vh + 0.8 * clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem)
+      ),
+      max(0.35rem, calc((100vh - 460px) / 2))
+    );
+  }
 }
 
 .brand-font-headline {
@@ -2059,13 +2095,10 @@ html.orby-dropzone-shell-pending .workspace {
 }
 
 .dropzone {
-  /* Define padding variable at dropzone level so it's available to all children */
-  /* Max padding: 20rem (320px) for even more generous spacing at large sizes */
-  /* Base symmetric padding (used for top/bottom by default) */
-  --dropzone-padding: clamp(0.25rem, calc((100vw - 600px) / 15), 20rem);
-  /* Allow separate horizontal control on very wide screens */
-  --dropzone-padding-x: var(--dropzone-padding);
-  --dropzone-padding-y: var(--dropzone-padding);
+  /* Aliases :root --orby-home-padding* (frame insets + marketing site width) */
+  --dropzone-padding: var(--orby-home-padding);
+  --dropzone-padding-x: var(--orby-home-padding-x);
+  --dropzone-padding-y: var(--orby-home-padding-y);
   /* Magic-card style frame (CodePen gayane-gasparyan/jOmaBQK) — stroke & radius preserved */
   --dropzone-frame-stroke: 2px;
   --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
@@ -2095,22 +2128,6 @@ html.orby-dropzone-shell-pending .workspace {
   --dropzone-glow-rim-a: 23.625px;
   --dropzone-glow-rim-b: 47.25px;
   --dropzone-glow-rim-c: 74.25px;
-}
-
-/* Big screens: extra horizontal inset only — vertical inset follows *height* so short
-   windows are not dominated by width-based padding (avoids stroke cutting through content). */
-@media (min-width: 1200px) and (max-width: 1599px) {
-  .dropzone {
-    --dropzone-padding-x: calc(
-      0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
-    );
-    --dropzone-padding-y: min(
-      calc(
-        0.06 * 100vh + 0.8 * clamp(0.35rem, calc((100vh - 500px) / 12), 4.5rem)
-      ),
-      max(0.35rem, calc((100vh - 460px) / 2))
-    );
-  }
 }
 
 /* Inspired by Magic Card pen: animate gradient angle only (no layout transform). */
@@ -2240,28 +2257,6 @@ html.safari-browser .dropzone::before {
       color-mix(in srgb, var(--brand-primary) 20%, transparent),
     0 0 calc(var(--dropzone-glow-rim-b) * 0.65)
       color-mix(in srgb, var(--text-link) 12%, transparent);
-}
-
-/* On very wide screens, increase horizontal padding only (narrower dropzone, same vertical spacing) */
-@media (min-width: 1600px) {
-  .dropzone {
-    --dropzone-padding-x: calc(
-      0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
-    );
-    /*
-      Vertical padding:
-      - On tall fullscreen 16:9 (e.g. 1080p), keep a comfortable cushion from top/bottom
-      - As the window height shrinks, padding tapers down
-      - Overall more generous so fullscreen doesn’t feel cramped
-      - Same 0.8 inner-scale as the 1200px rule, using height
-    */
-    --dropzone-padding-y: min(
-      calc(
-        0.1 * 100vh + 0.8 * clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem)
-      ),
-      max(0.35rem, calc((100vh - 460px) / 2))
-    );
-  }
 }
 
 .dropzone > * {

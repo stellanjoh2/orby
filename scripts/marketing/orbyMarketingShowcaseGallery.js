@@ -1,0 +1,256 @@
+/**
+ * Auto-cycling showcase gallery + lower-third credits (revealed after each slide loads).
+ */
+import gsap from 'gsap';
+import { prefersReducedMotion } from '../ui/modalReveal.js';
+import {
+  getMediaPlaceholderTargets,
+  setMediaPlaceholderOpacity,
+  tweenPlaceholderFadeOut,
+} from './orbyMarketingMediaPlaceholder.js';
+
+const CYCLE_MS = 5200;
+const FADE_S = 0.95;
+const CREDIT_IN_S = 0.48;
+
+/** @type {WeakMap<HTMLElement, ReturnType<typeof createGalleryController>>} */
+const controllers = new WeakMap();
+
+/**
+ * @param {HTMLImageElement} el
+ * @returns {Promise<void>}
+ */
+function whenImageReady(el) {
+  if (!el) return Promise.resolve();
+  if (el.complete && el.naturalWidth > 0) {
+    if (typeof el.decode === 'function') {
+      return el.decode().catch(() => {});
+    }
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const finish = () => {
+      if (typeof el.decode === 'function') {
+        el.decode().then(resolve).catch(resolve);
+      } else {
+        resolve();
+      }
+    };
+    el.addEventListener('load', finish, { once: true });
+    el.addEventListener('error', finish, { once: true });
+  });
+}
+
+/**
+ * @param {HTMLElement} mask
+ */
+function createGalleryController(mask) {
+  const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
+  const creditEl = mask.querySelector('[data-orby-marketing-showcase-credit]');
+  let index = Math.max(
+    0,
+    imgs.findIndex((img) => img.classList.contains('is-active')),
+  );
+  if (index < 0) index = 0;
+  let timer = null;
+  let tweening = false;
+  let creditTween = null;
+
+  const hideCredit = () => {
+    if (!creditEl) return Promise.resolve();
+    creditTween?.kill();
+    if (prefersReducedMotion()) {
+      gsap.set(creditEl, { opacity: 0, y: 8 });
+      creditEl.hidden = true;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      gsap.to(creditEl, {
+        opacity: 0,
+        y: 8,
+        duration: 0.22,
+        ease: 'power2.in',
+        onComplete: () => {
+          creditEl.hidden = true;
+          resolve();
+        },
+      });
+    });
+  };
+
+  /**
+   * @param {number} slideIndex
+   * @param {{ hideFirst?: boolean }} [options]
+   */
+  const revealCredit = async (slideIndex, options = {}) => {
+    const img = imgs[slideIndex];
+    if (!creditEl || !img) return;
+
+    const text = img.dataset.credit?.trim() || '';
+    if (!text) {
+      creditEl.hidden = true;
+      gsap.set(creditEl, { opacity: 0 });
+      return;
+    }
+
+    if (options.hideFirst) {
+      await hideCredit();
+    }
+
+    await whenImageReady(img);
+
+    creditEl.textContent = text;
+    creditEl.hidden = false;
+    creditTween?.kill();
+
+    if (prefersReducedMotion()) {
+      gsap.set(creditEl, { opacity: 1, y: 0 });
+      return;
+    }
+
+    creditTween = gsap.fromTo(
+      creditEl,
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: CREDIT_IN_S, ease: 'power2.out' },
+    );
+  };
+
+  const setActive = (nextIndex, animate) => {
+    const current = imgs[index];
+    const next = imgs[nextIndex];
+    if (!next || nextIndex === index) return;
+
+    const applyClasses = () => {
+      imgs.forEach((img, i) => {
+        img.classList.toggle('is-active', i === nextIndex);
+      });
+    };
+
+    if (!animate || prefersReducedMotion()) {
+      gsap.set(imgs, { opacity: (i) => (i === nextIndex ? 1 : 0) });
+      applyClasses();
+      setMediaPlaceholderOpacity(mask, 0);
+      index = nextIndex;
+      tweening = false;
+      void revealCredit(nextIndex);
+      return;
+    }
+
+    const needsPlaceholder =
+      !next.complete || next.naturalWidth === 0;
+    if (needsPlaceholder) {
+      setMediaPlaceholderOpacity(mask, 1);
+    }
+
+    tweening = true;
+    gsap.killTweensOf(imgs);
+    gsap.killTweensOf(getMediaPlaceholderTargets(mask));
+    void hideCredit();
+    gsap.to(current, {
+      opacity: 0,
+      duration: FADE_S,
+      ease: 'power2.inOut',
+    });
+    gsap.to(next, {
+      opacity: 1,
+      duration: FADE_S,
+      ease: 'power2.inOut',
+      onStart: applyClasses,
+      onComplete: () => {
+        index = nextIndex;
+        tweening = false;
+        setMediaPlaceholderOpacity(mask, 0);
+        void revealCredit(nextIndex);
+      },
+    });
+    if (needsPlaceholder) {
+      tweenPlaceholderFadeOut(mask, { duration: FADE_S, ease: 'power2.inOut' });
+    }
+  };
+
+  const tick = () => {
+    if (tweening) return;
+    setActive((index + 1) % imgs.length, true);
+  };
+
+  const start = () => {
+    stop();
+    if (imgs.length < 2 || prefersReducedMotion()) return;
+    timer = window.setInterval(tick, CYCLE_MS);
+  };
+
+  const stop = () => {
+    if (timer != null) {
+      window.clearInterval(timer);
+      timer = null;
+    }
+  };
+
+  const onSlideRevealed = () => {
+    void revealCredit(index);
+  };
+
+  mask.addEventListener('orby-marketing-showcase-slide', onSlideRevealed);
+
+  return {
+    start,
+    stop,
+    onSlideRevealed,
+    prepareCredit() {
+      if (!creditEl) return;
+      creditTween?.kill();
+      creditEl.hidden = true;
+      creditEl.textContent = '';
+      gsap.set(creditEl, { opacity: 0, y: 12 });
+    },
+    destroy() {
+      stop();
+      creditTween?.kill();
+      gsap.killTweensOf(imgs);
+      mask.removeEventListener('orby-marketing-showcase-slide', onSlideRevealed);
+    },
+  };
+}
+
+/**
+ * @param {HTMLElement} mask
+ */
+export function prepareShowcaseGalleryCredit(mask) {
+  const controller = controllers.get(mask) ?? createGalleryController(mask);
+  controllers.set(mask, controller);
+  controller.prepareCredit();
+}
+
+/**
+ * @param {HTMLElement} root
+ * @returns {() => void}
+ */
+export function initShowcaseGallery(root) {
+  const mask = root?.querySelector('[data-orby-marketing-showcase-gallery]');
+  if (!mask) return () => {};
+
+  const controller = controllers.get(mask) ?? createGalleryController(mask);
+  controllers.set(mask, controller);
+  controller.prepareCredit();
+
+  const imgs = mask.querySelectorAll('.orby-marketing__showcase-img');
+  if (!imgs.length) return () => controller.destroy();
+
+  const section = mask.closest('.orby-marketing__section--showcase');
+  if (section?.dataset.orbyMarketingRevealed === '1') {
+    controller.start();
+  } else if (section) {
+    const observer = new MutationObserver(() => {
+      if (section.dataset.orbyMarketingRevealed === '1') {
+        observer.disconnect();
+        controller.start();
+      }
+    });
+    observer.observe(section, {
+      attributes: true,
+      attributeFilter: ['data-orby-marketing-revealed'],
+    });
+  }
+
+  return () => controller.destroy();
+}

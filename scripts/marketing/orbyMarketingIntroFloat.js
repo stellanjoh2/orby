@@ -1,30 +1,26 @@
 /**
- * Intro hero side PNGs — subtle scroll parallax on the decorative bears.
+ * Intro + footer hero PNGs — subtle scroll parallax on the decorative bears.
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
 
 /**
- * @param {HTMLElement} root
+ * @param {HTMLElement} section
+ * @param {HTMLElement} asset
+ * @param {number} strength
  * @returns {() => void}
  */
-export function initIntroFloatParallax(root) {
-  const section = root?.querySelector('.orby-marketing__section--intro');
-  const left = section?.querySelector('[data-orby-marketing-intro-asset="left"]');
-  if (!section || !left || prefersReducedMotion()) {
-    return () => {};
-  }
+function bindSectionParallax(section, asset, strength) {
+  if (!section || !asset) return () => {};
 
   let raf = 0;
-  const PARALLAX_STRENGTH = 0.22;
 
   const update = () => {
     raf = 0;
     const rect = section.getBoundingClientRect();
     const vh = window.innerHeight || 1;
-    // Section center vs viewport center — opposite drift reads as depth on scroll
     const centerDelta = rect.top + rect.height * 0.5 - vh * 0.5;
-    const parallaxY = `${-centerDelta * PARALLAX_STRENGTH}px`;
-    left.style.setProperty('--orby-intro-parallax-y', parallaxY);
+    const parallaxY = `${-centerDelta * strength}px`;
+    asset.style.setProperty('--orby-intro-parallax-y', parallaxY);
   };
 
   const onScroll = () => {
@@ -39,6 +35,30 @@ export function initIntroFloatParallax(root) {
     document.removeEventListener('scroll', onScroll, { capture: true });
     window.removeEventListener('resize', onScroll);
     if (raf) cancelAnimationFrame(raf);
-    left.style.removeProperty('--orby-intro-parallax-y');
+    asset.style.removeProperty('--orby-intro-parallax-y');
+  };
+}
+
+/**
+ * @param {HTMLElement} root
+ * @returns {() => void}
+ */
+export function initIntroFloatParallax(root) {
+  if (!root || prefersReducedMotion()) {
+    return () => {};
+  }
+
+  const PARALLAX_STRENGTH = 0.22;
+  const intro = root.querySelector('.orby-marketing__section--intro');
+  const footer = root.querySelector('.orby-marketing__section--footer');
+  const introAsset = intro?.querySelector('[data-orby-marketing-intro-asset="left"]');
+  const footerAsset = footer?.querySelector('[data-orby-marketing-intro-asset="right"]');
+
+  const teardownIntro = bindSectionParallax(intro, introAsset, PARALLAX_STRENGTH);
+  const teardownFooter = bindSectionParallax(footer, footerAsset, PARALLAX_STRENGTH);
+
+  return () => {
+    teardownIntro();
+    teardownFooter();
   };
 }
