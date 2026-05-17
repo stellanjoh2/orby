@@ -253,11 +253,12 @@ export class ModelLifecycleManager {
           fadeExposure();
         }
 
-        if (wasFirstLoad) {
+        if (wasFirstLoad && !s._skipCameraFlightOnNextModelLoad) {
           s.cameraController?.focusOnObjectAnimated(s.currentModel, 1.0);
-        } else {
+        } else if (s.currentModel) {
           s.cameraController?.refreshModelBounds(s.currentModel);
         }
+        s._skipCameraFlightOnNextModelLoad = false;
         this._scaleInMeshOnSpawn(object);
       });
     });

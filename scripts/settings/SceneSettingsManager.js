@@ -356,7 +356,7 @@ export class SceneSettingsManager {
           resolve({ success: false, timeout: true });
         }, 12000);
       });
-      this.eventBus.emit('scene:preserve-ground-grid-on-next-model-load');
+      this.eventBus.emit('scene:orby-import-start');
       this.eventBus.emit('file:selected', embeddedFile);
       const modelLoadResult = await loadComplete;
       if (!modelLoadResult?.success) {

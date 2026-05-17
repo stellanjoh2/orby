@@ -155,6 +155,8 @@ export class SceneManager {
     this.isFirstModelLoad = true;
     /** When true, next `setModel` skips first-load podium/grid bottom snap (.orby restore). */
     this._skipGroundGridAutoAlignOnNextModelLoad = false;
+    /** When true, next `setModel` skips the intro camera flight (.orby restore). */
+    this._skipCameraFlightOnNextModelLoad = false;
     this.unlitMode = false;
     this.hdriEnabled = initialState.hdriEnabled ?? true;
     this.hdriBackgroundEnabled = initialState.hdriBackground;
@@ -602,6 +604,7 @@ export class SceneManager {
     this.isFirstModelLoad = true;
     /** When true, next `setModel` skips first-load podium/grid bottom snap (.orby restore). */
     this._skipGroundGridAutoAlignOnNextModelLoad = false;
+    this._skipCameraFlightOnNextModelLoad = false;
     this.ui?.updateTitle?.('Orby');
     this.ui?.updateTopBarDetail?.('');
     this.animationController = new AnimationController({

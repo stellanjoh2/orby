@@ -182,6 +182,7 @@ export class EventManager {
       eventBus.emit('camera:state', state);
     });
     eventBus.on('camera:set-state', (state) => {
+      s.cameraController?._cancelFocusAnimation?.();
       if (state.position) {
         s.camera.position.set(state.position.x, state.position.y, state.position.z);
       }
@@ -417,8 +418,9 @@ export class EventManager {
         void s.applyStateSnapshot(s.stateStore.getState());
       }
     });
-    eventBus.on('scene:preserve-ground-grid-on-next-model-load', () => {
+    eventBus.on('scene:orby-import-start', () => {
       s._skipGroundGridAutoAlignOnNextModelLoad = true;
+      s._skipCameraFlightOnNextModelLoad = true;
     });
     eventBus.on('scene:settings-restored', () => {
       if (s.isStudioReady) {
