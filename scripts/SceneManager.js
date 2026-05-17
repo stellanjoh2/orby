@@ -153,6 +153,8 @@ export class SceneManager {
     this.originalGeometryAttributes = new WeakMap();
     this.originalMaterialSides = new WeakMap();
     this.isFirstModelLoad = true;
+    /** When true, next `setModel` skips first-load podium/grid bottom snap (.orby restore). */
+    this._skipGroundGridAutoAlignOnNextModelLoad = false;
     this.unlitMode = false;
     this.hdriEnabled = initialState.hdriEnabled ?? true;
     this.hdriBackgroundEnabled = initialState.hdriBackground;
@@ -598,6 +600,8 @@ export class SceneManager {
     this.modelLifecycle?.clearModel();
     this.currentFile = null;
     this.isFirstModelLoad = true;
+    /** When true, next `setModel` skips first-load podium/grid bottom snap (.orby restore). */
+    this._skipGroundGridAutoAlignOnNextModelLoad = false;
     this.ui?.updateTitle?.('Orby');
     this.ui?.updateTopBarDetail?.('');
     this.animationController = new AnimationController({

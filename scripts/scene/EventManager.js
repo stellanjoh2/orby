@@ -417,6 +417,14 @@ export class EventManager {
         void s.applyStateSnapshot(s.stateStore.getState());
       }
     });
+    eventBus.on('scene:preserve-ground-grid-on-next-model-load', () => {
+      s._skipGroundGridAutoAlignOnNextModelLoad = true;
+    });
+    eventBus.on('scene:settings-restored', () => {
+      if (s.isStudioReady) {
+        void s.applyStateSnapshot(s.stateStore.getState());
+      }
+    });
 
     eventBus.on('scene:color-checker', () => {
       s.applyColorCheckerFromState(s.stateStore.getState());

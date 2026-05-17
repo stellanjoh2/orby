@@ -291,6 +291,9 @@ export class ResetControls {
       const file = event.target?.files?.[0];
       if (!file) return;
       const result = await this.ui.sceneSettingsManager.loadOrbyFromFile(file);
+      if (result.success) {
+        this.ui.syncControls(this.stateStore.getState());
+      }
       this.helpers.showToast(result.message);
       event.target.value = '';
     });

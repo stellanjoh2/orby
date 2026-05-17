@@ -201,6 +201,8 @@ export class SceneSettingsManager {
       moveWidgetEnabled: !!state.moveWidgetEnabled,
       rotateWidgetEnabled: !!state.rotateWidgetEnabled,
       scaleWidgetEnabled: !!state.scaleWidgetEnabled,
+      fbxMapSlots: state.fbxMapSlots,
+      svgColorDetail: state.svgColorDetail,
     };
   }
 
@@ -354,6 +356,7 @@ export class SceneSettingsManager {
           resolve({ success: false, timeout: true });
         }, 12000);
       });
+      this.eventBus.emit('scene:preserve-ground-grid-on-next-model-load');
       this.eventBus.emit('file:selected', embeddedFile);
       const modelLoadResult = await loadComplete;
       if (!modelLoadResult?.success) {
@@ -663,6 +666,19 @@ export class SceneSettingsManager {
         const enabled = !!payload.advanced.centerPivot;
         this.stateStore.set('advanced.centerPivot', enabled);
         this.eventBus.emit('mesh:center-pivot', enabled);
+      }
+      if (payload.fbxMapSlots) {
+        const d = this.stateStore.getDefaults().fbxMapSlots;
+        const merged = { ...d, ...payload.fbxMapSlots };
+        this.stateStore.set('fbxMapSlots', merged);
+        this.eventBus.emit('mesh:fbx-invert-normal-y', !!merged.invertNormalY);
+        this.eventBus.emit('mesh:fbx-pbr-uv-channel', merged.pbrUvChannel === 1 ? 1 : 0);
+      }
+      if (payload.svgColorDetail !== undefined) {
+        const level = payload.svgColorDetail;
+        if (level === 'low' || level === 'medium' || level === 'high') {
+          this.stateStore.set('svgColorDetail', level);
+        }
       }
 
       // Apply Studio settings
@@ -1261,6 +1277,8 @@ export class SceneSettingsManager {
 
       this.eventBus.emit('render:apply-performance');
       });
+
+      this.eventBus.emit('scene:settings-restored');
 
       return { success: true, message: 'Scene settings applied' };
     } catch (error) {

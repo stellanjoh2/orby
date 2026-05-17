@@ -52,6 +52,7 @@ function createStateApplySteps() {
         s.setGroundSolidColor(state.groundSolidColor);
         s.setGroundWireColor(state.groundWireColor);
         s.setGroundWireOpacity(state.groundWireOpacity);
+        s.setGroundY(state.groundY ?? 0);
         s.setGridY(state.gridY ?? 0);
       },
     },

@@ -178,10 +178,11 @@ export class ModelLifecycleManager {
       s.transformControlsScale.visible = true;
     }
     s.transformController?.applyState(state);
-    if (wasFirstLoad) {
+    if (wasFirstLoad && !s._skipGroundGridAutoAlignOnNextModelLoad) {
       s._cancelGroundGridBottomAlignAnimation();
       s._alignGroundAndGridToCurrentModelBottom();
     }
+    s._skipGroundGridAutoAlignOnNextModelLoad = false;
     s.materialController.setModel(object, state.shading, {
       clay: state.clay,
       fresnel: state.fresnel,
@@ -210,8 +211,9 @@ export class ModelLifecycleManager {
     s.animationController.setModel(s.currentModel, animations);
 
     requestAnimationFrame(() => {
-      s.setGroundSolid(state.groundSolid);
-      s.setGroundWire(state.groundWire);
+      const studio = s.stateStore.getState();
+      s.setGroundSolid(studio.groundSolid);
+      s.setGroundWire(studio.groundWire);
       s.materialController?.resyncEmissiveFromImportedMaterials?.();
     });
 
