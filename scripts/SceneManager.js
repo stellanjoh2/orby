@@ -2730,8 +2730,8 @@ export class SceneManager {
   }
 
   /**
-   * Isometric mode replaces lens orbit: when on, camera snaps to RTS-style pose and
-   * lens / fisheye / tilt are bypassed until turned off.
+   * Isometric mode locks orbit/pan: camera snaps to RTS-style pose; fisheye and tilt
+   * are bypassed until turned off. Focal length (FOV) still applies via syncPerspectiveCameraFovAndLens.
    */
   applyIsometricCamera(rawSettings) {
     const iso = normalizeIsometricState(rawSettings);

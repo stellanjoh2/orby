@@ -1,6 +1,6 @@
 /**
  * IsometricControls — master toggle and presets (Camera → Lens).
- * When enabled, isometric mode owns the camera; orbit rotation is locked.
+ * When enabled, isometric mode owns orbit angles; pan is locked. Focal length stays on Lens.
  */
 import {
   DEFAULT_ISOMETRIC_STATE,

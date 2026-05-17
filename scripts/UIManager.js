@@ -2229,8 +2229,7 @@ export class UIManager {
     const isoOn = !!currentState.camera?.isometric?.enabled;
     const fisheyeOn = !!currentState.fisheye?.enabled;
 
-    this.setBlockMuted('lens', isoOn);
-    this.lensControls?.setFovDisabled?.(isoOn || fisheyeOn);
+    this.lensControls?.setFovDisabled?.(fisheyeOn);
     this.setControlDisabled('cameraTilt', isoOn);
 
     // Lens flare block - requires both HDRI and lens flare to be enabled
