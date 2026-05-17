@@ -2819,16 +2819,19 @@ export class SceneManager {
   render() {
     if (!this.isStudioReady || !this.renderer) return;
     if (this.unlitMode) {
-      const previousExposure = this.renderer.toneMappingExposure;
-      const previousColor = this.renderer.getClearColor(new THREE.Color()).clone();
-      const previousAlpha = this.renderer.getClearAlpha();
-      this.renderer.toneMappingExposure = 1;
-      const bgColor = this.backgroundController?.getColor() ?? '#000000';
-      this.renderer.setClearColor(new THREE.Color(bgColor), 1);
-      this.composerLifecycle?.resetRendererViewportToCanvas();
-      this.renderer.render(this.scene, this.camera);
-      this.renderer.setClearColor(previousColor, previousAlpha);
-      this.renderer.toneMappingExposure = previousExposure;
+      // Avoid `renderer.render()` to the MSAA canvas — use RenderPass-only composer instead.
+      if (this.composer && this.postPipeline) {
+        this.postPipeline.pushUnlitPresentation();
+        try {
+          this.composerLifecycle.renderComposerPass();
+        } finally {
+          this.postPipeline.popUnlitPresentation();
+        }
+      } else {
+        this.composerLifecycle?.resetRendererViewportToCanvas();
+        this.renderer.setRenderTarget(null);
+        this.renderer.render(this.scene, this.camera);
+      }
       return;
     }
     this.autoExposureController?.update(this.unlitMode);

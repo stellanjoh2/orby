@@ -16,7 +16,9 @@ function buildFrameContext(scene) {
   return {
     panelsShelfScrolling: !!scene.panelsShelfScrolling,
     histogramEnabled:
-      !!scene.histogramController && !!state.histogramEnabled,
+      !!scene.histogramController &&
+      !!state.histogramEnabled &&
+      !scene.unlitMode,
     grainActive: !!scene.postPipeline?.grainTintPass?.enabled,
     creativeLookEnabled: !!scene.materialController?.creativeLookSettings?.enabled,
     /** Root always exists; pose step must run while scale-out after `enabled` flips off. */

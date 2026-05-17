@@ -140,6 +140,56 @@ export class PostProcessingPipeline {
     // Chromatic aberration after grading + tone map so low-saturation looks (e.g. Noir) keep visible channel separation.
     this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.lensDistortionPass);
+
+    /** @type {Array<{ pass: import('three/examples/jsm/postprocessing/Pass.js').Pass, key: string }>} */
+    this._managedPasses = [
+      { pass: this.renderPass, key: 'renderPass' },
+      { pass: this.n8aoPass, key: 'n8aoPass' },
+      { pass: this.bokehPass, key: 'bokehPass' },
+      { pass: this.bloomPass, key: 'bloomPass' },
+      { pass: this.bloomTintPass, key: 'bloomTintPass' },
+      { pass: this.anamorphicBloomPass, key: 'anamorphicBloomPass' },
+      { pass: this.lensDirtPass, key: 'lensDirtPass' },
+      { pass: this.filmPass, key: 'filmPass' },
+      { pass: this.grainTintPass, key: 'grainTintPass' },
+      { pass: this.fxaaPass, key: 'fxaaPass' },
+      { pass: this.exposurePass, key: 'exposurePass' },
+      { pass: this.colorAdjustPass, key: 'colorAdjustPass' },
+      { pass: this.toneMappingPass, key: 'toneMappingPass' },
+      { pass: this.aberrationPass, key: 'aberrationPass' },
+      { pass: this.lensDistortionPass, key: 'lensDistortionPass' },
+    ];
+    /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
+    this._unlitPresentationSnapshot = null;
+  }
+
+  /**
+   * Display → Unlit: draw through {@link RenderPass} into an RT (no MSAA on geometry) instead of
+   * `renderer.render()` to the antialiased default framebuffer, which is much slower at high DPR.
+   */
+  pushUnlitPresentation() {
+    if (this._unlitPresentationSnapshot) return;
+    this._unlitPresentationSnapshot = this._managedPasses.map(({ pass }) => ({
+      enabled: pass.enabled,
+      renderToScreen: pass.renderToScreen,
+    }));
+    for (const { pass, key } of this._managedPasses) {
+      if (key === 'renderPass') continue;
+      pass.enabled = false;
+    }
+    this.renderPass.enabled = true;
+    this.n8aoPass.enabled = false;
+    this.renderPass.renderToScreen = true;
+  }
+
+  popUnlitPresentation() {
+    const snap = this._unlitPresentationSnapshot;
+    if (!snap) return;
+    this._managedPasses.forEach(({ pass }, i) => {
+      pass.enabled = snap[i].enabled;
+      pass.renderToScreen = snap[i].renderToScreen;
+    });
+    this._unlitPresentationSnapshot = null;
   }
 
   /**

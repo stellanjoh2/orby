@@ -1280,6 +1280,7 @@ export class MaterialController {
 
   _applyCreativeLookOverride() {
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    if (this.currentShading === 'textures' || this.currentShading === 'wireframe') return;
 
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
 
