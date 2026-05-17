@@ -88,12 +88,30 @@ function renderSplitSection(section) {
   </section>`;
 }
 
+function renderIntroHeadline(title) {
+  return String(title)
+    .split(/\n+/)
+    .map((line) => escapeHtml(line.trim()))
+    .filter(Boolean)
+    .join('<br />');
+}
+
 function renderIntroSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--intro" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
-    <div class="orby-marketing__intro-stage" data-orby-marketing-float-stage aria-hidden="true"></div>
+    <div class="orby-marketing__intro-stage" data-orby-marketing-float-stage aria-hidden="true">
+      <img
+        class="orby-marketing__intro-asset orby-marketing__intro-asset--left"
+        src="./assets/marketing/intro-asset-left.png"
+        alt=""
+        width="1300"
+        height="1225"
+        decoding="async"
+        data-orby-marketing-intro-asset="left"
+      />
+    </div>
     <div class="orby-marketing__intro-center">
       <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
-      <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
+      <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
     </div>
   </section>`;
@@ -203,6 +221,8 @@ export function initOrbyMarketingPage(options = {}) {
   let bodyObserver = null;
   let revealObserver = null;
   let revealModule = null;
+  /** @type {(() => void) | null} */
+  let teardownIntroFloat = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
@@ -240,25 +260,22 @@ export function initOrbyMarketingPage(options = {}) {
 
   function syncMarketingMedia(home) {
     if (!root) return;
-    root.querySelectorAll('video').forEach((video) => {
-      if (home) return;
-      video.pause();
-      try {
-        video.currentTime = 0;
-      } catch {
-        /* seek unsupported on partial buffers */
-      }
-    });
     if (home) {
+      revealModule?.resumeMarketingVideos?.(root);
       attachRevealObserver();
-    } else if (revealObserver) {
-      revealObserver.disconnect();
-      revealObserver = null;
+    } else {
+      revealModule?.pauseMarketingVideos?.(root);
+      if (revealObserver) {
+        revealObserver.disconnect();
+        revealObserver = null;
+      }
     }
   }
 
   function suspendForStudio() {
     if (!root) return;
+    teardownIntroFloat?.();
+    teardownIntroFloat = null;
     revealModule?.cancelAllMarketingMotion?.(root);
     syncMarketingMedia(false);
     root.hidden = true;
@@ -272,6 +289,12 @@ export function initOrbyMarketingPage(options = {}) {
     root.hidden = false;
     root.classList.remove('orby-marketing--suspended');
     setScrollMode(true);
+    if (!teardownIntroFloat) {
+      import('./orbyMarketingIntroFloat.js').then((introFloat) => {
+        if (!root || destroyed) return;
+        teardownIntroFloat = introFloat.initIntroFloatParallax(root);
+      });
+    }
     syncMarketingMedia(true);
   }
 
@@ -317,6 +340,10 @@ export function initOrbyMarketingPage(options = {}) {
     });
     reveals.prepareMarketingSections(root);
     await reveals.preloadMarketingImages(root);
+
+    const introFloat = await import('./orbyMarketingIntroFloat.js');
+    teardownIntroFloat?.();
+    teardownIntroFloat = introFloat.initIntroFloatParallax(root);
 
     attachRevealObserver();
 
@@ -377,6 +404,8 @@ export function initOrbyMarketingPage(options = {}) {
   return {
     destroy() {
       destroyed = true;
+      teardownIntroFloat?.();
+      teardownIntroFloat = null;
       bodyObserver?.disconnect();
       revealObserver?.disconnect();
       scrollCue?.remove();

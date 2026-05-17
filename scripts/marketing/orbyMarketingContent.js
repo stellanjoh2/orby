@@ -26,14 +26,14 @@ export const MARKETING_SECTIONS = [
     type: 'intro',
     id: 'orby-marketing-intro',
     eyebrow: 'Free · Browser · Private',
-    title: 'Import. Present. Export.',
+    title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
       'Orby is a zero-install studio for GLB, glTF, and SVG — drag a file in, light it like a set, ship stills and video without leaving the tab.',
   },
   {
     type: 'split',
     id: 'orby-marketing-import',
-    eyebrow: '01 — Import',
+    eyebrow: '01 — Drop it in',
     title: 'Drop in. Start immediately.',
     lede:
       'No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.',
@@ -50,7 +50,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-present',
-    eyebrow: '02 — Present',
+    eyebrow: '02 — Set the stage',
     title: 'Light it like a set.',
     lede:
       'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
@@ -66,7 +66,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-export',
-    eyebrow: '03 — Export',
+    eyebrow: '03 — Send it',
     title: 'Deliverables without a pipeline.',
     lede:
       'Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.',

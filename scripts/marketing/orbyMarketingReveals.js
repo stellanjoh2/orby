@@ -77,7 +77,7 @@ export function preloadMarketingImages(root) {
   if (!root) return Promise.resolve();
   const media = [
     ...root.querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img',
+      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__intro-asset',
     ),
   ].filter((el) => {
     if (el instanceof HTMLImageElement) return Boolean(el.src);
@@ -141,7 +141,7 @@ function prepareMediaElement(el) {
   el.classList.remove('is-loaded');
 }
 
-function playMarketingVideo(video) {
+export function playMarketingVideo(video) {
   if (!(video instanceof HTMLVideoElement)) return;
   const run = () => {
     video.play().catch(() => {});
@@ -151,6 +151,34 @@ function playMarketingVideo(video) {
   } else {
     video.addEventListener('loadeddata', run, { once: true });
   }
+}
+
+/**
+ * @param {HTMLElement} root
+ */
+export function pauseMarketingVideos(root) {
+  if (!root) return;
+  root.querySelectorAll('video').forEach((video) => {
+    video.pause();
+    try {
+      video.currentTime = 0;
+    } catch {
+      /* seek unsupported on partial buffers */
+    }
+  });
+}
+
+/**
+ * Resume looped clips in sections that already revealed (e.g. return from studio).
+ * @param {HTMLElement} root
+ */
+export function resumeMarketingVideos(root) {
+  if (!root) return;
+  root.querySelectorAll('.orby-marketing__section[data-orby-marketing-revealed="1"] video').forEach(
+    (video) => {
+      playMarketingVideo(video);
+    },
+  );
 }
 
 /**
