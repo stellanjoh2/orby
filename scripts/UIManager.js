@@ -2232,6 +2232,7 @@ export class UIManager {
 
     this.lensControls?.setFovDisabled?.(fisheyeOn);
     this.setControlDisabled('cameraTilt', isoOn);
+    this.setControlDisabled('fisheyeEnabled', isoOn);
     this.setBlockMuted('isometric', !isoOn);
 
     // Lens flare block - requires both HDRI and lens flare to be enabled
