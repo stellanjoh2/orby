@@ -261,7 +261,7 @@ export const RENDER_QUALITY = {
     forceDepthOfFieldOff: false,
     forceBloomOff: false,
     forceAmbientOcclusionOff: false,
-    forceFxaaOff: true,
+    forceFxaaOff: false,
   },
   low: {
     maxPixelRatio: 1,
@@ -303,8 +303,8 @@ export function isBloomPipelineActive(state) {
 }
 
 /**
- * Anti-aliasing select: medium/low tiers force FXAA off in the GPU while keeping
- * `state.antiAliasing` for when the user returns to Ultra — use this for display + disabled.
+ * Anti-aliasing select: low tier forces FXAA off in the GPU while keeping
+ * `state.antiAliasing` for when the user returns to Medium/Ultra — use this for display + disabled.
  * @param {string | undefined} renderQuality
  * @param {string | undefined} storedAntiAliasing
  */

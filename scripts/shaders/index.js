@@ -188,11 +188,9 @@ vec3 ReinhardToneMapping(vec3 color) {
 void main() {
   vec4 color = texture2D(tDiffuse, vUv);
   
-  if (toneMappingType < 0.5) {
+  if (toneMappingType < 2.0) {
     gl_FragColor = color;
-  } else if (toneMappingType < 1.5) {
-    gl_FragColor = color;
-  } else if (toneMappingType < 2.5) {
+  } else if (toneMappingType < 3.5) {
     gl_FragColor = vec4(ReinhardToneMapping(color.rgb), color.a);
   } else {
     gl_FragColor = vec4(ACESFilmicToneMapping(color.rgb), color.a);

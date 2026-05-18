@@ -8,6 +8,11 @@
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
+  --orby-marketing-panel-bg: #121212;
+  /* Standard vertical seam between major marketing blocks */
+  --orby-marketing-gap-big: 250px;
+  --orby-marketing-gap-half: calc(var(--orby-marketing-gap-big) / 2);
+  --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   /* Match dropzone frame inner width (:root --orby-home-padding-x) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
   --orby-marketing-copy-max: 41rem;
@@ -20,8 +25,9 @@
   --orby-marketing-split-gap: clamp(2rem, 4.5vw, 3.75rem);
   /* Showcase 16∶9 gallery side inset (full-bleed breakout) */
   --orby-marketing-gutter: 7.5rem;
-  /* Black band between last FAQ answer and lime footer */
-  --orby-marketing-faq-footer-gap: 15.0625rem;
+  /* FAQ panel — space above headline and above lime footer */
+  --orby-marketing-faq-pad-top: 205px;
+  --orby-marketing-faq-pad-bottom: var(--orby-marketing-gap-big);
   /* Mega headlines — full size at max viewport (11.5vw); shrink via min(vw, 2× column cqi) */
   --orby-mega-headline-min: 2.75rem;
   --orby-mega-headline-max: 10.5rem;
@@ -394,6 +400,13 @@ html.orby-home-scroll #orby-marketing {
 /* Split features — 50% copy / 50% image; center line is the inner image edge */
 .orby-marketing__section--split {
   overflow: hidden;
+  padding-top: var(--orby-marketing-gap-half);
+  padding-bottom: var(--orby-marketing-gap-half);
+}
+
+/* Turntable intro → first feature: keep original section pad, not the 250px big gap */
+.orby-marketing__section--intro + .orby-marketing__section--split {
+  padding-top: var(--orby-marketing-space-lg);
 }
 
 .orby-marketing__split-bleed {
@@ -577,6 +590,8 @@ html.orby-home-scroll #orby-marketing {
 /* Showcase — copy uses site width; gallery breaks out toward viewport edges */
 .orby-marketing__section--showcase {
   overflow: visible;
+  padding-top: var(--orby-marketing-gap-half);
+  padding-bottom: var(--orby-marketing-gap-half);
 }
 
 .orby-marketing__section--showcase .orby-marketing__title {
@@ -667,21 +682,132 @@ html.orby-home-scroll #orby-marketing {
   height: auto;
 }
 
-/* FAQ after last split: full lg below Send it + md above FAQ */
-.orby-marketing__section--split:has(+ .orby-marketing__section--faq) {
-  padding-bottom: var(--orby-marketing-space-lg);
+/* Pro + FAQ — big-gap rhythm aligned with split features */
+.orby-marketing__section--split:has(+ .orby-marketing__section--pro) {
+  padding-bottom: var(--orby-marketing-gap-half);
 }
 
-.orby-marketing__section--split + .orby-marketing__section--faq {
-  padding-top: calc(var(--orby-marketing-space-md) + 15px);
+.orby-marketing__section--pro {
+  padding-top: var(--orby-marketing-gap-half);
+  padding-bottom: var(--orby-marketing-pro-faq-gap);
 }
 
-/* FAQ copy → lime footer (explicit px + rem so the band always wins over section shorthand) */
+/* Pro tools — three-up feature cards */
+.orby-marketing__pro-header {
+  container-type: inline-size;
+  container-name: orby-split-copy;
+  text-align: left;
+  margin: 0 0 clamp(2.5rem, 5vh, 4rem);
+  max-width: min(var(--orby-marketing-copy-max), 100%);
+}
+
+.orby-marketing__pro-header .orby-marketing__title {
+  margin-bottom: 0;
+  line-height: 1.1;
+}
+
+.orby-marketing__pro-header .orby-marketing__title-spacer {
+  display: block;
+  height: 1.65em;
+  margin: 0;
+  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  line-height: 0;
+}
+
+.orby-marketing__pro-lede {
+  margin: 0;
+  max-width: var(--orby-marketing-copy-max);
+}
+
+.orby-marketing__pro-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+@media (min-width: 900px) {
+  .orby-marketing__pro-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.25rem, 2.2vw, 1.75rem);
+  }
+}
+
+.orby-marketing__pro-card {
+  min-width: 0;
+}
+
+.orby-marketing__pro-card-surface {
+  --orby-media-radius: clamp(12px, 1.5vw, 20px);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: var(--orby-media-radius);
+  overflow: hidden;
+  background: var(--orby-marketing-panel-bg);
+  border: none;
+}
+
+.orby-marketing__pro-card-media {
+  position: relative;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
+  background: var(--orby-marketing-panel-bg);
+  overflow: hidden;
+}
+
+.orby-marketing__pro-card-media .orby-marketing__media-ph {
+  background: var(--orby-marketing-panel-bg);
+}
+
+.orby-marketing__pro-card-media--empty {
+  aspect-ratio: 1 / 1;
+  background: var(--orby-marketing-panel-bg);
+}
+
+.orby-marketing__pro-card-img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.orby-marketing__pro-card-copy {
+  flex: 1 1 auto;
+  --orby-pro-card-copy-pad-y: 1.05em;
+  padding: calc(clamp(1.35rem, 2.8vw, 1.75rem) + var(--orby-pro-card-copy-pad-y))
+    clamp(1.2rem, 2.4vw, 1.5rem)
+    calc(clamp(1.5rem, 3vw, 1.9rem) + var(--orby-pro-card-copy-pad-y));
+  text-align: center;
+}
+
+.orby-marketing__pro-card-title {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.15rem, 1.65vw, 1.32rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--orby-marketing-headline);
+}
+
+.orby-marketing__pro-card-body {
+  margin: 0 auto;
+  max-width: min(100%, 27rem);
+  font-size: clamp(0.92rem, 1.1vw, 0.98rem);
+  line-height: 1.65;
+  color: var(--orby-marketing-text-dim);
+}
+
+/* FAQ panel — 250px above headline and above lime footer */
 #orby-marketing .orby-marketing__section.orby-marketing__section--faq {
   position: relative;
   z-index: 1;
-  padding-bottom: 241px;
-  padding-bottom: var(--orby-marketing-faq-footer-gap);
+  background: var(--orby-marketing-panel-bg);
+  padding-top: var(--orby-marketing-faq-pad-top);
+  padding-bottom: var(--orby-marketing-faq-pad-bottom);
 }
 
 #orby-marketing .orby-marketing__inner.orby-marketing__faq {
@@ -882,6 +1008,7 @@ html.orby-home-scroll #orby-marketing {
   .orby-marketing .orby-stagger-word,
   .orby-marketing__figure-media,
   .orby-marketing__showcase-img,
+  .orby-marketing__pro-card-img,
   .orby-marketing__list li,
   .orby-marketing__cta,
   .orby-magic-btn:not(.orby-magic-btn--on-lime)::before,

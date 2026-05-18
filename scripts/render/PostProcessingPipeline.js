@@ -425,13 +425,13 @@ export class PostProcessingPipeline {
 
   /**
    * Set tone mapping mode
-   * @param {string} value - Tone mapping mode ('none', 'linear', 'reinhard', 'aces-filmic')
+   * @param {string} value - Tone mapping mode ('none', 'reinhard', 'aces-filmic')
    */
   setToneMapping(value) {
-    // Map UI values to shader pass values (0=none, 1=linear, 2=reinhard, 4=aces-filmic)
+    if (value === 'linear') value = 'none';
+    // Map UI values to shader pass values (0=none, 2=reinhard, 4=aces-filmic)
     const toneMappingMap = {
       'none': 0,
-      'linear': 1,
       'reinhard': 2,
       'aces-filmic': 4,
     };

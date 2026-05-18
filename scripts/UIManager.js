@@ -2132,7 +2132,9 @@ export class UIManager {
       this.inputs.renderQuality.value = state.renderQuality ?? 'medium';
     }
     if (this.inputs.toneMapping) {
-      this.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
+      const toneMapping = state.toneMapping ?? 'aces-filmic';
+      this.inputs.toneMapping.value =
+        toneMapping === 'linear' ? 'none' : toneMapping;
     }
     if (this.inputs.exportSvgColorDetail) {
       this.inputs.exportSvgColorDetail.value =

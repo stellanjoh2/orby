@@ -3,7 +3,15 @@
  * Swap imageSrc / videoSrc paths as real captures land. videoSrc on split blocks uses imageSrc as poster when both are set.
  */
 
-/** @typedef {'intro' | 'split' | 'showcase' | 'faq' | 'footer'} MarketingSectionType */
+/** @typedef {'intro' | 'split' | 'showcase' | 'pro' | 'faq' | 'footer'} MarketingSectionType */
+
+/**
+ * @typedef {Object} MarketingProCard
+ * @property {string} title
+ * @property {string} body
+ * @property {string} [imageSrc]
+ * @property {string} [imageAlt]
+ */
 
 /**
  * @typedef {Object} MarketingSection
@@ -21,6 +29,7 @@
  * @property {string} [ctaLabel]
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
+ * @property {MarketingProCard[]} [cards]
  */
 
 /** @type {MarketingSection[]} */
@@ -30,7 +39,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      'Orby is a zero-install studio for GLB, glTF, and SVG — drag a file in, light it like a set, ship stills and video without leaving the tab.',
+      "Orby is a zero-install studio for GLB, glTF, and SVG. Whether you're checking how your design looks in 3D, showcasing a photogrammetry scan, or presenting a product visualization — drag a file in, pose and light it, and ship stills and video without leaving the tab.",
   },
   {
     type: 'split',
@@ -160,6 +169,37 @@ export const MARKETING_SECTIONS = [
     imageAlt: 'Golden hour look on a product render',
   },
   {
+    type: 'pro',
+    id: 'orby-marketing-pro',
+    eyebrow: '07 — For pros',
+    title: 'Built for the details.',
+    lede:
+      "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
+    cards: [
+      {
+        title: 'Mesh diagnostics',
+        body:
+          'UV checker, wireframe overlay, clay mode, and reverse normals. Everything you need to sanity-check your mesh without opening a DCC.',
+        imageSrc: './assets/marketing/feature-ui-placeholder.png',
+        imageAlt: 'Orby viewport with mesh diagnostic overlays',
+      },
+      {
+        title: 'Export without recording',
+        body:
+          'PNG stills, MP4 turntable, or PNG sequences. No screen capture, no third-party tools.',
+        imageSrc: './assets/marketing/export-golden-look.png',
+        imageAlt: 'Product render ready for export from Orby',
+      },
+      {
+        title: 'Save your scene',
+        body:
+          'Every light, angle, and grade saved in a single .orby file. Pick it back up exactly where you left off.',
+        imageSrc: './assets/marketing/present-cinema-look.png',
+        imageAlt: 'Cinematic lighting and grade saved in an Orby scene',
+      },
+    ],
+  },
+  {
     type: 'faq',
     id: 'orby-marketing-faq',
     eyebrow: 'FAQ',
@@ -174,7 +214,7 @@ export const MARKETING_SECTIONS = [
       {
         question: 'Do I need to create an account?',
         answer:
-          'No. No account, no login, no email, no waitlist. Open the browser, drop your file, done.',
+          "No. No account, no login, no email, no waitlist. Just open the browser and drop your file. We wanted getting started to be as frictionless as possible — no hoops, no setup, no commitment. If you have a file, you're ready.",
       },
       {
         question: 'Do my files get uploaded anywhere?',

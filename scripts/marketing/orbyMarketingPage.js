@@ -195,6 +195,48 @@ function renderShowcaseSection(section) {
 
 const FAQ_ICON_SVG = `<svg class="orby-marketing__faq-icon-svg" width="32" height="32" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247zm2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg>`;
 
+function renderProCard(card) {
+  const media = card.imageSrc
+    ? `<div class="orby-marketing__pro-card-media">
+          <span class="orby-marketing__media-ph" aria-hidden="true"></span>
+          <img class="orby-marketing__pro-card-img" src="${escapeHtml(card.imageSrc)}" alt="${escapeHtml(card.imageAlt || '')}" width="640" height="640" decoding="async" loading="lazy" />
+        </div>`
+    : `<div class="orby-marketing__pro-card-media orby-marketing__pro-card-media--empty" aria-hidden="true"></div>`;
+
+  return `<article class="orby-marketing__pro-card" data-orby-marketing-reveal="pro-card">
+      <div class="orby-marketing__pro-card-surface">
+        ${media}
+        <div class="orby-marketing__pro-card-copy">
+          <h3 class="orby-marketing__pro-card-title brand-font-headline">${escapeHtml(card.title)}</h3>
+          <p class="orby-marketing__pro-card-body">${escapeHtml(card.body)}</p>
+        </div>
+      </div>
+    </article>`;
+}
+
+function renderProSection(section) {
+  const cards = (section.cards ?? [])
+    .map((card) => renderProCard(card))
+    .join('\n        ');
+  const ledeBlock = section.lede
+    ? `<p class="orby-marketing__lede orby-marketing__pro-lede">${escapeHtml(section.lede)}</p>`
+    : '';
+
+  return `<section class="orby-marketing__section orby-marketing__section--pro" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+    <div class="orby-marketing__inner orby-marketing__pro">
+      <header class="orby-marketing__pro-header">
+        <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow || 'For pros')}</p>
+        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
+        <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
+        ${ledeBlock}
+      </header>
+      <div class="orby-marketing__pro-grid">
+        ${cards}
+      </div>
+    </div>
+  </section>`;
+}
+
 function renderFaqSection(section) {
   const items = (section.faq ?? [])
     .map(
@@ -268,6 +310,8 @@ function renderSection(section) {
       return renderIntroSection(section);
     case 'showcase':
       return renderShowcaseSection(section);
+    case 'pro':
+      return renderProSection(section);
     case 'faq':
       return renderFaqSection(section);
     case 'footer':

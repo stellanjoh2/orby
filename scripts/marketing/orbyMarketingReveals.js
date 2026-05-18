@@ -46,6 +46,10 @@ function isFaqSection(sectionEl) {
   return sectionEl?.classList.contains('orby-marketing__section--faq');
 }
 
+function isProSection(sectionEl) {
+  return sectionEl?.classList.contains('orby-marketing__section--pro');
+}
+
 /**
  * @param {HTMLElement} maskEl
  * @returns {HTMLImageElement | HTMLVideoElement | null}
@@ -55,7 +59,7 @@ function getMaskMedia(maskEl) {
   const activeShowcase = maskEl.querySelector('.orby-marketing__showcase-img.is-active');
   if (activeShowcase) return activeShowcase;
   return maskEl.querySelector(
-    '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img',
+    '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img',
   );
 }
 
@@ -105,7 +109,7 @@ export function preloadMarketingImages(root) {
   if (!root) return Promise.resolve();
   const media = [
     ...root.querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__intro-asset',
+      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__intro-asset',
     ),
   ].filter((el) => {
     if (
@@ -399,6 +403,53 @@ function prepareStandardSection(sectionEl) {
   if (ctas.length) gsap.set(ctas, { opacity: 0, y: -15 });
 }
 
+function prepareProSection(sectionEl) {
+  const eyebrow = sectionEl.querySelector('.orby-marketing__eyebrow');
+  const title = sectionEl.querySelector('.orby-marketing__title');
+  const lede = sectionEl.querySelector('.orby-marketing__pro-lede');
+
+  if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
+  if (lede) gsap.set(lede, { opacity: 0, y: blockLiftY });
+
+  if (title) {
+    wrapWordsForBigMessage(title);
+    const words = [...title.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
+    gsap.set(title, { opacity: 1 });
+    if (words.length) gsap.set(words, { opacity: 0, y: headLiftY });
+  }
+
+  gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]'), {
+    opacity: 0,
+    y: blockLiftY,
+  });
+}
+
+function revealProSection(sectionEl, tl) {
+  const eyebrow = sectionEl.querySelector('.orby-marketing__eyebrow');
+  const title = sectionEl.querySelector('.orby-marketing__title');
+  const lede = sectionEl.querySelector('.orby-marketing__pro-lede');
+
+  revealBlock(eyebrow, tl, 0);
+  revealHeadline(title, tl, `>-=${blockOverlap}`);
+  if (lede) revealBlock(lede, tl, `>-=${blockOverlap}`);
+
+  const cards = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]')];
+  if (cards.length) {
+    tl.fromTo(
+      cards,
+      { opacity: 0, y: blockLiftY },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.45,
+        stagger: 0.09,
+        ease: mediaEase,
+      },
+      lede || title ? `>-=${blockOverlap}` : 0,
+    );
+  }
+}
+
 function prepareFaqSection(sectionEl) {
   sectionEl.querySelectorAll('[data-orby-marketing-reveal="text"]').forEach((el) => {
     wrapWordsForBigMessage(el);
@@ -447,6 +498,10 @@ function prepareSection(sectionEl) {
   }
   if (isSplitSection(sectionEl)) {
     prepareSplitSection(sectionEl);
+    return;
+  }
+  if (isProSection(sectionEl)) {
+    prepareProSection(sectionEl);
     return;
   }
   if (isFaqSection(sectionEl)) {
@@ -529,7 +584,9 @@ export function revealMarketingSection(sectionEl) {
     sectionEl.classList.remove('orby-marketing__section--pending');
     sectionEl.classList.add('orby-marketing__section--revealed');
     sectionEl
-      .querySelectorAll('.orby-marketing__figure-media, .orby-marketing__showcase-img')
+      .querySelectorAll(
+        '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img',
+      )
       .forEach((el) => {
         el.classList.add('is-loaded');
         if (el instanceof HTMLVideoElement) playMarketingVideo(el);
@@ -563,6 +620,8 @@ export function revealMarketingSection(sectionEl) {
     revealMegaSection(sectionEl, tl);
   } else if (isSplitSection(sectionEl)) {
     revealSplitSection(sectionEl, tl);
+  } else if (isProSection(sectionEl)) {
+    revealProSection(sectionEl, tl);
   } else if (isFaqSection(sectionEl)) {
     revealFaqSection(sectionEl, tl);
   } else {

@@ -23,13 +23,10 @@ vec3 ReinhardToneMapping(vec3 color) {
 void main() {
   vec4 color = texture2D(tDiffuse, vUv);
   
-  if (toneMappingType < 0.5) {
-    // None - no tone mapping
+  if (toneMappingType < 2.0) {
+    // None — passthrough (legacy linear used the same path)
     gl_FragColor = color;
-  } else if (toneMappingType < 1.5) {
-    // Linear - no tone mapping (same as none)
-    gl_FragColor = color;
-  } else if (toneMappingType < 2.5) {
+  } else if (toneMappingType < 3.5) {
     // Reinhard
     gl_FragColor = vec4(ReinhardToneMapping(color.rgb), color.a);
   } else {

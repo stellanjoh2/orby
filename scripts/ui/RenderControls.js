@@ -1242,7 +1242,9 @@ export class RenderControls {
         state.renderQuality ?? RENDER_QUALITY_DEFAULT;
     }
     if (this.ui.inputs.toneMapping) {
-      this.ui.inputs.toneMapping.value = state.toneMapping ?? 'aces-filmic';
+      const toneMapping = state.toneMapping ?? 'aces-filmic';
+      this.ui.inputs.toneMapping.value =
+        toneMapping === 'linear' ? 'none' : toneMapping;
     }
     if (this.ui.inputs.exportSvgColorDetail) {
       this.ui.inputs.exportSvgColorDetail.value =

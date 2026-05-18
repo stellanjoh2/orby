@@ -4186,13 +4186,18 @@ input[type='range']:disabled::-moz-range-thumb {
   column-gap: 0.3rem;
 }
 
+#svgExtrudeColorDepths .slider-line span:first-child {
+  overflow: visible;
+  padding-left: 1px;
+}
+
 #svgExtrudeColorDepths .svg-extrude-inline-number {
   grid-column: 3;
   width: 58px;
   padding: 0.18rem 0.3rem;
-  border: 1px solid var(--stroke);
+  border: none;
   border-radius: 6px;
-  background: rgba(20, 16, 34, 0.9);
+  background-color: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-size: 0.76rem;
   text-align: right;
@@ -4200,7 +4205,7 @@ input[type='range']:disabled::-moz-range-thumb {
 
 #svgExtrudeColorDepths .svg-extrude-inline-number:focus {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
 .svg-extrude-note {
@@ -4492,7 +4497,10 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   min-width: 10px;
   border-radius: 50%;
   margin-right: 0.35rem;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+  overflow: visible;
+  outline: 1px solid rgba(255, 255, 255, 0.28);
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 
