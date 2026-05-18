@@ -69,7 +69,15 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const type = MIME[ext] || 'application/octet-stream';
     res.setHeader('Content-Type', type);
-    res.setHeader('Cache-Control', 'no-store');
+    const isTurntableAsset =
+      filePath.includes(`${path.sep}assets${path.sep}marketing${path.sep}`) &&
+      /\.(webp|jpe?g|png)$/i.test(ext);
+    res.setHeader(
+      'Cache-Control',
+      isTurntableAsset
+        ? 'public, max-age=31536000, immutable'
+        : 'no-store',
+    );
 
     if (req.method === 'HEAD') {
       res.writeHead(200);

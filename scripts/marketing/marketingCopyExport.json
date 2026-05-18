@@ -43,7 +43,6 @@
       "order": 1,
       "type": "intro",
       "id": "orby-marketing-intro",
-      "eyebrow": "Free · Browser · Private",
       "title": "Drop it in.\nSet the stage.\nSend it.",
       "titleLines": ["Drop it in.", "Set the stage.", "Send it."],
       "lede": "Orby is a zero-install studio for GLB, glTF, and SVG — drag a file in, light it like a set, ship stills and video without leaving the tab.",

@@ -2500,28 +2500,28 @@ html.orby-dropzone-shell-pending .workspace {
    * Constant rotation speed (no drag speed-up).
    */
   --dropzone-magic-spin: 16s;
-  --dropzone-magic-bleed: 33.75px;
-  /* Blur is the main GPU cost — keep substantial but below ~70px when possible */
-  --dropzone-glow-blur: 46.5px;
-  --dropzone-glow-radial-w: 201%;
-  --dropzone-glow-radial-h: 114%;
-  --dropzone-glow-rim-a: 36px;
-  --dropzone-glow-rim-b: 72px;
-  --dropzone-glow-rim-c: 114px;
+  --dropzone-magic-bleed: 25.3125px;
+  /* Blur is the main GPU cost — another ~25% tighter for landing perf */
+  --dropzone-glow-blur: 26.15625px;
+  --dropzone-glow-radial-w: 150.75%;
+  --dropzone-glow-radial-h: 85.5%;
+  --dropzone-glow-rim-a: 27px;
+  --dropzone-glow-rim-b: 54px;
+  --dropzone-glow-rim-c: 85.5px;
   /* Cyan drag accents on ::before only (full-bleed box-shadow on .dropzone escapes clip → edge haze) */
-  --dropzone-drag-rim-cyan-a: 16.5px;
-  --dropzone-drag-rim-cyan-b: 28.5px;
-  --dropzone-drag-rim-cyan-c: 42px;
+  --dropzone-drag-rim-cyan-a: 12.375px;
+  --dropzone-drag-rim-cyan-b: 21.375px;
+  --dropzone-drag-rim-cyan-c: 31.5px;
 }
 
 .dropzone.drag-active {
-  --dropzone-magic-bleed: 16.875px;
-  --dropzone-glow-blur: 33px;
-  --dropzone-glow-radial-w: 131.625%;
-  --dropzone-glow-radial-h: 74.25%;
-  --dropzone-glow-rim-a: 23.625px;
-  --dropzone-glow-rim-b: 47.25px;
-  --dropzone-glow-rim-c: 74.25px;
+  --dropzone-magic-bleed: 12.65625px;
+  --dropzone-glow-blur: 18.5625px;
+  --dropzone-glow-radial-w: 98.71875%;
+  --dropzone-glow-radial-h: 55.6875%;
+  --dropzone-glow-rim-a: 17.71875px;
+  --dropzone-glow-rim-b: 35.4375px;
+  --dropzone-glow-rim-c: 55.6875px;
 }
 
 /* Inspired by Magic Card pen: animate gradient angle only (no layout transform). */
@@ -2622,7 +2622,7 @@ html.orby-dropzone-shell-pending .workspace {
 /* Safari fallback: preserve look while cutting compositor-heavy animated blur work. */
 html.safari-browser .dropzone {
   --dropzone-magic-spin: 24s;
-  --dropzone-glow-blur: 22px;
+  --dropzone-glow-blur: 12.375px;
 }
 
 html.safari-browser .dropzone::after {
@@ -2700,6 +2700,14 @@ body:not(.dropzone-visible) .dropzone::after {
 /* Pause gradient frame animation during window resize (reduces compositor churn) */
 html.orby-window-resizing body.dropzone-visible .dropzone::before,
 html.orby-window-resizing body.dropzone-visible .dropzone::after {
+  animation-play-state: paused;
+}
+
+/* Pause home glow spins while scrolling; Lottie paused in StartMenuController — resumes ~160ms after scroll idle */
+html.orby-dropzone-glow-scrolling body.dropzone-visible .dropzone::before,
+html.orby-dropzone-glow-scrolling body.dropzone-visible .dropzone::after,
+html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::before,
+html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
   animation-play-state: paused;
 }
 

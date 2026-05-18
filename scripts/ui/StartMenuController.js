@@ -117,6 +117,7 @@ export class StartMenuController {
     this.cacheDom();
     this.bindEvents();
     this.bindDropzoneGradientResizePause();
+    this.bindDropzoneGradientScrollPause();
     this.initLogotypeAnimation();
     this.initInfoLogotypeAnimation();
     this.setVisible(this.visible);
@@ -215,6 +216,49 @@ export class StartMenuController {
         document.documentElement.classList.add('orby-window-resizing');
         if (endTimer !== null) window.clearTimeout(endTimer);
         endTimer = window.setTimeout(clearResizing, END_MS);
+      },
+      { passive: true },
+    );
+  }
+
+  /**
+   * While the home page scrolls: pause dropzone + magic-btn glow (CSS) and Lottie; resume after scroll idle.
+   * @see html.orby-dropzone-glow-scrolling in styles.css
+   */
+  bindDropzoneGradientScrollPause() {
+    if (typeof window === 'undefined') return;
+    let endTimer = null;
+    const END_MS = 160;
+    const SCROLL_CLASS = 'orby-dropzone-glow-scrolling';
+    const pauseForScroll = () => {
+      if (!prefersReducedMotion()) {
+        document.documentElement.classList.add(SCROLL_CLASS);
+      }
+      this.animationInstance?.pause();
+    };
+    const resumeAfterScroll = () => {
+      document.documentElement.classList.remove(SCROLL_CLASS);
+      endTimer = null;
+      if (
+        document.body.classList.contains('dropzone-visible') &&
+        this.animationInstance
+      ) {
+        this.animationInstance.play();
+      }
+    };
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!document.body.classList.contains('dropzone-visible')) {
+          if (endTimer !== null) {
+            window.clearTimeout(endTimer);
+            resumeAfterScroll();
+          }
+          return;
+        }
+        pauseForScroll();
+        if (endTimer !== null) window.clearTimeout(endTimer);
+        endTimer = window.setTimeout(resumeAfterScroll, END_MS);
       },
       { passive: true },
     );

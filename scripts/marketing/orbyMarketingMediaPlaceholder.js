@@ -1,9 +1,15 @@
 /**
- * Lime lazy-load plate — real DOM layer (Safari-safe); fades with media via GSAP opacity.
+ * Dark lazy-load plate — real DOM layer (Safari-safe); fades with media via GSAP opacity.
  */
 import gsap from 'gsap';
 
 const PLACEHOLDER_CLASS = 'orby-marketing__media-ph';
+
+/** @param {Element | null | undefined} el */
+export function clearMarketingMediaFilter(el) {
+  if (!el) return;
+  gsap.set(el, { clearProps: 'filter' });
+}
 
 /**
  * @param {HTMLElement} maskEl

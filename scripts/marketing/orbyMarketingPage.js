@@ -8,6 +8,13 @@ import { orbyMagicButtonHtml, orbyMagicButtonOnLimeHtml } from '../ui/orbyMagicB
 const MARKETING_ROOT_ID = 'orby-marketing';
 const STYLES_HREF = './styles/orby-marketing.css';
 const SCROLL_CLASS = 'orby-home-scroll';
+/** Mega sections (intro + footer) — fire when the block is actually on screen */
+const MEGA_REVEAL_IO = { root: null, rootMargin: '0px 0px -22% 0px', threshold: 0.32 };
+const DEFAULT_REVEAL_IO = { root: null, rootMargin: '0px 0px -10% 0px', threshold: 0.08 };
+
+function isMegaRevealSection(section) {
+  return section.classList.contains('orby-marketing__section--mega');
+}
 
 let sectionsCache = null;
 
@@ -118,20 +125,28 @@ function renderIntroHeadline(title) {
 }
 
 function renderIntroSection(section) {
-  return `<section class="orby-marketing__section orby-marketing__section--intro" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--intro orby-marketing__section--intro-turntable" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
     <div class="orby-marketing__intro-stage" data-orby-marketing-float-stage aria-hidden="true">
-      <img
-        class="orby-marketing__intro-asset orby-marketing__intro-asset--left"
-        src="./assets/marketing/intro-asset-left.png"
-        alt=""
-        width="1300"
-        height="1225"
-        decoding="async"
-        data-orby-marketing-intro-asset="left"
-      />
-    </div>
-    <div class="orby-marketing__intro-center">
-      <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
+        <div class="orby-marketing__intro-turntable-wrap orby-marketing__intro-asset orby-marketing__intro-asset--right">
+          <img
+            class="orby-marketing__intro-turntable-poster"
+            src="./assets/marketing/intro-turntable-poster.jpg"
+            alt=""
+            width="2560"
+            height="1440"
+            decoding="async"
+            fetchpriority="low"
+          />
+          <canvas
+            class="orby-marketing__intro-turntable-canvas"
+            width="1920"
+            height="1080"
+            aria-hidden="true"
+          ></canvas>
+        </div>
+      </div>
+      <div class="orby-marketing__intro-center">
+      ${section.eyebrow ? `<p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>` : ''}
       <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
     </div>
@@ -212,7 +227,7 @@ function renderFaqSection(section) {
 }
 
 function renderFooterSection(section) {
-  return `<footer class="orby-marketing__section orby-marketing__section--footer" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<footer class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--footer" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
     <div class="orby-marketing__footer-stage" data-orby-marketing-float-stage aria-hidden="true">
       <img
         class="orby-marketing__intro-asset orby-marketing__intro-asset--right"
@@ -231,7 +246,7 @@ function renderFooterSection(section) {
           ? `<p class="orby-marketing__lede orby-marketing__lede--footer" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>`
           : ''
       }
-      <motion class="orby-marketing__footer-actions">
+      <div class="orby-marketing__footer-actions">
         ${orbyMagicButtonOnLimeHtml(escapeHtml(section.ctaLabel || 'Browse Files'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-browse',
@@ -360,6 +375,10 @@ export function initOrbyMarketingPage(options = {}) {
     return { destroy() {} };
   }
 
+  void import('./orbyMarketingIntroTurntable.js').then((mod) => {
+    mod.preloadIntroTurntableFrames();
+  });
+
   const lazy = options.lazy !== false;
   let root = null;
   let scrollCue = null;
@@ -367,30 +386,45 @@ export function initOrbyMarketingPage(options = {}) {
   let mountPromise = null;
   let bodyObserver = null;
   let revealObserver = null;
+  let megaRevealObserver = null;
   let revealModule = null;
   /** @type {(() => void) | null} */
   let teardownIntroFloat = null;
+  /** @type {(() => void) | null} */
+  let teardownIntroTurntable = null;
   let teardownShowcaseGallery = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
 
+  function disconnectRevealObservers() {
+    revealObserver?.disconnect();
+    revealObserver = null;
+    megaRevealObserver?.disconnect();
+    megaRevealObserver = null;
+  }
+
   function attachRevealObserver() {
     if (!root || revealObserver || !revealModule) return;
+    const onReveal = (observer, entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        revealModule.revealMarketingSection(entry.target);
+        observer.unobserve(entry.target);
+      }
+    };
+    megaRevealObserver = new IntersectionObserver(
+      (entries) => onReveal(megaRevealObserver, entries),
+      MEGA_REVEAL_IO,
+    );
     revealObserver = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          revealModule.revealMarketingSection(entry.target);
-          revealObserver.unobserve(entry.target);
-        }
-      },
-      { root: null, rootMargin: '0px 0px -10% 0px', threshold: 0.08 },
+      (entries) => onReveal(revealObserver, entries),
+      DEFAULT_REVEAL_IO,
     );
     root.querySelectorAll('.orby-marketing__section').forEach((section) => {
-      if (section.dataset.orbyMarketingRevealed !== '1') {
-        revealObserver.observe(section);
-      }
+      if (section.dataset.orbyMarketingRevealed === '1') return;
+      const observer = isMegaRevealSection(section) ? megaRevealObserver : revealObserver;
+      observer.observe(section);
     });
   }
 
@@ -413,10 +447,7 @@ export function initOrbyMarketingPage(options = {}) {
       attachRevealObserver();
     } else {
       revealModule?.pauseMarketingVideos?.(root);
-      if (revealObserver) {
-        revealObserver.disconnect();
-        revealObserver = null;
-      }
+      disconnectRevealObservers();
     }
   }
 
@@ -424,6 +455,8 @@ export function initOrbyMarketingPage(options = {}) {
     if (!root) return;
     teardownIntroFloat?.();
     teardownIntroFloat = null;
+    teardownIntroTurntable?.();
+    teardownIntroTurntable = null;
     teardownShowcaseGallery?.();
     teardownShowcaseGallery = null;
     revealModule?.cancelAllMarketingMotion?.(root);
@@ -443,6 +476,12 @@ export function initOrbyMarketingPage(options = {}) {
       import('./orbyMarketingIntroFloat.js').then((introFloat) => {
         if (!root || destroyed) return;
         teardownIntroFloat = introFloat.initIntroFloatParallax(root);
+      });
+    }
+    if (!teardownIntroTurntable) {
+      import('./orbyMarketingIntroTurntable.js').then((turntable) => {
+        if (!root || destroyed) return;
+        teardownIntroTurntable = turntable.initIntroTurntable(root);
       });
     }
     if (!teardownShowcaseGallery) {
@@ -498,12 +537,15 @@ export function initOrbyMarketingPage(options = {}) {
     attachRevealObserver();
     void reveals.preloadMarketingImages(root);
 
-    const [introFloat, showcaseGallery] = await Promise.all([
+    const [introFloat, introTurntable, showcaseGallery] = await Promise.all([
       import('./orbyMarketingIntroFloat.js'),
+      import('./orbyMarketingIntroTurntable.js'),
       import('./orbyMarketingShowcaseGallery.js'),
     ]);
     teardownIntroFloat?.();
     teardownIntroFloat = introFloat.initIntroFloatParallax(root);
+    teardownIntroTurntable?.();
+    teardownIntroTurntable = introTurntable.initIntroTurntable(root);
     teardownShowcaseGallery?.();
     teardownShowcaseGallery = showcaseGallery.initShowcaseGallery(root);
 
@@ -569,12 +611,17 @@ export function initOrbyMarketingPage(options = {}) {
   return {
     destroy() {
       destroyed = true;
+      void import('./orbyMarketingIntroTurntable.js').then((mod) => {
+        mod.clearIntroTurntablePreload();
+      });
       teardownIntroFloat?.();
       teardownIntroFloat = null;
+      teardownIntroTurntable?.();
+      teardownIntroTurntable = null;
       teardownShowcaseGallery?.();
       teardownShowcaseGallery = null;
       bodyObserver?.disconnect();
-      revealObserver?.disconnect();
+      disconnectRevealObservers();
       teardownScrollCueFade?.();
       teardownScrollCueFade = null;
       scrollCue?.remove();

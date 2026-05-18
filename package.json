@@ -7,6 +7,7 @@
     "dev": "node scripts/static-dev-server.mjs",
     "dev:python": "python3 -m http.server 8000 --bind 0.0.0.0",
     "build": "node build.js",
+    "encode:turntable": "node scripts/marketing/encodeIntroTurntableFrames.mjs",
     "preview": "python3 -m http.server 8000 --bind 0.0.0.0 -d dist",
     "setup-hooks": "node scripts/setup-git-hooks.mjs",
     "prepare": "node scripts/setup-git-hooks.mjs || true"
@@ -18,5 +19,8 @@
     "gsap": "^3.12.7",
     "n8ao": "^1.10.1",
     "postprocessing": "^6.36.4"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

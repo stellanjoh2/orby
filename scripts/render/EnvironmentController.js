@@ -43,6 +43,7 @@ export class EnvironmentController {
     this.lowResEnvironmentRenderTarget = null;
     this.rotationRenderTarget = null;
     this._lastNotifiedEnvTexture = null;
+    this._lastNotifiedEnvIntensity = null;
     this._presetLoadId = 0;
     this._fadeFrameId = null;
   }
@@ -207,10 +208,17 @@ export class EnvironmentController {
   }
 
   _notifyEnvironmentMapUpdated(texture, intensity) {
-    if (texture === this._lastNotifiedEnvTexture) return;
+    const nextIntensity = intensity ?? 0;
+    if (
+      texture === this._lastNotifiedEnvTexture &&
+      nextIntensity === this._lastNotifiedEnvIntensity
+    ) {
+      return;
+    }
     this._lastNotifiedEnvTexture = texture;
+    this._lastNotifiedEnvIntensity = nextIntensity;
     if (typeof this.onEnvironmentMapUpdated === 'function') {
-      this.onEnvironmentMapUpdated(texture, intensity);
+      this.onEnvironmentMapUpdated(texture, nextIntensity);
     }
   }
 
@@ -305,6 +313,7 @@ export class EnvironmentController {
       this.scene.background = null;
       if (forceMaterialSync) {
         this._lastNotifiedEnvTexture = null;
+        this._lastNotifiedEnvIntensity = null;
       }
       this._notifyEnvironmentMapUpdated(null, 0);
       return;
@@ -349,6 +358,7 @@ export class EnvironmentController {
     this.scene.environmentIntensity = envIntensity;
     if (forceMaterialSync) {
       this._lastNotifiedEnvTexture = null;
+      this._lastNotifiedEnvIntensity = null;
     }
     this._notifyEnvironmentMapUpdated(envTexture, envIntensity);
 

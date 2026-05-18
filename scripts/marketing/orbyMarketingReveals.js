@@ -1,6 +1,6 @@
 /**
  * Marketing section reveals — word stagger on headlines; block fade on split body copy;
- * media: preload then smooth fade + slide up (no clip-path wipe).
+ * media: preload plate then blur-in inside the 16∶9 mask (no slide-up).
  */
 import gsap from 'gsap';
 import {
@@ -10,17 +10,32 @@ import {
 import { prefersReducedMotion } from '../ui/modalReveal.js';
 import {
   addPlaceholderFadeOut,
+  clearMarketingMediaFilter,
   setMediaPlaceholderOpacity,
 } from './orbyMarketingMediaPlaceholder.js';
 import { prepareShowcaseGalleryCredit } from './orbyMarketingShowcaseGallery.js';
+import { killIntroTurntableScrollTriggers } from './orbyMarketingIntroTurntable.js';
 
 const headWordDur = 0.42;
 const headStagger = 0.035;
 const headLiftY = 14;
 const blockLiftY = 10;
 const blockOverlap = 0.22;
-const mediaLiftY = 28;
-const mediaRevealDur = 1.05;
+/**
+ * Mega sections (intro hero, lime footer, …) — large headline + optional lede + CTAs.
+ * @see MEGA_REVEAL_IO in orbyMarketingPage.js
+ */
+const megaRevealDelay = 0;
+const megaHeadWordDur = 0.78;
+const megaHeadStagger = 0.082;
+const megaHeadLiftY = 22;
+const megaBlockLiftY = 14;
+const megaLedeDur = 1.05;
+const megaBlockOverlap = 0.36;
+const megaCtaDur = 0.38;
+const megaCtaStagger = 0.08;
+const mediaBlurPx = 14;
+const mediaRevealDur = 0.88;
 const mediaEase = 'power3.out';
 
 function isSplitSection(sectionEl) {
@@ -110,7 +125,7 @@ export function preloadMarketingImages(root) {
   return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
 }
 
-function revealHeadline(el, tl, position = 0) {
+function revealHeadline(el, tl, position = 0, options = {}) {
   if (!el) return;
   wrapWordsForBigMessage(el);
   const words = [...el.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
@@ -118,13 +133,13 @@ function revealHeadline(el, tl, position = 0) {
   gsap.set(el, { opacity: 1 });
   tl.fromTo(
     words,
-    { opacity: 0, y: headLiftY },
+    { opacity: 0, y: options.liftY ?? headLiftY },
     {
       opacity: 1,
       y: 0,
-      duration: headWordDur,
-      stagger: headStagger,
-      ease: 'power2.out',
+      duration: options.wordDur ?? headWordDur,
+      stagger: options.stagger ?? headStagger,
+      ease: options.ease ?? 'power2.out',
     },
     position,
   );
@@ -160,7 +175,20 @@ function revealList(listEl, tl, position) {
 
 function prepareMediaElement(el) {
   if (!el) return;
-  gsap.set(el, { opacity: 0, y: mediaLiftY, scale: 1, clearProps: 'clipPath' });
+  gsap.set(el, {
+    opacity: 0,
+    y: 0,
+    scale: 1,
+    filter: `blur(${mediaBlurPx}px)`,
+    clearProps: 'clipPath',
+  });
+  el.classList.remove('is-loaded');
+}
+
+/** Showcase slides after the first — hidden, no blur (opacity crossfade only). */
+function prepareHiddenShowcaseSlide(el) {
+  if (!el) return;
+  gsap.set(el, { opacity: 0, y: 0, scale: 1, clearProps: 'filter,clipPath' });
   el.classList.remove('is-loaded');
 }
 
@@ -213,6 +241,7 @@ function revealMedia(maskEl, tl, position = 0) {
   if (!maskEl) return;
   const media = getMaskMedia(maskEl);
   if (!media) return;
+  const isShowcaseGallery = maskEl.hasAttribute('data-orby-marketing-showcase-gallery');
 
   gsap.set(maskEl, { clearProps: 'clipPath' });
 
@@ -220,10 +249,10 @@ function revealMedia(maskEl, tl, position = 0) {
   const revealStart = '>';
   tl.fromTo(
     media,
-    { opacity: 0, y: mediaLiftY },
+    { opacity: 0, filter: `blur(${mediaBlurPx}px)` },
     {
       opacity: 1,
-      y: 0,
+      filter: 'blur(0px)',
       duration: mediaRevealDur,
       ease: mediaEase,
       onStart: () => {
@@ -231,12 +260,16 @@ function revealMedia(maskEl, tl, position = 0) {
         if (media instanceof HTMLVideoElement) playMarketingVideo(media);
       },
       onComplete: () => {
-        setMediaPlaceholderOpacity(maskEl, 0);
-        if (maskEl.hasAttribute('data-orby-marketing-showcase-gallery')) {
+        clearMarketingMediaFilter(media);
+        if (isShowcaseGallery) {
+          maskEl.querySelectorAll('.orby-marketing__showcase-img').forEach((img) => {
+            if (img !== media) prepareHiddenShowcaseSlide(img);
+          });
           maskEl.dispatchEvent(
             new CustomEvent('orby-marketing-showcase-slide', { bubbles: true }),
           );
         }
+        setMediaPlaceholderOpacity(maskEl, 0);
       },
     },
     revealStart,
@@ -275,11 +308,76 @@ function prepareMarketingMask(mask) {
   setMediaPlaceholderOpacity(mask, 1);
   const showcaseImgs = mask.querySelectorAll('.orby-marketing__showcase-img');
   if (showcaseImgs.length) {
-    showcaseImgs.forEach(prepareMediaElement);
+    showcaseImgs.forEach((img) => {
+      if (img.classList.contains('is-active')) prepareMediaElement(img);
+      else prepareHiddenShowcaseSlide(img);
+    });
     prepareShowcaseGalleryCredit(mask);
     return;
   }
   prepareMediaElement(getMaskMedia(mask));
+}
+
+function isMegaMarketingSection(sectionEl) {
+  return sectionEl?.classList.contains('orby-marketing__section--mega');
+}
+
+function isIntroTurntableSection(sectionEl) {
+  return sectionEl?.classList.contains('orby-marketing__section--intro-turntable');
+}
+
+function prepareMegaSection(sectionEl) {
+  const title = sectionEl.querySelector('.orby-marketing__title--intro');
+  const lede = sectionEl.querySelector('.orby-marketing__lede');
+  if (title) {
+    wrapWordsForBigMessage(title);
+    const words = [...title.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
+    gsap.set(title, { opacity: 1 });
+    gsap.set(words, { opacity: 0, y: megaHeadLiftY });
+  }
+  if (lede?.textContent?.trim()) {
+    gsap.set(lede, { opacity: 0, y: megaBlockLiftY });
+  }
+  const ctas = [...sectionEl.querySelectorAll('.orby-marketing__cta')];
+  if (ctas.length) gsap.set(ctas, { opacity: 0, y: 12 });
+}
+
+function revealMegaSection(sectionEl, tl) {
+  const title = sectionEl.querySelector('.orby-marketing__title--intro');
+  const lede = sectionEl.querySelector('.orby-marketing__lede');
+  const ledeHasCopy = Boolean(lede?.textContent?.trim());
+
+  revealHeadline(title, tl, megaRevealDelay, {
+    wordDur: megaHeadWordDur,
+    stagger: megaHeadStagger,
+    liftY: megaHeadLiftY,
+    ease: 'power3.out',
+  });
+  if (ledeHasCopy) {
+    tl.fromTo(
+      lede,
+      { opacity: 0, y: megaBlockLiftY },
+      { opacity: 1, y: 0, duration: megaLedeDur, ease: 'power3.out' },
+      `>-=${megaBlockOverlap}`,
+    );
+  }
+
+  const ctas = [...sectionEl.querySelectorAll('.orby-marketing__cta')];
+  if (ctas.length) {
+    const afterCopy = ledeHasCopy ? lede : title;
+    tl.fromTo(
+      ctas,
+      { opacity: 0, y: 12 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: megaCtaDur,
+        stagger: megaCtaStagger,
+        ease: mediaEase,
+      },
+      afterCopy ? `>-=${megaBlockOverlap}` : megaRevealDelay,
+    );
+  }
 }
 
 function prepareStandardSection(sectionEl) {
@@ -343,6 +441,10 @@ function revealFaqSection(sectionEl, tl) {
 }
 
 function prepareSection(sectionEl) {
+  if (isMegaMarketingSection(sectionEl)) {
+    prepareMegaSection(sectionEl);
+    return;
+  }
   if (isSplitSection(sectionEl)) {
     prepareSplitSection(sectionEl);
     return;
@@ -442,7 +544,10 @@ export function revealMarketingSection(sectionEl) {
           );
         }
       });
-    gsap.set(sectionEl.querySelectorAll('*'), { clearProps: 'opacity,transform,clipPath,y,x,scale' });
+    const clearTargets = isIntroTurntableSection(sectionEl)
+      ? sectionEl.querySelectorAll('*:not(.orby-marketing__intro-turntable-wrap):not(.orby-marketing__intro-turntable-canvas):not(.orby-marketing__intro-turntable-poster)')
+      : sectionEl.querySelectorAll('*');
+    gsap.set(clearTargets, { clearProps: 'opacity,transform,clipPath,y,x,scale,filter' });
     return;
   }
 
@@ -454,7 +559,9 @@ export function revealMarketingSection(sectionEl) {
     },
   });
 
-  if (isSplitSection(sectionEl)) {
+  if (isMegaMarketingSection(sectionEl)) {
+    revealMegaSection(sectionEl, tl);
+  } else if (isSplitSection(sectionEl)) {
     revealSplitSection(sectionEl, tl);
   } else if (isFaqSection(sectionEl)) {
     revealFaqSection(sectionEl, tl);
@@ -474,5 +581,8 @@ export function prepareMarketingSections(root) {
 /** Stop in-flight GSAP when leaving the home page (studio session). */
 export function cancelAllMarketingMotion(root) {
   if (!root) return;
-  gsap.killTweensOf(root.querySelectorAll('*'));
+  gsap.killTweensOf(
+    root.querySelectorAll('*:not(.orby-marketing__intro-turntable-wrap):not(.orby-marketing__intro-turntable-canvas):not(.orby-marketing__intro-turntable-poster)'),
+  );
+  killIntroTurntableScrollTriggers(root);
 }
