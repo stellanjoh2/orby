@@ -107,10 +107,20 @@
   --app-settings-chrome-radius: 18px;
   /* Object shelf Scene / Export pills, modal footers — keep in sync */
   --ui-accent-action-font-size: 0.8rem;
-  /* Home dropzone + fullscreen prompt / thank-you primary pills — single spec (do not drift) */
-  --ui-hero-pill-font-size: calc(var(--ui-accent-action-font-size) * 1.2);
-  --ui-hero-pill-pad-block: calc(0.52rem * 1.2);
-  --ui-hero-pill-pad-inline: calc(1.9rem * 1.2);
+  /* Flat orby pill — compact base; normal = home; xl = fullscreen big-message modals */
+  --ui-orby-pill-font-size: var(--ui-accent-action-font-size);
+  --ui-orby-pill-pad-block: 0.52rem;
+  --ui-orby-pill-pad-inline: 1.9rem;
+  --ui-orby-pill-font-size-normal: calc(var(--ui-orby-pill-font-size) * 1.2);
+  --ui-orby-pill-pad-block-normal: calc(var(--ui-orby-pill-pad-block) * 1.2);
+  --ui-orby-pill-pad-inline-normal: calc(var(--ui-orby-pill-pad-inline) * 1.2);
+  --ui-orby-pill-font-size-xl: calc(var(--ui-orby-pill-font-size-normal) * 1.25);
+  --ui-orby-pill-pad-block-xl: calc(var(--ui-orby-pill-pad-block-normal) * 1.25);
+  --ui-orby-pill-pad-inline-xl: calc(var(--ui-orby-pill-pad-inline-normal) * 1.25);
+  /* Legacy aliases — home dropzone legacy gray pill */
+  --ui-hero-pill-font-size: var(--ui-orby-pill-font-size-normal);
+  --ui-hero-pill-pad-block: var(--ui-orby-pill-pad-block-normal);
+  --ui-hero-pill-pad-inline: var(--ui-orby-pill-pad-inline-normal);
   /* Multiply caption opacity inside muted .subsection / .panel-block (two ×~25% steps vs full captions) */
   --muted-section-text-scale: 0.5625;
   /*
@@ -415,7 +425,6 @@ body.orby-not-found-active.orby-not-found-fade-ready #webgl {
 
 .orby-not-found-btn {
   margin-top: 1rem;
-  max-width: 320px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -448,36 +457,13 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-not-found-symbol {
   animation: orbyNotFoundSymbolSpin 36s linear infinite;
 }
 
-body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog {
-  /* Reuse prompt button style without awkward label wrapping. */
-  white-space: nowrap;
-}
-
-body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptNo.orby-magic-btn--dialog-ghost {
+body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptNo {
   display: none !important;
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions {
   display: flex;
   justify-content: center;
-  grid-template-columns: none;
-  width: auto;
-  max-width: 100%;
-}
-
-/* Same animated glow pill as dropzone Browse */
-body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptYes.orby-magic-btn.dropzone-btn {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 12.5rem;
-  opacity: 1;
-  transform: none;
-  animation: none;
-}
-
-body.orby-not-found-active #orbyFullscreenPrompt .orby-magic-btn--dialog-ghost:focus-visible {
-  outline: none;
-  box-shadow: none;
 }
 
 @keyframes orbyNotFoundSymbolSpin {
@@ -1026,12 +1012,9 @@ html.orby-gate-unlocked .orby-entry-gate {
   cursor: default;
 }
 
-.bug-report-thank-you-stack .bug-report-thank-you-ok {
+.bug-report-thank-you-stack .orby-pill-btn,
+.orby-fullscreen-prompt-stack .orby-pill-btn {
   pointer-events: auto;
-  flex: 0 0 auto;
-  width: fit-content;
-  max-width: 100%;
-  align-self: center;
 }
 
 .orby-fullscreen-prompt-stack .orby-fullscreen-prompt-actions {
@@ -1039,37 +1022,11 @@ html.orby-gate-unlocked .orby-entry-gate {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: clamp(0.65rem, 1.8vw, 1rem);
+  width: auto;
+  max-width: 100%;
+  margin-inline: auto;
   pointer-events: auto;
-}
-
-.orby-fullscreen-prompt-btn--ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  border-radius: 999px;
-  border: none;
-  padding: 0.52rem 1.9rem;
-  font-family: inherit;
-  font-size: var(--ui-accent-action-font-size);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: rgba(0, 0, 0, 0.42);
-  color: var(--text);
-  cursor: pointer;
-  box-shadow: none;
-  transition:
-    filter 0.15s ease,
-    transform 0.15s ease;
-}
-
-.orby-fullscreen-prompt-btn--ghost:hover {
-  filter: brightness(1.08);
-}
-
-.orby-fullscreen-prompt-btn--ghost:active {
-  transform: scale(0.98);
 }
 
 .bug-report-thank-you-message {
@@ -1091,65 +1048,11 @@ html.orby-gate-unlocked .orby-entry-gate {
   display: inline-block;
 }
 
-.bug-report-thank-you-ok {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: fit-content;
-  max-width: 100%;
-  border-radius: 999px;
-  border: none;
-  padding: 0.52rem 1.9rem;
-  font-family: inherit;
-  font-size: var(--ui-accent-action-font-size);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: var(--brand-primary);
-  color: var(--brand-text);
-  cursor: pointer;
-  box-shadow: none;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    filter 0.15s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-}
-
-.bug-report-thank-you-ok:hover,
-.bug-report-thank-you-ok:focus-visible {
-  background: #fff;
-  color: var(--brand-text);
-  filter: none;
-  box-shadow: var(--ui-accent-outer-glow);
-}
-
-.bug-report-thank-you-ok:active {
-  transform: scale(0.98);
-}
-
 /* Slightly wider measure — ~one extra word per line at headline sizes */
 #orbyFullscreenPrompt .orby-fullscreen-prompt-stack {
   max-width: min(72rem, 96vw);
   /* Drop it in gap − one notch */
   gap: calc(clamp(1.25rem, 2.5vh, 1.75rem) + clamp(1rem, 2vh, 1.5rem));
-}
-
-#orbyFullscreenPrompt .orby-fullscreen-prompt-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: min(100%, 32rem);
-  max-width: 100%;
-  margin-inline: auto;
-  gap: clamp(0.65rem, 1.8vw, 1rem);
-  justify-content: stretch;
-  align-items: stretch;
-}
-
-#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog {
-  width: 100%;
-  min-width: 0;
 }
 
 .bug-report-content #bugReportForm {
@@ -1705,6 +1608,81 @@ html.orby-gate-unlocked .orby-entry-gate {
   margin-top: 0.5rem;
 }
 
+/* Flat orby pill — accent / ghost; --normal (home) / --xl (fullscreen big-message) */
+.orby-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+  align-self: center;
+  border-radius: 999px;
+  border: none;
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    filter 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.orby-pill-btn--normal {
+  font-size: var(--ui-orby-pill-font-size-normal);
+  padding: var(--ui-orby-pill-pad-block-normal) var(--ui-orby-pill-pad-inline-normal);
+}
+
+.orby-pill-btn--xl {
+  font-size: var(--ui-orby-pill-font-size-xl);
+  padding: var(--ui-orby-pill-pad-block-xl) var(--ui-orby-pill-pad-inline-xl);
+}
+
+.orby-pill-btn--accent {
+  background: var(--brand-primary);
+  color: var(--brand-text);
+}
+
+.orby-pill-btn--accent:hover,
+.orby-pill-btn--accent:focus-visible {
+  background: #fff;
+  color: var(--brand-text);
+  filter: none;
+  box-shadow: var(--ui-accent-outer-glow);
+  outline: none;
+}
+
+.orby-pill-btn--accent:active {
+  transform: scale(0.98);
+}
+
+.orby-pill-btn--ghost {
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--text);
+}
+
+.orby-pill-btn--ghost:hover,
+.orby-pill-btn--ghost:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.orby-pill-btn--ghost:active {
+  transform: scale(0.98);
+}
+
+/* Home magic Browse — same footprint as flat pill normal (glow shell unchanged) */
+.dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__inner {
+  font-size: var(--ui-orby-pill-font-size-normal);
+  padding: var(--ui-orby-pill-pad-block-normal) var(--ui-orby-pill-pad-inline-normal);
+}
+
 /* Orby magic pill — default CTA on dark backgrounds (dropzone + marketing) */
 @property --orby-magic-btn-rotate {
   syntax: '<angle>';
@@ -2083,11 +2061,6 @@ html.safari-browser .orby-magic-btn::before {
 .orby-magic-btn--dialog-accent:active {
   filter: none;
   transform: scale(0.98);
-}
-
-#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog {
-  min-width: 0;
-  width: 100%;
 }
 
 .dropzone-actions {

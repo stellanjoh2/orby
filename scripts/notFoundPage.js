@@ -326,7 +326,7 @@ function openFullscreenNotFoundPrompt(orby) {
     messageHtml: NOT_FOUND_MESSAGE_HTML,
     cancelLabel: 'Stay',
     confirmLabel: 'Return home',
-    confirmVariant: 'glow',
+    confirmVariant: 'accent',
     onConfirm: () => {
       window.location.href = '/';
     },
