@@ -51,8 +51,22 @@
     {
       "order": 2,
       "type": "split",
+      "id": "orby-marketing-present",
+      "eyebrow": "01 — Set the stage",
+      "title": "Your virtual studio, in the browser.",
+      "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
+      "bullets": [
+        "Look Filter presets, luminance curve, and full color grade",
+        "Depth of field, bloom, grain, lens flare, and tone mapping",
+        "Shader Lab stylized materials when you want to push beyond PBR"
+      ],
+      "cta": null
+    },
+    {
+      "order": 3,
+      "type": "split",
       "id": "orby-marketing-import",
-      "eyebrow": "01 — Drop it in",
+      "eyebrow": "02 — Drop it in",
       "title": "Drop in. Start immediately.",
       "lede": "No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.",
       "bullets": [
@@ -64,20 +78,6 @@
         "label": "Load Sample Object",
         "action": "load-sample"
       }
-    },
-    {
-      "order": 3,
-      "type": "split",
-      "id": "orby-marketing-present",
-      "eyebrow": "02 — Set the stage",
-      "title": "Your virtual studio, in the browser.",
-      "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
-      "bullets": [
-        "Look Filter presets, luminance curve, and full color grade",
-        "Depth of field, bloom, grain, lens flare, and tone mapping",
-        "Shader Lab stylized materials when you want to push beyond PBR"
-      ],
-      "cta": null
     },
     {
       "order": 4,

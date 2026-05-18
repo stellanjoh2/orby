@@ -28,6 +28,11 @@
   --orby-mega-headline-vw: 11.5;
   --orby-mega-headline-cqi-cap: 23;
   --orby-mega-headline-offset: 0.35rem;
+  /* Intro turntable mega type — large soft shadow for legibility over busy frames */
+  --orby-intro-headline-shadow:
+    0 0.06em 0.35em color-mix(in srgb, var(--orby-black, #080808) 32%, transparent),
+    0 0.14em 1.1em color-mix(in srgb, var(--orby-black, #080808) 22%, transparent),
+    0 0.32em 2.75em color-mix(in srgb, var(--orby-black, #080808) 14%, transparent);
   /* Intro / footer body copy measure (~⅓ viewport at desktop) */
   --orby-marketing-lede-measure: 40.8rem; /* +20% vs 34rem — intro/footer body copy */
   /* Feature / showcase / FAQ — 5.8vw at max; column cap when split */
@@ -189,6 +194,7 @@ html.orby-home-scroll #orby-marketing {
   width: max-content;
   max-width: 100%;
   white-space: nowrap;
+  text-shadow: var(--orby-intro-headline-shadow);
 }
 
 .orby-marketing__section--intro-turntable .orby-marketing__lede--intro {

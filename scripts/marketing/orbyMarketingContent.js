@@ -34,8 +34,24 @@ export const MARKETING_SECTIONS = [
   },
   {
     type: 'split',
+    id: 'orby-marketing-present',
+    eyebrow: '01 — Set the stage',
+    title: 'Your virtual studio, in the browser.',
+    lede:
+      'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
+    bullets: [
+      'Look Filter presets, luminance curve, and full color grade',
+      'Depth of field, bloom, grain, lens flare, and tone mapping',
+      'Shader Lab stylized materials when you want to push beyond PBR',
+    ],
+    layout: 'media-left',
+    imageSrc: './assets/marketing/present-cinema-look.png',
+    imageAlt: 'Cinematic look filter preset in Orby',
+  },
+  {
+    type: 'split',
     id: 'orby-marketing-import',
-    eyebrow: '01 — Drop it in',
+    eyebrow: '02 — Drop it in',
     title: 'Drop in. Start immediately.',
     lede:
       'No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.',
@@ -46,26 +62,10 @@ export const MARKETING_SECTIONS = [
     ],
     ctaLabel: 'Load Sample Object',
     ctaAction: 'load-sample',
-    layout: 'media-left',
+    layout: 'media-right',
     videoSrc: './assets/marketing/import-orbit-placeholder.mp4',
     imageSrc: './assets/images/orby-lookfilter-studio.png',
     imageAlt: 'Orbit preview of a 3D model in Orby',
-  },
-  {
-    type: 'split',
-    id: 'orby-marketing-present',
-    eyebrow: '02 — Set the stage',
-    title: 'Your virtual studio, in the browser.',
-    lede:
-      'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
-    bullets: [
-      'Look Filter presets, luminance curve, and full color grade',
-      'Depth of field, bloom, grain, lens flare, and tone mapping',
-      'Shader Lab stylized materials when you want to push beyond PBR',
-    ],
-    layout: 'media-right',
-    imageSrc: './assets/marketing/present-cinema-look.png',
-    imageAlt: 'Cinematic look filter preset in Orby',
   },
   {
     type: 'split',
