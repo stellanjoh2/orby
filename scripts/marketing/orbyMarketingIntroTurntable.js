@@ -300,7 +300,7 @@ function drawFrame(ctx, frame, bitmapW, bitmapH) {
   const { w: fw, h: fh } = framePixelSize(frame);
   if (!fw) return;
 
-  ctx.fillStyle = '#000000';
+  ctx.fillStyle = '#080808';
   ctx.fillRect(0, 0, bitmapW, bitmapH);
 
   const fit = Math.min(bitmapW / fw, bitmapH / fh);

@@ -151,7 +151,7 @@ function createStateApplySteps() {
         s.setLightsCastShadows(state.lightsCastShadows ?? true);
         s.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');
         s.setLightsShadowSoftness(state.lightsShadowSoftness ?? 4);
-        s.setLightsShadowColor(state.lightsShadowColor ?? '#000000');
+        s.setLightsShadowColor(state.lightsShadowColor ?? '#080808');
         s.setLightsShadowOpacity(state.lightsShadowOpacity ?? 0.25);
         s.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0001);
         s.setLightsShadowTwoSided(state.lightsShadowTwoSided ?? false);
@@ -280,7 +280,7 @@ function createStateApplySteps() {
         s.setShadows(cameraShadowsUiToShader(state.camera?.shadows ?? 0));
         const defaultCam = s.stateStore.getDefaults().camera ?? {};
         s.setVignette(effectiveVignetteIntensity(state.camera, defaultCam));
-        s.setVignetteColor(state.camera?.vignetteColor ?? '#000000');
+        s.setVignetteColor(state.camera?.vignetteColor ?? '#080808');
       },
     },
     {

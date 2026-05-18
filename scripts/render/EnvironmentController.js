@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ORBY_BLACK } from '../constants.js';
 import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
 import { RotateEquirectShader } from '../shaders/index.js';
@@ -13,7 +14,7 @@ export class EnvironmentController {
     strength = 1.0,
     blurriness = 0.0,
     rotation = 0,
-    fallbackColor = '#000000',
+    fallbackColor = ORBY_BLACK,
     onEnvironmentMapUpdated = null,
   } = {}) {
     this.scene = scene;

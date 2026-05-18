@@ -1253,7 +1253,7 @@ export class SceneSettingsManager {
       const defaultCam = this.stateStore.getDefaults().camera ?? {};
       const fsCam = finalState.camera ?? {};
       const vignetteIntensity = effectiveVignetteIntensity(fsCam, defaultCam);
-      const vignetteColor = fsCam.vignetteColor ?? '#000000';
+      const vignetteColor = fsCam.vignetteColor ?? '#080808';
       this.eventBus.emit('render:vignette', vignetteIntensity);
       this.eventBus.emit('render:vignette-color', vignetteColor);
       if (this.uiHelper?.setEffectControlsDisabled) {
@@ -1271,7 +1271,7 @@ export class SceneSettingsManager {
         );
         this.eventBus.emit(
           'render:vignette-color',
-          cam.vignetteColor ?? '#000000',
+          cam.vignetteColor ?? '#080808',
         );
       });
 

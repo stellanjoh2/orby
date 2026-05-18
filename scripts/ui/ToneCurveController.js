@@ -1,4 +1,5 @@
 import { evalToneCurveAt, normalizeToneCurve } from '../math/toneCurvePchip.js';
+import { ORBY_BLACK } from '../constants.js';
 
 /**
  * Four-handle luminance curve: (0, blackY), p1, p2, (1, whiteY), Catmull–Rom-style spline.
@@ -8,8 +9,9 @@ const MIN_GAP = 0.06;
 const MIN_CSS_W = 220;
 const MIN_CSS_H = 220;
 const BRAND = '#c4ff00';
-const BG = '#000000';
-const DIAG_ALPHA = 0.28125; // identity reference (solid), visible on #000
+
+const BG = ORBY_BLACK;
+const DIAG_ALPHA = 0.28125; // identity reference (solid), visible on app black
 const MARGIN = 0.02;
 
 function clamp(n, a, b) {

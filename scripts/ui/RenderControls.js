@@ -1014,7 +1014,7 @@ export class RenderControls {
       intensity: 3,
       radius: 1,
       quality: 'medium',
-      color: '#000000',
+      color: '#080808',
     };
     const ao = sanitizeAmbientOcclusion(aoRaw) ?? aoRaw;
     if (this.ui.inputs.toggleAmbientOcclusion) {
@@ -1180,7 +1180,7 @@ export class RenderControls {
       this.helpers.updateValueLabel('vignetteIntensity', vignette, 'decimal');
     }
     if (this.ui.inputs.vignetteColor) {
-      const vignetteColor = cam.vignetteColor ?? '#000000';
+      const vignetteColor = cam.vignetteColor ?? '#080808';
       this.ui.inputs.vignetteColor.value = vignetteColor;
     }
     const vignetteOn = isVignetteUiEnabled(cam);

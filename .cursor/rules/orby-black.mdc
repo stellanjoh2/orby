@@ -1,0 +1,42 @@
+---
+description: Use Orby brand black (#080808) — never pure #000 for UI/surfaces
+alwaysApply: true
+---
+
+# Orby black (`#080808`)
+
+When the user asks for **black** (backgrounds, buttons, text on lime, scene clear color, marketing surfaces, tooltips, etc.), use the project black token — **not** `#000`, `#000000`, `rgb(0,0,0)`, or `#02030a`.
+
+## Tokens (prefer these)
+
+| Layer | Use |
+|-------|-----|
+| CSS | `var(--orby-black)` or `var(--orby-app-bg)` (alias) |
+| JS | `ORBY_BLACK` from `scripts/constants.js` (`'#080808'`) |
+| Themes | `--brand-text` is aliased to `--orby-black` (lime CTAs, dark UI chrome) |
+
+Defined in `styles.css`:
+
+```css
+--orby-black: #080808;
+--orby-app-bg: var(--orby-black);
+```
+
+## Do
+
+- New surfaces, defaults, fallbacks, and color-picker defaults → `#080808` / tokens above
+- `color-mix(..., var(--orby-black))` instead of mixing with `#000`
+- Scene `background`, `theme-color`, letterbox mattes, histogram/tone-curve fills → `ORBY_BLACK` or CSS token
+
+## Don't (unless user explicitly asks for pure black)
+
+- `#000`, `#000000`, `black`, `#02030a` for brand/UI black
+- Hardcoding gray `#888888` from an old mistake — that was wrong; brand black is `#080808`
+
+## OK to leave as-is
+
+- **Transparent shadows**: `rgba(0, 0, 0, 0.x)` for overlays, scrims, box-shadow depth (not brand fill color)
+- **Tinted panels**: `--panel`, `--panel-alt` (purple/blue UI chrome, not flat black)
+- **Legal site** (`legal/legal.css`) unless the task touches it
+
+When adding a new black default, update the token source only if the brand value changes — do not scatter new hex literals.

@@ -179,7 +179,7 @@ export class SceneManager {
       ? initialState.lightsShadowContactOffset
       : -0.0001;
     this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
-    this.lightsShadowColor = initialState.lightsShadowColor ?? '#000000';
+    this.lightsShadowColor = initialState.lightsShadowColor ?? '#080808';
     this.lightsShadowOpacity = Number.isFinite(initialState.lightsShadowOpacity)
       ? Math.min(1, Math.max(0, initialState.lightsShadowOpacity))
       : 0.25;
@@ -354,7 +354,7 @@ export class SceneManager {
       renderer: this.renderer,
       scene: this.scene,
       camera: this.camera,
-      initialColor: initialState.background ?? '#000000',
+      initialColor: initialState.background ?? '#080808',
     });
 
     this.transformController = new TransformController({
@@ -766,7 +766,7 @@ export class SceneManager {
       updateBloom: (settings) => this.updateBloom(settings),
       updateGrain: (settings) => this.updateGrain(settings),
       setBloomState: (value) => this.stateStore.set('bloom', value),
-      fallbackBackgroundColor: this.backgroundController?.getColor() ?? '#000000',
+      fallbackBackgroundColor: this.backgroundController?.getColor() ?? '#080808',
     });
   }
 
@@ -780,7 +780,7 @@ export class SceneManager {
       strength: this.hdriStrength,
       blurriness: this.hdriBlurriness,
       rotation: this.hdriRotation,
-      fallbackColor: this.backgroundController?.getColor() ?? '#000000',
+      fallbackColor: this.backgroundController?.getColor() ?? '#080808',
       onEnvironmentMapUpdated: (texture, intensity) => {
         this.updateMaterialsEnvironment(texture, intensity);
       },
@@ -1309,7 +1309,7 @@ export class SceneManager {
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
 
-    const bgColor = this.backgroundController?.getColor() ?? '#000000';
+    const bgColor = this.backgroundController?.getColor() ?? '#080808';
     this.environmentController?.setFallbackColor(bgColor);
 
     this.environmentController?.setBackgroundEnabled(enabled);
@@ -1459,7 +1459,7 @@ export class SceneManager {
     this.environmentController?.setEnabled(enabled);
     
     // Update environment controller's fallback color (for when HDRI is completely off)
-    const bgColor = this.backgroundController?.getColor() ?? '#000000';
+    const bgColor = this.backgroundController?.getColor() ?? '#080808';
     this.environmentController?.setFallbackColor(bgColor);
     
     // Notify background controller of HDRI enabled state
@@ -2015,7 +2015,7 @@ export class SceneManager {
   }
 
   setLightsShadowColor(color) {
-    const next = color ?? '#000000';
+    const next = color ?? '#080808';
     this.lightsShadowColor = next;
     if (this.stateStore.getState().lightsShadowColor !== next) {
       this.stateStore.set('lightsShadowColor', next);
@@ -2035,7 +2035,7 @@ export class SceneManager {
   }
 
   _applyShadowTintToScene() {
-    const color = this.lightsShadowColor ?? '#000000';
+    const color = this.lightsShadowColor ?? '#080808';
     const strength = this._isShadowTintActive() ? 1 : 0;
     const opacity = this.lightsShadowOpacity ?? 0.25;
     this.materialController?.setShadowTintSettings({ color, strength, opacity });
@@ -2150,7 +2150,7 @@ export class SceneManager {
       intensity: 3,
       radius: 1,
       quality: 'medium',
-      color: '#000000',
+      color: '#080808',
     };
     const raw = settings ?? this.stateStore.getState().ambientOcclusion;
     const merged = { ...defaults, ...(raw && typeof raw === 'object' ? raw : {}) };

@@ -180,7 +180,7 @@ export class StateStore {
       /** Directional shadow softness radius (0 = harder edges, 4 = soft default). */
       lightsShadowSoftness: 4,
       /** Tint color for shadowed areas (black = darkest shadows). */
-      lightsShadowColor: '#000000',
+      lightsShadowColor: '#080808',
       /** How strongly the shadow tint is applied (0 = none, 1 = full). */
       lightsShadowOpacity: 0.25,
       /** Directional-light shadow bias; lower (more negative) tightens contact. */
@@ -237,7 +237,7 @@ export class StateStore {
         intensity: 3,
         radius: 1,
         quality: 'medium',
-        color: '#000000',
+        color: '#080808',
       },
       /** Wide-angle lens distortion (de Carpentier); post-process after full grading stack. */
       fisheye: {
@@ -271,7 +271,7 @@ export class StateStore {
         sharpness: 0,
         vignetteEnabled: false,
         vignette: 0.5,
-        vignetteColor: '#000000',
+        vignetteColor: '#080808',
         /** RTS / isometric framing — optional; does not override lens FOV until used. */
         isometric: {
           enabled: false,
@@ -295,7 +295,7 @@ export class StateStore {
       antiAliasing: 'fxaa',
       renderQuality: 'medium',
       toneMapping: 'aces-filmic',
-      background: '#000000',
+      background: '#080808',
       lookFilterPreset: 'none',
       lookFilterPresetsOpen: false,
       /** Object tab — fold-out for Shader Lab (stylized materials). */

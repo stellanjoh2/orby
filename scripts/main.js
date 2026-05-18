@@ -49,7 +49,7 @@ function isSafariBrowser() {
   return isWebKitSafari && !excludedShells;
 }
 
-/** Helps mobile browsers/iOS tint the toolbar and status chrome true black (#000). */
+/** Helps mobile browsers/iOS tint the toolbar and status chrome (--orby-black). */
 function setMobileSplashChromeMetaTags() {
   const ensureContentMeta = (name, content) => {
     let el = document.querySelector(`meta[name="${name}"]`);
@@ -60,7 +60,7 @@ function setMobileSplashChromeMetaTags() {
     }
     el.setAttribute('content', content);
   };
-  ensureContentMeta('theme-color', '#000000');
+  ensureContentMeta('theme-color', '#080808');
   ensureContentMeta('apple-mobile-web-app-status-bar-style', 'black');
 }
 

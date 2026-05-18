@@ -10,7 +10,7 @@ import * as THREE from 'three';
  * - Visibility based on HDRI background state
  */
 export class BackgroundController {
-  constructor({ renderer, scene, camera, initialColor = '#000000' } = {}) {
+  constructor({ renderer, scene, camera, initialColor = '#080808' } = {}) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;

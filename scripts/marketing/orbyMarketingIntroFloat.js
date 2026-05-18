@@ -20,7 +20,11 @@ function bindSectionParallax(section, asset, strength) {
 
   const applyParallax = () => {
     // Scroll down → negative Y → asset drifts up within the section (classic parallax).
-    const y = (sectionDocTop - window.scrollY) * strength;
+    let y = (sectionDocTop - window.scrollY) * strength;
+    // Footer PNG is bottom-anchored — never parallax downward (avoids black strip under lime).
+    if (section.classList.contains('orby-marketing__section--footer')) {
+      y = Math.min(0, y);
+    }
     asset.style.setProperty('--orby-intro-parallax-y', `${y}px`);
   };
 

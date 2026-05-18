@@ -105,7 +105,7 @@ const PRESET_SPECS = {
       shadows: 0,
       vignetteEnabled: true,
       vignette: 0.5,
-      vignetteColor: '#000000',
+      vignetteColor: '#080808',
     },
     bloom: { enabled: false },
     /* Slider max: UI 1.0 → stored intensity 0.15 (see grainIntensity × 0.15) */

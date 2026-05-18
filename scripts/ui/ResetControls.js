@@ -511,7 +511,7 @@ export class ResetControls {
       this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
       this.stateStore.set('lightsShadowQuality', defaults.lightsShadowQuality ?? 'medium');
       this.stateStore.set('lightsShadowSoftness', defaults.lightsShadowSoftness ?? 4);
-      this.stateStore.set('lightsShadowColor', defaults.lightsShadowColor ?? '#000000');
+      this.stateStore.set('lightsShadowColor', defaults.lightsShadowColor ?? '#080808');
       this.stateStore.set('lightsShadowOpacity', defaults.lightsShadowOpacity ?? 0.25);
       this.stateStore.set(
         'lightsShadowContactOffset',
@@ -574,7 +574,7 @@ export class ResetControls {
         castShadows: defaults.lightsCastShadows,
         quality: defaults.lightsShadowQuality ?? 'medium',
         softness: defaults.lightsShadowSoftness ?? 4,
-        color: defaults.lightsShadowColor ?? '#000000',
+        color: defaults.lightsShadowColor ?? '#080808',
         opacity: defaults.lightsShadowOpacity ?? 0.25,
         contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
         twoSided: defaults.lightsShadowTwoSided ?? false,
@@ -663,7 +663,7 @@ export class ResetControls {
         'render:vignette',
         effectiveVignetteIntensity(defaults.camera, defaults.camera),
       );
-      this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
+      this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#080808');
       this.eventBus.emit('render:anti-aliasing', defaults.antiAliasing);
       this.eventBus.emit('render:tone-curve', defaults.toneCurve);
       this.eventBus.emit('render:tone-mapping', defaults.toneMapping);
@@ -812,7 +812,7 @@ export class ResetControls {
               );
               this.stateStore.set(
                 'lightsShadowColor',
-                defaults.lightsShadowColor ?? '#000000',
+                defaults.lightsShadowColor ?? '#080808',
               );
               this.stateStore.set(
                 'lightsShadowOpacity',
@@ -844,7 +844,7 @@ export class ResetControls {
             this.eventBus.emit('lights:shadow-settings', {
               quality: defaults.lightsShadowQuality ?? 'medium',
               softness: defaults.lightsShadowSoftness ?? 4,
-              color: defaults.lightsShadowColor ?? '#000000',
+              color: defaults.lightsShadowColor ?? '#080808',
               opacity: defaults.lightsShadowOpacity ?? 0.25,
               contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
               twoSided: defaults.lightsShadowTwoSided ?? false,
@@ -856,7 +856,7 @@ export class ResetControls {
               const castShadows = defaults.lightsCastShadows ?? true;
               const shadowQuality = defaults.lightsShadowQuality ?? 'medium';
               const shadowSoftness = defaults.lightsShadowSoftness ?? 4;
-              const shadowColor = defaults.lightsShadowColor ?? '#000000';
+              const shadowColor = defaults.lightsShadowColor ?? '#080808';
               const shadowOpacity = defaults.lightsShadowOpacity ?? 0.25;
               const shadowContactOffset = defaults.lightsShadowContactOffset ?? -0.0001;
               const shadowTwoSided = defaults.lightsShadowTwoSided ?? false;
@@ -1110,7 +1110,7 @@ export class ResetControls {
               // Also reset vignette (camera/post-processing effect)
               this.stateStore.set('camera.vignetteEnabled', defaults.camera.vignetteEnabled ?? false);
               this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0.5);
-              this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+              this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#080808');
               this.stateStore.set(
                 'camera.compositionGridEnabled',
                 defaults.camera.compositionGridEnabled ?? false,
@@ -1134,7 +1134,7 @@ export class ResetControls {
               'render:vignette',
               effectiveVignetteIntensity(defaults.camera, defaults.camera),
             );
-            this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
+            this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#080808');
             this.eventBus.emit(
               'camera:composition-grid',
               !!(defaults.camera.compositionGridEnabled ?? false),
@@ -1219,13 +1219,13 @@ export class ResetControls {
               this.stateStore.set('lookFilterPreset', 'custom');
               this.stateStore.set('camera.vignetteEnabled', defaults.camera.vignetteEnabled ?? false);
               this.stateStore.set('camera.vignette', defaults.camera.vignette ?? 0.5);
-              this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#000000');
+              this.stateStore.set('camera.vignetteColor', defaults.camera.vignetteColor ?? '#080808');
             });
             this.eventBus.emit(
               'render:vignette',
               effectiveVignetteIntensity(defaults.camera, defaults.camera),
             );
-            this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#000000');
+            this.eventBus.emit('render:vignette-color', defaults.camera.vignetteColor ?? '#080808');
             this.ui.syncControls(this.stateStore.getState());
             break;
 

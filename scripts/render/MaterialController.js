@@ -85,7 +85,7 @@ export class MaterialController {
       scatterTint: DEFAULT_SUBSURFACE_SCATTER_TINT,
     };
     this.wireframeSettings = {};
-    this.shadowTintColor = stateStore?.getState()?.lightsShadowColor ?? '#000000';
+    this.shadowTintColor = stateStore?.getState()?.lightsShadowColor ?? '#080808';
     this.shadowTintStrength = 0;
     this.shadowTintOpacity =
       stateStore?.getState()?.lightsShadowOpacity ?? DEFAULT_SHADOW_OPACITY;
@@ -2028,7 +2028,7 @@ export class MaterialController {
   }
 
   applyShadowTintToObject(object, options = {}) {
-    const color = options.color ?? this.shadowTintColor ?? '#000000';
+    const color = options.color ?? this.shadowTintColor ?? '#080808';
     const strength =
       options.strength !== undefined ? options.strength : this.shadowTintStrength;
     const opacity =

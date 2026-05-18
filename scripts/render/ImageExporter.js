@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ORBY_BLACK } from '../constants.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
@@ -135,7 +136,7 @@ export class ImageExporter {
     if (w <= 0 || h <= 0) return;
     const r219 = 21 / 9;
     const ar = w / h;
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = ORBY_BLACK;
     if (ar >= r219) {
       const innerW = h * r219;
       const gap = w - innerW;

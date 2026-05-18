@@ -275,7 +275,7 @@ export const ToneMappingShader = {
     tDiffuse: { value: null },
     toneMappingType: { value: 4 },
     vignetteIntensity: { value: 0.0 },
-    vignetteColor: { value: new THREE.Color('#000000') },
+    vignetteColor: { value: new THREE.Color('#080808') },
   },
   vertexShader: toneMappingVertex,
   fragmentShader: toneMappingFragment,

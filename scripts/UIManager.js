@@ -1957,7 +1957,7 @@ export class UIManager {
       intensity: 3,
       radius: 1,
       quality: 'medium',
-      color: '#000000',
+      color: '#080808',
     };
     const ao = sanitizeAmbientOcclusion(aoRaw) ?? aoRaw;
     if (this.inputs.toggleAmbientOcclusion) {
@@ -2113,7 +2113,7 @@ export class UIManager {
       this.updateValueLabel('vignetteIntensity', vignette, 'decimal');
     }
     if (this.inputs.vignetteColor) {
-      const vignetteColor = vignetteCam.vignetteColor ?? '#000000';
+      const vignetteColor = vignetteCam.vignetteColor ?? '#080808';
       this.inputs.vignetteColor.value = vignetteColor;
     }
     this.setEffectControlsDisabled(

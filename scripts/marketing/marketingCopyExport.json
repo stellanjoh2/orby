@@ -197,7 +197,8 @@
       "type": "footer",
       "id": "orby-marketing-footer",
       "eyebrow": null,
-      "title": "Try it out for free now.",
+      "title": "Try it out\nfor free now.",
+      "titleLines": ["Try it out", "for free now."],
       "lede": "",
       "bullets": null,
       "cta": {

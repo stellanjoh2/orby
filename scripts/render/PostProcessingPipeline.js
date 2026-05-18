@@ -416,7 +416,7 @@ export class PostProcessingPipeline {
     const hex =
       typeof settings.color === 'string' && settings.color.trim().length > 0
         ? settings.color.trim()
-        : '#000000';
+        : '#080808';
     this.n8aoPass.configuration.color = new THREE.Color(hex);
     if (this.n8aoPass.configuration.halfRes !== halfRes) {
       this.n8aoPass.configuration.halfRes = halfRes;
@@ -563,7 +563,7 @@ export class PostProcessingPipeline {
 
   /**
    * Set vignette color
-   * @param {string} color - Vignette color (hex string, default '#000000')
+   * @param {string} color - Vignette color (hex string, default '#080808')
    */
   setVignetteColor(color) {
     if (this.toneMappingPass) {

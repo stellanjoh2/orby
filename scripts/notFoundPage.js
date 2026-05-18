@@ -151,11 +151,11 @@ const NOT_FOUND_PRESET = {
   lightsCastShadows: true,
   lightsShadowQuality: 'medium',
   lightsShadowSoftness: 4,
-  lightsShadowColor: '#000000',
+  lightsShadowColor: '#080808',
   lightsShadowOpacity: 0.25,
   lightsShadowContactOffset: -0.0001,
   lightsShadowTwoSided: false,
-  background: '#000000',
+  background: '#080808',
   camera: {
     fov: 45,
     tilt: -15,
@@ -180,7 +180,7 @@ const NOT_FOUND_PRESET = {
     sharpness: 0,
     vignetteEnabled: true,
     vignette: 0.69,
-    vignetteColor: '#000000',
+    vignetteColor: '#080808',
     autoOrbit: 'slow',
     handheld: 'off',
     compositionGridEnabled: false,
@@ -355,7 +355,7 @@ async function fetchNotFoundMesh() {
 
 function enforceBlackBackground(orby) {
   if (typeof orby.stateStore?.set === 'function') {
-    orby.stateStore.set('background', '#000000');
+    orby.stateStore.set('background', '#080808');
     orby.stateStore.set('hdriBackground', false);
     orby.stateStore.set('hdriEnabled', false);
   }
@@ -365,11 +365,11 @@ function enforceBlackBackground(orby) {
   if (typeof orby.scene?.setHdriBackground === 'function') {
     orby.scene.setHdriBackground(false);
   }
-  orby.scene?.backgroundController?.setColor?.('#000000');
+  orby.scene?.backgroundController?.setColor?.('#080808');
   // Hard clamp renderer output to opaque black (avoids gray startup frames).
   const renderer = orby.scene?.renderer;
   if (renderer?.setClearColor) {
-    renderer.setClearColor('#000000', 1);
+    renderer.setClearColor('#080808', 1);
   }
   if (renderer?.setClearAlpha) {
     renderer.setClearAlpha(1);

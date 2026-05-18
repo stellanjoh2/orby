@@ -211,7 +211,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'footer',
     id: 'orby-marketing-footer',
-    title: 'Try it out for free now.',
+    title: 'Try it out\nfor free now.',
     lede: '',
     ctaLabel: 'Browse Files',
     secondaryCtaLabel: 'Load Sample',

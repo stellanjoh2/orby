@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { ORBY_BLACK } from '../constants.js';
+
 export class HdriMoodController {
   constructor({
     renderer,
@@ -7,7 +9,7 @@ export class HdriMoodController {
     updateBloom,
     updateGrain,
     setBloomState,
-    fallbackBackgroundColor = '#000000',
+    fallbackBackgroundColor = ORBY_BLACK,
   }) {
     this.renderer = renderer;
     this.groundController = groundController;

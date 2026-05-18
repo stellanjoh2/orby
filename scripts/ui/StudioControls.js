@@ -696,7 +696,7 @@ export class StudioControls {
       this.helpers.updateValueLabel('lightsShadowSoftness', softness, 'decimal', 2);
     }
     if (this.ui.inputs.lightsShadowColor) {
-      this.ui.inputs.lightsShadowColor.value = state.lightsShadowColor ?? '#000000';
+      this.ui.inputs.lightsShadowColor.value = state.lightsShadowColor ?? '#080808';
     }
     if (this.ui.inputs.lightsShadowOpacity) {
       const opacity = Number.isFinite(state.lightsShadowOpacity)

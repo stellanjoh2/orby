@@ -169,6 +169,14 @@
 }
 
 :root,
+body[data-theme='violet'],
+body[data-theme='aqua'] {
+  /* Default near-black — surfaces, buttons on lime, scene background */
+  --orby-black: #080808;
+  --orby-app-bg: var(--orby-black);
+}
+
+:root,
 body[data-theme='violet'] {
   /* Brand Colors - Change these to swap the main brand color */
   --brand-primary: #c4ff00;
@@ -179,10 +187,10 @@ body[data-theme='violet'] {
   --brand-primary-inverted: #3b00ff;
   
   /* Base Colors */
-  --bg: #050112;
+  --bg: var(--orby-app-bg);
   --panel: #0d081f;
   --panel-alt: #160c2f;
-  --shelf-bg: rgba(10, 10, 10, 0.5);
+  --shelf-bg: rgba(8, 8, 8, 0.5);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
@@ -212,7 +220,7 @@ body[data-theme='violet'] {
   /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
   /* For bright colors like yellow, set to #000 or dark color */
   /* For dark colors like purple, set to #fff or light color */
-  --brand-text: #02030a; /* Default to dark text, adjust if brand is dark */
+  --brand-text: var(--orby-black);
   
   /* Drop Zone Colors - Now derived from brand colors */
   --drop-gradient-start: color-mix(in srgb, var(--brand-primary) 20%, var(--bg) 80%);
@@ -232,10 +240,10 @@ body[data-theme='aqua'] {
   --brand-primary-inverted: #3b00ff;
   
   /* Base Colors */
-  --bg: #04060c;
+  --bg: var(--orby-app-bg);
   --panel: #0d111c;
   --panel-alt: #121726;
-  --shelf-bg: rgba(10, 10, 10, 0.6);
+  --shelf-bg: rgba(8, 8, 8, 0.6);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
@@ -258,7 +266,7 @@ body[data-theme='aqua'] {
     0 0 14px color-mix(in srgb, var(--brand-primary) 11%, transparent);
   
   /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
-  --brand-text: #02030a; /* Default to dark text, adjust if brand is dark */
+  --brand-text: var(--orby-black);
   
   /* Drop Zone Colors - Now derived from brand colors */
   --drop-gradient-start: color-mix(in srgb, var(--brand-primary) 15%, var(--bg) 85%);
@@ -280,7 +288,7 @@ html {
   height: 100%;
   overflow: hidden;
   /* Covers overscroll/gutters before body paints; keeps boot from flashing UA gray */
-  background: #000;
+  background: var(--orby-app-bg);
 }
 
 #app {
@@ -312,7 +320,7 @@ html:not(.orby-studio-active) #webgl {
 }
 
 body.orby-not-found-active {
-  background: #000;
+  background: var(--orby-app-bg);
 }
 
 body.orby-not-found-active #orby-entry-gate,
@@ -637,7 +645,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-magic-btn--dialog-ghost:f
   padding: clamp(1rem, 4vw, 2rem);
   margin: 0;
   box-sizing: border-box;
-  background: #000;
+  background: var(--orby-app-bg);
   pointer-events: auto;
 }
 
@@ -646,7 +654,7 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-magic-btn--dialog-ghost:f
   max-width: 420px;
   padding: 1.75rem 1.5rem;
   border-radius: var(--app-settings-chrome-radius);
-  background: rgb(10, 10, 10);
+  background: var(--orby-black);
   border: 1px solid var(--stroke);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--brand-primary) 12%, transparent),
@@ -1810,7 +1818,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   border-radius: inherit;
   border: var(--orby-magic-btn-stroke) solid transparent;
   background:
-    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--orby-black), var(--orby-black)) padding-box,
     linear-gradient(
         var(--orby-magic-btn-rotate),
         var(--brand-primary) 0%,
@@ -1845,7 +1853,7 @@ html.orby-gate-unlocked .orby-entry-gate {
 .orby-magic-btn:hover,
 .orby-magic-btn:focus-visible {
   --orby-magic-btn-spin: var(--orby-magic-btn-spin-hover);
-  color: var(--brand-text, #02030a);
+  color: var(--brand-text, var(--orby-black));
   outline: none;
 }
 
@@ -1927,7 +1935,7 @@ html.safari-browser .orby-magic-btn::before {
 }
 
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime {
-  background: var(--brand-text, #02030a);
+  background: var(--brand-text, var(--orby-black));
   color: var(--brand-primary, #c4ff00);
   transition:
     background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1936,15 +1944,15 @@ html.safari-browser .orby-magic-btn::before {
 
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime:hover,
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime:focus-visible {
-  background: color-mix(in srgb, var(--brand-text, #02030a) 86%, white);
+  background: color-mix(in srgb, var(--brand-text, var(--orby-black)) 86%, white);
   color: var(--brand-primary, #c4ff00);
   outline: none;
 }
 
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime {
   background: transparent;
-  color: var(--brand-text, #02030a);
-  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, #02030a);
+  color: var(--brand-text, var(--orby-black));
+  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, var(--orby-black));
   transition:
     background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
     color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1953,9 +1961,9 @@ html.safari-browser .orby-magic-btn::before {
 
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:hover,
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:focus-visible {
-  background: var(--brand-text, #02030a);
+  background: var(--brand-text, var(--orby-black));
   color: var(--brand-primary, #c4ff00);
-  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, #02030a);
+  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, var(--orby-black));
   outline: none;
 }
 
@@ -1998,7 +2006,7 @@ html.safari-browser .orby-magic-btn::before {
 
 .orby-magic-btn--dialog-ghost:hover,
 .orby-magic-btn--dialog-ghost:focus-visible {
-  color: var(--brand-text, #02030a);
+  color: var(--brand-text, var(--orby-black));
   filter: none;
   outline: none;
 }
@@ -2013,12 +2021,12 @@ html.safari-browser .orby-magic-btn::before {
 }
 
 .orby-magic-btn--dialog-ghost:active .orby-magic-btn__fill {
-  background: color-mix(in srgb, var(--brand-primary, #c4ff00) 92%, #000);
+  background: color-mix(in srgb, var(--brand-primary, #c4ff00) 92%, var(--orby-black));
 }
 
 .orby-magic-btn--dialog-accent {
   background: var(--brand-primary, #c4ff00);
-  color: var(--brand-text, #02030a);
+  color: var(--brand-text, var(--orby-black));
   transition:
     background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
     color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2027,7 +2035,7 @@ html.safari-browser .orby-magic-btn::before {
 .orby-magic-btn--dialog-accent:hover,
 .orby-magic-btn--dialog-accent:focus-visible {
   background: #fff;
-  color: var(--brand-text, #02030a);
+  color: var(--brand-text, var(--orby-black));
   box-shadow: none;
   outline: none;
 }
@@ -2189,13 +2197,13 @@ html.safari-browser .orby-magic-btn::before {
 
 /* While start menu hides the dropzone (shell prep); --bg can read gray on some displays */
 html.orby-dropzone-shell-pending .workspace {
-  background: #000;
+  background: var(--orby-app-bg);
 }
 
 .viewport {
   position: relative;
   flex: 1;
-  background: #000;
+  background: var(--orby-app-bg);
   min-height: 0;
   min-width: 0;
   /* Clip dropzone paints (blur / shadows); inset(0) reinforces overflow in WebKit. */
@@ -2218,7 +2226,7 @@ html.orby-dropzone-shell-pending .workspace {
 
 .viewport-letterbox__bar {
   position: absolute;
-  background: #000;
+  background: var(--orby-app-bg);
   transition-property: transform;
   transition-timing-function: ease-out;
   transition-duration: var(--viewport-lb-in-duration);
@@ -2291,7 +2299,7 @@ html.orby-dropzone-shell-pending .workspace {
   height: 100%;
   display: block;
   /* Match .viewport; backs transparent WebGL clears (renderer alpha: true) */
-  background: #000;
+  background: var(--orby-app-bg);
   outline: none;
 }
 
@@ -2451,7 +2459,7 @@ html.orby-dropzone-shell-pending .workspace {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  background-color: #000;
+  background-color: var(--orby-app-bg);
   background-image: none;
   border: 0;
   text-align: center;
@@ -2512,6 +2520,17 @@ html.orby-dropzone-shell-pending .workspace {
   --dropzone-drag-rim-cyan-a: 12.375px;
   --dropzone-drag-rim-cyan-b: 21.375px;
   --dropzone-drag-rim-cyan-c: 31.5px;
+  /* Landing logotype + headline — max size at large viewport; shrink with card width */
+  --drop-logo-min: 140px;
+  --drop-logo-max: 440px;
+  --drop-logo-vw-ratio: 0.171875; /* 440 / 2560 */
+  --drop-headline-min: 1.9rem;
+  --drop-headline-max: 3.6rem;
+  --drop-headline-vw: 4.4;
+  --drop-headline-cqi-cap: 3.8;
+  --drop-headline-offset: 0.15rem;
+  container-type: inline-size;
+  container-name: orby-dropzone;
 }
 
 .dropzone.drag-active {
@@ -2584,9 +2603,9 @@ html.orby-dropzone-shell-pending .workspace {
   left: var(--dropzone-padding-x);
   border-radius: var(--dropzone-frame-radius);
   border: var(--dropzone-frame-stroke) solid transparent;
-  /* Solid black card interior (avoids panel tint reading as blue/purple “window”) */
+  /* Solid card interior (avoids panel tint reading as blue/purple “window”) */
   background:
-    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--orby-app-bg), var(--orby-app-bg)) padding-box,
     linear-gradient(
         var(--dropzone-magic-rotate),
         var(--brand-primary) 0%,
@@ -2712,14 +2731,17 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
 }
 
 .drop-logo {
-  /*
-   * Caps at 440px from ~2560px viewport width; below that, width tracks linearly with vw so
-   * shrinking from fullscreen starts reducing the mark immediately (not only below ~1570px with 28vw).
-   * 48vh still limits wide+short layouts; 140px floor preserves legibility.
-   */
+  /* Full size at max viewport; shrinks with card (48vh caps wide+short layouts) */
   width: min(
     92%,
-    max(140px, min(440px, calc(100vw * 440 / 2560))),
+    clamp(
+      var(--drop-logo-min),
+      max(
+        calc(100vw * var(--drop-logo-vw-ratio)),
+        calc(17.19 * 1cqi)
+      ),
+      var(--drop-logo-max)
+    ),
     48vh
   );
   height: auto;
@@ -2745,12 +2767,20 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
 .drop-primary {
   font-family: var(--brand-font-headline);
   font-weight: 700;
-  font-size: clamp(1.9rem, 4.4vw, 3.6rem);
+  font-size: clamp(
+    var(--drop-headline-min),
+    min(
+      var(--drop-headline-max),
+      calc(var(--drop-headline-vw) * 1vw),
+      calc(var(--drop-headline-cqi-cap) * 1cqi + var(--drop-headline-offset))
+    ),
+    var(--drop-headline-max)
+  );
   letter-spacing: 0.04em;
   opacity: 0;
   transform: translateY(-15px);
   animation: dropReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
-  max-width: 90%;
+  max-width: 92%;
   line-height: 1.2;
   text-align: center;
 }
@@ -2765,18 +2795,24 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
   margin-top: 0.06em;
 }
 
-@media (max-width: 1280px) {
-  .drop-primary,
-  .bug-report-thank-you-message {
-    font-size: clamp(1.75rem, 4vw, 3rem);
+@supports not (container-type: inline-size) {
+  .drop-logo {
+    width: min(
+      92%,
+      max(
+        var(--drop-logo-min),
+        min(var(--drop-logo-max), calc(100vw * var(--drop-logo-vw-ratio)))
+      ),
+      48vh
+    );
   }
-}
 
-@media (max-width: 1040px) {
-  .drop-primary,
-  .bug-report-thank-you-message {
-    font-size: clamp(1.6rem, 3.6vw, 2.6rem);
-    letter-spacing: 0.03em;
+  .drop-primary {
+    font-size: clamp(
+      var(--drop-headline-min),
+      min(var(--drop-headline-max), calc(var(--drop-headline-vw) * 1vw)),
+      var(--drop-headline-max)
+    );
   }
 }
 
@@ -4832,7 +4868,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .tooltip {
   position: absolute;
   padding: 0.5rem 0.75rem;
-  background: rgb(0, 0, 0);
+  background: var(--orby-black);
   border: none;
   border-radius: 6px;
   color: var(--text);
@@ -5429,7 +5465,7 @@ body.ui-hidden .shelf {
   height: auto;
   aspect-ratio: 16 / 9; /* ~25% less height than 4:3 at the same width */
   border-radius: 4px;
-  background: #000000;
+  background: var(--orby-black);
 }
 
 /* Tone curve block — divider above handles spacing from Histogram */
@@ -5442,7 +5478,7 @@ body.ui-hidden .shelf {
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  background: #000000;
+  background: var(--orby-black);
 }
 
 .tone-curve-canvas {
@@ -5453,7 +5489,7 @@ body.ui-hidden .shelf {
   cursor: crosshair;
   touch-action: none;
   vertical-align: top;
-  background: #000000;
+  background: var(--orby-black);
 }
 
 .histogram-warning {
@@ -5510,21 +5546,21 @@ body.ui-hidden .shelf {
 /* ── Mobile landing (html.mobile-landing from inline head script + scripts/main.js) ── */
 html.mobile-landing,
 html.mobile-landing body {
-  background-color: #000 !important;
-  background: #000 !important;
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
 }
 
 html.mobile-landing #app {
-  background-color: #000 !important;
-  background: #000 !important;
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
   min-height: 100vh !important;
   min-height: 100dvh !important;
   min-height: -webkit-fill-available !important;
 }
 
 html.mobile-landing .workspace {
-  background-color: #000 !important;
-  background: #000 !important;
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
   flex: 1 !important;
   min-height: 100vh !important;
   min-height: 100dvh !important;
@@ -5533,8 +5569,8 @@ html.mobile-landing .workspace {
 
 html.mobile-landing .viewport {
   clip-path: none !important;
-  background-color: #000 !important;
-  background: #000 !important;
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
   flex: 1 !important;
   width: 100% !important;
   min-height: 100vh !important;
@@ -5549,8 +5585,8 @@ html.mobile-landing #webgl {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none;
-  background: #000 !important;
-  background-color: #000 !important;
+  background: var(--orby-app-bg) !important;
+  background-color: var(--orby-app-bg) !important;
 }
 
 html.mobile-landing .dropzone::before,
@@ -5575,8 +5611,8 @@ html.mobile-landing .dropzone {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(0.75rem, 3vmin, 1.5rem));
   padding-left: calc(env(safe-area-inset-left, 0px) + clamp(1rem, 5vw, 1.5rem));
   padding-right: calc(env(safe-area-inset-right, 0px) + clamp(1rem, 5vw, 1.5rem));
-  background-color: #000 !important;
-  background: #000 !important;
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
   background-image: none !important;
   justify-content: center !important;
   align-items: center !important;

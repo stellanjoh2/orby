@@ -4,7 +4,7 @@
  */
 
 #orby-marketing {
-  --orby-marketing-bg: #000000;
+  --orby-marketing-bg: var(--orby-app-bg, var(--orby-black, #080808));
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
@@ -22,6 +22,20 @@
   --orby-marketing-gutter: 7.5rem;
   /* Black band between last FAQ answer and lime footer */
   --orby-marketing-faq-footer-gap: 15.0625rem;
+  /* Mega headlines — full size at max viewport (11.5vw); shrink via min(vw, 2× column cqi) */
+  --orby-mega-headline-min: 2.75rem;
+  --orby-mega-headline-max: 10.5rem;
+  --orby-mega-headline-vw: 11.5;
+  --orby-mega-headline-cqi-cap: 23;
+  --orby-mega-headline-offset: 0.35rem;
+  /* Intro / footer body copy measure (~⅓ viewport at desktop) */
+  --orby-marketing-lede-measure: 40.8rem; /* +20% vs 34rem — intro/footer body copy */
+  /* Feature / showcase / FAQ — 5.8vw at max; column cap when split */
+  --orby-section-headline-min: 2.35rem;
+  --orby-section-headline-max: 4.35rem;
+  --orby-section-headline-vw: 5.8;
+  --orby-section-headline-cqi-cap: 11.6;
+  --orby-section-headline-offset: 0.25rem;
 }
 
 /* Allow document scroll on the home dropzone only */
@@ -49,6 +63,10 @@ html.orby-home-scroll .workspace {
 
 html.orby-home-scroll #orby-marketing[hidden] {
   display: none !important;
+}
+
+html.orby-home-scroll #orby-marketing {
+  overflow-x: clip;
 }
 
 /* Studio session — detached from #app; kept for when user returns home */
@@ -122,7 +140,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
   display: block;
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: var(--orby-marketing-bg);
 }
 
 .orby-marketing__intro-turntable-poster {
@@ -162,6 +180,8 @@ html.orby-home-scroll #orby-marketing[hidden] {
   margin-inline: 0;
   text-align: left;
   align-items: flex-start;
+  container-type: inline-size;
+  container-name: orby-intro-copy;
 }
 
 .orby-marketing__section--intro-turntable .orby-marketing__title--intro {
@@ -173,6 +193,8 @@ html.orby-home-scroll #orby-marketing[hidden] {
 
 .orby-marketing__section--intro-turntable .orby-marketing__lede--intro {
   margin-inline: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .orby-marketing__intro-stage {
@@ -255,7 +277,15 @@ html.orby-home-scroll #orby-marketing[hidden] {
 
 .orby-marketing__title {
   margin: 0 0 1.15rem;
-  font-size: clamp(2.35rem, 5.8vw, 4.35rem);
+  font-size: clamp(
+    var(--orby-section-headline-min),
+    min(
+      var(--orby-section-headline-max),
+      calc(var(--orby-section-headline-vw) * 1vw),
+      calc(var(--orby-section-headline-cqi-cap) * 1cqi + var(--orby-section-headline-offset))
+    ),
+    var(--orby-section-headline-max)
+  );
   line-height: 0.96;
   letter-spacing: -0.03em;
   color: var(--orby-marketing-headline);
@@ -276,15 +306,25 @@ html.orby-home-scroll #orby-marketing[hidden] {
 }
 
 .orby-marketing__title--intro {
-  font-size: clamp(4.25rem, 11.5vw, 10.5rem);
-  max-width: min(18ch, 100%);
+  font-size: clamp(
+    var(--orby-mega-headline-min),
+    min(
+      var(--orby-mega-headline-max),
+      calc(var(--orby-mega-headline-vw) * 1vw),
+      calc(var(--orby-mega-headline-cqi-cap) * 1cqi + var(--orby-mega-headline-offset))
+    ),
+    var(--orby-mega-headline-max)
+  );
   margin-inline: auto;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .orby-marketing__title--footer {
-  color: var(--brand-text, #02030a);
-  max-width: min(16ch, 100%);
+  color: var(--brand-text, var(--orby-black, #080808));
+  white-space: normal;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .orby-marketing__lede {
@@ -296,7 +336,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
 }
 
 .orby-marketing__lede--intro {
-  max-width: 46rem;
+  max-width: var(--orby-marketing-lede-measure);
   font-size: clamp(1.2rem, 1.85vw, 1.5rem);
   line-height: 1.6;
   color: #fff;
@@ -368,6 +408,16 @@ html.orby-home-scroll #orby-marketing[hidden] {
 .orby-marketing__split-copy-inner {
   width: 100%;
   max-width: var(--orby-marketing-copy-max);
+  container-type: inline-size;
+  container-name: orby-split-copy;
+}
+
+/* Full-width copy bands — half the split cqi factor ≈ same scale at a given viewport */
+.orby-marketing__showcase-copy,
+.orby-marketing__faq-header {
+  container-type: inline-size;
+  container-name: orby-section-copy;
+  --orby-section-headline-cqi-cap: 5.8;
 }
 
 .orby-marketing__split-copy .orby-marketing__lede {
@@ -389,10 +439,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
   max-width: 100%;
   border-radius: var(--orby-media-radius);
   overflow: hidden;
-  background: #000;
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: var(--orby-black, #080808);
 }
 
 /* Frame is always 16∶9 — capture screenshots at 16∶9 for a perfect fit */
@@ -403,7 +450,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
   aspect-ratio: 16 / 9;
   height: auto;
   border-radius: inherit;
-  background: #000;
+  background: var(--orby-black, #080808);
   isolation: isolate;
   contain: paint;
 }
@@ -448,8 +495,19 @@ html.orby-home-scroll #orby-marketing[hidden] {
 
   .orby-marketing__split-bleed {
     flex-direction: row;
-    align-items: center;
+    align-items: stretch;
     gap: 0;
+  }
+
+  .orby-marketing__split-media {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Keep 16∶9 at full width but don’t shrink shorter than copy column on mid viewports */
+  .orby-marketing__split-bleed .orby-marketing__figure-mask {
+    min-height: clamp(16rem, 30vmin, 22rem);
   }
 
   .orby-marketing__split-copy,
@@ -541,11 +599,8 @@ html.orby-home-scroll #orby-marketing[hidden] {
   transform: translateX(-50%);
   overflow: hidden;
   border-radius: var(--orby-media-radius);
-  background: #000;
+  background: var(--orby-black, #080808);
   isolation: isolate;
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .orby-marketing__showcase-mask {
@@ -554,7 +609,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: inherit;
-  background: #000;
+  background: var(--orby-black, #080808);
   isolation: isolate;
   contain: paint;
 }
@@ -714,10 +769,24 @@ html.orby-home-scroll #orby-marketing[hidden] {
     env(safe-area-inset-bottom, 0px);
   overflow: visible;
   background: var(--brand-primary, #c4ff00);
-  color: var(--brand-text, #02030a);
+  color: var(--brand-text, var(--orby-black, #080808));
+  --orby-footer-asset-lift: clamp(3.5rem, 12vh, 6.25rem);
 }
 
-/* Stage bleeds above the lime edge so the bear isn’t clipped at the black band */
+/* Cover sub-pixel gap / scroll end — keep viewport bottom lime, not --orby-black */
+.orby-marketing__section--footer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -16px;
+  height: 16px;
+  background: var(--brand-primary, #c4ff00);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Stage bleeds above the lime edge (taller box); clip bottom so PNG never extends the page */
 .orby-marketing__footer-stage {
   position: absolute;
   top: clamp(-14rem, -22vh, -8rem);
@@ -726,14 +795,25 @@ html.orby-home-scroll #orby-marketing[hidden] {
   left: 0;
   pointer-events: none;
   z-index: 3;
-  overflow: visible;
-  --orby-intro-scale-right: 1;
+  overflow: hidden;
+  --orby-intro-scale-right: min(1, calc(88dvh / 1225));
   --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
-  --orby-intro-right-nudge: 350px;
+  --orby-intro-right-nudge: clamp(100px, 26vw, 350px);
+  --orby-footer-asset-max-h: min(88dvh, 1150px);
 }
 
 .orby-marketing__section--footer .orby-marketing__intro-asset--right {
-  top: 54%;
+  top: auto;
+  bottom: var(--orby-footer-asset-lift);
+  max-height: var(--orby-footer-asset-max-h);
+  max-width: min(58vw, 920px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: right bottom;
+  transform: translate3d(8%, 0, 0)
+    translate3d(0, min(0px, var(--orby-intro-parallax-y, 0px)), 0)
+    scale(var(--orby-intro-scale-right, 1));
 }
 
 .orby-marketing__footer-center {
@@ -747,16 +827,22 @@ html.orby-home-scroll #orby-marketing[hidden] {
   align-items: center;
   justify-content: center;
   gap: var(--orby-marketing-space-md);
+  container-type: inline-size;
+  container-name: orby-footer-copy;
 }
 
 .orby-marketing__footer-center .orby-marketing__title--footer {
   margin: 0;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-inline: clamp(0.5rem, 3vw, 1.5rem);
 }
 
 .orby-marketing__lede--footer {
-  max-width: 40rem;
+  max-width: var(--orby-marketing-lede-measure);
   margin: 0;
-  color: color-mix(in srgb, var(--brand-text, #02030a) 62%, transparent);
+  color: color-mix(in srgb, var(--brand-text, var(--orby-black, #080808)) 62%, transparent);
 }
 
 .orby-marketing__footer-actions {
@@ -876,10 +962,24 @@ html:not(.orby-home-scroll) .orby-marketing-scroll-cue,
   display: none !important;
 }
 
+@media (max-width: 1600px) {
+  .orby-marketing__section--intro-turntable {
+    --orby-intro-turntable-offset-x: clamp(180px, 48vw, 850px);
+  }
+}
+
+@media (max-width: 1280px) {
+  .orby-marketing__section--intro-turntable {
+    --orby-intro-turntable-offset-x: clamp(100px, 40vw, 620px);
+  }
+}
+
 @media (max-width: 1100px) {
   .orby-marketing__intro-stage,
   .orby-marketing__footer-stage {
     --orby-intro-edge-inset: clamp(0.25rem, 10vw, 3rem);
+    --orby-intro-right-nudge: clamp(60px, 16vw, 200px);
+    --orby-intro-scale-right: min(1, calc(78dvh / 1225));
   }
 }
 
@@ -897,16 +997,14 @@ html:not(.orby-home-scroll) .orby-marketing-scroll-cue,
   }
 
   .orby-marketing__title--intro {
-    font-size: clamp(2.75rem, 14vw, 4.5rem);
+    font-size: clamp(var(--orby-mega-headline-min), 12vw, 4.5rem);
   }
 
   .orby-marketing__intro-stage,
   .orby-marketing__footer-stage {
     --orby-intro-edge-inset: clamp(0px, 6vw, 1.5rem);
-  }
-
-  .orby-marketing__title--footer {
-    font-size: clamp(2.75rem, 14vw, 4.5rem);
+    --orby-intro-scale-right: min(1, calc(70dvh / 1225));
+    --orby-footer-asset-max-h: min(72dvh, 900px);
   }
 }
 

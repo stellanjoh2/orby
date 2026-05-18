@@ -48,7 +48,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
     'render:vignette',
     effectiveVignetteIntensity(cam, defaultCam),
   );
-  eventBus.emit('render:vignette-color', cam.vignetteColor ?? '#000000');
+  eventBus.emit('render:vignette-color', cam.vignetteColor ?? '#080808');
 
   eventBus.emit('scene:exposure', b.exposure);
   eventBus.emit('camera:auto-exposure', b.autoExposure);

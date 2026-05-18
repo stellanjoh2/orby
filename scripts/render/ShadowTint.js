@@ -102,7 +102,7 @@ export function applyShadowTintToMaterial(material, options = {}) {
   if (!isShadowTintPatchableMaterial(material)) return;
   if (material.userData?.orbyCreativeLook) return;
 
-  const colorHex = options.color ?? '#000000';
+  const colorHex = options.color ?? '#080808';
   const strength = normalizeStrength(options.strength ?? 0);
   const opacity = normalizeOpacity(options.opacity ?? DEFAULT_SHADOW_OPACITY);
 

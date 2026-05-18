@@ -1,5 +1,8 @@
 // Application-wide constants
 
+/** Default near-black — app surfaces, lime CTAs, scene background, letterbox mattes. */
+export const ORBY_BLACK = '#080808';
+
 export const WIREFRAME_OFFSET = 0.002; // Units to push wireframe vertices along normals
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = 2;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = 2;
@@ -199,7 +202,7 @@ export function sanitizeAmbientOcclusion(ao) {
   const color =
     typeof ao.color === 'string' && ao.color.trim().length > 0
       ? ao.color.trim()
-      : '#000000';
+      : ORBY_BLACK;
   let quality =
     typeof ao.quality === 'string' ? ao.quality.trim().toLowerCase() : '';
   if (quality === 'ultra' || quality === 'high') quality = 'max';
