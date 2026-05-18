@@ -4,21 +4,128 @@
  */
 
 #orby-marketing {
+  /*
+   * Downscale — exactly 1 @ 1440px; drops immediately below (boosted linear, not 1:1 vw).
+   * Does not affect dropzone frame (--orby-home-padding-x).
+   */
+  --orby-marketing-ref-width: 90rem; /* 1440px */
+  --orby-marketing-scale-min: 0.72;
+  --orby-marketing-scale-linear: min(1, 100vw / var(--orby-marketing-ref-width));
+  /* Body / lede / spacing — full @ 2560, ~88% @ 1920 */
+  --orby-marketing-type-wide-factor: clamp(
+    0.88,
+    calc(0.88 + 0.12 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-scale: clamp(
+    var(--orby-marketing-scale-min),
+    min(
+      1,
+      calc(
+        (var(--orby-marketing-scale-linear) * 1.32 - 0.32) *
+          var(--orby-marketing-type-wide-factor)
+      )
+    ),
+    1
+  );
+  /* Column / grid gutters — steeper than body; full @ 2560, ~84% @ 1920 */
+  --orby-marketing-gutter-scale-min: 0.65;
+  --orby-marketing-gutter-wide-factor: clamp(
+    0.84,
+    calc(0.84 + 0.16 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-gutter-scale: clamp(
+    var(--orby-marketing-gutter-scale-min),
+    min(
+      1,
+      calc(
+        (var(--orby-marketing-scale-linear) * 1.48 - 0.48) *
+          var(--orby-marketing-gutter-wide-factor)
+      )
+    ),
+    1
+  );
+  /* Feature lime headlines — steeper than body; full @ 2560, ~76% @ 1920 */
+  --orby-marketing-headline-wide-factor: clamp(
+    0.76,
+    calc(0.76 + 0.24 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-headline-scale-min: 0.65;
+  --orby-marketing-headline-scale: clamp(
+    var(--orby-marketing-headline-scale-min),
+    min(
+      1,
+      calc(
+        var(--orby-marketing-scale) * var(--orby-marketing-scale) *
+          (1.72 - 0.72 * var(--orby-marketing-scale)) *
+          var(--orby-marketing-headline-wide-factor)
+      )
+    ),
+    1
+  );
+  /*
+   * Intro mega — full @ 2560; ramps down 2560→1920 (~78% @ 1920).
+   * Below 1920, follows body --orby-marketing-scale.
+   */
+  --orby-marketing-mega-scale-min: 0.58;
+  --orby-marketing-mega-wide-factor: clamp(
+    0.78,
+    calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-mega-scale: clamp(
+    var(--orby-marketing-mega-scale-min),
+    min(
+      1,
+      calc(
+        var(--orby-marketing-scale) * var(--orby-marketing-mega-wide-factor)
+      )
+    ),
+    1
+  );
+  --orby-marketing-media-shrink: calc(1 - var(--orby-marketing-scale-linear));
+  /* Showcase reel — modest height gain when narrow */
+  --orby-marketing-media-aspect-h: calc(
+    9 + 6 * var(--orby-marketing-media-shrink) +
+      2 * var(--orby-marketing-media-shrink) * var(--orby-marketing-media-shrink)
+  );
+  /*
+   * Split frames — 16∶9 @ 2560+; gentle vertical ramp (1920 ≈ mid, not max).
+   */
+  --orby-marketing-split-media-ref-width: 160rem; /* 2560px */
+  --orby-marketing-split-media-shrink: clamp(
+    0,
+    calc((var(--orby-marketing-split-media-ref-width) - 100vw) / 80rem),
+    1
+  );
+  --orby-marketing-split-media-grow: calc(var(--orby-marketing-split-media-shrink) * 0.4);
+  --orby-marketing-split-media-aspect-h: calc(
+    9 + 16 * var(--orby-marketing-split-media-grow) +
+      7 * var(--orby-marketing-split-media-grow) * var(--orby-marketing-split-media-grow)
+  );
+  --orby-marketing-split-media-min-h: clamp(
+    calc(18rem + 5rem * var(--orby-marketing-split-media-grow)),
+    34vmin,
+    calc(26rem + 7rem * var(--orby-marketing-split-media-grow))
+  );
+
   --orby-marketing-bg: var(--orby-app-bg, var(--orby-black, #080808));
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
   --orby-marketing-panel-bg: #121212;
   /* Standard vertical seam between major marketing blocks */
-  --orby-marketing-gap-big: 250px;
+  --orby-marketing-gap-big: calc(250px * var(--orby-marketing-scale));
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   /* Match dropzone frame inner width (:root --orby-home-padding-x) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
-  --orby-marketing-copy-max: 41rem;
+  --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
   /* Feature copy — 22px lede / 18px bullets; split copy column measure */
-  --orby-marketing-feature-lede-size: 1.375rem; /* 22px */
+  --orby-marketing-feature-lede-size: calc(1.375rem * var(--orby-marketing-scale)); /* 22px @ 1440 */
   --orby-marketing-feature-lede-line: 1.6;
-  --orby-marketing-feature-list-size: 1.125rem; /* 18px */
+  --orby-marketing-feature-list-size: calc(1.125rem * var(--orby-marketing-scale)); /* 18px @ 1440 */
   --orby-marketing-feature-list-line: 1.55;
   --orby-marketing-feature-copy-span: calc(
     (100vw - var(--orby-marketing-col-gap)) / 2 - var(--orby-home-padding-x)
@@ -40,46 +147,74 @@
     var(--orby-marketing-grid-col-2up) - var(--orby-marketing-gutter-text-inset)
   );
   --orby-marketing-grid-col-2up-inset: var(--orby-marketing-section-headline-measure);
+  /*
+   * Centered body (showcase, pro, FAQ) — wider than split-column measure on desktop.
+   * Below 2560: gains width via split-media-shrink; narrow viewports via media-shrink.
+   */
+  --orby-marketing-centered-copy-measure: min(
+    var(--orby-marketing-site-max),
+    max(
+      var(--orby-marketing-lede-measure),
+      var(--orby-marketing-section-headline-measure),
+      calc(
+        var(--orby-marketing-feature-lede-measure) +
+          12rem * var(--orby-marketing-split-media-shrink) +
+          20rem * var(--orby-marketing-media-shrink)
+      )
+    )
+  );
   /* Body copy → image/gallery below (pro cards, showcase reel) */
-  --orby-marketing-feature-body-media-gap: 84px;
-  /* White feature lede → bullet list below (px — not rem; stays exact at zoom) */
-  --orby-marketing-feature-lede-list-gap: 54px;
+  --orby-marketing-feature-body-media-gap: calc(84px * var(--orby-marketing-scale));
+  /* White feature lede → bullet list below */
+  --orby-marketing-feature-lede-list-gap: calc(54px * var(--orby-marketing-scale));
   /* Vertical rhythm — big / medium / small only */
-  --orby-marketing-space-lg: clamp(4.5rem, 11vh, 8rem);
-  --orby-marketing-space-md: clamp(2.5rem, 5vh, 3.5rem);
-  --orby-marketing-space-sm: clamp(1rem, 2vh, 1.5rem);
+  --orby-marketing-space-lg: clamp(
+    calc(4.5rem * var(--orby-marketing-scale)),
+    11vh,
+    calc(8rem * var(--orby-marketing-scale))
+  );
+  --orby-marketing-space-md: clamp(
+    calc(2.5rem * var(--orby-marketing-scale)),
+    5vh,
+    calc(3.5rem * var(--orby-marketing-scale))
+  );
+  --orby-marketing-space-sm: clamp(
+    calc(1rem * var(--orby-marketing-scale)),
+    2vh,
+    calc(1.5rem * var(--orby-marketing-scale))
+  );
   --orby-marketing-section-pad: var(--orby-marketing-space-lg);
   /*
    * Unified column gutter — grids, showcase inset, split seam (84px).
    * Half token for peer UI (button pairs); do not double-pad split columns toward the seam.
    */
-  --orby-marketing-col-gap: 84px;
+  --orby-marketing-col-gap: calc(84px * var(--orby-marketing-gutter-scale));
   --orby-marketing-col-gap-half: calc(var(--orby-marketing-col-gap) / 2);
   /* @deprecated alias — use --orby-marketing-col-gap */
   --orby-marketing-split-gap: var(--orby-marketing-col-gap);
   --orby-marketing-gutter: var(--orby-marketing-col-gap);
   /* FAQ panel — space above headline and above lime footer */
-  --orby-marketing-faq-pad-top: 205px;
+  --orby-marketing-faq-pad-top: calc(205px * var(--orby-marketing-scale));
   --orby-marketing-faq-pad-bottom: var(--orby-marketing-gap-big);
-  /* Mega headlines — full size at max viewport (11.5vw); shrink via min(vw, 2× column cqi) */
-  --orby-mega-headline-min: 2.75rem;
-  --orby-mega-headline-max: 10.5rem;
+  /* Mega headlines — full size at 1440; shrink via min(vw, 2× column cqi) + mega scale */
+  --orby-mega-headline-min: calc(2.75rem * var(--orby-marketing-mega-scale));
+  --orby-mega-headline-max: calc(10.5rem * var(--orby-marketing-mega-scale));
   --orby-mega-headline-vw: 11.5;
   --orby-mega-headline-cqi-cap: 23;
-  --orby-mega-headline-offset: 0.35rem;
+  --orby-mega-headline-offset: calc(0.35rem * var(--orby-marketing-mega-scale));
   /* Intro turntable mega type — large soft shadow for legibility over busy frames */
   --orby-intro-headline-shadow:
     0 0.06em 0.35em color-mix(in srgb, var(--orby-black, #080808) 32%, transparent),
     0 0.14em 1.1em color-mix(in srgb, var(--orby-black, #080808) 22%, transparent),
     0 0.32em 2.75em color-mix(in srgb, var(--orby-black, #080808) 14%, transparent);
   /* Intro / footer body copy measure (~⅓ viewport at desktop) */
-  --orby-marketing-lede-measure: 40.8rem; /* +20% vs 34rem — intro/footer body copy */
+  --orby-marketing-lede-measure: calc(40.8rem * var(--orby-marketing-scale));
   /* Feature / showcase / FAQ — 5.8vw at max; column cap when split */
-  --orby-section-headline-min: 2.35rem;
-  --orby-section-headline-max: 4.35rem;
+  --orby-section-headline-min: calc(2.35rem * var(--orby-marketing-headline-scale));
+  --orby-section-headline-max: calc(4.35rem * var(--orby-marketing-headline-scale));
   --orby-section-headline-vw: 5.8;
   --orby-section-headline-cqi-cap: 11.6;
-  --orby-section-headline-offset: 0.25rem;
+  --orby-section-headline-offset: calc(0.25rem * var(--orby-marketing-headline-scale));
 }
 
 /* Allow document scroll on the home dropzone only */
@@ -149,7 +284,12 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(5rem, 14vh, 9rem) var(--orby-home-padding-x);
+  padding: clamp(
+      calc(5rem * var(--orby-marketing-scale)),
+      14vh,
+      calc(9rem * var(--orby-marketing-scale))
+    )
+    var(--orby-home-padding-x);
   overflow: visible;
 }
 
@@ -325,7 +465,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__eyebrow {
   margin: 0 0 1rem;
-  font-size: clamp(0.72rem, 1.1vw, 0.82rem);
+  font-size: clamp(
+    calc(0.72rem * var(--orby-marketing-scale)),
+    1.1vw,
+    calc(0.82rem * var(--orby-marketing-scale))
+  );
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -342,8 +486,13 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     var(--orby-section-headline-min),
     min(
       var(--orby-section-headline-max),
-      calc(var(--orby-section-headline-vw) * 1vw),
-      calc(var(--orby-section-headline-cqi-cap) * 1cqi + var(--orby-section-headline-offset))
+      calc(
+        var(--orby-section-headline-vw) * 1vw * var(--orby-marketing-headline-scale)
+      ),
+      calc(
+        var(--orby-section-headline-cqi-cap) * 1cqi * var(--orby-marketing-headline-scale) +
+          var(--orby-section-headline-offset)
+      )
     ),
     var(--orby-section-headline-max)
   );
@@ -385,8 +534,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     var(--orby-mega-headline-min),
     min(
       var(--orby-mega-headline-max),
-      calc(var(--orby-mega-headline-vw) * 1vw),
-      calc(var(--orby-mega-headline-cqi-cap) * 1cqi + var(--orby-mega-headline-offset))
+      calc(var(--orby-mega-headline-vw) * 1vw * var(--orby-marketing-mega-scale)),
+      calc(
+        var(--orby-mega-headline-cqi-cap) * 1cqi * var(--orby-marketing-mega-scale) +
+          var(--orby-mega-headline-offset)
+      )
     ),
     var(--orby-mega-headline-max)
   );
@@ -405,19 +557,27 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__lede {
   margin: 0;
   max-width: var(--orby-marketing-copy-max);
-  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  font-size: clamp(
+    calc(1rem * var(--orby-marketing-scale)),
+    1.35vw,
+    calc(1.18rem * var(--orby-marketing-scale))
+  );
   line-height: 1.65;
   color: var(--orby-marketing-text);
 }
 
 .orby-marketing__lede--intro {
   max-width: var(--orby-marketing-lede-measure);
-  font-size: clamp(1.2rem, 1.85vw, 1.5rem);
+  font-size: clamp(
+    calc(1.2rem * var(--orby-marketing-scale)),
+    1.85vw,
+    calc(1.5rem * var(--orby-marketing-scale))
+  );
   line-height: 1.6;
   color: #fff;
 }
 
-/* Split / pro / showcase / FAQ header — 22px feature lede */
+/* Split / pro / showcase / FAQ — 22px feature lede */
 .orby-marketing__section--split .orby-marketing__lede,
 .orby-marketing__section--pro .orby-marketing__lede,
 .orby-marketing__pro-lede,
@@ -427,6 +587,14 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   font-size: var(--orby-marketing-feature-lede-size);
   line-height: var(--orby-marketing-feature-lede-line);
   color: var(--orby-marketing-text);
+}
+
+/* Centered blocks — wider body than split-column measure when scaled down */
+.orby-marketing__section--pro .orby-marketing__lede,
+.orby-marketing__pro-lede,
+.orby-marketing__showcase-copy .orby-marketing__lede,
+.orby-marketing__faq-lede {
+  max-width: var(--orby-marketing-centered-copy-measure);
 }
 
 .orby-marketing__section--split .orby-marketing__lede + .orby-marketing__list {
@@ -467,7 +635,13 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__split-cta {
-  margin-top: calc(clamp(1.25rem, 2.5vh, 1.75rem) + var(--orby-marketing-space-sm));
+  margin-top: calc(
+    clamp(
+        calc(1.25rem * var(--orby-marketing-scale)),
+        2.5vh,
+        calc(1.75rem * var(--orby-marketing-scale))
+      ) + var(--orby-marketing-space-sm)
+  );
 }
 
 .orby-marketing__inner {
@@ -530,7 +704,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__figure {
-  --orby-media-radius: clamp(12px, 1.5vw, 20px);
+  --orby-media-radius: clamp(
+    calc(12px * var(--orby-marketing-scale)),
+    1.5vw,
+    calc(20px * var(--orby-marketing-scale))
+  );
   margin: 0;
   width: 100%;
   max-width: 100%;
@@ -539,12 +717,12 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   background: var(--orby-black, #080808);
 }
 
-/* Frame is always 16∶9 — capture screenshots at 16∶9 for a perfect fit */
+/* 16∶9 @ 1440; frame grows taller when scaled down (screenshots still 16∶9, object-fit: cover) */
 .orby-marketing__figure-mask {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / var(--orby-marketing-media-aspect-h);
   height: auto;
   border-radius: inherit;
   background: var(--orby-black, #080808);
@@ -593,7 +771,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   .orby-marketing__split-bleed {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: stretch;
+    align-items: center;
     gap: var(--orby-marketing-col-gap);
   }
 
@@ -605,9 +783,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     max-width: none;
   }
 
-  /* Keep 16∶9 at full width but don’t shrink shorter than copy column on mid viewports */
+  /* Fluid aspect — equals 16∶9 @ 1440 via --orby-marketing-split-media-aspect-h */
   .orby-marketing__split-bleed .orby-marketing__figure-mask {
-    min-height: clamp(16rem, 30vmin, 22rem);
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / var(--orby-marketing-split-media-aspect-h);
   }
 
   .orby-marketing__split-copy,
@@ -633,7 +813,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   }
 
   .orby-marketing__split-bleed--media-right .orby-marketing__figure {
-    --orby-media-radius: clamp(12px, 1.2vw, 20px);
+    --orby-media-radius: clamp(
+      calc(12px * var(--orby-marketing-scale)),
+      1.2vw,
+      calc(20px * var(--orby-marketing-scale))
+    );
     border-radius: var(--orby-media-radius) 0 0 var(--orby-media-radius);
   }
 
@@ -656,10 +840,35 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   }
 
   .orby-marketing__split-bleed--media-left .orby-marketing__figure {
-    --orby-media-radius: clamp(12px, 1.2vw, 20px);
+    --orby-media-radius: clamp(
+      calc(12px * var(--orby-marketing-scale)),
+      1.2vw,
+      calc(20px * var(--orby-marketing-scale))
+    );
     border-radius: 0 var(--orby-media-radius) var(--orby-media-radius) 0;
   }
+}
 
+/* Below 2560 — taller split frames + column-height floor */
+@media (min-width: 900px) and (max-width: 2559px) {
+  .orby-marketing__split-media {
+    container-type: inline-size;
+    container-name: orby-split-media;
+  }
+
+  .orby-marketing__split-bleed {
+    align-items: stretch;
+  }
+
+  .orby-marketing__split-media {
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .orby-marketing__split-bleed .orby-marketing__figure-mask {
+    aspect-ratio: 16 / var(--orby-marketing-split-media-aspect-h);
+    min-height: max(var(--orby-marketing-split-media-min-h), 52cqi);
+  }
 }
 
 @media (max-width: 899px) {
@@ -669,6 +878,25 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
   .orby-marketing__split-bleed--media-left .orby-marketing__split-media {
     order: -1;
+  }
+
+  .orby-marketing__section--split .orby-marketing__figure {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+
+  .orby-marketing__section--split .orby-marketing__split-media {
+    container-type: inline-size;
+    container-name: orby-split-media;
+  }
+
+  .orby-marketing__section--split .orby-marketing__figure-mask {
+    flex: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / var(--orby-marketing-split-media-aspect-h);
+    min-height: max(var(--orby-marketing-split-media-min-h), 46cqi);
   }
 }
 
@@ -695,7 +923,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /* Full-bleed breakout: wider than --orby-marketing-site-max, small side gutters only */
 .orby-marketing__showcase-figure {
-  --orby-media-radius: clamp(12px, 1.5vw, 20px);
+  --orby-media-radius: clamp(
+    calc(12px * var(--orby-marketing-scale)),
+    1.5vw,
+    calc(20px * var(--orby-marketing-scale))
+  );
   box-sizing: border-box;
   position: relative;
   left: 50%;
@@ -713,7 +945,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / var(--orby-marketing-media-aspect-h);
   border-radius: inherit;
   background: var(--orby-black, #080808);
   isolation: isolate;
@@ -858,7 +1090,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__pro-lede {
   margin: 0;
-  max-width: 100%;
+  max-width: var(--orby-marketing-centered-copy-measure);
 }
 
 .orby-marketing__pro-grid {
@@ -873,14 +1105,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     gap: var(--orby-marketing-col-gap);
   }
 
-  /* Feature ledes — split column capped at same viewport measure as pro / showcase */
-  .orby-marketing__section--split .orby-marketing__split-copy .orby-marketing__lede,
-  .orby-marketing__section--pro .orby-marketing__lede,
-  .orby-marketing__showcase-copy .orby-marketing__lede,
-  .orby-marketing__faq-lede {
-    max-width: var(--orby-marketing-feature-lede-measure);
-  }
-
+  /* Split feature ledes — half-column measure only */
   .orby-marketing__section--split .orby-marketing__split-copy .orby-marketing__lede {
     max-width: min(
       var(--orby-marketing-feature-lede-measure),
@@ -898,7 +1123,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__pro-card-surface {
-  --orby-media-radius: clamp(12px, 1.5vw, 20px);
+  --orby-media-radius: clamp(
+    calc(12px * var(--orby-marketing-scale)),
+    1.5vw,
+    calc(20px * var(--orby-marketing-scale))
+  );
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -939,15 +1168,35 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__pro-card-copy {
   flex: 1 1 auto;
   --orby-pro-card-copy-pad-y: 1.05em;
-  padding: calc(clamp(1.35rem, 2.8vw, 1.75rem) + var(--orby-pro-card-copy-pad-y))
-    clamp(1.2rem, 2.4vw, 1.5rem)
-    calc(clamp(1.5rem, 3vw, 1.9rem) + var(--orby-pro-card-copy-pad-y));
+  padding: calc(
+      clamp(
+          calc(1.35rem * var(--orby-marketing-scale)),
+          2.8vw,
+          calc(1.75rem * var(--orby-marketing-scale))
+        ) + var(--orby-pro-card-copy-pad-y)
+    )
+    clamp(
+      calc(1.2rem * var(--orby-marketing-scale)),
+      2.4vw,
+      calc(1.5rem * var(--orby-marketing-scale))
+    )
+    calc(
+      clamp(
+          calc(1.5rem * var(--orby-marketing-scale)),
+          3vw,
+          calc(1.9rem * var(--orby-marketing-scale))
+        ) + var(--orby-pro-card-copy-pad-y)
+    );
   text-align: center;
 }
 
 .orby-marketing__pro-card-title {
   margin: 0 0 0.65rem;
-  font-size: clamp(1.15rem, 1.65vw, 1.32rem);
+  font-size: clamp(
+    calc(1.15rem * var(--orby-marketing-headline-scale)),
+    calc(1.65vw * var(--orby-marketing-headline-scale)),
+    calc(1.32rem * var(--orby-marketing-headline-scale))
+  );
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -956,8 +1205,12 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__pro-card-body {
   margin: 0 auto;
-  max-width: min(100%, 27rem);
-  font-size: clamp(0.92rem, 1.1vw, 0.98rem);
+  max-width: min(100%, calc(27rem * var(--orby-marketing-scale)));
+  font-size: clamp(
+    calc(0.92rem * var(--orby-marketing-scale)),
+    1.1vw,
+    calc(0.98rem * var(--orby-marketing-scale))
+  );
   line-height: 1.65;
   color: var(--orby-marketing-text-dim);
 }
@@ -984,7 +1237,12 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   container-type: inline-size;
   container-name: orby-split-copy;
   text-align: left;
-  margin: 0 0 clamp(2.5rem, 5vh, 4rem);
+  margin: 0 0
+    clamp(
+      calc(2.5rem * var(--orby-marketing-scale)),
+      5vh,
+      calc(4rem * var(--orby-marketing-scale))
+    );
   width: 100%;
   max-width: none;
 }
@@ -996,7 +1254,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__faq-lede {
   margin: 1rem 0 0;
-  max-width: 100%;
+  max-width: var(--orby-marketing-centered-copy-measure);
 }
 
 .orby-marketing__faq-grid {
@@ -1028,7 +1286,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__faq-item {
   display: flex;
   align-items: flex-start;
-  gap: clamp(0.85rem, 1.8vw, 1.25rem);
+  gap: clamp(
+    calc(0.85rem * var(--orby-marketing-scale)),
+    1.8vw,
+    calc(1.25rem * var(--orby-marketing-scale))
+  );
   min-width: 0;
 }
 
@@ -1089,7 +1351,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   overflow: visible;
   background: var(--brand-primary, #c4ff00);
   color: var(--brand-text, var(--orby-black, #080808));
-  --orby-footer-asset-lift: clamp(3.5rem, 12vh, 6.25rem);
+  --orby-footer-asset-lift: clamp(
+    calc(3.5rem * var(--orby-marketing-scale)),
+    12vh,
+    calc(6.25rem * var(--orby-marketing-scale))
+  );
 }
 
 /* Cover sub-pixel gap / scroll end — keep viewport bottom lime, not --orby-black */
@@ -1155,7 +1421,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   width: auto;
   max-width: 100%;
   box-sizing: border-box;
-  padding-inline: clamp(0.5rem, 3vw, 1.5rem);
+  padding-inline: clamp(
+    calc(0.5rem * var(--orby-marketing-scale)),
+    3vw,
+    calc(1.5rem * var(--orby-marketing-scale))
+  );
 }
 
 .orby-marketing__lede--footer {
@@ -1327,7 +1597,11 @@ html:not(.orby-home-scroll) .orby-marketing-scroll-cue,
   }
 
   .orby-marketing__title--intro {
-    font-size: clamp(var(--orby-mega-headline-min), 12vw, 4.5rem);
+    font-size: clamp(
+      var(--orby-mega-headline-min),
+      calc(12vw * var(--orby-marketing-mega-scale)),
+      calc(4.5rem * var(--orby-marketing-mega-scale))
+    );
   }
 
   .orby-marketing__intro-stage,

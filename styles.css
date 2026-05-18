@@ -116,8 +116,17 @@
   /*
    * Home hero frame insets — shared by .dropzone and #orby-marketing so marketing
    * content width matches the dropzone inner edges (left/right of the frame).
+   * Full original padding @ 2560+; scales down gently when viewport narrows.
    */
-  --orby-home-padding: clamp(0.25rem, calc((100vw - 600px) / 15), 20rem);
+  --orby-home-full-width: 160rem; /* 2560px — reference for “full” outer inset */
+  --orby-home-outer-shrink: clamp(
+    0.82,
+    min(1, calc(0.55 + 0.45 * (100vw / var(--orby-home-full-width)))),
+    1
+  );
+  --orby-home-padding: calc(
+    clamp(0.25rem, calc((100vw - 600px) / 15), 20rem) * var(--orby-home-outer-shrink)
+  );
   --orby-home-padding-x: var(--orby-home-padding);
   --orby-home-padding-y: var(--orby-home-padding);
 }
@@ -126,7 +135,9 @@
 @media (min-width: 1200px) and (max-width: 1599px) {
   :root {
     --orby-home-padding-x: calc(
-      0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
+      (
+          0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
+        ) * var(--orby-home-outer-shrink)
     );
     --orby-home-padding-y: min(
       calc(
@@ -140,7 +151,9 @@
 @media (min-width: 1600px) {
   :root {
     --orby-home-padding-x: calc(
-      0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
+      (
+          0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
+        ) * var(--orby-home-outer-shrink)
     );
     --orby-home-padding-y: min(
       calc(
@@ -2517,22 +2530,28 @@ html.orby-dropzone-shell-pending .workspace {
   --dropzone-frame-stroke: 2px;
   --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
   /*
-   * Constant rotation speed (no drag speed-up).
+   * Hero scale — full @ 2560; 1:1 down to ~78% @ 1920 (logo, headline, glow).
    */
+  --drop-hero-wide-factor: clamp(
+    0.78,
+    calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
+    1
+  );
+  /* Constant rotation speed (no drag speed-up). Glow px values × wide-factor. */
   --dropzone-magic-spin: 16s;
-  --dropzone-magic-bleed: 25.3125px;
+  --dropzone-magic-bleed: calc(25.3125px * var(--drop-hero-wide-factor));
   /* Blur is the main GPU cost — another ~25% tighter for landing perf */
-  --dropzone-glow-blur: 26.15625px;
+  --dropzone-glow-blur: calc(26.15625px * var(--drop-hero-wide-factor));
   --dropzone-glow-radial-w: 150.75%;
   --dropzone-glow-radial-h: 85.5%;
-  --dropzone-glow-rim-a: 27px;
-  --dropzone-glow-rim-b: 54px;
-  --dropzone-glow-rim-c: 85.5px;
+  --dropzone-glow-rim-a: calc(27px * var(--drop-hero-wide-factor));
+  --dropzone-glow-rim-b: calc(54px * var(--drop-hero-wide-factor));
+  --dropzone-glow-rim-c: calc(85.5px * var(--drop-hero-wide-factor));
   /* Cyan drag accents on ::before only (full-bleed box-shadow on .dropzone escapes clip → edge haze) */
-  --dropzone-drag-rim-cyan-a: 12.375px;
-  --dropzone-drag-rim-cyan-b: 21.375px;
-  --dropzone-drag-rim-cyan-c: 31.5px;
-  /* Landing logotype + headline — max size at large viewport; shrink with card width */
+  --dropzone-drag-rim-cyan-a: calc(12.375px * var(--drop-hero-wide-factor));
+  --dropzone-drag-rim-cyan-b: calc(21.375px * var(--drop-hero-wide-factor));
+  --dropzone-drag-rim-cyan-c: calc(31.5px * var(--drop-hero-wide-factor));
+  /* Landing logotype + headline */
   --drop-logo-min: 140px;
   --drop-logo-max: 440px;
   --drop-logo-vw-ratio: 0.171875; /* 440 / 2560 */
@@ -2546,13 +2565,13 @@ html.orby-dropzone-shell-pending .workspace {
 }
 
 .dropzone.drag-active {
-  --dropzone-magic-bleed: 12.65625px;
-  --dropzone-glow-blur: 18.5625px;
+  --dropzone-magic-bleed: calc(12.65625px * var(--drop-hero-wide-factor));
+  --dropzone-glow-blur: calc(18.5625px * var(--drop-hero-wide-factor));
   --dropzone-glow-radial-w: 98.71875%;
   --dropzone-glow-radial-h: 55.6875%;
-  --dropzone-glow-rim-a: 17.71875px;
-  --dropzone-glow-rim-b: 35.4375px;
-  --dropzone-glow-rim-c: 55.6875px;
+  --dropzone-glow-rim-a: calc(17.71875px * var(--drop-hero-wide-factor));
+  --dropzone-glow-rim-b: calc(35.4375px * var(--drop-hero-wide-factor));
+  --dropzone-glow-rim-c: calc(55.6875px * var(--drop-hero-wide-factor));
 }
 
 /* Inspired by Magic Card pen: animate gradient angle only (no layout transform). */
@@ -2653,7 +2672,7 @@ html.orby-dropzone-shell-pending .workspace {
 /* Safari fallback: preserve look while cutting compositor-heavy animated blur work. */
 html.safari-browser .dropzone {
   --dropzone-magic-spin: 24s;
-  --dropzone-glow-blur: 12.375px;
+  --dropzone-glow-blur: calc(12.375px * var(--drop-hero-wide-factor));
 }
 
 html.safari-browser .dropzone::after {
@@ -2743,16 +2762,18 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
 }
 
 .drop-logo {
-  /* Full size at max viewport; shrinks with card (48vh caps wide+short layouts) */
+  /* Full size @ 2560; scales down 2560→1920 via --drop-hero-wide-factor */
   width: min(
     92%,
-    clamp(
-      var(--drop-logo-min),
-      max(
-        calc(100vw * var(--drop-logo-vw-ratio)),
-        calc(17.19 * 1cqi)
-      ),
-      var(--drop-logo-max)
+    calc(
+      clamp(
+          var(--drop-logo-min),
+          max(
+            calc(100vw * var(--drop-logo-vw-ratio)),
+            calc(17.19 * 1cqi)
+          ),
+          var(--drop-logo-max)
+        ) * var(--drop-hero-wide-factor)
     ),
     48vh
   );
@@ -2780,13 +2801,16 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
   font-family: var(--brand-font-headline);
   font-weight: 700;
   font-size: clamp(
-    var(--drop-headline-min),
+    calc(var(--drop-headline-min) * var(--drop-hero-wide-factor)),
     min(
-      var(--drop-headline-max),
-      calc(var(--drop-headline-vw) * 1vw),
-      calc(var(--drop-headline-cqi-cap) * 1cqi + var(--drop-headline-offset))
+      calc(var(--drop-headline-max) * var(--drop-hero-wide-factor)),
+      calc(var(--drop-headline-vw) * 1vw * var(--drop-hero-wide-factor)),
+      calc(
+        (var(--drop-headline-cqi-cap) * 1cqi + var(--drop-headline-offset)) *
+          var(--drop-hero-wide-factor)
+      )
     ),
-    var(--drop-headline-max)
+    calc(var(--drop-headline-max) * var(--drop-hero-wide-factor))
   );
   letter-spacing: 0.04em;
   opacity: 0;
@@ -2811,9 +2835,11 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
   .drop-logo {
     width: min(
       92%,
-      max(
-        var(--drop-logo-min),
-        min(var(--drop-logo-max), calc(100vw * var(--drop-logo-vw-ratio)))
+      calc(
+        max(
+            var(--drop-logo-min),
+            min(var(--drop-logo-max), calc(100vw * var(--drop-logo-vw-ratio)))
+          ) * var(--drop-hero-wide-factor)
       ),
       48vh
     );
@@ -2821,9 +2847,12 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
 
   .drop-primary {
     font-size: clamp(
-      var(--drop-headline-min),
-      min(var(--drop-headline-max), calc(var(--drop-headline-vw) * 1vw)),
-      var(--drop-headline-max)
+      calc(var(--drop-headline-min) * var(--drop-hero-wide-factor)),
+      min(
+        calc(var(--drop-headline-max) * var(--drop-hero-wide-factor)),
+        calc(var(--drop-headline-vw) * 1vw * var(--drop-hero-wide-factor))
+      ),
+      calc(var(--drop-headline-max) * var(--drop-hero-wide-factor))
     );
   }
 }
