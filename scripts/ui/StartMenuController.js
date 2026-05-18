@@ -46,6 +46,38 @@ function prefersReducedMotion() {
   );
 }
 
+function shouldPlayLogotypeLottie() {
+  if (document.documentElement.classList.contains('safari-browser')) return false;
+  if (prefersReducedMotion()) return false;
+  return true;
+}
+
+function getLogotypeLottieRendererSettings() {
+  return {
+    preserveAspectRatio: 'xMidYMid meet',
+    progressiveLoad: false,
+    hideOnTransparent: true,
+  };
+}
+
+/** @param {import('lottie-web').AnimationItem | null | undefined} instance */
+function freezeLogotypeLottie(instance) {
+  if (!instance) return;
+  instance.pause();
+  instance.goToAndStop(0, true);
+}
+
+/**
+ * @param {HTMLElement} container
+ */
+function styleLogotypeMedia(container) {
+  const media = container.querySelector('svg, canvas');
+  if (!media) return;
+  media.style.width = '100%';
+  media.style.height = 'auto';
+  media.style.display = 'block';
+}
+
 export class StartMenuController {
   constructor(eventBus, uiManager) {
     this.eventBus = eventBus;
@@ -234,12 +266,15 @@ export class StartMenuController {
       if (!prefersReducedMotion()) {
         document.documentElement.classList.add(SCROLL_CLASS);
       }
-      this.animationInstance?.pause();
+      if (shouldPlayLogotypeLottie() && this.isDropzoneHeroInView()) {
+        this.animationInstance?.pause();
+      }
     };
     const resumeAfterScroll = () => {
       document.documentElement.classList.remove(SCROLL_CLASS);
       endTimer = null;
       if (
+        shouldPlayLogotypeLottie() &&
         document.body.classList.contains('dropzone-visible') &&
         this.animationInstance
       ) {
@@ -394,11 +429,22 @@ export class StartMenuController {
    */
   syncDropzoneLogotypePlayback(shouldShow) {
     if (!this.animationInstance) return;
+    if (!shouldPlayLogotypeLottie()) {
+      freezeLogotypeLottie(this.animationInstance);
+      return;
+    }
     if (shouldShow) {
       this.animationInstance.play();
     } else {
       this.animationInstance.pause();
     }
+  }
+
+  /** True while the dropzone hero (logo) is still on screen — avoids scroll-jank when reading marketing below. */
+  isDropzoneHeroInView() {
+    if (!this.dropzone) return false;
+    const rect = this.dropzone.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < window.innerHeight;
   }
 
   /** After `.drop-logo` CSS `logotypeReveal` completes (fallback timeout ~750ms). */
@@ -635,11 +681,9 @@ export class StartMenuController {
           container: this.logotypeAnimation,
           renderer: 'svg',
           loop: true,
-          autoplay: true,
+          autoplay: shouldPlayLogotypeLottie(),
           path: `./assets/animations/data.json${cacheBuster}`,
-          rendererSettings: {
-            preserveAspectRatio: 'xMidYMid meet'
-          }
+          rendererSettings: getLogotypeLottieRendererSettings(),
         });
 
         // Let .drop-logo CSS control width; SVG fills container so it scales with the viewport
@@ -648,13 +692,13 @@ export class StartMenuController {
             window.clearTimeout(shellRevealWatchdog);
             const isMobileSplash =
               document.documentElement.classList.contains('mobile-landing');
-            const svg = this.logotypeAnimation.querySelector('svg');
+            styleLogotypeMedia(this.logotypeAnimation);
+            if (!shouldPlayLogotypeLottie()) {
+              freezeLogotypeLottie(this.animationInstance);
+            }
 
             void this.ensureDropzoneShellReady().then(() => {
-              if (svg) {
-                svg.style.width = '100%';
-                svg.style.height = 'auto';
-
+              if (this.logotypeAnimation.querySelector('svg, canvas')) {
                 // Trigger reveal when Lottie is in the DOM — after shell prep so GSAP/fonts settle
                 requestAnimationFrame(() => {
                   this.logotypeAnimation.style.opacity = '0';
@@ -722,19 +766,16 @@ export class StartMenuController {
           container: this.infoLogotypeAnimation,
           renderer: 'svg',
           loop: true,
-          autoplay: true,
+          autoplay: shouldPlayLogotypeLottie(),
           path: `./assets/animations/data.json${cacheBuster}`,
-          rendererSettings: {
-            preserveAspectRatio: 'xMidYMid meet'
-          }
+          rendererSettings: getLogotypeLottieRendererSettings(),
         });
 
         if (this.infoAnimationInstance) {
           this.infoAnimationInstance.addEventListener('DOMLoaded', () => {
-            const svg = this.infoLogotypeAnimation.querySelector('svg');
-            if (svg) {
-              svg.style.width = '100%';
-              svg.style.height = 'auto';
+            styleLogotypeMedia(this.infoLogotypeAnimation);
+            if (!shouldPlayLogotypeLottie()) {
+              freezeLogotypeLottie(this.infoAnimationInstance);
             }
           });
         }

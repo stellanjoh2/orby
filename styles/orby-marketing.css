@@ -11,7 +11,6 @@
   --orby-marketing-panel-bg: #121212;
   /* Standard vertical seam between major marketing blocks */
   --orby-marketing-gap-big: 250px;
-  --orby-marketing-gap-half: calc(var(--orby-marketing-gap-big) / 2);
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   /* Match dropzone frame inner width (:root --orby-home-padding-x) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
@@ -400,8 +399,8 @@ html.orby-home-scroll #orby-marketing {
 /* Split features — 50% copy / 50% image; center line is the inner image edge */
 .orby-marketing__section--split {
   overflow: hidden;
-  padding-top: var(--orby-marketing-gap-half);
-  padding-bottom: var(--orby-marketing-gap-half);
+  /* One 250px seam below each block (avoids half+half doubling with base section pad in Safari) */
+  padding: 0 0 var(--orby-marketing-gap-big);
 }
 
 /* Turntable intro → first feature: keep original section pad, not the 250px big gap */
@@ -590,8 +589,7 @@ html.orby-home-scroll #orby-marketing {
 /* Showcase — copy uses site width; gallery breaks out toward viewport edges */
 .orby-marketing__section--showcase {
   overflow: visible;
-  padding-top: var(--orby-marketing-gap-half);
-  padding-bottom: var(--orby-marketing-gap-half);
+  padding: 0 0 var(--orby-marketing-gap-big);
 }
 
 .orby-marketing__section--showcase .orby-marketing__title {
@@ -683,13 +681,8 @@ html.orby-home-scroll #orby-marketing {
 }
 
 /* Pro + FAQ — big-gap rhythm aligned with split features */
-.orby-marketing__section--split:has(+ .orby-marketing__section--pro) {
-  padding-bottom: var(--orby-marketing-gap-half);
-}
-
 .orby-marketing__section--pro {
-  padding-top: var(--orby-marketing-gap-half);
-  padding-bottom: var(--orby-marketing-pro-faq-gap);
+  padding: 0 0 var(--orby-marketing-pro-faq-gap);
 }
 
 /* Pro tools — three-up feature cards */
@@ -722,13 +715,13 @@ html.orby-home-scroll #orby-marketing {
 .orby-marketing__pro-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(1.5rem, 3vw, 2.25rem);
+  gap: 44px;
 }
 
 @media (min-width: 900px) {
   .orby-marketing__pro-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(1.25rem, 2.2vw, 1.75rem);
+    gap: 44px;
   }
 }
 
@@ -806,8 +799,8 @@ html.orby-home-scroll #orby-marketing {
   position: relative;
   z-index: 1;
   background: var(--orby-marketing-panel-bg);
-  padding-top: var(--orby-marketing-faq-pad-top);
-  padding-bottom: var(--orby-marketing-faq-pad-bottom);
+  /* Reset base section pad; FAQ uses its own top/bottom bands */
+  padding: var(--orby-marketing-faq-pad-top) 0 var(--orby-marketing-faq-pad-bottom);
 }
 
 #orby-marketing .orby-marketing__inner.orby-marketing__faq {
