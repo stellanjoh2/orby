@@ -652,6 +652,55 @@ html.orby-home-scroll #orby-marketing {
   z-index: 1;
 }
 
+.orby-marketing__showcase-dots {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: clamp(0.65rem, 1.8vh, 1rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.orby-marketing__showcase-dot {
+  width: 7px;
+  height: 7px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, #fff 38%, transparent);
+  cursor: pointer;
+  transition:
+    background 0.22s ease,
+    transform 0.22s ease;
+}
+
+.orby-marketing__showcase-dot.is-active {
+  background: var(--brand-primary, #c4ff00);
+  transform: scale(1.2);
+}
+
+.orby-marketing__showcase-dot:focus-visible {
+  outline: 2px solid var(--brand-primary, #c4ff00);
+  outline-offset: 3px;
+}
+
+.orby-marketing__showcase-mask:focus {
+  outline: none;
+}
+
+.orby-marketing__showcase-mask:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline-offset: 3px;
+}
+
 .orby-marketing__showcase-credit {
   position: absolute;
   z-index: 2;
@@ -662,9 +711,9 @@ html.orby-home-scroll #orby-marketing {
   padding: 0;
   color: #fff;
   font-size: clamp(0.7rem, 1.05vw, 0.8rem);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
   line-height: 1.35;
   text-shadow:
     0 1px 2px rgba(0, 0, 0, 0.45),
@@ -852,14 +901,21 @@ html.orby-home-scroll #orby-marketing {
 
 .orby-marketing__faq-icon {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--orby-marketing-headline);
-  line-height: 0;
+  /* Match question type size so the mark sits on the same line */
+  font-size: clamp(1.05rem, 1.45vw, 1.2rem);
+  line-height: 1.25;
+  width: 1.25em;
+  height: 1.25em;
 }
 
 .orby-marketing__faq-icon-svg {
   display: block;
-  width: clamp(1.65rem, 2.2vw, 2rem);
-  height: auto;
+  width: 1.25em;
+  height: 1.25em;
 }
 
 .orby-marketing__faq-question {

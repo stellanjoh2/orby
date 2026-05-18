@@ -379,27 +379,27 @@ export class GlobalControls {
         if (radio) radio.checked = true;
       }
 
-      // Arrow keys - Scrub animation
-      if (key === 'arrowleft') {
-        event.preventDefault();
-        if (this.ui.dom.animationScrub && !this.ui.dom.animationScrub.disabled) {
-          const current = parseFloat(this.ui.dom.animationScrub.value) || 0;
-          const step = 0.01;
-          const newValue = Math.max(0, current - step);
-          this.ui.dom.animationScrub.value = newValue;
-          this.eventBus.emit('animation:scrub', newValue);
+      // Arrow keys — scrub animation only when the scrub control is live. Do not
+      // preventDefault otherwise (marketing showcase gallery listens on window).
+      if (key === 'arrowleft' || key === 'arrowright') {
+        if (
+          document.querySelector(
+            '[data-orby-marketing-showcase-gallery][data-orby-marketing-showcase-keys]',
+          )
+        ) {
+          return;
         }
-      }
-
-      if (key === 'arrowright') {
+        const scrub = this.ui.dom.animationScrub;
+        if (!scrub || scrub.disabled) return;
         event.preventDefault();
-        if (this.ui.dom.animationScrub && !this.ui.dom.animationScrub.disabled) {
-          const current = parseFloat(this.ui.dom.animationScrub.value) || 0;
-          const step = 0.01;
-          const newValue = Math.min(1, current + step);
-          this.ui.dom.animationScrub.value = newValue;
-          this.eventBus.emit('animation:scrub', newValue);
-        }
+        const current = parseFloat(scrub.value) || 0;
+        const step = 0.01;
+        const newValue =
+          key === 'arrowleft'
+            ? Math.max(0, current - step)
+            : Math.min(1, current + step);
+        scrub.value = String(newValue);
+        this.eventBus.emit('animation:scrub', newValue);
       }
 
       // G - Toggle grid

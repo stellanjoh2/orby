@@ -765,8 +765,8 @@ export class StartMenuController {
         this.infoAnimationInstance = lottie.loadAnimation({
           container: this.infoLogotypeAnimation,
           renderer: 'svg',
-          loop: true,
-          autoplay: shouldPlayLogotypeLottie(),
+          loop: false,
+          autoplay: false,
           path: `./assets/animations/data.json${cacheBuster}`,
           rendererSettings: getLogotypeLottieRendererSettings(),
         });
@@ -774,9 +774,7 @@ export class StartMenuController {
         if (this.infoAnimationInstance) {
           this.infoAnimationInstance.addEventListener('DOMLoaded', () => {
             styleLogotypeMedia(this.infoLogotypeAnimation);
-            if (!shouldPlayLogotypeLottie()) {
-              freezeLogotypeLottie(this.infoAnimationInstance);
-            }
+            freezeLogotypeLottie(this.infoAnimationInstance);
           });
         }
       } catch (error) {

@@ -1,5 +1,5 @@
 /**
- * Auto-cycling showcase gallery + lower-third credits (revealed after each slide loads).
+ * Auto-cycling showcase gallery, dot nav, arrow keys, and lower-third credits.
  */
 import gsap from 'gsap';
 import { prefersReducedMotion } from '../ui/modalReveal.js';
@@ -12,6 +12,8 @@ import {
 const CYCLE_MS = 5200;
 const FADE_S = 0.95;
 const CREDIT_IN_S = 0.48;
+/** Set on the gallery mask while arrow keys should drive slides (see GlobalControls). */
+const SHOWCASE_KEYS_ATTR = 'data-orby-marketing-showcase-keys';
 
 /** @type {WeakMap<HTMLElement, ReturnType<typeof createGalleryController>>} */
 const controllers = new WeakMap();
@@ -44,9 +46,29 @@ function whenImageReady(el) {
 /**
  * @param {HTMLElement} mask
  */
+/**
+ * @param {EventTarget | null} target
+ */
+function isEditableTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return (
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    tag === 'SELECT' ||
+    target.isContentEditable
+  );
+}
+
+/**
+ * @param {HTMLElement} mask
+ */
 function createGalleryController(mask) {
   const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
   const creditEl = mask.querySelector('[data-orby-marketing-showcase-credit]');
+  const dotButtons = [
+    ...mask.querySelectorAll('[data-orby-marketing-showcase-dot]'),
+  ];
   let index = Math.max(
     0,
     imgs.findIndex((img) => img.classList.contains('is-active')),
@@ -55,6 +77,19 @@ function createGalleryController(mask) {
   let timer = null;
   let tweening = false;
   let creditTween = null;
+  let keyboardEnabled = false;
+  let intersectionObserver = null;
+
+  const updateDots = (activeIndex) => {
+    dotButtons.forEach((btn, i) => {
+      const active = i === activeIndex;
+      btn.classList.toggle('is-active', active);
+      if (active) btn.setAttribute('aria-current', 'true');
+      else btn.removeAttribute('aria-current');
+    });
+  };
+
+  updateDots(index);
 
   const hideCredit = () => {
     if (!creditEl) return Promise.resolve();
@@ -124,6 +159,7 @@ function createGalleryController(mask) {
       imgs.forEach((img, i) => {
         img.classList.toggle('is-active', i === nextIndex);
       });
+      updateDots(nextIndex);
     };
 
     if (!animate || prefersReducedMotion()) {
@@ -168,6 +204,19 @@ function createGalleryController(mask) {
     }
   };
 
+  const goTo = (targetIndex) => {
+    if (imgs.length < 2 || tweening) return;
+    const wrapped =
+      ((targetIndex % imgs.length) + imgs.length) % imgs.length;
+    if (wrapped === index) return;
+    setActive(wrapped, true);
+    restartAutoplay();
+  };
+
+  const goRelative = (delta) => {
+    goTo(index + delta);
+  };
+
   const tick = () => {
     if (tweening) return;
     setActive((index + 1) % imgs.length, true);
@@ -186,15 +235,73 @@ function createGalleryController(mask) {
     }
   };
 
+  const restartAutoplay = () => {
+    stop();
+    start();
+  };
+
+  const onKeyDown = (event) => {
+    if (!keyboardEnabled || imgs.length < 2) return;
+    if (event.defaultPrevented || isEditableTarget(event.target)) return;
+    const isPrev =
+      event.key === 'ArrowLeft' || event.code === 'ArrowLeft';
+    const isNext =
+      event.key === 'ArrowRight' || event.code === 'ArrowRight';
+    if (isPrev) {
+      event.preventDefault();
+      goRelative(-1);
+    } else if (isNext) {
+      event.preventDefault();
+      goRelative(1);
+    }
+  };
+
+  const onDotClick = (event) => {
+    const btn = event.target.closest('[data-orby-marketing-showcase-dot]');
+    if (!btn || !mask.contains(btn)) return;
+    const slideIndex = Number(btn.dataset.slideIndex);
+    if (!Number.isFinite(slideIndex)) return;
+    goTo(slideIndex);
+  };
+
+  const setKeyboardEnabled = (enabled) => {
+    keyboardEnabled = enabled;
+    if (enabled) mask.setAttribute(SHOWCASE_KEYS_ATTR, '');
+    else mask.removeAttribute(SHOWCASE_KEYS_ATTR);
+  };
+
+  const bindInteraction = () => {
+    if (imgs.length < 2) return;
+    mask.addEventListener('click', onDotClick);
+    window.addEventListener('keydown', onKeyDown);
+    intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        setKeyboardEnabled(Boolean(entry?.isIntersecting));
+      },
+      { threshold: 0.35 },
+    );
+    intersectionObserver.observe(mask);
+  };
+
+  const unbindInteraction = () => {
+    mask.removeEventListener('click', onDotClick);
+    window.removeEventListener('keydown', onKeyDown);
+    intersectionObserver?.disconnect();
+    intersectionObserver = null;
+    setKeyboardEnabled(false);
+  };
+
   const onSlideRevealed = () => {
     void revealCredit(index);
   };
 
   mask.addEventListener('orby-marketing-showcase-slide', onSlideRevealed);
+  bindInteraction();
 
   return {
     start,
     stop,
+    restartAutoplay,
     onSlideRevealed,
     prepareCredit() {
       if (!creditEl) return;
@@ -205,6 +312,7 @@ function createGalleryController(mask) {
     },
     destroy() {
       stop();
+      unbindInteraction();
       creditTween?.kill();
       gsap.killTweensOf(imgs);
       mask.removeEventListener('orby-marketing-showcase-slide', onSlideRevealed);

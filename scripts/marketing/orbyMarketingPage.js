@@ -153,12 +153,26 @@ function renderIntroSection(section) {
   </section>`;
 }
 
-function renderShowcaseSlides(section) {
-  const slides = section.gallery?.length
+function getShowcaseSlides(section) {
+  return section.gallery?.length
     ? section.gallery
     : section.imageSrc
       ? [{ src: section.imageSrc, alt: section.imageAlt || '' }]
       : [];
+}
+
+function renderShowcaseDots(slideCount) {
+  if (slideCount < 2) return '';
+  const buttons = Array.from({ length: slideCount }, (_, i) => {
+    const active = i === 0 ? ' is-active' : '';
+    const current = i === 0 ? ' aria-current="true"' : '';
+    return `<button type="button" class="orby-marketing__showcase-dot${active}" data-orby-marketing-showcase-dot data-slide-index="${i}" aria-label="Show image ${i + 1} of ${slideCount}"${current}></button>`;
+  }).join('\n          ');
+  return `<nav class="orby-marketing__showcase-dots" data-orby-marketing-showcase-dots aria-label="Showcase images">${buttons}</nav>`;
+}
+
+function renderShowcaseSlides(section) {
+  const slides = getShowcaseSlides(section);
   return slides
     .map((slide, index) => {
       const active = index === 0 ? ' is-active' : '';
@@ -172,6 +186,7 @@ function renderShowcaseSlides(section) {
 }
 
 function renderShowcaseSection(section) {
+  const slides = getShowcaseSlides(section);
   const video = section.videoSrc
     ? `<video class="orby-marketing__video" src="${escapeHtml(section.videoSrc)}" poster="${escapeHtml(section.gallery?.[0]?.src || section.imageSrc || '')}" playsinline muted loop preload="none"></video>`
     : '';
@@ -183,10 +198,11 @@ function renderShowcaseSection(section) {
       <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
     </div>
     <figure class="orby-marketing__showcase-figure">
-      <div class="orby-marketing__showcase-mask" data-orby-marketing-showcase-gallery data-orby-marketing-reveal="media" data-reveal-dir="ltr">
+      <div class="orby-marketing__showcase-mask" data-orby-marketing-showcase-gallery data-orby-marketing-reveal="media" data-reveal-dir="ltr" tabindex="0" aria-roledescription="carousel" aria-label="Showcase gallery">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
         ${renderShowcaseSlides(section)}
         <p class="orby-marketing__showcase-credit" data-orby-marketing-showcase-credit hidden></p>
+        ${renderShowcaseDots(slides.length)}
         ${video}
       </div>
     </figure>
