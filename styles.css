@@ -1026,12 +1026,12 @@ html.orby-gate-unlocked .orby-entry-gate {
   cursor: default;
 }
 
-.bug-report-thank-you-stack .bug-report-thank-you-ok.orby-magic-btn--dialog {
+.bug-report-thank-you-stack .bug-report-thank-you-ok {
   pointer-events: auto;
-  cursor: pointer;
-  padding: 0;
-  border: none;
-  box-shadow: none;
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  align-self: center;
 }
 
 .orby-fullscreen-prompt-stack .orby-fullscreen-prompt-actions {
@@ -1096,6 +1096,8 @@ html.orby-gate-unlocked .orby-entry-gate {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
   border-radius: 999px;
   border: none;
   padding: 0.52rem 1.9rem;
@@ -1145,8 +1147,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   align-items: stretch;
 }
 
-#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog,
-#bugReportThankYouLayer .orby-magic-btn--dialog {
+#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog {
   width: 100%;
   min-width: 0;
 }
@@ -2084,8 +2085,7 @@ html.safari-browser .orby-magic-btn::before {
   transform: scale(0.98);
 }
 
-#orbyFullscreenPrompt .orby-magic-btn--dialog,
-#bugReportThankYouLayer .orby-magic-btn--dialog {
+#orbyFullscreenPrompt .orby-fullscreen-prompt-actions > .orby-magic-btn--dialog {
   min-width: 0;
   width: 100%;
 }
