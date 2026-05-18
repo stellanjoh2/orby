@@ -194,7 +194,8 @@ html.orby-home-scroll #orby-marketing {
   width: max-content;
   max-width: 100%;
   white-space: nowrap;
-  text-shadow: var(--orby-intro-headline-shadow);
+  /* TEMP: headline shadow off over turntable — restore: var(--orby-intro-headline-shadow) */
+  text-shadow: none;
 }
 
 .orby-marketing__section--intro-turntable .orby-marketing__lede--intro {
