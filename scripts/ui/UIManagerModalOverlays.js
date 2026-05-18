@@ -9,7 +9,7 @@ import {
   createBigMessageRevealTimeline,
   killBigMessageRevealTweens,
 } from './bigMessageHeadlineReveal.js';
-import { setOrbyMagicButtonLabel } from './orbyMagicButton.js';
+import { setOrbyMagicButtonLabel, setOrbyMagicButtonVariant } from './orbyMagicButton.js';
 
 /** Full-screen prompt — match BugReportController thank-you scrim */
 const ORBY_FULLSCREEN_SCRIM_IN = 0.22;
@@ -108,7 +108,7 @@ export class UIManagerModalOverlays {
 
   /**
    * Full-screen confirm — same visual language as bug-report thank-you.
-   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void }} opts
+   * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, confirmVariant?: 'dialog-ghost' | 'glow', onConfirm?: () => void, onCancel?: () => void }} opts
    */
   showFullscreenPrompt(opts) {
     const layer = this._ui.dom.fullscreenPrompt;
@@ -144,6 +144,7 @@ export class UIManagerModalOverlays {
     msg.removeAttribute('aria-hidden');
     setOrbyMagicButtonLabel(noBtn, cancelLabel);
     setOrbyMagicButtonLabel(yesBtn, confirmLabel);
+    setOrbyMagicButtonVariant(yesBtn, opts?.confirmVariant === 'glow' ? 'glow' : 'dialog-ghost');
 
     const plain = msg.textContent?.trim() ?? '';
     if (plain) layer.setAttribute('aria-label', plain);
@@ -152,7 +153,9 @@ export class UIManagerModalOverlays {
     this._openFullscreenPromptAnimate();
 
     requestAnimationFrame(() => {
-      noBtn.focus();
+      const focusTarget =
+        getComputedStyle(noBtn).display === 'none' || noBtn.hidden ? yesBtn : noBtn;
+      focusTarget?.focus();
     });
   }
 
@@ -290,7 +293,11 @@ export class UIManagerModalOverlays {
       gsap.set(msg, { clearProps: 'all' });
       gsap.set(layer, { clearProps: 'opacity' });
       if (noBtn) gsap.set(noBtn, { clearProps: 'opacity,transform' });
-      if (yesBtn) gsap.set(yesBtn, { clearProps: 'opacity,transform' });
+      if (yesBtn) {
+        gsap.set(yesBtn, { clearProps: 'opacity,transform' });
+        setOrbyMagicButtonVariant(yesBtn, 'dialog-ghost');
+        yesBtn.classList.remove('dropzone-btn');
+      }
       this._ui.endShelfOverlaySuppression();
     };
 

@@ -418,9 +418,8 @@ html.orby-home-scroll #orby-marketing {
   container-name: orby-split-copy;
 }
 
-/* Full-width copy bands — half the split cqi factor ≈ same scale at a given viewport */
-.orby-marketing__showcase-copy,
-.orby-marketing__faq-header {
+/* Showcase — full site width; half the split cqi factor ≈ same scale as split column */
+.orby-marketing__showcase-copy {
   container-type: inline-size;
   container-name: orby-section-copy;
   --orby-section-headline-cqi-cap: 5.8;
@@ -692,7 +691,10 @@ html.orby-home-scroll #orby-marketing {
   margin-top: 0;
 }
 
+/* FAQ header — same column cqi scale as split feature headlines */
 .orby-marketing__faq-header {
+  container-type: inline-size;
+  container-name: orby-split-copy;
   text-align: left;
   margin: 0 0 clamp(2.5rem, 5vh, 4rem);
   max-width: min(var(--orby-marketing-copy-max), 100%);
@@ -700,6 +702,7 @@ html.orby-home-scroll #orby-marketing {
 
 .orby-marketing__faq-header .orby-marketing__title {
   margin-bottom: 0;
+  line-height: 1.1;
 }
 
 .orby-marketing__faq-lede {

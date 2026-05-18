@@ -250,7 +250,7 @@ function renderFooterSection(section) {
         ${orbyMagicButtonOnLimeHtml(escapeHtml(section.ctaLabel || 'Browse Files'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-browse',
-          variant: 'solid',
+          variant: 'outline',
         })}
         ${orbyMagicButtonOnLimeHtml(escapeHtml(section.secondaryCtaLabel || 'Load Sample'), {
           extraClass: 'orby-marketing__cta',

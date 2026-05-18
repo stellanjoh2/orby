@@ -1,5 +1,11 @@
 import './main.js';
+import * as THREE from 'three';
 import { DEFAULT_MATERIAL_BRIGHTNESS } from './constants.js';
+
+/** Default fit is ~radius × 1.87; 404 hero sits closer but not tight on the mesh. */
+const NOT_FOUND_CAMERA_DISTANCE_FACTOR = 0.62;
+const NOT_FOUND_CAMERA_DISTANCE_MIN = 0.35;
+const NOT_FOUND_VIEW_DIRECTION = new THREE.Vector3(1.5, 0.7, 1.5).normalize();
 
 const NOT_FOUND_PRESET = {
   shading: 'shaded',
@@ -242,7 +248,7 @@ const NOT_FOUND_PRESET = {
     tintColor: '#ffffff',
   },
   fisheye: {
-    enabled: true,
+    enabled: false,
     horizontalFOVDeg: 131,
     strength: 0.37,
     cylindricalRatio: 4,
@@ -320,6 +326,7 @@ function openFullscreenNotFoundPrompt(orby) {
     messageHtml: NOT_FOUND_MESSAGE_HTML,
     cancelLabel: 'Stay',
     confirmLabel: 'Return home',
+    confirmVariant: 'glow',
     onConfirm: () => {
       window.location.href = '/';
     },
@@ -389,14 +396,33 @@ function pushCameraCloserFor404(orby) {
   const controls = orby.scene?.controls;
   const cameraController = orby.scene?.cameraController;
   if (!camera || !controls) return;
-  const target = controls.target.clone();
-  const offset = camera.position.clone().sub(target);
-  if (offset.lengthSq() < 1e-10) return;
-  // Force a close hero framing for the 404 mesh.
-  offset.multiplyScalar(0.38);
-  camera.position.copy(target.clone().add(offset));
-  controls.update();
-  // Re-seed auto-orbit from this closer camera pose.
+
+  const bounds = cameraController?.modelBounds;
+  if (bounds?.center && bounds.radius > 0) {
+    const target = bounds.center.clone();
+    if (bounds.size) {
+      target.y -= bounds.size.y * 0.05;
+    }
+    const distance = Math.max(
+      bounds.radius * NOT_FOUND_CAMERA_DISTANCE_FACTOR,
+      NOT_FOUND_CAMERA_DISTANCE_MIN,
+    );
+    const direction = NOT_FOUND_VIEW_DIRECTION.clone();
+    controls.target.copy(target);
+    camera.position.copy(target.clone().add(direction.multiplyScalar(distance)));
+    camera.near = Math.max(0.01, distance / 200);
+    camera.far = Math.max(distance * 50, 50);
+    camera.updateProjectionMatrix();
+    controls.update();
+  } else {
+    const target = controls.target.clone();
+    const offset = camera.position.clone().sub(target);
+    if (offset.lengthSq() < 1e-10) return;
+    offset.multiplyScalar(0.12);
+    camera.position.copy(target.clone().add(offset));
+    controls.update();
+  }
+
   if (typeof cameraController?.setAutoOrbit === 'function') {
     cameraController.setAutoOrbit('slow');
   }
@@ -448,6 +474,9 @@ async function setupNotFoundExperience() {
   const onLoaded = ({ success }) => {
     if (!success) return;
     enforceBlackBackgroundHard(orby);
+    pushCameraCloserFor404(orby);
+    window.setTimeout(() => pushCameraCloserFor404(orby), 120);
+    window.setTimeout(() => pushCameraCloserFor404(orby), 450);
     orby.eventBus.off('scene:model-load-complete', onLoaded);
   };
   orby.eventBus.on('scene:model-load-complete', onLoaded);

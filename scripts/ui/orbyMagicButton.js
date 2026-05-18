@@ -37,6 +37,37 @@ export function setOrbyMagicButtonLabel(button, label) {
   else button.textContent = label;
 }
 
+const ORBY_MAGIC_BTN_FILL_HTML = '<span class="orby-magic-btn__fill" aria-hidden="true"></span>';
+
+/**
+ * Toggle an existing magic pill between animated glow (dropzone) and flat dialog styles.
+ * @param {HTMLButtonElement | null} button
+ * @param {'glow' | 'dialog-ghost'} [variant]
+ */
+export function setOrbyMagicButtonVariant(button, variant = 'dialog-ghost') {
+  if (!button) return;
+  button.classList.remove(
+    'orby-magic-btn--dialog',
+    'orby-magic-btn--dialog-ghost',
+    'orby-magic-btn--dialog-accent',
+    'orby-magic-btn--on-lime',
+    'orby-magic-btn--solid-lime',
+    'orby-magic-btn--outline-lime',
+  );
+  if (variant === 'glow') {
+    button.classList.add('dropzone-btn');
+    if (!button.querySelector('.orby-magic-btn__fill')) {
+      button.insertAdjacentHTML('afterbegin', ORBY_MAGIC_BTN_FILL_HTML);
+    }
+    return;
+  }
+  button.classList.remove('dropzone-btn');
+  button.classList.add('orby-magic-btn--dialog', 'orby-magic-btn--dialog-ghost');
+  if (!button.querySelector('.orby-magic-btn__fill')) {
+    button.insertAdjacentHTML('afterbegin', ORBY_MAGIC_BTN_FILL_HTML);
+  }
+}
+
 /**
  * Flat dialog pills on dark scrims — keeps existing ghost / lime accent colors, no glow.
  * @param {string} label

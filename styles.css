@@ -445,9 +445,21 @@ body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptNo.orby-ma
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions {
-  grid-template-columns: 1fr;
-  width: min(100%, 12rem);
+  display: flex;
   justify-content: center;
+  grid-template-columns: none;
+  width: auto;
+  max-width: 100%;
+}
+
+/* Same animated glow pill as dropzone Browse */
+body.orby-not-found-active #orbyFullscreenPrompt #orbyFullscreenPromptYes.orby-magic-btn.dropzone-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 12.5rem;
+  opacity: 1;
+  transform: none;
+  animation: none;
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .orby-magic-btn--dialog-ghost:focus-visible {
