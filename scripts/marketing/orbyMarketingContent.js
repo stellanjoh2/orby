@@ -80,7 +80,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-camera',
     eyebrow: '03 — Camera & FX',
-    title: 'Pro framing in the viewport.',
+    title: 'Pro framing in\nthe\u00a0viewport.',
     lede:
       'Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.',
     bullets: [
@@ -96,9 +96,9 @@ export const MARKETING_SECTIONS = [
     type: 'showcase',
     id: 'orby-marketing-showcase',
     eyebrow: 'Rendering',
-    title: 'Built to show the work.',
+    title: 'Looks this good,\nstraight in the browser.',
     lede:
-      'Full-bleed frames for the moments that matter — product viz, automotive, AI meshes, and game assets at the fidelity your model deserves.',
+      "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
     gallery: [
       {
         src: './assets/marketing/showcase/showcase-01-etron-gt.jpg',
@@ -126,7 +126,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-shader-lab',
     eyebrow: '04 — Shader Lab',
-    title: 'Stylized looks on demand.',
+    title: 'Stylized looks\non\u00a0demand.',
     lede:
       'Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.',
     bullets: [
@@ -172,7 +172,7 @@ export const MARKETING_SECTIONS = [
     type: 'pro',
     id: 'orby-marketing-pro',
     eyebrow: '07 — For pros',
-    title: 'Built for the details.',
+    title: 'Built for\nthe\u00a0details.',
     lede:
       "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [

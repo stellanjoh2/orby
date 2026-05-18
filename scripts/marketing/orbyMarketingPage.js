@@ -102,7 +102,7 @@ function renderSplitSection(section) {
       <div class="orby-marketing__split-copy">
         <div class="orby-marketing__split-copy-inner">
           <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow)}</p>
-          <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
+          <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
           <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
           <p class="orby-marketing__lede">${escapeHtml(section.lede)}</p>
           ${renderBulletList(section.bullets)}
@@ -119,9 +119,10 @@ function renderSplitSection(section) {
 function renderIntroHeadline(title) {
   return String(title)
     .split(/\n+/)
-    .map((line) => escapeHtml(line.trim()))
+    .map((line) => line.trim())
     .filter(Boolean)
-    .join('<br />');
+    .map((line) => `<span class="orby-marketing__title-line">${escapeHtml(line)}</span>`)
+    .join('');
 }
 
 function renderIntroSection(section) {
@@ -193,7 +194,7 @@ function renderShowcaseSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--showcase" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
     <div class="orby-marketing__showcase-copy">
       <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
-      <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
+      <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
       <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
     </div>
@@ -242,7 +243,7 @@ function renderProSection(section) {
     <div class="orby-marketing__inner orby-marketing__pro">
       <header class="orby-marketing__pro-header">
         <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow || 'For pros')}</p>
-        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
+        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
         <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
         ${ledeBlock}
       </header>
