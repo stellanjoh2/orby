@@ -578,6 +578,13 @@ body.legal-doc--about .legal-foot {
   margin: calc(2rem + var(--legal-about-body-size) * var(--legal-about-body-line)) 0 0;
 }
 
+@media (max-width: 639px) {
+  .legal-about__cta-row {
+    display: flex;
+    justify-content: center;
+  }
+}
+
 /* Magic pill CTA — beat .legal-doc a underline / lime hover */
 body.legal-doc--about a.orby-magic-btn {
   text-decoration: none;
