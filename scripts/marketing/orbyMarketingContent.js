@@ -3,7 +3,7 @@
  * Swap imageSrc / videoSrc paths as real captures land. videoSrc on split blocks uses imageSrc as poster when both are set.
  */
 
-/** @typedef {'intro' | 'split' | 'showcase' | 'pro' | 'faq' | 'footer'} MarketingSectionType */
+/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'footer'} MarketingSectionType */
 
 /**
  * @typedef {Object} MarketingProCard
@@ -25,6 +25,7 @@
  * @property {string} [imageSrc]
  * @property {string} [imageAlt]
  * @property {{ src: string, alt: string, credit?: string }[]} [gallery]
+ * @property {{ src: string, alt: string }[]} [marquee]
  * @property {string} [videoSrc]
  * @property {string} [ctaLabel]
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
@@ -171,6 +172,29 @@ export const MARKETING_SECTIONS = [
     layout: 'media-left',
     imageSrc: './assets/marketing/export-golden-look.png',
     imageAlt: 'Golden hour look on a product render',
+  },
+  {
+    type: 'marquee',
+    id: 'orby-marketing-png-marquee',
+    eyebrow: 'Export',
+    title: 'Perfect transparent PNGs.',
+    lede:
+      'Icons, ecommerce cutouts, logos on any background — export stills with real alpha from the viewport. No cleanup pass in Photoshop.',
+    /* Real RGBA PNGs required — paths in assets/marketing/png-loop/ (see README there). */
+    marquee: [
+      {
+        src: './assets/marketing/png-loop/new-balance-574.png',
+        alt: 'New Balance Classic 574 sneaker product cutout',
+      },
+      {
+        src: './assets/marketing/png-loop/skull-salazar.png',
+        alt: 'Decorative painted skull cutout',
+      },
+      {
+        src: './assets/marketing/png-loop/loggerhead-turtle.png',
+        alt: 'Loggerhead sea turtle cutout',
+      },
+    ],
   },
   {
     type: 'pro',

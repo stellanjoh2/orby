@@ -306,6 +306,59 @@ function renderShowcaseSlides(section) {
     .join('\n        ');
 }
 
+function renderPngMarqueeItems(items) {
+  return items
+    .map(
+      (item) => `<li class="orby-marketing__png-marquee-item">
+          <img
+            class="orby-marketing__png-marquee-img"
+            src="${escapeHtml(item.src)}"
+            alt="${escapeHtml(item.alt)}"
+            decoding="async"
+            loading="lazy"
+          />
+      </li>`,
+    )
+    .join('\n          ');
+}
+
+function renderPngMarqueeSection(section) {
+  const items = section.marquee ?? [];
+  const itemHtml = renderPngMarqueeItems(items);
+  const duplicateHtml = renderPngMarqueeItems(items);
+
+  return `<section class="orby-marketing__section orby-marketing__section--marquee" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+    <div class="orby-marketing__marquee-copy">
+      <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
+      <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
+      <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
+    </div>
+    <div
+      class="orby-marketing__png-marquee"
+      data-orby-marketing-png-marquee
+      data-orby-marketing-reveal="media"
+      data-reveal-dir="ltr"
+    >
+      <div class="orby-marketing__png-marquee-logotype" aria-hidden="true">
+        <div
+          class="orby-marketing__png-marquee-logotype-inner"
+          data-orby-marketing-png-marquee-logotype
+        ></div>
+      </div>
+      <div class="orby-marketing__png-marquee-viewport">
+        <div class="orby-marketing__png-marquee-track">
+          <ul class="orby-marketing__png-marquee-group">
+            ${itemHtml}
+          </ul>
+          <ul class="orby-marketing__png-marquee-group" aria-hidden="true">
+            ${duplicateHtml}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
 function renderShowcaseSection(section) {
   const slides = getShowcaseSlides(section);
   const video = section.videoSrc
@@ -466,6 +519,8 @@ function renderSection(section) {
       return renderIntroSection(section);
     case 'showcase':
       return renderShowcaseSection(section);
+    case 'marquee':
+      return renderPngMarqueeSection(section);
     case 'pro':
       return renderProSection(section);
     case 'faq':
@@ -595,6 +650,8 @@ export function initOrbyMarketingPage(options = {}) {
   /** @type {(() => void) | null} */
   let teardownIntroTurntable = null;
   let teardownShowcaseGallery = null;
+  /** @type {(() => void) | null} */
+  let teardownPngMarqueeLogotype = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
@@ -653,6 +710,48 @@ export function initOrbyMarketingPage(options = {}) {
     }
   }
 
+  /** Each enhancer loads on its own — one failure must not block intro turntable, etc. */
+  async function attachMarketingEnhancements() {
+    if (!root || destroyed) return;
+
+    teardownIntroFloat?.();
+    teardownIntroFloat = null;
+    teardownIntroTurntable?.();
+    teardownIntroTurntable = null;
+    teardownShowcaseGallery?.();
+    teardownShowcaseGallery = null;
+    teardownPngMarqueeLogotype?.();
+    teardownPngMarqueeLogotype = null;
+
+    try {
+      const introFloat = await import('./orbyMarketingIntroFloat.js');
+      teardownIntroFloat = introFloat.initIntroFloatParallax(root);
+    } catch (err) {
+      console.error('[orby-marketing] intro float failed to init', err);
+    }
+
+    try {
+      const introTurntable = await import('./orbyMarketingIntroTurntable.js');
+      teardownIntroTurntable = introTurntable.initIntroTurntable(root);
+    } catch (err) {
+      console.error('[orby-marketing] intro turntable failed to init', err);
+    }
+
+    try {
+      const showcaseGallery = await import('./orbyMarketingShowcaseGallery.js');
+      teardownShowcaseGallery = showcaseGallery.initShowcaseGallery(root);
+    } catch (err) {
+      console.error('[orby-marketing] showcase gallery failed to init', err);
+    }
+
+    try {
+      const pngLogotype = await import('./orbyMarketingPngMarqueeLogotype.js');
+      teardownPngMarqueeLogotype = pngLogotype.initPngMarqueeLogotype(root);
+    } catch (err) {
+      console.error('[orby-marketing] PNG marquee logotype failed to init', err);
+    }
+  }
+
   function suspendForStudio() {
     if (!root) return;
     teardownIntroFloat?.();
@@ -661,6 +760,8 @@ export function initOrbyMarketingPage(options = {}) {
     teardownIntroTurntable = null;
     teardownShowcaseGallery?.();
     teardownShowcaseGallery = null;
+    teardownPngMarqueeLogotype?.();
+    teardownPngMarqueeLogotype = null;
     revealModule?.cancelAllMarketingMotion?.(root);
     syncMarketingMedia(false);
     root.hidden = true;
@@ -674,23 +775,13 @@ export function initOrbyMarketingPage(options = {}) {
     root.hidden = false;
     root.classList.remove('orby-marketing--suspended');
     setScrollMode(true);
-    if (!teardownIntroFloat) {
-      import('./orbyMarketingIntroFloat.js').then((introFloat) => {
-        if (!root || destroyed) return;
-        teardownIntroFloat = introFloat.initIntroFloatParallax(root);
-      });
-    }
-    if (!teardownIntroTurntable) {
-      import('./orbyMarketingIntroTurntable.js').then((turntable) => {
-        if (!root || destroyed) return;
-        teardownIntroTurntable = turntable.initIntroTurntable(root);
-      });
-    }
-    if (!teardownShowcaseGallery) {
-      import('./orbyMarketingShowcaseGallery.js').then((showcaseGallery) => {
-        if (!root || destroyed) return;
-        teardownShowcaseGallery = showcaseGallery.initShowcaseGallery(root);
-      });
+    if (
+      !teardownIntroFloat ||
+      !teardownIntroTurntable ||
+      !teardownShowcaseGallery ||
+      !teardownPngMarqueeLogotype
+    ) {
+      void attachMarketingEnhancements();
     }
     syncMarketingMedia(true);
   }
@@ -740,17 +831,7 @@ export function initOrbyMarketingPage(options = {}) {
     attachRevealObserver();
     void reveals.preloadMarketingImages(root);
 
-    const [introFloat, introTurntable, showcaseGallery] = await Promise.all([
-      import('./orbyMarketingIntroFloat.js'),
-      import('./orbyMarketingIntroTurntable.js'),
-      import('./orbyMarketingShowcaseGallery.js'),
-    ]);
-    teardownIntroFloat?.();
-    teardownIntroFloat = introFloat.initIntroFloatParallax(root);
-    teardownIntroTurntable?.();
-    teardownIntroTurntable = introTurntable.initIntroTurntable(root);
-    teardownShowcaseGallery?.();
-    teardownShowcaseGallery = showcaseGallery.initShowcaseGallery(root);
+    await attachMarketingEnhancements();
 
     syncHomeState();
   }
@@ -823,6 +904,8 @@ export function initOrbyMarketingPage(options = {}) {
       teardownIntroTurntable = null;
       teardownShowcaseGallery?.();
       teardownShowcaseGallery = null;
+      teardownPngMarqueeLogotype?.();
+      teardownPngMarqueeLogotype = null;
       bodyObserver?.disconnect();
       disconnectRevealObservers();
       teardownScrollCueFade?.();

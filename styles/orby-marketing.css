@@ -554,6 +554,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /* Showcase / pro — headline to lede */
 .orby-marketing__showcase-copy > .orby-marketing__title + .orby-marketing__lede,
+.orby-marketing__marquee-copy > .orby-marketing__title + .orby-marketing__lede,
 .orby-marketing__pro-header > .orby-marketing__title + .orby-marketing__pro-lede {
   margin-top: var(--orby-marketing-headline-body-gap);
 }
@@ -611,6 +612,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__section--pro .orby-marketing__lede,
 .orby-marketing__pro-lede,
 .orby-marketing__showcase-copy .orby-marketing__lede,
+.orby-marketing__marquee-copy .orby-marketing__lede,
 .orby-marketing__faq-lede {
   margin-bottom: 0;
   font-size: var(--orby-marketing-feature-lede-size);
@@ -622,6 +624,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__section--pro .orby-marketing__lede,
 .orby-marketing__pro-lede,
 .orby-marketing__showcase-copy .orby-marketing__lede,
+.orby-marketing__marquee-copy .orby-marketing__lede,
 .orby-marketing__faq-lede {
   max-width: var(--orby-marketing-centered-copy-measure);
 }
@@ -720,8 +723,9 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   overflow: visible;
 }
 
-/* Showcase — full site width; half the split cqi factor ≈ same scale as split column */
-.orby-marketing__showcase-copy {
+/* Showcase / marquee — full site width; half the split cqi factor ≈ same scale as split column */
+.orby-marketing__showcase-copy,
+.orby-marketing__marquee-copy {
   container-type: inline-size;
   container-name: orby-section-copy;
   --orby-section-headline-cqi-cap: 5.8;
@@ -932,6 +936,134 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__section--showcase .orby-marketing__title {
   margin-bottom: 0;
+}
+
+/* PNG marquee — centered copy + full-bleed horizontal loop (Mobbin-style) */
+.orby-marketing__section--marquee {
+  overflow: visible;
+  /*
+   * Tighter seam into pro: strip is already ~800px tall + full-bleed logo;
+   * gap-big (~220px) reads as double air vs copy→PNG (col-gap ~112px).
+   */
+  padding: 0 0 var(--orby-marketing-feature-body-media-gap);
+}
+
+.orby-marketing__section--marquee .orby-marketing__title {
+  margin-bottom: 0;
+}
+
+.orby-marketing__marquee-copy {
+  width: min(var(--orby-marketing-site-max), 100%);
+  margin: 0 auto var(--orby-marketing-feature-body-media-gap);
+  text-align: center;
+}
+
+.orby-marketing__marquee-copy .orby-marketing__lede {
+  margin-inline: auto;
+}
+
+.orby-marketing__png-marquee {
+  --orby-marketing-png-marquee-max-h: min(50rem, 800px);
+  --orby-marketing-png-marquee-gap: 300px;
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  transform: translateX(-50%);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Site-width animated logotype — behind scrolling PNG cutouts */
+.orby-marketing__png-marquee-logotype {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.orby-marketing__png-marquee-logotype-inner {
+  box-sizing: border-box;
+  width: min(var(--orby-marketing-site-max), 100%);
+  margin-inline: auto;
+}
+
+.orby-marketing__png-marquee-logotype-inner svg,
+.orby-marketing__png-marquee-logotype-inner canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.orby-marketing__png-marquee-viewport {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  width: 100%;
+  padding-block: clamp(0.5rem, 1.5vh, 1.25rem);
+}
+
+.orby-marketing__png-marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: orbyMarketingPngMarquee 52s linear infinite;
+}
+
+.orby-marketing__png-marquee-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--orby-marketing-png-marquee-gap);
+  margin: 0;
+  padding: 0 var(--orby-marketing-png-marquee-gap) 0 0;
+  list-style: none;
+}
+
+.orby-marketing__png-marquee-item {
+  flex: 0 0 auto;
+}
+
+/* PNG alpha sits directly on page bg — no checkerboard panel */
+.orby-marketing__png-marquee-img {
+  display: block;
+  width: auto;
+  height: var(--orby-marketing-png-marquee-max-h);
+  max-height: var(--orby-marketing-png-marquee-max-h);
+  object-fit: contain;
+  object-position: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@keyframes orbyMarketingPngMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-marketing__png-marquee-track {
+    animation: none;
+  }
+
+  .orby-marketing__png-marquee-viewport {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .orby-marketing__png-marquee-group {
+    padding-inline-end: var(--orby-marketing-png-marquee-gap);
+  }
 }
 
 .orby-marketing__showcase-copy {

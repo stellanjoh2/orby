@@ -59,7 +59,7 @@ function getMaskMedia(maskEl) {
   const activeShowcase = maskEl.querySelector('.orby-marketing__showcase-img.is-active');
   if (activeShowcase) return activeShowcase;
   return maskEl.querySelector(
-    '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img',
+    '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img',
   );
 }
 
@@ -109,7 +109,7 @@ export function preloadMarketingImages(root) {
   if (!root) return Promise.resolve();
   const media = [
     ...root.querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__intro-asset',
+      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img, .orby-marketing__intro-asset',
     ),
   ].filter((el) => {
     if (
@@ -243,28 +243,45 @@ export function resumeMarketingVideos(root) {
  */
 function revealMedia(maskEl, tl, position = 0) {
   if (!maskEl) return;
+  const isPngMarquee = maskEl.hasAttribute('data-orby-marketing-png-marquee');
   const media = getMaskMedia(maskEl);
   if (!media) return;
   const isShowcaseGallery = maskEl.hasAttribute('data-orby-marketing-showcase-gallery');
+  const track = isPngMarquee ? maskEl.querySelector('.orby-marketing__png-marquee-track') : null;
+  const logotype = isPngMarquee
+    ? maskEl.querySelector('.orby-marketing__png-marquee-logotype')
+    : null;
 
   gsap.set(maskEl, { clearProps: 'clipPath' });
 
   tl.add(() => whenMediaReady(media), position);
   const revealStart = '>';
+  const revealTarget = isPngMarquee ? [track, logotype].filter(Boolean) : track || media;
   tl.fromTo(
-    media,
-    { opacity: 0, filter: `blur(${mediaBlurPx}px)` },
+    revealTarget,
+    isPngMarquee
+      ? { opacity: 0 }
+      : { opacity: 0, filter: `blur(${mediaBlurPx}px)` },
     {
       opacity: 1,
-      filter: 'blur(0px)',
+      ...(isPngMarquee ? {} : { filter: 'blur(0px)' }),
       duration: mediaRevealDur,
       ease: mediaEase,
       onStart: () => {
-        media.classList.add('is-loaded');
-        if (media instanceof HTMLVideoElement) playMarketingVideo(media);
+        if (isPngMarquee) {
+          maskEl.querySelectorAll('.orby-marketing__png-marquee-img').forEach((img) => {
+            img.classList.add('is-loaded');
+          });
+        } else {
+          media.classList.add('is-loaded');
+          if (media instanceof HTMLVideoElement) playMarketingVideo(media);
+        }
       },
       onComplete: () => {
-        clearMarketingMediaFilter(media);
+        if (isPngMarquee && track) {
+          gsap.set(track, { clearProps: 'x' });
+        }
+        if (!isPngMarquee) clearMarketingMediaFilter(media);
         if (isShowcaseGallery) {
           maskEl.querySelectorAll('.orby-marketing__showcase-img').forEach((img) => {
             if (img !== media) prepareHiddenShowcaseSlide(img);
@@ -278,10 +295,12 @@ function revealMedia(maskEl, tl, position = 0) {
     },
     revealStart,
   );
-  addPlaceholderFadeOut(maskEl, tl, revealStart, {
-    duration: mediaRevealDur,
-    ease: mediaEase,
-  });
+  if (!isPngMarquee) {
+    addPlaceholderFadeOut(maskEl, tl, revealStart, {
+      duration: mediaRevealDur,
+      ease: mediaEase,
+    });
+  }
 }
 
 function prepareSplitSection(sectionEl) {
@@ -309,6 +328,17 @@ function prepareSplitSection(sectionEl) {
 }
 
 function prepareMarketingMask(mask) {
+  if (mask.hasAttribute('data-orby-marketing-png-marquee')) {
+    setMediaPlaceholderOpacity(mask, 0);
+    const track = mask.querySelector('.orby-marketing__png-marquee-track');
+    const logotype = mask.querySelector('.orby-marketing__png-marquee-logotype');
+    if (track) gsap.set(track, { opacity: 0 });
+    if (logotype) gsap.set(logotype, { opacity: 0 });
+    mask.querySelectorAll('.orby-marketing__png-marquee-img').forEach((img) => {
+      gsap.set(img, { opacity: 1, clearProps: 'filter,clipPath' });
+    });
+    return;
+  }
   setMediaPlaceholderOpacity(mask, 1);
   const showcaseImgs = mask.querySelectorAll('.orby-marketing__showcase-img');
   if (showcaseImgs.length) {
@@ -585,7 +615,7 @@ export function revealMarketingSection(sectionEl) {
     sectionEl.classList.add('orby-marketing__section--revealed');
     sectionEl
       .querySelectorAll(
-        '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img',
+        '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img',
       )
       .forEach((el) => {
         el.classList.add('is-loaded');
@@ -595,6 +625,12 @@ export function revealMarketingSection(sectionEl) {
       .querySelectorAll('[data-orby-marketing-reveal="media"]')
       .forEach((mask) => {
         setMediaPlaceholderOpacity(mask, 0);
+        if (mask.hasAttribute('data-orby-marketing-png-marquee')) {
+          const track = mask.querySelector('.orby-marketing__png-marquee-track');
+          const logotype = mask.querySelector('.orby-marketing__png-marquee-logotype');
+          if (track) gsap.set(track, { opacity: 1 });
+          if (logotype) gsap.set(logotype, { opacity: 1 });
+        }
         if (mask.hasAttribute('data-orby-marketing-showcase-gallery')) {
           mask.dispatchEvent(
             new CustomEvent('orby-marketing-showcase-slide', { bubbles: true }),
