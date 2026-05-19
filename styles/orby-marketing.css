@@ -114,6 +114,8 @@
   --orby-marketing-bg: var(--orby-app-bg, var(--orby-black, #080808));
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
+  /* Body copy — Geist Light, same as legal About manifesto */
+  --orby-marketing-body-weight: 300;
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
   --orby-marketing-panel-bg: var(--orby-surface-muted, #121212);
   /* Ink on lime (footer) — matches FAQ panel, softer than --orby-black */
@@ -294,6 +296,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   z-index: 1;
   background: var(--orby-marketing-bg);
   color: var(--orby-marketing-text);
+  font-weight: var(--orby-marketing-body-weight);
 }
 
 .orby-marketing__section {
@@ -592,6 +595,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     1.35vw,
     calc(1.18rem * var(--orby-marketing-scale))
   );
+  font-weight: var(--orby-marketing-body-weight);
   line-height: 1.65;
   color: var(--orby-marketing-text);
 }
@@ -654,6 +658,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   position: relative;
   padding-left: 1.1rem;
   font-size: var(--orby-marketing-feature-list-size);
+  font-weight: var(--orby-marketing-body-weight);
   line-height: var(--orby-marketing-feature-list-line);
   color: var(--orby-marketing-text-dim);
 }
@@ -1348,6 +1353,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     1.1vw,
     calc(0.98rem * var(--orby-marketing-scale))
   );
+  font-weight: var(--orby-marketing-body-weight);
   line-height: 1.65;
   color: var(--orby-marketing-text-dim);
 }
@@ -1472,6 +1478,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   margin: 0;
   max-width: calc(100% - var(--orby-marketing-gutter-text-inset));
   font-size: var(--orby-marketing-feature-list-size);
+  font-weight: var(--orby-marketing-body-weight);
   line-height: var(--orby-marketing-feature-list-line);
   color: var(--orby-marketing-text-dim);
 }

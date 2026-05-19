@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credits — Orby</title>
+    <meta
+      name="description"
+      content="Acknowledgements for open-source libraries, fonts, sounds, shaders, and assets used in Orby."
+    />
+    <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
+    <link rel="stylesheet" href="../legal/legal.css" />
+  </head>
+  <body class="legal-doc legal-doc--credits">
+    <a class="legal-skip" href="#main">Skip to content</a>
+    <header class="legal-top">
+      <div class="legal-top__brand">
+        <a href="../index.html">Orby</a>
+        <span class="legal-top__sep" aria-hidden="true">/</span>
+        <span class="legal-top__crumb">Credits</span>
+      </div>
+      <a class="legal-top__back" href="../index.html">← Back to app</a>
+    </header>
+
+    <main id="main" class="legal-wrap">
+      <h1>Credits</h1>
+      <p class="legal-meta">Last updated: 19 May 2026</p>
+
+      <p class="legal-lead">
+        Orby is built on generous open-source work, licensed assets, and community shaders. This page
+        lists the people and projects we rely on—so you can explore their work and we can say thank
+        you properly.
+      </p>
+
+      <nav class="legal-credits-toc" aria-label="On this page">
+        <p class="legal-credits-toc__label">On this page</p>
+        <ul>
+          <li><a href="#shaders-effects">Shaders &amp; effects</a></li>
+          <li><a href="#rendering">Rendering</a></li>
+          <li><a href="#animation-ui">Animation &amp; UI</a></li>
+          <li><a href="#typography">Typography</a></li>
+          <li><a href="#audio-textures">Audio &amp; textures</a></li>
+          <li><a href="#export-tools">Export &amp; tools</a></li>
+          <li><a href="#three-d-assets">3D assets</a></li>
+          <li><a href="#development">Development</a></li>
+          <li><a href="#licensed-assets">Licensed assets note</a></li>
+        </ul>
+      </nav>
+
+      <section id="shaders-effects" class="legal-credits-section">
+        <h2>Shaders &amp; effects</h2>
+        <p class="legal-credits-section__intro">
+          Custom post-processing and lens effects adapted from community references.
+        </p>
+        <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://gist.github.com/hmans/550390e62cd1a9678bfd2cda7b612985" target="_blank" rel="noopener noreferrer">Hendrik Mans</a>
+            </p>
+            <p class="legal-credits-card__desc">Lens Dirt shader inspiration</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://github.com/ektogamat/lensflare-threejs-vanilla" target="_blank" rel="noopener noreferrer">Anderson Mancini (ektogamat)</a>
+            </p>
+            <p class="legal-credits-card__desc">Lens flare implementation</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="rendering" class="legal-credits-section">
+        <h2>Rendering</h2>
+        <p class="legal-credits-section__intro">
+          Core 3D stack loaded in the browser via Three.js and companion libraries.
+        </p>
+        <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://threejs.org/" target="_blank" rel="noopener noreferrer">Three.js contributors</a>
+            </p>
+            <p class="legal-credits-card__desc">
+              Core rendering, loaders (glTF, FBX, OBJ, STL, USDZ), OrbitControls, EffectComposer,
+              post-processing passes, Reflector, and line rendering utilities
+            </p>
+            <span class="legal-credits-card__tag">MIT</span>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://github.com/N8python/n8ao" target="_blank" rel="noopener noreferrer">N8AO (N8python)</a>
+            </p>
+            <p class="legal-credits-card__desc">Screen-space ambient occlusion (SSAO) pass</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://www.maxroz.com/hdri" target="_blank" rel="noopener noreferrer">Maxime Roz</a>
+            </p>
+            <p class="legal-credits-card__desc">HDRI environment maps bundled with Orby</p>
+            <span class="legal-credits-card__tag legal-credits-card__tag--warn">Licensed</span>
+          </li>
+        </ul>
+      </section>
+
+      <section id="animation-ui" class="legal-credits-section">
+        <h2>Animation &amp; UI</h2>
+        <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://greensock.com/gsap/" target="_blank" rel="noopener noreferrer">GSAP</a>
+            </p>
+            <p class="legal-credits-card__desc">UI motion, marketing scroll reveals, and panel transitions</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://github.com/airbnb/lottie-web" target="_blank" rel="noopener noreferrer">Lottie Web</a>
+            </p>
+            <p class="legal-credits-card__desc">SVG logotype animations (dropzone, info panel, marketing)</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://fontawesome.com/" target="_blank" rel="noopener noreferrer">Font Awesome</a>
+            </p>
+            <p class="legal-credits-card__desc">Icon library (CDN stylesheet)</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="typography" class="legal-credits-section">
+        <h2>Typography</h2>
+        <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://www.collletttivo.it/" target="_blank" rel="noopener noreferrer">Collletttivo</a>
+            </p>
+            <p class="legal-credits-card__desc">Mattone — headline brand typeface</p>
+            <span class="legal-credits-card__tag">SIL OFL 1.1</span>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://vercel.com/font" target="_blank" rel="noopener noreferrer">Vercel</a>
+            </p>
+            <p class="legal-credits-card__desc">Geist Sans &amp; Geist Mono — UI fonts (self-hosted <code>woff2</code>)</p>
+            <span class="legal-credits-card__tag">SIL OFL 1.1</span>
+          </li>
+        </ul>
+      </section>
+
+      <section id="audio-textures" class="legal-credits-section">
+        <h2>Audio &amp; textures</h2>
+        <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://snd.dev/" target="_blank" rel="noopener noreferrer">SND</a>
+              ·
+              <span class="legal-credits-card__name-inline">Yasuhiro Tsuchiya</span>
+            </p>
+            <p class="legal-credits-card__desc">UI interaction sounds (SND01 “sine” kit)</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://uvchecker.atlux.one/" target="_blank" rel="noopener noreferrer">Atlux</a>
+              ·
+              <span class="legal-credits-card__name-inline">Jorge Valle Hurtado</span>
+            </p>
+            <p class="legal-credits-card__desc">UV checker map overlay</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="export-tools" class="legal-credits-section">
+        <h2>Export &amp; tools</h2>
+        <p class="legal-credits-section__intro">Loaded on demand when you use specific export features.</p>
+        <ul class="legal-credits-grid">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener noreferrer">JSZip</a>
+            </p>
+            <p class="legal-credits-card__desc">PNG sequence ZIP packaging for video export</p>
+          </li>
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://github.com/jankovicsandras/imagetracerjs" target="_blank" rel="noopener noreferrer">ImageTracer.js</a>
+              ·
+              <span class="legal-credits-card__name-inline">András Jankovics</span>
+            </p>
+            <p class="legal-credits-card__desc">Raster-to-SVG tracing for silhouette and color vector export</p>
+            <span class="legal-credits-card__tag">Public domain</span>
+          </li>
+        </ul>
+      </section>
+
+      <section id="three-d-assets" class="legal-credits-section">
+        <h2>3D assets</h2>
+        <div class="legal-credits-placeholder" role="status">
+          <p class="legal-credits-placeholder__title">Coming soon</p>
+          <p class="legal-credits-placeholder__body">
+            We’re preparing credits for marketing showcase models and bundled demo geometry. This
+            section will list authors, sources, and license terms once final art is in place.
+          </p>
+        </div>
+      </section>
+
+      <section id="development" class="legal-credits-section">
+        <h2>Development</h2>
+        <ul class="legal-credits-grid legal-credits-grid--single">
+          <li class="legal-credits-card">
+            <p class="legal-credits-card__name">
+              <a href="https://cursor.com/" target="_blank" rel="noopener noreferrer">Cursor</a>
+            </p>
+            <p class="legal-credits-card__desc">AI-assisted development tooling</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="licensed-assets" class="legal-credits-section">
+        <h2>Licensed assets note</h2>
+        <aside class="legal-callout">
+          <p>
+            <strong>HDRI environment maps</strong> from
+            <a href="https://www.maxroz.com/hdri" target="_blank" rel="noopener noreferrer">Maxime Roz</a>
+            were purchased through
+            <a href="https://www.maxroz.com/hdri" target="_blank" rel="noopener noreferrer">maxroz.com/hdri</a>.
+            They are <strong>not</strong> covered by Orby’s MIT License.
+          </p>
+          <p>
+            See <a href="../ASSETS_LICENSE.md">ASSETS_LICENSE.md</a> in the repository for redistribution
+            and fork guidance.
+          </p>
+        </aside>
+      </section>
+
+      <footer class="legal-foot">
+        <a href="../index.html">← Orby</a>
+        ·
+        <a href="../about/">About</a>
+        ·
+        <a href="../legal/privacy-policy.html">Privacy Policy</a>
+        ·
+        <a href="../ASSETS_LICENSE.md">Asset licenses</a>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -103,6 +103,12 @@ cpSync('ASSETS_LICENSE.md', join(distDir, 'ASSETS_LICENSE.md'));
 if (existsSync(join(__dirname, 'legal'))) {
   cpSync('legal', join(distDir, 'legal'), { recursive: true });
 }
+if (existsSync(join(__dirname, 'about'))) {
+  cpSync('about', join(distDir, 'about'), { recursive: true });
+}
+if (existsSync(join(__dirname, 'credits'))) {
+  cpSync('credits', join(distDir, 'credits'), { recursive: true });
+}
 
 // Copy CNAME for GitHub Pages
 if (existsSync('CNAME')) {

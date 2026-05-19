@@ -659,7 +659,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Credits
 
-Full acknowledgements (libraries, fonts, sounds, shaders, licensed HDRIs, and more) live on the **[Credits page](legal/credits.html)**.
+Full acknowledgements (libraries, fonts, sounds, shaders, licensed HDRIs, and more) live on the **[Credits page](credits/)**.
 
 Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageTracer.js, community lens effects, Maxime Roz HDRIs (licensed separately — see [ASSETS_LICENSE.md](ASSETS_LICENSE.md)), and open fonts from Collletttivo and Vercel.
 

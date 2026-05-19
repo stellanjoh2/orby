@@ -496,8 +496,8 @@ function renderFooterSection(section) {
 function renderFooterMeta(section) {
   const contactEmail = section.footerContactEmail?.trim();
   const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
-  const aboutHref = section.footerAboutHref?.trim() || './legal/about.html';
-  const creditsHref = section.footerCreditsHref?.trim() || './legal/credits.html';
+  const aboutHref = section.footerAboutHref?.trim() || './about/';
+  const creditsHref = section.footerCreditsHref?.trim() || './credits/';
   const githubHref = section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby';
   const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
   const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
