@@ -33,6 +33,7 @@
  * @property {MarketingProCard[]} [cards]
  * @property {string} [footerContactEmail] — hidden; copied when “Contact” is pressed
  * @property {string} [footerPrivacyHref]
+ * @property {string} [footerCreditsHref]
  * @property {string} [footerGithubHref]
  * @property {string} [footerLicenseHref]
  */
@@ -177,9 +178,9 @@ export const MARKETING_SECTIONS = [
     type: 'marquee',
     id: 'orby-marketing-png-marquee',
     eyebrow: 'Export',
-    title: 'Perfect transparent PNGs.',
+    title: 'Perfect transparency.',
     lede:
-      'Icons, ecommerce cutouts, logos on any background — export stills with real alpha from the viewport. No cleanup pass in Photoshop.',
+      'Icons, ecommerce cutouts, logos on any background — export PNGs with real alpha from the viewport. No cleanup pass in Photoshop.',
     /* Real RGBA PNGs required — paths in assets/marketing/png-loop/ (see README there). */
     marquee: [
       {
@@ -285,6 +286,7 @@ export const MARKETING_SECTIONS = [
     secondaryCtaLabel: 'Load Sample',
     footerContactEmail: 'orby-admin@proton.me',
     footerPrivacyHref: './legal/privacy-policy.html',
+    footerCreditsHref: './legal/credits.html',
     footerGithubHref: 'https://github.com/stellanjoh2/orby',
     footerLicenseHref: './LICENSE',
   },

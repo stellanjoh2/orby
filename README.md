@@ -659,15 +659,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Credits
 
-Orby is built with the help of amazing open-source projects and contributors:
+Full acknowledgements (libraries, fonts, sounds, shaders, licensed HDRIs, and more) live on the **[Credits page](legal/credits.html)**.
 
-- **Hendrik Mans** — Lens Dirt shader inspiration ([gist](https://gist.github.com/hmans/550390e62cd1a9678bfd2cda7b612985))
-- **Anderson Mancini (ektogamat)** — Lens flare implementation ([repo](https://github.com/ektogamat/lensflare-threejs-vanilla))
-- **Maxime Roz** — HDRI maps ([website](https://www.maxroz.com/hdri))
-- **Three.js contributors** — Core rendering, loaders, post-processing utilities
-- **GSAP** — Animation library ([website](https://greensock.com/gsap/))
-- **Font Awesome** — Icon library ([website](https://fontawesome.com/))
-- **Lottie Web** — SVG animation library
+Highlights include Three.js, GSAP, Lottie Web, N8AO, Font Awesome, JSZip, ImageTracer.js, community lens effects, Maxime Roz HDRIs (licensed separately — see [ASSETS_LICENSE.md](ASSETS_LICENSE.md)), and open fonts from Collletttivo and Vercel.
 
 ---
 

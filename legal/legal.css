@@ -1,5 +1,5 @@
 /**
- * Orby — shared styles for standalone legal pages (privacy, terms, etc.).
+ * Orby — shared styles for standalone legal pages (privacy, credits, terms, etc.).
  * Self-contained; does not import the main app stylesheet.
  */
 
@@ -55,6 +55,7 @@
   color-scheme: dark;
   --legal-bg: #0a0a0a;
   --legal-surface: #121212;
+  --orby-black: #080808;
   --legal-border: rgba(255, 255, 255, 0.08);
   --legal-text: rgba(255, 255, 255, 0.92);
   --legal-muted: rgba(255, 255, 255, 0.62);
@@ -286,4 +287,211 @@ body.legal-doc {
   :root {
     --legal-max: 56rem;
   }
+}
+
+/* ——— Credits page ——— */
+
+body.legal-doc--credits {
+  --legal-bg: var(--orby-black);
+  --legal-surface: #101010;
+}
+
+.legal-credits-toc {
+  margin: 0 0 2.5rem;
+  padding: 1.15rem 1.25rem 1.05rem;
+  background: var(--legal-surface);
+  border: 1px solid var(--legal-border);
+  border-radius: 10px;
+  border-left: 3px solid var(--legal-accent);
+}
+
+.legal-credits-toc__label {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--legal-faint);
+}
+
+.legal-credits-toc ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+}
+
+.legal-credits-toc li {
+  margin: 0;
+}
+
+.legal-credits-toc a {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--legal-muted);
+  text-decoration: none;
+}
+
+.legal-credits-toc a:hover {
+  color: var(--legal-accent);
+  text-decoration: underline;
+}
+
+.legal-credits-section {
+  margin-bottom: 2.75rem;
+  scroll-margin-top: 4.5rem;
+}
+
+.legal-credits-section__intro {
+  margin: -0.35rem 0 1.1rem;
+  font-size: 0.98rem;
+  color: var(--legal-faint);
+}
+
+/* Override .legal-doc ul { padding-left: 1.5rem } — grids must align with h2 headings */
+body.legal-doc--credits ul.legal-credits-grid {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  color: inherit;
+}
+
+.legal-credits-grid {
+  display: grid;
+  width: 100%;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
+  margin-bottom: 0;
+}
+
+@media (min-width: 640px) {
+  .legal-credits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .legal-credits-grid--single {
+    grid-template-columns: 1fr;
+    max-width: 28rem;
+  }
+}
+
+.legal-credits-card {
+  margin: 0;
+  padding: 1rem 1.1rem 1.05rem;
+  background: var(--legal-surface);
+  border: 1px solid var(--legal-border);
+  border-radius: 8px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.legal-credits-card:hover {
+  border-color: rgba(196, 255, 0, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.legal-credits-card__name {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.legal-credits-card__name a {
+  color: var(--legal-accent);
+  text-decoration: none;
+}
+
+.legal-credits-card__name a:hover {
+  color: var(--legal-accent-hover);
+  text-decoration: underline;
+}
+
+.legal-credits-card__name-inline {
+  color: var(--legal-text);
+  font-weight: 500;
+}
+
+.legal-credits-card__desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--legal-muted);
+}
+
+.legal-credits-card__tag {
+  display: inline-block;
+  margin-top: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legal-faint);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--legal-border);
+  border-radius: 4px;
+}
+
+.legal-credits-card__tag--warn {
+  color: #e8c96a;
+  border-color: rgba(232, 201, 106, 0.35);
+  background: rgba(232, 201, 106, 0.08);
+}
+
+.legal-credits-card code {
+  font-family: ui-monospace, 'Geist Mono', monospace;
+  font-size: 0.88em;
+  color: var(--legal-text);
+}
+
+.legal-credits-placeholder {
+  padding: 1.35rem 1.25rem;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legal-credits-placeholder__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--legal-accent);
+}
+
+.legal-credits-placeholder__body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--legal-muted);
+}
+
+.legal-callout {
+  margin: 0;
+  padding: 1.15rem 1.25rem;
+  background: rgba(232, 201, 106, 0.06);
+  border: 1px solid rgba(232, 201, 106, 0.22);
+  border-radius: 8px;
+  border-left: 3px solid rgba(232, 201, 106, 0.55);
+}
+
+.legal-callout p {
+  margin: 0 0 0.75rem;
+  color: var(--legal-muted);
+}
+
+.legal-callout p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-callout strong {
+  color: var(--legal-text);
 }
