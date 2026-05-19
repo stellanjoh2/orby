@@ -3,7 +3,7 @@
 /** Session-only custom upload (blob URL registered at runtime). */
 export const HDRI_CUSTOM_ID = 'custom';
 
-/** Grid / keyboard cycle order (3×3). Excludes {@link HDRI_CUSTOM_ID} until a file is uploaded. */
+/** Grid / keyboard cycle order. Excludes {@link HDRI_CUSTOM_ID} until a file is uploaded. */
 export const HDRI_PRESET_ORDER = [
   'congress',
   'luminous-sky',
@@ -11,8 +11,6 @@ export const HDRI_PRESET_ORDER = [
   'meadow',
   'abandoned',
   'beach',
-  'soft-loft',
-  'overcast-sky',
 ];
 
 export const HDRI_PRESETS = {
@@ -22,10 +20,6 @@ export const HDRI_PRESETS = {
   abandoned: { url: './assets/hdris/MR_INT-022_RefugeWindowHighContrast_Aorai_4k.jpg', type: 'ldr' },
   beach: { url: './assets/hdris/MR_EXT-010_BlueEndDayPinkClouds_Moorea_4k.jpg', type: 'ldr' },
   sunset: { url: './assets/hdris/MR_EXT-014_SunsetTropicalMountains_4k.jpg', type: 'ldr' },
-  /** Drop `soft-loft_4k.jpg` in assets/hdris/ and thumbnail in assets/images/. */
-  'soft-loft': { url: './assets/hdris/soft-loft_4k.jpg', type: 'ldr' },
-  /** Drop `overcast-sky_4k.jpg` in assets/hdris/ and thumbnail in assets/images/. */
-  'overcast-sky': { url: './assets/hdris/overcast-sky_4k.jpg', type: 'ldr' },
 };
 
 export const HDRI_STRENGTH_UNIT = 1.0;
@@ -72,19 +66,5 @@ export const HDRI_MOODS = {
     bloomRadiusMin: 0.75,
     baseColor: '#4a3a2a',
     background: '#2a1f15',
-  },
-  'soft-loft': {
-    bloomTint: '#ffe9cc',
-    bloomStrengthMin: 0.35,
-    bloomRadiusMin: 0.75,
-    baseColor: '#808080',
-    background: '#080808',
-  },
-  'overcast-sky': {
-    bloomTint: '#e8ecf0',
-    bloomStrengthMin: 0.35,
-    bloomRadiusMin: 0.75,
-    baseColor: '#808080',
-    background: '#080808',
   },
 };

@@ -80,7 +80,7 @@ export const MARKETING_SECTIONS = [
     ctaAction: 'load-sample',
     layout: 'media-right',
     videoSrc: './assets/marketing/import-orbit-placeholder.mp4',
-    imageSrc: './assets/images/orby-lookfilter-studio.png',
+    imageSrc: './assets/images/look-filters/studio.png',
     imageAlt: 'Orbit preview of a 3D model in Orby',
   },
   {
