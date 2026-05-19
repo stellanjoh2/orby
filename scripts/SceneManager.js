@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { TransformControls } from './vendor/TransformControls.js';
-import { HDRI_PRESETS, HDRI_STRENGTH_UNIT, HDRI_MOODS } from './config/hdri.js';
+import {
+  HDRI_PRESETS,
+  HDRI_STRENGTH_UNIT,
+  HDRI_MOODS,
+  HDRI_CUSTOM_ID,
+} from './config/hdri.js';
 import {
   WIREFRAME_OFFSET,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
@@ -1235,8 +1240,49 @@ export class SceneManager {
     }
   }
 
-  async setHdriPreset(preset) {
-    if (!preset || !HDRI_PRESETS[preset]) return;
+  _hasHdriPreset(preset) {
+    if (!preset) return false;
+    if (HDRI_PRESETS[preset]) return true;
+    return preset === HDRI_CUSTOM_ID && !!this.environmentController?.presets?.[HDRI_CUSTOM_ID];
+  }
+
+  applyNeutralHdriCompanion() {
+    const bloom = { ...this.stateStore.defaults.bloom };
+    this.stateStore.set('bloom', bloom);
+    this.updateBloom(bloom);
+    this.applyHdriMood(null);
+  }
+
+  clearCustomHdri() {
+    this.environmentController?.disposePreset(HDRI_CUSTOM_ID);
+    this.stateStore.set('hdriCustomName', null);
+    this.ui?.clearHdriUploadLoaded?.();
+  }
+
+  async loadCustomHdri(file) {
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const type = ext === 'hdr' || ext === 'hdri' ? 'hdr' : 'ldr';
+    this.clearCustomHdri();
+    const url = URL.createObjectURL(file);
+    this.environmentController?.registerPreset(HDRI_CUSTOM_ID, {
+      url,
+      type,
+      revokeUrl: true,
+    });
+    this.stateStore.set('hdriCustomName', file.name);
+    const loaded = await this.setHdriPreset(HDRI_CUSTOM_ID, { suppressSuccessToast: true });
+    if (loaded) {
+      this.ui?.setHdriUploadLoaded?.(file.name);
+      this.ui?.showToast?.(`Custom HDRI loaded — ${file.name}`, 3200, { notification: false });
+    } else {
+      this.clearCustomHdri();
+      this.ui?.showToast?.('Failed to load custom HDRI');
+    }
+  }
+
+  async setHdriPreset(preset, options = {}) {
+    if (!this._hasHdriPreset(preset)) return false;
     this.currentHdri = preset;
     const alreadyCached = this.environmentController?.cache?.has?.(preset);
     if (!alreadyCached) {
@@ -1244,11 +1290,28 @@ export class SceneManager {
     }
     try {
       await this.environmentController?.setPreset(preset);
-      this.applyHdriMood(preset);
+      if (preset === HDRI_CUSTOM_ID) {
+        this.applyNeutralHdriCompanion();
+      } else {
+        this.applyHdriMood(preset);
+      }
       this.autoExposureController?.resetLuminance();
+      if (!options.suppressSuccessToast) {
+        const state = this.stateStore.getState();
+        const customName = state.hdriCustomName;
+        const message =
+          preset === HDRI_CUSTOM_ID && customName
+            ? `Custom HDRI loaded — ${customName}`
+            : `HDRI loaded — ${String(preset)
+                .replace(/-/g, ' ')
+                .replace(/\b\w/g, (c) => c.toUpperCase())}`;
+        this.ui?.showToast?.(message, 3200, { notification: false });
+      }
+      return true;
     } catch (error) {
       console.error('Failed to apply HDRI preset', preset, error);
       this.ui.showToast('Failed to load HDRI');
+      return false;
     } finally {
       if (!alreadyCached) {
         this.ui.endLoadSpinner();
@@ -2109,7 +2172,7 @@ export class SceneManager {
   }
 
   applyHdriMood(preset) {
-    const style = HDRI_MOODS[preset];
+    const style = preset ? HDRI_MOODS[preset] : null;
     this.hdriMood?.apply(style, {
       hdriBackgroundEnabled: this.hdriBackgroundEnabled,
       hdriEnabled: this.hdriEnabled,
@@ -2209,6 +2272,7 @@ export class SceneManager {
       const shading = this.stateStore.getState()?.shading ?? 'shaded';
       this.materialController.setShading(shading);
       this.eventBus.emit('scene:fbx-map-applied', { slot, name: file.name });
+      this.ui?.showToast?.(`Texture applied — ${file.name}`, 3200, { notification: false });
     } catch (err) {
       console.error('FBX map slot load failed', err);
       URL.revokeObjectURL(url);
@@ -2415,6 +2479,9 @@ export class SceneManager {
     }
 
     this._afterPivotChange();
+    if (wantCentered) {
+      this.ui?.showToast?.('Pivot centered', 3200, { notification: false });
+    }
     return true;
   }
 
@@ -2913,14 +2980,21 @@ export class SceneManager {
     this._suppressResizeForExport = true;
     try {
       if (transparent) {
-        if (!this.currentModel) return;
+        if (!this.currentModel) {
+          this.ui?.showToast?.('Load a mesh before exporting PNG');
+          return;
+        }
         const ok = await this.imageExporter.exportTransparentPng(
           this.currentModel,
           this.currentFile,
           this.cameraController,
           size,
         );
-        if (ok) this.ui?.uiSounds?.playRenderFinished();
+        if (ok) {
+          this.ui?.showToast?.('Transparent PNG exported', 3200, { notification: false });
+        } else {
+          this.ui?.showToast?.('PNG export failed');
+        }
       } else {
         const originalSize = new THREE.Vector2();
         this.renderer.getSize(originalSize);
@@ -2936,8 +3010,11 @@ export class SceneManager {
           size,
           cinematicLetterbox219,
         );
-        this.ui?.uiSounds?.playRenderFinished();
+        this.ui?.showToast?.('PNG exported', 3200, { notification: false });
       }
+    } catch (error) {
+      console.error('PNG export failed', error);
+      this.ui?.showToast?.('PNG export failed');
     } finally {
       this._suppressResizeForExport = false;
       this.handleResize();

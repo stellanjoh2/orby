@@ -7,7 +7,7 @@ import {
   isVignetteUiEnabled,
   cameraShadowsUiToShader,
 } from '../constants.js';
-import { HDRI_MOODS } from '../config/hdri.js';
+import { HDRI_CUSTOM_ID, HDRI_MOODS } from '../config/hdri.js';
 import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
@@ -104,6 +104,7 @@ export class SceneSettingsManager {
       },
       // Studio settings
       hdri: state.hdri,
+      hdriCustomName: state.hdriCustomName ?? null,
       hdriEnabled: state.hdriEnabled,
       hdriStrength: state.hdriStrength,
       hdriBlurriness: state.hdriBlurriness,
@@ -682,12 +683,30 @@ export class SceneSettingsManager {
       }
 
       // Apply Studio settings
+      if (payload.hdriCustomName !== undefined) {
+        this.stateStore.set('hdriCustomName', payload.hdriCustomName);
+      }
       if (payload.hdri !== undefined) {
-        this.stateStore.set('hdri', payload.hdri);
-        if (this.uiHelper?.setHdriActive) {
-          this.uiHelper.setHdriActive(payload.hdri);
+        if (payload.hdri === HDRI_CUSTOM_ID) {
+          const fallback = this.stateStore.getDefaults().hdri ?? 'beach';
+          this.stateStore.set('hdri', fallback);
+          this.stateStore.set('hdriCustomName', null);
+          this.eventBus.emit('studio:hdri-clear-custom');
+          if (this.uiHelper?.setHdriActive) {
+            this.uiHelper.setHdriActive(fallback);
+          }
+          this.eventBus.emit('studio:hdri', fallback);
+          this.uiHelper?.showToast?.(
+            'Custom HDRI is not included in scene JSON — re-upload your file.',
+            4200,
+          );
+        } else {
+          this.stateStore.set('hdri', payload.hdri);
+          if (this.uiHelper?.setHdriActive) {
+            this.uiHelper.setHdriActive(payload.hdri);
+          }
+          this.eventBus.emit('studio:hdri', payload.hdri);
         }
-        this.eventBus.emit('studio:hdri', payload.hdri);
       }
       if (payload.hdriEnabled !== undefined) {
         this.stateStore.set('hdriEnabled', payload.hdriEnabled);

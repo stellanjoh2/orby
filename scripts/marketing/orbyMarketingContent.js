@@ -220,11 +220,11 @@ export const MARKETING_SECTIONS = [
         imageAlt: 'Product render ready for export from Orby',
       },
       {
-        title: 'Save your scene',
+        title: 'Custom HDRI',
         body:
-          'Every light, angle, and grade saved in a single .orby file. Pick it back up exactly where you left off.',
-        imageSrc: './assets/marketing/present-cinema-look.png',
-        imageAlt: 'Cinematic lighting and grade saved in an Orby scene',
+          'Bring your own 360° environment — a sunset field, studio softbox, or location plate. Upload .jpg, .png, or .hdr and Orby lights your model from it: reflections, backdrop, and mood follow your file, not just our presets.',
+        imageSrc: './assets/marketing/custom-hdri-placeholder.png',
+        imageAlt: '3D model lit by a custom golden-hour environment in Orby',
       },
     ],
   },

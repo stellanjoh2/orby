@@ -4727,6 +4727,96 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   transform: scale(1.1);
 }
 
+.hdri-icon__sphere {
+  position: absolute;
+  width: clamp(52px, 4.8vw, 78px);
+  height: clamp(52px, 4.8vw, 78px);
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hdri-icon__sphere--placeholder {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--text-dim) 35%, var(--orby-black)) 0%,
+    color-mix(in srgb, var(--text-dim) 18%, var(--orby-black)) 100%
+  );
+  box-shadow: inset 0 -0.35rem 0.75rem rgba(0, 0, 0, 0.35);
+}
+
+.hdri-icon__sphere--placeholder + img {
+  position: relative;
+  z-index: 1;
+}
+
+/* Custom HDRI upload — same gray family as .ghost-btn, spherical */
+.hdri-icon--upload .hdri-icon__disc {
+  position: absolute;
+  width: clamp(52px, 4.8vw, 78px);
+  height: clamp(52px, 4.8vw, 78px);
+  border-radius: 50%;
+  z-index: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hdri-icon--upload .hdri-icon__plus,
+.hdri-icon--upload .hdri-icon__check {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+  transition: transform 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.hdri-icon--upload .hdri-icon__plus {
+  font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+  color: var(--text-dim);
+}
+
+.hdri-icon--upload .hdri-icon__check {
+  display: none;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  color: #1a6b32;
+}
+
+.hdri-icon--upload:hover:not(:disabled):not(.is-disabled) .hdri-icon__disc {
+  background: var(--accent-muted);
+}
+
+.hdri-icon--upload:hover:not(:disabled):not(.is-disabled) .hdri-icon__plus {
+  color: var(--text);
+  transform: scale(1.08);
+}
+
+.hdri-icon--upload.is-loaded .hdri-icon__disc {
+  background: var(--accent);
+  box-shadow: var(--ui-accent-outer-glow-compact);
+}
+
+.hdri-icon--upload.is-loaded .hdri-icon__plus {
+  display: none;
+}
+
+.hdri-icon--upload.is-loaded .hdri-icon__check {
+  display: block;
+}
+
+.hdri-icon--upload.is-loaded:hover:not(:disabled):not(.is-disabled) .hdri-icon__disc {
+  background: var(--accent);
+  box-shadow: var(--ui-accent-outer-glow);
+}
+
+.hdri-icon--upload.is-loaded:hover:not(:disabled):not(.is-disabled) .hdri-icon__check {
+  transform: scale(1.06);
+}
+
+.hdri-icon--upload.active::before {
+  border-color: var(--accent);
+}
+
 .export-format-sub {
   margin: 0 0 1rem 0;
   font-size: 0.8rem;

@@ -346,18 +346,15 @@ export class ModelLifecycleManager {
       const isFbx = this._configureFbxAfterLoad(file);
       s.updateStatsUI(file, asset.object, asset.gltfMetadata);
       s.ui.updateTopBarDetail(`${file.name} — Idle`);
-      if (!options.silent) {
-        if (isFbx) {
-          s.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
-            okLabel: 'CONTINUE',
-            modalTone:
-              options.suppressSuccessToastSound === true ? 'none' : 'notification',
-          });
-        } else {
-          s.ui.showToast('Model loaded', 3200, {
-            notification: options.suppressSuccessToastSound === true ? false : undefined,
-          });
-        }
+      if (options.silent) {
+        s.ui.showToast('Model reloaded', 3200, { notification: false });
+      } else if (isFbx) {
+        s.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
+          okLabel: 'CONTINUE',
+          modalTone: 'none',
+        });
+      } else {
+        s.ui.showToast('Model loaded', 3200, { notification: false });
       }
       s.eventBus.emit('scene:model-load-complete', { success: true, file });
     } catch (error) {
@@ -410,10 +407,10 @@ export class ModelLifecycleManager {
       if (isFbx) {
         s.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
           okLabel: 'CONTINUE',
-          modalTone: 'notification',
+          modalTone: 'none',
         });
       } else {
-        s.ui.showToast('Folder loaded');
+        s.ui.showToast('Folder loaded', 3200, { notification: false });
       }
       s.eventBus.emit('scene:model-load-complete', { success: true, file: sourceFile });
     } catch (error) {

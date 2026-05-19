@@ -1436,8 +1436,16 @@
                     </label>
                   </div>
                 </div>
+                <input
+                  type="file"
+                  id="hdriFileInput"
+                  class="sr-only"
+                  accept=".hdr,.hdri,image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff"
+                  tabindex="-1"
+                  aria-hidden="true"
+                />
                 <div class="hdri-grid" id="hdriGrid">
-                  <button data-hdri="congress" class="hdri-icon" data-tooltip="Congress Hall environment">
+                  <button type="button" data-hdri="congress" class="hdri-icon" data-tooltip="Congress Hall environment">
                     <img src="./assets/images/hdri-thumbnail-congress.png" alt="Congress" />
                   </button>
                   <button data-hdri="luminous-sky" class="hdri-icon" data-tooltip="Forest environment">
@@ -1452,8 +1460,27 @@
                   <button data-hdri="abandoned" class="hdri-icon" data-tooltip="Abandoned building environment">
                     <img src="./assets/images/hdri-thumbnail-abandoned.png" alt="Abandoned" />
                   </button>
-                  <button data-hdri="beach" class="hdri-icon active" data-tooltip="Beach environment">
+                  <button type="button" data-hdri="beach" class="hdri-icon active" data-tooltip="Beach environment">
                     <img src="./assets/images/hdri-thumbnail-beach.png" alt="Beach" />
+                  </button>
+                  <button type="button" data-hdri="soft-loft" class="hdri-icon" data-tooltip="Soft loft — add assets/hdris/soft-loft_4k.jpg">
+                    <span class="hdri-icon__sphere hdri-icon__sphere--placeholder" aria-hidden="true"></span>
+                    <img src="./assets/images/hdri-thumbnail-soft-loft.png" alt="Soft loft" />
+                  </button>
+                  <button type="button" data-hdri="overcast-sky" class="hdri-icon" data-tooltip="Overcast sky — add assets/hdris/overcast-sky_4k.jpg">
+                    <span class="hdri-icon__sphere hdri-icon__sphere--placeholder" aria-hidden="true"></span>
+                    <img src="./assets/images/hdri-thumbnail-overcast-sky.png" alt="Overcast sky" />
+                  </button>
+                  <button
+                    type="button"
+                    id="hdriUploadBtn"
+                    class="hdri-icon hdri-icon--upload"
+                    data-tooltip="Upload custom HDRI (.hdr, .jpg, .png)"
+                  >
+                    <span class="hdri-icon__disc" aria-hidden="true"></span>
+                    <i class="fa-solid fa-plus hdri-icon__plus" aria-hidden="true"></i>
+                    <i class="fa-solid fa-check hdri-icon__check" aria-hidden="true"></i>
+                    <span class="sr-only">Upload custom HDRI</span>
                   </button>
                 </div>
                 <label class="slider-line">
@@ -3958,7 +3985,7 @@
                   
                   <div style="margin-bottom: 1.5rem;">
                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text); font-size: 0.95rem; font-weight: 700;">HDRI (Environment)</h4>
-                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A 360° image that wraps around your scene, providing realistic lighting and reflections. Choose from different environments (meadow, studio, sunset) to change the mood and lighting of your render. The HDRI acts as both a light source and a background.</p>
+                    <p style="margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6;">A 360° image that lights your model and fills reflections. Orby’s presets are graded <strong>JPEG</strong> environments — predictable and easy to tune. You can <strong>upload</strong> your own <strong>.jpg</strong>, <strong>.png</strong>, or <strong>.hdr</strong>: JPEGs look like a finished photo sky; <strong>.hdr</strong> files hold more real brightness range, so highlights on metal and glass can hit harder (watch <strong>Intensity</strong> and <strong>Exposure</strong>). Use a <strong>2:1 equirectangular</strong> map. Custom uploads reset mood tints to neutral; re-upload the file after a refresh — it isn’t stored in scene JSON.</p>
                   </div>
                   
                   <div style="margin-bottom: 1.5rem;">

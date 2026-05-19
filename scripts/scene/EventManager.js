@@ -17,7 +17,7 @@ export class EventManager {
       s.ui.syncControls?.(s.stateStore.getState());
     }
     if (result?.message) {
-      s.ui.showToast(result.message);
+      s.ui.showToast(result.message, 3200, { notification: false });
     }
     return result;
   }
@@ -219,6 +219,8 @@ export class EventManager {
 
     // Studio/HDRI events
     eventBus.on('studio:hdri', (preset) => s.setHdriPreset(preset));
+    eventBus.on('studio:hdri-upload', (file) => s.loadCustomHdri(file));
+    eventBus.on('studio:hdri-clear-custom', () => s.clearCustomHdri());
     eventBus.on('studio:hdri-enabled', (enabled) => s.setHdriEnabled(enabled));
     eventBus.on('studio:hdri-strength', (value) => s.setHdriStrength(value));
     eventBus.on('studio:hdri-blurriness', (value) => s.setHdriBlurriness(value));
@@ -413,9 +415,9 @@ export class EventManager {
       }
       s.loadFileBundle(bundle);
     });
-    eventBus.on('file:reload', () => {
+    eventBus.on('file:reload', async () => {
       if (s.currentFile) {
-        s.loadFile(s.currentFile, { silent: true });
+        await s.loadFile(s.currentFile, { silent: true });
       } else {
         s.ui.showToast('No model to reload');
       }

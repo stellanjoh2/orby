@@ -1,4 +1,4 @@
-import { HDRI_STRENGTH_UNIT } from './config/hdri.js';
+import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DEFAULT_MATERIAL_BRIGHTNESS,
@@ -89,6 +89,13 @@ export class UIManager {
     this._rangeSliderFillRafId = null;
     /** Nested loads (model + HDRI) toggle #viewportLoadSpinner while depth > 0 */
     this._loadSpinnerDepth = 0;
+    /** @type {Array<{ text: string, durationMs: number, toastOptions: object }>} */
+    this._toastQueue = [];
+    this._toastQueueActive = false;
+    /** @type {HTMLElement | null} */
+    this._activeToastEl = null;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    this._activeToastTimer = null;
   }
 
   init() {
@@ -356,6 +363,8 @@ export class UIManager {
       backdropY: q('#backdropY'),
       backdropSnap: q('#backdropSnap'),
       hdriButtons: document.querySelectorAll('[data-hdri]'),
+      hdriUploadBtn: q('#hdriUploadBtn'),
+      hdriFileInput: q('#hdriFileInput'),
       lightControls: document.querySelectorAll('.light-color-row'),
       lightsEnabled: q('#lightsEnabled'),
       lightsMaster: q('#lightsMaster'),
@@ -611,9 +620,8 @@ export class UIManager {
     const { noCautionSound, modalTone, ...alertOptions } = options;
     const text = typeof message === 'string' ? message : String(message ?? '');
     const tone = modalTone ?? inferModalTone(text);
-    if (!noCautionSound) {
-      if (tone === 'notification') this.uiSounds?.playNotification();
-      else if (tone === 'caution') this.uiSounds?.playCaution();
+    if (!noCautionSound && tone === 'caution') {
+      this.uiSounds?.playCaution();
     }
     this.modalOverlays?.showMessageAlert(message, title, alertOptions);
   }
@@ -961,6 +969,38 @@ export class UIManager {
     this.inputs.hdriButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.hdri === preset);
     });
+    if (this.inputs.hdriUploadBtn) {
+      this.inputs.hdriUploadBtn.classList.toggle('active', preset === HDRI_CUSTOM_ID);
+    }
+  }
+
+  static HDRI_UPLOAD_TOOLTIP_EMPTY = 'Upload custom HDRI (.hdr, .jpg, .png)';
+
+  setHdriUploadLoaded(filename = '') {
+    const btn = this.inputs.hdriUploadBtn;
+    if (!btn) return;
+    const name = String(filename || '').trim();
+    if (!name) {
+      this.clearHdriUploadLoaded();
+      return;
+    }
+    btn.classList.add('is-loaded');
+    btn.dataset.tooltip = `Custom HDRI: ${name}`;
+  }
+
+  clearHdriUploadLoaded() {
+    const btn = this.inputs.hdriUploadBtn;
+    if (!btn) return;
+    btn.classList.remove('is-loaded');
+    btn.dataset.tooltip = UIManager.HDRI_UPLOAD_TOOLTIP_EMPTY;
+  }
+
+  syncHdriUploadButton(state) {
+    if (state?.hdriCustomName) {
+      this.setHdriUploadLoaded(state.hdriCustomName);
+    } else {
+      this.clearHdriUploadLoaded();
+    }
   }
 
   setCreativeLookActive(preset) {
@@ -984,6 +1024,10 @@ export class UIManager {
       button.disabled = !enabled;
       button.classList.toggle('is-disabled', !enabled);
     });
+    if (this.inputs.hdriUploadBtn) {
+      this.inputs.hdriUploadBtn.disabled = !enabled;
+      this.inputs.hdriUploadBtn.classList.toggle('is-disabled', !enabled);
+    }
     // Block muting handled by applyBlockStates via syncControls
     this.inputs.hdriBackground.disabled = !enabled;
       this.inputs.hdriStrength.disabled = !enabled;
@@ -1076,22 +1120,69 @@ export class UIManager {
       this.showMessageAlert(text, 'Message', { modalTone: tone });
       return;
     }
+    this._toastQueue.push({ text, durationMs, toastOptions });
+    void this._drainToastQueue();
+  }
+
+  _clearActiveToast() {
+    if (this._activeToastTimer) {
+      clearTimeout(this._activeToastTimer);
+      this._activeToastTimer = null;
+    }
+    if (this._activeToastEl?.isConnected) {
+      this._activeToastEl.remove();
+    }
+    this._activeToastEl = null;
+  }
+
+  /**
+   * Show one toast and resolve when its display duration ends.
+   * @param {{ text: string, durationMs: number, toastOptions: object }} item
+   * @returns {Promise<void>}
+   */
+  _presentToast(item) {
+    const { text, durationMs, toastOptions } = item;
     const wantCaution =
       toastOptions?.caution === true
       || (toastOptions?.caution !== false && inferToastCaution(text));
-    const wantNotification =
-      !wantCaution
-      && (toastOptions?.notification === true
-        || (toastOptions?.notification !== false && inferToastPositive(text)));
     if (wantCaution) this.uiSounds?.playCaution();
-    else if (wantNotification) this.uiSounds?.playNotification();
 
     const template = this.dom.toastTemplate?.content?.firstElementChild;
-    if (!template) return;
+    if (!template) return Promise.resolve();
+
+    this._clearActiveToast();
+
     const toast = template.cloneNode(true);
     toast.querySelector('.toast-message').textContent = text;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), durationMs);
+    this._activeToastEl = toast;
+
+    return new Promise((resolve) => {
+      this._activeToastTimer = setTimeout(() => {
+        toast.remove();
+        if (this._activeToastEl === toast) {
+          this._activeToastEl = null;
+        }
+        this._activeToastTimer = null;
+        resolve();
+      }, durationMs);
+    });
+  }
+
+  async _drainToastQueue() {
+    if (this._toastQueueActive) return;
+    this._toastQueueActive = true;
+    try {
+      while (this._toastQueue.length > 0) {
+        const item = this._toastQueue.shift();
+        await this._presentToast(item);
+      }
+    } finally {
+      this._toastQueueActive = false;
+      if (this._toastQueue.length > 0) {
+        void this._drainToastQueue();
+      }
+    }
   }
 
   copySettingsToClipboard(message, payload) {
@@ -1112,7 +1203,7 @@ export class UIManager {
       }
     };
     write()
-      .then(() => this.showToast(message))
+      .then(() => this.showToast(message, 3200, { notification: false }))
       .catch(() => this.showToast('Copy failed', 3200, { caution: true }));
   }
 
@@ -1392,7 +1483,7 @@ export class UIManager {
 
       // Sync UI to reflect loaded values
       this.syncControls(this.stateStore.getState());
-      this.showToast('FX settings loaded');
+      this.showToast('FX settings loaded', 3200, { notification: false });
     } catch (error) {
       console.error('Error loading FX settings:', error);
       this.showToast('Failed to load FX settings - invalid JSON');
@@ -1652,6 +1743,7 @@ export class UIManager {
 
   syncStudioControls(state) {
     this.setHdriActive(state.hdri);
+    this.syncHdriUploadButton(state);
     this.inputs.hdriEnabled.checked = !!state.hdriEnabled;
     this.toggleHdriControls(state.hdriEnabled);
     const normalizedStrength = Math.min(

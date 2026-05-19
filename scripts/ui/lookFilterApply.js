@@ -4,7 +4,7 @@ import {
   isVignetteUiEnabled,
   sanitizeDof,
 } from '../constants.js';
-import { mergeLookFilterState } from '../render/lookFilterPresets.js';
+import { LOOK_FILTER_CATALOG, mergeLookFilterState } from '../render/lookFilterPresets.js';
 
 /**
  * Applies a look filter preset: updates state, syncs UI, drives the post stack via the same
@@ -95,4 +95,11 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
 
   eventBus.emit('render:apply-performance');
   // State already updated via one notify(); subscribers ran syncControls — no second full sync
+
+  const label = LOOK_FILTER_CATALOG.find((entry) => entry.id === presetId)?.label ?? presetId;
+  ui?.showToast?.(
+    presetId === 'none' ? 'Look cleared' : `Look applied — ${label}`,
+    3200,
+    { notification: false },
+  );
 }

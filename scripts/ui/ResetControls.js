@@ -122,6 +122,46 @@ function getAtPath(obj, path) {
   return current;
 }
 
+/** Toast copy for `[data-reset]` block buttons (shown after each section reset). */
+const BLOCK_RESET_TOASTS = {
+  material: 'Material reset',
+  clay: 'Clay reset',
+  wireframe: 'Wireframe reset',
+  'creative-look': 'Creative look reset',
+  hdri: 'HDRI reset',
+  'lens-flare': 'Lens flare reset',
+  lights: 'Lights reset',
+  'lights-shadows': 'Shadows reset',
+  keyLight: 'Key light reset',
+  fillLight: 'Fill light reset',
+  rimLight: 'Rim light reset',
+  ambientLight: 'Ambient light reset',
+  base: 'Base reset',
+  'base-glass': 'Base glass reset',
+  backdrop: 'Backdrop reset',
+  background: 'Background reset',
+  grid: 'Grid reset',
+  dof: 'Depth of field reset',
+  bloom: 'Bloom reset',
+  'anamorphic-bloom': 'Anamorphic bloom reset',
+  'lens-dirt': 'Lens dirt reset',
+  grain: 'Film grain reset',
+  aberration: 'Chromatic aberration reset',
+  'color-checker': 'ColorChecker reset',
+  'ambient-occlusion': 'Ambient occlusion reset',
+  fresnel: 'Fresnel reset',
+  lens: 'Lens reset',
+  camera: 'Camera reset',
+  isometric: 'Isometric camera reset',
+  fisheye: 'Fisheye lens reset',
+  'color-correction': 'Color correction reset',
+  vignette: 'Vignette reset',
+  'tone-curve': 'Tone curve reset',
+  transform: 'Transform reset',
+  'svg-extrude': 'SVG Extrude settings reset',
+  advanced: 'Advanced reset',
+};
+
 export class ResetControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
@@ -270,14 +310,14 @@ export class ResetControls {
     // Copy Scene Settings
     const copyScene = async () => {
       const result = await this.ui.sceneSettingsManager.copyToClipboard();
-      this.helpers.showToast(result.message);
+      this.helpers.showToast(result.message, 3200, { notification: false });
     };
     this.ui.buttons.copySceneButtons?.forEach(button => {
       button.addEventListener('click', copyScene);
     });
     const saveOrby = async () => {
       const result = await this.ui.sceneSettingsManager.saveOrbyToFile();
-      this.helpers.showToast(result.message);
+      this.helpers.showToast(result.message, 3200, { notification: false });
     };
     this.ui.buttons.saveOrbyButtons?.forEach((button) => {
       button.addEventListener('click', saveOrby);
@@ -296,7 +336,6 @@ export class ResetControls {
         if (!modal) return;
         const panel = modal.querySelector('.load-settings-content');
         this.ui.uiSounds?.playShelfShow();
-        this.ui.uiSounds?.playNotification();
         void animateModalOpen(modal, panel).then(async () => {
           if (!text) return;
           text.focus();
@@ -347,7 +386,7 @@ export class ResetControls {
         if (result.success) {
           this.ui.syncControls(this.stateStore.getState());
         }
-        this.helpers.showToast(result.message);
+        this.helpers.showToast(result.message, 3200, { notification: false });
         if (result.success) {
           closeSceneModal();
         }
@@ -472,7 +511,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
 
       this.ui.syncUIFromState();
-      this.helpers.showToast('Mesh settings reset');
+      this.helpers.showToast('Mesh settings reset', 3200, { notification: false });
     };
 
     const resetStudio = () => {
@@ -582,7 +621,7 @@ export class ResetControls {
       this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
       
       this.ui.syncUIFromState();
-      this.helpers.showToast('Studio settings reset');
+      this.helpers.showToast('Studio settings reset', 3200, { notification: false });
     };
 
     const resetRender = () => {
@@ -682,7 +721,7 @@ export class ResetControls {
       );
 
       this.ui.syncUIFromState();
-      this.helpers.showToast('FX settings reset');
+      this.helpers.showToast('FX settings reset', 3200, { notification: false });
     };
 
     this.ui.buttons.resetMesh?.addEventListener('click', resetMesh);
@@ -761,8 +800,10 @@ export class ResetControls {
             break;
             
           case 'hdri':
+            this.eventBus.emit('studio:hdri-clear-custom');
             this.stateStore.batch(() => {
               this.stateStore.set('hdri', defaults.hdri);
+              this.stateStore.set('hdriCustomName', defaults.hdriCustomName ?? null);
               this.stateStore.set('hdriStrength', defaults.hdriStrength);
               this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
               this.stateStore.set('hdriRotation', defaults.hdriRotation);
@@ -1058,7 +1099,6 @@ export class ResetControls {
             this.eventBus.emit('scene:color-checker-reference-shading');
             this.eventBus.emit('scene:color-checker');
             this.ui.syncUIFromState();
-            this.helpers.showToast('ColorChecker reset');
             break;
 
           case 'ambient-occlusion':
@@ -1095,7 +1135,6 @@ export class ResetControls {
             this.eventBus.emit('camera:fov', defaults.camera.fov);
             this.ui.lensControls?.sync(this.stateStore.getState());
             this.ui.syncUIFromState();
-            this.helpers.showToast('Lens reset');
             break;
 
           case 'camera':
@@ -1163,7 +1202,6 @@ export class ResetControls {
             this.eventBus.emit('camera:isometric', isoDefault);
             this.ui.isometricControls?.sync(this.stateStore.getState());
             this.ui.syncUIFromState();
-            this.helpers.showToast('Isometric Camera reset');
             break;
           }
 
@@ -1179,7 +1217,6 @@ export class ResetControls {
             this.eventBus.emit('camera:fisheye');
             this.eventBus.emit('camera:fov');
             this.ui.syncUIFromState();
-            this.helpers.showToast('Fisheye Lens reset');
             break;
           }
 
@@ -1287,7 +1324,6 @@ export class ResetControls {
               scale: defaults.svgExtrude?.surfaceScale ?? 1.0,
             });
             this.ui.syncUIFromState();
-            this.helpers.showToast('SVG Extrude settings reset');
             break;
 
           case 'advanced':
@@ -1350,6 +1386,12 @@ export class ResetControls {
             this.ui.syncUIFromState();
             break;
         }
+
+        const resetToast = BLOCK_RESET_TOASTS[resetType];
+        if (resetToast) {
+          this.helpers.showToast(resetToast, 3200, { notification: false });
+        }
+
         // The user just reset this section; treat it as freshly untouched
         // so its icon stays hidden until they interact with it again.
         this.clearResetTouched(resetType);

@@ -2,7 +2,7 @@
  * StudioControls - Handles all studio/environment-related UI controls
  * Manages HDRI, lights, ground, podium, grid, and lens flare
  */
-import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import {
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
@@ -28,8 +28,29 @@ export class StudioControls {
         if (preset !== current) this.ui.uiSounds?.playSelect();
         this.ui.setHdriActive(preset);
         this.stateStore.set('hdri', preset);
+        if (preset !== HDRI_CUSTOM_ID) {
+          this.stateStore.set('hdriCustomName', null);
+        }
         this.eventBus.emit('studio:hdri', preset);
       });
+    });
+    document.querySelectorAll('#hdriGrid .hdri-icon img').forEach((img) => {
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+      }, { once: true });
+    });
+    this.ui.inputs.hdriUploadBtn?.addEventListener('click', () => {
+      if (!this.stateStore.getState().hdriEnabled) return;
+      this.ui.inputs.hdriFileInput?.click();
+    });
+    this.ui.inputs.hdriFileInput?.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      this.ui.uiSounds?.playSelect();
+      this.stateStore.set('hdri', HDRI_CUSTOM_ID);
+      this.ui.setHdriActive(HDRI_CUSTOM_ID);
+      this.eventBus.emit('studio:hdri-upload', file);
     });
     this.ui.inputs.hdriEnabled.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -741,6 +762,7 @@ export class StudioControls {
     this.ui.inputs.hdriButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.hdri === state.hdri);
     });
+    this.ui.syncHdriUploadButton(state);
   }
 
   syncIndividualLight(lightId, lightState, defaults) {

@@ -96,6 +96,8 @@ export class StateStore {
         centerPivot: false,
       },
       hdri: 'beach',
+      /** Filename when {@link hdri} is `custom` (blob URL is session-only). */
+      hdriCustomName: null,
       hdriEnabled: true,
       hdriStrength: 2,
       hdriBlurriness: 0,

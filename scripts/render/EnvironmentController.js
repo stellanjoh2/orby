@@ -81,6 +81,34 @@ export class EnvironmentController {
     this._applyEnvironment();
   }
 
+  registerPreset(preset, config) {
+    if (!preset || !config?.url) return;
+    this.presets[preset] = config;
+  }
+
+  disposePreset(preset) {
+    if (!preset) return;
+    const config = this.presets[preset];
+    if (config?.revokeUrl && typeof config.url === 'string' && config.url.startsWith('blob:')) {
+      URL.revokeObjectURL(config.url);
+    }
+    const cached = this.cache.get(preset);
+    if (cached) {
+      cached.dispose();
+      this.cache.delete(preset);
+    }
+    const pmrem = this.pmremCache.get(preset);
+    if (pmrem) {
+      pmrem.dispose();
+      this.pmremCache.delete(preset);
+    }
+    if (this.currentPreset === preset) {
+      this.currentEnvironmentTexture = null;
+      this.environmentRenderTarget = null;
+    }
+    delete this.presets[preset];
+  }
+
   async setPreset(preset) {
     if (!preset || !this.presets[preset]) return null;
 

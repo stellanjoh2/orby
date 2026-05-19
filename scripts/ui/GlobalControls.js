@@ -3,7 +3,7 @@
  * Manages keyboard shortcuts, tabs, drag & drop, help overlay, and UI visibility
  */
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
-import { HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import { HDRI_CUSTOM_ID, HDRI_PRESET_ORDER, HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { revealShelfPanelHeadline } from './panelHeadlineReveal.js';
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 
@@ -32,7 +32,7 @@ export class GlobalControls {
       const snapshot = this.stateStore.reset();
       this.ui.syncControls(snapshot);
       this.eventBus.emit('app:reset');
-      this.helpers.showToast('All settings reset');
+      this.helpers.showToast('All settings reset', 3200, { notification: false });
     });
   }
 
@@ -47,7 +47,6 @@ export class GlobalControls {
         };
         this.ui.dom.helpButton.addEventListener('click', () => {
           this.ui.dom.helpOverlay.hidden = false;
-          this.ui.uiSounds?.playNotification();
           gsap.fromTo(
             this.ui.dom.helpOverlay.querySelector('.help-card'),
             { scale: 0.95, autoAlpha: 0 },
@@ -165,7 +164,6 @@ export class GlobalControls {
 
   bindKeyboardShortcuts() {
     const { hasHelpOverlay, hideHelp } = this.bindHelpOverlay();
-    const HDRI_PRESETS = ['noir-studio', 'luminous-sky', 'sunset-cove', 'steel-lab', 'cyberpunk'];
 
     // Handle arrow keys for range inputs at document level (includes ↑/↓ for granular tweaks)
     document.addEventListener('keydown', (event) => {
@@ -646,15 +644,22 @@ export class GlobalControls {
       if (key === '[' || key === ']') {
         event.preventDefault();
         const state = this.stateStore.getState();
-        const currentPreset = state.hdri || 'noir-studio';
-        let currentIndex = HDRI_PRESETS.indexOf(currentPreset);
+        const cyclePresets = HDRI_PRESET_ORDER.filter(
+          (id) => id !== HDRI_CUSTOM_ID || state.hdriCustomName,
+        );
+        if (!cyclePresets.length) return;
+        const currentPreset = state.hdri || cyclePresets[0];
+        let currentIndex = cyclePresets.indexOf(currentPreset);
         if (currentIndex === -1) {
           currentIndex = 0;
         }
         const direction = key === '[' ? -1 : 1;
-        const nextIndex = (currentIndex + direction + HDRI_PRESETS.length) % HDRI_PRESETS.length;
-        const nextPreset = HDRI_PRESETS[nextIndex];
+        const nextIndex = (currentIndex + direction + cyclePresets.length) % cyclePresets.length;
+        const nextPreset = cyclePresets[nextIndex];
         this.stateStore.set('hdri', nextPreset);
+        if (nextPreset !== HDRI_CUSTOM_ID) {
+          this.stateStore.set('hdriCustomName', null);
+        }
         this.eventBus.emit('studio:hdri', nextPreset);
         this.ui.setHdriActive(nextPreset);
       }

@@ -407,14 +407,7 @@ export class UIHelpers {
   showToast(message, durationMs = 3200, toastOptions = {}) {
     if (typeof this.ui?.showToast === 'function') {
       this.ui.showToast(message, durationMs, toastOptions);
-      return;
     }
-    const template = this.ui.dom.toastTemplate?.content?.firstElementChild;
-    if (!template) return;
-    const toast = template.cloneNode(true);
-    toast.querySelector('.toast-message').textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), durationMs);
   }
 
   /**

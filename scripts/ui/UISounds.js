@@ -136,9 +136,14 @@ export class UISounds {
     this._play(this._caution);
   }
 
+  /** Notification / render-complete SFX (`notification.wav`). Off until re-enabled. */
+  get notificationSoundsEnabled() {
+    return false;
+  }
+
   /** Success / informational modals and positive toasts. */
   playNotification() {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.notificationSoundsEnabled) return;
     if (!this._notification) {
       this._notification = new Audio('./assets/sounds/ui/notification.wav');
       this._notification.preload = 'auto';

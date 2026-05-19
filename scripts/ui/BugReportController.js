@@ -481,8 +481,6 @@ export class BugReportController {
 
     this._maskBugModalBehindThankYou();
 
-    this.ui?.uiSounds?.playNotification();
-
     gsap.killTweensOf([msg, ok]);
     killBigMessageRevealTweens(msg, [ok]);
     if (!skipBackdropReveal) gsap.killTweensOf(layer);

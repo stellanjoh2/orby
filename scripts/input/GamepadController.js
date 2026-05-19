@@ -1,4 +1,8 @@
-import { HDRI_PRESETS, HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import {
+  HDRI_CUSTOM_ID,
+  HDRI_PRESET_ORDER,
+  HDRI_STRENGTH_UNIT,
+} from '../config/hdri.js';
 import { applyWireframeOnlyVisibleOnEnter } from '../ui/wireframeEnterDefaults.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -62,7 +66,7 @@ export class GamepadController {
     this.connected = true;
     this.buttonStates.clear();
     if (this.ui?.showToast) {
-      this.ui.showToast('GAMEPAD CONNECTED');
+      this.ui.showToast('GAMEPAD CONNECTED', 3200, { notification: false });
     }
   }
 
@@ -298,9 +302,11 @@ export class GamepadController {
   }
 
   cycleHdri(direction) {
-    const presets = Object.keys(HDRI_PRESETS);
-    if (!presets.length) return;
     const state = this.stateStore.getState();
+    const presets = HDRI_PRESET_ORDER.filter(
+      (id) => id !== HDRI_CUSTOM_ID || state.hdriCustomName,
+    );
+    if (!presets.length) return;
     const current = state.hdri ?? presets[0];
     const currentIndex = presets.indexOf(current);
     const nextIndex =
@@ -308,6 +314,9 @@ export class GamepadController {
     const nextPreset = presets[nextIndex];
 
     this.stateStore.set('hdri', nextPreset);
+    if (nextPreset !== HDRI_CUSTOM_ID) {
+      this.stateStore.set('hdriCustomName', null);
+    }
     this.ui?.setHdriActive?.(nextPreset);
     this.eventBus.emit('studio:hdri', nextPreset);
   }
