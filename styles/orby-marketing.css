@@ -963,8 +963,9 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__png-marquee {
-  --orby-marketing-png-marquee-max-h: min(50rem, 800px);
-  --orby-marketing-png-marquee-gap: 300px;
+  /* 800px / 300px @ scale 1 (2560+); shrink with page type + gutter rhythm */
+  --orby-marketing-png-marquee-max-h: min(50rem, calc(800px * var(--orby-marketing-scale)));
+  --orby-marketing-png-marquee-gap: calc(300px * var(--orby-marketing-gutter-scale));
   position: relative;
   left: 50%;
   width: 100vw;
