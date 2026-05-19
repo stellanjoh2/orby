@@ -496,6 +496,7 @@ function renderFooterSection(section) {
 function renderFooterMeta(section) {
   const contactEmail = section.footerContactEmail?.trim();
   const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
+  const aboutHref = section.footerAboutHref?.trim() || './legal/about.html';
   const creditsHref = section.footerCreditsHref?.trim() || './legal/credits.html';
   const githubHref = section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby';
   const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
@@ -504,6 +505,7 @@ function renderFooterMeta(section) {
   const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeHtml(licenseHref)}">MIT License</a>.`;
 
   const links = [
+    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(aboutHref)}">About</a>`,
     `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(privacyHref)}">Privacy Policy</a>`,
     `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(creditsHref)}">Credits</a>`,
     `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,

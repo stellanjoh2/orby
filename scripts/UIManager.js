@@ -974,7 +974,8 @@ export class UIManager {
     }
   }
 
-  static HDRI_UPLOAD_TOOLTIP_EMPTY = 'Upload custom HDRI (.hdr, .jpg, .png)';
+  static HDRI_UPLOAD_TOOLTIP_EMPTY =
+    'Upload custom HDRI (.hdr, .jpg, .png) — 2:1 equirectangular';
 
   setHdriUploadLoaded(filename = '') {
     const btn = this.inputs.hdriUploadBtn;
