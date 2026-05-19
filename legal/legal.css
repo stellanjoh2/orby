@@ -500,18 +500,26 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 
 body.legal-doc--about {
   --legal-bg: var(--orby-black);
-  --legal-max: 44rem;
-  font-size: 1.25rem; /* 20px — body letter; intro is 24px */
-  line-height: 1.72;
+  /* Match privacy policy column (52rem → 56rem @ 1200px); type scales with width */
+  --legal-about-body-size: 1.3125rem; /* 21px */
+  --legal-about-body-line: 1.78;
+  --legal-about-intro-size: 1.625rem; /* 26px */
+  --legal-about-intro-line: 1.52;
+  font-size: var(--legal-about-body-size);
+  line-height: var(--legal-about-body-line);
 }
 
-/* About only — letter links read as white text, not lime */
-body.legal-doc--about a {
+/* About only — body copy links white; lime on hover */
+body.legal-doc--about .legal-about a:not(.orby-magic-btn) {
   color: var(--legal-text);
   text-decoration-color: rgba(255, 255, 255, 0.32);
 }
 
-body.legal-doc--about a:hover,
+body.legal-doc--about .legal-about a:not(.orby-magic-btn):hover {
+  color: var(--legal-accent);
+  text-decoration-color: rgba(196, 255, 0, 0.55);
+}
+
 body.legal-doc--about .legal-top__back:hover,
 body.legal-doc--about .legal-foot a:hover {
   color: #fff;
@@ -539,9 +547,9 @@ body.legal-doc--about .legal-top__back {
 }
 
 .legal-about__section--intro p {
-  font-size: 1.5rem; /* 24px */
+  font-size: var(--legal-about-intro-size);
   font-weight: 400;
-  line-height: 1.45;
+  line-height: var(--legal-about-intro-line);
   letter-spacing: -0.015em;
   color: #fff;
 }
@@ -552,20 +560,41 @@ body.legal-doc--about .legal-top__back {
 
 .legal-about__section:not(.legal-about__section--intro) p {
   margin: 0;
-  font-size: 1.25rem; /* 20px */
-  line-height: 1.72;
+  font-size: var(--legal-about-body-size);
+  line-height: var(--legal-about-body-line);
   color: var(--legal-text);
 }
 
-body.legal-doc--about a.legal-about__cta {
-  font-weight: 500;
-  color: var(--legal-accent);
-  text-decoration-color: rgba(196, 255, 0, 0.45);
+.legal-about__section--closing {
+  margin-bottom: 0;
 }
 
-body.legal-doc--about a.legal-about__cta:hover {
-  color: var(--legal-accent-hover);
-  text-decoration-color: var(--legal-accent-hover);
+/* Extra breath between CTA pill and footer rule */
+body.legal-doc--about .legal-foot {
+  margin-top: calc(3.5rem + var(--legal-about-body-size) * var(--legal-about-body-line));
+}
+
+.legal-about__cta-row {
+  margin: calc(2rem + var(--legal-about-body-size) * var(--legal-about-body-line)) 0 0;
+}
+
+/* Magic pill CTA — beat .legal-doc a underline / lime hover */
+body.legal-doc--about a.orby-magic-btn {
+  text-decoration: none;
+  color: var(--brand-primary, #c4ff00);
+}
+
+body.legal-doc--about a.orby-magic-btn:hover,
+body.legal-doc--about a.orby-magic-btn:focus-visible {
+  color: var(--orby-black, #080808);
+  text-decoration: none;
+}
+
+body.legal-doc--about a.orby-magic-btn:hover .orby-magic-btn__label,
+body.legal-doc--about a.orby-magic-btn:hover .orby-magic-btn__arrow,
+body.legal-doc--about a.orby-magic-btn:focus-visible .orby-magic-btn__label,
+body.legal-doc--about a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
+  color: var(--orby-black, #080808);
 }
 
 .legal-about__block--pending {
@@ -583,5 +612,14 @@ body.legal-doc--about a.legal-about__cta:hover {
 @media (min-width: 720px) {
   .legal-about__section {
     margin-bottom: 1.85rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  body.legal-doc--about {
+    --legal-about-body-size: 1.375rem; /* 22px @ 56rem measure */
+    --legal-about-body-line: 1.82;
+    --legal-about-intro-size: 1.75rem; /* 28px */
+    --legal-about-intro-line: 1.5;
   }
 }
