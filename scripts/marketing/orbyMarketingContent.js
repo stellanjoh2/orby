@@ -30,6 +30,10 @@
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
  * @property {MarketingProCard[]} [cards]
+ * @property {string} [footerContactEmail] — hidden; copied when “Contact” is pressed
+ * @property {string} [footerPrivacyHref]
+ * @property {string} [footerGithubHref]
+ * @property {string} [footerLicenseHref]
  */
 
 /** @type {MarketingSection[]} */
@@ -44,7 +48,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-present',
-    eyebrow: '01 — Set the stage',
+    eyebrow: 'Set the stage',
     title: 'Your virtual studio, in the browser.',
     lede:
       'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
@@ -60,7 +64,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-import',
-    eyebrow: '02 — Drop it in',
+    eyebrow: 'Drop it in',
     title: 'Drop in. Start immediately.',
     lede:
       'No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.',
@@ -79,7 +83,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-camera',
-    eyebrow: '03 — Camera & FX',
+    eyebrow: 'Camera & FX',
     title: 'Pro framing in\nthe\u00a0viewport.',
     lede:
       'Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.',
@@ -125,7 +129,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-shader-lab',
-    eyebrow: '04 — Shader Lab',
+    eyebrow: 'Shader Lab',
     title: 'Stylized looks\non\u00a0demand.',
     lede:
       'Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.',
@@ -140,7 +144,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-svg',
-    eyebrow: '05 — SVG Extrude',
+    eyebrow: 'SVG Extrude',
     title: 'Logos become geometry.',
     lede:
       'Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.',
@@ -155,7 +159,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'split',
     id: 'orby-marketing-export',
-    eyebrow: '06 — Send it',
+    eyebrow: 'Send it',
     title: 'Deliverables without a pipeline.',
     lede:
       'Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.',
@@ -171,7 +175,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'pro',
     id: 'orby-marketing-pro',
-    eyebrow: '07 — For pros',
+    eyebrow: 'For pros',
     title: 'Built for\nthe\u00a0details.',
     lede:
       "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
@@ -255,5 +259,9 @@ export const MARKETING_SECTIONS = [
     lede: '',
     ctaLabel: 'Browse Files',
     secondaryCtaLabel: 'Load Sample',
+    footerContactEmail: 'orby-admin@proton.me',
+    footerPrivacyHref: './legal/privacy-policy.html',
+    footerGithubHref: 'https://github.com/stellanjoh2/orby',
+    footerLicenseHref: './LICENSE',
   },
 ];

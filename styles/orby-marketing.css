@@ -115,11 +115,37 @@
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
-  --orby-marketing-panel-bg: #121212;
-  /* Standard vertical seam between major marketing blocks */
-  --orby-marketing-gap-big: calc(250px * var(--orby-marketing-scale));
+  --orby-marketing-panel-bg: var(--orby-surface-muted, #121212);
+  /* Ink on lime (footer) — matches FAQ panel, softer than --orby-black */
+  --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
+  /* Standard vertical seam between major blocks — 220px @ 1440; scales with gutter-scale */
+  --orby-marketing-gap-big: calc(220px * var(--orby-marketing-gutter-scale));
+  /* Eyebrow / preheader → section headline */
+  --orby-marketing-eyebrow-size: clamp(
+    calc(0.72rem * var(--orby-marketing-scale)),
+    1.1vw,
+    calc(0.82rem * var(--orby-marketing-scale))
+  );
+  /* Split feature rhythm — eyebrow → headline, headline → lede, lede → bullets (36px @ 1440) */
+  --orby-marketing-feature-copy-gap: calc(36px * var(--orby-marketing-scale));
+  --orby-marketing-eyebrow-headline-gap: var(--orby-marketing-feature-copy-gap);
+  /* Section headline → lede (showcase / pro / FAQ) */
+  --orby-marketing-headline-body-gap: calc(32px * var(--orby-marketing-scale));
+  /* Split / showcase / pro media corners — 24px @ 1440, scales down with type */
+  --orby-marketing-media-radius: clamp(
+    calc(12px * var(--orby-marketing-scale)),
+    1.667vw,
+    calc(24px * var(--orby-marketing-scale))
+  );
+  /* Lime feature headlines — explicit; block .title-line rows ignore parent h2 leading */
+  --orby-marketing-section-headline-line: 1.1;
+  /*
+   * Pro → FAQ: gap-big dark band below cards (220px @ 1440); faq-pad-top inside gray panel only.
+   * Do not use col-gap here — that seam is section rhythm, not copy→media.
+   */
+  --orby-marketing-faq-pad-top: calc(60px * var(--orby-marketing-gutter-scale));
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
-  /* Match dropzone frame inner width (:root --orby-home-padding-x) */
+  /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560+) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
   --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
   /* Feature copy — 22px lede / 18px bullets; split copy column measure */
@@ -163,10 +189,7 @@
       )
     )
   );
-  /* Body copy → image/gallery below (pro cards, showcase reel) */
-  --orby-marketing-feature-body-media-gap: calc(84px * var(--orby-marketing-scale));
-  /* White feature lede → bullet list below */
-  --orby-marketing-feature-lede-list-gap: calc(54px * var(--orby-marketing-scale));
+  --orby-marketing-feature-lede-list-gap: var(--orby-marketing-feature-copy-gap);
   /* Vertical rhythm — big / medium / small only */
   --orby-marketing-space-lg: clamp(
     calc(4.5rem * var(--orby-marketing-scale)),
@@ -185,16 +208,17 @@
   );
   --orby-marketing-section-pad: var(--orby-marketing-space-lg);
   /*
-   * Unified column gutter — grids, showcase inset, split seam (84px).
+   * Unified column gutter — grids, showcase inset, split seam (112px @ 2560).
    * Half token for peer UI (button pairs); do not double-pad split columns toward the seam.
    */
-  --orby-marketing-col-gap: calc(84px * var(--orby-marketing-gutter-scale));
+  --orby-marketing-col-gap: calc(112px * var(--orby-marketing-gutter-scale));
+  /* Copy block → media below (showcase gallery, pro cards, stacked split features) */
+  --orby-marketing-feature-body-media-gap: var(--orby-marketing-col-gap);
   --orby-marketing-col-gap-half: calc(var(--orby-marketing-col-gap) / 2);
   /* @deprecated alias — use --orby-marketing-col-gap */
   --orby-marketing-split-gap: var(--orby-marketing-col-gap);
   --orby-marketing-gutter: var(--orby-marketing-col-gap);
-  /* FAQ panel — space above headline and above lime footer */
-  --orby-marketing-faq-pad-top: calc(205px * var(--orby-marketing-scale));
+  /* FAQ panel — bottom band matches other section seams */
   --orby-marketing-faq-pad-bottom: var(--orby-marketing-gap-big);
   /* Mega headlines — full size at 1440; shrink via min(vw, 2× column cqi) + mega scale */
   --orby-mega-headline-min: calc(2.75rem * var(--orby-marketing-mega-scale));
@@ -464,12 +488,8 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__eyebrow {
-  margin: 0 0 1rem;
-  font-size: clamp(
-    calc(0.72rem * var(--orby-marketing-scale)),
-    1.1vw,
-    calc(0.82rem * var(--orby-marketing-scale))
-  );
+  margin: 0 0 var(--orby-marketing-eyebrow-headline-gap);
+  font-size: var(--orby-marketing-eyebrow-size);
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -478,6 +498,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__title-line {
   display: block;
+  line-height: var(--orby-marketing-section-headline-line);
 }
 
 .orby-marketing__title {
@@ -496,13 +517,19 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     ),
     var(--orby-section-headline-max)
   );
-  line-height: 0.96;
+  line-height: var(--orby-marketing-section-headline-line);
   letter-spacing: -0.03em;
   color: var(--orby-marketing-headline);
 }
 
+/* .brand-font-headline sets line-height: 1 in styles.css — restore section rhythm */
+#orby-marketing .orby-marketing__title.brand-font-headline:not(.orby-marketing__title--intro):not(
+    .orby-marketing__title--footer
+  ) {
+  line-height: var(--orby-marketing-section-headline-line);
+}
+
 .orby-marketing__split-copy .orby-marketing__title {
-  line-height: 1.1;
   margin-bottom: 0;
 }
 
@@ -520,13 +547,15 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   max-width: 100%;
 }
 
-.orby-marketing__split-copy-inner .orby-marketing__title-spacer,
-.orby-marketing__showcase-copy .orby-marketing__title-spacer {
-  display: block;
-  height: 1.65em;
-  margin: 0;
-  font-size: var(--orby-marketing-feature-lede-size);
-  line-height: 0;
+/* Split features — 36px from lime headline to white lede */
+.orby-marketing__split-copy-inner > .orby-marketing__title + .orby-marketing__lede {
+  margin-top: var(--orby-marketing-feature-copy-gap);
+}
+
+/* Showcase / pro — headline to lede */
+.orby-marketing__showcase-copy > .orby-marketing__title + .orby-marketing__lede,
+.orby-marketing__pro-header > .orby-marketing__title + .orby-marketing__pro-lede {
+  margin-top: var(--orby-marketing-headline-body-gap);
 }
 
 .orby-marketing__title--intro {
@@ -548,7 +577,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__title--footer {
-  color: var(--brand-text, var(--orby-black, #080808));
+  color: var(--brand-text);
   white-space: normal;
   text-align: center;
   text-wrap: balance;
@@ -597,12 +626,15 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   max-width: var(--orby-marketing-centered-copy-measure);
 }
 
+/* Split features — 36px from white lede to bullet list (margin only, no extra block gap) */
 .orby-marketing__section--split .orby-marketing__lede + .orby-marketing__list {
-  margin-top: var(--orby-marketing-feature-lede-list-gap);
+  margin-top: var(--orby-marketing-feature-copy-gap);
 }
 
 .orby-marketing .orby-stagger-word {
   display: inline-block;
+  line-height: inherit;
+  vertical-align: baseline;
   will-change: transform, opacity;
 }
 
@@ -635,6 +667,9 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__split-cta {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
   margin-top: calc(
     clamp(
         calc(1.25rem * var(--orby-marketing-scale)),
@@ -651,12 +686,13 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /* Split features — 50% copy / 50% image; center line is the inner image edge */
 .orby-marketing__section--split {
-  overflow: hidden;
-  /* One 250px seam below each block (avoids half+half doubling with base section pad in Safari) */
+  overflow-x: clip;
+  overflow-y: visible;
+  /* One 220px seam below each block (avoids half+half doubling with base section pad in Safari) */
   padding: 0 0 var(--orby-marketing-gap-big);
 }
 
-/* Turntable intro → first feature: keep original section pad, not the 250px big gap */
+/* Turntable intro → first feature: keep original section pad, not the 220px big gap */
 .orby-marketing__section--intro + .orby-marketing__section--split {
   padding-top: var(--orby-marketing-space-lg);
 }
@@ -665,7 +701,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--orby-marketing-space-md);
+  gap: var(--orby-marketing-feature-body-media-gap);
   width: 100%;
 }
 
@@ -675,13 +711,13 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   box-sizing: border-box;
   flex: 1 1 auto;
   min-width: 0;
+  overflow: visible;
 }
 
 .orby-marketing__split-copy-inner {
   width: 100%;
   max-width: 100%;
-  container-type: inline-size;
-  container-name: orby-split-copy;
+  overflow: visible;
 }
 
 /* Showcase — full site width; half the split cqi factor ≈ same scale as split column */
@@ -704,11 +740,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__figure {
-  --orby-media-radius: clamp(
-    calc(12px * var(--orby-marketing-scale)),
-    1.5vw,
-    calc(20px * var(--orby-marketing-scale))
-  );
+  --orby-media-radius: var(--orby-marketing-media-radius);
   margin: 0;
   width: 100%;
   max-width: 100%;
@@ -813,11 +845,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   }
 
   .orby-marketing__split-bleed--media-right .orby-marketing__figure {
-    --orby-media-radius: clamp(
-      calc(12px * var(--orby-marketing-scale)),
-      1.2vw,
-      calc(20px * var(--orby-marketing-scale))
-    );
+    --orby-media-radius: var(--orby-marketing-media-radius);
     border-radius: var(--orby-media-radius) 0 0 var(--orby-media-radius);
   }
 
@@ -840,11 +868,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   }
 
   .orby-marketing__split-bleed--media-left .orby-marketing__figure {
-    --orby-media-radius: clamp(
-      calc(12px * var(--orby-marketing-scale)),
-      1.2vw,
-      calc(20px * var(--orby-marketing-scale))
-    );
+    --orby-media-radius: var(--orby-marketing-media-radius);
     border-radius: 0 var(--orby-media-radius) var(--orby-media-radius) 0;
   }
 }
@@ -907,7 +931,6 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__section--showcase .orby-marketing__title {
-  line-height: 1.1;
   margin-bottom: 0;
 }
 
@@ -923,11 +946,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /* Full-bleed breakout: wider than --orby-marketing-site-max, small side gutters only */
 .orby-marketing__showcase-figure {
-  --orby-media-radius: clamp(
-    calc(12px * var(--orby-marketing-scale)),
-    1.5vw,
-    calc(20px * var(--orby-marketing-scale))
-  );
+  --orby-media-radius: var(--orby-marketing-media-radius);
   box-sizing: border-box;
   position: relative;
   left: 50%;
@@ -1055,8 +1074,6 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /* Pro tools — three-up feature cards */
 .orby-marketing__pro-header {
-  container-type: inline-size;
-  container-name: orby-split-copy;
   text-align: left;
   margin: 0;
   width: 100%;
@@ -1070,16 +1087,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__pro-header .orby-marketing__title {
   margin-bottom: 0;
-  line-height: 1.1;
   max-width: none;
-}
-
-.orby-marketing__pro-header .orby-marketing__title-spacer {
-  display: block;
-  height: 1.65em;
-  margin: 0;
-  font-size: var(--orby-marketing-feature-lede-size);
-  line-height: 0;
 }
 
 .orby-marketing__inner.orby-marketing__pro {
@@ -1123,11 +1131,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__pro-card-surface {
-  --orby-media-radius: clamp(
-    calc(12px * var(--orby-marketing-scale)),
-    1.5vw,
-    calc(20px * var(--orby-marketing-scale))
-  );
+  --orby-media-radius: var(--orby-marketing-media-radius);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1191,7 +1195,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 }
 
 .orby-marketing__pro-card-title {
-  margin: 0 0 0.65rem;
+  margin: 0 0 calc(1.15rem * var(--orby-marketing-scale));
   font-size: clamp(
     calc(1.15rem * var(--orby-marketing-headline-scale)),
     calc(1.65vw * var(--orby-marketing-headline-scale)),
@@ -1215,7 +1219,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   color: var(--orby-marketing-text-dim);
 }
 
-/* FAQ panel — 250px above headline and above lime footer */
+/* FAQ panel — seam above = pro gap-big; faq-pad-top before headline; bottom uses gap-big */
 #orby-marketing .orby-marketing__section.orby-marketing__section--faq {
   position: relative;
   z-index: 1;
@@ -1234,27 +1238,32 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /* FAQ header — same column cqi scale as split feature headlines */
 .orby-marketing__faq-header {
-  container-type: inline-size;
-  container-name: orby-split-copy;
   text-align: left;
-  margin: 0 0
-    clamp(
-      calc(2.5rem * var(--orby-marketing-scale)),
-      5vh,
-      calc(4rem * var(--orby-marketing-scale))
-    );
+  margin: 0 0 var(--orby-marketing-col-gap);
   width: 100%;
   max-width: none;
 }
 
 .orby-marketing__faq-header .orby-marketing__title {
   margin-bottom: 0;
-  line-height: 1.1;
+}
+
+.orby-marketing__faq-header .orby-marketing__eyebrow + .orby-marketing__faq-lede {
+  margin-top: var(--orby-marketing-eyebrow-headline-gap);
+}
+
+.orby-marketing__faq-header .orby-marketing__faq-lede + .orby-marketing__title {
+  margin-top: var(--orby-marketing-headline-body-gap);
 }
 
 .orby-marketing__faq-lede {
-  margin: 1rem 0 0;
+  margin: 0;
   max-width: var(--orby-marketing-centered-copy-measure);
+}
+
+/* Headline → Q&A grid — single col-gap band (no stacked lede + margin) */
+.orby-marketing__faq-header + .orby-marketing__faq-grid {
+  margin-top: 0;
 }
 
 .orby-marketing__faq-grid {
@@ -1350,7 +1359,8 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     env(safe-area-inset-bottom, 0px);
   overflow: visible;
   background: var(--brand-primary, #c4ff00);
-  color: var(--brand-text, var(--orby-black, #080808));
+  --brand-text: var(--orby-marketing-on-lime-ink);
+  color: var(--brand-text);
   --orby-footer-asset-lift: clamp(
     calc(3.5rem * var(--orby-marketing-scale)),
     12vh,
@@ -1368,7 +1378,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   height: 16px;
   background: var(--brand-primary, #c4ff00);
   pointer-events: none;
-  z-index: 5;
+  z-index: 1;
 }
 
 /* Stage bleeds above the lime edge (taller box); clip bottom so PNG never extends the page */
@@ -1412,8 +1422,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   align-items: center;
   justify-content: center;
   gap: var(--orby-marketing-space-md);
-  container-type: inline-size;
-  container-name: orby-footer-copy;
+  overflow: visible;
 }
 
 .orby-marketing__footer-center .orby-marketing__title--footer {
@@ -1431,12 +1440,14 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__lede--footer {
   max-width: var(--orby-marketing-lede-measure);
   margin: 0;
-  color: color-mix(in srgb, var(--brand-text, var(--orby-black, #080808)) 62%, transparent);
+  color: color-mix(in srgb, var(--brand-text) 62%, transparent);
 }
 
 /* Side-by-side peers (footer CTAs, future button pairs) — ½ column gutter */
 .orby-marketing__peer-row,
 .orby-marketing__footer-actions {
+  position: relative;
+  z-index: 6;
   display: flex;
   flex-flow: row wrap;
   align-items: center;
@@ -1461,6 +1472,107 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   transform: none;
   animation: none;
   white-space: nowrap;
+  /* Bleed for Safari pseudo ring — avoids footer edge compositing clips */
+  margin-block: 2px;
+}
+
+/* Bottom info line — centered on lime footer */
+.orby-marketing__footer-meta {
+  position: absolute;
+  z-index: 10;
+  pointer-events: auto;
+  left: 0;
+  right: 0;
+  bottom: max(calc(1.25rem * var(--orby-marketing-scale)), env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  padding: 0 var(--orby-home-padding-x);
+  box-sizing: border-box;
+  text-align: center;
+  font-size: calc(16px * var(--orby-marketing-scale));
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, var(--brand-text) 58%, transparent);
+}
+
+.orby-marketing__footer-meta-sep {
+  opacity: 0.72;
+}
+
+.orby-marketing__footer-meta-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  transition:
+    color 0.18s ease,
+    text-decoration-color 0.18s ease;
+}
+
+.orby-marketing__footer-meta-link:hover {
+  color: var(--brand-text);
+  text-decoration-color: currentColor;
+}
+
+.orby-marketing__footer-meta-contact {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.orby-marketing__footer-meta-link:focus-visible,
+.orby-marketing__footer-meta-contact:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-text) 55%, transparent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Copy feedback — Sandbar-style pill; works over lime footer + dark sections */
+.orby-marketing__copy-toast {
+  position: fixed;
+  z-index: 100050;
+  left: 50%;
+  bottom: max(calc(5.5rem * var(--orby-marketing-scale)), calc(env(safe-area-inset-bottom, 0px) + 3.5rem));
+  transform: translate3d(-50%, 12px, 0);
+  margin: 0;
+  padding: calc(0.62rem * var(--orby-marketing-scale)) calc(1.05rem * var(--orby-marketing-scale));
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 22%, transparent);
+  background: color-mix(in srgb, var(--orby-black, #080808) 92%, transparent);
+  box-shadow:
+    0 10px 36px color-mix(in srgb, var(--orby-black, #080808) 42%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--orby-black, #080808) 20%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: calc(0.875rem * var(--orby-marketing-scale));
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  color: var(--brand-primary, #c4ff00);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.orby-marketing__copy-toast.is-visible {
+  opacity: 1;
+  transform: translate3d(-50%, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-marketing__copy-toast {
+    transition: opacity 0.12s ease;
+  }
+
+  .orby-marketing__copy-toast.is-visible {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 .orby-marketing__section--pending {
@@ -1496,6 +1608,12 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
     --orby-intro-parallax-y: 0px !important;
     opacity: 1 !important;
   }
+
+  .orby-marketing-scroll-cue__icon {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
 }
 
 /* Fixed scroll cue on the home hero */
@@ -1506,54 +1624,63 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   z-index: 12;
   transform: translateX(-50%);
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.5rem;
+  justify-content: center;
+  padding: 0.5rem;
   border: 0;
   background: transparent;
-  color: var(--orby-marketing-text-dim);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   cursor: pointer;
-  opacity: 0.72;
-  transition: opacity 0.35s ease, color 0.2s;
+  opacity: 1;
+  transition: opacity 0.14s ease-out;
 }
 
-.orby-marketing-scroll-cue--scrolled {
+.orby-marketing-scroll-cue--hidden {
   pointer-events: none;
 }
 
-.orby-marketing-scroll-cue:hover,
 .orby-marketing-scroll-cue:focus-visible {
-  opacity: 1;
-  color: var(--orby-marketing-headline);
   outline: none;
 }
 
 .orby-marketing-scroll-cue__icon {
-  width: 1px;
-  height: 2rem;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--orby-marketing-headline) 70%, transparent),
-    transparent
-  );
-  animation: orbyMarketingScrollCuePulse 1.8s ease-in-out infinite;
+  --orby-scroll-cue-arrow-w: 16px;
+  display: block;
+  width: var(--orby-scroll-cue-arrow-w);
+  aspect-ratio: 86.6 / 75;
+  background-color: var(--brand-primary, #c4ff00);
+  -webkit-mask-image: url('../assets/marketing/arrow-down.svg');
+  mask-image: url('../assets/marketing/arrow-down.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  animation: orbyMarketingScrollCueDrop 1.35s ease-out infinite;
+  transition:
+    background-color 0.2s ease,
+    filter 0.2s ease;
 }
 
-@keyframes orbyMarketingScrollCuePulse {
-  0%,
-  100% {
-    opacity: 0.35;
+.orby-marketing-scroll-cue:hover .orby-marketing-scroll-cue__icon,
+.orby-marketing-scroll-cue:focus-visible .orby-marketing-scroll-cue__icon {
+  background-color: #fff;
+  animation-play-state: paused;
+  filter:
+    drop-shadow(0 0 3px var(--brand-primary, #c4ff00))
+    drop-shadow(0 0 10px color-mix(in srgb, var(--brand-primary, #c4ff00) 62%, transparent));
+}
+
+@keyframes orbyMarketingScrollCueDrop {
+  0% {
     transform: translateY(0);
   }
-  50% {
-    opacity: 1;
-    transform: translateY(6px);
+  72% {
+    transform: translateY(5px);
+  }
+  73%,
+  100% {
+    transform: translateY(0);
   }
 }
 

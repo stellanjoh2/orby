@@ -12,13 +12,13 @@ export function orbyMagicButtonHtml(label, options = {}) {
   const extraClass = options.extraClass?.trim() || '';
   const attrs = options.attrs?.trim() || '';
   const classes = ['orby-magic-btn', extraClass].filter(Boolean).join(' ');
-  return `<button type="button" class="${classes}"${attrs ? ` ${attrs}` : ''}>
+  return `<span class="orby-magic-btn-host"><button type="button" class="${classes}"${attrs ? ` ${attrs}` : ''}>
         <span class="orby-magic-btn__fill" aria-hidden="true"></span>
         <span class="orby-magic-btn__inner">
           <span class="orby-magic-btn__label">${label}</span>
           <span class="orby-magic-btn__arrow" aria-hidden="true">${ORBY_MAGIC_BTN_ARROW_SVG}</span>
         </span>
-      </button>`;
+      </button></span>`;
 }
 
 /**
@@ -109,8 +109,12 @@ export function orbyMagicButtonOnLimeHtml(label, options = {}) {
   ]
     .filter(Boolean)
     .join(' ');
+  const ring =
+    variant === 'outline'
+      ? '<span class="orby-magic-btn__ring" aria-hidden="true"></span>\n        '
+      : '';
   return `<button type="button" class="${classes}"${attrs ? ` ${attrs}` : ''}>
-        <span class="orby-magic-btn__inner">
+        ${ring}<span class="orby-magic-btn__inner">
           <span class="orby-magic-btn__label">${label}</span>
           <span class="orby-magic-btn__arrow" aria-hidden="true">${ORBY_MAGIC_BTN_ARROW_SVG}</span>
         </span>

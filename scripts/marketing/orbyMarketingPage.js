@@ -52,6 +52,127 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
+const MARKETING_COPY_TOAST_CLASS = 'orby-marketing__copy-toast';
+const MARKETING_COPY_TOAST_MESSAGE = 'Contact email copied to clipboard';
+let marketingCopyToastHideTimer = null;
+let marketingCopyToastRemoveTimer = null;
+/** @type {Array<{ btn: HTMLElement; handler: (event: Event) => void }>} */
+let marketingCopyBoundButtons = [];
+
+function clearMarketingCopyToastTimers() {
+  if (marketingCopyToastHideTimer != null) {
+    window.clearTimeout(marketingCopyToastHideTimer);
+    marketingCopyToastHideTimer = null;
+  }
+  if (marketingCopyToastRemoveTimer != null) {
+    window.clearTimeout(marketingCopyToastRemoveTimer);
+    marketingCopyToastRemoveTimer = null;
+  }
+}
+
+function showMarketingCopyToast(message) {
+  document.querySelector(`.${MARKETING_COPY_TOAST_CLASS}`)?.remove();
+  clearMarketingCopyToastTimers();
+
+  const toast = document.createElement('div');
+  toast.className = MARKETING_COPY_TOAST_CLASS;
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => toast.classList.add('is-visible'));
+  });
+
+  marketingCopyToastHideTimer = window.setTimeout(() => {
+    toast.classList.remove('is-visible');
+    marketingCopyToastHideTimer = null;
+    marketingCopyToastRemoveTimer = window.setTimeout(() => {
+      toast.remove();
+      marketingCopyToastRemoveTimer = null;
+    }, 320);
+  }, 2200);
+}
+
+/** @param {string} message @param {{ caution?: boolean }} [options] */
+function notifyMarketingCopy(message, options = {}) {
+  const ui = window.orby?.ui;
+  if (typeof ui?.showToast === 'function') {
+    ui.showToast(message, 2600, {
+      caution: options.caution === true,
+      notification: options.caution !== true,
+    });
+    return;
+  }
+  showMarketingCopyToast(message);
+}
+
+function copyTextFallback(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  textarea.remove();
+  return ok;
+}
+
+async function copyMarketingEmail(email) {
+  const value = String(email || '').trim();
+  if (!value) return;
+
+  notifyMarketingCopy(MARKETING_COPY_TOAST_MESSAGE);
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+    if (copyTextFallback(value)) return;
+    throw new Error('clipboard unavailable');
+  } catch {
+    notifyMarketingCopy('Could not copy email', { caution: true });
+  }
+}
+
+function bindMarketingCopyEmail(root) {
+  unbindMarketingCopyEmail();
+
+  const marketingRoot = root ?? document.getElementById(MARKETING_ROOT_ID);
+  if (!marketingRoot) return;
+
+  marketingRoot.querySelectorAll('[data-orby-marketing-copy-email]').forEach((btn) => {
+    if (!(btn instanceof HTMLElement)) return;
+    const handler = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void copyMarketingEmail(btn.getAttribute('data-orby-marketing-copy-email') || '');
+    };
+    btn.addEventListener('click', handler);
+    marketingCopyBoundButtons.push({ btn, handler });
+  });
+}
+
+function unbindMarketingCopyEmail() {
+  for (const { btn, handler } of marketingCopyBoundButtons) {
+    btn.removeEventListener('click', handler);
+  }
+  marketingCopyBoundButtons = [];
+  document.querySelector(`.${MARKETING_COPY_TOAST_CLASS}`)?.remove();
+  clearMarketingCopyToastTimers();
+}
+
 function renderBulletList(items) {
   if (!items?.length) return '';
   return `<ul class="orby-marketing__list">${items
@@ -103,7 +224,6 @@ function renderSplitSection(section) {
         <div class="orby-marketing__split-copy-inner">
           <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow)}</p>
           <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
-          <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
           <p class="orby-marketing__lede">${escapeHtml(section.lede)}</p>
           ${renderBulletList(section.bullets)}
           ${renderMagicCta(section)}
@@ -195,7 +315,6 @@ function renderShowcaseSection(section) {
     <div class="orby-marketing__showcase-copy">
       <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
       <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
-      <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
       <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
     </div>
     <figure class="orby-marketing__showcase-figure">
@@ -244,7 +363,6 @@ function renderProSection(section) {
       <header class="orby-marketing__pro-header">
         <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow || 'For pros')}</p>
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
-        <div class="orby-marketing__title-spacer" aria-hidden="true"></div>
         ${ledeBlock}
       </header>
       <div class="orby-marketing__pro-grid">
@@ -275,8 +393,8 @@ function renderFaqSection(section) {
     <div class="orby-marketing__inner orby-marketing__faq">
       <header class="orby-marketing__faq-header">
         <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow || 'FAQ')}</p>
-        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
         ${ledeBlock}
+        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
       </header>
       <div class="orby-marketing__faq-grid">
         ${items}
@@ -318,7 +436,28 @@ function renderFooterSection(section) {
         })}
       </div>
     </div>
+    ${renderFooterMeta(section)}
   </footer>`;
+}
+
+function renderFooterMeta(section) {
+  const contactEmail = section.footerContactEmail?.trim();
+  const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
+  const githubHref = section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby';
+  const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
+  const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
+
+  const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeHtml(licenseHref)}">MIT License</a>.`;
+
+  const links = [
+    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(privacyHref)}">Privacy Policy</a>`,
+    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
+    contactEmail
+      ? `<button type="button" class="orby-marketing__footer-meta-link orby-marketing__footer-meta-contact" data-orby-marketing-copy-email="${escapeHtml(contactEmail)}">Contact</button>`
+      : '',
+  ].filter(Boolean);
+
+  return `<p class="orby-marketing__footer-meta">${lead}${sep}${links.join(sep)}</p>`;
 }
 
 function renderSection(section) {
@@ -388,8 +527,7 @@ function createScrollCue(onExplore) {
   cue.className = 'orby-marketing-scroll-cue';
   cue.setAttribute('data-orby-marketing-scroll-cue', '');
   cue.setAttribute('aria-label', 'Scroll to learn about Orby');
-  cue.innerHTML =
-    '<span class="orby-marketing-scroll-cue__label">Explore Orby</span><span class="orby-marketing-scroll-cue__icon" aria-hidden="true"></span>';
+  cue.innerHTML = '<span class="orby-marketing-scroll-cue__icon" aria-hidden="true"></span>';
   cue.addEventListener('click', () => {
     onExplore();
   });
@@ -397,10 +535,10 @@ function createScrollCue(onExplore) {
   return cue;
 }
 
-/** Fade the home scroll cue once the user starts scrolling. */
+/** Fade the scroll cue out quickly once the user scrolls down. */
 function bindScrollCueFade(cue) {
-  const fadeStart = 12;
-  const fadeEnd = 140;
+  const fadeStart = 1;
+  const fadeEnd = 48;
   let ticking = false;
 
   const update = () => {
@@ -408,13 +546,16 @@ function bindScrollCueFade(cue) {
     if (!cue || cue.hidden) return;
     const y = window.scrollY;
     if (y <= fadeStart) {
-      cue.classList.remove('orby-marketing-scroll-cue--scrolled');
+      cue.classList.remove('orby-marketing-scroll-cue--hidden');
       cue.style.removeProperty('opacity');
+      cue.style.removeProperty('pointer-events');
       return;
     }
     const t = Math.min(1, (y - fadeStart) / (fadeEnd - fadeStart));
-    cue.classList.toggle('orby-marketing-scroll-cue--scrolled', t >= 1);
-    cue.style.opacity = String(0.72 * (1 - t));
+    cue.classList.toggle('orby-marketing-scroll-cue--hidden', t >= 1);
+    cue.style.opacity = String(1 - t);
+    if (t >= 1) cue.style.pointerEvents = 'none';
+    else cue.style.removeProperty('pointer-events');
   };
 
   const onScroll = () => {
@@ -590,6 +731,7 @@ export function initOrbyMarketingPage(options = {}) {
     root.innerHTML = buildMarketingMarkup(sections);
     app.appendChild(root);
     bindMarketingInteractions(root);
+    bindMarketingCopyEmail(root);
 
     root.querySelectorAll('.orby-marketing__section').forEach((section) => {
       section.classList.add('orby-marketing__section--pending');
@@ -653,7 +795,6 @@ export function initOrbyMarketingPage(options = {}) {
     scrollToMarketing(scheduleMount);
   });
   teardownScrollCueFade = bindScrollCueFade(scrollCue);
-
   if (lazy) {
     const runMount = () => {
       if (!destroyed && isDropzoneHome()) scheduleMount();
@@ -672,6 +813,7 @@ export function initOrbyMarketingPage(options = {}) {
   return {
     destroy() {
       destroyed = true;
+      unbindMarketingCopyEmail();
       void import('./orbyMarketingIntroTurntable.js').then((mod) => {
         mod.clearIntroTurntablePreload();
       });

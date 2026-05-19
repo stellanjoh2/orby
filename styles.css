@@ -129,6 +129,7 @@
    * Full original padding @ 2560+; scales down gently when viewport narrows.
    */
   --orby-home-full-width: 160rem; /* 2560px — reference for “full” outer inset */
+  --orby-home-inner-max-width: 111.875rem; /* 1790px — content width @ 2560+ */
   --orby-home-outer-shrink: clamp(
     0.82,
     min(1, calc(0.55 + 0.45 * (100vw / var(--orby-home-full-width)))),
@@ -174,6 +175,15 @@
   }
 }
 
+/* 2560+ — widen inner frame to 1790px (marketing + dropzone share --orby-home-padding-x) */
+@media (min-width: 160rem) {
+  :root {
+    --orby-home-padding-x: calc(
+      (100vw - var(--orby-home-inner-max-width)) / 2
+    );
+  }
+}
+
 .brand-font-headline {
   font-family: var(--brand-font-headline);
   font-weight: 700;
@@ -197,6 +207,8 @@ body[data-theme='aqua'] {
   /* Default near-black — surfaces, buttons on lime, scene background */
   --orby-black: #080808;
   --orby-app-bg: var(--orby-black);
+  /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
+  --orby-surface-muted: #121212;
 }
 
 :root,
@@ -740,7 +752,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   opacity: 1;
 }
 
-html.orby-gate-unlocked .orby-entry-gate {
+html.orby-gate-unlocked .orby-entry-gate,
+#orby-entry-gate[hidden] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -1690,6 +1703,23 @@ html.orby-gate-unlocked .orby-entry-gate {
   initial-value: 0deg;
 }
 
+/* Bleed box for ::before/::after blur + rim — Safari clips glow on <button> bounds */
+.orby-magic-btn-host {
+  --orby-magic-btn-bleed: 6px;
+  --orby-magic-btn-glow-blur: 10px;
+  --orby-magic-btn-rim-c: 16px;
+  --orby-magic-btn-glow-pad: calc(
+    var(--orby-magic-btn-bleed) + var(--orby-magic-btn-glow-blur) * 1.5 + var(--orby-magic-btn-rim-c)
+  );
+  display: inline-flex;
+  vertical-align: middle;
+  max-width: 100%;
+  box-sizing: content-box;
+  padding: var(--orby-magic-btn-glow-pad);
+  margin: calc(-1 * var(--orby-magic-btn-glow-pad));
+  overflow: visible;
+}
+
 .orby-magic-btn {
   --orby-magic-btn-spin: 12s;
   --orby-magic-btn-spin-hover: 8s;
@@ -1702,6 +1732,7 @@ html.orby-gate-unlocked .orby-entry-gate {
   --orby-magic-btn-fill-speed: 0.16s;
 
   position: relative;
+  overflow: visible;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1721,6 +1752,8 @@ html.orby-gate-unlocked .orby-entry-gate {
   text-transform: none;
   line-height: 1.1;
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
   isolation: isolate;
   z-index: 2;
   opacity: 1;
@@ -1897,18 +1930,54 @@ html.orby-gate-unlocked .orby-entry-gate {
   filter: brightness(0.96);
 }
 
+/* Safari: half glow radius + opacity so blur/rim fit inside compositor bounds */
+html.safari-browser .orby-magic-btn-host {
+  --orby-magic-btn-bleed: 3px;
+  --orby-magic-btn-glow-blur: 5px;
+  --orby-magic-btn-rim-c: 8px;
+  --orby-magic-btn-glow-pad: calc(
+    var(--orby-magic-btn-bleed) + var(--orby-magic-btn-glow-blur) * 1.2 + var(--orby-magic-btn-rim-c) * 0.65
+  );
+}
+
 html.safari-browser .orby-magic-btn {
   --orby-magic-btn-spin: 18s;
   --orby-magic-btn-spin-hover: 12s;
-  --orby-magic-btn-glow-blur: 6px;
+  --orby-magic-btn-bleed: 3px;
+  --orby-magic-btn-glow-blur: 5px;
+  --orby-magic-btn-rim-a: 2.5px;
+  --orby-magic-btn-rim-b: 5px;
+  --orby-magic-btn-rim-c: 8px;
+}
+
+html.safari-browser .orby-magic-btn::after {
+  opacity: 0.2;
+}
+
+html.safari-browser .orby-magic-btn:hover::after,
+html.safari-browser .orby-magic-btn:focus-visible::after {
+  opacity: 0.34;
 }
 
 html.safari-browser .orby-magic-btn::before {
   box-shadow:
     0 0 calc(var(--orby-magic-btn-rim-a) * 0.65)
-      color-mix(in srgb, var(--brand-primary) 30%, transparent),
+      color-mix(in srgb, var(--brand-primary) 15%, transparent),
     0 0 calc(var(--orby-magic-btn-rim-b) * 0.65)
-      color-mix(in srgb, var(--text-link) 16%, transparent);
+      color-mix(in srgb, var(--text-link) 8%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-c) * 0.65)
+      color-mix(in srgb, var(--text-link) 4.5%, transparent);
+}
+
+html.safari-browser .orby-magic-btn:hover::before,
+html.safari-browser .orby-magic-btn:focus-visible::before {
+  box-shadow:
+    0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
+      color-mix(in srgb, var(--brand-primary) 24%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
+      color-mix(in srgb, var(--text-link) 13%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
+      color-mix(in srgb, var(--text-link) 7%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1938,6 +2007,11 @@ html.safari-browser .orby-magic-btn::before {
   display: none;
 }
 
+.orby-magic-btn--on-lime .orby-magic-btn__inner {
+  /* Safari: min-height 100% overflows the pill and clips bottom border */
+  min-height: 0;
+}
+
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime {
   background: var(--brand-text, var(--orby-black));
   color: var(--brand-primary, #c4ff00);
@@ -1956,18 +2030,28 @@ html.safari-browser .orby-magic-btn::before {
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime {
   background: transparent;
   color: var(--brand-text, var(--orby-black));
-  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, var(--orby-black));
+  border: none;
+  overflow: visible;
   transition:
     background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-    color 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Outline ring as a child span — Safari clips <button> borders and inset shadows */
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime .orby-magic-btn__ring {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--orby-magic-btn-stroke) solid var(--brand-text, var(--orby-black));
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:hover,
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:focus-visible {
   background: var(--brand-text, var(--orby-black));
   color: var(--brand-primary, #c4ff00);
-  box-shadow: inset 0 0 0 var(--orby-magic-btn-stroke) var(--brand-text, var(--orby-black));
   outline: none;
 }
 
@@ -2069,6 +2153,7 @@ html.safari-browser .orby-magic-btn::before {
   justify-content: center;
   gap: clamp(0.65rem, 1.8vw, 1rem);
   flex-wrap: wrap;
+  overflow: visible;
 }
 
 .dropzone-actions .orby-magic-btn {
@@ -4870,6 +4955,12 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   z-index: 15;
 }
 
+/* Marketing footer copy feedback — above #orby-marketing and lime footer */
+html.orby-home-scroll .toast {
+  z-index: 100060;
+  bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem));
+}
+
 @keyframes toast {
   0% {
     opacity: 0;
@@ -4890,7 +4981,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .tooltip {
   position: absolute;
   padding: 0.5rem 0.75rem;
-  background: var(--orby-black);
+  background: var(--orby-surface-muted, #121212);
   border: none;
   border-radius: 6px;
   color: var(--text);

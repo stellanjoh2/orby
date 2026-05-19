@@ -471,8 +471,8 @@ function revealFaqSection(sectionEl, tl) {
   const lede = sectionEl.querySelector('.orby-marketing__faq-lede');
 
   revealBlock(eyebrow, tl, 0);
-  revealHeadline(title, tl, `>-=${blockOverlap}`);
   if (lede) revealBlock(lede, tl, `>-=${blockOverlap}`);
+  revealHeadline(title, tl, `>-=${blockOverlap}`);
 
   const items = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="faq-item"]')];
   if (items.length) {
@@ -486,7 +486,7 @@ function revealFaqSection(sectionEl, tl) {
         stagger: 0.07,
         ease: mediaEase,
       },
-      lede || title ? `>-=${blockOverlap}` : 0,
+      title || lede ? `>-=${blockOverlap}` : 0,
     );
   }
 }

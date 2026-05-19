@@ -52,7 +52,7 @@
       "order": 2,
       "type": "split",
       "id": "orby-marketing-present",
-      "eyebrow": "01 — Set the stage",
+      "eyebrow": "Set the stage",
       "title": "Your virtual studio, in the browser.",
       "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
       "bullets": [
@@ -66,7 +66,7 @@
       "order": 3,
       "type": "split",
       "id": "orby-marketing-import",
-      "eyebrow": "02 — Drop it in",
+      "eyebrow": "Drop it in",
       "title": "Drop in. Start immediately.",
       "lede": "No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.",
       "bullets": [
@@ -83,7 +83,7 @@
       "order": 4,
       "type": "split",
       "id": "orby-marketing-camera",
-      "eyebrow": "03 — Camera & FX",
+      "eyebrow": "Camera & FX",
       "title": "Pro framing in\nthe\u00a0viewport.",
       "lede": "Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.",
       "bullets": [
@@ -113,7 +113,7 @@
       "order": 6,
       "type": "split",
       "id": "orby-marketing-shader-lab",
-      "eyebrow": "04 — Shader Lab",
+      "eyebrow": "Shader Lab",
       "title": "Stylized looks\non\u00a0demand.",
       "lede": "Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.",
       "bullets": [
@@ -126,7 +126,7 @@
       "order": 7,
       "type": "split",
       "id": "orby-marketing-svg",
-      "eyebrow": "05 — SVG Extrude",
+      "eyebrow": "SVG Extrude",
       "title": "Logos become geometry.",
       "lede": "Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.",
       "bullets": [
@@ -139,7 +139,7 @@
       "order": 8,
       "type": "split",
       "id": "orby-marketing-export",
-      "eyebrow": "06 — Send it",
+      "eyebrow": "Send it",
       "title": "Deliverables without a pipeline.",
       "lede": "Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.",
       "bullets": [
@@ -153,7 +153,7 @@
       "order": 9,
       "type": "pro",
       "id": "orby-marketing-pro",
-      "eyebrow": "07 — For pros",
+      "eyebrow": "For pros",
       "title": "Built for\nthe\u00a0details.",
       "lede": "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
       "cards": [
