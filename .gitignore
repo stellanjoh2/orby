@@ -13,6 +13,13 @@ dist/
 # Test assets - keep locally only
 TEMP/
 
+# Intro turntable encode sources (large); commit *_web/ + posters only (npm run encode:turntable)
+assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_60fps_1spin_1440p/
+assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_60fps_1spin_1440p.zip
+assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_30fps_1spin_1080p/
+assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_30fps_1spin_1080p.zip
+assets/marketing/toyotagr_supra_gt300__www.vecarz.com_turntable_5s_60fps.mp4
+
 # Look/creative preview sources (large); commit optimized thumbs only
 assets/images/creative-look-*-source.png
 assets/images/creative-look-source-unused-*.png

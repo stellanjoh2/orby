@@ -132,15 +132,13 @@ async function copyMarketingEmail(email) {
   const value = String(email || '').trim();
   if (!value) return;
 
-  notifyMarketingCopy(MARKETING_COPY_TOAST_MESSAGE);
-
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(value);
-      return;
+    } else if (!copyTextFallback(value)) {
+      throw new Error('clipboard unavailable');
     }
-    if (copyTextFallback(value)) return;
-    throw new Error('clipboard unavailable');
+    notifyMarketingCopy(MARKETING_COPY_TOAST_MESSAGE);
   } catch {
     notifyMarketingCopy('Could not copy email', { caution: true });
   }

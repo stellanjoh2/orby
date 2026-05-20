@@ -6,7 +6,8 @@
  *   node scripts/marketing/encodeIntroTurntableFrames.mjs --quality 82
  *
  * Requires: npm install (sharp in devDependencies).
- * Output: assets/marketing/<sourceFolder>_web/ (+ poster next to marketing/)
+ * Source PNG folder is gitignored (see .gitignore); place frames locally before encoding.
+ * Output: assets/marketing/<sourceFolder>_web/ (+ poster next to marketing/) — committed for the site.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
