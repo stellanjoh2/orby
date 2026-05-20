@@ -98,6 +98,12 @@ if (existsSync(join(__dirname, 'styles', 'orby-marketing.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   cpSync(join(__dirname, 'styles', 'orby-marketing.css'), join(distDir, 'styles', 'orby-marketing.css'));
 }
+if (existsSync(join(__dirname, 'styles', 'marketing'))) {
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(join(__dirname, 'styles', 'marketing'), join(distDir, 'styles', 'marketing'), {
+    recursive: true,
+  });
+}
 if (existsSync(join(__dirname, 'styles', 'orby-magic-btn.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   cpSync(join(__dirname, 'styles', 'orby-magic-btn.css'), join(distDir, 'styles', 'orby-magic-btn.css'));
