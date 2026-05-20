@@ -1,5 +1,5 @@
 /**
- * Marketing section reveals — word stagger on headlines; block fade on split body copy;
+ * Marketing section reveals — word stagger on headlines and body copy (ledes);
  * media: preload plate then blur-in inside the 16∶9 mask (no slide-up).
  */
 import gsap from 'gsap';
@@ -34,7 +34,6 @@ const megaHeadWordDur = 0.78;
 const megaHeadStagger = 0.082;
 const megaHeadLiftY = 22;
 const megaBlockLiftY = 14;
-const megaLedeDur = 1.05;
 const megaBlockOverlap = 0.36;
 const megaCtaDur = 0.38;
 const megaCtaStagger = 0.08;
@@ -105,10 +104,6 @@ function whenMediaReady(el, options = {}) {
   });
 }
 
-/**
- * @param {HTMLElement} root
- * @returns {Promise<void>}
- */
 /**
  * @param {Element} el
  */
@@ -389,9 +384,9 @@ function prepareSplitSection(sectionEl) {
   const list = sectionEl.querySelector('.orby-marketing__list');
 
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
-  if (lede) gsap.set(lede, { opacity: 0, y: blockLiftY });
 
   prepareHeadline(title, headLiftY);
+  if (lede) prepareHeadline(lede, headLiftY);
 
   if (list) gsap.set(list.querySelectorAll('li'), { opacity: 0, y: 12 });
 
@@ -438,9 +433,7 @@ function prepareMegaSection(sectionEl) {
   const title = sectionEl.querySelector('.orby-marketing__title--intro');
   const lede = sectionEl.querySelector('.orby-marketing__lede');
   prepareHeadline(title, megaHeadLiftY);
-  if (lede?.textContent?.trim()) {
-    gsap.set(lede, { opacity: 0, y: megaBlockLiftY });
-  }
+  if (lede?.textContent?.trim()) prepareHeadline(lede, megaBlockLiftY);
   const ctas = [...sectionEl.querySelectorAll('.orby-marketing__cta')];
   if (ctas.length) gsap.set(ctas, { opacity: 0, y: 12 });
 }
@@ -457,12 +450,10 @@ function revealMegaSection(sectionEl, tl) {
     ease: 'power3.out',
   });
   if (ledeHasCopy) {
-    tl.fromTo(
-      lede,
-      { opacity: 0, y: megaBlockLiftY },
-      { opacity: 1, y: 0, duration: megaLedeDur, ease: 'power3.out' },
-      `>-=${megaBlockOverlap}`,
-    );
+    revealHeadline(lede, tl, `>-=${megaBlockOverlap}`, {
+      liftY: megaBlockLiftY,
+      ease: 'power3.out',
+    });
   }
 
   const ctas = [...sectionEl.querySelectorAll('.orby-marketing__cta')];
@@ -503,9 +494,9 @@ function prepareProSection(sectionEl) {
   const lede = sectionEl.querySelector('.orby-marketing__pro-lede');
 
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
-  if (lede) gsap.set(lede, { opacity: 0, y: blockLiftY });
 
   prepareHeadline(title, headLiftY);
+  if (lede) prepareHeadline(lede, headLiftY);
 
   gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]'), {
     opacity: 0,
@@ -520,7 +511,7 @@ function revealProSection(sectionEl, tl) {
 
   revealBlock(eyebrow, tl, 0);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
-  if (lede) revealBlock(lede, tl, `>-=${blockOverlap}`);
+  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
 
   const cards = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]')];
   if (cards.length) {
@@ -555,7 +546,7 @@ function revealFaqSection(sectionEl, tl) {
   const lede = sectionEl.querySelector('.orby-marketing__faq-lede');
 
   revealBlock(eyebrow, tl, 0);
-  if (lede) revealBlock(lede, tl, `>-=${blockOverlap}`);
+  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
 
   const items = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="faq-item"]')];
@@ -603,7 +594,7 @@ function revealSplitSection(sectionEl, tl) {
 
   revealBlock(eyebrow, tl, 0);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
-  revealBlock(lede, tl, `>-=${blockOverlap}`);
+  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
   if (list) revealList(list, tl, `>-=${blockOverlap}`);
 
   const magicBtn = sectionEl.querySelector('.orby-magic-btn');
