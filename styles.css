@@ -2819,6 +2819,23 @@ html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
   animation-play-state: paused;
 }
 
+html.orby-dropzone-glow-off-screen body.dropzone-visible .dropzone::before,
+html.orby-dropzone-glow-off-screen body.dropzone-visible .dropzone::after,
+html.orby-dropzone-glow-tab-hidden body.dropzone-visible .dropzone::before,
+html.orby-dropzone-glow-tab-hidden body.dropzone-visible .dropzone::after {
+  animation-play-state: paused;
+}
+
+html.orby-marketing-reduced body.dropzone-visible .dropzone::after {
+  filter: blur(calc(var(--dropzone-glow-blur) * 0.55));
+  opacity: 0.38;
+  animation-duration: 28s;
+}
+
+html.orby-marketing-reduced body.dropzone-visible .dropzone::before {
+  animation-duration: 28s;
+}
+
 .drop-logo {
   /* Full size @ 2560; scales down 2560→1920 via --drop-hero-wide-factor */
   width: min(

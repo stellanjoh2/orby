@@ -2,6 +2,7 @@
  * Intro + footer hero PNGs — scroll-linked parallax (moves with scroll, slower than content).
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
+import { isMarketingReducedEffects } from './marketingPerformanceTier.js';
 
 /**
  * @param {HTMLElement} section
@@ -13,34 +14,62 @@ function bindSectionParallax(section, asset, strength) {
   if (!section || !asset) return () => {};
 
   let sectionDocTop = 0;
+  let active = false;
+  let ticking = false;
 
   const updateSectionDocTop = () => {
     sectionDocTop = section.getBoundingClientRect().top + window.scrollY;
   };
 
   const applyParallax = () => {
-    // Scroll down → negative Y → asset drifts up within the section (classic parallax).
+    if (!active) return;
     let y = (sectionDocTop - window.scrollY) * strength;
-    // Footer PNG is bottom-anchored — never parallax downward (avoids black strip under lime).
     if (section.classList.contains('orby-marketing__section--footer')) {
       y = Math.min(0, y);
     }
     asset.style.setProperty('--orby-intro-parallax-y', `${y}px`);
   };
 
+  const scheduleApply = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      applyParallax();
+    });
+  };
+
   const onResize = () => {
     updateSectionDocTop();
-    applyParallax();
+    scheduleApply();
   };
 
   updateSectionDocTop();
-  applyParallax();
+  scheduleApply();
 
-  document.addEventListener('scroll', applyParallax, { passive: true, capture: true });
+  const intersectionObserver =
+    typeof IntersectionObserver !== 'undefined'
+      ? new IntersectionObserver(
+          ([entry]) => {
+            active = Boolean(entry?.isIntersecting);
+            if (active) {
+              updateSectionDocTop();
+              scheduleApply();
+            }
+          },
+          { root: null, rootMargin: '120px 0px', threshold: 0 },
+        )
+      : null;
+
+  intersectionObserver?.observe(section);
+  if (!intersectionObserver) active = true;
+
+  document.addEventListener('scroll', scheduleApply, { passive: true, capture: true });
   window.addEventListener('resize', onResize, { passive: true });
 
   return () => {
-    document.removeEventListener('scroll', applyParallax, { capture: true });
+    intersectionObserver?.disconnect();
+    document.removeEventListener('scroll', scheduleApply, { capture: true });
     window.removeEventListener('resize', onResize);
     asset.style.removeProperty('--orby-intro-parallax-y');
   };
@@ -51,7 +80,7 @@ function bindSectionParallax(section, asset, strength) {
  * @returns {() => void}
  */
 export function initIntroFloatParallax(root) {
-  if (!root || prefersReducedMotion()) {
+  if (!root || prefersReducedMotion() || isMarketingReducedEffects()) {
     return () => {};
   }
 

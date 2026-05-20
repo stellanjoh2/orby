@@ -3,6 +3,7 @@
  * Handles drag & drop, file input, visibility, and all start menu interactions
  */
 import gsap from 'gsap';
+import { ensureLottie } from './lottieLoader.js';
 
 const STAGGER_CLASS = 'orby-stagger-word';
 
@@ -262,10 +263,23 @@ export class StartMenuController {
     let endTimer = null;
     const END_MS = 160;
     const SCROLL_CLASS = 'orby-dropzone-glow-scrolling';
+    const OFF_SCREEN_CLASS = 'orby-dropzone-glow-off-screen';
+
+    const syncOffScreenGlow = () => {
+      const offScreen =
+        document.body.classList.contains('dropzone-visible') &&
+        !this.isDropzoneHeroInView();
+      document.documentElement.classList.toggle(OFF_SCREEN_CLASS, offScreen);
+      if (offScreen) {
+        this.animationInstance?.pause();
+      }
+    };
+
     const pauseForScroll = () => {
       if (!prefersReducedMotion()) {
         document.documentElement.classList.add(SCROLL_CLASS);
       }
+      syncOffScreenGlow();
       if (shouldPlayLogotypeLottie() && this.isDropzoneHeroInView()) {
         this.animationInstance?.pause();
       }
@@ -273,9 +287,11 @@ export class StartMenuController {
     const resumeAfterScroll = () => {
       document.documentElement.classList.remove(SCROLL_CLASS);
       endTimer = null;
+      syncOffScreenGlow();
       if (
         shouldPlayLogotypeLottie() &&
         document.body.classList.contains('dropzone-visible') &&
+        this.isDropzoneHeroInView() &&
         this.animationInstance
       ) {
         this.animationInstance.play();
@@ -285,6 +301,7 @@ export class StartMenuController {
       'scroll',
       () => {
         if (!document.body.classList.contains('dropzone-visible')) {
+          document.documentElement.classList.remove(OFF_SCREEN_CLASS);
           if (endTimer !== null) {
             window.clearTimeout(endTimer);
             resumeAfterScroll();
@@ -297,6 +314,16 @@ export class StartMenuController {
       },
       { passive: true },
     );
+
+    const onVisibility = () => {
+      const hidden = document.visibilityState === 'hidden';
+      document.documentElement.classList.toggle(
+        'orby-dropzone-glow-tab-hidden',
+        hidden && document.body.classList.contains('dropzone-visible'),
+      );
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    onVisibility();
   }
 
   handleDropEvent(event, emitFile) {
@@ -667,15 +694,9 @@ export class StartMenuController {
     }, 5200);
 
     // Wait for Lottie library to load
-    const tryInit = () => {
-      if (typeof lottie === 'undefined') {
-        // Retry after a short delay
-        setTimeout(tryInit, 100);
-        return;
-      }
-
+    const tryInit = async () => {
       try {
-        // Add cache-busting parameter to ensure fresh file is loaded
+        const lottie = await ensureLottie();
         const cacheBuster = `?v=${Date.now()}`;
         this.animationInstance = lottie.loadAnimation({
           container: this.logotypeAnimation,
@@ -752,15 +773,9 @@ export class StartMenuController {
     }
 
     // Wait for Lottie library to load
-    const tryInit = () => {
-      if (typeof lottie === 'undefined') {
-        // Retry after a short delay
-        setTimeout(tryInit, 100);
-        return;
-      }
-
+    const tryInit = async () => {
       try {
-        // Add cache-busting parameter to ensure fresh file is loaded
+        const lottie = await ensureLottie();
         const cacheBuster = `?v=${Date.now()}`;
         this.infoAnimationInstance = lottie.loadAnimation({
           container: this.infoLogotypeAnimation,

@@ -79,6 +79,10 @@ if (isSafariBrowser()) {
   document.documentElement.classList.add('safari-browser');
 }
 
+void import('./marketing/marketingPerformanceTier.js')
+  .then((mod) => mod.applyMarketingPerformanceClass())
+  .catch(() => {});
+
 const eventBus = new EventBus();
 const stateStore = new StateStore();
 const ui = new UIManager(eventBus, stateStore);

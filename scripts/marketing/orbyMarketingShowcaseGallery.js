@@ -3,13 +3,13 @@
  */
 import gsap from 'gsap';
 import { prefersReducedMotion } from '../ui/modalReveal.js';
+import { getShowcaseCycleMs } from './marketingPerformanceTier.js';
 import {
   getMediaPlaceholderTargets,
   setMediaPlaceholderOpacity,
   tweenPlaceholderFadeOut,
 } from './orbyMarketingMediaPlaceholder.js';
 
-const CYCLE_MS = 5200;
 const FADE_S = 0.95;
 const CREDIT_IN_S = 0.48;
 /** Set on the gallery mask while arrow keys should drive slides (see GlobalControls). */
@@ -79,6 +79,8 @@ function createGalleryController(mask) {
   let creditTween = null;
   let keyboardEnabled = false;
   let intersectionObserver = null;
+  let visibilityObserver = null;
+  let visible = false;
 
   const updateDots = (activeIndex) => {
     dotButtons.forEach((btn, i) => {
@@ -224,8 +226,8 @@ function createGalleryController(mask) {
 
   const start = () => {
     stop();
-    if (imgs.length < 2 || prefersReducedMotion()) return;
-    timer = window.setInterval(tick, CYCLE_MS);
+    if (imgs.length < 2 || prefersReducedMotion() || !visible) return;
+    timer = window.setInterval(tick, getShowcaseCycleMs());
   };
 
   const stop = () => {
@@ -281,6 +283,19 @@ function createGalleryController(mask) {
       { threshold: 0.35 },
     );
     intersectionObserver.observe(mask);
+
+    visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        visible = Boolean(entry?.isIntersecting);
+        if (visible) restartAutoplay();
+        else stop();
+      },
+      { threshold: 0.2 },
+    );
+    visibilityObserver.observe(mask);
+    const rect = mask.getBoundingClientRect();
+    visible = rect.bottom > 0 && rect.top < window.innerHeight;
+    if (visible) restartAutoplay();
   };
 
   const unbindInteraction = () => {
@@ -288,6 +303,9 @@ function createGalleryController(mask) {
     window.removeEventListener('keydown', onKeyDown);
     intersectionObserver?.disconnect();
     intersectionObserver = null;
+    visibilityObserver?.disconnect();
+    visibilityObserver = null;
+    visible = false;
     setKeyboardEnabled(false);
   };
 

@@ -2,6 +2,8 @@
  * DemoLogotypeController - Manages the demo mode logotype in bottom-left corner
  * Toggleable branded screensaver-style logotype animation
  */
+import { ensureLottie } from './lottieLoader.js';
+
 export class DemoLogotypeController {
   constructor() {
     this.container = null;
@@ -30,15 +32,9 @@ export class DemoLogotypeController {
     }
 
     // Wait for Lottie library to load
-    const tryInit = () => {
-      if (typeof lottie === 'undefined') {
-        // Retry after a short delay
-        setTimeout(tryInit, 100);
-        return;
-      }
-
+    const tryInit = async () => {
       try {
-        // Add cache-busting parameter to ensure fresh file is loaded
+        const lottie = await ensureLottie();
         const cacheBuster = `?v=${Date.now()}`;
         this.animationInstance = lottie.loadAnimation({
           container: this.container,

@@ -304,6 +304,17 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   background: var(--orby-marketing-bg);
 }
 
+/* Below-fold sections — skip layout/paint until near viewport */
+.orby-marketing__section--split,
+.orby-marketing__section--showcase,
+.orby-marketing__section--marquee,
+.orby-marketing__section--pro,
+.orby-marketing__section--faq,
+.orby-marketing__section--footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 820px;
+}
+
 /* Intro — full-viewport hero with side PNGs / scroll turntable */
 .orby-marketing__section--intro {
   position: relative;
@@ -459,6 +470,14 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 .orby-marketing__section--footer.orby-marketing__section--revealed .orby-marketing__intro-asset {
   opacity: 1;
   transition: opacity 1.1s ease;
+}
+
+html.orby-marketing-reduced .orby-marketing__section--intro.orby-marketing__section--revealed
+  .orby-marketing__intro-asset:not(.orby-marketing__intro-turntable-wrap),
+html.orby-marketing-reduced
+  .orby-marketing__section--footer.orby-marketing__section--revealed
+  .orby-marketing__intro-asset {
+  will-change: auto;
 }
 
 /* ~halfway between headline cluster and viewport edge; vertically centered with copy */
@@ -1018,6 +1037,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   width: max-content;
   will-change: transform;
   animation: orbyMarketingPngMarquee 52s linear infinite;
+  animation-play-state: paused;
+}
+
+.orby-marketing__png-marquee--playing .orby-marketing__png-marquee-track {
+  animation-play-state: running;
 }
 
 .orby-marketing__png-marquee-group {
@@ -1126,6 +1150,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 .orby-marketing__showcase-img.is-active {
   z-index: 1;
+}
+
+html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__showcase-img.is-loaded,
+html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__figure-media.is-loaded {
+  will-change: auto;
 }
 
 .orby-marketing__showcase-dots {

@@ -201,7 +201,7 @@ function renderFigure(imageSrc, imageAlt, revealDir, videoSrc = '') {
   const posterAttr =
     imageSrc && videoSrc ? ` poster="${escapeHtml(imageSrc)}"` : '';
   const media = videoSrc
-    ? `<video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="metadata" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>`
+    ? `<video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="none" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>`
     : `<img class="orby-marketing__figure-media orby-marketing__figure-img" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(imageAlt || '')}" decoding="async" />`;
   return `<figure class="orby-marketing__figure">
       <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
@@ -306,19 +306,37 @@ function renderShowcaseSlides(section) {
     .join('\n        ');
 }
 
+function pngMarqueeDeliverySrc(pngSrc) {
+  if (!pngSrc || !/\.png$/i.test(pngSrc)) return { primary: pngSrc, fallback: '' };
+  const webpSrc = pngSrc.replace(/\.png$/i, '.webp');
+  return { primary: webpSrc, fallback: pngSrc };
+}
+
 function renderPngMarqueeItems(items) {
   return items
-    .map(
-      (item) => `<li class="orby-marketing__png-marquee-item">
-          <img
-            class="orby-marketing__png-marquee-img"
-            src="${escapeHtml(item.src)}"
-            alt="${escapeHtml(item.alt)}"
-            decoding="async"
-            loading="lazy"
-          />
-      </li>`,
-    )
+    .map((item) => {
+      const { primary, fallback } = pngMarqueeDeliverySrc(item.src);
+      const picture =
+        fallback && primary !== fallback
+          ? `<picture>
+            <source type="image/webp" srcset="${escapeHtml(primary)}" />
+            <img
+              class="orby-marketing__png-marquee-img"
+              src="${escapeHtml(fallback)}"
+              alt="${escapeHtml(item.alt)}"
+              decoding="async"
+              loading="lazy"
+            />
+          </picture>`
+          : `<img
+              class="orby-marketing__png-marquee-img"
+              src="${escapeHtml(primary)}"
+              alt="${escapeHtml(item.alt)}"
+              decoding="async"
+              loading="lazy"
+            />`;
+      return `<li class="orby-marketing__png-marquee-item">${picture}</li>`;
+    })
     .join('\n          ');
 }
 
@@ -636,8 +654,8 @@ export function initOrbyMarketingPage(options = {}) {
     return { destroy() {} };
   }
 
-  void import('./orbyMarketingIntroTurntable.js').then((mod) => {
-    mod.preloadIntroTurntableFrames();
+  void import('./marketingPerformanceTier.js').then((mod) => {
+    mod.applyMarketingPerformanceClass();
   });
 
   const lazy = options.lazy !== false;
@@ -656,6 +674,8 @@ export function initOrbyMarketingPage(options = {}) {
   let teardownShowcaseGallery = null;
   /** @type {(() => void) | null} */
   let teardownPngMarqueeLogotype = null;
+  /** @type {(() => void) | null} */
+  let teardownPngMarqueePerf = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
@@ -672,8 +692,11 @@ export function initOrbyMarketingPage(options = {}) {
     const onReveal = (observer, entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        revealModule.revealMarketingSection(entry.target);
-        observer.unobserve(entry.target);
+        const section = entry.target;
+        void revealModule.preloadSectionMedia(section).then(() => {
+          revealModule.revealMarketingSection(section);
+        });
+        observer.unobserve(section);
       }
     };
     megaRevealObserver = new IntersectionObserver(
@@ -726,6 +749,8 @@ export function initOrbyMarketingPage(options = {}) {
     teardownShowcaseGallery = null;
     teardownPngMarqueeLogotype?.();
     teardownPngMarqueeLogotype = null;
+    teardownPngMarqueePerf?.();
+    teardownPngMarqueePerf = null;
 
     try {
       const introFloat = await import('./orbyMarketingIntroFloat.js');
@@ -754,6 +779,20 @@ export function initOrbyMarketingPage(options = {}) {
     } catch (err) {
       console.error('[orby-marketing] PNG marquee logotype failed to init', err);
     }
+
+    try {
+      const pngMarquee = await import('./orbyMarketingPngMarquee.js');
+      teardownPngMarqueePerf = pngMarquee.initPngMarqueePerformance(root);
+    } catch (err) {
+      console.error('[orby-marketing] PNG marquee performance hooks failed', err);
+    }
+
+    try {
+      const introTurntableMod = await import('./orbyMarketingIntroTurntable.js');
+      introTurntableMod.refreshIntroTurntableScrollTriggers();
+    } catch (_) {
+      /* optional */
+    }
   }
 
   function suspendForStudio() {
@@ -766,6 +805,8 @@ export function initOrbyMarketingPage(options = {}) {
     teardownShowcaseGallery = null;
     teardownPngMarqueeLogotype?.();
     teardownPngMarqueeLogotype = null;
+    teardownPngMarqueePerf?.();
+    teardownPngMarqueePerf = null;
     revealModule?.cancelAllMarketingMotion?.(root);
     syncMarketingMedia(false);
     root.hidden = true;
@@ -783,7 +824,8 @@ export function initOrbyMarketingPage(options = {}) {
       !teardownIntroFloat ||
       !teardownIntroTurntable ||
       !teardownShowcaseGallery ||
-      !teardownPngMarqueeLogotype
+      !teardownPngMarqueeLogotype ||
+      !teardownPngMarqueePerf
     ) {
       void attachMarketingEnhancements();
     }
@@ -833,7 +875,6 @@ export function initOrbyMarketingPage(options = {}) {
     });
     reveals.prepareMarketingSections(root);
     attachRevealObserver();
-    void reveals.preloadMarketingImages(root);
 
     await attachMarketingEnhancements();
 
@@ -910,6 +951,8 @@ export function initOrbyMarketingPage(options = {}) {
       teardownShowcaseGallery = null;
       teardownPngMarqueeLogotype?.();
       teardownPngMarqueeLogotype = null;
+      teardownPngMarqueePerf?.();
+      teardownPngMarqueePerf = null;
       bodyObserver?.disconnect();
       disconnectRevealObservers();
       teardownScrollCueFade?.();

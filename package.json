@@ -4,10 +4,13 @@
   "description": "A completely free, zero-install, drag-and-drop 3D model viewer",
   "type": "module",
   "scripts": {
+    "start": "node scripts/static-dev-server.mjs",
     "dev": "node scripts/static-dev-server.mjs",
+    "restart": "node -e \"require('child_process').execSync('lsof -ti :8000 | xargs kill -9 2>/dev/null||true',{stdio:'inherit'})\" && node scripts/static-dev-server.mjs",
     "dev:python": "python3 -m http.server 8000 --bind 0.0.0.0",
     "build": "node build.js",
     "encode:turntable": "node scripts/marketing/encodeIntroTurntableFrames.mjs",
+    "encode:png-marquee": "node scripts/marketing/encodePngMarquee.mjs",
     "preview": "python3 -m http.server 8000 --bind 0.0.0.0 -d dist",
     "setup-hooks": "node scripts/setup-git-hooks.mjs",
     "prepare": "node scripts/setup-git-hooks.mjs || true"

@@ -3,6 +3,7 @@
  * Loads when the marquee block nears the viewport; plays only while on screen.
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
+import { ensureLottie } from '../ui/lottieLoader.js';
 
 const LOGOTYPE_JSON = './assets/animations/data.json';
 const IO_OPTIONS = { root: null, rootMargin: '240px 0px', threshold: 0.05 };
@@ -56,15 +57,11 @@ export function initPngMarqueeLogotype(root) {
     animation.pause();
   };
 
-  const ensureAnimation = () => {
+  const ensureAnimation = async () => {
     if (animation || destroyed || loadScheduled) return;
-    if (typeof lottie === 'undefined') {
-      window.setTimeout(ensureAnimation, 100);
-      return;
-    }
-
     loadScheduled = true;
     try {
+      const lottie = await ensureLottie();
       animation = lottie.loadAnimation({
         container: slot,
         renderer: 'svg',
@@ -94,7 +91,7 @@ export function initPngMarqueeLogotype(root) {
     entries.forEach((entry) => {
       if (entry.target !== block) return;
       if (entry.isIntersecting) {
-        ensureAnimation();
+        void ensureAnimation();
         syncPlayback(true);
       } else {
         syncPlayback(false);

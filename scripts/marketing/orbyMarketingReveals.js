@@ -15,6 +15,10 @@ import {
 } from './orbyMarketingMediaPlaceholder.js';
 import { prepareShowcaseGalleryCredit } from './orbyMarketingShowcaseGallery.js';
 import { killIntroTurntableScrollTriggers } from './orbyMarketingIntroTurntable.js';
+import {
+  shouldUseHeadlineWordStagger,
+  shouldUseMediaBlurReveal,
+} from './marketingPerformanceTier.js';
 
 const headWordDur = 0.42;
 const headStagger = 0.035;
@@ -105,44 +109,111 @@ function whenMediaReady(el, options = {}) {
  * @param {HTMLElement} root
  * @returns {Promise<void>}
  */
+/**
+ * @param {Element} el
+ */
+function shouldPreloadMarketingElement(el) {
+  if (
+    el instanceof HTMLImageElement &&
+    el.classList.contains('orby-marketing__showcase-img') &&
+    !el.classList.contains('is-active')
+  ) {
+    return false;
+  }
+  if (el instanceof HTMLImageElement && el.dataset.orbyMarketingIntroAsset) {
+    return false;
+  }
+  if (el instanceof HTMLImageElement && el.loading === 'lazy') {
+    return false;
+  }
+  if (el instanceof HTMLImageElement) return Boolean(el.src);
+  if (el instanceof HTMLVideoElement) {
+    return el.preload !== 'none' && Boolean(el.src);
+  }
+  return false;
+}
+
+/**
+ * @param {HTMLElement} sectionEl
+ * @returns {Promise<void>}
+ */
+export function preloadSectionMedia(sectionEl) {
+  if (!sectionEl) return Promise.resolve();
+  const media = [
+    ...sectionEl.querySelectorAll(
+      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img.is-active, .orby-marketing__pro-card-img, .orby-marketing__intro-asset:not(.orby-marketing__intro-turntable-wrap)',
+    ),
+  ].filter(shouldPreloadMarketingElement);
+  return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
+}
+
+/**
+ * @param {HTMLElement} root
+ * @returns {Promise<void>}
+ */
 export function preloadMarketingImages(root) {
   if (!root) return Promise.resolve();
-  const media = [
-    ...root.querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img, .orby-marketing__intro-asset',
-    ),
-  ].filter((el) => {
-    if (
-      el instanceof HTMLImageElement &&
-      el.classList.contains('orby-marketing__showcase-img') &&
-      !el.classList.contains('is-active')
-    ) {
-      return false;
-    }
-    if (el instanceof HTMLImageElement && el.dataset.orbyMarketingIntroAsset) {
-      return false;
-    }
-    if (el instanceof HTMLImageElement) return Boolean(el.src);
-    if (el instanceof HTMLVideoElement) return Boolean(el.src);
-    return false;
+  const sections = [...root.querySelectorAll('.orby-marketing__section')];
+  return Promise.all(sections.map((section) => preloadSectionMedia(section)));
+}
+
+/**
+ * @param {HTMLElement} sectionEl
+ */
+function clearSectionCompositorHints(sectionEl) {
+  sectionEl
+    .querySelectorAll(
+      '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img, .orby-marketing__intro-asset, [data-orby-marketing-reveal="text"]',
+    )
+    .forEach((el) => {
+      if (el instanceof HTMLElement) el.style.willChange = 'auto';
+    });
+  sectionEl.querySelectorAll('.orby-marketing__png-marquee-track').forEach((el) => {
+    if (el instanceof HTMLElement) el.style.willChange = 'auto';
   });
-  return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
+}
+
+function prepareHeadline(el, liftY = headLiftY) {
+  if (!el) return;
+  if (shouldUseHeadlineWordStagger()) {
+    wrapWordsForBigMessage(el);
+    const words = [...el.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
+    gsap.set(el, { opacity: 1 });
+    if (words.length) gsap.set(words, { opacity: 0, y: liftY });
+    return;
+  }
+  gsap.set(el, { opacity: 0, y: liftY });
 }
 
 function revealHeadline(el, tl, position = 0, options = {}) {
   if (!el) return;
-  wrapWordsForBigMessage(el);
-  const words = [...el.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
-  if (!words.length) return;
-  gsap.set(el, { opacity: 1 });
+  const liftY = options.liftY ?? headLiftY;
+  if (shouldUseHeadlineWordStagger()) {
+    wrapWordsForBigMessage(el);
+    const words = [...el.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
+    if (!words.length) return;
+    gsap.set(el, { opacity: 1 });
+    tl.fromTo(
+      words,
+      { opacity: 0, y: liftY },
+      {
+        opacity: 1,
+        y: 0,
+        duration: options.wordDur ?? headWordDur,
+        stagger: options.stagger ?? headStagger,
+        ease: options.ease ?? 'power2.out',
+      },
+      position,
+    );
+    return;
+  }
   tl.fromTo(
-    words,
-    { opacity: 0, y: options.liftY ?? headLiftY },
+    el,
+    { opacity: 0, y: liftY },
     {
       opacity: 1,
       y: 0,
       duration: options.wordDur ?? headWordDur,
-      stagger: options.stagger ?? headStagger,
       ease: options.ease ?? 'power2.out',
     },
     position,
@@ -179,13 +250,22 @@ function revealList(listEl, tl, position) {
 
 function prepareMediaElement(el) {
   if (!el) return;
-  gsap.set(el, {
-    opacity: 0,
-    y: 0,
-    scale: 1,
-    filter: `blur(${mediaBlurPx}px)`,
-    clearProps: 'clipPath',
-  });
+  if (shouldUseMediaBlurReveal()) {
+    gsap.set(el, {
+      opacity: 0,
+      y: 0,
+      scale: 1,
+      filter: `blur(${mediaBlurPx}px)`,
+      clearProps: 'clipPath',
+    });
+  } else {
+    gsap.set(el, {
+      opacity: 0,
+      y: 0,
+      scale: 1,
+      clearProps: 'clipPath,filter',
+    });
+  }
   el.classList.remove('is-loaded');
 }
 
@@ -257,14 +337,13 @@ function revealMedia(maskEl, tl, position = 0) {
   tl.add(() => whenMediaReady(media), position);
   const revealStart = '>';
   const revealTarget = isPngMarquee ? [track, logotype].filter(Boolean) : track || media;
+  const useBlur = !isPngMarquee && shouldUseMediaBlurReveal();
   tl.fromTo(
     revealTarget,
-    isPngMarquee
-      ? { opacity: 0 }
-      : { opacity: 0, filter: `blur(${mediaBlurPx}px)` },
+    isPngMarquee ? { opacity: 0 } : { opacity: 0, ...(useBlur ? { filter: `blur(${mediaBlurPx}px)` } : {}) },
     {
       opacity: 1,
-      ...(isPngMarquee ? {} : { filter: 'blur(0px)' }),
+      ...(useBlur ? { filter: 'blur(0px)' } : {}),
       duration: mediaRevealDur,
       ease: mediaEase,
       onStart: () => {
@@ -312,12 +391,7 @@ function prepareSplitSection(sectionEl) {
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
   if (lede) gsap.set(lede, { opacity: 0, y: blockLiftY });
 
-  if (title) {
-    wrapWordsForBigMessage(title);
-    const words = [...title.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
-    gsap.set(title, { opacity: 1 });
-    if (words.length) gsap.set(words, { opacity: 0, y: headLiftY });
-  }
+  prepareHeadline(title, headLiftY);
 
   if (list) gsap.set(list.querySelectorAll('li'), { opacity: 0, y: 12 });
 
@@ -363,12 +437,7 @@ function isIntroTurntableSection(sectionEl) {
 function prepareMegaSection(sectionEl) {
   const title = sectionEl.querySelector('.orby-marketing__title--intro');
   const lede = sectionEl.querySelector('.orby-marketing__lede');
-  if (title) {
-    wrapWordsForBigMessage(title);
-    const words = [...title.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
-    gsap.set(title, { opacity: 1 });
-    gsap.set(words, { opacity: 0, y: megaHeadLiftY });
-  }
+  prepareHeadline(title, megaHeadLiftY);
   if (lede?.textContent?.trim()) {
     gsap.set(lede, { opacity: 0, y: megaBlockLiftY });
   }
@@ -415,14 +484,9 @@ function revealMegaSection(sectionEl, tl) {
 }
 
 function prepareStandardSection(sectionEl) {
-  sectionEl.querySelectorAll('[data-orby-marketing-reveal="text"]').forEach((el) => {
-    wrapWordsForBigMessage(el);
-    const words = [...el.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
-    if (words.length) {
-      gsap.set(el, { opacity: 1 });
-      gsap.set(words, { opacity: 0, y: headLiftY });
-    }
-  });
+  sectionEl
+    .querySelectorAll('[data-orby-marketing-reveal="text"]')
+    .forEach((el) => prepareHeadline(el, headLiftY));
 
   sectionEl.querySelectorAll('[data-orby-marketing-reveal="media"]').forEach(prepareMarketingMask);
 
@@ -441,12 +505,7 @@ function prepareProSection(sectionEl) {
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
   if (lede) gsap.set(lede, { opacity: 0, y: blockLiftY });
 
-  if (title) {
-    wrapWordsForBigMessage(title);
-    const words = [...title.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
-    gsap.set(title, { opacity: 1 });
-    if (words.length) gsap.set(words, { opacity: 0, y: headLiftY });
-  }
+  prepareHeadline(title, headLiftY);
 
   gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]'), {
     opacity: 0,
@@ -481,14 +540,9 @@ function revealProSection(sectionEl, tl) {
 }
 
 function prepareFaqSection(sectionEl) {
-  sectionEl.querySelectorAll('[data-orby-marketing-reveal="text"]').forEach((el) => {
-    wrapWordsForBigMessage(el);
-    const words = [...el.querySelectorAll(`.${BIG_MESSAGE_STAGGER_CLASS}`)];
-    if (words.length) {
-      gsap.set(el, { opacity: 1 });
-      gsap.set(words, { opacity: 0, y: headLiftY });
-    }
-  });
+  sectionEl
+    .querySelectorAll('[data-orby-marketing-reveal="text"]')
+    .forEach((el) => prepareHeadline(el, headLiftY));
   gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="faq-item"]'), {
     opacity: 0,
     y: blockLiftY,
@@ -649,6 +703,7 @@ export function revealMarketingSection(sectionEl) {
     onComplete: () => {
       sectionEl.classList.remove('orby-marketing__section--pending');
       sectionEl.classList.add('orby-marketing__section--revealed');
+      clearSectionCompositorHints(sectionEl);
     },
   });
 
