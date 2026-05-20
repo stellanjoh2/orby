@@ -384,6 +384,9 @@ export class StudioControls {
       }
 
       this.eventBus.emit('lights:enabled', enabled);
+      if (enabled) {
+        this.eventBus.emit('lights:cast-shadows', true);
+      }
       this.ui.updateLightSliderStates();
     });
     this.ui.inputs.lightsShadowQuality?.addEventListener('change', (event) => {

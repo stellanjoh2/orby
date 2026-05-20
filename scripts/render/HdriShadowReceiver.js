@@ -1,12 +1,20 @@
 import * as THREE from 'three';
 import { DEFAULT_SHADOW_OPACITY } from './ShadowTint.js';
 
-/** Wide invisible catcher; radial depth feather avoids a hard square AO cutoff. */
+/** Base plane size before {@link HdriShadowReceiver#_applyMeshScale}; scaled to fit the model. */
 const CATCHER_SIZE = 320;
 const DEPTH_OFFSET = 0.012;
 const SHADOW_Y_LIFT = 0.003;
+/** Sit the catcher just under the mesh bottom when geometry sinks below Ground Y. */
+const MODEL_BOTTOM_PAD = 0.006;
 const AO_RADIUS_PAD = 4;
 const MIN_CATCHER_RADIUS = 6;
+/** ≥ {@link LightsController} ortho padding so the catcher covers the shadow frustum. */
+const SHADOW_ORTHO_PADDING = 2.8;
+/** Extra ground reach for low lights / tall subjects (long shadow tails). */
+const SHADOW_HEIGHT_STRETCH = 6;
+/** ShadowMaterial plane extends past the AO disc so long tails are not square-clipped. */
+const SHADOW_PLANE_MARGIN = 1.5;
 
 const FEATHER_DEPTH_VERT = /* glsl */ `
 varying vec3 vWorldPos;
@@ -62,6 +70,8 @@ export class HdriShadowReceiver {
     this.hdriEnabled = false;
     this.groundSolid = false;
     this.groundY = options.groundY ?? 0;
+    /** World Y for catcher meshes — may drop with model bottom when feet clip through groundY. */
+    this._placementGroundY = this.groundY;
     this._shadowOpacity =
       typeof options.shadowOpacity === 'number'
         ? options.shadowOpacity
@@ -69,6 +79,8 @@ export class HdriShadowReceiver {
     this._aoRadius = 1;
     this._center = { cx: 0, cz: 0 };
     this._modelRadius = 1;
+    this._boundsRadius = 1;
+    this._modelHalfHeight = 0.5;
 
     this.group = new THREE.Group();
     this.group.userData.meshglHdriShadowReceiver = true;
@@ -100,11 +112,13 @@ export class HdriShadowReceiver {
     shadowMat.polygonOffsetUnits = -4;
     this.shadowMesh = new THREE.Mesh(planeGeo, shadowMat);
     this.shadowMesh.rotation.x = -Math.PI / 2;
-    this.shadowMesh.position.y = floorY + SHADOW_Y_LIFT;
+    this.shadowMesh.position.y = this._shadowY();
     this.shadowMesh.receiveShadow = true;
     this.shadowMesh.castShadow = false;
     this.shadowMesh.frustumCulled = false;
-    this.shadowMesh.renderOrder = 2;
+    // Below the mesh (0) so depth-tested feet occlude the plane — avoids a black outline when
+    // geometry clips through the catcher (rendering the plane on top looked cartoony).
+    this.shadowMesh.renderOrder = -1;
     this.shadowMesh.userData.meshglHdriShadowReceiver = true;
     this.shadowMesh.userData.lensflare = 'no-occlusion';
 
@@ -117,7 +131,11 @@ export class HdriShadowReceiver {
   }
 
   _floorY() {
-    return this.groundY - DEPTH_OFFSET;
+    return this._placementGroundY - DEPTH_OFFSET;
+  }
+
+  _shadowY() {
+    return this._placementGroundY - DEPTH_OFFSET + SHADOW_Y_LIFT;
   }
 
   isActive() {
@@ -156,14 +174,20 @@ export class HdriShadowReceiver {
   setAoRadius(radius) {
     const raw = Number(radius);
     this._aoRadius = Number.isFinite(raw) ? Math.max(0.1, raw) : 1;
+    this._applyMeshScale();
     this._updateDepthUniforms();
   }
 
   setGroundY(value) {
     this.groundY = value ?? 0;
+    this._placementGroundY = this.groundY;
+    this._applyFloorHeights();
+  }
+
+  _applyFloorHeights() {
     const floorY = this._floorY();
     this.aoDepthMesh.position.y = floorY;
-    this.shadowMesh.position.y = floorY + SHADOW_Y_LIFT;
+    this.shadowMesh.position.y = this._shadowY();
   }
 
   setShadowOpacity(opacity) {
@@ -179,9 +203,21 @@ export class HdriShadowReceiver {
   }
 
   _catcherRadius() {
-    const modelPad = this._modelRadius * 1.85;
+    const footprintPad = this._modelRadius * 2.1;
     const aoExtent = this._aoRadius * AO_RADIUS_PAD;
-    return Math.max(MIN_CATCHER_RADIUS, modelPad + aoExtent);
+    const orthoExtent = this._boundsRadius * SHADOW_ORTHO_PADDING;
+    const heightStretch = this._modelHalfHeight * SHADOW_HEIGHT_STRETCH;
+    return Math.max(
+      MIN_CATCHER_RADIUS,
+      footprintPad + aoExtent,
+      orthoExtent,
+      this._modelRadius + heightStretch,
+    );
+  }
+
+  /** Wider than {@link #_catcherRadius} — ShadowMaterial square, long diagonal tails. */
+  _shadowCatcherRadius() {
+    return this._catcherRadius() * SHADOW_PLANE_MARGIN;
   }
 
   _featherWidth() {
@@ -196,12 +232,20 @@ export class HdriShadowReceiver {
     uniforms.uFeather.value = this._featherWidth();
   }
 
+  _applyMeshScale() {
+    const aoScale = (this._catcherRadius() * 2) / CATCHER_SIZE;
+    const shadowScale = (this._shadowCatcherRadius() * 2) / CATCHER_SIZE;
+    this.aoDepthMesh.scale.set(aoScale, 1, aoScale);
+    this.shadowMesh.scale.set(shadowScale, 1, shadowScale);
+  }
+
   _applyPlacement() {
     const { cx, cz } = this._center;
     this.aoDepthMesh.position.x = cx;
     this.aoDepthMesh.position.z = cz;
     this.shadowMesh.position.x = cx;
     this.shadowMesh.position.z = cz;
+    this._applyMeshScale();
     this._updateDepthUniforms();
   }
 
@@ -215,6 +259,9 @@ export class HdriShadowReceiver {
     let cz = 0;
     let modelRadius = 1;
 
+    let boundsRadius = 1;
+    let modelHalfHeight = 0.5;
+
     if (modelRoot) {
       const box = new THREE.Box3().setFromObject(modelRoot);
       if (!box.isEmpty()) {
@@ -223,11 +270,24 @@ export class HdriShadowReceiver {
         cx = center.x;
         cz = center.z;
         modelRadius = Math.max(0.35, Math.max(size.x, size.z) * 0.5);
+        boundsRadius = Math.max(0.35, size.length() * 0.5);
+        modelHalfHeight = Math.max(0.1, size.y * 0.5);
+        // Keep the catcher under the lowest geometry so it does not intersect the mesh.
+        const modelBottomY = box.min.y;
+        this._placementGroundY = Math.min(
+          this.groundY,
+          modelBottomY - MODEL_BOTTOM_PAD,
+        );
       }
+    } else {
+      this._placementGroundY = this.groundY;
     }
 
     this._center = { cx, cz };
     this._modelRadius = modelRadius;
+    this._boundsRadius = boundsRadius;
+    this._modelHalfHeight = modelHalfHeight;
+    this._applyFloorHeights();
     this._applyPlacement();
   }
 

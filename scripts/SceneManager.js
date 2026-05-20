@@ -184,6 +184,7 @@ export class SceneManager {
       ? initialState.lightsShadowContactOffset
       : -0.0001;
     this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
+    this.lightsCastShadows = !!initialState.lightsCastShadows;
     this.lightsShadowColor = initialState.lightsShadowColor ?? '#080808';
     this.lightsShadowOpacity = Number.isFinite(initialState.lightsShadowOpacity)
       ? Math.min(1, Math.max(0, initialState.lightsShadowOpacity))
@@ -1982,6 +1983,8 @@ export class SceneManager {
 
   setLightsEnabled(enabled) {
     this.lightsEnabled = !!enabled;
+    // Keep in sync with StateStore (UI may set lightsCastShadows before this runs).
+    this.lightsCastShadows = !!this.stateStore.getState().lightsCastShadows;
     const lightsState = this.stateStore.getState().lights;
     this.lightsController?.setEnabled(this.lightsEnabled, lightsState);
 
@@ -2002,7 +2005,7 @@ export class SceneManager {
   }
 
   _isShadowTintActive() {
-    return !!this.lightsEnabled && this.lightsCastShadows !== false;
+    return !!this.lightsEnabled && !!this.lightsCastShadows;
   }
 
   _syncEffectiveCastShadows() {

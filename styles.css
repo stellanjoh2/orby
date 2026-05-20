@@ -4942,7 +4942,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   grid-template-columns: 160px auto;
 }
 
-.lights .slider-line {
+.lights .slider-line:not(.slider-line--toggle-only) {
   grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
 }
 
