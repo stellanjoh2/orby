@@ -281,6 +281,7 @@ function renderProSection(section) {
   </section>`;
 }
 
+/** FAQ: eyebrow + title only — never render a white lede above the lime headline. */
 function renderFaqSection(section) {
   const items = (section.faq ?? [])
     .map(

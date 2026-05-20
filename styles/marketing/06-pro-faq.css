@@ -151,16 +151,17 @@
   color: var(--orby-marketing-text-dim);
 }
 
-/* FAQ panel — seam above = pro gap-big; faq-pad-top before headline; bottom uses gap-big */
+/* FAQ panel — dark seam above is pro padding-bottom (gap-big); inner pad before copy */
 #orby-marketing .orby-marketing__section.orby-marketing__section--faq {
   position: relative;
   z-index: 1;
   background: var(--orby-marketing-panel-bg);
-  /* Reset base section pad; FAQ uses its own top/bottom bands */
-  padding: var(--orby-marketing-faq-pad-top) 0 var(--orby-marketing-faq-pad-bottom);
+  /* No section padding-top — avoids stacking on pro-faq-gap */
+  padding: 0 0 var(--orby-marketing-faq-pad-bottom);
 }
 
 #orby-marketing .orby-marketing__inner.orby-marketing__faq {
+  padding-top: var(--orby-marketing-faq-inner-pad-top);
   padding-bottom: 0;
 }
 

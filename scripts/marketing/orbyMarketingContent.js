@@ -237,6 +237,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-faq',
     eyebrow: 'FAQ',
     title: 'Questions, answered.',
+    /* No lede — eyebrow + headline only. Pro→FAQ dark seam = gap-big (220px @ 1440); see --orby-marketing-pro-faq-gap. */
     faq: [
       {
         question: 'Who is Orby for?',
