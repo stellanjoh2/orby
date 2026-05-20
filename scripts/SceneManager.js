@@ -472,6 +472,7 @@ export class SceneManager {
     this.textureLoader = new THREE.TextureLoader();
     this.setupLights();
     this.setupGround();
+    this._syncHdriShadowReceiverFromState();
     const bootGround = this.stateStore.getState();
     this._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
     this._baseToggleCtx.prevEnabled = !!bootGround.groundSolid;
@@ -1380,6 +1381,32 @@ export class SceneManager {
     this.backgroundController?.setHdriBackgroundEnabled(enabled);
 
     this.applyHdriMood(this.currentHdri);
+    this.ui?.updateHdriReceiveShadowsAoDisabled?.();
+  }
+
+  setHdriReceiveShadowsAo(enabled) {
+    this.backgroundController?.setReceiveShadowsAoEnabled(!!enabled);
+    this._syncHdriShadowReceiverFromState();
+  }
+
+  _syncHdriShadowReceiverFromState() {
+    const state = this.stateStore.getState();
+    const bg = this.backgroundController;
+    if (!bg) return;
+    bg.setReceiveShadowsAoEnabled(!!state.hdriReceiveShadowsAo);
+    bg.setHdriBackgroundEnabled(this.hdriBackgroundEnabled);
+    bg.setHdriEnabled(this.hdriEnabled);
+    bg.setGroundSolid(!!state.groundSolid);
+    bg.setGroundY(state.groundY ?? 0);
+    bg.setShadowReceiverOpacity(
+      state.lightsShadowOpacity ?? this.lightsShadowOpacity,
+    );
+    bg.setHdriShadowReceiverAoRadius(state.ambientOcclusion?.radius ?? 1);
+    this._syncShadowModesHdriReceiver();
+  }
+
+  _updateHdriShadowReceiverContact() {
+    this.backgroundController?.updateHdriShadowReceiverFromModel?.(this.currentModel);
   }
 
   setLensFlareEnabled(enabled) {
@@ -1527,9 +1554,10 @@ export class SceneManager {
     
     // Notify background controller of HDRI enabled state
     this.backgroundController?.setHdriEnabled(enabled);
-    
+
     this.applyHdriMood(this.currentHdri);
     this.lensFlareController?.setHdriEnabled(enabled);
+    this.ui?.updateHdriReceiveShadowsAoDisabled?.();
     // Reset auto-exposure when HDRI is toggled (scene brightness changes dramatically)
     this.autoExposureController?.resetLuminance();
   }
@@ -1616,6 +1644,7 @@ export class SceneManager {
 
   setGroundSolid(enabled) {
     this.groundController?.setSolidEnabled(enabled);
+    this.backgroundController?.setGroundSolid(!!enabled);
     this._updateBaseAppearAnimation();
     this._updateBaseGlassAppearAnimation();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
@@ -1651,6 +1680,8 @@ export class SceneManager {
 
   setGroundY(value) {
     this.groundController?.setGroundY(value);
+    this.backgroundController?.setGroundY(value);
+    this._updateHdriShadowReceiverContact();
   }
 
   setGridY(value) {
@@ -1967,6 +1998,7 @@ export class SceneManager {
 
     this._syncEffectiveCastShadows();
     this._applyShadowTintToScene();
+    this._syncHdriShadowReceiverFromState();
   }
 
   _isShadowTintActive() {
@@ -2057,6 +2089,7 @@ export class SceneManager {
     }
     this._syncEffectiveCastShadows();
     this._applyShadowTintToScene();
+    this._syncHdriShadowReceiverFromState();
   }
 
   setLightsShadowQuality(quality) {
@@ -2095,6 +2128,7 @@ export class SceneManager {
       this.stateStore.set('lightsShadowOpacity', this.lightsShadowOpacity);
     }
     this._applyShadowTintToScene();
+    this.backgroundController?.setShadowReceiverOpacity(this.lightsShadowOpacity);
   }
 
   _applyShadowTintToScene() {
@@ -2221,10 +2255,17 @@ export class SceneManager {
     const tier = resolveRenderQualityTier(
       this.stateStore.getState().renderQuality,
     );
-    this.postPipeline?.updateAmbientOcclusion(
-      ao,
-      tier.forceAmbientOcclusionOff,
-    );
+    this.postPipeline?.updateAmbientOcclusion(ao, tier.forceAmbientOcclusionOff);
+    this.backgroundController?.setHdriShadowReceiverAoRadius(ao.radius ?? 1);
+    this._syncShadowModesHdriReceiver();
+  }
+
+  _syncShadowModesHdriReceiver() {
+    const bg = this.backgroundController;
+    if (!bg) return;
+    const state = this.stateStore.getState();
+    bg.setHdriShadowReceiverAoRadius(state.ambientOcclusion?.radius ?? 1);
+    this._updateHdriShadowReceiverContact();
   }
 
   /**

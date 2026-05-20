@@ -183,6 +183,7 @@ export class ModelLifecycleManager {
       s._alignGroundAndGridToCurrentModelBottom();
     }
     s._skipGroundGridAutoAlignOnNextModelLoad = false;
+    s._updateHdriShadowReceiverContact();
     s.materialController.setModel(object, state.shading, {
       clay: state.clay,
       fresnel: state.fresnel,

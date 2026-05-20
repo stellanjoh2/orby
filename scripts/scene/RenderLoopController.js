@@ -80,6 +80,14 @@ export class RenderLoopController {
         },
       },
       {
+        id: 'hdri-shadow-receiver',
+        when: (_ctx, s) =>
+          !!s.backgroundController?.hdriShadowReceiver?.shouldTrackModelEachFrame?.(),
+        run: (_delta, s) => {
+          s._updateHdriShadowReceiverContact();
+        },
+      },
+      {
         id: 'mesh-auto-rotate',
         run: (delta, s) => {
           if (s.autoRotateSpeed && s.currentModel) {

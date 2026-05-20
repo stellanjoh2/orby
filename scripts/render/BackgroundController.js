@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { HdriShadowReceiver } from './HdriShadowReceiver.js';
 
 /**
  * BackgroundController
@@ -25,6 +26,10 @@ export class BackgroundController {
     this.backgroundSphere.visible = false;
     this.scene.add(this.backgroundSphere);
     
+    this.hdriShadowReceiver = new HdriShadowReceiver(this.scene, {
+      groundY: 0,
+    });
+
     // Initialize clear color
     this._applyClearColor();
   }
@@ -82,6 +87,7 @@ export class BackgroundController {
    */
   setHdriBackgroundEnabled(enabled) {
     this.hdriBackgroundEnabled = enabled;
+    this.hdriShadowReceiver?.setHdriBackgroundEnabled(enabled);
     this._applyClearColor();
   }
   
@@ -90,7 +96,32 @@ export class BackgroundController {
    */
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
+    this.hdriShadowReceiver?.setHdriEnabled(enabled);
     this._applyClearColor();
+  }
+
+  setReceiveShadowsAoEnabled(enabled) {
+    this.hdriShadowReceiver?.setReceiveShadowsAoEnabled(enabled);
+  }
+
+  setGroundSolid(enabled) {
+    this.hdriShadowReceiver?.setGroundSolid(enabled);
+  }
+
+  setGroundY(value) {
+    this.hdriShadowReceiver?.setGroundY(value);
+  }
+
+  setShadowReceiverOpacity(opacity) {
+    this.hdriShadowReceiver?.setShadowOpacity(opacity);
+  }
+
+  updateHdriShadowReceiverFromModel(modelRoot) {
+    this.hdriShadowReceiver?.updateFromModel(modelRoot);
+  }
+
+  setHdriShadowReceiverAoRadius(radius) {
+    this.hdriShadowReceiver?.setAoRadius(radius);
   }
   
   /**
@@ -172,6 +203,8 @@ export class BackgroundController {
    * Dispose of resources
    */
   dispose() {
+    this.hdriShadowReceiver?.dispose();
+    this.hdriShadowReceiver = null;
     if (this.backgroundSphere) {
       this.scene.remove(this.backgroundSphere);
       this.backgroundSphere.geometry.dispose();

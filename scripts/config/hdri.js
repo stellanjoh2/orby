@@ -3,7 +3,7 @@
 /** Session-only custom upload (blob URL registered at runtime). */
 export const HDRI_CUSTOM_ID = 'custom';
 
-/** Grid / keyboard cycle order. Excludes {@link HDRI_CUSTOM_ID} until a file is uploaded. */
+/** Grid / keyboard cycle order (3×3). Excludes {@link HDRI_CUSTOM_ID} until a file is uploaded. */
 export const HDRI_PRESET_ORDER = [
   'congress',
   'luminous-sky',
@@ -11,6 +11,8 @@ export const HDRI_PRESET_ORDER = [
   'meadow',
   'abandoned',
   'beach',
+  'blue-hour',
+  'sunny-parking',
 ];
 
 export const HDRI_PRESETS = {
@@ -20,6 +22,14 @@ export const HDRI_PRESETS = {
   abandoned: { url: './assets/hdris/MR_INT-022_RefugeWindowHighContrast_Aorai_4k.jpg', type: 'ldr' },
   beach: { url: './assets/hdris/MR_EXT-010_BlueEndDayPinkClouds_Moorea_4k.jpg', type: 'ldr' },
   sunset: { url: './assets/hdris/MR_EXT-014_SunsetTropicalMountains_4k.jpg', type: 'ldr' },
+  'blue-hour': {
+    url: './assets/hdris/MR_EXT-011_BlueHour_Rangiroa_4k.jpg',
+    type: 'ldr',
+  },
+  'sunny-parking': {
+    url: './assets/hdris/MR_EXT-001_Sunny_Parking_4k.jpg',
+    type: 'ldr',
+  },
 };
 
 export const HDRI_STRENGTH_UNIT = 1.0;
@@ -66,5 +76,19 @@ export const HDRI_MOODS = {
     bloomRadiusMin: 0.75,
     baseColor: '#4a3a2a',
     background: '#2a1f15',
+  },
+  'blue-hour': {
+    bloomTint: '#ffc48a',
+    bloomStrengthMin: 0.4,
+    bloomRadiusMin: 0.75,
+    baseColor: '#5a6478',
+    background: '#243044',
+  },
+  'sunny-parking': {
+    bloomTint: '#fff0b0',
+    bloomStrengthMin: 0.4,
+    bloomRadiusMin: 0.75,
+    baseColor: '#7a7d82',
+    background: '#5a8ec8',
   },
 };

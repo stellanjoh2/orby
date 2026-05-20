@@ -298,6 +298,7 @@ function createStateApplySteps() {
         s.setHdriRotation(state.hdriRotation ?? 0);
         s.setHdriEnabled(state.hdriEnabled);
         s.setHdriBackground(state.hdriBackground);
+        s.setHdriReceiveShadowsAo(!!state.hdriReceiveShadowsAo);
         s.lensFlareController?.applyStateSnapshot(state);
         await s.setHdriPreset(state.hdri);
       },

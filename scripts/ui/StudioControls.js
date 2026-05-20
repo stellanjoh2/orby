@@ -81,6 +81,12 @@ export class StudioControls {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
+      this.ui.updateHdriReceiveShadowsAoDisabled?.();
+    });
+    this.ui.inputs.hdriReceiveShadowsAo?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('hdriReceiveShadowsAo', enabled);
+      this.eventBus.emit('studio:hdri-receive-shadows-ao', enabled);
     });
 
     // Lens Flare
@@ -554,6 +560,10 @@ export class StudioControls {
       this.helpers.updateValueLabel('hdriRotation', rotation, 'angle');
     }
     this.ui.inputs.hdriBackground.checked = state.hdriBackground;
+    if (this.ui.inputs.hdriReceiveShadowsAo) {
+      this.ui.inputs.hdriReceiveShadowsAo.checked = !!state.hdriReceiveShadowsAo;
+    }
+    this.ui.updateHdriReceiveShadowsAoDisabled?.();
     this.ui.inputs.backgroundColor.value = state.background;
     
     // Lens Flare

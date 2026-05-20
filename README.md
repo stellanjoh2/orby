@@ -348,6 +348,7 @@ Ground grid for alignment and perspective:
 #### Background
 Render backdrop (HDRI):
 - **Render Backdrop** - When on (default), the environment image is drawn behind the scene. When off, only solid Background Color shows; HDRI still lights the scene (`B` toggles).
+- **Receive Shadows + AO** - Invisible floor at Ground Y: directional shadow maps and screen-space AO contact on the HDRI (off by default; needs Render Backdrop).
 - **Color** - Background color override
 
 ### Scene Settings

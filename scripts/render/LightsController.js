@@ -329,18 +329,18 @@ export class LightsController {
     const globalRadians = THREE.MathUtils.degToRad(this.rotation);
     const individualRadians = THREE.MathUtils.degToRad(props.rotate ?? 0);
     const totalRotation = globalRadians + individualRadians;
-    
+
     const cos = Math.cos(totalRotation);
     const sin = Math.sin(totalRotation);
-    
+
     // Calculate rotated position
     const rotatedX = base.x * cos + base.z * sin;
     const rotatedZ = -base.x * sin + base.z * cos;
-    
+
     // Use individual height or global height (ignore non-finite so strength/master sync never snaps Y)
     const rawY = props.height ?? this.lightsHeight ?? base.y;
     const height = Number.isFinite(Number(rawY)) ? Number(rawY) : base.y;
-    
+
     // Set final position
     light.position.set(rotatedX, height, rotatedZ);
   }

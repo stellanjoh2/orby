@@ -277,6 +277,7 @@ export class UIManager {
       hdriBlurriness: q('#hdriBlurriness'),
       hdriRotation: q('#hdriRotation'),
       hdriBackground: q('#hdriBackground'),
+      hdriReceiveShadowsAo: q('#hdriReceiveShadowsAo'),
       lensFlareEnabled: q('#lensFlareEnabled'),
       lensFlareRotation: q('#lensFlareRotation'),
       lensFlareHeight: q('#lensFlareHeight'),
@@ -1031,6 +1032,7 @@ export class UIManager {
     }
     // Block muting handled by applyBlockStates via syncControls
     this.inputs.hdriBackground.disabled = !enabled;
+    this.updateHdriReceiveShadowsAoDisabled();
       this.inputs.hdriStrength.disabled = !enabled;
       this.inputs.hdriBlurriness.disabled = !enabled;
       if (this.inputs.hdriRotation) {
@@ -1039,7 +1041,15 @@ export class UIManager {
     if (!enabled) {
       this.inputs.backgroundColor.disabled = false;
     }
+    this.updateHdriReceiveShadowsAoDisabled();
     this.updateLensFlareControlsDisabled();
+  }
+
+  updateHdriReceiveShadowsAoDisabled() {
+    if (!this.inputs.hdriReceiveShadowsAo) return;
+    const hdriOn = !!this.inputs.hdriEnabled?.checked;
+    const backdropOn = hdriOn && !!this.inputs.hdriBackground?.checked;
+    this.inputs.hdriReceiveShadowsAo.disabled = !backdropOn;
   }
 
   updateLensFlareControlsDisabled() {
@@ -1764,6 +1774,10 @@ export class UIManager {
       this.updateValueLabel('hdriRotation', rotation, 'angle');
     }
     this.inputs.hdriBackground.checked = state.hdriBackground;
+    if (this.inputs.hdriReceiveShadowsAo) {
+      this.inputs.hdriReceiveShadowsAo.checked = !!state.hdriReceiveShadowsAo;
+    }
+    this.updateHdriReceiveShadowsAoDisabled();
     // Background color input is always enabled - color shows when render backdrop is off
     this.inputs.backgroundColor.value = state.background;
     

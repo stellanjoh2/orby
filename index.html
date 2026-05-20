@@ -1462,6 +1462,12 @@
                   <button type="button" data-hdri="beach" class="hdri-icon active" data-tooltip="Beach environment">
                     <img src="./assets/images/hdri-thumbnail-beach.png" alt="Beach" />
                   </button>
+                  <button type="button" data-hdri="blue-hour" class="hdri-icon" data-tooltip="Blue hour — Rangiroa">
+                    <img src="./assets/images/hdri-thumbnail-blue-hour.png" alt="Blue hour" />
+                  </button>
+                  <button type="button" data-hdri="sunny-parking" class="hdri-icon" data-tooltip="Sunny parking — urban daylight">
+                    <img src="./assets/images/hdri-thumbnail-sunny-parking.png" alt="Sunny parking" />
+                  </button>
                   <button
                     type="button"
                     id="hdriUploadBtn"
@@ -1516,6 +1522,14 @@
                     <input type="checkbox" id="hdriBackground" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Render HDRI as viewport backdrop</span>
+                  </label>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Invisible floor at Ground Y under the model: Ambient Occlusion for contact on the HDRI; 3-point lights + Cast Shadows for directional shadow maps. Uses Ground Y (snap to mesh if it floats).">Receive Shadows + AO</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="hdriReceiveShadowsAo" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Receive shadows and ambient occlusion on HDRI backdrop</span>
                   </label>
                 </label>
               </div>
@@ -1866,6 +1880,10 @@
                     </select>
                     <span class="value" aria-hidden="true"></span>
                   </label>
+                  <label class="color-line">
+                    <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
+                    <input type="color" id="lightsShadowColor" class="color-chip" value="#080808" />
+                  </label>
                   <label class="slider-line">
                     <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra (current default).">Softness</span>
                     <input
@@ -1877,10 +1895,6 @@
                       value="4"
                     />
                     <span class="value" data-output="lightsShadowSoftness">4.00</span>
-                  </label>
-                  <label class="color-line">
-                    <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
-                    <input type="color" id="lightsShadowColor" class="color-chip" value="#080808" />
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="How strong the shadow tint is. Lower for softer, less solid shadows.">Opacity</span>

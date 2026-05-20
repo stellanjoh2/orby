@@ -103,6 +103,8 @@ export class StateStore {
       hdriBlurriness: 0,
       hdriRotation: 0,
       hdriBackground: true,
+      /** Invisible shadow/AO catcher over HDRI backdrop (see HdriShadowReceiver). */
+      hdriReceiveShadowsAo: false,
       groundSolid: false,
       groundWire: false,
       groundWireOpacity: 1.0,

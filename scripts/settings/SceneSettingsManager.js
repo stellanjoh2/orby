@@ -110,6 +110,7 @@ export class SceneSettingsManager {
       hdriBlurriness: state.hdriBlurriness,
       hdriRotation: state.hdriRotation,
       hdriBackground: state.hdriBackground,
+      hdriReceiveShadowsAo: state.hdriReceiveShadowsAo,
       lensFlare: state.lensFlare,
       groundSolid: state.groundSolid,
       groundWire: state.groundWire,
@@ -730,6 +731,11 @@ export class SceneSettingsManager {
       if (payload.hdriBackground !== undefined) {
         this.stateStore.set('hdriBackground', payload.hdriBackground);
         this.eventBus.emit('studio:hdri-background', payload.hdriBackground);
+        this.ui?.updateHdriReceiveShadowsAoDisabled?.();
+      }
+      if (payload.hdriReceiveShadowsAo !== undefined) {
+        this.stateStore.set('hdriReceiveShadowsAo', !!payload.hdriReceiveShadowsAo);
+        this.eventBus.emit('studio:hdri-receive-shadows-ao', !!payload.hdriReceiveShadowsAo);
       }
       if (payload.lensFlare) {
         const d = this.stateStore.getDefaults().lensFlare;

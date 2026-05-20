@@ -226,6 +226,9 @@ export class EventManager {
     eventBus.on('studio:hdri-blurriness', (value) => s.setHdriBlurriness(value));
     eventBus.on('studio:hdri-rotation', (value) => s.setHdriRotation(value));
     eventBus.on('studio:hdri-background', (enabled) => s.setHdriBackground(enabled));
+    eventBus.on('studio:hdri-receive-shadows-ao', (enabled) =>
+      s.setHdriReceiveShadowsAo(enabled),
+    );
     eventBus.on('studio:lens-flare-enabled', (enabled) => s.setLensFlareEnabled(enabled));
     eventBus.on('studio:lens-flare-rotation', (value) => s.setLensFlareRotation(value));
     eventBus.on('studio:lens-flare-height', (value) => s.setLensFlareHeight(value));

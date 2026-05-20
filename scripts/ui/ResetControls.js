@@ -33,7 +33,7 @@ const RESET_DIRTY_PATHS = {
   subsurface: ['subsurface'],
   wireframe: ['wireframe'],
   'creative-look': ['creativeLook'],
-  hdri: ['hdri', 'hdriStrength', 'hdriBlurriness', 'hdriRotation', 'hdriBackground', 'lensFlare'],
+  hdri: ['hdri', 'hdriStrength', 'hdriBlurriness', 'hdriRotation', 'hdriBackground', 'hdriReceiveShadowsAo', 'lensFlare'],
   'lens-flare': ['lensFlare'],
   lights: [
     'lights', 'lightsMaster', 'lightsRotation', 'lightsHeight',
@@ -523,6 +523,7 @@ export class ResetControls {
       this.stateStore.set('hdriStrength', defaults.hdriStrength);
       this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
       this.stateStore.set('hdriBackground', defaults.hdriBackground);
+      this.stateStore.set('hdriReceiveShadowsAo', defaults.hdriReceiveShadowsAo);
       this.stateStore.set('groundSolid', defaults.groundSolid);
       this.stateStore.set('groundWire', defaults.groundWire);
       this.stateStore.set('groundWireOpacity', defaults.groundWireOpacity);
@@ -568,6 +569,8 @@ export class ResetControls {
       this.eventBus.emit('studio:hdri-strength', defaults.hdriStrength);
       this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
       this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+      this.eventBus.emit('studio:hdri-receive-shadows-ao', defaults.hdriReceiveShadowsAo);
+      this.ui.updateHdriReceiveShadowsAoDisabled?.();
       // Ensure lens flare toggle is fully reset (state + event + UI sync)
       this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
       this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
@@ -808,6 +811,7 @@ export class ResetControls {
               this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
               this.stateStore.set('hdriRotation', defaults.hdriRotation);
               this.stateStore.set('hdriBackground', defaults.hdriBackground);
+              this.stateStore.set('hdriReceiveShadowsAo', defaults.hdriReceiveShadowsAo);
               this.stateStore.set('lensFlare', defaults.lensFlare);
             });
             this.ui.setHdriActive(defaults.hdri);
@@ -816,6 +820,7 @@ export class ResetControls {
             this.eventBus.emit('studio:hdri-blurriness', defaults.hdriBlurriness);
             this.eventBus.emit('studio:hdri-rotation', defaults.hdriRotation);
             this.eventBus.emit('studio:hdri-background', defaults.hdriBackground);
+            this.eventBus.emit('studio:hdri-receive-shadows-ao', defaults.hdriReceiveShadowsAo);
             this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
