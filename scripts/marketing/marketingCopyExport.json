@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-20T13:40:31.005Z",
+    "generatedAt": "2026-05-20T14:52:38.215Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -257,7 +257,7 @@
       "titleLines": [
         "Questions, answered."
       ],
-      "lede": "Everything you need to know before you drop your first file.",
+      "lede": "",
       "bullets": null,
       "cta": null,
       "faq": [

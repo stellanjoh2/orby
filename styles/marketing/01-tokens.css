@@ -137,10 +137,12 @@
   /* Lime feature headlines — explicit; block .title-line rows ignore parent h2 leading */
   --orby-marketing-section-headline-line: 1.1;
   /*
-   * Pro → FAQ: gap-big dark band below cards (220px @ 1440); faq-pad-top inside gray panel only.
+   * Pro → FAQ: gap-big dark band below cards (220px @ 1440); faq-pad-top ~150px @ 1440 (gap-big − 70px; eyebrow adds the rest).
    * Do not use col-gap here — that seam is section rhythm, not copy→media.
    */
-  --orby-marketing-faq-pad-top: calc(60px * var(--orby-marketing-gutter-scale));
+  --orby-marketing-faq-pad-top: calc(
+    var(--orby-marketing-gap-big) - 70px * var(--orby-marketing-gutter-scale)
+  );
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560+) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));

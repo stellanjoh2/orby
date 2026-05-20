@@ -237,7 +237,6 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-faq',
     eyebrow: 'FAQ',
     title: 'Questions, answered.',
-    lede: 'Everything you need to know before you drop your first file.',
     faq: [
       {
         question: 'Who is Orby for?',
