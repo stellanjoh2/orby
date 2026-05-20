@@ -77,6 +77,23 @@
   contain: paint;
 }
 
+.orby-marketing__figure-mask--gallery:focus {
+  outline: none;
+}
+
+.orby-marketing__figure-mask--gallery:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline-offset: 3px;
+}
+
+/* Full-res 2560×1440 JPEGs — fill mask via CSS only, no HTML dimension downscale hints */
+.orby-marketing__figure-mask--gallery .orby-marketing__showcase-img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
 .orby-marketing__media-ph {
   position: absolute;
   inset: 1px;

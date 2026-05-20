@@ -69,14 +69,19 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const type = MIME[ext] || 'application/octet-stream';
     res.setHeader('Content-Type', type);
-    const isTurntableAsset =
-      filePath.includes(`${path.sep}assets${path.sep}marketing${path.sep}`) &&
-      /\.(webp|jpe?g|png)$/i.test(ext);
+    // Long cache only for intro turntable frames / png-loop — not section captures (orby-section*.jpg).
+    const marketingRel = filePath.includes(`${path.sep}assets${path.sep}marketing${path.sep}`)
+      ? filePath.split(`${path.sep}assets${path.sep}marketing${path.sep}`)[1]
+      : '';
+    const isImmutableMarketingAsset =
+      Boolean(marketingRel) &&
+      /\.(webp|jpe?g|png)$/i.test(ext) &&
+      (marketingRel.startsWith('toyotagr_') ||
+        marketingRel.startsWith('png-loop/') ||
+        /^intro-turntable-poster\.(webp|jpe?g)$/i.test(marketingRel));
     res.setHeader(
       'Cache-Control',
-      isTurntableAsset
-        ? 'public, max-age=31536000, immutable'
-        : 'no-store',
+      isImmutableMarketingAsset ? 'public, max-age=31536000, immutable' : 'no-store',
     );
 
     if (req.method === 'HEAD') {

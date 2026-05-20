@@ -3,6 +3,10 @@
  */
 import gsap from 'gsap';
 import { prefersReducedMotion } from '../ui/modalReveal.js';
+import {
+  escapeMarketingHtml,
+  formatMarketingImageCreditHtml,
+} from './orbyMarketingImageCredit.js';
 import { getShowcaseCycleMs } from './marketingPerformanceTier.js';
 import {
   getMediaPlaceholderTargets,
@@ -12,11 +16,31 @@ import {
 
 const FADE_S = 0.95;
 const CREDIT_IN_S = 0.48;
+/** Split feature galleries — auto-advance only, no dots/keys. */
+const SPLIT_GALLERY_CYCLE_MS = 5000;
 /** Set on the gallery mask while arrow keys should drive slides (see GlobalControls). */
 const SHOWCASE_KEYS_ATTR = 'data-orby-marketing-showcase-keys';
 
 /** @type {WeakMap<HTMLElement, ReturnType<typeof createGalleryController>>} */
 const controllers = new WeakMap();
+
+/**
+ * @param {HTMLImageElement} img
+ * @returns {string}
+ */
+function getSlideCreditHtml(img) {
+  const raw = img.dataset.imageCredit?.trim();
+  if (raw) {
+    try {
+      const credit = JSON.parse(raw);
+      return formatMarketingImageCreditHtml(credit);
+    } catch {
+      /* invalid JSON — fall through */
+    }
+  }
+  const text = img.dataset.credit?.trim() || '';
+  return text ? escapeMarketingHtml(text) : '';
+}
 
 /**
  * @param {HTMLImageElement} el
@@ -61,11 +85,12 @@ function isEditableTarget(target) {
  * @param {HTMLElement} mask
  */
 function createGalleryController(mask) {
+  const isSimpleGallery = mask.hasAttribute('data-orby-marketing-gallery-simple');
   const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
   const creditEl = mask.querySelector('[data-orby-marketing-showcase-credit]');
-  const dotButtons = [
-    ...mask.querySelectorAll('[data-orby-marketing-showcase-dot]'),
-  ];
+  const dotButtons = isSimpleGallery
+    ? []
+    : [...mask.querySelectorAll('[data-orby-marketing-showcase-dot]')];
   let index = Math.max(
     0,
     imgs.findIndex((img) => img.classList.contains('is-active')),
@@ -80,6 +105,7 @@ function createGalleryController(mask) {
   let visible = false;
 
   const updateDots = (activeIndex) => {
+    if (!dotButtons.length) return;
     dotButtons.forEach((btn, i) => {
       const active = i === activeIndex;
       btn.classList.toggle('is-active', active);
@@ -88,9 +114,28 @@ function createGalleryController(mask) {
     });
   };
 
-  updateDots(index);
+  if (dotButtons.length) updateDots(index);
+
+  /**
+   * @param {number} slideIndex
+   */
+  const mountStaticCredit = async (slideIndex = 0) => {
+    const img = imgs[slideIndex];
+    if (!creditEl || !img) return;
+    const html = getSlideCreditHtml(img);
+    if (!html) {
+      creditEl.hidden = true;
+      gsap.set(creditEl, { opacity: 0 });
+      return;
+    }
+    await whenImageReady(img);
+    creditEl.innerHTML = html;
+    creditEl.hidden = false;
+    gsap.set(creditEl, { opacity: 1, y: 0 });
+  };
 
   const hideCredit = () => {
+    if (isSimpleGallery) return Promise.resolve();
     if (!creditEl) return Promise.resolve();
     creditTween?.kill();
     if (prefersReducedMotion()) {
@@ -117,11 +162,12 @@ function createGalleryController(mask) {
    * @param {{ hideFirst?: boolean }} [options]
    */
   const revealCredit = async (slideIndex, options = {}) => {
+    if (isSimpleGallery) return;
     const img = imgs[slideIndex];
     if (!creditEl || !img) return;
 
-    const text = img.dataset.credit?.trim() || '';
-    if (!text) {
+    const html = getSlideCreditHtml(img);
+    if (!html) {
       creditEl.hidden = true;
       gsap.set(creditEl, { opacity: 0 });
       return;
@@ -133,7 +179,7 @@ function createGalleryController(mask) {
 
     await whenImageReady(img);
 
-    creditEl.textContent = text;
+    creditEl.innerHTML = html;
     creditEl.hidden = false;
     creditTween?.kill();
 
@@ -167,7 +213,7 @@ function createGalleryController(mask) {
       setMediaPlaceholderOpacity(mask, 0);
       index = nextIndex;
       tweening = false;
-      void revealCredit(nextIndex);
+      if (!isSimpleGallery) void revealCredit(nextIndex);
       return;
     }
 
@@ -180,7 +226,7 @@ function createGalleryController(mask) {
     tweening = true;
     gsap.killTweensOf(imgs);
     gsap.killTweensOf(getMediaPlaceholderTargets(mask));
-    void hideCredit();
+    if (!isSimpleGallery) void hideCredit();
     gsap.to(current, {
       opacity: 0,
       duration: FADE_S,
@@ -195,7 +241,7 @@ function createGalleryController(mask) {
         index = nextIndex;
         tweening = false;
         setMediaPlaceholderOpacity(mask, 0);
-        void revealCredit(nextIndex);
+        if (!isSimpleGallery) void revealCredit(nextIndex);
       },
     });
     if (needsPlaceholder) {
@@ -224,7 +270,8 @@ function createGalleryController(mask) {
   const start = () => {
     stop();
     if (imgs.length < 2 || prefersReducedMotion() || !visible) return;
-    timer = window.setInterval(tick, getShowcaseCycleMs());
+    const cycleMs = isSimpleGallery ? SPLIT_GALLERY_CYCLE_MS : getShowcaseCycleMs();
+    timer = window.setInterval(tick, cycleMs);
   };
 
   const stop = () => {
@@ -271,15 +318,18 @@ function createGalleryController(mask) {
 
   const bindInteraction = () => {
     if (imgs.length < 2) return;
-    mask.addEventListener('click', onDotClick);
-    window.addEventListener('keydown', onKeyDown);
-    intersectionObserver = new IntersectionObserver(
-      ([entry]) => {
-        setKeyboardEnabled(Boolean(entry?.isIntersecting));
-      },
-      { threshold: 0.35 },
-    );
-    intersectionObserver.observe(mask);
+
+    if (!isSimpleGallery) {
+      mask.addEventListener('click', onDotClick);
+      window.addEventListener('keydown', onKeyDown);
+      intersectionObserver = new IntersectionObserver(
+        ([entry]) => {
+          setKeyboardEnabled(Boolean(entry?.isIntersecting));
+        },
+        { threshold: 0.35 },
+      );
+      intersectionObserver.observe(mask);
+    }
 
     visibilityObserver = new IntersectionObserver(
       ([entry]) => {
@@ -296,8 +346,10 @@ function createGalleryController(mask) {
   };
 
   const unbindInteraction = () => {
-    mask.removeEventListener('click', onDotClick);
-    window.removeEventListener('keydown', onKeyDown);
+    if (!isSimpleGallery) {
+      mask.removeEventListener('click', onDotClick);
+      window.removeEventListener('keydown', onKeyDown);
+    }
     intersectionObserver?.disconnect();
     intersectionObserver = null;
     visibilityObserver?.disconnect();
@@ -307,7 +359,8 @@ function createGalleryController(mask) {
   };
 
   const onSlideRevealed = () => {
-    void revealCredit(index);
+    if (isSimpleGallery) void mountStaticCredit(index);
+    else void revealCredit(index);
   };
 
   mask.addEventListener('orby-marketing-showcase-slide', onSlideRevealed);
@@ -322,7 +375,7 @@ function createGalleryController(mask) {
       if (!creditEl) return;
       creditTween?.kill();
       creditEl.hidden = true;
-      creditEl.textContent = '';
+      creditEl.innerHTML = '';
       gsap.set(creditEl, { opacity: 0, y: 12 });
     },
     destroy() {
@@ -345,13 +398,10 @@ export function prepareShowcaseGalleryCredit(mask) {
 }
 
 /**
- * @param {HTMLElement} root
+ * @param {HTMLElement} mask
  * @returns {() => void}
  */
-export function initShowcaseGallery(root) {
-  const mask = root?.querySelector('[data-orby-marketing-showcase-gallery]');
-  if (!mask) return () => {};
-
+function initGalleryMask(mask) {
   const controller = controllers.get(mask) ?? createGalleryController(mask);
   controllers.set(mask, controller);
   controller.prepareCredit();
@@ -359,7 +409,7 @@ export function initShowcaseGallery(root) {
   const imgs = mask.querySelectorAll('.orby-marketing__showcase-img');
   if (!imgs.length) return () => controller.destroy();
 
-  const section = mask.closest('.orby-marketing__section--showcase');
+  const section = mask.closest('.orby-marketing__section');
   if (section?.dataset.orbyMarketingRevealed === '1') {
     controller.start();
   } else if (section) {
@@ -376,4 +426,18 @@ export function initShowcaseGallery(root) {
   }
 
   return () => controller.destroy();
+}
+
+/**
+ * @param {HTMLElement} root
+ * @returns {() => void}
+ */
+export function initShowcaseGallery(root) {
+  const masks = [...(root?.querySelectorAll('[data-orby-marketing-showcase-gallery]') ?? [])];
+  if (!masks.length) return () => {};
+
+  const cleanups = masks.map((mask) => initGalleryMask(mask));
+  return () => {
+    cleanups.forEach((fn) => fn());
+  };
 }

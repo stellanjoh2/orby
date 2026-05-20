@@ -70,6 +70,14 @@ function sectionToExport(section, order) {
       .filter(Boolean);
   }
 
+  if (section.imageCredit) {
+    row.imageCredit = section.imageCredit;
+  }
+
+  if (section.type === 'split' && section.gallery?.length) {
+    row.galleryCount = section.gallery.length;
+  }
+
   if (section.type === 'marquee' && section.marquee?.length) {
     row.marqueeAlts = section.marquee.map((item) => item.alt);
   }

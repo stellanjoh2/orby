@@ -2,6 +2,7 @@
  * Homepage marketing section HTML — string templates only (no DOM / lifecycle).
  */
 import { orbyMagicButtonHtml, orbyMagicButtonOnLimeHtml } from '../ui/orbyMagicButton.js';
+import { formatMarketingImageCreditHtml } from './orbyMarketingImageCredit.js';
 
 function escapeHtml(text) {
   return String(text)
@@ -34,17 +35,110 @@ function renderMagicCta(section) {
     </div>`;
 }
 
-function renderFigure(imageSrc, imageAlt, revealDir, videoSrc = '') {
-  if (!imageSrc && !videoSrc) return '';
-  const posterAttr =
-    imageSrc && videoSrc ? ` poster="${escapeHtml(imageSrc)}"` : '';
-  const media = videoSrc
-    ? `<video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="none" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>`
-    : `<img class="orby-marketing__figure-media orby-marketing__figure-img" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(imageAlt || '')}" decoding="async" />`;
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingImageCredit | undefined} credit
+ */
+function renderMarketingImageCredit(credit) {
+  const body = formatMarketingImageCreditHtml(credit);
+  if (!body) return '';
+  return `<p class="orby-marketing__figure-credit" data-orby-marketing-figure-credit>${body}</p>`;
+}
+
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ */
+function getSplitSlides(section) {
+  if (section.gallery?.length) {
+    return section.gallery.map((slide) => ({
+      src: slide.src,
+      alt: slide.alt || '',
+      credit: slide.credit,
+      imageCredit: slide.imageCredit,
+    }));
+  }
+  if (section.imageSrc) {
+    return [
+      {
+        src: section.imageSrc,
+        alt: section.imageAlt || '',
+        imageCredit: section.imageCredit,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Split feature gallery — full-res JPEGs; no width/height attrs (natural 2560×1440 from file).
+ * @param {{ src: string, alt: string, credit?: string, imageCredit?: import('./orbyMarketingContent.js').MarketingImageCredit }[]} slides
+ */
+function renderSplitGallerySlideImages(slides) {
+  return slides
+    .map((slide, index) => {
+      const active = index === 0 ? ' is-active' : '';
+      const lazy = index === 0 ? '' : ' loading="lazy"';
+      const creditAttr = slide.credit ? ` data-credit="${escapeHtml(slide.credit)}"` : '';
+      const imageCreditAttr = slide.imageCredit
+        ? ` data-image-credit="${escapeHtml(JSON.stringify(slide.imageCredit))}"`
+        : '';
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" decoding="async"${creditAttr}${imageCreditAttr}${lazy} />`;
+    })
+    .join('\n        ');
+}
+
+/**
+ * @param {{ src: string, alt: string, credit?: string }[]} slides
+ */
+function renderShowcaseSlideImages(slides) {
+  return slides
+    .map((slide, index) => {
+      const active = index === 0 ? ' is-active' : '';
+      const lazy = index === 0 ? '' : ' loading="lazy"';
+      const creditAttr = slide.credit ? ` data-credit="${escapeHtml(slide.credit)}"` : '';
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" width="1024" height="576" decoding="async"${creditAttr}${lazy} />`;
+    })
+    .join('\n        ');
+}
+
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @param {string} revealDir
+ */
+function renderFigure(section, revealDir) {
+  const slides = getSplitSlides(section);
+  const videoSrc = section.videoSrc || '';
+
+  if (!slides.length && !videoSrc) return '';
+
+  if (videoSrc) {
+    const posterSrc = slides[0]?.src || '';
+    const posterAttr = posterSrc ? ` poster="${escapeHtml(posterSrc)}"` : '';
+    const imageAlt = slides[0]?.alt || section.imageAlt || '';
+    return `<figure class="orby-marketing__figure">
+      <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
+        <span class="orby-marketing__media-ph" aria-hidden="true"></span>
+        <video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="none" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>
+        ${renderMarketingImageCredit(slides[0]?.imageCredit || section.imageCredit)}
+      </div>
+    </figure>`;
+  }
+
+  if (slides.length > 1) {
+    return `<figure class="orby-marketing__figure">
+      <div class="orby-marketing__figure-mask orby-marketing__figure-mask--gallery" data-orby-marketing-showcase-gallery data-orby-marketing-gallery-simple data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}" aria-label="${escapeHtml(section.eyebrow || 'Feature')} previews">
+        <span class="orby-marketing__media-ph" aria-hidden="true"></span>
+        ${renderSplitGallerySlideImages(slides)}
+        <p class="orby-marketing__figure-credit orby-marketing__figure-credit--static" data-orby-marketing-showcase-credit hidden></p>
+      </div>
+    </figure>`;
+  }
+
+  const slide = slides[0];
   return `<figure class="orby-marketing__figure">
       <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-        ${media}
+        <img class="orby-marketing__figure-media orby-marketing__figure-img" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" decoding="async" />
+        ${renderMarketingImageCredit(slide.imageCredit)}
       </div>
     </figure>`;
 }
@@ -68,7 +162,7 @@ function renderSplitSection(section) {
         </div>
       </div>
       <div class="orby-marketing__split-media">
-        ${renderFigure(section.imageSrc, section.imageAlt, revealDir, section.videoSrc)}
+        ${renderFigure(section, revealDir)}
       </div>
     </div>
   </section>`;
@@ -116,7 +210,7 @@ function getShowcaseSlides(section) {
   return section.gallery?.length
     ? section.gallery
     : section.imageSrc
-      ? [{ src: section.imageSrc, alt: section.imageAlt || '' }]
+      ? [{ src: section.imageSrc, alt: section.imageAlt || '', credit: undefined }]
       : [];
 }
 
@@ -131,17 +225,7 @@ function renderShowcaseDots(slideCount) {
 }
 
 function renderShowcaseSlides(section) {
-  const slides = getShowcaseSlides(section);
-  return slides
-    .map((slide, index) => {
-      const active = index === 0 ? ' is-active' : '';
-      const lazy = index === 0 ? '' : ' loading="lazy"';
-      const creditAttr = slide.credit
-        ? ` data-credit="${escapeHtml(slide.credit)}"`
-        : '';
-      return `<img class="orby-marketing__showcase-img${active}" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" width="1024" height="576" decoding="async"${creditAttr}${lazy} />`;
-    })
-    .join('\n        ');
+  return renderShowcaseSlideImages(getShowcaseSlides(section));
 }
 
 function pngMarqueeDeliverySrc(pngSrc) {

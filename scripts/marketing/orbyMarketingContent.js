@@ -17,6 +17,15 @@
  */
 
 /**
+ * Lower-third artwork credit on split (and similar) feature images.
+ * @typedef {Object} MarketingImageCredit
+ * @property {string} title — artwork title
+ * @property {string} [artist] — creator name or handle
+ * @property {string} sourceLabel — source name (e.g. Meshy); linked when sourceHref is set
+ * @property {string} [sourceHref] — page where the asset was downloaded
+ */
+
+/**
  * @typedef {Object} MarketingSection
  * @property {MarketingSectionType} type
  * @property {string} id
@@ -27,7 +36,8 @@
  * @property {'media-left' | 'media-right'} [layout]
  * @property {string} [imageSrc]
  * @property {string} [imageAlt]
- * @property {{ src: string, alt: string, credit?: string }[]} [gallery]
+ * @property {MarketingImageCredit} [imageCredit]
+ * @property {{ src: string, alt: string, credit?: string, imageCredit?: MarketingImageCredit }[]} [gallery]
  * @property {{ src: string, alt: string }[]} [marquee]
  * @property {string} [videoSrc]
  * @property {string} [ctaLabel]
@@ -82,9 +92,15 @@ export const MARKETING_SECTIONS = [
     ctaLabel: 'Load Sample Object',
     ctaAction: 'load-sample',
     layout: 'media-right',
-    videoSrc: './assets/marketing/import-orbit-placeholder.mp4',
-    imageSrc: './assets/images/look-filters/studio.png',
-    imageAlt: 'Orbit preview of a 3D model in Orby',
+    imageSrc: './assets/marketing/orby-section02-dropitin.jpg',
+    imageAlt: 'Drag-and-drop import in Orby with a 3D model in the viewport',
+    imageCredit: {
+      title: 'Lemur on a Rock',
+      artist: '@cyber_fox',
+      sourceLabel: 'Meshy',
+      sourceHref:
+        'https://www.meshy.ai/sv/3d-models/Lemur-on-a-Rock-v2-019ccee8-c882-758d-b3d9-0941c257dd65',
+    },
   },
   {
     type: 'split',
@@ -99,8 +115,41 @@ export const MARKETING_SECTIONS = [
       'Auto exposure plus manual grade stack in one tab',
     ],
     layout: 'media-left',
-    imageSrc: './assets/marketing/feature-ui-placeholder.png',
-    imageAlt: 'Orby studio UI with viewport and Camera & FX controls',
+    gallery: [
+      {
+        src: './assets/marketing/orby-section03-camerafx.jpg',
+        alt: 'Jeep Wrangler Adventure Rubicon render with Camera & FX framing in Orby',
+        imageCredit: {
+          title: 'Jeep Wrangler Adventure Rubicon',
+          artist: 'www.vecarz.com',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
+        },
+      },
+      {
+        src: './assets/marketing/orby-section03-camerafx-2.jpg',
+        alt: 'Jeep Wrangler Adventure Rubicon with composition grid and letterbox in Orby',
+        imageCredit: {
+          title: 'Jeep Wrangler Adventure Rubicon',
+          artist: 'www.vecarz.com',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
+        },
+      },
+      {
+        src: './assets/marketing/orby-section03-camerafx-3.jpg',
+        alt: 'Jeep Wrangler Adventure Rubicon with Camera & FX and histogram in Orby',
+        imageCredit: {
+          title: 'Jeep Wrangler Adventure Rubicon',
+          artist: 'www.vecarz.com',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
+        },
+      },
+    ],
   },
   {
     type: 'showcase',
@@ -144,8 +193,16 @@ export const MARKETING_SECTIONS = [
       'Great for social clips, concept boards, and rapid art direction',
     ],
     layout: 'media-left',
-    imageSrc: './assets/images/creative-look-chrome.png',
-    imageAlt: 'Chrome creative look material',
+    /* Poster until section video lands; then set videoSrc to the MP4 path. */
+    imageSrc: './assets/marketing/orby-section05-shaderlab-01.jpg',
+    imageAlt: 'Female head anatomy with stylized Shader Lab look in Orby',
+    imageCredit: {
+      title: 'Female Head Anatomy',
+      artist: 'leofinearts',
+      sourceLabel: 'Sketchfab',
+      sourceHref:
+        'https://sketchfab.com/3d-models/female-head-anatomy-0516c68f0da747beaed75a0d762d0e8c',
+    },
   },
   {
     type: 'split',

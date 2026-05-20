@@ -72,8 +72,10 @@
   }
 
   .orby-marketing__intro-asset,
-  .orby-marketing__intro-turntable-wrap {
+  .orby-marketing__intro-turntable-wrap,
+  .orby-marketing__figure-credit {
     opacity: 1 !important;
+    transform: none !important;
   }
 
   .orby-marketing-scroll-cue__icon {

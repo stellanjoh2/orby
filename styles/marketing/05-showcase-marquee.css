@@ -252,7 +252,8 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
   outline-offset: 3px;
 }
 
-.orby-marketing__showcase-credit {
+.orby-marketing__showcase-credit,
+.orby-marketing__figure-credit {
   position: absolute;
   z-index: 2;
   left: clamp(1rem, 2.8vw, 1.75rem);
@@ -272,6 +273,33 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
   opacity: 0;
   pointer-events: none;
   will-change: opacity, transform;
+}
+
+.orby-marketing__media-credit-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  text-decoration-color: color-mix(in srgb, currentColor 72%, transparent);
+  pointer-events: auto;
+}
+
+.orby-marketing__media-credit-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.orby-marketing__media-credit-link:focus-visible {
+  outline: 2px solid var(--brand-primary, #c4ff00);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.orby-marketing__section--revealed .orby-marketing__figure-credit {
+  opacity: 1;
+  transform: none;
+}
+
+.orby-marketing__figure-credit--static {
+  will-change: auto;
 }
 
 .orby-marketing__video {
