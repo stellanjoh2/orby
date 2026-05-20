@@ -1,18 +1,10 @@
 /**
  * Intro turntable — canvas sequence driven by natural scroll (no pin / scroll-jack).
- * Web delivery: WebP/JPEG frames, windowed decode cache, static poster on slow/narrow viewports.
+ * Web delivery: WebP/JPEG frames, fetch + createImageBitmap, static poster on slow/narrow viewports.
  */
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { prefersReducedMotion } from '../ui/modalReveal.js';
-import {
-  getIntroTurntableMaxDpr,
-  getIntroTurntableStride,
-  getMarketingPerformanceTier,
-  getTurntableFrameWindowRadius,
-  getTurntablePreloadConcurrency,
-  shouldPreloadAllTurntableFrames,
-} from './marketingPerformanceTier.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,11 +13,16 @@ export const INTRO_TURNTABLE_SEQUENCE = {
   basePath:
     './assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_60fps_1spin_1440p_web',
   namePrefix: 'toyotagr_supra_gt300__www_vecarz_com_turntable_5s_',
+  /** Primary format (run `npm run encode:turntable` from PNG masters). */
   ext: 'webp',
   fallbackExt: 'jpg',
   frameCount: 300,
   pad: 4,
+  /** Every Nth source frame (~150 scrub frames at stride 2). */
+  stride: 2,
+  /** 1-based source frame at scroll progress 0; scroll runs 60→300→1→59. */
   startFrame: 60,
+  /** 1 = contain within canvas; no zoom past section edges. */
   drawScale: 1,
   poster: {
     webp: './assets/marketing/intro-turntable-poster.webp',
@@ -34,125 +31,21 @@ export const INTRO_TURNTABLE_SEQUENCE = {
 };
 
 const SCROLL_TRIGGER_ID = 'orby-intro-turntable';
+const PRELOAD_CONCURRENCY = 12;
+const MAX_DPR = 2;
 const STATIC_MAX_WIDTH_PX = 767;
-const PRELOAD_IO = { root: null, rootMargin: '480px 0px', threshold: 0 };
 
-/** @type {TurntableFrameWindow | null} */
-let frameWindow = null;
-/** @type {Promise<TurntableFrameWindow> | null} */
+/** @type {TurntableFrame[] | null} */
+let frameCache = null;
+/** @type {Promise<TurntableFrame[]> | null} */
 let preloadPromise = null;
 /** @type {Promise<'webp' | 'jpg'> | null} */
 let resolvedExtPromise = null;
-/** @type {IntersectionObserver | null} */
-let preloadObserver = null;
 
 /** @typedef {ImageBitmap | HTMLImageElement} TurntableFrame */
 
-class TurntableFrameWindow {
-  /**
-   * @param {number[]} sourceIndices
-   * @param {'webp' | 'jpg'} ext
-   */
-  constructor(sourceIndices, ext) {
-    this.sourceIndices = sourceIndices;
-    this.ext = ext;
-    /** @type {(TurntableFrame | null)[]} */
-    this.frames = new Array(sourceIndices.length);
-    this.radius = getTurntableFrameWindowRadius();
-    this.retainRadius = this.radius * 2;
-    /** @type {Set<number>} */
-    this.inFlight = new Set();
-    this.firstReady = false;
-  }
-
-  /**
-   * @param {number} scrubIndex
-   */
-  async ensureAround(scrubIndex) {
-    const center = Math.min(
-      this.frames.length - 1,
-      Math.max(0, Math.round(scrubIndex)),
-    );
-    const jobs = [];
-    for (
-      let i = Math.max(0, center - this.radius);
-      i <= Math.min(this.frames.length - 1, center + this.radius);
-      i += 1
-    ) {
-      if (!this.frames[i] && !this.inFlight.has(i)) {
-        jobs.push(this.loadSlot(i));
-      }
-    }
-    this.evictOutside(center);
-    if (jobs.length) await Promise.all(jobs);
-  }
-
-  /**
-   * @param {number} center
-   */
-  evictOutside(center) {
-    for (let i = 0; i < this.frames.length; i += 1) {
-      if (Math.abs(i - center) <= this.retainRadius) continue;
-      if (this.frames[i]) {
-        releaseFrame(this.frames[i]);
-        this.frames[i] = null;
-      }
-    }
-  }
-
-  /**
-   * @param {number} slot
-   */
-  async loadSlot(slot) {
-    if (this.frames[slot] || this.inFlight.has(slot)) return;
-    this.inFlight.add(slot);
-    try {
-      this.frames[slot] = await loadFrame(this.sourceIndices[slot], this.ext);
-      if (!this.firstReady && framePixelSize(this.frames[slot]).w > 0) {
-        this.firstReady = true;
-      }
-    } finally {
-      this.inFlight.delete(slot);
-    }
-  }
-
-  async preloadAll() {
-    const concurrency = getTurntablePreloadConcurrency();
-    let cursor = 0;
-    const workers = Array.from({ length: concurrency }, async () => {
-      while (cursor < this.frames.length) {
-        const slot = cursor++;
-        if (!this.frames[slot]) await this.loadSlot(slot);
-      }
-    });
-    await Promise.all(workers);
-  }
-
-  async ensureFirst() {
-    if (this.frames[0] && framePixelSize(this.frames[0]).w > 0) return;
-    await this.loadSlot(0);
-  }
-
-  /**
-   * @param {number} scrubIndex
-   * @returns {TurntableFrame | null}
-   */
-  getFrame(scrubIndex) {
-    const idx = Math.min(
-      this.frames.length - 1,
-      Math.max(0, Math.round(scrubIndex)),
-    );
-    return this.frames[idx] ?? null;
-  }
-
-  release() {
-    this.frames.forEach((frame) => releaseFrame(frame));
-    this.frames = [];
-    this.inFlight.clear();
-  }
-}
-
 /**
+ * Apple-style gate: scroll sequence only where it will stay smooth.
  * @returns {boolean}
  */
 export function shouldRunIntroTurntableSequence() {
@@ -168,9 +61,6 @@ export function shouldRunIntroTurntableSequence() {
   if (conn?.saveData) return false;
   const effectiveType = conn?.effectiveType;
   if (effectiveType && /^(slow-2g|2g)$/i.test(effectiveType)) return false;
-  if (getMarketingPerformanceTier() === 'reduced' && typeof navigator.deviceMemory === 'number') {
-    if (navigator.deviceMemory <= 4) return false;
-  }
   return true;
 }
 
@@ -204,7 +94,7 @@ async function detectWebPSupport() {
 }
 
 /**
- * @param {number} sourceIndex
+ * @param {number} sourceIndex 1-based frame index in the asset folder
  * @param {'webp' | 'jpg'} ext
  */
 function frameUrl(sourceIndex, ext) {
@@ -217,8 +107,7 @@ function frameUrl(sourceIndex, ext) {
  * @returns {number[]}
  */
 export function sourceFrameIndices() {
-  const { frameCount, startFrame = 1 } = INTRO_TURNTABLE_SEQUENCE;
-  const stride = getIntroTurntableStride();
+  const { frameCount, stride, startFrame = 1 } = INTRO_TURNTABLE_SEQUENCE;
   const indices = [];
   for (let i = 1; i <= frameCount; i += stride) {
     indices.push(i);
@@ -320,72 +209,61 @@ async function loadFrame(sourceIndex, ext) {
 }
 
 /**
- * @param {{ eager?: boolean }} [options]
- * @returns {Promise<TurntableFrameWindow | null>}
+ * @param {number[]} indices
+ * @param {TurntableFrame[]} results
+ * @param {'webp' | 'jpg'} ext
  */
-export async function preloadIntroTurntableFrames(options = {}) {
+async function preloadFrames(indices, results, ext) {
+  let cursor = 0;
+
+  const workers = Array.from({ length: PRELOAD_CONCURRENCY }, async () => {
+    while (cursor < indices.length) {
+      const slot = cursor++;
+      if (!results[slot]) {
+        results[slot] = await loadFrame(indices[slot], ext);
+      }
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * @returns {Promise<TurntableFrame[]>}
+ */
+export function preloadIntroTurntableFrames() {
   if (!shouldRunIntroTurntableSequence()) {
-    return null;
+    return Promise.resolve([]);
   }
-  if (frameWindow?.firstReady) return frameWindow;
+  if (frameCache?.length && frameCache.every((f) => f && framePixelSize(f).w > 0)) {
+    return Promise.resolve(frameCache);
+  }
   if (preloadPromise) return preloadPromise;
 
   const indices = sourceFrameIndices();
+  frameCache = new Array(indices.length);
+  const cache = frameCache;
+
   preloadPromise = (async () => {
     const ext = await resolveFrameExt();
-    const windowCache = new TurntableFrameWindow(indices, ext);
-    frameWindow = windowCache;
-    await windowCache.ensureFirst();
-    if (options.eager || shouldPreloadAllTurntableFrames()) {
-      void windowCache.preloadAll();
-    }
-    return windowCache;
+    cache[0] = await loadFrame(indices[0], ext);
+    await preloadFrames(indices, cache, ext);
+    return cache;
   })();
 
   return preloadPromise;
 }
 
-/**
- * Begin turntable decode when the intro section nears the viewport.
- * @param {HTMLElement} section
- */
-export function scheduleIntroTurntablePreload(section) {
-  if (!section || !shouldRunIntroTurntableSequence()) return;
-  if (frameWindow?.firstReady) return;
-
-  const run = () => {
-    void preloadIntroTurntableFrames({ eager: shouldPreloadAllTurntableFrames() });
-  };
-
-  if (typeof IntersectionObserver === 'undefined') {
-    run();
-    return;
-  }
-
-  if (preloadObserver) {
-    preloadObserver.disconnect();
-    preloadObserver = null;
-  }
-
-  preloadObserver = new IntersectionObserver((entries, observer) => {
-    if (!entries.some((e) => e.isIntersecting)) return;
-    observer.disconnect();
-    preloadObserver = null;
-    run();
-  }, PRELOAD_IO);
-  preloadObserver.observe(section);
-}
-
-/** @returns {Promise<TurntableFrameWindow | null> | null} */
+/** @returns {Promise<TurntableFrame[]> | null} */
 export function getIntroTurntablePreloadPromise() {
   return preloadPromise;
 }
 
+/** Frees decoded frames when leaving the home marketing page entirely. */
 export function clearIntroTurntablePreload() {
-  preloadObserver?.disconnect();
-  preloadObserver = null;
-  frameWindow?.release();
-  frameWindow = null;
+  frameCache?.forEach(releaseFrame);
+  frameCache = null;
   preloadPromise = null;
   resolvedExtPromise = null;
 }
@@ -400,7 +278,7 @@ function resizeCanvasToDisplay(canvas) {
   const rect = wrap.getBoundingClientRect();
   const cssW = Math.max(1, Math.round(rect.width));
   const cssH = Math.max(1, Math.round(rect.height));
-  const dpr = Math.min(getIntroTurntableMaxDpr(), window.devicePixelRatio || 1);
+  const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
   const bitmapW = Math.round(cssW * dpr);
   const bitmapH = Math.round(cssH * dpr);
 
@@ -474,8 +352,6 @@ export function initIntroTurntable(root) {
     };
   }
 
-  scheduleIntroTurntablePreload(section);
-
   if (!canvas) {
     return () => {};
   }
@@ -486,38 +362,29 @@ export function initIntroTurntable(root) {
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) return () => {};
 
-  /** @type {TurntableFrameWindow | null} */
-  let windowCache = null;
-  let frameCount = sourceFrameIndices().length;
+  const sourceIndices = sourceFrameIndices();
+  /** @type {TurntableFrame[]} */
+  let frames = new Array(sourceIndices.length);
   let paintedFrame = -1;
   let scrollTrigger = null;
   let resizeObserver = null;
   let resizeTimer = 0;
-  let paintPending = false;
-  let lastScrub = 0;
-  let lastEnsureIdx = -1;
 
   const paint = (scrubIndex) => {
-    lastScrub = scrubIndex;
-    if (paintPending) return;
-    paintPending = true;
-    requestAnimationFrame(() => {
-      paintPending = false;
-      const idx = Math.min(frameCount - 1, Math.max(0, Math.round(lastScrub)));
-      const frame = windowCache?.getFrame(lastScrub);
-      if (idx === paintedFrame || !frame || framePixelSize(frame).w === 0) return;
-      paintedFrame = idx;
-      const metrics = resizeCanvasToDisplay(canvas);
-      if (!metrics.bitmapW) return;
-      drawFrame(ctx, frame, metrics.bitmapW, metrics.bitmapH);
-    });
+    const idx = Math.min(frames.length - 1, Math.max(0, Math.round(scrubIndex)));
+    const frame = frames[idx];
+    if (idx === paintedFrame || !frame || framePixelSize(frame).w === 0) return;
+    paintedFrame = idx;
+    const metrics = resizeCanvasToDisplay(canvas);
+    if (!metrics.bitmapW) return;
+    drawFrame(ctx, frame, metrics.bitmapW, metrics.bitmapH);
   };
 
   const onResize = () => {
     paintedFrame = -1;
     paint(
       scrollTrigger
-        ? scrollTrigger.progress * Math.max(0, frameCount - 1)
+        ? scrollTrigger.progress * Math.max(0, frames.length - 1)
         : 0,
     );
   };
@@ -535,7 +402,7 @@ export function initIntroTurntable(root) {
   };
 
   const attachScrollScrub = () => {
-    if (scrollTrigger || prefersReducedMotion() || !windowCache) return;
+    if (scrollTrigger || prefersReducedMotion()) return;
     scrollTrigger = ScrollTrigger.create({
       id: SCROLL_TRIGGER_ID,
       trigger: section,
@@ -543,39 +410,39 @@ export function initIntroTurntable(root) {
       end: 'bottom top',
       invalidateOnRefresh: true,
       onUpdate: (self) => {
-        const scrub = self.progress * Math.max(0, frameCount - 1);
-        const idx = Math.round(scrub);
-        if (idx !== lastEnsureIdx) {
-          lastEnsureIdx = idx;
-          void windowCache.ensureAround(scrub).then(() => paint(scrub));
-        } else {
-          paint(scrub);
-        }
+        paint(self.progress * Math.max(0, frames.length - 1));
       },
     });
     onResize();
+    ScrollTrigger.refresh();
   };
 
-  const applyWindow = (loaded) => {
-    if (!section.isConnected || !loaded) return;
-    windowCache = loaded;
-    frameCount = loaded.frames.length;
+  const applyLoadedFrames = (loaded) => {
+    if (!section.isConnected) return;
+    frames = loaded;
     paintedFrame = -1;
     markReady();
-    const scrub = scrollTrigger
-      ? scrollTrigger.progress * Math.max(0, frameCount - 1)
-      : 0;
-    void loaded.ensureAround(scrub).then(() => {
-      paint(scrub);
-      attachScrollScrub();
-    });
+    paint(
+      scrollTrigger
+        ? scrollTrigger.progress * Math.max(0, frames.length - 1)
+        : 0,
+    );
+    attachScrollScrub();
+  };
+
+  const paintFirstCached = () => {
+    const first = frameCache?.[0];
+    if (!first || !section.isConnected || framePixelSize(first).w === 0) return;
+    frames[0] = first;
+    paint(0);
+    markReady();
   };
 
   if (prefersReducedMotion()) {
     void preloadIntroTurntableFrames().then((loaded) => {
-      if (loaded) {
-        windowCache = loaded;
-        void loaded.ensureFirst().then(() => paint(0));
+      if (loaded[0]) {
+        frames[0] = loaded[0];
+        paint(0);
       }
       markReady();
     });
@@ -589,14 +456,8 @@ export function initIntroTurntable(root) {
   resizeObserver?.observe(canvas.parentElement ?? canvas);
   window.addEventListener('resize', scheduleResize, { passive: true });
 
-  void preloadIntroTurntableFrames().then((loaded) => {
-    if (loaded?.frames[0]) {
-      windowCache = loaded;
-      paint(0);
-      markReady();
-    }
-    applyWindow(loaded);
-  });
+  paintFirstCached();
+  void preloadIntroTurntableFrames().then(applyLoadedFrames);
 
   return () => {
     window.clearTimeout(resizeTimer);
@@ -604,7 +465,7 @@ export function initIntroTurntable(root) {
     window.removeEventListener('resize', scheduleResize);
     scrollTrigger?.kill();
     scrollTrigger = null;
-    windowCache = null;
+    frames = [];
     paintedFrame = -1;
   };
 }
