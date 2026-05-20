@@ -21,6 +21,7 @@ function injectVersionIntoHtml(html) {
   const line = readFileSync(versionPath, 'utf-8').trim();
   if (!/^\d+\.\d+\.\d+$/.test(line)) return html;
   const banner = formatVersionBanner(line);
+  const v = line;
   return html
     .replace(
       /<div class="info-version-tag">[^<]+<\/div>/g,
@@ -29,6 +30,14 @@ function injectVersionIntoHtml(html) {
     .replace(
       /<div class="dropzone-version-tag">[^<]+<\/div>/,
       `<div class="dropzone-version-tag">${banner}</div>`,
+    )
+    .replace(
+      /src="\.\/scripts\/entry\.js(?:\?v=[^"]*)?"/,
+      `src="./scripts/entry.js?v=${v}"`,
+    )
+    .replace(
+      /<meta name="orby-version" content="[^"]*"\s*\/>/,
+      `<meta name="orby-version" content="${v}" />`,
     );
 }
 

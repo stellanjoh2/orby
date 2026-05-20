@@ -45,9 +45,14 @@ async function loadSections() {
 
 function ensureStylesheet() {
   if (document.querySelector('link[data-orby-marketing-css]')) return;
+  const version = document.querySelector('meta[name="orby-version"]')?.getAttribute('content');
+  const href =
+    version && version !== 'dev'
+      ? `${STYLES_HREF}?v=${encodeURIComponent(version)}`
+      : STYLES_HREF;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = STYLES_HREF;
+  link.href = href;
   link.setAttribute('data-orby-marketing-css', '');
   document.head.appendChild(link);
 }

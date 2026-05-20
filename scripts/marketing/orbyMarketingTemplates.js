@@ -294,15 +294,10 @@ function renderFaqSection(section) {
     )
     .join('\n          ');
 
-  const ledeBlock = section.lede
-    ? `<p class="orby-marketing__lede orby-marketing__faq-lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>`
-    : '';
-
   return `<section class="orby-marketing__section orby-marketing__section--faq" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__faq">
       <header class="orby-marketing__faq-header">
         <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow || 'FAQ')}</p>
-        ${ledeBlock}
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
       </header>
       <div class="orby-marketing__faq-grid">

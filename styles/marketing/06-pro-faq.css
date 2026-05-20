@@ -180,17 +180,14 @@
   margin-bottom: 0;
 }
 
-.orby-marketing__faq-header .orby-marketing__eyebrow + .orby-marketing__faq-lede {
+.orby-marketing__faq-header .orby-marketing__eyebrow + .orby-marketing__title {
   margin-top: var(--orby-marketing-eyebrow-headline-gap);
 }
 
-.orby-marketing__faq-header .orby-marketing__faq-lede + .orby-marketing__title {
-  margin-top: var(--orby-marketing-headline-body-gap);
-}
-
+/* Legacy — FAQ no longer renders a lede; hide if an old cached bundle injects one */
 .orby-marketing__faq-lede {
+  display: none !important;
   margin: 0;
-  max-width: var(--orby-marketing-centered-copy-measure);
 }
 
 /* Headline → Q&A grid — single col-gap band (no stacked lede + margin) */
