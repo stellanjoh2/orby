@@ -5712,22 +5712,81 @@ body.ui-hidden .shelf {
   contain-intrinsic-size: auto 20rem;
 }
 
+.panel[data-panel='info'] {
+  /* Single vertical rhythm for Information prose (FAQ, lists, SVG Extrude, etc.) */
+  --info-prose-gap: var(--shelf-rhythm);
+  /* Extra breath before FAQ / transparency subheads so titles sit with the copy below */
+  --info-prose-section-gap: calc(2 * var(--info-prose-gap));
+}
+
+.panel[data-panel='info'] .about-content {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.panel[data-panel='info'] .about-content > p {
+  margin: 0 0 var(--info-prose-gap);
+}
+
+.panel[data-panel='info'] .about-content > p:last-child {
+  margin-bottom: 0;
+}
+
+.panel[data-panel='info'] .about-content > ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--info-prose-gap);
+}
+
+.panel[data-panel='info'] .about-content > ul:last-child {
+  margin-bottom: 0;
+}
+
+.panel[data-panel='info'] .about-content ul > li {
+  margin-bottom: var(--info-prose-gap);
+}
+
+.panel[data-panel='info'] .about-content ul > li:last-child {
+  margin-bottom: 0;
+}
+
+.panel[data-panel='info'] .about-content ul.info-prose-nested {
+  padding-left: 1.5rem;
+  margin-top: var(--info-prose-gap);
+}
+
+.panel[data-panel='info'] .about-content > div + div {
+  margin-top: var(--info-prose-section-gap);
+}
+
+.panel[data-panel='info'] .about-content h4 {
+  margin: 0 0 var(--info-prose-gap);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.panel[data-panel='info'] .about-content > div > p {
+  margin: 0;
+}
+
 .panel[data-panel='info'] .info-panel-stack > .panel-block + .panel-block {
   margin-top: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  padding-top: 0;
+  padding-top: var(--info-prose-section-gap);
 }
 
 .panel[data-panel='info'] .info-panel-stack > .panel-block:not(:last-child) {
   margin-bottom: 0;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  padding-bottom: 0.85rem;
+  padding-bottom: 0;
 }
 
 .panel[data-panel='info'] .info-panel-stack > .panel-block:first-child {
-  padding-bottom: 0.85rem;
+  padding-bottom: 0;
 }
 
 .panel[data-panel='info'] .info-panel-stack {
