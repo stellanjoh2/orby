@@ -1,0 +1,72 @@
+/* Allow document scroll on the home dropzone only */
+html.orby-home-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: auto;
+}
+
+html.orby-home-scroll body {
+  overflow: visible;
+  height: auto;
+}
+
+html.orby-home-scroll #app {
+  height: auto;
+  min-height: 100dvh;
+}
+
+html.orby-home-scroll .workspace {
+  flex: none;
+  min-height: 100dvh;
+  height: 100dvh;
+  margin-bottom: 0;
+}
+
+html.orby-home-scroll #orby-marketing[hidden] {
+  display: none !important;
+}
+
+html.orby-home-scroll #orby-marketing {
+  overflow-x: clip;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+html.orby-home-scroll #orby-marketing > .orby-marketing {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Studio session — detached from #app; kept for when user returns home */
+.orby-marketing.orby-marketing--suspended {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  content-visibility: hidden;
+  contain: strict;
+}
+
+#orby-marketing {
+  position: relative;
+  z-index: 1;
+  background: var(--orby-marketing-bg);
+  color: var(--orby-marketing-text);
+  font-weight: var(--orby-marketing-body-weight);
+}
+
+.orby-marketing__section {
+  padding: var(--orby-marketing-space-lg) 0;
+  background: var(--orby-marketing-bg);
+}
+
+/* Below-fold sections — skip layout/paint until near viewport */
+.orby-marketing__section--split,
+.orby-marketing__section--showcase,
+.orby-marketing__section--marquee,
+.orby-marketing__section--pro,
+.orby-marketing__section--faq,
+.orby-marketing__section--footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 820px;
+}
+

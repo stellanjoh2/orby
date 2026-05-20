@@ -166,10 +166,10 @@ export class StateStore {
         scatterTint: '#ffd4b8',
       },
       lights: {
-        key: { color: '#ffdfc9', intensity: 1.28, height: 5, rotate: 0, enabled: true, castShadows: true },
-        fill: { color: '#b0c7ff', intensity: 0.8, height: 3, rotate: 0, enabled: true, castShadows: true },
-        rim: { color: '#a0eaf9', intensity: 0.96, height: 4, rotate: 0, enabled: true, castShadows: true },
-        ambient: { color: '#7c8ca6', intensity: 0.48, enabled: true },
+        key: { color: '#ffdfc9', intensity: 1.28, height: 5, rotate: 0, enabled: false, castShadows: false },
+        fill: { color: '#b0c7ff', intensity: 0.8, height: 3, rotate: 0, enabled: false, castShadows: false },
+        rim: { color: '#a0eaf9', intensity: 0.96, height: 4, rotate: 0, enabled: false, castShadows: false },
+        ambient: { color: '#7c8ca6', intensity: 0.48, enabled: false },
       },
       /** Off by default: HDRI already lights the scene; turn on for 3-point rig + directional shadows. */
       lightsEnabled: false,
@@ -178,7 +178,7 @@ export class StateStore {
       lightsHeight: 5,
       lightsAutoRotate: false,
       showLightIndicators: false,
-      lightsCastShadows: true,
+      lightsCastShadows: false,
       /** 3-point light shadow map quality preset. */
       lightsShadowQuality: 'medium',
       /** Directional shadow softness radius (0 = harder edges, 4 = soft default). */

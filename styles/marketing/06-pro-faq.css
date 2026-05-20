@@ -1,0 +1,277 @@
+/* Pro + FAQ — big-gap rhythm aligned with split features */
+.orby-marketing__section--pro {
+  padding: 0 0 var(--orby-marketing-pro-faq-gap);
+}
+
+/* Pro tools — three-up feature cards */
+.orby-marketing__pro-header {
+  text-align: left;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+}
+
+/* Intentional \n breaks only — no extra wrap inside a line */
+.orby-marketing__pro-header .orby-marketing__title-line {
+  white-space: nowrap;
+}
+
+.orby-marketing__pro-header .orby-marketing__title {
+  margin-bottom: 0;
+  max-width: none;
+}
+
+.orby-marketing__inner.orby-marketing__pro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--orby-marketing-feature-body-media-gap);
+}
+
+.orby-marketing__pro-lede {
+  margin: 0;
+  max-width: var(--orby-marketing-centered-copy-measure);
+}
+
+.orby-marketing__pro-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--orby-marketing-col-gap);
+}
+
+@media (min-width: 900px) {
+  .orby-marketing__pro-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--orby-marketing-col-gap);
+  }
+
+  /* Split feature ledes — half-column measure only */
+  .orby-marketing__section--split .orby-marketing__split-copy .orby-marketing__lede {
+    max-width: min(
+      var(--orby-marketing-feature-lede-measure),
+      calc(100% - var(--orby-marketing-gutter-text-inset))
+    );
+  }
+
+  .orby-marketing__section--split .orby-marketing__list {
+    max-width: var(--orby-marketing-feature-lede-measure);
+  }
+}
+
+.orby-marketing__pro-card {
+  min-width: 0;
+}
+
+.orby-marketing__pro-card-surface {
+  --orby-media-radius: var(--orby-marketing-media-radius);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: var(--orby-media-radius);
+  overflow: hidden;
+  background: var(--orby-marketing-panel-bg);
+  border: none;
+}
+
+.orby-marketing__pro-card-media {
+  position: relative;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
+  background: var(--orby-marketing-panel-bg);
+  overflow: hidden;
+}
+
+.orby-marketing__pro-card-media .orby-marketing__media-ph {
+  background: var(--orby-marketing-panel-bg);
+}
+
+.orby-marketing__pro-card-media--empty {
+  aspect-ratio: 1 / 1;
+  background: var(--orby-marketing-panel-bg);
+}
+
+.orby-marketing__pro-card-img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.orby-marketing__pro-card-copy {
+  flex: 1 1 auto;
+  --orby-pro-card-copy-pad-y: 1.05em;
+  padding: calc(
+      clamp(
+          calc(1.35rem * var(--orby-marketing-scale)),
+          2.8vw,
+          calc(1.75rem * var(--orby-marketing-scale))
+        ) + var(--orby-pro-card-copy-pad-y)
+    )
+    clamp(
+      calc(1.2rem * var(--orby-marketing-scale)),
+      2.4vw,
+      calc(1.5rem * var(--orby-marketing-scale))
+    )
+    calc(
+      clamp(
+          calc(1.5rem * var(--orby-marketing-scale)),
+          3vw,
+          calc(1.9rem * var(--orby-marketing-scale))
+        ) + var(--orby-pro-card-copy-pad-y)
+    );
+  text-align: center;
+}
+
+.orby-marketing__pro-card-title {
+  margin: 0 0 calc(1.15rem * var(--orby-marketing-scale));
+  font-size: clamp(
+    calc(1.15rem * var(--orby-marketing-headline-scale)),
+    calc(1.65vw * var(--orby-marketing-headline-scale)),
+    calc(1.32rem * var(--orby-marketing-headline-scale))
+  );
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--orby-marketing-headline);
+}
+
+.orby-marketing__pro-card-body {
+  margin: 0 auto;
+  max-width: min(100%, calc(27rem * var(--orby-marketing-scale)));
+  font-size: clamp(
+    calc(0.92rem * var(--orby-marketing-scale)),
+    1.1vw,
+    calc(0.98rem * var(--orby-marketing-scale))
+  );
+  font-weight: var(--orby-marketing-body-weight);
+  line-height: 1.65;
+  color: var(--orby-marketing-text-dim);
+}
+
+/* FAQ panel — seam above = pro gap-big; faq-pad-top before headline; bottom uses gap-big */
+#orby-marketing .orby-marketing__section.orby-marketing__section--faq {
+  position: relative;
+  z-index: 1;
+  background: var(--orby-marketing-panel-bg);
+  /* Reset base section pad; FAQ uses its own top/bottom bands */
+  padding: var(--orby-marketing-faq-pad-top) 0 var(--orby-marketing-faq-pad-bottom);
+}
+
+#orby-marketing .orby-marketing__inner.orby-marketing__faq {
+  padding-bottom: 0;
+}
+
+.orby-marketing__section--faq + .orby-marketing__section--footer {
+  margin-top: 0;
+}
+
+/* FAQ header — same column cqi scale as split feature headlines */
+.orby-marketing__faq-header {
+  text-align: left;
+  margin: 0 0 var(--orby-marketing-col-gap);
+  width: 100%;
+  max-width: none;
+}
+
+.orby-marketing__faq-header .orby-marketing__title {
+  margin-bottom: 0;
+}
+
+.orby-marketing__faq-header .orby-marketing__eyebrow + .orby-marketing__faq-lede {
+  margin-top: var(--orby-marketing-eyebrow-headline-gap);
+}
+
+.orby-marketing__faq-header .orby-marketing__faq-lede + .orby-marketing__title {
+  margin-top: var(--orby-marketing-headline-body-gap);
+}
+
+.orby-marketing__faq-lede {
+  margin: 0;
+  max-width: var(--orby-marketing-centered-copy-measure);
+}
+
+/* Headline → Q&A grid — single col-gap band (no stacked lede + margin) */
+.orby-marketing__faq-header + .orby-marketing__faq-grid {
+  margin-top: 0;
+}
+
+.orby-marketing__faq-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--orby-marketing-col-gap);
+}
+
+@media (min-width: 900px) {
+  .orby-marketing__faq-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--orby-marketing-col-gap);
+  }
+
+  /* Pro header — cqi + line length match the lede (full-width header was scaling type 2×) */
+  .orby-marketing__pro-header {
+    max-width: var(--orby-marketing-feature-lede-measure);
+  }
+
+  /* FAQ headline — half site width column */
+  .orby-marketing__faq-header .orby-marketing__title {
+    max-width: var(--orby-marketing-section-headline-measure);
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+}
+
+.orby-marketing__faq-item {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(
+    calc(0.85rem * var(--orby-marketing-scale)),
+    1.8vw,
+    calc(1.25rem * var(--orby-marketing-scale))
+  );
+  min-width: 0;
+}
+
+.orby-marketing__faq-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--orby-marketing-headline);
+  font-size: var(--orby-marketing-feature-lede-size);
+  line-height: var(--orby-marketing-feature-lede-line);
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.orby-marketing__faq-icon-svg {
+  display: block;
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.orby-marketing__faq-question {
+  margin: 0 0 0.55rem;
+  font-size: var(--orby-marketing-feature-lede-size);
+  font-weight: 700;
+  line-height: var(--orby-marketing-feature-lede-line);
+  letter-spacing: -0.02em;
+  color: var(--orby-marketing-text);
+}
+
+.orby-marketing__faq-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.orby-marketing__faq-answer {
+  margin: 0;
+  max-width: calc(100% - var(--orby-marketing-gutter-text-inset));
+  font-size: var(--orby-marketing-feature-list-size);
+  font-weight: var(--orby-marketing-body-weight);
+  line-height: var(--orby-marketing-feature-list-line);
+  color: var(--orby-marketing-text-dim);
+}

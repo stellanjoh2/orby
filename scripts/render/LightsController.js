@@ -57,10 +57,10 @@ export class LightsController {
 
     // Individual light properties
     this.individualProperties = {
-      key: { height: 5, rotate: 0, intensity: 1.28, enabled: true, castShadows: true },
-      fill: { height: 3, rotate: 0, intensity: 0.8, enabled: true, castShadows: true },
-      rim: { height: 4, rotate: 0, intensity: 0.96, enabled: true, castShadows: true },
-      ambient: { intensity: 0.48, enabled: true },
+      key: { height: 5, rotate: 0, intensity: 1.28, enabled: false, castShadows: false },
+      fill: { height: 3, rotate: 0, intensity: 0.8, enabled: false, castShadows: false },
+      rim: { height: 4, rotate: 0, intensity: 0.96, enabled: false, castShadows: false },
+      ambient: { intensity: 0.48, enabled: false },
     };
 
     Object.values(this.lights).forEach((light) => {
@@ -193,7 +193,7 @@ export class LightsController {
       const baseIntensity = intensity * multiplier;
       // Clamp to max 5.0 × multiplier to prevent overexposure
       const targetIntensity = Math.min(baseIntensity * (this.lightsMaster ?? 1), 5.0 * multiplier);
-      const isLightEnabled = (this.individualProperties[id].enabled !== false) && this.lightsEnabled;
+      const isLightEnabled = this.individualProperties[id].enabled === true && this.lightsEnabled;
       light.intensity = isLightEnabled ? targetIntensity : 0;
       
       // Apply individual height and rotate for directional lights
@@ -223,7 +223,7 @@ export class LightsController {
       const light = this.lights[lightId];
       if (!light) return;
       const props = this.individualProperties[lightId];
-      const isLightEnabled = (props?.enabled !== false) && this.lightsEnabled;
+      const isLightEnabled = props?.enabled === true && this.lightsEnabled;
       if (isLightEnabled) {
         const intensity = props?.intensity ?? 0;
         const multiplier = light.isAmbientLight ? 4 : 2;
@@ -252,7 +252,7 @@ export class LightsController {
       const baseIntensity = intensity * multiplier;
       // Clamp to max 5.0 × multiplier to prevent overexposure
       const targetIntensity = Math.min(baseIntensity * this.lightsMaster, 5.0 * multiplier);
-      const isLightEnabled = (props?.enabled !== false) && this.lightsEnabled;
+      const isLightEnabled = props?.enabled === true && this.lightsEnabled;
       light.intensity = isLightEnabled ? targetIntensity : 0;
     });
     if (this.lightsEnabled) {
@@ -279,7 +279,7 @@ export class LightsController {
       const baseIntensity = this.individualProperties[lightId].intensity * multiplier;
       // Clamp effective intensity to prevent overexposure (max 5.0 × multiplier)
       const effectiveIntensity = Math.min(baseIntensity * (this.lightsMaster ?? 1), 5.0 * multiplier);
-      const isLightEnabled = this.individualProperties[lightId].enabled !== false && this.lightsEnabled;
+      const isLightEnabled = this.individualProperties[lightId].enabled === true && this.lightsEnabled;
       light.intensity = isLightEnabled ? effectiveIntensity : 0;
     } else if (property === 'height') {
       // Store individual height
@@ -299,7 +299,7 @@ export class LightsController {
       }
     } else if (property === 'enabled') {
       // Store enabled state
-      this.individualProperties[lightId].enabled = value !== false;
+      this.individualProperties[lightId].enabled = value === true;
       // Update intensity based on enabled state
       const intensity = this.individualProperties[lightId].intensity ?? 0;
       const multiplier = light.isAmbientLight ? 4 : 2;
@@ -310,7 +310,7 @@ export class LightsController {
       light.intensity = isLightEnabled ? targetIntensity : 0;
     } else if (property === 'castShadows') {
       // Store cast shadows state
-      this.individualProperties[lightId].castShadows = value !== false;
+      this.individualProperties[lightId].castShadows = value === true;
       // Update shadow casting
       if (light.isDirectionalLight && light.shadow) {
         light.castShadow = this.individualProperties[lightId].castShadows;

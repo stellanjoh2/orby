@@ -11,6 +11,7 @@
     "build": "node build.js",
     "encode:turntable": "node scripts/marketing/encodeIntroTurntableFrames.mjs",
     "encode:png-marquee": "node scripts/marketing/encodePngMarquee.mjs",
+    "export:marketing-copy": "node scripts/marketing/exportMarketingCopy.mjs",
     "encode:hdri": "python3 scripts/encodeHdriPresets.py",
     "preview": "python3 -m http.server 8000 --bind 0.0.0.0 -d dist",
     "setup-hooks": "node scripts/setup-git-hooks.mjs",

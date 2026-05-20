@@ -43,6 +43,8 @@ export class RenderControls {
     this.ui = uiManager;
     this.helpers = helpers;
     this.toneCurveController = null;
+    /** Look-filter thumbs use data-src until the presets fold-out opens once. */
+    this._lookFilterThumbsHydrated = false;
   }
 
   /** Anamorphic Bloom: toggle follows master Bloom; sliders follow this toggle (like Lens Dirt). */
@@ -461,15 +463,13 @@ export class RenderControls {
           el.classList.toggle('tone-curve-foldout--collapsed', !open);
           el.classList.toggle('tone-curve-foldout--expanded', open);
         }
+        this.toneCurveController?.setFoldoutOpen(!!open);
       };
       this.ui.inputs.toneCurveOpen.addEventListener('change', (event) => {
         const open = event.target.checked;
         this.stateStore.set('toneCurveOpen', open);
         updateToneCurveFoldout(open);
       });
-      updateToneCurveFoldout(
-        this.stateStore.getState().toneCurveOpen ?? false,
-      );
     }
 
     // Camera (FOV + lens presets live in LensControls.js)
@@ -793,6 +793,7 @@ export class RenderControls {
           );
           container.classList.toggle('look-filter-presets-container--expanded', open);
         }
+        if (open) this.hydrateLookFilterThumbs();
       };
       this.ui.inputs.lookFilterPresetsOpen.addEventListener('change', (event) => {
         const open = event.target.checked;
@@ -885,6 +886,15 @@ export class RenderControls {
       this.stateStore,
     );
     this.toneCurveController.bind();
+    if (this.ui.inputs.toneCurveOpen) {
+      const open = this.stateStore.getState().toneCurveOpen ?? false;
+      const tcc = document.querySelector('#toneCurveContainer');
+      if (tcc) {
+        tcc.classList.toggle('tone-curve-foldout--collapsed', !open);
+        tcc.classList.toggle('tone-curve-foldout--expanded', open);
+      }
+      this.toneCurveController.setFoldoutOpen(open);
+    }
   }
 
   sync(state) {
@@ -1227,6 +1237,7 @@ export class RenderControls {
         tcc.classList.toggle('tone-curve-foldout--collapsed', !open);
         tcc.classList.toggle('tone-curve-foldout--expanded', open);
       }
+      this.toneCurveController?.setFoldoutOpen(open);
     }
     if (this.ui.inputs.antiAliasing) {
       const aa = getAntiAliasingUiState(
@@ -1318,6 +1329,24 @@ export class RenderControls {
     );
 
     this.toneCurveController?.syncFromState(state);
+  }
+
+  /**
+   * Assign src from data-src on first presets open — skips decode/network while fold-out is collapsed.
+   */
+  hydrateLookFilterThumbs() {
+    if (this._lookFilterThumbsHydrated) return;
+    this._lookFilterThumbsHydrated = true;
+    const container = document.querySelector('#lookFilterPresetsContainer');
+    if (!container) return;
+    container.querySelectorAll('.look-filter-tile__thumb[data-src]').forEach((img) => {
+      if (img.getAttribute('src')) return;
+      const url = img.dataset.src;
+      if (!url) return;
+      img.loading = 'lazy';
+      img.fetchPriority = 'low';
+      img.src = url;
+    });
   }
 }
 

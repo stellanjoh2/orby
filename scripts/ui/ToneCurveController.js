@@ -79,7 +79,14 @@ export class ToneCurveController {
     this.h = 1;
     this.drag = null;
     this.hover = null;
+    this._mounted = false;
     this._resizeObserver = null;
+    this._onWindowResize = null;
+    this._onPointerDown = null;
+    this._onPointerMove = null;
+    this._onPointerUp = null;
+    this._onPointerLeave = null;
+    this._onResize = null;
   }
 
   _getPad() {
@@ -105,29 +112,73 @@ export class ToneCurveController {
     this.canvas = document.getElementById('toneCurveCanvas');
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d', { alpha: false });
+  }
+
+  /** Mount canvas observers/listeners when the Curve fold-out is open. */
+  setFoldoutOpen(open) {
+    if (open) this.mount();
+    else this.unmount();
+  }
+
+  mount() {
+    if (this._mounted || !this.canvas || !this.ctx) return;
+    this._mounted = true;
     const wrap = this.canvas.parentElement;
-    this._resize();
-    this._draw();
-    const onResize = () => {
+    this._onResize = () => {
       this._resize();
       this._draw();
     };
-    window.addEventListener('resize', onResize);
+    this._onWindowResize = this._onResize;
+    this._onPointerDown = (e) => this._handlePointerDown(e);
+    this._onPointerMove = (e) => this._handlePointerMove(e);
+    this._onPointerUp = (e) => this._handlePointerUp(e);
+    this._onPointerLeave = (e) => this._handlePointerLeave(e);
+    window.addEventListener('resize', this._onWindowResize);
     if (wrap && typeof ResizeObserver !== 'undefined') {
-      this._resizeObserver = new ResizeObserver(onResize);
+      this._resizeObserver = new ResizeObserver(this._onResize);
       this._resizeObserver.observe(wrap);
     }
-    requestAnimationFrame(() => {
-      onResize();
-    });
-    this.canvas.addEventListener('pointerdown', (e) => this._onPointerDown(e));
-    this.canvas.addEventListener('pointermove', (e) => this._onPointerMove(e));
-    this.canvas.addEventListener('pointerup', (e) => this._onPointerUp(e));
-    this.canvas.addEventListener('pointerleave', (e) => this._onPointerLeave(e));
+    this.canvas.addEventListener('pointerdown', this._onPointerDown);
+    this.canvas.addEventListener('pointermove', this._onPointerMove);
+    this.canvas.addEventListener('pointerup', this._onPointerUp);
+    this.canvas.addEventListener('pointerleave', this._onPointerLeave);
+    this._resize();
+    this._draw();
+    requestAnimationFrame(this._onResize);
+  }
+
+  unmount() {
+    if (!this._mounted || !this.canvas) return;
+    this._mounted = false;
+    this.drag = null;
+    this.hover = null;
+    if (this._onWindowResize) {
+      window.removeEventListener('resize', this._onWindowResize);
+    }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+    if (this._onPointerDown) {
+      this.canvas.removeEventListener('pointerdown', this._onPointerDown);
+      this.canvas.removeEventListener('pointermove', this._onPointerMove);
+      this.canvas.removeEventListener('pointerup', this._onPointerUp);
+      this.canvas.removeEventListener('pointerleave', this._onPointerLeave);
+    }
+    this._onWindowResize = null;
+    this._onResize = null;
+    this._onPointerDown = null;
+    this._onPointerMove = null;
+    this._onPointerUp = null;
+    this._onPointerLeave = null;
+    if (this.ctx) {
+      this.ctx.fillStyle = BG;
+      this.ctx.fillRect(0, 0, this.w, this.h);
+    }
   }
 
   syncFromState(state) {
-    if (!this.canvas) return;
+    if (!this.canvas || !this._mounted) return;
     this._draw();
   }
 
@@ -190,7 +241,7 @@ export class ToneCurveController {
     return null;
   }
 
-  _onPointerDown(e) {
+  _handlePointerDown(e) {
     const state = this.stateStore.getState();
     const c = constrainMonotoneY(copyCurve(state.toneCurve));
     const pn = this.toNorm(e.clientX, e.clientY);
@@ -201,7 +252,7 @@ export class ToneCurveController {
     this._draw();
   }
 
-  _onPointerMove(e) {
+  _handlePointerMove(e) {
     const pn = this.toNorm(e.clientX, e.clientY);
     const state = this.stateStore.getState();
     const cCurve = constrainMonotoneY(copyCurve(state.toneCurve));
@@ -235,15 +286,15 @@ export class ToneCurveController {
     this._draw();
   }
 
-  _onPointerLeave(e) {
+  _handlePointerLeave(e) {
     if (this.hover !== null) {
       this.hover = null;
       this._draw();
     }
-    this._onPointerUp(e);
+    this._handlePointerUp(e);
   }
 
-  _onPointerUp(e) {
+  _handlePointerUp(e) {
     if (this.drag && this.canvas) {
       try {
         this.canvas.releasePointerCapture(e.pointerId);

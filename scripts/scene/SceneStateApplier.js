@@ -148,7 +148,7 @@ function createStateApplySteps() {
         s.setLightsHeight(state.lightsHeight ?? 5);
         s.setShowLightIndicators(state.showLightIndicators ?? false);
         s.setLightsAutoRotate(state.lightsAutoRotate ?? false);
-        s.setLightsCastShadows(state.lightsCastShadows ?? true);
+        s.setLightsCastShadows(state.lightsCastShadows ?? false);
         s.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');
         s.setLightsShadowSoftness(state.lightsShadowSoftness ?? 4);
         s.setLightsShadowColor(state.lightsShadowColor ?? '#080808');
@@ -165,6 +165,15 @@ function createStateApplySteps() {
             }
             if (config.rotate !== undefined) {
               s.lightsController?.updateLightProperty(lightId, 'rotate', config.rotate);
+            }
+            if (config.enabled !== undefined) {
+              s.lightsController?.updateLightProperty(lightId, 'enabled', config.enabled);
+            }
+            if (config.castShadows !== undefined) {
+              s.lightsController?.updateLightProperty(lightId, 'castShadows', config.castShadows);
+            }
+            if (config.color !== undefined) {
+              s.lightsController?.updateLightProperty(lightId, 'color', config.color);
             }
           });
         }

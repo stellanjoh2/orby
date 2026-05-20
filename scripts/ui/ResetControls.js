@@ -899,7 +899,7 @@ export class ResetControls {
             break;
           case 'lights-shadows':
             {
-              const castShadows = defaults.lightsCastShadows ?? true;
+              const castShadows = defaults.lightsCastShadows ?? false;
               const shadowQuality = defaults.lightsShadowQuality ?? 'medium';
               const shadowSoftness = defaults.lightsShadowSoftness ?? 4;
               const shadowColor = defaults.lightsShadowColor ?? '#080808';

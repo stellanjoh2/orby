@@ -1,6 +1,9 @@
 /**
  * Copy + media map for the homepage marketing one-pager.
  * Swap imageSrc / videoSrc paths as real captures land. videoSrc on split blocks uses imageSrc as poster when both are set.
+ *
+ * After editing marketing copy here, regenerate the review export:
+ *   npm run export:marketing-copy
  */
 
 /** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'footer'} MarketingSectionType */

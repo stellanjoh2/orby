@@ -708,7 +708,8 @@ export class StudioControls {
       this.ui.setLightsRotationDisabled(!!state.lightsAutoRotate);
     }
     if (this.ui.inputs.lightsCastShadows) {
-      this.ui.inputs.lightsCastShadows.checked = !!state.lightsCastShadows;
+      this.ui.inputs.lightsCastShadows.checked =
+        !!state.lightsEnabled && !!state.lightsCastShadows;
     }
     const shadowQuality =
       state.lightsShadowQuality === 'low'
@@ -747,7 +748,7 @@ export class StudioControls {
       this.ui.inputs.lightsShadowTwoSided.checked = !!state.lightsShadowTwoSided;
     }
     this._syncLightShadowControlDisabledState(
-      !!state.lightsCastShadows,
+      !!state.lightsEnabled && !!state.lightsCastShadows,
       !!state.lightsEnabled,
     );
     if (this.ui.inputs.lightsEnabled) {
@@ -802,13 +803,13 @@ export class StudioControls {
       
       const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
       if (castShadowsInput) {
-        castShadowsInput.checked = lightState.castShadows !== false;
+        castShadowsInput.checked = lightState.castShadows === true;
       }
     }
     
     const enabledInput = this.ui.inputs[`${lightId}LightEnabled`];
     if (enabledInput) {
-      enabledInput.checked = lightState.enabled !== false;
+      enabledInput.checked = lightState.enabled === true;
     }
   }
 

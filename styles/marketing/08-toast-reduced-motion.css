@@ -1,0 +1,84 @@
+/* Copy feedback — Sandbar-style pill; works over lime footer + dark sections */
+.orby-marketing__copy-toast {
+  position: fixed;
+  z-index: 100050;
+  left: 50%;
+  bottom: max(calc(5.5rem * var(--orby-marketing-scale)), calc(env(safe-area-inset-bottom, 0px) + 3.5rem));
+  transform: translate3d(-50%, 12px, 0);
+  margin: 0;
+  padding: calc(0.62rem * var(--orby-marketing-scale)) calc(1.05rem * var(--orby-marketing-scale));
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 22%, transparent);
+  background: color-mix(in srgb, var(--orby-black, #080808) 92%, transparent);
+  box-shadow:
+    0 10px 36px color-mix(in srgb, var(--orby-black, #080808) 42%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--orby-black, #080808) 20%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: calc(0.875rem * var(--orby-marketing-scale));
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  color: var(--brand-primary, #c4ff00);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.orby-marketing__copy-toast.is-visible {
+  opacity: 1;
+  transform: translate3d(-50%, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-marketing__copy-toast {
+    transition: opacity 0.12s ease;
+  }
+
+  .orby-marketing__copy-toast.is-visible {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.orby-marketing__section--pending {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-marketing .orby-stagger-word,
+  .orby-marketing__figure-media,
+  .orby-marketing__showcase-img,
+  .orby-marketing__pro-card-img,
+  .orby-marketing__list li,
+  .orby-marketing__cta,
+  .orby-magic-btn:not(.orby-magic-btn--on-lime)::before,
+  .orby-magic-btn:not(.orby-magic-btn--on-lime)::after {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+  }
+
+  .orby-magic-btn__inner,
+  .orby-magic-btn__arrow {
+    transform: none !important;
+  }
+
+  .orby-magic-btn__fill {
+    transition: none !important;
+  }
+
+  .orby-marketing__intro-asset,
+  .orby-marketing__intro-turntable-wrap {
+    opacity: 1 !important;
+  }
+
+  .orby-marketing-scroll-cue__icon {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}

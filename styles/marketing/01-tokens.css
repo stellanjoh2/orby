@@ -1,0 +1,239 @@
+#orby-marketing {
+  /*
+   * Downscale — exactly 1 @ 1440px; drops immediately below (boosted linear, not 1:1 vw).
+   * Does not affect dropzone frame (--orby-home-padding-x).
+   */
+  --orby-marketing-ref-width: 90rem; /* 1440px */
+  --orby-marketing-scale-min: 0.72;
+  --orby-marketing-scale-linear: min(1, 100vw / var(--orby-marketing-ref-width));
+  /* Body / lede / spacing — full @ 2560, ~88% @ 1920 */
+  --orby-marketing-type-wide-factor: clamp(
+    0.88,
+    calc(0.88 + 0.12 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-scale: clamp(
+    var(--orby-marketing-scale-min),
+    min(
+      1,
+      calc(
+        (var(--orby-marketing-scale-linear) * 1.32 - 0.32) *
+          var(--orby-marketing-type-wide-factor)
+      )
+    ),
+    1
+  );
+  /* Column / grid gutters — steeper than body; full @ 2560, ~84% @ 1920 */
+  --orby-marketing-gutter-scale-min: 0.65;
+  --orby-marketing-gutter-wide-factor: clamp(
+    0.84,
+    calc(0.84 + 0.16 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-gutter-scale: clamp(
+    var(--orby-marketing-gutter-scale-min),
+    min(
+      1,
+      calc(
+        (var(--orby-marketing-scale-linear) * 1.48 - 0.48) *
+          var(--orby-marketing-gutter-wide-factor)
+      )
+    ),
+    1
+  );
+  /* Feature lime headlines — steeper than body; full @ 2560, ~76% @ 1920 */
+  --orby-marketing-headline-wide-factor: clamp(
+    0.76,
+    calc(0.76 + 0.24 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-headline-scale-min: 0.65;
+  --orby-marketing-headline-scale: clamp(
+    var(--orby-marketing-headline-scale-min),
+    min(
+      1,
+      calc(
+        var(--orby-marketing-scale) * var(--orby-marketing-scale) *
+          (1.72 - 0.72 * var(--orby-marketing-scale)) *
+          var(--orby-marketing-headline-wide-factor)
+      )
+    ),
+    1
+  );
+  /*
+   * Intro mega — full @ 2560; ramps down 2560→1920 (~78% @ 1920).
+   * Below 1920, follows body --orby-marketing-scale.
+   */
+  --orby-marketing-mega-scale-min: 0.58;
+  --orby-marketing-mega-wide-factor: clamp(
+    0.78,
+    calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-marketing-mega-scale: clamp(
+    var(--orby-marketing-mega-scale-min),
+    min(
+      1,
+      calc(
+        var(--orby-marketing-scale) * var(--orby-marketing-mega-wide-factor)
+      )
+    ),
+    1
+  );
+  --orby-marketing-media-shrink: calc(1 - var(--orby-marketing-scale-linear));
+  /* Showcase reel — modest height gain when narrow */
+  --orby-marketing-media-aspect-h: calc(
+    9 + 6 * var(--orby-marketing-media-shrink) +
+      2 * var(--orby-marketing-media-shrink) * var(--orby-marketing-media-shrink)
+  );
+  /*
+   * Split frames — 16∶9 @ 2560+; gentle vertical ramp (1920 ≈ mid, not max).
+   */
+  --orby-marketing-split-media-ref-width: 160rem; /* 2560px */
+  --orby-marketing-split-media-shrink: clamp(
+    0,
+    calc((var(--orby-marketing-split-media-ref-width) - 100vw) / 80rem),
+    1
+  );
+  --orby-marketing-split-media-grow: calc(var(--orby-marketing-split-media-shrink) * 0.4);
+  --orby-marketing-split-media-aspect-h: calc(
+    9 + 16 * var(--orby-marketing-split-media-grow) +
+      7 * var(--orby-marketing-split-media-grow) * var(--orby-marketing-split-media-grow)
+  );
+  --orby-marketing-split-media-min-h: clamp(
+    calc(18rem + 5rem * var(--orby-marketing-split-media-grow)),
+    34vmin,
+    calc(26rem + 7rem * var(--orby-marketing-split-media-grow))
+  );
+
+  --orby-marketing-bg: var(--orby-app-bg, var(--orby-black, #080808));
+  --orby-marketing-text: rgba(255, 255, 255, 0.88);
+  --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
+  /* Body copy — Geist Light, same as legal About manifesto */
+  --orby-marketing-body-weight: 300;
+  --orby-marketing-headline: var(--brand-primary, #c4ff00);
+  --orby-marketing-panel-bg: var(--orby-surface-muted, #121212);
+  /* Ink on lime (footer) — matches FAQ panel, softer than --orby-black */
+  --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
+  /* Standard vertical seam between major blocks — 220px @ 1440; scales with gutter-scale */
+  --orby-marketing-gap-big: calc(220px * var(--orby-marketing-gutter-scale));
+  /* Eyebrow / preheader → section headline */
+  --orby-marketing-eyebrow-size: clamp(
+    calc(0.72rem * var(--orby-marketing-scale)),
+    1.1vw,
+    calc(0.82rem * var(--orby-marketing-scale))
+  );
+  /* Split feature rhythm — eyebrow → headline, headline → lede, lede → bullets (36px @ 1440) */
+  --orby-marketing-feature-copy-gap: calc(36px * var(--orby-marketing-scale));
+  --orby-marketing-eyebrow-headline-gap: var(--orby-marketing-feature-copy-gap);
+  /* Section headline → lede (showcase / pro / FAQ) */
+  --orby-marketing-headline-body-gap: calc(32px * var(--orby-marketing-scale));
+  /* Split / showcase / pro media corners — 24px @ 1440, scales down with type */
+  --orby-marketing-media-radius: clamp(
+    calc(12px * var(--orby-marketing-scale)),
+    1.667vw,
+    calc(24px * var(--orby-marketing-scale))
+  );
+  /* Lime feature headlines — explicit; block .title-line rows ignore parent h2 leading */
+  --orby-marketing-section-headline-line: 1.1;
+  /*
+   * Pro → FAQ: gap-big dark band below cards (220px @ 1440); faq-pad-top inside gray panel only.
+   * Do not use col-gap here — that seam is section rhythm, not copy→media.
+   */
+  --orby-marketing-faq-pad-top: calc(60px * var(--orby-marketing-gutter-scale));
+  --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
+  /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560+) */
+  --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
+  --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
+  /* Feature copy — 22px lede / 18px bullets; split copy column measure */
+  --orby-marketing-feature-lede-size: calc(1.375rem * var(--orby-marketing-scale)); /* 22px @ 1440 */
+  --orby-marketing-feature-lede-line: 1.6;
+  --orby-marketing-feature-list-size: calc(1.125rem * var(--orby-marketing-scale)); /* 18px @ 1440 */
+  --orby-marketing-feature-list-line: 1.55;
+  --orby-marketing-feature-copy-span: calc(
+    (100vw - var(--orby-marketing-col-gap)) / 2 - var(--orby-home-padding-x)
+  );
+  /* ~1 word shy of column/gutter edge when copy spans toward a seam */
+  --orby-marketing-gutter-text-inset: 6ch;
+  --orby-marketing-feature-copy-span-inset: calc(
+    var(--orby-marketing-feature-copy-span) - var(--orby-marketing-gutter-text-inset)
+  );
+  /* White 22px ledes — same line length as split / pro copy columns */
+  --orby-marketing-feature-lede-measure: var(--orby-marketing-feature-copy-span-inset);
+  --orby-marketing-grid-col-3up: calc((100% - 2 * var(--orby-marketing-col-gap)) / 3);
+  --orby-marketing-grid-col-3up-inset: calc(
+    var(--orby-marketing-grid-col-3up) - var(--orby-marketing-gutter-text-inset)
+  );
+  --orby-marketing-grid-col-2up: calc((100% - var(--orby-marketing-col-gap)) / 2);
+  /* Pro + FAQ section headlines — one “half-row” column (same line length) */
+  --orby-marketing-section-headline-measure: calc(
+    var(--orby-marketing-grid-col-2up) - var(--orby-marketing-gutter-text-inset)
+  );
+  --orby-marketing-grid-col-2up-inset: var(--orby-marketing-section-headline-measure);
+  /*
+   * Centered body (showcase, pro, FAQ) — wider than split-column measure on desktop.
+   * Below 2560: gains width via split-media-shrink; narrow viewports via media-shrink.
+   */
+  --orby-marketing-centered-copy-measure: min(
+    var(--orby-marketing-site-max),
+    max(
+      var(--orby-marketing-lede-measure),
+      var(--orby-marketing-section-headline-measure),
+      calc(
+        var(--orby-marketing-feature-lede-measure) +
+          12rem * var(--orby-marketing-split-media-shrink) +
+          20rem * var(--orby-marketing-media-shrink)
+      )
+    )
+  );
+  --orby-marketing-feature-lede-list-gap: var(--orby-marketing-feature-copy-gap);
+  /* Vertical rhythm — big / medium / small only */
+  --orby-marketing-space-lg: clamp(
+    calc(4.5rem * var(--orby-marketing-scale)),
+    11vh,
+    calc(8rem * var(--orby-marketing-scale))
+  );
+  --orby-marketing-space-md: clamp(
+    calc(2.5rem * var(--orby-marketing-scale)),
+    5vh,
+    calc(3.5rem * var(--orby-marketing-scale))
+  );
+  --orby-marketing-space-sm: clamp(
+    calc(1rem * var(--orby-marketing-scale)),
+    2vh,
+    calc(1.5rem * var(--orby-marketing-scale))
+  );
+  --orby-marketing-section-pad: var(--orby-marketing-space-lg);
+  /*
+   * Unified column gutter — grids, showcase inset, split seam (112px @ 2560).
+   * Half token for peer UI (button pairs); do not double-pad split columns toward the seam.
+   */
+  --orby-marketing-col-gap: calc(112px * var(--orby-marketing-gutter-scale));
+  /* Copy block → media below (showcase gallery, pro cards, stacked split features) */
+  --orby-marketing-feature-body-media-gap: var(--orby-marketing-col-gap);
+  --orby-marketing-col-gap-half: calc(var(--orby-marketing-col-gap) / 2);
+  /* @deprecated alias — use --orby-marketing-col-gap */
+  --orby-marketing-split-gap: var(--orby-marketing-col-gap);
+  --orby-marketing-gutter: var(--orby-marketing-col-gap);
+  /* FAQ panel — bottom band matches other section seams */
+  --orby-marketing-faq-pad-bottom: var(--orby-marketing-gap-big);
+  /* Mega headlines — full size at 1440; shrink via min(vw, 2× column cqi) + mega scale */
+  --orby-mega-headline-min: calc(2.75rem * var(--orby-marketing-mega-scale));
+  --orby-mega-headline-max: calc(10.5rem * var(--orby-marketing-mega-scale));
+  --orby-mega-headline-vw: 11.5;
+  --orby-mega-headline-cqi-cap: 23;
+  --orby-mega-headline-offset: calc(0.35rem * var(--orby-marketing-mega-scale));
+  /* Intro turntable mega type — large soft shadow for legibility over busy frames */
+  --orby-intro-headline-shadow:
+    0 0.06em 0.35em color-mix(in srgb, var(--orby-black, #080808) 32%, transparent),
+    0 0.14em 1.1em color-mix(in srgb, var(--orby-black, #080808) 22%, transparent),
+    0 0.32em 2.75em color-mix(in srgb, var(--orby-black, #080808) 14%, transparent);
+  /* Intro / footer body copy measure (~⅓ viewport at desktop) */
+  --orby-marketing-lede-measure: calc(40.8rem * var(--orby-marketing-scale));
+  /* Feature / showcase / FAQ — 5.8vw at max; column cap when split */
+  --orby-section-headline-min: calc(2.35rem * var(--orby-marketing-headline-scale));
+  --orby-section-headline-max: calc(4.35rem * var(--orby-marketing-headline-scale));
+  --orby-section-headline-vw: 5.8;
+  --orby-section-headline-cqi-cap: 11.6;
+  --orby-section-headline-offset: calc(0.25rem * var(--orby-marketing-headline-scale));
+}

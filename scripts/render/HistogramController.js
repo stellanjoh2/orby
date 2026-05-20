@@ -18,6 +18,7 @@ export class HistogramController {
     this.containerElement = containerElement;
     this.composer = composer; // Optional: if post-processing is used
     this.enabled = false;
+    this._uiMounted = false;
     this._resizeObserver = null;
 
     // Create canvas — layout 16:9 in CSS (~25% shorter than 4:3); bitmap tracks DPR
@@ -39,21 +40,7 @@ export class HistogramController {
     this.warningCloseElement.className = 'histogram-warning histogram-warning--close';
     this.warningCloseElement.style.display = 'none';
     this.warningCloseElement.textContent = 'Close to overexposing';
-    
-    // Setup container
-    if (this.containerElement) {
-      this.containerElement.appendChild(this.histogramCanvas);
-      this.containerElement.appendChild(this.warningElement);
-      this.containerElement.appendChild(this.warningCloseElement);
-      if (typeof ResizeObserver !== 'undefined') {
-        this._resizeObserver = new ResizeObserver(() => {
-          this._syncHistogramCanvasSize();
-        });
-        this._resizeObserver.observe(this.histogramCanvas);
-      }
-      requestAnimationFrame(() => this._syncHistogramCanvasSize());
-    }
-    
+
     // Histogram data
     this.bins = 64; // Reduced from 256 for better performance
     this.histogramData = new Array(this.bins).fill(0);
@@ -71,9 +58,41 @@ export class HistogramController {
     // Sample size for performance (read every Nth pixel)
     this.sampleRate = 8; // Increased sampling for better performance
 
-    // Start disabled by default (UI controls when to enable)
     if (this.containerElement) {
       this.setEnabled(false);
+    }
+  }
+
+  mountUi() {
+    if (this._uiMounted || !this.containerElement) return;
+    this._uiMounted = true;
+    this.containerElement.appendChild(this.histogramCanvas);
+    this.containerElement.appendChild(this.warningElement);
+    this.containerElement.appendChild(this.warningCloseElement);
+    if (typeof ResizeObserver !== 'undefined') {
+      this._resizeObserver = new ResizeObserver(() => {
+        this._syncHistogramCanvasSize();
+      });
+      this._resizeObserver.observe(this.histogramCanvas);
+    }
+    requestAnimationFrame(() => this._syncHistogramCanvasSize());
+  }
+
+  unmountUi() {
+    if (!this._uiMounted) return;
+    this._uiMounted = false;
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+    if (this.histogramCanvas.parentNode) {
+      this.histogramCanvas.parentNode.removeChild(this.histogramCanvas);
+    }
+    if (this.warningElement.parentNode) {
+      this.warningElement.parentNode.removeChild(this.warningElement);
+    }
+    if (this.warningCloseElement.parentNode) {
+      this.warningCloseElement.parentNode.removeChild(this.warningCloseElement);
     }
   }
 
@@ -97,16 +116,22 @@ export class HistogramController {
   }
 
   setEnabled(enabled) {
-    this.enabled = !!enabled;
+    const on = !!enabled;
+    if (this.enabled === on && (!on || this._uiMounted)) return;
+    this.enabled = on;
     if (this.containerElement) {
-      this.containerElement.classList.toggle('histogram-container--collapsed', !this.enabled);
-      this.containerElement.classList.toggle('histogram-container--expanded', this.enabled);
+      this.containerElement.classList.toggle('histogram-container--collapsed', !on);
+      this.containerElement.classList.toggle('histogram-container--expanded', on);
     }
-    if (!this.enabled && this.histogramCtx && this.histogramCanvas) {
-      this.histogramCtx.clearRect(0, 0, this.histogramCanvas.width, this.histogramCanvas.height);
-    } else if (this.enabled) {
+    if (on) {
+      this.mountUi();
       requestAnimationFrame(() => this._syncHistogramCanvasSize());
+      return;
     }
+    if (this.histogramCtx && this.histogramCanvas) {
+      this.histogramCtx.clearRect(0, 0, this.histogramCanvas.width, this.histogramCanvas.height);
+    }
+    this.unmountUi();
   }
   
   /**
@@ -303,20 +328,8 @@ export class HistogramController {
    * Clean up
    */
   dispose() {
-    if (this._resizeObserver && this.histogramCanvas) {
-      this._resizeObserver.unobserve(this.histogramCanvas);
-      this._resizeObserver.disconnect();
-      this._resizeObserver = null;
-    }
-    if (this.histogramCanvas && this.histogramCanvas.parentNode) {
-      this.histogramCanvas.parentNode.removeChild(this.histogramCanvas);
-    }
-    if (this.warningElement && this.warningElement.parentNode) {
-      this.warningElement.parentNode.removeChild(this.warningElement);
-    }
-    if (this.warningCloseElement && this.warningCloseElement.parentNode) {
-      this.warningCloseElement.parentNode.removeChild(this.warningCloseElement);
-    }
+    this.enabled = false;
+    this.unmountUi();
   }
 }
 

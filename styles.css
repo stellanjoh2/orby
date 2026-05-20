@@ -107,6 +107,10 @@
   --app-settings-chrome-radius: 18px;
   /* Object shelf Scene / Export pills, modal footers — keep in sync */
   --ui-accent-action-font-size: 0.8rem;
+  /* Settings shelf: control row labels (Brightness, Color, …) */
+  --shelf-label-font-size: 14px;
+  /* Lime section headlines (.block-title) and compact preset grids (Lens, ISO, …) */
+  --shelf-headline-font-size: 12px;
   /* Flat orby pill — compact base; normal = home; xl = fullscreen big-message modals */
   --ui-orby-pill-font-size: var(--ui-accent-action-font-size);
   --ui-orby-pill-pad-block: 0.52rem;
@@ -225,7 +229,9 @@ body[data-theme='violet'] {
   --bg: var(--orby-app-bg);
   --panel: #0d081f;
   --panel-alt: #160c2f;
-  --shelf-bg: rgba(8, 8, 8, 0.5);
+  /* Shelf hierarchy: dark frosted shell; cards slightly lifted (controls ghost 0.15 brightest) */
+  --shelf-bg: rgba(8, 8, 8, 0.78);
+  --shelf-card-bg: rgba(255, 255, 255, 0.054);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
   --text-dim: rgba(245, 241, 255, 0.6);
@@ -243,14 +249,9 @@ body[data-theme='violet'] {
   --text-link: #7e6bff;
   --text-link-hover: var(--brand-primary);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 65%, transparent);
-  /* Single spec: colored lift + halo for wide pills / CTAs (hover); ~½ strength vs prior */
-  --ui-accent-outer-glow:
-    0 4px 14px color-mix(in srgb, var(--accent-shadow) 50%, transparent),
-    0 0 22px color-mix(in srgb, var(--brand-primary) 11%, transparent);
-  /* Same pigment mix, tighter radii — range thumbs / small accent hits */
-  --ui-accent-outer-glow-compact:
-    0 1px 7px color-mix(in srgb, var(--accent-shadow) 50%, transparent),
-    0 0 14px color-mix(in srgb, var(--brand-primary) 11%, transparent);
+  /* Perf: no outer halo on button/slider hovers — color fill only */
+  --ui-accent-outer-glow: none;
+  --ui-accent-outer-glow-compact: none;
   
   /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
   /* For bright colors like yellow, set to #000 or dark color */
@@ -278,7 +279,8 @@ body[data-theme='aqua'] {
   --bg: var(--orby-app-bg);
   --panel: #0d111c;
   --panel-alt: #121726;
-  --shelf-bg: rgba(8, 8, 8, 0.6);
+  --shelf-bg: rgba(8, 8, 8, 0.82);
+  --shelf-card-bg: rgba(255, 255, 255, 0.048);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
   --text-dim: rgba(241, 244, 255, 0.6);
@@ -293,12 +295,8 @@ body[data-theme='aqua'] {
   --text-link: #7e6bff;
   --text-link-hover: var(--brand-primary);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 55%, transparent);
-  --ui-accent-outer-glow:
-    0 4px 14px color-mix(in srgb, var(--accent-shadow) 50%, transparent),
-    0 0 22px color-mix(in srgb, var(--brand-primary) 11%, transparent);
-  --ui-accent-outer-glow-compact:
-    0 1px 7px color-mix(in srgb, var(--accent-shadow) 50%, transparent),
-    0 0 14px color-mix(in srgb, var(--brand-primary) 11%, transparent);
+  --ui-accent-outer-glow: none;
+  --ui-accent-outer-glow-compact: none;
   
   /* Brand Text Color - Auto-detects if brand is bright (needs dark text) */
   --brand-text: var(--orby-black);
@@ -1909,21 +1907,19 @@ html.orby-gate-unlocked .orby-entry-gate,
   transform: translateX(9px);
 }
 
+/* Hover: motion + fill only — no intensified rim / blur (perf) */
 .orby-magic-btn:hover::before,
 .orby-magic-btn:focus-visible::before {
   box-shadow:
-    0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
-      color-mix(in srgb, var(--brand-primary) 48%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
-      color-mix(in srgb, var(--text-link) 26%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
-      color-mix(in srgb, var(--text-link) 14%, transparent);
+    0 0 var(--orby-magic-btn-rim-a) color-mix(in srgb, var(--brand-primary) 30%, transparent),
+    0 0 var(--orby-magic-btn-rim-b) color-mix(in srgb, var(--text-link) 16%, transparent),
+    0 0 var(--orby-magic-btn-rim-c) color-mix(in srgb, var(--text-link) 9%, transparent);
 }
 
 .orby-magic-btn:hover::after,
 .orby-magic-btn:focus-visible::after {
-  opacity: 0.68;
-  filter: blur(calc(var(--orby-magic-btn-glow-blur) * 1.3)) saturate(1.08);
+  opacity: 0.4;
+  filter: blur(var(--orby-magic-btn-glow-blur));
 }
 
 .orby-magic-btn:active {
@@ -1956,7 +1952,7 @@ html.safari-browser .orby-magic-btn::after {
 
 html.safari-browser .orby-magic-btn:hover::after,
 html.safari-browser .orby-magic-btn:focus-visible::after {
-  opacity: 0.34;
+  opacity: 0.2;
 }
 
 html.safari-browser .orby-magic-btn::before {
@@ -1972,12 +1968,12 @@ html.safari-browser .orby-magic-btn::before {
 html.safari-browser .orby-magic-btn:hover::before,
 html.safari-browser .orby-magic-btn:focus-visible::before {
   box-shadow:
-    0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
-      color-mix(in srgb, var(--brand-primary) 24%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
-      color-mix(in srgb, var(--text-link) 13%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
-      color-mix(in srgb, var(--text-link) 7%, transparent);
+    0 0 calc(var(--orby-magic-btn-rim-a) * 0.65)
+      color-mix(in srgb, var(--brand-primary) 15%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-b) * 0.65)
+      color-mix(in srgb, var(--text-link) 8%, transparent),
+    0 0 calc(var(--orby-magic-btn-rim-c) * 0.65)
+      color-mix(in srgb, var(--text-link) 4.5%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3028,9 +3024,12 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   /* Slider rows: fixed label + value gutters so every track ends on the same line */
   --slider-label-col: 90px;
   --slider-value-col: 2.5rem; /* ~4 digits at 0.8rem; longer values ellipsize for now */
-  /* One rhythm unit: = gap between vertical panel cards; 2× --shelf-g = horizontal inset to card edges */
+  /* --shelf-g: tab chrome bleed; --shelf-panel-gutter: equal H/V between shell bg and scroll cards */
   --shelf-rhythm: 0.75rem;
   --shelf-g: calc(var(--shelf-rhythm) / 2);
+  --shelf-panel-gutter: 14px;
+  --shelf-scrollbar-edge-offset: 12px;
+  --shelf-scroll-end-pad: 1.25rem;
   /* Match show ↔ hide: opacity/transform animate; visibility must not flip until the hide finishes */
   --shelf-reveal-dur: 0.45s;
   --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -3038,16 +3037,18 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   background: var(--shelf-bg);
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(22px);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   /* Fallback for browsers without dvh, then prefer dynamic viewport height */
   height: calc(100vh - 2 * var(--shelf-inset));
   height: calc(100dvh - 2 * var(--shelf-inset));
-  padding: var(--shelf-g);
+  /* --shelf-panel-gutter inset: sole H gutter for scroll cards (.panels does not add horizontal pad) */
+  padding: var(--shelf-panel-gutter) var(--shelf-panel-gutter) 0 var(--shelf-panel-gutter);
   position: absolute;
   top: var(--shelf-inset);
   right: var(--shelf-inset);
   border-radius: var(--app-settings-chrome-radius);
-  border: 1px solid var(--stroke);
+  border: none;
   opacity: 1;
   transform: translate3d(0, 0, 0);
   /* Explicit so first reveal after load isn’t stuck behind inherited visibility from the hidden state */
@@ -3078,19 +3079,19 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
 .tabs {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  margin: calc(-1 * var(--shelf-g)) calc(-1 * var(--shelf-g)) 0 calc(-1 * var(--shelf-g));
+  margin: calc(-1 * var(--shelf-panel-gutter)) calc(-1 * var(--shelf-panel-gutter)) 0
+    calc(-1 * var(--shelf-panel-gutter));
   padding: 0;
-  /* Keep each tab's hit targets inside its grid cell (no overlapping neighbors). */
-  isolation: isolate;
+  background: transparent;
 }
 
 .tab {
-  /* Transparent fill so hover highlight can interpolate (timing aligned with slider track hovers). */
-  background-color: rgba(255, 255, 255, 0);
+  /* Inherit shelf frosted shell — no solid tab bar fill */
+  background-color: transparent;
   border: none;
   color: var(--text-dim);
   padding: 0.75rem 0;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   letter-spacing: -0.01em;
   cursor: pointer;
   transition:
@@ -3162,7 +3163,7 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
 
 .shortcut-action {
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.4;
 }
 
@@ -3178,7 +3179,7 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   color: var(--text);
 }
 
@@ -3238,14 +3239,14 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
 .info-list dt {
   font-weight: 600;
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   margin-bottom: 0.25rem;
 }
 
 .info-list dd {
   margin: 0 0 0.75rem 0;
   color: var(--text-dim);
-  font-size: 0.8rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.4;
 }
 
@@ -3313,65 +3314,63 @@ a.about-highlight:focus-visible {
   font-family: 'Geist Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
 }
 
+.shelf-scroll {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
 .panels {
-  flex: 1;
+  flex: 1 1 0;
   /* Column flex items default min-width:auto — long unbroken mesh metadata can widen
      past the shelf, break scrolling, and make the accent scrollbar paint as a solid block. */
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
-  padding: var(--shelf-g) var(--shelf-g) 3rem var(--shelf-g);
+  margin: 0;
+  /* Top gutter under tabs; horizontal inset is only on .shelf (no double pad) */
+  padding: var(--shelf-panel-gutter) 0 var(--shelf-scroll-end-pad) 0;
+  scroll-padding-bottom: var(--shelf-scroll-end-pad);
+  background: transparent;
   border-top: none;
-  margin-top: 0;
-  /*
-   * Do NOT set scrollbar-width / scrollbar-color here. In Chrome 121+ they enable the
-   * standard scrollbar model and the ::-webkit-scrollbar { width } rules are effectively ignored
-   * (so the bar stayed “OS wide”). Firefox has no webkit scrollbars; scope those props below.
-   */
-}
-
-/* Firefox only — thin + accent when revealed (no ::-webkit) */
-@supports (selector(::-moz-progress-bar)) {
-  .panels {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
-
-  .panels.panels--scrollbar-reveal {
-    scrollbar-color: var(--accent) transparent;
-  }
+  border-bottom-left-radius: calc(var(--app-settings-chrome-radius) - var(--shelf-panel-gutter));
+  border-bottom-right-radius: calc(var(--app-settings-chrome-radius) - var(--shelf-panel-gutter));
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .panels::-webkit-scrollbar {
-  /* Literal px — some WebKit builds ignore `width: var(--x)` on scrollbar pseudos; !important vs Chrome’s scrollbar-width */
-  width: 2px !important;
-  min-width: 0 !important;
-  max-width: 2px !important;
-  /* Push track a bit toward the outer edge of the glass */
-  margin: 0 0 0 4px;
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
 }
 
-.panels::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 0.5rem 0;
+/* Custom rail — native ::-webkit-scrollbar offset is ignored in Chrome 121+ */
+.shelf-scrollbar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(-1 * var(--shelf-scrollbar-edge-offset));
+  width: 2px;
+  pointer-events: none;
+  z-index: 2;
 }
 
-.panels::-webkit-scrollbar-thumb {
-  /* Hidden until .panels--scrollbar-reveal. No transition here — it tanks scroll FPS (thumb repaints every frame). */
+.shelf-scrollbar-thumb {
+  position: absolute;
+  left: 0;
+  width: 2px;
   border-radius: 1px;
-  background: transparent !important;
-  background-color: transparent !important;
+  background: transparent;
+  will-change: transform;
 }
 
-.panels.panels--scrollbar-reveal::-webkit-scrollbar-thumb {
-  background: var(--accent) !important;
-  background-color: var(--accent) !important;
-}
-
-.panels.panels--scrollbar-reveal::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--accent) 88%, white 12%) !important;
-  background-color: color-mix(in srgb, var(--accent) 88%, white 12%) !important;
+.shelf-scrollbar.is-revealed .shelf-scrollbar-thumb {
+  background: var(--accent);
 }
 
 .panel {
@@ -3380,6 +3379,11 @@ a.about-highlight:focus-visible {
 
 .panel.visible {
   display: block;
+}
+
+/* Shelf panel CTAs (Snap to Mesh, etc.) — match control label size */
+.panels .ghost-btn {
+  font-size: var(--shelf-label-font-size);
 }
 
 .panel[data-panel='info'] {
@@ -3395,7 +3399,7 @@ a.about-highlight:focus-visible {
   font-weight: 400;
   line-height: 1;
   color: var(--accent);
-  margin: 0.95rem 0 0.6rem 0;
+  margin: 0.95rem 0 12px 0;
   padding: 0;
 }
 
@@ -3425,11 +3429,16 @@ a.about-highlight:focus-visible {
   border: none;
   border-radius: 6px;
   padding: 1.2rem;
-  margin-bottom: var(--shelf-rhythm);
-  background: rgba(10, 10, 10, 0.6);
-  /* Skip layout/paint for off-screen blocks while scrolling the shelf */
+  margin-bottom: var(--shelf-panel-gutter);
+  background: var(--shelf-card-bg);
+  /* Skip layout/paint for off-screen cards while scrolling .panels (placeholder height avoids thumb jump) */
   content-visibility: auto;
-  contain-intrinsic-size: auto 160px;
+  contain-intrinsic-size: auto 400px;
+}
+
+/* Scroll end breathing room lives on the last card, not below the scrollport */
+.panel.visible > .panel-block:last-child {
+  margin-bottom: var(--shelf-panel-gutter);
 }
 
 /* Subtle divider line within panel blocks - only spans content width */
@@ -3455,33 +3464,27 @@ a.about-highlight:focus-visible {
 
 /* Shelf section headings (all tabs): body font stack. Never use --brand-font-headline here—that is only for .panel-header-title and dropzone/marketing headlines. */
 .block-title {
-  font-size: 1.0rem;
+  font-size: var(--shelf-headline-font-size);
+  text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent);
   margin-bottom: 0.75rem;
   font-weight: 400;
 }
 
-:is(.subsection, .panel-block) .block-title {
+.subsection .block-title,
+.panel-block .block-title {
   transition: color 0.2s ease;
 }
 
 /*
- * Muted .subsection / .panel-block — captions use --muted-section-text-scale; .block-title text stays opacity 1.
- * Heading color stays the muted blend (25% accent / 75% text-dim). Scope avoids export foldout double-dimming.
- * No opacity on the whole .block-title so .effect-toggle stays visually full strength.
+ * Muted shelf sections — captions use --muted-section-text-scale; .block-title stays full strength.
+ * Scoped to .subsection / .panel-block (not export foldouts that reuse .is-muted).
  */
-:is(.subsection, .panel-block).is-muted .block-title {
+.subsection.is-muted .block-title,
+.panel-block.is-muted .block-title {
   opacity: 1;
   color: color-mix(in srgb, var(--accent) 25%, var(--text-dim) 75%);
-}
-
-:is(.subsection, .panel-block).is-muted .block-title:not(:has(> span)) {
-  opacity: 1;
-}
-
-:is(.subsection, .panel-block).is-muted .block-title > span:first-child {
-  opacity: 1;
 }
 
 /* Only dim the reset icon while muted *if it is currently shown* (`.is-dirty`).
@@ -3489,33 +3492,53 @@ a.about-highlight:focus-visible {
    default `opacity: 0`, leaking the icon through on every muted section at
    startup (Fresnel, Grid, Base, Backdrop, DoF, Bloom, …) before the user
    has touched anything. */
-:is(.subsection, .panel-block).is-muted
-  .block-title
-  .block-reset-btn.is-dirty:not(:disabled):not(.is-disabled) {
+.subsection.is-muted .block-title .block-reset-btn.is-dirty:not(:disabled):not(.is-disabled),
+.panel-block.is-muted .block-title .block-reset-btn.is-dirty:not(:disabled):not(.is-disabled) {
   opacity: calc(0.75 * var(--muted-section-text-scale));
 }
 
-:is(.subsection, .panel-block).is-muted .slider-line > span:first-child,
-:is(.subsection, .panel-block).is-muted .slider-line .value,
-:is(.subsection, .panel-block).is-muted .color-line > span:first-child,
-:is(.subsection, .panel-block).is-muted .color-line input.color-chip:not(.is-disabled-handle),
-:is(.subsection, .panel-block).is-muted .select-line > span:first-child,
-:is(.subsection, .panel-block).is-muted .select-line select,
-:is(.subsection, .panel-block).is-muted .ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted .panel-hint,
-:is(.subsection, .panel-block).is-muted .map-slot-row > span:first-child,
-:is(.subsection, .panel-block).is-muted .map-slot-name,
-:is(.subsection, .panel-block).is-muted .advanced-import-details summary,
-:is(.subsection, .panel-block).is-muted .svg-extrude-note,
-:is(.subsection, .panel-block).is-muted .look-filter-tile {
+.subsection.is-muted :where(
+    .slider-line > span:first-child,
+    .slider-line .value,
+    .color-line > span:first-child,
+    .color-line input.color-chip:not(.is-disabled-handle),
+    .select-line > span:first-child,
+    .select-line select,
+    .ghost-btn:not(:disabled):not(.is-disabled),
+    .panel-hint,
+    .map-slot-row > span:first-child,
+    .map-slot-name,
+    .advanced-import-details summary,
+    .svg-extrude-note,
+    .look-filter-tile
+  ),
+.panel-block.is-muted :where(
+    .slider-line > span:first-child,
+    .slider-line .value,
+    .color-line > span:first-child,
+    .color-line input.color-chip:not(.is-disabled-handle),
+    .select-line > span:first-child,
+    .select-line select,
+    .ghost-btn:not(:disabled):not(.is-disabled),
+    .panel-hint,
+    .map-slot-row > span:first-child,
+    .map-slot-name,
+    .advanced-import-details summary,
+    .svg-extrude-note,
+    .look-filter-tile
+  ) {
   opacity: var(--muted-section-text-scale);
 }
 
 /* Snap-to-mesh CTAs: dimmer than other muted captions (−25% vs --muted-section-text-scale) */
-:is(.subsection, .panel-block).is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
-:is(.subsection, .panel-block).is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
+.subsection.is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.subsection.is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.subsection.is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.subsection.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled),
+.panel-block.is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.panel-block.is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.panel-block.is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.panel-block.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
 
@@ -3606,8 +3629,7 @@ a.about-highlight:focus-visible {
   stroke: var(--text-dim);
 }
 
-/* Toggle base - always isolated, never affected by muting */
-/* Force toggle to render in completely separate layer, bypassing any parent filters */
+/* Toggle base — stay full strength inside muted sections; avoid extra compositor layers (scroll perf) */
 .effect-toggle {
   --toggle-track-height: calc(0.65rem + 0.5rem);
   --toggle-thumb-size: calc(var(--toggle-track-height) - 0.3rem);
@@ -3620,16 +3642,8 @@ a.about-highlight:focus-visible {
   margin-left: auto;
   cursor: pointer;
   justify-self: end;
-  /* Toggles are NEVER muted - always full opacity and no filters */
   opacity: 1 !important;
   filter: none !important;
-  backdrop-filter: none !important;
-  isolation: isolate !important;
-  contain: layout style paint !important; /* Completely self-contained */
-  transform: translateZ(0) !important; /* Force new compositing layer */
-  will-change: transform, opacity, filter !important;
-  mix-blend-mode: normal !important;
-  z-index: 10 !important; /* High z-index to ensure it's above filtered contexts */
 }
 
 .effect-toggle input {
@@ -3641,7 +3655,6 @@ a.about-highlight:focus-visible {
   z-index: 2;
 }
 
-/* Toggle indicator - always isolated, never affected by muting */
 .effect-toggle .effect-indicator {
   position: absolute;
   top: 0;
@@ -3652,19 +3665,9 @@ a.about-highlight:focus-visible {
   border-radius: 999px;
   transition: background-color 0.3s ease;
   cursor: pointer;
-  /* Always isolated from parent - force separate compositing layer */
-  opacity: 1 !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  isolation: isolate !important;
-  contain: layout style paint !important;
-  transform: translateZ(0) !important;
-  will-change: background-color, transform, opacity, filter !important;
-  mix-blend-mode: normal !important;
   z-index: 1;
 }
 
-/* Toggle thumb - always isolated */
 .effect-toggle .effect-indicator::before {
   position: absolute;
   content: '';
@@ -3680,18 +3683,12 @@ a.about-highlight:focus-visible {
   filter: none;
 }
 
-/* Toggle checked state - always isolated */
 .effect-toggle input:checked + .effect-indicator {
   background-color: var(--brand-primary) !important; /* Always yellow when checked */
-  opacity: 1 !important;
-  filter: none !important;
-  transform: translateZ(0) !important;
 }
 
-/* Toggle checked thumb - always isolated */
 .effect-toggle input:checked + .effect-indicator::before {
-  transform: translateX(calc(var(--toggle-track-height) * 2 - var(--toggle-thumb-size) - var(--toggle-thumb-offset) * 2)) translateZ(0);
-  opacity: 1;
+  transform: translateX(calc(var(--toggle-track-height) * 2 - var(--toggle-thumb-size) - var(--toggle-thumb-offset) * 2));
 }
 
 .effect-toggle:hover .effect-indicator {
@@ -3699,7 +3696,8 @@ a.about-highlight:focus-visible {
 }
 
 /* Muted blocks: checked toggles stay readable but not full lime (guides off + letterbox on, etc.). */
-:is(.subsection, .panel-block).is-muted .effect-toggle input:checked + .effect-indicator {
+.subsection.is-muted .effect-toggle input:checked + .effect-indicator,
+.panel-block.is-muted .effect-toggle input:checked + .effect-indicator {
   background-color: color-mix(
     in srgb,
     var(--brand-primary) 40%,
@@ -3707,7 +3705,8 @@ a.about-highlight:focus-visible {
   ) !important;
 }
 
-:is(.subsection, .panel-block).is-muted .effect-toggle:hover input:checked + .effect-indicator {
+.subsection.is-muted .effect-toggle:hover input:checked + .effect-indicator,
+.panel-block.is-muted .effect-toggle:hover input:checked + .effect-indicator {
   background-color: color-mix(
     in srgb,
     var(--brand-primary) 48%,
@@ -3715,7 +3714,8 @@ a.about-highlight:focus-visible {
   ) !important;
 }
 
-:is(.subsection, .panel-block).is-muted .effect-toggle:hover input:not(:checked) + .effect-indicator {
+.subsection.is-muted .effect-toggle:hover input:not(:checked) + .effect-indicator,
+.panel-block.is-muted .effect-toggle:hover input:not(:checked) + .effect-indicator {
   background-color: rgba(255, 255, 255, 0.22) !important;
 }
 
@@ -3739,7 +3739,7 @@ a.about-highlight:focus-visible {
   padding: 0.5rem 0.4rem;
   border-radius: 999px;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   cursor: pointer;
   letter-spacing: -0.01em;
   color: var(--text);
@@ -3873,7 +3873,7 @@ a.about-highlight:focus-visible {
 
 .advanced-import-details {
   margin: 0.15rem 0 0.55rem;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
 }
 
 .advanced-import-details summary {
@@ -3907,19 +3907,18 @@ button.advanced-info-doc-btn {
   gap: 0.35rem;
   align-items: center;
   margin-bottom: 0.45rem;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
 }
 
 .map-slot-row > span:first-child {
   color: var(--text-dim);
-  font-size: 0.9rem;
   letter-spacing: -0.01em;
 }
 
 .map-slot-name {
   display: block;
   min-width: 0;
-  font-size: 0.75rem;
+  font-size: var(--shelf-label-font-size);
   color: var(--text-muted, var(--text-dim));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3934,7 +3933,7 @@ button.advanced-info-doc-btn {
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.6rem;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
 }
 
 .slider-line {
@@ -3970,7 +3969,6 @@ button.advanced-info-doc-btn {
   align-self: center;
   text-align: left;
   letter-spacing: -0.01em;
-  font-size: 0.9rem;
   color: var(--text-dim);
   white-space: nowrap;
   min-width: 0;
@@ -3978,17 +3976,17 @@ button.advanced-info-doc-btn {
   text-overflow: ellipsis;
 }
 
-/* Toggle-only rows: label uses full width; switch aligns with slider value column */
-.slider-line:not(:has(input[type='range'])) {
+/* Toggle-only rows: label uses full width; switch aligns with slider value column (.slider-line--toggle-only set in UIHelpers) */
+.slider-line.slider-line--toggle-only {
   grid-template-columns: minmax(0, 1fr) var(--slider-value-col, 2.5rem);
 }
 
-.slider-line:not(:has(input[type='range'])) span:first-child {
+.slider-line.slider-line--toggle-only span:first-child {
   overflow: visible;
   text-overflow: clip;
 }
 
-.slider-line:not(:has(input[type='range'])) .value {
+.slider-line.slider-line--toggle-only .value {
   display: none;
 }
 
@@ -3997,30 +3995,41 @@ button.advanced-info-doc-btn {
   justify-self: end;
 }
 
-.slider-line:not(:has(input[type='range'])) > .effect-toggle {
+.slider-line.slider-line--toggle-only > .effect-toggle {
   grid-column: 2;
 }
 
 .color-line span:first-child,
 .select-line span:first-child {
   letter-spacing: -0.01em;
-  font-size: 0.9rem;
   color: var(--text-dim);
 }
 
-/* Smooth mute ↔ unmute for all controls that dim inside Studio subsections / panel blocks */
-:is(.subsection, .panel-block) :where(
-  .slider-line > span:first-child,
-  .slider-line .value,
-  .color-line > span:first-child,
-  .select-line > span:first-child,
-  .select-line select,
-  .panel-hint,
-  .map-slot-row > span:first-child,
-  .map-slot-name,
-  .advanced-import-details summary,
-  .svg-extrude-note
-) {
+/* Smooth mute ↔ unmute for controls that dim inside shelf subsections / panel blocks */
+.subsection :where(
+    .slider-line > span:first-child,
+    .slider-line .value,
+    .color-line > span:first-child,
+    .select-line > span:first-child,
+    .select-line select,
+    .panel-hint,
+    .map-slot-row > span:first-child,
+    .map-slot-name,
+    .advanced-import-details summary,
+    .svg-extrude-note
+  ),
+.panel-block :where(
+    .slider-line > span:first-child,
+    .slider-line .value,
+    .color-line > span:first-child,
+    .select-line > span:first-child,
+    .select-line select,
+    .panel-hint,
+    .map-slot-row > span:first-child,
+    .map-slot-name,
+    .advanced-import-details summary,
+    .svg-extrude-note
+  ) {
   transition: opacity 0.2s ease, color 0.2s ease, filter 0.2s ease;
 }
 
@@ -4075,8 +4084,9 @@ button.advanced-info-doc-btn {
   );
 }
 
-/* Muted blocks: use gray fill instead of accent color */
-.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track {
+/* Muted shelf sections: gray fill instead of accent color */
+.subsection.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track,
+.panel-block.is-muted .slider-line input[type='range']::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -4088,8 +4098,9 @@ button.advanced-info-doc-btn {
   );
 }
 
-/* Muted blocks: active / keyboard focus */
-.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
+/* Muted shelf sections: active / keyboard focus */
+.subsection.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track,
+.panel-block.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -4133,7 +4144,8 @@ button.advanced-info-doc-btn {
 }
 
 /* Muted blocks: use gray fill instead of accent color */
-.is-muted .slider-line input[type='range']::-moz-range-track {
+.subsection.is-muted .slider-line input[type='range']::-moz-range-track,
+.panel-block.is-muted .slider-line input[type='range']::-moz-range-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -4146,7 +4158,8 @@ button.advanced-info-doc-btn {
 }
 
 /* Muted blocks: active / keyboard focus */
-.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
+.subsection.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track,
+.panel-block.is-muted .slider-line input[type='range']:is(:active, :focus-visible)::-moz-range-track {
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
@@ -4219,11 +4232,11 @@ input[type='range']:disabled::-moz-range-thumb {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  height: 1rem;
-  max-height: 1rem;
+  height: auto;
+  max-height: none;
   color: var(--text-dim);
-  font-size: 0.8rem;
-  line-height: 1rem;
+  font-size: var(--shelf-label-font-size);
+  line-height: 1.25;
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4257,7 +4270,7 @@ input[type='range']:disabled::-moz-range-thumb {
   line-height: 1;
   background: rgba(20, 16, 34, 0.9);
   color: var(--text);
-  font-size: 0.74rem;
+  font-size: var(--shelf-label-font-size);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -4303,7 +4316,7 @@ input[type='range']:disabled::-moz-range-thumb {
   border-radius: 6px;
   background-color: rgba(255, 255, 255, 0.15);
   color: var(--text);
-  font-size: 0.76rem;
+  font-size: var(--shelf-label-font-size);
   text-align: right;
 }
 
@@ -4338,6 +4351,7 @@ input[type='range']:disabled::-moz-range-thumb {
   align-items: center;
   width: 100%;
   margin-top: 1.65rem;
+  margin-bottom: 0;
   padding: 0;
   border: none;
   background: none;
@@ -4626,14 +4640,14 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .stats-block dt {
-  font-size: 0.7rem;
+  font-size: var(--shelf-label-font-size);
   letter-spacing: -0.01em;
   color: var(--text-dim);
 }
 
 .stats-block dd {
   margin: 0.2rem 0 0;
-  font-size: 1rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 500;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -4651,7 +4665,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 #animationTime {
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   min-width: 2.8ch;
@@ -4836,7 +4850,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 
 .export-format-sub {
   margin: 0 0 1rem 0;
-  font-size: 0.8rem;
+  font-size: var(--shelf-label-font-size);
   line-height: 1.45;
   color: var(--text-dim);
   letter-spacing: -0.01em;
@@ -4863,7 +4877,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .export-label {
-  font-size: 0.9rem;
+  font-size: var(--shelf-label-font-size);
   color: var(--text-dim);
   letter-spacing: -0.01em;
 }
@@ -4888,7 +4902,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   border-radius: 999px;
   padding: 0.5rem 0.4rem;
   letter-spacing: -0.01em;
-  font-size: 0.75rem;
+  font-size: var(--shelf-headline-font-size);
   color: var(--text);
   background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
@@ -5189,13 +5203,15 @@ input[type='range']:disabled::-webkit-slider-thumb {
   cursor: not-allowed;
 }
 
-/* Muted blocks: gray thumbs */
-.is-muted input[type='range']::-webkit-slider-thumb {
+/* Muted shelf sections: gray thumbs */
+.subsection.is-muted input[type='range']::-webkit-slider-thumb,
+.panel-block.is-muted input[type='range']::-webkit-slider-thumb {
   background: #999 !important;
   box-shadow: none !important;
 }
 
-.is-muted input[type='range']::-moz-range-thumb {
+.subsection.is-muted input[type='range']::-moz-range-thumb,
+.panel-block.is-muted input[type='range']::-moz-range-thumb {
   background: #999 !important;
   box-shadow: none !important;
 }
@@ -5424,7 +5440,7 @@ body.ui-hidden .shelf {
 
 .look-filter-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem 0.4rem;
 }
 
@@ -5439,8 +5455,10 @@ body.ui-hidden .shelf {
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 7.5rem;
   color: var(--text-dim, #9a9a9a);
-  font-size: 0.7rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -5471,8 +5489,10 @@ body.ui-hidden .shelf {
 .look-filter-tile__thumb {
   display: block;
   width: 100%;
+  max-width: 100%;
   aspect-ratio: 1;
   height: auto;
+  min-height: 0;
   object-fit: cover;
   object-position: center;
   border: none;
@@ -5480,6 +5500,7 @@ body.ui-hidden .shelf {
   margin: 0;
   vertical-align: top;
   flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .look-filter-tile__label {
@@ -5540,21 +5561,22 @@ body.ui-hidden .shelf {
 }
 
 .lens-preset-btn__focal {
-  font-size: 0.78rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
 
 .lens-preset-btn__label {
-  font-size: 0.62rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 500;
   letter-spacing: 0.01em;
   line-height: 1.2;
   opacity: 0.9;
 }
 
-:is(.subsection, .panel-block).is-muted .lens-preset-btn {
+.subsection.is-muted .lens-preset-btn,
+.panel-block.is-muted .lens-preset-btn {
   opacity: 0.45;
 }
 
@@ -5614,7 +5636,7 @@ body.ui-hidden .shelf {
 }
 
 .iso-preset-btn__title {
-  font-size: 0.9rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.12;
@@ -5627,8 +5649,10 @@ body.ui-hidden .shelf {
   opacity: 0.88;
 }
 
-:is(.subsection, .panel-block).is-muted .iso-preset-btn,
-:is(.subsection, .panel-block).is-muted .iso-action-row .ghost-btn.small {
+.subsection.is-muted .iso-preset-btn,
+.subsection.is-muted .iso-action-row .ghost-btn.small,
+.panel-block.is-muted .iso-preset-btn,
+.panel-block.is-muted .iso-action-row .ghost-btn.small {
   opacity: 0.45;
 }
 
@@ -5638,7 +5662,7 @@ body.ui-hidden .shelf {
   margin: 0;
   padding: 0.42rem 0.45rem;
   border-radius: 6px;
-  font-size: 0.76rem;
+  font-size: var(--shelf-headline-font-size);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -5656,21 +5680,64 @@ body.ui-hidden .shelf {
   box-shadow: var(--ui-accent-outer-glow);
 }
 
-:is(.subsection, .panel-block).is-muted .iso-preset-btn.is-selected {
+.subsection.is-muted .iso-preset-btn.is-selected,
+.panel-block.is-muted .iso-preset-btn.is-selected {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-dim);
   box-shadow: none;
 }
 
-:is(.subsection, .panel-block).is-muted .iso-preset-btn.is-selected .iso-preset-btn__subtitle {
+.subsection.is-muted .iso-preset-btn.is-selected .iso-preset-btn__subtitle,
+.panel-block.is-muted .iso-preset-btn.is-selected .iso-preset-btn__subtitle {
   color: var(--text-dim);
   opacity: 0.88;
+}
+
+/*
+ * Information tab — tuned content-visibility placeholders + merged stacks (same card look, smaller scroll units).
+ */
+.panel[data-panel='info'] .info-panel-block--compact {
+  contain-intrinsic-size: auto 11rem;
+}
+
+.panel[data-panel='info'] .info-panel-block--medium {
+  contain-intrinsic-size: auto 17rem;
+}
+
+.panel[data-panel='info'] .info-panel-block--tall {
+  contain-intrinsic-size: auto 26rem;
+}
+
+.panel[data-panel='info'] .info-panel-block--faq-part {
+  contain-intrinsic-size: auto 20rem;
+}
+
+.panel[data-panel='info'] .info-panel-stack > .panel-block + .panel-block {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  padding-top: 0;
+}
+
+.panel[data-panel='info'] .info-panel-stack > .panel-block:not(:last-child) {
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-bottom: 0.85rem;
+}
+
+.panel[data-panel='info'] .info-panel-stack > .panel-block:first-child {
+  padding-bottom: 0.85rem;
+}
+
+.panel[data-panel='info'] .info-panel-stack {
+  margin-bottom: var(--shelf-panel-gutter);
 }
 
 /* Information tab quick navigation */
 .info-quicknav {
   display: block !important;
-  font-size: 0.85rem;
+  font-size: var(--shelf-label-font-size);
   color: var(--text-dim);
 }
 

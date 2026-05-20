@@ -227,10 +227,20 @@ export class UIHelpers {
         this.updateSliderFill(event.target);
       }
     }, true); // Use capture phase to catch all events
-    
+
+    this.markToggleOnlySliderLines();
+
     // Initialize fill for all existing sliders
     document.querySelectorAll('input[type="range"]').forEach((slider) => {
       this.updateSliderFill(slider);
+    });
+  }
+
+  /** Class hook for toggle-only rows — avoids :has() in shelf slider-line layout CSS. */
+  markToggleOnlySliderLines() {
+    document.querySelectorAll('.slider-line').forEach((line) => {
+      const hasRange = line.querySelector('input[type="range"]') !== null;
+      line.classList.toggle('slider-line--toggle-only', !hasRange);
     });
   }
 

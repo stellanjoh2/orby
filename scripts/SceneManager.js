@@ -1987,7 +1987,7 @@ export class SceneManager {
 
     if (this.lightsEnabled) {
       ['key', 'fill', 'rim', 'ambient'].forEach((lightId) => {
-        const on = lightsState?.[lightId]?.enabled !== false;
+        const on = lightsState?.[lightId]?.enabled === true;
         this.lightsController?.updateLightProperty(lightId, 'enabled', on);
       });
     } else {
@@ -2925,7 +2925,7 @@ export class SceneManager {
     }
     const keyOn =
       lc.lightsEnabled !== false &&
-      lc.individualProperties?.key?.enabled !== false &&
+      lc.individualProperties?.key?.enabled === true &&
       key.intensity > 1e-6;
     if (!keyOn) {
       return v.set(0.35, 0.92, 0.42).normalize();

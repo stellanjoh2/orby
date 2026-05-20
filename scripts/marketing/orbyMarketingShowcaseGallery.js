@@ -44,9 +44,6 @@ function whenImageReady(el) {
 }
 
 /**
- * @param {HTMLElement} mask
- */
-/**
  * @param {EventTarget | null} target
  */
 function isEditableTarget(target) {

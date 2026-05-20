@@ -2,15 +2,19 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
+    "generatedAt": "2026-05-20T13:40:31.005Z",
+    "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
       "scripts/marketing/orbyMarketingContent.js",
-      "scripts/marketing/orbyMarketingPage.js"
+      "scripts/marketing/orbyMarketingConstants.js",
+      "scripts/ui/UIManagerModalOverlays.js"
     ],
     "exportedFor": "copy review",
     "notes": [
+      "Regenerate after copy edits: npm run export:marketing-copy",
       "brand-highlight in UI renders as lime accent, not necessarily bold",
-      "Hero links 'Load test object' and 'Debug 404 (temp)' are likely dev-only",
+      "Hero links 'Load test object' and 'Debug 404 (temp)' are dev-only",
       "Return-home modal copy is studio-triggered, not part of scroll landing"
     ]
   },
@@ -18,34 +22,59 @@
     "headline": {
       "line1": "Drag and drop your GLB",
       "line2": "or SVG file here",
-      "highlightedTerms": ["GLB", "SVG"]
+      "highlightedTerms": [
+        "GLB",
+        "SVG"
+      ]
     },
     "primaryCta": {
       "label": "Browse",
       "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
     },
-    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur.",
+    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. Load test object · Debug 404 (temp)",
     "secondaryLinks": [
-      { "label": "privacy policy", "href": "./legal/privacy-policy.html", "type": "policy" },
-      { "label": "Load test object", "href": "#", "type": "dev" },
-      { "label": "Debug 404 (temp)", "href": "/?orby404Debug=1", "type": "dev" }
+      {
+        "label": "privacy policy",
+        "href": "./legal/privacy-policy.html",
+        "type": "policy"
+      },
+      {
+        "label": "Load test object",
+        "href": "#",
+        "type": "dev"
+      },
+      {
+        "label": "Debug 404 (temp)",
+        "href": "/?orby404Debug=1",
+        "type": "dev"
+      }
     ],
-    "highlightedTermsInSecondary": ["glTF", "GLB", "SVG"],
+    "highlightedTermsInSecondary": [
+      "glTF",
+      "GLB",
+      "SVG"
+    ],
     "underConstructionLabel": "under construction",
     "keyboardShortcuts": "V — Hide UI · F — Focus camera · Q/W/E/R — Select / move / rotate / scale · 1/2/3/4 — Display modes",
     "mobileWarning": "This app is not optimized for mobile devices. Please use a desktop browser for the best experience."
   },
   "scrollCue": {
-    "label": "Explore Orby"
+    "ariaLabel": "Scroll to learn about Orby"
   },
   "sections": [
     {
       "order": 1,
       "type": "intro",
       "id": "orby-marketing-intro",
+      "eyebrow": null,
       "title": "Drop it in.\nSet the stage.\nSend it.",
-      "titleLines": ["Drop it in.", "Set the stage.", "Send it."],
+      "titleLines": [
+        "Drop it in.",
+        "Set the stage.",
+        "Send it."
+      ],
       "lede": "Orby is a zero-install studio for GLB, glTF, and SVG. Whether you're checking how your design looks in 3D, showcasing a photogrammetry scan, or presenting a product visualization — drag a file in, pose and light it, and ship stills and video without leaving the tab.",
+      "bullets": null,
       "cta": null
     },
     {
@@ -54,6 +83,9 @@
       "id": "orby-marketing-present",
       "eyebrow": "Set the stage",
       "title": "Your virtual studio, in the browser.",
+      "titleLines": [
+        "Your virtual studio, in the browser."
+      ],
       "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
       "bullets": [
         "Look Filter presets, luminance curve, and full color grade",
@@ -68,6 +100,9 @@
       "id": "orby-marketing-import",
       "eyebrow": "Drop it in",
       "title": "Drop in. Start immediately.",
+      "titleLines": [
+        "Drop in. Start immediately."
+      ],
       "lede": "No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.",
       "bullets": [
         "GLB / glTF, OBJ, FBX, STL, USD, and SVG extrusion",
@@ -84,7 +119,11 @@
       "type": "split",
       "id": "orby-marketing-camera",
       "eyebrow": "Camera & FX",
-      "title": "Pro framing in\nthe\u00a0viewport.",
+      "title": "Pro framing in\nthe viewport.",
+      "titleLines": [
+        "Pro framing in",
+        "the viewport."
+      ],
       "lede": "Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.",
       "bullets": [
         "FOV, tilt, and camera presets for repeatable shots",
@@ -99,22 +138,30 @@
       "id": "orby-marketing-showcase",
       "eyebrow": "Rendering",
       "title": "Looks this good,\nstraight in the browser.",
+      "titleLines": [
+        "Looks this good,",
+        "straight in the browser."
+      ],
       "lede": "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
       "bullets": null,
+      "cta": null,
       "galleryCredits": [
         "Audi e-tron GT · vecarz.com",
         "Sports car detail · vecarz.com",
         "Jeep Wrangler Rubicon · vecarz.com",
         "New Balance 574 · vecarz.com"
-      ],
-      "cta": null
+      ]
     },
     {
       "order": 6,
       "type": "split",
       "id": "orby-marketing-shader-lab",
       "eyebrow": "Shader Lab",
-      "title": "Stylized looks\non\u00a0demand.",
+      "title": "Stylized looks\non demand.",
+      "titleLines": [
+        "Stylized looks",
+        "on demand."
+      ],
       "lede": "Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.",
       "bullets": [
         "Non-destructive: your glTF materials return when you disable the preset",
@@ -128,6 +175,9 @@
       "id": "orby-marketing-svg",
       "eyebrow": "SVG Extrude",
       "title": "Logos become geometry.",
+      "titleLines": [
+        "Logos become geometry."
+      ],
       "lede": "Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.",
       "bullets": [
         "Per-fill depth and position for layered marks",
@@ -141,6 +191,9 @@
       "id": "orby-marketing-export",
       "eyebrow": "Send it",
       "title": "Deliverables without a pipeline.",
+      "titleLines": [
+        "Deliverables without a pipeline."
+      ],
       "lede": "Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.",
       "bullets": [
         "PNG stills at 1× or 2× with optional transparency",
@@ -151,11 +204,35 @@
     },
     {
       "order": 9,
+      "type": "marquee",
+      "id": "orby-marketing-png-marquee",
+      "eyebrow": "Export",
+      "title": "Perfect transparency.",
+      "titleLines": [
+        "Perfect transparency."
+      ],
+      "lede": "Icons, ecommerce cutouts, logos on any background — export PNGs with real alpha from the viewport. No cleanup pass in Photoshop.",
+      "bullets": null,
+      "cta": null,
+      "marqueeAlts": [
+        "New Balance Classic 574 sneaker product cutout",
+        "Decorative painted skull cutout",
+        "Loggerhead sea turtle cutout"
+      ]
+    },
+    {
+      "order": 10,
       "type": "pro",
       "id": "orby-marketing-pro",
       "eyebrow": "For pros",
-      "title": "Built for\nthe\u00a0details.",
+      "title": "Built for\nthe details.",
+      "titleLines": [
+        "Built for",
+        "the details."
+      ],
       "lede": "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
+      "bullets": null,
+      "cta": null,
       "cards": [
         {
           "title": "Mesh diagnostics",
@@ -166,18 +243,23 @@
           "body": "PNG stills, MP4 turntable, or PNG sequences. No screen capture, no third-party tools."
         },
         {
-          "title": "Save your scene",
-          "body": "Every light, angle, and grade saved in a single .orby file. Pick it back up exactly where you left off."
+          "title": "Custom HDRI",
+          "body": "Bring your own 360° environment — a sunset field, studio softbox, or location plate. Upload .jpg, .png, or .hdr and Orby lights your model from it: reflections, backdrop, and mood follow your file, not just our presets."
         }
       ]
     },
     {
-      "order": 10,
+      "order": 11,
       "type": "faq",
       "id": "orby-marketing-faq",
       "eyebrow": "FAQ",
       "title": "Questions, answered.",
+      "titleLines": [
+        "Questions, answered."
+      ],
       "lede": "Everything you need to know before you drop your first file.",
+      "bullets": null,
+      "cta": null,
       "faq": [
         {
           "question": "Who is Orby for?",
@@ -211,27 +293,35 @@
           "question": "Why does Orby exist?",
           "answer": "Orby started as a personal learning experiment — I wanted to learn more about code and 3D on the web, and the process of building something on my own. It was never meant to be anything more than that. But it kept growing, and at some point it became something worth sharing. So here it is. I hope it's useful."
         }
-      ],
-      "cta": null
+      ]
     },
     {
-      "order": 10,
+      "order": 12,
       "type": "footer",
       "id": "orby-marketing-footer",
       "eyebrow": null,
       "title": "Try it out\nfor free now.",
-      "titleLines": ["Try it out", "for free now."],
+      "titleLines": [
+        "Try it out",
+        "for free now."
+      ],
       "lede": "",
       "bullets": null,
       "cta": {
-        "primary": { "label": "Browse Files", "action": "browse" },
-        "secondary": { "label": "Load Sample", "action": "load-sample" }
+        "primary": {
+          "label": "Browse Files",
+          "action": "browse"
+        },
+        "secondary": {
+          "label": "Load Sample",
+          "action": "load-sample"
+        }
       }
     }
   ],
   "studioOnly": {
     "returnHomeModal": {
-      "messageHtml": "Return home? This ends your session and resets the studio.",
+      "messageHtml": "<span class=\"brand-highlight\">Return home?</span> This ends your session and resets the studio.",
       "cancelLabel": "Stay",
       "confirmLabel": "Go Home"
     }

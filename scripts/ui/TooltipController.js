@@ -18,7 +18,9 @@ export class TooltipController {
     this.isVisible = false;
     this.position = 'top'; // top, bottom, left, right, auto
     this.offset = 8; // Distance from target element
-    
+    /** @type {Array<{ el: EventTarget, handler: (e: Event) => void }>} */
+    this._scrollListeners = [];
+
     this.init();
   }
 
@@ -41,10 +43,9 @@ export class TooltipController {
     
     // Hide tooltip on click anywhere
     document.addEventListener('click', this.handleClick.bind(this), true);
-    
-    // Hide tooltip on scroll (tooltip position would be wrong)
-    document.addEventListener('scroll', this.handleScroll.bind(this), true);
-    
+
+    this._bindScrollHide();
+
     // Touch support for mobile
     document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: true });
   }
@@ -201,10 +202,32 @@ export class TooltipController {
   }
   
   /**
-   * Handle scroll - hide tooltip on scroll (position would be wrong)
+   * Shelf `.panels` scroll only (not document capture — avoids work on every page scroll).
+   * Window scroll hides tooltips outside the fixed shelf (e.g. dropzone).
+   */
+  _bindScrollHide() {
+    const onScroll = (event) => this.handleScroll(event);
+    const panels = document.querySelector('.panels');
+    if (panels) {
+      panels.addEventListener('scroll', onScroll, { passive: true });
+      this._scrollListeners.push({ el: panels, handler: onScroll });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    this._scrollListeners.push({ el: window, handler: onScroll });
+  }
+
+  /**
+   * Hide when scroll would desync tooltip from its target.
    */
   handleScroll(event) {
-    if (this.isVisible) {
+    if (!this.isVisible || !this.currentTarget) return;
+    const root = event.currentTarget;
+    const inShelf = !!this.currentTarget.closest('#shelf');
+    if (root instanceof Element && root.classList.contains('panels')) {
+      if (inShelf) this.hide();
+      return;
+    }
+    if (root === window && !inShelf) {
       this.hide();
     }
   }
@@ -488,9 +511,12 @@ export class TooltipController {
   destroy() {
     if (this.hideTimeout) clearTimeout(this.hideTimeout);
     if (this.showTimeout) clearTimeout(this.showTimeout);
+    for (const { el, handler } of this._scrollListeners) {
+      el.removeEventListener('scroll', handler);
+    }
+    this._scrollListeners.length = 0;
     if (this.tooltip) this.tooltip.remove();
-    // Note: Event listeners are on document, so we'd need to track them to remove
-    // For now, this is fine as the tooltip controller lives for the app lifetime
+    // Note: Other listeners are on document; fine for app lifetime
   }
 }
 

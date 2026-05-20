@@ -237,6 +237,8 @@ export class UIManager {
     this.dom.tabs = document.querySelectorAll('.tab');
     this.dom.panels = document.querySelectorAll('.panel');
     this.dom.panelsContainer = q('.panels');
+    this.dom.shelfScrollbar = q('.shelf-scrollbar');
+    this.dom.shelfScrollbarThumb = q('.shelf-scrollbar-thumb');
     this.dom.toastTemplate = document.querySelector('#toastTemplate');
     this.dom.messageAlertModal = q('#messageAlertModal');
     this.dom.messageAlertTitle = q('#messageAlertTitle');
@@ -646,8 +648,10 @@ export class UIManager {
    */
   setupPanelsScrollbarReveal() {
     const el = this.dom.panelsContainer;
-    if (!el) return;
-    const revealClass = 'panels--scrollbar-reveal';
+    const rail = this.dom.shelfScrollbar;
+    const thumb = this.dom.shelfScrollbarThumb;
+    if (!el || !rail || !thumb) return;
+    const revealClass = 'is-revealed';
     let hideTimer = null;
     let rafId = 0;
     let shelfScrollActive = false;
@@ -656,21 +660,45 @@ export class UIManager {
       shelfScrollActive = !!active;
       this.eventBus.emit('ui:panels-scrolling', { active: shelfScrollActive });
     };
+
+    const syncThumb = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollHeight <= clientHeight + 1) {
+        thumb.style.height = '0px';
+        thumb.style.transform = 'translateY(0px)';
+        return;
+      }
+      const travel = scrollHeight - clientHeight;
+      const thumbHeight = Math.max(28, (clientHeight / scrollHeight) * clientHeight);
+      const maxOffset = Math.max(0, clientHeight - thumbHeight);
+      const offset = travel > 0 ? (scrollTop / travel) * maxOffset : 0;
+      thumb.style.height = `${thumbHeight}px`;
+      thumb.style.transform = `translateY(${offset}px)`;
+    };
+
     const onScroll = () => {
       if (rafId !== 0) return;
       rafId = requestAnimationFrame(() => {
         rafId = 0;
-        el.classList.add(revealClass);
+        syncThumb();
+        rail.classList.add(revealClass);
         emitPanelsScrolling(true);
         clearTimeout(hideTimer);
         hideTimer = setTimeout(() => {
-          el.classList.remove(revealClass);
+          rail.classList.remove(revealClass);
           hideTimer = null;
           emitPanelsScrolling(false);
         }, 500);
       });
     };
+
     el.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', syncThumb);
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => syncThumb());
+      observer.observe(el);
+    }
+    syncThumb();
   }
 
 
@@ -1892,7 +1920,8 @@ export class UIManager {
       this.setLightsRotationDisabled(!!state.lightsAutoRotate);
     }
     if (this.inputs.lightsCastShadows) {
-      this.inputs.lightsCastShadows.checked = !!state.lightsCastShadows;
+      this.inputs.lightsCastShadows.checked =
+        !!state.lightsEnabled && !!state.lightsCastShadows;
     }
     if (this.inputs.lightsEnabled) {
       this.inputs.lightsEnabled.checked = !!state.lightsEnabled;
@@ -1953,26 +1982,26 @@ export class UIManager {
     }
     // Sync individual light enabled states
     if (this.inputs.keyLightEnabled && state.lights?.key) {
-      this.inputs.keyLightEnabled.checked = state.lights.key.enabled !== false;
+      this.inputs.keyLightEnabled.checked = state.lights.key.enabled === true;
     }
     if (this.inputs.fillLightEnabled && state.lights?.fill) {
-      this.inputs.fillLightEnabled.checked = state.lights.fill.enabled !== false;
+      this.inputs.fillLightEnabled.checked = state.lights.fill.enabled === true;
     }
     if (this.inputs.rimLightEnabled && state.lights?.rim) {
-      this.inputs.rimLightEnabled.checked = state.lights.rim.enabled !== false;
+      this.inputs.rimLightEnabled.checked = state.lights.rim.enabled === true;
     }
     if (this.inputs.ambientLightEnabled && state.lights?.ambient) {
-      this.inputs.ambientLightEnabled.checked = state.lights.ambient.enabled !== false;
+      this.inputs.ambientLightEnabled.checked = state.lights.ambient.enabled === true;
     }
     // Sync cast shadows
     if (this.inputs.keyLightCastShadows && state.lights?.key) {
-      this.inputs.keyLightCastShadows.checked = state.lights.key.castShadows !== false;
+      this.inputs.keyLightCastShadows.checked = state.lights.key.castShadows === true;
     }
     if (this.inputs.fillLightCastShadows && state.lights?.fill) {
-      this.inputs.fillLightCastShadows.checked = state.lights.fill.castShadows !== false;
+      this.inputs.fillLightCastShadows.checked = state.lights.fill.castShadows === true;
     }
     if (this.inputs.rimLightCastShadows && state.lights?.rim) {
-      this.inputs.rimLightCastShadows.checked = state.lights.rim.castShadows !== false;
+      this.inputs.rimLightCastShadows.checked = state.lights.rim.castShadows === true;
     }
     
     // HDRI buttons
@@ -2530,7 +2559,7 @@ export class UIManager {
     // Individual light sliders are enabled only if master is on AND that specific light is enabled
     const lightIds = ['key', 'fill', 'rim', 'ambient'];
     lightIds.forEach((lightId) => {
-      const lightEnabled = state.lights?.[lightId]?.enabled !== false;
+      const lightEnabled = state.lights?.[lightId]?.enabled === true;
       const slidersEnabled = masterEnabled && lightEnabled;
       
       // Apply muted state to subsection (for gray thumbs)
