@@ -32,6 +32,15 @@ function shouldSkipMarketing() {
   return path !== '/' && path !== '/index.html';
 }
 
+/** Dev preview — append ?uiCrop=1 to keep screenshot UI pinned on the right while narrowing. */
+function syncMarketingUiCropPreview() {
+  const q = new URLSearchParams(window.location.search);
+  document.documentElement.classList.toggle(
+    'orby-marketing-ui-crop',
+    q.get('uiCrop') === '1' || q.get('uiCrop') === 'visible',
+  );
+}
+
 function isDropzoneHome() {
   return document.body.classList.contains('dropzone-visible');
 }
@@ -146,6 +155,7 @@ function bindScrollCueFade(cue) {
  * @param {{ lazy?: boolean }} [options]
  */
 export function initOrbyMarketingPage(options = {}) {
+  syncMarketingUiCropPreview();
   if (shouldSkipMarketing()) {
     return { destroy() {} };
   }

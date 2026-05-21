@@ -87,24 +87,49 @@
       2 * var(--orby-marketing-media-shrink) * var(--orby-marketing-media-shrink)
   );
   /*
-   * Split frames — 16∶9 @ 2560+; gentle vertical ramp (1920 ≈ mid, not max).
+   * Split frames — 16∶9 @ 2560; slightly taller below (crop left, keep Studio UI height).
+   * Shrink ramp 640px: 2560 → 1920.
    */
   --orby-marketing-split-media-ref-width: 160rem; /* 2560px */
   --orby-marketing-split-media-shrink: clamp(
     0,
-    calc((var(--orby-marketing-split-media-ref-width) - 100vw) / 80rem),
+    calc((var(--orby-marketing-split-media-ref-width) - 100vw) / 40rem),
     1
   );
   --orby-marketing-split-media-grow: calc(var(--orby-marketing-split-media-shrink) * 0.4);
-  --orby-marketing-split-media-aspect-h: calc(
-    9 + 16 * var(--orby-marketing-split-media-grow) +
+  --orby-marketing-split-media-aspect-boost: calc(
+    16 * var(--orby-marketing-split-media-grow) +
       7 * var(--orby-marketing-split-media-grow) * var(--orby-marketing-split-media-grow)
   );
-  --orby-marketing-split-media-min-h: clamp(
+  --orby-marketing-split-media-aspect-h: calc(
+    9 +
+      var(--orby-marketing-split-media-aspect-boost) *
+      var(--orby-marketing-split-media-shrink) * 0.36
+  );
+  --orby-marketing-split-media-min-h-peak: clamp(
     calc(18rem + 5rem * var(--orby-marketing-split-media-grow)),
     34vmin,
     calc(26rem + 7rem * var(--orby-marketing-split-media-grow))
   );
+  /* Target ~600px tall @ 1920×1080 — cap, not stretch-to-copy */
+  --orby-marketing-split-media-target-h: 37.5rem;
+  --orby-marketing-split-media-min-h: calc(
+    var(--orby-marketing-split-media-min-h-peak) * var(--orby-marketing-split-media-shrink)
+  );
+  --orby-marketing-split-media-max-h: max(
+    calc(var(--orby-marketing-split-media-target-h) * var(--orby-marketing-split-media-shrink)),
+    calc(625rem * (1 - var(--orby-marketing-split-media-shrink)))
+  );
+  /*
+   * Pan focal point right as viewport narrows — clips hero on the left, not the Studio chrome.
+   */
+  --orby-marketing-split-media-crop-t: calc(
+    var(--orby-marketing-split-media-shrink) * var(--orby-marketing-split-media-shrink)
+  );
+  --orby-marketing-split-media-focus-x: calc(
+    50% + 50% * var(--orby-marketing-split-media-crop-t)
+  );
+  --orby-marketing-split-media-crop-scale: 1;
 
   --orby-marketing-bg: var(--orby-app-bg, var(--orby-black, #080808));
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
@@ -239,4 +264,11 @@
   --orby-section-headline-vw: 5.8;
   --orby-section-headline-cqi-cap: 11.6;
   --orby-section-headline-offset: calc(0.25rem * var(--orby-marketing-headline-scale));
+}
+
+/* ?uiCrop=1 — production behavior (kept for side-by-side checks in dev) */
+html.orby-marketing-ui-crop {
+  --orby-marketing-split-media-focus-x: calc(
+    50% + 50% * var(--orby-marketing-split-media-crop-t)
+  );
 }

@@ -194,6 +194,26 @@
   will-change: opacity, filter;
 }
 
+/* Rendering gallery — pan right on narrow viewports (crop left) */
+.orby-marketing__section--showcase .orby-marketing__showcase-img {
+  inset: auto;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(100% * var(--orby-marketing-split-media-crop-scale));
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: var(--orby-marketing-split-media-focus-x) center;
+}
+
+@media (max-width: 2559px) {
+  .orby-marketing__section--showcase .orby-marketing__showcase-img {
+    left: auto;
+    right: 0;
+  }
+}
+
 .orby-marketing__showcase-img.is-active {
   z-index: 1;
 }

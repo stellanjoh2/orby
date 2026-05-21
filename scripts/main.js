@@ -79,6 +79,20 @@ if (isSafariBrowser()) {
   document.documentElement.classList.add('safari-browser');
 }
 
+/** Dev preview: ?uiCrop=1 — keep screenshot UI on the right (see html.orby-marketing-ui-crop). */
+function syncMarketingUiCropPreview() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    document.documentElement.classList.toggle(
+      'orby-marketing-ui-crop',
+      q.get('uiCrop') === '1' || q.get('uiCrop') === 'visible',
+    );
+  } catch {
+    /* URL blocked */
+  }
+}
+syncMarketingUiCropPreview();
+
 void import('./marketing/marketingPerformanceTier.js')
   .then((mod) => mod.applyMarketingPerformanceClass())
   .catch(() => {});
