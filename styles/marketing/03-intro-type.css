@@ -109,6 +109,55 @@
   text-shadow: none;
 }
 
+/*
+ * PNG turntable intro — 1920×1080 band (px queries — reliable vs rem root size).
+ * 2560+ keeps mega clamp, 850px turntable offset, space-md flex gap.
+ */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
+    --orby-intro-turntable-offset-x: 650px;
+  }
+
+  .orby-marketing__section--intro-turntable .orby-marketing__intro-turntable-wrap {
+    transform: translate3d(650px, 0, 0);
+  }
+  .orby-marketing__section--intro-turntable .orby-marketing__intro-center {
+    gap: 0;
+  }
+
+  .orby-marketing__section--intro-turntable .orby-marketing__eyebrow {
+    margin-bottom: var(--orby-marketing-eyebrow-headline-gap);
+  }
+
+  .orby-marketing__section--intro-turntable .orby-marketing__title--intro {
+    margin-bottom: 0;
+    font-size: 112px;
+    line-height: 1.1;
+  }
+
+  .orby-marketing__section--intro-turntable
+    .orby-marketing__title--intro
+    .orby-marketing__title-line {
+    line-height: 1.1;
+  }
+
+  #orby-marketing
+    .orby-marketing__section--intro-turntable
+    .orby-marketing__title--intro.brand-font-headline {
+    line-height: 1.1;
+  }
+
+  .orby-marketing__section--intro-turntable
+    .orby-marketing__title--intro
+    + .orby-marketing__lede--intro {
+    margin-top: 64px;
+  }
+
+  .orby-marketing__section--intro-turntable .orby-marketing__intro-center {
+    padding-right: calc(var(--orby-marketing-col-gap) - var(--orby-marketing-gutter-text-inset));
+  }
+}
+
 .orby-marketing__section--intro-turntable .orby-marketing__lede--intro {
   margin-inline: 0;
   width: 100%;
@@ -279,23 +328,15 @@ html.orby-marketing-reduced
 .orby-marketing__lede {
   margin: 0;
   max-width: var(--orby-marketing-copy-max);
-  font-size: clamp(
-    calc(1rem * var(--orby-marketing-scale)),
-    1.35vw,
-    calc(1.18rem * var(--orby-marketing-scale))
-  );
+  font-size: var(--orby-marketing-feature-lede-size);
   font-weight: var(--orby-marketing-body-weight);
-  line-height: 1.65;
+  line-height: var(--orby-marketing-feature-lede-line);
   color: var(--orby-marketing-text);
 }
 
 .orby-marketing__lede--intro {
   max-width: var(--orby-marketing-lede-measure);
-  font-size: clamp(
-    calc(1.2rem * var(--orby-marketing-scale)),
-    1.85vw,
-    calc(1.5rem * var(--orby-marketing-scale))
-  );
+  font-size: var(--orby-marketing-intro-lede-size);
   line-height: 1.6;
   color: #fff;
 }

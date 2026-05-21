@@ -141,7 +141,7 @@
   padding: 0 var(--orby-home-padding-x);
   box-sizing: border-box;
   text-align: center;
-  font-size: calc(16px * var(--orby-marketing-scale));
+  font-size: var(--orby-marketing-meta-size);
   line-height: 1.45;
   letter-spacing: -0.01em;
   color: color-mix(in srgb, var(--brand-text) 58%, transparent);

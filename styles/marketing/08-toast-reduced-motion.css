@@ -15,7 +15,7 @@
     0 0 0 1px color-mix(in srgb, var(--orby-black, #080808) 20%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  font-size: calc(0.875rem * var(--orby-marketing-scale));
+  font-size: var(--orby-marketing-support-size);
   font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 1.35;

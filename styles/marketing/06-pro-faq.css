@@ -141,11 +141,7 @@
 .orby-marketing__pro-card-body {
   margin: 0 auto;
   max-width: min(100%, calc(27rem * var(--orby-marketing-scale)));
-  font-size: clamp(
-    calc(0.92rem * var(--orby-marketing-scale)),
-    1.1vw,
-    calc(0.98rem * var(--orby-marketing-scale))
-  );
+  font-size: var(--orby-marketing-support-size);
   font-weight: var(--orby-marketing-body-weight);
   line-height: 1.65;
   color: var(--orby-marketing-text-dim);
@@ -200,12 +196,14 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--orby-marketing-col-gap);
+  row-gap: var(--orby-marketing-faq-grid-row-gap);
 }
 
 @media (min-width: 900px) {
   .orby-marketing__faq-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--orby-marketing-col-gap);
+    row-gap: var(--orby-marketing-faq-grid-row-gap);
   }
 
   /* Pro header — cqi + line length match the lede (full-width header was scaling type 2×) */

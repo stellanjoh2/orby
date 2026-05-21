@@ -127,6 +127,8 @@
   --ui-hero-pill-pad-inline: var(--ui-orby-pill-pad-inline-normal);
   /* Multiply caption opacity inside muted .subsection / .panel-block (two ×~25% steps vs full captions) */
   --muted-section-text-scale: 0.5625;
+  /* Studio shelf / settings chrome — 1 on mobile landing; scaled on desktop (see below) */
+  --studio-ui-scale: 1;
   /*
    * Home hero frame insets — shared by .dropzone and #orby-marketing so marketing
    * content width matches the dropzone inner edges (left/right of the frame).
@@ -186,6 +188,77 @@
       (100vw - var(--orby-home-inner-max-width)) / 2
     );
   }
+}
+
+/*
+ * Studio UI density — designed @ 2560×1440; scale shelf + settings chrome on smaller
+ * desktops so 1080p feels like the 2560 layout (dropzone keeps its own hero factor).
+ */
+html:not(.mobile-landing) {
+  --orby-studio-ref-width: 160rem; /* 2560px */
+  --orby-studio-ref-height: 90rem; /* 1440px */
+  --studio-ui-scale: clamp(
+    0.72,
+    min(100vw / var(--orby-studio-ref-width), 100dvh / var(--orby-studio-ref-height)),
+    1
+  );
+  --app-settings-chrome-radius: calc(18px * var(--studio-ui-scale));
+  --shelf-label-font-size: calc(14px * var(--studio-ui-scale));
+  --shelf-headline-font-size: calc(12px * var(--studio-ui-scale));
+  --ui-accent-action-font-size: calc(0.8rem * var(--studio-ui-scale));
+  --color-chip-w: calc(92px * var(--studio-ui-scale));
+  --ui-orby-pill-pad-block: calc(0.52rem * var(--studio-ui-scale));
+  --ui-orby-pill-pad-inline: calc(1.9rem * var(--studio-ui-scale));
+}
+
+/*
+ * Studio overlays (bug report, paste settings, entry gate, Return Home, 404 card).
+ * `scale` shrinks uniformly @ 1920; 2560 stays 1. Separate from `transform` so GSAP modal wipes still work.
+ */
+html:not(.mobile-landing) .load-settings-modal {
+  padding: calc(2rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .load-settings-modal .load-settings-content {
+  scale: var(--studio-ui-scale);
+}
+
+html:not(.mobile-landing) .bug-report-thank-you-layer {
+  padding: calc(2rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .orby-entry-gate {
+  padding: clamp(
+    calc(1rem * var(--studio-ui-scale)),
+    calc(4vw * var(--studio-ui-scale)),
+    calc(2rem * var(--studio-ui-scale))
+  );
+}
+
+html:not(.mobile-landing) .orby-entry-gate__panel {
+  scale: var(--studio-ui-scale);
+}
+
+html:not(.mobile-landing) .orby-not-found-page {
+  padding: clamp(
+    calc(1.25rem * var(--studio-ui-scale)),
+    calc(3vw * var(--studio-ui-scale)),
+    calc(2.5rem * var(--studio-ui-scale))
+  );
+}
+
+html:not(.mobile-landing) .orby-not-found-copy {
+  scale: var(--studio-ui-scale);
+}
+
+html:not(.mobile-landing) .bug-report-thank-you-stack,
+html:not(.mobile-landing) #orbyFullscreenPrompt .orby-fullscreen-prompt-stack {
+  scale: var(--studio-ui-scale);
+}
+
+html:not(.mobile-landing) body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-stack {
+  transform: none;
+  scale: calc(1.25 * var(--studio-ui-scale));
 }
 
 .brand-font-headline {
@@ -1688,10 +1761,42 @@ html.orby-gate-unlocked .orby-entry-gate,
   transform: scale(0.98);
 }
 
-/* Home magic Browse — same footprint as flat pill normal (glow shell unchanged) */
+/* Home magic Browse — scales with --drop-hero-wide-factor (full @ 2560, ~78% @ 1920) */
+.dropzone .orby-magic-btn-host,
+.dropzone .orby-magic-btn.dropzone-btn {
+  --orby-magic-btn-bleed: calc(6px * var(--drop-hero-wide-factor));
+  --orby-magic-btn-glow-blur: calc(10px * var(--drop-hero-wide-factor));
+  --orby-magic-btn-rim-a: calc(5px * var(--drop-hero-wide-factor));
+  --orby-magic-btn-rim-b: calc(10px * var(--drop-hero-wide-factor));
+  --orby-magic-btn-rim-c: calc(16px * var(--drop-hero-wide-factor));
+  --orby-magic-btn-stroke: calc(1.5px * var(--drop-hero-wide-factor));
+}
+
+.dropzone .orby-magic-btn.dropzone-btn {
+  width: var(--drop-hero-magic-btn-width, 15.25rem);
+  min-width: var(--drop-hero-magic-btn-width, 15.25rem);
+  min-height: calc(3.65rem * var(--drop-hero-wide-factor));
+  /* Match .drop-secondary — --orby-marketing-support-size (12px @ 1920, 0.9rem @ 2560) */
+  font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
+}
+
 .dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__inner {
-  font-size: var(--ui-orby-pill-font-size-normal);
-  padding: var(--ui-orby-pill-pad-block-normal) var(--ui-orby-pill-pad-inline-normal);
+  font-size: inherit;
+  padding-inline: calc(var(--ui-orby-pill-pad-inline-normal) * var(--drop-hero-wide-factor));
+  padding-top: calc(
+    var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor) -
+      var(--drop-hero-magic-btn-y-nudge, 0px)
+  );
+  padding-bottom: calc(
+    var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor) +
+      var(--drop-hero-magic-btn-y-nudge, 0px)
+  );
+  gap: calc(0.5rem * var(--drop-hero-wide-factor));
+}
+
+.dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__arrow {
+  width: 1.125em;
+  height: 1.125em;
 }
 
 /* Orby magic pill — default CTA on dark backgrounds (dropzone + marketing) */
@@ -2154,7 +2259,7 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 
 .dropzone-actions .orby-magic-btn {
   flex: 0 0 auto;
-  min-width: 12.5rem;
+  min-width: var(--drop-hero-magic-btn-width, 15.25rem);
   opacity: 0;
   transform: translateY(-15px);
   animation: none;
@@ -2584,12 +2689,20 @@ html.orby-dropzone-shell-pending .workspace {
   --dropzone-frame-stroke: 2px;
   --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
   /*
-   * Hero scale — full @ 2560; 1:1 down to ~78% @ 1920 (logo, headline, glow).
+   * Hero scale — full @ 2560; ~78% @ 1920 (logo, headline, Browse pill, frame glow).
    */
   --drop-hero-wide-factor: clamp(
     0.78,
     calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
     1
+  );
+  /* Browse magic pill width — 15.25rem @ 2560, ~160px @ 1920 (tighter than linear 0.78×) */
+  --drop-hero-magic-btn-width: calc(
+    160px + 84px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
+  );
+  /* Browse label+arrow — sit ~2px low @ 1920 when hero padding shrinks faster than min-height */
+  --drop-hero-magic-btn-y-nudge: calc(
+    2px * clamp(0, (1 - var(--drop-hero-wide-factor)) / 0.22, 1)
   );
   /* Constant rotation speed (no drag speed-up). Glow px values × wide-factor. */
   --dropzone-magic-spin: 16s;
@@ -2944,8 +3057,7 @@ html.orby-marketing-reduced body.dropzone-visible .dropzone::before {
 
 .drop-secondary {
   color: var(--text-dim);
-  /* Responsive font size: scales down on smaller screens */
-  font-size: clamp(0.75rem, 1.2vw, 0.9rem);
+  font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
   letter-spacing: -0.01em;
   line-height: 1.5;
   opacity: 0;
@@ -3025,11 +3137,28 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   --slider-label-col: 90px;
   --slider-value-col: 2.5rem; /* ~4 digits at 0.8rem; longer values ellipsize for now */
   /* --shelf-g: tab chrome bleed; --shelf-panel-gutter: equal H/V between shell bg and scroll cards */
-  --shelf-rhythm: 0.75rem;
+  --shelf-stack-gap: 12px; /* section / block vertical rhythm @ 2560×1440 */
+  --shelf-row-gap: calc(var(--shelf-stack-gap) * 0.8); /* control rows (was 0.6rem) */
+  --shelf-control-gap: 1rem; /* accent button stacks (Scene, Export) */
+  --shelf-rhythm: var(--shelf-stack-gap);
   --shelf-g: calc(var(--shelf-rhythm) / 2);
-  --shelf-panel-gutter: 14px;
+  --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
+  /* Inset inside lighter panel cards (.panel-block) */
+  --shelf-card-padding: 1.2rem;
   --shelf-scrollbar-edge-offset: 12px;
   --shelf-scroll-end-pad: 1.25rem;
+  /* Panel footer: last card → version line, logo → shelf bottom (symmetrical) */
+  --shelf-footer-outer-gap: 1.75rem;
+  /* HDRI grid (Studio tab) — 2560×1440 reference */
+  --shelf-hdri-sphere-img: 78px;
+  --shelf-hdri-sphere-ring: 92px;
+  --shelf-hdri-grid-gap-x: 1rem;
+  --shelf-hdri-grid-gap-y: 1.8rem;
+  /* Shader Lab + Object Display pickers — smaller (4-up / dense grids) */
+  --shelf-picker-sphere-img: 54px;
+  --shelf-picker-sphere-ring: 70px;
+  --shelf-sphere-ring-border: 3px;
+  --shelf-picker-grid-gap: 8px;
   /* Match show ↔ hide: opacity/transform animate; visibility must not flip until the hide finishes */
   --shelf-reveal-dur: 0.45s;
   --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -3069,6 +3198,385 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
     visibility 0s linear var(--shelf-reveal-dur);
 }
 
+html:not(.mobile-landing) .shelf {
+  font-size: calc(1rem * var(--studio-ui-scale));
+  --shelf-inset: calc(48px * var(--studio-ui-scale));
+  --slider-label-col: calc(90px * var(--studio-ui-scale));
+  --shelf-g: calc(var(--shelf-rhythm) / 2);
+  /* 12px @ 2560 (scale 1), 10px @ 1920 (scale 0.75); 2560 unchanged */
+  --shelf-stack-gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-row-gap: calc(var(--shelf-stack-gap) * 0.8);
+  /* Scene/Export stacks: 16px @ 2560, 10px @ 1920 */
+  --shelf-control-gap: calc(10px + 6px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
+  /* 16px @ 1920, 1.2rem @ 2560 — card inner gutter */
+  --shelf-card-padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-scrollbar-edge-offset: calc(12px * var(--studio-ui-scale));
+  --shelf-scroll-end-pad: calc(1.25rem * var(--studio-ui-scale));
+  --shelf-footer-outer-gap: calc(1.75rem * var(--studio-ui-scale));
+  --shelf-hdri-sphere-img: round(78px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-sphere-ring: round(92px * var(--studio-ui-scale), 1px);
+  --shelf-hdri-grid-gap-x: calc(1rem * var(--studio-ui-scale));
+  --shelf-hdri-grid-gap-y: calc(1.8rem * var(--studio-ui-scale));
+  --shelf-picker-sphere-img: round(54px * var(--studio-ui-scale), 1px);
+  --shelf-picker-sphere-ring: round(70px * var(--studio-ui-scale), 1px);
+  --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
+  --shelf-picker-grid-gap: calc(8px * var(--studio-ui-scale));
+  width: calc(380px * var(--studio-ui-scale));
+  backdrop-filter: blur(calc(15px * var(--studio-ui-scale)));
+  -webkit-backdrop-filter: blur(calc(15px * var(--studio-ui-scale)));
+}
+
+html:not(.mobile-landing) .shelf.is-shelf-hidden {
+  transform: translate3d(calc(36px * var(--studio-ui-scale)), 0, 0);
+}
+
+html:not(.mobile-landing) .shelf .tab i {
+  font-size: calc(20px * var(--studio-ui-scale)) !important;
+  width: calc(20px * var(--studio-ui-scale)) !important;
+  height: calc(20px * var(--studio-ui-scale)) !important;
+}
+
+html:not(.mobile-landing) .shelf .accent-action-btn i {
+  font-size: calc(12px * var(--studio-ui-scale)) !important;
+  width: calc(12px * var(--studio-ui-scale)) !important;
+  height: calc(12px * var(--studio-ui-scale)) !important;
+}
+
+html:not(.mobile-landing) .shelf .panel-block {
+  border-radius: calc(6px * var(--studio-ui-scale));
+  contain-intrinsic-size: auto calc(400px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .color-chip {
+  height: calc(12px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
+  width: calc(var(--color-chip-w) + 8px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .rotation-notch {
+  width: calc(26px * var(--studio-ui-scale));
+  height: calc(22px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .rotation-notch i {
+  width: calc(16px * var(--studio-ui-scale));
+  height: calc(16px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .slider-line input[type='range'] {
+  height: calc(4px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .slider-line input[type='range']::-webkit-slider-runnable-track {
+  height: calc(4px * var(--studio-ui-scale));
+  border-radius: calc(2px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .slider-line input[type='range']::-moz-range-track {
+  height: calc(4px * var(--studio-ui-scale));
+  border-radius: calc(2px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf input[type='range']::-webkit-slider-thumb {
+  width: calc(12px * var(--studio-ui-scale));
+  height: calc(12px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf input[type='range']::-moz-range-thumb {
+  width: calc(12px * var(--studio-ui-scale));
+  height: calc(12px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .slider-line .value-inline-input {
+  height: calc(16px * var(--studio-ui-scale));
+  border-radius: calc(4px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .rotate-slider {
+  --slider-label-col: calc(80px * var(--studio-ui-scale));
+}
+
+/* Toggles use rem (root-sized) — scale track/thumb with studio factor */
+html:not(.mobile-landing) .shelf .effect-toggle {
+  --toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
+  --toggle-thumb-size: calc(var(--toggle-track-height) - 0.3rem * var(--studio-ui-scale));
+  --toggle-thumb-offset: calc(0.15rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .effect-toggle .effect-indicator::before {
+  box-shadow: 0 calc(2px * var(--studio-ui-scale)) calc(4px * var(--studio-ui-scale))
+    rgba(0, 0, 0, 0.2);
+}
+
+html:not(.mobile-landing) .shelf .effect-toggle input:focus-visible + .effect-indicator {
+  outline-width: calc(2px * var(--studio-ui-scale));
+  outline-offset: calc(2px * var(--studio-ui-scale));
+}
+
+/* Tab headline (Object, Studio, …) — 2rem is root-sized; HDRI grid used vw not shelf width */
+html:not(.mobile-landing) .shelf .panel-header-title {
+  font-size: calc(2rem * var(--studio-ui-scale));
+  margin: 0.95rem 0 var(--shelf-stack-gap) 0;
+}
+
+html:not(.mobile-landing) .shelf .hdri-grid {
+  gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
+  margin-bottom: calc(1.1rem * var(--studio-ui-scale));
+  padding: var(--shelf-stack-gap) 0;
+}
+
+html:not(.mobile-landing) .shelf .mode-icons {
+  gap: var(--shelf-picker-grid-gap);
+  padding: var(--shelf-stack-gap) 0;
+}
+
+/* Shader Lab — 4-column picker grid, smaller spheres than Studio HDRI */
+#creativeLookGrid.hdri-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--shelf-hdri-grid-gap-y) var(--shelf-picker-grid-gap);
+}
+
+html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__plus {
+  font-size: calc(1.45rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__check {
+  font-size: calc(1.35rem * var(--studio-ui-scale));
+}
+
+/* Scene / Object accent buttons — gap + min-height use root rem; scale with studio factor */
+html:not(.mobile-landing) .shelf .scene-controls,
+html:not(.mobile-landing) .shelf .export-controls {
+  gap: var(--shelf-control-gap);
+}
+
+html:not(.mobile-landing) .shelf .accent-action-btn {
+  padding: calc(0.5rem * var(--studio-ui-scale)) calc(1rem * var(--studio-ui-scale));
+  min-height: calc(2.5rem * var(--studio-ui-scale));
+  gap: calc(0.4rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .select-line {
+  gap: calc(0.5rem * var(--studio-ui-scale));
+  margin-bottom: var(--shelf-row-gap);
+}
+
+html:not(.mobile-landing) .shelf .select-line select {
+  font-size: var(--shelf-label-font-size);
+  line-height: 1.25;
+  padding: calc(0.35rem * var(--studio-ui-scale)) calc(1.6rem * var(--studio-ui-scale))
+    calc(0.35rem * var(--studio-ui-scale)) calc(0.7rem * var(--studio-ui-scale));
+  background-position: right calc(0.6rem * var(--studio-ui-scale)) center;
+  background-size: calc(12px * var(--studio-ui-scale)) calc(12px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .select-line select:focus-visible {
+  box-shadow: 0 0 0 calc(2px * var(--studio-ui-scale))
+    color-mix(in srgb, var(--brand-primary) 55%, transparent);
+}
+
+/* Segmented pills (Auto Rotate, etc.) — min-height/padding were root rem */
+html:not(.mobile-landing) .shelf .segmented {
+  gap: calc(0.4rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .segmented label {
+  padding: calc(0.5rem * var(--studio-ui-scale)) calc(0.4rem * var(--studio-ui-scale));
+  min-height: calc(2.5rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .export-option-btn {
+  padding: calc(0.5rem * var(--studio-ui-scale)) calc(0.4rem * var(--studio-ui-scale));
+  min-height: calc(2.5rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .export-button-group {
+  gap: var(--shelf-row-gap);
+}
+
+html:not(.mobile-landing) .shelf .info-version-tag {
+  font-size: calc(0.69rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .info-orby-mark {
+  margin-top: calc(1.65rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .info-orby-mark img {
+  width: calc(28px * var(--studio-ui-scale));
+  height: calc(28px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .info-orby-mark:focus-visible {
+  outline-offset: calc(3px * var(--studio-ui-scale));
+}
+
+/* Information tab — prose/quicknav/shortcuts use root rem or inline px */
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content {
+  font-size: calc(0.9rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content h4 {
+  font-size: calc(0.95rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content ul.info-prose-nested {
+  padding-left: calc(1.5rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(1.5rem * var(--studio-ui-scale));
+  height: calc(1.35rem * var(--studio-ui-scale));
+  padding: 0 calc(0.35rem * var(--studio-ui-scale));
+  margin: 0 calc(0.1rem * var(--studio-ui-scale));
+  border: 1px solid var(--stroke);
+  border-radius: calc(4px * var(--studio-ui-scale));
+  background: rgba(255, 255, 255, 0.1);
+  font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
+  font-size: calc(0.7rem * var(--studio-ui-scale));
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: 0 calc(1px * var(--studio-ui-scale)) calc(2px * var(--studio-ui-scale))
+    rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .bug-report-panel-description {
+  font-size: calc(0.88rem * var(--studio-ui-scale));
+  margin-bottom: calc(1rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] nav.info-quicknav {
+  font-size: calc(0.85rem * var(--studio-ui-scale)) !important;
+  gap: calc(0.4rem * var(--studio-ui-scale)) calc(0.75rem * var(--studio-ui-scale)) !important;
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-quicknav a {
+  margin-bottom: calc(0.25rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-note {
+  font-size: calc(0.75rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcuts-grid {
+  gap: calc(0.5rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-row {
+  gap: calc(1rem * var(--studio-ui-scale));
+  padding: calc(0.5rem * var(--studio-ui-scale)) 0;
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-keys kbd {
+  min-width: calc(1.75rem * var(--studio-ui-scale));
+  height: calc(1.75rem * var(--studio-ui-scale));
+  padding: 0 calc(0.5rem * var(--studio-ui-scale));
+  font-size: calc(0.75rem * var(--studio-ui-scale));
+  border-radius: calc(4px * var(--studio-ui-scale));
+  box-shadow: 0 calc(1px * var(--studio-ui-scale)) calc(2px * var(--studio-ui-scale))
+    rgba(0, 0, 0, 0.1);
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list {
+  gap: var(--shelf-stack-gap);
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dt {
+  margin-bottom: calc(0.25rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dd {
+  margin: 0 0 var(--shelf-stack-gap) 0;
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype-container {
+  padding: calc(2rem * var(--studio-ui-scale)) calc(1rem * var(--studio-ui-scale));
+  margin-bottom: calc(1rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype {
+  width: min(calc(300px * var(--studio-ui-scale)), 100%);
+  max-width: min(calc(300px * var(--studio-ui-scale)), 100%);
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .microcopy {
+  font-size: calc(0.75rem * var(--studio-ui-scale));
+  margin-bottom: calc(0.5rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .panel-header p {
+  font-size: calc(0.65rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-panel-block--compact {
+  contain-intrinsic-size: auto calc(11rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-panel-block--medium {
+  contain-intrinsic-size: auto calc(17rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-panel-block--tall {
+  contain-intrinsic-size: auto calc(26rem * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-panel-block--faq-part {
+  contain-intrinsic-size: auto calc(20rem * var(--studio-ui-scale));
+}
+
+/* Viewport chrome (studio) — dropzone keeps its own hero scale */
+html:not(.mobile-landing) .viewport > .viewport-fullscreen-btn {
+  top: calc(1.2rem * var(--studio-ui-scale));
+  left: calc(1.5rem * var(--studio-ui-scale));
+  width: calc(32px * var(--studio-ui-scale));
+  height: calc(32px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .viewport > .viewport-fullscreen-btn i {
+  font-size: calc(14px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .viewport > .demo-logotype {
+  bottom: clamp(
+    calc(1rem * var(--studio-ui-scale)),
+    calc(4vw * var(--studio-ui-scale)),
+    calc(4.5rem * var(--studio-ui-scale))
+  );
+  left: clamp(
+    calc(1rem * var(--studio-ui-scale)),
+    calc(4vw * var(--studio-ui-scale)),
+    calc(4.5rem * var(--studio-ui-scale))
+  );
+  width: min(
+    calc(440px * var(--studio-ui-scale)),
+    calc(100vw - 2rem * var(--studio-ui-scale)),
+    max(calc(160px * var(--studio-ui-scale)), calc(38vw * var(--studio-ui-scale)))
+  );
+  max-width: calc(440px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .viewport > .viewport-load-spinner {
+  bottom: clamp(
+    calc(1rem * var(--studio-ui-scale)),
+    calc(4vw * var(--studio-ui-scale)),
+    calc(4.5rem * var(--studio-ui-scale))
+  );
+  left: clamp(
+    calc(1rem * var(--studio-ui-scale)),
+    calc(4vw * var(--studio-ui-scale)),
+    calc(4.5rem * var(--studio-ui-scale))
+  );
+  width: calc(70px * var(--studio-ui-scale));
+  height: calc(70px * var(--studio-ui-scale));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shelf,
   .shelf.is-shelf-hidden {
@@ -3090,7 +3598,7 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   background-color: transparent;
   border: none;
   color: var(--text-dim);
-  padding: 0.75rem 0;
+  padding: var(--shelf-stack-gap) 0;
   font-size: var(--shelf-label-font-size);
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -3232,7 +3740,7 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
 
 .info-list {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--shelf-stack-gap);
   margin: 0;
 }
 
@@ -3244,7 +3752,7 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
 }
 
 .info-list dd {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 var(--shelf-stack-gap) 0;
   color: var(--text-dim);
   font-size: var(--shelf-label-font-size);
   line-height: 1.4;
@@ -3399,7 +3907,7 @@ a.about-highlight:focus-visible {
   font-weight: 400;
   line-height: 1;
   color: var(--accent);
-  margin: 0.95rem 0 12px 0;
+  margin: 0.95rem 0 var(--shelf-stack-gap) 0;
   padding: 0;
 }
 
@@ -3428,7 +3936,7 @@ a.about-highlight:focus-visible {
 .panel-block {
   border: none;
   border-radius: 6px;
-  padding: 1.2rem;
+  padding: var(--shelf-card-padding, 1.2rem);
   margin-bottom: var(--shelf-panel-gutter);
   background: var(--shelf-card-bg);
   /* Skip layout/paint for off-screen cards while scrolling .panels (placeholder height avoids thumb jump) */
@@ -3468,7 +3976,7 @@ a.about-highlight:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent);
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--shelf-stack-gap);
   font-weight: 400;
 }
 
@@ -3782,61 +4290,67 @@ a.about-highlight:focus-visible {
   overflow: hidden;
 }
 
-/* Mode Icons - Free floating spherical icons */
+/* Object Display — 4-up; smaller picker tokens than Studio HDRI */
 .mode-icons {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-items: center;
   align-items: center;
-  padding: 0.75rem 0;
+  padding: var(--shelf-stack-gap) 0;
   width: 100%;
-  gap: 8px;
+  gap: var(--shelf-picker-grid-gap);
 }
 
 .mode-icon {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  box-sizing: content-box;
+  width: var(--shelf-picker-sphere-ring);
+  height: var(--shelf-picker-sphere-ring);
   cursor: pointer;
   border: none;
   background: none;
   padding: 0;
   margin: 0;
-  transition: transform 0.2s ease;
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.mode-icon {
-  transform-origin: center center;
+  flex: none;
+  overflow: visible;
 }
 
 .mode-icon::before {
   content: '';
   position: absolute;
-  width: clamp(50px, 4.375vw, 70px);
-  height: clamp(50px, 4.375vw, 70px);
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-picker-sphere-ring);
+  height: var(--shelf-picker-sphere-ring);
   border-radius: 50%;
-  border: 3px solid transparent;
+  border: var(--shelf-sphere-ring-border) solid transparent;
   transition: border-color 0.2s ease, transform 0.2s ease;
   pointer-events: none;
   z-index: 1;
+  transform: translate(-50%, -50%);
   transform-origin: center center;
 }
 
 .mode-icon img {
-  width: clamp(38px, 3.375vw, 54px);
-  height: clamp(38px, 3.375vw, 54px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-picker-sphere-img);
+  height: var(--shelf-picker-sphere-img);
   display: block;
   border-radius: 50%;
+  margin: 0;
   transition: transform 0.2s ease;
-  position: relative;
   z-index: 0;
+  transform: translate(-50%, -50%);
   transform-origin: center center;
+  object-fit: cover;
   /* Free floating - no background or border when unselected */
 }
 
 .mode-icon:hover img {
-  transform: scale(1.1);
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .mode-icon input {
@@ -3849,11 +4363,12 @@ a.about-highlight:focus-visible {
 /* Selected state - brand yellow stroked ring around icon */
 .mode-icon:has(input:checked)::before {
   border-color: var(--accent);
-  transform: scale(1);
+  transform: translate(-50%, -50%);
 }
 
 .mode-icon:has(input:checked):hover img {
-  transform: scale(1.1);
+  transform: translate(-50%, -50%)
+    scale(calc(1.1 + 2px / var(--shelf-picker-sphere-img)));
 }
 
 .panel-hint.map-slots-hint {
@@ -3929,11 +4444,33 @@ button.advanced-info-doc-btn {
 .color-line,
 .select-line {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
   align-items: center;
-  margin-bottom: 0.6rem;
+  margin-bottom: var(--shelf-row-gap);
   font-size: var(--shelf-label-font-size);
+}
+
+.slider-line,
+.color-line {
+  gap: 0.5rem;
+}
+
+.color-line {
+  grid-template-columns: 1fr auto;
+}
+
+.select-line {
+  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
+  column-gap: 0.45rem;
+  gap: 0.5rem;
+}
+
+.select-line > span:first-child {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.select-line > .value {
+  grid-column: 3;
 }
 
 .slider-line {
@@ -4332,9 +4869,15 @@ input[type='range']:disabled::-moz-range-thumb {
   line-height: 1.45;
 }
 
+/* Scrollport ends at logo; outer footer gap is on version (top) + orby mark (bottom) */
+.panels:has(.info-orby-mark) {
+  padding-bottom: 0;
+  scroll-padding-bottom: var(--shelf-footer-outer-gap);
+}
+
 .info-version-tag {
   display: block;
-  margin-top: 1.75rem;
+  margin-top: var(--shelf-footer-outer-gap);
   font-size: 0.69rem;
   letter-spacing: -0.01em;
   text-align: center;
@@ -4351,7 +4894,7 @@ input[type='range']:disabled::-moz-range-thumb {
   align-items: center;
   width: 100%;
   margin-top: 1.65rem;
-  margin-bottom: 0;
+  margin-bottom: var(--shelf-footer-outer-gap);
   padding: 0;
   border: none;
   background: none;
@@ -4563,8 +5106,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 }
 
 .color-chip {
-  --color-chip-w: 92px;
-  width: var(--color-chip-w);
+  width: var(--color-chip-w, 92px);
   max-width: 100%;
   height: 12px;
   padding: 0;
@@ -4655,9 +5197,9 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 
 .animation-controls {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--shelf-row-gap);
   align-items: center;
-  margin-bottom: 0.7rem;
+  margin-bottom: calc(var(--shelf-row-gap) + 0.1rem);
 }
 
 #animationScrub {
@@ -4673,12 +5215,18 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .select-line select {
-  grid-column: span 1;
+  grid-column: 2;
+  justify-self: end;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
   border: none;
   border-radius: 999px;
   padding: 0.35rem 1.6rem 0.35rem 0.7rem;
   color: var(--text);
   font-family: inherit;
+  font-size: var(--shelf-label-font-size);
+  line-height: 1.25;
   appearance: none;
   background-color: rgba(255, 255, 255, 0.15);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -4694,52 +5242,60 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .hdri-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.8rem 1rem;
+  gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
   margin-bottom: 1.1rem;
-  padding: 0.75rem 0;
+  padding: var(--shelf-stack-gap) 0;
 }
 
 .hdri-icon {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  box-sizing: content-box;
+  width: var(--shelf-hdri-sphere-ring);
+  height: var(--shelf-hdri-sphere-ring);
   cursor: pointer;
   border: none;
   background: none;
   padding: 0;
   margin: 0;
-  transition: transform 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
-  transform-origin: center center;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+  overflow: visible;
 }
 
 .hdri-icon::before {
   content: '';
   position: absolute;
-  width: clamp(62px, 5.8vw, 92px);
-  height: clamp(62px, 5.8vw, 92px);
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-hdri-sphere-ring);
+  height: var(--shelf-hdri-sphere-ring);
   border-radius: 50%;
-  border: 3px solid transparent;
+  border: var(--shelf-sphere-ring-border) solid transparent;
   transition: border-color 0.2s ease, transform 0.2s ease;
   pointer-events: none;
   z-index: 1;
+  transform: translate(-50%, -50%);
   transform-origin: center center;
 }
 
 .hdri-icon img {
-  width: clamp(52px, 4.8vw, 78px);
-  height: clamp(52px, 4.8vw, 78px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-hdri-sphere-img);
+  height: var(--shelf-hdri-sphere-img);
   display: block;
   border-radius: 50%;
+  margin: 0;
   transition: transform 0.2s ease;
-  position: relative;
   z-index: 0;
+  transform: translate(-50%, -50%);
   transform-origin: center center;
   object-fit: cover;
 }
 
-.hdri-icon:hover img {
-  transform: scale(1.1);
+.hdri-icon:hover:not(:disabled):not(.is-disabled) img {
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .hdri-icon:disabled,
@@ -4751,20 +5307,56 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 
 .hdri-icon.active::before {
   border-color: var(--accent);
-  transform: scale(1);
+  transform: translate(-50%, -50%);
 }
 
-.hdri-icon.active:hover img {
-  transform: scale(1.1);
+/* Active + hover: 1.1 + 1px radius so thumbnail meets the lime ring */
+.hdri-icon.active:hover:not(:disabled):not(.is-disabled) img {
+  transform: translate(-50%, -50%)
+    scale(calc(1.1 + 2px / var(--shelf-hdri-sphere-img)));
 }
 
 .hdri-icon__sphere {
   position: absolute;
-  width: clamp(52px, 4.8vw, 78px);
-  height: clamp(52px, 4.8vw, 78px);
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-hdri-sphere-img);
+  height: var(--shelf-hdri-sphere-img);
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* Shader Lab presets — same smaller metrics + centered hover scale as Object Display */
+#creativeLookGrid .hdri-icon {
+  display: block;
+  width: var(--shelf-picker-sphere-ring);
+  height: var(--shelf-picker-sphere-ring);
+}
+
+#creativeLookGrid .hdri-icon::before {
+  width: var(--shelf-picker-sphere-ring);
+  height: var(--shelf-picker-sphere-ring);
+}
+
+#creativeLookGrid .hdri-icon img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-picker-sphere-img);
+  height: var(--shelf-picker-sphere-img);
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
+
+#creativeLookGrid .hdri-icon:hover:not(:disabled):not(.is-disabled) img {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+#creativeLookGrid .hdri-icon.active:hover:not(:disabled):not(.is-disabled) img {
+  transform: translate(-50%, -50%)
+    scale(calc(1.1 + 2px / var(--shelf-picker-sphere-img)));
 }
 
 .hdri-icon__sphere--placeholder {
@@ -4784,9 +5376,12 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 /* Custom HDRI upload — same gray family as .ghost-btn, spherical */
 .hdri-icon--upload .hdri-icon__disc {
   position: absolute;
-  width: clamp(52px, 4.8vw, 78px);
-  height: clamp(52px, 4.8vw, 78px);
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-hdri-sphere-img);
+  height: var(--shelf-hdri-sphere-img);
   border-radius: 50%;
+  transform: translate(-50%, -50%);
   z-index: 0;
   border: none;
   background: rgba(255, 255, 255, 0.15);
@@ -4860,14 +5455,14 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .export-controls {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--shelf-control-gap);
 }
 
 /* Scene footer controls in Studio tab (same spacing, no export-specific nesting semantics). */
 .scene-controls {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--shelf-control-gap);
 }
 
 .export-option-group {
@@ -4938,8 +5533,23 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   box-shadow: none;
 }
 
+/* Key/Fill/Rim/Ambient color rows — same 3-col as sliders; chip spans track+value like Shadow Color width */
 .lights .light-color-row {
-  grid-template-columns: 160px auto;
+  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
+  column-gap: 0.45rem;
+}
+
+.lights .light-color-row > span:first-child {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.lights .light-color-row .color-chip {
+  /* Span track + value cols (Shadow Color uses 1fr + chip — same right edge, full chip width) */
+  grid-column: 2 / -1;
+  justify-self: end;
+  width: var(--color-chip-w, 92px);
+  max-width: none;
 }
 
 .lights .slider-line:not(.slider-line--toggle-only) {
@@ -5270,29 +5880,18 @@ input[type='range'].is-disabled-handle::-moz-range-thumb {
   cursor: not-allowed;
 }
 
-@media (max-width: 1200px) {
-  .shelf {
-    width: clamp(280px, 30vw, 340px);
-  }
-  .color-chip {
-    --color-chip-w: 73px;
-  }
-}
-
 @media (max-width: 960px) {
   .workspace {
     flex-direction: column;
   }
-  .shelf {
+  .shelf,
+  html:not(.mobile-landing) .shelf {
     width: 100%;
     height: 45vh;
   }
   .viewport {
     height: 55vh;
     min-height: 0;
-  }
-  .color-chip {
-    --color-chip-w: 63px;
   }
 }
 
@@ -5515,7 +6114,7 @@ body.ui-hidden .shelf {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.4rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: calc(var(--shelf-row-gap) + 0.05rem);
 }
 
 .lens-preset-btn {
@@ -5585,7 +6184,7 @@ body.ui-hidden .shelf {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: calc(var(--shelf-row-gap) + 0.05rem);
 }
 
 .iso-preset-grid,
@@ -5795,14 +6394,16 @@ body.ui-hidden .shelf {
 
 /* Information tab quick navigation */
 .info-quicknav {
-  display: block !important;
-  font-size: var(--shelf-label-font-size);
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  font-size: 0.85rem;
   color: var(--text-dim);
 }
 
 .info-quicknav a {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0;
 }
 
 .histogram-container canvas {

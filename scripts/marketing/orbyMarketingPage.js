@@ -58,7 +58,7 @@ function ensureStylesheet() {
   const href =
     version && version !== 'dev'
       ? `${STYLES_HREF}?v=${encodeURIComponent(version)}`
-      : STYLES_HREF;
+      : `${STYLES_HREF}?dev=${Date.now()}`;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = href;

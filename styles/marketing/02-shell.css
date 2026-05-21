@@ -46,6 +46,11 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
   contain: strict;
 }
 
+/* Pill labels — same support ramp as dropzone secondary copy */
+#orby-marketing .orby-magic-btn {
+  font-size: var(--orby-marketing-support-size);
+}
+
 #orby-marketing {
   position: relative;
   z-index: 1;
