@@ -20,6 +20,12 @@ const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
   high: 6,
   ultra: 4.5,
 };
+/** Viewport gizmos scale with the loaded mesh so tiny models don't get huge cones. */
+const LIGHT_INDICATOR_DISTANCE_FACTOR = 2.5;
+const LIGHT_INDICATOR_RADIUS_FACTOR = 0.15;
+const LIGHT_INDICATOR_HEIGHT_FACTOR = 0.3;
+const LIGHT_INDICATOR_UNIT_CONE_RADIUS = 1;
+const LIGHT_INDICATOR_UNIT_CONE_HEIGHT = 1;
 
 export class LightsController {
   constructor(scene, options = {}) {
@@ -450,24 +456,33 @@ export class LightsController {
     }
   }
 
+  _getIndicatorMetrics(radius) {
+    const r = Math.max(Number(radius) || 0, 1e-6);
+    return {
+      baseDistance: r * LIGHT_INDICATOR_DISTANCE_FACTOR,
+      coneRadius: r * LIGHT_INDICATOR_RADIUS_FACTOR,
+      coneHeight: r * LIGHT_INDICATOR_HEIGHT_FACTOR,
+    };
+  }
+
   createIndicators() {
     this.clearIndicators();
     if (!this.modelBounds || !this.basePositions) return;
 
     const group = new THREE.Group();
     const { center, radius } = this.modelBounds;
-    const baseDistance = radius * 2.5;
 
     ['key', 'fill', 'rim'].forEach((id) => {
       const light = this.lights[id];
       if (!light) return;
 
-      const lightPos = light.position.clone();
-      const direction = lightPos.clone().sub(center).normalize();
-      const position = center.clone().add(direction.multiplyScalar(baseDistance));
-
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(0.15, 0.3, 28, 1),
+        new THREE.ConeGeometry(
+          LIGHT_INDICATOR_UNIT_CONE_RADIUS,
+          LIGHT_INDICATOR_UNIT_CONE_HEIGHT,
+          28,
+          1,
+        ),
         new THREE.MeshBasicMaterial({
           color: light.color,
           transparent: true,
@@ -476,12 +491,6 @@ export class LightsController {
         }),
       );
 
-      cone.position.copy(position);
-      const dirToCenter = center.clone().sub(position).normalize();
-      const up = new THREE.Vector3(0, 1, 0);
-      const quaternion = new THREE.Quaternion();
-      quaternion.setFromUnitVectors(up.clone().negate(), dirToCenter);
-      cone.quaternion.copy(quaternion);
       cone.userData.lightId = id;
       group.add(cone);
     });
@@ -504,7 +513,7 @@ export class LightsController {
   updateIndicators() {
     if (!this.lightIndicators || !this.modelBounds) return;
     const { center, radius } = this.modelBounds;
-    const baseDistance = radius * 2.5;
+    const { baseDistance, coneRadius, coneHeight } = this._getIndicatorMetrics(radius);
     this.lightIndicators.traverse((child) => {
       if (!child.isMesh || !child.userData.lightId) return;
       const lightId = child.userData.lightId;
@@ -517,8 +526,12 @@ export class LightsController {
       child.material.color.copy(light.color);
       const maxIntensity = 10;
       const normalizedIntensity = Math.min(light.intensity / maxIntensity, 1);
-      const scale = 0.5 + normalizedIntensity * 2.0;
-      child.scale.set(scale, scale, scale);
+      const intensityScale = 0.5 + normalizedIntensity * 2.0;
+      child.scale.set(
+        coneRadius * intensityScale,
+        coneHeight * intensityScale,
+        coneRadius * intensityScale,
+      );
       const dirToCenter = center.clone().sub(newPosition).normalize();
       const up = new THREE.Vector3(0, 1, 0);
       const quaternion = new THREE.Quaternion();

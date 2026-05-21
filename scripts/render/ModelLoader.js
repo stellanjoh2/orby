@@ -9,8 +9,36 @@ import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
 
-const FBX_TARGET_MAX_DIMENSION = 2.0;
-const FBX_SCALE_NORMALIZE_THRESHOLD = 20.0;
+/** Target max axis length (meters-ish studio units) for lights, AO, shadows, camera fit. */
+const IMPORT_TARGET_MAX_DIMENSION = 2.0;
+/** Below target × ratio → scale up on import (e.g. Sketchfab GLB with 0.01 node scale). */
+const IMPORT_SCALE_MIN_RATIO = 0.25;
+/** Above target × ratio → scale down on import (legacy FBX cm/m extremes). */
+const IMPORT_SCALE_MAX_RATIO = 10;
+
+/**
+ * Uniformly scale a loaded root so its world AABB max dimension sits near {@link IMPORT_TARGET_MAX_DIMENSION}.
+ * Skips assets already in the Orby-friendly band so intentional ~2-unit glTF is unchanged.
+ */
+function normalizeImportScale(object) {
+  if (!object) return;
+  object.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (!bounds || bounds.isEmpty()) return;
+  const size = bounds.getSize(new THREE.Vector3());
+  const maxDimension = Math.max(size.x, size.y, size.z);
+  if (!Number.isFinite(maxDimension) || maxDimension <= 0) return;
+
+  const target = IMPORT_TARGET_MAX_DIMENSION;
+  const minThreshold = target * IMPORT_SCALE_MIN_RATIO;
+  const maxThreshold = target * IMPORT_SCALE_MAX_RATIO;
+  if (maxDimension >= minThreshold && maxDimension <= maxThreshold) return;
+
+  const uniformScale = target / maxDimension;
+  if (!Number.isFinite(uniformScale) || uniformScale <= 0) return;
+  object.scale.multiplyScalar(uniformScale);
+  object.updateMatrixWorld(true);
+}
 /** Mixamo / FBX Phong shininess is usually 0–100; map to PBR roughness. */
 const FBX_PHONG_SHININESS_ROUGHNESS_RANGE = 100;
 
@@ -242,6 +270,7 @@ export class ModelLoader {
             version: asset.version || null,
             copyright: asset.copyright || null,
           };
+          normalizeImportScale(gltf.scene);
           resolve({
             object: gltf.scene,
             animations: gltf.animations ?? [],
@@ -328,6 +357,7 @@ export class ModelLoader {
           if (!assetName) {
             assetName = file.name.replace(/\.[^/.]+$/, '');
           }
+          normalizeImportScale(gltf.scene);
           resolve({
             object: gltf.scene,
             animations: gltf.animations,
@@ -367,6 +397,7 @@ export class ModelLoader {
           if (!assetName) {
             assetName = file.name.replace(/\.[^/.]+$/, '');
           }
+          normalizeImportScale(gltf.scene);
           resolve({
             object: gltf.scene,
             animations: gltf.animations || [],
@@ -466,17 +497,7 @@ export class ModelLoader {
   }
 
   normalizeFbxScale(object) {
-    if (!object) return;
-    const bounds = new THREE.Box3().setFromObject(object);
-    if (!bounds || bounds.isEmpty()) return;
-    const size = new THREE.Vector3();
-    bounds.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    if (!Number.isFinite(maxDim) || maxDim <= FBX_SCALE_NORMALIZE_THRESHOLD) return;
-    const uniformScale = FBX_TARGET_MAX_DIMENSION / maxDim;
-    if (!Number.isFinite(uniformScale) || uniformScale <= 0) return;
-    object.scale.multiplyScalar(uniformScale);
-    object.updateMatrixWorld(true);
+    normalizeImportScale(object);
   }
 
   applyFbxVertexColorFallback(object) {
@@ -554,6 +575,7 @@ export class ModelLoader {
     return new Promise((resolve, reject) => {
       try {
         const object = this.objLoader.parse(text);
+        normalizeImportScale(object);
         resolve({ object, animations: [] });
       } catch (error) {
         reject(error);
@@ -573,6 +595,7 @@ export class ModelLoader {
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.userData.orbyStlImport = true;
+        normalizeImportScale(mesh);
         resolve({
           object: mesh,
           animations: [],
@@ -604,6 +627,7 @@ export class ModelLoader {
         'This USDZ uses binary USD (USDC). The viewer only loads USDZ packages whose main stage is text USDA—a common exporter default is USDC, which shows up empty here. Prefer GLB/glTF, or convert with usdcat and repackage if you control the asset.',
       );
     }
+    normalizeImportScale(object);
     return { object, animations: [] };
   }
 
