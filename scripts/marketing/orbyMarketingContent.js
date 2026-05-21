@@ -271,7 +271,7 @@ export const MARKETING_SECTIONS = [
         title: 'Mesh diagnostics',
         body:
           'UV checker, wireframe overlay, clay mode, and reverse normals. Everything you need to sanity-check your mesh without opening a DCC.',
-        imageSrc: './assets/marketing/feature-ui-placeholder.png',
+        imageSrc: './assets/marketing/orby-section-pro-meshdiagnostics01.jpg',
         imageAlt: 'Orby viewport with mesh diagnostic overlays',
       },
       {

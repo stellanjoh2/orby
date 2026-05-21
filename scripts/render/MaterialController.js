@@ -49,6 +49,48 @@ function setFresnelColorUniform(uniform, cssColor) {
   }
 }
 
+function isOrbyShaderPatchHook(hook) {
+  return !!(
+    hook?.__orbyFresnelShaderPatch
+    || hook?.__orbyShadowTintPatch
+    || hook?.__orbySvgSurfPatch
+  );
+}
+
+/**
+ * Base onBeforeCompile for Fresnel — not another Orby patch.
+ * When shadow tint is already outer, using it as Fresnel's `original` creates a cycle
+ * (shadow → fresnel → shadow → …) and duplicate GLSL on compile.
+ */
+function resolveFresnelBaseOnBeforeCompile(material) {
+  const unwrapShadowTint = (hook) => {
+    if (typeof hook === 'function' && hook.__orbyShadowTintPatch) {
+      const inner = material.userData?.orbyShadowTint?.previousOnBeforeCompile;
+      if (typeof inner === 'function') return inner;
+    }
+    return hook;
+  };
+
+  let candidate = unwrapShadowTint(material.onBeforeCompile);
+  if (typeof candidate === 'function' && candidate.__orbyFresnelShaderPatch) {
+    candidate = unwrapShadowTint(material.userData?.originalOnBeforeCompile);
+  }
+
+  if (typeof candidate === 'function' && !isOrbyShaderPatchHook(candidate)) {
+    return candidate;
+  }
+
+  const stored = unwrapShadowTint(material.userData?.originalOnBeforeCompile);
+  if (typeof stored === 'function' && stored.__orbyFresnelShaderPatch) {
+    return () => {};
+  }
+  if (typeof stored === 'function' && !isOrbyShaderPatchHook(stored)) {
+    return stored;
+  }
+
+  return () => {};
+}
+
 export class MaterialController {
   constructor({
     stateStore,
@@ -2122,11 +2164,21 @@ export class MaterialController {
         const svgIdx = material.userData.svgExtrudeProceduralPresetIndex;
         const svgScale = material.userData.svgExtrudeProceduralScale;
         const hadSvg = !!material.userData.svgExtrudeProceduralPatched;
-        const base = material.userData.originalOnBeforeCompile || (() => {});
+        const base = resolveFresnelBaseOnBeforeCompile(material);
+        const shadowHook = material.userData.shadowTintOnBeforeCompile;
+        const hadShadowTint = !!material.userData.shadowTintPatched;
         if (hadSvg) {
           removeSvgExtrudeProceduralFromMaterial(material);
         }
-        material.onBeforeCompile = typeof base === 'function' ? base : (() => {});
+        if (hadShadowTint && typeof shadowHook === 'function') {
+          material.onBeforeCompile = shadowHook;
+          if (material.userData.orbyShadowTint) {
+            material.userData.orbyShadowTint.previousOnBeforeCompile =
+              typeof base === 'function' ? base : (() => {});
+          }
+        } else {
+          material.onBeforeCompile = typeof base === 'function' ? base : (() => {});
+        }
         delete material.userData.originalOnBeforeCompile;
         delete material.userData.fresnelPatched;
         delete material.userData.fresnelUniforms;
@@ -2146,6 +2198,13 @@ export class MaterialController {
     // Always re-patch if material was replaced or uniforms are missing
     // This ensures Fresnel works even after material updates/recompilations
     if (material.userData.fresnelPatched) {
+      if (isOrbyShaderPatchHook(material.userData.originalOnBeforeCompile)) {
+        material.userData.originalOnBeforeCompile = resolveFresnelBaseOnBeforeCompile(material);
+        delete material.userData.fresnelPatched;
+        delete material.userData.fresnelOnBeforeCompile;
+      }
+    }
+    if (material.userData.fresnelPatched) {
       const uniforms = material.userData.fresnelUniforms;
       // If uniforms exist and are valid, just update values (no recompilation needed)
       if (uniforms && uniforms.color && uniforms.color.value !== undefined) {
@@ -2160,8 +2219,9 @@ export class MaterialController {
           // refs, and full repatch below. Never delete originalOnBeforeCompile here — if we do, the
           // next patch can treat the old Fresnel closure as "original", call it from the new hook,
           // and double-inject GLSL (duplicate uniforms → shader compile failure, Fresnel "dies").
-          const base = material.userData.originalOnBeforeCompile;
-          material.onBeforeCompile = typeof base === 'function' ? base : (() => {});
+          const base = resolveFresnelBaseOnBeforeCompile(material);
+          material.userData.originalOnBeforeCompile = base;
+          material.onBeforeCompile = base;
           delete material.userData.fresnelPatched;
           delete material.userData.fresnelUniforms;
         } else if (!material.onBeforeCompile || material.onBeforeCompile !== material.userData.fresnelOnBeforeCompile) {
@@ -2198,17 +2258,9 @@ export class MaterialController {
     }
 
     // Create new patch - this handles both new materials and re-patching
-    // Only store original if we haven't stored it before (to preserve the true original)
     let original = material.userData.originalOnBeforeCompile;
-    if (typeof original !== 'function') {
-      const live = material.onBeforeCompile;
-      if (typeof live === 'function' && !live.__orbyFresnelShaderPatch) {
-        original = live;
-      } else {
-        original = () => {};
-      }
-    }
-    if (!material.userData.originalOnBeforeCompile) {
+    if (typeof original !== 'function' || isOrbyShaderPatchHook(original)) {
+      original = resolveFresnelBaseOnBeforeCompile(material);
       material.userData.originalOnBeforeCompile = original;
     }
 
@@ -2216,11 +2268,14 @@ export class MaterialController {
     // Invert radius: low radius (0.5) = high power (5.0) = narrow, high radius (5.0) = low power (0.5) = wide
     const radius = settings.radius || 2.0;
     const invertedPower = Math.max(0.1, 5.5 - radius);
-    const uniforms = {
+    const uniforms = material.userData.fresnelUniforms || {
       color: { value: new THREE.Color(settings.color || '#ffffff') },
       strength: { value: settings.strength || 0.5 },
       power: { value: invertedPower },
     };
+    setFresnelColorUniform(uniforms.color, settings.color);
+    uniforms.strength.value = settings.strength || 0.5;
+    uniforms.power.value = invertedPower;
 
     // Store uniforms before patching so they're available even if shader recompiles
     material.userData.fresnelUniforms = uniforms;
@@ -2235,18 +2290,21 @@ export class MaterialController {
       shader.uniforms.fresnelStrength = fresnelUniforms.strength;
       shader.uniforms.fresnelPower = fresnelUniforms.power;
 
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <common>',
-        `
+      if (!shader.fragmentShader.includes('uniform vec3 fresnelColor')) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <common>',
+          `
         #include <common>
         uniform vec3 fresnelColor;
         uniform float fresnelStrength;
         uniform float fresnelPower;
       `,
-      );
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <lights_fragment_end>',
-        `
+        );
+      }
+      if (!shader.fragmentShader.includes('fresnelContribution')) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <lights_fragment_end>',
+          `
         #include <lights_fragment_end>
         vec3 fresnelNormal = normalize( normal );
         vec3 fresnelViewDir = normalize( vViewPosition );
@@ -2255,7 +2313,8 @@ export class MaterialController {
         reflectedLight.directDiffuse += fresnelContribution;
         totalEmissiveRadiance += fresnelContribution;
       `,
-      );
+        );
+      }
 
       // Ensure uniforms are stored after shader compilation
       material.userData.fresnelUniforms = fresnelUniforms;

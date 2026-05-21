@@ -22,6 +22,27 @@ html.orby-home-scroll .workspace {
   margin-bottom: 0;
 }
 
+/* Hero deco (e.g. bottom-left creature) may extend below the fold into scroll */
+html.orby-home-scroll body.dropzone-visible #app {
+  overflow: visible;
+}
+
+html.orby-home-scroll body.dropzone-visible .workspace,
+html.orby-home-scroll body.dropzone-visible .viewport {
+  overflow: visible;
+  clip-path: none;
+}
+
+/* Above #orby-marketing (z-index 1) so hero bleed paints over the section below */
+html.orby-home-scroll body.dropzone-visible .workspace {
+  position: relative;
+  z-index: 2;
+}
+
+html.orby-home-scroll body.dropzone-visible .dropzone {
+  overflow: visible;
+}
+
 html.orby-home-scroll #orby-marketing[hidden] {
   display: none !important;
 }

@@ -2897,8 +2897,8 @@ html.safari-browser .dropzone::before {
 }
 
 .dropzone-hero-deco__slot--ll {
-  bottom: 100px;
-  left: 100px;
+  bottom: -220px;
+  left: 75px;
 }
 
 .dropzone-hero-deco__img {
@@ -2917,12 +2917,20 @@ html.safari-browser .dropzone::before {
 }
 
 .dropzone-hero-deco__slot--ur .dropzone-hero-deco__img {
-  transform: translate(6%, -4%);
+  transform: translate(6%, -4%) scale(2);
   transform-origin: 100% 0%;
 }
 
+/* 2560+ — nudge hero JPG toward top-right gutter */
+@media (min-width: 160rem) {
+  .dropzone-hero-deco__slot--ur {
+    top: -150px;
+    right: -115px;
+  }
+}
+
 .dropzone-hero-deco__slot--ll .dropzone-hero-deco__img {
-  transform: translate(-6%, 4%);
+  transform: translate(-6%, 12%) scale(2);
   transform-origin: 0% 100%;
 }
 

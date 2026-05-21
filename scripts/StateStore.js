@@ -1,5 +1,6 @@
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
+  COLOR_CHECKER_DEFAULT_SCALE,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
@@ -309,7 +310,7 @@ export class StateStore {
       /**
        * ColorChecker Classic (24 swatches) — reference sRGB from Wikipedia / manufacturer data.
        * Default placement (distance / rotate / height / scale) is a tuned “spawn” preset; `enabled` stays
-       * false until the user shows the chart.
+       * false until the user shows the chart. Scale matches ~356 mm card on import-normalized (~2 m) assets.
        */
       colorChecker: {
         enabled: false,
@@ -318,8 +319,8 @@ export class StateStore {
         rotate: 333,
         /** Vertical offset from orbit target (scene units), like Key → Height. */
         height: -0.5,
-        /** Uniform scale of the chart group (1 = default built-in size). */
-        scale: 0.17,
+        /** Uniform scale of the chart group (1× ≈ built-in mesh width; default ≈ physical card on normalized imports). */
+        scale: COLOR_CHECKER_DEFAULT_SCALE,
         /** Shortcut to Object → Display → Unlit (textures); restores prior display mode when turned off. */
         rawColors: false,
       },

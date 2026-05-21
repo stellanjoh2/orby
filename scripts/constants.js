@@ -1,7 +1,22 @@
 // Application-wide constants
 
+import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
+
 /** Default near-black — app surfaces, lime CTAs, scene background, letterbox mattes. */
 export const ORBY_BLACK = '#080808';
+
+/** Target max axis after import normalization (see ModelLoader.normalizeImportScale). */
+export const STUDIO_IMPORT_TARGET_MAX_DIMENSION = 2.0;
+
+/** ColorChecker Classic card width (~356 mm) in normalized studio units. */
+export const COLOR_CHECKER_PHYSICAL_WIDTH = 0.356;
+
+/**
+ * Default `colorChecker.scale` — real card size on ~2 m normalized imports.
+ * (Mesh is ~{COLOR_CHECKER_MESH_WIDTH} units wide at 1×; old 0.17× preset predates import scale.)
+ */
+export const COLOR_CHECKER_DEFAULT_SCALE =
+  COLOR_CHECKER_PHYSICAL_WIDTH / COLOR_CHECKER_MESH_WIDTH;
 
 export const WIREFRAME_OFFSET = 0.002; // Units to push wireframe vertices along normals
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = 2;

@@ -112,20 +112,31 @@ function createReferenceSphereMeshes(group, totalW, totalH) {
   return mats;
 }
 
+/** Patch grid layout — keep in sync with {@link COLOR_CHECKER_MESH_WIDTH}. */
+const CC_COLS = 6;
+const CC_ROWS = 4;
+const CC_PATCH = 1;
+const CC_GUTTER = 0.045;
+const CC_FRAME_W = 0.11;
+
+/** Built group width before `colorChecker.scale` (studio imports normalize to ~2 m max axis). */
+export const COLOR_CHECKER_MESH_WIDTH =
+  CC_COLS * CC_PATCH + (CC_COLS - 1) * CC_GUTTER + 2 * CC_FRAME_W;
+
 /**
- * @returns {THREE.Group} Centered in XY, front face toward +Z, ~1.5 units wide (Classic-like aspect).
+ * @returns {THREE.Group} Centered in XY, front face toward +Z (~{COLOR_CHECKER_MESH_WIDTH} units wide at scale 1).
  */
 export function createColorCheckerMeshGroup() {
   const group = new THREE.Group();
   group.name = 'ColorChecker';
 
-  const rows = 4;
-  const cols = 6;
-  const patch = 1;
-  const gutter = 0.045;
+  const rows = CC_ROWS;
+  const cols = CC_COLS;
+  const patch = CC_PATCH;
+  const gutter = CC_GUTTER;
   /** Slightly thicker than the original 0.028 so the card reads as a solid slab */
   const depth = 0.04;
-  const frameW = 0.11;
+  const frameW = CC_FRAME_W;
   const cornerMark = 0.07;
   const cornerTh = 0.006;
 

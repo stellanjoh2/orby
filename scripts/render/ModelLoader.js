@@ -6,18 +6,19 @@ import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/j
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/USDZLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
-import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import {
+  DEFAULT_MATERIAL_ROUGHNESS,
+  STUDIO_IMPORT_TARGET_MAX_DIMENSION,
+} from '../constants.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
 
-/** Target max axis length (meters-ish studio units) for lights, AO, shadows, camera fit. */
-const IMPORT_TARGET_MAX_DIMENSION = 2.0;
 /** Below target × ratio → scale up on import (e.g. Sketchfab GLB with 0.01 node scale). */
 const IMPORT_SCALE_MIN_RATIO = 0.25;
 /** Above target × ratio → scale down on import (legacy FBX cm/m extremes). */
 const IMPORT_SCALE_MAX_RATIO = 10;
 
 /**
- * Uniformly scale a loaded root so its world AABB max dimension sits near {@link IMPORT_TARGET_MAX_DIMENSION}.
+ * Uniformly scale a loaded root so its world AABB max dimension sits near {@link STUDIO_IMPORT_TARGET_MAX_DIMENSION}.
  * Skips assets already in the Orby-friendly band so intentional ~2-unit glTF is unchanged.
  */
 function normalizeImportScale(object) {
@@ -29,7 +30,7 @@ function normalizeImportScale(object) {
   const maxDimension = Math.max(size.x, size.y, size.z);
   if (!Number.isFinite(maxDimension) || maxDimension <= 0) return;
 
-  const target = IMPORT_TARGET_MAX_DIMENSION;
+  const target = STUDIO_IMPORT_TARGET_MAX_DIMENSION;
   const minThreshold = target * IMPORT_SCALE_MIN_RATIO;
   const maxThreshold = target * IMPORT_SCALE_MAX_RATIO;
   if (maxDimension >= minThreshold && maxDimension <= maxThreshold) return;

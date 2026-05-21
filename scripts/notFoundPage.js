@@ -258,7 +258,7 @@ const NOT_FOUND_PRESET = {
     distance: 2,
     rotate: 333,
     height: -0.5,
-    scale: 0.17,
+    scale: 0.055,
     rawColors: false,
   },
   antiAliasing: 'fxaa',
