@@ -2875,6 +2875,61 @@ html.safari-browser .dropzone::before {
   z-index: 2;
 }
 
+/* Experiment — png-loop cutouts in frame gutters (behind magic card, above page fill) */
+.dropzone > .dropzone-hero-deco {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.dropzone-hero-deco__slot {
+  position: absolute;
+  display: block;
+  margin: 0;
+}
+
+/* Corner-anchored into gutter; inset pulls back toward frame edge */
+.dropzone-hero-deco__slot--ur {
+  top: 100px;
+  right: 100px;
+}
+
+.dropzone-hero-deco__slot--ll {
+  bottom: 100px;
+  left: 100px;
+}
+
+.dropzone-hero-deco__img {
+  display: block;
+  width: auto;
+  height: clamp(
+    192px,
+    min(calc(36vw * var(--drop-hero-wide-factor)), calc(48vh * var(--drop-hero-wide-factor))),
+    600px
+  );
+  max-width: min(76vw, 840px);
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  opacity: 0.92;
+}
+
+.dropzone-hero-deco__slot--ur .dropzone-hero-deco__img {
+  transform: translate(6%, -4%);
+  transform-origin: 100% 0%;
+}
+
+.dropzone-hero-deco__slot--ll .dropzone-hero-deco__img {
+  transform: translate(-6%, 4%);
+  transform-origin: 0% 100%;
+}
+
+html.mobile-landing .dropzone-hero-deco {
+  display: none;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
