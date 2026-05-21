@@ -111,13 +111,13 @@ function renderFigure(section, revealDir) {
   if (!slides.length && !videoSrc) return '';
 
   if (videoSrc) {
-    const posterSrc = slides[0]?.src || '';
+    const posterSrc = section.videoPoster ? slides[0]?.src || '' : '';
     const posterAttr = posterSrc ? ` poster="${escapeHtml(posterSrc)}"` : '';
     const imageAlt = slides[0]?.alt || section.imageAlt || '';
     return `<figure class="orby-marketing__figure">
       <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-        <video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="none" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>
+        <video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="auto" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>
         ${renderMarketingImageCredit(slides[0]?.imageCredit || section.imageCredit)}
       </div>
     </figure>`;

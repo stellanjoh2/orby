@@ -78,6 +78,7 @@ function whenMediaReady(el, options = {}) {
 
   if (el instanceof HTMLVideoElement) {
     if (el.readyState >= 2) return Promise.resolve();
+    if (el.readyState < 1) el.load();
     return new Promise((resolve) => {
       const finish = () => resolve();
       el.addEventListener('loadeddata', finish, { once: true });
@@ -124,7 +125,7 @@ function shouldPreloadMarketingElement(el) {
   }
   if (el instanceof HTMLImageElement) return Boolean(el.src);
   if (el instanceof HTMLVideoElement) {
-    return el.preload !== 'none' && Boolean(el.src);
+    return Boolean(el.currentSrc || el.src);
   }
   return false;
 }
@@ -277,11 +278,19 @@ export function playMarketingVideo(video) {
   const run = () => {
     video.play().catch(() => {});
   };
+  video.addEventListener(
+    'playing',
+    () => {
+      video.removeAttribute('poster');
+    },
+    { once: true },
+  );
   if (video.readyState >= 2) {
     run();
-  } else {
-    video.addEventListener('loadeddata', run, { once: true });
+    return;
   }
+  if (video.readyState < 1) video.load();
+  video.addEventListener('loadeddata', run, { once: true });
 }
 
 /**
@@ -356,6 +365,8 @@ function revealMedia(maskEl, tl, position = 0) {
     : null;
 
   gsap.set(maskEl, { clearProps: 'clipPath' });
+
+  if (media instanceof HTMLVideoElement) playMarketingVideo(media);
 
   tl.add(() => whenMediaReady(media), position);
   const revealStart = '>';

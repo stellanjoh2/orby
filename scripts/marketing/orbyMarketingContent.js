@@ -1,6 +1,6 @@
 /**
  * Copy + media map for the homepage marketing one-pager.
- * Swap imageSrc / videoSrc paths as real captures land. videoSrc on split blocks uses imageSrc as poster when both are set.
+ * Swap imageSrc / videoSrc paths as real captures land. Set videoPoster: true to use imageSrc as a poster frame.
  *
  * After editing marketing copy here, regenerate the review export:
  *   npm run export:marketing-copy
@@ -40,6 +40,7 @@
  * @property {{ src: string, alt: string, credit?: string, imageCredit?: MarketingImageCredit }[]} [gallery]
  * @property {{ src: string, alt: string }[]} [marquee]
  * @property {string} [videoSrc]
+ * @property {boolean} [videoPoster] — split video: use imageSrc as poster (default false)
  * @property {string} [ctaLabel]
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
@@ -193,8 +194,8 @@ export const MARKETING_SECTIONS = [
       'Great for social clips, concept boards, and rapid art direction',
     ],
     layout: 'media-left',
-    /* Poster until section video lands; then set videoSrc to the MP4 path. */
     imageSrc: './assets/marketing/orby-section05-shaderlab-01.jpg',
+    videoSrc: './assets/marketing/orby-shaderspin-1080p-60mp4.mp4',
     imageAlt: 'Female head anatomy with stylized Shader Lab look in Orby',
     imageCredit: {
       title: 'Female Head Anatomy',
