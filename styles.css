@@ -146,6 +146,23 @@
   );
   --orby-home-padding-x: var(--orby-home-padding);
   --orby-home-padding-y: var(--orby-home-padding);
+  /* Hero credits — same gutter as showcase gallery (--orby-marketing-col-gap); 112px @ 2560 */
+  --orby-hero-credit-gutter-wide-factor: clamp(
+    0.84,
+    calc(0.84 + 0.16 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-hero-credit-gutter-scale: clamp(
+    0.65,
+    min(
+      1,
+      calc(
+        (min(1, 100vw / 90rem) * 1.48 - 0.48) * var(--orby-hero-credit-gutter-wide-factor)
+      )
+    ),
+    1
+  );
+  --orby-hero-credit-inset: calc(112px * var(--orby-hero-credit-gutter-scale));
 }
 
 /* Big screens: extra horizontal inset only — vertical inset follows height */
@@ -2689,7 +2706,7 @@ html.orby-dropzone-shell-pending .workspace {
   --dropzone-frame-stroke: 2px;
   --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
   /*
-   * Hero scale — full @ 2560; ~78% @ 1920 (logo, headline, Browse pill, frame glow).
+   * Hero scale — full @ 2560; ~78% @ 1920 (logo, headline, Browse pill, frosted frame).
    */
   --drop-hero-wide-factor: clamp(
     0.78,
@@ -2704,16 +2721,9 @@ html.orby-dropzone-shell-pending .workspace {
   --drop-hero-magic-btn-y-nudge: calc(
     2px * clamp(0, (1 - var(--drop-hero-wide-factor)) / 0.22, 1)
   );
-  /* Constant rotation speed (no drag speed-up). Glow px values × wide-factor. */
-  --dropzone-magic-spin: 16s;
-  --dropzone-magic-bleed: calc(25.3125px * var(--drop-hero-wide-factor));
-  /* Blur is the main GPU cost — another ~25% tighter for landing perf */
-  --dropzone-glow-blur: calc(26.15625px * var(--drop-hero-wide-factor));
-  --dropzone-glow-radial-w: 150.75%;
-  --dropzone-glow-radial-h: 85.5%;
-  --dropzone-glow-rim-a: calc(27px * var(--drop-hero-wide-factor));
-  --dropzone-glow-rim-b: calc(54px * var(--drop-hero-wide-factor));
-  --dropzone-glow-rim-c: calc(85.5px * var(--drop-hero-wide-factor));
+  --dropzone-frost-blur: calc(20px * var(--drop-hero-wide-factor));
+  --dropzone-frost-fill: color-mix(in srgb, var(--orby-app-bg) 78%, transparent);
+  isolation: isolate;
   /* Cyan drag accents on ::before only (full-bleed box-shadow on .dropzone escapes clip → edge haze) */
   --dropzone-drag-rim-cyan-a: calc(12.375px * var(--drop-hero-wide-factor));
   --dropzone-drag-rim-cyan-b: calc(21.375px * var(--drop-hero-wide-factor));
@@ -2731,66 +2741,7 @@ html.orby-dropzone-shell-pending .workspace {
   container-name: orby-dropzone;
 }
 
-.dropzone.drag-active {
-  --dropzone-magic-bleed: calc(12.65625px * var(--drop-hero-wide-factor));
-  --dropzone-glow-blur: calc(18.5625px * var(--drop-hero-wide-factor));
-  --dropzone-glow-radial-w: 98.71875%;
-  --dropzone-glow-radial-h: 55.6875%;
-  --dropzone-glow-rim-a: calc(17.71875px * var(--drop-hero-wide-factor));
-  --dropzone-glow-rim-b: calc(35.4375px * var(--drop-hero-wide-factor));
-  --dropzone-glow-rim-c: calc(55.6875px * var(--drop-hero-wide-factor));
-}
-
-/* Inspired by Magic Card pen: animate gradient angle only (no layout transform). */
-@property --dropzone-magic-rotate {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-/* Soft diffuse glow — filtered blur is the main cost; pseudos animate the same angle (two repaints). */
-.dropzone::after {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  top: calc(var(--dropzone-padding-y) - var(--dropzone-magic-bleed));
-  right: calc(var(--dropzone-padding-x) - var(--dropzone-magic-bleed));
-  bottom: calc(var(--dropzone-padding-y) - var(--dropzone-magic-bleed));
-  left: calc(var(--dropzone-padding-x) - var(--dropzone-magic-bleed));
-  border-radius: calc(
-    var(--dropzone-frame-radius) + min(6px, var(--dropzone-magic-bleed))
-  );
-  /* Bottom pool + rotating sweep — lime, purple, dead zone (transparent → reads black) */
-  background-image:
-    radial-gradient(
-      ellipse var(--dropzone-glow-radial-w) var(--dropzone-glow-radial-h) at 50% 108%,
-      color-mix(in srgb, var(--text-link) 38%, transparent) 0%,
-      transparent 65%
-    ),
-    linear-gradient(
-      var(--dropzone-magic-rotate),
-      var(--brand-primary) 0%,
-      var(--text-link) 32%,
-      transparent 40%,
-      transparent 46%,
-      transparent 51%,
-      transparent 58%,
-      var(--brand-primary) 100%
-    );
-  filter: blur(var(--dropzone-glow-blur));
-  opacity: 0.48;
-  pointer-events: none;
-  animation: dropzoneMagicSpin var(--dropzone-magic-spin) linear infinite;
-  transition:
-    opacity 0.35s ease,
-    filter 0.35s ease,
-    top 0.35s ease,
-    right 0.35s ease,
-    bottom 0.35s ease,
-    left 0.35s ease;
-}
-
-/* Frame + inner window above blurred glow. */
+/* Frosted frame — blurs hero deco behind; static lime stroke (no outer glow ring). */
 .dropzone::before {
   content: '';
   position: absolute;
@@ -2800,74 +2751,15 @@ html.orby-dropzone-shell-pending .workspace {
   bottom: var(--dropzone-padding-y);
   left: var(--dropzone-padding-x);
   border-radius: var(--dropzone-frame-radius);
-  border: var(--dropzone-frame-stroke) solid transparent;
-  /* Solid card interior (avoids panel tint reading as blue/purple “window”) */
-  background:
-    linear-gradient(var(--orby-app-bg), var(--orby-app-bg)) padding-box,
-    linear-gradient(
-        var(--dropzone-magic-rotate),
-        var(--brand-primary) 0%,
-        var(--text-link) 32%,
-        transparent 40%,
-        transparent 46%,
-        transparent 51%,
-        transparent 58%,
-        var(--brand-primary) 100%
-      )
-      border-box;
-  background-origin: padding-box, border-box;
-  -webkit-background-clip: padding-box, border-box;
-  background-clip: padding-box, border-box;
+  border: var(--dropzone-frame-stroke) solid
+    color-mix(in srgb, var(--brand-primary) 28%, transparent);
+  -webkit-backdrop-filter: blur(var(--dropzone-frost-blur)) saturate(1.1);
+  backdrop-filter: blur(var(--dropzone-frost-blur)) saturate(1.1);
+  background: linear-gradient(var(--dropzone-frost-fill), var(--dropzone-frost-fill));
   pointer-events: none;
-  animation: dropzoneMagicSpin var(--dropzone-magic-spin) linear infinite;
-  /* Rim read on the stroke; bulk glow comes from ::after */
-  box-shadow:
-    0 0 var(--dropzone-glow-rim-a) color-mix(in srgb, var(--brand-primary) 32%, transparent),
-    0 0 var(--dropzone-glow-rim-b) color-mix(in srgb, var(--text-link) 18%, transparent),
-    0 0 var(--dropzone-glow-rim-c) color-mix(in srgb, var(--text-link) 10%, transparent);
   transition:
-    filter 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-@keyframes dropzoneMagicSpin {
-  to {
-    --dropzone-magic-rotate: 360deg;
-  }
-}
-
-/* Safari fallback: preserve look while cutting compositor-heavy animated blur work. */
-html.safari-browser .dropzone {
-  --dropzone-magic-spin: 24s;
-  --dropzone-glow-blur: calc(12.375px * var(--drop-hero-wide-factor));
-}
-
-html.safari-browser .dropzone::after {
-  opacity: 0.3;
-  filter: blur(var(--dropzone-glow-blur));
-  animation: none;
-  background-image:
-    radial-gradient(
-      ellipse var(--dropzone-glow-radial-w) var(--dropzone-glow-radial-h) at 50% 108%,
-      color-mix(in srgb, var(--text-link) 24%, transparent) 0%,
-      transparent 66%
-    ),
-    linear-gradient(
-      135deg,
-      var(--brand-primary) 0%,
-      var(--text-link) 30%,
-      transparent 40%,
-      transparent 60%,
-      var(--brand-primary) 100%
-    );
-}
-
-html.safari-browser .dropzone::before {
-  box-shadow:
-    0 0 calc(var(--dropzone-glow-rim-a) * 0.65)
-      color-mix(in srgb, var(--brand-primary) 20%, transparent),
-    0 0 calc(var(--dropzone-glow-rim-b) * 0.65)
-      color-mix(in srgb, var(--text-link) 12%, transparent);
+    -webkit-backdrop-filter 0.35s ease,
+    backdrop-filter 0.35s ease;
 }
 
 .dropzone > * {
@@ -2875,7 +2767,7 @@ html.safari-browser .dropzone::before {
   z-index: 2;
 }
 
-/* Experiment — png-loop cutouts in frame gutters (behind magic card, above page fill) */
+/* Corner hero JPGs — behind frosted frame, above page fill */
 .dropzone > .dropzone-hero-deco {
   position: absolute;
   inset: 0;
@@ -2893,12 +2785,12 @@ html.safari-browser .dropzone::before {
 /* Corner-anchored into gutter; inset pulls back toward frame edge */
 .dropzone-hero-deco__slot--ur {
   top: 100px;
-  right: 100px;
+  right: 115px;
 }
 
 .dropzone-hero-deco__slot--ll {
-  bottom: -220px;
-  left: 75px;
+  bottom: -260px;
+  left: 90px;
 }
 
 .dropzone-hero-deco__img {
@@ -2925,7 +2817,7 @@ html.safari-browser .dropzone::before {
 @media (min-width: 160rem) {
   .dropzone-hero-deco__slot--ur {
     top: -150px;
-    right: -115px;
+    right: -100px;
   }
 }
 
@@ -2934,7 +2826,65 @@ html.safari-browser .dropzone::before {
   transform-origin: 0% 100%;
 }
 
-html.mobile-landing .dropzone-hero-deco {
+/* Hero credits — right gutter, vertically centered within dropzone frame */
+body.dropzone-visible #dropzone > .dropzone-hero-credits {
+  position: absolute;
+  top: var(--dropzone-padding-y);
+  right: var(--orby-hero-credit-inset);
+  bottom: var(--dropzone-padding-y);
+  left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: max-content;
+  max-width: none;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+body:not(.dropzone-visible) .dropzone-hero-credits,
+html:not(.orby-home-scroll) .dropzone-hero-credits {
+  display: none;
+}
+
+.dropzone-hero-credit {
+  margin: 0;
+  padding: 0;
+  color: color-mix(in srgb, var(--text-dim) 50%, var(--orby-app-bg));
+  font-size: var(--orby-marketing-support-size, 12px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  text-align: center;
+  pointer-events: auto;
+}
+
+.dropzone-hero-credit__label,
+.dropzone-hero-credit__sep {
+  color: inherit;
+}
+
+.dropzone-hero-credit a {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--text-link) 55%, transparent);
+  text-underline-offset: 0.14em;
+}
+
+.dropzone-hero-credit a:hover,
+.dropzone-hero-credit a:focus-visible {
+  color: var(--brand-primary);
+  text-decoration-color: currentColor;
+}
+
+html.mobile-landing .dropzone-hero-deco,
+html.mobile-landing .dropzone-hero-credits {
   display: none;
 }
 
@@ -2959,53 +2909,28 @@ html.mobile-landing .dropzone-hero-deco {
     0 0 var(--dropzone-drag-rim-cyan-c) color-mix(in srgb, var(--text-link) 16%, transparent);
 }
 
-.dropzone.drag-active::after {
-  opacity: 0.52;
-  filter: blur(var(--dropzone-glow-blur)) saturate(1.08);
-}
-
-/* Start menu off — stop gradient spin / @property churn (nothing visible; saves compositor work). */
-body:not(.dropzone-visible) .dropzone::before,
-body:not(.dropzone-visible) .dropzone::after {
-  animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dropzone::before,
-  .dropzone::after {
-    animation: none;
-  }
-}
-
-/* Pause gradient frame animation during window resize (reduces compositor churn) */
-html.orby-window-resizing body.dropzone-visible .dropzone::before,
-html.orby-window-resizing body.dropzone-visible .dropzone::after {
-  animation-play-state: paused;
-}
-
-/* Pause home glow spins while scrolling; Lottie paused in StartMenuController — resumes ~160ms after scroll idle */
-html.orby-dropzone-glow-scrolling body.dropzone-visible .dropzone::before,
-html.orby-dropzone-glow-scrolling body.dropzone-visible .dropzone::after,
+/* Pause Browse pill glow spins while scrolling; Lottie paused in StartMenuController */
 html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::before,
 html.orby-dropzone-glow-scrolling body.dropzone-visible .orby-magic-btn::after {
   animation-play-state: paused;
 }
 
-html.orby-dropzone-glow-off-screen body.dropzone-visible .dropzone::before,
-html.orby-dropzone-glow-off-screen body.dropzone-visible .dropzone::after,
-html.orby-dropzone-glow-tab-hidden body.dropzone-visible .dropzone::before,
-html.orby-dropzone-glow-tab-hidden body.dropzone-visible .dropzone::after {
+html.orby-dropzone-glow-off-screen body.dropzone-visible .orby-magic-btn::before,
+html.orby-dropzone-glow-off-screen body.dropzone-visible .orby-magic-btn::after,
+html.orby-dropzone-glow-tab-hidden body.dropzone-visible .orby-magic-btn::before,
+html.orby-dropzone-glow-tab-hidden body.dropzone-visible .orby-magic-btn::after {
   animation-play-state: paused;
 }
 
-html.orby-marketing-reduced body.dropzone-visible .dropzone::after {
-  filter: blur(calc(var(--dropzone-glow-blur) * 0.55));
-  opacity: 0.38;
-  animation-duration: 28s;
+html.orby-window-resizing body.dropzone-visible .orby-magic-btn::before,
+html.orby-window-resizing body.dropzone-visible .orby-magic-btn::after {
+  animation-play-state: paused;
 }
 
 html.orby-marketing-reduced body.dropzone-visible .dropzone::before {
-  animation-duration: 28s;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  --dropzone-frost-fill: var(--orby-app-bg);
 }
 
 .drop-logo {
@@ -6599,10 +6524,8 @@ html.mobile-landing #webgl {
   background-color: var(--orby-app-bg) !important;
 }
 
-html.mobile-landing .dropzone::before,
-html.mobile-landing .dropzone::after {
+html.mobile-landing .dropzone::before {
   content: none !important;
-  animation: none !important;
 }
 
 html.mobile-landing .dropzone {
