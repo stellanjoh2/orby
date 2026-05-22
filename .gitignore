@@ -13,6 +13,10 @@ dist/
 # Test assets - keep locally only
 TEMP/
 
+# Fab / Megascans / Quixel library meshes — never commit (license forbids redistribution)
+assets/3D-assets/*_xisgcic_*.glb
+assets/3D-assets/nordic_forest_cluster*.glb
+
 # Intro turntable encode sources (large); commit *_web/ + posters only (npm run encode:turntable)
 assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_60fps_1spin_1440p/
 assets/marketing/toyotagr_supra_gt300__www_vecarz_com_turntable_5s_60fps_1spin_1440p.zip

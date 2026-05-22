@@ -6,7 +6,7 @@
     <title>Privacy Policy — Orby</title>
     <meta
       name="description"
-      content="How Orby handles your information. Orby is a client-side 3D viewer in your browser."
+      content="How Orby handles your information. Orby is a browser-based 3D studio that runs on your device."
     />
     <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
     <link rel="stylesheet" href="./legal.css" />
@@ -24,26 +24,34 @@
 
     <main id="main" class="legal-wrap">
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last updated: 14 May 2026</p>
+      <p class="legal-meta">Last updated: 22 May 2026</p>
 
       <p class="legal-lead">
         Your privacy matters to us. Thank you for using <strong>Orby</strong>. This policy explains
-        how we handle information when you use our viewer, website, and related materials—in plain
+        how we handle information when you use our studio, website, and related materials—in plain
         terms: what stays on your device, what might reach us or our infrastructure providers, and
         what we do <strong>not</strong> do with your creative work.
       </p>
 
       <p>
-        By using Orby, you acknowledge this policy. If you do not agree, please do not use the
-        service. Questions:
+        <strong>Who operates Orby:</strong> Orby at
+        <a href="https://orby.studio/">orby.studio</a> is operated by
+        <strong>Stellan Johansson</strong> (Sweden). For privacy questions or requests, email
         <a href="mailto:orby-admin@proton.me">orby-admin@proton.me</a>.
+      </p>
+
+      <p>
+        By using Orby, you acknowledge this policy. If you do not agree, please do not use the
+        service.
       </p>
 
       <h2 id="what-orby-is">1. What Orby is</h2>
       <p>
-        Orby is a <strong>3D model viewer</strong> that runs in your web browser. You open or load
-        model files from your device (or from sources you choose), and Orby renders and displays
-        them locally for you.
+        Orby is a <strong>browser-based 3D studio</strong> that runs in your web browser. You open
+        or load model files from your device (or from sources you choose), and Orby renders,
+        adjusts, and exports them <strong>locally</strong> for you—materials, lighting, scene
+        settings, stills, video, and similar outputs without uploading your files to us for normal
+        use.
       </p>
 
       <h2 id="your-content-and-ai">2. Your content and AI</h2>
@@ -91,43 +99,99 @@
         What is logged, and for how long, depends on our hosting and infrastructure providers.
       </p>
 
-      <p class="legal-sub">3.4 Optional site features</p>
+      <p class="legal-sub">3.4 Issue reports and abuse prevention</p>
       <p>
-        From time to time the site may use optional mechanisms (for example a visitor challenge or
-        abuse prevention widget) provided by a third party. If present, that provider may process
-        technical data as described in its own documentation. Similarly, if you use an optional bug
-        report or feedback flow that sends data to a server we operate or configure, that submission
-        is governed by what is shown in the form at the time you send it.
+        The app may include an optional <strong>issue report</strong> form. If you use it and the
+        feature is enabled on the site you are visiting, your browser sends a submission to an API we
+        configure (hosted on infrastructure such as Vercel). That payload typically includes the
+        <strong>category</strong>, <strong>severity</strong>, and <strong>message text</strong> you
+        enter, plus technical context added server-side (for example browser user-agent and
+        timestamp). Your <strong>IP address</strong> may be used for rate limiting and, when
+        enabled, to verify an abuse-prevention challenge.
+      </p>
+      <p>
+        Issue reports do <strong>not</strong> attach your 3D files automatically. Do not paste
+        confidential model data into the message unless you intend to share it with us for support.
+        When configured, a <strong>Cloudflare Turnstile</strong> challenge may run before send;
+        Turnstile’s provider may process technical data under its own policy.
       </p>
 
       <h2 id="cookies">4. Cookies and similar technologies</h2>
       <p>
-        We do not use cookies or similar technologies in Orby to <strong>track you across other
-        sites</strong> or to <strong>profile you for advertising</strong>. If we introduce cookies
-        for essential functionality (for example security or preferences), we will update this
-        page and, where required by law, obtain consent.
+        We do <strong>not</strong> use cookies or browser storage to <strong>track you across other
+        sites</strong> or to <strong>profile you for advertising</strong>. We do not run analytics
+        or ad pixels on Orby.
+      </p>
+      <p>
+        Orby may use <strong>local storage</strong> and <strong>session storage</strong> in your
+        browser for essential or convenience features only—for example UI sound preferences
+        (<code>localStorage</code>), remembering mobile layout or optional access-control state for
+        the current tab (<code>sessionStorage</code>). These values stay on your device and are not
+        sent to us as part of normal studio use.
+      </p>
+      <p>
+        When the issue-report flow uses <strong>Cloudflare Turnstile</strong>, Cloudflare may set
+        cookies or use similar technologies as described in
+        <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer"
+          >Cloudflare’s privacy policy</a
+        >. If we introduce additional cookies or storage for new features, we will update this page
+        and, where required by law, obtain consent.
       </p>
 
       <h2 id="third-parties">5. Third parties</h2>
       <p>
-        Orby may load <strong>fonts, scripts, or libraries</strong> from <strong>content delivery
-        networks</strong> (for example to deliver the application code and icon stylesheets) so the
-        application can run in your browser. Those providers may receive technical information (such
-        as IP address and request metadata) when your browser fetches those assets. Their practices
-        are described in their respective privacy policies.
+        Orby loads <strong>fonts, scripts, and libraries</strong> from third-party hosts so the
+        application can run in your browser. When your browser requests those assets, the provider
+        may receive technical information (such as IP address and request metadata). Examples
+        include:
+      </p>
+      <ul>
+        <li>
+          <strong>jsDelivr</strong> — application code (for example Three.js, GSAP, and related
+          modules)
+        </li>
+        <li>
+          <strong>Cloudflare CDN (cdnjs)</strong> — stylesheets such as icon fonts
+        </li>
+        <li>
+          <strong>Iconify</strong> (<code>api.iconify.design</code>) — SVG icons fetched on demand
+          for parts of the UI
+        </li>
+      </ul>
+      <p>
+        Their practices are described in their respective privacy policies.
       </p>
       <p>
-        Pages we link to (documentation, standards, credits, or other sites) are governed by their own
-        policies once you leave Orby—we do not control how those sites collect or use data.
+        When issue reporting is enabled, we also rely on:
+      </p>
+      <ul>
+        <li>
+          <strong>Cloudflare Turnstile</strong> — optional bot/abuse challenge before submit
+        </li>
+        <li>
+          <strong>Resend</strong> — delivers report content to our support inbox by email
+        </li>
+        <li>
+          <strong>Upstash</strong> — optional per-IP rate limiting on the report API
+        </li>
+        <li>
+          <strong>Vercel</strong> — hosts the report API and may process request metadata and logs
+        </li>
+      </ul>
+      <p>
+        Static site hosting (for example <strong>GitHub Pages</strong> or <strong>Vercel</strong>)
+        may also log access to pages and assets. Pages we link to (documentation, standards, credits,
+        or other sites) are governed by their own policies once you leave Orby—we do not control how
+        those sites collect or use data.
       </p>
       <p>
-        If we add analytics, error reporting, payment processors, or other services, we will list
-        them here and update this policy.
+        If we add analytics, payment processors, or other services, we will list them here and update
+        this policy.
       </p>
 
       <h2 id="use-of-information">6. How we use information</h2>
       <ul>
-        <li>To respond to support requests and communications you initiate.</li>
+        <li>To respond to support requests, issue reports, and communications you initiate.</li>
         <li>To keep the site and application available, detect abuse, and protect our systems.</li>
         <li>
           To honor our commitment that your creative content is not used for AI model training; see
@@ -147,9 +211,18 @@
           practices.
         </li>
         <li>
+          <strong>Issue reports:</strong> kept in our email inbox and provider logs only as long as
+          needed to investigate, respond, and for ordinary business, legal, or security
+          record-keeping.
+        </li>
+        <li>
           <strong>Your model files:</strong> not stored by us as part of normal Orby operation; they
           remain on your device unless you separately share them with someone else. They are not used
           to train AI; see <a href="#your-content-and-ai">section 2</a>.
+        </li>
+        <li>
+          <strong>Browser storage on your device:</strong> persists until you clear site data or the
+          browser removes it; we do not retain copies on our servers.
         </li>
       </ul>
 
@@ -170,9 +243,15 @@
 
       <h2 id="international">10. International users</h2>
       <p>
-        If you access Orby from outside the country where we operate, your information may be
-        processed in countries with different data protection laws. Where required, we will provide
-        additional information or safeguards.
+        Orby is operated from <strong>Sweden</strong>. If you access Orby from elsewhere, your
+        information may be processed in Sweden, the European Economic Area, the United States, or
+        other countries where our hosting and service providers operate—those locations may have
+        different data protection laws.
+      </p>
+      <p>
+        If you are in the European Economic Area, United Kingdom, or another region with privacy
+        laws, you may have additional rights (see <a href="#rights">section 11</a>). Where required,
+        we will provide further information or safeguards.
       </p>
 
       <h2 id="rights">11. Your rights</h2>
@@ -192,6 +271,7 @@
 
       <h2 id="contact">13. Contact</h2>
       <p>
+        <strong>Operator:</strong> Stellan Johansson (Sweden)<br />
         <strong>Email:</strong>
         <a href="mailto:orby-admin@proton.me">orby-admin@proton.me</a><br />
         <strong>Website:</strong> <a href="https://orby.studio/">https://orby.studio/</a>

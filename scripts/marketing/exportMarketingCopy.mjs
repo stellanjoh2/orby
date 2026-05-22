@@ -36,13 +36,13 @@ function titleLines(title) {
 }
 
 function sectionCta(section) {
-  if (section.type === 'footer') {
+  if (section.type === 'cta') {
     return {
       primary: { label: section.ctaLabel || 'Browse Files', action: 'browse' },
       secondary: { label: section.secondaryCtaLabel || 'Load Sample', action: 'load-sample' },
     };
   }
-  if (section.type === 'refrct-teaser' && section.ctaLabel) {
+  if (section.type === 'in-progress' && section.ctaLabel) {
     return { label: section.ctaLabel, href: section.ctaHref ?? null };
   }
   if (!section.ctaLabel) return null;
@@ -63,7 +63,7 @@ function sectionToExport(section, order) {
     cta: sectionCta(section),
   };
 
-  if (section.type === 'footer') {
+  if (section.type === 'cta') {
     row.eyebrow = null;
   }
 

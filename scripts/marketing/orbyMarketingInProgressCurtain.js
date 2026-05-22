@@ -1,25 +1,25 @@
 /**
- * rfrct — fixed white endcap behind scrolling lime footer (no second lime curtain).
+ * In Progress — fixed white endcap behind scrolling lime CTA (no second lime curtain).
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
-import { showRefrctTeaserStatic } from './orbyMarketingReveals.js';
+import { showInProgressStatic } from './orbyMarketingReveals.js';
 
 const SCROLL_OPTS = { passive: true };
-/** rfrct interactive once lime has cleared the top by this much (vh). */
+/** In Progress interactive once lime CTA has cleared the top by this much (vh). */
 const REVEAL_LEAD_VH = 0.03;
 
 /**
  * @param {HTMLElement} root
  */
-export function initRefrctCurtainReveal(root) {
-  const stage = root?.querySelector('[data-orby-marketing-refrct-reveal]');
-  const footer = root?.querySelector('.orby-marketing__section--footer');
-  if (!stage || !footer) return () => {};
+export function initInProgressCurtainReveal(root) {
+  const stage = root?.querySelector('[data-orby-marketing-in-progress-reveal]');
+  const ctaSection = root?.querySelector('.orby-marketing__section--cta');
+  if (!stage || !ctaSection) return () => {};
 
-  const section = stage.querySelector('.orby-marketing__section--refrct-teaser');
+  const section = stage.querySelector('.orby-marketing__section--in-progress');
   if (!section) return () => {};
 
-  showRefrctTeaserStatic(section);
+  showInProgressStatic(section);
 
   if (prefersReducedMotion()) {
     stage.classList.add('is-endcap-active', 'is-revealed');
@@ -33,7 +33,7 @@ export function initRefrctCurtainReveal(root) {
 
   const sync = () => {
     raf = 0;
-    const { top } = footer.getBoundingClientRect();
+    const { top } = ctaSection.getBoundingClientRect();
     const vh = window.innerHeight;
     const revealPx = vh * REVEAL_LEAD_VH;
 
@@ -67,7 +67,7 @@ export function initRefrctCurtainReveal(root) {
 }
 
 /** @param {HTMLElement | null} _root */
-export function killRefrctCurtainScrollTriggers(_root) {}
+export function killInProgressCurtainScrollTriggers(_root) {}
 
 /** @param {HTMLElement | null} _root */
-export function refreshRefrctCurtainScrollTriggers(_root) {}
+export function refreshInProgressCurtainScrollTriggers(_root) {}

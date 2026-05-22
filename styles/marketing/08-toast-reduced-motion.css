@@ -1,4 +1,4 @@
-/* Copy feedback — Sandbar-style pill; works over lime footer + dark sections */
+/* Copy feedback — Sandbar-style pill; works over lime CTA + dark sections */
 .orby-marketing__copy-toast {
   position: fixed;
   z-index: 100050;

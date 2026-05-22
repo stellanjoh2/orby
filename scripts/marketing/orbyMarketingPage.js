@@ -17,7 +17,7 @@ import {
 } from './orbyMarketingCopyEmail.js';
 import { buildMarketingMarkup } from './orbyMarketingTemplates.js';
 
-/** Mega sections (intro + footer) — fire when the block is actually on screen */
+/** Mega sections (intro + CTA) — fire when the block is actually on screen */
 const MEGA_REVEAL_IO = { root: null, rootMargin: '0px 0px -22% 0px', threshold: 0.32 };
 const DEFAULT_REVEAL_IO = { root: null, rootMargin: '0px 0px -10% 0px', threshold: 0.08 };
 
@@ -168,7 +168,7 @@ export function initOrbyMarketingPage(options = {}) {
   /** @type {(() => void) | null} */
   let teardownPngMarqueePerf = null;
   /** @type {(() => void) | null} */
-  let teardownRefrctCurtain = null;
+  let teardownInProgressCurtain = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
@@ -182,8 +182,8 @@ export function initOrbyMarketingPage(options = {}) {
     teardownPngMarqueeLogotype = null;
     teardownPngMarqueePerf?.();
     teardownPngMarqueePerf = null;
-    teardownRefrctCurtain?.();
-    teardownRefrctCurtain = null;
+    teardownInProgressCurtain?.();
+    teardownInProgressCurtain = null;
   }
 
   function disconnectRevealObservers() {
@@ -215,7 +215,7 @@ export function initOrbyMarketingPage(options = {}) {
     );
     root.querySelectorAll('.orby-marketing__section').forEach((section) => {
       if (section.dataset.orbyMarketingRevealed === '1') return;
-      if (section.classList.contains('orby-marketing__section--refrct-teaser')) return;
+      if (section.classList.contains('orby-marketing__section--in-progress')) return;
       const observer = isMegaRevealSection(section) ? megaRevealObserver : revealObserver;
       observer.observe(section);
     });
@@ -280,10 +280,10 @@ export function initOrbyMarketingPage(options = {}) {
     }
 
     try {
-      const refrctCurtain = await import('./orbyMarketingRefrctCurtain.js');
-      teardownRefrctCurtain = refrctCurtain.initRefrctCurtainReveal(root);
+      const inProgressCurtain = await import('./orbyMarketingInProgressCurtain.js');
+      teardownInProgressCurtain = inProgressCurtain.initInProgressCurtainReveal(root);
     } catch (err) {
-      console.error('[orby-marketing] rfrct curtain reveal failed to init', err);
+      console.error('[orby-marketing] In Progress curtain reveal failed to init', err);
     }
   }
 
@@ -308,7 +308,7 @@ export function initOrbyMarketingPage(options = {}) {
       !teardownShowcaseGallery ||
       !teardownPngMarqueeLogotype ||
       !teardownPngMarqueePerf ||
-      !teardownRefrctCurtain
+      !teardownInProgressCurtain
     ) {
       void attachMarketingEnhancements();
     }
@@ -358,10 +358,10 @@ export function initOrbyMarketingPage(options = {}) {
     });
     reveals.prepareMarketingSections(root);
 
-    const refrctSection = root.querySelector('.orby-marketing__section--refrct-teaser');
-    if (refrctSection) {
-      reveals.showRefrctTeaserStatic(refrctSection);
-      void reveals.preloadSectionMedia(refrctSection);
+    const inProgressSection = root.querySelector('.orby-marketing__section--in-progress');
+    if (inProgressSection) {
+      reveals.showInProgressStatic(inProgressSection);
+      void reveals.preloadSectionMedia(inProgressSection);
     }
 
     const marketingVideo = await import('./orbyMarketingVideo.js');

@@ -48,7 +48,7 @@
 
   /* Split feature ledes — half-column measure only */
   .orby-marketing__section--split .orby-marketing__split-copy .orby-marketing__lede,
-  .orby-marketing__section--refrct-teaser .orby-marketing__split-copy .orby-marketing__lede {
+  .orby-marketing__section--in-progress .orby-marketing__split-copy .orby-marketing__lede {
     max-width: min(
       var(--orby-marketing-feature-lede-measure),
       calc(100% - var(--orby-marketing-gutter-text-inset))
@@ -164,7 +164,7 @@
   padding-bottom: 0;
 }
 
-.orby-marketing__section--faq + .orby-marketing__section--footer {
+.orby-marketing__section--faq + .orby-marketing__section--cta {
   margin-top: 0;
 }
 

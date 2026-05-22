@@ -6,7 +6,7 @@
   padding: 0 0 var(--orby-marketing-gap-big);
 }
 
-.orby-marketing__section--refrct-teaser {
+.orby-marketing__section--in-progress {
   overflow-x: clip;
   overflow-y: visible;
   padding: 0;
@@ -144,7 +144,7 @@ html.safari-browser .orby-marketing__figure-video {
 .orby-marketing__section--split
   .orby-marketing__figure-mask--gallery
   .orby-marketing__showcase-img,
-.orby-marketing__section--refrct-teaser .orby-marketing__figure-media {
+.orby-marketing__section--in-progress .orby-marketing__figure-media {
   inset: auto;
   left: 0;
   top: 0;
@@ -162,7 +162,7 @@ html.safari-browser .orby-marketing__figure-video {
   .orby-marketing__section--split
     .orby-marketing__figure-mask--gallery
     .orby-marketing__showcase-img,
-  .orby-marketing__section--refrct-teaser .orby-marketing__figure-media {
+  .orby-marketing__section--in-progress .orby-marketing__figure-media {
     left: auto;
     right: 0;
   }
@@ -287,20 +287,20 @@ html.safari-browser .orby-marketing__figure-video {
   }
 
   .orby-marketing__section--split .orby-marketing__figure,
-  .orby-marketing__section--refrct-teaser .orby-marketing__figure {
+  .orby-marketing__section--in-progress .orby-marketing__figure {
     display: block;
     height: auto;
     min-height: 0;
   }
 
   .orby-marketing__section--split .orby-marketing__split-media,
-  .orby-marketing__section--refrct-teaser .orby-marketing__split-media {
+  .orby-marketing__section--in-progress .orby-marketing__split-media {
     container-type: inline-size;
     container-name: orby-split-media;
   }
 
   .orby-marketing__section--split .orby-marketing__figure-mask,
-  .orby-marketing__section--refrct-teaser .orby-marketing__figure-mask {
+  .orby-marketing__section--in-progress .orby-marketing__figure-mask {
     flex: none;
     width: 100%;
     height: auto;
@@ -316,7 +316,7 @@ html.safari-browser .orby-marketing__figure-video {
   .orby-marketing__section--split
     .orby-marketing__figure-mask--gallery
     .orby-marketing__showcase-img,
-  .orby-marketing__section--refrct-teaser .orby-marketing__figure-media {
+  .orby-marketing__section--in-progress .orby-marketing__figure-media {
     left: auto;
     right: 0;
   }
@@ -329,7 +329,7 @@ html.safari-browser .orby-marketing__figure-video {
     .orby-marketing__section--split
     .orby-marketing__figure-mask--gallery
     .orby-marketing__showcase-img,
-  html.orby-marketing-ui-crop .orby-marketing__section--refrct-teaser .orby-marketing__figure-media {
+  html.orby-marketing-ui-crop .orby-marketing__section--in-progress .orby-marketing__figure-media {
     left: auto;
     right: 0;
   }

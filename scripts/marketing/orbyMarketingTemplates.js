@@ -143,7 +143,7 @@ function renderFigure(section, revealDir) {
     </figure>`;
 }
 
-function renderRefrctTeaserCta(section) {
+function renderInProgressCta(section) {
   if (!section.ctaLabel || !section.ctaHref) return '';
   return `<div class="orby-marketing__split-cta">
       ${orbyMagicButtonMonoLinkHtml(escapeMarketingHtml(section.ctaLabel), escapeMarketingHtml(section.ctaHref), {
@@ -152,24 +152,24 @@ function renderRefrctTeaserCta(section) {
     </div>`;
 }
 
-function renderRefrctTeaserSection(section, footerSection) {
+function renderInProgressSection(section, ctaSection) {
   const mediaLeft = section.layout === 'media-left';
   const bleedClass = mediaLeft
     ? 'orby-marketing__split-bleed orby-marketing__split-bleed--media-left'
     : 'orby-marketing__split-bleed orby-marketing__split-bleed--media-right';
   const revealDir = mediaLeft ? 'rtl' : 'ltr';
 
-  return `<div class="orby-marketing__refrct-reveal-spacer" data-orby-marketing-refrct-spacer aria-hidden="true"></div>
-  <div class="orby-marketing__refrct-reveal" data-orby-marketing-refrct-reveal>
-    <div class="orby-marketing__refrct-panel" data-orby-marketing-refrct-panel>
-      <section class="orby-marketing__section orby-marketing__section--refrct-teaser" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
+  return `<div class="orby-marketing__in-progress-reveal-spacer" data-orby-marketing-in-progress-spacer aria-hidden="true"></div>
+  <div class="orby-marketing__in-progress-reveal" data-orby-marketing-in-progress-reveal>
+    <div class="orby-marketing__in-progress-panel" data-orby-marketing-in-progress-panel>
+      <section class="orby-marketing__section orby-marketing__section--in-progress" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
         <div class="${bleedClass}">
           <div class="orby-marketing__split-copy">
             <div class="orby-marketing__split-copy-inner">
               <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow)}</p>
               <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
               <p class="orby-marketing__lede">${escapeMarketingHtml(section.lede)}</p>
-              ${renderRefrctTeaserCta(section)}
+              ${renderInProgressCta(section)}
             </div>
           </div>
           <div class="orby-marketing__split-media">
@@ -177,7 +177,7 @@ function renderRefrctTeaserSection(section, footerSection) {
           </div>
         </div>
       </section>
-      ${footerSection ? renderFooterMeta(footerSection, { onWhite: true }) : ''}
+      ${ctaSection ? renderFooterMeta(ctaSection, { onWhite: true }) : ''}
     </div>
   </div>`;
 }
@@ -431,9 +431,9 @@ function renderFaqSection(section) {
   </section>`;
 }
 
-function renderFooterSection(section) {
-  return `<footer class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--footer" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
-    <div class="orby-marketing__footer-stage" aria-hidden="true">
+function renderCtaSection(section) {
+  return `<section class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--cta" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
+    <div class="orby-marketing__cta-stage" aria-hidden="true">
       <img
         class="orby-marketing__intro-asset orby-marketing__intro-asset--right"
         src="./assets/marketing/intro-asset-right.png"
@@ -444,14 +444,14 @@ function renderFooterSection(section) {
         data-orby-marketing-intro-asset="right"
       />
     </div>
-    <div class="orby-marketing__footer-center">
-      <h2 class="orby-marketing__title orby-marketing__title--intro orby-marketing__title--footer brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
+    <div class="orby-marketing__cta-center">
+      <h2 class="orby-marketing__title orby-marketing__title--intro orby-marketing__title--cta brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       ${
         section.lede
-          ? `<p class="orby-marketing__lede orby-marketing__lede--footer" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>`
+          ? `<p class="orby-marketing__lede orby-marketing__lede--cta" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>`
           : ''
       }
-      <div class="orby-marketing__footer-actions">
+      <div class="orby-marketing__cta-actions">
         ${orbyMagicButtonOnLimeHtml(escapeMarketingHtml(section.ctaLabel || 'Browse Files'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-browse',
@@ -464,19 +464,26 @@ function renderFooterSection(section) {
         })}
       </div>
     </div>
-  </footer>`;
+  </section>`;
 }
 
 /**
  * @param {import('./orbyMarketingContent.js').MarketingSection} section
  * @param {{ onWhite?: boolean }} [options]
  */
+const FOOTER_INSTAGRAM_ICON =
+  '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--instagram" aria-hidden="true"></span>';
+
+const FOOTER_GITHUB_ICON =
+  '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--github" aria-hidden="true"></span>';
+
 function renderFooterMeta(section, options = {}) {
   const contactEmail = section.footerContactEmail?.trim();
   const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
   const aboutHref = section.footerAboutHref?.trim() || './about/';
   const creditsHref = section.footerCreditsHref?.trim() || './credits/';
   const githubHref = section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby';
+  const instagramHref = section.footerInstagramHref?.trim() || '';
   const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
   const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
 
@@ -492,18 +499,34 @@ function renderFooterMeta(section, options = {}) {
       : '',
   ].filter(Boolean);
 
-  const metaClass = options.onWhite
-    ? 'orby-marketing__footer-meta orby-marketing__footer-meta--on-white'
-    : 'orby-marketing__footer-meta';
+  const barClass = options.onWhite
+    ? 'orby-marketing__footer-bar orby-marketing__footer-bar--on-white'
+    : 'orby-marketing__footer-bar';
 
-  return `<p class="${metaClass}">${lead}${sep}${links.join(sep)}</p>`;
+  const brandMark =
+    '<span class="orby-marketing__footer-brand-mark" aria-hidden="true"></span>';
+
+  const socialLinks = [
+    instagramHref
+      ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(instagramHref)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram">${FOOTER_INSTAGRAM_ICON}</a>`
+      : '',
+    `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(githubHref)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">${FOOTER_GITHUB_ICON}</a>`,
+  ]
+    .filter(Boolean)
+    .join('');
+
+  return `<div class="${barClass}">
+    <button type="button" class="orby-marketing__footer-brand" data-orby-marketing-scroll-top aria-label="Back to top">${brandMark}</button>
+    <p class="orby-marketing__footer-meta-copy">${lead}${sep}${links.join(sep)}</p>
+    <div class="orby-marketing__footer-social">${socialLinks}</div>
+  </div>`;
 }
 
 /**
  * @param {import('./orbyMarketingContent.js').MarketingSection} section
- * @param {import('./orbyMarketingContent.js').MarketingSection | undefined} footerSection
+ * @param {import('./orbyMarketingContent.js').MarketingSection | undefined} ctaSection — supplies footer link fields for the legal strip
  */
-function renderSection(section, footerSection) {
+function renderSection(section, ctaSection) {
   switch (section.type) {
     case 'intro':
       return renderIntroSection(section);
@@ -515,10 +538,10 @@ function renderSection(section, footerSection) {
       return renderProSection(section);
     case 'faq':
       return renderFaqSection(section);
-    case 'footer':
-      return renderFooterSection(section);
-    case 'refrct-teaser':
-      return renderRefrctTeaserSection(section, footerSection);
+    case 'cta':
+      return renderCtaSection(section);
+    case 'in-progress':
+      return renderInProgressSection(section, ctaSection);
     case 'split':
     default:
       return renderSplitSection(section);
@@ -527,8 +550,8 @@ function renderSection(section, footerSection) {
 
 /** @param {import('./orbyMarketingContent.js').MarketingSection[]} sections */
 export function buildMarketingMarkup(sections) {
-  const footerSection = sections.find((s) => s.type === 'footer');
+  const ctaSection = sections.find((s) => s.type === 'cta');
   return `<div class="orby-marketing" data-orby-marketing>
-    ${sections.map((section) => renderSection(section, footerSection)).join('\n')}
+    ${sections.map((section) => renderSection(section, ctaSection)).join('\n')}
   </div>`;
 }

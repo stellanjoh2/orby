@@ -138,8 +138,10 @@
   --orby-marketing-body-weight: 300;
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
   --orby-marketing-panel-bg: var(--orby-surface-muted, #151515);
-  /* Ink on lime (footer) — matches FAQ panel, softer than --orby-black */
+  /* Ink on lime (CTA) — matches FAQ panel, softer than --orby-black */
   --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
+  /* Ink on white (In Progress) — type, icons, strokes; fills stay --orby-black */
+  --orby-marketing-on-white-ink: color-mix(in srgb, var(--orby-black, #080808) 88%, white);
   /* Standard vertical seam between major blocks — 220px @ 1440; scales with gutter-scale */
   --orby-marketing-gap-big: calc(220px * var(--orby-marketing-gutter-scale));
   /* Eyebrow / preheader — 14px @ 2560, 11px @ 1920 */
@@ -150,8 +152,14 @@
   );
   /* Split feature rhythm — eyebrow → headline, headline → lede, lede → bullets (36px @ 1440) */
   --orby-marketing-feature-copy-gap: calc(36px * var(--orby-marketing-scale));
-  /* White refrct teaser — body copy → Request Preview */
+  /* In Progress white panel — body copy → Request Preview */
   --orby-marketing-lede-cta-gap: 54px;
+  /* Marketing footer — logotype 40px, social 32px, 18px legal line */
+  --orby-footer-logotype-height: 40px;
+  --orby-footer-social-height: 32px;
+  --orby-footer-social-gap: 28px;
+  --orby-footer-lift: 36px;
+  --orby-marketing-footer-meta-size: 18px;
   --orby-marketing-eyebrow-headline-gap: var(--orby-marketing-feature-copy-gap);
   /* Section headline → lede (showcase / pro / FAQ) */
   --orby-marketing-headline-body-gap: calc(32px * var(--orby-marketing-scale));
@@ -295,7 +303,7 @@
   --orby-marketing-col-gap-half: calc(var(--orby-marketing-col-gap) / 2);
   /* Side-by-side mega CTAs — tighter than ½ col gutter (~48px @ 1920) */
   --orby-marketing-peer-gap: calc(36px * var(--orby-marketing-scale));
-  /* Mega headline → body / dual CTAs (intro lede, lime footer) — fixed px */
+  /* Mega headline → body / dual CTAs (intro lede, lime CTA) — fixed px */
   --orby-marketing-headline-actions-gap: 92px;
   --orby-marketing-gutter: var(--orby-marketing-col-gap);
   /* FAQ panel — bottom band matches other section seams */

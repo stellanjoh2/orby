@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-22T15:06:36.482Z",
+    "generatedAt": "2026-05-22T15:53:38.660Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -310,8 +310,8 @@
     },
     {
       "order": 12,
-      "type": "footer",
-      "id": "orby-marketing-footer",
+      "type": "cta",
+      "id": "orby-marketing-cta",
       "eyebrow": null,
       "title": "Try it out\nfor free now",
       "titleLines": [
@@ -333,12 +333,12 @@
     },
     {
       "order": 13,
-      "type": "refrct-teaser",
-      "id": "orby-marketing-refrct",
+      "type": "in-progress",
+      "id": "orby-marketing-in-progress",
       "eyebrow": "In progress",
-      "title": "Do you enjoy Orby? We got more things coming",
+      "title": "Do you enjoy Orby? We got more things coming soon",
       "titleLines": [
-        "Do you enjoy Orby? We got more things coming"
+        "Do you enjoy Orby? We got more things coming soon"
       ],
       "lede": "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
       "bullets": null,

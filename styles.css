@@ -111,9 +111,9 @@
   --shelf-label-font-size: 14px;
   /* Lime section headlines (.block-title) and compact preset grids (Lens, ISO, …) */
   --shelf-headline-font-size: 12px;
-  /* Horizontal gap between paired large CTAs (marketing footer, dropzone, fullscreen prompts) */
+  /* Horizontal gap between paired large CTAs (marketing CTA, dropzone, fullscreen prompts) */
   --orby-big-dual-btn-gap: 36px;
-  /* Big headline → CTA row (thank-you, Return Home, marketing footer) */
+  /* Big headline → CTA row (thank-you, Return Home, marketing lime CTA) */
   --orby-big-message-headline-actions-gap: 120px;
   /* Flat orby pill — compact base; normal = home; xl = fullscreen big-message modals */
   --ui-orby-pill-font-size: var(--ui-accent-action-font-size);
@@ -5772,7 +5772,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   z-index: 15;
 }
 
-/* Marketing footer copy feedback — above #orby-marketing and lime footer */
+/* Marketing copy-toast — above #orby-marketing and lime CTA */
 html.orby-home-scroll .toast {
   z-index: 100060;
   bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem));

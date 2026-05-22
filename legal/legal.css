@@ -350,12 +350,22 @@ body.legal-doc--credits {
   color: var(--legal-faint);
 }
 
-/* Override .legal-doc ul { padding-left: 1.5rem } — grids must align with h2 headings */
-body.legal-doc--credits ul.legal-credits-grid {
+/* Override .legal-doc ul { padding-left: 1.5rem } — align with column / h2 */
+body.legal-doc--credits ul.legal-credits-grid,
+body.legal-doc--credits ul.legal-credits-asset-list {
   margin: 0 0 1rem;
   padding: 0;
   list-style: none;
+  width: 100%;
   color: inherit;
+}
+
+body.legal-doc--credits ul.legal-credits-asset-list {
+  margin-bottom: 1.5rem;
+}
+
+body.legal-doc--credits ul.legal-credits-asset-list > li {
+  margin: 0;
 }
 
 .legal-credits-grid {
@@ -445,6 +455,25 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
   background: rgba(232, 201, 106, 0.08);
 }
 
+.legal-credits-card__tag--cc0 {
+  color: var(--legal-accent);
+  border-color: rgba(196, 255, 0, 0.35);
+  background: rgba(196, 255, 0, 0.08);
+}
+
+.legal-credits-asset__license {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin: 0 0 0.45rem;
+}
+
+.legal-credits-asset__license-src {
+  font-size: 0.8125rem;
+  color: var(--legal-faint);
+}
+
 .legal-credits-card code {
   font-family: ui-monospace, 'Geist Mono', monospace;
   font-size: 0.88em;
@@ -474,6 +503,77 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
   color: var(--legal-muted);
 }
 
+.legal-credits-asset-list > li + li {
+  margin-top: 0.75rem;
+}
+
+.legal-credits-asset {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--legal-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legal-credits-asset__thumb-wrap {
+  flex-shrink: 0;
+  width: 7rem;
+  height: 7rem;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--legal-border);
+  background: var(--orby-black, #080808);
+}
+
+.legal-credits-asset__thumb-wrap picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.legal-credits-asset__thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.legal-credits-asset__thumb-wrap--contain .legal-credits-asset__thumb {
+  object-fit: contain;
+  padding: 0.2rem;
+  box-sizing: border-box;
+}
+
+.legal-credits-asset__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.legal-credits-asset__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--legal-text);
+}
+
+.legal-credits-asset__meta,
+.legal-credits-asset__use,
+.legal-credits-asset__note {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--legal-muted);
+}
+
+.legal-credits-asset__note:last-child,
+.legal-credits-asset__use:last-child {
+  margin-bottom: 0;
+}
+
 .legal-callout {
   margin: 0;
   padding: 1.15rem 1.25rem;
@@ -486,6 +586,16 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 .legal-callout p {
   margin: 0 0 0.75rem;
   color: var(--legal-muted);
+}
+
+.legal-callout--lime {
+  background: rgba(196, 255, 0, 0.06);
+  border-color: rgba(196, 255, 0, 0.2);
+  border-left-color: var(--legal-accent);
+}
+
+.legal-callout--lime p:last-child {
+  margin-bottom: 0;
 }
 
 .legal-callout p:last-child {

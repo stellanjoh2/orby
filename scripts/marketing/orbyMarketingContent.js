@@ -2,11 +2,16 @@
  * Copy + media map for the homepage marketing one-pager.
  * Swap imageSrc / videoSrc paths as real captures land. Set videoPoster: true to use imageSrc as a poster frame.
  *
+ * Section naming:
+ * - CTA — lime “Try it out for free now” block (type: `cta`)
+ * - In Progress — white rfrct teaser panel (type: `in-progress`)
+ * - Footer — brand, legal strip, social (`.orby-marketing__footer-bar`); link fields live on the CTA section
+ *
  * After editing marketing copy here, regenerate the review export:
  *   npm run export:marketing-copy
  */
 
-/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'footer' | 'refrct-teaser'} MarketingSectionType */
+/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'cta' | 'in-progress'} MarketingSectionType */
 
 /**
  * @typedef {Object} MarketingProCard
@@ -42,7 +47,7 @@
  * @property {string} [videoSrc]
  * @property {boolean} [videoPoster] — split video: use imageSrc as poster (default false)
  * @property {string} [ctaLabel]
- * @property {string} [ctaHref] — mailto: or https: link (refrct teaser)
+ * @property {string} [ctaHref] — mailto: or https: link (In Progress section)
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
  * @property {MarketingProCard[]} [cards]
@@ -51,6 +56,7 @@
  * @property {string} [footerAboutHref]
  * @property {string} [footerCreditsHref]
  * @property {string} [footerGithubHref]
+ * @property {string} [footerInstagramHref]
  * @property {string} [footerLicenseHref]
  */
 
@@ -164,22 +170,43 @@ export const MARKETING_SECTIONS = [
       {
         src: './assets/marketing/showcase/showcase-01-etron-gt.jpg',
         alt: 'Audi e-tron GT on a reflective platform lit in Orby',
-        credit: 'Audi e-tron GT · vecarz.com',
+        imageCredit: {
+          title: 'Audi e-tron GT',
+          artist: 'vecarz (@heynic)',
+          sourceLabel: 'Sketchfab',
+          sourceHref: 'https://sketchfab.com/heynic/models',
+        },
       },
       {
         src: './assets/marketing/showcase/showcase-02-etron-detail.jpg',
         alt: 'Close-up headlight detail on a red sports car render',
-        credit: 'Sports car detail · vecarz.com',
+        imageCredit: {
+          title: 'Sports car detail',
+          artist: 'vecarz (@heynic)',
+          sourceLabel: 'Sketchfab',
+          sourceHref: 'https://sketchfab.com/heynic/models',
+        },
       },
       {
         src: './assets/marketing/showcase/showcase-03-jeep-rubicon.jpg',
         alt: 'Jeep Wrangler Rubicon adventure render with lake backdrop',
-        credit: 'Jeep Wrangler Rubicon · vecarz.com',
+        imageCredit: {
+          title: 'Jeep Wrangler Adventure Rubicon',
+          artist: 'www.vecarz.com',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
+        },
       },
       {
         src: './assets/marketing/showcase/showcase-04-new-balance.jpg',
         alt: 'New Balance 574 product shot on a reflective disc',
-        credit: 'New Balance 574 · vecarz.com',
+        imageCredit: {
+          title: 'New Balance 574',
+          artist: 'vecarz (@heynic)',
+          sourceLabel: 'Sketchfab',
+          sourceHref: 'https://sketchfab.com/heynic/models',
+        },
       },
     ],
   },
@@ -341,8 +368,8 @@ export const MARKETING_SECTIONS = [
     ],
   },
   {
-    type: 'footer',
-    id: 'orby-marketing-footer',
+    type: 'cta',
+    id: 'orby-marketing-cta',
     title: 'Try it out\nfor free now',
     lede: '',
     ctaLabel: 'Browse Files',
@@ -352,13 +379,14 @@ export const MARKETING_SECTIONS = [
     footerAboutHref: './about/',
     footerCreditsHref: './credits/',
     footerGithubHref: 'https://github.com/stellanjoh2/orby',
+    footerInstagramHref: 'https://www.instagram.com/dropittoorby',
     footerLicenseHref: './LICENSE',
   },
   {
-    type: 'refrct-teaser',
-    id: 'orby-marketing-refrct',
+    type: 'in-progress',
+    id: 'orby-marketing-in-progress',
     eyebrow: 'In progress',
-    title: 'Do you enjoy Orby? We got more things coming',
+    title: 'Do you enjoy Orby? We got more things coming soon',
     lede:
       "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
     layout: 'media-right',

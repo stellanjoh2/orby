@@ -14,9 +14,23 @@ These HDRI files are purchased assets with their own licensing terms. They are p
 
 The HDRI files in this repository are excluded from the MIT license and are subject to their original creator's terms of use.
 
+## Marketing 3D models and renders
+
+Homepage marketing stills, turntable frame sequences (`assets/marketing/…`), and PNG cutouts are **renders** made in Orby from **third-party 3D models** (Sketchfab, Meshy, vecarz.com, and similar sources).
+
+Those source models are **not** owned by Orby and are **not** covered by this repository’s MIT License. Each creator’s terms apply (often CC Attribution or platform-specific licenses). See **[Credits](credits/)** on the site (or `credits/index.html`) for authors, sources, and usage notes.
+
+Do not assume you may redistribute raw meshes or marketing captures unless your download license explicitly allows it.
+
+## Fab / Megascans / Quixel library meshes
+
+**Do not commit** environment or surface meshes downloaded from [Fab](https://www.fab.com/), Megascans, or Quixel to this repository. Their licenses are tied to your Epic/account download and **do not permit** redistributing the raw `.glb` / `.uasset` files in a public GitHub project.
+
+If you need demo geometry locally, keep it outside the repo (for example under `TEMP/`, which is gitignored) or use models whose license explicitly allows redistribution (and document them on the [Credits](credits/) page).
+
 ## Other Assets
 
-All other assets in this repository (icons, images, animations, etc.) are included in the MIT license unless otherwise specified.
+Icons, UI art, Lottie, and Orby-original imagery are included in the MIT license unless otherwise specified. Third-party marketing meshes and purchased HDRIs are excluded as described above.
 
 ## Typeface: Mattone
 

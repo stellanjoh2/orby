@@ -34,7 +34,7 @@ const ctaRevealDur = 0.38 * TEXT_REVEAL_PACE;
 const ctaStagger = 0.08 * TEXT_REVEAL_PACE;
 const cardRevealDur = 0.45 * TEXT_REVEAL_PACE;
 /**
- * Mega sections (intro hero, lime footer, …) — large headline + optional lede + CTAs.
+ * Mega sections (intro hero, lime CTA, …) — large headline + optional lede + CTAs.
  * @see MEGA_REVEAL_IO in orbyMarketingPage.js
  */
 const megaRevealDelay = 0;
@@ -678,16 +678,16 @@ function revealStandardSection(sectionEl, tl) {
 }
 
 /**
- * rfrct — no scroll-in stagger; content stays vertically centered under the lime curtain.
+ * In Progress — no scroll-in stagger; content stays vertically centered under the lime CTA.
  * @param {HTMLElement} sectionEl
  */
-export function showRefrctTeaserStatic(sectionEl) {
+export function showInProgressStatic(sectionEl) {
   if (!sectionEl || sectionEl.dataset.orbyMarketingRevealed === '1') return;
   sectionEl.dataset.orbyMarketingRevealed = '1';
   sectionEl.classList.remove('orby-marketing__section--pending');
   sectionEl.classList.add(
     'orby-marketing__section--revealed',
-    'orby-marketing__section--refrct-ready',
+    'orby-marketing__section--in-progress-ready',
   );
 
   sectionEl
@@ -715,8 +715,8 @@ export function showRefrctTeaserStatic(sectionEl) {
  */
 export function revealMarketingSection(sectionEl) {
   if (!sectionEl || sectionEl.dataset.orbyMarketingRevealed === '1') return;
-  if (sectionEl.classList.contains('orby-marketing__section--refrct-teaser')) {
-    showRefrctTeaserStatic(sectionEl);
+  if (sectionEl.classList.contains('orby-marketing__section--in-progress')) {
+    showInProgressStatic(sectionEl);
     return;
   }
   sectionEl.dataset.orbyMarketingRevealed = '1';
@@ -785,7 +785,7 @@ export function revealMarketingSection(sectionEl) {
 export function prepareMarketingSections(root) {
   if (!root || prefersReducedMotion()) return;
   root.querySelectorAll('.orby-marketing__section').forEach((section) => {
-    if (section.classList.contains('orby-marketing__section--refrct-teaser')) return;
+    if (section.classList.contains('orby-marketing__section--in-progress')) return;
     prepareSection(section);
   });
 }
@@ -799,7 +799,7 @@ export function cancelAllMarketingMotion(root) {
     ),
   );
   killIntroTurntableScrollTriggers(root);
-  void import('./orbyMarketingRefrctCurtain.js').then((mod) => {
-    mod.killRefrctCurtainScrollTriggers(root);
+  void import('./orbyMarketingInProgressCurtain.js').then((mod) => {
+    mod.killInProgressCurtainScrollTriggers(root);
   });
 }
