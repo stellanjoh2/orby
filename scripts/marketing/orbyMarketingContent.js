@@ -61,13 +61,13 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      "Your model deserves better than a screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
+      "Your model deserves better than a screenshot. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
   },
   {
     type: 'split',
     id: 'orby-marketing-present',
     eyebrow: 'Set the stage',
-    title: 'Your virtual studio, in the browser.',
+    title: 'Your virtual studio, in the browser',
     lede:
       'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
     bullets: [
@@ -83,7 +83,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-import',
     eyebrow: 'Drop it in',
-    title: 'Drop in. Start immediately.',
+    title: 'Drop in — Start immediately',
     lede:
       'No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.',
     bullets: [
@@ -108,7 +108,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-camera',
     eyebrow: 'Camera & FX',
-    title: 'Pro framing in\nthe\u00a0viewport.',
+    title: 'Pro framing in\nthe\u00a0viewport',
     lede:
       'Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.',
     bullets: [
@@ -157,7 +157,7 @@ export const MARKETING_SECTIONS = [
     type: 'showcase',
     id: 'orby-marketing-showcase',
     eyebrow: 'Rendering',
-    title: 'Looks this good,\nstraight in the browser.',
+    title: 'Looks this good,\nstraight in the browser',
     lede:
       "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
     gallery: [
@@ -187,7 +187,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-shader-lab',
     eyebrow: 'Shader Lab',
-    title: 'Stylized looks\non\u00a0demand.',
+    title: 'Stylized looks\non\u00a0demand',
     lede:
       'Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.',
     bullets: [
@@ -210,7 +210,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-svg',
     eyebrow: 'SVG Extrude',
-    title: 'Logos become geometry.',
+    title: 'Logos become geometry',
     lede:
       'Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.',
     bullets: [
@@ -225,7 +225,7 @@ export const MARKETING_SECTIONS = [
     type: 'split',
     id: 'orby-marketing-export',
     eyebrow: 'Send it',
-    title: 'Deliverables without a pipeline.',
+    title: 'Deliverables without a pipeline',
     lede:
       'Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.',
     bullets: [
@@ -241,7 +241,7 @@ export const MARKETING_SECTIONS = [
     type: 'marquee',
     id: 'orby-marketing-png-marquee',
     eyebrow: 'Export',
-    title: 'Perfect transparency.',
+    title: 'Perfect transparency',
     lede:
       'Icons, ecommerce cutouts, logos on any background — export PNGs with real alpha from the viewport. No cleanup pass in Photoshop.',
     /* Real RGBA PNGs required — paths in assets/marketing/png-loop/ (see README there). */
@@ -264,7 +264,7 @@ export const MARKETING_SECTIONS = [
     type: 'pro',
     id: 'orby-marketing-pro',
     eyebrow: 'For pros',
-    title: 'Built for\nthe\u00a0details.',
+    title: 'Built for\nthe\u00a0details',
     lede:
       "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [
@@ -295,7 +295,7 @@ export const MARKETING_SECTIONS = [
     type: 'faq',
     id: 'orby-marketing-faq',
     eyebrow: 'FAQ',
-    title: 'Questions, answered.',
+    title: 'Questions, answered',
     /* No lede — eyebrow + headline only. Pro→FAQ dark seam = gap-big (220px @ 1440); see --orby-marketing-pro-faq-gap. */
     faq: [
       {
@@ -343,7 +343,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'footer',
     id: 'orby-marketing-footer',
-    title: 'Try it out\nfor free now.',
+    title: 'Try it out\nfor free now',
     lede: '',
     ctaLabel: 'Browse Files',
     secondaryCtaLabel: 'Load Sample',

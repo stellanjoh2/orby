@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-22T13:30:36.629Z",
+    "generatedAt": "2026-05-22T15:06:36.482Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -73,7 +73,7 @@
         "Set the stage.",
         "Send it."
       ],
-      "lede": "Your model deserves better than a screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
+      "lede": "Your model deserves better than a screenshot. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
       "bullets": null,
       "cta": null
     },
@@ -82,9 +82,9 @@
       "type": "split",
       "id": "orby-marketing-present",
       "eyebrow": "Set the stage",
-      "title": "Your virtual studio, in the browser.",
+      "title": "Your virtual studio, in the browser",
       "titleLines": [
-        "Your virtual studio, in the browser."
+        "Your virtual studio, in the browser"
       ],
       "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
       "bullets": [
@@ -99,9 +99,9 @@
       "type": "split",
       "id": "orby-marketing-import",
       "eyebrow": "Drop it in",
-      "title": "Drop in. Start immediately.",
+      "title": "Drop in — Start immediately",
       "titleLines": [
-        "Drop in. Start immediately."
+        "Drop in — Start immediately"
       ],
       "lede": "No accounts, no uploads, no waiting. Your models stay on your machine — Orby never trains on your work.",
       "bullets": [
@@ -125,10 +125,10 @@
       "type": "split",
       "id": "orby-marketing-camera",
       "eyebrow": "Camera & FX",
-      "title": "Pro framing in\nthe viewport.",
+      "title": "Pro framing in\nthe viewport",
       "titleLines": [
         "Pro framing in",
-        "the viewport."
+        "the viewport"
       ],
       "lede": "Orbit, pan, and zoom with focus shortcuts, auto-orbit presentations, exposure tools, and a live histogram when you need precision.",
       "bullets": [
@@ -144,10 +144,10 @@
       "type": "showcase",
       "id": "orby-marketing-showcase",
       "eyebrow": "Rendering",
-      "title": "Looks this good,\nstraight in the browser.",
+      "title": "Looks this good,\nstraight in the browser",
       "titleLines": [
         "Looks this good,",
-        "straight in the browser."
+        "straight in the browser"
       ],
       "lede": "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
       "bullets": null,
@@ -164,10 +164,10 @@
       "type": "split",
       "id": "orby-marketing-shader-lab",
       "eyebrow": "Shader Lab",
-      "title": "Stylized looks\non demand.",
+      "title": "Stylized looks\non demand",
       "titleLines": [
         "Stylized looks",
-        "on demand."
+        "on demand"
       ],
       "lede": "Swap the mesh into chrome, glass, plasma, toon, and more — tune motion and scale, then switch off to restore your original materials.",
       "bullets": [
@@ -187,9 +187,9 @@
       "type": "split",
       "id": "orby-marketing-svg",
       "eyebrow": "SVG Extrude",
-      "title": "Logos become geometry.",
+      "title": "Logos become geometry",
       "titleLines": [
-        "Logos become geometry."
+        "Logos become geometry"
       ],
       "lede": "Import vector fills, extrude per color, and export opaque GLB for AR, slides, or the rest of your toolchain.",
       "bullets": [
@@ -203,9 +203,9 @@
       "type": "split",
       "id": "orby-marketing-export",
       "eyebrow": "Send it",
-      "title": "Deliverables without a pipeline.",
+      "title": "Deliverables without a pipeline",
       "titleLines": [
-        "Deliverables without a pipeline."
+        "Deliverables without a pipeline"
       ],
       "lede": "Frame the hero angle once, then export production-ready stills, vectors, turntable video, or GLB from SVG extrusions.",
       "bullets": [
@@ -220,9 +220,9 @@
       "type": "marquee",
       "id": "orby-marketing-png-marquee",
       "eyebrow": "Export",
-      "title": "Perfect transparency.",
+      "title": "Perfect transparency",
       "titleLines": [
-        "Perfect transparency."
+        "Perfect transparency"
       ],
       "lede": "Icons, ecommerce cutouts, logos on any background — export PNGs with real alpha from the viewport. No cleanup pass in Photoshop.",
       "bullets": null,
@@ -238,10 +238,10 @@
       "type": "pro",
       "id": "orby-marketing-pro",
       "eyebrow": "For pros",
-      "title": "Built for\nthe details.",
+      "title": "Built for\nthe details",
       "titleLines": [
         "Built for",
-        "the details."
+        "the details"
       ],
       "lede": "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
       "bullets": null,
@@ -266,9 +266,9 @@
       "type": "faq",
       "id": "orby-marketing-faq",
       "eyebrow": "FAQ",
-      "title": "Questions, answered.",
+      "title": "Questions, answered",
       "titleLines": [
-        "Questions, answered."
+        "Questions, answered"
       ],
       "lede": "",
       "bullets": null,
@@ -313,10 +313,10 @@
       "type": "footer",
       "id": "orby-marketing-footer",
       "eyebrow": null,
-      "title": "Try it out\nfor free now.",
+      "title": "Try it out\nfor free now",
       "titleLines": [
         "Try it out",
-        "for free now."
+        "for free now"
       ],
       "lede": "",
       "bullets": null,
