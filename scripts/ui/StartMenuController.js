@@ -47,6 +47,33 @@ function prefersReducedMotion() {
   );
 }
 
+const DROPZONE_HERO_DECO_OPACITY = 0.92;
+
+/**
+ * @param {HTMLImageElement} img
+ * @returns {Promise<void>}
+ */
+function whenDropzoneHeroImgReady(img) {
+  if (!img) return Promise.resolve();
+  if (img.complete && img.naturalWidth > 0) {
+    if (typeof img.decode === 'function') {
+      return img.decode().catch(() => {});
+    }
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const finish = () => {
+      if (typeof img.decode === 'function') {
+        img.decode().then(resolve).catch(resolve);
+      } else {
+        resolve();
+      }
+    };
+    img.addEventListener('load', finish, { once: true });
+    img.addEventListener('error', finish, { once: true });
+  });
+}
+
 function shouldPlayLogotypeLottie() {
   if (document.documentElement.classList.contains('safari-browser')) return false;
   if (prefersReducedMotion()) return false;
@@ -102,6 +129,7 @@ export class StartMenuController {
     /** First visit: defer dropzone fade-in until fonts settle + idle so Lottie/GSAP/main chunk can warm up */
     this._dropzoneShellReady = false;
     this._dropzoneShellPrepPromise = null;
+    this._dropzoneHeroDecoPreloadPromise = null;
   }
 
   /**
@@ -124,17 +152,25 @@ export class StartMenuController {
         await new Promise((r) =>
           requestAnimationFrame(() => requestAnimationFrame(r)),
         );
-        if (typeof requestIdleCallback === 'function') {
-          await new Promise((r) =>
-            requestIdleCallback(() => r(), { timeout: 550 }),
-          );
-        } else {
-          await new Promise((r) => setTimeout(r, 72));
-        }
+        await Promise.all([
+          (async () => {
+            if (typeof requestIdleCallback === 'function') {
+              await new Promise((r) =>
+                requestIdleCallback(() => r(), { timeout: 550 }),
+              );
+            } else {
+              await new Promise((r) => setTimeout(r, 72));
+            }
+          })(),
+          this.preloadDropzoneHeroDeco(),
+        ]);
       } else {
-        await new Promise((r) =>
-          requestAnimationFrame(() => requestAnimationFrame(r)),
-        );
+        await Promise.all([
+          this.preloadDropzoneHeroDeco(),
+          new Promise((r) =>
+            requestAnimationFrame(() => requestAnimationFrame(r)),
+          ),
+        ]);
       }
       this._dropzoneShellReady = true;
       if (this.visible && !this.ui.uiHidden) {
@@ -167,6 +203,27 @@ export class StartMenuController {
     this.mobileWarning = document.querySelector('#mobileWarning');
     this.dropPrimary = document.querySelector('.drop-primary');
     this.dropSecondary = document.querySelector('.drop-secondary');
+    this.dropzoneHeroCredit = document.querySelector('.dropzone-hero-credit');
+    this.dropzoneHeroDecoUrImg = document.querySelector(
+      '.dropzone-hero-deco__slot--ur .dropzone-hero-deco__img',
+    );
+    this.dropzoneHeroDecoLlImg = document.querySelector(
+      '.dropzone-hero-deco__slot--ll .dropzone-hero-deco__img',
+    );
+    void this.preloadDropzoneHeroDeco();
+  }
+
+  /** Preload corner hero JPGs — no gray flash; reveal waits on decode when possible. */
+  preloadDropzoneHeroDeco() {
+    if (this._dropzoneHeroDecoPreloadPromise) return this._dropzoneHeroDecoPreloadPromise;
+    const imgs = [this.dropzoneHeroDecoUrImg, this.dropzoneHeroDecoLlImg].filter(Boolean);
+    if (!imgs.length) return Promise.resolve();
+    this._dropzoneHeroDecoPreloadPromise = Promise.all(
+      imgs.map((img) => whenDropzoneHeroImgReady(img)),
+    ).finally(() => {
+      this._dropzoneHeroDecoPreloadPromise = null;
+    });
+    return this._dropzoneHeroDecoPreloadPromise;
   }
 
   bindEvents() {
@@ -522,7 +579,7 @@ export class StartMenuController {
 
   /**
    * Desktop start menu after logo: word stagger on headline only, then legacy-style block fades.
-   * Order: 1 logo (CSS before this) → 2 headline → 3 buttons → 4 footer copy (shortcuts + info).
+   * Order: 1 logo (CSS) → 2 hero deco UR → 3 hero deco LL → 4 headline → 5 buttons → 6 footer → 7 credits.
    */
   revealDesktopDropzoneIntroText() {
     if (document.documentElement.classList.contains('mobile-landing')) return;
@@ -531,11 +588,16 @@ export class StartMenuController {
 
     const primary = this.dropPrimary;
     const secondary = this.dropSecondary;
+    const credits = this.dropzoneHeroCredit;
+    const heroDecoUr = this.dropzoneHeroDecoUrImg;
+    const heroDecoLl = this.dropzoneHeroDecoLlImg;
     const buttons = this.dropzone?.querySelectorAll('.dropzone-actions .orby-magic-btn');
 
-    const killTargets = [primary, secondary].filter(Boolean);
+    const killTargets = [primary, secondary, credits, heroDecoUr, heroDecoLl].filter(Boolean);
     if (buttons?.length) killTargets.push(...buttons);
     gsap.killTweensOf(killTargets);
+
+    void this.preloadDropzoneHeroDeco();
 
     wrapWordsForStagger(primary);
 
@@ -547,6 +609,8 @@ export class StartMenuController {
     const blockEase = 'power3.out';
     const headWordDur = 0.42;
     const headStagger = 0.035;
+    const decoFadeDur = 0.55;
+    const decoEase = 'power2.out';
     /** Start next block tween this many seconds before the previous block tween ends (buttons / footer copy only) */
     const blockOverlap = 0.2;
 
@@ -563,6 +627,18 @@ export class StartMenuController {
       }
       if (secondary)
         gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
+      if (heroDecoUr) gsap.set(heroDecoUr, { opacity: DROPZONE_HERO_DECO_OPACITY });
+      if (heroDecoLl) gsap.set(heroDecoLl, { opacity: DROPZONE_HERO_DECO_OPACITY });
+      if (credits) {
+        gsap.set(credits, { opacity: 1 });
+        const creditWords = [...credits.querySelectorAll(`.${STAGGER_CLASS}`)];
+        creditWords.forEach((node) =>
+          gsap.set(node, { opacity: 1, y: 0, clearProps: 'transform' }),
+        );
+        if (!creditWords.length) {
+          gsap.set(credits, { opacity: 1, y: 0, clearProps: 'transform' });
+        }
+      }
       return;
     }
 
@@ -571,6 +647,27 @@ export class StartMenuController {
     const tl = gsap.timeline({
       defaults: { ease: revealEase, overwrite: true },
     });
+
+    if (heroDecoUr) gsap.set(heroDecoUr, { opacity: 0 });
+    if (heroDecoLl) gsap.set(heroDecoLl, { opacity: 0 });
+
+    let timelineCursor = 0;
+    if (heroDecoUr) {
+      tl.to(
+        heroDecoUr,
+        { opacity: DROPZONE_HERO_DECO_OPACITY, duration: decoFadeDur, ease: decoEase },
+        timelineCursor,
+      );
+      timelineCursor = '>';
+    }
+    if (heroDecoLl) {
+      tl.to(
+        heroDecoLl,
+        { opacity: DROPZONE_HERO_DECO_OPACITY, duration: decoFadeDur, ease: decoEase },
+        timelineCursor,
+      );
+      timelineCursor = '>';
+    }
 
     let headRan = false;
     if (w1.length) {
@@ -584,6 +681,7 @@ export class StartMenuController {
           stagger: headStagger,
           ease: 'power2.out',
         },
+        timelineCursor,
       );
       headRan = true;
     } else if (primary) {
@@ -591,11 +689,12 @@ export class StartMenuController {
         primary,
         { opacity: 0, y: -15 },
         { opacity: 1, y: 0, duration: blockDur },
+        timelineCursor,
       );
       headRan = true;
     }
 
-    const blockAfterHead = headRan ? '>' : 0;
+    const blockAfterHead = headRan ? '>' : timelineCursor === 0 ? 0 : timelineCursor;
     /* 3 Buttons before footer copy — matches classic dropRevealButton end state */
     if (buttons?.length) {
       tl.fromTo(
@@ -619,6 +718,35 @@ export class StartMenuController {
         { opacity: 1, y: 0, duration: blockDur, ease: blockEase },
         buttons?.length ? `>-=${blockOverlap}` : blockAfterHead,
       );
+    }
+
+    if (credits) {
+      wrapWordsForStagger(credits);
+      const creditWords = [...credits.querySelectorAll(`.${STAGGER_CLASS}`)];
+      if (creditWords.length) {
+        gsap.set(credits, { opacity: 1 });
+        const creditsAfter =
+          secondary != null ? '>' : buttons?.length ? `>-=${blockOverlap}` : blockAfterHead;
+        tl.fromTo(
+          creditWords,
+          { opacity: 0, y: 14 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: headWordDur,
+            stagger: headStagger,
+            ease: 'power2.out',
+          },
+          creditsAfter,
+        );
+      } else {
+        tl.fromTo(
+          credits,
+          { opacity: 0, y: -10 },
+          { opacity: 1, y: 0, duration: blockDur, ease: blockEase },
+          secondary != null ? '>' : buttons?.length ? `>-=${blockOverlap}` : blockAfterHead,
+        );
+      }
     }
   }
 

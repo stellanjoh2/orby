@@ -21,6 +21,22 @@
     12vh,
     calc(6.25rem * var(--orby-marketing-scale))
   );
+  /* Mega CTAs — ~20% larger @ 2560; 16px label (support-size is 14px elsewhere) */
+  --orby-footer-cta-scale: 1.2;
+  --orby-footer-cta-font-size: 16px;
+  --orby-footer-cta-min-width: calc(15.25rem * var(--orby-footer-cta-scale));
+  --orby-footer-cta-min-height: calc(3.65rem * var(--orby-footer-cta-scale));
+  --orby-footer-cta-pad-block: calc(1.08rem * var(--orby-footer-cta-scale));
+  --orby-footer-cta-pad-inline: calc(2.65rem * var(--orby-footer-cta-scale));
+  --orby-footer-cta-inner-gap: calc(0.5rem * var(--orby-footer-cta-scale));
+  --orby-footer-cta-stroke: calc(1.5px * var(--orby-footer-cta-scale));
+}
+
+@media (max-width: 159.99rem) {
+  .orby-marketing__section--footer {
+    --orby-footer-cta-scale: 1;
+    --orby-footer-cta-font-size: var(--orby-marketing-support-size);
+  }
 }
 
 /* Cover sub-pixel gap / scroll end — keep viewport bottom lime, not --orby-black */
@@ -127,6 +143,22 @@
   white-space: nowrap;
   /* Bleed for Safari pseudo ring — avoids footer edge compositing clips */
   margin-block: 2px;
+}
+
+/* Lime mega footer only — dropzone / dialog pills keep global magic-btn sizing */
+#orby-marketing .orby-marketing__footer-actions .orby-magic-btn.orby-magic-btn--on-lime {
+  min-width: var(--orby-footer-cta-min-width);
+  min-height: var(--orby-footer-cta-min-height);
+  font-size: var(--orby-footer-cta-font-size);
+  --orby-magic-btn-stroke: var(--orby-footer-cta-stroke);
+}
+
+#orby-marketing
+  .orby-marketing__footer-actions
+  .orby-magic-btn.orby-magic-btn--on-lime
+  .orby-magic-btn__inner {
+  padding: var(--orby-footer-cta-pad-block) var(--orby-footer-cta-pad-inline);
+  gap: var(--orby-footer-cta-inner-gap);
 }
 
 /* Bottom info line — centered on lime footer */

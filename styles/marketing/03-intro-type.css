@@ -116,13 +116,37 @@
 @media (min-width: 1920px) and (max-width: 2559px) {
   .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
     --orby-intro-turntable-offset-x: 650px;
+    /* Lift turntable — left dragon + car clear intro headline */
+    --orby-intro-turntable-offset-y: -106px;
+    overflow: visible;
   }
 
   .orby-marketing__section--intro-turntable .orby-marketing__intro-turntable-wrap {
-    transform: translate3d(650px, 0, 0);
+    transform: translate3d(
+      var(--orby-intro-turntable-offset-x, 650px),
+      var(--orby-intro-turntable-offset-y, 0),
+      0
+    );
   }
+
   .orby-marketing__section--intro-turntable .orby-marketing__intro-center {
     gap: 0;
+    overflow: visible;
+  }
+
+  .orby-marketing__section--intro-turntable .orby-marketing__intro-turntable-poster,
+  .orby-marketing__section--intro-turntable .orby-marketing__intro-turntable-canvas {
+    object-position: 52% 38%;
+  }
+
+  /* White lede — ~20% wider into center seam (1920-only) */
+  .orby-marketing__section--intro-turntable .orby-marketing__lede--intro {
+    max-width: min(
+      calc(
+        (var(--orby-marketing-lede-measure) + var(--orby-marketing-col-gap) + 50cqi) * 1.2
+      ),
+      calc(100vw - var(--orby-home-padding-x) - var(--orby-marketing-col-gap-half))
+    );
   }
 
   .orby-marketing__section--intro-turntable .orby-marketing__eyebrow {
@@ -155,6 +179,13 @@
 
   .orby-marketing__section--intro-turntable .orby-marketing__intro-center {
     padding-right: calc(var(--orby-marketing-col-gap) - var(--orby-marketing-gutter-text-inset));
+  }
+}
+
+/* 2560+ — horizontal turntable offset only (no vertical lift) */
+@media (min-width: 2560px) {
+  .orby-marketing__section--intro-turntable .orby-marketing__intro-turntable-wrap {
+    transform: translate3d(var(--orby-intro-turntable-offset-x, 0), 0, 0);
   }
 }
 

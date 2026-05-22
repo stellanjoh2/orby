@@ -26,6 +26,9 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow: visible;
+  /* cqi cap in .orby-marketing__title — without a container, min() collapsed to ~38px */
+  container-type: inline-size;
+  container-name: orby-section-copy;
 }
 
 .orby-marketing__split-copy-inner {

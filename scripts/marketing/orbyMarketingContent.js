@@ -60,7 +60,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      "Orby is a zero-install studio for GLB, glTF, and SVG. Whether you're checking how your design looks in 3D, showcasing a photogrammetry scan, or presenting a product visualization — drag a file in, pose and light it, and ship stills and video without leaving the tab.",
+      "Your model deserves better than a simple screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG you just turned into a 3D mesh — inspect it, present it, and export it without leaving the tab.",
   },
   {
     type: 'split',
@@ -270,21 +270,21 @@ export const MARKETING_SECTIONS = [
       {
         title: 'Mesh diagnostics',
         body:
-          'UV checker, wireframe overlay, clay mode, and reverse normals. Everything you need to sanity-check your mesh without opening a DCC.',
+          'UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC.',
         imageSrc: './assets/marketing/orby-section-pro-meshdiagnostics01.jpg',
         imageAlt: 'Orby viewport with mesh diagnostic overlays',
       },
       {
-        title: 'Export without recording',
+        title: 'Instant export',
         body:
-          'PNG stills, MP4 turntable, or PNG sequences. No screen capture, no third-party tools.',
+          'PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools.',
         imageSrc: './assets/marketing/export-golden-look.png',
         imageAlt: 'Product render ready for export from Orby',
       },
       {
         title: 'Custom HDRI',
         body:
-          'Bring your own 360° environment — a sunset field, studio softbox, or location plate. Upload .jpg, .png, or .hdr and Orby lights your model from it: reflections, backdrop, and mood follow your file, not just our presets.',
+          'Upload any .jpg, .png, or .hdr to set the mood. Reflections, backdrop, and lighting all follow your file — not a preset.',
         imageSrc: './assets/marketing/custom-hdri-placeholder.png',
         imageAlt: '3D model lit by a custom golden-hour environment in Orby',
       },

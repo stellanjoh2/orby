@@ -9,6 +9,8 @@
   margin: 0;
   width: 100%;
   max-width: none;
+  container-type: inline-size;
+  container-name: orby-section-copy;
 }
 
 /* Intentional \n breaks only — no extra wrap inside a line */
@@ -141,7 +143,7 @@
 .orby-marketing__pro-card-body {
   margin: 0 auto;
   max-width: min(100%, calc(27rem * var(--orby-marketing-scale)));
-  font-size: var(--orby-marketing-support-size);
+  font-size: var(--orby-marketing-pro-card-body-size);
   font-weight: var(--orby-marketing-body-weight);
   line-height: 1.65;
   color: var(--orby-marketing-text-dim);
@@ -171,6 +173,8 @@
   margin: 0 0 var(--orby-marketing-col-gap);
   width: 100%;
   max-width: none;
+  container-type: inline-size;
+  container-name: orby-section-copy;
 }
 
 .orby-marketing__faq-header .orby-marketing__title {
@@ -211,13 +215,23 @@
     max-width: var(--orby-marketing-feature-lede-measure);
   }
 
-  /* FAQ headline — half site width column */
-  .orby-marketing__faq-header .orby-marketing__title {
+  /* FAQ headline — half site width column; header width = cqi container (not full panel) */
+  .orby-marketing__faq-header {
     max-width: var(--orby-marketing-section-headline-measure);
+  }
+
+  .orby-marketing__faq-header .orby-marketing__title {
+    max-width: 100%;
     white-space: normal;
     text-wrap: balance;
   }
+}
 
+/* 1920×1080 band — lock FAQ headline to 48px (panel-wide cqi was overshooting section ramp) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .orby-marketing__faq-header .orby-marketing__title {
+    font-size: 48px;
+  }
 }
 
 .orby-marketing__faq-item {

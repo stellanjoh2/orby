@@ -1793,21 +1793,14 @@ html.orby-gate-unlocked .orby-entry-gate,
   width: var(--drop-hero-magic-btn-width, 15.25rem);
   min-width: var(--drop-hero-magic-btn-width, 15.25rem);
   min-height: calc(3.65rem * var(--drop-hero-wide-factor));
-  /* Match .drop-secondary — --orby-marketing-support-size (12px @ 1920, 0.9rem @ 2560) */
+  /* Match .drop-secondary — --orby-marketing-support-size (14px @ 2560, 0.9rem @ 1920) */
   font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
 }
 
 .dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__inner {
   font-size: inherit;
-  padding-inline: calc(var(--ui-orby-pill-pad-inline-normal) * var(--drop-hero-wide-factor));
-  padding-top: calc(
-    var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor) -
-      var(--drop-hero-magic-btn-y-nudge, 0px)
-  );
-  padding-bottom: calc(
-    var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor) +
-      var(--drop-hero-magic-btn-y-nudge, 0px)
-  );
+  padding: calc(var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor))
+    calc(var(--ui-orby-pill-pad-inline-normal) * var(--drop-hero-wide-factor));
   gap: calc(0.5rem * var(--drop-hero-wide-factor));
 }
 
@@ -1870,7 +1863,7 @@ html.orby-gate-unlocked .orby-entry-gate,
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: none;
-  line-height: 1.1;
+  line-height: 1;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -1902,7 +1895,6 @@ html.orby-gate-unlocked .orby-entry-gate,
   justify-content: center;
   gap: 0.5rem;
   box-sizing: border-box;
-  min-height: 100%;
   padding: 1.08rem 2.65rem;
   pointer-events: none;
   transform: translateX(0);
@@ -1910,8 +1902,9 @@ html.orby-gate-unlocked .orby-entry-gate,
 }
 
 .orby-magic-btn__label {
-  display: block;
-  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
   pointer-events: none;
 }
 
@@ -2717,10 +2710,6 @@ html.orby-dropzone-shell-pending .workspace {
   --drop-hero-magic-btn-width: calc(
     160px + 84px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
   );
-  /* Browse label+arrow — sit ~2px low @ 1920 when hero padding shrinks faster than min-height */
-  --drop-hero-magic-btn-y-nudge: calc(
-    2px * clamp(0, (1 - var(--drop-hero-wide-factor)) / 0.22, 1)
-  );
   --dropzone-frost-blur: calc(20px * var(--drop-hero-wide-factor));
   --dropzone-frost-fill: color-mix(in srgb, var(--orby-app-bg) 78%, transparent);
   isolation: isolate;
@@ -2780,6 +2769,7 @@ html.orby-dropzone-shell-pending .workspace {
   position: absolute;
   display: block;
   margin: 0;
+  background: transparent;
 }
 
 /* Corner-anchored into gutter; inset pulls back toward frame edge */
@@ -2803,9 +2793,15 @@ html.orby-dropzone-shell-pending .workspace {
   );
   max-width: min(76vw, 840px);
   object-fit: contain;
+  background-color: transparent;
   user-select: none;
   -webkit-user-drag: none;
   opacity: 0.92;
+}
+
+/* Hidden until GSAP fade-in — avoids gray decode placeholder over black */
+html:not(.mobile-landing) .dropzone-hero-deco__img {
+  opacity: 0;
 }
 
 .dropzone-hero-deco__slot--ur .dropzone-hero-deco__img {
@@ -2813,11 +2809,29 @@ html.orby-dropzone-shell-pending .workspace {
   transform-origin: 100% 0%;
 }
 
-/* 2560+ — nudge hero JPG toward top-right gutter */
-@media (min-width: 160rem) {
+/*
+ * 1920+ — match 2560 corner placement (sub-2560 had used loose defaults: ur 100/115).
+ * 1920–2559: pull lizard up slightly — scaled deco was overlapping the drop headline.
+ */
+@media (min-width: 120rem) {
   .dropzone-hero-deco__slot--ur {
     top: -150px;
     right: -100px;
+  }
+
+  .dropzone-hero-deco__img {
+    height: clamp(192px, min(36vw, 48vh), 600px);
+  }
+}
+
+@media (min-width: 120rem) and (max-width: 159.99rem) {
+  .dropzone-hero-deco__slot--ll {
+    bottom: -140px;
+    left: 90px;
+  }
+
+  .dropzone-hero-deco__slot--ll .dropzone-hero-deco__img {
+    transform: translate(-6%, -8%) scale(2);
   }
 }
 
@@ -2881,6 +2895,12 @@ html:not(.orby-home-scroll) .dropzone-hero-credits {
 .dropzone-hero-credit a:focus-visible {
   color: var(--brand-primary);
   text-decoration-color: currentColor;
+}
+
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .dropzone-hero-credit {
+    font-size: 12px;
+  }
 }
 
 html.mobile-landing .dropzone-hero-deco,
@@ -3104,6 +3124,16 @@ html:not(.mobile-landing) .dropzone-btn:not(.orby-magic-btn) {
   animation: none !important;
   opacity: 0;
   transform: translateY(-15px);
+}
+
+html:not(.mobile-landing) .dropzone-hero-credit {
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: none !important;
+}
+
+html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
+  display: inline-block;
 }
 
 /* Narrow or short desktop windows: hide keyboard legend; less bottom margin on secondary

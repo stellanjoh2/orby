@@ -142,11 +142,11 @@
   --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
   /* Standard vertical seam between major blocks — 220px @ 1440; scales with gutter-scale */
   --orby-marketing-gap-big: calc(220px * var(--orby-marketing-gutter-scale));
-  /* Eyebrow / preheader → section headline */
+  /* Eyebrow / preheader — 14px @ 2560, 11px @ 1920 */
   --orby-marketing-eyebrow-size: clamp(
     calc(0.72rem * var(--orby-marketing-scale)),
-    1.1vw,
-    calc(0.82rem * var(--orby-marketing-scale))
+    calc(14px - 3px * var(--orby-marketing-wide-type-ramp)),
+    14px
   );
   /* Split feature rhythm — eyebrow → headline, headline → lede, lede → bullets (36px @ 1440) */
   --orby-marketing-feature-copy-gap: calc(36px * var(--orby-marketing-scale));
@@ -175,7 +175,7 @@
   --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
   /*
    * Informative / supporting type — ramps 1920→2560 (headlines keep headline-scale).
-   * Support 12px→0.9rem; list 15px→18px; feature lede 18px→22px; intro lede 22px→24px.
+   * Support 14px @ 2560 → 0.9rem @ 1920; list 15px→18px; feature lede 18px→22px; intro lede 22px→24px.
    */
   --orby-marketing-wide-type-ramp: clamp(
     0,
@@ -183,14 +183,21 @@
     1
   );
   --orby-marketing-support-size: clamp(
-    12px,
-    calc(12px + 2.4px * var(--orby-marketing-wide-type-ramp)),
+    14px,
+    calc(14px + 0.4px * var(--orby-marketing-wide-type-ramp)),
     0.9rem
   );
+  /* Footer meta line — 14px @ 2560, 16px @ 1920 */
   --orby-marketing-meta-size: clamp(
-    12px,
-    calc(12px + 4px * var(--orby-marketing-wide-type-ramp)),
+    14px,
+    calc(14px + 2px * var(--orby-marketing-wide-type-ramp)),
     16px
+  );
+  /* Pro card gray copy — 18px @ 2560, 15px @ 1920 */
+  --orby-marketing-pro-card-body-size: clamp(
+    15px,
+    calc(15px + 3px * (1 - var(--orby-marketing-wide-type-ramp))),
+    18px
   );
   --orby-marketing-feature-list-size: clamp(
     15px,
@@ -303,8 +310,17 @@
   /* Intro / footer body copy measure (~⅓ viewport at desktop) */
   --orby-marketing-lede-measure: calc(40.8rem * var(--orby-marketing-scale));
   /* Feature / showcase / FAQ — 5.8vw at max; column cap when split */
-  --orby-section-headline-min: calc(2.35rem * var(--orby-marketing-headline-scale));
-  --orby-section-headline-max: calc(4.35rem * var(--orby-marketing-headline-scale));
+  /* Lime section headlines — 68px @ 2560, 48px @ 1920 (split / showcase / pro / FAQ) */
+  --orby-section-headline-min: clamp(
+    calc(2.35rem * var(--orby-marketing-headline-scale)),
+    calc(68px - 20px * var(--orby-marketing-wide-type-ramp)),
+    68px
+  );
+  --orby-section-headline-max: clamp(
+    calc(2.35rem * var(--orby-marketing-headline-scale)),
+    calc(68px - 20px * var(--orby-marketing-wide-type-ramp)),
+    68px
+  );
   --orby-section-headline-vw: 5.8;
   --orby-section-headline-cqi-cap: 11.6;
   --orby-section-headline-offset: calc(0.25rem * var(--orby-marketing-headline-scale));
@@ -318,8 +334,8 @@
     1
   );
   --orby-marketing-support-size: clamp(
-    12px,
-    calc(12px + 2.4px * var(--orby-marketing-wide-type-ramp)),
+    14px,
+    calc(14px + 0.4px * var(--orby-marketing-wide-type-ramp)),
     0.9rem
   );
 }
