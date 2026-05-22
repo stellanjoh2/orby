@@ -55,10 +55,6 @@ export function applyMarketingPerformanceClass() {
   document.documentElement.classList.toggle('orby-marketing-reduced', reduced);
 }
 
-export function isMarketingReducedEffects() {
-  return getMarketingPerformanceTier() === 'reduced';
-}
-
 export function shouldUseHeadlineWordStagger() {
   return getMarketingPerformanceTier() === 'full';
 }

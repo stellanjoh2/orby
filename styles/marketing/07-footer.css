@@ -1,4 +1,4 @@
-/* Footer — one viewport of lime; document ends here (no bleed / infinite scroll) */
+/* Footer — one viewport of lime; scrolls over fixed white rfrct endcap (10-refrct-teaser.css) */
 .orby-marketing__section--footer {
   position: relative;
   z-index: 2;
@@ -39,17 +39,9 @@
   }
 }
 
-/* Cover sub-pixel gap / scroll end — keep viewport bottom lime, not --orby-black */
+/* Seam into rfrct unveil — pin handles the handoff; no extra ::after band */
 .orby-marketing__section--footer::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -16px;
-  height: 16px;
-  background: var(--brand-primary, #c4ff00);
-  pointer-events: none;
-  z-index: 1;
+  content: none;
 }
 
 /* Stage bleeds above the lime edge (taller box); clip bottom so PNG never extends the page */
@@ -77,7 +69,7 @@
   height: auto;
   object-fit: contain;
   object-position: right bottom;
-  transform: translate3d(8%, 0, 0) scale(var(--orby-intro-scale-right, 1));
+  transform: translate3d(8%, 200px, 0) scale(var(--orby-intro-scale-right, 1));
 }
 
 .orby-marketing__footer-center {
@@ -90,12 +82,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--orby-marketing-space-md);
+  gap: 0;
   overflow: visible;
+}
+
+.orby-marketing__footer-center > .orby-marketing__title--footer + .orby-marketing__lede--footer {
+  margin-top: var(--orby-marketing-headline-body-gap);
+}
+
+.orby-marketing__footer-center > .orby-marketing__title--footer + .orby-marketing__footer-actions,
+.orby-marketing__footer-center > .orby-marketing__lede--footer + .orby-marketing__footer-actions {
+  margin-top: var(--orby-marketing-headline-actions-gap);
 }
 
 .orby-marketing__footer-center .orby-marketing__title--footer {
   margin: 0;
+  margin-bottom: 0;
   width: auto;
   max-width: 100%;
   box-sizing: border-box;
@@ -112,7 +114,7 @@
   color: color-mix(in srgb, var(--brand-text) 62%, transparent);
 }
 
-/* Side-by-side peers (footer CTAs, future button pairs) — ½ column gutter */
+/* Side-by-side peers (footer CTAs, future button pairs) */
 .orby-marketing__peer-row,
 .orby-marketing__footer-actions {
   position: relative;
@@ -121,7 +123,7 @@
   flex-flow: row wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--orby-marketing-col-gap-half);
+  gap: var(--orby-marketing-peer-gap);
   width: auto;
   max-width: none;
 }
@@ -141,8 +143,6 @@
   transform: none;
   animation: none;
   white-space: nowrap;
-  /* Bleed for Safari pseudo ring — avoids footer edge compositing clips */
-  margin-block: 2px;
 }
 
 /* Lime mega footer only — dropzone / dialog pills keep global magic-btn sizing */

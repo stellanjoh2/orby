@@ -1,21 +1,21 @@
 /**
  * Homepage marketing section HTML — string templates only (no DOM / lifecycle).
  */
-import { orbyMagicButtonHtml, orbyMagicButtonOnLimeHtml } from '../ui/orbyMagicButton.js';
-import { formatMarketingImageCreditHtml } from './orbyMarketingImageCredit.js';
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import {
+  orbyMagicButtonHtml,
+  orbyMagicButtonMonoLinkHtml,
+  orbyMagicButtonOnLimeHtml,
+} from '../ui/orbyMagicButton.js';
+import {
+  escapeMarketingHtml,
+  formatMarketingImageCreditHtml,
+} from './orbyMarketingImageCredit.js';
+import { MARKETING_VIDEO_HTML_ATTRS } from './orbyMarketingVideo.js';
 
 function renderBulletList(items) {
   if (!items?.length) return '';
   return `<ul class="orby-marketing__list">${items
-    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .map((item) => `<li>${escapeMarketingHtml(item)}</li>`)
     .join('')}</ul>`;
 }
 
@@ -28,7 +28,7 @@ function renderMagicCta(section) {
         ? 'data-orby-marketing-load-sample'
         : 'data-orby-marketing-scroll-top';
   return `<div class="orby-marketing__split-cta">
-      ${orbyMagicButtonHtml(escapeHtml(section.ctaLabel), {
+      ${orbyMagicButtonHtml(escapeMarketingHtml(section.ctaLabel), {
         extraClass: 'orby-marketing__cta',
         attrs: actionAttr,
       })}
@@ -77,11 +77,11 @@ function renderSplitGallerySlideImages(slides) {
     .map((slide, index) => {
       const active = index === 0 ? ' is-active' : '';
       const lazy = index === 0 ? '' : ' loading="lazy"';
-      const creditAttr = slide.credit ? ` data-credit="${escapeHtml(slide.credit)}"` : '';
+      const creditAttr = slide.credit ? ` data-credit="${escapeMarketingHtml(slide.credit)}"` : '';
       const imageCreditAttr = slide.imageCredit
-        ? ` data-image-credit="${escapeHtml(JSON.stringify(slide.imageCredit))}"`
+        ? ` data-image-credit="${escapeMarketingHtml(JSON.stringify(slide.imageCredit))}"`
         : '';
-      return `<img class="orby-marketing__showcase-img${active}" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" decoding="async"${creditAttr}${imageCreditAttr}${lazy} />`;
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" decoding="async"${creditAttr}${imageCreditAttr}${lazy} />`;
     })
     .join('\n        ');
 }
@@ -94,8 +94,8 @@ function renderShowcaseSlideImages(slides) {
     .map((slide, index) => {
       const active = index === 0 ? ' is-active' : '';
       const lazy = index === 0 ? '' : ' loading="lazy"';
-      const creditAttr = slide.credit ? ` data-credit="${escapeHtml(slide.credit)}"` : '';
-      return `<img class="orby-marketing__showcase-img${active}" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" width="1024" height="576" decoding="async"${creditAttr}${lazy} />`;
+      const creditAttr = slide.credit ? ` data-credit="${escapeMarketingHtml(slide.credit)}"` : '';
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" width="1024" height="576" decoding="async"${creditAttr}${lazy} />`;
     })
     .join('\n        ');
 }
@@ -112,12 +112,12 @@ function renderFigure(section, revealDir) {
 
   if (videoSrc) {
     const posterSrc = section.videoPoster ? slides[0]?.src || '' : '';
-    const posterAttr = posterSrc ? ` poster="${escapeHtml(posterSrc)}"` : '';
+    const posterAttr = posterSrc ? ` poster="${escapeMarketingHtml(posterSrc)}"` : '';
     const imageAlt = slides[0]?.alt || section.imageAlt || '';
     return `<figure class="orby-marketing__figure">
-      <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
+      <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-        <video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeHtml(videoSrc)}"${posterAttr} playsinline muted loop preload="auto" aria-label="${escapeHtml(imageAlt || 'Feature preview video')}"></video>
+        <video class="orby-marketing__figure-media orby-marketing__figure-video" src="${escapeMarketingHtml(videoSrc)}"${posterAttr} ${MARKETING_VIDEO_HTML_ATTRS} aria-label="${escapeMarketingHtml(imageAlt || 'Feature preview video')}"></video>
         ${renderMarketingImageCredit(slides[0]?.imageCredit || section.imageCredit)}
       </div>
     </figure>`;
@@ -125,7 +125,7 @@ function renderFigure(section, revealDir) {
 
   if (slides.length > 1) {
     return `<figure class="orby-marketing__figure">
-      <div class="orby-marketing__figure-mask orby-marketing__figure-mask--gallery" data-orby-marketing-showcase-gallery data-orby-marketing-gallery-simple data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}" aria-label="${escapeHtml(section.eyebrow || 'Feature')} previews">
+      <div class="orby-marketing__figure-mask orby-marketing__figure-mask--gallery" data-orby-marketing-showcase-gallery data-orby-marketing-gallery-simple data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}" aria-label="${escapeMarketingHtml(section.eyebrow || 'Feature')} previews">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
         ${renderSplitGallerySlideImages(slides)}
         <p class="orby-marketing__figure-credit orby-marketing__figure-credit--static" data-orby-marketing-showcase-credit hidden></p>
@@ -135,12 +135,51 @@ function renderFigure(section, revealDir) {
 
   const slide = slides[0];
   return `<figure class="orby-marketing__figure">
-      <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeHtml(revealDir)}">
+      <div class="orby-marketing__figure-mask" data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-        <img class="orby-marketing__figure-media orby-marketing__figure-img" src="${escapeHtml(slide.src)}" alt="${escapeHtml(slide.alt)}" decoding="async" />
+        <img class="orby-marketing__figure-media orby-marketing__figure-img" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" decoding="async" />
         ${renderMarketingImageCredit(slide.imageCredit)}
       </div>
     </figure>`;
+}
+
+function renderRefrctTeaserCta(section) {
+  if (!section.ctaLabel || !section.ctaHref) return '';
+  return `<div class="orby-marketing__split-cta">
+      ${orbyMagicButtonMonoLinkHtml(escapeMarketingHtml(section.ctaLabel), escapeMarketingHtml(section.ctaHref), {
+        extraClass: 'orby-marketing__cta',
+      })}
+    </div>`;
+}
+
+function renderRefrctTeaserSection(section, footerSection) {
+  const mediaLeft = section.layout === 'media-left';
+  const bleedClass = mediaLeft
+    ? 'orby-marketing__split-bleed orby-marketing__split-bleed--media-left'
+    : 'orby-marketing__split-bleed orby-marketing__split-bleed--media-right';
+  const revealDir = mediaLeft ? 'rtl' : 'ltr';
+
+  return `<div class="orby-marketing__refrct-reveal-spacer" data-orby-marketing-refrct-spacer aria-hidden="true"></div>
+  <div class="orby-marketing__refrct-reveal" data-orby-marketing-refrct-reveal>
+    <div class="orby-marketing__refrct-panel" data-orby-marketing-refrct-panel>
+      <section class="orby-marketing__section orby-marketing__section--refrct-teaser" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
+        <div class="${bleedClass}">
+          <div class="orby-marketing__split-copy">
+            <div class="orby-marketing__split-copy-inner">
+              <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow)}</p>
+              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
+              <p class="orby-marketing__lede">${escapeMarketingHtml(section.lede)}</p>
+              ${renderRefrctTeaserCta(section)}
+            </div>
+          </div>
+          <div class="orby-marketing__split-media">
+            ${renderFigure(section, revealDir)}
+          </div>
+        </div>
+      </section>
+      ${footerSection ? renderFooterMeta(footerSection, { onWhite: true }) : ''}
+    </div>
+  </div>`;
 }
 
 function renderSplitSection(section) {
@@ -150,13 +189,13 @@ function renderSplitSection(section) {
     : 'orby-marketing__split-bleed orby-marketing__split-bleed--media-right';
   const revealDir = mediaLeft ? 'rtl' : 'ltr';
 
-  return `<section class="orby-marketing__section orby-marketing__section--split" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--split" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="${bleedClass}">
       <div class="orby-marketing__split-copy">
         <div class="orby-marketing__split-copy-inner">
-          <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow)}</p>
-          <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
-          <p class="orby-marketing__lede">${escapeHtml(section.lede)}</p>
+          <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow)}</p>
+          <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
+          <p class="orby-marketing__lede">${escapeMarketingHtml(section.lede)}</p>
           ${renderBulletList(section.bullets)}
           ${renderMagicCta(section)}
         </div>
@@ -173,14 +212,14 @@ function renderIntroHeadline(title) {
     .split(/\n+/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => `<span class="orby-marketing__title-line">${escapeHtml(line)}</span>`)
+    .map((line) => `<span class="orby-marketing__title-line">${escapeMarketingHtml(line)}</span>`)
     .join('');
 }
 
 function renderIntroSection(section) {
-  return `<section class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--intro orby-marketing__section--intro-turntable" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--intro orby-marketing__section--intro-turntable" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__intro-stage" aria-hidden="true">
-        <div class="orby-marketing__intro-turntable-wrap orby-marketing__intro-asset orby-marketing__intro-asset--right">
+        <div class="orby-marketing__intro-turntable-wrap">
           <img
             class="orby-marketing__intro-turntable-poster"
             src="./assets/marketing/intro-turntable-poster.jpg"
@@ -199,9 +238,9 @@ function renderIntroSection(section) {
         </div>
       </div>
       <div class="orby-marketing__intro-center">
-      ${section.eyebrow ? `<p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>` : ''}
-      <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
-      <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
+      ${section.eyebrow ? `<p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>` : ''}
+      <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
+      <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>
     </div>
   </section>`;
 }
@@ -241,19 +280,19 @@ function renderPngMarqueeItems(items) {
       const picture =
         fallback && primary !== fallback
           ? `<picture>
-            <source type="image/webp" srcset="${escapeHtml(primary)}" />
+            <source type="image/webp" srcset="${escapeMarketingHtml(primary)}" />
             <img
               class="orby-marketing__png-marquee-img"
-              src="${escapeHtml(fallback)}"
-              alt="${escapeHtml(item.alt)}"
+              src="${escapeMarketingHtml(fallback)}"
+              alt="${escapeMarketingHtml(item.alt)}"
               decoding="async"
               loading="lazy"
             />
           </picture>`
           : `<img
               class="orby-marketing__png-marquee-img"
-              src="${escapeHtml(primary)}"
-              alt="${escapeHtml(item.alt)}"
+              src="${escapeMarketingHtml(primary)}"
+              alt="${escapeMarketingHtml(item.alt)}"
               decoding="async"
               loading="lazy"
             />`;
@@ -267,11 +306,11 @@ function renderPngMarqueeSection(section) {
   const itemHtml = renderPngMarqueeItems(items);
   const duplicateHtml = renderPngMarqueeItems(items);
 
-  return `<section class="orby-marketing__section orby-marketing__section--marquee" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--marquee" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__marquee-copy">
-      <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
-      <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
-      <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
+      <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>
+      <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.title)}</h2>
+      <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>
     </div>
     <div
       class="orby-marketing__png-marquee"
@@ -302,13 +341,13 @@ function renderPngMarqueeSection(section) {
 function renderShowcaseSection(section) {
   const slides = getShowcaseSlides(section);
   const video = section.videoSrc
-    ? `<video class="orby-marketing__video" src="${escapeHtml(section.videoSrc)}" poster="${escapeHtml(section.gallery?.[0]?.src || section.imageSrc || '')}" playsinline muted loop preload="none"></video>`
+    ? `<video class="orby-marketing__video" src="${escapeMarketingHtml(section.videoSrc)}" poster="${escapeMarketingHtml(section.gallery?.[0]?.src || section.imageSrc || '')}" ${MARKETING_VIDEO_HTML_ATTRS}></video>`
     : '';
-  return `<section class="orby-marketing__section orby-marketing__section--showcase" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--showcase" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__showcase-copy">
-      <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow)}</p>
-      <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
-      <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>
+      <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>
+      <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
+      <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>
     </div>
     <figure class="orby-marketing__showcase-figure">
       <div class="orby-marketing__showcase-mask" data-orby-marketing-showcase-gallery data-orby-marketing-reveal="media" data-reveal-dir="ltr" tabindex="0" aria-roledescription="carousel" aria-label="Showcase gallery">
@@ -328,7 +367,7 @@ function renderProCard(card) {
   const media = card.imageSrc
     ? `<div class="orby-marketing__pro-card-media">
           <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-          <img class="orby-marketing__pro-card-img" src="${escapeHtml(card.imageSrc)}" alt="${escapeHtml(card.imageAlt || '')}" width="640" height="640" decoding="async" loading="lazy" />
+          <img class="orby-marketing__pro-card-img" src="${escapeMarketingHtml(card.imageSrc)}" alt="${escapeMarketingHtml(card.imageAlt || '')}" width="640" height="640" decoding="async" loading="lazy" />
         </div>`
     : `<div class="orby-marketing__pro-card-media orby-marketing__pro-card-media--empty" aria-hidden="true"></div>`;
 
@@ -336,8 +375,8 @@ function renderProCard(card) {
       <div class="orby-marketing__pro-card-surface">
         ${media}
         <div class="orby-marketing__pro-card-copy">
-          <h3 class="orby-marketing__pro-card-title brand-font-headline">${escapeHtml(card.title)}</h3>
-          <p class="orby-marketing__pro-card-body">${escapeHtml(card.body)}</p>
+          <h3 class="orby-marketing__pro-card-title brand-font-headline">${escapeMarketingHtml(card.title)}</h3>
+          <p class="orby-marketing__pro-card-body">${escapeMarketingHtml(card.body)}</p>
         </div>
       </div>
     </article>`;
@@ -348,14 +387,14 @@ function renderProSection(section) {
     .map((card) => renderProCard(card))
     .join('\n        ');
   const ledeBlock = section.lede
-    ? `<p class="orby-marketing__lede orby-marketing__pro-lede">${escapeHtml(section.lede)}</p>`
+    ? `<p class="orby-marketing__lede orby-marketing__pro-lede">${escapeMarketingHtml(section.lede)}</p>`
     : '';
 
-  return `<section class="orby-marketing__section orby-marketing__section--pro" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--pro" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__pro">
       <header class="orby-marketing__pro-header">
-        <p class="orby-marketing__eyebrow">${escapeHtml(section.eyebrow || 'For pros')}</p>
-        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
+        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || 'For pros')}</p>
+        <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
         ${ledeBlock}
       </header>
       <div class="orby-marketing__pro-grid">
@@ -372,18 +411,18 @@ function renderFaqSection(section) {
       (item) => `<article class="orby-marketing__faq-item" data-orby-marketing-reveal="faq-item">
         <div class="orby-marketing__faq-icon">${FAQ_ICON_SVG}</div>
         <div class="orby-marketing__faq-body">
-          <h3 class="orby-marketing__faq-question">${escapeHtml(item.question)}</h3>
-          <p class="orby-marketing__faq-answer">${escapeHtml(item.answer)}</p>
+          <h3 class="orby-marketing__faq-question">${escapeMarketingHtml(item.question)}</h3>
+          <p class="orby-marketing__faq-answer">${escapeMarketingHtml(item.answer)}</p>
         </div>
       </article>`,
     )
     .join('\n          ');
 
-  return `<section class="orby-marketing__section orby-marketing__section--faq" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<section class="orby-marketing__section orby-marketing__section--faq" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__faq">
       <header class="orby-marketing__faq-header">
-        <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeHtml(section.eyebrow || 'FAQ')}</p>
-        <h2 class="orby-marketing__title brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeHtml(section.title)}</h2>
+        <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow || 'FAQ')}</p>
+        <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.title)}</h2>
       </header>
       <div class="orby-marketing__faq-grid">
         ${items}
@@ -393,7 +432,7 @@ function renderFaqSection(section) {
 }
 
 function renderFooterSection(section) {
-  return `<footer class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--footer" id="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+  return `<footer class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--footer" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__footer-stage" aria-hidden="true">
       <img
         class="orby-marketing__intro-asset orby-marketing__intro-asset--right"
@@ -406,30 +445,33 @@ function renderFooterSection(section) {
       />
     </div>
     <div class="orby-marketing__footer-center">
-      <h2 class="orby-marketing__title orby-marketing__title--intro orby-marketing__title--footer brand-font-headline" id="${escapeHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
+      <h2 class="orby-marketing__title orby-marketing__title--intro orby-marketing__title--footer brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       ${
         section.lede
-          ? `<p class="orby-marketing__lede orby-marketing__lede--footer" data-orby-marketing-reveal="text">${escapeHtml(section.lede)}</p>`
+          ? `<p class="orby-marketing__lede orby-marketing__lede--footer" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>`
           : ''
       }
       <div class="orby-marketing__footer-actions">
-        ${orbyMagicButtonOnLimeHtml(escapeHtml(section.ctaLabel || 'Browse Files'), {
+        ${orbyMagicButtonOnLimeHtml(escapeMarketingHtml(section.ctaLabel || 'Browse Files'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-browse',
           variant: 'outline',
         })}
-        ${orbyMagicButtonOnLimeHtml(escapeHtml(section.secondaryCtaLabel || 'Load Sample'), {
+        ${orbyMagicButtonOnLimeHtml(escapeMarketingHtml(section.secondaryCtaLabel || 'Load Sample'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-load-sample',
           variant: 'outline',
         })}
       </div>
     </div>
-    ${renderFooterMeta(section)}
   </footer>`;
 }
 
-function renderFooterMeta(section) {
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @param {{ onWhite?: boolean }} [options]
+ */
+function renderFooterMeta(section, options = {}) {
   const contactEmail = section.footerContactEmail?.trim();
   const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
   const aboutHref = section.footerAboutHref?.trim() || './about/';
@@ -438,22 +480,30 @@ function renderFooterMeta(section) {
   const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
   const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
 
-  const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeHtml(licenseHref)}">MIT License</a>.`;
+  const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(licenseHref)}">MIT License</a>.`;
 
   const links = [
-    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(aboutHref)}">About</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(privacyHref)}">Privacy Policy</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(creditsHref)}">Credits</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
+    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(aboutHref)}">About</a>`,
+    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(privacyHref)}">Privacy Policy</a>`,
+    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(creditsHref)}">Credits</a>`,
+    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
     contactEmail
-      ? `<button type="button" class="orby-marketing__footer-meta-link orby-marketing__footer-meta-contact" data-orby-marketing-copy-email="${escapeHtml(contactEmail)}">Contact</button>`
+      ? `<button type="button" class="orby-marketing__footer-meta-link orby-marketing__footer-meta-contact" data-orby-marketing-copy-email="${escapeMarketingHtml(contactEmail)}">Contact</button>`
       : '',
   ].filter(Boolean);
 
-  return `<p class="orby-marketing__footer-meta">${lead}${sep}${links.join(sep)}</p>`;
+  const metaClass = options.onWhite
+    ? 'orby-marketing__footer-meta orby-marketing__footer-meta--on-white'
+    : 'orby-marketing__footer-meta';
+
+  return `<p class="${metaClass}">${lead}${sep}${links.join(sep)}</p>`;
 }
 
-function renderSection(section) {
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @param {import('./orbyMarketingContent.js').MarketingSection | undefined} footerSection
+ */
+function renderSection(section, footerSection) {
   switch (section.type) {
     case 'intro':
       return renderIntroSection(section);
@@ -467,6 +517,8 @@ function renderSection(section) {
       return renderFaqSection(section);
     case 'footer':
       return renderFooterSection(section);
+    case 'refrct-teaser':
+      return renderRefrctTeaserSection(section, footerSection);
     case 'split':
     default:
       return renderSplitSection(section);
@@ -475,7 +527,8 @@ function renderSection(section) {
 
 /** @param {import('./orbyMarketingContent.js').MarketingSection[]} sections */
 export function buildMarketingMarkup(sections) {
+  const footerSection = sections.find((s) => s.type === 'footer');
   return `<div class="orby-marketing" data-orby-marketing>
-    ${sections.map(renderSection).join('\n')}
+    ${sections.map((section) => renderSection(section, footerSection)).join('\n')}
   </div>`;
 }

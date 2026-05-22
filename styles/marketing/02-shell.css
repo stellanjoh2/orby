@@ -33,10 +33,24 @@ html.orby-home-scroll body.dropzone-visible .viewport {
   clip-path: none;
 }
 
-/* Above #orby-marketing (z-index 1) so hero bleed paints over the section below */
+/*
+ * Home stack (back → front) — #app siblings share one root context (no z-index on
+ * marketing/workspace): turntable (z -1) → hero deco (z 0) → intro headline (z 1) →
+ * dropzone frost + UI (.dropzone > * at z 2). Studio keeps #orby-marketing at z 2.
+ */
+html.orby-home-scroll #orby-marketing {
+  position: relative;
+  z-index: auto;
+}
+
 html.orby-home-scroll body.dropzone-visible .workspace {
   position: relative;
-  z-index: 2;
+  z-index: auto;
+  background: transparent;
+}
+
+html.orby-home-scroll body.dropzone-visible .viewport {
+  background: transparent;
 }
 
 html.orby-home-scroll body.dropzone-visible .dropzone {
@@ -49,6 +63,7 @@ html.orby-home-scroll #orby-marketing[hidden] {
 
 html.orby-home-scroll #orby-marketing {
   overflow-x: clip;
+  overflow-y: visible;
   margin-top: 0;
   padding-top: 0;
 }
@@ -56,6 +71,21 @@ html.orby-home-scroll #orby-marketing {
 html.orby-home-scroll #orby-marketing > .orby-marketing {
   margin-top: 0;
   padding-top: 0;
+}
+
+/*
+ * Pull intro over the 100dvh workspace seam — mid-scroll otherwise shows the bottom
+ * of the dropzone frosted ::before (78% black) across headline + turntable car.
+ */
+html.orby-home-scroll .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
+  --orby-intro-seam-overlap: clamp(5rem, 11vh, 9.5rem);
+  margin-top: calc(-1 * var(--orby-intro-seam-overlap));
+  padding-block: calc(
+      max(0px, env(safe-area-inset-top, 0px)) + var(--orby-intro-seam-overlap)
+    )
+    max(0px, env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  overflow: hidden;
 }
 
 /* Studio session — detached from #app; kept for when user returns home */
@@ -74,14 +104,23 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 #orby-marketing {
   position: relative;
-  z-index: 1;
-  background: var(--orby-marketing-bg);
+  z-index: 2; /* studio / non-home; home scroll overrides to 0 above */
+  background: transparent;
   color: var(--orby-marketing-text);
   font-weight: var(--orby-marketing-body-weight);
 }
 
 .orby-marketing__section {
   padding: var(--orby-marketing-space-lg) 0;
+  background: transparent;
+}
+
+/* Opaque fills per section — root stays transparent so dropzone bleed is not trapped */
+.orby-marketing__section--split,
+.orby-marketing__section--showcase,
+.orby-marketing__section--marquee,
+.orby-marketing__section--pro,
+.orby-marketing__section--faq {
   background: var(--orby-marketing-bg);
 }
 

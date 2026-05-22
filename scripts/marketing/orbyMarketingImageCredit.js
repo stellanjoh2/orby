@@ -1,8 +1,9 @@
 /**
- * HTML for marketing lower-third artwork credits (split + gallery slides).
+ * Marketing HTML helpers — attribute/text escaping and lower-third credits.
  */
 
 /**
+ * Escape text for HTML attributes and text nodes in marketing templates.
  * @param {string} text
  */
 export function escapeMarketingHtml(text) {

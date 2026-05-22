@@ -22,6 +22,25 @@ export function orbyMagicButtonHtml(label, options = {}) {
 }
 
 /**
+ * Magic pill link — dropzone scale, rotating stroke, no glow (B/W on light surfaces).
+ * @param {string} label — already escaped
+ * @param {string} href — already escaped
+ * @param {{ extraClass?: string, attrs?: string }} [options]
+ */
+export function orbyMagicButtonMonoLinkHtml(label, href, options = {}) {
+  const extraClass = options.extraClass?.trim() || '';
+  const attrs = options.attrs?.trim() || '';
+  const classes = ['orby-magic-btn', 'orby-magic-btn--mono', extraClass].filter(Boolean).join(' ');
+  return `<span class="orby-magic-btn-host orby-magic-btn-host--mono"><a class="${classes}" href="${href}"${attrs ? ` ${attrs}` : ''}>
+        <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+        <span class="orby-magic-btn__inner">
+          <span class="orby-magic-btn__label">${label}</span>
+          <span class="orby-magic-btn__arrow" aria-hidden="true">${ORBY_MAGIC_BTN_ARROW_SVG}</span>
+        </span>
+      </a></span>`;
+}
+
+/**
  * Flat inverted pill for lime marketing surfaces — same footprint as `.orby-magic-btn`, no glow.
  * @param {string} label
  * @param {{ extraClass?: string, attrs?: string, variant?: 'solid' | 'outline' }} [options]

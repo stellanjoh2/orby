@@ -7,13 +7,16 @@ import { prefersReducedMotion } from './modalReveal.js';
 
 export const BIG_MESSAGE_STAGGER_CLASS = 'orby-stagger-word';
 
-const headWordDur = 0.42;
-const headStagger = 0.035;
+/** Text/copy reveal pace (1 = baseline; 0.72 ≈ 28% snappier). Dropzone, marketing, modals. */
+export const TEXT_REVEAL_PACE = 0.72;
+
+const headWordDur = 0.42 * TEXT_REVEAL_PACE;
+const headStagger = 0.035 * TEXT_REVEAL_PACE;
 const headLiftY = 14;
-const btnDur = 0.38;
+const btnDur = 0.38 * TEXT_REVEAL_PACE;
 const btnEase = 'power3.out';
-const btnStagger = 0.022;
-const blockOverlap = 0.2;
+const btnStagger = 0.022 * TEXT_REVEAL_PACE;
+const blockOverlap = 0.2 * TEXT_REVEAL_PACE;
 
 /**
  * Wrap whitespace-delimited text nodes in spans for word stagger (recursive).

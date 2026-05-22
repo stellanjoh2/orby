@@ -137,7 +137,7 @@
   /* Body copy — Geist Light, same as legal About manifesto */
   --orby-marketing-body-weight: 300;
   --orby-marketing-headline: var(--brand-primary, #c4ff00);
-  --orby-marketing-panel-bg: var(--orby-surface-muted, #121212);
+  --orby-marketing-panel-bg: var(--orby-surface-muted, #151515);
   /* Ink on lime (footer) — matches FAQ panel, softer than --orby-black */
   --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
   /* Standard vertical seam between major blocks — 220px @ 1440; scales with gutter-scale */
@@ -150,6 +150,8 @@
   );
   /* Split feature rhythm — eyebrow → headline, headline → lede, lede → bullets (36px @ 1440) */
   --orby-marketing-feature-copy-gap: calc(36px * var(--orby-marketing-scale));
+  /* White refrct teaser — body copy → Request Preview */
+  --orby-marketing-lede-cta-gap: 54px;
   --orby-marketing-eyebrow-headline-gap: var(--orby-marketing-feature-copy-gap);
   /* Section headline → lede (showcase / pro / FAQ) */
   --orby-marketing-headline-body-gap: calc(32px * var(--orby-marketing-scale));
@@ -175,7 +177,7 @@
   --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
   /*
    * Informative / supporting type — ramps 1920→2560 (headlines keep headline-scale).
-   * Support 14px @ 2560 → 0.9rem @ 1920; list 15px→18px; feature lede 18px→22px; intro lede 22px→24px.
+   * Support 14px @ 2560 → 0.9rem @ 1920; list 15px→18px; feature lede 18px→22px; intro lede 22px→30px.
    */
   --orby-marketing-wide-type-ramp: clamp(
     0,
@@ -213,8 +215,8 @@
   --orby-marketing-feature-lede-line: 1.6;
   --orby-marketing-intro-lede-size: clamp(
     22px,
-    calc(22px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
-    1.5rem
+    calc(22px + 8px * (1 - var(--orby-marketing-wide-type-ramp))),
+    30px
   );
   --orby-marketing-feature-copy-span: calc(
     (100vw - var(--orby-marketing-col-gap)) / 2 - var(--orby-home-padding-x)
@@ -291,8 +293,10 @@
   /* Copy block → media below (showcase gallery, pro cards, stacked split features) */
   --orby-marketing-feature-body-media-gap: var(--orby-marketing-col-gap);
   --orby-marketing-col-gap-half: calc(var(--orby-marketing-col-gap) / 2);
-  /* @deprecated alias — use --orby-marketing-col-gap */
-  --orby-marketing-split-gap: var(--orby-marketing-col-gap);
+  /* Side-by-side mega CTAs — tighter than ½ col gutter (~48px @ 1920) */
+  --orby-marketing-peer-gap: calc(36px * var(--orby-marketing-scale));
+  /* Mega headline → body / dual CTAs (intro lede, lime footer) — fixed px */
+  --orby-marketing-headline-actions-gap: 92px;
   --orby-marketing-gutter: var(--orby-marketing-col-gap);
   /* FAQ panel — bottom band matches other section seams */
   --orby-marketing-faq-pad-bottom: var(--orby-marketing-gap-big);
@@ -302,11 +306,6 @@
   --orby-mega-headline-vw: 11.5;
   --orby-mega-headline-cqi-cap: 23;
   --orby-mega-headline-offset: calc(0.35rem * var(--orby-marketing-mega-scale));
-  /* Intro turntable mega type — large soft shadow for legibility over busy frames */
-  --orby-intro-headline-shadow:
-    0 0.06em 0.35em color-mix(in srgb, var(--orby-black, #080808) 32%, transparent),
-    0 0.14em 1.1em color-mix(in srgb, var(--orby-black, #080808) 22%, transparent),
-    0 0.32em 2.75em color-mix(in srgb, var(--orby-black, #080808) 14%, transparent);
   /* Intro / footer body copy measure (~⅓ viewport at desktop) */
   --orby-marketing-lede-measure: calc(40.8rem * var(--orby-marketing-scale));
   /* Feature / showcase / FAQ — 5.8vw at max; column cap when split */

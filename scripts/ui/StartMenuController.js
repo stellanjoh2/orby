@@ -3,6 +3,7 @@
  * Handles drag & drop, file input, visibility, and all start menu interactions
  */
 import gsap from 'gsap';
+import { TEXT_REVEAL_PACE } from './bigMessageHeadlineReveal.js';
 import { ensureLottie } from './lottieLoader.js';
 
 const STAGGER_CLASS = 'orby-stagger-word';
@@ -48,6 +49,15 @@ function prefersReducedMotion() {
 }
 
 const DROPZONE_HERO_DECO_OPACITY = 0.92;
+
+/** Corner JPGs + artist credits — wide desktop only (matches styles.css 1920px breakpoint). */
+function shouldShowDropzoneHeroArt() {
+  if (document.documentElement.classList.contains('mobile-landing')) return false;
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(min-width: 1920px)').matches
+  );
+}
 
 /**
  * @param {HTMLImageElement} img
@@ -215,6 +225,7 @@ export class StartMenuController {
 
   /** Preload corner hero JPGs — no gray flash; reveal waits on decode when possible. */
   preloadDropzoneHeroDeco() {
+    if (!shouldShowDropzoneHeroArt()) return Promise.resolve();
     if (this._dropzoneHeroDecoPreloadPromise) return this._dropzoneHeroDecoPreloadPromise;
     const imgs = [this.dropzoneHeroDecoUrImg, this.dropzoneHeroDecoLlImg].filter(Boolean);
     if (!imgs.length) return Promise.resolve();
@@ -588,9 +599,10 @@ export class StartMenuController {
 
     const primary = this.dropPrimary;
     const secondary = this.dropSecondary;
-    const credits = this.dropzoneHeroCredit;
-    const heroDecoUr = this.dropzoneHeroDecoUrImg;
-    const heroDecoLl = this.dropzoneHeroDecoLlImg;
+    const showHeroArt = shouldShowDropzoneHeroArt();
+    const credits = showHeroArt ? this.dropzoneHeroCredit : null;
+    const heroDecoUr = showHeroArt ? this.dropzoneHeroDecoUrImg : null;
+    const heroDecoLl = showHeroArt ? this.dropzoneHeroDecoLlImg : null;
     const buttons = this.dropzone?.querySelectorAll('.dropzone-actions .orby-magic-btn');
 
     const killTargets = [primary, secondary, credits, heroDecoUr, heroDecoLl].filter(Boolean);
@@ -605,14 +617,15 @@ export class StartMenuController {
 
     /** Headline stays word-staggered; lower blocks quicker and slightly overlapped so no dead air between them */
     const revealEase = 'power4.out';
-    const blockDur = 0.38;
+    const blockDur = 0.38 * TEXT_REVEAL_PACE;
     const blockEase = 'power3.out';
-    const headWordDur = 0.42;
-    const headStagger = 0.035;
+    const headWordDur = 0.42 * TEXT_REVEAL_PACE;
+    const headStagger = 0.035 * TEXT_REVEAL_PACE;
+    const buttonStagger = 0.022 * TEXT_REVEAL_PACE;
     const decoFadeDur = 0.55;
     const decoEase = 'power2.out';
     /** Start next block tween this many seconds before the previous block tween ends (buttons / footer copy only) */
-    const blockOverlap = 0.2;
+    const blockOverlap = 0.2 * TEXT_REVEAL_PACE;
 
     if (prefersReducedMotion()) {
       if (primary) gsap.set(primary, { opacity: 1 });
@@ -630,7 +643,7 @@ export class StartMenuController {
       if (heroDecoUr) gsap.set(heroDecoUr, { opacity: DROPZONE_HERO_DECO_OPACITY });
       if (heroDecoLl) gsap.set(heroDecoLl, { opacity: DROPZONE_HERO_DECO_OPACITY });
       if (credits) {
-        gsap.set(credits, { opacity: 1 });
+        gsap.set(credits, { opacity: 1, clearProps: 'transform' });
         const creditWords = [...credits.querySelectorAll(`.${STAGGER_CLASS}`)];
         creditWords.forEach((node) =>
           gsap.set(node, { opacity: 1, y: 0, clearProps: 'transform' }),
@@ -705,7 +718,7 @@ export class StartMenuController {
           y: 0,
           duration: blockDur,
           ease: blockEase,
-          stagger: 0.022,
+          stagger: buttonStagger,
         },
         blockAfterHead,
       );
@@ -724,7 +737,7 @@ export class StartMenuController {
       wrapWordsForStagger(credits);
       const creditWords = [...credits.querySelectorAll(`.${STAGGER_CLASS}`)];
       if (creditWords.length) {
-        gsap.set(credits, { opacity: 1 });
+        gsap.set(credits, { opacity: 1, clearProps: 'transform' });
         const creditsAfter =
           secondary != null ? '>' : buttons?.length ? `>-=${blockOverlap}` : blockAfterHead;
         tl.fromTo(
@@ -798,8 +811,8 @@ export class StartMenuController {
       {
         opacity: 1,
         y: 0,
-        duration: 0.28,
-        stagger: 0.022,
+        duration: 0.28 * TEXT_REVEAL_PACE,
+        stagger: 0.022 * TEXT_REVEAL_PACE,
         ease: 'power2.out',
         overwrite: true,
       },

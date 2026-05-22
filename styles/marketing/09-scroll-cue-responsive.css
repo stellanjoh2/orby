@@ -71,18 +71,6 @@ html:not(.orby-home-scroll) .orby-marketing-scroll-cue,
   display: none !important;
 }
 
-@media (max-width: 1600px) {
-  .orby-marketing__section--intro-turntable {
-    --orby-intro-turntable-offset-x: clamp(180px, 48vw, 850px);
-  }
-}
-
-@media (max-width: 1280px) {
-  .orby-marketing__section--intro-turntable {
-    --orby-intro-turntable-offset-x: clamp(100px, 40vw, 620px);
-  }
-}
-
 @media (max-width: 1100px) {
   .orby-marketing__intro-stage,
   .orby-marketing__footer-stage {
@@ -93,10 +81,6 @@ html:not(.orby-home-scroll) .orby-marketing-scroll-cue,
 }
 
 @media (max-width: 768px) {
-  .orby-marketing__section--intro-turntable {
-    --orby-intro-turntable-offset-x: clamp(0px, 28vw, 130px);
-  }
-
   .orby-marketing__section--intro-turntable .orby-marketing__intro-center {
     max-width: 100%;
   }
@@ -130,5 +114,4 @@ html:not(.orby-home-scroll) .orby-marketing-scroll-cue,
   .orby-marketing__section--intro-turntable .orby-marketing__intro-stage {
     display: block;
   }
-
 }

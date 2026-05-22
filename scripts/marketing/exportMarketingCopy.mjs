@@ -42,6 +42,9 @@ function sectionCta(section) {
       secondary: { label: section.secondaryCtaLabel || 'Load Sample', action: 'load-sample' },
     };
   }
+  if (section.type === 'refrct-teaser' && section.ctaLabel) {
+    return { label: section.ctaLabel, href: section.ctaHref ?? null };
+  }
   if (!section.ctaLabel) return null;
   return { label: section.ctaLabel, action: section.ctaAction ?? 'scroll-top' };
 }

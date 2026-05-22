@@ -2,6 +2,7 @@
  * Homepage marketing one-pager — mounted below the dropzone hero.
  * Kept separate from the studio runtime: lazy DOM, lazy CSS, no Three.js coupling.
  * `html.orby-marketing-reduced` is set from main.js via marketingPerformanceTier.js.
+ * `html.orby-marketing-ui-crop` (?uiCrop=1) is toggled from main.js at boot.
  */
 
 import {
@@ -30,15 +31,6 @@ function shouldSkipMarketing() {
   if (document.documentElement.classList.contains('mobile-landing')) return true;
   const path = window.location.pathname || '/';
   return path !== '/' && path !== '/index.html';
-}
-
-/** Dev preview — append ?uiCrop=1 to keep screenshot UI pinned on the right while narrowing. */
-function syncMarketingUiCropPreview() {
-  const q = new URLSearchParams(window.location.search);
-  document.documentElement.classList.toggle(
-    'orby-marketing-ui-crop',
-    q.get('uiCrop') === '1' || q.get('uiCrop') === 'visible',
-  );
 }
 
 function isDropzoneHome() {
@@ -155,7 +147,6 @@ function bindScrollCueFade(cue) {
  * @param {{ lazy?: boolean }} [options]
  */
 export function initOrbyMarketingPage(options = {}) {
-  syncMarketingUiCropPreview();
   if (shouldSkipMarketing()) {
     return { destroy() {} };
   }
@@ -176,6 +167,8 @@ export function initOrbyMarketingPage(options = {}) {
   let teardownPngMarqueeLogotype = null;
   /** @type {(() => void) | null} */
   let teardownPngMarqueePerf = null;
+  /** @type {(() => void) | null} */
+  let teardownRefrctCurtain = null;
   /** @type {Comment | null} Placeholder when #orby-marketing is detached during studio. */
   let marketingAnchor = null;
   let destroyed = false;
@@ -189,6 +182,8 @@ export function initOrbyMarketingPage(options = {}) {
     teardownPngMarqueeLogotype = null;
     teardownPngMarqueePerf?.();
     teardownPngMarqueePerf = null;
+    teardownRefrctCurtain?.();
+    teardownRefrctCurtain = null;
   }
 
   function disconnectRevealObservers() {
@@ -220,6 +215,7 @@ export function initOrbyMarketingPage(options = {}) {
     );
     root.querySelectorAll('.orby-marketing__section').forEach((section) => {
       if (section.dataset.orbyMarketingRevealed === '1') return;
+      if (section.classList.contains('orby-marketing__section--refrct-teaser')) return;
       const observer = isMegaRevealSection(section) ? megaRevealObserver : revealObserver;
       observer.observe(section);
     });
@@ -282,6 +278,13 @@ export function initOrbyMarketingPage(options = {}) {
     } catch (err) {
       console.error('[orby-marketing] PNG marquee performance hooks failed', err);
     }
+
+    try {
+      const refrctCurtain = await import('./orbyMarketingRefrctCurtain.js');
+      teardownRefrctCurtain = refrctCurtain.initRefrctCurtainReveal(root);
+    } catch (err) {
+      console.error('[orby-marketing] rfrct curtain reveal failed to init', err);
+    }
   }
 
   function suspendForStudio() {
@@ -304,7 +307,8 @@ export function initOrbyMarketingPage(options = {}) {
       !teardownIntroTurntable ||
       !teardownShowcaseGallery ||
       !teardownPngMarqueeLogotype ||
-      !teardownPngMarqueePerf
+      !teardownPngMarqueePerf ||
+      !teardownRefrctCurtain
     ) {
       void attachMarketingEnhancements();
     }
@@ -353,6 +357,16 @@ export function initOrbyMarketingPage(options = {}) {
       section.classList.add('orby-marketing__section--pending');
     });
     reveals.prepareMarketingSections(root);
+
+    const refrctSection = root.querySelector('.orby-marketing__section--refrct-teaser');
+    if (refrctSection) {
+      reveals.showRefrctTeaserStatic(refrctSection);
+      void reveals.preloadSectionMedia(refrctSection);
+    }
+
+    const marketingVideo = await import('./orbyMarketingVideo.js');
+    marketingVideo.initMarketingVideos(root);
+
     attachRevealObserver();
 
     await attachMarketingEnhancements();
@@ -423,6 +437,9 @@ export function initOrbyMarketingPage(options = {}) {
         mod.clearIntroTurntablePreload();
       });
       releaseEnhancements();
+      if (root) {
+        void import('./orbyMarketingVideo.js').then((mod) => mod.teardownMarketingVideos(root));
+      }
       bodyObserver?.disconnect();
       disconnectRevealObservers();
       teardownScrollCueFade?.();

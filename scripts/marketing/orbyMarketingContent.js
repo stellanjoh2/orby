@@ -6,7 +6,7 @@
  *   npm run export:marketing-copy
  */
 
-/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'footer'} MarketingSectionType */
+/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'footer' | 'refrct-teaser'} MarketingSectionType */
 
 /**
  * @typedef {Object} MarketingProCard
@@ -42,6 +42,7 @@
  * @property {string} [videoSrc]
  * @property {boolean} [videoPoster] — split video: use imageSrc as poster (default false)
  * @property {string} [ctaLabel]
+ * @property {string} [ctaHref] — mailto: or https: link (refrct teaser)
  * @property {'scroll-top' | 'browse' | 'load-sample'} [ctaAction]
  * @property {{ question: string, answer: string }[]} [faq]
  * @property {MarketingProCard[]} [cards]
@@ -60,7 +61,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      "Your model deserves better than a simple screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG you just turned into a 3D mesh — inspect it, present it, and export it without leaving the tab.",
+      "Your model deserves better than a screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
   },
   {
     type: 'split',
@@ -352,5 +353,20 @@ export const MARKETING_SECTIONS = [
     footerCreditsHref: './credits/',
     footerGithubHref: 'https://github.com/stellanjoh2/orby',
     footerLicenseHref: './LICENSE',
+  },
+  {
+    type: 'refrct-teaser',
+    id: 'orby-marketing-refrct',
+    eyebrow: 'In progress',
+    title: 'Do you enjoy Orby? We got more things coming',
+    lede:
+      "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
+    layout: 'media-right',
+    imageSrc: './assets/marketing/rfrct.jpg',
+    videoSrc: './assets/marketing/rfrct.mp4',
+    videoPoster: true,
+    imageAlt: 'Refrct design tool — distorted type in the browser',
+    ctaLabel: 'Request Preview',
+    ctaHref: 'mailto:hello@rfrct.app?subject=rfrct%20early%20access',
   },
 ];

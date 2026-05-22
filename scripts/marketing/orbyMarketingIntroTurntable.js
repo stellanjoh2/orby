@@ -22,8 +22,8 @@ export const INTRO_TURNTABLE_SEQUENCE = {
   stride: 2,
   /** 1-based source frame at scroll progress 0; scroll runs 60→300→1→59. */
   startFrame: 60,
-  /** 1 = contain within canvas; no zoom past section edges. */
-  drawScale: 1,
+  /** Fallback when CSS --orby-intro-turntable-fit-scale is unset. */
+  drawScale: 0.85,
   poster: {
     webp: './assets/marketing/intro-turntable-poster.webp',
     jpg: './assets/marketing/intro-turntable-poster.jpg',
@@ -34,6 +34,10 @@ const SCROLL_TRIGGER_ID = 'orby-intro-turntable';
 const PRELOAD_CONCURRENCY = 12;
 const MAX_DPR = 2;
 const STATIC_MAX_WIDTH_PX = 767;
+/** Below 1920, layout math uses these refs so resize does not re-center the car. */
+export const INTRO_TURNTABLE_LAYOUT_REF_WIDTH_PX = 1920;
+export const INTRO_TURNTABLE_LAYOUT_REF_HEIGHT_PX = 1080;
+const INTRO_TURNTABLE_NARROW_MQ = `(max-width: ${INTRO_TURNTABLE_LAYOUT_REF_WIDTH_PX - 1}px)`;
 
 /** @type {TurntableFrame[] | null} */
 let frameCache = null;
@@ -43,6 +47,14 @@ let preloadPromise = null;
 let resolvedExtPromise = null;
 
 /** @typedef {ImageBitmap | HTMLImageElement} TurntableFrame */
+
+/** @returns {boolean} */
+function isIntroTurntableNarrowViewport() {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(INTRO_TURNTABLE_NARROW_MQ).matches
+  );
+}
 
 /**
  * Apple-style gate: scroll sequence only where it will stay smooth.
@@ -255,11 +267,6 @@ export function preloadIntroTurntableFrames() {
   return preloadPromise;
 }
 
-/** @returns {Promise<TurntableFrame[]> | null} */
-export function getIntroTurntablePreloadPromise() {
-  return preloadPromise;
-}
-
 /** Frees decoded frames when leaving the home marketing page entirely. */
 export function clearIntroTurntablePreload() {
   frameCache?.forEach(releaseFrame);
@@ -269,25 +276,120 @@ export function clearIntroTurntablePreload() {
 }
 
 /**
- * @param {HTMLCanvasElement} canvas
+ * @param {HTMLElement} section
  */
-function resizeCanvasToDisplay(canvas) {
+function readTurntableFitScale(section) {
+  const raw = getComputedStyle(section)
+    .getPropertyValue('--orby-intro-turntable-fit-scale')
+    .trim();
+  const n = Number.parseFloat(raw);
+  if (Number.isFinite(n) && n > 0) return Math.min(1, n);
+  return INTRO_TURNTABLE_SEQUENCE.drawScale;
+}
+
+/**
+ * @param {number} containerW
+ * @param {number} containerH
+ * @param {number} frameW
+ * @param {number} frameH
+ * @param {number} fitScale
+ */
+function computeContainedSize(containerW, containerH, frameW, frameH, fitScale) {
+  const fit = Math.min(containerW / frameW, containerH / frameH) * fitScale;
+  return { w: frameW * fit, h: frameH * fit };
+}
+
+/**
+ * Size the canvas element to object-fit: contain (canvas ignores CSS object-fit).
+ * @param {HTMLCanvasElement} canvas
+ * @param {HTMLElement} section
+ * @param {TurntableFrame} frame
+ */
+function layoutCanvasToContain(canvas, section, frame) {
   const wrap = canvas.parentElement;
-  if (!wrap) return { width: 0, height: 0 };
+  if (!wrap) return { bitmapW: 0, bitmapH: 0 };
+
+  const { w: fw, h: fh } = framePixelSize(frame);
+  if (!fw || !fh) return { bitmapW: 0, bitmapH: 0 };
 
   const rect = wrap.getBoundingClientRect();
-  const cssW = Math.max(1, Math.round(rect.width));
-  const cssH = Math.max(1, Math.round(rect.height));
+  const narrow = isIntroTurntableNarrowViewport();
+  /* Below 1920, lock placement to 1920×1080 layout math — no shift on resize */
+  const containerW = narrow
+    ? INTRO_TURNTABLE_LAYOUT_REF_WIDTH_PX
+    : Math.max(1, rect.width);
+  const containerH = narrow
+    ? INTRO_TURNTABLE_LAYOUT_REF_HEIGHT_PX
+    : Math.max(1, rect.height);
+  const fitScale = readTurntableFitScale(section);
+  const { w, h } = computeContainedSize(containerW, containerH, fw, fh, fitScale);
+  const [posX, posY] = parseObjectPositionPair(
+    readTurntableObjectPosition(section),
+  );
+  const cssW = Math.max(1, Math.round(w));
+  const cssH = Math.max(1, Math.round(h));
+  const offsetX = Math.round((containerW - cssW) * posX);
+  const offsetY = Math.round((containerH - cssH) * posY);
+
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+  canvas.style.right = 'auto';
+  canvas.style.left = `${offsetX}px`;
+  canvas.style.top = `${offsetY}px`;
+
   const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
-  const bitmapW = Math.round(cssW * dpr);
-  const bitmapH = Math.round(cssH * dpr);
+  const bitmapW = Math.max(1, Math.round(cssW * dpr));
+  const bitmapH = Math.max(1, Math.round(cssH * dpr));
 
   if (canvas.width !== bitmapW || canvas.height !== bitmapH) {
     canvas.width = bitmapW;
     canvas.height = bitmapH;
   }
 
-  return { cssW, cssH, dpr, bitmapW, bitmapH };
+  return { bitmapW, bitmapH, cssW, cssH, dpr };
+}
+
+/**
+ * CSS object-position axis → 0–1 along the free space after object-fit: contain.
+ * @param {string} token
+ * @param {'x' | 'y'} axis
+ */
+function parseObjectPositionAxis(token, axis) {
+  const t = token.trim().toLowerCase();
+  if (t.endsWith('%')) {
+    const pct = Number.parseFloat(t);
+    return Number.isFinite(pct) ? Math.min(1, Math.max(0, pct / 100)) : 0.5;
+  }
+  const map = {
+    left: 0,
+    top: 0,
+    center: 0.5,
+    right: 1,
+    bottom: 1,
+  };
+  if (t in map) return map[t];
+  return axis === 'x' ? 0.5 : 0.5;
+}
+
+/**
+ * @param {string} value e.g. "62% 44%" or "center"
+ * @returns {[number, number]}
+ */
+function parseObjectPositionPair(value) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  const xToken = parts[0] || 'center';
+  const yToken = parts[1] || parts[0] || 'center';
+  return [parseObjectPositionAxis(xToken, 'x'), parseObjectPositionAxis(yToken, 'y')];
+}
+
+/**
+ * @param {HTMLElement} section
+ */
+function readTurntableObjectPosition(section) {
+  const raw = getComputedStyle(section)
+    .getPropertyValue('--orby-intro-turntable-object-position')
+    .trim();
+  return raw || 'center center';
 }
 
 /**
@@ -298,18 +400,10 @@ function resizeCanvasToDisplay(canvas) {
  */
 function drawFrame(ctx, frame, bitmapW, bitmapH) {
   const { w: fw, h: fh } = framePixelSize(frame);
-  if (!fw) return;
+  if (!fw || !bitmapW || !bitmapH) return;
 
-  ctx.fillStyle = '#080808';
-  ctx.fillRect(0, 0, bitmapW, bitmapH);
-
-  const fit = Math.min(bitmapW / fw, bitmapH / fh);
-  const scale = fit * INTRO_TURNTABLE_SEQUENCE.drawScale;
-  const w = fw * scale;
-  const h = fh * scale;
-  const x = (bitmapW - w) * 0.5;
-  const y = (bitmapH - h) * 0.5;
-  ctx.drawImage(frame, x, y, w, h);
+  ctx.clearRect(0, 0, bitmapW, bitmapH);
+  ctx.drawImage(frame, 0, 0, bitmapW, bitmapH);
 }
 
 /**
@@ -359,7 +453,7 @@ export function initIntroTurntable(root) {
   section.classList.remove('orby-marketing__intro-turntable--static');
   if (poster) poster.removeAttribute('src');
 
-  const ctx = canvas.getContext('2d', { alpha: false });
+  const ctx = canvas.getContext('2d', { alpha: true });
   if (!ctx) return () => {};
 
   const sourceIndices = sourceFrameIndices();
@@ -375,7 +469,7 @@ export function initIntroTurntable(root) {
     const frame = frames[idx];
     if (idx === paintedFrame || !frame || framePixelSize(frame).w === 0) return;
     paintedFrame = idx;
-    const metrics = resizeCanvasToDisplay(canvas);
+    const metrics = layoutCanvasToContain(canvas, section, frame);
     if (!metrics.bitmapW) return;
     drawFrame(ctx, frame, metrics.bitmapW, metrics.bitmapH);
   };
@@ -453,7 +547,8 @@ export function initIntroTurntable(root) {
     typeof ResizeObserver !== 'undefined'
       ? new ResizeObserver(scheduleResize)
       : null;
-  resizeObserver?.observe(canvas.parentElement ?? canvas);
+  const stage = section.querySelector('.orby-marketing__intro-stage');
+  resizeObserver?.observe(stage ?? canvas.parentElement ?? canvas);
   window.addEventListener('resize', scheduleResize, { passive: true });
 
   paintFirstCached();

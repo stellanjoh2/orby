@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-20T14:52:38.215Z",
+    "generatedAt": "2026-05-22T13:30:36.629Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -73,7 +73,7 @@
         "Set the stage.",
         "Send it."
       ],
-      "lede": "Your model deserves better than a simple screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG you just turned into a 3D mesh — inspect it, present it, and export it without leaving the tab.",
+      "lede": "Your model deserves better than a screenshot. Orby gives you a full studio — lighting, post-processing, camera control — right in the browser. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
       "bullets": null,
       "cta": null
     },
@@ -112,6 +112,12 @@
       "cta": {
         "label": "Load Sample Object",
         "action": "load-sample"
+      },
+      "imageCredit": {
+        "title": "Lemur on a Rock",
+        "artist": "@cyber_fox",
+        "sourceLabel": "Meshy",
+        "sourceHref": "https://www.meshy.ai/sv/3d-models/Lemur-on-a-Rock-v2-019ccee8-c882-758d-b3d9-0941c257dd65"
       }
     },
     {
@@ -130,7 +136,8 @@
         "Composition grid and 21∶9 letterbox for cinematic framing",
         "Auto exposure plus manual grade stack in one tab"
       ],
-      "cta": null
+      "cta": null,
+      "galleryCount": 3
     },
     {
       "order": 5,
@@ -167,7 +174,13 @@
         "Non-destructive: your glTF materials return when you disable the preset",
         "Great for social clips, concept boards, and rapid art direction"
       ],
-      "cta": null
+      "cta": null,
+      "imageCredit": {
+        "title": "Female Head Anatomy",
+        "artist": "leofinearts",
+        "sourceLabel": "Sketchfab",
+        "sourceHref": "https://sketchfab.com/3d-models/female-head-anatomy-0516c68f0da747beaed75a0d762d0e8c"
+      }
     },
     {
       "order": 7,
@@ -316,6 +329,22 @@
           "label": "Load Sample",
           "action": "load-sample"
         }
+      }
+    },
+    {
+      "order": 13,
+      "type": "refrct-teaser",
+      "id": "orby-marketing-refrct",
+      "eyebrow": "In progress",
+      "title": "Do you enjoy Orby? We got more things coming",
+      "titleLines": [
+        "Do you enjoy Orby? We got more things coming"
+      ],
+      "lede": "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
+      "bullets": null,
+      "cta": {
+        "label": "Request Preview",
+        "href": "mailto:hello@rfrct.app?subject=rfrct%20early%20access"
       }
     }
   ],
