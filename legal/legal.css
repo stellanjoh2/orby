@@ -366,6 +366,8 @@ body.legal-doc--credits ul.legal-credits-asset-list {
 
 body.legal-doc--credits ul.legal-credits-asset-list > li {
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .legal-credits-grid {
@@ -512,6 +514,8 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
   gap: 1rem;
   align-items: flex-start;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
   padding: 1rem 1.1rem;
   border: 1px solid var(--legal-border);
@@ -551,6 +555,23 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 .legal-credits-asset__body {
   flex: 1;
   min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.legal-credits-asset__meta,
+.legal-credits-asset__use,
+.legal-credits-asset__note {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.legal-credits-asset__body code,
+body.legal-doc--credits .legal-credits-asset code {
+  display: inline;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .legal-credits-asset__title {
@@ -558,6 +579,12 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
   font-size: 1rem;
   font-weight: 600;
   color: var(--legal-text);
+  overflow-wrap: break-word;
+}
+
+body.legal-doc--credits .legal-credits-asset__meta a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .legal-credits-asset__meta,
@@ -572,6 +599,22 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 .legal-credits-asset__note:last-child,
 .legal-credits-asset__use:last-child {
   margin-bottom: 0;
+}
+
+@media (max-width: 639px) {
+  body.legal-doc--credits .legal-credits-asset {
+    overflow: hidden;
+  }
+
+  body.legal-doc--credits .legal-credits-asset__body p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  body.legal-doc--credits .legal-credits-asset code {
+    display: block;
+    margin-top: 0.2rem;
+  }
 }
 
 .legal-callout {
