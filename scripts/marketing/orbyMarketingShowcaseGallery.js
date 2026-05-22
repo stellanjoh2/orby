@@ -18,6 +18,9 @@ const FADE_S = 0.95;
 const CREDIT_IN_S = 0.48;
 /** Split feature galleries — auto-advance only, no dots/keys. */
 const SPLIT_GALLERY_CYCLE_MS = 5000;
+/** GIF-like 2-frame flip — hard cut by default. */
+const FLIP_GALLERY_CYCLE_MS = 1000;
+const FLIP_GALLERY_FADE_S = 0;
 /** Set on the gallery mask while arrow keys should drive slides (see GlobalControls). */
 const SHOWCASE_KEYS_ATTR = 'data-orby-marketing-showcase-keys';
 
@@ -84,8 +87,31 @@ function isEditableTarget(target) {
 /**
  * @param {HTMLElement} mask
  */
+/**
+ * @param {HTMLElement} mask
+ */
+function getGalleryTiming(mask) {
+  const isFlipGallery = mask.hasAttribute('data-orby-marketing-gallery-flip');
+  const isSimpleGallery = mask.hasAttribute('data-orby-marketing-gallery-simple');
+  if (isFlipGallery) {
+    const cycleRaw = Number(mask.dataset.galleryCycleMs);
+    const fadeRaw = Number(mask.dataset.galleryFadeS);
+    return {
+      cycleMs:
+        Number.isFinite(cycleRaw) && cycleRaw > 0 ? cycleRaw : FLIP_GALLERY_CYCLE_MS,
+      fadeS: Number.isFinite(fadeRaw) && fadeRaw >= 0 ? fadeRaw : FLIP_GALLERY_FADE_S,
+    };
+  }
+  return {
+    cycleMs: isSimpleGallery ? SPLIT_GALLERY_CYCLE_MS : getShowcaseCycleMs(),
+    fadeS: FADE_S,
+  };
+}
+
 function createGalleryController(mask) {
   const isSimpleGallery = mask.hasAttribute('data-orby-marketing-gallery-simple');
+  const isFlipGallery = mask.hasAttribute('data-orby-marketing-gallery-flip');
+  const { cycleMs, fadeS } = getGalleryTiming(mask);
   const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
   const creditEl = mask.querySelector('[data-orby-marketing-showcase-credit]');
   const dotButtons = isSimpleGallery
@@ -207,7 +233,8 @@ function createGalleryController(mask) {
       updateDots(nextIndex);
     };
 
-    if (!animate || prefersReducedMotion()) {
+    const instant = fadeS <= 0;
+    if (!animate || prefersReducedMotion() || instant) {
       gsap.set(imgs, { opacity: (i) => (i === nextIndex ? 1 : 0) });
       applyClasses();
       setMediaPlaceholderOpacity(mask, 0);
@@ -229,12 +256,12 @@ function createGalleryController(mask) {
     if (!isSimpleGallery) void hideCredit();
     gsap.to(current, {
       opacity: 0,
-      duration: FADE_S,
+      duration: fadeS,
       ease: 'power2.inOut',
     });
     gsap.to(next, {
       opacity: 1,
-      duration: FADE_S,
+      duration: fadeS,
       ease: 'power2.inOut',
       onStart: applyClasses,
       onComplete: () => {
@@ -245,7 +272,7 @@ function createGalleryController(mask) {
       },
     });
     if (needsPlaceholder) {
-      tweenPlaceholderFadeOut(mask, { duration: FADE_S, ease: 'power2.inOut' });
+      tweenPlaceholderFadeOut(mask, { duration: fadeS, ease: 'power2.inOut' });
     }
   };
 
@@ -270,9 +297,12 @@ function createGalleryController(mask) {
   const start = () => {
     stop();
     if (imgs.length < 2 || prefersReducedMotion() || !visible) return;
-    const cycleMs = isSimpleGallery ? SPLIT_GALLERY_CYCLE_MS : getShowcaseCycleMs();
     timer = window.setInterval(tick, cycleMs);
   };
+
+  if (isFlipGallery && imgs.length >= 2) {
+    void Promise.all(imgs.map((img) => whenImageReady(img)));
+  }
 
   const stop = () => {
     if (timer != null) {

@@ -119,12 +119,10 @@ function whenMediaReady(el, options = {}) {
  * @param {Element} el
  */
 function shouldPreloadMarketingElement(el) {
-  if (
-    el instanceof HTMLImageElement &&
-    el.classList.contains('orby-marketing__showcase-img') &&
-    !el.classList.contains('is-active')
-  ) {
-    return false;
+  if (el instanceof HTMLImageElement && el.classList.contains('orby-marketing__showcase-img')) {
+    const flipMask = el.closest('[data-orby-marketing-gallery-flip]');
+    if (flipMask) return Boolean(el.src);
+    if (!el.classList.contains('is-active')) return false;
   }
   if (el instanceof HTMLImageElement && el.dataset.orbyMarketingIntroAsset) {
     return false;
@@ -531,6 +529,8 @@ function prepareProSection(sectionEl) {
     opacity: 0,
     y: blockLiftY,
   });
+
+  sectionEl.querySelectorAll('[data-orby-marketing-gallery-flip]').forEach(prepareMarketingMask);
 }
 
 function revealProSection(sectionEl, tl) {

@@ -2730,7 +2730,7 @@ html.orby-dropzone-shell-pending .workspace {
     160px + 84px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
   );
   --dropzone-frost-blur: calc(20px * var(--drop-hero-wide-factor));
-  --dropzone-frost-fill: color-mix(in srgb, var(--orby-app-bg) 78%, transparent);
+  --dropzone-frost-fill: color-mix(in srgb, var(--orby-app-bg) 50%, transparent);
   isolation: isolate;
   /* Cyan drag accents on ::before only (full-bleed box-shadow on .dropzone escapes clip → edge haze) */
   --dropzone-drag-rim-cyan-a: calc(12.375px * var(--drop-hero-wide-factor));

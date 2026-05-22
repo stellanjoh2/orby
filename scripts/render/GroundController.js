@@ -17,10 +17,44 @@ import {
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
+import {
+  createShadowTintUniformValues,
+  DIRECTIONAL_SHADOW_TINT_SAMPLE_GLSL,
+  DIRECTIONAL_SHADOW_TINT_UNIFORM_DECL,
+  syncShadowTintUniforms,
+} from './ShadowTint.js';
+
+/** Vertex shader: Reflector UV projection + shadow map coords for 3-point lights. */
+function buildBaseGlassReflectorVertexShader() {
+  return /* glsl */ `
+uniform mat4 textureMatrix;
+varying vec4 vUv;
+
+#include <common>
+#include <logdepthbuf_pars_vertex>
+#include <shadowmap_pars_vertex>
+
+void main() {
+  #include <beginnormal_vertex>
+  #include <defaultnormal_vertex>
+  #include <begin_vertex>
+  #include <project_vertex>
+  #include <worldpos_vertex>
+
+  vUv = textureMatrix * vec4( position, 1.0 );
+
+  #include <logdepthbuf_vertex>
+  #include <shadowmap_vertex>
+}
+`;
+}
 
 /** Glass reflection FS: single projected sample — blur is separable H/V on the RT (see BaseGlassSeparableBlur). */
 function buildBaseGlassReflectorFragmentShader() {
   return /* glsl */ `
+#include <common>
+#include <shadowmap_pars_fragment>
+${DIRECTIONAL_SHADOW_TINT_UNIFORM_DECL}
 uniform sampler2D tDiffuse;
 uniform float reflectionAmount;
 uniform float surfaceBrightness;
@@ -38,6 +72,11 @@ void main() {
   vec3 mutedBase = vec3( surfaceBrightness );
   vec3 reflWeighted = mix( mutedBase, reflRgb, reflectionAmount );
 
+  ${DIRECTIONAL_SHADOW_TINT_SAMPLE_GLSL}
+  #ifdef USE_SHADOWMAP
+    reflWeighted = mix( reflWeighted, uOrbyShadowColor, clamp( orbyShadowAmt, 0.0, 1.0 ) );
+  #endif
+
   gl_FragColor = vec4( reflWeighted, 1.0 );
 
   #include <tonemapping_fragment>
@@ -46,7 +85,7 @@ void main() {
 `;
 }
 
-function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness01) {
+function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness01, shadowTint) {
   if (!material?.uniforms) return;
   const ra = clamp01(reflection01);
   const sb = clamp01(surfaceBrightness01);
@@ -60,7 +99,9 @@ function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness
   } else {
     material.uniforms.surfaceBrightness.value = sb;
   }
+  material.vertexShader = buildBaseGlassReflectorVertexShader();
   material.fragmentShader = buildBaseGlassReflectorFragmentShader();
+  syncShadowTintUniforms(material, shadowTint);
   material.needsUpdate = true;
 }
 
@@ -395,6 +436,7 @@ export class GroundController {
     this.podium = null;
     this.podiumReflector = null;
     this._glassSepBlur = null;
+    this._baseGlassShadowTint = createShadowTintUniformValues();
     this.backdropEnabled = !!options.backdropEnabled;
     this.backdropScale = clampScale(options.backdropScale ?? 1);
     this.backdropWidth = clampScale(options.backdropWidth ?? 2);
@@ -581,6 +623,8 @@ export class GroundController {
     reflector.position.y = PODIUM_REFLECTOR_Y_EPS;
     reflector.renderOrder = 2;
     reflector.frustumCulled = false;
+    reflector.receiveShadow = true;
+    reflector.userData.meshglBaseGlassReflector = true;
 
     this.podium.add(reflector);
     this.podiumReflector = reflector;
@@ -614,7 +658,23 @@ export class GroundController {
       reflector.material,
       this.podiumGlassAmount,
       this.podiumGlassBrightness,
+      this._baseGlassShadowTint,
     );
+  }
+
+  /** Match 3-point shadow tint on the glass top (same as podium solid material). */
+  setBaseGlassShadowTint({ color, strength, opacity } = {}) {
+    const stash = this._baseGlassShadowTint;
+    if (color !== undefined) stash.color.set(color);
+    if (strength !== undefined) stash.strength = Math.min(1, Math.max(0, Number(strength) || 0));
+    if (opacity !== undefined) {
+      const o = Number(opacity);
+      stash.opacity = Number.isFinite(o) ? Math.min(1, Math.max(0, o)) : stash.opacity;
+    }
+    const mat = this.podiumReflector?.material;
+    if (mat) {
+      syncShadowTintUniforms(mat, stash);
+    }
   }
 
   /** Call from SceneManager on resize so the reflector render target stays sharp enough without wasting pixels. */

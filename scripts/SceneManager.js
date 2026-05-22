@@ -2142,6 +2142,7 @@ export class SceneManager {
     const ground = this.groundController;
     const tintOpts = { color, strength, opacity };
     if (ground?.podium) this.materialController?.applyShadowTintToObject(ground.podium, tintOpts);
+    ground?.setBaseGlassShadowTint?.(tintOpts);
     if (ground?.backdrop) {
       this.materialController?.clearShadowTintFromObject(ground.backdrop);
     }

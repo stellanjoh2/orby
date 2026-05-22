@@ -1,6 +1,7 @@
 /**
  * Copy + media map for the homepage marketing one-pager.
  * Swap imageSrc / videoSrc paths as real captures land. Set videoPoster: true to use imageSrc as a poster frame.
+ * Fast GIF-like flip: pro card `flipGallery` (2 images) or split `gallery` + `galleryFlip: true` (default 1s, hard cut).
  *
  * Section naming:
  * - CTA — lime “Try it out for free now” block (type: `cta`)
@@ -14,11 +15,22 @@
 /** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'cta' | 'in-progress'} MarketingSectionType */
 
 /**
+ * @typedef {Object} MarketingGallerySlide
+ * @property {string} src
+ * @property {string} alt
+ */
+
+/**
  * @typedef {Object} MarketingProCard
  * @property {string} title
  * @property {string} body
  * @property {string} [imageSrc]
  * @property {string} [imageAlt]
+ * @property {string} [videoSrc]
+ * @property {boolean} [videoPoster] — use imageSrc as poster while the clip loads
+ * @property {MarketingGallerySlide[]} [flipGallery] — 2+ frames; GIF-like fast flip (see flipGalleryIntervalMs)
+ * @property {number} [flipGalleryIntervalMs] — ms between frames (default 1000)
+ * @property {number} [flipGalleryFadeMs] — crossfade seconds; 0 = hard cut (default 0)
  */
 
 /**
@@ -43,6 +55,9 @@
  * @property {string} [imageAlt]
  * @property {MarketingImageCredit} [imageCredit]
  * @property {{ src: string, alt: string, credit?: string, imageCredit?: MarketingImageCredit }[]} [gallery]
+ * @property {boolean} [galleryFlip] — with gallery: fast 2-frame flip instead of slow crossfade
+ * @property {number} [flipGalleryIntervalMs]
+ * @property {number} [flipGalleryFadeMs]
  * @property {{ src: string, alt: string }[]} [marquee]
  * @property {string} [videoSrc]
  * @property {boolean} [videoPoster] — split video: use imageSrc as poster (default false)
@@ -291,30 +306,70 @@ export const MARKETING_SECTIONS = [
     type: 'pro',
     id: 'orby-marketing-pro',
     eyebrow: 'For pros',
-    title: 'Built for\nthe\u00a0details',
+    title: 'Goes a lot deeper\nthan you think',
     lede:
-      "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
+      "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [
       {
         title: 'Mesh diagnostics',
         body:
           'UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC.',
-        imageSrc: './assets/marketing/orby-section-pro-meshdiagnostics01.jpg',
-        imageAlt: 'Orby viewport with mesh diagnostic overlays',
+        flipGallery: [
+          {
+            src: './assets/marketing/pro-feature1-shoes01.jpg',
+            alt: 'Sneaker product render in Orby',
+          },
+          {
+            src: './assets/marketing/pro-feature1-shoes02.jpg',
+            alt: 'Same sneaker with wireframe overlay in Orby',
+          },
+          {
+            src: './assets/marketing/pro-feature1-shoes03.jpg',
+            alt: 'Same sneaker with UV checker in Orby',
+          },
+          {
+            src: './assets/marketing/pro-feature1-shoes04.jpg',
+            alt: 'Same sneaker in clay mode in Orby',
+          },
+        ],
+        flipGalleryIntervalMs: 2000,
+        flipGalleryFadeMs: 0.405,
       },
       {
         title: 'Instant export',
         body:
           'PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools.',
-        imageSrc: './assets/marketing/export-golden-look.png',
-        imageAlt: 'Product render ready for export from Orby',
+        imageSrc: './assets/marketing/pro-feature2-export.jpg',
+        imageAlt: 'Export deliverables from Orby — stills, video, and sequences',
+      },
+      {
+        title: 'Animation Preview',
+        body:
+          'Rigged clips, baked cycles, and timeline scrub. Everything you need to preview motion before you export — no DCC required.',
+        videoSrc: './assets/marketing/orby-dancing-compressed.mp4',
+        imageAlt: 'Orby mascot previewing animation playback in the viewport',
       },
       {
         title: 'Custom HDRI',
         body:
-          'Upload any .jpg, .png, or .hdr to set the mood. Reflections, backdrop, and lighting all follow your file — not a preset.',
-        imageSrc: './assets/marketing/custom-hdri-placeholder.png',
-        imageAlt: '3D model lit by a custom golden-hour environment in Orby',
+          'Drop your own 2:1 environment — HDR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine.',
+        imageSrc: './assets/marketing/pro-feature3-custom-hdri.png',
+        imageAlt: 'Product render with custom HDRI upload in Orby — placeholder',
+      },
+      {
+        title: 'Color reference',
+        body:
+          'Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world.',
+        imageSrc: './assets/marketing/pro-feature4-color-checker.jpg',
+        imageAlt:
+          'Porsche render with ColorChecker, chrome ball, and reference spheres in Orby',
+      },
+      {
+        title: 'Isometric camera',
+        body:
+          "Switch to isometric view, step 45° around your model, and shoot top-down game assets exactly as they'll appear in your scene.",
+        imageSrc: './assets/marketing/pro-feature5-isometric.jpg',
+        imageAlt: 'Product render with isometric camera lock in Orby — placeholder',
       },
     ],
   },
@@ -328,7 +383,7 @@ export const MARKETING_SECTIONS = [
       {
         question: 'Who is Orby for?',
         answer:
-          "Orby is made for designers who need to present 3D content without really knowing 3D — think AI-generated models, quick client presentations, product visuals, or seeing how a logo looks extruded in 3D with a single drop. It's also for 3D artists who need a fast, clean view without booting up a full DCC. No setup, no pipeline. Just your file and an instant presentation studio.",
+          'Orby is built for 3D artists who need a fast, clean view without booting up a full DCC — and for designers who need to present 3D content without a pipeline. AI-generated models, product visuals, client presentations, logo extrusions. No setup, no commitment. Just your file and an instant virtual studio.',
       },
       {
         question: 'Do I need to create an account?',

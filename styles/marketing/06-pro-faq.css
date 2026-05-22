@@ -37,13 +37,15 @@
 .orby-marketing__pro-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--orby-marketing-col-gap);
+  column-gap: var(--orby-marketing-col-gap);
+  row-gap: var(--orby-marketing-col-gap);
 }
 
 @media (min-width: 900px) {
   .orby-marketing__pro-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--orby-marketing-col-gap);
+    column-gap: var(--orby-marketing-col-gap);
+    row-gap: var(--orby-marketing-col-gap);
   }
 
   /* Split feature ledes — half-column measure only */
@@ -83,6 +85,24 @@
   overflow: hidden;
 }
 
+.orby-marketing__pro-card-media--flip .orby-marketing__showcase-img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  opacity: 0;
+  transform: none;
+  will-change: opacity;
+}
+
+.orby-marketing__pro-card-media--flip .orby-marketing__showcase-img.is-active {
+  z-index: 1;
+}
+
 .orby-marketing__pro-card-media .orby-marketing__media-ph {
   background: var(--orby-marketing-panel-bg);
 }
@@ -92,7 +112,8 @@
   background: var(--orby-marketing-panel-bg);
 }
 
-.orby-marketing__pro-card-img {
+.orby-marketing__pro-card-img,
+.orby-marketing__pro-card-video {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -101,6 +122,10 @@
   height: 100%;
   object-fit: cover;
   object-position: center center;
+}
+
+html.safari-browser .orby-marketing__pro-card-video {
+  will-change: opacity;
 }
 
 .orby-marketing__pro-card-copy {

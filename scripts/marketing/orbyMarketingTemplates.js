@@ -68,9 +68,37 @@ function getSplitSlides(section) {
   return [];
 }
 
+/** @typedef {{ src: string, alt: string, credit?: string, imageCredit?: import('./orbyMarketingContent.js').MarketingImageCredit }} MarketingGallerySlide */
+
+/**
+ * @param {number} [intervalMs]
+ * @param {number} [fadeMs]
+ */
+function renderFlipGalleryAttrs(intervalMs, fadeMs) {
+  const cycle = intervalMs ?? 1000;
+  const fade = fadeMs ?? 0;
+  return `data-orby-marketing-showcase-gallery data-orby-marketing-gallery-simple data-orby-marketing-gallery-flip data-gallery-cycle-ms="${cycle}" data-gallery-fade-s="${fade}"`;
+}
+
+/**
+ * @param {MarketingGallerySlide[]} slides
+ * @param {{ square?: boolean, eager?: boolean }} [options]
+ */
+function renderFlipGallerySlideImages(slides, options = {}) {
+  const { square = false, eager = true } = options;
+  const sizeAttrs = square ? ' width="640" height="640"' : '';
+  const loading = eager ? ' loading="eager"' : ' loading="lazy"';
+  return slides
+    .map((slide, index) => {
+      const active = index === 0 ? ' is-active' : '';
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" decoding="async"${sizeAttrs}${loading} />`;
+    })
+    .join('\n        ');
+}
+
 /**
  * Split feature gallery — full-res JPEGs; no width/height attrs (natural 2560×1440 from file).
- * @param {{ src: string, alt: string, credit?: string, imageCredit?: import('./orbyMarketingContent.js').MarketingImageCredit }[]} slides
+ * @param {MarketingGallerySlide[]} slides
  */
 function renderSplitGallerySlideImages(slides) {
   return slides
@@ -124,10 +152,16 @@ function renderFigure(section, revealDir) {
   }
 
   if (slides.length > 1) {
+    const flipAttrs = section.galleryFlip
+      ? renderFlipGalleryAttrs(section.flipGalleryIntervalMs, section.flipGalleryFadeMs)
+      : 'data-orby-marketing-showcase-gallery data-orby-marketing-gallery-simple';
+    const slideMarkup = section.galleryFlip
+      ? renderFlipGallerySlideImages(slides)
+      : renderSplitGallerySlideImages(slides);
     return `<figure class="orby-marketing__figure">
-      <div class="orby-marketing__figure-mask orby-marketing__figure-mask--gallery" data-orby-marketing-showcase-gallery data-orby-marketing-gallery-simple data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}" aria-label="${escapeMarketingHtml(section.eyebrow || 'Feature')} previews">
+      <div class="orby-marketing__figure-mask orby-marketing__figure-mask--gallery${section.galleryFlip ? ' orby-marketing__figure-mask--flip' : ''}" ${flipAttrs} data-orby-marketing-reveal="media" data-reveal-dir="${escapeMarketingHtml(revealDir)}" aria-label="${escapeMarketingHtml(section.eyebrow || 'Feature')} previews">
         <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-        ${renderSplitGallerySlideImages(slides)}
+        ${slideMarkup}
         <p class="orby-marketing__figure-credit orby-marketing__figure-credit--static" data-orby-marketing-showcase-credit hidden></p>
       </div>
     </figure>`;
@@ -364,12 +398,28 @@ function renderShowcaseSection(section) {
 const FAQ_ICON_SVG = `<svg class="orby-marketing__faq-icon-svg" width="32" height="32" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247zm2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg>`;
 
 function renderProCard(card) {
-  const media = card.imageSrc
-    ? `<div class="orby-marketing__pro-card-media">
+  const flipSlides = card.flipGallery?.length >= 2 ? card.flipGallery : null;
+  const videoSrc = card.videoSrc || '';
+  const posterAttr =
+    videoSrc && card.videoPoster && card.imageSrc
+      ? ` poster="${escapeMarketingHtml(card.imageSrc)}"`
+      : '';
+  const media = flipSlides
+    ? `<div class="orby-marketing__pro-card-media orby-marketing__pro-card-media--flip" ${renderFlipGalleryAttrs(card.flipGalleryIntervalMs, card.flipGalleryFadeMs)}>
+          <span class="orby-marketing__media-ph" aria-hidden="true"></span>
+          ${renderFlipGallerySlideImages(flipSlides, { square: true, eager: true })}
+        </div>`
+    : videoSrc
+      ? `<div class="orby-marketing__pro-card-media">
+          <span class="orby-marketing__media-ph" aria-hidden="true"></span>
+          <video class="orby-marketing__pro-card-video" src="${escapeMarketingHtml(videoSrc)}"${posterAttr} ${MARKETING_VIDEO_HTML_ATTRS} aria-label="${escapeMarketingHtml(card.imageAlt || 'Feature preview video')}"></video>
+        </div>`
+    : card.imageSrc
+      ? `<div class="orby-marketing__pro-card-media">
           <span class="orby-marketing__media-ph" aria-hidden="true"></span>
           <img class="orby-marketing__pro-card-img" src="${escapeMarketingHtml(card.imageSrc)}" alt="${escapeMarketingHtml(card.imageAlt || '')}" width="640" height="640" decoding="async" loading="lazy" />
         </div>`
-    : `<div class="orby-marketing__pro-card-media orby-marketing__pro-card-media--empty" aria-hidden="true"></div>`;
+      : `<div class="orby-marketing__pro-card-media orby-marketing__pro-card-media--empty" aria-hidden="true"></div>`;
 
   return `<article class="orby-marketing__pro-card" data-orby-marketing-reveal="pro-card">
       <div class="orby-marketing__pro-card-surface">

@@ -8,7 +8,18 @@ const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
  * Shadow sampling matches Three.js r165 (cdn three@0.165.0):
  * getShadow(map, mapSize, bias, radius, coord) — no shadowIntensity uniform.
  */
-const SHADOW_TINT_GLSL = `
+/** Uniform declarations for custom shaders (base glass reflector, etc.). */
+export const DIRECTIONAL_SHADOW_TINT_UNIFORM_DECL = `
+uniform vec3 uOrbyShadowColor;
+uniform float uOrbyShadowStrength;
+uniform float uOrbyShadowOpacity;
+`;
+
+/**
+ * Samples directional shadow maps; leaves `orbyShadowAmt` in scope when USE_SHADOWMAP is set.
+ * Pair with `mix( rgb, uOrbyShadowColor, clamp( orbyShadowAmt, 0.0, 1.0 ) )` on the target color.
+ */
+export const DIRECTIONAL_SHADOW_TINT_SAMPLE_GLSL = `
 #ifdef USE_SHADOWMAP
 	float orbyShadowLit = 1.0;
 	#if NUM_DIR_LIGHT_SHADOWS > 0
@@ -30,6 +41,12 @@ const SHADOW_TINT_GLSL = `
 		#pragma unroll_loop_end
 	#endif
 	float orbyShadowAmt = ( 1.0 - orbyShadowLit ) * uOrbyShadowStrength * uOrbyShadowOpacity;
+#endif
+`;
+
+const SHADOW_TINT_GLSL = `
+${DIRECTIONAL_SHADOW_TINT_SAMPLE_GLSL}
+#ifdef USE_SHADOWMAP
 	outgoingLight.rgb = mix( outgoingLight.rgb, uOrbyShadowColor, clamp( orbyShadowAmt, 0.0, 1.0 ) );
 #endif
 `;
@@ -92,6 +109,42 @@ function normalizeOpacity(opacity) {
   const raw = Number(opacity);
   if (!Number.isFinite(raw)) return DEFAULT_SHADOW_OPACITY;
   return Math.min(1, Math.max(0, raw));
+}
+
+/** @returns {{ color: THREE.Color, strength: number, opacity: number }} */
+export function createShadowTintUniformValues(options = {}) {
+  return {
+    color: new THREE.Color(options.color ?? '#080808'),
+    strength: normalizeStrength(options.strength ?? 0),
+    opacity: normalizeOpacity(options.opacity ?? DEFAULT_SHADOW_OPACITY),
+  };
+}
+
+/** Sync shadow-tint uniforms on a ShaderMaterial (e.g. base glass). */
+export function syncShadowTintUniforms(material, options = {}) {
+  if (!material?.uniforms) return;
+  const colorSrc = options.color ?? '#080808';
+  const strength = normalizeStrength(options.strength ?? 0);
+  const opacity = normalizeOpacity(options.opacity ?? DEFAULT_SHADOW_OPACITY);
+
+  if (!material.uniforms.uOrbyShadowColor) {
+    material.uniforms.uOrbyShadowColor = { value: new THREE.Color() };
+  }
+  if (colorSrc?.isColor) {
+    material.uniforms.uOrbyShadowColor.value.copy(colorSrc);
+  } else {
+    material.uniforms.uOrbyShadowColor.value.set(colorSrc);
+  }
+  if (!material.uniforms.uOrbyShadowStrength) {
+    material.uniforms.uOrbyShadowStrength = { value: strength };
+  } else {
+    material.uniforms.uOrbyShadowStrength.value = strength;
+  }
+  if (!material.uniforms.uOrbyShadowOpacity) {
+    material.uniforms.uOrbyShadowOpacity = { value: opacity };
+  } else {
+    material.uniforms.uOrbyShadowOpacity.value = opacity;
+  }
 }
 
 /**
@@ -192,6 +245,7 @@ export function applyShadowTintToObject(object, options = {}) {
   object.traverse((child) => {
     if (!child.isMesh || !child.material) return;
     if (child.userData?.orbyStudioBackdrop) return;
+    if (child.userData?.meshglBaseGlassReflector) return;
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     materials.forEach((mat) => applyShadowTintToMaterial(mat, options));
   });

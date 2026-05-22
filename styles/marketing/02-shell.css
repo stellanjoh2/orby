@@ -75,7 +75,7 @@ html.orby-home-scroll #orby-marketing > .orby-marketing {
 
 /*
  * Pull intro over the 100dvh workspace seam — mid-scroll otherwise shows the bottom
- * of the dropzone frosted ::before (78% black) across headline + turntable car.
+ * of the dropzone frosted ::before (50% black) across headline + turntable car.
  */
 html.orby-home-scroll .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
   --orby-intro-seam-overlap: clamp(5rem, 11vh, 9.5rem);

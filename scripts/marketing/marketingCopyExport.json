@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-22T15:53:38.660Z",
+    "generatedAt": "2026-05-22T22:21:42.686Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -152,12 +152,7 @@
       "lede": "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
       "bullets": null,
       "cta": null,
-      "galleryCredits": [
-        "Audi e-tron GT · vecarz.com",
-        "Sports car detail · vecarz.com",
-        "Jeep Wrangler Rubicon · vecarz.com",
-        "New Balance 574 · vecarz.com"
-      ]
+      "galleryCredits": []
     },
     {
       "order": 6,
@@ -238,12 +233,12 @@
       "type": "pro",
       "id": "orby-marketing-pro",
       "eyebrow": "For pros",
-      "title": "Built for\nthe details",
+      "title": "Goes a lot deeper\nthan you think",
       "titleLines": [
-        "Built for",
-        "the details"
+        "Goes a lot deeper",
+        "than you think"
       ],
-      "lede": "There's more under the hood than meets the eye. UV checker, wireframe overlay, clay mode, isometric camera, and much more — the kind of tools you'd expect from a desktop app, running quietly in your browser tab.",
+      "lede": "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
       "bullets": null,
       "cta": null,
       "cards": [
@@ -256,8 +251,20 @@
           "body": "PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools."
         },
         {
+          "title": "Animation Preview",
+          "body": "Rigged clips, baked cycles, and timeline scrub. Everything you need to preview motion before you export — no DCC required."
+        },
+        {
           "title": "Custom HDRI",
-          "body": "Upload any .jpg, .png, or .hdr to set the mood. Reflections, backdrop, and lighting all follow your file — not a preset."
+          "body": "Drop your own 2:1 environment — HDR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine."
+        },
+        {
+          "title": "Color reference",
+          "body": "Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world."
+        },
+        {
+          "title": "Isometric camera",
+          "body": "Switch to isometric view, step 45° around your model, and shoot top-down game assets exactly as they'll appear in your scene."
         }
       ]
     },
@@ -276,7 +283,7 @@
       "faq": [
         {
           "question": "Who is Orby for?",
-          "answer": "Orby is made for designers who need to present 3D content without really knowing 3D — think AI-generated models, quick client presentations, product visuals, or seeing how a logo looks extruded in 3D with a single drop. It's also for 3D artists who need a fast, clean view without booting up a full DCC. No setup, no pipeline. Just your file and an instant presentation studio."
+          "answer": "Orby is built for 3D artists who need a fast, clean view without booting up a full DCC — and for designers who need to present 3D content without a pipeline. AI-generated models, product visuals, client presentations, logo extrusions. No setup, no commitment. Just your file and an instant virtual studio."
         },
         {
           "question": "Do I need to create an account?",
