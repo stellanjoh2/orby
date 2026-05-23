@@ -3,6 +3,14 @@
 /** Session-only custom upload (blob URL registered at runtime). */
 export const HDRI_CUSTOM_ID = 'custom';
 
+/** @returns {'hdr' | 'exr' | 'ldr'} Custom upload types: `.hdr`/`.hdri`, `.exr`, or LDR (`.jpg`, `.png`, etc.). */
+export function getCustomHdriUploadType(filename) {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'exr') return 'exr';
+  if (ext === 'hdr' || ext === 'hdri') return 'hdr';
+  return 'ldr';
+}
+
 /** Grid / keyboard cycle order (3×3). Excludes {@link HDRI_CUSTOM_ID} until a file is uploaded. */
 export const HDRI_PRESET_ORDER = [
   'congress',

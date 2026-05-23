@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ORBY_BLACK } from '../constants.js';
+import { EXRLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/EXRLoader.js';
 import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
 import { RotateEquirectShader } from '../shaders/index.js';
@@ -32,6 +33,7 @@ export class EnvironmentController {
 
     this.textureLoader = new THREE.TextureLoader();
     this.hdriLoader = new RGBELoader();
+    this.exrLoader = new EXRLoader();
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
     this.pmremGenerator.compileEquirectangularShader();
 
@@ -316,6 +318,14 @@ export class EnvironmentController {
           reject,
         );
       });
+    }
+
+    if (type === 'exr') {
+      const texture = await this.exrLoader.loadAsync(source);
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
     }
 
     const texture = await this.hdriLoader.loadAsync(source);

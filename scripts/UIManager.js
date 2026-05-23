@@ -263,6 +263,7 @@ export class UIManager {
     this.dom.playPause = q('#playPause');
     this.dom.animationScrub = q('#animationScrub');
     this.dom.animationTime = q('#animationTime');
+    this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
 
     this.inputs = {
       shading: document.querySelectorAll('input[name="shading"]'),
@@ -438,6 +439,7 @@ export class UIManager {
       lensSensor: q('#lensSensor'),
       isometricEnabled: q('#isometricEnabled'),
       isoOrbitStep: q('#isoOrbitStep'),
+      isoAssetRotateStep: q('#isoAssetRotateStep'),
       isoPanUnlock: q('#isoPanUnlock'),
       fisheyeEnabled: q('#fisheyeEnabled'),
       fisheyeHorizontalFOV: q('#fisheyeHorizontalFOV'),
@@ -446,6 +448,9 @@ export class UIManager {
       cameraTilt: q('#cameraTilt'),
       exposure: q('#exposure'),
       autoExposure: q('#autoExposure'),
+      manualClipPlanes: q('#manualClipPlanes'),
+      cameraClipNear: q('#cameraClipNear'),
+      cameraClipFar: q('#cameraClipFar'),
       cameraContrast: q('#cameraContrast'),
       cameraTemperature: q('#cameraTemperature'),
       cameraTint: q('#cameraTint'),
@@ -1013,7 +1018,7 @@ export class UIManager {
   }
 
   static HDRI_UPLOAD_TOOLTIP_EMPTY =
-    'Upload custom HDRI (.hdr, .jpg, .png) — 2:1 equirectangular';
+    'Upload custom HDRI (.hdr, .exr, .jpg, .png) — 2:1 equirectangular';
 
   setHdriUploadLoaded(filename = '') {
     const btn = this.inputs.hdriUploadBtn;
@@ -1412,6 +1417,10 @@ export class UIManager {
           if (h === 'medium') h = 'high';
           this.stateStore.set('camera.handheld', h);
           this.eventBus.emit('camera:handheld', h);
+        }
+        if (payload.camera.clipPlanes !== undefined) {
+          this.stateStore.set('camera.clipPlanes', payload.camera.clipPlanes);
+          this.eventBus.emit('camera:clip-planes');
         }
         if (payload.camera.compositionGridEnabled !== undefined) {
           this.stateStore.set(
@@ -2083,7 +2092,22 @@ export class UIManager {
       this.inputs.autoExposure.checked = enabled;
       this.setEffectControlsDisabled(['exposure'], enabled);
     }
-    
+    const clipPlanes = state.camera?.clipPlanes ?? this.stateStore.getDefaults().camera?.clipPlanes ?? {};
+    if (this.inputs.manualClipPlanes) {
+      this.inputs.manualClipPlanes.checked = !!clipPlanes.manual;
+    }
+    if (this.inputs.cameraClipNear) {
+      const near = clipPlanes.near ?? 0.1;
+      this.inputs.cameraClipNear.value = near;
+      this.updateValueLabel('cameraClipNear', near, 'decimal', 2);
+    }
+    if (this.inputs.cameraClipFar) {
+      const far = clipPlanes.far ?? 100;
+      this.inputs.cameraClipFar.value = far;
+      this.updateValueLabel('cameraClipFar', far, 'decimal', 1);
+    }
+    this.setClipPlanesFoldoutOpen(!!clipPlanes.manual);
+
     // Grain
     this.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
     this.updateValueLabel('grainIntensity', state.grain.intensity / 0.15, 'decimal');
@@ -2318,6 +2342,14 @@ export class UIManager {
 
   setEffectControlsDisabled(ids, disabled) {
     this.setControlDisabled(ids, disabled);
+  }
+
+  setClipPlanesFoldoutOpen(open) {
+    const el = this.dom.clipPlanesFoldout;
+    if (!el) return;
+    el.classList.toggle('clip-planes-foldout--collapsed', !open);
+    el.classList.toggle('clip-planes-foldout--expanded', open);
+    el.setAttribute('aria-hidden', open ? 'false' : 'true');
   }
 
   setLightsRotationDisabled(disabled) {
@@ -2603,6 +2635,20 @@ export class UIManager {
     // Update slider value (as number) and label, even when slider is disabled
     this.inputs.exposure.value = value;
     this.updateValueLabel('exposure', parseFloat(value), 'decimal');
+  }
+
+  updateClipPlaneDisplay(near, far, manual) {
+    if (this.inputs.cameraClipNear) {
+      this.inputs.cameraClipNear.value = near;
+      this.updateValueLabel('cameraClipNear', near, 'decimal', 2);
+    }
+    if (this.inputs.cameraClipFar) {
+      this.inputs.cameraClipFar.value = far;
+      this.updateValueLabel('cameraClipFar', far, 'decimal', 1);
+    }
+    if (manual !== undefined) {
+      this.setClipPlanesFoldoutOpen(!!manual);
+    }
   }
 }
 

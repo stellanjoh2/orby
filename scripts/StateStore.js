@@ -300,6 +300,12 @@ export class StateStore {
           verticalDeg: (Math.atan(1 / Math.sqrt(2)) * 180) / Math.PI,
           panUnlocked: false,
         },
+        /** Optional manual near/far override (telephoto / isometric). Off = DEFAULT_CAMERA_* . */
+        clipPlanes: {
+          manual: false,
+          near: 0.1,
+          far: 100,
+        },
       },
       exposure: 1.0,
       /** Off by default; enable to adapt exposure to scene brightness automatically. */

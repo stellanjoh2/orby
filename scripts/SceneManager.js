@@ -5,6 +5,7 @@ import {
   HDRI_STRENGTH_UNIT,
   HDRI_MOODS,
   HDRI_CUSTOM_ID,
+  getCustomHdriUploadType,
 } from './config/hdri.js';
 import {
   WIREFRAME_OFFSET,
@@ -67,6 +68,8 @@ import {
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { normalizeIsometricState } from './camera/isometricPresets.js';
+import { sanitizeClipPlanes } from './camera/clipPlanes.js';
+import { DEFAULT_CAMERA_FAR, DEFAULT_CAMERA_NEAR } from './constants.js';
 import {
   ensureStudioActive,
   shutdownStudio as shutdownStudioLifecycle,
@@ -265,8 +268,8 @@ export class SceneManager {
     this.camera = new THREE.PerspectiveCamera(
       45,
       window.innerWidth / window.innerHeight,
-      0.1,
-      5000,
+      DEFAULT_CAMERA_NEAR,
+      DEFAULT_CAMERA_FAR,
     );
     this.scene.add(this.camera);
     this.renderer = new THREE.WebGLRenderer({
@@ -343,7 +346,6 @@ export class SceneManager {
         this.ui?.syncControls?.(this.stateStore.getState());
       },
       onModelBoundsChanged: (bounds) => {
-        // Update lights controller when model bounds change
         this.lightsController?.setModelBounds(bounds);
       },
     });
@@ -1022,6 +1024,51 @@ export class SceneManager {
     pass.uniforms.cylindricalRatio.value = cylindricalRatio;
   }
 
+  /**
+   * Manual Render Distance only — does not auto-fit on mesh load or orbit.
+   * When off, camera keeps DEFAULT_CAMERA_NEAR / DEFAULT_CAMERA_FAR unless restoring defaults.
+   */
+  syncCameraClipPlanes(options = {}) {
+    const cc = this.cameraController;
+    if (!cc || !this.camera?.isPerspectiveCamera) return null;
+
+    const defaults = this.stateStore.getDefaults().camera?.clipPlanes ?? {};
+    const clip = sanitizeClipPlanes(
+      this.stateStore.getState().camera?.clipPlanes,
+      defaults,
+    );
+
+    let near;
+    let far;
+    if (clip.manual) {
+      near = clip.near;
+      far = clip.far;
+    } else if (options.restoreDefaults) {
+      near = DEFAULT_CAMERA_NEAR;
+      far = DEFAULT_CAMERA_FAR;
+    } else {
+      return null;
+    }
+
+    const applied = cc.applyClipPlanes(near, far);
+    if (!options.skipUiUpdate) {
+      const last = this._clipPlaneUiCache ?? {};
+      if (
+        Math.abs((last.near ?? 0) - applied.near) > 0.005
+        || Math.abs((last.far ?? 0) - applied.far) > 0.05
+        || last.manual !== clip.manual
+      ) {
+        this._clipPlaneUiCache = {
+          near: applied.near,
+          far: applied.far,
+          manual: clip.manual,
+        };
+        this.ui?.updateClipPlaneDisplay?.(applied.near, applied.far, clip.manual);
+      }
+    }
+    return applied;
+  }
+
 
 
   // registerEvents() - Moved to EventManager.js
@@ -1305,8 +1352,7 @@ export class SceneManager {
 
   async loadCustomHdri(file) {
     if (!file) return;
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const type = ext === 'hdr' || ext === 'hdri' ? 'hdr' : 'ldr';
+    const type = getCustomHdriUploadType(file.name);
     this.clearCustomHdri();
     const url = URL.createObjectURL(file);
     this.environmentController?.registerPreset(HDRI_CUSTOM_ID, {

@@ -39,6 +39,10 @@ export class IsometricControls {
       this.stepOrbit45();
     });
 
+    this.ui.inputs.isoAssetRotateStep?.addEventListener('click', () => {
+      this.stepAssetRotate45();
+    });
+
     this.ui.inputs.isoPanUnlock?.addEventListener('click', () => {
       this.togglePanUnlock();
     });
@@ -104,6 +108,19 @@ export class IsometricControls {
     this._emitIsometric();
   }
 
+  stepAssetRotate45() {
+    if (!this._isIsoActive()) return;
+    const current = this.stateStore.getState().rotationY ?? 0;
+    let next = ((current + 45) % 360 + 360) % 360;
+    if (next > 180) next -= 360;
+    this.stateStore.set('rotationY', next);
+    this.eventBus.emit('mesh:rotationY', next);
+    if (this.ui.inputs.rotationY) {
+      this.ui.inputs.rotationY.value = next;
+      this.helpers.updateValueLabel('rotationY', next, 'angle');
+    }
+  }
+
   togglePanUnlock() {
     if (!this._isIsoActive()) return;
     const iso = normalizeIsometricState(
@@ -144,6 +161,9 @@ export class IsometricControls {
       const actionDisabled = !active;
       if (this.ui.inputs.isoOrbitStep) {
         this.ui.inputs.isoOrbitStep.disabled = actionDisabled;
+      }
+      if (this.ui.inputs.isoAssetRotateStep) {
+        this.ui.inputs.isoAssetRotateStep.disabled = actionDisabled;
       }
       if (this.ui.inputs.isoPanUnlock) {
         const panBtn = this.ui.inputs.isoPanUnlock;

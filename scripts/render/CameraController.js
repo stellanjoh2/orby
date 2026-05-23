@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { setCameraOrbitFromAngles } from '../camera/isometricView.js';
-
 function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
 }
@@ -383,6 +382,22 @@ export class CameraController {
     return this.camera.position.distanceTo(this.controls.target);
   }
 
+  applyClipPlanes(near, far) {
+    const nextNear = Math.max(0.001, Number(near) || 0.1);
+    let nextFar = Math.max(nextNear + 0.1, Number(far) || nextNear + 1);
+    if (nextFar / nextNear > 2000) nextFar = nextNear * 2000;
+    if (
+      Math.abs(this.camera.near - nextNear) < 1e-6
+      && Math.abs(this.camera.far - nextFar) < 1e-4
+    ) {
+      return { near: this.camera.near, far: this.camera.far };
+    }
+    this.camera.near = nextNear;
+    this.camera.far = nextFar;
+    this.camera.updateProjectionMatrix();
+    return { near: nextNear, far: nextFar };
+  }
+
   orbit(deltaAzimuth, deltaPolar) {
     if (!this.controls || this._isometricModeActive) return;
     if (Math.abs(deltaAzimuth) > 1e-4) {
@@ -692,9 +707,6 @@ export class CameraController {
       const distance = (this.modelBounds.radius * 2.2 || 5) * 0.85;
       const direction = defaultModelViewDirection();
       this.camera.position.copy(adjustedCenter.clone().add(direction.multiplyScalar(distance)));
-      this.camera.near = Math.max(0.01, distance / 200);
-      this.camera.far = distance * 50;
-      this.camera.updateProjectionMatrix();
       this.controls.update();
       if (this.autoOrbitMode === 'off') {
         this._applyTilt();
@@ -762,9 +774,6 @@ export class CameraController {
       onComplete: () => {
         if (generation !== this._focusGeneration) return;
         this._focusTimeline = null;
-        this.camera.near = Math.max(0.01, distance / 200);
-        this.camera.far = distance * 50;
-        this.camera.updateProjectionMatrix();
         this._restoreFocusOrbitControls();
         if (this.autoOrbitMode === 'off') {
           this._applyTilt();

@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-22T22:21:42.686Z",
+    "generatedAt": "2026-05-23T21:23:47.537Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -243,11 +243,11 @@
       "cta": null,
       "cards": [
         {
-          "title": "Mesh diagnostics",
+          "title": "Mesh Diagnostics",
           "body": "UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC."
         },
         {
-          "title": "Instant export",
+          "title": "Instant Export",
           "body": "PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools."
         },
         {
@@ -256,15 +256,27 @@
         },
         {
           "title": "Custom HDRI",
-          "body": "Drop your own 2:1 environment — HDR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine."
+          "body": "Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine."
         },
         {
-          "title": "Color reference",
+          "title": "Spotlight Gobos",
+          "body": "Palm, leaf, and tree gobos on the key light — dappled shadows and instant mood. Softness, scale, and rotation without a single flag."
+        },
+        {
+          "title": "Isometric Camera",
+          "body": "Switch to isometric view, step 45° around your model, and export 2D game assets exactly as they'll appear in your world."
+        },
+        {
+          "title": "Look Filters",
+          "body": "Cinematic presets, luminance curve, and full color grade — everything you need to land the mood before export. No round trip through Lightroom."
+        },
+        {
+          "title": "Color Reference",
           "body": "Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world."
         },
         {
-          "title": "Isometric camera",
-          "body": "Switch to isometric view, step 45° around your model, and shoot top-down game assets exactly as they'll appear in your scene."
+          "title": "Studio Backdrop",
+          "body": "Seamless curved cyclorama with color tint, texture, and scale — everything you need for product heroes without building a set in a DCC."
         }
       ]
     },

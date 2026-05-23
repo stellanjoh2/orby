@@ -577,6 +577,47 @@ export class RenderControls {
       });
     }
 
+    const emitClipPlanes = (options = {}) =>
+      this.eventBus.emit('camera:clip-planes', options);
+    if (this.ui.inputs.manualClipPlanes) {
+      this.ui.inputs.manualClipPlanes.addEventListener('change', (event) => {
+        const manual = event.target.checked;
+        this.stateStore.set('camera.clipPlanes.manual', manual);
+        this.ui.setClipPlanesFoldoutOpen(manual);
+        if (manual) {
+          const near = parseFloat(this.ui.inputs.cameraClipNear?.value);
+          const far = parseFloat(this.ui.inputs.cameraClipFar?.value);
+          if (Number.isFinite(near)) this.stateStore.set('camera.clipPlanes.near', near);
+          if (Number.isFinite(far)) this.stateStore.set('camera.clipPlanes.far', far);
+          emitClipPlanes();
+        } else {
+          emitClipPlanes({ restoreDefaults: true });
+        }
+      });
+    }
+    if (this.ui.inputs.cameraClipNear) {
+      this.ui.inputs.cameraClipNear.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.helpers.updateValueLabel('cameraClipNear', value, 'decimal', 2);
+        if (!this.stateStore.getState().camera?.clipPlanes?.manual) return;
+        this.stateStore.set('camera.clipPlanes.near', value);
+        emitClipPlanes();
+      });
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraClipNear);
+    }
+    if (this.ui.inputs.cameraClipFar) {
+      this.ui.inputs.cameraClipFar.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.helpers.updateValueLabel('cameraClipFar', value, 'decimal', 1);
+        if (!this.stateStore.getState().camera?.clipPlanes?.manual) return;
+        this.stateStore.set('camera.clipPlanes.far', value);
+        emitClipPlanes();
+      });
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraClipFar);
+    }
+
     // Color & Tone
     this.ui.inputs.cameraContrast?.addEventListener('input', (event) => {
       const value = this.helpers.applySnapToCenter(event.target, 0, 2, 1.0, event);
@@ -1003,7 +1044,22 @@ export class RenderControls {
       this.ui.inputs.autoExposure.checked = enabled;
       this.ui.setEffectControlsDisabled(['exposure'], enabled);
     }
-    
+    const clip = state.camera?.clipPlanes ?? this.stateStore.getDefaults().camera?.clipPlanes ?? {};
+    if (this.ui.inputs.manualClipPlanes) {
+      this.ui.inputs.manualClipPlanes.checked = !!clip.manual;
+    }
+    if (this.ui.inputs.cameraClipNear) {
+      const near = clip.near ?? 0.1;
+      this.ui.inputs.cameraClipNear.value = near;
+      this.helpers.updateValueLabel('cameraClipNear', near, 'decimal', 2);
+    }
+    if (this.ui.inputs.cameraClipFar) {
+      const far = clip.far ?? 100;
+      this.ui.inputs.cameraClipFar.value = far;
+      this.helpers.updateValueLabel('cameraClipFar', far, 'decimal', 1);
+    }
+    this.ui.setClipPlanesFoldoutOpen(!!clip.manual);
+
     // Grain
     this.ui.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
     this.helpers.updateValueLabel('grainIntensity', state.grain.intensity / 0.15, 'decimal');
@@ -1136,6 +1192,21 @@ export class RenderControls {
     }
     this.ui.inputs.exposure.value = state.exposure;
     this.helpers.updateValueLabel('exposure', state.exposure, 'decimal');
+    const clipPlanes = cam.clipPlanes ?? defCam.clipPlanes ?? {};
+    if (this.ui.inputs.manualClipPlanes) {
+      this.ui.inputs.manualClipPlanes.checked = !!clipPlanes.manual;
+    }
+    if (this.ui.inputs.cameraClipNear) {
+      const near = clipPlanes.near ?? 0.1;
+      this.ui.inputs.cameraClipNear.value = near;
+      this.helpers.updateValueLabel('cameraClipNear', near, 'decimal', 2);
+    }
+    if (this.ui.inputs.cameraClipFar) {
+      const far = clipPlanes.far ?? 100;
+      this.ui.inputs.cameraClipFar.value = far;
+      this.helpers.updateValueLabel('cameraClipFar', far, 'decimal', 1);
+    }
+    this.ui.setClipPlanesFoldoutOpen(!!clipPlanes.manual);
     if (this.ui.inputs.cameraContrast) {
       const contrast = state.camera?.contrast ?? 1.0;
       this.ui.inputs.cameraContrast.value = contrast;

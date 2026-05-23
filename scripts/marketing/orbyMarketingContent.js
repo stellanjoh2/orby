@@ -311,7 +311,7 @@ export const MARKETING_SECTIONS = [
       "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [
       {
-        title: 'Mesh diagnostics',
+        title: 'Mesh Diagnostics',
         body:
           'UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC.',
         flipGallery: [
@@ -336,7 +336,7 @@ export const MARKETING_SECTIONS = [
         flipGalleryFadeMs: 0.405,
       },
       {
-        title: 'Instant export',
+        title: 'Instant Export',
         body:
           'PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools.',
         imageSrc: './assets/marketing/pro-feature2-export.jpg',
@@ -352,24 +352,81 @@ export const MARKETING_SECTIONS = [
       {
         title: 'Custom HDRI',
         body:
-          'Drop your own 2:1 environment — HDR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine.',
-        imageSrc: './assets/marketing/pro-feature3-custom-hdri.png',
-        imageAlt: 'Product render with custom HDRI upload in Orby — placeholder',
+          'Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine.',
+        videoSrc: './assets/marketing/orby-feature-custom-hdri.mp4',
+        imageAlt: 'Custom HDRI upload lighting a product render in Orby',
       },
       {
-        title: 'Color reference',
+        title: 'Spotlight Gobos',
+        body:
+          'Palm, leaf, and tree gobos on the key light — dappled shadows and instant mood. Softness, scale, and rotation without a single flag.',
+        imageSrc: './assets/marketing/pro-feature-gobos.jpg',
+        imageAlt: 'Key-light gobo projection with palm shadow pattern in Orby',
+      },
+      {
+        title: 'Isometric Camera',
+        body:
+          "Switch to isometric view, step 45° around your model, and export 2D game assets exactly as they'll appear in your world.",
+        flipGallery: [
+          {
+            src: './assets/marketing/orby-marketing-isocamera-01.jpg',
+            alt: 'Medieval cottage render with isometric camera lock in Orby',
+          },
+          {
+            src: './assets/marketing/orby-marketing-isocamera-02.jpg',
+            alt: 'Same cottage from a stepped isometric angle in Orby',
+          },
+          {
+            src: './assets/marketing/orby-marketing-isocamera-03.jpg',
+            alt: 'Same cottage from another stepped isometric angle in Orby',
+          },
+        ],
+        flipGalleryIntervalMs: 2000,
+        flipGalleryFadeMs: 0.405,
+      },
+      {
+        title: 'Look Filters',
+        body:
+          'Cinematic presets, luminance curve, and full color grade — everything you need to land the mood before export. No round trip through Lightroom.',
+        flipGallery: [
+          {
+            src: './assets/marketing/orby-marketing-lookfilter-01.jpg',
+            alt: 'Product render with a cinematic look filter preset in Orby',
+          },
+          {
+            src: './assets/marketing/orby-marketing-lookfilter-02.jpg',
+            alt: 'Same model with a different look filter grade in Orby',
+          },
+          {
+            src: './assets/marketing/orby-marketing-lookfilter-03.jpg',
+            alt: 'Same model with another look filter preset in Orby',
+          },
+          {
+            src: './assets/marketing/orby-marketing-lookfilter-04.jpg',
+            alt: 'Same model with a warm look filter treatment in Orby',
+          },
+          {
+            src: './assets/marketing/orby-marketing-lookfilter-05.jpg',
+            alt: 'Same model with a high-contrast look filter grade in Orby',
+          },
+        ],
+        flipGalleryIntervalMs: 2000,
+        flipGalleryFadeMs: 0.405,
+      },
+      {
+        title: 'Color Reference',
         body:
           'Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world.',
-        imageSrc: './assets/marketing/pro-feature4-color-checker.jpg',
+        imageSrc: './assets/marketing/orby-marketing-colorchecker.jpg',
         imageAlt:
           'Porsche render with ColorChecker, chrome ball, and reference spheres in Orby',
       },
       {
-        title: 'Isometric camera',
+        title: 'Studio Backdrop',
         body:
-          "Switch to isometric view, step 45° around your model, and shoot top-down game assets exactly as they'll appear in your scene.",
-        imageSrc: './assets/marketing/pro-feature5-isometric.jpg',
-        imageAlt: 'Product render with isometric camera lock in Orby — placeholder',
+          'Seamless curved cyclorama with color tint, texture, and scale — everything you need for product heroes without building a set in a DCC.',
+        imageSrc: './assets/marketing/pro-feature1-shoes01.jpg',
+        imageAlt: 'Product render with curved studio backdrop in Orby',
       },
     ],
   },

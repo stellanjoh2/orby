@@ -40,7 +40,7 @@ export const ISOMETRIC_PRESET_BY_ID = Object.fromEntries(
   ISOMETRIC_PRESETS.map((p) => [p.id, p]),
 );
 
-/** Azimuth step for Camera → Isometric → Rotate 45°. */
+/** Azimuth step for Camera → Isometric → Rotate camera 45. */
 export const ISOMETRIC_ORBIT_STEP_DEG = 45;
 
 export const DEFAULT_ISOMETRIC_STATE = {

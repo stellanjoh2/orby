@@ -412,6 +412,7 @@ export class EventManager {
       s.lensDirtController?.updateExposureFactor();
     });
     eventBus.on('camera:auto-exposure', (enabled) => s.autoExposureController?.setEnabled(enabled));
+    eventBus.on('camera:clip-planes', (options) => s.syncCameraClipPlanes(options ?? {}));
 
     // File loading events (.orby scenes are restored via SceneSettingsManager)
     eventBus.on('file:selected', async (payload) => {

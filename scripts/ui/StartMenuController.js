@@ -61,10 +61,22 @@ function shouldShowDropzoneHeroArt() {
 
 /**
  * @param {HTMLImageElement} img
+ */
+function hydrateDropzoneHeroDecoImg(img) {
+  if (!img || img.getAttribute('src')) return;
+  const url = img.dataset.src;
+  if (!url) return;
+  img.src = url;
+}
+
+/**
+ * @param {HTMLImageElement} img
  * @returns {Promise<void>}
  */
 function whenDropzoneHeroImgReady(img) {
   if (!img) return Promise.resolve();
+  hydrateDropzoneHeroDecoImg(img);
+  if (!img.getAttribute('src')) return Promise.resolve();
   if (img.complete && img.naturalWidth > 0) {
     if (typeof img.decode === 'function') {
       return img.decode().catch(() => {});
@@ -223,12 +235,13 @@ export class StartMenuController {
     void this.preloadDropzoneHeroDeco();
   }
 
-  /** Preload corner hero JPGs — no gray flash; reveal waits on decode when possible. */
+  /** Preload corner hero JPGs — assign src from data-src, decode before GSAP reveal. */
   preloadDropzoneHeroDeco() {
     if (!shouldShowDropzoneHeroArt()) return Promise.resolve();
     if (this._dropzoneHeroDecoPreloadPromise) return this._dropzoneHeroDecoPreloadPromise;
     const imgs = [this.dropzoneHeroDecoUrImg, this.dropzoneHeroDecoLlImg].filter(Boolean);
     if (!imgs.length) return Promise.resolve();
+    imgs.forEach(hydrateDropzoneHeroDecoImg);
     this._dropzoneHeroDecoPreloadPromise = Promise.all(
       imgs.map((img) => whenDropzoneHeroImgReady(img)),
     ).finally(() => {
@@ -592,7 +605,7 @@ export class StartMenuController {
    * Desktop start menu after logo: word stagger on headline only, then legacy-style block fades.
    * Order: 1 logo (CSS) → 2 hero deco UR → 3 hero deco LL → 4 headline → 5 buttons → 6 footer → 7 credits.
    */
-  revealDesktopDropzoneIntroText() {
+  async revealDesktopDropzoneIntroText() {
     if (document.documentElement.classList.contains('mobile-landing')) return;
     if (this._desktopDropzoneTextRevealed) return;
     this._desktopDropzoneTextRevealed = true;
@@ -605,11 +618,13 @@ export class StartMenuController {
     const heroDecoLl = showHeroArt ? this.dropzoneHeroDecoLlImg : null;
     const buttons = this.dropzone?.querySelectorAll('.dropzone-actions .orby-magic-btn');
 
+    if (showHeroArt) {
+      await this.preloadDropzoneHeroDeco();
+    }
+
     const killTargets = [primary, secondary, credits, heroDecoUr, heroDecoLl].filter(Boolean);
     if (buttons?.length) killTargets.push(...buttons);
     gsap.killTweensOf(killTargets);
-
-    void this.preloadDropzoneHeroDeco();
 
     wrapWordsForStagger(primary);
 
@@ -640,8 +655,18 @@ export class StartMenuController {
       }
       if (secondary)
         gsap.set(secondary, { opacity: 1, y: 0, clearProps: 'transform' });
-      if (heroDecoUr) gsap.set(heroDecoUr, { opacity: DROPZONE_HERO_DECO_OPACITY });
-      if (heroDecoLl) gsap.set(heroDecoLl, { opacity: DROPZONE_HERO_DECO_OPACITY });
+      if (heroDecoUr) {
+        gsap.set(heroDecoUr, {
+          opacity: DROPZONE_HERO_DECO_OPACITY,
+          visibility: 'visible',
+        });
+      }
+      if (heroDecoLl) {
+        gsap.set(heroDecoLl, {
+          opacity: DROPZONE_HERO_DECO_OPACITY,
+          visibility: 'visible',
+        });
+      }
       if (credits) {
         gsap.set(credits, { opacity: 1, clearProps: 'transform' });
         const creditWords = [...credits.querySelectorAll(`.${STAGGER_CLASS}`)];
@@ -661,8 +686,8 @@ export class StartMenuController {
       defaults: { ease: revealEase, overwrite: true },
     });
 
-    if (heroDecoUr) gsap.set(heroDecoUr, { opacity: 0 });
-    if (heroDecoLl) gsap.set(heroDecoLl, { opacity: 0 });
+    if (heroDecoUr) gsap.set(heroDecoUr, { opacity: 0, visibility: 'visible' });
+    if (heroDecoLl) gsap.set(heroDecoLl, { opacity: 0, visibility: 'visible' });
 
     let timelineCursor = 0;
     if (heroDecoUr) {

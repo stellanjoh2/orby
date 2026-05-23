@@ -182,6 +182,7 @@ export class SceneSettingsManager {
         compositionGuidesInverted: state.camera?.compositionGuidesInverted,
         cinematicLetterbox219: state.camera?.cinematicLetterbox219,
         isometric: state.camera?.isometric,
+        clipPlanes: state.camera?.clipPlanes,
       },
       exposure: state.exposure,
       autoExposure: state.autoExposure,
@@ -1152,6 +1153,10 @@ export class SceneSettingsManager {
         if (payload.camera.isometric !== undefined) {
           this.stateStore.set('camera.isometric', payload.camera.isometric);
           this.eventBus.emit('camera:isometric', payload.camera.isometric);
+        }
+        if (payload.camera.clipPlanes !== undefined) {
+          this.stateStore.set('camera.clipPlanes', payload.camera.clipPlanes);
+          this.eventBus.emit('camera:clip-planes');
         }
       }
 

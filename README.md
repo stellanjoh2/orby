@@ -22,7 +22,7 @@ Orby is a professional-grade 3D model viewer that runs entirely in your browser.
 
 - ⚡ **Instant drag-and-drop loading** for your local files
 - 🎬 **Full cinematic post-processing**: selective bloom, depth of field, film grain, chromatic aberration, professional tonemapping
-- 🌍 **HDR environments** with blur, rotation, and intensity controls
+- 🌍 **HDR environments** with blur, rotation, intensity controls, and custom `.hdr` / `.exr` upload
 - 💡 **Custom 3-point studio lighting** that blends seamlessly with image-based lighting
 - 🎨 **Real-time material controls**: brightness (up to 3.0), metalness, roughness, emissive glow
 - 📊 **Exposure histogram** with overexposure warnings
@@ -232,6 +232,8 @@ Professional color correction tools:
 ### Lighting
 
 #### HDRI Environment
+Built-in environments plus custom upload (2:1 equirectangular `.hdr`, `.exr`, `.jpg`, or `.png` — session-only; re-upload after refresh):
+
 6 built-in HDR environments with rotation, blur, and intensity controls:
 - **Meadow** - Outdoor natural lighting
 - **Noir Studio** - Dark studio environment

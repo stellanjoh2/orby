@@ -5,6 +5,10 @@ import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
 /** Default near-black — app surfaces, lime CTAs, scene background, letterbox mattes. */
 export const ORBY_BLACK = '#080808';
 
+/** Perspective camera clip when Manual Render Distance is off — generous, unchanged on mesh load. */
+export const DEFAULT_CAMERA_NEAR = 0.1;
+export const DEFAULT_CAMERA_FAR = 5000;
+
 /** Target max axis after import normalization (see ModelLoader.normalizeImportScale). */
 export const STUDIO_IMPORT_TARGET_MAX_DIMENSION = 2.0;
 

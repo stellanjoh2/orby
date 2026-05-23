@@ -210,159 +210,7 @@
         </button>
       </div>
     </section>
-    <script>
-      (function () {
-        var STORAGE_KEY = 'orby_site_gate_verified';
-        var EXPECTED_ACCESS_PHRASE = 'hellotest555';
-        var gateEl = document.getElementById('orby-entry-gate');
-        var formEl = document.getElementById('orby-entry-gate-form');
-        var fieldEl = document.getElementById('orby-access-phrase-field');
-        var errEl = document.getElementById('orby-entry-gate-error');
-        var gateObserver = null;
-        var bodyObserver = null;
-        var enforceTimer = null;
-
-        function sessionOk() {
-          try {
-            return sessionStorage.getItem(STORAGE_KEY) === '1';
-          } catch (e) {
-            return false;
-          }
-        }
-
-        function lockStyles() {
-          return [
-            'position:fixed',
-            'inset:0',
-            'z-index:2147483647',
-            'display:flex',
-            'align-items:center',
-            'justify-content:center',
-            'visibility:visible',
-            'opacity:1',
-            'background:#080808',
-            'pointer-events:auto',
-            'margin:0',
-            'padding:clamp(1rem,4vw,2rem)',
-            'box-sizing:border-box',
-          ].join(';');
-        }
-
-        function stripForgedUnlock() {
-          if (!sessionOk() && document.documentElement.classList.contains('orby-gate-unlocked')) {
-            document.documentElement.classList.remove('orby-gate-unlocked');
-          }
-        }
-
-        function ensureGateMounted() {
-          if (!gateEl || sessionOk()) return;
-          stripForgedUnlock();
-          if (!document.body.contains(gateEl)) {
-            document.body.insertBefore(gateEl, document.body.firstChild);
-          }
-        }
-
-        function enforceVeil() {
-          if (sessionOk()) return;
-          ensureGateMounted();
-          if (!gateEl) return;
-          gateEl.removeAttribute('hidden');
-          gateEl.setAttribute('style', lockStyles());
-        }
-
-        function stopGuards() {
-          if (gateObserver) {
-            gateObserver.disconnect();
-            gateObserver = null;
-          }
-          if (bodyObserver) {
-            bodyObserver.disconnect();
-            bodyObserver = null;
-          }
-          if (enforceTimer) {
-            clearInterval(enforceTimer);
-            enforceTimer = null;
-          }
-        }
-
-        function unlockUI() {
-          try {
-            sessionStorage.setItem(STORAGE_KEY, '1');
-          } catch (e) {}
-          document.documentElement.classList.add('orby-gate-unlocked');
-          if (gateEl) {
-            gateEl.setAttribute('hidden', '');
-            gateEl.removeAttribute('style');
-          }
-          stopGuards();
-        }
-
-        function showMismatch() {
-          if (!errEl) return;
-          errEl.textContent = 'That phrase is not valid.';
-        }
-
-        function initGuards() {
-          if (sessionOk() || !gateEl) return;
-          enforceVeil();
-          gateObserver = new MutationObserver(function () {
-            if (sessionOk()) return;
-            enforceVeil();
-          });
-          gateObserver.observe(gateEl, {
-            attributes: true,
-            attributeFilter: ['class', 'hidden'],
-          });
-          bodyObserver = new MutationObserver(function () {
-            if (sessionOk()) return;
-            ensureGateMounted();
-            enforceVeil();
-          });
-          bodyObserver.observe(document.body, { childList: true });
-          enforceTimer = setInterval(function () {
-            if (sessionOk()) {
-              stopGuards();
-              return;
-            }
-            stripForgedUnlock();
-            enforceVeil();
-          }, 400);
-        }
-
-        if (formEl && fieldEl) {
-          formEl.addEventListener('submit', function (ev) {
-            ev.preventDefault();
-            if (sessionOk()) {
-              unlockUI();
-              return;
-            }
-            var entered = (fieldEl.value || '').trim();
-            if (entered === EXPECTED_ACCESS_PHRASE) {
-              if (errEl) errEl.textContent = '';
-              unlockUI();
-            } else {
-              showMismatch();
-              fieldEl.focus();
-            }
-          });
-        }
-
-        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
-          document.documentElement.classList.add('orby-gate-unlocked');
-          if (gateEl) {
-            gateEl.setAttribute('hidden', '');
-            gateEl.removeAttribute('style');
-          }
-        } else if (sessionOk()) {
-          unlockUI();
-        } else {
-          initGuards();
-          requestAnimationFrame(function () {
-            if (fieldEl && !sessionOk()) fieldEl.focus();
-          });
-        }
-      })();
-    </script>
+    <script src="./scripts/orbyEntryGate.js"></script>
     <div id="app">
       <main class="workspace">
         <section class="viewport">
@@ -1476,7 +1324,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.565 · 2026-05-23 13:05:34 UTC</div>
+              <div class="info-version-tag">v0.5.568 · 2026-05-23 21:32:24 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1504,7 +1352,7 @@
                   type="file"
                   id="hdriFileInput"
                   class="sr-only"
-                  accept=".hdr,.hdri,image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff"
+                  accept=".hdr,.hdri,.exr,image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff"
                   tabindex="-1"
                   aria-hidden="true"
                 />
@@ -1537,7 +1385,7 @@
                     type="button"
                     id="hdriUploadBtn"
                     class="hdri-icon hdri-icon--upload"
-                    data-tooltip="Upload custom HDRI (.hdr, .jpg, .png) — 2:1 equirectangular"
+                    data-tooltip="Upload custom HDRI (.hdr, .exr, .jpg, .png) — 2:1 equirectangular"
                   >
                     <span class="hdri-icon__disc" aria-hidden="true"></span>
                     <i class="fa-solid fa-plus hdri-icon__plus" aria-hidden="true"></i>
@@ -2363,7 +2211,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.565 · 2026-05-23 13:05:34 UTC</div>
+              <div class="info-version-tag">v0.5.568 · 2026-05-23 21:32:24 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3687,7 +3535,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.565 · 2026-05-23 13:05:34 UTC</div>
+              <div class="info-version-tag">v0.5.568 · 2026-05-23 21:32:24 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3835,7 +3683,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.565 · 2026-05-23 13:05:34 UTC</div>
+              <div class="info-version-tag">v0.5.568 · 2026-05-23 21:32:24 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4171,7 +4019,7 @@
                       <li>• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
                       <li>• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
                       <li>• <span class="about-highlight">Shader Lab</span> — Go beyond standard glTF materials: enable stylized presets (metallic chrome, physical glass, animated FX, and more) that temporarily replace the mesh materials—tune motion and scale, then switch off to restore your original look</li>
-                      <li>• <span class="about-highlight">HDRI environment lighting</span> — Preset environments with adjustable strength, rotation, and blur for realistic lighting</li>
+                      <li>• <span class="about-highlight">HDRI environment lighting</span> — Preset environments or custom <strong>.hdr</strong> / <strong>.exr</strong> / <strong>.jpg</strong> / <strong>.png</strong> upload, with adjustable strength, rotation, and blur</li>
                       <li>• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and Auto Rotate</li>
                     </ul>
                   </div>
@@ -4221,7 +4069,7 @@
                   <div class="about-content">
                     <div>
                       <h4>HDRI (Environment)</h4>
-                      <p>A 360° image that lights your model and drives reflections. <strong>Built-in presets ship as JPEG environments</strong> — already graded and tuned — so the app stays fast to load and the download stays small. We still wanted you to own the scene, so you can <strong>upload</strong> your own <strong>.jpg</strong>, <strong>.png</strong>, or true <strong>.hdr</strong> files: JPEGs behave like a finished photo sky; <strong>.hdr</strong> maps keep a wider brightness range, so sun and windows can punch harder on metal and glass (ease off <strong>Intensity</strong> and <strong>Exposure</strong> if it gets hot). Use a <strong>2:1 equirectangular</strong> map. Custom uploads reset mood tints to neutral; re-upload the file after a refresh — it isn’t stored in scene JSON.</p>
+                      <p>A 360° image that lights your model and drives reflections. <strong>Built-in presets ship as JPEG environments</strong> — already graded and tuned — so the app stays fast to load and the download stays small. We still wanted you to own the scene, so you can <strong>upload</strong> your own <strong>.jpg</strong>, <strong>.png</strong>, <strong>.hdr</strong>, or <strong>.exr</strong> files: JPEGs behave like a finished photo sky; <strong>.hdr</strong> and <strong>.exr</strong> maps keep a wider brightness range, so sun and windows can punch harder on metal and glass (ease off <strong>Intensity</strong> and <strong>Exposure</strong> if it gets hot). Use a <strong>2:1 equirectangular</strong> map. Custom uploads reset mood tints to neutral; re-upload the file after a refresh — it isn’t stored in scene JSON.</p>
                     </div>
 
                     <div>
@@ -4439,7 +4287,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.565 · 2026-05-23 13:05:34 UTC</div>
+              <div class="info-version-tag">v0.5.568 · 2026-05-23 21:32:24 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

@@ -235,12 +235,40 @@ function createGalleryController(mask) {
 
     const instant = fadeS <= 0;
     if (!animate || prefersReducedMotion() || instant) {
-      gsap.set(imgs, { opacity: (i) => (i === nextIndex ? 1 : 0) });
+      gsap.set(imgs, { opacity: (i) => (i === nextIndex ? 1 : 0), zIndex: 1 });
       applyClasses();
       setMediaPlaceholderOpacity(mask, 0);
       index = nextIndex;
       tweening = false;
       if (!isSimpleGallery) void revealCredit(nextIndex);
+      return;
+    }
+
+    tweening = true;
+    gsap.killTweensOf(imgs);
+    gsap.killTweensOf(getMediaPlaceholderTargets(mask));
+    if (!isSimpleGallery) void hideCredit();
+
+    if (isFlipGallery) {
+      // Stack the incoming frame on top — keep the outgoing frame at full opacity so
+      // combined alpha never dips and the panel background never flashes through.
+      gsap.set(current, { opacity: 1, zIndex: 1 });
+      gsap.set(next, { opacity: 0, zIndex: 2 });
+      gsap.to(next, {
+        opacity: 1,
+        duration: fadeS,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          applyClasses();
+          imgs.forEach((img, i) => {
+            gsap.set(img, { opacity: i === nextIndex ? 1 : 0, zIndex: 1 });
+          });
+          index = nextIndex;
+          tweening = false;
+          setMediaPlaceholderOpacity(mask, 0);
+          if (!isSimpleGallery) void revealCredit(nextIndex);
+        },
+      });
       return;
     }
 
@@ -250,10 +278,6 @@ function createGalleryController(mask) {
       setMediaPlaceholderOpacity(mask, 1);
     }
 
-    tweening = true;
-    gsap.killTweensOf(imgs);
-    gsap.killTweensOf(getMediaPlaceholderTargets(mask));
-    if (!isSimpleGallery) void hideCredit();
     gsap.to(current, {
       opacity: 0,
       duration: fadeS,

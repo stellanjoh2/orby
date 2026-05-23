@@ -130,6 +130,7 @@ function createStateApplySteps() {
       apply: (s, state) => {
         s.syncPerspectiveCameraFovAndLens();
         s.cameraController?.setTilt(state.camera.tilt ?? 0);
+        s.syncCameraClipPlanes();
       },
     },
     {

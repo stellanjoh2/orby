@@ -78,6 +78,7 @@ const RESET_DIRTY_PATHS = {
     'camera.tilt',
     'camera.autoOrbit', 'camera.handheld',
     'exposure', 'autoExposure',
+    'camera.clipPlanes',
     'camera.vignetteEnabled', 'camera.vignette', 'camera.vignetteColor',
     'camera.compositionGridEnabled',
     'camera.compositionGuidesInverted',
@@ -691,6 +692,7 @@ export class ResetControls {
       this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
       this.eventBus.emit('scene:exposure', defaults.exposure);
       this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
+      this.eventBus.emit('camera:clip-planes');
       this.eventBus.emit('render:contrast', defaults.camera.contrast);
       this.eventBus.emit('render:temperature', defaults.camera.temperature ?? CAMERA_TEMPERATURE_NEUTRAL_K);
       this.eventBus.emit('render:tint', (defaults.camera.tint ?? 0) / 100);
@@ -1191,6 +1193,7 @@ export class ResetControls {
             this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);
             this.eventBus.emit('camera:auto-exposure', defaults.autoExposure ?? false);
+            this.eventBus.emit('camera:clip-planes');
             this.eventBus.emit(
               'render:vignette',
               effectiveVignetteIntensity(defaults.camera, defaults.camera),

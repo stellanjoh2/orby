@@ -18,6 +18,12 @@ import {
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 
+const _backdropRestPos = new THREE.Vector3();
+const _backdropRestEuler = new THREE.Euler();
+const _backdropRestQuat = new THREE.Quaternion();
+const _backdropRestScale = new THREE.Vector3();
+const _backdropRestMatrix = new THREE.Matrix4();
+
 /** Vertex shader: Reflector UV projection. */
 function buildBaseGlassReflectorVertexShader() {
   return /* glsl */ `
@@ -976,6 +982,38 @@ export class GroundController {
     // Anchor reveal/hide to the floor edge (bottom vertices), not the mesh center.
     // Keep the world-space floor contact at backdropY while scaling.
     this.backdrop.position.y = this.backdropY + (this.backdropCurveRadius * by * (m - 1));
+  }
+
+  /**
+   * World bounds at full resting scale — used for auto clip planes so near/far
+   * does not chase the scale-in/out tween (which warps the whole view).
+   */
+  getBackdropRestWorldBox(target = new THREE.Box3()) {
+    if (!this.backdrop?.geometry) return target.makeEmpty();
+    const geom = this.backdrop.geometry;
+    if (!geom.boundingBox) geom.computeBoundingBox();
+
+    const base = this.backdrop.userData?.backdropBaseScale ?? {
+      x: this.backdropWidth * this.backdropScale,
+      y: this.backdropScale,
+      z: this.backdropScale,
+    };
+
+    _backdropRestPos.set(
+      this.backdrop.position.x,
+      this.backdropY,
+      this.backdrop.position.z,
+    );
+    _backdropRestEuler.set(0, THREE.MathUtils.degToRad(this.backdropRotation), 0);
+    _backdropRestQuat.setFromEuler(_backdropRestEuler);
+    _backdropRestScale.set(base.x, base.y, base.z);
+    _backdropRestMatrix.compose(
+      _backdropRestPos,
+      _backdropRestQuat,
+      _backdropRestScale,
+    );
+
+    return target.copy(geom.boundingBox).applyMatrix4(_backdropRestMatrix);
   }
 
   _ensureBackdropTexture(onReady) {
