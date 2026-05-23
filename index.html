@@ -6,7 +6,35 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
-    <style>html{background:#080808}</style>
+    <style>
+      /* First-paint boot — external styles.css may load a frame later */
+      html,
+      body {
+        background: #080808;
+      }
+      .orby-entry-gate {
+        background: #080808;
+      }
+      .dropzone {
+        opacity: 0;
+      }
+      .dropzone-hero-deco__img {
+        visibility: hidden;
+        opacity: 0;
+      }
+      .look-filter-tile__thumb:not([src]) {
+        visibility: hidden;
+      }
+      .shelf.is-shelf-hidden {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .viewport-load-spinner {
+        visibility: hidden;
+        opacity: 0;
+      }
+    </style>
     <!-- Entry gate: false = open site immediately (HTML + phrase logic stay in this file). true = require access phrase + periodic re-check. -->
     <script>
       window.__ORBY_ENTRY_GATE_ENABLED__ = true;
@@ -404,23 +432,21 @@
               <picture class="dropzone-hero-deco__slot dropzone-hero-deco__slot--ur">
                 <img
                   class="dropzone-hero-deco__img"
-                  src="./assets/marketing/orby-hero-area-topright.jpg"
+                  data-src="./assets/marketing/orby-hero-area-topright.jpg"
                   alt=""
                   width="2880"
                   height="2880"
                   decoding="async"
-                  loading="lazy"
                 />
               </picture>
               <picture class="dropzone-hero-deco__slot dropzone-hero-deco__slot--ll">
                 <img
                   class="dropzone-hero-deco__img"
-                  src="./assets/marketing/orby-hero-area-bottomleft.jpg"
+                  data-src="./assets/marketing/orby-hero-area-bottomleft.jpg"
                   alt=""
                   width="2880"
                   height="2880"
                   decoding="async"
-                  loading="lazy"
                 />
               </picture>
             </div>
@@ -1450,7 +1476,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.562 · 2026-05-23 11:29:41 UTC</div>
+              <div class="info-version-tag">v0.5.564 · 2026-05-23 12:43:47 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2337,7 +2363,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.562 · 2026-05-23 11:29:41 UTC</div>
+              <div class="info-version-tag">v0.5.564 · 2026-05-23 12:43:47 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2387,6 +2413,44 @@
                     <span class="sr-only">Enable auto exposure</span>
                   </label>
                 </label>
+                <label class="slider-line">
+                  <span>Manual Render Distance</span>
+                  <label class="effect-toggle" data-tooltip="Rare override — set near/far manually for telephoto or isometric shots when AO banding appears on the backdrop">
+                    <input type="checkbox" id="manualClipPlanes" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable manual render distance</span>
+                  </label>
+                </label>
+                <div
+                  id="clipPlanesFoldout"
+                  class="clip-planes-foldout clip-planes-foldout--collapsed"
+                  aria-hidden="true"
+                >
+                <label class="slider-line">
+                  <span data-tooltip="Near clip plane — geometry closer than this is not rendered">Near Clip</span>
+                  <input
+                    id="cameraClipNear"
+                    type="range"
+                    min="0.01"
+                    max="50"
+                    value="0.1"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraClipNear">0.10</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Far clip plane — geometry farther than this is not rendered">Far Clip</span>
+                  <input
+                    id="cameraClipFar"
+                    type="range"
+                    min="1"
+                    max="500"
+                    value="100"
+                    step="0.5"
+                  />
+                  <span class="value" data-output="cameraClipFar">100</span>
+                </label>
+                </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens">
                   <div class="block-title has-reset">
@@ -2511,21 +2575,29 @@
                       id="isoOrbitStep"
                       class="ghost-btn small"
                       type="button"
-                      data-tooltip="Rotate the isometric view 45° around the model (repeats)"
+                      data-tooltip="Rotate the isometric camera 45° around the model (repeats)"
                     >
-                      Rotate 45°
+                      Rotate camera 45
                     </button>
                     <button
-                      id="isoPanUnlock"
+                      id="isoAssetRotateStep"
                       class="ghost-btn small"
                       type="button"
-                      aria-pressed="false"
-                      data-tooltip="Allow right-drag to pan the orbit target while isometric angles stay locked"
+                      data-tooltip="Rotate the asset 45° on Y — shortcut for Object → Rotate Y when batching isometric renders"
                     >
-                      Unlock Camera Pan
+                      Rotate asset 45
                     </button>
                   </div>
                   </div>
+                  <button
+                    id="isoPanUnlock"
+                    class="ghost-btn small"
+                    type="button"
+                    aria-pressed="false"
+                    data-tooltip="Allow right-drag to pan the orbit target while isometric angles stay locked"
+                  >
+                    Unlock Camera Pan
+                  </button>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fisheye">
@@ -3615,7 +3687,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.562 · 2026-05-23 11:29:41 UTC</div>
+              <div class="info-version-tag">v0.5.564 · 2026-05-23 12:43:47 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3763,7 +3835,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.562 · 2026-05-23 11:29:41 UTC</div>
+              <div class="info-version-tag">v0.5.564 · 2026-05-23 12:43:47 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4367,7 +4439,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.562 · 2026-05-23 11:29:41 UTC</div>
+              <div class="info-version-tag">v0.5.564 · 2026-05-23 12:43:47 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
