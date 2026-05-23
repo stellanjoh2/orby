@@ -877,7 +877,8 @@ export class SceneManager {
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
       syncPerspectiveProjection: (opts) => this.syncPerspectiveCameraFovAndLens(opts),
-      renderComposerPassForExport: () => this.composerLifecycle.renderComposerPassForExport(),
+      renderComposerPassForExport: (opts) =>
+        this.composerLifecycle.renderComposerPassForExport(opts),
     });
 
     const szComposer = new THREE.Vector2();

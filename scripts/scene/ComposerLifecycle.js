@@ -127,13 +127,18 @@ export class ComposerLifecycle {
   }
 
   /**
-   * PNG export — same pass sequence; caller sets full-frame viewport via ImageExporter first.
+   * PNG export — same pass sequence as the live loop; resets viewport before and after render
+   * so passes that shrink the GL viewport (bloom, N8AO, podium blur) cannot leave dead edge pixels.
+   * @param {{ transparent?: boolean }} [opts] — skip opaque background clear when exporting alpha.
    */
-  renderComposerPassForExport() {
+  renderComposerPassForExport({ transparent = false } = {}) {
     if (!this.composer) return;
     this.applyCreativeLookBloomSuppression();
     this.ensureComposerBuffersMatchRenderer();
-    this.syncRendererClearForSceneBackground();
+    this.resetRendererViewportToCanvas();
+    if (!transparent) {
+      this.syncRendererClearForSceneBackground();
+    }
     this.composer.render();
     this.resetRendererViewportToCanvas();
   }

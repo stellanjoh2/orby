@@ -65,7 +65,7 @@ export class ImageExporter {
   /**
    * EffectComposer RTs must match renderer.getDrawingBufferSize(); export resize can leave them stale.
    */
-  _ensureComposerMatchesDrawingBuffer() {
+  _ensureComposerMatchesDrawingBuffer({ strict = false } = {}) {
     const composer = this.composer;
     if (!composer?.renderTarget1) return;
     const gl = this.renderer.getContext();
@@ -81,7 +81,14 @@ export class ImageExporter {
       bh = db.y;
     }
     const rt = composer.renderTarget1;
-    if (Math.abs(rt.width - bw) <= 2 && Math.abs(rt.height - bh) <= 2) {
+    if (
+      !strict
+      && Math.abs(rt.width - bw) <= 2
+      && Math.abs(rt.height - bh) <= 2
+    ) {
+      return;
+    }
+    if (strict && rt.width === bw && rt.height === bh) {
       return;
     }
     const logical = fullViewportLogicalSize(this.renderer);
@@ -208,13 +215,14 @@ export class ImageExporter {
     }
   }
 
-  _captureComposerOutputAsPngDataUrl(
-    fallbackWidth,
-    fallbackHeight,
-    { cinematicLetterbox219 = false } = {},
-  ) {
+  /**
+   * Read the composer's final ping-pong buffer into RGBA bytes (GL bottom-left origin).
+   * @returns {{ pixels: Uint8Array, width: number, height: number } | null}
+   */
+  _readComposerOutputPixels(fallbackWidth, fallbackHeight) {
     const r = this.renderer;
     const composer = this.composer;
+    if (!composer) return null;
     const outputRT = getComposerOutputRenderTarget(composer);
     const targetWidth = Math.max(1, outputRT?.width ?? fallbackWidth ?? 1);
     const targetHeight = Math.max(1, outputRT?.height ?? fallbackHeight ?? 1);
@@ -229,16 +237,27 @@ export class ImageExporter {
 
     try {
       composer.copyPass.render(r, byteRT, outputRT, 0, false);
-
       const pixels = new Uint8Array(targetWidth * targetHeight * 4);
       r.readRenderTargetPixels(byteRT, 0, 0, targetWidth, targetHeight, pixels);
-
-      return this._pixelsToFlippedPngDataUrl(pixels, targetWidth, targetHeight, {
-        cinematicLetterbox219,
-      });
+      return { pixels, width: targetWidth, height: targetHeight };
     } finally {
       byteRT.dispose();
     }
+  }
+
+  _captureComposerOutputAsPngDataUrl(
+    fallbackWidth,
+    fallbackHeight,
+    { cinematicLetterbox219 = false } = {},
+  ) {
+    const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight);
+    if (!capture) return '';
+    return this._pixelsToFlippedPngDataUrl(
+      capture.pixels,
+      capture.width,
+      capture.height,
+      { cinematicLetterbox219 },
+    );
   }
 
   /**
@@ -283,7 +302,7 @@ export class ImageExporter {
       this.syncPerspectiveProjection({ fovScale: exportFovScale });
     }
 
-    this._ensureComposerMatchesDrawingBuffer();
+    this._ensureComposerMatchesDrawingBuffer({ strict: true });
 
     const prevComposerRenderToScreen = this.composer?.renderToScreen;
     if (this.composer) {
@@ -292,7 +311,7 @@ export class ImageExporter {
       this.composer.renderToScreen = false;
     }
     try {
-      this._ensureComposerMatchesDrawingBuffer();
+      this._ensureComposerMatchesDrawingBuffer({ strict: true });
       this._setExportViewport(exportW, exportH);
       if (typeof this.renderComposerPassForExport === 'function') {
         this.renderComposerPassForExport();
@@ -800,7 +819,8 @@ export class ImageExporter {
   }
 
   /**
-   * Fade out the outer 3px edge of the alpha channel to soften harsh edges
+   * Fade alpha near the mesh silhouette (neighbors with alpha 0). Does not treat the image
+   * border as transparency — that incorrectly zeroed pixels when the mesh filled the frame.
    */
   _fadeOuterEdge(alphaPixels, width, height) {
     const faded = new Uint8Array(alphaPixels.length);
@@ -824,16 +844,14 @@ export class ImageExporter {
               const dist = Math.sqrt(dx * dx + dy * dy); // Euclidean distance for smoother falloff
               
               if (checkX < 0 || checkX >= width || checkY < 0 || checkY >= height) {
-                // Out of bounds = edge of image
+                continue;
+              }
+              const checkIdx = (checkY * width + checkX) * 4;
+              const checkAlpha = alphaPixels[checkIdx + 3];
+              
+              // If this pixel is transparent, we found a silhouette edge
+              if (checkAlpha === 0) {
                 distanceToEdge = Math.min(distanceToEdge, dist);
-              } else {
-                const checkIdx = (checkY * width + checkX) * 4;
-                const checkAlpha = alphaPixels[checkIdx + 3];
-                
-                // If this pixel is transparent, we found an edge
-                if (checkAlpha === 0) {
-                  distanceToEdge = Math.min(distanceToEdge, dist);
-                }
               }
             }
           }
@@ -898,26 +916,23 @@ export class ImageExporter {
     // fullRenderWidth/Height are already scaled, so pixel ratio stays at 1 for exact resolution
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight, false);
-    this.camera.aspect =
-      cropInfo.fullRenderWidth / Math.max(1e-6, cropInfo.fullRenderHeight);
-    this.camera.updateProjectionMatrix();
+    const { width: exportW, height: exportH } =
+      this._syncRendererInternalSizeToCanvasBackingStore();
+    this.camera.aspect = exportW / Math.max(1e-6, exportH);
     if (this.syncPostProcessingForLogicalSize) {
-      this.syncPostProcessingForLogicalSize(
-        cropInfo.fullRenderWidth,
-        cropInfo.fullRenderHeight,
-      );
+      this.syncPostProcessingForLogicalSize(exportW, exportH);
     } else if (this.composer) {
       this.composer.setPixelRatio(1);
-      this.composer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
+      this.composer.setSize(exportW, exportH);
     }
     if (this.syncPerspectiveProjection) {
       this.syncPerspectiveProjection();
     }
-    
+
     // Create our render target with alpha
     const renderTarget = new THREE.WebGLRenderTarget(
-      cropInfo.fullRenderWidth,
-      cropInfo.fullRenderHeight,
+      exportW,
+      exportH,
       {
         format: THREE.RGBAFormat,
         type: THREE.UnsignedByteType,
@@ -926,65 +941,64 @@ export class ImageExporter {
       },
     );
     
-    // Canvas Capture Approach: Render composer to canvas, then read from it
-    // This works because composer already renders correctly in viewport
+    // Read post-processed RGB from the composer ping-pong buffer (not the default FBO — partial
+    // viewports after bloom/N8AO/podium passes leave dead pixels on canvas readback).
     if (this.composer) {
       // Set render pass to clear with transparent alpha
       if (this.postPipeline?.renderPass) {
         this.postPipeline.renderPass.clearAlpha = 0; // Transparent clear
       }
 
-      // Renderer.setSize already matched canvas to fullRender*; reset viewport after any stale state.
+      this._ensureComposerMatchesDrawingBuffer({ strict: true });
       this._ensureFullDrawingBufferViewport();
 
       gl.clearColor(0, 0, 0, 0); // Clear with transparent black
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // Render composer normally to canvas (this is what works in viewport!)
-      this.composer.render();
-      this._ensureFullDrawingBufferViewport();
+      const prevComposerRenderToScreen = this.composer.renderToScreen;
+      this.composer.renderToScreen = false;
+      try {
+        if (typeof this.renderComposerPassForExport === 'function') {
+          this.renderComposerPassForExport({ transparent: true });
+        } else {
+          this.composer.render();
+          this._ensureFullDrawingBufferViewport();
+        }
+      } finally {
+        this.composer.renderToScreen = prevComposerRenderToScreen;
+      }
 
-      // Read pixels from canvas using WebGL readPixels
-      // We need to bind the default framebuffer and read from it
-      const fullPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
-      
-      // Bind default framebuffer (canvas)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      
-      // Ensure viewport is still set correctly before reading
-      gl.viewport(0, 0, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
-      
-      // Read pixels from default framebuffer
-      gl.readPixels(
-        0,
-        0,
-        cropInfo.fullRenderWidth,
-        cropInfo.fullRenderHeight,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        fullPixels,
-      );
+      if (gl && typeof gl.finish === 'function') {
+        gl.finish();
+      }
+
+      const capture = this._readComposerOutputPixels(exportW, exportH);
+      const fullPixels = capture?.pixels ?? null;
+      const captureW = capture?.width ?? exportW;
+      const captureH = capture?.height ?? exportH;
 
       // Debug: Check if we got any content
       // Sample multiple points to check for content
       let hasContent = false;
-      const samplePoints = [
-        Math.floor((cropInfo.fullRenderHeight / 2) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth / 2) * 4, // Center
-        Math.floor((cropInfo.fullRenderHeight / 4) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth / 4) * 4, // Top-left quadrant
-        Math.floor((cropInfo.fullRenderHeight * 3 / 4) * cropInfo.fullRenderWidth + cropInfo.fullRenderWidth * 3 / 4) * 4, // Bottom-right quadrant
-      ];
-      
-      for (const idx of samplePoints) {
-        if (idx >= 0 && idx < fullPixels.length - 3) {
-          if (fullPixels[idx] > 0 || fullPixels[idx + 1] > 0 || fullPixels[idx + 2] > 0 || fullPixels[idx + 3] > 0) {
-            hasContent = true;
-            break;
+      if (fullPixels) {
+        const samplePoints = [
+          Math.floor((captureH / 2) * captureW + captureW / 2) * 4, // Center
+          Math.floor((captureH / 4) * captureW + captureW / 4) * 4, // Top-left quadrant
+          Math.floor((captureH * 3 / 4) * captureW + captureW * 3 / 4) * 4, // Bottom-right quadrant
+        ];
+
+        for (const idx of samplePoints) {
+          if (idx >= 0 && idx < fullPixels.length - 3) {
+            if (fullPixels[idx] > 0 || fullPixels[idx + 1] > 0 || fullPixels[idx + 2] > 0 || fullPixels[idx + 3] > 0) {
+              hasContent = true;
+              break;
+            }
           }
         }
       }
-      
+
       if (!hasContent) {
-        console.warn(`Canvas appears empty after composer.render() at ${cropInfo.fullRenderWidth}x${cropInfo.fullRenderHeight}. Renderer canvas: ${this.renderer.domElement.width}x${this.renderer.domElement.height}. Trying fallback approach...`);
+        console.warn(`Composer output appears empty at ${exportW}x${exportH}. Renderer canvas: ${this.renderer.domElement.width}x${this.renderer.domElement.height}. Trying fallback approach...`);
         // Fallback: render directly to our render target, then apply post-processing manually
         this.renderer.setRenderTarget(renderTarget);
         this.renderer.clear();
@@ -997,8 +1011,8 @@ export class ImageExporter {
       // We need to restore alpha for black/dark background pixels
       // Render scene directly to get alpha channel with anti-aliasing
       const alphaRT = new THREE.WebGLRenderTarget(
-        cropInfo.fullRenderWidth,
-        cropInfo.fullRenderHeight,
+        exportW,
+        exportH,
         {
           format: THREE.RGBAFormat,
           type: THREE.UnsignedByteType,
@@ -1014,23 +1028,23 @@ export class ImageExporter {
       this.renderer.setRenderTarget(null);
       
       // Read alpha channel from direct render (from render target)
-      const alphaPixels = new Uint8Array(cropInfo.fullRenderWidth * cropInfo.fullRenderHeight * 4);
+      const alphaPixels = new Uint8Array(exportW * exportH * 4);
       this.renderer.readRenderTargetPixels(
         alphaRT,
         0,
         0,
-        cropInfo.fullRenderWidth,
-        cropInfo.fullRenderHeight,
+        exportW,
+        exportH,
         alphaPixels,
       );
       
       // Smooth alpha edges to reduce harsh artifacts and green pixel bleed
-      this._smoothAlphaEdges(alphaPixels, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
+      this._smoothAlphaEdges(alphaPixels, exportW, exportH);
       
-      // Fade outer 1px edge to soften harsh edges
-      this._fadeOuterEdge(alphaPixels, cropInfo.fullRenderWidth, cropInfo.fullRenderHeight);
+      // Fade silhouette fringe (not the image border — see _fadeOuterEdge)
+      this._fadeOuterEdge(alphaPixels, exportW, exportH);
       
-      // Composite: Use RGB from post-processed canvas for opaque pixels, direct render RGB for edge pixels
+      // Composite: Use RGB from post-processed buffer for opaque pixels, direct render RGB for edge pixels
       // This prevents dark outlines by using clean mesh colors at edges instead of darkened post-processed values
       for (let i = 0; i < fullPixels.length; i += 4) {
         const directAlpha = alphaPixels[i + 3];
@@ -1066,8 +1080,8 @@ export class ImageExporter {
       // Write pixels to our render target
       const dataTexture = new THREE.DataTexture(
         fullPixels,
-        cropInfo.fullRenderWidth,
-        cropInfo.fullRenderHeight,
+        captureW,
+        captureH,
         THREE.RGBAFormat,
         THREE.UnsignedByteType,
       );
