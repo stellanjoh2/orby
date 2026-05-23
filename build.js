@@ -87,6 +87,9 @@ await esbuild.build({
   }
 });
 
+mkdirSync(join(distDir, 'scripts'), { recursive: true });
+cpSync(join(__dirname, 'scripts', 'orbyEntryGate.js'), join(distDir, 'scripts', 'orbyEntryGate.js'));
+
 // Copy HTML (refresh version banners from VERSION for deterministic deploys)
 const indexHtml = readFileSync('index.html', 'utf-8');
 const updatedHtml = injectTurnstileSiteKey(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml)));

@@ -122,6 +122,43 @@
     errEl.textContent = 'That phrase is not valid.';
   }
 
+  function phraseFromUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (!params.has('orby-access-phrase')) return null;
+      return (params.get('orby-access-phrase') || '').trim();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function stripPhraseFromUrl() {
+    try {
+      var url = new URL(window.location.href);
+      if (!url.searchParams.has('orby-access-phrase')) return;
+      url.searchParams.delete('orby-access-phrase');
+      var next =
+        url.pathname +
+        (url.searchParams.toString() ? '?' + url.searchParams.toString() : '') +
+        url.hash;
+      window.history.replaceState(null, '', next);
+    } catch (e) {}
+  }
+
+  function tryUnlockWithPhrase(phrase) {
+    if (phrase === EXPECTED_ACCESS_PHRASE) {
+      if (errEl) errEl.textContent = '';
+      stripPhraseFromUrl();
+      unlockUI();
+      return true;
+    }
+    if (phrase !== null && phrase !== '') {
+      showMismatch();
+      if (fieldEl) fieldEl.value = phrase;
+    }
+    return false;
+  }
+
   function initGuards() {
     if (sessionOk() || !gateEl) return;
     enforceVeil();
@@ -157,17 +194,18 @@
         return;
       }
       var entered = (fieldEl.value || '').trim();
-      if (entered === EXPECTED_ACCESS_PHRASE) {
-        if (errEl) errEl.textContent = '';
-        unlockUI();
-      } else {
-        showMismatch();
-        fieldEl.focus();
+      if (tryUnlockWithPhrase(entered)) {
+        return;
       }
+      showMismatch();
+      fieldEl.focus();
     });
   }
 
-  if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
+  var urlPhrase = phraseFromUrl();
+  if (urlPhrase !== null && tryUnlockWithPhrase(urlPhrase)) {
+    /* unlocked from ?orby-access-phrase= */
+  } else if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
     document.documentElement.classList.add('orby-gate-unlocked');
     if (gateEl) {
       gateEl.setAttribute('hidden', '');
