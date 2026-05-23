@@ -11,6 +11,7 @@ import {
   formatMarketingImageCreditHtml,
 } from './orbyMarketingImageCredit.js';
 import { MARKETING_VIDEO_HTML_ATTRS } from './orbyMarketingVideo.js';
+import { renderRoadmapSection } from './orbyMarketingRoadmapTemplates.js';
 
 function renderBulletList(items) {
   if (!items?.length) return '';
@@ -586,6 +587,8 @@ function renderSection(section, ctaSection) {
       return renderPngMarqueeSection(section);
     case 'pro':
       return renderProSection(section);
+    case 'roadmap':
+      return renderRoadmapSection(section);
     case 'faq':
       return renderFaqSection(section);
     case 'cta':

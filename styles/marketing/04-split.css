@@ -2,7 +2,7 @@
 .orby-marketing__section--split {
   overflow-x: clip;
   overflow-y: visible;
-  /* One 220px seam below each block (avoids half+half doubling with base section pad in Safari) */
+  /* One 192px seam below each block (avoids half+half doubling with base section pad in Safari) */
   padding: 0 0 var(--orby-marketing-gap-big);
 }
 
@@ -12,7 +12,7 @@
   padding: 0;
 }
 
-/* Turntable intro → first feature: keep original section pad, not the 220px big gap */
+/* Turntable intro → first feature: keep original section pad, not the 192px big gap */
 .orby-marketing__section--intro + .orby-marketing__section--split {
   padding-top: var(--orby-marketing-space-lg);
 }

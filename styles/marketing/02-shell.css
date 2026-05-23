@@ -120,6 +120,7 @@ html.orby-home-scroll .orby-marketing__section--intro.orby-marketing__section--i
 .orby-marketing__section--showcase,
 .orby-marketing__section--marquee,
 .orby-marketing__section--pro,
+.orby-marketing__section--roadmap,
 .orby-marketing__section--faq {
   background: var(--orby-marketing-bg);
 }
@@ -129,6 +130,7 @@ html.orby-home-scroll .orby-marketing__section--intro.orby-marketing__section--i
 .orby-marketing__section--showcase,
 .orby-marketing__section--marquee,
 .orby-marketing__section--pro,
+.orby-marketing__section--roadmap,
 .orby-marketing__section--faq,
 .orby-marketing__section--cta {
   content-visibility: auto;

@@ -155,11 +155,8 @@ html.safari-browser .orby-marketing__pro-card-video {
 
 .orby-marketing__pro-card-title {
   margin: 0 0 calc(1.15rem * var(--orby-marketing-scale));
-  font-size: clamp(
-    calc(1.15rem * var(--orby-marketing-headline-scale)),
-    calc(1.65vw * var(--orby-marketing-headline-scale)),
-    calc(1.32rem * var(--orby-marketing-headline-scale))
-  );
+  font-family: var(--brand-font-headline);
+  font-size: 21px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;

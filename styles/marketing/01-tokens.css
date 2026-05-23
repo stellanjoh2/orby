@@ -142,8 +142,8 @@
   --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
   /* Ink on white (In Progress) — type, icons, strokes; fills stay --orby-black */
   --orby-marketing-on-white-ink: color-mix(in srgb, var(--orby-black, #080808) 88%, white);
-  /* Standard vertical seam between major blocks — 220px @ 1440; scales with gutter-scale */
-  --orby-marketing-gap-big: calc(220px * var(--orby-marketing-gutter-scale));
+  /* Standard vertical seam between major blocks — 192px @ 1440; scales with gutter-scale */
+  --orby-marketing-gap-big: calc(192px * var(--orby-marketing-gutter-scale));
   /* Eyebrow / preheader — 14px @ 2560, 11px @ 1920 */
   --orby-marketing-eyebrow-size: clamp(
     calc(0.72rem * var(--orby-marketing-scale)),
@@ -172,9 +172,9 @@
   /* Lime feature headlines — explicit; block .title-line rows ignore parent h2 leading */
   --orby-marketing-section-headline-line: 1.1;
   /*
-   * Pro → FAQ dark seam: one gap-big (220px @ 1440) on .orby-marketing__section--pro padding-bottom only.
-   * Do not stack faq-pad-top on the section — that doubled the band (220 + 150 ≈ 320+ on screen).
-   * Inside the gray FAQ panel, pad before eyebrow/headline (gap-big − 70px ≈ 150px @ 1440).
+   * Pro → Roadmap dark seam: one gap-big (192px @ 1440) on .orby-marketing__section--pro padding-bottom only.
+   * Do not stack faq-pad-top on the section — that doubled the band (192 + 122 ≈ 314+ on screen).
+   * Inside the gray FAQ panel, pad before eyebrow/headline (gap-big − 70px ≈ 122px @ 1440).
    */
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   --orby-marketing-faq-inner-pad-top: calc(

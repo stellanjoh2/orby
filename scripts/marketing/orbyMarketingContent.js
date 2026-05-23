@@ -12,7 +12,7 @@
  *   npm run export:marketing-copy
  */
 
-/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'faq' | 'cta' | 'in-progress'} MarketingSectionType */
+/** @typedef {'intro' | 'split' | 'showcase' | 'marquee' | 'pro' | 'roadmap' | 'faq' | 'cta' | 'in-progress'} MarketingSectionType */
 
 /**
  * @typedef {Object} MarketingGallerySlide
@@ -431,11 +431,19 @@ export const MARKETING_SECTIONS = [
     ],
   },
   {
+    type: 'roadmap',
+    id: 'orby-marketing-roadmap',
+    eyebrow: "What's coming",
+    title: 'Roadmap',
+    lede:
+      "A lot is already here. A lot more is coming. Features get added, timelines shift, and we're always building — but this is our best outline of what's next and when to expect it.",
+  },
+  {
     type: 'faq',
     id: 'orby-marketing-faq',
     eyebrow: 'FAQ',
     title: 'Questions, answered',
-    /* No lede — eyebrow + headline only. Pro→FAQ dark seam = gap-big (220px @ 1440); see --orby-marketing-pro-faq-gap. */
+    /* No lede — eyebrow + headline only. Roadmap→FAQ dark seam = gap-big on roadmap padding-bottom. */
     faq: [
       {
         question: 'Who is Orby for?',

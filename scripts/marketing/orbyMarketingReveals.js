@@ -63,6 +63,10 @@ function isProSection(sectionEl) {
   return sectionEl?.classList.contains('orby-marketing__section--pro');
 }
 
+function isRoadmapSection(sectionEl) {
+  return sectionEl?.classList.contains('orby-marketing__section--roadmap');
+}
+
 /**
  * @param {HTMLElement} maskEl
  * @returns {HTMLImageElement | HTMLVideoElement | null}
@@ -559,6 +563,48 @@ function revealProSection(sectionEl, tl) {
   }
 }
 
+function prepareRoadmapSection(sectionEl) {
+  const eyebrow = sectionEl.querySelector('.orby-marketing__eyebrow');
+  const title = sectionEl.querySelector('.orby-marketing__title');
+  const lede = sectionEl.querySelector('.orby-marketing__roadmap-lede');
+
+  if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
+
+  prepareHeadline(title, headLiftY);
+  if (lede) prepareHeadline(lede, headLiftY);
+
+  gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="roadmap-bar"]'), {
+    opacity: 0,
+    y: blockLiftY,
+  });
+}
+
+function revealRoadmapSection(sectionEl, tl) {
+  const eyebrow = sectionEl.querySelector('.orby-marketing__eyebrow');
+  const title = sectionEl.querySelector('.orby-marketing__title');
+  const lede = sectionEl.querySelector('.orby-marketing__roadmap-lede');
+
+  revealBlock(eyebrow, tl, 0);
+  revealHeadline(title, tl, `>-=${blockOverlap}`);
+  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
+
+  const bars = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="roadmap-bar"]')];
+  if (bars.length) {
+    tl.fromTo(
+      bars,
+      { opacity: 0, y: blockLiftY },
+      {
+        opacity: 1,
+        y: 0,
+        duration: cardRevealDur,
+        stagger: 0.04 * TEXT_REVEAL_PACE,
+        ease: mediaEase,
+      },
+      lede || title ? `>-=${blockOverlap}` : 0,
+    );
+  }
+}
+
 function prepareFaqSection(sectionEl) {
   sectionEl
     .querySelectorAll('[data-orby-marketing-reveal="text"]')
@@ -606,6 +652,10 @@ function prepareSection(sectionEl) {
   }
   if (isProSection(sectionEl)) {
     prepareProSection(sectionEl);
+    return;
+  }
+  if (isRoadmapSection(sectionEl)) {
+    prepareRoadmapSection(sectionEl);
     return;
   }
   if (isFaqSection(sectionEl)) {
@@ -772,6 +822,8 @@ export function revealMarketingSection(sectionEl) {
     revealSplitSection(sectionEl, tl);
   } else if (isProSection(sectionEl)) {
     revealProSection(sectionEl, tl);
+  } else if (isRoadmapSection(sectionEl)) {
+    revealRoadmapSection(sectionEl, tl);
   } else if (isFaqSection(sectionEl)) {
     revealFaqSection(sectionEl, tl);
   } else {
