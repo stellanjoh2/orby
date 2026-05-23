@@ -916,3 +916,7 @@ html.orby-gate-unlocked .orby-entry-gate,
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+html:not(.orby-gate-unlocked) body.legal-doc--about > :not(#orby-entry-gate) {
+  visibility: hidden !important;
+}

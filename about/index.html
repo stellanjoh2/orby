@@ -11,6 +11,9 @@
       .orby-entry-gate {
         background: #080808;
       }
+      html:not(.orby-gate-unlocked) body.legal-doc--about > :not(#orby-entry-gate) {
+        visibility: hidden !important;
+      }
     </style>
     <script>
       window.__ORBY_ENTRY_GATE_ENABLED__ = true;
@@ -62,6 +65,39 @@
     </script>
   </head>
   <body class="legal-doc legal-doc--about">
+    <div
+      id="orby-entry-gate"
+      class="orby-entry-gate"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orby-entry-gate-title"
+    >
+      <div class="orby-entry-gate__panel">
+        <h1 id="orby-entry-gate-title" class="orby-entry-gate__title">Orby</h1>
+        <p class="orby-entry-gate__hint">
+          Enter the access phrase to view this page.
+        </p>
+        <form class="orby-entry-gate__form" id="orby-entry-gate-form" autocomplete="off">
+          <label class="orby-entry-gate__label" for="orby-access-phrase-field"
+            >Access phrase</label
+          >
+          <input
+            id="orby-access-phrase-field"
+            class="orby-entry-gate__input"
+            type="text"
+            name="orby-access-phrase"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <p class="orby-entry-gate__error" id="orby-entry-gate-error" aria-live="polite"></p>
+          <button type="submit" class="orby-entry-gate__submit accent-action-btn">
+            Continue
+          </button>
+        </form>
+      </div>
+    </div>
     <script src="../scripts/orbyEntryGate.js"></script>
     <a class="legal-skip" href="#main">Skip to content</a>
     <header class="legal-top">
