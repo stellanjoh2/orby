@@ -718,6 +718,10 @@ body.legal-doc--about .legal-top__back {
   color: var(--legal-text);
 }
 
+.legal-about__section:not(.legal-about__section--intro) p + p {
+  margin-top: calc(var(--legal-about-body-size) * var(--legal-about-body-line));
+}
+
 .legal-about__section--closing {
   margin-bottom: 0;
 }
