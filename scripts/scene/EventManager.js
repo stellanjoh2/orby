@@ -355,6 +355,16 @@ export class EventManager {
     // Lights events
     eventBus.on('lights:update', ({ lightId, property, value }) => {
       s.lightsController?.updateLightProperty(lightId, property, value);
+      if (lightId === 'key' && property === 'castShadows') {
+        s._applyKeyLightGoboShadowOverride();
+      }
+      if (
+        lightId === 'key'
+        && (property === 'height' || property === 'rotate')
+        && s.goboProjection?.enabled
+      ) {
+        s.goboProjection.syncUniformsOnScene(s._getGoboSceneTargets());
+      }
     });
     eventBus.on('lights:master', (value) => s.setLightsMaster(value));
     eventBus.on('lights:enabled', (enabled) => s.setLightsEnabled(enabled));
@@ -376,6 +386,21 @@ export class EventManager {
     eventBus.on('lights:shadow-settings', (settings) =>
       s.setLightsShadowSettings(settings),
     );
+    eventBus.on('lights:gobo-enabled', (enabled) => {
+      void s.setGoboEnabled(enabled);
+    });
+    eventBus.on('lights:gobo-texture', (textureId) => {
+      void s.setGoboTexture(textureId);
+    });
+    eventBus.on('lights:gobo-softness', (value) => {
+      s.setGoboSoftness(value);
+    });
+    eventBus.on('lights:gobo-scale', (value) => {
+      s.setGoboScale(value);
+    });
+    eventBus.on('lights:gobo-rotation', (value) => {
+      s.setGoboRotation(value);
+    });
 
     // Scene/Background events
     eventBus.on('scene:background', (color) => s.backgroundController?.setColor(color));

@@ -1,6 +1,7 @@
 import './main.js';
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_BRIGHTNESS } from './constants.js';
+import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 
 /** Default fit is ~radius × 1.87; 404 hero sits closer but not tight on the mesh. */
 const NOT_FOUND_CAMERA_DISTANCE_FACTOR = 0.62;
@@ -161,6 +162,14 @@ const NOT_FOUND_PRESET = {
   lightsShadowOpacity: 0.25,
   lightsShadowContactOffset: -0.0001,
   lightsShadowTwoSided: false,
+  gobo: {
+    enabled: false,
+    panelOpen: false,
+    texture: 'palm',
+    softness: DEFAULT_GOBO_SOFTNESS,
+    scale: 1,
+    rotation: 0,
+  },
   background: '#080808',
   camera: {
     fov: 45,

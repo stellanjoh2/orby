@@ -39,6 +39,13 @@ import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
+import {
+  GoboProjectionController,
+  GOBO_UI_DEFAULT,
+  clampGoboUiScale,
+  normalizeStoredGoboScale,
+} from './render/GoboProjection.js';
+import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { HistogramController } from './render/HistogramController.js';
@@ -82,18 +89,10 @@ import {
   undoCenterPivot,
 } from './scene/centerModelPivot.js';
 
-const LIGHT_SHADOW_MAP_SIZE = {
-  low: 512,
-  medium: 1024,
-  high: 2048,
-  ultra: 4096,
-};
-
-function normalizeLightShadowQuality(quality) {
-  return quality === 'low' || quality === 'high' || quality === 'ultra'
-    ? quality
-    : 'medium';
-}
+import {
+  shadowMapSizeForQuality,
+  normalizeShadowQuality,
+} from './config/shadowQuality.js';
 
 export class SceneManager {
   constructor(eventBus, stateStore, uiManager) {
@@ -172,7 +171,7 @@ export class SceneManager {
       5 * HDRI_STRENGTH_UNIT,
       Math.max(0, initialState.hdriStrength ?? 2),
     );
-    this.lightsShadowQuality = normalizeLightShadowQuality(
+    this.lightsShadowQuality = normalizeShadowQuality(
       initialState.lightsShadowQuality,
     );
     this.lightsShadowSoftness = Number.isFinite(initialState.lightsShadowSoftness)
@@ -189,6 +188,18 @@ export class SceneManager {
     this.lightsShadowOpacity = Number.isFinite(initialState.lightsShadowOpacity)
       ? Math.min(1, Math.max(0, initialState.lightsShadowOpacity))
       : 0.25;
+    this.goboEnabled = !!initialState.gobo?.enabled;
+    this.goboTextureId = initialState.gobo?.texture ?? DEFAULT_GOBO_TEXTURE_ID;
+    this.goboSoftness = Number.isFinite(initialState.gobo?.softness)
+      ? Math.min(4, Math.max(0, initialState.gobo.softness))
+      : DEFAULT_GOBO_SOFTNESS;
+    this.goboScale = normalizeStoredGoboScale(
+      initialState.gobo?.scale,
+      initialState.gobo?.scaleSpace,
+    );
+    this.goboRotation = Number.isFinite(initialState.gobo?.rotation)
+      ? ((initialState.gobo.rotation % 360) + 360) % 360
+      : 0;
 
     this.modelLoader = new ModelLoader();
     this.modelLifecycle = new ModelLifecycleManager(this);
@@ -471,6 +482,38 @@ export class SceneManager {
     });
 
     this.textureLoader = new THREE.TextureLoader();
+    this.goboProjection = new GoboProjectionController({
+      textureLoader: this.textureLoader,
+      getKeyLight: () => this.lightsController?.lights?.key ?? null,
+      getProjectionCenter: (out) => {
+        const bounds = this.cameraController?.getModelBounds?.();
+        if (bounds?.center) return out.copy(bounds.center);
+        return out.set(0, 1, 0);
+      },
+      getProjectionBounds: (out) => {
+        out.makeEmpty();
+        if (this.currentModel) out.expandByObject(this.currentModel);
+        // Backdrop/podium still receive the pattern; frustum follows the mesh so
+        // studio backdrop width/scale does not rescale the projected gobo.
+        return out;
+      },
+      getProjectionRadius: () => {
+        const bounds = this.cameraController?.getModelBounds?.();
+        return Number.isFinite(bounds?.radius) ? Math.max(0.5, bounds.radius) : 3;
+      },
+    });
+    this.goboProjection.setEnabled(this.goboEnabled);
+    this.goboProjection.setShadowSettings({
+      opacity: this.lightsShadowOpacity,
+      color: this.lightsShadowColor,
+    });
+    this.goboProjection.setGoboSettings({
+      softness: this.goboSoftness,
+      scale: this.goboScale,
+      rotation: this.goboRotation,
+    });
+    this.goboProjection.setShadowQuality(this.lightsShadowQuality);
+    void this.goboProjection.setTextureId(this.goboTextureId);
     this.setupLights();
     this.setupGround();
     this._syncHdriShadowReceiverFromState();
@@ -643,6 +686,8 @@ export class SceneManager {
     this.environmentController?.dispose?.();
     this.environmentController = null;
     this.groundController?.disposeMeshes?.();
+    this.goboProjection?.dispose?.();
+    this.goboProjection = null;
     this.backgroundController?.dispose?.();
     this.backgroundController = null;
     this.materialController?.clear?.();
@@ -1229,17 +1274,13 @@ export class SceneManager {
         !tier.forceFxaaOff && (state.antiAliasing ?? 'none') === 'fxaa';
     }
     const shadowSize =
-      LIGHT_SHADOW_MAP_SIZE[normalizeLightShadowQuality(this.lightsShadowQuality)]
+      shadowMapSizeForQuality(this.lightsShadowQuality)
       ?? tier.shadowMapSize;
     this.lightsController?.setShadowMapResolution(shadowSize);
-    const isUltraShadowQuality = normalizeLightShadowQuality(this.lightsShadowQuality) === 'ultra';
-    if (isUltraShadowQuality) {
-      this.renderer.shadowMap.type = THREE.VSMShadowMap;
-    } else {
-      this.renderer.shadowMap.type = tier.softShadowMap
-        ? (this.lightsShadowSoftness <= 0.05 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap)
-        : THREE.PCFShadowMap;
-    }
+    // Ultra uses 4096 maps + PCFSoft (not VSM — variance blur streaks on cyclorama / large receivers).
+    this.renderer.shadowMap.type = tier.softShadowMap
+      ? (this.lightsShadowSoftness <= 0.05 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap)
+      : THREE.PCFShadowMap;
   }
 
   _hasHdriPreset(preset) {
@@ -1904,17 +1945,20 @@ export class SceneManager {
     this.groundController?.setBackdropEnabled(on);
     if (updateState) this.stateStore.set('backdropEnabled', on);
     this._updateBackdropAppearAnimation();
+    this._syncShadowAndGobo();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
   setBackdropScale(value, { updateState = true } = {}) {
     this.groundController?.setBackdropScale(value);
     if (updateState) this.stateStore.set('backdropScale', value);
+    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
   setBackdropWidth(value, { updateState = true } = {}) {
     this.groundController?.setBackdropWidth(value);
     if (updateState) this.stateStore.set('backdropWidth', value);
+    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
   setBackdropColor(color, { updateState = true } = {}) {
@@ -1930,6 +1974,7 @@ export class SceneManager {
   setBackdropY(value, { updateState = true } = {}) {
     this.groundController?.setBackdropY(value);
     if (updateState) this.stateStore.set('backdropY', value);
+    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
   setBackdropTextureEnabled(enabled, { updateState = true } = {}) {
@@ -2000,7 +2045,7 @@ export class SceneManager {
     }
 
     this._syncEffectiveCastShadows();
-    this._applyShadowTintToScene();
+    this._syncShadowAndGobo();
     this._syncHdriShadowReceiverFromState();
   }
 
@@ -2018,6 +2063,21 @@ export class SceneManager {
         this.stateStore.set(`lights.${lightId}.castShadows`, cast);
       }
     });
+    this._applyKeyLightGoboShadowOverride();
+  }
+
+  /**
+   * When gobo is on, the key light uses the projected pattern instead of shadow maps.
+   * Preserves the user's key cast-shadow preference in state for when gobo turns off.
+   */
+  _applyKeyLightGoboShadowOverride() {
+    if (!this.lightsController || !this._isShadowTintActive()) return;
+    if (this.goboEnabled) {
+      this.lightsController.updateLightProperty('key', 'castShadows', false);
+      return;
+    }
+    const keyCast = this.stateStore.getState().lights?.key?.castShadows === true;
+    this.lightsController.updateLightProperty('key', 'castShadows', keyCast);
   }
 
   setLightsMaster(value) {
@@ -2051,6 +2111,7 @@ export class SceneManager {
     }
     // Update light indicators if visible
     this.updateLightIndicators();
+    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
   /**
@@ -2082,6 +2143,7 @@ export class SceneManager {
     if (updateUi) {
       this.ui?.syncControls?.(this.stateStore.getState());
     }
+    this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
   setLightsCastShadows(enabled) {
@@ -2091,13 +2153,16 @@ export class SceneManager {
       this.stateStore.set('lightsCastShadows', next);
     }
     this._syncEffectiveCastShadows();
-    this._applyShadowTintToScene();
+    this._syncShadowAndGobo();
     this._syncHdriShadowReceiverFromState();
   }
 
   setLightsShadowQuality(quality) {
-    this.lightsShadowQuality = normalizeLightShadowQuality(quality);
+    this.lightsShadowQuality = normalizeShadowQuality(quality);
     this.lightsController?.setShadowQuality(this.lightsShadowQuality);
+    this.goboProjection?.setShadowQuality(this.lightsShadowQuality);
+    this.applyRenderQualitySettings();
+    this._syncShadowAndGobo();
   }
 
   setLightsShadowSoftness(value) {
@@ -2105,6 +2170,7 @@ export class SceneManager {
     this.lightsShadowSoftness = Number.isFinite(raw) ? Math.min(4, Math.max(0, raw)) : 4;
     this.lightsController?.setShadowSoftness(this.lightsShadowSoftness);
     this.applyRenderQualitySettings();
+    this._syncShadowAndGobo();
   }
 
   setLightsShadowContactOffset(value) {
@@ -2119,7 +2185,7 @@ export class SceneManager {
     if (this.stateStore.getState().lightsShadowColor !== next) {
       this.stateStore.set('lightsShadowColor', next);
     }
-    this._applyShadowTintToScene();
+    this._syncShadowAndGobo();
   }
 
   setLightsShadowOpacity(value) {
@@ -2130,8 +2196,108 @@ export class SceneManager {
     if (this.stateStore.getState().lightsShadowOpacity !== this.lightsShadowOpacity) {
       this.stateStore.set('lightsShadowOpacity', this.lightsShadowOpacity);
     }
-    this._applyShadowTintToScene();
+    this._syncShadowAndGobo();
     this.backgroundController?.setShadowReceiverOpacity(this.lightsShadowOpacity);
+  }
+
+  _syncGoboShadowSettings() {
+    this.goboProjection?.setShadowSettings({
+      opacity: this.lightsShadowOpacity,
+      color: this.lightsShadowColor ?? '#080808',
+    });
+    this.goboProjection?.setGoboSettings({
+      softness: this.goboSoftness,
+      scale: this.goboScale,
+      rotation: this.goboRotation,
+    });
+  }
+
+  setGoboSoftness(value, { updateState = true } = {}) {
+    const raw = Number(value);
+    this.goboSoftness = Number.isFinite(raw) ? Math.min(4, Math.max(0, raw)) : DEFAULT_GOBO_SOFTNESS;
+    if (updateState) this.stateStore.set('gobo.softness', this.goboSoftness);
+    this._syncGoboShadowSettings();
+    if (this.goboProjection?.enabled) {
+      this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
+    }
+  }
+
+  setGoboScale(value, { updateState = true } = {}) {
+    const raw = Number(value);
+    this.goboScale = Number.isFinite(raw) ? clampGoboUiScale(raw) : GOBO_UI_DEFAULT;
+    if (updateState) {
+      this.stateStore.set('gobo.scale', this.goboScale);
+      this.stateStore.set('gobo.scaleSpace', 'ui');
+    }
+    this._syncGoboShadowSettings();
+    if (this.goboProjection?.enabled) {
+      this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
+    }
+  }
+
+  setGoboRotation(value, { updateState = true } = {}) {
+    const raw = Number(value);
+    this.goboRotation = Number.isFinite(raw) ? ((raw % 360) + 360) % 360 : 0;
+    if (updateState) this.stateStore.set('gobo.rotation', this.goboRotation);
+    this._syncGoboShadowSettings();
+    if (this.goboProjection?.enabled) {
+      this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
+    }
+  }
+
+  _syncShadowAndGobo() {
+    this._applyKeyLightGoboShadowOverride();
+    this._applyShadowTintToScene();
+    this._syncGoboShadowSettings();
+    this._applyGoboToScene();
+    if (this.goboProjection?.enabled) {
+      this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
+    }
+  }
+
+  _getGoboSceneTargets() {
+    const ground = this.groundController;
+    return {
+      model: this.currentModel,
+      backdrop: ground?.backdrop ?? null,
+      podium: ground?.podium ?? null,
+    };
+  }
+
+  async setGoboEnabled(enabled, { updateState = true } = {}) {
+    const on = !!enabled;
+    if (this.goboEnabled === on && this.goboProjection?.enabled === on) {
+      if (on) this._syncShadowAndGobo();
+      return;
+    }
+    this.goboEnabled = on;
+    this.goboProjection?.setEnabled(on);
+    if (updateState) this.stateStore.set('gobo.enabled', on);
+    if (on) {
+      if (!this.goboProjection?._goboTexture) {
+        await this.goboProjection?.setTextureId(this.goboTextureId);
+      }
+      this._syncShadowAndGobo();
+    } else {
+      this.goboProjection?.removeFromScene(this._getGoboSceneTargets());
+      this._applyKeyLightGoboShadowOverride();
+      this._applyShadowTintToScene();
+    }
+  }
+
+  async setGoboTexture(textureId, { updateState = true } = {}) {
+    const nextId = textureId || DEFAULT_GOBO_TEXTURE_ID;
+    this.goboTextureId = nextId;
+    if (updateState) this.stateStore.set('gobo.texture', nextId);
+    await this.goboProjection?.setTextureId(nextId);
+    if (this.goboEnabled) {
+      this._syncShadowAndGobo();
+    }
+  }
+
+  _applyGoboToScene() {
+    if (!this.goboProjection?.enabled) return;
+    this.goboProjection.applyToScene(this._getGoboSceneTargets());
   }
 
   _applyShadowTintToScene() {
@@ -2142,9 +2308,11 @@ export class SceneManager {
     const ground = this.groundController;
     const tintOpts = { color, strength, opacity };
     if (ground?.podium) this.materialController?.applyShadowTintToObject(ground.podium, tintOpts);
-    ground?.setBaseGlassShadowTint?.(tintOpts);
     if (ground?.backdrop) {
-      this.materialController?.clearShadowTintFromObject(ground.backdrop);
+      this.materialController?.applyShadowTintToObject(ground.backdrop, {
+        ...tintOpts,
+        includeStudioBackdrop: true,
+      });
     }
   }
 
@@ -2836,7 +3004,7 @@ export class SceneManager {
     }
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
-    this._applyShadowTintToScene();
+    this._syncShadowAndGobo();
     this.setLightsShadowTwoSided(this.lightsShadowTwoSided);
     // Material instances are recreated when shading changes; reapply reverse mode.
     this.setReverseNormals(this.reverseNormalsEnabled);

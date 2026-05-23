@@ -1915,7 +1915,6 @@
                       <option value="high">High</option>
                       <option value="ultra">Ultra</option>
                     </select>
-                    <span class="value" aria-hidden="true"></span>
                   </label>
                   <label class="color-line">
                     <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
@@ -1974,18 +1973,29 @@
                 <div class="subsection" data-subsection="keyLight">
                   <div class="block-title has-toggle has-reset">
                     <span>Key</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="creative-look-heading-actions">
                       <button class="block-reset-btn" data-reset="keyLight" aria-label="Reset Key Light" data-tooltip="Reset Key Light settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
+                      </button>
+                      <button
+                        type="button"
+                        id="keyLightGoboBtn"
+                        class="gobo-panel-btn"
+                        aria-expanded="false"
+                        aria-controls="keyLightGoboFoldout"
+                        data-tooltip="Gobo — project patterned light/shadow from the key light"
+                      >
+                        <i class="fa-solid fa-tree" aria-hidden="true"></i>
+                        <span class="sr-only">Gobo textures</span>
                       </button>
                       <label class="effect-toggle" data-tooltip="Enable/disable Key Light (main light)">
                         <input type="checkbox" id="keyLightEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Enable Key Light</span>
-                    </label>
+                      </label>
+                    </div>
                   </div>
-                </div>
                 <label class="color-line light-color-row" data-light="key">
                     <span>Color</span>
                   <input type="color" class="color-chip light-chip" value="#ffdfc9" />
@@ -2034,6 +2044,98 @@
                       <span class="sr-only">Cast shadows</span>
                     </label>
                   </label>
+                  <div
+                    id="keyLightGoboFoldout"
+                    class="creative-look-foldout creative-look-foldout--collapsed"
+                  >
+                    <div class="creative-look-foldout-body">
+                      <label class="slider-line slider-line--toggle-only">
+                        <span data-tooltip="Project the selected gobo pattern from the key light">Gobo</span>
+                        <label class="effect-toggle">
+                          <input type="checkbox" id="goboEnabled" />
+                          <span class="effect-indicator" aria-hidden="true"></span>
+                          <span class="sr-only">Enable gobo projection</span>
+                        </label>
+                      </label>
+                      <div class="hdri-grid" id="goboGrid">
+                        <button
+                          type="button"
+                          data-gobo="palm"
+                          class="hdri-icon active"
+                          data-tooltip="Palm leaf gobo — dappled foliage shadows"
+                        >
+                          <img
+                            src="./assets/gobos/orby-spotlight-gobo01-palm.jpg"
+                            alt="Palm gobo"
+                            width="192"
+                            height="192"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          data-gobo="leaf"
+                          class="hdri-icon"
+                          data-tooltip="Single leaf gobo — soft organic shadow"
+                        >
+                          <img
+                            src="./assets/gobos/orby-spotlight-gobo02-leaf.jpg"
+                            alt="Leaf gobo"
+                            width="192"
+                            height="192"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          data-gobo="tree"
+                          class="hdri-icon"
+                          data-tooltip="Tree canopy gobo — broad branching shadows"
+                        >
+                          <img
+                            src="./assets/gobos/orby-spotlight-gobo03-tree.jpg"
+                            alt="Tree gobo"
+                            width="192"
+                            height="192"
+                          />
+                        </button>
+                      </div>
+                      <label class="slider-line">
+                        <span data-tooltip="Blur the gobo mask. Independent from cast-shadow softness — tune per texture.">Softness</span>
+                        <input
+                          id="goboSoftness"
+                          type="range"
+                          min="0"
+                          max="4"
+                          step="0.05"
+                          value="0.3"
+                        />
+                        <span class="value" data-output="goboSoftness">0.30</span>
+                      </label>
+                      <label class="slider-line">
+                        <span data-tooltip="Pattern size (0–10). Higher = smaller pattern. 5 matches the former 0.50 setting.">Scale</span>
+                        <input
+                          id="goboScale"
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="0.05"
+                          value="5"
+                        />
+                        <span class="value" data-output="goboScale">5.00</span>
+                      </label>
+                      <label class="slider-line">
+                        <span data-tooltip="Rotate the projected pattern around its center">Rotation</span>
+                        <input
+                          id="goboRotation"
+                          type="range"
+                          min="0"
+                          max="360"
+                          step="1"
+                          value="0"
+                        />
+                        <span class="value" data-output="goboRotation">0°</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="panel-block-divider"></div>

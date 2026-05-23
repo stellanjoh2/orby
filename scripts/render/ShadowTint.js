@@ -8,12 +8,6 @@ const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
  * Shadow sampling matches Three.js r165 (cdn three@0.165.0):
  * getShadow(map, mapSize, bias, radius, coord) — no shadowIntensity uniform.
  */
-/** Uniform declarations for custom shaders (base glass reflector, etc.). */
-export const DIRECTIONAL_SHADOW_TINT_UNIFORM_DECL = `
-uniform vec3 uOrbyShadowColor;
-uniform float uOrbyShadowStrength;
-uniform float uOrbyShadowOpacity;
-`;
 
 /**
  * Samples directional shadow maps; leaves `orbyShadowAmt` in scope when USE_SHADOWMAP is set.
@@ -86,6 +80,10 @@ export function isShadowTintPatchableMaterial(material) {
 function resolvePreviousOnBeforeCompile(material) {
   const live = material.onBeforeCompile;
   if (typeof live === 'function' && !live.__orbyShadowTintPatch) {
+    if (live.__orbyGoboPatch) {
+      const inner = material.userData?.orbyGobo?.previousOnBeforeCompile;
+      if (typeof inner === 'function') return inner;
+    }
     return live;
   }
   const stored = material.userData?.orbyShadowTint?.previousOnBeforeCompile;
@@ -120,33 +118,6 @@ export function createShadowTintUniformValues(options = {}) {
   };
 }
 
-/** Sync shadow-tint uniforms on a ShaderMaterial (e.g. base glass). */
-export function syncShadowTintUniforms(material, options = {}) {
-  if (!material?.uniforms) return;
-  const colorSrc = options.color ?? '#080808';
-  const strength = normalizeStrength(options.strength ?? 0);
-  const opacity = normalizeOpacity(options.opacity ?? DEFAULT_SHADOW_OPACITY);
-
-  if (!material.uniforms.uOrbyShadowColor) {
-    material.uniforms.uOrbyShadowColor = { value: new THREE.Color() };
-  }
-  if (colorSrc?.isColor) {
-    material.uniforms.uOrbyShadowColor.value.copy(colorSrc);
-  } else {
-    material.uniforms.uOrbyShadowColor.value.set(colorSrc);
-  }
-  if (!material.uniforms.uOrbyShadowStrength) {
-    material.uniforms.uOrbyShadowStrength = { value: strength };
-  } else {
-    material.uniforms.uOrbyShadowStrength.value = strength;
-  }
-  if (!material.uniforms.uOrbyShadowOpacity) {
-    material.uniforms.uOrbyShadowOpacity = { value: opacity };
-  } else {
-    material.uniforms.uOrbyShadowOpacity.value = opacity;
-  }
-}
-
 /**
  * Tint shadowed fragments toward a color (black = fully black shadows).
  * Use strength 0 when the 3-point shadow rig is off so HDRI-only lighting is unaffected.
@@ -172,9 +143,14 @@ export function applyShadowTintToMaterial(material, options = {}) {
   }
 
   const stash = material.userData.orbyShadowTint;
+  const goboWrapsShadow =
+    material.userData.goboPatched
+    && material.onBeforeCompile === material.userData.goboOnBeforeCompile
+    && material.userData.orbyGobo?.previousOnBeforeCompile
+      === material.userData.shadowTintOnBeforeCompile;
   const hookIntact =
     material.userData.shadowTintPatched
-    && material.onBeforeCompile === material.userData.shadowTintOnBeforeCompile;
+    && (material.onBeforeCompile === material.userData.shadowTintOnBeforeCompile || goboWrapsShadow);
 
   if (hookIntact && stash.uniforms?.color && stash.uniforms?.opacity) {
     stash.uniforms.color.value.set(colorHex);
@@ -183,7 +159,11 @@ export function applyShadowTintToMaterial(material, options = {}) {
     return;
   }
 
-  if (material.userData.shadowTintPatched) {
+  const goboIsOuter =
+    material.userData.goboPatched
+    && material.onBeforeCompile === material.userData.goboOnBeforeCompile;
+
+  if (material.userData.shadowTintPatched && !goboIsOuter) {
     delete material.userData.shadowTintPatched;
     delete material.userData.shadowTintOnBeforeCompile;
     delete stash.uniforms;
@@ -227,7 +207,6 @@ export function applyShadowTintToMaterial(material, options = {}) {
   };
   tintCompile.__orbyShadowTintPatch = true;
 
-  material.onBeforeCompile = tintCompile;
   material.userData.shadowTintPatched = true;
   material.userData.shadowTintOnBeforeCompile = tintCompile;
 
@@ -237,14 +216,22 @@ export function applyShadowTintToMaterial(material, options = {}) {
     return `${base}|orbyShadowTint:${stash.color.getHexString()}:${stash.strength}:${stash.opacity}`;
   };
 
+  if (goboIsOuter) {
+    material.userData.orbyGobo.previousOnBeforeCompile = tintCompile;
+    material.needsUpdate = true;
+    return;
+  }
+
+  material.onBeforeCompile = tintCompile;
   material.needsUpdate = true;
 }
 
 export function applyShadowTintToObject(object, options = {}) {
   if (!object) return;
+  const includeStudioBackdrop = options.includeStudioBackdrop === true;
   object.traverse((child) => {
     if (!child.isMesh || !child.material) return;
-    if (child.userData?.orbyStudioBackdrop) return;
+    if (!includeStudioBackdrop && child.userData?.orbyStudioBackdrop) return;
     if (child.userData?.meshglBaseGlassReflector) return;
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     materials.forEach((mat) => applyShadowTintToMaterial(mat, options));

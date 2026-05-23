@@ -1,3 +1,5 @@
+import { normalizeStoredGoboScale, GOBO_UI_DEFAULT } from '../render/GoboProjection.js';
+import { DEFAULT_GOBO_SOFTNESS } from '../config/gobos.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DEFAULT_MATERIAL_METALNESS,
@@ -177,6 +179,20 @@ function createStateApplySteps() {
             }
           });
         }
+      },
+    },
+    {
+      id: 'gobo',
+      apply: async (s, state) => {
+        const gobo = state.gobo ?? {};
+        await s.setGoboTexture(gobo.texture ?? 'palm', { updateState: false });
+        s.setGoboSoftness(gobo.softness ?? DEFAULT_GOBO_SOFTNESS, { updateState: false });
+        s.setGoboScale(
+          normalizeStoredGoboScale(gobo.scale, gobo.scaleSpace) ?? GOBO_UI_DEFAULT,
+          { updateState: false },
+        );
+        s.setGoboRotation(gobo.rotation ?? 0, { updateState: false });
+        await s.setGoboEnabled(!!gobo.enabled, { updateState: false });
       },
     },
     {

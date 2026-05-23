@@ -198,6 +198,10 @@ export class ModelLifecycleManager {
       },
     });
     s.setShading(state.shading);
+    if (state.gobo?.texture) {
+      void s.setGoboTexture(state.gobo.texture, { updateState: false });
+    }
+    void s.setGoboEnabled(!!state.gobo?.enabled, { updateState: false });
     s._emitAdvancedAlphaPanelVisibility();
     s.setReverseNormals(state.advanced?.reverseNormals ?? false);
     s.diagnosticsController.setModel(object, state.shading);

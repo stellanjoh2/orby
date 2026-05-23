@@ -1,11 +1,10 @@
 import * as THREE from 'three';
+import {
+  SHADOW_MAP_SIZE_BY_QUALITY,
+  normalizeShadowQuality,
+  shadowBlurSamplesForQuality,
+} from '../config/shadowQuality.js';
 
-const SHADOW_QUALITY_MAP_SIZE = {
-  low: 512,
-  medium: 1024,
-  high: 2048,
-  ultra: 4096,
-};
 const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
 const MIN_SHADOW_BOUNDS_RADIUS = 0.5;
 const SHADOW_BOUNDS_PADDING_BY_QUALITY = {
@@ -38,7 +37,7 @@ export class LightsController {
     this.modelBounds = null;
     this.showIndicators = false;
     this.lightIndicators = null;
-    this.shadowQuality = this._normalizeShadowQuality(options.shadowQuality);
+    this.shadowQuality = normalizeShadowQuality(options.shadowQuality);
     this.shadowSoftness = this._normalizeShadowSoftness(options.shadowSoftness);
     this.shadowContactOffset = this._normalizeShadowContactOffset(
       options.shadowContactOffset,
@@ -74,8 +73,8 @@ export class LightsController {
       if ('castShadow' in light && light.shadow) {
         light.castShadow = true;
         light.shadow.mapSize.set(
-          SHADOW_QUALITY_MAP_SIZE[this.shadowQuality],
-          SHADOW_QUALITY_MAP_SIZE[this.shadowQuality],
+          SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality],
+          SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality],
         );
         light.shadow.bias = this.shadowContactOffset;
         light.shadow.normalBias = 0.015;
@@ -93,9 +92,7 @@ export class LightsController {
   }
 
   _normalizeShadowQuality(quality) {
-    return quality === 'low' || quality === 'high' || quality === 'ultra'
-      ? quality
-      : 'medium';
+    return normalizeShadowQuality(quality);
   }
 
   _normalizeShadowContactOffset(offset) {
@@ -110,18 +107,23 @@ export class LightsController {
     return Math.min(4, Math.max(0, raw));
   }
 
+  _shadowBlurSamplesForQuality() {
+    return shadowBlurSamplesForQuality(this.shadowQuality);
+  }
+
   _applyShadowSoftnessToLights() {
     const currentSize =
-      SHADOW_QUALITY_MAP_SIZE[this.shadowQuality] ?? SHADOW_QUALITY_MAP_SIZE.medium;
-    const referenceSize = SHADOW_QUALITY_MAP_SIZE[SHADOW_SOFTNESS_REFERENCE_QUALITY];
+      SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality] ?? SHADOW_MAP_SIZE_BY_QUALITY.medium;
+    const referenceSize = SHADOW_MAP_SIZE_BY_QUALITY[SHADOW_SOFTNESS_REFERENCE_QUALITY];
     // Radius is in shadow texels; scale it with map resolution to preserve visual softness.
     const effectiveRadius = this.shadowSoftness * (currentSize / referenceSize);
+    const blurSamples = this._shadowBlurSamplesForQuality();
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
       if (light?.isDirectionalLight && light.shadow) {
         light.shadow.radius = effectiveRadius;
         if ('blurSamples' in light.shadow) {
-          light.shadow.blurSamples = this.shadowQuality === 'ultra' ? 32 : 8;
+          light.shadow.blurSamples = blurSamples;
         }
       }
     });
@@ -407,7 +409,7 @@ export class LightsController {
     const normalized = this._normalizeShadowQuality(quality);
     if (normalized === this.shadowQuality) return;
     this.shadowQuality = normalized;
-    this.setShadowMapResolution(SHADOW_QUALITY_MAP_SIZE[this.shadowQuality]);
+    this.setShadowMapResolution(SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality]);
     this._applyShadowSoftnessToLights();
   }
 

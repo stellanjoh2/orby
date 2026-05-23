@@ -13,6 +13,8 @@ import { deepClone } from '../utils/deepClone.js';
 import { deepEqual } from '../utils/deepEqual.js';
 import { animateModalClose, animateModalOpen } from './modalReveal.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
+import { GOBO_UI_DEFAULT } from '../render/GoboProjection.js';
+import { DEFAULT_GOBO_SOFTNESS } from '../config/gobos.js';
 
 /**
  * For each `data-reset` value in the markup, the set of state paths whose
@@ -44,7 +46,7 @@ const RESET_DIRTY_PATHS = {
     'lightsCastShadows', 'lightsShadowQuality', 'lightsShadowSoftness',
     'lightsShadowColor', 'lightsShadowOpacity', 'lightsShadowContactOffset', 'lightsShadowTwoSided',
   ],
-  keyLight: ['lights.key'],
+  keyLight: ['lights.key', 'gobo'],
   fillLight: ['lights.fill'],
   rimLight: ['lights.rim'],
   ambientLight: ['lights.ambient'],
@@ -929,6 +931,21 @@ export class ResetControls {
             }
           case 'keyLight':
             this.ui.resetIndividualLight('key', defaults.lights.key);
+            this.stateStore.batch(() => {
+              this.stateStore.set('gobo.enabled', defaults.gobo?.enabled ?? false);
+              this.stateStore.set('gobo.texture', defaults.gobo?.texture ?? 'palm');
+              this.stateStore.set('gobo.panelOpen', defaults.gobo?.panelOpen ?? false);
+              this.stateStore.set('gobo.softness', defaults.gobo?.softness ?? DEFAULT_GOBO_SOFTNESS);
+              this.stateStore.set('gobo.scale', defaults.gobo?.scale ?? GOBO_UI_DEFAULT);
+              this.stateStore.set('gobo.scaleSpace', 'ui');
+              this.stateStore.set('gobo.rotation', defaults.gobo?.rotation ?? 0);
+            });
+            this.eventBus.emit('lights:gobo-enabled', defaults.gobo?.enabled ?? false);
+            this.eventBus.emit('lights:gobo-texture', defaults.gobo?.texture ?? 'palm');
+            this.eventBus.emit('lights:gobo-softness', defaults.gobo?.softness ?? DEFAULT_GOBO_SOFTNESS);
+            this.eventBus.emit('lights:gobo-scale', defaults.gobo?.scale ?? GOBO_UI_DEFAULT);
+            this.eventBus.emit('lights:gobo-rotation', defaults.gobo?.rotation ?? 0);
+            this.ui.syncControls(this.stateStore.getState());
             break;
           case 'fillLight':
             this.ui.resetIndividualLight('fill', defaults.lights.fill);

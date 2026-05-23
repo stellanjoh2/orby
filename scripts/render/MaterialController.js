@@ -2075,7 +2075,12 @@ export class MaterialController {
       options.strength !== undefined ? options.strength : this.shadowTintStrength;
     const opacity =
       options.opacity !== undefined ? options.opacity : this.shadowTintOpacity;
-    patchShadowTintOnObject(object, { color, strength, opacity });
+    patchShadowTintOnObject(object, {
+      color,
+      strength,
+      opacity,
+      includeStudioBackdrop: options.includeStudioBackdrop,
+    });
   }
 
   clearShadowTintFromObject(object) {

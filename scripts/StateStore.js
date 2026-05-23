@@ -12,6 +12,8 @@ import { defaultAberration } from './render/chromaticAberration.js';
 import { normalizeToneCurve } from './math/toneCurvePchip.js';
 import { deepClone } from './utils/deepClone.js';
 import { migrateLegacyGroundKeys } from './state/migrateLegacyGroundKeys.js';
+import { GOBO_UI_DEFAULT } from './render/GoboProjection.js';
+import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 
 export class StateStore {
   constructor() {
@@ -192,6 +194,19 @@ export class StateStore {
       lightsShadowContactOffset: -0.0001,
       /** Cast shadows from both sides (useful for thin single-surface meshes). */
       lightsShadowTwoSided: false,
+      /** Key-light gobo projection — patterned shadow/light mask from the directional key. */
+      gobo: {
+        enabled: false,
+        panelOpen: false,
+        texture: 'palm',
+        /** Gobo mask blur — independent from cast-shadow softness. */
+        softness: DEFAULT_GOBO_SOFTNESS,
+        /** Pattern size — UI 0–10 (higher = smaller pattern; 5 ≈ former 0.50). */
+        scale: GOBO_UI_DEFAULT,
+        scaleSpace: 'ui',
+        /** Rotate projected pattern around its center, degrees. */
+        rotation: 0,
+      },
       lensFlare: {
         enabled: false,
         rotation: 0,

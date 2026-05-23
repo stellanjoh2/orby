@@ -21,6 +21,7 @@ import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
 import { StudioControls } from './ui/StudioControls.js';
+import { GoboControls } from './ui/GoboControls.js';
 import { RenderControls } from './ui/RenderControls.js';
 import { LensControls } from './ui/LensControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
@@ -114,6 +115,7 @@ export class UIManager {
     this.startMenuController = new StartMenuController(this.eventBus, this);
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.goboControls = new GoboControls(this.eventBus, this.stateStore, this, this.helpers);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
     this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
     this.isometricControls = new IsometricControls(
@@ -397,6 +399,12 @@ export class UIManager {
       rimLightEnabled: q('#rimLightEnabled'),
       ambientLightEnabled: q('#ambientLightEnabled'),
       keyLightCastShadows: q('#keyLightCastShadows'),
+      keyLightGoboBtn: q('#keyLightGoboBtn'),
+      goboButtons: document.querySelectorAll('[data-gobo]'),
+      goboEnabled: q('#goboEnabled'),
+      goboSoftness: q('#goboSoftness'),
+      goboScale: q('#goboScale'),
+      goboRotation: q('#goboRotation'),
       fillLightCastShadows: q('#fillLightCastShadows'),
       rimLightCastShadows: q('#rimLightCastShadows'),
       dofFocus: q('#dofFocus'),
@@ -535,6 +543,7 @@ export class UIManager {
     this.globalControls.bind();
     this.meshControls.bind();
     this.studioControls.bind();
+    this.goboControls.bind();
     this.renderControls.bind();
     this.lensControls.bind();
     this.isometricControls.bind();
@@ -1993,9 +2002,11 @@ export class UIManager {
     if (this.inputs.ambientLightEnabled && state.lights?.ambient) {
       this.inputs.ambientLightEnabled.checked = state.lights.ambient.enabled === true;
     }
-    // Sync cast shadows
+    // Sync cast shadows (key shadow maps are suppressed while gobo is active)
     if (this.inputs.keyLightCastShadows && state.lights?.key) {
-      this.inputs.keyLightCastShadows.checked = state.lights.key.castShadows === true;
+      const keyCast =
+        state.gobo?.enabled ? false : state.lights.key.castShadows === true;
+      this.inputs.keyLightCastShadows.checked = keyCast;
     }
     if (this.inputs.fillLightCastShadows && state.lights?.fill) {
       this.inputs.fillLightCastShadows.checked = state.lights.fill.castShadows === true;
@@ -2283,6 +2294,7 @@ export class UIManager {
   syncControls(state) {
     this.meshControls.sync(state);
     this.studioControls.sync(state);
+    this.goboControls.sync(state);
     this.renderControls.sync(state);
     this.lensControls.sync(state);
     this.isometricControls.sync(state);

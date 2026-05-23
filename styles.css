@@ -5301,7 +5301,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .select-line select {
-  grid-column: 2;
+  grid-column: 2 / -1;
   justify-self: end;
   width: auto;
   max-width: 100%;
@@ -6110,6 +6110,37 @@ body.ui-hidden .shelf {
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
+}
+
+.gobo-panel-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  opacity: 1;
+  pointer-events: auto;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.gobo-panel-btn:hover,
+.gobo-panel-btn.is-active {
+  color: var(--text);
+}
+
+.gobo-panel-btn i {
+  font-size: 0.875rem;
+  line-height: 1;
+  width: 16px;
+  text-align: center;
 }
 
 .creative-look-foldout-body {

@@ -11,6 +11,7 @@ import { HDRI_CUSTOM_ID, HDRI_MOODS } from '../config/hdri.js';
 import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
+import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
 
 /**
  * SceneSettingsManager
@@ -153,6 +154,7 @@ export class SceneSettingsManager {
       lightsShadowOpacity: state.lightsShadowOpacity,
       lightsShadowContactOffset: state.lightsShadowContactOffset,
       lightsShadowTwoSided: state.lightsShadowTwoSided,
+      gobo: state.gobo,
       background: state.background,
       // Camera/Render settings
       camera: {
@@ -986,6 +988,37 @@ export class SceneSettingsManager {
           contactOffset: payload.lightsShadowContactOffset,
           twoSided: payload.lightsShadowTwoSided,
         });
+      }
+
+      if (payload.gobo !== undefined) {
+        const gobo = payload.gobo ?? {};
+        this.stateStore.batch(() => {
+          if (gobo.enabled !== undefined) this.stateStore.set('gobo.enabled', !!gobo.enabled);
+          if (gobo.panelOpen !== undefined) this.stateStore.set('gobo.panelOpen', !!gobo.panelOpen);
+          if (gobo.texture !== undefined) this.stateStore.set('gobo.texture', gobo.texture);
+          if (gobo.softness !== undefined) this.stateStore.set('gobo.softness', gobo.softness);
+          if (gobo.scale !== undefined) {
+            const uiScale = normalizeStoredGoboScale(gobo.scale, gobo.scaleSpace);
+            this.stateStore.set('gobo.scale', uiScale);
+            this.stateStore.set('gobo.scaleSpace', 'ui');
+          }
+          if (gobo.rotation !== undefined) this.stateStore.set('gobo.rotation', gobo.rotation);
+        });
+        if (gobo.texture !== undefined) {
+          this.eventBus.emit('lights:gobo-texture', gobo.texture);
+        }
+        if (gobo.softness !== undefined) {
+          this.eventBus.emit('lights:gobo-softness', gobo.softness);
+        }
+        if (gobo.scale !== undefined) {
+          this.eventBus.emit('lights:gobo-scale', this.stateStore.getState().gobo?.scale);
+        }
+        if (gobo.rotation !== undefined) {
+          this.eventBus.emit('lights:gobo-rotation', gobo.rotation);
+        }
+        if (gobo.enabled !== undefined) {
+          this.eventBus.emit('lights:gobo-enabled', !!gobo.enabled);
+        }
       }
 
       if (payload.moveWidgetEnabled !== undefined) {
