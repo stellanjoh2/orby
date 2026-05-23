@@ -34,8 +34,11 @@ export const ROADMAP_QUARTERS = [
   "Q2 '27",
 ];
 
-/** Grid index for the public launch milestone (start of Q2 2026). */
-export const ROADMAP_LAUNCH_GRID = 16;
+/** Grid index for the start of Q2 2026 (quarter boundary). */
+export const ROADMAP_Q2_2026_START_GRID = 16;
+
+/** Grid index for public launch — mid Q2 2026 (~2 months into the quarter). */
+export const ROADMAP_LAUNCH_GRID = 18;
 
 /** @type {{ label: string, grid: number }} */
 export const ROADMAP_LAUNCH_MILESTONE = {
@@ -70,7 +73,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
   /* Q1 2026 (grid 12–16) */
   { label: 'Look filters', startGrid: 12, endGrid: 15, lane: 1, status: 'done' },
   { label: 'Custom HDRI', startGrid: 12, endGrid: 14, lane: 0, status: 'done' },
-  { label: 'Landing page', startGrid: 13, endGrid: 16, lane: 4, status: 'active' },
+  { label: 'Landing page', startGrid: 13, endGrid: 18, lane: 4, status: 'active' },
   { label: 'Isometric cam', startGrid: 13, endGrid: 16, lane: 3, status: 'active' },
   { label: 'Spotlight gobos', startGrid: 14, endGrid: 16, lane: 2, status: 'active' },
   { label: 'Histogram', startGrid: 12, endGrid: 14, lane: 2, status: 'done' },
@@ -79,12 +82,12 @@ export const ROADMAP_TASK_GRID_DEFS = [
   { label: 'Stability & QA', startGrid: 16, endGrid: 20, lane: 0, status: 'active' },
   { label: 'ColorChecker', startGrid: 16, endGrid: 18, lane: 1, status: 'done' },
   { label: 'Studio backdrop', startGrid: 18, endGrid: 20, lane: 1, status: 'done' },
-  { label: 'Presskit', startGrid: 16, endGrid: 20, lane: 3, status: 'todo' },
+  { label: 'Presskit', startGrid: 16, endGrid: 18, lane: 3, status: 'todo' },
 
   /* Q3 2026 (grid 20–24) */
   { label: 'Scene sharing', startGrid: 20, endGrid: 23, lane: 1, status: 'todo' },
   { label: 'Batch export', startGrid: 21, endGrid: 24, lane: 3, status: 'todo' },
-  { label: 'Performance pass', startGrid: 16, endGrid: 28, lane: 2, status: 'todo' },
+  { label: 'Performance pass', startGrid: 16, endGrid: 28, lane: 2, status: 'active' },
 
   /* Q4 2026 (grid 24–28) */
   { label: 'Collaboration', startGrid: 24, endGrid: 27, lane: 0, status: 'future' },
