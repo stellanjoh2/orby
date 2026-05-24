@@ -920,3 +920,352 @@ html.orby-gate-unlocked .orby-entry-gate,
 html:not(.orby-gate-unlocked) body.legal-doc--about > :not(#orby-entry-gate) {
   visibility: hidden !important;
 }
+
+/* ——— Brand page (guidelines + press gallery) ——— */
+
+body.legal-doc--brand {
+  --legal-bg: var(--orby-black);
+  --legal-brand-logotype-clearspace-ratio: 0.1638;
+  --legal-brand-symbol-clearspace-ratio: 0.5;
+}
+
+.legal-brand-section {
+  margin-top: 2.5rem;
+}
+
+.legal-brand-section__intro {
+  margin: 0 0 1.25rem;
+  font-size: 1rem;
+  line-height: 1.62;
+  color: var(--legal-muted);
+}
+
+.legal-brand-note {
+  margin: 1rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--legal-faint);
+}
+
+/* Override .legal-doc ul padding — grid galleries flush left */
+body.legal-doc--brand ul.legal-brand-press-grid,
+body.legal-doc--brand ul.legal-brand-swatches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.legal-doc--brand ul.legal-brand-press-grid > li,
+body.legal-doc--brand ul.legal-brand-swatches > li {
+  margin: 0;
+  list-style: none;
+}
+
+.legal-brand-logo-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+.legal-brand-logo-grid--pairs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#logo .legal-brand-logo-grid--pairs {
+  grid-template-columns: 1fr;
+}
+
+.legal-brand-logo-grid--pairs .legal-brand-logo-card__stage {
+  min-height: 11.5rem;
+  padding: 1.5rem 1rem;
+}
+
+#logo .legal-brand-logo-grid--pairs .legal-brand-logo-card__stage {
+  width: 100%;
+  min-height: 408px;
+  height: 408px;
+  padding: 0;
+  container-type: inline-size;
+}
+
+#logo .legal-brand-logo-grid--pairs .legal-brand-logo-card__frame--logotype {
+  /* Max size with half-O clearspace: 694.27/1676.82 height + 2×(274.885/1676.82) margin */
+  --legal-brand-logotype-total-h: 0.7416;
+  --legal-brand-logotype-total-w: 1.3276;
+  --legal-brand-mark-width: min(
+    calc(408px / var(--legal-brand-logotype-total-h)),
+    calc(100cqw / var(--legal-brand-logotype-total-w))
+  );
+  --legal-brand-clearspace: calc(
+    var(--legal-brand-mark-width) * var(--legal-brand-logotype-clearspace-ratio)
+  );
+  padding: var(--legal-brand-clearspace);
+  max-width: 100%;
+}
+
+.legal-brand-logo-grid--symbol .legal-brand-logo-card__stage {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  min-height: 0;
+  padding: 1.5rem 1rem;
+}
+
+.legal-brand-logo-grid--symbol .legal-brand-logo-card__frame--symbol {
+  --legal-brand-mark-width: 404px;
+  padding: 0;
+}
+
+.legal-brand-logo-grid--symbol .legal-brand-logo-card__stage img {
+  width: min(404px, 100%);
+  height: min(404px, 100%);
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+}
+
+@media (max-width: 519px) {
+  .legal-brand-logo-grid--pairs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.legal-brand-logo-card {
+  margin: 0;
+  border: 1px solid var(--legal-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--legal-surface);
+}
+
+.legal-brand-logo-card__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legal-brand-logo-card__frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+  max-width: 100%;
+}
+
+.legal-brand-logo-card__frame--logotype {
+  --legal-brand-mark-width: min(11.5rem, 100%);
+  --legal-brand-clearspace: calc(
+    var(--legal-brand-mark-width) * var(--legal-brand-logotype-clearspace-ratio)
+  );
+  padding: var(--legal-brand-clearspace);
+}
+
+.legal-brand-logo-card__frame--symbol {
+  --legal-brand-mark-width: min(4.25rem, 100%);
+  --legal-brand-clearspace: calc(
+    var(--legal-brand-mark-width) * var(--legal-brand-symbol-clearspace-ratio)
+  );
+  padding: var(--legal-brand-clearspace);
+}
+
+.legal-brand-logo-card--dark .legal-brand-logo-card__stage {
+  background: var(--orby-black);
+}
+
+.legal-brand-logo-card--lime .legal-brand-logo-card__stage {
+  background: var(--legal-accent);
+}
+
+.legal-brand-logo-card--white .legal-brand-logo-card__stage {
+  background: #fff;
+}
+
+.legal-brand-logo-card__stage img {
+  display: block;
+  width: var(--legal-brand-mark-width);
+  max-width: 100%;
+  height: auto;
+}
+
+.legal-brand-logo-card__mark--dark {
+  filter: brightness(0);
+}
+
+.legal-brand-logo-card__mark--white {
+  filter: brightness(0) invert(1);
+}
+
+.legal-brand-logo-card__caption {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--legal-muted);
+  border-top: 1px solid var(--legal-border);
+}
+
+.legal-brand-swatches {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legal-brand-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.2rem;
+  min-height: 7.25rem;
+  padding: 1.15rem 1.2rem;
+  border-radius: 14px;
+  background: var(--legal-brand-swatch-bg);
+}
+
+.legal-brand-swatch--bordered {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.legal-brand-swatch__name {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.legal-brand-swatch__hex {
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.3;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+
+.legal-brand-swatch--on-dark .legal-brand-swatch__name,
+.legal-brand-swatch--on-dark .legal-brand-swatch__hex {
+  color: #fff;
+}
+
+.legal-brand-swatch--on-light .legal-brand-swatch__name,
+.legal-brand-swatch--on-light .legal-brand-swatch__hex {
+  color: var(--orby-black);
+}
+
+.legal-brand-usage-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  margin-bottom: 1.25rem;
+}
+
+.legal-brand-usage-col {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--legal-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legal-brand-usage-heading {
+  margin: 0 0 0.65rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legal-text);
+}
+
+.legal-brand-usage-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--legal-muted);
+}
+
+.legal-brand-usage-list li + li {
+  margin-top: 0.45rem;
+}
+
+.legal-brand-press-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+
+.legal-brand-press-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--legal-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--legal-surface);
+}
+
+.legal-brand-press-card__thumb-wrap {
+  aspect-ratio: 16 / 10;
+  background: var(--orby-black);
+}
+
+.legal-brand-press-card__thumb-wrap--contain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.legal-brand-press-card__thumb-wrap--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--legal-accent) 8%, var(--orby-black)),
+    var(--orby-black)
+  );
+}
+
+.legal-brand-press-card__thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.legal-brand-press-card__thumb-wrap--contain .legal-brand-press-card__thumb {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.legal-brand-press-card__placeholder-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--legal-faint);
+}
+
+.legal-brand-press-card__body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.legal-brand-press-card__title {
+  margin: 0 0 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--legal-text);
+}
+
+.legal-brand-press-card__meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--legal-muted);
+}
+
+@media (min-width: 720px) {
+  body.legal-doc--brand .legal-wrap {
+    max-width: 56rem;
+  }
+}

@@ -71,6 +71,7 @@
  * @property {string} [footerPrivacyHref]
  * @property {string} [footerAboutHref]
  * @property {string} [footerCreditsHref]
+ * @property {string} [footerBrandHref]
  * @property {string} [footerGithubHref]
  * @property {string} [footerInstagramHref]
  * @property {string} [footerLicenseHref]
@@ -83,8 +84,8 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      "Your 3D model deserves better. Whether it's a photogrammetry scan, a game asset, or your logotype extruded into a mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
-    gradientPhrases: ['deserves better'],
+      "Your 3D models deserve better. Whether it's a photogrammetry scan, a game asset, or your logotype extruded into a mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
+    gradientPhrases: ['deserve better'],
   },
   {
     type: 'split',
@@ -501,6 +502,7 @@ export const MARKETING_SECTIONS = [
     footerPrivacyHref: './legal/privacy-policy.html',
     footerAboutHref: './about/',
     footerCreditsHref: './credits/',
+    footerBrandHref: './brand/',
     footerGithubHref: 'https://github.com/stellanjoh2/orby',
     footerInstagramHref: 'https://www.instagram.com/dropittoorby',
     footerLicenseHref: './LICENSE',
@@ -510,6 +512,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-in-progress',
     eyebrow: 'In progress',
     title: 'Do you enjoy Orby? We got more things coming soon',
+    gradientPhrases: ['more things'],
     lede:
       "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
     layout: 'media-right',

@@ -117,7 +117,7 @@ function renderSplitGallerySlideImages(slides) {
 }
 
 /**
- * @param {{ src: string, alt: string, credit?: string }[]} slides
+ * @param {MarketingGallerySlide[]} slides
  */
 function renderShowcaseSlideImages(slides) {
   return slides
@@ -125,7 +125,10 @@ function renderShowcaseSlideImages(slides) {
       const active = index === 0 ? ' is-active' : '';
       const lazy = index === 0 ? '' : ' loading="lazy"';
       const creditAttr = slide.credit ? ` data-credit="${escapeMarketingHtml(slide.credit)}"` : '';
-      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" width="1024" height="576" decoding="async"${creditAttr}${lazy} />`;
+      const imageCreditAttr = slide.imageCredit
+        ? ` data-image-credit="${escapeMarketingHtml(JSON.stringify(slide.imageCredit))}"`
+        : '';
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" width="1024" height="576" decoding="async"${creditAttr}${imageCreditAttr}${lazy} />`;
     })
     .join('\n        ');
 }
@@ -203,7 +206,7 @@ function renderInProgressSection(section, ctaSection) {
           <div class="orby-marketing__split-copy">
             <div class="orby-marketing__split-copy-inner">
               <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow)}</p>
-              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
+              <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title"><span class="orby-marketing__title-line">${renderMarketingBodyHtml(section.title, section.gradientPhrases)}</span></h2>
               <p class="orby-marketing__lede">${escapeMarketingHtml(section.lede)}</p>
               ${renderInProgressCta(section)}
             </div>
@@ -534,6 +537,7 @@ function renderFooterMeta(section, options = {}) {
   const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
   const aboutHref = section.footerAboutHref?.trim() || './about/';
   const creditsHref = section.footerCreditsHref?.trim() || './credits/';
+  const brandHref = section.footerBrandHref?.trim() || './brand/';
   const githubHref = section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby';
   const instagramHref = section.footerInstagramHref?.trim() || '';
   const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
@@ -545,6 +549,7 @@ function renderFooterMeta(section, options = {}) {
     `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(aboutHref)}">About</a>`,
     `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(privacyHref)}">Privacy Policy</a>`,
     `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(creditsHref)}">Credits</a>`,
+    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(brandHref)}">Brand</a>`,
     `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
     contactEmail
       ? `<button type="button" class="orby-marketing__footer-meta-link orby-marketing__footer-meta-contact" data-orby-marketing-copy-email="${escapeMarketingHtml(contactEmail)}">Contact</button>`

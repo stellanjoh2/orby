@@ -103,7 +103,7 @@ export const ROADMAP_SUBDIVISION_COUNT =
   ROADMAP_QUARTER_COUNT * ROADMAP_MONTHS_PER_QUARTER;
 
 /**
- * @param {number} gridIndex — 0–36
+ * @param {number} gridIndex — 0–39
  * @returns {number}
  */
 export function roadmapGridToPercent(gridIndex) {

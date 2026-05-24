@@ -93,7 +93,7 @@ export function renderRoadmapSection(section) {
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderRoadmapHeadline(section.title)}</h2>
         ${ledeBlock}
       </header>
-      <div class="orby-marketing__roadmap-chart" style="--orby-roadmap-lanes: ${ROADMAP_LANE_COUNT}; --orby-roadmap-quarters: ${ROADMAP_QUARTER_COUNT}; --orby-roadmap-subdivisions: ${ROADMAP_SUBDIVISION_COUNT}; --orby-roadmap-months-per-quarter: ${ROADMAP_MONTHS_PER_QUARTER};" role="group" aria-label="Product roadmap from development through Q2 2027, with public launch in mid Q2 2026. Hover or focus a task to read its full name.">
+      <div class="orby-marketing__roadmap-chart" style="--orby-roadmap-lanes: ${ROADMAP_LANE_COUNT}; --orby-roadmap-quarters: ${ROADMAP_QUARTER_COUNT}; --orby-roadmap-subdivisions: ${ROADMAP_SUBDIVISION_COUNT}; --orby-roadmap-months-per-quarter: ${ROADMAP_MONTHS_PER_QUARTER};" role="group" aria-label="Product roadmap from development through Q3 2027, with public launch in mid Q2 2026. Hover or focus a task to read its full name.">
         <div class="orby-marketing__roadmap-axis" aria-hidden="true">
           <div class="orby-marketing__roadmap-years">${yearLabels}</div>
           <div class="orby-marketing__roadmap-quarters">${quarterLabels}</div>
