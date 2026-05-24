@@ -916,6 +916,10 @@ export class SceneManager {
           this.setCameraAutoOrbit(this.cameraAutoOrbit);
         }
       },
+      beginExportAnimationDrive: () => this.animationController?.beginExportDrive?.(),
+      applyExportAnimationDriveFrame: (frameIndex, fps) =>
+        this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
+      endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
@@ -1520,6 +1524,22 @@ export class SceneManager {
 
   setLensFlareHaloIntensity(value) {
     this.lensFlareController?.setHaloIntensity(value);
+  }
+
+  setLensFlareStreakLength(value) {
+    this.lensFlareController?.setStreakLength(value);
+  }
+
+  setLensFlareSunDiscScale(value) {
+    this.lensFlareController?.setSunDiscScale(value);
+  }
+
+  setLensFlareSunDiscBlur(value) {
+    this.lensFlareController?.setSunDiscBlur(value);
+  }
+
+  setLensFlareSunDiscColor(value) {
+    this.lensFlareController?.setSunDiscColor(value);
   }
 
   setClayNormalMap(enabled) {

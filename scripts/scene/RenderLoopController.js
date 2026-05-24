@@ -75,6 +75,7 @@ export class RenderLoopController {
     this._updateSteps = [
       {
         id: 'animation',
+        when: (_ctx, s) => !s.animationController?.isExportDriving?.(),
         run: (delta, s) => {
           s.animationController.update(delta);
         },

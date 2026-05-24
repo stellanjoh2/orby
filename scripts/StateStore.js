@@ -214,6 +214,10 @@ export class StateStore {
         color: '#d28756',
         quality: 'maximum',
         haloIntensity: 1.0,
+        streakLength: 5.0,
+        sunDiscScale: 1.5,
+        sunDiscBlur: 1.25,
+        sunDiscColor: '#fff0c8',
         anamorphicBloom: {
           enabled: false,
           quality: 'medium',

@@ -287,6 +287,10 @@ export class UIManager {
       lensFlareRotation: q('#lensFlareRotation'),
       lensFlareHeight: q('#lensFlareHeight'),
       lensFlareHalo: q('#lensFlareHalo'),
+      lensFlareStreakLength: q('#lensFlareStreakLength'),
+      lensFlareSunDiscScale: q('#lensFlareSunDiscScale'),
+      lensFlareSunDiscBlur: q('#lensFlareSunDiscBlur'),
+      lensFlareSunDiscColor: q('#lensFlareSunDiscColor'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
@@ -1104,7 +1108,7 @@ export class UIManager {
     
     // Disable lens flare controls if not enabled
     this.setControlDisabled(
-      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareHalo', 'lensFlareColor', 'lensFlareQuality'],
+      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareHalo', 'lensFlareStreakLength', 'lensFlareSunDiscScale', 'lensFlareSunDiscBlur', 'lensFlareSunDiscColor', 'lensFlareColor', 'lensFlareQuality'],
       !enabled,
     );
     
@@ -1848,6 +1852,24 @@ export class UIManager {
       const halo = Math.min(5, Math.max(0, state.lensFlare?.haloIntensity ?? 1));
       this.inputs.lensFlareHalo.value = halo;
       this.updateValueLabel('lensFlareHalo', halo, 'multiplier');
+    }
+    if (this.inputs.lensFlareStreakLength) {
+      const streakLength = Math.min(10, Math.max(0, state.lensFlare?.streakLength ?? 5));
+      this.inputs.lensFlareStreakLength.value = streakLength;
+      this.updateValueLabel('lensFlareStreakLength', streakLength, 'decimal');
+    }
+    if (this.inputs.lensFlareSunDiscScale) {
+      const sunDiscScale = Math.min(10, Math.max(0, state.lensFlare?.sunDiscScale ?? 1.5));
+      this.inputs.lensFlareSunDiscScale.value = sunDiscScale;
+      this.updateValueLabel('lensFlareSunDiscScale', sunDiscScale, 'decimal');
+    }
+    if (this.inputs.lensFlareSunDiscBlur) {
+      const sunDiscBlur = Math.min(5, Math.max(0, state.lensFlare?.sunDiscBlur ?? 1.25));
+      this.inputs.lensFlareSunDiscBlur.value = sunDiscBlur;
+      this.updateValueLabel('lensFlareSunDiscBlur', sunDiscBlur, 'decimal');
+    }
+    if (this.inputs.lensFlareSunDiscColor && state.lensFlare?.sunDiscColor) {
+      this.inputs.lensFlareSunDiscColor.value = state.lensFlare.sunDiscColor;
     }
     if (this.inputs.lensFlareColor && state.lensFlare?.color) {
       this.inputs.lensFlareColor.value = state.lensFlare.color;

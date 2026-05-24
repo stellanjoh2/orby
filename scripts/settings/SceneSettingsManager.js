@@ -757,6 +757,10 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-color', merged.color);
         this.eventBus.emit('studio:lens-flare-quality', merged.quality);
         this.eventBus.emit('studio:lens-flare-halo', merged.haloIntensity);
+        this.eventBus.emit('studio:lens-flare-streak-length', merged.streakLength);
+        this.eventBus.emit('studio:lens-flare-sun-disc-scale', merged.sunDiscScale);
+        this.eventBus.emit('studio:lens-flare-sun-disc-blur', merged.sunDiscBlur);
+        this.eventBus.emit('studio:lens-flare-sun-disc-color', merged.sunDiscColor);
         this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       }
       if (payload.groundSolid !== undefined) {

@@ -122,6 +122,25 @@ export class StudioControls {
       this.stateStore.set('lensFlare.haloIntensity', value);
       this.eventBus.emit('studio:lens-flare-halo', value);
     });
+    this.ui.inputs.lensFlareStreakLength?.addEventListener('input', (event) => {
+      const value = Math.min(10, Math.max(0, parseFloat(event.target.value) || 0));
+      this.helpers.updateValueLabel('lensFlareStreakLength', value, 'decimal');
+      this.stateStore.set('lensFlare.streakLength', value);
+      this.eventBus.emit('studio:lens-flare-streak-length', value);
+    });
+    this.ui.inputs.lensFlareSunDiscScale?.addEventListener('input', (event) => {
+      const value = Math.min(10, Math.max(0, parseFloat(event.target.value) || 0));
+      this.helpers.updateValueLabel('lensFlareSunDiscScale', value, 'decimal');
+      this.stateStore.set('lensFlare.sunDiscScale', value);
+      this.eventBus.emit('studio:lens-flare-sun-disc-scale', value);
+    });
+    this.ui.inputs.lensFlareSunDiscBlur?.addEventListener('input', (event) => {
+      const value = Math.min(5, Math.max(0, parseFloat(event.target.value) || 0));
+      this.helpers.updateValueLabel('lensFlareSunDiscBlur', value, 'decimal');
+      this.stateStore.set('lensFlare.sunDiscBlur', value);
+      this.eventBus.emit('studio:lens-flare-sun-disc-blur', value);
+    });
+    this.helpers.bindColorInput('lensFlareSunDiscColor', 'lensFlare.sunDiscColor', 'studio:lens-flare-sun-disc-color');
     this.helpers.bindColorInput('lensFlareColor', 'lensFlare.color', 'studio:lens-flare-color');
     this.ui.inputs.lensFlareQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
@@ -587,6 +606,24 @@ export class StudioControls {
       const halo = Math.min(5, Math.max(0, state.lensFlare?.haloIntensity ?? 1));
       this.ui.inputs.lensFlareHalo.value = halo;
       this.helpers.updateValueLabel('lensFlareHalo', halo, 'multiplier');
+    }
+    if (this.ui.inputs.lensFlareStreakLength) {
+      const streakLength = Math.min(10, Math.max(0, state.lensFlare?.streakLength ?? 5));
+      this.ui.inputs.lensFlareStreakLength.value = streakLength;
+      this.helpers.updateValueLabel('lensFlareStreakLength', streakLength, 'decimal');
+    }
+    if (this.ui.inputs.lensFlareSunDiscScale) {
+      const sunDiscScale = Math.min(10, Math.max(0, state.lensFlare?.sunDiscScale ?? 1.5));
+      this.ui.inputs.lensFlareSunDiscScale.value = sunDiscScale;
+      this.helpers.updateValueLabel('lensFlareSunDiscScale', sunDiscScale, 'decimal');
+    }
+    if (this.ui.inputs.lensFlareSunDiscBlur) {
+      const sunDiscBlur = Math.min(5, Math.max(0, state.lensFlare?.sunDiscBlur ?? 1.25));
+      this.ui.inputs.lensFlareSunDiscBlur.value = sunDiscBlur;
+      this.helpers.updateValueLabel('lensFlareSunDiscBlur', sunDiscBlur, 'decimal');
+    }
+    if (this.ui.inputs.lensFlareSunDiscColor && state.lensFlare?.sunDiscColor) {
+      this.ui.inputs.lensFlareSunDiscColor.value = state.lensFlare.sunDiscColor;
     }
     if (this.ui.inputs.lensFlareColor && state.lensFlare?.color) {
       this.ui.inputs.lensFlareColor.value = state.lensFlare.color;

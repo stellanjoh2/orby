@@ -18,6 +18,68 @@ export class AnimationController {
     this.onTimeUpdate = onTimeUpdate;
     this.onTopBarUpdate = onTopBarUpdate;
     this.getFileName = getFileName;
+    this._exportDriveActive = false;
+    this._exportDriveSnapshot = null;
+  }
+
+  isExportDriving() {
+    return !!this._exportDriveActive;
+  }
+
+  /** Pause live playback; export will set absolute clip times per frame. */
+  beginExportDrive() {
+    if (!this.mixer || !this.currentAction || !this.animations.length) return;
+    this._exportDriveActive = true;
+    this._exportDriveSnapshot = {
+      time: this.currentAction.time,
+      paused: this.currentAction.paused,
+    };
+    this.currentAction.paused = true;
+  }
+
+  /**
+   * Set GLB pose for one export frame (wall-clock seconds = frameIndex / fps).
+   * @param {number} frameIndex — 0-based export frame
+   * @param {number} fps
+   */
+  applyExportDriveFrame(frameIndex, fps) {
+    if (!this._exportDriveActive || !this.mixer || !this.currentAction) return;
+    const clip = this.animations[this.currentClipIndex];
+    if (!clip || !(clip.duration > 0)) return;
+
+    const exportTimeSec = Math.max(0, frameIndex) / Math.max(1, fps);
+    const duration = clip.duration;
+    const loop = this.currentAction.loop;
+    let time;
+    if (loop === THREE.LoopOnce) {
+      time = Math.min(exportTimeSec, duration);
+    } else if (loop === THREE.LoopPingPong) {
+      const cycle = duration * 2;
+      const m = exportTimeSec % cycle;
+      time = m <= duration ? m : cycle - m;
+    } else {
+      time = exportTimeSec % duration;
+    }
+
+    this.currentAction.time = time;
+    this.mixer.update(0);
+    this.onTimeUpdate(this.currentAction.time, clip.duration);
+  }
+
+  endExportDrive() {
+    if (!this._exportDriveActive) return;
+    const snap = this._exportDriveSnapshot;
+    this._exportDriveActive = false;
+    this._exportDriveSnapshot = null;
+    if (!this.mixer || !this.currentAction || !snap) return;
+
+    this.currentAction.time = snap.time;
+    this.currentAction.paused = snap.paused;
+    this.mixer.update(0);
+    const clip = this.animations[this.currentClipIndex];
+    if (clip) {
+      this.onTimeUpdate(this.currentAction.time, clip.duration);
+    }
   }
 
   setModel(model, animations = []) {

@@ -428,7 +428,9 @@ export const MARKETING_SECTIONS = [
         title: 'Lens Effects',
         body:
           'Lens flare, dirt, and chromatic aberration — optical polish on your hero without a post round trip. Dial intensity, color, and quality in realtime.',
-        imageSrc: './assets/marketing/pro-feature1-shoes01.jpg',
+        videoSrc: './assets/marketing/orby-feature-lensflare.mp4',
+        videoPoster: true,
+        imageSrc: './assets/marketing/orby-feature-lensflare.jpg',
         imageAlt: 'Product render with lens flare and chromatic aberration in Orby',
       },
     ],

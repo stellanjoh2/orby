@@ -109,6 +109,15 @@ function normalizeOpacity(opacity) {
   return Math.min(1, Math.max(0, raw));
 }
 
+/** Material.clone() JSON-roundtrips userData, turning THREE.Color into plain { r, g, b }. */
+function ensureShadowTintColor(color, colorHex) {
+  if (color instanceof THREE.Color) {
+    color.set(colorHex);
+    return color;
+  }
+  return new THREE.Color(colorHex);
+}
+
 /** @returns {{ color: THREE.Color, strength: number, opacity: number }} */
 export function createShadowTintUniformValues(options = {}) {
   return {
@@ -137,7 +146,10 @@ export function applyShadowTintToMaterial(material, options = {}) {
       opacity,
     };
   } else {
-    material.userData.orbyShadowTint.color.set(colorHex);
+    material.userData.orbyShadowTint.color = ensureShadowTintColor(
+      material.userData.orbyShadowTint.color,
+      colorHex,
+    );
     material.userData.orbyShadowTint.strength = strength;
     material.userData.orbyShadowTint.opacity = opacity;
   }

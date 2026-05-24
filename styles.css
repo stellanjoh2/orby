@@ -3248,7 +3248,7 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-hdri-sphere-img: 78px;
   --shelf-hdri-sphere-ring: 92px;
   --shelf-hdri-grid-gap-x: 1rem;
-  --shelf-hdri-grid-gap-y: 1.8rem;
+  --shelf-hdri-grid-gap-y: 34px; /* thumbnail edge-to-edge @ 2560×1440 */
   /* Shader Lab + Object Display pickers — smaller (4-up / dense grids) */
   --shelf-picker-sphere-img: 54px;
   --shelf-picker-sphere-ring: 70px;
@@ -3312,7 +3312,7 @@ html:not(.mobile-landing) .shelf {
   --shelf-hdri-sphere-img: round(78px * var(--studio-ui-scale), 1px);
   --shelf-hdri-sphere-ring: round(92px * var(--studio-ui-scale), 1px);
   --shelf-hdri-grid-gap-x: calc(1rem * var(--studio-ui-scale));
-  --shelf-hdri-grid-gap-y: calc(1.8rem * var(--studio-ui-scale));
+  --shelf-hdri-grid-gap-y: round(34px * var(--studio-ui-scale), 1px);
   --shelf-picker-sphere-img: round(54px * var(--studio-ui-scale), 1px);
   --shelf-picker-sphere-ring: round(70px * var(--studio-ui-scale), 1px);
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
@@ -3420,7 +3420,7 @@ html:not(.mobile-landing) .shelf .panel-header-title {
 html:not(.mobile-landing) .shelf .hdri-grid {
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
   margin-bottom: calc(1.1rem * var(--studio-ui-scale));
-  padding: var(--shelf-stack-gap) 0;
+  padding: calc(0.75rem * var(--studio-ui-scale)) 0;
 }
 
 html:not(.mobile-landing) .shelf .mode-icons {
@@ -5340,15 +5340,17 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   grid-template-columns: repeat(3, 1fr);
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
   margin-bottom: 1.1rem;
-  padding: var(--shelf-stack-gap) 0;
+  /* 0.75rem @ 2560 — original HDRI grid vertical inset (not shelf stack rhythm) */
+  padding: 0.75rem 0;
 }
 
 .hdri-icon {
   position: relative;
   display: block;
-  box-sizing: content-box;
-  width: var(--shelf-hdri-sphere-ring);
-  height: var(--shelf-hdri-sphere-ring);
+  box-sizing: border-box;
+  /* Row height tracks the thumbnail (78px @ 2560); selection ring overflows into gap */
+  width: 100%;
+  height: var(--shelf-hdri-sphere-img);
   cursor: pointer;
   border: none;
   background: none;
@@ -5545,6 +5547,10 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   line-height: 1.45;
   color: var(--text-dim);
   letter-spacing: -0.01em;
+}
+
+.export-format-warning {
+  color: var(--warning);
 }
 
 /* Export Controls */

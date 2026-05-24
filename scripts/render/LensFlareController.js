@@ -39,6 +39,10 @@ export class LensFlareController {
       color: state.color ?? defaults?.color ?? '#d28756',
       quality: state.quality ?? 'maximum',
       haloIntensity: state.haloIntensity ?? defaults?.haloIntensity ?? 1.0,
+      streakLength: state.streakLength ?? defaults?.streakLength ?? 5.0,
+      sunDiscScale: state.sunDiscScale ?? defaults?.sunDiscScale ?? 1.5,
+      sunDiscBlur: state.sunDiscBlur ?? defaults?.sunDiscBlur ?? 1.25,
+      sunDiscColor: state.sunDiscColor ?? defaults?.sunDiscColor ?? '#fff0c8',
     });
 
     this.camera.add(this.lensFlare);
@@ -142,6 +146,46 @@ export class LensFlareController {
   }
 
   /**
+   * Set star-ray streak length (0–10; 5 = default look).
+   * @param {number} value - Streak length
+   */
+  setStreakLength(value) {
+    if (this.lensFlare && Number.isFinite(value)) {
+      this.lensFlare.setStreakLength(value);
+    }
+  }
+
+  /**
+   * Set the sun disc scale (0–10). The disc stays visible when flares are occluded.
+   * @param {number} value - Sun disc scale
+   */
+  setSunDiscScale(value) {
+    if (this.lensFlare && Number.isFinite(value)) {
+      this.lensFlare.setSunDiscScale(value);
+    }
+  }
+
+  /**
+   * Set the sun disc edge blur (0 = sharp, 5 = soft).
+   * @param {number} value - Blur amount
+   */
+  setSunDiscBlur(value) {
+    if (this.lensFlare && Number.isFinite(value)) {
+      this.lensFlare.setSunDiscBlur(value);
+    }
+  }
+
+  /**
+   * Set the sun disc color.
+   * @param {string} value - Color value (hex string)
+   */
+  setSunDiscColor(value) {
+    if (this.lensFlare && value) {
+      this.lensFlare.setSunDiscColor(value);
+    }
+  }
+
+  /**
    * Apply a state snapshot (used when loading saved state)
    * @param {Object} state - Full state object
    */
@@ -157,6 +201,10 @@ export class LensFlareController {
     this.setQuality(lensState.quality ?? 'maximum');
     this.setRotation(lensState.rotation ?? 0);
     this.setHaloIntensity(lensState.haloIntensity ?? 1.0);
+    this.setStreakLength(lensState.streakLength ?? 5.0);
+    this.setSunDiscScale(lensState.sunDiscScale ?? 1.5);
+    this.setSunDiscBlur(lensState.sunDiscBlur ?? 1.25);
+    this.setSunDiscColor(lensState.sunDiscColor ?? '#fff0c8');
     this.setEnabled(lensState.enabled ?? false);
   }
 

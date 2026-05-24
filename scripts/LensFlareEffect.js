@@ -4,6 +4,7 @@ const yAxis = new THREE.Vector3(0, 1, 0);
 const DEFAULT_DIRT_TEXTURE =
   'https://i.ibb.co/c3x4dBy/lens-Dirt-Texture.jpg';
 const DEFAULT_COLOR = '#d28756';
+const DEFAULT_SUN_DISC_COLOR = '#fff0c8';
 
 const fragmentShader = `
     uniform float iTime;
@@ -31,6 +32,13 @@ const fragmentShader = `
     uniform float uDistortion;
     uniform float uBrightDark;
     uniform float uHaloIntensity;
+    uniform float uStreakLength;
+    uniform float uSunDiscScale;
+    uniform float uSunDiscBlur;
+    uniform float uSunDiscVisibility;
+    uniform vec3 uSunDiscColor;
+    uniform bool uOccluded;
+    uniform bool uInView;
     varying vec2 vUv;
 
     vec2 vTexCoord;
@@ -64,10 +72,18 @@ const fragmentShader = `
         );
     }
 
+    float streakScaleFromLength(float len) {
+        float t = clamp(len / 10.0, 0.0, 1.0);
+        // 5 = 1.0 (current look); 0 = shorter rays; 10 = longer rays
+        return pow(2.0, (0.5 - t) * 2.4);
+    }
+
     vec3 drawflare(vec2 p, float intensity, float rnd, float speed, int id)
     {
+        float sScale = streakScaleFromLength(uStreakLength);
+        vec2 ps = p * sScale;
         float flarehueoffset = (1. / 32.) * float(id) * 0.1;
-        float lingrad = distance(vec2(0.), p);
+        float lingrad = distance(vec2(0.), ps);
         float expgrad = 1. / exp(lingrad * (fract(rnd) * 0.66 + 0.33));
         vec3 colgrad = hsv2rgb(vec3( fract( (expgrad * 8.) + speed * flareSpeed + flarehueoffset), pow(1.-abs(expgrad*2.-1.), 0.45), 20.0 * expgrad * intensity));
 
@@ -79,7 +95,7 @@ const fragmentShader = `
             internalStarPoints = starPoints;
         }
         
-        float blades = length(p * flareShape * sin(internalStarPoints * atan(p.x, p.y)));
+        float blades = length(ps * flareShape * sin(internalStarPoints * atan(ps.x, ps.y)));
         
         float comp = pow(1.-saturate2(blades), ( anamorphic ? 100. : 12.));
         comp += saturate2(expgrad-0.9) * 3.;
@@ -97,6 +113,7 @@ const fragmentShader = `
 
     float glare(vec2 uv, vec2 pos, float size)
     {
+        float sScale = streakScaleFromLength(uStreakLength);
         vec2 main;
 
         if(animated){
@@ -107,9 +124,9 @@ const fragmentShader = `
         
         float ang = atan(main.y, main.x) * (anamorphic ? 1.0 : starPoints);
         float dist = length(main); 
-        dist = pow(dist, .9);
+        dist = pow(dist * sScale, .9);
         
-        float f0 = 1.0/(length(uv-pos)*(1.0/size*16.0)+.2);
+        float f0 = 1.0/(length(uv-pos)*sScale*(1.0/size*16.0)+.2);
 
         return f0+f0*(sin((ang))*.2 +.3);
     }
@@ -311,34 +328,58 @@ const fragmentShader = `
                     1.0);
     }
 
-    vec4 getStartBurst(){
+    vec4 getStartBurst(vec2 flareAxis){
         vec2 aspectTexCoord = vec2(1.0) - (((vTexCoord - vec2(0.5)) * vec2(1.0)) + vec2(0.5)); 
-        vec2 texCoord = vec2(1.0) - vTexCoord; 
-        vec2 ghostVec = (vec2(0.5) - texCoord) * uDispersal - lensPosition;
-        vec2 ghostVecAspectNormalized = normalize(ghostVec * vec2(1.0)) * vec2(1.0);
-        // Let the rainbow halo spread further as intensity is pushed up,
-        // so the ring visibly expands rather than just brightening in place.
+        vec2 texCoord = vec2(1.0) - vTexCoord;
+        // Ghosts and dispersion lie on the center ↔ light axis (same space as myUV / sun disc)
+        vec2 ghostVec = -flareAxis * uDispersal;
+        vec2 ghostDir = length(ghostVec) > 0.0001 ? normalize(ghostVec) : vec2(1.0, 0.0);
         float widenedHaloWidth = uHaloWidth * (1.0 + max(uHaloIntensity - 1.0, 0.0) * 0.35);
-        vec2 haloVec = normalize(ghostVec) * widenedHaloWidth;
-        vec2 haloVecAspectNormalized = ghostVecAspectNormalized * widenedHaloWidth;
+        vec2 haloVec = ghostDir * widenedHaloWidth;
         vec2 texelSize = vec2(1.0) / vec2(iResolution.xy);
         vec3 distortion = vec3(-(texelSize.x * uDistortion), 0.2, texelSize.x * uDistortion);
         vec4 c = vec4(0.0);
-        // Reduce texture lookups: use 6 instead of 8 for better performance
-        // Skip every other iteration for distant samples
         for (int i = 0; i < 8; i++) {
-            // Skip samples that are likely outside view or have low contribution
             vec2 offset = texCoord + (ghostVec * float(i));
             float distFromCenter = length(vec2(0.5) - offset);
-            // Early skip for samples far from center (they contribute less)
             if(distFromCenter > 0.7 && i > 4) continue;
             
-            c += textureDistorted(lensDirtTexture, offset, ghostVecAspectNormalized, distortion) * pow(max(0.0, 1.0 - (distFromCenter / length(vec2(0.5)))), 10.0);
+            c += textureDistorted(lensDirtTexture, offset, ghostDir * uDispersal, distortion) * pow(max(0.0, 1.0 - (distFromCenter / length(vec2(0.5)))), 10.0);
         }                       
-        vec2 haloOffset = texCoord + haloVecAspectNormalized; 
+        vec2 haloOffset = texCoord + haloVec; 
         return (c * getLensColor((length(vec2(0.5) - aspectTexCoord) / length(vec2(haloScale))))) + 
-            (textureDistorted(lensDirtTexture, haloOffset, ghostVecAspectNormalized, distortion) * pow(max(0.0, 1.0 - (length(vec2(0.5) - haloOffset) / length(vec2(0.5)))), 10.0));
+            (textureDistorted(lensDirtTexture, haloOffset, ghostDir * uDispersal, distortion) * pow(max(0.0, 1.0 - (length(vec2(0.5) - haloOffset) / length(vec2(0.5)))), 10.0));
     } 
+
+    vec3 drawSunDisc(vec2 uv, vec2 pos) {
+        if (uSunDiscScale <= 0.001 || uSunDiscVisibility <= 0.0001) return vec3(0.0);
+        vec2 p = uv - pos;
+        float dist = length(p);
+        float blurT = clamp(uSunDiscBlur / 5.0, 0.0, 1.0);
+        float vis = uSunDiscVisibility;
+        // UI slider 0–10; 10 equals the former internal scale of 1.0
+        float sizeNorm = uSunDiscScale * 0.1;
+        float effectiveScale = sizeNorm * mix(0.32, 1.0, vis);
+        float radius = effectiveScale * 0.065;
+
+        float intensity;
+        if (blurT < 0.001) {
+            // Perfectly solid disc — hard edge, full fill inside
+            intensity = 1.0 - step(radius, dist);
+        } else {
+            float aa = fwidth(dist);
+            float edgeInner = radius - aa * mix(0.35, 1.5, blurT);
+            float edgeOuter = radius + aa * mix(0.35, 1.5, blurT) + radius * blurT * 1.45;
+            float hardDisc = 1.0 - smoothstep(edgeInner, edgeOuter, dist);
+            float softGlow = exp(-pow(dist / max(radius, 0.0001), mix(12.0, 1.08, blurT)));
+            intensity = mix(hardDisc, max(hardDisc, softGlow * 0.85), blurT);
+        }
+
+        // Occlusion scales the whole disc — never per-pixel edge transparency
+        float visWeight = vis;
+        float brightness = mix(3.2, 1.75, blurT);
+        return uSunDiscColor * intensity * visWeight * brightness;
+    }
 
     void main()
     {
@@ -348,23 +389,30 @@ const fragmentShader = `
             return;
         }
         
-        // Early exit if opacity is very low - skip expensive calculations
-        if(opacity < 0.01) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
-        
         vec2 uv = vUv;
         vec2 myUV = uv -0.5;
         myUV.y *= iResolution.y/iResolution.x;
         vec2 mouse = lensPosition * 0.5;
         mouse.y *= iResolution.y/iResolution.x;
+
+        vec3 sunDisc = uInView ? drawSunDisc(myUV, mouse) : vec3(0.0);
+        bool showSunDisc = uSunDiscScale > 0.001 && uSunDiscVisibility > 0.001;
+
+        // When fully occluded and no sun disc, skip expensive flare work
+        if (uOccluded && opacity < 0.01 && !showSunDisc) {
+            gl_FragColor = vec4(0.0);
+            return;
+        }
         
+        vec3 finalColor = vec3(0.0);
+
+        // Main flares — hidden when geometry occludes the light source
+        if (!uOccluded && opacity >= 0.01) {
         // Distance-based LOD: skip expensive features when far from lens position
         float distFromLens = length(myUV - mouse);
         bool useHighQuality = distFromLens < 1.5; // Only use expensive features near the lens
         
-        vec3 finalColor = LensFlare(myUV, mouse) * 20.0 * colorGain / 256.;
+        finalColor = LensFlare(myUV, mouse) * 20.0 * colorGain / 256.;
 
         // Only compute expensive features when close to lens position or when explicitly enabled
         if(aditionalStreaks && useHighQuality){
@@ -372,21 +420,21 @@ const fragmentShader = `
             vec3 circColor2 = vec3(0.3, 0.1, 0.9);
 
             for(float i=0.;i<10.;i++){
-            finalColor += circle(myUV, pow(rnd(i*2000.)*2.8, .1)+1.41, 0.0, circColor+i , circColor2+i, rnd(i*20.)*3.+0.2-.5, lensPosition);
+            finalColor += circle(myUV, pow(rnd(i*2000.)*2.8, .1)+1.41, 0.0, circColor+i , circColor2+i, rnd(i*20.)*3.+0.2-.5, mouse);
             }
         }
 
         if(secondaryGhosts && useHighQuality){
             vec3 altGhosts = vec3(0.1);
-            altGhosts += renderhex(myUV, -lensPosition*0.25, ghostScale * 1.4, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, lensPosition*0.25, ghostScale * 0.5, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, lensPosition*0.1, ghostScale * 1.6,vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, lensPosition*1.8, ghostScale * 2.0, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, lensPosition*1.25, ghostScale * 0.8, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, -lensPosition*1.25, ghostScale * 5.0, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, -mouse*0.25, ghostScale * 1.4, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*0.25, ghostScale * 0.5, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*0.1, ghostScale * 1.6,vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*1.8, ghostScale * 2.0, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*1.25, ghostScale * 0.8, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, -mouse*1.25, ghostScale * 5.0, vec3(0.03)* colorGain);
             
-            altGhosts += fpow(1.0 - abs(distance(lensPosition*0.8,myUV) - 0.5),0.985)*vec3(.1);
-            altGhosts += fpow(1.0 - abs(distance(lensPosition*0.4,myUV) - 0.2),0.994)*vec3(.05);
+            altGhosts += fpow(1.0 - abs(distance(mouse*0.8,myUV) - 0.5),0.985)*vec3(.1);
+            altGhosts += fpow(1.0 - abs(distance(mouse*0.4,myUV) - 0.2),0.994)*vec3(.05);
             finalColor += altGhosts;
         }
         
@@ -404,7 +452,7 @@ const fragmentShader = `
             // Boost the rainbow halo with uHaloIntensity: at 1.0 we match the
             // original look (clamped 0.01–1.0). Higher values push the ring
             // brighter while keeping its rainbow character before saturation.
-            vec3 startBurst = getStartBurst().rgb;
+            vec3 startBurst = getStartBurst(mouse).rgb;
             // Pull the halo toward chromatic rainbow colours so it doesn't
             // visually merge with the warm flare tint from colorGain. The
             // boost scales gently with intensity so cranking the slider
@@ -415,9 +463,13 @@ const fragmentShader = `
             vec3 burst = clamp((lensMod.rgb * startBurst), 0.0, 1.0);
             finalColor += burst * uHaloIntensity;
         }
+        }
 
-        // enabled check already done at top, so we can just output here
-        gl_FragColor = vec4(finalColor, mix(finalColor, -vec3(.15), 0.5) * opacity);
+        finalColor += sunDisc;
+
+        float discAlpha = showSunDisc ? uSunDiscVisibility : 0.0;
+        float outOpacity = max(opacity, discAlpha);
+        gl_FragColor = vec4(finalColor, mix(finalColor, -vec3(.15), 0.5) * outOpacity);
     }
 `;
 
@@ -477,6 +529,13 @@ export class LensFlareEffect extends THREE.Mesh {
       uDistortion: { value: 1.5 },
       uBrightDark: { value: 0.5 },
       uHaloIntensity: { value: options.haloIntensity ?? 1.0 },
+      uStreakLength: { value: options.streakLength ?? 5.0 },
+      uSunDiscScale: { value: options.sunDiscScale ?? 1.5 },
+      uSunDiscBlur: { value: options.sunDiscBlur ?? 1.25 },
+      uSunDiscVisibility: { value: 1.0 },
+      uSunDiscColor: { value: new THREE.Vector3(1, 0.94, 0.78) },
+      uOccluded: { value: false },
+      uInView: { value: true },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -513,8 +572,14 @@ export class LensFlareEffect extends THREE.Mesh {
     this.azimuthDeg = options.rotation ?? 0;
     this.elevationDeg = options.height ?? 15;
     this.colorHex = options.color ?? DEFAULT_COLOR;
+    this.sunDiscColorHex = options.sunDiscColor ?? DEFAULT_SUN_DISC_COLOR;
     this.fadeInSpeed = options.fadeInSpeed ?? 4;
     this.fadeOutSpeed = options.fadeOutSpeed ?? 20.25;
+    /** Sun disc fades slower than flares — eases scale + opacity when occluded. */
+    this.sunDiscFadeOutSpeed = options.sunDiscFadeOutSpeed ?? 2.2;
+    this.sunDiscFadeInSpeed = options.sunDiscFadeInSpeed ?? 1.1;
+    this.sunDiscVisibility = 1;
+    this.sunDiscVisibilityTarget = 1;
     this.baseOpacity = options.opacity ?? 0.8;
     this.currentOpacity = this.baseOpacity;
     this.targetOpacity = this.baseOpacity;
@@ -573,6 +638,7 @@ export class LensFlareEffect extends THREE.Mesh {
       if (this.followMouse) {
       this.material.uniforms.lensPosition.value.copy(this.pointer);
       this.targetOpacity = this.baseOpacity;
+      this.sunDiscVisibilityTarget = 1;
       } else {
         this.updateProjectedPosition(camera, scene);
       }
@@ -591,9 +657,24 @@ export class LensFlareEffect extends THREE.Mesh {
         delta,
       );
       this.material.uniforms.opacity.value = this.currentOpacity;
+
+      const sunDiscDamp =
+        this.sunDiscVisibilityTarget < this.sunDiscVisibility
+          ? this.sunDiscFadeOutSpeed
+          : this.sunDiscFadeInSpeed;
+      this.sunDiscVisibility = THREE.MathUtils.damp(
+        this.sunDiscVisibility,
+        this.sunDiscVisibilityTarget,
+        sunDiscDamp,
+        delta,
+      );
+      this.material.uniforms.uSunDiscVisibility.value = this.sunDiscVisibility;
     };
 
     this.setColor(this.colorHex);
+    this.setSunDiscColor(this.sunDiscColorHex);
+    this.setSunDiscScale(options.sunDiscScale ?? 1.5);
+    this.setSunDiscBlur(options.sunDiscBlur ?? 1.25);
     this.setQuality(options.quality ?? 'maximum');
     this.updateAnchorPosition();
     this.setEnabled(this.userEnabled);
@@ -610,8 +691,13 @@ export class LensFlareEffect extends THREE.Mesh {
       Math.abs(this.projected.y) > 1.5
     ) {
       this.targetOpacity = 0;
+      this.sunDiscVisibilityTarget = 0;
+      this.material.uniforms.uInView.value = false;
+      this.material.uniforms.uOccluded.value = false;
       return;
     }
+
+    this.material.uniforms.uInView.value = true;
 
     this.material.uniforms.lensPosition.value.set(
       this.projected.x,
@@ -620,6 +706,8 @@ export class LensFlareEffect extends THREE.Mesh {
 
     if (!this.enableOcclusion) {
       this.targetOpacity = this.baseOpacity;
+      this.sunDiscVisibilityTarget = 1;
+      this.material.uniforms.uOccluded.value = false;
       return;
     }
 
@@ -640,6 +728,8 @@ export class LensFlareEffect extends THREE.Mesh {
     // If no occlusionCheckObjects are set, skip occlusion check entirely (better than checking all scene children)
     if (!this.occlusionCheckObjects || this.occlusionCheckObjects.length === 0) {
       this.targetOpacity = this.baseOpacity;
+      this.sunDiscVisibilityTarget = 1;
+      this.material.uniforms.uOccluded.value = false;
       return;
     }
     
@@ -654,10 +744,8 @@ export class LensFlareEffect extends THREE.Mesh {
 
     const isOccluded = !!occluder;
     this.targetOpacity = isOccluded ? 0 : this.baseOpacity;
-    
-    // When occluded, disable shader entirely to save performance
-    // The shader is very expensive, so we should skip it completely when not visible
-    this.material.uniforms.enabled.value = !isOccluded && this.userEnabled;
+    this.sunDiscVisibilityTarget = isOccluded ? 0 : 1;
+    this.material.uniforms.uOccluded.value = isOccluded;
   }
 
   setEnabled(enabled) {
@@ -668,9 +756,13 @@ export class LensFlareEffect extends THREE.Mesh {
     if (!this.visible) {
       this.targetOpacity = 0;
       this.currentOpacity = 0;
+      this.sunDiscVisibility = 0;
+      this.sunDiscVisibilityTarget = 0;
       this.material.uniforms.opacity.value = 0;
+      this.material.uniforms.uSunDiscVisibility.value = 0;
     } else {
       this.targetOpacity = this.baseOpacity;
+      this.sunDiscVisibilityTarget = 1;
       // Re-check occlusion state when re-enabling
       // The occlusion check will update the enabled uniform if needed
     }
@@ -740,6 +832,36 @@ export class LensFlareEffect extends THREE.Mesh {
     if (!Number.isFinite(value)) return;
     const clamped = Math.max(0, Math.min(5, value));
     this.material.uniforms.uHaloIntensity.value = clamped;
+  }
+
+  setStreakLength(value) {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(0, Math.min(10, value));
+    this.material.uniforms.uStreakLength.value = clamped;
+  }
+
+  setSunDiscScale(value) {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(0, Math.min(10, value));
+    this.material.uniforms.uSunDiscScale.value = clamped;
+  }
+
+  setSunDiscBlur(value) {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(0, Math.min(5, value));
+    this.material.uniforms.uSunDiscBlur.value = clamped;
+  }
+
+  setSunDiscColor(hex) {
+    if (!hex) return;
+    let color;
+    try {
+      color = new THREE.Color(hex);
+    } catch (error) {
+      return;
+    }
+    this.sunDiscColorHex = hex;
+    this.material.uniforms.uSunDiscColor.value.set(color.r, color.g, color.b);
   }
 
   dispose() {
