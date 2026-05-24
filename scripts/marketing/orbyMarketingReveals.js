@@ -749,10 +749,7 @@ export function showInProgressStatic(sectionEl) {
   if (!sectionEl || sectionEl.dataset.orbyMarketingRevealed === '1') return;
   sectionEl.dataset.orbyMarketingRevealed = '1';
   sectionEl.classList.remove('orby-marketing__section--pending');
-  sectionEl.classList.add(
-    'orby-marketing__section--revealed',
-    'orby-marketing__section--in-progress-ready',
-  );
+  sectionEl.classList.add('orby-marketing__section--revealed');
 
   sectionEl
     .querySelectorAll(
@@ -866,7 +863,4 @@ export function cancelAllMarketingMotion(root) {
     ),
   );
   killIntroTurntableScrollTriggers(root);
-  void import('./orbyMarketingInProgressCurtain.js').then((mod) => {
-    mod.killInProgressCurtainScrollTriggers(root);
-  });
 }

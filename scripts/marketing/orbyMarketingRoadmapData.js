@@ -82,7 +82,7 @@ export const ROADMAP_TASK_GRID_DEFS = [
   /* Q2 2026 — launch quarter (grid 16–20) */
   { label: 'Stability & QA', startGrid: 16, endGrid: 20, lane: 0, status: 'active' },
   { label: 'ColorChecker', startGrid: 16, endGrid: 18, lane: 1, status: 'done' },
-  { label: 'Studio backdrop', startGrid: 18, endGrid: 20, lane: 1, status: 'done' },
+  { label: 'Lens effects', startGrid: 18, endGrid: 20, lane: 1, status: 'done' },
   { label: 'Presskit', startGrid: 16, endGrid: 18, status: 'todo' },
 
   /* Q3 2026 (grid 20–24) */
@@ -100,5 +100,5 @@ export const ROADMAP_TASK_GRID_DEFS = [
   { label: 'Offline PWA', startGrid: 29, endGrid: 32, status: 'future' },
 
   /* Q2 2027 (grid 32–36) */
-  { label: 'OUTLINER', startGrid: 32, endGrid: 35, status: 'future' },
+  { label: 'OUTLINER', startGrid: 32, endGrid: 36, status: 'future' },
 ];

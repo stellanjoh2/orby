@@ -123,8 +123,6 @@ export function taskFromGrid(def) {
   };
 }
 
-export { ROADMAP_LAUNCH_GRID };
-
 /** @type {{ label: string, grid: number, at: number }} */
 export const ROADMAP_LAUNCH_MILESTONE = {
   ...ROADMAP_LAUNCH_MILESTONE_DATA,

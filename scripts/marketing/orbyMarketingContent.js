@@ -92,11 +92,11 @@ export const MARKETING_SECTIONS = [
     eyebrow: 'Set the stage',
     title: 'Your virtual studio, in the browser',
     lede:
-      'HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.',
+      'Achieve photorealism without leaving the browser. Every tool you need to light, grade, and present your model is right here — reacting in real time while you orbit the shot.',
     bullets: [
       'Look Filter presets, luminance curve, and full color grade',
-      'Depth of field, bloom, grain, lens flare, and tone mapping',
-      'Shader Lab stylized materials when you want to push beyond PBR',
+      'Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, anamorphic streaks, and tone mapping',
+      'PBR / real materials — metalness, roughness, normals, and emissive as authored',
     ],
     layout: 'media-left',
     imageSrc: './assets/marketing/present-cinema-look.png',
@@ -424,11 +424,11 @@ export const MARKETING_SECTIONS = [
           'Porsche render with ColorChecker, chrome ball, and reference spheres in Orby',
       },
       {
-        title: 'Studio Backdrop',
+        title: 'Lens Effects',
         body:
-          'Seamless curved cyclorama with color tint, texture, and scale — everything you need for product heroes without building a set in a DCC.',
+          'Lens flare, dirt, and chromatic aberration — optical polish on your hero without a post round trip. Dial intensity, color, and quality in realtime.',
         imageSrc: './assets/marketing/pro-feature1-shoes01.jpg',
-        imageAlt: 'Product render with curved studio backdrop in Orby',
+        imageAlt: 'Product render with lens flare and chromatic aberration in Orby',
       },
     ],
   },

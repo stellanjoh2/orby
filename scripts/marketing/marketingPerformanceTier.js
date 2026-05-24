@@ -91,8 +91,3 @@ export function getTurntablePreloadConcurrency() {
 export function getShowcaseCycleMs() {
   return getMarketingPerformanceTier() === 'full' ? 5200 : 7800;
 }
-
-/** Reset cached tier (tests only). */
-export function resetMarketingPerformanceTierCache() {
-  tierCache = null;
-}

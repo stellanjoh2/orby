@@ -2,7 +2,6 @@
  * In Progress — fixed white endcap behind scrolling lime CTA (no second lime curtain).
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
-import { showInProgressStatic } from './orbyMarketingReveals.js';
 
 const SCROLL_OPTS = { passive: true };
 /** In Progress interactive once lime CTA has cleared the top by this much (vh). */
@@ -18,8 +17,6 @@ export function initInProgressCurtainReveal(root) {
 
   const section = stage.querySelector('.orby-marketing__section--in-progress');
   if (!section) return () => {};
-
-  showInProgressStatic(section);
 
   if (prefersReducedMotion()) {
     stage.classList.add('is-endcap-active', 'is-revealed');
@@ -65,9 +62,3 @@ export function initInProgressCurtainReveal(root) {
     stage.classList.remove('is-endcap-active', 'is-revealed');
   };
 }
-
-/** @param {HTMLElement | null} _root */
-export function killInProgressCurtainScrollTriggers(_root) {}
-
-/** @param {HTMLElement | null} _root */
-export function refreshInProgressCurtainScrollTriggers(_root) {}

@@ -37,7 +37,6 @@ function renderRoadmapTaskBar(task) {
         : task.status === 'future'
           ? 'orby-marketing__roadmap-bar--future'
           : 'orby-marketing__roadmap-bar--todo';
-
   return `<div class="orby-marketing__roadmap-bar ${statusClass}" data-orby-marketing-reveal="roadmap-bar" tabindex="0" aria-label="${escapeMarketingHtml(task.label)}" style="--orby-roadmap-start-grid: ${task.startGrid}; --orby-roadmap-end-grid: ${task.endGrid}; --orby-roadmap-lane: ${task.lane};">
       <span class="orby-marketing__roadmap-bar-label">${escapeMarketingHtml(task.label)}</span>
     </div>`;
