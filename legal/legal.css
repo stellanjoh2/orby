@@ -947,6 +947,10 @@ body.legal-doc--brand {
   color: var(--legal-faint);
 }
 
+.legal-brand-section .legal-callout {
+  margin-bottom: 1.25rem;
+}
+
 /* Override .legal-doc ul padding — grid galleries flush left */
 body.legal-doc--brand ul.legal-brand-press-grid,
 body.legal-doc--brand ul.legal-brand-swatches {
