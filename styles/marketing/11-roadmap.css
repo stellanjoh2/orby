@@ -38,27 +38,28 @@
 /* Timeline chart — scales with main content width (1920–3840+) */
 .orby-marketing__roadmap-chart {
   --orby-roadmap-bar-height: clamp(
-    40px,
-    calc(40px + 8px * (1 - var(--orby-marketing-wide-type-ramp))),
-    48px
+    45px,
+    calc(45px + 9px * (1 - var(--orby-marketing-wide-type-ramp))),
+    54px
   );
-  --orby-roadmap-pill-gap-x: 8px;
-  --orby-roadmap-pill-gap-y: 8px;
+  /* 48→54px pills: scale gutters/spacing by bar height so rhythm stays even */
+  --orby-roadmap-ui-scale: calc(var(--orby-roadmap-bar-height) / 48px);
+  --orby-roadmap-pill-gap-x: calc(8px * var(--orby-roadmap-ui-scale));
+  --orby-roadmap-pill-gap-y: var(--orby-roadmap-pill-gap-x);
   --orby-roadmap-lane-gap: var(--orby-roadmap-pill-gap-y);
-  --orby-roadmap-axis-gap: clamp(10px, 0.9vw, 16px);
-  --orby-roadmap-label-size: clamp(
-    10px,
-    calc(10px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
-    12px
+  --orby-roadmap-axis-gap: calc(clamp(10px, 0.9vw, 16px) * var(--orby-roadmap-ui-scale));
+  --orby-roadmap-label-size: calc(
+    clamp(10px, calc(10px + 2px * (1 - var(--orby-marketing-wide-type-ramp))), 12px) *
+      var(--orby-roadmap-ui-scale)
   );
   --orby-roadmap-body-height: calc(
     var(--orby-roadmap-lanes) * var(--orby-roadmap-bar-height) +
       (var(--orby-roadmap-lanes) - 1) * var(--orby-roadmap-lane-gap)
   );
-  --orby-roadmap-grid-bleed: clamp(8px, 0.75vw, 14px);
-  --orby-roadmap-axis-to-stage: clamp(12px, 1.2vw, 20px);
+  --orby-roadmap-grid-bleed: calc(clamp(8px, 0.75vw, 14px) * var(--orby-roadmap-ui-scale));
+  --orby-roadmap-axis-to-stage: calc(clamp(12px, 1.2vw, 20px) * var(--orby-roadmap-ui-scale));
   --orby-roadmap-launch-line-height: calc(21px * 1.1);
-  --orby-roadmap-launch-label-gap: 20px;
+  --orby-roadmap-launch-label-gap: calc(20px * var(--orby-roadmap-ui-scale));
   /* Mirror: years → quarters → stage gap (axis only) */
   --orby-roadmap-year-to-stage: calc(
     var(--orby-roadmap-axis-to-stage) + var(--orby-roadmap-axis-gap) +
@@ -120,6 +121,7 @@
   right: 0;
   height: calc(var(--orby-roadmap-body-height) + var(--orby-roadmap-grid-bleed));
   pointer-events: none;
+  z-index: 0;
 }
 
 .orby-marketing__roadmap-gridline,
@@ -139,13 +141,13 @@
 .orby-marketing__roadmap-launch-line {
   width: 1px;
   background: var(--brand-primary, #c4ff00);
-  z-index: 2;
 }
 
 .orby-marketing__roadmap-lanes {
   position: relative;
   width: 100%;
   height: var(--orby-roadmap-body-height);
+  z-index: 1;
 }
 
 .orby-marketing__roadmap-bar {
@@ -176,7 +178,7 @@
   border-radius: calc(var(--orby-roadmap-bar-height) / 2);
   display: flex;
   align-items: center;
-  padding: 0 clamp(12px, 1vw, 18px);
+  padding: 0 calc(clamp(12px, 1vw, 18px) * var(--orby-roadmap-ui-scale));
   overflow: hidden;
   box-sizing: border-box;
   z-index: 1;
@@ -286,8 +288,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  column-gap: clamp(14px, 1.4vw, 22px);
-  row-gap: 8px;
+  column-gap: calc(clamp(14px, 1.4vw, 22px) * var(--orby-roadmap-ui-scale) + 4px);
+  row-gap: var(--orby-roadmap-pill-gap-y);
 }
 
 .orby-marketing__roadmap-legend-item {
@@ -304,8 +306,8 @@
 
 .orby-marketing__roadmap-legend-dot {
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
+  width: calc(8px * var(--orby-roadmap-ui-scale));
+  height: calc(8px * var(--orby-roadmap-ui-scale));
   border-radius: 50%;
 }
 
@@ -335,6 +337,7 @@
   display: flex;
   align-items: center;
   transform: translateX(-50%);
+  z-index: 1;
   font-family: var(--brand-font-headline);
   font-size: 21px;
   font-weight: 700;

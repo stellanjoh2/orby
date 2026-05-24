@@ -49,6 +49,7 @@
  * @property {string} [eyebrow]
  * @property {string} title
  * @property {string} lede
+ * @property {string[]} [gradientPhrases] — substrings in lede/body rendered with animated lime↔purple gradient
  * @property {string[]} [bullets]
  * @property {'media-left' | 'media-right'} [layout]
  * @property {string} [imageSrc]
@@ -82,7 +83,8 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      "Your model deserves better than a screenshot. Whether it's a photogrammetry scan, a game asset, or an SVG turned 3D mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
+      "Your 3D model deserves better. Whether it's a photogrammetry scan, a game asset, or your logotype extruded into a mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
+    gradientPhrases: ['deserves better'],
   },
   {
     type: 'split',
@@ -437,6 +439,7 @@ export const MARKETING_SECTIONS = [
     title: 'Roadmap',
     lede:
       "A lot is already here. A lot more is coming. Features get added, timelines shift, and we're always building — but this is our best outline of what's next and when to expect it.",
+    gradientPhrases: ['A lot more is coming'],
   },
   {
     type: 'faq',

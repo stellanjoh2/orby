@@ -1,0 +1,36 @@
+/* Animated lime ↔ purple emphasis — one gradient sweep across the whole phrase */
+
+.orby-marketing__gradient-text {
+  background: linear-gradient(
+    to right,
+    var(--orby-marketing-headline, var(--brand-primary, #c4ff00)) 18%,
+    var(--text-link, #7e6bff) 42%,
+    var(--orby-marketing-headline, var(--brand-primary, #c4ff00)) 66%,
+    var(--text-link, #7e6bff) 90%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  background-size: 500% auto;
+  animation: orby-marketing-gradient-text-shine var(--orby-marketing-gradient-text-duration, 5s)
+    ease-in-out infinite alternate;
+}
+
+@keyframes orby-marketing-gradient-text-shine {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-marketing__gradient-text {
+    animation: none;
+    background-size: 200% auto;
+    background-position: 50% 50%;
+  }
+}

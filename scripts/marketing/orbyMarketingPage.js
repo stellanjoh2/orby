@@ -199,6 +199,7 @@ export function initOrbyMarketingPage(options = {}) {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         const section = entry.target;
+        section.classList.add('orby-marketing__section--in-view');
         void revealModule.preloadSectionMedia(section).then(() => {
           revealModule.revealMarketingSection(section);
         });

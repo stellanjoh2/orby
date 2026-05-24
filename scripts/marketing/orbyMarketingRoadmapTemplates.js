@@ -1,7 +1,7 @@
 /**
  * Public roadmap section HTML.
  */
-import { escapeMarketingHtml } from './orbyMarketingImageCredit.js';
+import { escapeMarketingHtml, renderMarketingBodyHtml } from './orbyMarketingImageCredit.js';
 import {
   ROADMAP_LAUNCH_MILESTONE,
   ROADMAP_LANE_COUNT,
@@ -66,7 +66,7 @@ function renderRoadmapLegend() {
  */
 export function renderRoadmapSection(section) {
   const ledeBlock = section.lede
-    ? `<p class="orby-marketing__lede orby-marketing__roadmap-lede">${escapeMarketingHtml(section.lede)}</p>`
+    ? `<p class="orby-marketing__lede orby-marketing__roadmap-lede">${renderMarketingBodyHtml(section.lede, section.gradientPhrases)}</p>`
     : '';
 
   const yearLabels = ROADMAP_YEARS.map(

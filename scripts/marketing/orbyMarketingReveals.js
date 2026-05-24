@@ -171,6 +171,20 @@ function clearSectionCompositorHints(sectionEl) {
   });
 }
 
+/** Restart magic-btn rim spin after scroll reveal (content-visibility: auto can leave it paused). */
+function resumeMarketingMagicBtnRim(sectionEl) {
+  if (prefersReducedMotion()) return;
+  const buttons = sectionEl.querySelectorAll(
+    '.orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)',
+  );
+  buttons.forEach((btn) => {
+    if (!(btn instanceof HTMLElement)) return;
+    btn.classList.add('orby-magic-btn--rim-kick');
+    void btn.offsetWidth;
+    btn.classList.remove('orby-magic-btn--rim-kick');
+  });
+}
+
 function prepareHeadline(el, liftY = headLiftY) {
   if (!el) return;
   if (shouldUseHeadlineWordStagger()) {
@@ -813,6 +827,7 @@ export function revealMarketingSection(sectionEl) {
       sectionEl.classList.remove('orby-marketing__section--pending');
       sectionEl.classList.add('orby-marketing__section--revealed');
       clearSectionCompositorHints(sectionEl);
+      resumeMarketingMagicBtnRim(sectionEl);
     },
   });
 

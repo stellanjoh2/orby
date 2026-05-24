@@ -7,6 +7,9 @@ import { prefersReducedMotion } from './modalReveal.js';
 
 export const BIG_MESSAGE_STAGGER_CLASS = 'orby-stagger-word';
 
+/** Marketing body — one span per phrase; do not split for stagger (unified gradient sweep). */
+export const MARKETING_GRADIENT_PHRASE_CLASS = 'orby-marketing__gradient-text';
+
 /** Text/copy reveal pace (1 = baseline; 0.72 ≈ 28% snappier). Dropzone, marketing, modals. */
 export const TEXT_REVEAL_PACE = 0.72;
 
@@ -46,7 +49,14 @@ export function wrapWordsForBigMessage(root) {
         node.insertBefore(fragment, child);
         node.removeChild(child);
       } else if (child.nodeType === Node.ELEMENT_NODE) {
-        processNode(child);
+        const el = /** @type {HTMLElement} */ (child);
+        if (el.classList.contains(MARKETING_GRADIENT_PHRASE_CLASS)) {
+          if (!el.classList.contains(BIG_MESSAGE_STAGGER_CLASS)) {
+            el.classList.add(BIG_MESSAGE_STAGGER_CLASS);
+          }
+          continue;
+        }
+        processNode(el);
       }
     }
   };

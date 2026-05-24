@@ -9,6 +9,7 @@ import {
 import {
   escapeMarketingHtml,
   formatMarketingImageCreditHtml,
+  renderMarketingBodyHtml,
 } from './orbyMarketingImageCredit.js';
 import { MARKETING_VIDEO_HTML_ATTRS } from './orbyMarketingVideo.js';
 import { renderRoadmapSection } from './orbyMarketingRoadmapTemplates.js';
@@ -275,7 +276,7 @@ function renderIntroSection(section) {
       <div class="orby-marketing__intro-center">
       ${section.eyebrow ? `<p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>` : ''}
       <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
-      <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>
+      <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${renderMarketingBodyHtml(section.lede, section.gradientPhrases)}</p>
     </div>
   </section>`;
 }

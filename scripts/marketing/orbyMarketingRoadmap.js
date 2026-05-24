@@ -23,10 +23,74 @@ export {
 /** @typedef {import('./orbyMarketingRoadmapData.js').RoadmapTaskGridDef} RoadmapTaskGridDef */
 
 /**
- * @typedef {RoadmapTaskGridDef & { start: number, width: number }} RoadmapTask
+ * @typedef {RoadmapTaskGridDef & { start: number, width: number, lane: number }} RoadmapTask
  * @property {number} start — computed % (for aria / export)
  * @property {number} width — computed span %
+ * @property {number} lane — computed for todo/future; from data for done/active
  */
+
+/** Statuses whose lane is fixed in content data. Todo/future pack into the topmost free lane. */
+const ROADMAP_FIXED_LANE_STATUSES = new Set(['done', 'active']);
+
+/**
+ * @param {number} aStart
+ * @param {number} aEnd — exclusive
+ * @param {number} bStart
+ * @param {number} bEnd — exclusive
+ */
+function roadmapGridRangesOverlap(aStart, aEnd, bStart, bEnd) {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+/**
+ * @param {number} lane
+ * @param {Pick<RoadmapTaskGridDef, 'startGrid' | 'endGrid'>} task
+ * @param {readonly Pick<RoadmapTaskGridDef, 'lane' | 'startGrid' | 'endGrid'>[]} placed
+ */
+function roadmapLaneHasConflict(lane, task, placed) {
+  return placed.some(
+    (other) =>
+      other.lane === lane &&
+      roadmapGridRangesOverlap(other.startGrid, other.endGrid, task.startGrid, task.endGrid),
+  );
+}
+
+/**
+ * @param {Pick<RoadmapTaskGridDef, 'startGrid' | 'endGrid'>} task
+ * @param {readonly Pick<RoadmapTaskGridDef, 'lane' | 'startGrid' | 'endGrid'>[]} placed
+ */
+function roadmapFindLowestFreeLane(task, placed) {
+  let lane = 0;
+  while (roadmapLaneHasConflict(lane, task, placed)) lane += 1;
+  return lane;
+}
+
+/**
+ * Done/active keep authored lanes; todo/future fill the topmost row with no overlap.
+ * @param {readonly RoadmapTaskGridDef[]} defs
+ * @returns {RoadmapTaskGridDef[]}
+ */
+export function assignRoadmapTaskLanes(defs) {
+  const fixed = defs.filter((task) => ROADMAP_FIXED_LANE_STATUSES.has(task.status));
+  const flexible = defs
+    .filter((task) => !ROADMAP_FIXED_LANE_STATUSES.has(task.status))
+    .sort(
+      (a, b) =>
+        a.startGrid - b.startGrid || b.endGrid - b.startGrid - (a.endGrid - a.startGrid),
+    );
+
+  /** @type {RoadmapTaskGridDef[]} */
+  const placed = fixed.map((task) => ({ ...task }));
+
+  for (const task of flexible) {
+    placed.push({
+      ...task,
+      lane: roadmapFindLowestFreeLane(task, placed),
+    });
+  }
+
+  return placed;
+}
 
 /** Quarters on the public roadmap */
 export const ROADMAP_QUARTER_COUNT = ROADMAP_QUARTERS.length;
@@ -68,7 +132,7 @@ export const ROADMAP_LAUNCH_MILESTONE = {
 };
 
 /** @type {RoadmapTask[]} */
-export const ROADMAP_TASKS = ROADMAP_TASK_GRID_DEFS.map(taskFromGrid);
+export const ROADMAP_TASKS = assignRoadmapTaskLanes(ROADMAP_TASK_GRID_DEFS).map(taskFromGrid);
 
 /** @type {number} */
 export const ROADMAP_LANE_COUNT =

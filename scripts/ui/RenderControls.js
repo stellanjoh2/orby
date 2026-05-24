@@ -1345,6 +1345,7 @@ export class RenderControls {
         );
         lookContainer.classList.toggle('look-filter-presets-container--expanded', open);
       }
+      if (open) this.hydrateLookFilterThumbs();
     }
     const lookId = state.lookFilterPreset ?? 'none';
     document.querySelectorAll('.look-filter-tile').forEach((el) => {

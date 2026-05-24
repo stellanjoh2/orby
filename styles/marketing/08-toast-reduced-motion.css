@@ -54,8 +54,8 @@
   .orby-marketing__pro-card-img,
   .orby-marketing__list li,
   .orby-marketing__cta,
-  .orby-magic-btn:not(.orby-magic-btn--on-lime)::before,
-  .orby-magic-btn:not(.orby-magic-btn--on-lime)::after {
+  #orby-marketing .orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)::before,
+  #orby-marketing .orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)::after {
     opacity: 1 !important;
     transform: none !important;
     filter: none !important;
@@ -69,6 +69,10 @@
 
   .orby-magic-btn__fill {
     transition: none !important;
+  }
+
+  .orby-marketing__gradient-text {
+    animation: none !important;
   }
 
   .orby-marketing__intro-asset,

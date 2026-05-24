@@ -137,3 +137,37 @@ html.orby-home-scroll .orby-marketing__section--intro.orby-marketing__section--i
   contain-intrinsic-size: auto 820px;
 }
 
+/*
+ * Resume paint + CSS (magic-btn rim spin) once a block is on screen or revealed.
+ * content-visibility: auto pauses descendant animations while skipped — dropzone stays visible.
+ */
+.orby-marketing__section--split.orby-marketing__section--in-view,
+.orby-marketing__section--showcase.orby-marketing__section--in-view,
+.orby-marketing__section--marquee.orby-marketing__section--in-view,
+.orby-marketing__section--pro.orby-marketing__section--in-view,
+.orby-marketing__section--roadmap.orby-marketing__section--in-view,
+.orby-marketing__section--faq.orby-marketing__section--in-view,
+.orby-marketing__section--cta.orby-marketing__section--in-view,
+.orby-marketing__section--split.orby-marketing__section--revealed,
+.orby-marketing__section--showcase.orby-marketing__section--revealed,
+.orby-marketing__section--marquee.orby-marketing__section--revealed,
+.orby-marketing__section--pro.orby-marketing__section--revealed,
+.orby-marketing__section--roadmap.orby-marketing__section--revealed,
+.orby-marketing__section--faq.orby-marketing__section--revealed,
+.orby-marketing__section--cta.orby-marketing__section--revealed {
+  content-visibility: visible;
+}
+
+.orby-marketing__section--in-view .orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)::before,
+.orby-marketing__section--in-view .orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)::after,
+.orby-marketing__section--revealed .orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)::before,
+.orby-marketing__section--revealed .orby-magic-btn:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono)::after {
+  animation-play-state: running;
+}
+
+/* One-frame off/on — restarts rim spin after content-visibility un-skip (see orbyMarketingReveals.js) */
+.orby-magic-btn--rim-kick::before,
+.orby-magic-btn--rim-kick::after {
+  animation: none !important;
+}
+

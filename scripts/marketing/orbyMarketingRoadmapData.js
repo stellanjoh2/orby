@@ -10,7 +10,7 @@
  * @property {string} label
  * @property {number} startGrid — inclusive month-line index (0–35)
  * @property {number} endGrid — exclusive month-line index (1–36)
- * @property {number} lane
+ * @property {number} [lane] — required for done/active; todo/future lanes are auto-packed
  * @property {RoadmapTaskStatus} status
  */
 
@@ -49,7 +49,8 @@ export const ROADMAP_LAUNCH_MILESTONE = {
 /**
  * Shipped work + what's next — aligned to the month grid.
  * Same-lane bars never overlap; different lanes may run in parallel.
- * Short tasks need at least 2 grid units so 48px pills stay inside quarter lines.
+ * Todo/future omit lane — they pack into the topmost free row.
+ * Short tasks need at least 2 grid units so 54px pills stay inside quarter lines.
  * @type {readonly RoadmapTaskGridDef[]}
  */
 export const ROADMAP_TASK_GRID_DEFS = [
@@ -82,22 +83,22 @@ export const ROADMAP_TASK_GRID_DEFS = [
   { label: 'Stability & QA', startGrid: 16, endGrid: 20, lane: 0, status: 'active' },
   { label: 'ColorChecker', startGrid: 16, endGrid: 18, lane: 1, status: 'done' },
   { label: 'Studio backdrop', startGrid: 18, endGrid: 20, lane: 1, status: 'done' },
-  { label: 'Presskit', startGrid: 16, endGrid: 18, lane: 3, status: 'todo' },
+  { label: 'Presskit', startGrid: 16, endGrid: 18, status: 'todo' },
 
   /* Q3 2026 (grid 20–24) */
-  { label: 'Scene sharing', startGrid: 20, endGrid: 23, lane: 1, status: 'todo' },
-  { label: 'Batch export', startGrid: 21, endGrid: 24, lane: 3, status: 'todo' },
+  { label: 'Scene sharing', startGrid: 20, endGrid: 23, status: 'todo' },
+  { label: 'Batch export', startGrid: 21, endGrid: 24, status: 'todo' },
   { label: 'Performance pass', startGrid: 16, endGrid: 28, lane: 2, status: 'active' },
 
   /* Q4 2026 (grid 24–28) */
-  { label: 'Collaboration', startGrid: 24, endGrid: 27, lane: 0, status: 'future' },
-  { label: 'Plugin API', startGrid: 25, endGrid: 29, lane: 3, status: 'future' },
-  { label: 'Shader Lab+', startGrid: 24, endGrid: 26, lane: 1, status: 'future' },
+  { label: 'Collaboration', startGrid: 24, endGrid: 27, status: 'future' },
+  { label: 'Plugin API', startGrid: 25, endGrid: 29, status: 'future' },
+  { label: 'Shader Lab+', startGrid: 24, endGrid: 26, status: 'future' },
 
   /* Q1 2027 (grid 28–32) */
-  { label: 'Mobile preview', startGrid: 28, endGrid: 31, lane: 1, status: 'future' },
-  { label: 'Offline PWA', startGrid: 29, endGrid: 32, lane: 3, status: 'future' },
+  { label: 'Mobile preview', startGrid: 28, endGrid: 31, status: 'future' },
+  { label: 'Offline PWA', startGrid: 29, endGrid: 32, status: 'future' },
 
   /* Q2 2027 (grid 32–36) */
-  { label: 'Multiple assets loaded', startGrid: 32, endGrid: 35, lane: 0, status: 'future' },
+  { label: 'OUTLINER', startGrid: 32, endGrid: 35, status: 'future' },
 ];
