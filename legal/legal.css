@@ -67,6 +67,12 @@
   --legal-font: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
   --legal-brand-headline: 'Mattone Bold', 'Cal Sans', var(--legal-font);
+  --legal-body-size: 1.0625rem;
+  --legal-body-line: 1.68;
+  --legal-lead-size: 1.125rem;
+  --legal-lead-line: 1.62;
+  --legal-secondary-size: 0.9375rem;
+  --legal-sub-size: 1rem;
 }
 
 *,
@@ -84,8 +90,8 @@ body.legal-doc {
   min-height: 100vh;
   font-family: var(--legal-font);
   font-weight: 300;
-  font-size: 1.0625rem;
-  line-height: 1.68;
+  font-size: var(--legal-body-size);
+  line-height: var(--legal-body-line);
   color: var(--legal-text);
   background: var(--legal-bg);
   -webkit-font-smoothing: antialiased;
@@ -182,14 +188,14 @@ body.legal-doc {
 }
 
 .legal-meta {
-  font-size: 0.9375rem;
+  font-size: var(--legal-secondary-size);
   color: var(--legal-muted);
 }
 
 .legal-lead {
-  font-size: 1.125rem;
-  line-height: 1.62;
-  color: var(--legal-muted);
+  font-size: var(--legal-lead-size);
+  line-height: var(--legal-lead-line);
+  color: var(--legal-text);
 }
 
 .legal-doc h2 {
@@ -207,12 +213,13 @@ body.legal-doc {
 
 .legal-doc p {
   margin: 0 0 1rem;
-  color: var(--legal-muted);
+  color: var(--legal-text);
 }
 
 /* After .legal-doc p — same specificity as p + class, must win over paragraph reset */
 .legal-doc p.legal-meta {
   margin: 0 0 4.25rem;
+  color: var(--legal-muted);
 }
 
 .legal-doc p.legal-lead {
@@ -227,7 +234,7 @@ body.legal-doc {
 .legal-doc ol {
   margin: 0 0 1rem;
   padding-left: 1.5rem;
-  color: var(--legal-muted);
+  color: var(--legal-text);
 }
 
 .legal-doc li {
@@ -255,7 +262,7 @@ body.legal-doc {
 
 .legal-sub {
   margin: 1rem 0 0.5rem;
-  font-size: 1rem;
+  font-size: var(--legal-sub-size);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.88);
 }
@@ -346,8 +353,7 @@ body.legal-doc--credits {
 
 .legal-credits-section__intro {
   margin: -0.35rem 0 1.1rem;
-  font-size: 0.98rem;
-  color: var(--legal-faint);
+  color: var(--legal-text);
 }
 
 /* Override .legal-doc ul { padding-left: 1.5rem } — align with column / h2 */
@@ -432,8 +438,8 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 
 .legal-credits-card__desc {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: var(--legal-body-size);
+  line-height: var(--legal-body-line);
   color: var(--legal-muted);
 }
 
@@ -500,8 +506,8 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 
 .legal-credits-placeholder__body {
   margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: var(--legal-body-size);
+  line-height: var(--legal-body-line);
   color: var(--legal-muted);
 }
 
@@ -561,6 +567,10 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 .legal-credits-asset__meta,
 .legal-credits-asset__use,
 .legal-credits-asset__note {
+  margin: 0 0 0.35rem;
+  font-size: var(--legal-body-size);
+  line-height: var(--legal-body-line);
+  color: var(--legal-muted);
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -575,9 +585,11 @@ body.legal-doc--credits .legal-credits-asset code {
 }
 
 .legal-credits-asset__title {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  font-size: var(--legal-lead-size);
   font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
   color: var(--legal-text);
   overflow-wrap: break-word;
 }
@@ -585,15 +597,6 @@ body.legal-doc--credits .legal-credits-asset code {
 body.legal-doc--credits .legal-credits-asset__meta a {
   overflow-wrap: anywhere;
   word-break: break-word;
-}
-
-.legal-credits-asset__meta,
-.legal-credits-asset__use,
-.legal-credits-asset__note {
-  margin: 0 0 0.35rem;
-  font-size: 0.92rem;
-  line-height: 1.5;
-  color: var(--legal-muted);
 }
 
 .legal-credits-asset__note:last-child,
@@ -628,7 +631,7 @@ body.legal-doc--credits .legal-credits-asset__meta a {
 
 .legal-callout p {
   margin: 0 0 0.75rem;
-  color: var(--legal-muted);
+  color: var(--legal-text);
 }
 
 .legal-callout--lime {
@@ -935,14 +938,12 @@ body.legal-doc--brand {
 
 .legal-brand-section__intro {
   margin: 0 0 1.25rem;
-  font-size: 1rem;
-  line-height: 1.62;
-  color: var(--legal-muted);
+  color: var(--legal-text);
 }
 
 .legal-brand-note {
   margin: 1rem 0 0;
-  font-size: 0.9375rem;
+  font-size: var(--legal-secondary-size);
   color: var(--legal-faint);
 }
 
@@ -970,7 +971,7 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-#logo .legal-brand-logo-grid--pairs {
+.legal-brand-logo-grid--logotype-hero {
   grid-template-columns: 1fr;
 }
 
@@ -979,7 +980,7 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
   padding: 1.5rem 1rem;
 }
 
-#logo .legal-brand-logo-grid--pairs .legal-brand-logo-card__stage {
+.legal-brand-logo-grid--logotype-hero .legal-brand-logo-card__stage {
   width: 100%;
   min-height: 408px;
   height: 408px;
@@ -987,7 +988,7 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
   container-type: inline-size;
 }
 
-#logo .legal-brand-logo-grid--pairs .legal-brand-logo-card__frame--logotype {
+.legal-brand-logo-grid--logotype-hero .legal-brand-logo-card__frame--logotype {
   /* Max size with half-O clearspace: 694.27/1676.82 height + 2×(274.885/1676.82) margin */
   --legal-brand-logotype-total-h: 0.7416;
   --legal-brand-logotype-total-w: 1.3276;
@@ -1175,7 +1176,7 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
 .legal-brand-usage-list {
   margin: 0;
   padding-left: 1.15rem;
-  color: var(--legal-muted);
+  color: var(--legal-text);
 }
 
 .legal-brand-usage-list li + li {
