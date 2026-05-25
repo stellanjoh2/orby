@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { ORBY_BLACK } from '../constants.js';
-import { EXRLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/EXRLoader.js';
-import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
+import { EXRLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/EXRLoader.js';
+import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/RGBELoader.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
 import { RotateEquirectShader } from '../shaders/index.js';
 
 export class EnvironmentController {
@@ -409,6 +409,7 @@ export class EnvironmentController {
       if (this.blurriness > 0 && envTexture) {
         bgTexture = envTexture;
       }
+
       this.scene.background = bgTexture;
       if ('backgroundBlurriness' in this.scene) {
         this.scene.backgroundBlurriness = this.blurriness;

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
 import { ColorAdjustShader } from '../shaders/index.js';
 import {
   buildToneCurveLutBytes,

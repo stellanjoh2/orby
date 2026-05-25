@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { N8AOPass } from 'n8ao';
-import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js';
+import { MeshglEffectComposer } from './MeshglEffectComposer.js';
+import { MeshglRenderPass } from './MeshglRenderPass.js';
 import { MeshglBokehPass } from './MeshglBokehPass.js';
-import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/FilmPass.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js';
+import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/FilmPass.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/shaders/FXAAShader.js';
 import {
   BloomTintShader,
   buildAnamorphicBloomShader,
@@ -49,8 +49,8 @@ export class PostProcessingPipeline {
     const size = new THREE.Vector2();
     this.renderer.getSize(size);
 
-    this.composer = new EffectComposer(this.renderer);
-    this.renderPass = new RenderPass(scene, camera);
+    this.composer = new MeshglEffectComposer(this.renderer);
+    this.renderPass = new MeshglRenderPass(scene, camera);
     // clearAlpha = 1 ensures the background color shows when scene.background is null
     this.renderPass.clearAlpha = 1;
 

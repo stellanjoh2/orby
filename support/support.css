@@ -1,0 +1,474 @@
+/**
+ * Support page — embedded bug report form (legal template).
+ * Scoped under .legal-doc--support; does not import the main app stylesheet.
+ */
+
+body.legal-doc--support {
+  --legal-bg: var(--orby-black);
+  --legal-surface: #101010;
+  --stroke: var(--legal-border);
+  --text: var(--legal-text);
+  --text-dim: var(--legal-muted);
+  --accent: var(--legal-accent);
+  --brand-primary: var(--legal-accent);
+  --brand-text: var(--orby-black);
+  --warning: #ef4444;
+}
+
+.legal-support-bug-report {
+  margin: 0 0 3.5rem;
+  padding: 0;
+  background: var(--legal-surface);
+  border: 1px solid var(--legal-border);
+  border-radius: 12px;
+  border-left: 3px solid var(--legal-accent);
+  scroll-margin-top: 5rem;
+  overflow: hidden;
+}
+
+/* Match in-app bug-report modal (.load-settings-header h3), white on support page */
+.legal-support-bug-report h2.legal-support-bug-report__head {
+  margin: 0 0 0.55rem;
+  font-family: var(--legal-brand-headline);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.legal-support-bug-report__header {
+  padding: 1.25rem 1.35rem 1.15rem;
+  border-bottom: 1px solid var(--legal-border);
+  background: color-mix(in srgb, var(--legal-accent) 4%, var(--legal-surface));
+}
+
+.legal-support-bug-report__eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--legal-accent);
+}
+
+.legal-support-bug-report__intro {
+  margin: 0;
+  max-width: 42em;
+  font-size: var(--legal-secondary-size);
+  line-height: 1.55;
+  color: var(--legal-muted);
+}
+
+.legal-support-bug-report__body {
+  padding: 1.2rem 1.35rem 1.45rem;
+}
+
+.legal-support-bug-report__intro strong {
+  color: var(--legal-text);
+  font-weight: 600;
+}
+
+.legal-support-bug-report .bug-report-content {
+  max-width: none;
+}
+
+.legal-support-bug-report #supportBugReportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.legal-support-bug-report .bug-report-field:has(#supportBugReportMessage) {
+  margin-bottom: -0.5rem;
+}
+
+.legal-support-bug-report .bug-report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.legal-support-bug-report .bug-report-field label {
+  font-size: 0.8rem;
+  color: var(--legal-muted);
+}
+
+.legal-support-bug-report .bug-report-severity-combo {
+  position: relative;
+}
+
+.legal-support-bug-report .bug-report-severity-trigger-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  pointer-events: none;
+}
+
+.legal-support-bug-report .bug-report-severity-level {
+  font-weight: 700;
+}
+
+.legal-support-bug-report .bug-report-severity-listbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  border-radius: 8px;
+  border: 1px solid var(--legal-border);
+  max-height: min(16rem, 70vh);
+  overflow-y: auto;
+}
+
+.legal-support-bug-report .bug-report-severity-list-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.88rem;
+  color: var(--legal-text);
+  cursor: pointer;
+}
+
+.legal-support-bug-report .bug-report-severity-list-option:hover,
+.legal-support-bug-report .bug-report-severity-list-option:focus {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.legal-support-bug-report .bug-report-severity-dot {
+  flex-shrink: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.32em;
+  border-radius: 50%;
+}
+
+.legal-support-bug-report .bug-report-severity-dot[data-severity='blocker'] {
+  background: var(--warning);
+}
+
+.legal-support-bug-report .bug-report-severity-dot[data-severity='major'] {
+  background: #ea580c;
+}
+
+.legal-support-bug-report .bug-report-severity-dot[data-severity='moderate'] {
+  background: #ca8a04;
+}
+
+.legal-support-bug-report .bug-report-severity-dot[data-severity='minor'] {
+  background: #65a30d;
+}
+
+.legal-support-bug-report .bug-report-severity-dot[data-severity='cosmetic'] {
+  background: #16a34a;
+}
+
+.legal-support-bug-report .bug-report-message-stage {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.legal-support-bug-report .bug-report-word-meter {
+  width: 100%;
+  height: 4px;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.legal-support-bug-report .bug-report-word-meter-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.22s ease;
+  position: relative;
+}
+
+.legal-support-bug-report .bug-report-word-meter-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.legal-support-bug-report .bug-report-word-meter-fill.bug-report-word-meter-fill--complete::after {
+  opacity: 1;
+}
+
+.legal-support-bug-report .bug-report-message-sending-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.52);
+}
+
+.legal-support-bug-report .bug-report-message-sending-overlay[hidden] {
+  display: none !important;
+}
+
+.legal-support-bug-report .bug-report-message-sending-bar-track {
+  width: min(14rem, 78%);
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.legal-support-bug-report .bug-report-message-sending-bar-fill {
+  display: block;
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--legal-accent) 40%, transparent),
+    var(--legal-accent)
+  );
+}
+
+.legal-support-bug-report .bug-report-message-stage--sending .bug-report-message-sending-bar-fill {
+  animation: support-bug-report-progress 1.08s ease-in-out infinite;
+}
+
+.legal-support-bug-report .bug-report-turnstile:empty {
+  display: none;
+}
+
+.legal-support-bug-report .bug-report-turnstile:not(:empty) {
+  min-height: 4rem;
+}
+
+@keyframes support-bug-report-progress {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
+}
+
+.legal-support-bug-report .bug-report-field input,
+.legal-support-bug-report .bug-report-field select,
+.legal-support-bug-report .bug-report-severity-trigger,
+.legal-support-bug-report .bug-report-field textarea {
+  border-radius: 8px;
+  border: 1px solid var(--legal-border);
+  color: var(--legal-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.legal-support-bug-report .bug-report-field select,
+.legal-support-bug-report .bug-report-severity-trigger {
+  width: 100%;
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.06);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 12px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.legal-support-bug-report .bug-report-field select:focus,
+.legal-support-bug-report .bug-report-severity-trigger:focus,
+.legal-support-bug-report .bug-report-field textarea:focus {
+  border-color: var(--legal-accent);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.legal-support-bug-report .bug-report-field textarea {
+  width: 100%;
+  min-height: 11rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.legal-support-bug-report .bug-report-severity-listbox {
+  background: rgba(16, 16, 16, 0.98);
+  border-color: var(--legal-border);
+}
+
+.legal-support-bug-report .bug-report-severity-list-option[aria-selected='true'] {
+  box-shadow: inset 2px 0 0 0 var(--legal-accent);
+}
+
+.legal-support-bug-report .bug-report-word-meter {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.legal-support-bug-report .bug-report-word-meter-fill {
+  background: linear-gradient(90deg, var(--warning) 0%, #ca8a04 100%);
+}
+
+.legal-support-bug-report .bug-report-word-meter-fill::after {
+  background: var(--legal-accent);
+}
+
+.legal-support-bug-report .bug-report-actions {
+  display: flex;
+  margin-top: 0.25rem;
+}
+
+.legal-support-bug-report .bug-report-submit-wrap {
+  flex: 1;
+  max-width: 14rem;
+}
+
+.legal-support-bug-report .legal-support-submit-btn {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--legal-accent);
+  color: var(--orby-black);
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.legal-support-bug-report .legal-support-submit-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.legal-support-bug-report .legal-support-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.legal-support-bug-report .bug-report-submit-wrap:has(.legal-support-submit-btn:disabled) {
+  cursor: not-allowed;
+}
+
+.legal-support-bug-report .bug-report-submit-wrap:has(.legal-support-submit-btn:disabled) .legal-support-submit-btn {
+  pointer-events: none;
+}
+
+.legal-support-bug-report .bug-report-status {
+  min-height: 1.15rem;
+  font-size: 0.82rem;
+  color: var(--legal-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.legal-support-thank-you[hidden] {
+  display: none !important;
+}
+
+.legal-support-thank-you {
+  margin: 0 0 0;
+}
+
+.legal-support-thank-you:not([hidden]) {
+  margin-bottom: 0;
+}
+
+.legal-support-thank-you:not([hidden]) + .legal-support-lead {
+  margin-top: 1.5rem;
+}
+
+.legal-support-section {
+  margin: 0 0 2.75rem;
+  scroll-margin-top: 5rem;
+}
+
+.legal-support-section h2 {
+  margin: 0 0 0.75rem;
+}
+
+.legal-support-section__intro {
+  margin: 0 0 1rem;
+  color: var(--legal-muted);
+  font-size: var(--legal-secondary-size);
+  line-height: 1.55;
+}
+
+.legal-support-faq {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legal-support-faq > li {
+  margin: 0 0 1.75rem;
+  padding: 0 0 1.75rem;
+  border-bottom: 1px solid var(--legal-border);
+}
+
+.legal-support-faq > li:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.legal-support-faq h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.legal-support-faq p {
+  margin: 0 0 0.75rem;
+}
+
+.legal-support-faq p:last-child,
+.legal-support-faq ul:last-child {
+  margin-bottom: 0;
+}
+
+.legal-support-faq ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.35rem;
+}
+
+@media (min-width: 640px) {
+  .legal-support-bug-report__header {
+    padding: 1.4rem 1.65rem 1.25rem;
+  }
+
+  .legal-support-bug-report__body {
+    padding: 1.35rem 1.65rem 1.55rem;
+  }
+}
+
+/* Match Credits / Privacy — space under “Last updated” before ticket card */
+body.legal-doc--support p.legal-meta {
+  margin-bottom: 4.25rem;
+}
+
+body.legal-doc--support .legal-support-lead {
+  margin-top: 2.25rem;
+  margin-bottom: 2rem;
+}

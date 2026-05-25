@@ -5,8 +5,8 @@ export const DEFAULT_SHADOW_OPACITY = 0.25;
 const OPAQUE_FRAGMENT = '#include <opaque_fragment>';
 
 /**
- * Shadow sampling matches Three.js r165 (cdn three@0.165.0):
- * getShadow(map, mapSize, bias, radius, coord) — no shadowIntensity uniform.
+ * Shadow sampling matches Three.js r167 (cdn three@0.167.0):
+ * getShadow(map, mapSize, shadowIntensity, bias, radius, coord).
  */
 
 /**
@@ -26,6 +26,7 @@ export const DIRECTIONAL_SHADOW_TINT_SAMPLE_GLSL = `
 				receiveShadow ? getShadow(
 					directionalShadowMap[ i ],
 					orbyDirShadow.shadowMapSize,
+					orbyDirShadow.shadowIntensity,
 					orbyDirShadow.shadowBias,
 					orbyDirShadow.shadowRadius,
 					vDirectionalShadowCoord[ i ]

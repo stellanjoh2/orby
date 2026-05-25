@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { resetRendererFullViewport } from '../render/resetRendererFullViewport.js';
 
 /**
  * Manages auto-exposure system that dynamically adjusts scene exposure
@@ -111,9 +112,11 @@ export class AutoExposureController {
     if (!this.luminanceRenderTarget || !this.renderer) return;
 
     const previousTarget = this.renderer.getRenderTarget();
+    resetRendererFullViewport(this.renderer);
     this.renderer.setRenderTarget(this.luminanceRenderTarget);
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(previousTarget);
+    resetRendererFullViewport(this.renderer);
 
     try {
       this.renderer.readRenderTargetPixels(

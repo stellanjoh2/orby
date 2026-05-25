@@ -236,6 +236,11 @@ export class MaterialController {
         if (!this.originalMaterials.has(child)) {
           this.originalMaterials.set(child, child.material);
         }
+        const stored = this.originalMaterials.get(child);
+        const srcMats = Array.isArray(stored) ? stored : [stored];
+        for (const m of srcMats) {
+          if (m) this._syncEmissiveDisplayMesh(child, m);
+        }
         // Some exporters set an own `onBeforeCompile: undefined` on materials, which shadows
         // Material.prototype.onBeforeCompile and breaks customProgramCacheKey (undefined.toString()).
         const mats = Array.isArray(child.material) ? child.material : [child.material];
@@ -269,6 +274,315 @@ export class MaterialController {
       seen.add(m);
       callback(m);
     });
+  }
+
+  /** Import/source materials from {@link #originalMaterials} — pipeline must drive these, not shaded clones. */
+  _forEachImportMaterial(object, callback) {
+    if (!object) return;
+    const seen = new Set();
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const source = stored ?? child.material;
+      const mats = Array.isArray(source) ? source : [source];
+      for (const m of mats) {
+        if (!m || seen.has(m)) continue;
+        seen.add(m);
+        callback(m, child);
+      }
+    });
+  }
+
+  _forEachImportMeshMaterial(object, callback) {
+    if (!object) return;
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const source = stored ?? child.material;
+      const mats = Array.isArray(source) ? source : [source];
+      for (const m of mats) {
+        if (m) callback(child, m);
+      }
+    });
+  }
+
+  /** Three.js applies glTF alphaMode but does not store it — infer once at import snapshot. */
+  _inferGltfAlphaMode(m) {
+    if (m.userData?.alphaMode) return m.userData.alphaMode;
+    if (m.alphaTest > 0) return 'MASK';
+    if (m.transparent) return 'BLEND';
+    return 'OPAQUE';
+  }
+
+  /** Import snapshot had KHR_materials_transmission (baseline), not live transmission slider state. */
+  _materialHadImportTransmission(m) {
+    if (m?.userData?.orbyGltfTransmissionFallback) return true;
+    const importT = Number(m?.userData?.orbyGltfImportBaseline?.transmission);
+    return Number.isFinite(importT) && importT > 1e-4;
+  }
+
+  /** Import had KHR_materials_transmission — includes live drift before baseline is snapshotted. */
+  _materialHasImportTransmission(m) {
+    if (m?.userData?.orbyGltfTransmissionFallback) return true;
+    if (this._materialHadImportTransmission(m)) return true;
+    return (
+      m?.isMeshPhysicalMaterial &&
+      (Number(m.transmission) > 1e-4 || !!m.transmissionMap)
+    );
+  }
+
+  /** True when the loaded model uses KHR_materials_transmission (import baseline). */
+  modelHasGltfTransmissionMaterials(object) {
+    if (!object) return false;
+    let found = false;
+    this._forEachImportMaterial(object, (m) => {
+      if (found) return;
+      if (this._materialHasImportTransmission(m)) found = true;
+    });
+    return found;
+  }
+
+  /** glTF BLEND + emissiveTexture (HUD / MFD holograms) — must keep alpha from baseColor, never force opaque. */
+  _materialIsEmissiveDisplay(m) {
+    if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
+    if (m.userData?.orbyEmissiveBlend) return true;
+    if (m.emissiveMap) return true;
+    return this._importMaterialHasEmissiveBaseline(m);
+  }
+
+  _syncEmissiveBlendMaterial(m) {
+    if (!this._materialIsEmissiveDisplay(m)) return;
+    const alphaMode = m.userData?.alphaMode ?? this._inferGltfAlphaMode(m);
+    const isBlendDisplay =
+      alphaMode === 'BLEND' || (m.transparent && !this._materialHasImportTransmission(m));
+    if (!isBlendDisplay) return;
+
+    m.userData.orbyEmissiveBlend = true;
+    m.userData.orbySkipBlendMitigation = true;
+    if ('alphaHash' in m) m.alphaHash = false;
+    m.opacity = 1;
+
+    // Binary-alpha hologram quads (HUD/MFD): alphaTest cutout avoids solid black BLEND shells in WebGL.
+    if (m.map) {
+      m.alphaTest = 0.02;
+      m.transparent = false;
+      m.depthWrite = true;
+    } else {
+      m.alphaTest = 0;
+      m.transparent = true;
+      m.depthWrite = false;
+    }
+    m.needsUpdate = true;
+  }
+
+  /** Emissive BLEND display (HUD plane, MFD) — keep import PBR; global sliders must not repaint the quad. */
+  _isEmissiveBlendDisplayImport(importMat) {
+    if (!importMat || !this._materialIsEmissiveDisplay(importMat)) return false;
+    const alphaMode =
+      importMat.userData?.alphaMode ?? this._inferGltfAlphaMode(importMat);
+    return alphaMode === 'BLEND' || !!importMat.transparent;
+  }
+
+  /**
+   * HUD / MFD hologram meshes: draw after glass, and opt out of N8AO's transparency-aware AO skip
+   * (transparent + depthWrite:false otherwise keeps full brightness while the cockpit darkens).
+   */
+  _syncEmissiveDisplayMesh(mesh, importMat) {
+    if (!mesh?.isMesh || !this._isEmissiveBlendDisplayImport(importMat)) return;
+    mesh.renderOrder = 10;
+    mesh.userData.treatAsOpaque = true;
+  }
+
+  _emissiveDisplayGain(importMat, userEmissive = 0) {
+    const ei = Number(importMat?.emissiveIntensity);
+    let baseGain = 1;
+    if (importMat?.emissiveMap && (!Number.isFinite(ei) || ei <= 0)) {
+      baseGain = 1;
+    } else if (Number.isFinite(ei) && ei > 0) {
+      baseGain = ei;
+    }
+    const slider = userEmissive > 0 ? userEmissive : 0;
+    return baseGain * (slider > 0 ? 1 + slider : 1);
+  }
+
+  /**
+   * HUD / MFD holograms: draw emissiveTexture with additive blending so black texels add nothing
+   * (avoids solid BLEND quads that block the cockpit in WebGL).
+   */
+  _buildEmissiveDisplayMaterial(importMat, userEmissive = 0) {
+    const tex = importMat?.emissiveMap || importMat?.map;
+    if (!tex) return null;
+    const mat = new THREE.MeshBasicMaterial({
+      name: importMat.name || '',
+      map: tex,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.AdditiveBlending,
+      side: importMat.side ?? THREE.DoubleSide,
+      toneMapped: importMat.toneMapped !== false,
+    });
+    mat.color.setScalar(this._emissiveDisplayGain(importMat, userEmissive));
+    mat.userData.orbyEmissiveBlend = true;
+    mat.userData.orbyEmissiveDisplay = true;
+    mat.userData.orbySkipBlendMitigation = true;
+    return mat;
+  }
+
+  _applyEmissiveDisplayMaterialGain(target, importMat, userEmissive = 0) {
+    if (!target?.userData?.orbyEmissiveDisplay || !target.isMeshBasicMaterial) return;
+    target.color.setScalar(this._emissiveDisplayGain(importMat, userEmissive));
+    target.needsUpdate = true;
+  }
+
+  /** Advanced → glass slider bundle for import glTF glass presentation. */
+  _glassPresentationFromState() {
+    const adv = this.stateStore?.getState()?.advanced;
+    const rawOp = adv?.glassOpacity;
+    const glassOpacity = Number.isFinite(Number(rawOp))
+      ? Math.min(1, Math.max(0.02, Number(rawOp)))
+      : 0.45;
+    const rawBody = adv?.glassBody;
+    const glassBody = Number.isFinite(Number(rawBody))
+      ? Math.min(1, Math.max(0, Number(rawBody)))
+      : 0;
+    const rawTint = adv?.glassTint;
+    const glassTintHex =
+      typeof rawTint === 'string' && /^#[0-9A-Fa-f]{6}$/.test(rawTint.trim())
+        ? rawTint.trim()
+        : '#ffffff';
+    const rawRef = adv?.glassReflection;
+    const glassReflection = Number.isFinite(Number(rawRef))
+      ? Math.min(4, Math.max(0, Number(rawRef)))
+      : 2;
+    return { glassOpacity, glassBody, glassTintHex, glassReflection };
+  }
+
+  /**
+   * KHR_materials_transmission → env-heavy BLEND glass (Punto-style), not Three.js transmission pass.
+   * Demote MeshPhysicalMaterial → MeshStandardMaterial so transmission can never re-enter the render list.
+   */
+  _applyImportGltfGlassPresentation(m, opts = {}) {
+    if (!m || !this._materialHasImportTransmission(m)) return m;
+    if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return m;
+
+    const b = m.userData?.orbyGltfImportBaseline;
+    const glassOpacity = opts.glassOpacity ?? this._glassPresentationFromState().glassOpacity;
+    const glassBody = opts.glassBody ?? this._glassPresentationFromState().glassBody;
+    const glassTintHex = opts.glassTintHex ?? this._glassPresentationFromState().glassTintHex;
+    const bodyDarken = Math.max(0.06, 1 - 0.72 * glassBody);
+    const bodyOpacity = Math.min(
+      1,
+      glassOpacity + glassBody * (1 - glassOpacity) * 0.55,
+    );
+    const importRough = Number.isFinite(b?.roughness) ? b.roughness : Number(m.roughness);
+    const glassRough = Number.isFinite(importRough)
+      ? THREE.MathUtils.clamp(importRough, 0.02, 0.18)
+      : 0.08;
+
+    let target = m;
+    if (m.isMeshPhysicalMaterial && !m.userData?.orbyGltfGlassStandardFallback) {
+      target = new THREE.MeshStandardMaterial();
+      target.name = m.name;
+      target.userData = {
+        ...(m.userData || {}),
+        orbyGltfTransmissionFallback: true,
+        orbyGltfGlassStandardFallback: true,
+        orbySkipBlendMitigation: true,
+      };
+      if (m.envMap) target.envMap = m.envMap;
+      if (m.envMapIntensity !== undefined) target.envMapIntensity = m.envMapIntensity;
+      if (m.normalMap) {
+        target.normalMap = m.normalMap;
+        if (m.normalScale?.clone) target.normalScale = m.normalScale.clone();
+      }
+      m.dispose?.();
+    }
+
+    // Author baseColor maps for transmission often encode visibility in alpha (~0 on this ship).
+    target.map = null;
+    target.alphaMap = null;
+    const tint = new THREE.Color(glassTintHex);
+    if (b?.color?.isColor) {
+      target.color.copy(b.color).lerp(tint, 0.72);
+    } else if (b?.color) {
+      target.color.set(b.color).lerp(tint, 0.72);
+    } else {
+      target.color.copy(tint);
+    }
+    target.color.multiplyScalar(bodyDarken);
+    target.roughness = glassRough;
+    target.metalness = 0;
+    target.opacity = Math.max(0.08, bodyOpacity);
+    target.transparent = true;
+    target.depthWrite = false;
+    if ('alphaHash' in target) target.alphaHash = false;
+    target.side = b?.side ?? target.side ?? THREE.DoubleSide;
+    target.userData.orbyGltfTransmissionFallback = true;
+    target.userData.orbySkipBlendMitigation = true;
+    target.needsUpdate = true;
+    return target;
+  }
+
+  /** Swap a material reference on every mesh + import snapshot (shared glTF materials). */
+  _replaceMaterialReference(object, oldMat, newMat) {
+    if (!object || !oldMat || !newMat || oldMat === newMat) return;
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      const patch = (cur) => {
+        if (cur === oldMat) return newMat;
+        if (Array.isArray(cur)) {
+          let changed = false;
+          const next = cur.map((mat) => {
+            if (mat === oldMat) {
+              changed = true;
+              return newMat;
+            }
+            return mat;
+          });
+          return changed ? next : cur;
+        }
+        return cur;
+      };
+      const nextLive = patch(child.material);
+      if (nextLive !== child.material) child.material = nextLive;
+      const stored = this.originalMaterials.get(child);
+      if (stored) {
+        const nextStored = patch(stored);
+        if (nextStored !== stored) this.originalMaterials.set(child, nextStored);
+      }
+    });
+  }
+
+  _assignImportGltfGlassPresentation(object, m, opts = {}) {
+    const next = this._applyImportGltfGlassPresentation(m, opts);
+    if (next && next !== m) this._replaceMaterialReference(object, m, next);
+    return next;
+  }
+
+  _syncTransparentFlagsFromImport(target, importMat) {
+    if (!target || !importMat) return;
+    const hasImportTransmission = this._materialHasImportTransmission(importMat);
+    const b = importMat.userData?.orbyGltfImportBaseline;
+    // KHR_materials_transmission imports use BLEND fallback — baseline opacity/map are for the native pass.
+    if (b && !hasImportTransmission) {
+      target.transparent = b.transparent;
+      target.opacity = b.opacity;
+      target.depthWrite = b.depthWrite;
+      if ('alphaHash' in target) target.alphaHash = b.alphaHash;
+      if (b.alphaMode) target.userData.alphaMode = b.alphaMode;
+    }
+    if (importMat.userData?.orbyEmissiveBlend || this._materialIsEmissiveDisplay(importMat)) {
+      this._syncEmissiveBlendMaterial(target);
+    }
+    if (importMat.userData?.orbySkipBlendMitigation) {
+      target.userData.orbySkipBlendMitigation = true;
+    }
+  }
+
+  applyEmissiveBlendPresentation(object) {
+    this._forEachImportMaterial(object, (m) => this._syncEmissiveBlendMaterial(m));
   }
 
   /**
@@ -415,14 +729,20 @@ export class MaterialController {
       if (!original) return;
 
       const patch = (mat, idx) => {
-        if (!mat || (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial)) return;
+        if (!mat) return;
         const origMat = Array.isArray(original) ? original[idx] : original;
         if (!origMat) return;
+        if (mat.userData?.orbyEmissiveDisplay && mat.isMeshBasicMaterial) {
+          this._applyEmissiveDisplayMaterialGain(mat, origMat, userEm);
+          return;
+        }
+        if (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) return;
         if (origMat.emissiveMap && mat.emissiveMap !== origMat.emissiveMap) {
           mat.emissiveMap = origMat.emissiveMap;
         }
         const adjustedColor = this._diffuseColorWithBrightness(getOrigColor(original, idx), bright);
         this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
+        this._syncTransparentFlagsFromImport(mat, origMat);
         mat.needsUpdate = true;
       };
 
@@ -446,18 +766,34 @@ export class MaterialController {
     this._forEachUniqueMaterial(object, (m) => {
       if (m.userData?.orbyGltfImportBaseline) return;
       if (!('transparent' in m)) return;
-      m.userData.orbyGltfImportBaseline = {
+      m.userData.alphaMode = this._inferGltfAlphaMode(m);
+      const baseline = {
         transparent: !!m.transparent,
         opacity: Number.isFinite(m.opacity) ? m.opacity : 1,
         side: m.side,
         depthWrite: m.depthWrite !== false,
         alphaHash: 'alphaHash' in m ? !!m.alphaHash : false,
+        alphaMode: m.userData.alphaMode,
       };
+      if (m.isMeshPhysicalMaterial) {
+        baseline.transmission = Number(m.transmission) || 0;
+        baseline.thickness = Number.isFinite(m.thickness) ? m.thickness : 0;
+        baseline.roughness = Number.isFinite(m.roughness) ? m.roughness : undefined;
+        baseline.ior = Number.isFinite(m.ior) ? m.ior : undefined;
+        baseline.color = m.color?.clone?.() ?? null;
+      }
+      if (
+        (m.emissiveMap || this._importMaterialHasEmissiveBaseline(m)) &&
+        baseline.alphaMode === 'BLEND'
+      ) {
+        m.userData.orbyEmissiveBlend = true;
+      }
+      m.userData.orbyGltfImportBaseline = baseline;
     });
   }
 
   _restoreImportMaterialBaselines(object) {
-    this._forEachUniqueMaterial(object, (m) => {
+    this._forEachImportMaterial(object, (m) => {
       const b = m.userData?.orbyGltfImportBaseline;
       if (!b) return;
       m.transparent = b.transparent;
@@ -465,9 +801,25 @@ export class MaterialController {
       m.side = b.side;
       m.depthWrite = b.depthWrite;
       if ('alphaHash' in m) m.alphaHash = b.alphaHash;
+      if (b.alphaMode) m.userData.alphaMode = b.alphaMode;
+      if (m.isMeshPhysicalMaterial && b.transmission !== undefined) {
+        const hadImportTransmission = Number(b.transmission) > 1e-4;
+        if (hadImportTransmission) {
+          // KHR_materials_transmission — keep pass off; _applyImportGltfGlassPresentation runs after.
+          m.transmission = 0;
+          m.transmissionMap = null;
+          m.thickness = 0;
+          if (b.color && m.color) m.color.copy(b.color);
+        } else {
+          m.transmission = b.transmission;
+          if (b.thickness !== undefined) m.thickness = b.thickness;
+          if (b.color && m.color) m.color.copy(b.color);
+        }
+      }
       delete m.userData.orbyGlassPresentation;
       delete m.userData.orbyBlendMitigation;
       delete m.userData.orbyUserOpaqueBlend;
+      delete m.userData.orbyAdvGlassPhysical;
       m.needsUpdate = true;
     });
   }
@@ -492,8 +844,86 @@ export class MaterialController {
       this.applyNamedGlassPresentation(object);
       this.applyGltfBlendSortingMitigation(object);
     }
+    this.applyEmissiveBlendPresentation(object);
     this.applyGlassAppearanceFromState(object);
     this.applyGlassOrientationFromState(object);
+    this._applyAllImportGltfGlassPresentation(object);
+    this._applyRenderedImportGltfGlassPresentation(object);
+  }
+
+  /** BLEND glass for KHR_materials_transmission imports (no Three.js transmission pass). */
+  _applyAllImportGltfGlassPresentation(object) {
+    const glass = this._glassPresentationFromState();
+    this._forEachImportMaterial(object, (m) => {
+      if (this._materialHasImportTransmission(m)) {
+        this._assignImportGltfGlassPresentation(object, m, glass);
+      }
+    });
+  }
+
+  /** Live mesh materials — re-apply transmission fallback on what is actually drawn. */
+  _applyRenderedImportGltfGlassPresentation(object) {
+    if (!object) return;
+    const glass = this._glassPresentationFromState();
+    object.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const stored = this.originalMaterials.get(child);
+      const liveMats = Array.isArray(child.material) ? child.material : [child.material];
+      const importMats = stored
+        ? Array.isArray(stored)
+          ? stored
+          : [stored]
+        : liveMats;
+      for (let i = 0; i < liveMats.length; i += 1) {
+        const live = liveMats[i];
+        const imp = importMats[i] ?? importMats[0];
+        if (!live?.isMeshStandardMaterial && !live?.isMeshPhysicalMaterial) continue;
+        if (
+          this._materialHadImportTransmission(imp) ||
+          this._materialHadImportTransmission(live) ||
+          this._materialHasImportTransmission(live)
+        ) {
+          this._assignImportGltfGlassPresentation(object, live, glass);
+        }
+      }
+    });
+  }
+
+  /** Keep KHR transmission imports on BLEND fallback (rendered meshes + post-load / per-frame guard). */
+  syncImportGltfGlassMaterials(object = this.currentModel, { forcePresentation = false } = {}) {
+    if (!object || !this.modelHasGltfTransmissionMaterials(object)) return;
+    const glass = this._glassPresentationFromState();
+    object.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const stored = this.originalMaterials.get(child);
+      const liveMats = Array.isArray(child.material) ? child.material : [child.material];
+      const importMats = stored
+        ? Array.isArray(stored)
+          ? stored
+          : [stored]
+        : liveMats;
+      for (let i = 0; i < liveMats.length; i += 1) {
+        const live = liveMats[i];
+        const imp = importMats[i] ?? importMats[0];
+        if (!live?.isMeshStandardMaterial && !live?.isMeshPhysicalMaterial) continue;
+        if (
+          !this._materialHadImportTransmission(imp) &&
+          !this._materialHadImportTransmission(live) &&
+          !this._materialHasImportTransmission(live)
+        ) {
+          continue;
+        }
+        const drifted =
+          forcePresentation ||
+          !live.userData?.orbyGltfTransmissionFallback ||
+          !!live.map ||
+          (live.isMeshPhysicalMaterial &&
+            (Number(live.transmission) > 1e-4 || !!live.transmissionMap));
+        if (drifted) {
+          this._assignImportGltfGlassPresentation(object, live, glass);
+        }
+      }
+    });
   }
 
   _subsurfaceTranslucency() {
@@ -629,7 +1059,7 @@ export class MaterialController {
       if (op < 0.999) return true;
     }
 
-    const gltfMode = m.userData?.alphaMode;
+    const gltfMode = m.userData?.alphaMode ?? this._inferGltfAlphaMode(m);
     if (gltfMode === 'BLEND' || gltfMode === 'MASK') return true;
 
     if (m.alphaMap) return true;
@@ -654,10 +1084,12 @@ export class MaterialController {
     if (op < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return false;
     if (m.alphaMap) return false;
     if (m.alphaTest > 0) return false;
+    // BLEND + emissive (HUD / MFD screens) or transmission glass — author intended real alpha or refraction.
+    if (m.userData?.orbyEmissiveBlend || this._materialIsEmissiveDisplay(m)) return false;
 
-    const gltfMode = m.userData?.alphaMode;
+    const gltfMode = m.userData?.alphaMode ?? this._inferGltfAlphaMode(m);
     if (gltfMode === 'MASK') return false;
-    if (m.isMeshPhysicalMaterial && Number(m.transmission) > 0.01) return false;
+    if (this._materialHasImportTransmission(m)) return false;
 
     return true;
   }
@@ -725,7 +1157,7 @@ export class MaterialController {
     const flipY = adv.flipGlassNormalMapY === true;
     const frontOnly = adv.glassFrontFacesOnly === true;
 
-    this._forEachMeshMaterial(object, (mesh, m) => {
+    this._forEachImportMeshMaterial(object, (mesh, m) => {
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
       if (!this._isGlassLikeForOrientation(mesh, m)) return;
 
@@ -754,7 +1186,7 @@ export class MaterialController {
   /** Transmission / heuristic glass — not full-mesh BLEND characters (those need Alpha modes instead). */
   _isGlassLikeForOrientation(mesh, m) {
     if (!mesh?.isMesh || !m) return false;
-    if (m.isMeshPhysicalMaterial && Number(m.transmission) > 1e-4) return true;
+    if (this._materialHadImportTransmission(m)) return true;
     return this.isWindowMesh(mesh);
   }
 
@@ -785,46 +1217,23 @@ export class MaterialController {
       glassOpacity + glassBody * (1 - glassOpacity) * 0.55,
     );
 
-    this._forEachMeshMaterial(object, (mesh, m) => {
+    this._forEachImportMeshMaterial(object, (mesh, m) => {
       if (!this.isWindowMesh(mesh)) return;
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
 
       if (mode !== 'default') return;
 
-      // glTF car glass often uses MeshPhysicalMaterial + transmission (any magnitude). We must
-      // keep using this path after crushing transmission, else we stop driving body once T<0.01.
-      const hadPhysSnapshot = !!m.userData?.orbyAdvGlassPhysical;
-      const physTransmission = m.isMeshPhysicalMaterial ? Number(m.transmission) || 0 : 0;
-      const usePhysicalGlassPath =
-        m.isMeshPhysicalMaterial && (physTransmission > 1e-6 || hadPhysSnapshot);
-
-      if (usePhysicalGlassPath) {
-        if (!m.userData.orbyAdvGlassPhysical) {
-          m.userData.orbyAdvGlassPhysical = {
-            baseTransmission: Math.min(1, Math.max(0, physTransmission)),
-            baseThickness: Number.isFinite(m.thickness) ? m.thickness : 1,
-          };
-        }
-        const snap = m.userData.orbyAdvGlassPhysical;
-        const bt = snap.baseTransmission;
-        // Linear to 0 at full body — noticeably reduces see-through vs a soft floor at ~2% T.
-        m.transmission = bt * (1 - glassBody);
-        if (glassBody >= 0.999) m.transmission = 0;
-        // Thicker slab = more in-volume absorption while transmission > 0 (reads “more solid”).
-        const th0 = Number.isFinite(snap.baseThickness) ? snap.baseThickness : 1;
-        m.thickness = th0 * (1 + 4 * glassBody);
-
-        m.color.set(glassTintHex);
-        m.color.multiplyScalar(bodyDarken);
-        m.metalness = 0;
-        m.opacity = bodyOpacity;
-        m.transparent = true;
-        m.depthWrite = false;
-        m.needsUpdate = true;
+      // glTF KHR_materials_transmission — BLEND fallback; Glass sliders still apply.
+      if (this._materialHasImportTransmission(m)) {
+        this._assignImportGltfGlassPresentation(object, m, {
+          glassOpacity,
+          glassBody,
+          glassTintHex,
+        });
         return;
       }
 
-      // Standard (or physical with no measurable transmission): single blend path.
+      // Heuristic window/glass without glTF transmission — opacity/tint/body sliders apply.
       m.color.set(glassTintHex);
       m.color.multiplyScalar(bodyDarken);
       m.opacity = bodyOpacity;
@@ -832,24 +1241,29 @@ export class MaterialController {
       m.depthWrite = false;
       m.needsUpdate = true;
     });
+    this._applyRenderedImportGltfGlassPresentation(object);
   }
 
   /** Re-run pipeline after load / when Advanced setting changes (uses currentModel). */
   reapplyTransparencyPipeline() {
     if (!this.currentModel) return;
     this.applyTransparencyPipeline(this.currentModel);
+    const shading = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
+    if (shading === 'shaded' || shading === 'clay' || shading === 'textures') {
+      this.setShading(shading);
+    }
   }
 
   /** Treat full-opacity BLEND glTF as opaque shading (fixes many Sketchfab single-atlas exports). */
   _applyUserForceOpaqueBlend(object) {
-    this._forEachUniqueMaterial(object, (m) => {
+    this._forEachImportMaterial(object, (m) => {
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
+      if (this._materialHasImportTransmission(m)) return;
+      if (this._materialIsEmissiveDisplay(m)) return;
 
       const b = m.userData?.orbyGltfImportBaseline;
       const baseOp = b ? b.opacity : (Number.isFinite(m.opacity) ? m.opacity : 1);
       const baseTr = b ? b.transparent : m.transparent;
-      const hasTransmission = m.isMeshPhysicalMaterial && m.transmission > 0.01;
-      if (hasTransmission) return;
 
       if (baseTr && baseOp >= GLTF_FULL_OPACITY_BLEND_THRESHOLD) {
         m.transparent = false;
@@ -862,8 +1276,12 @@ export class MaterialController {
   }
 
   _applyUserForceFrontFace(object) {
-    this._forEachUniqueMaterial(object, (m) => {
+    this._forEachImportMaterial(object, (m) => {
       if (m.side === undefined) return;
+      // Only transparent / transmission draws — not opaque DoubleSide hull plates (would vanish).
+      if (!this._materialImportLooksAlphaRelevant(m) && !this._materialHasImportTransmission(m)) {
+        return;
+      }
       m.side = THREE.FrontSide;
       m.needsUpdate = true;
     });
@@ -879,12 +1297,10 @@ export class MaterialController {
       this.stateStore?.getState()?.advanced?.blendSortingMitigation !== false;
     if (!enabled) return;
 
-    this._forEachUniqueMaterial(object, (m) => {
+    this._forEachImportMaterial(object, (m) => {
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
       if (m.userData?.orbySkipBlendMitigation) return;
-
-      const hasTransmission = m.isMeshPhysicalMaterial && m.transmission > 0.01;
-      if (hasTransmission) return;
+      if (this._materialHasImportTransmission(m)) return;
       if (!m.transparent) return;
 
       const op = Number.isFinite(m.opacity) ? m.opacity : 1;
@@ -913,13 +1329,12 @@ export class MaterialController {
    * Runs at prepare time so fade-in + shading see correct transparency without needing scene.environment.
    */
   applyNamedGlassPresentation(object) {
-    this._forEachMeshMaterial(object, (mesh, m) => {
+    this._forEachImportMeshMaterial(object, (mesh, m) => {
       if (!this.isWindowMesh(mesh)) return;
       if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) return;
       if (m.userData?.orbyGlassPresentation) return;
 
-      const hasTransmission = m.isMeshPhysicalMaterial && m.transmission > 0.01;
-      if (hasTransmission) {
+      if (this._materialHasImportTransmission(m)) {
         m.userData.orbyGlassPresentation = true;
         return;
       }
@@ -1103,9 +1518,17 @@ export class MaterialController {
       };
 
       if (mode === 'wireframe') {
-        // Wireframe mode: keep original materials but show overlay on top
-        // Restore original materials (they'll be visible under the wireframe overlay)
-        applyMaterial(original);
+        const resolveWireframeMaterial = (mat) => {
+          if (this._isEmissiveBlendDisplayImport(mat)) {
+            const built = this._buildEmissiveDisplayMaterial(
+              mat,
+              this.materialSettings.emissive || 0.0,
+            );
+            if (built) return built;
+          }
+          return mat;
+        };
+        applyMaterial(buildArray(resolveWireframeMaterial));
       } else if (mode === 'clay') {
         const { color } = this.claySettings;
         // Use material settings for roughness and metalness (unified controls)
@@ -1146,6 +1569,16 @@ export class MaterialController {
         applyMaterial(buildArray(createClay));
       } else if (mode === 'textures') {
         const createTextureMaterial = (mat) => {
+          if (this._isEmissiveBlendDisplayImport(mat)) {
+            const built = this._buildEmissiveDisplayMaterial(
+              mat,
+              this.materialSettings.emissive || 0.0,
+            );
+            if (built) {
+              built.wireframe = false;
+              return built;
+            }
+          }
           // Get base color from original material or default to white
           const baseColor = mat?.color
               ? mat.color.clone()
@@ -1187,10 +1620,26 @@ export class MaterialController {
           if (!isGlass && mat.isMeshBasicMaterial) {
             return this._promoteBasicToStandardForShaded(mat, modelHasEmissive);
           }
+          if (this._isEmissiveBlendDisplayImport(mat)) {
+            const display = this._buildEmissiveDisplayMaterial(
+              mat,
+              this.materialSettings.emissive || 0.0,
+            );
+            if (display) {
+              display.wireframe = false;
+              return display;
+            }
+          }
           let cloned = mat.clone ? mat.clone() : mat;
+          this._syncTransparentFlagsFromImport(cloned, mat);
           // Don't apply brightness/metalness/roughness to glass materials
           if (isGlass) {
-            // Glass materials should keep their properties
+            if (this._materialHasImportTransmission(cloned)) {
+              cloned = this._applyImportGltfGlassPresentation(
+                cloned,
+                this._glassPresentationFromState(),
+              );
+            }
             if (cloned) {
               cloned.wireframe = false;
             }
@@ -1281,6 +1730,7 @@ export class MaterialController {
     this.applyFresnelToModel(this.currentModel);
     reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, mode);
     this._applyCreativeLookOverride();
+    this._applyRenderedImportGltfGlassPresentation(this.currentModel);
 
     // After recreating shaded materials, either apply user emissive glow or re-sync file emissive
     // (microtask so hooks like Fresnel/SVG run first; import textures may also finish binding).
@@ -1750,6 +2200,27 @@ export class MaterialController {
               if (mat?.userData?.orbyCreativeLook) return;
               if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
                 let m = mat;
+                const origMat = Array.isArray(original) ? original[idx] : original;
+                if (this._isEmissiveBlendDisplayImport(origMat)) {
+                  if (m.userData?.orbyEmissiveDisplay && m.isMeshBasicMaterial) {
+                    this._applyEmissiveDisplayMaterialGain(
+                      m,
+                      origMat,
+                      this.materialSettings.emissive || 0.0,
+                    );
+                  } else {
+                    this._applyUserEmissiveOrRestoreImport(
+                      m,
+                      origMat,
+                      m.color,
+                      this.materialSettings.emissive || 0.0,
+                      modelHasEmissive,
+                    );
+                    this._syncEmissiveBlendMaterial(m);
+                  }
+                  m.needsUpdate = true;
+                  return;
+                }
                 if (tSub > SUBSURFACE_EPS && m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) {
                   m = this._upgradeStandardMaterialToPhysical(m);
                   material[idx] = m;
@@ -1758,7 +2229,6 @@ export class MaterialController {
                 m.color.copy(adjustedColor);
                 m.metalness = this.materialSettings.metalness;
                 m.roughness = this.materialSettings.roughness;
-                const origMat = Array.isArray(original) ? original[idx] : original;
                 this._applyUserEmissiveOrRestoreImport(
                   m,
                   origMat,
@@ -1766,6 +2236,7 @@ export class MaterialController {
                   this.materialSettings.emissive || 0.0,
                   modelHasEmissive,
                 );
+                this._syncTransparentFlagsFromImport(m, origMat);
                 if ('metalnessMap' in m) {
                   m.metalnessMap = null;
                 }
@@ -1787,6 +2258,26 @@ export class MaterialController {
             });
           } else if (material && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
             if (material.userData?.orbyCreativeLook) return;
+            if (this._isEmissiveBlendDisplayImport(original)) {
+              if (material.userData?.orbyEmissiveDisplay && material.isMeshBasicMaterial) {
+                this._applyEmissiveDisplayMaterialGain(
+                  material,
+                  original,
+                  this.materialSettings.emissive || 0.0,
+                );
+              } else {
+                this._applyUserEmissiveOrRestoreImport(
+                  material,
+                  original,
+                  material.color,
+                  this.materialSettings.emissive || 0.0,
+                  modelHasEmissive,
+                );
+                this._syncEmissiveBlendMaterial(material);
+              }
+              material.needsUpdate = true;
+              return;
+            }
             let mat = material;
             if (tSub > SUBSURFACE_EPS && mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) {
               mat = this._upgradeStandardMaterialToPhysical(mat);
@@ -1803,6 +2294,7 @@ export class MaterialController {
               this.materialSettings.emissive || 0.0,
               modelHasEmissive,
             );
+            this._syncTransparentFlagsFromImport(mat, original);
             if ('metalnessMap' in mat) {
               mat.metalnessMap = null;
             }
@@ -2432,15 +2924,34 @@ export class MaterialController {
           material.isMeshLambertMaterial ||
           material.isMeshPhongMaterial
         ) {
+          const importGltfGlass =
+            material.userData?.orbyGltfTransmissionFallback === true ||
+            this._materialHadImportTransmission(material) ||
+            this._materialHasImportTransmission(material);
           const usesTransmission =
+            !importGltfGlass &&
             material.isMeshPhysicalMaterial &&
             (Number(material.transmission) > 1e-4 || !!material.transmissionMap);
+
+          if (importGltfGlass && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+            const active =
+              this._assignImportGltfGlassPresentation(
+                this.currentModel,
+                material,
+                this._glassPresentationFromState(),
+              ) || material;
+            active.envMap = envTexture;
+            if (active.envMapIntensity !== undefined) {
+              active.envMapIntensity = intensity * glassEnvMul;
+            }
+            active.needsUpdate = true;
+            return;
+          }
 
           const envChanged = material.envMap !== envTexture;
           material.envMap = envTexture;
           if (material.envMapIntensity !== undefined) {
-            const glassBoost =
-              this.isWindowMesh(child) || usesTransmission;
+            const glassBoost = this.isWindowMesh(child) || importGltfGlass || usesTransmission;
             const userSubsurface = material.userData?.orbySubsurface === true;
             let envMul = intensity;
             if (glassBoost) {
@@ -2460,8 +2971,6 @@ export class MaterialController {
             return;
           }
 
-          // glTF KHR_materials_transmission — preserve imported roughness/metalness/IOR; crushing them
-          // with global sliders breaks glass on every HDRI update (felt like imports were never correct).
           if (usesTransmission) {
             material.needsUpdate = true;
             return;

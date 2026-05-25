@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-23T21:23:47.537Z",
+    "generatedAt": "2026-05-25T15:00:57.632Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -28,7 +28,7 @@
       ]
     },
     "primaryCta": {
-      "label": "Browse",
+      "label": "Browse Files",
       "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
     },
     "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. Load test object · Debug 404 (temp)",
@@ -86,11 +86,11 @@
       "titleLines": [
         "Your virtual studio, in the browser"
       ],
-      "lede": "HDR environments, 3-point lighting, look-dev presets, and cinematic post — all reacting in real time while you orbit the shot.",
+      "lede": "Achieve photorealism without leaving the browser. Every tool you need to light, grade, and present your model is right here — reacting in real time while you orbit the shot.",
       "bullets": [
         "Look Filter presets, luminance curve, and full color grade",
-        "Depth of field, bloom, grain, lens flare, and tone mapping",
-        "Shader Lab stylized materials when you want to push beyond PBR"
+        "Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, anamorphic streaks, and tone mapping",
+        "PBR / real materials — metalness, roughness, normals, and emissive as authored"
       ],
       "cta": null
     },
@@ -232,7 +232,7 @@
       "order": 10,
       "type": "pro",
       "id": "orby-marketing-pro",
-      "eyebrow": "For pros",
+      "eyebrow": "ADDITIONAL FEATURES",
       "title": "Goes a lot deeper\nthan you think",
       "titleLines": [
         "Goes a lot deeper",
@@ -247,8 +247,8 @@
           "body": "UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC."
         },
         {
-          "title": "Instant Export",
-          "body": "PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools."
+          "title": "Simple UI",
+          "body": "Made for designers, creators and curious people — not just 3D artists. If you can open a file, you can use Orby."
         },
         {
           "title": "Animation Preview",
@@ -271,17 +271,30 @@
           "body": "Cinematic presets, luminance curve, and full color grade — everything you need to land the mood before export. No round trip through Lightroom."
         },
         {
-          "title": "Color Reference",
-          "body": "Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world."
-        },
-        {
           "title": "Lens Effects",
           "body": "Lens flare, dirt, and chromatic aberration — optical polish on your hero without a post round trip. Dial intensity, color, and quality in realtime."
+        },
+        {
+          "title": "Color Reference",
+          "body": "Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world."
         }
       ]
     },
     {
       "order": 11,
+      "type": "roadmap",
+      "id": "orby-marketing-roadmap",
+      "eyebrow": "What's coming",
+      "title": "Roadmap",
+      "titleLines": [
+        "Roadmap"
+      ],
+      "lede": "A lot is already here. A lot more is coming. Features get added, timelines shift, and we're always building — but this is our best outline of what's next and when to expect it.",
+      "bullets": null,
+      "cta": null
+    },
+    {
+      "order": 12,
       "type": "faq",
       "id": "orby-marketing-faq",
       "eyebrow": "FAQ",
@@ -328,7 +341,7 @@
       ]
     },
     {
-      "order": 12,
+      "order": 13,
       "type": "cta",
       "id": "orby-marketing-cta",
       "eyebrow": null,
@@ -351,7 +364,7 @@
       }
     },
     {
-      "order": 13,
+      "order": 14,
       "type": "in-progress",
       "id": "orby-marketing-in-progress",
       "eyebrow": "In progress",

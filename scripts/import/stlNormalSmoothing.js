@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   mergeVertices,
   toCreasedNormals,
-} from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js';
+} from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const DEFAULT_STL_SMOOTHING_ANGLE_DEG = 40;
 const MIN_ANGLE_DEG = 0;

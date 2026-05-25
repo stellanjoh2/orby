@@ -448,7 +448,7 @@ function renderProSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--pro" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__pro">
       <header class="orby-marketing__pro-header">
-        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || 'For pros')}</p>
+        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || 'Additional features')}</p>
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
         ${ledeBlock}
       </header>
@@ -532,29 +532,80 @@ const FOOTER_INSTAGRAM_ICON =
 const FOOTER_GITHUB_ICON =
   '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--github" aria-hidden="true"></span>';
 
-function renderFooterMeta(section, options = {}) {
-  const contactEmail = section.footerContactEmail?.trim();
-  const privacyHref = section.footerPrivacyHref?.trim() || './legal/privacy-policy.html';
-  const aboutHref = section.footerAboutHref?.trim() || './about/';
-  const creditsHref = section.footerCreditsHref?.trim() || './credits/';
-  const brandHref = section.footerBrandHref?.trim() || './brand/';
-  const githubHref = section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby';
-  const instagramHref = section.footerInstagramHref?.trim() || '';
-  const licenseHref = section.footerLicenseHref?.trim() || './LICENSE';
-  const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ */
+function getMarketingFooterFields(section) {
+  return {
+    contactEmail: section.footerContactEmail?.trim() || '',
+    privacyHref: section.footerPrivacyHref?.trim() || './legal/privacy-policy.html',
+    aboutHref: section.footerAboutHref?.trim() || './about/',
+    creditsHref: section.footerCreditsHref?.trim() || './credits/',
+    supportHref: section.footerSupportHref?.trim() || './support/',
+    brandHref: section.footerBrandHref?.trim() || './brand/',
+    githubHref: section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby',
+    instagramHref: section.footerInstagramHref?.trim() || '',
+    licenseHref: section.footerLicenseHref?.trim() || './LICENSE',
+  };
+}
 
-  const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(licenseHref)}">MIT License</a>.`;
-
-  const links = [
-    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(aboutHref)}">About</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(privacyHref)}">Privacy Policy</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(creditsHref)}">Credits</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(brandHref)}">Brand</a>`,
-    `<a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
-    contactEmail
-      ? `<button type="button" class="orby-marketing__footer-meta-link orby-marketing__footer-meta-contact" data-orby-marketing-copy-email="${escapeMarketingHtml(contactEmail)}">Contact</button>`
+/**
+ * @param {ReturnType<typeof getMarketingFooterFields>} fields
+ * @param {{ linkClass: string, contactClass: string }} classes
+ */
+function renderMarketingSiteNavLinks(fields, classes) {
+  const { linkClass, contactClass } = classes;
+  const items = [
+    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.aboutHref)}">About</a>`,
+    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.supportHref)}">Support</a>`,
+    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.privacyHref)}">Privacy Policy</a>`,
+    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.creditsHref)}">Credits</a>`,
+    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.brandHref)}">Brand</a>`,
+    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
+    fields.contactEmail
+      ? `<button type="button" class="${linkClass} ${contactClass}" data-orby-marketing-copy-email="${escapeMarketingHtml(fields.contactEmail)}">Contact</button>`
       : '',
   ].filter(Boolean);
+  return items;
+}
+
+/**
+ * Fixed top strip — revealed when the user scrolls up on the marketing page.
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ */
+export function renderMarketingScrollNav(section) {
+  const fields = getMarketingFooterFields(section);
+  const links = renderMarketingSiteNavLinks(fields, {
+    linkClass: 'orby-marketing-scroll-nav__link',
+    contactClass: 'orby-marketing-scroll-nav__contact',
+  });
+
+  const browseCta = orbyMagicButtonHtml('Browse Files', {
+    extraClass: 'dropzone-btn orby-marketing-scroll-nav__browse',
+    attrs: 'data-orby-marketing-browse',
+  });
+
+  return `<nav class="orby-marketing-scroll-nav" data-orby-marketing-scroll-nav aria-label="Site" aria-hidden="true">
+    <div class="orby-marketing-scroll-nav__bar">
+      <button type="button" class="orby-marketing-scroll-nav__brand" data-orby-marketing-scroll-top aria-label="Back to top">
+        <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
+      </button>
+      <div class="orby-marketing-scroll-nav__links">${links.join('')}</div>
+      <div class="orby-marketing-scroll-nav__cta">${browseCta}</div>
+    </div>
+  </nav>`;
+}
+
+function renderFooterMeta(section, options = {}) {
+  const fields = getMarketingFooterFields(section);
+  const sep = '<span class="orby-marketing__footer-meta-sep" aria-hidden="true"> · </span>';
+
+  const lead = `Orby is a free, open-source personal project released under the <a class="orby-marketing__footer-meta-link" href="${escapeMarketingHtml(fields.licenseHref)}">MIT License</a>.`;
+
+  const links = renderMarketingSiteNavLinks(fields, {
+    linkClass: 'orby-marketing__footer-meta-link',
+    contactClass: 'orby-marketing__footer-meta-contact',
+  });
 
   const barClass = options.onWhite
     ? 'orby-marketing__footer-bar orby-marketing__footer-bar--on-white'
@@ -564,10 +615,10 @@ function renderFooterMeta(section, options = {}) {
     '<span class="orby-marketing__footer-brand-mark" aria-hidden="true"></span>';
 
   const socialLinks = [
-    instagramHref
-      ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(instagramHref)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram">${FOOTER_INSTAGRAM_ICON}</a>`
+    fields.instagramHref
+      ? `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.instagramHref)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram">${FOOTER_INSTAGRAM_ICON}</a>`
       : '',
-    `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(githubHref)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">${FOOTER_GITHUB_ICON}</a>`,
+    `<a class="orby-marketing__footer-social-link" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">${FOOTER_GITHUB_ICON}</a>`,
   ]
     .filter(Boolean)
     .join('');

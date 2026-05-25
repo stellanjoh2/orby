@@ -98,6 +98,18 @@ writeFileSync(join(distDir, 'index.html'), updatedHtml);
 // client entry (scripts/entry.js) can render the in-app 404 experience.
 writeFileSync(join(distDir, '404.html'), updatedHtml);
 
+if (existsSync(join(__dirname, 'support'))) {
+  cpSync('support', join(distDir, 'support'), { recursive: true });
+  const supportIndexPath = join(distDir, 'support', 'index.html');
+  if (existsSync(supportIndexPath)) {
+    const supportHtml = readFileSync(join(__dirname, 'support', 'index.html'), 'utf-8');
+    writeFileSync(
+      supportIndexPath,
+      injectTurnstileSiteKey(injectBugReportApiUrl(supportHtml)),
+    );
+  }
+}
+
 // Copy assets
 cpSync('assets', join(distDir, 'assets'), { recursive: true });
 if (existsSync(join(__dirname, 'scripts', 'vendor'))) {

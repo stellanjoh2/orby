@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { ORBY_BLACK } from '../constants.js';
+import { ORBY_BLACK, RENDER_QUALITY } from '../constants.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
-import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js';
+import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
 
 /**
  * ImageExporter
@@ -200,6 +200,27 @@ export class ImageExporter {
     return exportCanvas.toDataURL('image/png');
   }
 
+  /**
+   * PNG 1×/2× output size. 1× uses the current preview density (Medium/Low/Ultra).
+   * 2×+ uses Ultra-equivalent density so full-res export works while previewing in Medium.
+   * @param {number} scale — 1 or 2 from the export UI
+   */
+  _resolveExportPixelSize(scale) {
+    const logical = fullViewportLogicalSize(this.renderer);
+    const previewDensity = Math.max(1e-6, this.renderer.getPixelRatio());
+    const ultraDensity = Math.min(
+      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+      RENDER_QUALITY.max.maxPixelRatio,
+    );
+    const s = Math.max(0.25, Number(scale) || 1);
+    const density = s > 1 ? ultraDensity : previewDensity;
+    return {
+      width: Math.max(1, Math.round(logical.x * density * s)),
+      height: Math.max(1, Math.round(logical.y * density * s)),
+      density,
+    };
+  }
+
   /** Full backing-store viewport in logical units (pixelRatio should be 1 during export). */
   _setExportViewport(width, height) {
     const r = this.renderer;
@@ -275,11 +296,8 @@ export class ImageExporter {
     cinematicLetterbox219 = false,
   ) {
     const scale = Math.max(0.25, Number(size) || 1);
-    // Authoritative pre-export pixel size (matches Three's backing store, including rounding).
-    const db = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(db);
-    const targetWidth = Math.max(1, Math.round(db.x * scale));
-    const targetHeight = Math.max(1, Math.round(db.y * scale));
+    const { width: targetWidth, height: targetHeight } =
+      this._resolveExportPixelSize(scale);
 
     const canvas = this.renderer.domElement;
 
@@ -375,9 +393,14 @@ export class ImageExporter {
     // Set up for transparent export
     this._setupTransparentRender();
 
-    // Calculate mesh bounds and crop region
-    // Pass pixel ratio so we can calculate actual canvas resolution
-    const cropInfo = this._calculateCropRegion(currentModel, cameraController, state.originalSize, state.originalPixelRatio, size);
+    const { density: exportDensity } = this._resolveExportPixelSize(size);
+    const cropInfo = this._calculateCropRegion(
+      currentModel,
+      cameraController,
+      state.originalSize,
+      size,
+      exportDensity,
+    );
     if (!cropInfo) {
       console.warn('Could not calculate mesh bounds');
       this._restoreState(state);
@@ -616,7 +639,7 @@ export class ImageExporter {
   /**
    * Calculate crop region based on mesh bounds in screen space
    */
-  _calculateCropRegion(currentModel, cameraController, originalSize, originalPixelRatio, size = 2) {
+  _calculateCropRegion(currentModel, cameraController, originalSize, size = 2, exportDensity) {
     const bounds = cameraController?.getModelBounds();
     if (!bounds) {
       return null;
@@ -657,10 +680,14 @@ export class ImageExporter {
       maxY = Math.max(maxY, corner.y);
     });
 
-    // Convert from normalized device coordinates (-1 to 1) to pixel coordinates
-    // Use actual canvas resolution (CSS size * pixel ratio) for accurate calculations
-    const actualWidth = originalSize.x * originalPixelRatio;
-    const actualHeight = originalSize.y * originalPixelRatio;
+    // Convert from normalized device coordinates (-1 to 1) to pixel coordinates.
+    // Use export density (Ultra-equivalent), not the Medium/Low preview DPR cap.
+    const density =
+      Number.isFinite(exportDensity) && exportDensity > 0
+        ? exportDensity
+        : this.renderer.getPixelRatio();
+    const actualWidth = originalSize.x * density;
+    const actualHeight = originalSize.y * density;
     const width = actualWidth;
     const height = actualHeight;
     const padding = 5; // Padding in pixels (max 5px from mesh edges)

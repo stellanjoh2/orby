@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js';
-import { LineSegments2 } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lines/LineSegments2.js';
-import { LineSegmentsGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lines/LineSegmentsGeometry.js';
-import { LineMaterial } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lines/LineMaterial.js';
+import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/objects/Reflector.js';
+import { LineSegments2 } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineMaterial.js';
 import {
   PODIUM_TOP_RADIUS_OFFSET,
   PODIUM_SEGMENTS,
   PODIUM_BEVEL_EDGE_SEGMENTS,
   PODIUM_REFLECTOR_Y_EPS,
+  PODIUM_REFLECTOR_RADIUS_SCALE,
   PODIUM_REFLECTOR_RES_SCALE,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
@@ -90,6 +91,7 @@ function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness
 }
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
+const clampBaseScale = (value) => Math.min(10, Math.max(0.5, value));
 const clampGridLineWidth = (value) => Math.min(2.5, Math.max(0.5, Number(value) || 1));
 const GRID_DIVISIONS = 32;
 const DEFAULT_GRID_LINE_WIDTH = 1;
@@ -372,7 +374,7 @@ export class GroundController {
     this.wireOpacity = options.wireOpacity ?? 1.0;
     this.groundY = options.groundY ?? 0;
     this.gridY = options.gridY ?? 0;
-    this.podiumScale = clampScale(options.baseScale ?? options.podiumScale ?? 1);
+    this.podiumScale = clampBaseScale(options.baseScale ?? options.podiumScale ?? 1);
     this.gridScale = clampScale(options.gridScale ?? 1);
     this.gridLineWidth = clampGridLineWidth(options.gridLineWidth ?? DEFAULT_GRID_LINE_WIDTH);
     this.groundHeight = options.groundHeight ?? 0.1;
@@ -591,7 +593,10 @@ export class GroundController {
       ?? Math.max(256, Math.floor(lh * dpr * PODIUM_REFLECTOR_RES_SCALE));
 
     const segments = Math.min(96, Math.max(48, PODIUM_SEGMENTS));
-    const geom = new THREE.CircleGeometry(topRadius * 0.992, segments);
+    const geom = new THREE.CircleGeometry(
+      topRadius * PODIUM_REFLECTOR_RADIUS_SCALE,
+      segments,
+    );
 
     const ms = this.renderer.capabilities?.isWebGL2 === true ? 4 : 0;
 
@@ -859,7 +864,7 @@ export class GroundController {
   }
 
   setBaseScale(value) {
-    this.podiumScale = clampScale(value ?? this.podiumScale);
+    this.podiumScale = clampBaseScale(value ?? this.podiumScale);
 
     const wasVisible = this.solidEnabled;
     const currentColor = this.solidColor;

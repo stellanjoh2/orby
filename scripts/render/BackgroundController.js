@@ -49,6 +49,7 @@ export class BackgroundController {
     const sphere = new THREE.Mesh(geometry, material);
     sphere.position.set(0, 0, -5000);
     sphere.renderOrder = -1000; // Render first, behind everything
+    sphere.frustumCulled = false;
     // Camera sits inside this large sphere; flip winding so FrontSide (and MeshDepthMaterial prepass)
     // rasterizes the inward-facing shell — otherwise the sphere is fully back-face culled and writes
     // no depth for DOF.
@@ -169,7 +170,7 @@ export class BackgroundController {
    */
   updateSpherePosition() {
     if (!this.backgroundSphere || !this.camera) return;
-    
+
     // Position sphere far behind camera
     const cameraDirection = new THREE.Vector3();
     this.camera.getWorldDirection(cameraDirection);
@@ -177,7 +178,7 @@ export class BackgroundController {
     this.backgroundSphere.position.copy(this.camera.position);
     this.backgroundSphere.position.addScaledVector(cameraDirection, -distance);
   }
-  
+
   /**
    * Get current background color
    */

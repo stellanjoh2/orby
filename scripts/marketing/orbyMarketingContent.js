@@ -71,6 +71,7 @@
  * @property {string} [footerPrivacyHref]
  * @property {string} [footerAboutHref]
  * @property {string} [footerCreditsHref]
+ * @property {string} [footerSupportHref]
  * @property {string} [footerBrandHref]
  * @property {string} [footerGithubHref]
  * @property {string} [footerInstagramHref]
@@ -186,44 +187,25 @@ export const MARKETING_SECTIONS = [
       "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
     gallery: [
       {
-        src: './assets/marketing/showcase/showcase-01-etron-gt.jpg',
-        alt: 'Audi e-tron GT on a reflective platform lit in Orby',
+        src: './assets/marketing/orby-marketing-promo1.jpg',
+        alt: 'Racing spaceships hero render — three-quarter view in Orby',
         imageCredit: {
-          title: 'Audi e-tron GT',
-          artist: 'vecarz (@heynic)',
-          sourceLabel: 'Sketchfab',
-          sourceHref: 'https://sketchfab.com/heynic/models',
-        },
-      },
-      {
-        src: './assets/marketing/showcase/showcase-02-etron-detail.jpg',
-        alt: 'Close-up headlight detail on a red sports car render',
-        imageCredit: {
-          title: 'Sports car detail',
-          artist: 'vecarz (@heynic)',
-          sourceLabel: 'Sketchfab',
-          sourceHref: 'https://sketchfab.com/heynic/models',
-        },
-      },
-      {
-        src: './assets/marketing/showcase/showcase-03-jeep-rubicon.jpg',
-        alt: 'Jeep Wrangler Rubicon adventure render with lake backdrop',
-        imageCredit: {
-          title: 'Jeep Wrangler Adventure Rubicon',
-          artist: 'www.vecarz.com',
-          sourceLabel: 'Sketchfab',
+          title: 'Racing spaceships',
+          artist: 'pebegou',
+          sourceLabel: 'Fab',
           sourceHref:
-            'https://sketchfab.com/3d-models/jeep-wrangler-adventure-rubicon-wwwvecarzcom-aae5b65c544d40a4b8eaf95d907e67cd',
+            'https://www.fab.com/listings/1b2f7565-c9ad-433e-9a19-96c6687a55cd',
         },
       },
       {
-        src: './assets/marketing/showcase/showcase-04-new-balance.jpg',
-        alt: 'New Balance 574 product shot on a reflective disc',
+        src: './assets/marketing/orby-marketing-promo2.jpg',
+        alt: 'Racing spaceships — same ship, underside view with lens flare in Orby',
         imageCredit: {
-          title: 'New Balance 574',
-          artist: 'vecarz (@heynic)',
-          sourceLabel: 'Sketchfab',
-          sourceHref: 'https://sketchfab.com/heynic/models',
+          title: 'Racing spaceships',
+          artist: 'pebegou',
+          sourceLabel: 'Fab',
+          sourceHref:
+            'https://www.fab.com/listings/1b2f7565-c9ad-433e-9a19-96c6687a55cd',
         },
       },
     ],
@@ -308,7 +290,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'pro',
     id: 'orby-marketing-pro',
-    eyebrow: 'For pros',
+    eyebrow: 'ADDITIONAL FEATURES',
     title: 'Goes a lot deeper\nthan you think',
     lede:
       "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
@@ -339,9 +321,9 @@ export const MARKETING_SECTIONS = [
         flipGalleryFadeMs: 0.405,
       },
       {
-        title: 'Instant Export',
+        title: 'Simple UI',
         body:
-          'PNG stills, MP4 turntables, or frame sequences — rendered directly from the viewer. No screen capture, no third-party tools.',
+          'Made for designers, creators and curious people — not just 3D artists. If you can open a file, you can use Orby.',
         imageSrc: './assets/marketing/pro-feature2-export.jpg',
         imageAlt: 'Export deliverables from Orby — stills, video, and sequences',
       },
@@ -417,14 +399,6 @@ export const MARKETING_SECTIONS = [
         flipGalleryFadeMs: 0.405,
       },
       {
-        title: 'Color Reference',
-        body:
-          'Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world.',
-        imageSrc: './assets/marketing/orby-marketing-colorchecker.jpg',
-        imageAlt:
-          'Porsche render with ColorChecker, chrome ball, and reference spheres in Orby',
-      },
-      {
         title: 'Lens Effects',
         body:
           'Lens flare, dirt, and chromatic aberration — optical polish on your hero without a post round trip. Dial intensity, color, and quality in realtime.',
@@ -432,6 +406,23 @@ export const MARKETING_SECTIONS = [
         videoPoster: true,
         imageSrc: './assets/marketing/orby-feature-lensflare.jpg',
         imageAlt: 'Product render with lens flare and chromatic aberration in Orby',
+      },
+      {
+        title: 'Color Reference',
+        body:
+          'Reference spheres, ColorChecker, lit/unlit toggle — everything you need to validate your grade and match your CG to the real world.',
+        flipGallery: [
+          {
+            src: './assets/marketing/orby-feature-colorchecker.jpg',
+            alt: 'Racing spaceship on a reflective podium with ColorChecker and reference spheres in Orby',
+          },
+          {
+            src: './assets/marketing/orby-feature-colorchecker-b.jpg',
+            alt: 'Racing spaceship from below with ColorChecker chart and reference spheres in Orby',
+          },
+        ],
+        flipGalleryIntervalMs: 2000,
+        flipGalleryFadeMs: 0.405,
       },
     ],
   },
@@ -504,6 +495,7 @@ export const MARKETING_SECTIONS = [
     footerPrivacyHref: './legal/privacy-policy.html',
     footerAboutHref: './about/',
     footerCreditsHref: './credits/',
+    footerSupportHref: './support/',
     footerBrandHref: './brand/',
     footerGithubHref: 'https://github.com/stellanjoh2/orby',
     footerInstagramHref: 'https://www.instagram.com/dropittoorby',

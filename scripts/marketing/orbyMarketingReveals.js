@@ -551,6 +551,24 @@ function prepareProSection(sectionEl) {
   sectionEl.querySelectorAll('[data-orby-marketing-gallery-flip]').forEach(prepareMarketingMask);
 }
 
+/** Pro-card flip galleries skip split/showcase revealMedia — show the first frame when cards land. */
+function revealProFlipGalleries(sectionEl) {
+  sectionEl.querySelectorAll('[data-orby-marketing-gallery-flip]').forEach((mask) => {
+    const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
+    if (!imgs.length) return;
+    const activeIndex = Math.max(0, imgs.findIndex((img) => img.classList.contains('is-active')));
+    imgs.forEach((img, i) => {
+      gsap.set(img, {
+        opacity: i === activeIndex ? 1 : 0,
+        zIndex: i === activeIndex ? 1 : 0,
+        clearProps: 'filter',
+      });
+      if (i === activeIndex) img.classList.add('is-loaded');
+    });
+    setMediaPlaceholderOpacity(mask, 0);
+  });
+}
+
 function revealProSection(sectionEl, tl) {
   const eyebrow = sectionEl.querySelector('.orby-marketing__eyebrow');
   const title = sectionEl.querySelector('.orby-marketing__title');
@@ -575,6 +593,7 @@ function revealProSection(sectionEl, tl) {
       lede || title ? `>-=${blockOverlap}` : 0,
     );
   }
+  tl.add(() => revealProFlipGalleries(sectionEl), cards.length ? `>-=${blockOverlap}` : 0);
 }
 
 function prepareRoadmapSection(sectionEl) {

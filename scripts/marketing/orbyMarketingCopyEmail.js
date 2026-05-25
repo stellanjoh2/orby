@@ -100,9 +100,14 @@ export function bindMarketingCopyEmail(root) {
   unbindMarketingCopyEmail();
 
   const marketingRoot = root ?? document.getElementById(MARKETING_ROOT_ID);
-  if (!marketingRoot) return;
+  const copyButtons = new Set();
+  marketingRoot?.querySelectorAll('[data-orby-marketing-copy-email]').forEach((el) => copyButtons.add(el));
+  document
+    .querySelectorAll('[data-orby-marketing-scroll-nav] [data-orby-marketing-copy-email]')
+    .forEach((el) => copyButtons.add(el));
+  if (!copyButtons.size) return;
 
-  marketingRoot.querySelectorAll('[data-orby-marketing-copy-email]').forEach((btn) => {
+  copyButtons.forEach((btn) => {
     if (!(btn instanceof HTMLElement)) return;
     const handler = (event) => {
       event.preventDefault();

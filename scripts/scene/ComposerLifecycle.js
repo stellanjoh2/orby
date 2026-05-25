@@ -14,6 +14,7 @@ export class ComposerLifecycle {
     backgroundController,
     getCreativeLookEnabled,
     syncPostProcessingForLogicalSize,
+    beforeComposerRender,
     onRestoreBloomAfterCreativeLook,
   }) {
     this.renderer = renderer;
@@ -23,6 +24,7 @@ export class ComposerLifecycle {
     this.backgroundController = backgroundController;
     this.getCreativeLookEnabled = getCreativeLookEnabled ?? (() => false);
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
+    this.beforeComposerRender = beforeComposerRender;
     this.onRestoreBloomAfterCreativeLook = onRestoreBloomAfterCreativeLook;
     this._creativeBloomWasSuppressed = false;
   }
@@ -118,6 +120,7 @@ export class ComposerLifecycle {
    */
   renderComposerPass() {
     if (!this.composer) return;
+    this.beforeComposerRender?.();
     this.applyCreativeLookBloomSuppression();
     this.ensureComposerBuffersMatchRenderer();
     this.resetRendererViewportToCanvas();

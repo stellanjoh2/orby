@@ -33,6 +33,8 @@ export const PODIUM_SEGMENTS = 96;
 /** Samples along the podium’s rounded top outer edge (replaces a single flat chamfer). */
 export const PODIUM_BEVEL_EDGE_SEGMENTS = 28;
 
+/** Glass disc radius vs podium top — slightly inset from flush (0.992) + a few px (→ 0.996). */
+export const PODIUM_REFLECTOR_RADIUS_SCALE = 0.996;
 /** Planar mesh reflection disc sits slightly above the podium top cap (world units). */
 export const PODIUM_REFLECTOR_Y_EPS = 0.003;
 /** Render-target scale vs canvas for podium Reflector (performance vs sharpness). */

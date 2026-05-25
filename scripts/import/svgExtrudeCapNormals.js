@@ -1,4 +1,4 @@
-import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
  * THREE.ExtrudeGeometry can produce inverted winding on cap triangles for shapes with

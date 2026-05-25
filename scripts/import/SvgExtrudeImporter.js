@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
-import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/SVGLoader.js';
-import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/SVGLoader.js';
+import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 const DEFAULT_DEPTH = 0.2;
 const MIN_DEPTH = 0.01;

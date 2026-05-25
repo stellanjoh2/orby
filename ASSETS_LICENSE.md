@@ -34,10 +34,10 @@ Icons, UI art, Lottie, and Orby-original imagery are included in the MIT license
 
 ## Typeface: Mattone
 
-`assets/fonts/Mattone-Bold.ttf` is sourced from [Collletttivo](https://www.collletttivo.it/), and is licensed under the SIL Open Font License 1.1 (OFL).
+`assets/fonts/Mattone-Bold.ttf` and `assets/fonts/Mattone-Regular.woff2` are sourced from [Collletttivo](https://www.collletttivo.it/), and are licensed under the SIL Open Font License 1.1 (OFL).
 
 - Upstream license copy: `assets/fonts/Mattone-LICENSE.txt`
-- Original source package (local import path used): `~/Downloads/mattone-main/`
+- Original source package (local import path used): `~/Fonts/mattone-main/`
 
 ## Typeface: Geist
 

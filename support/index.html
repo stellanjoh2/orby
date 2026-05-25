@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support — Orby</title>
+    <meta
+      name="description"
+      content="Report issues, troubleshoot exports and HDRI lighting, and learn how Orby works in the browser."
+    />
+    <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
+    <meta name="orby-bug-report-api" content="" />
+    <meta name="orby-turnstile-site-key" content="" />
+    <link rel="stylesheet" href="../legal/legal.css" />
+    <link rel="stylesheet" href="./support.css" />
+  </head>
+  <body class="legal-doc legal-doc--support">
+    <a class="legal-skip" href="#main">Skip to content</a>
+    <header class="legal-top">
+      <div class="legal-top__brand">
+        <a href="../index.html">Orby</a>
+        <span class="legal-top__sep" aria-hidden="true">/</span>
+        <span class="legal-top__crumb">Support</span>
+      </div>
+      <a class="legal-top__back" href="../index.html">← Back to app</a>
+    </header>
+
+    <main id="main" class="legal-wrap">
+      <h1>Support</h1>
+      <p class="legal-meta">Last updated: 25 May 2026</p>
+
+      <section
+        id="report-issue"
+        class="legal-support-bug-report bug-report-content"
+        data-support-bug-report
+        aria-labelledby="support-bug-report-heading"
+      >
+        <div id="supportBugReportPanel">
+          <header class="legal-support-bug-report__header">
+            <p class="legal-support-bug-report__eyebrow">Support ticket</p>
+            <h2 id="support-bug-report-heading" class="legal-support-bug-report__head">
+              Report an issue
+            </h2>
+            <p class="legal-support-bug-report__intro">
+              Tell us what’s happening — steps to reproduce, browser, and OS help a lot.
+              <strong>We don’t collect contact details</strong>, so we can’t reply, but we read
+              everything you send.
+            </p>
+          </header>
+
+          <div class="legal-support-bug-report__body">
+          <form id="supportBugReportForm">
+            <div class="bug-report-field">
+              <label for="supportBugReportCategory">Category</label>
+              <select id="supportBugReportCategory" name="category" required aria-required="true">
+                <option value="crash">Crash / Freeze</option>
+                <option value="rendering" selected>Rendering / Display</option>
+                <option value="loaded-mesh-materials">Loaded Mesh / Materials</option>
+                <option value="ui">UI / Controls</option>
+                <option value="export">Export</option>
+                <option value="performance">Performance</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="bug-report-field bug-report-field-severity">
+              <label id="supportBugReportSeverityLabel" for="supportBugReportSeverityTrigger">Severity</label>
+              <div class="bug-report-severity-combo" id="supportBugReportSeverityCombo">
+                <input type="hidden" name="severity" id="supportBugReportSeverity" value="moderate" />
+                <button
+                  type="button"
+                  id="supportBugReportSeverityTrigger"
+                  class="bug-report-severity-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="supportBugReportSeverityListbox"
+                >
+                  <span class="bug-report-severity-trigger-inner">
+                    <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
+                    <span class="bug-report-severity-trigger-text" id="supportBugReportSeverityTriggerText"
+                      ><span class="bug-report-severity-level">Moderate</span
+                      ><span class="bug-report-severity-desc"> — Noticeable issue</span></span
+                    >
+                  </span>
+                </button>
+                <ul
+                  id="supportBugReportSeverityListbox"
+                  class="bug-report-severity-listbox"
+                  role="listbox"
+                  tabindex="-1"
+                  aria-labelledby="supportBugReportSeverityLabel"
+                  hidden
+                >
+                  <li role="option" data-value="cosmetic" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                    <span class="bug-report-severity-dot" data-severity="cosmetic" aria-hidden="true"></span>
+                    <span class="bug-report-severity-label"
+                      ><span class="bug-report-severity-level">Low</span
+                      ><span class="bug-report-severity-desc"> — Visual issue or polish</span></span
+                    >
+                  </li>
+                  <li role="option" data-value="minor" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                    <span class="bug-report-severity-dot" data-severity="minor" aria-hidden="true"></span>
+                    <span class="bug-report-severity-label"
+                      ><span class="bug-report-severity-level">Minor</span
+                      ><span class="bug-report-severity-desc"> — Minor glitch</span></span
+                    >
+                  </li>
+                  <li role="option" data-value="moderate" class="bug-report-severity-list-option" aria-selected="true" tabindex="-1">
+                    <span class="bug-report-severity-dot" data-severity="moderate" aria-hidden="true"></span>
+                    <span class="bug-report-severity-label"
+                      ><span class="bug-report-severity-level">Moderate</span
+                      ><span class="bug-report-severity-desc"> — Noticeable issue</span></span
+                    >
+                  </li>
+                  <li role="option" data-value="major" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                    <span class="bug-report-severity-dot" data-severity="major" aria-hidden="true"></span>
+                    <span class="bug-report-severity-label"
+                      ><span class="bug-report-severity-level">Major</span
+                      ><span class="bug-report-severity-desc"> — Important feature broken</span></span
+                    >
+                  </li>
+                  <li role="option" data-value="blocker" class="bug-report-severity-list-option" aria-selected="false" tabindex="-1">
+                    <span class="bug-report-severity-dot" data-severity="blocker" aria-hidden="true"></span>
+                    <span class="bug-report-severity-label"
+                      ><span class="bug-report-severity-level">Blocker</span
+                      ><span class="bug-report-severity-desc"> — Can’t use the app or it crashes</span></span
+                    >
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="bug-report-field">
+              <label for="supportBugReportMessage" id="supportBugReportMessageLabel">Details</label>
+              <div class="bug-report-message-block">
+                <div class="bug-report-message-stage">
+                  <textarea
+                    id="supportBugReportMessage"
+                    class="bug-report-message-textarea"
+                    name="message"
+                    rows="6"
+                    maxlength="8000"
+                    required
+                    placeholder="About 5+ words: steps to reproduce, browser/OS, what you expected…"
+                    aria-labelledby="supportBugReportMessageLabel"
+                  ></textarea>
+                  <div class="bug-report-message-sending-overlay" hidden aria-hidden="true">
+                    <div class="bug-report-message-sending-bar-track">
+                      <div class="bug-report-message-sending-bar-fill"></div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="bug-report-word-meter"
+                  id="supportBugReportWordMeter"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="5"
+                  aria-valuenow="0"
+                  aria-label="Words of detail"
+                >
+                  <div class="bug-report-word-meter-fill" id="supportBugReportWordMeterFill"></div>
+                </div>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              name="honeypot"
+              class="sr-only"
+              tabindex="-1"
+              autocomplete="off"
+              aria-hidden="true"
+            />
+            <div id="support-bug-report-turnstile" class="bug-report-turnstile"></div>
+            <p class="bug-report-status" aria-live="polite">
+              <span class="bug-report-status-text"></span>
+            </p>
+            <div class="bug-report-actions">
+              <span class="bug-report-submit-wrap" id="supportBugReportSubmitWrap">
+                <button type="submit" id="supportSubmitBugReport" class="legal-support-submit-btn">
+                  Send report
+                </button>
+              </span>
+            </div>
+          </form>
+          </div>
+        </div>
+      </section>
+
+      <aside
+        id="supportBugReportThankYou"
+        class="legal-callout legal-callout--lime legal-support-thank-you"
+        hidden
+        role="status"
+        aria-live="polite"
+      >
+        <p>
+          <strong>Thanks — we got it.</strong> We don’t collect contact details on reports, so we can’t
+          reply, but every submission is read. If you need to add detail, you can submit again with
+          more context.
+        </p>
+      </aside>
+
+      <p class="legal-lead legal-support-lead">
+        Technical help for Orby in the browser — how lighting, exports, and file formats work, plus a
+        place to report bugs when something breaks. Your models stay on your device; this page only
+        sends what you type in the report form above.
+      </p>
+
+      <nav class="legal-credits-toc" aria-label="Help topics">
+        <p class="legal-credits-toc__label">Help topics</p>
+        <ul>
+          <li><a href="#file-formats">File formats</a></li>
+          <li><a href="#hdri">HDRI &amp; lighting</a></li>
+          <li><a href="#exports">Exports</a></li>
+          <li><a href="#transparency">Transparency &amp; glass</a></li>
+          <li><a href="#svg-extrude">SVG extrude</a></li>
+          <li><a href="#performance">Performance</a></li>
+          <li><a href="#scene-settings">Scene settings</a></li>
+          <li><a href="#privacy">Privacy reminder</a></li>
+        </ul>
+      </nav>
+
+      <section id="file-formats" class="legal-support-section">
+        <h2>File formats &amp; loading</h2>
+        <p class="legal-support-section__intro">
+          Orby is optimized for <strong>glTF / GLB</strong> and <strong>SVG extrusion</strong>. Other
+          formats load via Three.js loaders but may need extra care for materials and scale.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>What should I use for AI-generated or game assets?</h3>
+            <p>
+              <strong>GLB</strong> is the best default — single file, PBR materials, animations, and
+              extensions like transmission for glass. Export from Meshy, Tripo, Blender, etc. as glTF
+              2.0 when you can.
+            </p>
+          </li>
+          <li>
+            <h3>SVG logos and flat artwork</h3>
+            <p>
+              Drop an SVG to extrude filled paths into 3D meshes. Use <strong>Object → SVG Extrude</strong>
+              for depth, per-color layers, and surface presets. Complex strokes-only artwork may need
+              cleanup in a vector editor first.
+            </p>
+          </li>
+          <li>
+            <h3>Model looks tiny, huge, or off-center</h3>
+            <p>
+              Orby auto-frames on load. Use <strong>F</strong> to refocus, or transform tools
+              (<kbd>W</kbd> / <kbd>E</kbd> / <kbd>R</kbd>) if you need manual placement. Some FBX/OBJ
+              exports use different unit scales — zoom and framing usually recover a usable view.
+            </p>
+          </li>
+          <li>
+            <h3>Materials look flat or wrong compared to another viewer</h3>
+            <p>
+              Check display mode (<strong>Shaded</strong> vs <strong>Unlit</strong> vs <strong>Clay</strong>).
+              Shader Lab presets temporarily replace materials — turn them off to see the imported glTF
+              look again. Marketplace assets often pack transparency into atlases; see
+              <a href="#transparency">Transparency &amp; glass</a> below.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="hdri" class="legal-support-section">
+        <h2>HDRI &amp; environment lighting</h2>
+        <p class="legal-support-section__intro">
+          A 360° environment image lights the scene and drives reflections on metals, glass, and chrome
+          looks.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>Built-in presets vs custom uploads</h3>
+            <p>
+              Presets ship as <strong>JPEG environments</strong> — graded and tuned for fast load and a
+              small download. You can upload your own <strong>.jpg</strong>, <strong>.png</strong>,
+              <strong>.hdr</strong>, or <strong>.exr</strong>: JPEGs behave like a finished sky;
+              <strong>.hdr</strong> / <strong>.exr</strong> keep a wider brightness range so sun and
+              windows can punch harder on metal and glass (lower <strong>Intensity</strong> and
+              <strong>Exposure</strong> if it blows out).
+            </p>
+          </li>
+          <li>
+            <h3>Layout and backdrop</h3>
+            <p>
+              Use a <strong>2:1 equirectangular</strong> map. <strong>Render Backdrop</strong> draws the
+              HDRI behind the scene; when off, only your background color shows but the HDRI still lights
+              the model. Rotate the environment to change highlight direction; <strong>Blurriness</strong>
+              softens reflections.
+            </p>
+          </li>
+          <li>
+            <h3>Custom HDRI session limits</h3>
+            <p>
+              Custom uploads are <strong>session-only</strong> — they reset mood tints to neutral and are
+              not saved in copied scene JSON. Re-upload after a refresh if you need the same file again.
+            </p>
+          </li>
+          <li>
+            <h3>Shader Lab and HDRI</h3>
+            <p>
+              True Chrome and Glass follow the current HDRI (strength, rotation, blur). Animated Shader
+              Lab presets (Flow Field, Plasma, etc.) can be frozen so they stop drifting while the rest of
+              the scene still responds to the environment.
+            </p>
+          </li>
+        </ul>
+        <aside class="legal-callout">
+          <p>
+            Bundled HDRIs are by
+            <a href="https://www.maxroz.com/hdri" target="_blank" rel="noopener noreferrer">Maxime Roz</a>
+            and are <strong>not</strong> covered by Orby’s MIT License — see
+            <a href="../credits/#licensed-assets">Credits → Licensed assets</a>.
+          </p>
+        </aside>
+      </section>
+
+      <section id="exports" class="legal-support-section">
+        <h2>Exports</h2>
+        <p class="legal-support-section__intro">
+          Exports render the current view and settings on your GPU. Heavy post-processing and high
+          resolution increase time and memory use.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>PNG still (1× / 2×, transparency)</h3>
+            <p>
+              Matches the viewport grade and effects. <strong>2×</strong> is sharper but slower and uses
+              more memory. Transparency exports the alpha channel when enabled — hide the ground/base if
+              you need a clean plate.
+            </p>
+          </li>
+          <li>
+            <h3>Fisheye lens and PNG</h3>
+            <p>
+              <strong>Fisheye looks fine live but PNG export is not supported yet</strong> while the
+              effect is on — you may see missing geometry, black patches, or a broken frame. Turn off
+              <strong>Fisheye Lens</strong> in the Render panel, export PNG, then turn fisheye back on.
+              <strong>MP4 video export still works</strong> with fisheye enabled.
+            </p>
+          </li>
+          <li>
+            <h3>SVG vector (silhouette &amp; flat color)</h3>
+            <p>
+              Vector exports trace the visible silhouette or flat fills — they are not a substitute for a
+              3D mesh export. Tune detail level if paths are too heavy or too coarse for your target app.
+            </p>
+          </li>
+          <li>
+            <h3>GLB from SVG extrude</h3>
+            <p>
+              Available when the source was an imported SVG. Exported meshes use opaque GLB materials for
+              predictable shading in other viewers and AR pipelines.
+            </p>
+          </li>
+          <li>
+            <h3>Video (MP4 / PNG sequence)</h3>
+            <p>
+              Turntable or orbit camera paths; control length, spins, FPS, resolution, and encode quality.
+              Encoding uses browser APIs — very long or 4K runs can fail on low memory; try shorter clips or
+              lower resolution. PNG sequences download as a zip of numbered frames.
+            </p>
+          </li>
+          <li>
+            <h3>Export failed or file won’t open</h3>
+            <p>
+              Note your browser and OS in a <a href="#report-issue">bug report</a>. Safari and mobile GPUs
+              can be stricter than desktop Chrome. Disable the heaviest effects temporarily, reduce export
+              size, and close other heavy tabs before retrying.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="transparency" class="legal-support-section">
+        <h2>Transparency &amp; glass</h2>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>Flicker, sorting, or “see-through” layers</h3>
+            <p>
+              Real-time engines sort draw calls — not every triangle. When many transparent surfaces share
+              one mesh/material, order artifacts are common in WebGL/Three.js, especially on marketplace
+              downloads with blended atlases.
+            </p>
+          </li>
+          <li>
+            <h3>What to try in Orby</h3>
+            <p>
+              Under <strong>Mesh → Advanced</strong>, try <strong>Transparency Mode</strong> and
+              <strong>Stabilize Layered Transparency</strong>. These change draw order but cannot fix assets
+              where unrelated surfaces were baked into one blended material.
+            </p>
+          </li>
+          <li>
+            <h3>Transmission / refractive glass in glTF</h3>
+            <p>
+              Thin glass often uses <strong>KHR_materials_transmission</strong>. When present, it reads from
+              the file’s material properties rather than global scene overrides.
+            </p>
+          </li>
+          <li>
+            <h3>Further reading</h3>
+            <p>
+              <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#material-alphamode" target="_blank" rel="noopener noreferrer">glTF alpha modes</a>
+              ·
+              <a href="https://threejs.org/manual/en/transparency.html" target="_blank" rel="noopener noreferrer">Three.js — Transparency</a>
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="svg-extrude" class="legal-support-section">
+        <h2>SVG extrude</h2>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>Controls</h3>
+            <p>
+              <strong>Depth</strong> sets global extrusion; <strong>Angle</strong> controls normal smoothing;
+              <strong>Flip Direction</strong> inverts front/back; <strong>Color Override</strong> replaces fill
+              colors; per-color depth/position rows tune layered logos.
+            </p>
+          </li>
+          <li>
+            <h3>Scene JSON</h3>
+            <p>
+              SVG extrude settings are included when you copy/paste scene settings in the app. They are not
+              stored on this support page — only in your local session.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="performance" class="legal-support-section">
+        <h2>Performance</h2>
+        <p class="legal-support-section__intro">
+          Orby is a real-time GPU renderer. Frame cost comes from your mesh complexity, shadow maps,
+          screen-space effects, and how many full-quality passes you stack — not just sliders in one panel.
+        </p>
+        <ul class="legal-support-faq">
+          <li>
+            <h3>High-poly meshes</h3>
+            <p>
+              Triangle count matters before any effect is turned on. Dense photogrammetry, CAD exports, and
+              AI meshes with heavy subdivision can choke integrated GPUs and older laptops even at rest.
+              If orbit feels sticky with effects off, try a decimated export, hide optional parts in the
+              source file, or use <strong>Clay</strong> / <strong>Unlit</strong> while framing, then switch
+              back to <strong>Shaded</strong> for the final look.
+            </p>
+          </li>
+          <li>
+            <h3>Shadow-casting 3-point lights</h3>
+            <p>
+              Under <strong>Lights → Shadows</strong>, enabling <strong>Cast Shadows</strong> makes the key,
+              fill, and rim spotlights render shadow maps every frame. That is powerful for product shots but
+              expensive — especially with soft shadows and when multiple lights cast at once. Per-light
+              shadow toggles add up quickly.
+            </p>
+            <p>
+              <strong>Shadow Quality</strong> (Low → Ultra) sets shadow map resolution and filtering. Ultra
+              uses very large maps and softer PCF — beautiful on desktop, brutal on low-end hardware. Start
+              at Medium; only go High or Ultra when you are polishing a still or export.
+            </p>
+            <p>
+              On the HDRI panel, <strong>Receive Shadows + AO</strong> adds a ground catcher under the model
+              so contact shadows and occlusion read on the backdrop. Turn it off when you do not need floor
+              contact — it is extra geometry and compositing work each frame.
+            </p>
+          </li>
+          <li>
+            <h3>Ambient occlusion</h3>
+            <p>
+              <strong>FX → Ambient Occlusion</strong> runs screen-space AO (N8AO) as an extra post pass. It
+              deepens creases and ground contact but costs GPU time on top of bloom, depth of field, and
+              shadows. It is off by default for a reason. If the toggle stays disabled, check
+              <strong>Render → Quality → Render Quality</strong> — the Low tier forces AO off to save performance
+              (your saved settings return when you move back to Medium or Ultra).
+            </p>
+          </li>
+          <li>
+            <h3>Ultra settings (global and per-effect)</h3>
+            <p>
+              <strong>Render → Quality → Render Quality → Ultra</strong> is the top tier: higher device pixel
+              ratio (sharper internal resolution), full-resolution bloom, and no automatic shutoff of depth of
+              field, bloom, AO, or FXAA. Medium lowers pixel ratio and runs bloom at half resolution; Low goes
+              further and disables several heavy passes entirely while keeping your slider values saved.
+            </p>
+            <p>
+              Several FX blocks also have their own <strong>Quality → Ultra</strong> (depth of field, bloom,
+              anamorphic bloom, lens flare). Stacking Render Quality Ultra with multiple per-effect Ultra modes
+              is the fastest way to tank frame rate — fine for a hero frame, rough for live orbiting on a weak GPU.
+            </p>
+          </li>
+          <li>
+            <h3>Lens flare</h3>
+            <p>
+              <strong>FX → Lens Flare</strong> simulates glare and streaks from bright areas in the scene. On
+              lower-spec machines it can drag performance noticeably, especially at <strong>Quality → Ultra</strong>
+              (the default). Try <strong>Optimized</strong> first, or disable flare while working and enable it
+              only for the final PNG or video export.
+            </p>
+          </li>
+          <li>
+            <h3>Cheaper vs heavier color &amp; post effects</h3>
+            <p>
+              <strong>Light:</strong> exposure, contrast, saturation, tint, temperature, fade, luminance tone
+              curve. <strong>Medium:</strong> vignette, clarity, sharpness, Fresnel. <strong>Heavy:</strong>
+              depth of field, bloom, lens dirt, film grain, chromatic aberration, FXAA, histogram/auto-exposure
+              — plus AO and lens flare when enabled. Turning an effect <strong>on</strong> is usually the biggest
+              step; cranking intensity changes the look more than the cost.
+            </p>
+          </li>
+          <li>
+            <h3>Practical recovery checklist</h3>
+            <p>
+              If Orby feels slow: set <strong>Render Quality</strong> to Medium or Low; disable Cast Shadows or
+              drop shadow quality; turn off AO, lens flare, DOF, and bloom; shrink the browser window; avoid
+              2× PNG export on a struggling GPU. Re-enable one cinematic layer at a time when you are close to final.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="scene-settings" class="legal-support-section">
+        <h2>Scene settings</h2>
+        <p>
+          Copy/paste scene JSON from the app to save lighting, camera, effects, tone curve, Look Filter
+          selection, and panel toggles. Paste on the landing page or via the in-app loader. Settings are
+          local to your browser — they are not uploaded to Orby servers.
+        </p>
+      </section>
+
+      <section id="privacy" class="legal-support-section">
+        <h2>Privacy reminder</h2>
+        <p>
+          Models and HDRIs you load stay in the browser. Issue reports only send the text you submit in
+          the form (plus anti-abuse metadata described in our
+          <a href="../legal/privacy-policy.html">Privacy Policy</a>).
+        </p>
+      </section>
+
+      <p class="legal-foot">
+        <a href="../index.html">Open Orby</a> ·
+        <a href="../credits/">Credits</a> ·
+        <a href="../legal/privacy-policy.html">Privacy Policy</a>
+      </p>
+    </main>
+
+    <script type="module" src="./supportBugReport.js"></script>
+  </body>
+</html>

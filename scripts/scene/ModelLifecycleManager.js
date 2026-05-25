@@ -198,6 +198,7 @@ export class ModelLifecycleManager {
       },
     });
     s.setShading(state.shading);
+    s.repairRenderSurfacesAfterModelLoad?.();
     if (state.gobo?.texture) {
       void s.setGoboTexture(state.gobo.texture, { updateState: false });
     }
@@ -233,7 +234,8 @@ export class ModelLifecycleManager {
         if (!s.currentModel) return;
         if (wasFirstLoad) {
           const targetExposure = s.stateStore.getState().exposure ?? 1.0;
-          const startExposure = 0.1;
+          // Keep HDRI readable during spawn — 0.1 made the backdrop look “off” for ~2s.
+          const startExposure = Math.min(targetExposure, Math.max(0.72, targetExposure * 0.88));
           const duration = 2000;
           const startTime = performance.now();
 

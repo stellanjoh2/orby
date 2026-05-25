@@ -69,6 +69,14 @@ export class RenderControls {
     }
   }
 
+  /** PNG 1×/2× — always choosable; export resolution is decoupled from Medium/Low preview DPR. */
+  _syncExportSizeControls() {
+    document.querySelectorAll('[data-export-size]').forEach((btn) => {
+      btn.disabled = false;
+      btn.classList.remove('is-disabled');
+    });
+  }
+
   bind() {
     /** Batches primary control writes with look-filter preset so syncControls never runs between them (avoids first-click checkbox resets). */
     const commitLookFilterTouchWith = (fn) => {
@@ -773,6 +781,7 @@ export class RenderControls {
           this.stateStore.set('renderQuality', value);
         });
         this.eventBus.emit('render:apply-performance');
+        this._syncExportSizeControls();
       });
     }
 
@@ -1401,6 +1410,7 @@ export class RenderControls {
     );
 
     this.toneCurveController?.syncFromState(state);
+    this._syncExportSizeControls();
   }
 
   /**

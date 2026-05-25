@@ -1,4 +1,4 @@
-import { BokehPass } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js';
+import { BokehPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/BokehPass.js';
 
 /**
  * Three.js stock {@link BokehPass} (same family as

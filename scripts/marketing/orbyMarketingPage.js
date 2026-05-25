@@ -155,6 +155,8 @@ export function initOrbyMarketingPage(options = {}) {
   let root = null;
   let scrollCue = null;
   let teardownScrollCueFade = null;
+  /** @type {ReturnType<import('./orbyMarketingScrollNav.js').initMarketingScrollNav> | null} */
+  let scrollNav = null;
   let mountPromise = null;
   let bodyObserver = null;
   let revealObserver = null;
@@ -322,6 +324,7 @@ export function initOrbyMarketingPage(options = {}) {
     if (scrollCue) {
       scrollCue.hidden = !home;
     }
+    scrollNav?.setHomeActive(home);
     if (!root) {
       if (home) setScrollMode(true);
       return;
@@ -415,6 +418,21 @@ export function initOrbyMarketingPage(options = {}) {
     scrollToMarketing(scheduleMount);
   });
   teardownScrollCueFade = bindScrollCueFade(scrollCue);
+
+  void loadSections().then((sections) => {
+    if (destroyed) return;
+    const ctaSection = sections.find((s) => s.type === 'cta');
+    void import('./orbyMarketingScrollNav.js').then((scrollNavMod) => {
+      if (destroyed || scrollNav) return;
+      scrollNav = scrollNavMod.initMarketingScrollNav({
+        section: ctaSection,
+        onScrollTop: scrollToTop,
+      });
+      bindMarketingCopyEmail(root);
+      syncHomeState();
+    });
+  });
+
   if (lazy) {
     const runMount = () => {
       if (!destroyed && isDropzoneHome()) scheduleMount();
@@ -446,6 +464,8 @@ export function initOrbyMarketingPage(options = {}) {
       teardownScrollCueFade?.();
       teardownScrollCueFade = null;
       scrollCue?.remove();
+      scrollNav?.destroy();
+      scrollNav = null;
       attachMarketingToDom();
       root?.remove();
       root = null;

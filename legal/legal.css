@@ -4,6 +4,14 @@
  */
 
 @font-face {
+  font-family: 'Mattone Regular';
+  src: url('../assets/fonts/Mattone-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Mattone Bold';
   src: url('../assets/fonts/Mattone-Bold.ttf') format('truetype');
   font-style: normal;
@@ -57,7 +65,8 @@
   --legal-surface: #121212;
   --orby-black: #080808;
   --legal-border: rgba(255, 255, 255, 0.08);
-  --legal-text: rgba(255, 255, 255, 0.92);
+  /* Body copy on legal pages (headings stay #fff / accent) */
+  --legal-text: rgba(255, 255, 255, 0.7);
   --legal-muted: rgba(255, 255, 255, 0.62);
   --legal-faint: rgba(255, 255, 255, 0.38);
   --legal-accent: #c4ff00;
@@ -258,6 +267,11 @@ body.legal-doc {
 .legal-doc strong {
   font-weight: 600;
   color: var(--legal-text);
+}
+
+/* Slight emphasis lift within softened body copy (not on About) */
+body.legal-doc:not(.legal-doc--about) strong {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .legal-sub {
@@ -656,6 +670,8 @@ body.legal-doc--credits .legal-credits-asset__meta a {
 
 body.legal-doc--about {
   --legal-bg: var(--orby-black);
+  /* About keeps brighter body copy; other legal pages use --legal-text at 0.7 */
+  --legal-text: rgba(255, 255, 255, 0.92);
   /* Match privacy policy column (52rem → 56rem @ 1200px); type scales with width */
   --legal-about-body-size: 1.3125rem; /* 21px */
   --legal-about-body-line: 1.78;
