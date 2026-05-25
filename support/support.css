@@ -463,9 +463,28 @@ body.legal-doc--support {
   }
 }
 
-/* Match Credits / Privacy — space under “Last updated” before ticket card */
+/* Match Credits / Privacy — space under “Last updated” before export callout */
 body.legal-doc--support p.legal-meta {
-  margin-bottom: 4.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.legal-support-export-callout {
+  margin-bottom: 2.75rem;
+}
+
+.legal-doc--support .legal-callout--red {
+  background: color-mix(in srgb, var(--warning) 14%, var(--legal-surface));
+  border-color: color-mix(in srgb, var(--warning) 42%, transparent);
+  border-left-color: var(--warning);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warning) 8%, transparent);
+}
+
+.legal-doc--support .legal-callout--red p {
+  color: color-mix(in srgb, #fecaca 28%, var(--legal-text));
+}
+
+.legal-doc--support .legal-callout--red strong {
+  color: #fca5a5;
 }
 
 body.legal-doc--support .legal-support-lead {
