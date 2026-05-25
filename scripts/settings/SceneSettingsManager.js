@@ -12,6 +12,7 @@ import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
+import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 
 /**
  * SceneSettingsManager
@@ -750,6 +751,10 @@ export class SceneSettingsManager {
             ...(payload.lensFlare.anamorphicBloom ?? {}),
           },
         };
+        const discGlow = resolveDiscGlowFromState(merged, d);
+        merged.discGlowIntensity = discGlow.intensity;
+        merged.discGlowSize = discGlow.size;
+        merged.discGlowColor = discGlow.color;
         this.stateStore.set('lensFlare', merged);
         this.eventBus.emit('studio:lens-flare-enabled', merged.enabled);
         this.eventBus.emit('studio:lens-flare-rotation', merged.rotation);
@@ -761,6 +766,9 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-sun-disc-scale', merged.sunDiscScale);
         this.eventBus.emit('studio:lens-flare-sun-disc-blur', merged.sunDiscBlur);
         this.eventBus.emit('studio:lens-flare-sun-disc-color', merged.sunDiscColor);
+        this.eventBus.emit('studio:lens-flare-disc-glow-intensity', merged.discGlowIntensity);
+        this.eventBus.emit('studio:lens-flare-disc-glow-size', merged.discGlowSize);
+        this.eventBus.emit('studio:lens-flare-disc-glow-color', merged.discGlowColor);
         this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       }
       if (payload.groundSolid !== undefined) {

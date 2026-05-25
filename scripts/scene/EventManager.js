@@ -239,6 +239,9 @@ export class EventManager {
     eventBus.on('studio:lens-flare-sun-disc-scale', (value) => s.setLensFlareSunDiscScale(value));
     eventBus.on('studio:lens-flare-sun-disc-blur', (value) => s.setLensFlareSunDiscBlur(value));
     eventBus.on('studio:lens-flare-sun-disc-color', (value) => s.setLensFlareSunDiscColor(value));
+    eventBus.on('studio:lens-flare-disc-glow-intensity', (value) => s.setLensFlareDiscGlowIntensity(value));
+    eventBus.on('studio:lens-flare-disc-glow-size', (value) => s.setLensFlareDiscGlowSize(value));
+    eventBus.on('studio:lens-flare-disc-glow-color', (value) => s.setLensFlareDiscGlowColor(value));
     eventBus.on('studio:lens-flare-anamorphic-bloom', () => s.syncAnamorphicBloomFromState());
     eventBus.on('mesh:clay-normal-map', (enabled) => s.setClayNormalMap(enabled));
 

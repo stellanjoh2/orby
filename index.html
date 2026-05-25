@@ -314,7 +314,7 @@
               >
                 <span class="orby-magic-btn__fill" aria-hidden="true"></span>
                 <span class="orby-magic-btn__inner">
-                  <span class="orby-magic-btn__label">Browse</span>
+                  <span class="orby-magic-btn__label">Browse Files</span>
                   <span class="orby-magic-btn__arrow" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1508,7 +1508,7 @@
                       id="baseScale"
                       type="range"
                       min="0.5"
-                      max="3"
+                      max="10"
                       step="0.01"
                       value="1"
                     />
@@ -3250,6 +3250,39 @@
                       value="#fff0c8"
                     />
                   </label>
+                  <label class="slider-line" data-tooltip="Brightness of the soft glow around the sun">
+                    <span>Glow Intensity</span>
+                    <input
+                      id="lensFlareDiscGlowIntensity"
+                      type="range"
+                      min="0"
+                      max="10"
+                      value="0"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareDiscGlowIntensity">0</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="How far the glow extends from the sun">
+                    <span>Glow Size</span>
+                    <input
+                      id="lensFlareDiscGlowSize"
+                      type="range"
+                      min="0"
+                      max="10"
+                      value="5"
+                      step="0.1"
+                    />
+                    <span class="value" data-output="lensFlareDiscGlowSize">5</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Glow Color</span>
+                    <input
+                      type="color"
+                      id="lensFlareDiscGlowColor"
+                      class="color-chip"
+                      value="#ff8844"
+                    />
+                  </label>
                   <label class="select-line">
                     <span>Quality</span>
                     <select id="lensFlareQuality">
@@ -4358,9 +4391,9 @@
     <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
-          "three/examples/jsm/postprocessing/Pass.js": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/Pass.js",
-          "three/examples/jsm/objects/Reflector.js": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js",
+          "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+          "three/examples/jsm/postprocessing/Pass.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "three/examples/jsm/objects/Reflector.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/objects/Reflector.js",
           "postprocessing": "https://cdn.jsdelivr.net/npm/postprocessing@6.36.4/build/index.js",
           "n8ao": "https://cdn.jsdelivr.net/npm/n8ao@1.10.1/dist/N8AO.js",
           "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.7/+esm",

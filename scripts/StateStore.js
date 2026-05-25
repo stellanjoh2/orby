@@ -218,6 +218,9 @@ export class StateStore {
         sunDiscScale: 1.5,
         sunDiscBlur: 1.25,
         sunDiscColor: '#fff0c8',
+        discGlowIntensity: 0,
+        discGlowSize: 5,
+        discGlowColor: '#ff8844',
         anamorphicBloom: {
           enabled: false,
           quality: 'medium',

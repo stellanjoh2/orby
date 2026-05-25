@@ -5,6 +5,7 @@ const DEFAULT_DIRT_TEXTURE =
   'https://i.ibb.co/c3x4dBy/lens-Dirt-Texture.jpg';
 const DEFAULT_COLOR = '#d28756';
 const DEFAULT_SUN_DISC_COLOR = '#fff0c8';
+const DEFAULT_DISC_GLOW_COLOR = '#ff8844';
 
 const fragmentShader = `
     uniform float iTime;
@@ -37,6 +38,10 @@ const fragmentShader = `
     uniform float uSunDiscBlur;
     uniform float uSunDiscVisibility;
     uniform vec3 uSunDiscColor;
+    uniform float uDiscGlowIntensity;
+    uniform float uDiscGlowSize;
+    uniform vec3 uDiscGlowColor;
+    uniform float uDiscGlowVisibility;
     uniform bool uOccluded;
     uniform bool uInView;
     varying vec2 vUv;
@@ -381,6 +386,22 @@ const fragmentShader = `
         return uSunDiscColor * intensity * visWeight * brightness;
     }
 
+    vec3 drawDiscGlow(vec2 uv, vec2 pos) {
+        if (uDiscGlowIntensity <= 0.001 || uDiscGlowSize <= 0.001) return vec3(0.0);
+        vec2 p = uv - pos;
+        float dist = length(p);
+        float vis = smoothstep(0.0, 1.0, uDiscGlowVisibility);
+        if (vis <= 0.0001) return vec3(0.0);
+        float sizeNorm = uDiscGlowSize * 0.1;
+        // Keep full size while fading — opacity only, for a soft bloom dissolve
+        float radius = sizeNorm * 0.42;
+
+        float intensity = exp(-pow(dist / max(radius, 0.0001), 1.35));
+
+        float brightness = 1.15 * (uDiscGlowIntensity * 0.1);
+        return uDiscGlowColor * intensity * vis * brightness;
+    }
+
     void main()
     {
         // Early exit if disabled - saves expensive shader calculations
@@ -395,11 +416,13 @@ const fragmentShader = `
         vec2 mouse = lensPosition * 0.5;
         mouse.y *= iResolution.y/iResolution.x;
 
+        vec3 discGlow = uInView ? drawDiscGlow(myUV, mouse) : vec3(0.0);
         vec3 sunDisc = uInView ? drawSunDisc(myUV, mouse) : vec3(0.0);
+        bool showDiscGlow = uDiscGlowIntensity > 0.001 && uDiscGlowSize > 0.001 && uDiscGlowVisibility > 0.001;
         bool showSunDisc = uSunDiscScale > 0.001 && uSunDiscVisibility > 0.001;
 
-        // When fully occluded and no sun disc, skip expensive flare work
-        if (uOccluded && opacity < 0.01 && !showSunDisc) {
+        // When fully occluded and no sun disc / disc glow, skip expensive flare work
+        if (uOccluded && opacity < 0.01 && !showSunDisc && !showDiscGlow) {
             gl_FragColor = vec4(0.0);
             return;
         }
@@ -465,9 +488,13 @@ const fragmentShader = `
         }
         }
 
+        finalColor += discGlow;
         finalColor += sunDisc;
 
-        float discAlpha = showSunDisc ? uSunDiscVisibility : 0.0;
+        float discAlpha = max(
+            showSunDisc ? uSunDiscVisibility : 0.0,
+            showDiscGlow ? uDiscGlowVisibility : 0.0
+        );
         float outOpacity = max(opacity, discAlpha);
         gl_FragColor = vec4(finalColor, mix(finalColor, -vec3(.15), 0.5) * outOpacity);
     }
@@ -534,6 +561,10 @@ export class LensFlareEffect extends THREE.Mesh {
       uSunDiscBlur: { value: options.sunDiscBlur ?? 1.25 },
       uSunDiscVisibility: { value: 1.0 },
       uSunDiscColor: { value: new THREE.Vector3(1, 0.94, 0.78) },
+      uDiscGlowIntensity: { value: options.discGlowIntensity ?? 0 },
+      uDiscGlowSize: { value: options.discGlowSize ?? 5 },
+      uDiscGlowColor: { value: new THREE.Vector3(1, 0.53, 0.27) },
+      uDiscGlowVisibility: { value: 1.0 },
       uOccluded: { value: false },
       uInView: { value: true },
     };
@@ -573,6 +604,7 @@ export class LensFlareEffect extends THREE.Mesh {
     this.elevationDeg = options.height ?? 15;
     this.colorHex = options.color ?? DEFAULT_COLOR;
     this.sunDiscColorHex = options.sunDiscColor ?? DEFAULT_SUN_DISC_COLOR;
+    this.discGlowColorHex = options.discGlowColor ?? DEFAULT_DISC_GLOW_COLOR;
     this.fadeInSpeed = options.fadeInSpeed ?? 4;
     this.fadeOutSpeed = options.fadeOutSpeed ?? 20.25;
     /** Sun disc fades slower than flares — eases scale + opacity when occluded. */
@@ -580,6 +612,11 @@ export class LensFlareEffect extends THREE.Mesh {
     this.sunDiscFadeInSpeed = options.sunDiscFadeInSpeed ?? 1.1;
     this.sunDiscVisibility = 1;
     this.sunDiscVisibilityTarget = 1;
+    /** Glow fades more gradually — soft bloom dissolve when occluded. */
+    this.discGlowFadeOutSpeed = options.discGlowFadeOutSpeed ?? 0.75;
+    this.discGlowFadeInSpeed = options.discGlowFadeInSpeed ?? 0.55;
+    this.discGlowVisibility = 1;
+    this.discGlowVisibilityTarget = 1;
     this.baseOpacity = options.opacity ?? 0.8;
     this.currentOpacity = this.baseOpacity;
     this.targetOpacity = this.baseOpacity;
@@ -626,58 +663,78 @@ export class LensFlareEffect extends THREE.Mesh {
     );
 
     this.material.onBeforeRender = (renderer, scene, camera) => {
-      if (!this.visible) return;
-      const elapsed = this.timeClock.getElapsedTime();
-      const delta = this.deltaClock.getDelta();
-      renderer.getCurrentViewport(this.viewport);
-      this.material.uniforms.iResolution.value.set(
-        this.viewport.z,
-        this.viewport.w,
-      );
-
-      if (this.followMouse) {
-      this.material.uniforms.lensPosition.value.copy(this.pointer);
-      this.targetOpacity = this.baseOpacity;
-      this.sunDiscVisibilityTarget = 1;
-      } else {
-        this.updateProjectedPosition(camera, scene);
-      }
-
-      if (!this.timeAnimationPaused) {
-        this.material.uniforms.iTime.value = elapsed;
-      }
-      const dampingFactor =
-        this.targetOpacity < this.currentOpacity
-          ? this.fadeOutSpeed
-          : this.fadeInSpeed;
-      this.currentOpacity = THREE.MathUtils.damp(
-        this.currentOpacity,
-        this.targetOpacity,
-        dampingFactor,
-        delta,
-      );
-      this.material.uniforms.opacity.value = this.currentOpacity;
-
-      const sunDiscDamp =
-        this.sunDiscVisibilityTarget < this.sunDiscVisibility
-          ? this.sunDiscFadeOutSpeed
-          : this.sunDiscFadeInSpeed;
-      this.sunDiscVisibility = THREE.MathUtils.damp(
-        this.sunDiscVisibility,
-        this.sunDiscVisibilityTarget,
-        sunDiscDamp,
-        delta,
-      );
-      this.material.uniforms.uSunDiscVisibility.value = this.sunDiscVisibility;
+      this.prepareFrame(renderer, scene, camera);
     };
 
     this.setColor(this.colorHex);
     this.setSunDiscColor(this.sunDiscColorHex);
+    this.setDiscGlowColor(this.discGlowColorHex);
     this.setSunDiscScale(options.sunDiscScale ?? 1.5);
     this.setSunDiscBlur(options.sunDiscBlur ?? 1.25);
+    this.setDiscGlowIntensity(options.discGlowIntensity ?? 0);
+    this.setDiscGlowSize(options.discGlowSize ?? 5);
     this.setQuality(options.quality ?? 'maximum');
     this.updateAnchorPosition();
     this.setEnabled(this.userEnabled);
+  }
+
+  prepareFrame(renderer, scene, camera) {
+    if (!this.visible) return;
+    const elapsed = this.timeClock.getElapsedTime();
+    const delta = this.deltaClock.getDelta();
+    renderer.getCurrentViewport(this.viewport);
+    this.material.uniforms.iResolution.value.set(
+      this.viewport.z,
+      this.viewport.w,
+    );
+
+    if (this.followMouse) {
+      this.material.uniforms.lensPosition.value.copy(this.pointer);
+      this.targetOpacity = this.baseOpacity;
+      this.sunDiscVisibilityTarget = 1;
+      this.discGlowVisibilityTarget = 1;
+    } else {
+      this.updateProjectedPosition(camera, scene);
+    }
+
+    if (!this.timeAnimationPaused) {
+      this.material.uniforms.iTime.value = elapsed;
+    }
+    const dampingFactor =
+      this.targetOpacity < this.currentOpacity
+        ? this.fadeOutSpeed
+        : this.fadeInSpeed;
+    this.currentOpacity = THREE.MathUtils.damp(
+      this.currentOpacity,
+      this.targetOpacity,
+      dampingFactor,
+      delta,
+    );
+    this.material.uniforms.opacity.value = this.currentOpacity;
+
+    const sunDiscDamp =
+      this.sunDiscVisibilityTarget < this.sunDiscVisibility
+        ? this.sunDiscFadeOutSpeed
+        : this.sunDiscFadeInSpeed;
+    this.sunDiscVisibility = THREE.MathUtils.damp(
+      this.sunDiscVisibility,
+      this.sunDiscVisibilityTarget,
+      sunDiscDamp,
+      delta,
+    );
+    this.material.uniforms.uSunDiscVisibility.value = this.sunDiscVisibility;
+
+    const discGlowDamp =
+      this.discGlowVisibilityTarget < this.discGlowVisibility
+        ? this.discGlowFadeOutSpeed
+        : this.discGlowFadeInSpeed;
+    this.discGlowVisibility = THREE.MathUtils.damp(
+      this.discGlowVisibility,
+      this.discGlowVisibilityTarget,
+      discGlowDamp,
+      delta,
+    );
+    this.material.uniforms.uDiscGlowVisibility.value = this.discGlowVisibility;
   }
 
   updateProjectedPosition(camera, scene) {
@@ -692,6 +749,7 @@ export class LensFlareEffect extends THREE.Mesh {
     ) {
       this.targetOpacity = 0;
       this.sunDiscVisibilityTarget = 0;
+      this.discGlowVisibilityTarget = 0;
       this.material.uniforms.uInView.value = false;
       this.material.uniforms.uOccluded.value = false;
       return;
@@ -707,14 +765,15 @@ export class LensFlareEffect extends THREE.Mesh {
     if (!this.enableOcclusion) {
       this.targetOpacity = this.baseOpacity;
       this.sunDiscVisibilityTarget = 1;
+      this.discGlowVisibilityTarget = 1;
       this.material.uniforms.uOccluded.value = false;
       return;
     }
 
-    // Throttle occlusion checks to avoid performance issues
+    // Throttle occlusion ray tests only — projection still updates every frame.
     const now = this.timeClock.getElapsedTime();
     if (now - this.lastOcclusionCheck < this.occlusionCheckInterval) {
-      return; // Use cached opacity, don't check again yet
+      return;
     }
     this.lastOcclusionCheck = now;
 
@@ -729,6 +788,7 @@ export class LensFlareEffect extends THREE.Mesh {
     if (!this.occlusionCheckObjects || this.occlusionCheckObjects.length === 0) {
       this.targetOpacity = this.baseOpacity;
       this.sunDiscVisibilityTarget = 1;
+      this.discGlowVisibilityTarget = 1;
       this.material.uniforms.uOccluded.value = false;
       return;
     }
@@ -745,6 +805,7 @@ export class LensFlareEffect extends THREE.Mesh {
     const isOccluded = !!occluder;
     this.targetOpacity = isOccluded ? 0 : this.baseOpacity;
     this.sunDiscVisibilityTarget = isOccluded ? 0 : 1;
+    this.discGlowVisibilityTarget = isOccluded ? 0 : 1;
     this.material.uniforms.uOccluded.value = isOccluded;
   }
 
@@ -758,13 +819,16 @@ export class LensFlareEffect extends THREE.Mesh {
       this.currentOpacity = 0;
       this.sunDiscVisibility = 0;
       this.sunDiscVisibilityTarget = 0;
+      this.discGlowVisibility = 0;
+      this.discGlowVisibilityTarget = 0;
       this.material.uniforms.opacity.value = 0;
       this.material.uniforms.uSunDiscVisibility.value = 0;
+      this.material.uniforms.uDiscGlowVisibility.value = 0;
     } else {
       this.targetOpacity = this.baseOpacity;
       this.sunDiscVisibilityTarget = 1;
-      // Re-check occlusion state when re-enabling
-      // The occlusion check will update the enabled uniform if needed
+      this.discGlowVisibilityTarget = 1;
+      this.lastOcclusionCheck = 0;
     }
   }
 
@@ -862,6 +926,30 @@ export class LensFlareEffect extends THREE.Mesh {
     }
     this.sunDiscColorHex = hex;
     this.material.uniforms.uSunDiscColor.value.set(color.r, color.g, color.b);
+  }
+
+  setDiscGlowIntensity(value) {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(0, Math.min(10, value));
+    this.material.uniforms.uDiscGlowIntensity.value = clamped;
+  }
+
+  setDiscGlowSize(value) {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(0, Math.min(10, value));
+    this.material.uniforms.uDiscGlowSize.value = clamped;
+  }
+
+  setDiscGlowColor(hex) {
+    if (!hex) return;
+    let color;
+    try {
+      color = new THREE.Color(hex);
+    } catch (error) {
+      return;
+    }
+    this.discGlowColorHex = hex;
+    this.material.uniforms.uDiscGlowColor.value.set(color.r, color.g, color.b);
   }
 
   dispose() {

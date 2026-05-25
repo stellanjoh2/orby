@@ -1,12 +1,33 @@
 import { LensFlareEffect } from '../LensFlareEffect.js';
 
+export function resolveDiscGlowFromState(state = {}, defaults = {}) {
+  const legacyScale = state.discGlowScale;
+  const hasLegacyOnly =
+    legacyScale != null &&
+    state.discGlowIntensity == null &&
+    state.discGlowSize == null;
+
+  return {
+    intensity:
+      state.discGlowIntensity ??
+      (hasLegacyOnly ? legacyScale : defaults.discGlowIntensity ?? 0),
+    size:
+      state.discGlowSize ??
+      legacyScale ??
+      defaults.discGlowSize ??
+      5,
+    color: state.discGlowColor ?? defaults.discGlowColor ?? '#ff8844',
+  };
+}
+
 /**
  * Manages the lens flare effect system, including initialization,
  * settings updates, and occlusion handling for performance.
  */
 export class LensFlareController {
-  constructor({ camera, stateStore }) {
+  constructor({ camera, scene, stateStore }) {
     this.camera = camera;
+    this.scene = scene;
     this.stateStore = stateStore;
 
     this.lensFlare = null;
@@ -32,6 +53,8 @@ export class LensFlareController {
       Math.max(0, state?.height ?? defaults?.height ?? 15),
     );
 
+    const discGlow = resolveDiscGlowFromState(state, defaults);
+
     this.lensFlare = new LensFlareEffect({
       enabled: this.lensFlareEnabled && this.hdriEnabled,
       rotation: state.rotation ?? 0,
@@ -43,11 +66,22 @@ export class LensFlareController {
       sunDiscScale: state.sunDiscScale ?? defaults?.sunDiscScale ?? 1.5,
       sunDiscBlur: state.sunDiscBlur ?? defaults?.sunDiscBlur ?? 1.25,
       sunDiscColor: state.sunDiscColor ?? defaults?.sunDiscColor ?? '#fff0c8',
+      discGlowIntensity: discGlow.intensity,
+      discGlowSize: discGlow.size,
+      discGlowColor: discGlow.color,
     });
 
-    this.camera.add(this.lensFlare);
-    this.lensFlare.position.set(0, 0, -1);
+    // Fullscreen clip-space quad — must live on the scene graph, not the camera.
+    // Camera children are skipped by the EffectComposer render pass in this pipeline.
+    this.scene.add(this.lensFlare);
+    this.lensFlare.matrixAutoUpdate = false;
     this.lensFlare.userData.lensflare = 'no-occlusion';
+  }
+
+  /** Keep uniforms fresh even if a pass skips the draw call. */
+  prepareFrame(renderer) {
+    if (!this.lensFlare?.visible || !this.scene) return;
+    this.lensFlare.prepareFrame(renderer, this.scene, this.camera);
   }
 
   /**
@@ -186,6 +220,36 @@ export class LensFlareController {
   }
 
   /**
+   * Set the disc glow intensity (0–10).
+   * @param {number} value - Disc glow intensity
+   */
+  setDiscGlowIntensity(value) {
+    if (this.lensFlare && Number.isFinite(value)) {
+      this.lensFlare.setDiscGlowIntensity(value);
+    }
+  }
+
+  /**
+   * Set the disc glow size (0–10).
+   * @param {number} value - Disc glow size
+   */
+  setDiscGlowSize(value) {
+    if (this.lensFlare && Number.isFinite(value)) {
+      this.lensFlare.setDiscGlowSize(value);
+    }
+  }
+
+  /**
+   * Set the disc glow color.
+   * @param {string} value - Color value (hex string)
+   */
+  setDiscGlowColor(value) {
+    if (this.lensFlare && value) {
+      this.lensFlare.setDiscGlowColor(value);
+    }
+  }
+
+  /**
    * Apply a state snapshot (used when loading saved state)
    * @param {Object} state - Full state object
    */
@@ -196,6 +260,8 @@ export class LensFlareController {
       ...(state.lensFlare ?? {}),
     };
 
+    const discGlow = resolveDiscGlowFromState(lensState, lensDefaults);
+
     this.setHeight(lensState.height ?? 0);
     this.setColor(lensState.color ?? '#d28756');
     this.setQuality(lensState.quality ?? 'maximum');
@@ -205,6 +271,9 @@ export class LensFlareController {
     this.setSunDiscScale(lensState.sunDiscScale ?? 1.5);
     this.setSunDiscBlur(lensState.sunDiscBlur ?? 1.25);
     this.setSunDiscColor(lensState.sunDiscColor ?? '#fff0c8');
+    this.setDiscGlowIntensity(discGlow.intensity);
+    this.setDiscGlowSize(discGlow.size);
+    this.setDiscGlowColor(discGlow.color);
     this.setEnabled(lensState.enabled ?? false);
   }
 
@@ -213,7 +282,7 @@ export class LensFlareController {
    */
   dispose() {
     if (this.lensFlare) {
-      this.camera.remove(this.lensFlare);
+      this.scene?.remove(this.lensFlare);
       this.lensFlare.dispose?.();
       this.lensFlare = null;
     }

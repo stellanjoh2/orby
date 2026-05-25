@@ -551,6 +551,7 @@ export class SceneManager {
     this.lensDirtController.init(initialState);
     this.lensFlareController = new LensFlareController({
       camera: this.camera,
+      scene: this.scene,
       stateStore: this.stateStore,
     });
     this.lensFlareController.init(initialState, this.hdriEnabled);
@@ -860,6 +861,10 @@ export class SceneManager {
         this.materialController?.getCreativeLookSettings?.()?.enabled === true,
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
+      beforeComposerRender: () => {
+        this.materialController?.syncImportGltfGlassMaterials?.();
+        this.lensFlareController?.prepareFrame(this.renderer);
+      },
       onRestoreBloomAfterCreativeLook: () => {
         this.updateBloom(this.stateStore.getState().bloom);
         this.applyRenderQualityVisualOverrides();
@@ -1540,6 +1545,18 @@ export class SceneManager {
 
   setLensFlareSunDiscColor(value) {
     this.lensFlareController?.setSunDiscColor(value);
+  }
+
+  setLensFlareDiscGlowIntensity(value) {
+    this.lensFlareController?.setDiscGlowIntensity(value);
+  }
+
+  setLensFlareDiscGlowSize(value) {
+    this.lensFlareController?.setDiscGlowSize(value);
+  }
+
+  setLensFlareDiscGlowColor(value) {
+    this.lensFlareController?.setDiscGlowColor(value);
   }
 
   setClayNormalMap(enabled) {
@@ -2894,8 +2911,30 @@ export class SceneManager {
    */
   applyTransparencyFixFromState() {
     if (!this.currentModel) return;
-    this.materialController.reapplyTransparencyPipeline();
-    this.refreshMaterialSidesForReverseNormals();
+    try {
+      this.materialController.reapplyTransparencyPipeline();
+      this.refreshMaterialSidesForReverseNormals();
+      if (this.scene.environment) {
+        const intensity = Math.max(0, this.hdriStrength ?? 0);
+        this.updateMaterialsEnvironment(this.scene.environment, intensity);
+      }
+    } catch (err) {
+      console.error('[Orby] Transparency mode update failed:', err);
+    }
+  }
+
+  /** Re-sync composer RTs + viewport after import (transmission/bloom need full-frame buffers). */
+  repairRenderSurfacesAfterModelLoad() {
+    const sz = new THREE.Vector2();
+    this.renderer.getSize(sz);
+    if (sz.x > 0 && sz.y > 0) {
+      this.syncPostProcessingForLogicalSize(sz.x, sz.y);
+    }
+    this.composerLifecycle?.ensureComposerBuffersMatchRenderer();
+    this.composerLifecycle?.resetRendererViewportToCanvas();
+    this.materialController?.syncImportGltfGlassMaterials?.(undefined, {
+      forcePresentation: true,
+    });
     if (this.scene.environment) {
       const intensity = Math.max(0, this.hdriStrength ?? 0);
       this.updateMaterialsEnvironment(this.scene.environment, intensity);

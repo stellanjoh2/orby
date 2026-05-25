@@ -585,6 +585,9 @@ export class ResetControls {
       this.eventBus.emit('studio:lens-flare-sun-disc-scale', defaults.lensFlare.sunDiscScale);
       this.eventBus.emit('studio:lens-flare-sun-disc-blur', defaults.lensFlare.sunDiscBlur);
       this.eventBus.emit('studio:lens-flare-sun-disc-color', defaults.lensFlare.sunDiscColor);
+      this.eventBus.emit('studio:lens-flare-disc-glow-intensity', defaults.lensFlare.discGlowIntensity);
+      this.eventBus.emit('studio:lens-flare-disc-glow-size', defaults.lensFlare.discGlowSize);
+      this.eventBus.emit('studio:lens-flare-disc-glow-color', defaults.lensFlare.discGlowColor);
       this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
       this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
       this.eventBus.emit('studio:ground-wire', defaults.groundWire);
@@ -838,6 +841,9 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-sun-disc-scale', defaults.lensFlare.sunDiscScale);
             this.eventBus.emit('studio:lens-flare-sun-disc-blur', defaults.lensFlare.sunDiscBlur);
             this.eventBus.emit('studio:lens-flare-sun-disc-color', defaults.lensFlare.sunDiscColor);
+            this.eventBus.emit('studio:lens-flare-disc-glow-intensity', defaults.lensFlare.discGlowIntensity);
+      this.eventBus.emit('studio:lens-flare-disc-glow-size', defaults.lensFlare.discGlowSize);
+            this.eventBus.emit('studio:lens-flare-disc-glow-color', defaults.lensFlare.discGlowColor);
             this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;
@@ -854,6 +860,9 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-sun-disc-scale', defaults.lensFlare.sunDiscScale);
             this.eventBus.emit('studio:lens-flare-sun-disc-blur', defaults.lensFlare.sunDiscBlur);
             this.eventBus.emit('studio:lens-flare-sun-disc-color', defaults.lensFlare.sunDiscColor);
+            this.eventBus.emit('studio:lens-flare-disc-glow-intensity', defaults.lensFlare.discGlowIntensity);
+      this.eventBus.emit('studio:lens-flare-disc-glow-size', defaults.lensFlare.discGlowSize);
+            this.eventBus.emit('studio:lens-flare-disc-glow-color', defaults.lensFlare.discGlowColor);
             this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
             this.ui.syncUIFromState();
             break;

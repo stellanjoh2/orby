@@ -291,6 +291,9 @@ export class UIManager {
       lensFlareSunDiscScale: q('#lensFlareSunDiscScale'),
       lensFlareSunDiscBlur: q('#lensFlareSunDiscBlur'),
       lensFlareSunDiscColor: q('#lensFlareSunDiscColor'),
+      lensFlareDiscGlowIntensity: q('#lensFlareDiscGlowIntensity'),
+      lensFlareDiscGlowSize: q('#lensFlareDiscGlowSize'),
+      lensFlareDiscGlowColor: q('#lensFlareDiscGlowColor'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
@@ -1108,7 +1111,7 @@ export class UIManager {
     
     // Disable lens flare controls if not enabled
     this.setControlDisabled(
-      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareHalo', 'lensFlareStreakLength', 'lensFlareSunDiscScale', 'lensFlareSunDiscBlur', 'lensFlareSunDiscColor', 'lensFlareColor', 'lensFlareQuality'],
+      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareHalo', 'lensFlareStreakLength', 'lensFlareSunDiscScale', 'lensFlareSunDiscBlur', 'lensFlareSunDiscColor', 'lensFlareDiscGlowIntensity', 'lensFlareDiscGlowSize', 'lensFlareDiscGlowColor', 'lensFlareColor', 'lensFlareQuality'],
       !enabled,
     );
     
@@ -1870,6 +1873,33 @@ export class UIManager {
     }
     if (this.inputs.lensFlareSunDiscColor && state.lensFlare?.sunDiscColor) {
       this.inputs.lensFlareSunDiscColor.value = state.lensFlare.sunDiscColor;
+    }
+    if (this.inputs.lensFlareDiscGlowIntensity) {
+      const legacyScale = state.lensFlare?.discGlowScale;
+      const hasLegacyOnly =
+        legacyScale != null &&
+        state.lensFlare?.discGlowIntensity == null &&
+        state.lensFlare?.discGlowSize == null;
+      const discGlowIntensity = Math.min(
+        10,
+        Math.max(
+          0,
+          state.lensFlare?.discGlowIntensity ?? (hasLegacyOnly ? legacyScale : 0),
+        ),
+      );
+      this.inputs.lensFlareDiscGlowIntensity.value = discGlowIntensity;
+      this.updateValueLabel('lensFlareDiscGlowIntensity', discGlowIntensity, 'decimal');
+    }
+    if (this.inputs.lensFlareDiscGlowSize) {
+      const discGlowSize = Math.min(
+        10,
+        Math.max(0, state.lensFlare?.discGlowSize ?? state.lensFlare?.discGlowScale ?? 5),
+      );
+      this.inputs.lensFlareDiscGlowSize.value = discGlowSize;
+      this.updateValueLabel('lensFlareDiscGlowSize', discGlowSize, 'decimal');
+    }
+    if (this.inputs.lensFlareDiscGlowColor && state.lensFlare?.discGlowColor) {
+      this.inputs.lensFlareDiscGlowColor.value = state.lensFlare.discGlowColor;
     }
     if (this.inputs.lensFlareColor && state.lensFlare?.color) {
       this.inputs.lensFlareColor.value = state.lensFlare.color;
