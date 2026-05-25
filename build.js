@@ -1,5 +1,5 @@
 import * as esbuild from 'esbuild';
-import { readFileSync, writeFileSync, cpSync, existsSync, rmSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, cpSync, existsSync, rmSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -63,6 +63,35 @@ function injectTurnstileSiteKey(html) {
   );
 }
 
+/** Public stats API; ORBY_STATS_API_URL or derived from BUG_REPORT_API_URL (/api/stats). */
+function injectStatsApiUrl(html) {
+  let url = process.env.ORBY_STATS_API_URL?.trim();
+  if (!url) {
+    const bug = process.env.BUG_REPORT_API_URL?.trim();
+    if (bug) url = bug.replace(/\/api\/bug-report\/?$/i, '/api/stats');
+  }
+  if (!url) return html;
+  const safe = url.replace(/"/g, '&quot;');
+  return html.replace(
+    /<meta\s+name="orby-stats-api"\s+content="[^"]*"\s*\/>/,
+    `<meta name="orby-stats-api" content="${safe}" />`,
+  );
+}
+
+function injectStatsApiIntoHtmlTree(rootDir) {
+  if (!existsSync(rootDir)) return;
+  for (const name of readdirSync(rootDir)) {
+    const full = join(rootDir, name);
+    if (statSync(full).isDirectory()) {
+      injectStatsApiIntoHtmlTree(full);
+      continue;
+    }
+    if (!name.endsWith('.html')) continue;
+    const html = readFileSync(full, 'utf-8');
+    writeFileSync(full, injectStatsApiUrl(html));
+  }
+}
+
 // Clean dist folder
 const distDir = join(__dirname, 'dist');
 if (existsSync(distDir)) {
@@ -89,10 +118,13 @@ await esbuild.build({
 
 mkdirSync(join(distDir, 'scripts'), { recursive: true });
 cpSync(join(__dirname, 'scripts', 'orbyEntryGate.js'), join(distDir, 'scripts', 'orbyEntryGate.js'));
+cpSync(join(__dirname, 'scripts', 'orbyStatsBeacon.js'), join(distDir, 'scripts', 'orbyStatsBeacon.js'));
 
 // Copy HTML (refresh version banners from VERSION for deterministic deploys)
 const indexHtml = readFileSync('index.html', 'utf-8');
-const updatedHtml = injectTurnstileSiteKey(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml)));
+const updatedHtml = injectTurnstileSiteKey(
+  injectStatsApiUrl(injectBugReportApiUrl(injectVersionIntoHtml(indexHtml))),
+);
 writeFileSync(join(distDir, 'index.html'), updatedHtml);
 // GitHub Pages SPA fallback: serve app shell for unknown paths so route-aware
 // client entry (scripts/entry.js) can render the in-app 404 experience.
@@ -105,7 +137,7 @@ if (existsSync(join(__dirname, 'support'))) {
     const supportHtml = readFileSync(join(__dirname, 'support', 'index.html'), 'utf-8');
     writeFileSync(
       supportIndexPath,
-      injectTurnstileSiteKey(injectBugReportApiUrl(supportHtml)),
+      injectTurnstileSiteKey(injectStatsApiUrl(injectBugReportApiUrl(supportHtml))),
     );
   }
 }
@@ -136,12 +168,27 @@ cpSync('LICENSE', join(distDir, 'LICENSE'));
 cpSync('ASSETS_LICENSE.md', join(distDir, 'ASSETS_LICENSE.md'));
 if (existsSync(join(__dirname, 'legal'))) {
   cpSync('legal', join(distDir, 'legal'), { recursive: true });
+  injectStatsApiIntoHtmlTree(join(distDir, 'legal'));
 }
 if (existsSync(join(__dirname, 'about'))) {
   cpSync('about', join(distDir, 'about'), { recursive: true });
+  injectStatsApiIntoHtmlTree(join(distDir, 'about'));
 }
 if (existsSync(join(__dirname, 'credits'))) {
   cpSync('credits', join(distDir, 'credits'), { recursive: true });
+  injectStatsApiIntoHtmlTree(join(distDir, 'credits'));
+}
+if (existsSync(join(__dirname, 'brand'))) {
+  cpSync('brand', join(distDir, 'brand'), { recursive: true });
+  injectStatsApiIntoHtmlTree(join(distDir, 'brand'));
+}
+if (existsSync(join(__dirname, 'stats'))) {
+  cpSync('stats', join(distDir, 'stats'), { recursive: true });
+  const statsIndexPath = join(distDir, 'stats', 'index.html');
+  if (existsSync(statsIndexPath)) {
+    const statsHtml = readFileSync(join(__dirname, 'stats', 'index.html'), 'utf-8');
+    writeFileSync(statsIndexPath, injectStatsApiUrl(statsHtml));
+  }
 }
 
 // Copy CNAME for GitHub Pages

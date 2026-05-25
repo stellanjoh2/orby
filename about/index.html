@@ -46,23 +46,9 @@
       content="Stellan Johansson, creative director and brand designer behind Orby. Games, 3D, and brand."
     />
     <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
+    <meta name="orby-stats-api" content="" />
     <link rel="stylesheet" href="../legal/legal.css" />
     <link rel="stylesheet" href="../styles/orby-magic-btn.css" />
-    <noscript>
-      <style>
-        .legal-about__block--pending {
-          opacity: 1;
-          transform: none;
-        }
-      </style>
-    </noscript>
-    <script type="importmap">
-      {
-        "imports": {
-          "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.7/+esm"
-        }
-      }
-    </script>
   </head>
   <body class="legal-doc legal-doc--about">
     <div
@@ -110,18 +96,18 @@
     </header>
 
     <main id="main" class="legal-wrap legal-about">
-      <header class="legal-about__head legal-about__block--pending" data-legal-about-reveal>
+      <header class="legal-about__head">
         <h1>About</h1>
       </header>
 
-      <section class="legal-about__section legal-about__section--intro legal-about__block--pending" data-legal-about-reveal>
+      <section class="legal-about__section legal-about__section--intro">
         <p>
           For over twenty years I've worked where games, 3D and brand meet. Shipping titles at studios,
           running agencies, shaping how platforms look for millions of creators. That's been the through-line.
         </p>
       </section>
 
-      <section class="legal-about__section legal-about__block--pending" data-legal-about-reveal>
+      <section class="legal-about__section">
         <p>
           I'm
           <a href="https://www.linkedin.com/in/stellanj/" target="_blank" rel="noopener noreferrer"
@@ -136,7 +122,7 @@
         </p>
       </section>
 
-      <section class="legal-about__section legal-about__block--pending" data-legal-about-reveal>
+      <section class="legal-about__section">
         <p>
           I co-founded two agencies later on:
           <a href="https://www.behance.net/weare1910" target="_blank" rel="noopener noreferrer"
@@ -151,7 +137,7 @@
         </p>
       </section>
 
-      <section class="legal-about__section legal-about__block--pending" data-legal-about-reveal>
+      <section class="legal-about__section">
         <p>
           Most recently I was Creative Director for Creator Marketplaces at
           <a href="https://www.epicgames.com/" target="_blank" rel="noopener noreferrer">Epic Games</a>, leading
@@ -166,7 +152,7 @@
         </p>
       </section>
 
-      <section class="legal-about__section legal-about__block--pending" data-legal-about-reveal>
+      <section class="legal-about__section">
         <p>
           Orby started as me trying to understand code and 3D on the web. What it feels like to build something
           alone, from scratch — which, after
@@ -192,10 +178,7 @@
         </p>
       </section>
 
-      <section
-        class="legal-about__section legal-about__section--closing legal-about__block--pending"
-        data-legal-about-reveal
-      >
+      <section class="legal-about__section legal-about__section--closing">
         <p>
           If you're in games or 3D and need a creative director or brand designer who gets that world,
           <a href="mailto:orby-admin@proton.me">I'd love to hear from you</a>. Orby is a passion project, not
@@ -235,9 +218,12 @@
         <a href="../credits/">Credits</a>
         ·
         <a href="../brand/">Brand</a>
+        ·
+        <a href="../stats/">Statistics</a>
       </footer>
     </main>
 
+    <script type="module" src="../scripts/orbyStatsBeacon.js"></script>
     <script type="module" src="./about.js"></script>
   </body>
 </html>

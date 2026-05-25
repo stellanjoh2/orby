@@ -288,7 +288,6 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
   margin: 0;
   padding: 0;
   color: #fff;
-  font-size: var(--orby-marketing-support-size);
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
@@ -299,6 +298,14 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
   opacity: 0;
   pointer-events: none;
   will-change: opacity, transform;
+}
+
+.orby-marketing__showcase-credit {
+  font-size: 18px;
+}
+
+.orby-marketing__figure-credit {
+  font-size: var(--orby-marketing-support-size);
 }
 
 .orby-marketing__media-credit-link {

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Statistics — Orby</title>
+    <meta
+      name="description"
+      content="Anonymous usage totals for Orby — page visits and assets loaded. No personal data collected."
+    />
+    <meta name="orby-stats-api" content="" />
+    <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
+    <link rel="stylesheet" href="../legal/legal.css" />
+    <link rel="stylesheet" href="./stats.css" />
+  </head>
+  <body class="legal-doc legal-doc--stats">
+    <a class="legal-skip" href="#main">Skip to content</a>
+    <header class="legal-top">
+      <div class="legal-top__brand">
+        <a href="../index.html">Orby</a>
+        <span class="legal-top__sep" aria-hidden="true">/</span>
+        <span class="legal-top__crumb">Statistics</span>
+      </div>
+      <a class="legal-top__back" href="../index.html">← Back to app</a>
+    </header>
+
+    <main id="main" class="legal-wrap legal-wrap--stats">
+      <h1 class="legal-stats__title">Statistics</h1>
+
+      <section class="legal-stats__grid" aria-label="Usage totals">
+        <article class="legal-stats__card">
+          <p class="legal-stats__value" id="statsPageViews" aria-live="polite">0</p>
+          <p class="legal-stats__label">Page visits</p>
+        </article>
+        <article class="legal-stats__card">
+          <p class="legal-stats__value" id="statsAssetsLoaded" aria-live="polite">0</p>
+          <p class="legal-stats__label">Assets loaded</p>
+        </article>
+      </section>
+
+      <section class="legal-stats__formats" aria-labelledby="statsFormatsHeading">
+        <h2 class="legal-stats__formats-title" id="statsFormatsHeading">Top formats</h2>
+        <ol class="legal-stats__formats-list" id="statsFormatsList"></ol>
+      </section>
+
+      <p class="legal-stats__meta" id="statsMeta">Loading…</p>
+
+      <p class="legal-stats__disclaimer">
+        We don’t collect personal data. These numbers are anonymous totals only: we count page
+        loads, when a file is opened in the app, and which file type was used (for example GLB or
+        SVG). We don’t use cookies for this, we don’t identify visitors, and we never receive your
+        models or filenames. For more detail, see our
+        <a href="../legal/privacy-policy.html">Privacy Policy</a>.
+      </p>
+    </main>
+
+    <script type="module" src="../scripts/orbyStatsBeacon.js"></script>
+    <script type="module" src="./stats.js"></script>
+  </body>
+</html>

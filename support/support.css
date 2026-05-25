@@ -29,9 +29,8 @@ body.legal-doc--support {
 /* Match in-app bug-report modal (.load-settings-header h3), white on support page */
 .legal-support-bug-report h2.legal-support-bug-report__head {
   margin: 0 0 0.55rem;
-  font-family: var(--legal-brand-headline);
   font-size: clamp(1.5rem, 3.5vw, 2rem);
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: -0.01em;
   color: #fff;
@@ -453,6 +452,101 @@ body.legal-doc--support {
   padding-left: 1.35rem;
 }
 
+.legal-support-glossary-section {
+  scroll-margin-top: 5rem;
+}
+
+.legal-support-glossary-nav {
+  margin: 0 0 2rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--legal-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--legal-accent) 3%, var(--legal-surface));
+}
+
+.legal-support-glossary-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.1rem;
+}
+
+.legal-support-glossary-nav a {
+  font-size: 0.88rem;
+  color: var(--legal-muted);
+  text-decoration: none;
+}
+
+.legal-support-glossary-nav a:hover {
+  color: var(--legal-accent);
+}
+
+.legal-support-glossary__group {
+  margin: 0 0 2.5rem;
+  scroll-margin-top: 5rem;
+}
+
+.legal-support-glossary__group:last-child {
+  margin-bottom: 0;
+}
+
+.legal-support-glossary__group h3 {
+  margin: 0 0 1rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--legal-border);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.legal-support-glossary dl {
+  margin: 0;
+  padding: 0 0 0 1.25rem;
+  border-left: 2px solid color-mix(in srgb, var(--legal-border) 75%, transparent);
+}
+
+.legal-support-glossary dl > div {
+  margin: 0 0 1.15rem;
+  padding: 0 0 1.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--legal-border) 65%, transparent);
+}
+
+.legal-support-glossary dl > div:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.legal-support-glossary dt {
+  margin: 0 0 0.35rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.legal-support-glossary dd {
+  margin: 0;
+  font-size: var(--legal-secondary-size);
+  line-height: 1.55;
+  color: var(--legal-muted);
+}
+
+.legal-support-glossary dd a {
+  color: var(--legal-accent);
+}
+
+.legal-support-glossary dd kbd {
+  font-family: inherit;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  border: 1px solid var(--legal-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--legal-text);
+}
+
 @media (min-width: 640px) {
   .legal-support-bug-report__header {
     padding: 1.4rem 1.65rem 1.25rem;
@@ -485,6 +579,14 @@ body.legal-doc--support p.legal-meta {
 
 .legal-doc--support .legal-callout--red strong {
   color: #fca5a5;
+}
+
+.legal-doc--support .legal-callout--red .legal-callout__secondary {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--warning) 18%, transparent);
+  font-size: 0.94em;
+  color: color-mix(in srgb, #fecaca 16%, var(--legal-text));
 }
 
 body.legal-doc--support .legal-support-lead {

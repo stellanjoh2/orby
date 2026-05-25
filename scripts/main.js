@@ -1,3 +1,4 @@
+import './orbyStatsBeacon.js';
 import { EventBus } from './EventBus.js';
 import { StateStore } from './StateStore.js';
 import { UIManager } from './UIManager.js';

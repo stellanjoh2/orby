@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { recordAssetLoaded } from '../orbyStatsBeacon.js';
 import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
@@ -364,6 +365,7 @@ export class ModelLifecycleManager {
         s.ui.showToast('Model loaded', 3200, { notification: false });
       }
       s.eventBus.emit('scene:model-load-complete', { success: true, file });
+      recordAssetLoaded(file);
     } catch (error) {
       console.error('Failed to load model', error);
       const msg =
@@ -420,6 +422,7 @@ export class ModelLifecycleManager {
         s.ui.showToast('Folder loaded', 3200, { notification: false });
       }
       s.eventBus.emit('scene:model-load-complete', { success: true, file: sourceFile });
+      recordAssetLoaded(sourceFile);
     } catch (error) {
       console.error('Folder load failed', error);
       const raw = error?.message || 'Folder load failed';

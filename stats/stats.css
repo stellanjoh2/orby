@@ -1,0 +1,191 @@
+/**
+ * Statistics page — centered layout, big numbers.
+ */
+
+body.legal-doc--stats {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+body.legal-doc--stats .legal-top {
+  flex-shrink: 0;
+}
+
+body.legal-doc--stats .legal-wrap--stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: none;
+  width: 100%;
+  padding: clamp(3rem, 10vh, 6rem) clamp(1.5rem, 5vw, 3rem);
+  text-align: center;
+  --legal-stats-content-width: min(100%, 56rem);
+}
+
+body.legal-doc--stats .legal-wrap--stats > h1.legal-stats__title {
+  margin: 0 0 48px;
+  font-family: var(--legal-brand-headline-bold);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  color: var(--legal-accent);
+}
+
+.legal-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 5vw, 4rem);
+  width: var(--legal-stats-content-width);
+  margin: 0 auto;
+}
+
+.legal-stats__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 2.5vh, 1.5rem);
+  padding: clamp(2.5rem, 7vh, 4rem) clamp(1.5rem, 4vw, 2.5rem);
+  min-height: clamp(10rem, 22vh, 14rem);
+  border: 1px solid var(--legal-border);
+  border-radius: 1.25rem;
+  background: var(--legal-surface);
+}
+
+.legal-stats__value {
+  margin: 0;
+  font-family: var(--legal-brand-headline);
+  font-size: 112px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--legal-accent);
+}
+
+.legal-stats__label {
+  margin: 0;
+  font-size: clamp(0.9375rem, 2vw, 1.0625rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--legal-muted);
+}
+
+.legal-stats__meta {
+  margin: clamp(2rem, 5vh, 3rem) 0 0;
+  font-size: var(--legal-sub-size);
+  color: var(--legal-faint);
+}
+
+.legal-stats__formats {
+  width: var(--legal-stats-content-width);
+  margin: clamp(2.5rem, 6vh, 3.5rem) auto 0;
+  text-align: left;
+}
+
+body.legal-doc--stats h2.legal-stats__formats-title {
+  margin: 0 0 1.5rem;
+  font-family: var(--legal-brand-headline);
+  font-size: clamp(1rem, 2.2vw, 1.125rem);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--legal-muted);
+  line-height: 1.2;
+}
+
+.legal-stats__formats-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.legal-stats__formats-item {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr auto;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  padding: 1.15rem 1.35rem;
+  border: 1px solid var(--legal-border);
+  border-radius: 1rem;
+  background: var(--legal-surface);
+}
+
+.legal-stats__formats-rank {
+  font-family: var(--legal-brand-headline-bold);
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--legal-faint);
+  text-align: center;
+}
+
+.legal-stats__formats-name,
+.legal-stats__formats-count {
+  font-family: var(--legal-brand-headline-bold);
+  font-size: clamp(1.375rem, 3vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+
+.legal-stats__formats-name {
+  color: #fff;
+}
+
+.legal-stats__formats-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--legal-accent);
+}
+
+.legal-stats__disclaimer {
+  width: min(100%, 40rem);
+  margin: clamp(3rem, 8vh, 5rem) auto 0;
+  padding-top: clamp(2rem, 5vh, 3rem);
+  border-top: 1px solid var(--legal-border);
+  font-size: var(--legal-sub-size);
+  line-height: 1.7;
+  color: var(--legal-muted);
+  text-align: center;
+}
+
+.legal-stats__disclaimer a {
+  color: var(--legal-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.legal-stats__disclaimer a:hover {
+  color: var(--legal-accent-hover);
+}
+
+@media (max-width: 540px) {
+  body.legal-doc--stats .legal-wrap--stats {
+    --legal-stats-content-width: min(100%, 22rem);
+  }
+
+  .legal-stats__grid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .legal-stats__card {
+    min-height: 9rem;
+    padding: 2.25rem 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legal-stats__value {
+    transition: none;
+  }
+}

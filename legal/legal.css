@@ -75,7 +75,8 @@
   --legal-max: 52rem;
   --legal-font: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
-  --legal-brand-headline: 'Mattone Bold', 'Cal Sans', var(--legal-font);
+  --legal-brand-headline: 'Mattone Regular', 'Cal Sans', var(--legal-font);
+  --legal-brand-headline-bold: 'Mattone Bold', 'Cal Sans', var(--legal-font);
   --legal-body-size: 1.0625rem;
   --legal-body-line: 1.68;
   --legal-lead-size: 1.125rem;
@@ -188,7 +189,7 @@ body.legal-doc {
 
 .legal-doc h1 {
   margin: 0 0 0.75rem;
-  font-family: var(--legal-brand-headline);
+  font-family: var(--legal-brand-headline-bold);
   font-size: clamp(2.4rem, 6vw, 3.3rem);
   font-weight: 700;
   line-height: 1.08;
@@ -209,9 +210,11 @@ body.legal-doc {
 
 .legal-doc h2 {
   margin: 2.75rem 0 0.85rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-family: var(--legal-brand-headline);
+  font-size: clamp(1.35rem, 2.8vw, 1.55rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
   color: #fff;
   scroll-margin-top: 4rem;
 }
@@ -780,18 +783,6 @@ body.legal-doc--about a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   color: var(--orby-black, #080808);
 }
 
-.legal-about__block--pending {
-  opacity: 0;
-  transform: translateY(18px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .legal-about__block--pending {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @media (min-width: 720px) {
   .legal-about__section {
     margin-bottom: 1.85rem;
@@ -836,10 +827,10 @@ body.legal-doc--about a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
 }
 
 .orby-entry-gate__title {
-  font-family: var(--legal-brand-headline);
+  font-family: var(--legal-brand-headline-bold);
   margin: 0 0 0.35rem 0;
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--legal-accent);

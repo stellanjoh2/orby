@@ -8,6 +8,7 @@
       name="description"
       content="How Orby handles your information. Orby is a browser-based 3D studio that runs on your device."
     />
+    <meta name="orby-stats-api" content="" />
     <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
     <link rel="stylesheet" href="./legal.css" />
   </head>
@@ -24,7 +25,7 @@
 
     <main id="main" class="legal-wrap">
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last updated: 22 May 2026</p>
+      <p class="legal-meta">Last updated: 26 May 2026</p>
 
       <p class="legal-lead">
         Your privacy matters to us. Thank you for using <strong>Orby</strong>. This policy explains
@@ -116,11 +117,25 @@
         Turnstile’s provider may process technical data under its own policy.
       </p>
 
+      <p class="legal-sub" id="anonymous-stats">3.5 Anonymous usage totals</p>
+      <p>
+        We publish a <a href="../stats/">Statistics</a> page with aggregate counters:
+        <strong>page visits</strong>, <strong>assets loaded</strong>, and a
+        <strong>top file formats</strong> scoreboard (for example GLB, OBJ, or SVG). When enabled,
+        your browser sends a minimal signal (for example when a page loads or when you open a model
+        in the studio). We increment anonymous totals only — we do <strong>not</strong> store your
+        IP address for this purpose, do <strong>not</strong> use cookies or visitor IDs, and do
+        <strong>not</strong> receive filenames or file content. Your IP may be used briefly for
+        abuse-prevention rate limiting on the stats API (same pattern as issue reports); we do not
+        keep it in the published totals.
+      </p>
+
       <h2 id="cookies">4. Cookies and similar technologies</h2>
       <p>
         We do <strong>not</strong> use cookies or browser storage to <strong>track you across other
-        sites</strong> or to <strong>profile you for advertising</strong>. We do not run analytics
-        or ad pixels on Orby.
+        sites</strong> or to <strong>profile you for advertising</strong>. We do not use third-party
+        analytics or ad pixels on Orby. Anonymous usage totals (see
+        <a href="#anonymous-stats">section 3.5</a>) do not use cookies.
       </p>
       <p>
         Orby may use <strong>local storage</strong> and <strong>session storage</strong> in your
@@ -172,7 +187,8 @@
           <strong>Resend</strong> — delivers report content to our support inbox by email
         </li>
         <li>
-          <strong>Upstash</strong> — optional per-IP rate limiting on the report API
+          <strong>Upstash</strong> — optional per-IP rate limiting on the report API and anonymous
+          stats counters
         </li>
         <li>
           <strong>Vercel</strong> — hosts the report API and may process request metadata and logs
@@ -285,8 +301,11 @@
         <a href="../credits/">Credits</a>
         ·
         <a href="../brand/">Brand</a>
+        ·
+        <a href="../stats/">Statistics</a>
         · This page is part of the Orby legal documents. Future policies will use the same layout.
       </footer>
     </main>
+    <script type="module" src="../scripts/orbyStatsBeacon.js"></script>
   </body>
 </html>

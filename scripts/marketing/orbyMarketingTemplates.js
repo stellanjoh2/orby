@@ -542,6 +542,7 @@ function getMarketingFooterFields(section) {
     aboutHref: section.footerAboutHref?.trim() || './about/',
     creditsHref: section.footerCreditsHref?.trim() || './credits/',
     supportHref: section.footerSupportHref?.trim() || './support/',
+    statsHref: section.footerStatsHref?.trim() || './stats/',
     brandHref: section.footerBrandHref?.trim() || './brand/',
     githubHref: section.footerGithubHref?.trim() || 'https://github.com/stellanjoh2/orby',
     instagramHref: section.footerInstagramHref?.trim() || '',
@@ -552,17 +553,22 @@ function getMarketingFooterFields(section) {
 /**
  * @param {ReturnType<typeof getMarketingFooterFields>} fields
  * @param {{ linkClass: string, contactClass: string }} classes
+ * @param {{ includeContact?: boolean }} [options]
  */
-function renderMarketingSiteNavLinks(fields, classes) {
+function renderMarketingSiteNavLinks(fields, classes, options = {}) {
   const { linkClass, contactClass } = classes;
+  const { includeContact = true, includeStats = false } = options;
   const items = [
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.aboutHref)}">About</a>`,
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.supportHref)}">Support</a>`,
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.privacyHref)}">Privacy Policy</a>`,
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.creditsHref)}">Credits</a>`,
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.brandHref)}">Brand</a>`,
+    includeStats
+      ? `<a class="${linkClass}" href="${escapeMarketingHtml(fields.statsHref)}">Statistics</a>`
+      : '',
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
-    fields.contactEmail
+    includeContact && fields.contactEmail
       ? `<button type="button" class="${linkClass} ${contactClass}" data-orby-marketing-copy-email="${escapeMarketingHtml(fields.contactEmail)}">Contact</button>`
       : '',
   ].filter(Boolean);
@@ -575,10 +581,14 @@ function renderMarketingSiteNavLinks(fields, classes) {
  */
 export function renderMarketingScrollNav(section) {
   const fields = getMarketingFooterFields(section);
-  const links = renderMarketingSiteNavLinks(fields, {
-    linkClass: 'orby-marketing-scroll-nav__link',
-    contactClass: 'orby-marketing-scroll-nav__contact',
-  });
+  const links = renderMarketingSiteNavLinks(
+    fields,
+    {
+      linkClass: 'orby-marketing-scroll-nav__link',
+      contactClass: 'orby-marketing-scroll-nav__contact',
+    },
+    { includeContact: false },
+  );
 
   const browseCta = orbyMagicButtonHtml('Browse Files', {
     extraClass: 'dropzone-btn orby-marketing-scroll-nav__browse',
@@ -605,7 +615,7 @@ function renderFooterMeta(section, options = {}) {
   const links = renderMarketingSiteNavLinks(fields, {
     linkClass: 'orby-marketing__footer-meta-link',
     contactClass: 'orby-marketing__footer-meta-contact',
-  });
+  }, { includeStats: true });
 
   const barClass = options.onWhite
     ? 'orby-marketing__footer-bar orby-marketing__footer-bar--on-white'

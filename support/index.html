@@ -10,6 +10,7 @@
     />
     <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg" />
     <meta name="orby-bug-report-api" content="" />
+    <meta name="orby-stats-api" content="" />
     <meta name="orby-turnstile-site-key" content="" />
     <link rel="stylesheet" href="../legal/legal.css" />
     <link rel="stylesheet" href="./support.css" />
@@ -33,10 +34,26 @@
         <p>
           <strong>Every source exports differently.</strong> Meshes from AI tools, game engines,
           Blender, marketplaces, and elsewhere can arrive at very different scales, brightness levels,
-          and PBR settings (metalness, roughness, emissive, and so on). The same asset can look
+          and PBR settings (metalness, roughness, emissive, transparency, and so on) — glass, cutouts,
+          and fade surfaces are especially inconsistent between exporters. The same asset can look
           nothing like it did in another app — and that is usually not an Orby bug; it is how 3D
           interchange works. Expect a bit of manual tweaking: exposure, materials, framing, HDRI, and
-          display mode. Not everything will land perfectly out of the box.
+          display mode — not everything lands perfectly out of the box. If your file looks right
+          elsewhere and you think Orby is misreading it, we would love to know: use the form below.
+        </p>
+        <p>
+          <strong>SVGs vary just as much.</strong> Files differ in complexity and quality — many
+          layers, paths, and colors can glitch or behave oddly when imported directly, especially on
+          <a href="#svg-extrude">extrude</a>. If something looks wrong, check the source in a vector
+          editor first: simplify paths, flatten layers, or clean up the artwork. Complex multi-color
+          logos are the most common troublemakers.
+        </p>
+        <p class="legal-callout__secondary">
+          Orby is a free passion project — no ads, no subscriptions, no revenue. I read every report
+          and keep improving the app when I can, but I’m
+          <a href="../about/">one person</a> working in spare time, so
+          turnaround isn’t always fast. If something’s off, still send it in; it genuinely helps me
+          decide what to fix next.
         </p>
       </aside>
 
@@ -229,6 +246,7 @@
           <li><a href="#svg-extrude">SVG extrude</a></li>
           <li><a href="#performance">Performance</a></li>
           <li><a href="#scene-settings">Scene settings</a></li>
+          <li><a href="#glossary">Glossary</a></li>
           <li><a href="#privacy">Privacy reminder</a></li>
         </ul>
       </nav>
@@ -548,6 +566,739 @@
         </p>
       </section>
 
+      <section id="glossary" class="legal-support-section legal-support-glossary-section">
+        <h2>Glossary</h2>
+        <p class="legal-support-section__intro">
+          Plain-language definitions for the technical terms you will see in Orby, in exports, and in
+          3D forums. The in-app <strong>Information</strong> tab has a short preview — this is the
+          expanded reference.
+        </p>
+
+        <nav class="legal-support-glossary-nav" aria-label="Glossary categories">
+          <ul>
+            <li><a href="#glossary-formats">Formats &amp; 3D basics</a></li>
+            <li><a href="#glossary-materials">Materials &amp; textures</a></li>
+            <li><a href="#glossary-lighting">Lighting &amp; environment</a></li>
+            <li><a href="#glossary-camera">Camera &amp; transforms</a></li>
+            <li><a href="#glossary-display">Display modes</a></li>
+            <li><a href="#glossary-post">Post-processing &amp; color</a></li>
+            <li><a href="#glossary-orby">Orby features</a></li>
+            <li><a href="#glossary-tech">Technical foundations</a></li>
+          </ul>
+        </nav>
+
+        <div class="legal-support-glossary">
+          <div class="legal-support-glossary__group" id="glossary-formats">
+            <h3>File formats &amp; 3D basics</h3>
+            <dl>
+              <div>
+                <dt>3D interchange</dt>
+                <dd>
+                  Moving 3D data between apps (Blender → game engine → web viewer). No format is perfect —
+                  scale, materials, and lighting intent often change on export. That is normal, not
+                  necessarily a bug.
+                </dd>
+              </div>
+              <div>
+                <dt>glTF / GLB</dt>
+                <dd>
+                  The modern open standard for real-time 3D on the web.
+                  <a href="https://en.wikipedia.org/wiki/glTF" target="_blank" rel="noopener noreferrer">glTF</a>
+                  is the format; <strong>GLB</strong> is the single-file binary version; a
+                  <strong>.gltf</strong> file is often JSON plus separate textures. Orby is built around
+                  glTF 2.0 — best support for PBR materials, animations, and extensions like glass
+                  transmission.
+                </dd>
+              </div>
+              <div>
+                <dt>OBJ</dt>
+                <dd>
+                  An older mesh format —
+                  <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file" target="_blank" rel="noopener noreferrer">Wavefront OBJ</a>
+                  — geometry and basic materials only. No PBR, no animations. Fine for simple shapes;
+                  expect to tune materials manually in Orby.
+                </dd>
+              </div>
+              <div>
+                <dt>FBX</dt>
+                <dd>
+                  Autodesk’s
+                  <a href="https://en.wikipedia.org/wiki/FBX" target="_blank" rel="noopener noreferrer">FBX</a>
+                  exchange format, common in games and DCC tools. Loads in Orby but export quality varies
+                  — embedded textures, scale, and material setup depend on the source app.
+                </dd>
+              </div>
+              <div>
+                <dt>STL</dt>
+                <dd>
+                  A triangle-only
+                  <a href="https://en.wikipedia.org/wiki/STL_(file_format)" target="_blank" rel="noopener noreferrer">STL</a>
+                  format used for 3D printing and CAD. No color or PBR — Orby shows it as a neutral solid
+                  mesh.
+                </dd>
+              </div>
+              <div>
+                <dt>USD / USDZ</dt>
+                <dd>
+                  Pixar’s
+                  <a href="https://en.wikipedia.org/wiki/Universal_Scene_Description" target="_blank" rel="noopener noreferrer">Universal Scene Description</a>
+                  — used in film pipelines and Apple AR. Basic loading support; complex USD features may
+                  not translate fully.
+                </dd>
+              </div>
+              <div>
+                <dt>SVG</dt>
+                <dd>
+                  <a href="https://en.wikipedia.org/wiki/SVG" target="_blank" rel="noopener noreferrer">Scalable Vector Graphics</a>
+                  — flat 2D artwork (logos, icons). Orby can
+                  <a href="#svg-extrude">extrude</a> filled paths into 3D meshes.
+                </dd>
+              </div>
+              <div>
+                <dt>Mesh</dt>
+                <dd>
+                  The 3D surface of a model — a
+                  <a href="https://en.wikipedia.org/wiki/Polygon_mesh" target="_blank" rel="noopener noreferrer">polygon mesh</a>
+                  made of vertices (points), edges, and triangular faces. What you see when wireframe is
+                  off.
+                </dd>
+              </div>
+              <div>
+                <dt>Polygon / triangle</dt>
+                <dd>
+                  The flat faces that make up a mesh. More triangles = more detail but heavier on your
+                  <a href="https://en.wikipedia.org/wiki/Graphics_processing_unit" target="_blank" rel="noopener noreferrer">GPU</a>.
+                  High-poly scans and dense AI exports can slow orbit even before effects are on.
+                </dd>
+              </div>
+              <div>
+                <dt>Vertex</dt>
+                <dd>
+                  A
+                  <a href="https://en.wikipedia.org/wiki/Vertex_(geometry)" target="_blank" rel="noopener noreferrer">vertex</a>
+                  — a point in 3D space. Meshes connect vertices with edges to form faces.
+                </dd>
+              </div>
+              <div>
+                <dt>Normal</dt>
+                <dd>
+                  The direction a surface “faces” — a
+                  <a href="https://en.wikipedia.org/wiki/Normal_(geometry)" target="_blank" rel="noopener noreferrer">surface normal</a>
+                  used for lighting. Smooth normals blend across edges (soft highlights); hard normals
+                  stay faceted (crisp edges).
+                </dd>
+              </div>
+              <div>
+                <dt>UV map</dt>
+                <dd>
+                  How 2D texture images wrap onto 3D surfaces —
+                  <a href="https://en.wikipedia.org/wiki/UV_mapping" target="_blank" rel="noopener noreferrer">UV mapping</a>
+                  is like unfolding a cardboard box into a flat pattern. Bad or missing UVs can make
+                  textures look stretched or wrong.
+                </dd>
+              </div>
+              <div>
+                <dt>Animation</dt>
+                <dd>
+                  Keyframed motion stored in the file (bones, morphs, object transforms). glTF/GLB
+                  animations play in Orby’s timeline when present — see
+                  <a href="https://en.wikipedia.org/wiki/Computer_animation" target="_blank" rel="noopener noreferrer">computer animation</a>.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-materials">
+            <h3>Materials &amp; textures</h3>
+            <dl>
+              <div>
+                <dt>PBR (Physically Based Rendering)</dt>
+                <dd>
+                  A
+                  <a href="https://en.wikipedia.org/wiki/Physically_based_rendering" target="_blank" rel="noopener noreferrer">physically based rendering</a>
+                  material model that mimics real-world light behavior using sliders like metalness and
+                  roughness instead of hand-painted fake highlights. Most modern 3D (games, AI tools,
+                  glTF) uses PBR.
+                </dd>
+              </div>
+              <div>
+                <dt>Material</dt>
+                <dd>
+                  The surface recipe for a mesh — color, shininess, metal, glow, transparency. One file
+                  can contain many materials (body, glass, tires, etc.).
+                </dd>
+              </div>
+              <div>
+                <dt>Texture / texture map</dt>
+                <dd>
+                  A 2D image applied to a mesh via
+                  <a href="https://en.wikipedia.org/wiki/Texture_mapping" target="_blank" rel="noopener noreferrer">texture mapping</a>
+                  (skin, rust, labels). Different map types drive different material properties — not
+                  just color.
+                </dd>
+              </div>
+              <div>
+                <dt>Albedo / base color</dt>
+                <dd>
+                  The flat color or diffuse texture of a surface before lighting —
+                  <a href="https://en.wikipedia.org/wiki/Albedo" target="_blank" rel="noopener noreferrer">albedo</a>
+                  is what you would see under even white light, without shadows baked in.
+                </dd>
+              </div>
+              <div>
+                <dt>Metalness</dt>
+                <dd>
+                  How metallic a surface reads (0 = plastic or paint, 1 = chrome or steel). Controls
+                  whether reflections dominate the look.
+                </dd>
+              </div>
+              <div>
+                <dt>Roughness</dt>
+                <dd>
+                  Surface micro-scatter (0 = mirror-smooth, 1 = chalky matte). A chrome ball is low
+                  roughness; concrete is high.
+                </dd>
+              </div>
+              <div>
+                <dt>Emissive</dt>
+                <dd>
+                  Self-lit glow on a material — neon signs, screens, sci-fi trim. Adds light-looking
+                  color without necessarily casting shadows on other objects.
+                </dd>
+              </div>
+              <div>
+                <dt>Normal map</dt>
+                <dd>
+                  A texture that fakes small surface bumps and dents without extra geometry —
+                  <a href="https://en.wikipedia.org/wiki/Normal_mapping" target="_blank" rel="noopener noreferrer">normal mapping</a>.
+                  Toggle normal maps under material options for Shaded and Clay modes.
+                </dd>
+              </div>
+              <div>
+                <dt>Transmission / KHR_materials_transmission</dt>
+                <dd>
+                  glTF’s extension for refractive glass — light passes through the surface with
+                  realistic
+                  <a href="https://en.wikipedia.org/wiki/Refraction" target="_blank" rel="noopener noreferrer">refraction</a>.
+                  Thin panes in proper glTF files use this instead of simple transparency.
+                </dd>
+              </div>
+              <div>
+                <dt>Transparency / alpha</dt>
+                <dd>
+                  See-through surfaces (windows, hair cards, foliage). Real-time engines struggle when
+                  many
+                  <a href="https://en.wikipedia.org/wiki/Transparency_(graphic)" target="_blank" rel="noopener noreferrer">transparent</a>
+                  layers share one material — see
+                  <a href="#transparency">Transparency &amp; glass</a>.
+                </dd>
+              </div>
+              <div>
+                <dt>Alpha mode (OPAQUE, MASK, BLEND)</dt>
+                <dd>
+                  glTF rules for cutouts vs fades. <strong>OPAQUE</strong> = solid;
+                  <strong>MASK</strong> = hard cutout (chain-link, leaves);
+                  <strong>BLEND</strong> = soft partial transparency (glass, fog) — hardest to render
+                  correctly in real time.
+                </dd>
+              </div>
+              <div>
+                <dt>Atlas</dt>
+                <dd>
+                  Multiple small textures packed into one
+                  <a href="https://en.wikipedia.org/wiki/Texture_atlas" target="_blank" rel="noopener noreferrer">texture atlas</a>
+                  to save draw calls. Common in game assets — can cause transparency sorting headaches
+                  when unrelated surfaces share one blended sheet.
+                </dd>
+              </div>
+              <div>
+                <dt>Subsurface / translucency</dt>
+                <dd>
+                  <a href="https://en.wikipedia.org/wiki/Subsurface_scattering" target="_blank" rel="noopener noreferrer">Subsurface scattering</a>
+                  — light passing through a thin surface (wax, skin, leaves). Orby has a translucency
+                  toggle for compatible PBR materials — distinct from glass transmission.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-lighting">
+            <h3>Lighting &amp; environment</h3>
+            <dl>
+              <div>
+                <dt>HDRI / environment map</dt>
+                <dd>
+                  A 360°
+                  <a href="https://en.wikipedia.org/wiki/High-dynamic-range_imaging" target="_blank" rel="noopener noreferrer">high-dynamic-range image</a>
+                  that wraps around the scene. It lights the model and drives reflections on metal and
+                  glass — like placing your object inside a photographed room or sky.
+                </dd>
+              </div>
+              <div>
+                <dt>Image-based lighting (IBL)</dt>
+                <dd>
+                  Using an environment image as the main light source instead of (or blended with)
+                  manual lights —
+                  <a href="https://en.wikipedia.org/wiki/Image-based_lighting" target="_blank" rel="noopener noreferrer">image-based lighting</a>.
+                  Orby’s HDRI presets and custom uploads work this way.
+                </dd>
+              </div>
+              <div>
+                <dt>Equirectangular</dt>
+                <dd>
+                  The standard 2:1
+                  <a href="https://en.wikipedia.org/wiki/Equirectangular_projection" target="_blank" rel="noopener noreferrer">equirectangular</a>
+                  panorama layout for HDRI files — width is twice the height. Custom environment uploads
+                  should use this aspect ratio.
+                </dd>
+              </div>
+              <div>
+                <dt>HDR / EXR vs JPEG environment</dt>
+                <dd>
+                  <strong>.hdr</strong> and
+                  <a href="https://en.wikipedia.org/wiki/OpenEXR" target="_blank" rel="noopener noreferrer">.exr</a>
+                  store a wide brightness range (bright sun, deep shadows) — powerful but can blow out if
+                  intensity is too high. <strong>JPEG</strong> environments are pre-graded “finished”
+                  skies — what Orby’s built-in presets use for fast load and predictable look.
+                </dd>
+              </div>
+              <div>
+                <dt>Exposure</dt>
+                <dd>
+                  Overall scene brightness — like adjusting camera
+                  <a href="https://en.wikipedia.org/wiki/Exposure_(photography)" target="_blank" rel="noopener noreferrer">exposure</a>.
+                  Works with the histogram to avoid crushed blacks or blown highlights.
+                </dd>
+              </div>
+              <div>
+                <dt>3-point lighting</dt>
+                <dd>
+                  A classic
+                  <a href="https://en.wikipedia.org/wiki/Three-point_lighting" target="_blank" rel="noopener noreferrer">three-point lighting</a>
+                  setup: <strong>key</strong> (main light), <strong>fill</strong> (softens shadows),
+                  <strong>rim</strong> (edge separation from background), plus <strong>ambient</strong>
+                  (overall base level). Orby exposes each as a controllable spotlight.
+                </dd>
+              </div>
+              <div>
+                <dt>Render Backdrop</dt>
+                <dd>
+                  When on, the HDRI is visible behind the model. When off, you see a solid background
+                  color — but the HDRI still lights and reflects on the mesh.
+                </dd>
+              </div>
+              <div>
+                <dt>Shadow map</dt>
+                <dd>
+                  A depth texture the GPU uses to cast shadows from spotlights —
+                  <a href="https://en.wikipedia.org/wiki/Shadow_mapping" target="_blank" rel="noopener noreferrer">shadow mapping</a>.
+                  Enabling shadows on multiple 3-point lights is realistic but expensive — see
+                  <a href="#performance">Performance</a>.
+                </dd>
+              </div>
+              <div>
+                <dt>PCF (shadow filtering)</dt>
+                <dd>
+                  Softening of shadow edges —
+                  <a href="https://en.wikipedia.org/wiki/Percentage-closer_filtering" target="_blank" rel="noopener noreferrer">percentage-closer filtering</a>.
+                  Higher shadow quality in Orby uses larger maps and softer filtering — prettier,
+                  heavier on the GPU.
+                </dd>
+              </div>
+              <div>
+                <dt>Ground catcher / Receive Shadows + AO</dt>
+                <dd>
+                  An invisible floor under the model that catches contact shadows and
+                  <a href="https://en.wikipedia.org/wiki/Ambient_occlusion" target="_blank" rel="noopener noreferrer">ambient occlusion</a>
+                  from the HDRI panel — helps products “sit” on a surface.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-camera">
+            <h3>Camera &amp; transforms</h3>
+            <dl>
+              <div>
+                <dt>Orbit</dt>
+                <dd>
+                  Rotating the camera around the model — click-drag on the canvas. The default way to
+                  inspect a mesh.
+                </dd>
+              </div>
+              <div>
+                <dt>Pan</dt>
+                <dd>
+                  Sliding the view sideways or up/down without changing angle — right-click drag.
+                </dd>
+              </div>
+              <div>
+                <dt>Dolly / zoom</dt>
+                <dd>
+                  Moving closer or farther from the model — scroll wheel or pinch. Orby adjusts field
+                  of view at extremes for a cinematic feel.
+                </dd>
+              </div>
+              <div>
+                <dt>FOV (field of view)</dt>
+                <dd>
+                  How wide the camera lens feels —
+                  <a href="https://en.wikipedia.org/wiki/Field_of_view" target="_blank" rel="noopener noreferrer">field of view</a>:
+                  low FOV = telephoto (flat, compressed); high FOV = wide-angle (dramatic perspective).
+                  Under Camera controls.
+                </dd>
+              </div>
+              <div>
+                <dt>Framing / Focus (<kbd>F</kbd>)</dt>
+                <dd>
+                  Auto-centers and sizes the model in view. Use after load or when a mesh looks tiny,
+                  huge, or off-screen.
+                </dd>
+              </div>
+              <div>
+                <dt>Auto Orbit</dt>
+                <dd>
+                  The camera slowly spins around the model on its own — good for previews, turntables,
+                  and presentations. Press <kbd>Esc</kbd> to stop.
+                </dd>
+              </div>
+              <div>
+                <dt>Transform / gizmo</dt>
+                <dd>
+                  On-screen handles to move, rotate, or scale the model.
+                  <kbd>W</kbd> translate, <kbd>E</kbd> rotate, <kbd>R</kbd> scale,
+                  <kbd>Q</kbd> exit back to select/orbit.
+                </dd>
+              </div>
+              <div>
+                <dt>Depth of field (DOF)</dt>
+                <dd>
+                  Camera-style blur —
+                  <a href="https://en.wikipedia.org/wiki/Depth_of_field" target="_blank" rel="noopener noreferrer">depth of field</a>
+                  keeps the subject sharp and softens background (or foreground). A post effect under
+                  FX; heavier on performance at high quality.
+                </dd>
+              </div>
+              <div>
+                <dt>Bokeh</dt>
+                <dd>
+                  The shape and quality of out-of-focus highlights in depth of field —
+                  <a href="https://en.wikipedia.org/wiki/Bokeh" target="_blank" rel="noopener noreferrer">bokeh</a>.
+                  Orby simulates lens blur in the DOF pass.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-display">
+            <h3>Display modes</h3>
+            <dl>
+              <div>
+                <dt>Shaded</dt>
+                <dd>
+                  Default — full lighting, PBR materials, environment reflections. What you want for
+                  final looks.
+                </dd>
+              </div>
+              <div>
+                <dt>Unlit</dt>
+                <dd>
+                  Textures and colors without lighting math — flat, even, illustration-like. Useful to
+                  check albedo or debug texture issues.
+                </dd>
+              </div>
+              <div>
+                <dt>Clay</dt>
+                <dd>
+                  Single-color matte render — ignores textures, shows form and lighting only. Good for
+                  checking shape and silhouette.
+                </dd>
+              </div>
+              <div>
+                <dt>Wireframe</dt>
+                <dd>
+                  Shows the triangle structure of the mesh —
+                  <a href="https://en.wikipedia.org/wiki/Wire-frame_model" target="_blank" rel="noopener noreferrer">wireframe</a>
+                  view. Can replace the view or overlay on top of Shaded/Unlit/Clay.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-post">
+            <h3>Post-processing &amp; color</h3>
+            <dl>
+              <div>
+                <dt>Post-processing</dt>
+                <dd>
+                  Image effects applied after the 3D scene is rendered —
+                  <a href="https://en.wikipedia.org/wiki/Post-processing_(video)" target="_blank" rel="noopener noreferrer">post-processing</a>
+                  covers bloom, grain, color grade, and more. Think of it as a photo filter stack on
+                  the final frame.
+                </dd>
+              </div>
+              <div>
+                <dt>Bloom</dt>
+                <dd>
+                  A soft glow bleeding from bright areas — windows, specular hits, emissive parts.
+                  “Selective” bloom targets bright pixels rather than the whole image.
+                </dd>
+              </div>
+              <div>
+                <dt>Film grain</dt>
+                <dd>
+                  Adds fine
+                  <a href="https://en.wikipedia.org/wiki/Film_grain" target="_blank" rel="noopener noreferrer">film grain</a>
+                  texture for a cinematic or analog feel.
+                </dd>
+              </div>
+              <div>
+                <dt>Chromatic aberration (CA)</dt>
+                <dd>
+                  Slight color fringing at frame edges —
+                  <a href="https://en.wikipedia.org/wiki/Chromatic_aberration" target="_blank" rel="noopener noreferrer">chromatic aberration</a>
+                  mimics cheap or vintage camera lenses.
+                </dd>
+              </div>
+              <div>
+                <dt>Lens flare</dt>
+                <dd>
+                  Streaks and ghosts from bright light sources in frame —
+                  <a href="https://en.wikipedia.org/wiki/Lens_flare" target="_blank" rel="noopener noreferrer">lens flare</a>
+                  is decorative and can cost performance on low-end GPUs.
+                </dd>
+              </div>
+              <div>
+                <dt>Lens dirt</dt>
+                <dd>
+                  Simulated smudges on a virtual camera lens — subtle atmosphere, not literal dirt on
+                  your screen.
+                </dd>
+              </div>
+              <div>
+                <dt>Vignette</dt>
+                <dd>
+                  Darkening toward the corners of the frame —
+                  <a href="https://en.wikipedia.org/wiki/Vignetting" target="_blank" rel="noopener noreferrer">vignetting</a>
+                  draws the eye to the center.
+                </dd>
+              </div>
+              <div>
+                <dt>FXAA</dt>
+                <dd>
+                  <a href="https://en.wikipedia.org/wiki/Fast_approximate_anti-aliasing" target="_blank" rel="noopener noreferrer">Fast approximate anti-aliasing</a>
+                  — smooths jagged edges on high-contrast geometry. A small performance cost.
+                </dd>
+              </div>
+              <div>
+                <dt>Tonemapping / ACES</dt>
+                <dd>
+                  Maps HDR scene brightness into viewable range on your monitor —
+                  <a href="https://en.wikipedia.org/wiki/Tone_mapping" target="_blank" rel="noopener noreferrer">tone mapping</a>
+                  is like a film print curve. Orby uses ACES Filmic for a cinematic rolloff in
+                  highlights.
+                </dd>
+              </div>
+              <div>
+                <dt>Color grading</dt>
+                <dd>
+                  Creative adjustments after render —
+                  <a href="https://en.wikipedia.org/wiki/Color_grading" target="_blank" rel="noopener noreferrer">color grading</a>
+                  covers contrast, saturation, tint, temperature, shadows and highlights. Orby’s Camera
+                  → Color &amp; Tone block.
+                </dd>
+              </div>
+              <div>
+                <dt>Histogram</dt>
+                <dd>
+                  A
+                  <a href="https://en.wikipedia.org/wiki/Histogram" target="_blank" rel="noopener noreferrer">histogram</a>
+                  of brightness in the current frame. Helps spot crushed shadows or overexposed clipping
+                  — turns orange/red when highlights blow out.
+                </dd>
+              </div>
+              <div>
+                <dt>Auto exposure</dt>
+                <dd>
+                  Automatically adjusts brightness to match scene content — handy for varied HDRIs;
+                  turn off for manual, repeatable grades.
+                </dd>
+              </div>
+              <div>
+                <dt>Luminance tone curve</dt>
+                <dd>
+                  A draggable curve that remaps dark, mid, and bright tones before other color
+                  adjustments — lift blacks, punch mids, roll off highlights. Saved in scene settings.
+                </dd>
+              </div>
+              <div>
+                <dt>LUT (lookup table)</dt>
+                <dd>
+                  A precomputed
+                  <a href="https://en.wikipedia.org/wiki/Lookup_table" target="_blank" rel="noopener noreferrer">lookup table</a>
+                  that maps input brightness to output — Orby bakes the tone curve into a 256-step LUT
+                  for smooth, efficient grading.
+                </dd>
+              </div>
+              <div>
+                <dt>Fresnel</dt>
+                <dd>
+                  Edge-brightening based on viewing angle — named after the
+                  <a href="https://en.wikipedia.org/wiki/Fresnel_equations" target="_blank" rel="noopener noreferrer">Fresnel equations</a>
+                  for how reflectivity changes at glancing angles. A stylized rim-glow effect in Orby,
+                  not physical glass.
+                </dd>
+              </div>
+              <div>
+                <dt>Ambient occlusion (AO)</dt>
+                <dd>
+                  Darkening in crevices and contact points where light is occluded —
+                  <a href="https://en.wikipedia.org/wiki/Ambient_occlusion" target="_blank" rel="noopener noreferrer">ambient occlusion</a>.
+                  Orby’s screen-space AO (N8AO) is an extra post pass — deepens detail but costs GPU
+                  time.
+                </dd>
+              </div>
+              <div>
+                <dt>Clarity / sharpness</dt>
+                <dd>
+                  Local contrast and edge enhancement — “clarity” punches mid-tone detail; “sharpness”
+                  adds fine edge definition. Medium GPU cost.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-orby">
+            <h3>Orby features</h3>
+            <dl>
+              <div>
+                <dt>Shader Lab</dt>
+                <dd>
+                  Stylized material presets (chrome, glass, animated FX) that temporarily replace your
+                  imported materials. Turn off to restore the original glTF look.
+                </dd>
+              </div>
+              <div>
+                <dt>Look Filter Presets</dt>
+                <dd>
+                  One-tap style combos under Camera — color grade, curve, bloom, grain, CA, and more
+                  applied together. <strong>None</strong> resets those defaults.
+                </dd>
+              </div>
+              <div>
+                <dt>Scene settings / .orby JSON</dt>
+                <dd>
+                  Copy-paste text that saves your full setup — lights, camera, FX, curve, Look Filter,
+                  panel toggles. Local to your browser; not uploaded to servers.
+                </dd>
+              </div>
+              <div>
+                <dt>SVG extrude</dt>
+                <dd>
+                  Converts flat SVG fill shapes into 3D geometry with depth, per-color layers, and
+                  export to GLB. See <a href="#svg-extrude">SVG extrude</a>.
+                </dd>
+              </div>
+              <div>
+                <dt>Turntable export</dt>
+                <dd>
+                  Renders the model spinning over time — MP4 video or numbered PNG sequence in a zip.
+                  Control spins, duration, FPS, and resolution.
+                </dd>
+              </div>
+              <div>
+                <dt>Render Quality</dt>
+                <dd>
+                  Global performance tier (Low / Medium / Ultra) — changes internal resolution, bloom
+                  resolution, and which heavy passes stay enabled.
+                </dd>
+              </div>
+              <div>
+                <dt>ColorChecker</dt>
+                <dd>
+                  A reference
+                  <a href="https://en.wikipedia.org/wiki/ColorChecker" target="_blank" rel="noopener noreferrer">ColorChecker</a>
+                  chart mesh you can drop into the scene to sanity-check white balance and exposure
+                  against known swatches.
+                </dd>
+              </div>
+              <div>
+                <dt>Client-side</dt>
+                <dd>
+                  Everything runs in your browser tab — models are not uploaded to Orby servers. Close
+                  the tab and the session data is gone.
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="legal-support-glossary__group" id="glossary-tech">
+            <h3>Technical foundations</h3>
+            <dl>
+              <div>
+                <dt>WebGL</dt>
+                <dd>
+                  The browser API that lets web pages draw 3D on your GPU —
+                  <a href="https://en.wikipedia.org/wiki/WebGL" target="_blank" rel="noopener noreferrer">WebGL</a>.
+                  Orby, Three.js, and most web viewers depend on it.
+                </dd>
+              </div>
+              <div>
+                <dt>Three.js</dt>
+                <dd>
+                  The open-source JavaScript 3D library Orby builds on — loaders, materials, lights,
+                  and render pipeline. See
+                  <a href="https://en.wikipedia.org/wiki/Three.js" target="_blank" rel="noopener noreferrer">Three.js</a>
+                  on Wikipedia.
+                </dd>
+              </div>
+              <div>
+                <dt>GPU</dt>
+                <dd>
+                  Your
+                  <a href="https://en.wikipedia.org/wiki/Graphics_processing_unit" target="_blank" rel="noopener noreferrer">graphics processing unit</a>
+                  — does the heavy lifting for real-time 3D. Integrated laptop GPUs struggle sooner
+                  than desktop cards when effects and shadow maps stack up.
+                </dd>
+              </div>
+              <div>
+                <dt>Draw call</dt>
+                <dd>
+                  One batch of geometry sent to the GPU per frame. Transparent materials and multi-mesh
+                  scenes increase sorting complexity — a root cause of transparency artifacts.
+                </dd>
+              </div>
+              <div>
+                <dt>Frame rate (FPS)</dt>
+                <dd>
+                  How many images per second the viewer renders —
+                  <a href="https://en.wikipedia.org/wiki/Frame_rate" target="_blank" rel="noopener noreferrer">frame rate</a>:
+                  60 feels smooth; heavy scenes may drop lower on weak hardware.
+                </dd>
+              </div>
+              <div>
+                <dt>Pixel ratio / device pixel ratio</dt>
+                <dd>
+                  How sharp the internal render is vs your screen — higher =
+                  <a href="https://en.wikipedia.org/wiki/Pixel_density" target="_blank" rel="noopener noreferrer">pixel density</a>,
+                  crisper but slower. Render Quality Ultra uses a higher ratio.
+                </dd>
+              </div>
+              <div>
+                <dt>H.264 / MP4</dt>
+                <dd>
+                  The
+                  <a href="https://en.wikipedia.org/wiki/H.264" target="_blank" rel="noopener noreferrer">H.264</a>
+                  video codec Orby uses for turntable exports, wrapped in
+                  <a href="https://en.wikipedia.org/wiki/MPEG-4_Part_14" target="_blank" rel="noopener noreferrer">MP4</a>
+                  — widely supported for social and editing apps.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
       <section id="privacy" class="legal-support-section">
         <h2>Privacy reminder</h2>
         <p>
@@ -561,9 +1312,12 @@
         <a href="../index.html">Open Orby</a> ·
         <a href="../credits/">Credits</a> ·
         <a href="../legal/privacy-policy.html">Privacy Policy</a>
+        ·
+        <a href="../stats/">Statistics</a>
       </p>
     </main>
 
+    <script type="module" src="../scripts/orbyStatsBeacon.js"></script>
     <script type="module" src="./supportBugReport.js"></script>
   </body>
 </html>
