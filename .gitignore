@@ -13,6 +13,10 @@ dist/
 # Test assets - keep locally only
 TEMP/
 
+# Cursor agent scratch (video frame extracts, local scripts)
+.cursor/video-frames-*/
+.tmp/
+
 # Fab / Megascans / Quixel library meshes — never commit (license forbids redistribution)
 assets/3D-assets/*_xisgcic_*.glb
 assets/3D-assets/nordic_forest_cluster*.glb
