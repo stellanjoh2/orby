@@ -132,14 +132,80 @@ export function resolveAnamorphicBloomQualityTier(id) {
   return ANAMORPHIC_BLOOM_QUALITY[k] ?? ANAMORPHIC_BLOOM_QUALITY.medium;
 }
 
-/** God rays radial march — sample count scales with length + quality tier. */
-export const GOD_RAYS_QUALITY_DEFAULT = /** @type {const} */ ('medium');
-export const GOD_RAYS_MAX_SAMPLES = 96;
+/**
+ * Lens flare — reduce sample counts / LOD radius, not which features exist.
+ * Legacy: optimized → low, maximum → ultra.
+ */
+export const LENS_FLARE_QUALITY_DEFAULT = /** @type {const} */ ('high');
+export const LENS_FLARE_QUALITY = {
+  /** ~50% fewer samples + tighter LOD than prior low; all layers stay on (unlike legacy optimized). */
+  low: {
+    animated: false,
+    secondaryGhosts: true,
+    starBurst: true,
+    aditionalStreaks: true,
+    ghostLoopCount: 3,
+    dirtGhostSamples: 2,
+    lodDistance: 0.72,
+  },
+  medium: {
+    animated: false,
+    secondaryGhosts: true,
+    starBurst: true,
+    aditionalStreaks: true,
+    ghostLoopCount: 7,
+    dirtGhostSamples: 6,
+    lodDistance: 1.3,
+  },
+  high: {
+    animated: false,
+    secondaryGhosts: true,
+    starBurst: true,
+    aditionalStreaks: true,
+    ghostLoopCount: 9,
+    dirtGhostSamples: 7,
+    lodDistance: 1.45,
+  },
+  ultra: {
+    animated: false,
+    secondaryGhosts: true,
+    starBurst: true,
+    aditionalStreaks: true,
+    ghostLoopCount: 10,
+    dirtGhostSamples: 8,
+    lodDistance: 1.5,
+  },
+};
+
+/**
+ * @param {string | undefined} id
+ */
+export function normalizeLensFlareQualityId(id) {
+  if (id === 'optimized') return 'low';
+  if (id === 'maximum') return 'ultra';
+  if (id === 'low' || id === 'medium' || id === 'high' || id === 'ultra') {
+    return id;
+  }
+  return LENS_FLARE_QUALITY_DEFAULT;
+}
+
+/**
+ * @param {string | undefined} id
+ * @returns {typeof LENS_FLARE_QUALITY['high']}
+ */
+export function resolveLensFlareQualityTier(id) {
+  const k = normalizeLensFlareQualityId(id);
+  return LENS_FLARE_QUALITY[k] ?? LENS_FLARE_QUALITY.high;
+}
+
+/** pmndrs GodRays — samples + resolution scale per quality tier. */
+export const GOD_RAYS_QUALITY_DEFAULT = /** @type {const} */ ('low');
+export const GOD_RAYS_MAX_SAMPLES = 80;
 export const GOD_RAYS_QUALITY = {
-  low: { minSamples: 8, maxSamples: 28, stepScale: 1.0 },
-  medium: { minSamples: 12, maxSamples: 48, stepScale: 0.86 },
-  high: { minSamples: 18, maxSamples: 72, stepScale: 0.72 },
-  ultra: { minSamples: 24, maxSamples: 96, stepScale: 0.58 },
+  low: { minSamples: 24, maxSamples: 40, resolutionScale: 0.4 },
+  medium: { minSamples: 36, maxSamples: 56, resolutionScale: 0.5 },
+  high: { minSamples: 48, maxSamples: 68, resolutionScale: 0.6 },
+  ultra: { minSamples: 60, maxSamples: 80, resolutionScale: 0.65 },
 };
 
 /**
@@ -170,7 +236,7 @@ export function resolveGodRaysQualityTier(id) {
 export function resolveGodRaysSampleCount(length, qualityId) {
   const tier = resolveGodRaysQualityTier(qualityId);
   const t = Math.min(1, Math.max(0, typeof length === 'number' && !Number.isNaN(length) ? length : 0));
-  const lengthWeight = Math.pow(t, 0.82);
+  const lengthWeight = Math.pow(t, 0.72);
   return Math.round(tier.minSamples + (tier.maxSamples - tier.minSamples) * lengthWeight);
 }
 

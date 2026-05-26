@@ -3678,8 +3678,18 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner {
     calc(4vw * var(--studio-ui-scale)),
     calc(4.5rem * var(--studio-ui-scale))
   );
+  gap: calc(12px * var(--studio-ui-scale));
+  width: auto;
+  height: calc(70px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .viewport > .viewport-load-spinner img {
   width: calc(70px * var(--studio-ui-scale));
   height: calc(70px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
+  font-size: calc(22px * var(--studio-ui-scale));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5087,7 +5097,11 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   position: absolute;
   bottom: clamp(1rem, 4vw, 4.5rem);
   left: clamp(1rem, 4vw, 4.5rem);
-  width: 70px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: auto;
   height: 70px;
   z-index: 14;
   pointer-events: none;
@@ -5099,6 +5113,20 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
     opacity 0.2s ease,
     transform 0.2s ease,
     visibility 0s linear 0.2s;
+}
+
+.viewport-load-spinner__elapsed {
+  font-family: var(--brand-font-mattone-regular);
+  font-size: 22px;
+  line-height: 1;
+  color: #fff;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.viewport-load-spinner__elapsed[hidden] {
+  display: none;
 }
 
 .viewport-load-spinner.is-visible {
@@ -5113,8 +5141,9 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 
 .viewport-load-spinner img {
   display: block;
-  width: 100%;
-  height: 100%;
+  flex-shrink: 0;
+  width: 70px;
+  height: 70px;
   object-fit: contain;
   /* 100 RPM → 0.6s per revolution */
   animation: viewport-load-spin 0.6s linear infinite;
@@ -5716,6 +5745,15 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 
 .export-video-foldout.is-muted {
   opacity: 0.6;
+}
+
+#exportMeshAnimationsSettings[hidden],
+#exportMeshAnimationClipWrap[hidden] {
+  display: none !important;
+}
+
+#exportMeshAnimationClipWrap:not([hidden]) {
+  margin-top: 0.15rem;
 }
 
 /* Transparent background — fixed vertical slot; muted unless .PNG format */

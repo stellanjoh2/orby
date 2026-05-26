@@ -245,11 +245,23 @@ export class EventManager {
     eventBus.on('studio:lens-flare-anamorphic-bloom', () => s.syncAnamorphicBloomFromState());
     eventBus.on('studio:god-rays-enabled', (enabled) => s.setGodRaysEnabled(enabled));
     eventBus.on('studio:god-rays-color', (value) => s.setGodRaysColor(value));
+    eventBus.on('studio:god-rays-light-scale', (value) => s.setGodRaysLightScale(value));
+    eventBus.on('studio:god-rays-opacity', (value) => s.setGodRaysOpacity(value));
+    eventBus.on('studio:god-rays-density', (value) => s.setGodRaysDensity(value));
+    eventBus.on('studio:god-rays-decay', (value) => s.setGodRaysDecay(value));
+    eventBus.on('studio:god-rays-weight', (value) => s.setGodRaysWeight(value));
+    eventBus.on('studio:god-rays-exposure', (value) => s.setGodRaysExposure(value));
+    eventBus.on('studio:god-rays-clamp-max', (value) => s.setGodRaysClampMax(value));
+    eventBus.on('studio:god-rays-blur', (enabled) => s.setGodRaysBlur(enabled));
+    eventBus.on('studio:lens-flare-spin-during-orbit', (enabled) =>
+      s.setLensFlareSpinDuringOrbit(enabled),
+    );
+    eventBus.on('studio:god-rays-quality', (value) => s.setGodRaysQuality(value));
+    // Legacy saved scenes / presets
     eventBus.on('studio:god-rays-strength', (value) => s.setGodRaysStrength(value));
     eventBus.on('studio:god-rays-length', (value) => s.setGodRaysLength(value));
     eventBus.on('studio:god-rays-softness', (value) => s.setGodRaysSoftness(value));
-    eventBus.on('studio:god-rays-threshold', (value) => s.setGodRaysThreshold(value));
-    eventBus.on('studio:god-rays-quality', (value) => s.setGodRaysQuality(value));
+    eventBus.on('studio:god-rays-threshold', () => {});
     eventBus.on('mesh:clay-normal-map', (enabled) => s.setClayNormalMap(enabled));
 
     // Render/Post-processing events
@@ -486,6 +498,9 @@ export class EventManager {
     );
     eventBus.on('export:svg-glb', () => s.exportSvgGlb());
     eventBus.on('export:video', (payload) => s.exportVideo(payload));
+    eventBus.on('export:video-preview-toggle', (payload) =>
+      s.toggleExportVideoPreview(payload),
+    );
     
     // App events
     eventBus.on('app:reset', () => {

@@ -13,6 +13,7 @@ import { mergeAberrationSettings } from '../render/chromaticAberration.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
 import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
+import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
 
 /**
  * SceneSettingsManager
@@ -752,6 +753,12 @@ export class SceneSettingsManager {
             ...(payload.lensFlare.anamorphicBloom ?? {}),
           },
         };
+        if (
+          merged.spinDuringOrbit === undefined &&
+          payload.godRays?.spinDuringOrbit != null
+        ) {
+          merged.spinDuringOrbit = payload.godRays.spinDuringOrbit;
+        }
         const discGlow = resolveDiscGlowFromState(merged, d);
         merged.discGlowIntensity = discGlow.intensity;
         merged.discGlowSize = discGlow.size;
@@ -762,6 +769,10 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-height', merged.height);
         this.eventBus.emit('studio:lens-flare-color', merged.color);
         this.eventBus.emit('studio:lens-flare-quality', merged.quality);
+        this.eventBus.emit(
+          'studio:lens-flare-spin-during-orbit',
+          !!merged.spinDuringOrbit,
+        );
         this.eventBus.emit('studio:lens-flare-halo', merged.haloIntensity);
         this.eventBus.emit('studio:lens-flare-streak-length', merged.streakLength);
         this.eventBus.emit('studio:lens-flare-sun-disc-scale', merged.sunDiscScale);
@@ -779,13 +790,7 @@ export class SceneSettingsManager {
           ...payload.godRays,
         };
         this.stateStore.set('godRays', merged);
-        this.eventBus.emit('studio:god-rays-enabled', merged.enabled);
-        this.eventBus.emit('studio:god-rays-color', merged.color);
-        this.eventBus.emit('studio:god-rays-strength', merged.strength);
-        this.eventBus.emit('studio:god-rays-length', merged.length);
-        this.eventBus.emit('studio:god-rays-softness', merged.softness);
-        this.eventBus.emit('studio:god-rays-threshold', merged.threshold);
-        this.eventBus.emit('studio:god-rays-quality', merged.quality);
+        emitGodRaysStudioEvents(this.eventBus, merged, d);
       }
       if (payload.groundSolid !== undefined) {
         this.stateStore.set('groundSolid', payload.groundSolid);

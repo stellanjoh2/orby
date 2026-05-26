@@ -74,8 +74,15 @@ export class RenderLoopController {
     /** @type {Array<{ id: string, when?: (ctx: ReturnType<typeof buildFrameContext>, scene: import('../SceneManager.js').SceneManager) => boolean, run: (delta: number, scene: import('../SceneManager.js').SceneManager) => void }>} */
     this._updateSteps = [
       {
+        id: 'export-movement-preview',
+        when: (_ctx, s) => !!s.exportMovementPreview?.isActive?.(),
+        run: (delta, s) => {
+          s.exportMovementPreview.update(delta);
+        },
+      },
+      {
         id: 'animation',
-        when: (_ctx, s) => !s.animationController?.isExportDriving?.(),
+        when: (_ctx, s) => !s.animationController?.isExportSessionActive?.(),
         run: (delta, s) => {
           s.animationController.update(delta);
         },
@@ -109,7 +116,7 @@ export class RenderLoopController {
         id: 'camera',
         run: (delta, s) => {
           s.cameraController.update();
-          if (s.cameraAutoOrbit !== 'off') {
+          if (s.cameraAutoOrbit !== 'off' && !s.exportMovementPreview?.isActive?.()) {
             s.cameraController.updateAutoOrbit(delta);
           }
           s.cameraController.applyHandheldMotion(delta);

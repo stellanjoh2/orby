@@ -785,17 +785,111 @@ export class MeshControls {
       });
     };
 
-    document.querySelectorAll('[data-video-mode]').forEach((button) => {
+    const syncExportMovementSlidersUi = () => {
+      const video = this.ui.exportSettings.video;
+      const zoomActive = !!(video?.zoomIn || video?.zoomOut);
+      const tiltActive = !!(video?.tiltLeft || video?.tiltRight);
+      const wrap = this.ui.inputs.exportMovementSliders;
+      if (wrap) {
+        wrap.classList.toggle('is-muted', !zoomActive && !tiltActive);
+      }
+      if (this.ui.inputs.exportZoomDistanceSettings) {
+        this.ui.inputs.exportZoomDistanceSettings.classList.toggle('is-muted', !zoomActive);
+      }
+      if (this.ui.inputs.exportTiltAngleSettings) {
+        this.ui.inputs.exportTiltAngleSettings.classList.toggle('is-muted', !tiltActive);
+      }
+      this.ui.setControlDisabled('exportZoomDistance', !zoomActive);
+      this.ui.setControlDisabled('exportTiltAngle', !tiltActive);
+    };
+
+    const syncExportMovementButtons = () => {
+      const video = this.ui.exportSettings.video || {};
+      document.querySelectorAll('[data-video-movement]').forEach((btn) => {
+        const key = btn.dataset.videoMovement;
+        let active = false;
+        if (key === 'turntable') active = !!video.turntable;
+        else if (key === 'orbit') active = !!video.orbit;
+        else if (key === 'zoom-in') active = !!video.zoomIn;
+        else if (key === 'zoom-out') active = !!video.zoomOut;
+        else if (key === 'tilt-left') active = !!video.tiltLeft;
+        else if (key === 'tilt-right') active = !!video.tiltRight;
+        btn.classList.toggle('active', active);
+      });
+      syncExportMovementSlidersUi();
+    };
+
+    document.querySelectorAll('[data-video-movement]').forEach((button) => {
       button.addEventListener('click', () => {
         if (button.disabled) return;
-        const mode = button.dataset.videoMode;
-        if (mode !== 'turntable' && mode !== 'orbit') return;
-        this.ui.exportSettings.video.mode = mode;
-        document.querySelectorAll('[data-video-mode]').forEach((btn) => {
-          btn.classList.toggle('active', btn === button);
-        });
+        const key = button.dataset.videoMovement;
+        const video = this.ui.exportSettings.video;
+        if (key === 'turntable') {
+          video.turntable = !video.turntable;
+        } else if (key === 'orbit') {
+          video.orbit = !video.orbit;
+        } else if (key === 'zoom-in') {
+          video.zoomIn = !video.zoomIn;
+          if (video.zoomIn) video.zoomOut = false;
+        } else if (key === 'zoom-out') {
+          video.zoomOut = !video.zoomOut;
+          if (video.zoomOut) video.zoomIn = false;
+        } else if (key === 'tilt-left') {
+          video.tiltLeft = !video.tiltLeft;
+          if (video.tiltLeft) video.tiltRight = false;
+        } else if (key === 'tilt-right') {
+          video.tiltRight = !video.tiltRight;
+          if (video.tiltRight) video.tiltLeft = false;
+        }
+        syncExportMovementButtons();
       });
     });
+
+    if (this.ui.inputs.exportZoomDistance) {
+      this.ui.inputs.exportZoomDistance.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.ui.exportSettings.video.zoomDistance = value;
+        this.helpers.updateValueLabel('exportZoomDistance', value, 'distance');
+      });
+      this.helpers.updateValueLabel(
+        'exportZoomDistance',
+        this.ui.exportSettings.video.zoomDistance ?? 1.5,
+        'distance',
+      );
+    }
+
+    if (this.ui.inputs.exportTiltAngle) {
+      this.ui.inputs.exportTiltAngle.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.ui.exportSettings.video.tiltAngle = value;
+        this.helpers.updateValueLabel('exportTiltAngle', value, 'angle');
+      });
+      this.helpers.updateValueLabel(
+        'exportTiltAngle',
+        this.ui.exportSettings.video.tiltAngle ?? 15,
+        'angle',
+      );
+    }
+
+    if (this.ui.inputs.exportMeshAnimationsEmbed) {
+      this.ui.inputs.exportMeshAnimationsEmbed.addEventListener('change', (event) => {
+        this.ui.exportSettings.video.meshAnimationsInclude = !!event.target.checked;
+        this.ui.syncExportMeshAnimationsUi();
+      });
+    }
+
+    if (this.ui.inputs.exportMeshAnimationSelect) {
+      this.ui.inputs.exportMeshAnimationSelect.addEventListener('change', (event) => {
+        const index = parseInt(event.target.value, 10);
+        if (!Number.isFinite(index)) return;
+        this.ui.exportSettings.video.meshAnimationClipIndex = index;
+      });
+    }
+
+    syncExportMovementButtons();
+    this.ui.syncExportMeshAnimationsUi();
 
     document.querySelectorAll('[data-video-format]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -832,16 +926,66 @@ export class MeshControls {
       });
     });
 
+    const syncExportSpinUi = () => {
+      const video = this.ui.exportSettings.video || {};
+      const fullSpins = video.spins === 0 || video.spins === 2 ? video.spins : 1;
+      const subtleEnabled = fullSpins === 0;
+      const subtleDegrees = video.subtleSpinDegrees === 90 ? 90 : video.subtleSpinDegrees === 45 ? 45 : 0;
+      const spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
+
+      document.querySelectorAll('[data-video-spins]').forEach((btn) => {
+        const spins = parseInt(btn.dataset.videoSpins, 10);
+        btn.classList.toggle('active', spins === fullSpins);
+      });
+
+      const subtleWrap = document.getElementById('exportSubtleSpinsGroup');
+      if (subtleWrap) {
+        subtleWrap.classList.toggle('is-muted', !subtleEnabled);
+      }
+      document.querySelectorAll('[data-video-subtle-spins]').forEach((btn) => {
+        const degrees = parseInt(btn.dataset.videoSubtleSpins, 10);
+        btn.classList.toggle('active', subtleEnabled && degrees === subtleDegrees);
+        if ('disabled' in btn) btn.disabled = !subtleEnabled;
+        btn.classList.toggle('is-disabled', !subtleEnabled);
+      });
+
+      document.querySelectorAll('[data-video-spin-direction]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.videoSpinDirection === spinDirection);
+      });
+    };
+
     document.querySelectorAll('[data-video-spins]').forEach((button) => {
       button.addEventListener('click', () => {
         const spins = parseInt(button.dataset.videoSpins, 10);
-        if (spins !== 1 && spins !== 2) return;
+        if (spins !== 0 && spins !== 1 && spins !== 2) return;
         this.ui.exportSettings.video.spins = spins;
-        document.querySelectorAll('[data-video-spins]').forEach((btn) => {
-          btn.classList.toggle('active', btn === button);
-        });
+        syncExportSpinUi();
       });
     });
+
+    document.querySelectorAll('[data-video-subtle-spins]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.disabled) return;
+        const degrees = parseInt(button.dataset.videoSubtleSpins, 10);
+        if (degrees !== 45 && degrees !== 90) return;
+        const video = this.ui.exportSettings.video;
+        const current =
+          video.subtleSpinDegrees === 90 ? 90 : video.subtleSpinDegrees === 45 ? 45 : 0;
+        video.subtleSpinDegrees = current === degrees ? 0 : degrees;
+        syncExportSpinUi();
+      });
+    });
+
+    document.querySelectorAll('[data-video-spin-direction]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const direction = button.dataset.videoSpinDirection;
+        if (direction !== 'forward' && direction !== 'reverse') return;
+        this.ui.exportSettings.video.spinDirection = direction;
+        syncExportSpinUi();
+      });
+    });
+
+    syncExportSpinUi();
 
     document.querySelectorAll('[data-video-resolution]').forEach((button) => {
       button.addEventListener('click', () => {

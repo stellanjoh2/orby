@@ -17,6 +17,7 @@ import {
   cameraShadowsUiToShader,
   clampCameraShadowsUi,
 } from './constants.js';
+import { normalizeGodRaysState } from './GodRaysEffect.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
@@ -90,6 +91,8 @@ export class UIManager {
     this._rangeSliderFillRafId = null;
     /** Nested loads (model + HDRI) toggle #viewportLoadSpinner while depth > 0 */
     this._loadSpinnerDepth = 0;
+    this._loadSpinnerElapsedActive = false;
+    this._loadSpinnerElapsedStart = 0;
     /** @type {Array<{ text: string, durationMs: number, toastOptions: object }>} */
     this._toastQueue = [];
     this._toastQueueActive = false;
@@ -224,6 +227,7 @@ export class UIManager {
     this.dom.canvas = q('#webgl');
     this.dom.fullscreenToggle = q('#fullscreenToggle');
     this.dom.loadSpinner = q('#viewportLoadSpinner');
+    this.dom.loadSpinnerElapsed = q('#viewportLoadSpinnerElapsed');
     this.dom.topBarTitle = q('#topBarTitle');
     this.dom.topBarAnimation = q('#topBarAnimation');
     this.dom.resetAll = q('#resetAll');
@@ -298,10 +302,15 @@ export class UIManager {
       lensFlareQuality: q('#lensFlareQuality'),
       godRaysEnabled: q('#godRaysEnabled'),
       godRaysColor: q('#godRaysColor'),
-      godRaysStrength: q('#godRaysStrength'),
-      godRaysLength: q('#godRaysLength'),
-      godRaysSoftness: q('#godRaysSoftness'),
-      godRaysThreshold: q('#godRaysThreshold'),
+      godRaysLightScale: q('#godRaysLightScale'),
+      godRaysOpacity: q('#godRaysOpacity'),
+      godRaysDensity: q('#godRaysDensity'),
+      godRaysDecay: q('#godRaysDecay'),
+      godRaysWeight: q('#godRaysWeight'),
+      godRaysExposure: q('#godRaysExposure'),
+      godRaysClampMax: q('#godRaysClampMax'),
+      godRaysBlur: q('#godRaysBlur'),
+      lensFlareSpinDuringOrbit: q('#lensFlareSpinDuringOrbit'),
       godRaysQuality: q('#godRaysQuality'),
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
       anamorphicBloomStrength: q('#anamorphicBloomStrength'),
@@ -495,6 +504,15 @@ export class UIManager {
       exportSvgColorDetail: q('#exportSvgColorDetail'),
       exportPngTransparentSettings: q('#exportPngTransparentSettings'),
       exportMp4Settings: q('#exportMp4Settings'),
+      exportZoomDistance: q('#exportZoomDistance'),
+      exportZoomDistanceSettings: q('#exportZoomDistanceSettings'),
+      exportTiltAngle: q('#exportTiltAngle'),
+      exportTiltAngleSettings: q('#exportTiltAngleSettings'),
+      exportMovementSliders: q('#exportMovementSliders'),
+      exportMeshAnimationSelect: q('#exportMeshAnimationSelect'),
+      exportMeshAnimationClipWrap: q('#exportMeshAnimationClipWrap'),
+      exportMeshAnimationsEmbed: q('#exportMeshAnimationsEmbed'),
+      exportMeshAnimationsSettings: q('#exportMeshAnimationsSettings'),
       fbxMapFileInput: q('#fbxMapFileInput'),
       fbxMapInvertNormalY: q('#fbxMapInvertNormalY'),
       fbxMapPbrUvChannel: q('#fbxMapPbrUvChannel'),
@@ -507,6 +525,7 @@ export class UIManager {
       exportSvgColor: q('#exportSvgColorButton'),
       exportSvgGlb: q('#exportSvgGlbButton'),
       exportVideo: q('#exportVideoButton'),
+      exportVideoPreview: q('#exportVideoPreviewButton'),
       copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
       loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
       saveOrbyButtons: document.querySelectorAll('.save-orby-scene'),
@@ -528,14 +547,25 @@ export class UIManager {
       transparent: true,
       size: 2,
       video: {
-        mode: 'turntable',
+        turntable: true,
+        orbit: false,
+        zoomIn: false,
+        zoomOut: false,
+        tiltLeft: false,
+        tiltRight: false,
+        zoomDistance: 1.5,
+        tiltAngle: 15,
         format: 'mp4',
         durationSec: 5,
         spins: 1,
+        subtleSpinDegrees: 0,
+        spinDirection: 'forward',
         fps: 24,
         resolution: '1080p',
         mp4Quality: 'medium',
         movTransparent: false,
+        meshAnimationsInclude: false,
+        meshAnimationClipIndex: 0,
       },
     };
 
@@ -963,6 +993,39 @@ export class UIManager {
     });
   }
 
+  /** Toggle export movement preview button label and mute export controls while previewing. */
+  setExportVideoPreviewActive(active) {
+    const btn = this.buttons.exportVideoPreview;
+    if (btn) {
+      btn.classList.toggle('is-preview-active', !!active);
+      const label = btn.querySelector('.export-video-preview__label');
+      if (label) {
+        label.textContent = active ? 'Stop Preview' : 'Preview Movement';
+      } else {
+        btn.textContent = active ? 'Stop Preview' : 'Preview Movement';
+      }
+    }
+    const movementSelectors = [
+      '[data-video-movement]',
+      '[data-video-duration]',
+      '[data-video-spins]',
+      '[data-video-subtle-spins]',
+      '[data-video-spin-direction]',
+    ];
+    document.querySelectorAll(movementSelectors.join(',')).forEach((el) => {
+      if ('disabled' in el) el.disabled = !!active;
+      el.classList.toggle('is-disabled', !!active);
+    });
+    this.setControlDisabled('exportZoomDistance', !!active);
+    this.setControlDisabled('exportTiltAngle', !!active);
+    this.setControlDisabled('exportMeshAnimationSelect', !!active);
+    this.setControlDisabled('exportMeshAnimationsEmbed', !!active);
+    if (this.buttons.exportVideo) {
+      this.buttons.exportVideo.disabled = !!active;
+      this.buttons.exportVideo.classList.toggle('is-disabled', !!active);
+    }
+  }
+
   /**
    * Unified method to set control disabled state
    * @param {string|string[]} inputIds - Single ID or array of IDs
@@ -1133,7 +1196,18 @@ export class UIManager {
 
     this.setControlDisabled('godRaysEnabled', !hdriActive);
     this.setControlDisabled(
-      ['godRaysColor', 'godRaysStrength', 'godRaysLength', 'godRaysSoftness', 'godRaysThreshold', 'godRaysQuality'],
+      [
+        'godRaysColor',
+        'godRaysLightScale',
+        'godRaysOpacity',
+        'godRaysDensity',
+        'godRaysDecay',
+        'godRaysWeight',
+        'godRaysExposure',
+        'godRaysClampMax',
+        'godRaysBlur',
+        'godRaysQuality',
+      ],
       !enabled,
     );
   }
@@ -1632,7 +1706,39 @@ export class UIManager {
 
   endLoadSpinner() {
     this._loadSpinnerDepth = Math.max(0, this._loadSpinnerDepth - 1);
+    if (this._loadSpinnerDepth === 0) {
+      this.endLoadSpinnerElapsed();
+    }
     this._syncLoadSpinner();
+  }
+
+  beginLoadSpinnerElapsed() {
+    this._loadSpinnerElapsedActive = true;
+    this._loadSpinnerElapsedStart = performance.now();
+    this._syncLoadSpinnerElapsed(0);
+  }
+
+  setLoadSpinnerElapsedFromStart() {
+    if (!this._loadSpinnerElapsedActive) return;
+    const elapsedSec = (performance.now() - this._loadSpinnerElapsedStart) / 1000;
+    this._syncLoadSpinnerElapsed(elapsedSec);
+  }
+
+  endLoadSpinnerElapsed() {
+    this._loadSpinnerElapsedActive = false;
+    this._loadSpinnerElapsedStart = 0;
+    const el = this.dom.loadSpinnerElapsed;
+    if (!el) return;
+    el.hidden = true;
+    el.textContent = '';
+  }
+
+  _syncLoadSpinnerElapsed(seconds) {
+    const el = this.dom.loadSpinnerElapsed;
+    if (!el || !this._loadSpinnerElapsedActive) return;
+    el.hidden = false;
+    const wholeSec = Math.max(0, Math.floor(seconds));
+    el.textContent = `Rendering ${wholeSec}s`;
   }
 
   _syncLoadSpinner() {
@@ -1689,6 +1795,72 @@ export class UIManager {
     this.dom.animationScrub.disabled = false;
     this.dom.animationSelect.disabled = false; // Enable dropdown when clips are available
     this.currentAnimationDuration = clips[0].seconds ?? 0;
+  }
+
+  setExportVideoAnimationClips(clips) {
+    const select = this.inputs.exportMeshAnimationSelect;
+    const wrap = this.inputs.exportMeshAnimationsSettings;
+    const clipWrap = this.inputs.exportMeshAnimationClipWrap;
+    const embedToggle = this.inputs.exportMeshAnimationsEmbed;
+    if (!select || !wrap) return;
+
+    select.innerHTML = '';
+    const hasClips = !!clips?.length;
+
+    if (!hasClips) {
+      wrap.hidden = true;
+      this.exportSettings.video.meshAnimationsInclude = false;
+      if (embedToggle) {
+        embedToggle.checked = false;
+        embedToggle.disabled = true;
+      }
+      if (clipWrap) clipWrap.hidden = true;
+      select.disabled = true;
+      return;
+    }
+
+    wrap.hidden = false;
+    if (embedToggle) embedToggle.disabled = false;
+
+    clips.forEach((clip, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = this.extractAnimationName(clip.name);
+      select.appendChild(option);
+    });
+
+    const savedIndex = Number(this.exportSettings.video.meshAnimationClipIndex);
+    const clipIndex = Number.isFinite(savedIndex)
+      ? Math.min(clips.length - 1, Math.max(0, savedIndex))
+      : 0;
+    this.exportSettings.video.meshAnimationClipIndex = clipIndex;
+    select.value = String(clipIndex);
+
+    this.syncExportMeshAnimationsUi();
+  }
+
+  syncExportMeshAnimationsUi() {
+    const video = this.exportSettings.video || {};
+    const select = this.inputs.exportMeshAnimationSelect;
+    const clipWrap = this.inputs.exportMeshAnimationClipWrap;
+    const embedToggle = this.inputs.exportMeshAnimationsEmbed;
+    const settingsWrap = this.inputs.exportMeshAnimationsSettings;
+    const hasClips = !!(select && select.options.length);
+    const embed = hasClips && !!video.meshAnimationsInclude;
+
+    if (settingsWrap) {
+      settingsWrap.hidden = !hasClips;
+    }
+    if (embedToggle) {
+      embedToggle.checked = embed;
+      embedToggle.disabled = !hasClips;
+    }
+    if (clipWrap) {
+      clipWrap.hidden = !embed;
+    }
+    if (select) {
+      select.disabled = !embed;
+    }
   }
 
   setAnimationPlaying(playing) {
@@ -1925,38 +2097,66 @@ export class UIManager {
       this.inputs.lensFlareColor.value = state.lensFlare.color;
     }
     if (this.inputs.lensFlareQuality) {
-      this.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'maximum';
+      this.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'high';
     }
     this.updateLensFlareControlsDisabled();
 
+    const godRays = normalizeGodRaysState(
+      state.godRays ?? {},
+      this.stateStore?.getDefaults?.().godRays,
+    );
     if (this.inputs.godRaysEnabled) {
-      this.inputs.godRaysEnabled.checked = !!state.godRays?.enabled;
+      this.inputs.godRaysEnabled.checked = !!godRays?.enabled;
     }
-    if (this.inputs.godRaysColor && state.godRays?.color) {
-      this.inputs.godRaysColor.value = state.godRays.color;
+    if (this.inputs.godRaysColor && godRays?.color) {
+      this.inputs.godRaysColor.value = godRays.color;
     }
-    if (this.inputs.godRaysStrength) {
-      const strength = Math.min(2, Math.max(0, state.godRays?.strength ?? 0.25));
-      this.inputs.godRaysStrength.value = strength;
-      this.updateValueLabel('godRaysStrength', strength, 'decimal');
+    if (this.inputs.godRaysLightScale) {
+      const lightScale = godRays?.lightScale ?? 0.4;
+      this.inputs.godRaysLightScale.value = lightScale;
+      this.updateValueLabel('godRaysLightScale', lightScale, 'decimal');
     }
-    if (this.inputs.godRaysLength) {
-      const length = Math.min(1, Math.max(0, state.godRays?.length ?? 0.45));
-      this.inputs.godRaysLength.value = length;
-      this.updateValueLabel('godRaysLength', length, 'decimal');
+    if (this.inputs.godRaysOpacity) {
+      const opacity = Math.min(1, Math.max(0, godRays?.opacity ?? 1));
+      this.inputs.godRaysOpacity.value = opacity;
+      this.updateValueLabel('godRaysOpacity', opacity, 'decimal');
     }
-    if (this.inputs.godRaysSoftness) {
-      const softness = Math.min(1, Math.max(0, state.godRays?.softness ?? 0.55));
-      this.inputs.godRaysSoftness.value = softness;
-      this.updateValueLabel('godRaysSoftness', softness, 'decimal');
+    if (this.inputs.godRaysDensity) {
+      const density = Math.min(1, Math.max(0, godRays?.density ?? 0.96));
+      this.inputs.godRaysDensity.value = density;
+      this.updateValueLabel('godRaysDensity', density, 'decimal');
     }
-    if (this.inputs.godRaysThreshold) {
-      const threshold = Math.min(1, Math.max(0, state.godRays?.threshold ?? 0.52));
-      this.inputs.godRaysThreshold.value = threshold;
-      this.updateValueLabel('godRaysThreshold', threshold, 'decimal');
+    if (this.inputs.godRaysDecay) {
+      const decay = Math.min(1, Math.max(0, godRays?.decay ?? 0.92));
+      this.inputs.godRaysDecay.value = decay;
+      this.updateValueLabel('godRaysDecay', decay, 'decimal');
+    }
+    if (this.inputs.godRaysWeight) {
+      const weight = Math.min(1, Math.max(0, godRays?.weight ?? 0.4));
+      this.inputs.godRaysWeight.value = weight;
+      this.updateValueLabel('godRaysWeight', weight, 'decimal');
+    }
+    if (this.inputs.godRaysExposure) {
+      const exposure = Math.min(2, Math.max(0, godRays?.exposure ?? 0.6));
+      this.inputs.godRaysExposure.value = exposure;
+      this.updateValueLabel('godRaysExposure', exposure, 'decimal');
+    }
+    if (this.inputs.godRaysClampMax) {
+      const clampMax = Math.min(1, Math.max(0, godRays?.clampMax ?? 1));
+      this.inputs.godRaysClampMax.value = clampMax;
+      this.updateValueLabel('godRaysClampMax', clampMax, 'decimal');
+    }
+    if (this.inputs.godRaysBlur) {
+      this.inputs.godRaysBlur.checked = godRays?.blur !== false;
+    }
+    if (this.inputs.lensFlareSpinDuringOrbit) {
+      const flare = state.lensFlare ?? {};
+      this.inputs.lensFlareSpinDuringOrbit.checked = !!(
+        flare.spinDuringOrbit ?? state.godRays?.spinDuringOrbit
+      );
     }
     if (this.inputs.godRaysQuality) {
-      this.inputs.godRaysQuality.value = state.godRays?.quality ?? 'medium';
+      this.inputs.godRaysQuality.value = godRays?.quality ?? 'medium';
     }
     this.updateGodRaysControlsDisabled();
 
@@ -2545,8 +2745,9 @@ export class UIManager {
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
     this.setBlockMuted('lens-flare', !lensEnabled || isoOn);
 
-    const volScatterOn = !!currentState.hdriEnabled && !!currentState.godRays?.enabled;
-    this.setBlockMuted('volumetric-scattering', !volScatterOn || isoOn);
+    // Mute sliders when god rays are off (see updateGodRaysControlsDisabled); keep the
+    // section chrome visible under HDRI so the reset control stays reachable after tweaks.
+    this.setBlockMuted('volumetric-scattering', !currentState.hdriEnabled || isoOn);
     
     // Lights block - only muted if lightsEnabled is false
     this.setBlockMuted('lights', !currentState.lightsEnabled);

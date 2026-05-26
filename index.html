@@ -360,6 +360,7 @@
             role="status"
           >
             <img src="./assets/images/favicon.svg" alt="" width="70" height="70" draggable="false" />
+            <span id="viewportLoadSpinnerElapsed" class="viewport-load-spinner__elapsed" hidden></span>
           </div>
           <div id="demoLogotype" class="demo-logotype"></div>
         </section>
@@ -3286,16 +3287,29 @@
                   </label>
                   <label class="select-line">
                     <span>Quality</span>
-                    <select id="lensFlareQuality">
-                      <option value="optimized">Optimized</option>
-                      <option value="maximum" selected>Ultra</option>
+                    <select id="lensFlareQuality" data-tooltip="Lowers ghost/dirt sample counts — same look, less GPU work (not feature cutoffs)">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high" selected>High</option>
+                      <option value="ultra">Ultra</option>
                     </select>
+                  </label>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Animate flare streaks with iTime — only while camera auto-orbit is on (off by default)"
+                  >
+                    <span>Spin during orbit</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lensFlareSpinDuringOrbit" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Animate lens flare streaks during camera auto-orbit</span>
+                    </label>
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="volumetric-scattering">
                   <div class="block-title has-toggle">
-                    <span data-tooltip="Sun volumetric light shafts — follows Lens Flare rotation and height">Volumetric Scattering</span>
+                    <span data-tooltip="pmndrs God Rays — follows Lens Flare rotation and height (virtual sun mesh)">God Rays</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Volumetric Scattering" data-tooltip="Reset Volumetric Scattering settings">
                         <i class="fa-solid fa-rotate-left"></i>
@@ -3317,55 +3331,105 @@
                       value="#ffe8c4"
                     />
                   </label>
-                  <label class="slider-line" data-tooltip="Overall brightness of the light shafts">
-                    <span>Strength</span>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Size of the virtual sun mesh that casts rays (1 = full default disc)"
+                  >
+                    <span>Sun size</span>
                     <input
-                      id="godRaysStrength"
+                      id="godRaysLightScale"
+                      type="range"
+                      min="0.08"
+                      max="1.25"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysLightScale">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Overall opacity of the god rays composite">
+                    <span>Opacity</span>
+                    <input
+                      id="godRaysOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysOpacity">1</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Ray density — higher reaches farther across the frame">
+                    <span>Density</span>
+                    <input
+                      id="godRaysDensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.96"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDensity">0.96</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Illumination decay along each ray sample (lower = faster falloff)">
+                    <span>Decay</span>
+                    <input
+                      id="godRaysDecay"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.92"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDecay">0.92</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Weight of each ray sample">
+                    <span>Weight</span>
+                    <input
+                      id="godRaysWeight"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysWeight">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Exposure multiplier after radial blur">
+                    <span>Exposure</span>
+                    <input
+                      id="godRaysExposure"
                       type="range"
                       min="0"
                       max="2"
-                      value="0.25"
+                      value="0.6"
                       step="0.01"
                     />
-                    <span class="value" data-output="godRaysStrength">0.25</span>
+                    <span class="value" data-output="godRaysExposure">0.6</span>
                   </label>
-                  <label class="slider-line" data-tooltip="How far rays extend across the frame">
-                    <span>Length</span>
+                  <label class="slider-line" data-tooltip="Maximum output intensity clamp">
+                    <span>Clamp Max</span>
                     <input
-                      id="godRaysLength"
+                      id="godRaysClampMax"
                       type="range"
                       min="0"
                       max="1"
-                      value="0.45"
+                      value="1"
                       step="0.01"
                     />
-                    <span class="value" data-output="godRaysLength">0.45</span>
+                    <span class="value" data-output="godRaysClampMax">1</span>
                   </label>
-                  <label class="slider-line" data-tooltip="Feathering and falloff — higher values give softer, more diffuse shafts">
-                    <span>Softness</span>
-                    <input
-                      id="godRaysSoftness"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.55"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysSoftness">0.55</span>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
+                  >
+                    <span>Blur mask</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="godRaysBlur" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Blur sun mask before radial blur</span>
+                    </label>
                   </label>
-                  <label class="slider-line" data-tooltip="Higher = only the brightest highlights scatter into shafts">
-                    <span>Threshold</span>
-                    <input
-                      id="godRaysThreshold"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.52"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysThreshold">0.52</span>
-                  </label>
-                  <label class="select-line" data-tooltip="More samples at higher settings — helps long stretched rays stay smooth">
+                  <label class="select-line" data-tooltip="Resolution scale and sample count preset">
                     <span>Quality</span>
                     <select id="godRaysQuality">
                       <option value="low">Low</option>
@@ -3772,19 +3836,98 @@
               <div class="panel-block">
                 <div class="block-title">Video</div>
                 <p class="export-format-sub">
-                  Turntable rotates the mesh in place. Orbit circles the camera around your orbit target for cinematic shots—one full lap over the chosen length (Spins = multiple laps).
+                  Combine turntable (mesh rotation), orbit (camera rotation), and dolly zoom for cinematic exports. Toggle any combination — use full or subtle spins for partial cinematics.
                 </p>
                 <p class="export-format-sub export-format-warning">
                   MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
                 </p>
                 <div class="export-controls">
                   <div class="export-option-group">
-                    <label class="export-label">Mode</label>
+                    <label class="export-label">Movement</label>
                     <div class="export-button-group">
-                      <button data-video-mode="turntable" class="export-option-btn active" data-tooltip="Rotate mesh 360° in place">TURNTABLE</button>
-                      <button data-video-mode="orbit" class="export-option-btn" data-tooltip="Camera orbits your current target; one full 360° per spin over export length">ORBIT</button>
+                      <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Rotate mesh 360° in place">TURNTABLE</button>
+                      <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Camera orbits your current target; one full 360° per spin over export length">ORBIT</button>
+                    </div>
+                    <div class="export-button-group" style="margin-top: 0.35rem;">
+                      <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Dolly the camera toward the orbit target over the export length">ZOOM IN</button>
+                      <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Dolly the camera away from the orbit target over the export length">ZOOM OUT</button>
+                    </div>
+                    <div class="export-button-group" style="margin-top: 0.35rem;">
+                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Roll the camera left (counter-clockwise) over the export length">TILT LEFT</button>
+                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Roll the camera right (clockwise) over the export length">TILT RIGHT</button>
                     </div>
                   </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Full Spins (360)</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below or zoom/tilt only">0</button>
+                      <button type="button" data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh rotation (turntable) or camera orbit">1</button>
+                      <button type="button" data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration">2</button>
+                    </div>
+                  </div>
+                  <div id="exportSubtleSpinsGroup" class="export-option-group">
+                    <label class="export-label">Subtle Spins</label>
+                    <div class="export-button-group">
+                      <button type="button" data-video-subtle-spins="45" class="export-option-btn" data-tooltip="Partial 45° rotation over the export length (when full spins is 0)">45°</button>
+                      <button type="button" data-video-subtle-spins="90" class="export-option-btn" data-tooltip="Partial 90° rotation over the export length (when full spins is 0)">90°</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">Spin Direction</label>
+                    <div class="export-button-group">
+                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Rotate in the default direction">FORWARD</button>
+                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Rotate in the opposite direction">REVERSE</button>
+                    </div>
+                  </div>
+                  <div id="exportMovementSliders" class="export-option-group">
+                    <label id="exportZoomDistanceSettings" class="slider-line">
+                      <span data-tooltip="How far the camera dollies in or out over the export length (scene units).">Zoom distance</span>
+                      <input
+                        id="exportZoomDistance"
+                        type="range"
+                        min="0.1"
+                        max="6"
+                        value="1.5"
+                        step="0.05"
+                      />
+                      <span class="value" data-output="exportZoomDistance">1.50m</span>
+                    </label>
+                    <label id="exportTiltAngleSettings" class="slider-line">
+                      <span data-tooltip="Roll angle applied over the export length (degrees).">Tilt angle</span>
+                      <input
+                        id="exportTiltAngle"
+                        type="range"
+                        min="0"
+                        max="180"
+                        value="15"
+                        step="1"
+                      />
+                      <span class="value" data-output="exportTiltAngle">15°</span>
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    id="exportVideoPreviewButton"
+                    class="accent-action-btn export-video-preview-btn"
+                    data-tooltip="Preview the selected movements in the viewport without rendering frames"
+                  >
+                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                    <span class="export-video-preview__label">Preview Movement</span>
+                  </button>
+                  <div id="exportMeshAnimationsSettings" class="export-option-group" hidden>
+                    <label class="slider-line">
+                      <span data-tooltip="Play a GLB animation clip during export and preview">Embed Animations</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="exportMeshAnimationsEmbed" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Embed GLB animations in video export</span>
+                      </label>
+                    </label>
+                    <div id="exportMeshAnimationClipWrap" class="select-line" hidden>
+                      <select id="exportMeshAnimationSelect" data-tooltip="Which GLB animation clip to play during export"></select>
+                    </div>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
                   <div class="export-option-group">
                     <label class="export-label">Format</label>
                     <div class="export-button-group">
@@ -3820,13 +3963,6 @@
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Spins</label>
-                    <div class="export-button-group">
-                      <button data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh rotation (turntable) or camera orbit">1</button>
-                      <button data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration">2</button>
-                    </div>
-                  </div>
-                  <div class="export-option-group">
                     <label class="export-label">FPS</label>
                     <div class="export-button-group export-button-group--triple">
                       <button data-video-fps="24" class="export-option-btn active" data-tooltip="Cinematic motion">24</button>
@@ -3842,7 +3978,7 @@
                       <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
                     </div>
                   </div>
-                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence—turntable or orbit camera">
+                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence with selected camera movements">
                     <i class="fa-solid fa-film"></i>
                     Export Video
                   </button>
@@ -4443,6 +4579,45 @@
                     <a href="./credits/" class="about-highlight" style="text-decoration: underline; text-underline-offset: 0.15em;">full credits page</a>
                     — including Three.js, GSAP, Lottie, N8AO, Font Awesome, JSZip, ImageTracer.js, and more.
                   </p>
+                  <p><strong>Shaders &amp; effects (highlights):</strong></p>
+                  <ul>
+                    <li>
+                      •
+                      <a
+                        href="https://post-processing.tresjs.org/guide/pmndrs/god-rays.html"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="about-highlight"
+                        style="text-decoration: underline; text-underline-offset: 0.15em;"
+                        >pmndrs postprocessing — God Rays</a
+                      >
+                      — volumetric light shafts in Orby
+                    </li>
+                    <li>
+                      •
+                      <a
+                        href="https://github.com/ektogamat/lensflare-threejs-vanilla"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="about-highlight"
+                        style="text-decoration: underline; text-underline-offset: 0.15em;"
+                        >Anderson Mancini (ektogamat)</a
+                      >
+                      — lens flare
+                    </li>
+                    <li>
+                      •
+                      <a
+                        href="https://gist.github.com/hmans/550390e62cd1a9678bfd2cda7b612985"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="about-highlight"
+                        style="text-decoration: underline; text-underline-offset: 0.15em;"
+                        >Hendrik Mans</a
+                      >
+                      — lens dirt shader inspiration
+                    </li>
+                  </ul>
                   <p>
                     <strong>Note:</strong> HDRI environment maps from <a href="https://www.maxroz.com/hdri" target="_blank" rel="noreferrer" class="about-highlight">Maxime Roz</a> are <strong>not</strong> covered by Orby’s MIT License — see <a href="./credits/#licensed-assets" class="about-highlight">Credits → Licensed assets</a> or <a href="./ASSETS_LICENSE.md">ASSETS_LICENSE.md</a>.
                   </p>

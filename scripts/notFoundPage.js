@@ -80,7 +80,7 @@ const NOT_FOUND_PRESET = {
     rotation: 0,
     height: 15,
     color: '#d28756',
-    quality: 'maximum',
+    quality: 'ultra',
     anamorphicBloom: {
       enabled: false,
       quality: 'medium',

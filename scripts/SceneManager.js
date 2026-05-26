@@ -50,6 +50,7 @@ import {
 import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
+import { ExportMovementPreview } from './render/ExportMovementPreview.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
@@ -209,7 +210,10 @@ export class SceneManager {
     this.modelLifecycle = new ModelLifecycleManager(this);
     this.svgGlbExporter = new SvgGlbExporter();
     this.animationController = new AnimationController({
-      onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
+      onClipsChanged: (clips) => {
+        this.ui.setAnimationClips(clips);
+        this.ui.setExportVideoAnimationClips(clips);
+      },
       onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
       onTimeUpdate: (current, duration) =>
         this.ui.updateAnimationTime(current, duration),
@@ -554,6 +558,7 @@ export class SceneManager {
       camera: this.camera,
       scene: this.scene,
       stateStore: this.stateStore,
+      getCameraAutoOrbit: () => this.cameraAutoOrbit ?? 'off',
     });
     this.lensFlareController.init(initialState, this.hdriEnabled);
     this.lensFlareController.setTimeAnimationPaused(this.panelsShelfScrolling);
@@ -669,7 +674,10 @@ export class SceneManager {
     this.ui?.updateTitle?.('Orby');
     this.ui?.updateTopBarDetail?.('');
     this.animationController = new AnimationController({
-      onClipsChanged: (clips) => this.ui.setAnimationClips(clips),
+      onClipsChanged: (clips) => {
+        this.ui.setAnimationClips(clips);
+        this.ui.setExportVideoAnimationClips(clips);
+      },
       onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
       onTimeUpdate: (current, duration) =>
         this.ui.updateAnimationTime(current, duration),
@@ -932,7 +940,16 @@ export class SceneManager {
           this.setCameraAutoOrbit(this.cameraAutoOrbit);
         }
       },
-      beginExportAnimationDrive: () => this.animationController?.beginExportDrive?.(),
+      beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
+      applyExportCameraDriveFrame: (t, options) =>
+        this.cameraController?.applyExportCameraDriveFrame?.(t, options),
+      endExportCameraDrive: () => {
+        this.cameraController?.endExportCameraDrive?.();
+        if (this.cameraAutoOrbit !== 'off') {
+          this.setCameraAutoOrbit(this.cameraAutoOrbit);
+        }
+      },
+      beginExportAnimationDrive: (opts) => this.animationController?.beginExportDrive?.(opts),
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
       endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
@@ -940,7 +957,32 @@ export class SceneManager {
       getCurrentFile: () => this.currentFile,
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
       getHdriBackgroundEnabled: () => this.hdriBackgroundEnabled,
+      getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
       handleResize: () => this.handleResize(),
+    });
+
+    this.exportMovementPreview = new ExportMovementPreview({
+      stateStore: this.stateStore,
+      ui: this.ui,
+      setRotationY: (value) => this.setRotationY(value),
+      getCurrentModel: () => this.currentModel,
+      getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
+      beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
+      applyExportCameraDriveFrame: (t, options) =>
+        this.cameraController?.applyExportCameraDriveFrame?.(t, options),
+      endExportCameraDrive: () => {
+        this.cameraController?.endExportCameraDrive?.();
+        if (this.cameraAutoOrbit !== 'off') {
+          this.setCameraAutoOrbit(this.cameraAutoOrbit);
+        }
+      },
+      beginExportAnimationDrive: (opts) => this.animationController?.beginExportDrive?.(opts),
+      applyExportAnimationDriveFrame: (frameIndex, fps) =>
+        this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
+      endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
+      onActiveChange: (active) => {
+        this.ui?.setExportVideoPreviewActive?.(active);
+      },
     });
   }
 
@@ -1578,21 +1620,60 @@ export class SceneManager {
     this.godRaysController?.setColor(value);
   }
 
+  setGodRaysLightScale(value) {
+    this.godRaysController?.setLightScale(value);
+  }
+
+  setGodRaysOpacity(value) {
+    this.godRaysController?.setOpacity(value);
+  }
+
+  setGodRaysDensity(value) {
+    this.godRaysController?.setDensity(value);
+  }
+
+  setGodRaysDecay(value) {
+    this.godRaysController?.setDecay(value);
+  }
+
+  setGodRaysWeight(value) {
+    this.godRaysController?.setWeight(value);
+  }
+
+  setGodRaysExposure(value) {
+    this.godRaysController?.setExposure(value);
+  }
+
+  setGodRaysClampMax(value) {
+    this.godRaysController?.setClampMax(value);
+  }
+
+  setGodRaysBlur(enabled) {
+    this.godRaysController?.setBlur(enabled);
+  }
+
+  setLensFlareSpinDuringOrbit(enabled) {
+    this.stateStore.set('lensFlare.spinDuringOrbit', !!enabled);
+    this.lensFlareController?.setSpinDuringOrbit(enabled);
+  }
+
+  /** @deprecated Legacy presets — maps to opacity. */
   setGodRaysStrength(value) {
     this.godRaysController?.setStrength(value);
   }
 
+  /** @deprecated Legacy presets — maps to density. */
   setGodRaysLength(value) {
     this.godRaysController?.setLength(value);
   }
 
+  /** @deprecated Legacy presets — maps to decay. */
   setGodRaysSoftness(value) {
     this.godRaysController?.setSoftness(value);
   }
 
-  setGodRaysThreshold(value) {
-    this.godRaysController?.setThreshold(value);
-  }
+  /** @deprecated No-op (pmndrs has no threshold). */
+  setGodRaysThreshold() {}
 
   setGodRaysQuality(value) {
     this.godRaysController?.setQuality(value);
@@ -1835,6 +1916,7 @@ export class SceneManager {
   setCameraAutoOrbit(mode) {
     this.cameraAutoOrbit = mode ?? 'off';
     this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
+    this.lensFlareController?.refreshProceduralSpin?.();
   }
 
   setCameraHandheld(mode) {
@@ -3444,11 +3526,38 @@ export class SceneManager {
   }
 
   async exportVideo(settings = {}) {
+    if (this.exportMovementPreview?.isActive?.()) {
+      this.exportMovementPreview.stop({ silent: true });
+    }
     if (settings?.format === 'png' && isFisheyeEnabledInState(this.stateStore)) {
       showFisheyePngExportBlockedAlert(this.ui);
       return;
     }
-    await this.videoExporter?.exportVideo(settings);
+    await this.videoExporter?.exportVideo(this._videoExportSettingsFromUi(settings));
+  }
+
+  toggleExportVideoPreview(settings = {}) {
+    if (this.exportMovementPreview?.isActive?.()) {
+      this.exportMovementPreview.stop();
+      return;
+    }
+    this.exportMovementPreview?.start(this._videoExportSettingsFromUi(settings));
+  }
+
+  _videoExportSettingsFromUi(settings = {}) {
+    const video = { ...(this.ui?.exportSettings?.video || {}), ...settings };
+    const embedToggle = this.ui?.inputs?.exportMeshAnimationsEmbed;
+    const clipSelect = this.ui?.inputs?.exportMeshAnimationSelect;
+    if (embedToggle) {
+      video.meshAnimationsInclude = !!embedToggle.checked;
+    }
+    if (clipSelect && clipSelect.options.length) {
+      const index = parseInt(clipSelect.value, 10);
+      if (Number.isFinite(index)) {
+        video.meshAnimationClipIndex = index;
+      }
+    }
+    return video;
   }
 }
 

@@ -1,19 +1,64 @@
 import * as THREE from 'three';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
-import { GodRaysShader } from '../GodRaysEffect.js';
+import { RGBADepthPacking } from 'three';
+import { Pass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js';
+import {
+  BlendFunction,
+  EffectPass,
+  GodRaysEffect,
+  KernelSize,
+} from 'postprocessing';
+import { GOD_RAYS_LIGHT_RADIUS } from '../GodRaysEffect.js';
 
 /**
- * Volumetric scattering pass with a scene depth prepass for per-pixel sun occlusion.
+ * pmndrs/postprocessing god rays for three.js EffectComposer.
+ * @see https://post-processing.tresjs.org/guide/pmndrs/god-rays
  */
-export class MeshglGodRaysPass extends ShaderPass {
+export class MeshglGodRaysPass extends Pass {
   /**
    * @param {import('three').Scene} scene
    * @param {import('three').Camera} camera
    */
   constructor(scene, camera) {
-    super(GodRaysShader);
+    super();
     this.scene = scene;
     this.camera = camera;
+    this.needsSwap = true;
+
+    /** @type {import('./MeshglBokehPass.js').MeshglBokehPass | null} */
+    this.bokehPass = null;
+
+    this.lightSource = new THREE.Mesh(
+      new THREE.SphereGeometry(GOD_RAYS_LIGHT_RADIUS, 24, 16),
+      new THREE.MeshBasicMaterial({
+        color: '#ffffff',
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    this.lightSource.name = 'GodRaysLightSource';
+    this.lightSource.frustumCulled = false;
+    this.lightSource.userData.lensflare = 'no-occlusion';
+    this.lightSource.visible = false;
+    scene.add(this.lightSource);
+
+    this.godRaysEffect = new GodRaysEffect(camera, this.lightSource, {
+      blendFunction: BlendFunction.SCREEN,
+      samples: 60,
+      density: 0.96,
+      decay: 0.92,
+      weight: 0.4,
+      exposure: 0.6,
+      clampMax: 1.0,
+      resolutionScale: 0.5,
+      blur: true,
+      kernelSize: KernelSize.SMALL,
+    });
+
+    this.effectPass = new EffectPass(camera, this.godRaysEffect);
+    this.effectPass.mainScene = scene;
+    this.effectPass.mainCamera = camera;
+    this.effectPass.needsSwap = true;
 
     this.renderTargetDepth = new THREE.WebGLRenderTarget(1, 1, {
       minFilter: THREE.NearestFilter,
@@ -21,21 +66,30 @@ export class MeshglGodRaysPass extends ShaderPass {
       type: THREE.HalfFloatType,
     });
     this.renderTargetDepth.texture.name = 'GodRaysPass.depth';
-
     this.materialDepth = new THREE.MeshDepthMaterial();
     this.materialDepth.depthPacking = THREE.RGBADepthPacking;
     this.materialDepth.blending = THREE.NoBlending;
 
-    this.uniforms.tDepth.value = this.renderTargetDepth.texture;
     this._oldClearColor = new THREE.Color();
     /** @type {import('three').Object3D[]} */
     this._depthHideStack = [];
+    this._initialized = false;
+    this._lastSize = { w: 0, h: 0 };
   }
 
   setSize(width, height) {
-    if (this.renderTargetDepth) {
-      this.renderTargetDepth.setSize(width, height);
-    }
+    this._lastSize.w = width;
+    this._lastSize.h = height;
+    this.effectPass.setSize(width, height);
+    this.renderTargetDepth.setSize(width, height);
+  }
+
+  _ensureInitialized(renderer, readBuffer) {
+    if (this._initialized) return;
+    const frameBufferType = readBuffer?.texture?.type;
+    this.effectPass.initialize(renderer, false, frameBufferType);
+    this.effectPass.setSize(this._lastSize.w || 1, this._lastSize.h || 1);
+    this._initialized = true;
   }
 
   _beginDepthExclusions() {
@@ -56,11 +110,7 @@ export class MeshglGodRaysPass extends ShaderPass {
     this._depthHideStack.length = 0;
   }
 
-  render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
-    const w = readBuffer?.width ?? 1;
-    const h = readBuffer?.height ?? 1;
-    this.renderTargetDepth.setSize(w, h);
-
+  _renderDepthPrepass(renderer) {
     const oldOverride = this.scene.overrideMaterial;
     this.scene.overrideMaterial = this.materialDepth;
 
@@ -83,24 +133,51 @@ export class MeshglGodRaysPass extends ShaderPass {
       renderer.setClearAlpha(oldClearAlpha);
       renderer.autoClear = oldAutoClear;
     }
+  }
 
-    this.uniforms.tDiffuse.value = readBuffer.texture;
-    this.uniforms.tDepth.value = this.renderTargetDepth.texture;
-    this.uniforms.uProjectionMatrix.value.copy(this.camera.projectionMatrix);
-    this.uniforms.uInverseProjectionMatrix.value.copy(
-      this.camera.projectionMatrixInverse,
+  _syncDepthTexture(renderer) {
+    const bokehDepth =
+      this.bokehPass?.enabled && this.bokehPass.renderTargetDepth?.texture
+        ? this.bokehPass.renderTargetDepth.texture
+        : null;
+
+    if (bokehDepth) {
+      this.godRaysEffect.setDepthTexture(bokehDepth, RGBADepthPacking);
+      return;
+    }
+
+    this._renderDepthPrepass(renderer);
+    this.godRaysEffect.setDepthTexture(
+      this.renderTargetDepth.texture,
+      RGBADepthPacking,
     );
-    this.uniforms.uViewMatrix.value.copy(this.camera.matrixWorldInverse);
-    this.uniforms.uNearClip.value = this.camera.near;
-    this.uniforms.uFarClip.value = this.camera.far;
+  }
 
-    super.render(renderer, writeBuffer, readBuffer, deltaTime, maskActive);
+  /** Rebuild shader after samples / uniforms change. */
+  recompile() {
+    this.effectPass?.recompile?.();
+  }
+
+  render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+    this._ensureInitialized(renderer, readBuffer);
+    this._syncDepthTexture(renderer);
+
+    this.lightSource.visible = true;
+    try {
+      this.effectPass.renderToScreen = false;
+      this.effectPass.render(renderer, readBuffer, writeBuffer, deltaTime, maskActive);
+    } finally {
+      this.lightSource.visible = false;
+    }
   }
 
   dispose() {
+    this.scene?.remove(this.lightSource);
+    this.lightSource.geometry?.dispose();
+    this.lightSource.material?.dispose();
     this.renderTargetDepth?.dispose();
     this.materialDepth?.dispose();
-    this.material?.dispose();
-    this.fsQuad?.dispose?.();
+    this.effectPass?.dispose();
+    this.godRaysEffect?.dispose();
   }
 }

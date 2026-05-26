@@ -212,7 +212,7 @@ export class StateStore {
         rotation: 0,
         height: 15,
         color: '#d28756',
-        quality: 'maximum',
+        quality: 'high',
         haloIntensity: 1.0,
         streakLength: 5.0,
         sunDiscScale: 1.5,
@@ -221,6 +221,8 @@ export class StateStore {
         discGlowIntensity: 0,
         discGlowSize: 5,
         discGlowColor: '#ff8844',
+        /** Procedural streak spin (iTime) — only while camera auto-orbit is active. */
+        spinDuringOrbit: false,
         anamorphicBloom: {
           enabled: false,
           quality: 'medium',
@@ -233,14 +235,18 @@ export class StateStore {
           streakTint: '#7ec8ff',
         },
       },
-      /** Screen-space light shafts — shares sun direction with lens flare (rotation/height). */
+      /** pmndrs GodRays — sun direction follows lens flare (rotation/height). */
       godRays: {
         enabled: false,
         color: '#ffe8c4',
-        strength: 0.25,
-        length: 0.45,
-        softness: 0.55,
-        threshold: 0.52,
+        lightScale: 0.4,
+        opacity: 1,
+        density: 0.96,
+        decay: 0.92,
+        weight: 0.4,
+        exposure: 0.6,
+        clampMax: 1,
+        blur: true,
         quality: 'medium',
       },
       dof: {

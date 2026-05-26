@@ -3,6 +3,7 @@
  * Manages HDRI, lights, ground, podium, grid, and lens flare
  */
 import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from '../config/hdri.js';
+import { normalizeGodRaysState } from '../GodRaysEffect.js';
 import {
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
@@ -161,7 +162,10 @@ export class StudioControls {
       this.eventBus.emit('studio:lens-flare-quality', value);
     });
 
-    // Volumetric Scattering (sun direction follows lens flare rotation/height)
+    // God rays (pmndrs) — sun direction follows lens flare rotation/height
+    const touchGodRaysReset = () => {
+      this.eventBus.emit('ui:reset-section-touched', 'volumetric-scattering');
+    };
     this.ui.inputs.godRaysEnabled?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('godRays.enabled', enabled);
@@ -170,34 +174,72 @@ export class StudioControls {
       this.ui.applyBlockStates?.(this.stateStore.getState());
     });
     this.helpers.bindColorInput('godRaysColor', 'godRays.color', 'studio:god-rays-color');
-    this.ui.inputs.godRaysStrength?.addEventListener('input', (event) => {
+    this.ui.inputs.godRaysColor?.addEventListener('input', touchGodRaysReset);
+    this.ui.inputs.godRaysLightScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('godRaysStrength', value, 'decimal');
-      this.stateStore.set('godRays.strength', value);
-      this.eventBus.emit('studio:god-rays-strength', value);
+      this.helpers.updateValueLabel('godRaysLightScale', value, 'decimal');
+      this.stateStore.set('godRays.lightScale', value);
+      this.eventBus.emit('studio:god-rays-light-scale', value);
+      touchGodRaysReset();
     });
-    this.ui.inputs.godRaysLength?.addEventListener('input', (event) => {
+    this.ui.inputs.godRaysOpacity?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('godRaysLength', value, 'decimal');
-      this.stateStore.set('godRays.length', value);
-      this.eventBus.emit('studio:god-rays-length', value);
+      this.helpers.updateValueLabel('godRaysOpacity', value, 'decimal');
+      this.stateStore.set('godRays.opacity', value);
+      this.eventBus.emit('studio:god-rays-opacity', value);
+      touchGodRaysReset();
     });
-    this.ui.inputs.godRaysSoftness?.addEventListener('input', (event) => {
+    this.ui.inputs.godRaysDensity?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('godRaysSoftness', value, 'decimal');
-      this.stateStore.set('godRays.softness', value);
-      this.eventBus.emit('studio:god-rays-softness', value);
+      this.helpers.updateValueLabel('godRaysDensity', value, 'decimal');
+      this.stateStore.set('godRays.density', value);
+      this.eventBus.emit('studio:god-rays-density', value);
+      touchGodRaysReset();
     });
-    this.ui.inputs.godRaysThreshold?.addEventListener('input', (event) => {
+    this.ui.inputs.godRaysDecay?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('godRaysThreshold', value, 'decimal');
-      this.stateStore.set('godRays.threshold', value);
-      this.eventBus.emit('studio:god-rays-threshold', value);
+      this.helpers.updateValueLabel('godRaysDecay', value, 'decimal');
+      this.stateStore.set('godRays.decay', value);
+      this.eventBus.emit('studio:god-rays-decay', value);
+      touchGodRaysReset();
+    });
+    this.ui.inputs.godRaysWeight?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysWeight', value, 'decimal');
+      this.stateStore.set('godRays.weight', value);
+      this.eventBus.emit('studio:god-rays-weight', value);
+      touchGodRaysReset();
+    });
+    this.ui.inputs.godRaysExposure?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysExposure', value, 'decimal');
+      this.stateStore.set('godRays.exposure', value);
+      this.eventBus.emit('studio:god-rays-exposure', value);
+      touchGodRaysReset();
+    });
+    this.ui.inputs.godRaysClampMax?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysClampMax', value, 'decimal');
+      this.stateStore.set('godRays.clampMax', value);
+      this.eventBus.emit('studio:god-rays-clamp-max', value);
+      touchGodRaysReset();
+    });
+    this.ui.inputs.godRaysBlur?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('godRays.blur', enabled);
+      this.eventBus.emit('studio:god-rays-blur', enabled);
+      touchGodRaysReset();
+    });
+    this.ui.inputs.lensFlareSpinDuringOrbit?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('lensFlare.spinDuringOrbit', enabled);
+      this.eventBus.emit('studio:lens-flare-spin-during-orbit', enabled);
     });
     this.ui.inputs.godRaysQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
       this.stateStore.set('godRays.quality', value);
       this.eventBus.emit('studio:god-rays-quality', value);
+      touchGodRaysReset();
     });
 
     // Ground/Podium
@@ -708,38 +750,66 @@ export class StudioControls {
       this.ui.inputs.lensFlareColor.value = state.lensFlare.color;
     }
     if (this.ui.inputs.lensFlareQuality) {
-      this.ui.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'maximum';
+      this.ui.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'high';
+    }
+    if (this.ui.inputs.lensFlareSpinDuringOrbit) {
+      const flare = state.lensFlare ?? {};
+      this.ui.inputs.lensFlareSpinDuringOrbit.checked = !!(
+        flare.spinDuringOrbit ?? state.godRays?.spinDuringOrbit
+      );
     }
     this.ui.updateLensFlareControlsDisabled();
 
+    const godRays = normalizeGodRaysState(
+      state.godRays ?? {},
+      this.stateStore.getDefaults().godRays,
+    );
     if (this.ui.inputs.godRaysEnabled) {
-      this.ui.inputs.godRaysEnabled.checked = !!state.godRays?.enabled;
+      this.ui.inputs.godRaysEnabled.checked = !!godRays.enabled;
     }
-    if (this.ui.inputs.godRaysColor && state.godRays?.color) {
-      this.ui.inputs.godRaysColor.value = state.godRays.color;
+    if (this.ui.inputs.godRaysColor && godRays.color) {
+      this.ui.inputs.godRaysColor.value = godRays.color;
     }
-    if (this.ui.inputs.godRaysStrength) {
-      const strength = Math.min(2, Math.max(0, state.godRays?.strength ?? 0.25));
-      this.ui.inputs.godRaysStrength.value = strength;
-      this.helpers.updateValueLabel('godRaysStrength', strength, 'decimal');
+    if (this.ui.inputs.godRaysLightScale) {
+      const lightScale = godRays.lightScale;
+      this.ui.inputs.godRaysLightScale.value = lightScale;
+      this.helpers.updateValueLabel('godRaysLightScale', lightScale, 'decimal');
     }
-    if (this.ui.inputs.godRaysLength) {
-      const length = Math.min(1, Math.max(0, state.godRays?.length ?? 0.45));
-      this.ui.inputs.godRaysLength.value = length;
-      this.helpers.updateValueLabel('godRaysLength', length, 'decimal');
+    if (this.ui.inputs.godRaysOpacity) {
+      const opacity = godRays.opacity;
+      this.ui.inputs.godRaysOpacity.value = opacity;
+      this.helpers.updateValueLabel('godRaysOpacity', opacity, 'decimal');
     }
-    if (this.ui.inputs.godRaysSoftness) {
-      const softness = Math.min(1, Math.max(0, state.godRays?.softness ?? 0.55));
-      this.ui.inputs.godRaysSoftness.value = softness;
-      this.helpers.updateValueLabel('godRaysSoftness', softness, 'decimal');
+    if (this.ui.inputs.godRaysDensity) {
+      const density = godRays.density;
+      this.ui.inputs.godRaysDensity.value = density;
+      this.helpers.updateValueLabel('godRaysDensity', density, 'decimal');
     }
-    if (this.ui.inputs.godRaysThreshold) {
-      const threshold = Math.min(1, Math.max(0, state.godRays?.threshold ?? 0.52));
-      this.ui.inputs.godRaysThreshold.value = threshold;
-      this.helpers.updateValueLabel('godRaysThreshold', threshold, 'decimal');
+    if (this.ui.inputs.godRaysDecay) {
+      const decay = godRays.decay;
+      this.ui.inputs.godRaysDecay.value = decay;
+      this.helpers.updateValueLabel('godRaysDecay', decay, 'decimal');
+    }
+    if (this.ui.inputs.godRaysWeight) {
+      const weight = godRays.weight;
+      this.ui.inputs.godRaysWeight.value = weight;
+      this.helpers.updateValueLabel('godRaysWeight', weight, 'decimal');
+    }
+    if (this.ui.inputs.godRaysExposure) {
+      const exposure = godRays.exposure;
+      this.ui.inputs.godRaysExposure.value = exposure;
+      this.helpers.updateValueLabel('godRaysExposure', exposure, 'decimal');
+    }
+    if (this.ui.inputs.godRaysClampMax) {
+      const clampMax = godRays.clampMax;
+      this.ui.inputs.godRaysClampMax.value = clampMax;
+      this.helpers.updateValueLabel('godRaysClampMax', clampMax, 'decimal');
+    }
+    if (this.ui.inputs.godRaysBlur) {
+      this.ui.inputs.godRaysBlur.checked = godRays.blur !== false;
     }
     if (this.ui.inputs.godRaysQuality) {
-      this.ui.inputs.godRaysQuality.value = state.godRays?.quality ?? 'medium';
+      this.ui.inputs.godRaysQuality.value = godRays.quality ?? 'medium';
     }
     this.ui.updateGodRaysControlsDisabled();
     

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { resolveLensFlareQualityTier } from './constants.js';
 
 const yAxis = new THREE.Vector3(0, 1, 0);
 const DEFAULT_DIRT_TEXTURE =
@@ -43,6 +44,9 @@ const fragmentShader = `
     uniform vec3 uDiscGlowColor;
     uniform bool uOccluded;
     uniform bool uInView;
+    uniform float uGhostLoopCount;
+    uniform float uDirtGhostSamples;
+    uniform float uLodDistance;
     varying vec2 vUv;
 
     vec2 vTexCoord;
@@ -200,7 +204,7 @@ const fragmentShader = `
             prot = uv - pos;
         }
 
-        c += drawflare(prot, (anamorphic ? flareSize * 10. : flareSize), 0.1, iTime, 1);
+        c += drawflare(prot, (anamorphic ? flareSize * 10. : flareSize), 0.1, animated ? iTime : 0.0, 1);
         
         c.r+=f1+f2+f4+f5+f6; c.g+=f1+f22+f42+f52+f62; c.b+=f1+f23+f43+f53+f63;
         c = c*1.3 * vec3(length(uvd)+.09);
@@ -344,15 +348,19 @@ const fragmentShader = `
         vec3 distortion = vec3(-(texelSize.x * uDistortion), 0.2, texelSize.x * uDistortion);
         vec4 c = vec4(0.0);
         for (int i = 0; i < 8; i++) {
+            if (float(i) >= uDirtGhostSamples) break;
             vec2 offset = texCoord + (ghostVec * float(i));
             float distFromCenter = length(vec2(0.5) - offset);
             if(distFromCenter > 0.7 && i > 4) continue;
             
             c += textureDistorted(lensDirtTexture, offset, ghostDir * uDispersal, distortion) * pow(max(0.0, 1.0 - (distFromCenter / length(vec2(0.5)))), 10.0);
         }                       
-        vec2 haloOffset = texCoord + haloVec; 
-        return (c * getLensColor((length(vec2(0.5) - aspectTexCoord) / length(vec2(haloScale))))) + 
-            (textureDistorted(lensDirtTexture, haloOffset, ghostDir * uDispersal, distortion) * pow(max(0.0, 1.0 - (length(vec2(0.5) - haloOffset) / length(vec2(0.5)))), 10.0));
+        vec2 haloOffset = texCoord + haloVec;
+        vec4 haloRing =
+            textureDistorted(lensDirtTexture, haloOffset, ghostDir * uDispersal, distortion)
+            * pow(max(0.0, 1.0 - (length(vec2(0.5) - haloOffset) / length(vec2(0.5)))), 10.0);
+        vec4 dirtGhosts = c * getLensColor((length(vec2(0.5) - aspectTexCoord) / length(vec2(haloScale))));
+        return haloRing + dirtGhosts;
     } 
 
     vec3 drawSunDisc(vec2 uv, vec2 pos) {
@@ -432,35 +440,12 @@ const fragmentShader = `
         if (!uOccluded && opacity >= 0.01) {
         // Distance-based LOD: skip expensive features when far from lens position
         float distFromLens = length(myUV - mouse);
-        bool useHighQuality = distFromLens < 1.5; // Only use expensive features near the lens
+        bool useHighQuality = distFromLens < uLodDistance;
         
         finalColor = LensFlare(myUV, mouse) * 20.0 * colorGain / 256.;
 
-        // Only compute expensive features when close to lens position or when explicitly enabled
-        if(aditionalStreaks && useHighQuality){
-            vec3 circColor = vec3(0.9, 0.2, 0.1);
-            vec3 circColor2 = vec3(0.3, 0.1, 0.9);
-
-            for(float i=0.;i<10.;i++){
-            finalColor += circle(myUV, pow(rnd(i*2000.)*2.8, .1)+1.41, 0.0, circColor+i , circColor2+i, rnd(i*20.)*3.+0.2-.5, mouse);
-            }
-        }
-
-        if(secondaryGhosts && useHighQuality){
-            vec3 altGhosts = vec3(0.1);
-            altGhosts += renderhex(myUV, -mouse*0.25, ghostScale * 1.4, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, mouse*0.25, ghostScale * 0.5, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, mouse*0.1, ghostScale * 1.6,vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, mouse*1.8, ghostScale * 2.0, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, mouse*1.25, ghostScale * 0.8, vec3(0.03)* colorGain);
-            altGhosts += renderhex(myUV, -mouse*1.25, ghostScale * 5.0, vec3(0.03)* colorGain);
-            
-            altGhosts += fpow(1.0 - abs(distance(mouse*0.8,myUV) - 0.5),0.985)*vec3(.1);
-            altGhosts += fpow(1.0 - abs(distance(mouse*0.4,myUV) - 0.2),0.994)*vec3(.05);
-            finalColor += altGhosts;
-        }
-        
-        // starBurst is the most expensive feature - only compute when close to lens
+        // starBurst (dirt ghosts + rainbow halo) before procedural ghosts so hex /
+        // circle ghosts are not covered by the halo ring (visible on Low quality).
         if(starBurst && useHighQuality){
             vTexCoord = myUV + 0.5;
             vec4 lensMod = getLensDirt(myUV);
@@ -484,6 +469,30 @@ const fragmentShader = `
             startBurst = mix(vec3(burstLuma), startBurst, satBoost);
             vec3 burst = clamp((lensMod.rgb * startBurst), 0.0, 1.0);
             finalColor += burst * uHaloIntensity;
+        }
+
+        if(aditionalStreaks && useHighQuality){
+            vec3 circColor = vec3(0.9, 0.2, 0.1);
+            vec3 circColor2 = vec3(0.3, 0.1, 0.9);
+
+            for(float i=0.;i<10.;i++){
+            if (i >= uGhostLoopCount) break;
+            finalColor += circle(myUV, pow(rnd(i*2000.)*2.8, .1)+1.41, 0.0, circColor+i , circColor2+i, rnd(i*20.)*3.+0.2-.5, mouse);
+            }
+        }
+
+        if(secondaryGhosts && useHighQuality){
+            vec3 altGhosts = vec3(0.1);
+            altGhosts += renderhex(myUV, -mouse*0.25, ghostScale * 1.4, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*0.25, ghostScale * 0.5, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*0.1, ghostScale * 1.6,vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*1.8, ghostScale * 2.0, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, mouse*1.25, ghostScale * 0.8, vec3(0.03)* colorGain);
+            altGhosts += renderhex(myUV, -mouse*1.25, ghostScale * 5.0, vec3(0.03)* colorGain);
+            
+            altGhosts += fpow(1.0 - abs(distance(mouse*0.8,myUV) - 0.5),0.985)*vec3(.1);
+            altGhosts += fpow(1.0 - abs(distance(mouse*0.4,myUV) - 0.2),0.994)*vec3(.05);
+            finalColor += altGhosts;
         }
         }
 
@@ -565,6 +574,9 @@ export class LensFlareEffect extends THREE.Mesh {
       uDiscGlowColor: { value: new THREE.Vector3(1, 0.53, 0.27) },
       uOccluded: { value: false },
       uInView: { value: true },
+      uGhostLoopCount: { value: 10 },
+      uDirtGhostSamples: { value: 8 },
+      uLodDistance: { value: 1.5 },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -666,7 +678,9 @@ export class LensFlareEffect extends THREE.Mesh {
     this.setSunDiscBlur(options.sunDiscBlur ?? 1.25);
     this.setDiscGlowIntensity(options.discGlowIntensity ?? 0);
     this.setDiscGlowSize(options.discGlowSize ?? 5);
-    this.setQuality(options.quality ?? 'maximum');
+    this._tierAnimated = false;
+    this._proceduralAnimationOverride = null;
+    this.setQuality(options.quality ?? 'ultra');
     this.updateAnchorPosition();
     this.setEnabled(this.userEnabled);
   }
@@ -689,7 +703,7 @@ export class LensFlareEffect extends THREE.Mesh {
       this.updateProjectedPosition(camera, scene);
     }
 
-    if (!this.timeAnimationPaused) {
+    if (!this.timeAnimationPaused && this.material.uniforms.animated.value) {
       this.material.uniforms.iTime.value = elapsed;
     }
     const dampingFactor =
@@ -848,14 +862,37 @@ export class LensFlareEffect extends THREE.Mesh {
     );
   }
 
-  setQuality(mode = 'maximum') {
+  setQuality(mode = 'ultra') {
     this.quality = mode;
-    const optimized = mode === 'optimized';
+    const tier = resolveLensFlareQualityTier(mode);
+    this._tierAnimated = tier.animated;
     const uniforms = this.material.uniforms;
-    uniforms.animated.value = !optimized;
-    uniforms.secondaryGhosts.value = !optimized;
-    uniforms.starBurst.value = !optimized;
-    uniforms.aditionalStreaks.value = !optimized;
+    this._applyAnimatedUniform();
+    uniforms.secondaryGhosts.value = tier.secondaryGhosts;
+    uniforms.starBurst.value = tier.starBurst;
+    uniforms.aditionalStreaks.value = tier.aditionalStreaks;
+    uniforms.uGhostLoopCount.value = tier.ghostLoopCount;
+    uniforms.uDirtGhostSamples.value = tier.dirtGhostSamples;
+    uniforms.uLodDistance.value = tier.lodDistance;
+  }
+
+  /**
+   * Override procedural spin (iTime rotation). null = use quality tier default.
+   * @param {boolean | null} enabled
+   */
+  setProceduralAnimation(enabled) {
+    this._proceduralAnimationOverride =
+      enabled === null || enabled === undefined ? null : !!enabled;
+    this._applyAnimatedUniform();
+  }
+
+  _applyAnimatedUniform() {
+    const animated =
+      this._proceduralAnimationOverride !== null &&
+      this._proceduralAnimationOverride !== undefined
+        ? this._proceduralAnimationOverride
+        : !!this._tierAnimated;
+    this.material.uniforms.animated.value = animated;
   }
 
   setDistance(value) {

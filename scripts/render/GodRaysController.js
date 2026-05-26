@@ -1,14 +1,13 @@
 import * as THREE from 'three';
 import {
+  applyGodRaysLightScale,
   applyGodRaysSettings,
-  computeSunAnchorWorld,
-  updateGodRaysSunUniforms,
+  normalizeGodRaysState,
+  syncGodRaysLightSource,
 } from '../GodRaysEffect.js';
 
-const SUN_DISTANCE = 40;
-
 /**
- * Screen-space volumetric light shafts (god rays) synced with lens-flare sun direction.
+ * pmndrs GodRays — sun mesh follows lens-flare rotation/height.
  */
 export class GodRaysController {
   constructor({ godRaysPass, stateStore, getCamera }) {
@@ -19,17 +18,7 @@ export class GodRaysController {
     this.userEnabled = false;
     this.hdriEnabled = false;
     this.settings = null;
-    this.modelRoot = null;
-    this.occlusionCheckObjects = null;
-
     this._sunScratch = new THREE.Vector3();
-    this._viewportScratch = new THREE.Vector4();
-    this._rayDirection = new THREE.Vector3();
-    this._raycaster = new THREE.Raycaster();
-    this._intersections = [];
-    this._lastOcclusionCheck = 0;
-    this._occlusionCheckInterval = 0.1;
-    this._sunOccluded = 1;
   }
 
   init(initialState) {
@@ -38,6 +27,7 @@ export class GodRaysController {
       ...defaults,
       ...(initialState.godRays ?? {}),
     };
+    this.hdriEnabled = !!initialState.hdriEnabled;
     this.userEnabled = !!this.settings.enabled;
     this.updateSettings(this.settings);
   }
@@ -55,91 +45,47 @@ export class GodRaysController {
 
     const defaults = this.stateStore.getDefaults().godRays;
     const currentState = this.stateStore.getState();
-    const current = {
+    const merged = {
       ...defaults,
       ...(this.settings ?? {}),
       ...(currentState.godRays ?? {}),
     };
 
-    this.userEnabled = !!current.enabled;
+    this.userEnabled = !!merged.enabled;
     const active = this.userEnabled && this.hdriEnabled;
     this.godRaysPass.enabled = active;
 
-    applyGodRaysSettings(this.godRaysPass.uniforms, current, defaults);
+    const normalized = normalizeGodRaysState(merged, defaults);
+    applyGodRaysSettings(
+      this.godRaysPass.godRaysEffect,
+      normalized,
+      defaults,
+      this.godRaysPass,
+    );
   }
 
-  setModelRoot(modelRoot) {
-    this.modelRoot = modelRoot;
-    this.occlusionCheckObjects = modelRoot ? [modelRoot] : null;
-    this._lastOcclusionCheck = 0;
-  }
-
-  _updateSunOcclusion(camera) {
-    const uniforms = this.godRaysPass?.uniforms;
-    if (!uniforms || !camera) return;
-
-    if (!this.occlusionCheckObjects?.length) {
-      this._sunOccluded = 0;
-      uniforms.uSunOccluded.value = 0;
-      return;
-    }
-
-    const now = performance.now() * 0.001;
-    if (now - this._lastOcclusionCheck < this._occlusionCheckInterval) {
-      uniforms.uSunOccluded.value = this._sunOccluded;
-      return;
-    }
-    this._lastOcclusionCheck = now;
-
-    computeSunAnchorWorld(
-      this.stateStore.getState().lensFlare?.rotation ?? 0,
-      this.stateStore.getState().lensFlare?.height ?? 15,
-      SUN_DISTANCE,
-      this._sunScratch,
-    );
-
-    const distance = camera.position.distanceTo(this._sunScratch);
-    this._rayDirection.copy(this._sunScratch).sub(camera.position).normalize();
-    this._raycaster.set(camera.position, this._rayDirection);
-    this._raycaster.far = distance;
-    this._intersections.length = 0;
-    this._raycaster.intersectObjects(
-      this.occlusionCheckObjects,
-      true,
-      this._intersections,
-    );
-
-    const occluder = this._intersections.find(
-      (hit) =>
-        hit.object.visible !== false &&
-        hit.object.userData?.lensflare !== 'no-occlusion',
-    );
-
-    this._sunOccluded = occluder ? 1 : 0;
-    uniforms.uSunOccluded.value = this._sunOccluded;
-  }
-
-  /** Keep sun position in sync with lens-flare rotation/height each frame. */
-  prepareFrame(renderer) {
+  prepareFrame() {
     if (!this.godRaysPass?.enabled) return;
-
-    const camera = this.getCamera?.();
-    if (!camera) return;
-
-    const viewport = this._viewportScratch;
-    renderer.getCurrentViewport(viewport);
-    this.godRaysPass.uniforms.uResolution.value.set(viewport.z, viewport.w);
 
     const state = this.stateStore.getState();
     const lensFlare = state.lensFlare ?? this.stateStore.getDefaults().lensFlare;
-    updateGodRaysSunUniforms(
-      this.godRaysPass.uniforms,
-      camera,
+    const godRays = normalizeGodRaysState(
+      {
+        ...this.stateStore.getDefaults().godRays,
+        ...(state.godRays ?? {}),
+      },
+      this.stateStore.getDefaults().godRays,
+    );
+
+    const light = this.godRaysPass.lightSource;
+    syncGodRaysLightSource(
+      light,
       lensFlare.rotation ?? 0,
       lensFlare.height ?? 15,
+      godRays.color,
       this._sunScratch,
     );
-    this._updateSunOcclusion(camera);
+    applyGodRaysLightScale(light, godRays.lightScale);
   }
 
   setEnabled(enabled) {
@@ -152,44 +98,89 @@ export class GodRaysController {
     this.updateSettings();
   }
 
+  _patch(key, value) {
+    if (value === undefined || value === null) return;
+    this.updateSettings({ [key]: value });
+  }
+
   setColor(value) {
     if (!value) return;
-    this.updateSettings({ color: value });
+    this._patch('color', value);
   }
 
-  setStrength(value) {
+  setLightScale(value) {
     if (!Number.isFinite(value)) return;
-    this.updateSettings({ strength: value });
+    this._patch('lightScale', value);
   }
 
-  setLength(value) {
+  setOpacity(value) {
     if (!Number.isFinite(value)) return;
-    this.updateSettings({ length: value });
+    this._patch('opacity', value);
   }
 
-  setSoftness(value) {
+  setDensity(value) {
     if (!Number.isFinite(value)) return;
-    this.updateSettings({ softness: value });
+    this._patch('density', value);
   }
 
-  setThreshold(value) {
+  setDecay(value) {
     if (!Number.isFinite(value)) return;
-    this.updateSettings({ threshold: value });
+    this._patch('decay', value);
+  }
+
+  setWeight(value) {
+    if (!Number.isFinite(value)) return;
+    this._patch('weight', value);
+  }
+
+  setExposure(value) {
+    if (!Number.isFinite(value)) return;
+    this._patch('exposure', value);
+  }
+
+  setClampMax(value) {
+    if (!Number.isFinite(value)) return;
+    this._patch('clampMax', value);
+  }
+
+  setBlur(enabled) {
+    this._patch('blur', !!enabled);
   }
 
   setQuality(value) {
     if (!value) return;
-    this.updateSettings({ quality: value });
+    this._patch('quality', value);
   }
+
+  /** @deprecated Legacy API — maps to opacity. */
+  setStrength(value) {
+    if (!Number.isFinite(value)) return;
+    this._patch('opacity', THREE.MathUtils.clamp(value * 0.5, 0, 1));
+  }
+
+  /** @deprecated Legacy API — maps to density. */
+  setLength(value) {
+    if (!Number.isFinite(value)) return;
+    this._patch('density', THREE.MathUtils.lerp(0.88, 1.08, THREE.MathUtils.clamp(value, 0, 1)));
+  }
+
+  /** @deprecated Legacy API — maps to decay. */
+  setSoftness(value) {
+    if (!Number.isFinite(value)) return;
+    this._patch('decay', THREE.MathUtils.lerp(0.99, 0.86, THREE.MathUtils.clamp(value, 0, 1)));
+  }
+
+  /** @deprecated Legacy API — no direct mapping; ignored. */
+  setThreshold() {}
 
   applyStateSnapshot(state) {
     this.updateSettings(state.godRays);
   }
 
+  setModelRoot() {}
+
   dispose() {
     this.godRaysPass = null;
     this.settings = null;
-    this.modelRoot = null;
-    this.occlusionCheckObjects = null;
   }
 }

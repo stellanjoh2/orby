@@ -15,6 +15,11 @@ import { animateModalClose, animateModalOpen } from './modalReveal.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import { GOBO_UI_DEFAULT } from '../render/GoboProjection.js';
 import { DEFAULT_GOBO_SOFTNESS } from '../config/gobos.js';
+import {
+  emitGodRaysStudioEvents,
+  godRaysStateAfterSectionReset,
+  godRaysStateForResetCompare,
+} from '../GodRaysEffect.js';
 
 /**
  * For each `data-reset` value in the markup, the set of state paths whose
@@ -113,6 +118,20 @@ const RESET_DIRTY_PATHS = {
     'advanced.stlSmoothShading', 'advanced.stlSmoothingAngle',
     'advanced.centerPivot',
   ],
+};
+
+/**
+ * Sections whose dirty state should compare normalized values (legacy keys, etc.).
+ * @type {Record<string, (state: object, defaults: object) => boolean>}
+ */
+const RESET_DIRTY_NORMALIZERS = {
+  'volumetric-scattering': (state, defaults) => {
+    const defGod = defaults?.godRays ?? {};
+    return !deepEqual(
+      godRaysStateForResetCompare(getAtPath(state, 'godRays'), defGod),
+      godRaysStateForResetCompare(defGod, defGod),
+    );
+  },
 };
 
 function getAtPath(obj, path) {
@@ -295,9 +314,12 @@ export class ResetControls {
         button.classList.remove('is-dirty');
         continue;
       }
+      const normalizeDirty = RESET_DIRTY_NORMALIZERS[type];
       const paths = RESET_DIRTY_PATHS[type];
       let dirty = false;
-      if (paths) {
+      if (normalizeDirty) {
+        dirty = normalizeDirty(state, defaults);
+      } else if (paths) {
         for (const path of paths) {
           if (!deepEqual(getAtPath(state, path), getAtPath(defaults, path))) {
             dirty = true;
@@ -583,6 +605,10 @@ export class ResetControls {
       this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
       this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
       this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
+      this.eventBus.emit(
+        'studio:lens-flare-spin-during-orbit',
+        !!defaults.lensFlare.spinDuringOrbit,
+      );
       this.eventBus.emit('studio:lens-flare-halo', defaults.lensFlare.haloIntensity);
       this.eventBus.emit('studio:lens-flare-streak-length', defaults.lensFlare.streakLength);
       this.eventBus.emit('studio:lens-flare-sun-disc-scale', defaults.lensFlare.sunDiscScale);
@@ -592,13 +618,7 @@ export class ResetControls {
       this.eventBus.emit('studio:lens-flare-disc-glow-size', defaults.lensFlare.discGlowSize);
       this.eventBus.emit('studio:lens-flare-disc-glow-color', defaults.lensFlare.discGlowColor);
       this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
-      this.eventBus.emit('studio:god-rays-enabled', defaults.godRays.enabled);
-      this.eventBus.emit('studio:god-rays-color', defaults.godRays.color);
-      this.eventBus.emit('studio:god-rays-strength', defaults.godRays.strength);
-      this.eventBus.emit('studio:god-rays-length', defaults.godRays.length);
-      this.eventBus.emit('studio:god-rays-softness', defaults.godRays.softness);
-      this.eventBus.emit('studio:god-rays-threshold', defaults.godRays.threshold);
-      this.eventBus.emit('studio:god-rays-quality', defaults.godRays.quality);
+      emitGodRaysStudioEvents(this.eventBus, defaults.godRays, defaults.godRays);
       this.eventBus.emit('studio:ground-solid', defaults.groundSolid);
       this.eventBus.emit('studio:ground-wire', defaults.groundWire);
       this.eventBus.emit('studio:ground-wire-opacity', defaults.groundWireOpacity);
@@ -865,6 +885,10 @@ export class ResetControls {
             this.eventBus.emit('studio:lens-flare-height', defaults.lensFlare.height);
             this.eventBus.emit('studio:lens-flare-color', defaults.lensFlare.color);
             this.eventBus.emit('studio:lens-flare-quality', defaults.lensFlare.quality);
+      this.eventBus.emit(
+        'studio:lens-flare-spin-during-orbit',
+        !!defaults.lensFlare.spinDuringOrbit,
+      );
             this.eventBus.emit('studio:lens-flare-halo', defaults.lensFlare.haloIntensity);
             this.eventBus.emit('studio:lens-flare-streak-length', defaults.lensFlare.streakLength);
             this.eventBus.emit('studio:lens-flare-sun-disc-scale', defaults.lensFlare.sunDiscScale);
@@ -877,17 +901,17 @@ export class ResetControls {
             this.ui.syncUIFromState();
             break;
 
-          case 'volumetric-scattering':
-            this.stateStore.set('godRays', defaults.godRays);
-            this.eventBus.emit('studio:god-rays-enabled', defaults.godRays.enabled);
-            this.eventBus.emit('studio:god-rays-color', defaults.godRays.color);
-            this.eventBus.emit('studio:god-rays-strength', defaults.godRays.strength);
-            this.eventBus.emit('studio:god-rays-length', defaults.godRays.length);
-            this.eventBus.emit('studio:god-rays-softness', defaults.godRays.softness);
-      this.eventBus.emit('studio:god-rays-threshold', defaults.godRays.threshold);
-      this.eventBus.emit('studio:god-rays-quality', defaults.godRays.quality);
+          case 'volumetric-scattering': {
+            const currentGodRays = this.stateStore.getState().godRays ?? {};
+            const resetGodRays = godRaysStateAfterSectionReset(
+              currentGodRays,
+              defaults.godRays,
+            );
+            this.stateStore.set('godRays', resetGodRays);
+            emitGodRaysStudioEvents(this.eventBus, resetGodRays, defaults.godRays);
             this.ui.syncUIFromState();
             break;
+          }
             
           case 'lights':
             this.stateStore.batch(() => {

@@ -1,3 +1,4 @@
+import { normalizeLensFlareQualityId } from '../constants.js';
 import { LensFlareEffect } from '../LensFlareEffect.js';
 
 export function resolveDiscGlowFromState(state = {}, defaults = {}) {
@@ -25,14 +26,23 @@ export function resolveDiscGlowFromState(state = {}, defaults = {}) {
  * settings updates, and occlusion handling for performance.
  */
 export class LensFlareController {
-  constructor({ camera, scene, stateStore }) {
+  /**
+   * @param {object} opts
+   * @param {import('three').Camera} opts.camera
+   * @param {import('three').Scene} opts.scene
+   * @param {import('../StateStore.js').StateStore} opts.stateStore
+   * @param {() => string} [opts.getCameraAutoOrbit]
+   */
+  constructor({ camera, scene, stateStore, getCameraAutoOrbit = () => 'off' }) {
     this.camera = camera;
     this.scene = scene;
     this.stateStore = stateStore;
+    this.getCameraAutoOrbit = getCameraAutoOrbit;
 
     this.lensFlare = null;
     this.lensFlareEnabled = false;
     this.hdriEnabled = false;
+    this.spinDuringOrbit = false;
     this.modelRoot = null;
   }
 
@@ -47,6 +57,11 @@ export class LensFlareController {
 
     this.lensFlareEnabled = state.enabled ?? false;
     this.hdriEnabled = hdriEnabled;
+    this.spinDuringOrbit = !!(
+      state.spinDuringOrbit ??
+      initialState.godRays?.spinDuringOrbit ??
+      defaults.spinDuringOrbit
+    );
 
     const safeHeight = Math.min(
       90,
@@ -60,7 +75,7 @@ export class LensFlareController {
       rotation: state.rotation ?? 0,
       height: safeHeight,
       color: state.color ?? defaults?.color ?? '#d28756',
-      quality: state.quality ?? 'maximum',
+      quality: state.quality ?? 'high',
       haloIntensity: state.haloIntensity ?? defaults?.haloIntensity ?? 1.0,
       streakLength: state.streakLength ?? defaults?.streakLength ?? 5.0,
       sunDiscScale: state.sunDiscScale ?? defaults?.sunDiscScale ?? 1.5,
@@ -76,11 +91,26 @@ export class LensFlareController {
     this.scene.add(this.lensFlare);
     this.lensFlare.matrixAutoUpdate = false;
     this.lensFlare.userData.lensflare = 'no-occlusion';
+    this._syncProceduralSpin();
+  }
+
+  /** iTime streak spin — only when enabled and camera auto-orbit is active. */
+  _syncProceduralSpin() {
+    if (!this.lensFlare) return;
+
+    const active =
+      this.lensFlareEnabled &&
+      this.hdriEnabled &&
+      !!this.spinDuringOrbit &&
+      this.getCameraAutoOrbit() !== 'off';
+
+    this.lensFlare.setProceduralAnimation(active ? true : null);
   }
 
   /** Keep uniforms fresh even if a pass skips the draw call. */
   prepareFrame(renderer) {
     if (!this.lensFlare?.visible || !this.scene) return;
+    this._syncProceduralSpin();
     this.lensFlare.prepareFrame(renderer, this.scene, this.camera);
   }
 
@@ -104,6 +134,7 @@ export class LensFlareController {
     if (this.lensFlare) {
       this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
     }
+    this._syncProceduralSpin();
   }
 
   /**
@@ -124,6 +155,17 @@ export class LensFlareController {
     if (this.lensFlare) {
       this.lensFlare.setEnabled(this.lensFlareEnabled && this.hdriEnabled);
     }
+    this._syncProceduralSpin();
+  }
+
+  setSpinDuringOrbit(enabled) {
+    this.spinDuringOrbit = !!enabled;
+    this._syncProceduralSpin();
+  }
+
+  /** Re-evaluate spin vs current auto-orbit mode (e.g. after orbit preset changes). */
+  refreshProceduralSpin() {
+    this._syncProceduralSpin();
   }
 
   /**
@@ -163,8 +205,17 @@ export class LensFlareController {
    */
   setQuality(mode) {
     if (this.lensFlare && mode) {
-      this.lensFlare.setQuality(mode);
+      this.lensFlare.setQuality(normalizeLensFlareQualityId(mode));
+      this._syncProceduralSpin();
     }
+  }
+
+  /** Procedural iTime spin — null restores quality-tier default. */
+  setProceduralAnimation(enabled) {
+    if (!this.lensFlare) return;
+    this.lensFlare.setProceduralAnimation(
+      enabled === null || enabled === undefined ? null : !!enabled,
+    );
   }
 
   /**
@@ -264,7 +315,7 @@ export class LensFlareController {
 
     this.setHeight(lensState.height ?? 0);
     this.setColor(lensState.color ?? '#d28756');
-    this.setQuality(lensState.quality ?? 'maximum');
+    this.setQuality(lensState.quality ?? 'high');
     this.setRotation(lensState.rotation ?? 0);
     this.setHaloIntensity(lensState.haloIntensity ?? 1.0);
     this.setStreakLength(lensState.streakLength ?? 5.0);
@@ -274,7 +325,12 @@ export class LensFlareController {
     this.setDiscGlowIntensity(discGlow.intensity);
     this.setDiscGlowSize(discGlow.size);
     this.setDiscGlowColor(discGlow.color);
+    this.spinDuringOrbit = !!(
+      lensState.spinDuringOrbit ??
+      state.godRays?.spinDuringOrbit
+    );
     this.setEnabled(lensState.enabled ?? false);
+    this._syncProceduralSpin();
   }
 
   /**

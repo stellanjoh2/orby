@@ -75,6 +75,7 @@ export class PostProcessingPipeline {
 
     this.godRaysPass = new MeshglGodRaysPass(scene, camera);
     this.godRaysPass.enabled = false;
+    this.godRaysPass.bokehPass = this.bokehPass;
 
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(size.x, size.y),
@@ -237,14 +238,7 @@ export class PostProcessingPipeline {
    */
   updateGodRays(settings, { forceOff = false } = {}) {
     if (!this.godRaysPass) return;
-    if (forceOff || !settings?.enabled) {
-      this.godRaysPass.enabled = false;
-      if (this.godRaysPass.uniforms?.uStrength) {
-        this.godRaysPass.uniforms.uStrength.value = 0;
-      }
-      return;
-    }
-    this.godRaysPass.enabled = true;
+    this.godRaysPass.enabled = !forceOff && !!settings?.enabled;
   }
 
   /**

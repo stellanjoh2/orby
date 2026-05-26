@@ -19,22 +19,60 @@ export class AnimationController {
     this.onTopBarUpdate = onTopBarUpdate;
     this.getFileName = getFileName;
     this._exportDriveActive = false;
+    this._exportPoseHoldActive = false;
     this._exportDriveSnapshot = null;
+    this._exportAction = null;
+    this._exportClipIndex = 0;
   }
 
   isExportDriving() {
     return !!this._exportDriveActive;
   }
 
-  /** Pause live playback; export will set absolute clip times per frame. */
-  beginExportDrive() {
-    if (!this.mixer || !this.currentAction || !this.animations.length) return;
-    this._exportDriveActive = true;
+  /** Live GLB playback is frozen for export or movement preview. */
+  isExportSessionActive() {
+    return this._exportDriveActive || this._exportPoseHoldActive;
+  }
+
+  /**
+   * Pause live playback; optionally drive a selected clip per export frame.
+   * @param {{ include?: boolean, clipIndex?: number }} [options]
+   */
+  beginExportDrive({ include = false, clipIndex = 0 } = {}) {
+    if (!this.mixer || !this.animations.length) return;
+
     this._exportDriveSnapshot = {
-      time: this.currentAction.time,
-      paused: this.currentAction.paused,
+      time: this.currentAction?.time ?? 0,
+      paused: this.currentAction?.paused ?? true,
     };
-    this.currentAction.paused = true;
+    if (this.currentAction) {
+      this.currentAction.paused = true;
+    }
+
+    if (!include) {
+      this._exportDriveActive = false;
+      this._exportPoseHoldActive = true;
+      return;
+    }
+
+    const idx = Math.min(
+      this.animations.length - 1,
+      Math.max(0, Number(clipIndex) || 0),
+    );
+    const clip = this.animations[idx];
+    if (!clip) {
+      this._exportPoseHoldActive = true;
+      return;
+    }
+
+    this._exportDriveActive = true;
+    this._exportPoseHoldActive = false;
+    this._exportClipIndex = idx;
+
+    this._exportAction = this.mixer.clipAction(clip);
+    this._exportAction.reset();
+    this._exportAction.play();
+    this._exportAction.paused = true;
   }
 
   /**
@@ -43,13 +81,13 @@ export class AnimationController {
    * @param {number} fps
    */
   applyExportDriveFrame(frameIndex, fps) {
-    if (!this._exportDriveActive || !this.mixer || !this.currentAction) return;
-    const clip = this.animations[this.currentClipIndex];
+    if (!this._exportDriveActive || !this.mixer || !this._exportAction) return;
+    const clip = this.animations[this._exportClipIndex];
     if (!clip || !(clip.duration > 0)) return;
 
     const exportTimeSec = Math.max(0, frameIndex) / Math.max(1, fps);
     const duration = clip.duration;
-    const loop = this.currentAction.loop;
+    const loop = this._exportAction.loop;
     let time;
     if (loop === THREE.LoopOnce) {
       time = Math.min(exportTimeSec, duration);
@@ -61,16 +99,23 @@ export class AnimationController {
       time = exportTimeSec % duration;
     }
 
-    this.currentAction.time = time;
+    this._exportAction.time = time;
     this.mixer.update(0);
-    this.onTimeUpdate(this.currentAction.time, clip.duration);
   }
 
   endExportDrive() {
-    if (!this._exportDriveActive) return;
+    if (!this._exportDriveActive && !this._exportPoseHoldActive) return;
     const snap = this._exportDriveSnapshot;
     this._exportDriveActive = false;
+    this._exportPoseHoldActive = false;
     this._exportDriveSnapshot = null;
+    this._exportClipIndex = 0;
+
+    if (this._exportAction) {
+      this._exportAction.stop();
+      this._exportAction = null;
+    }
+
     if (!this.mixer || !this.currentAction || !snap) return;
 
     this.currentAction.time = snap.time;
@@ -88,6 +133,10 @@ export class AnimationController {
       this.mixer = null;
     }
     this.currentAction = null;
+    this._exportAction = null;
+    this._exportDriveActive = false;
+    this._exportPoseHoldActive = false;
+    this._exportDriveSnapshot = null;
     this.animations = [];
     if (!animations.length || !model) {
       this.onClipsChanged([]);
@@ -159,7 +208,7 @@ export class AnimationController {
       this.mixer = null;
     }
     this.currentAction = null;
+    this._exportAction = null;
     this.animations = [];
   }
 }
-

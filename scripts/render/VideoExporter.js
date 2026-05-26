@@ -1,5 +1,15 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
+import {
+  exportVideoMovementLabel,
+  hasExportVideoMovement,
+  needsExportCameraDrive,
+  normalizeExportVideoMovements,
+  normalizeExportMeshAnimationSettings,
+  normalizeExportSpinSettings,
+  exportSpinSequenceLabel,
+  exportSpinToastLabel,
+} from './exportVideoMovements.js';
 
 export class VideoExporter {
   constructor({
@@ -21,6 +31,9 @@ export class VideoExporter {
     beginExportOrbitDrive = () => {},
     applyExportOrbitDriveFrame = () => {},
     endExportOrbitDrive = () => {},
+    beginExportCameraDrive = () => {},
+    applyExportCameraDriveFrame = () => {},
+    endExportCameraDrive = () => {},
     beginExportAnimationDrive = () => {},
     applyExportAnimationDriveFrame = () => {},
     endExportAnimationDrive = () => {},
@@ -28,6 +41,7 @@ export class VideoExporter {
     getCurrentFile,
     getCurrentAssetMetadata,
     getHdriBackgroundEnabled,
+    getAnimationClipCount = () => 0,
     handleResize,
   } = {}) {
     this.renderer = renderer;
@@ -47,6 +61,9 @@ export class VideoExporter {
     this.beginExportOrbitDrive = beginExportOrbitDrive;
     this.applyExportOrbitDriveFrame = applyExportOrbitDriveFrame;
     this.endExportOrbitDrive = endExportOrbitDrive;
+    this.beginExportCameraDrive = beginExportCameraDrive;
+    this.applyExportCameraDriveFrame = applyExportCameraDriveFrame;
+    this.endExportCameraDrive = endExportCameraDrive;
     this.beginExportAnimationDrive = beginExportAnimationDrive;
     this.applyExportAnimationDriveFrame = applyExportAnimationDriveFrame;
     this.endExportAnimationDrive = endExportAnimationDrive;
@@ -54,6 +71,7 @@ export class VideoExporter {
     this.getCurrentFile = getCurrentFile;
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
     this.getHdriBackgroundEnabled = getHdriBackgroundEnabled;
+    this.getAnimationClipCount = getAnimationClipCount;
     this.handleResize = handleResize;
   }
 
@@ -81,24 +99,39 @@ export class VideoExporter {
     return `${safeBase}_${mode}_${durationSec}s_${frame}.png`;
   }
 
-  _sequenceFolderName(baseName, durationSec, fps, spins, resolution, mode = 'turntable') {
+  _sequenceFolderName(baseName, durationSec, fps, spinSettings, resolution, mode = 'turntable') {
     const safeBase = (baseName || 'orby')
       .replace(/\.[a-z0-9]+$/i, '')
       .replace(/[^a-zA-Z0-9_-]+/g, '_')
       .replace(/^_+|_+$/g, '')
       || 'orby';
-    return `${safeBase}_${mode}_${durationSec}s_${fps}fps_${spins}spin_${resolution}`;
+    const spinLabel = exportSpinSequenceLabel(spinSettings);
+    return `${safeBase}_${mode}_${durationSec}s_${fps}fps_${spinLabel}_${resolution}`;
   }
 
-  _applyVideoExportFrame({ mode, t, spins, startRotationY, frameIndex, fps }) {
-    if (mode === 'orbit') {
-      this.applyExportOrbitDriveFrame?.(t, spins);
-    } else {
-      const rotationY = startRotationY + (360 * spins) * t;
+  _applyVideoExportFrame({ movements, t, spinSettings, startRotationY, frameIndex, fps, meshAnimation }) {
+    const { rotationDegrees, signedRotationDegrees, sign } = spinSettings;
+    if (movements.turntable && rotationDegrees > 0) {
+      const rotationY = startRotationY + signedRotationDegrees * t;
       this.setRotationY(rotationY);
       this.stateStore.set('rotationY', rotationY);
     }
-    if (typeof frameIndex === 'number' && typeof fps === 'number') {
+    if (needsExportCameraDrive(movements)) {
+      this.applyExportCameraDriveFrame?.(t, {
+        rotationDegrees,
+        rotationSign: sign,
+        orbit: movements.orbit,
+        zoom: movements.zoom,
+        zoomDistance: movements.zoomDistance,
+        tilt: movements.tilt,
+        tiltAngle: movements.tiltAngle,
+      });
+    }
+    if (
+      meshAnimation?.include
+      && typeof frameIndex === 'number'
+      && typeof fps === 'number'
+    ) {
       this.applyExportAnimationDriveFrame?.(frameIndex, fps);
     }
   }
@@ -108,7 +141,7 @@ export class VideoExporter {
     baseName,
     durationSec,
     fps,
-    spins,
+    spinSettings,
     resolution,
     mode = 'turntable',
   }) {
@@ -127,7 +160,7 @@ export class VideoExporter {
       baseName,
       durationSec,
       fps,
-      spins,
+      spinSettings,
       resolution,
       mode,
     );
@@ -421,8 +454,9 @@ export class VideoExporter {
     fps,
     startRotationY,
     quality = 'medium',
-    spins = 1,
-    mode = 'turntable',
+    spinSettings,
+    movements,
+    meshAnimation,
   }) {
     const mimeType = this._getSupportedRecorderMimeType();
     if (!mimeType) return null;
@@ -439,8 +473,9 @@ export class VideoExporter {
         fps,
         startRotationY,
         quality,
-        spins,
-        mode,
+        spinSettings,
+        movements,
+        meshAnimation,
       });
     }
 
@@ -459,9 +494,12 @@ export class VideoExporter {
 
     // Prime frame 0 and wait until the canvas reflects it — avoids garbage lead-in frames
     // after recorder.start().
-    this._applyVideoExportFrame({ mode, t: 0, spins, startRotationY, frameIndex: 0, fps });
+    this._applyVideoExportFrame({
+      movements, t: 0, spinSettings, startRotationY, frameIndex: 0, fps, meshAnimation,
+    });
     this._renderCurrentFrameToCanvas();
     await this._yieldUntilPaintCommitted();
+    this.ui?.setLoadSpinnerElapsedFromStart?.();
 
     const timesliceMs = Math.min(
       1000,
@@ -478,9 +516,12 @@ export class VideoExporter {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
       const t = i / totalFrames;
-      this._applyVideoExportFrame({ mode, t, spins, startRotationY, frameIndex: i, fps });
+      this._applyVideoExportFrame({
+        movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
+      });
       this._renderCurrentFrameToCanvas();
       track.requestFrame();
+      this.ui?.setLoadSpinnerElapsedFromStart?.();
     }
     await new Promise((resolve) =>
       setTimeout(resolve, Math.max(33, Math.round(frameDurationMs * 2.5))),
@@ -498,8 +539,9 @@ export class VideoExporter {
     fps,
     startRotationY,
     quality = 'medium',
-    spins = 1,
-    mode = 'turntable',
+    spinSettings,
+    movements,
+    meshAnimation,
   }) {
     const mimeType = this._getSupportedRecorderMimeType();
     if (!mimeType) return null;
@@ -519,9 +561,12 @@ export class VideoExporter {
     const totalFrames = Math.max(2, Math.round(durationSec * fps));
     const frameDurationMs = 1000 / Math.max(1, fps);
 
-    this._applyVideoExportFrame({ mode, t: 0, spins, startRotationY, frameIndex: 0, fps });
+    this._applyVideoExportFrame({
+      movements, t: 0, spinSettings, startRotationY, frameIndex: 0, fps, meshAnimation,
+    });
     this._renderCurrentFrameToCanvas();
     await this._yieldUntilPaintCommitted();
+    this.ui?.setLoadSpinnerElapsedFromStart?.();
 
     const timesliceMs = Math.min(
       1000,
@@ -538,8 +583,11 @@ export class VideoExporter {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
       const t = i / totalFrames;
-      this._applyVideoExportFrame({ mode, t, spins, startRotationY, frameIndex: i, fps });
+      this._applyVideoExportFrame({
+        movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
+      });
       this._renderCurrentFrameToCanvas();
+      this.ui?.setLoadSpinnerElapsedFromStart?.();
     }
     await new Promise((resolve) =>
       setTimeout(resolve, Math.max(33, Math.round(frameDurationMs * 2.5))),
@@ -555,10 +603,11 @@ export class VideoExporter {
     const blob = await this._recordTurntableToMp4Blob(opts);
     if (!blob) return false;
     const safeBase = (opts.baseName || 'orby').replace(/\.[a-z0-9]+$/i, '');
-    const { durationSec, fps, mode = 'turntable' } = opts;
+    const { durationSec, fps } = opts;
+    const modeLabel = exportVideoMovementLabel(opts.movements);
     this._downloadBlob(
       blob,
-      `${safeBase}_${mode}_${durationSec}s_${fps}fps.mp4`,
+      `${safeBase}_${modeLabel}_${durationSec}s_${fps}fps.mp4`,
     );
     return true;
   }
@@ -569,7 +618,16 @@ export class VideoExporter {
       return;
     }
 
-    const mode = settings?.mode === 'orbit' ? 'orbit' : 'turntable';
+    const movements = normalizeExportVideoMovements(settings);
+    if (!hasExportVideoMovement(movements)) {
+      this.ui?.showToast?.('Enable at least one camera movement to export');
+      return;
+    }
+    const modeLabel = exportVideoMovementLabel(movements);
+    const meshAnimation = normalizeExportMeshAnimationSettings(
+      settings,
+      this.getAnimationClipCount?.() ?? 0,
+    );
 
     const format = settings?.format === 'png' ? 'png' : 'mp4';
     const allowedDurations = [5, 10, 15];
@@ -580,7 +638,7 @@ export class VideoExporter {
       settings?.mp4Quality === 'low' || settings?.mp4Quality === 'high'
         ? settings.mp4Quality
         : 'medium';
-    const spins = settings?.spins === 2 ? 2 : 1;
+    const spinSettings = normalizeExportSpinSettings(settings);
     const movTransparent = !!settings?.movTransparent;
     const resolution =
       settings?.resolution === '1440p' || settings?.resolution === '2160p'
@@ -614,18 +672,18 @@ export class VideoExporter {
     if (typeof this.ui?.beginLoadSpinner === 'function') {
       this.ui.beginLoadSpinner();
       spinnerActive = true;
+      this.ui.beginLoadSpinnerElapsed?.();
     }
 
     try {
-      if (mode === 'orbit') {
-        this.beginExportOrbitDrive?.();
+      if (needsExportCameraDrive(movements)) {
+        this.beginExportCameraDrive?.();
       }
-      this.beginExportAnimationDrive?.();
+      this.beginExportAnimationDrive?.(meshAnimation);
 
       if (format === 'mp4') {
-        const modeLabel = mode === 'orbit' ? 'orbit' : 'turntable';
         this.ui?.showToast?.(
-          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolution}, ${mp4Quality}, ${modeLabel}, ${spins} spin${spins > 1 ? 's' : ''})…`,
+          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolution}, ${mp4Quality}, ${modeLabel}, ${exportSpinToastLabel(spinSettings)})…`,
         );
         try {
           const success = await this._exportTurntableRealtimeRecorder({
@@ -634,8 +692,9 @@ export class VideoExporter {
             startRotationY,
             baseName,
             quality: mp4Quality,
-            spins,
-            mode,
+            spinSettings,
+            movements,
+            meshAnimation,
           });
           if (success) {
             this.ui?.uiSounds?.playRenderFinished();
@@ -646,8 +705,8 @@ export class VideoExporter {
           console.error('MP4 export failed', error);
           this.ui?.showToast?.('MP4 export failed');
         } finally {
-          if (mode === 'orbit') {
-            this.endExportOrbitDrive?.();
+          if (needsExportCameraDrive(movements)) {
+            this.endExportCameraDrive?.();
           }
           this.endExportAnimationDrive?.();
           this.setRotationY(startRotationY);
@@ -668,13 +727,16 @@ export class VideoExporter {
         const bufferedFiles = [];
         for (let i = 0; i < totalFrames; i += 1) {
           const t = i / totalFrames;
-          this._applyVideoExportFrame({ mode, t, spins, startRotationY, frameIndex: i, fps });
+          this._applyVideoExportFrame({
+            movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
+          });
           const dataUrl = shouldUseTransparentFrames
             ? this._captureTransparentFramePngDataUrl()
             : this._renderAndCaptureCurrentFramePng();
           const blob = await (await fetch(dataUrl)).blob();
-          const fileName = this._frameNameForSequence(baseName, mode, durationSec, i);
+          const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
           bufferedFiles.push({ fileName, blob });
+          this.ui?.setLoadSpinnerElapsedFromStart?.();
         }
 
         if (bufferedFiles.length > 0) {
@@ -683,9 +745,9 @@ export class VideoExporter {
             baseName,
             durationSec,
             fps,
-            spins,
+            spinSettings,
             resolution,
-            mode,
+            mode: modeLabel,
           });
           if (!zipped) {
             // Last-resort fallback if zip library failed to load.
@@ -707,8 +769,8 @@ export class VideoExporter {
         console.error('Video export failed', error);
         this.ui?.showToast?.('Video export failed');
       } finally {
-        if (mode === 'orbit') {
-          this.endExportOrbitDrive?.();
+        if (needsExportCameraDrive(movements)) {
+          this.endExportCameraDrive?.();
         }
         this.endExportAnimationDrive?.();
         this.setRotationY(startRotationY);

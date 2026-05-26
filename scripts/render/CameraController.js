@@ -86,10 +86,10 @@ export class CameraController {
     this.autoOrbitTime = 0; // Time accumulator for smooth orbit
     this.autoOrbitBaseSpherical = null; // Store initial orbit position
 
-    /** Video export: timed horizontal orbit matching current framing (orbit target + spherical pose). */
-    this._exportOrbitDriveActive = false;
-    this._exportOrbitSnapshot = null;
-    this._preExportOrbitControls = null;
+    /** Video export / preview: timed camera path from current orbit-target framing. */
+    this._exportCameraDriveActive = false;
+    this._exportCameraSnapshot = null;
+    this._preExportCameraControls = null;
 
     this.altRightDragging = false;
     this.shiftRightDragging = false;
@@ -263,7 +263,7 @@ export class CameraController {
    * @param {number} delta seconds
    */
   applyHandheldMotion(delta) {
-    if (this._exportOrbitDriveActive) return;
+    if (this._exportCameraDriveActive) return;
     if (this._isometricModeActive) return;
     if (this.handheldMode === 'off') return;
     const d = typeof delta === 'number' ? delta : 0;
@@ -347,16 +347,14 @@ export class CameraController {
    * Roll around the view axis using a local Z quaternion after a neutral lookAt —
    * avoids fragile pairing of custom camera.up with lookAt when values come from UI/state as strings.
    */
-  _applyTilt() {
+  _applyTilt({ uncapped = false } = {}) {
     const target = this.controls?.target;
     if (!target) return;
 
     const raw = Number(this.currentTilt);
-    const clampedTilt = THREE.MathUtils.clamp(
-      Number.isFinite(raw) ? raw : 0,
-      -45,
-      45,
-    );
+    const clampedTilt = uncapped
+      ? (Number.isFinite(raw) ? raw : 0)
+      : THREE.MathUtils.clamp(Number.isFinite(raw) ? raw : 0, -45, 45);
 
     const towardTarget = this._tiltTowardTarget.subVectors(
       target,
@@ -493,11 +491,11 @@ export class CameraController {
   }
 
   /**
-   * Begin timed export orbit (camera circles orbit target; polar distance & height match current shot).
+   * Begin timed export camera path (orbit and/or dolly zoom from current framing).
    */
-  beginExportOrbitDrive() {
+  beginExportCameraDrive() {
     if (!this.controls) return;
-    this._preExportOrbitControls = {
+    this._preExportCameraControls = {
       pan: this.controls.enablePan,
       rotate: this.controls.enableRotate,
       zoom: this.controls.enableZoom,
@@ -506,8 +504,9 @@ export class CameraController {
     const target = this.controls.target ?? new THREE.Vector3();
     this._orbitOffset.copy(this.camera.position).sub(target);
     this._orbitSpherical.setFromVector3(this._orbitOffset);
-    this._exportOrbitSnapshot = new THREE.Spherical().copy(this._orbitSpherical);
-    this._exportOrbitDriveActive = true;
+    this._exportCameraSnapshot = new THREE.Spherical().copy(this._orbitSpherical);
+    this._exportCameraStartTilt = this.currentTilt;
+    this._exportCameraDriveActive = true;
     this.controls.enablePan = false;
     this.controls.enableRotate = false;
     this.controls.enableZoom = false;
@@ -516,42 +515,106 @@ export class CameraController {
 
   /**
    * @param {number} t — progress in [0, 1] over export duration
-   * @param {number} spins — full 360° laps (same semantics as turntable spins)
+   * @param {{ rotationDegrees?: number, rotationSign?: 1 | -1, spins?: 0 | 1 | 2, orbit?: boolean, zoom?: 'in' | 'out' | null, zoomDistance?: number, tilt?: 'left' | 'right' | null, tiltAngle?: number }} [options]
    */
-  applyExportOrbitDriveFrame(t, spins = 1) {
-    if (!this._exportOrbitDriveActive || !this._exportOrbitSnapshot || !this.controls?.target) {
+  applyExportCameraDriveFrame(t, options = {}) {
+    if (!this._exportCameraDriveActive || !this._exportCameraSnapshot || !this.controls?.target) {
       return;
     }
+    const {
+      orbit = false,
+      zoom = null,
+      zoomDistance = 0,
+      tilt = null,
+      tiltAngle = 0,
+    } = options;
+    let rotationDegrees = Number(options.rotationDegrees);
+    let rotationSign = options.rotationSign === -1 ? -1 : 1;
+    if (!Number.isFinite(rotationDegrees) && options.spins != null) {
+      const legacySpins = options.spins === 2 ? 2 : options.spins === 0 ? 0 : 1;
+      rotationDegrees = legacySpins * 360;
+    }
+    if (!Number.isFinite(rotationDegrees)) rotationDegrees = 360;
     const target = this.controls.target;
-    const sn = this._exportOrbitSnapshot;
+    const sn = this._exportCameraSnapshot;
     const u = THREE.MathUtils.clamp(typeof t === 'number' ? t : 0, 0, 1);
-    const nSpins = spins === 2 ? 2 : 1;
-    const theta = sn.theta + nSpins * Math.PI * 2 * u;
-    this._orbitSpherical.set(sn.radius, sn.phi, theta);
+
+    let theta = sn.theta;
+    if (orbit && rotationDegrees > 0) {
+      theta = sn.theta + rotationSign * THREE.MathUtils.degToRad(rotationDegrees) * u;
+    }
+
+    let radius = sn.radius;
+    const distance = Math.max(0, Number(zoomDistance) || 0);
+    if (zoom === 'in' && distance > 0) {
+      const minRadius = this.controls.minDistance ?? 0.01;
+      radius = Math.max(minRadius, sn.radius - distance * u);
+    } else if (zoom === 'out' && distance > 0) {
+      const maxRadius = this.controls.maxDistance ?? Infinity;
+      radius = Math.min(maxRadius, sn.radius + distance * u);
+    }
+
+    this._orbitSpherical.set(radius, sn.phi, theta);
     this._orbitOffset.setFromSpherical(this._orbitSpherical);
     this.camera.position.copy(target).add(this._orbitOffset);
-    this._applyTilt();
+
+    const startTilt = Number.isFinite(this._exportCameraStartTilt)
+      ? this._exportCameraStartTilt
+      : 0;
+    const angle = THREE.MathUtils.clamp(Number(tiltAngle) || 0, 0, 180);
+    if (tilt === 'left' && angle > 0) {
+      this.currentTilt = startTilt - angle * u;
+    } else if (tilt === 'right' && angle > 0) {
+      this.currentTilt = startTilt + angle * u;
+    } else {
+      this.currentTilt = startTilt;
+    }
+    this._applyTilt({ uncapped: true });
   }
 
-  endExportOrbitDrive() {
-    if (!this._exportOrbitDriveActive) return;
-    this._exportOrbitDriveActive = false;
-    this._exportOrbitSnapshot = null;
-    if (this._preExportOrbitControls && this.controls) {
-      this.controls.enablePan = this._preExportOrbitControls.pan;
-      this.controls.enableRotate = this._preExportOrbitControls.rotate;
-      this.controls.enableZoom = this._preExportOrbitControls.zoom;
-      this.controls.enableDamping = this._preExportOrbitControls.damping;
+  endExportCameraDrive() {
+    if (!this._exportCameraDriveActive) return;
+    this._exportCameraDriveActive = false;
+    this._exportCameraSnapshot = null;
+    if (Number.isFinite(this._exportCameraStartTilt)) {
+      this.currentTilt = this._exportCameraStartTilt;
     }
-    this._preExportOrbitControls = null;
+    this._exportCameraStartTilt = null;
+    if (this._preExportCameraControls && this.controls) {
+      this.controls.enablePan = this._preExportCameraControls.pan;
+      this.controls.enableRotate = this._preExportCameraControls.rotate;
+      this.controls.enableZoom = this._preExportCameraControls.zoom;
+      this.controls.enableDamping = this._preExportCameraControls.damping;
+    }
+    this._preExportCameraControls = null;
     this.controls?.update?.();
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
     }
   }
 
+  isExportCameraDriving() {
+    return !!this._exportCameraDriveActive;
+  }
+
+  /** @deprecated use beginExportCameraDrive */
+  beginExportOrbitDrive() {
+    this.beginExportCameraDrive();
+  }
+
+  /** @deprecated use applyExportCameraDriveFrame */
+  applyExportOrbitDriveFrame(t, spins = 1) {
+    this.applyExportCameraDriveFrame(t, { spins, orbit: true });
+  }
+
+  /** @deprecated use endExportCameraDrive */
+  endExportOrbitDrive() {
+    this.endExportCameraDrive();
+  }
+
+  /** @deprecated use isExportCameraDriving */
   isExportOrbitDriving() {
-    return !!this._exportOrbitDriveActive;
+    return this.isExportCameraDriving();
   }
 
   /**
@@ -597,7 +660,7 @@ export class CameraController {
    * @param {number} delta - Time delta in seconds
    */
   updateAutoOrbit(delta) {
-    if (this._exportOrbitDriveActive) return;
+    if (this._exportCameraDriveActive) return;
     if (this._isometricModeActive) return;
     if (this.autoOrbitMode === 'off' || !this.autoOrbitBaseSpherical) return;
 
@@ -649,7 +712,7 @@ export class CameraController {
   }
 
   update() {
-    if (this._exportOrbitDriveActive) return;
+    if (this._exportCameraDriveActive) return;
     // Only update controls if auto-orbit is off (to prevent interference)
     // When auto-orbit is on, updateAutoOrbit sets pose then _applyTilt() there.
     if (this.autoOrbitMode === 'off') {
