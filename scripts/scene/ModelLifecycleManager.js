@@ -61,6 +61,7 @@ export class ModelLifecycleManager {
     s.transformControlsRotate?.detach();
     s.transformControlsScale?.detach();
     s.lensFlareController?.setModelRoot(null);
+    s.godRaysController?.setModelRoot(null);
     s.animationController.dispose();
     s.currentAssetMetadata = null;
     s.svgExtrudeImporter = null;
@@ -155,6 +156,7 @@ export class ModelLifecycleManager {
     s.modelRoot.add(object);
 
     s.lensFlareController?.setModelRoot(s.modelRoot);
+    s.godRaysController?.setModelRoot(s.modelRoot);
 
     s.materialController.prepareMesh(object);
     s._setupStlSmoothingForModel(object);

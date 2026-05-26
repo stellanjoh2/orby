@@ -233,6 +233,16 @@ export class StateStore {
           streakTint: '#7ec8ff',
         },
       },
+      /** Screen-space light shafts — shares sun direction with lens flare (rotation/height). */
+      godRays: {
+        enabled: false,
+        color: '#ffe8c4',
+        strength: 0.25,
+        length: 0.45,
+        softness: 0.55,
+        threshold: 0.52,
+        quality: 'medium',
+      },
       dof: {
         enabled: false,
         focus: 1.5, // Very close focus for tight asset viewing

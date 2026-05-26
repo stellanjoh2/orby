@@ -36,6 +36,7 @@ import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js
 import { MaterialController } from './render/MaterialController.js';
 import { reapplySvgExtrudeProceduralFromState } from './render/SvgExtrudeSurfaceShader.js';
 import { LensFlareController } from './render/LensFlareController.js';
+import { GodRaysController } from './render/GodRaysController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
@@ -556,6 +557,13 @@ export class SceneManager {
     });
     this.lensFlareController.init(initialState, this.hdriEnabled);
     this.lensFlareController.setTimeAnimationPaused(this.panelsShelfScrolling);
+    this.godRaysController = new GodRaysController({
+      godRaysPass: this.postPipeline.godRaysPass,
+      stateStore: this.stateStore,
+      getCamera: () => this.camera,
+    });
+    this.godRaysController.init(initialState);
+    this.godRaysController.setHdriEnabled(this.hdriEnabled);
     
     // Initialize histogram controller
     const histogramContainer = document.querySelector('#histogramContainer');
@@ -682,6 +690,8 @@ export class SceneManager {
     this.histogramController = null;
     this.lensFlareController?.dispose?.();
     this.lensFlareController = null;
+    this.godRaysController?.dispose?.();
+    this.godRaysController = null;
     this.lensDirtController?.dispose?.();
     this.lensDirtController = null;
     this.autoExposureController?.dispose?.();
@@ -864,6 +874,7 @@ export class SceneManager {
       beforeComposerRender: () => {
         this.materialController?.syncImportGltfGlassMaterials?.();
         this.lensFlareController?.prepareFrame(this.renderer);
+        this.godRaysController?.prepareFrame(this.renderer);
       },
       onRestoreBloomAfterCreativeLook: () => {
         this.updateBloom(this.stateStore.getState().bloom);
@@ -1559,6 +1570,34 @@ export class SceneManager {
     this.lensFlareController?.setDiscGlowColor(value);
   }
 
+  setGodRaysEnabled(enabled) {
+    this.godRaysController?.setEnabled(enabled);
+  }
+
+  setGodRaysColor(value) {
+    this.godRaysController?.setColor(value);
+  }
+
+  setGodRaysStrength(value) {
+    this.godRaysController?.setStrength(value);
+  }
+
+  setGodRaysLength(value) {
+    this.godRaysController?.setLength(value);
+  }
+
+  setGodRaysSoftness(value) {
+    this.godRaysController?.setSoftness(value);
+  }
+
+  setGodRaysThreshold(value) {
+    this.godRaysController?.setThreshold(value);
+  }
+
+  setGodRaysQuality(value) {
+    this.godRaysController?.setQuality(value);
+  }
+
   setClayNormalMap(enabled) {
     if (!this.currentModel) return;
 
@@ -1683,6 +1722,7 @@ export class SceneManager {
 
     this.applyHdriMood(this.currentHdri);
     this.lensFlareController?.setHdriEnabled(enabled);
+    this.godRaysController?.setHdriEnabled(enabled);
     this.ui?.updateHdriReceiveShadowsAoDisabled?.();
     // Reset auto-exposure when HDRI is toggled (scene brightness changes dramatically)
     this.autoExposureController?.resetLuminance();

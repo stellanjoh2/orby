@@ -326,6 +326,7 @@ function createStateApplySteps() {
         s.setHdriBackground(state.hdriBackground);
         s.setHdriReceiveShadowsAo(!!state.hdriReceiveShadowsAo);
         s.lensFlareController?.applyStateSnapshot(state);
+        s.godRaysController?.applyStateSnapshot(state);
         await s.setHdriPreset(state.hdri);
       },
     },

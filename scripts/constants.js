@@ -132,6 +132,48 @@ export function resolveAnamorphicBloomQualityTier(id) {
   return ANAMORPHIC_BLOOM_QUALITY[k] ?? ANAMORPHIC_BLOOM_QUALITY.medium;
 }
 
+/** God rays radial march — sample count scales with length + quality tier. */
+export const GOD_RAYS_QUALITY_DEFAULT = /** @type {const} */ ('medium');
+export const GOD_RAYS_MAX_SAMPLES = 96;
+export const GOD_RAYS_QUALITY = {
+  low: { minSamples: 8, maxSamples: 28, stepScale: 1.0 },
+  medium: { minSamples: 12, maxSamples: 48, stepScale: 0.86 },
+  high: { minSamples: 18, maxSamples: 72, stepScale: 0.72 },
+  ultra: { minSamples: 24, maxSamples: 96, stepScale: 0.58 },
+};
+
+/**
+ * @param {string | undefined} id
+ */
+export function normalizeGodRaysQualityId(id) {
+  if (id === 'optimized') return 'low';
+  if (id === 'maximum') return 'ultra';
+  if (id === 'low' || id === 'medium' || id === 'high' || id === 'ultra') {
+    return id;
+  }
+  return GOD_RAYS_QUALITY_DEFAULT;
+}
+
+/**
+ * @param {string | undefined} id
+ * @returns {typeof GOD_RAYS_QUALITY['medium']}
+ */
+export function resolveGodRaysQualityTier(id) {
+  const k = normalizeGodRaysQualityId(id);
+  return GOD_RAYS_QUALITY[k] ?? GOD_RAYS_QUALITY.medium;
+}
+
+/**
+ * @param {number} length - UI length 0–1
+ * @param {string | undefined} qualityId
+ */
+export function resolveGodRaysSampleCount(length, qualityId) {
+  const tier = resolveGodRaysQualityTier(qualityId);
+  const t = Math.min(1, Math.max(0, typeof length === 'number' && !Number.isNaN(length) ? length : 0));
+  const lengthWeight = Math.pow(t, 0.82);
+  return Math.round(tier.minSamples + (tier.maxSamples - tier.minSamples) * lengthWeight);
+}
+
 /**
  * Streak axis in degrees for UI + shader: fold to [0, 180] (line has π symmetry; 180° stays 180°).
  * @param {number} raw

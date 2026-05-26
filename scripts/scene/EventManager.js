@@ -243,6 +243,13 @@ export class EventManager {
     eventBus.on('studio:lens-flare-disc-glow-size', (value) => s.setLensFlareDiscGlowSize(value));
     eventBus.on('studio:lens-flare-disc-glow-color', (value) => s.setLensFlareDiscGlowColor(value));
     eventBus.on('studio:lens-flare-anamorphic-bloom', () => s.syncAnamorphicBloomFromState());
+    eventBus.on('studio:god-rays-enabled', (enabled) => s.setGodRaysEnabled(enabled));
+    eventBus.on('studio:god-rays-color', (value) => s.setGodRaysColor(value));
+    eventBus.on('studio:god-rays-strength', (value) => s.setGodRaysStrength(value));
+    eventBus.on('studio:god-rays-length', (value) => s.setGodRaysLength(value));
+    eventBus.on('studio:god-rays-softness', (value) => s.setGodRaysSoftness(value));
+    eventBus.on('studio:god-rays-threshold', (value) => s.setGodRaysThreshold(value));
+    eventBus.on('studio:god-rays-quality', (value) => s.setGodRaysQuality(value));
     eventBus.on('mesh:clay-normal-map', (enabled) => s.setClayNormalMap(enabled));
 
     // Render/Post-processing events

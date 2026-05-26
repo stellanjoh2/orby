@@ -3293,6 +3293,89 @@
                   </label>
                 </div>
                 <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="volumetric-scattering">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Sun volumetric light shafts — follows Lens Flare rotation and height">Volumetric Scattering</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Volumetric Scattering" data-tooltip="Reset Volumetric Scattering settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable sun volumetric scattering">
+                        <input type="checkbox" id="godRaysEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Volumetric Scattering</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="godRaysColor"
+                      class="color-chip"
+                      value="#ffe8c4"
+                    />
+                  </label>
+                  <label class="slider-line" data-tooltip="Overall brightness of the light shafts">
+                    <span>Strength</span>
+                    <input
+                      id="godRaysStrength"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.25"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysStrength">0.25</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="How far rays extend across the frame">
+                    <span>Length</span>
+                    <input
+                      id="godRaysLength"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.45"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysLength">0.45</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Feathering and falloff — higher values give softer, more diffuse shafts">
+                    <span>Softness</span>
+                    <input
+                      id="godRaysSoftness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.55"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysSoftness">0.55</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Higher = only the brightest highlights scatter into shafts">
+                    <span>Threshold</span>
+                    <input
+                      id="godRaysThreshold"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.52"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysThreshold">0.52</span>
+                  </label>
+                  <label class="select-line" data-tooltip="More samples at higher settings — helps long stretched rays stay smooth">
+                    <span>Quality</span>
+                    <select id="godRaysQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens-dirt">
                   <div class="block-title has-toggle">
                     <span>Lens Dirt</span>

@@ -114,6 +114,7 @@ export class SceneSettingsManager {
       hdriBackground: state.hdriBackground,
       hdriReceiveShadowsAo: state.hdriReceiveShadowsAo,
       lensFlare: state.lensFlare,
+      godRays: state.godRays,
       groundSolid: state.groundSolid,
       groundWire: state.groundWire,
       groundSolidColor: state.groundSolidColor,
@@ -770,6 +771,21 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-disc-glow-size', merged.discGlowSize);
         this.eventBus.emit('studio:lens-flare-disc-glow-color', merged.discGlowColor);
         this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
+      }
+      if (payload.godRays) {
+        const d = this.stateStore.getDefaults().godRays;
+        const merged = {
+          ...d,
+          ...payload.godRays,
+        };
+        this.stateStore.set('godRays', merged);
+        this.eventBus.emit('studio:god-rays-enabled', merged.enabled);
+        this.eventBus.emit('studio:god-rays-color', merged.color);
+        this.eventBus.emit('studio:god-rays-strength', merged.strength);
+        this.eventBus.emit('studio:god-rays-length', merged.length);
+        this.eventBus.emit('studio:god-rays-softness', merged.softness);
+        this.eventBus.emit('studio:god-rays-threshold', merged.threshold);
+        this.eventBus.emit('studio:god-rays-quality', merged.quality);
       }
       if (payload.groundSolid !== undefined) {
         this.stateStore.set('groundSolid', payload.groundSolid);

@@ -3,6 +3,7 @@ import { N8AOPass } from 'n8ao';
 import { MeshglEffectComposer } from './MeshglEffectComposer.js';
 import { MeshglRenderPass } from './MeshglRenderPass.js';
 import { MeshglBokehPass } from './MeshglBokehPass.js';
+import { MeshglGodRaysPass } from './MeshglGodRaysPass.js';
 import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FilmPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/FilmPass.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
@@ -72,6 +73,9 @@ export class PostProcessingPipeline {
       getDofDepthProxy: opts.getDofDepthProxy,
     });
 
+    this.godRaysPass = new MeshglGodRaysPass(scene, camera);
+    this.godRaysPass.enabled = false;
+
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(size.x, size.y),
       1.2,
@@ -127,6 +131,7 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.n8aoPass);
     this.composer.addPass(this.bokehPass);
+    this.composer.addPass(this.godRaysPass);
     this.composer.addPass(this.bloomPass);
     this.composer.addPass(this.bloomTintPass);
     this.composer.addPass(this.anamorphicBloomPass);
@@ -146,6 +151,7 @@ export class PostProcessingPipeline {
       { pass: this.renderPass, key: 'renderPass' },
       { pass: this.n8aoPass, key: 'n8aoPass' },
       { pass: this.bokehPass, key: 'bokehPass' },
+      { pass: this.godRaysPass, key: 'godRaysPass' },
       { pass: this.bloomPass, key: 'bloomPass' },
       { pass: this.bloomTintPass, key: 'bloomTintPass' },
       { pass: this.anamorphicBloomPass, key: 'anamorphicBloomPass' },
@@ -222,6 +228,23 @@ export class PostProcessingPipeline {
     const mul = resolveDofBokehMaxBlurMul(qualityId);
     const maxblur = Math.min(0.04, Math.max(0.01, settings.aperture * 15 * mul));
     this.bokehPass.uniforms.maxblur.value = maxblur;
+  }
+
+  /**
+   * Screen-space volumetric light shafts (after DOF, before bloom).
+   * @param {object} settings
+   * @param {{ forceOff?: boolean }} [opts]
+   */
+  updateGodRays(settings, { forceOff = false } = {}) {
+    if (!this.godRaysPass) return;
+    if (forceOff || !settings?.enabled) {
+      this.godRaysPass.enabled = false;
+      if (this.godRaysPass.uniforms?.uStrength) {
+        this.godRaysPass.uniforms.uStrength.value = 0;
+      }
+      return;
+    }
+    this.godRaysPass.enabled = true;
   }
 
   /**

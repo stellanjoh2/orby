@@ -161,6 +161,45 @@ export class StudioControls {
       this.eventBus.emit('studio:lens-flare-quality', value);
     });
 
+    // Volumetric Scattering (sun direction follows lens flare rotation/height)
+    this.ui.inputs.godRaysEnabled?.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      this.stateStore.set('godRays.enabled', enabled);
+      this.eventBus.emit('studio:god-rays-enabled', enabled);
+      this.ui.updateGodRaysControlsDisabled();
+      this.ui.applyBlockStates?.(this.stateStore.getState());
+    });
+    this.helpers.bindColorInput('godRaysColor', 'godRays.color', 'studio:god-rays-color');
+    this.ui.inputs.godRaysStrength?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysStrength', value, 'decimal');
+      this.stateStore.set('godRays.strength', value);
+      this.eventBus.emit('studio:god-rays-strength', value);
+    });
+    this.ui.inputs.godRaysLength?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysLength', value, 'decimal');
+      this.stateStore.set('godRays.length', value);
+      this.eventBus.emit('studio:god-rays-length', value);
+    });
+    this.ui.inputs.godRaysSoftness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysSoftness', value, 'decimal');
+      this.stateStore.set('godRays.softness', value);
+      this.eventBus.emit('studio:god-rays-softness', value);
+    });
+    this.ui.inputs.godRaysThreshold?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('godRaysThreshold', value, 'decimal');
+      this.stateStore.set('godRays.threshold', value);
+      this.eventBus.emit('studio:god-rays-threshold', value);
+    });
+    this.ui.inputs.godRaysQuality?.addEventListener('change', (event) => {
+      const value = event.target.value;
+      this.stateStore.set('godRays.quality', value);
+      this.eventBus.emit('studio:god-rays-quality', value);
+    });
+
     // Ground/Podium
     this.ui.inputs.groundSolid.addEventListener('change', (event) => {
       const enabled = event.target.checked;
@@ -672,6 +711,37 @@ export class StudioControls {
       this.ui.inputs.lensFlareQuality.value = state.lensFlare?.quality ?? 'maximum';
     }
     this.ui.updateLensFlareControlsDisabled();
+
+    if (this.ui.inputs.godRaysEnabled) {
+      this.ui.inputs.godRaysEnabled.checked = !!state.godRays?.enabled;
+    }
+    if (this.ui.inputs.godRaysColor && state.godRays?.color) {
+      this.ui.inputs.godRaysColor.value = state.godRays.color;
+    }
+    if (this.ui.inputs.godRaysStrength) {
+      const strength = Math.min(2, Math.max(0, state.godRays?.strength ?? 0.25));
+      this.ui.inputs.godRaysStrength.value = strength;
+      this.helpers.updateValueLabel('godRaysStrength', strength, 'decimal');
+    }
+    if (this.ui.inputs.godRaysLength) {
+      const length = Math.min(1, Math.max(0, state.godRays?.length ?? 0.45));
+      this.ui.inputs.godRaysLength.value = length;
+      this.helpers.updateValueLabel('godRaysLength', length, 'decimal');
+    }
+    if (this.ui.inputs.godRaysSoftness) {
+      const softness = Math.min(1, Math.max(0, state.godRays?.softness ?? 0.55));
+      this.ui.inputs.godRaysSoftness.value = softness;
+      this.helpers.updateValueLabel('godRaysSoftness', softness, 'decimal');
+    }
+    if (this.ui.inputs.godRaysThreshold) {
+      const threshold = Math.min(1, Math.max(0, state.godRays?.threshold ?? 0.52));
+      this.ui.inputs.godRaysThreshold.value = threshold;
+      this.helpers.updateValueLabel('godRaysThreshold', threshold, 'decimal');
+    }
+    if (this.ui.inputs.godRaysQuality) {
+      this.ui.inputs.godRaysQuality.value = state.godRays?.quality ?? 'medium';
+    }
+    this.ui.updateGodRaysControlsDisabled();
     
     // Ground/Podium
     this.ui.inputs.groundSolid.checked = state.groundSolid;

@@ -296,6 +296,13 @@ export class UIManager {
       lensFlareDiscGlowColor: q('#lensFlareDiscGlowColor'),
       lensFlareColor: q('#lensFlareColor'),
       lensFlareQuality: q('#lensFlareQuality'),
+      godRaysEnabled: q('#godRaysEnabled'),
+      godRaysColor: q('#godRaysColor'),
+      godRaysStrength: q('#godRaysStrength'),
+      godRaysLength: q('#godRaysLength'),
+      godRaysSoftness: q('#godRaysSoftness'),
+      godRaysThreshold: q('#godRaysThreshold'),
+      godRaysQuality: q('#godRaysQuality'),
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
       anamorphicBloomStrength: q('#anamorphicBloomStrength'),
       anamorphicBloomSpread: q('#anamorphicBloomSpread'),
@@ -1092,6 +1099,7 @@ export class UIManager {
     }
     this.updateHdriReceiveShadowsAoDisabled();
     this.updateLensFlareControlsDisabled();
+    this.updateGodRaysControlsDisabled();
   }
 
   updateHdriReceiveShadowsAoDisabled() {
@@ -1116,6 +1124,18 @@ export class UIManager {
     );
     
     // Block muting handled by applyBlockStates via syncControls
+  }
+
+  updateGodRaysControlsDisabled() {
+    if (!this.inputs.godRaysEnabled) return;
+    const hdriActive = !!this.inputs.hdriEnabled?.checked;
+    const enabled = hdriActive && !!this.inputs.godRaysEnabled.checked;
+
+    this.setControlDisabled('godRaysEnabled', !hdriActive);
+    this.setControlDisabled(
+      ['godRaysColor', 'godRaysStrength', 'godRaysLength', 'godRaysSoftness', 'godRaysThreshold', 'godRaysQuality'],
+      !enabled,
+    );
   }
 
   setDropzoneVisible(visible) {
@@ -1909,6 +1929,37 @@ export class UIManager {
     }
     this.updateLensFlareControlsDisabled();
 
+    if (this.inputs.godRaysEnabled) {
+      this.inputs.godRaysEnabled.checked = !!state.godRays?.enabled;
+    }
+    if (this.inputs.godRaysColor && state.godRays?.color) {
+      this.inputs.godRaysColor.value = state.godRays.color;
+    }
+    if (this.inputs.godRaysStrength) {
+      const strength = Math.min(2, Math.max(0, state.godRays?.strength ?? 0.25));
+      this.inputs.godRaysStrength.value = strength;
+      this.updateValueLabel('godRaysStrength', strength, 'decimal');
+    }
+    if (this.inputs.godRaysLength) {
+      const length = Math.min(1, Math.max(0, state.godRays?.length ?? 0.45));
+      this.inputs.godRaysLength.value = length;
+      this.updateValueLabel('godRaysLength', length, 'decimal');
+    }
+    if (this.inputs.godRaysSoftness) {
+      const softness = Math.min(1, Math.max(0, state.godRays?.softness ?? 0.55));
+      this.inputs.godRaysSoftness.value = softness;
+      this.updateValueLabel('godRaysSoftness', softness, 'decimal');
+    }
+    if (this.inputs.godRaysThreshold) {
+      const threshold = Math.min(1, Math.max(0, state.godRays?.threshold ?? 0.52));
+      this.inputs.godRaysThreshold.value = threshold;
+      this.updateValueLabel('godRaysThreshold', threshold, 'decimal');
+    }
+    if (this.inputs.godRaysQuality) {
+      this.inputs.godRaysQuality.value = state.godRays?.quality ?? 'medium';
+    }
+    this.updateGodRaysControlsDisabled();
+
     // Ground/Podium
     this.inputs.groundSolid.checked = state.groundSolid;
     this.inputs.groundWire.checked = state.groundWire;
@@ -2493,6 +2544,9 @@ export class UIManager {
     // Lens flare block - requires both HDRI and lens flare to be enabled
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
     this.setBlockMuted('lens-flare', !lensEnabled || isoOn);
+
+    const volScatterOn = !!currentState.hdriEnabled && !!currentState.godRays?.enabled;
+    this.setBlockMuted('volumetric-scattering', !volScatterOn || isoOn);
     
     // Lights block - only muted if lightsEnabled is false
     this.setBlockMuted('lights', !currentState.lightsEnabled);
