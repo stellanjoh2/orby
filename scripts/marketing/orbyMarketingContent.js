@@ -301,11 +301,18 @@ export const MARKETING_SECTIONS = [
   {
     type: 'pro',
     id: 'orby-marketing-pro',
-    eyebrow: 'ADDITIONAL FEATURES',
+    eyebrow: 'LIGHT CONTROL',
     title: 'Goes a lot deeper\nthan you think',
     lede:
       "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [
+      {
+        title: 'Light Control',
+        body:
+          'Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in.',
+        videoSrc: './assets/marketing/orby-feature-lights.mp4',
+        imageAlt: 'Three-point lighting rig orbiting a product render in Orby',
+      },
       {
         title: 'Mesh Diagnostics',
         body:
@@ -330,13 +337,6 @@ export const MARKETING_SECTIONS = [
         ],
         flipGalleryIntervalMs: 2000,
         flipGalleryFadeMs: 0.405,
-      },
-      {
-        title: 'Simple UI',
-        body:
-          'Made for designers, creators and curious people — not just 3D artists. If you can open a file, you can use Orby.',
-        imageSrc: './assets/marketing/pro-feature2-export.jpg',
-        imageAlt: 'Export deliverables from Orby — stills, video, and sequences',
       },
       {
         title: 'Animation Preview',

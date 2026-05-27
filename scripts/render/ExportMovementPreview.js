@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import {
   hasExportVideoMovement,
   needsExportCameraDrive,
@@ -15,6 +16,7 @@ export class ExportMovementPreview {
     stateStore,
     ui,
     setRotationY,
+    setLightsRotation,
     getCurrentModel,
     getAnimationClipCount = () => 0,
     beginExportCameraDrive = () => {},
@@ -28,6 +30,7 @@ export class ExportMovementPreview {
     this.stateStore = stateStore;
     this.ui = ui;
     this.setRotationY = setRotationY;
+    this.setLightsRotation = setLightsRotation;
     this.getCurrentModel = getCurrentModel;
     this.getAnimationClipCount = getAnimationClipCount;
     this.beginExportCameraDrive = beginExportCameraDrive;
@@ -44,6 +47,8 @@ export class ExportMovementPreview {
     this._fps = 24;
     this._spinSettings = normalizeExportSpinSettings();
     this._startRotationY = 0;
+    this._startLightsRotation = 0;
+    this._lightsAutoRotate = false;
     this._movements = normalizeExportVideoMovements();
     this._meshAnimation = normalizeExportMeshAnimationSettings();
     this._cameraDriveStarted = false;
@@ -84,6 +89,10 @@ export class ExportMovementPreview {
     this._startRotationY = Number.isFinite(state.rotationY)
       ? state.rotationY
       : THREE.MathUtils.radToDeg(this.getCurrentModel()?.rotation?.y || 0);
+    this._startLightsRotation = Number.isFinite(state.lightsRotation)
+      ? state.lightsRotation
+      : 0;
+    this._lightsAutoRotate = !!state.lightsAutoRotate;
 
     this._cameraDriveStarted = needsExportCameraDrive(movements);
     if (this._cameraDriveStarted) {
@@ -119,6 +128,10 @@ export class ExportMovementPreview {
     this.endExportAnimationDrive();
     this.setRotationY(this._startRotationY);
     this.stateStore.set('rotationY', this._startRotationY);
+    if (this._lightsAutoRotate && typeof this.setLightsRotation === 'function') {
+      this.setLightsRotation(this._startLightsRotation);
+      this.stateStore.set('lightsRotation', this._startLightsRotation);
+    }
 
     this._active = false;
     this._cameraDriveStarted = false;
@@ -150,6 +163,14 @@ export class ExportMovementPreview {
     }
     if (this._meshAnimation.include && typeof frameIndex === 'number' && this._fps > 0) {
       this.applyExportAnimationDriveFrame(frameIndex, this._fps);
+    }
+    if (this._lightsAutoRotate && typeof this.setLightsRotation === 'function') {
+      const lightsRotation = lightsRotationForExportFrame(
+        this._startLightsRotation,
+        this._durationSec,
+        t,
+      );
+      this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });
     }
   }
 }

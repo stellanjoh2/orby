@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-27T10:04:19.104Z",
+    "generatedAt": "2026-05-27T14:47:51.119Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -243,7 +243,7 @@
       "order": 10,
       "type": "pro",
       "id": "orby-marketing-pro",
-      "eyebrow": "ADDITIONAL FEATURES",
+      "eyebrow": "LIGHT CONTROL",
       "title": "Goes a lot deeper\nthan you think",
       "titleLines": [
         "Goes a lot deeper",
@@ -254,12 +254,12 @@
       "cta": null,
       "cards": [
         {
-          "title": "Mesh Diagnostics",
-          "body": "UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC."
+          "title": "Light Control",
+          "body": "Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in."
         },
         {
-          "title": "Simple UI",
-          "body": "Made for designers, creators and curious people — not just 3D artists. If you can open a file, you can use Orby."
+          "title": "Mesh Diagnostics",
+          "body": "UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC."
         },
         {
           "title": "Animation Preview",

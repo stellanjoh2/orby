@@ -1,12 +1,12 @@
 import * as THREE from 'three';
+import { lightsAutoRotateDegreesPerSecond } from '../config/lightsAutoRotate.js';
 import {
   SHADOW_MAP_SIZE_BY_QUALITY,
   normalizeShadowQuality,
   shadowBlurSamplesForQuality,
   shadowCameraOrthoPaddingForQuality,
+  effectiveDirectionalShadowRadius,
 } from '../config/shadowQuality.js';
-
-const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
 const MIN_SHADOW_BOUNDS_RADIUS = 0.5;
 const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
   low: 10,
@@ -28,7 +28,7 @@ export class LightsController {
     this.lightsMaster = options.master ?? 1;
     this.rotation = options.rotation ?? 0;
     this.lightsHeight = options.height ?? 5;
-    this.autoRotateSpeed = options.autoRotateSpeed ?? 30;
+    this.autoRotateSpeed = options.autoRotateSpeed ?? lightsAutoRotateDegreesPerSecond();
     this.modelBounds = null;
     /** Horizontal reach from shadow target center to the receive surface edge (base / catcher). */
     this.receiveSurfaceRadius = 0;
@@ -109,11 +109,10 @@ export class LightsController {
   }
 
   _applyShadowSoftnessToLights() {
-    const currentSize =
-      SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality] ?? SHADOW_MAP_SIZE_BY_QUALITY.medium;
-    const referenceSize = SHADOW_MAP_SIZE_BY_QUALITY[SHADOW_SOFTNESS_REFERENCE_QUALITY];
-    // Radius is in shadow texels; scale it with map resolution to preserve visual softness.
-    const effectiveRadius = this.shadowSoftness * (currentSize / referenceSize);
+    const effectiveRadius = effectiveDirectionalShadowRadius(
+      this.shadowSoftness,
+      this.shadowQuality,
+    );
     const blurSamples = this._shadowBlurSamplesForQuality();
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];

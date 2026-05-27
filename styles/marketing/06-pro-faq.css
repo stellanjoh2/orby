@@ -153,13 +153,14 @@ html.safari-browser .orby-marketing__pro-card-video {
   text-align: center;
 }
 
-.orby-marketing__pro-card-title {
+#orby-marketing .orby-marketing__pro-card-title {
   margin: 0 0 calc(1.15rem * var(--orby-marketing-scale));
-  font-family: var(--brand-font-headline);
-  font-size: 21px;
-  font-weight: 700;
+  font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
+    sans-serif);
+  font-size: 22px;
+  font-weight: 400;
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: var(--orby-marketing-headline);
 }
 
@@ -273,9 +274,9 @@ html.safari-browser .orby-marketing__pro-card-video {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--orby-marketing-headline);
-  font-size: var(--orby-marketing-feature-lede-size);
-  line-height: var(--orby-marketing-feature-lede-line);
+  color: var(--brand-primary, #c4ff00);
+  font-size: 18px;
+  line-height: 1.2;
   width: 1.25em;
   height: 1.25em;
 }
@@ -288,11 +289,13 @@ html.safari-browser .orby-marketing__pro-card-video {
 
 .orby-marketing__faq-question {
   margin: 0 0 0.55rem;
-  font-size: var(--orby-marketing-feature-lede-size);
-  font-weight: 700;
-  line-height: var(--orby-marketing-feature-lede-line);
-  letter-spacing: -0.02em;
-  color: var(--orby-marketing-text);
+  font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
+    sans-serif);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--brand-primary, #c4ff00);
 }
 
 .orby-marketing__faq-body {

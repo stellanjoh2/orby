@@ -430,7 +430,7 @@ function renderProCard(card) {
       <div class="orby-marketing__pro-card-surface">
         ${media}
         <div class="orby-marketing__pro-card-copy">
-          <h3 class="orby-marketing__pro-card-title brand-font-headline">${escapeMarketingHtml(card.title)}</h3>
+          <h3 class="orby-marketing__pro-card-title">${escapeMarketingHtml(card.title)}</h3>
           <p class="orby-marketing__pro-card-body">${escapeMarketingHtml(card.body)}</p>
         </div>
       </div>
@@ -448,7 +448,7 @@ function renderProSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--pro" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__pro">
       <header class="orby-marketing__pro-header">
-        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || 'Additional features')}</p>
+        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || 'Light Control')}</p>
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
         ${ledeBlock}
       </header>

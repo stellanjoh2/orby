@@ -22,8 +22,9 @@ export const SHADOW_MAP_SIZE_BY_QUALITY = {
 };
 
 /**
- * PCF filter sample count per quality tier (Three.js DirectionalLightShadow.blurSamples).
- * Ultra uses PCFSoft + 4096 maps — not VSM (streaks on studio backdrop).
+ * PCF filter sample count per quality tier (VSM only in Three.js r167; kept for future use).
+ * Spotlight softness uses PCFShadowMap + {@link effectiveDirectionalShadowRadius}, not VSM
+ * (VSM can streak on large cyclorama / HDRI receivers).
  */
 export const SHADOW_BLUR_SAMPLES_BY_QUALITY = {
   low: 4,
@@ -70,4 +71,24 @@ export function shadowCameraOrthoPaddingForQuality(quality) {
 export function goboBlurModeForQuality(quality) {
   const q = normalizeShadowQuality(quality);
   return GOBO_BLUR_MODE_BY_QUALITY[q] ?? GOBO_BLUR_MODE_BY_QUALITY.medium;
+}
+
+const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
+
+/**
+ * Shadow-map blur radius (texels) for the lights Softness slider.
+ * Scales with map resolution and inversely with ortho padding so Ultra’s tighter
+ * frustum does not halve world-space penumbra vs Low.
+ */
+export function effectiveDirectionalShadowRadius(softness, quality) {
+  const q = normalizeShadowQuality(quality);
+  const s = Math.min(4, Math.max(0, Number(softness) || 0));
+  const currentSize = SHADOW_MAP_SIZE_BY_QUALITY[q] ?? SHADOW_MAP_SIZE_BY_QUALITY.medium;
+  const referenceSize =
+    SHADOW_MAP_SIZE_BY_QUALITY[SHADOW_SOFTNESS_REFERENCE_QUALITY];
+  const padding = shadowCameraOrthoPaddingForQuality(q);
+  const refPadding = shadowCameraOrthoPaddingForQuality(
+    SHADOW_SOFTNESS_REFERENCE_QUALITY,
+  );
+  return s * (currentSize / referenceSize) * (refPadding / padding);
 }

@@ -48,6 +48,7 @@ import {
   normalizeStoredGoboScale,
 } from './render/GoboProjection.js';
 import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
+import { lightsAutoRotateDegreesPerSecond } from './config/lightsAutoRotate.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
@@ -148,7 +149,7 @@ export class SceneManager {
     this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
     this.lightsAutoRotate = initialState.lightsAutoRotate ?? false;
-    this.lightsAutoRotateSpeed = 30;
+    this.lightsAutoRotateSpeed = lightsAutoRotateDegreesPerSecond();
     this.currentFile = null;
     this.currentModel = null;
     this.currentAssetMetadata = null;
@@ -938,6 +939,7 @@ export class SceneManager {
       renderComposerPassForExport: (opts) =>
         this.composerLifecycle.renderComposerPassForExport(opts),
       setRotationY: (value) => this.setRotationY(value),
+      setLightsRotation: (value, opts) => this.setLightsRotation(value, opts),
       beginExportOrbitDrive: () => this.cameraController?.beginExportOrbitDrive?.(),
       applyExportOrbitDriveFrame: (t, spins) =>
         this.cameraController?.applyExportOrbitDriveFrame?.(t, spins),
@@ -976,6 +978,7 @@ export class SceneManager {
       stateStore: this.stateStore,
       ui: this.ui,
       setRotationY: (value) => this.setRotationY(value),
+      setLightsRotation: (value, opts) => this.setLightsRotation(value, opts),
       getCurrentModel: () => this.currentModel,
       getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
       beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
@@ -1398,10 +1401,8 @@ export class SceneManager {
       shadowMapSizeForQuality(this.lightsShadowQuality)
       ?? tier.shadowMapSize;
     this.lightsController?.setShadowMapResolution(shadowSize);
-    // Ultra uses 4096 maps + PCFSoft (not VSM — variance blur streaks on cyclorama / large receivers).
-    this.renderer.shadowMap.type = tier.softShadowMap
-      ? (this.lightsShadowSoftness <= 0.05 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap)
-      : THREE.PCFShadowMap;
+    // PCFSoft ignores shadow.radius; softness slider drives radius on PCFShadowMap only.
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
   }
 
   _hasHdriPreset(preset) {

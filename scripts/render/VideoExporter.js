@@ -10,6 +10,7 @@ import {
   exportSpinSequenceLabel,
   exportSpinToastLabel,
 } from './exportVideoMovements.js';
+import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
 
 export class VideoExporter {
@@ -33,6 +34,7 @@ export class VideoExporter {
     /** Same pass sequence as still PNG export (`ImageExporter.exportPng`). */
     renderComposerPassForExport,
     setRotationY,
+    setLightsRotation,
     beginExportOrbitDrive = () => {},
     applyExportOrbitDriveFrame = () => {},
     endExportOrbitDrive = () => {},
@@ -66,6 +68,7 @@ export class VideoExporter {
     this.beforeComposerRender = beforeComposerRender;
     this.renderComposerPassForExport = renderComposerPassForExport;
     this.setRotationY = setRotationY;
+    this.setLightsRotation = setLightsRotation;
     this.beginExportOrbitDrive = beginExportOrbitDrive;
     this.applyExportOrbitDriveFrame = applyExportOrbitDriveFrame;
     this.endExportOrbitDrive = endExportOrbitDrive;
@@ -123,12 +126,31 @@ export class VideoExporter {
     return `${safeBase}_${mode}_${durationSec}s_${fps}fps_${spinLabel}_${resolution}`;
   }
 
-  _applyVideoExportFrame({ movements, t, spinSettings, startRotationY, frameIndex, fps, meshAnimation }) {
+  _applyVideoExportFrame({
+    movements,
+    t,
+    spinSettings,
+    startRotationY,
+    startLightsRotation,
+    lightsAutoRotate,
+    durationSec,
+    frameIndex,
+    fps,
+    meshAnimation,
+  }) {
     const { rotationDegrees, signedRotationDegrees, sign } = spinSettings;
     if (movements.turntable && rotationDegrees > 0) {
       const rotationY = startRotationY + signedRotationDegrees * t;
       this.setRotationY(rotationY);
       this.stateStore.set('rotationY', rotationY);
+    }
+    if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
+      const lightsRotation = lightsRotationForExportFrame(
+        startLightsRotation,
+        durationSec,
+        t,
+      );
+      this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });
     }
     if (needsExportCameraDrive(movements)) {
       this.applyExportCameraDriveFrame?.(t, {
@@ -488,6 +510,8 @@ export class VideoExporter {
     durationSec,
     fps,
     startRotationY,
+    startLightsRotation,
+    lightsAutoRotate,
     quality = 'medium',
     spinSettings,
     movements,
@@ -507,6 +531,8 @@ export class VideoExporter {
         durationSec,
         fps,
         startRotationY,
+        startLightsRotation,
+        lightsAutoRotate,
         quality,
         spinSettings,
         movements,
@@ -530,7 +556,16 @@ export class VideoExporter {
     // Prime frame 0 and wait until the canvas reflects it — avoids garbage lead-in frames
     // after recorder.start().
     this._applyVideoExportFrame({
-      movements, t: 0, spinSettings, startRotationY, frameIndex: 0, fps, meshAnimation,
+      movements,
+      t: 0,
+      spinSettings,
+      startRotationY,
+      startLightsRotation,
+      lightsAutoRotate,
+      durationSec,
+      frameIndex: 0,
+      fps,
+      meshAnimation,
     });
     this._renderCurrentFrameToCanvas();
     await this._yieldUntilPaintCommitted();
@@ -552,7 +587,16 @@ export class VideoExporter {
       }
       const t = i / totalFrames;
       this._applyVideoExportFrame({
-        movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
+        movements,
+        t,
+        spinSettings,
+        startRotationY,
+        startLightsRotation,
+        lightsAutoRotate,
+        durationSec,
+        frameIndex: i,
+        fps,
+        meshAnimation,
       });
       this._renderCurrentFrameToCanvas();
       track.requestFrame();
@@ -573,6 +617,8 @@ export class VideoExporter {
     durationSec,
     fps,
     startRotationY,
+    startLightsRotation,
+    lightsAutoRotate,
     quality = 'medium',
     spinSettings,
     movements,
@@ -597,7 +643,16 @@ export class VideoExporter {
     const frameDurationMs = 1000 / Math.max(1, fps);
 
     this._applyVideoExportFrame({
-      movements, t: 0, spinSettings, startRotationY, frameIndex: 0, fps, meshAnimation,
+      movements,
+      t: 0,
+      spinSettings,
+      startRotationY,
+      startLightsRotation,
+      lightsAutoRotate,
+      durationSec,
+      frameIndex: 0,
+      fps,
+      meshAnimation,
     });
     this._renderCurrentFrameToCanvas();
     await this._yieldUntilPaintCommitted();
@@ -619,7 +674,16 @@ export class VideoExporter {
       }
       const t = i / totalFrames;
       this._applyVideoExportFrame({
-        movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
+        movements,
+        t,
+        spinSettings,
+        startRotationY,
+        startLightsRotation,
+        lightsAutoRotate,
+        durationSec,
+        frameIndex: i,
+        fps,
+        meshAnimation,
       });
       this._renderCurrentFrameToCanvas();
       this.ui?.setLoadSpinnerElapsedFromStart?.();
@@ -687,6 +751,10 @@ export class VideoExporter {
     const startRotationY = Number.isFinite(state.rotationY)
       ? state.rotationY
       : THREE.MathUtils.radToDeg(this.getCurrentModel()?.rotation?.y || 0);
+    const startLightsRotation = Number.isFinite(state.lightsRotation)
+      ? state.lightsRotation
+      : 0;
+    const lightsAutoRotate = !!state.lightsAutoRotate;
     const baseName =
       this.getCurrentFile?.()?.name
       || this.getCurrentAssetMetadata?.()?.assetName
@@ -749,6 +817,8 @@ export class VideoExporter {
             durationSec,
             fps,
             startRotationY,
+            startLightsRotation,
+            lightsAutoRotate,
             baseName,
             quality: mp4Quality,
             spinSettings,
@@ -770,6 +840,10 @@ export class VideoExporter {
           this.endExportAnimationDrive?.();
           this.setRotationY(startRotationY);
           this.stateStore.set('rotationY', startRotationY);
+          if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
+            this.setLightsRotation(startLightsRotation);
+            this.stateStore.set('lightsRotation', startLightsRotation);
+          }
           this._restoreVideoExportSize(sizeSnapshot);
           this._repairViewportAfterExport();
           this.handleResize?.();
@@ -793,7 +867,16 @@ export class VideoExporter {
           }
           const t = i / totalFrames;
           this._applyVideoExportFrame({
-            movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
+            movements,
+            t,
+            spinSettings,
+            startRotationY,
+            startLightsRotation,
+            lightsAutoRotate,
+            durationSec,
+            frameIndex: i,
+            fps,
+            meshAnimation,
           });
           const dataUrl = shouldUseTransparentFrames
             ? this._captureTransparentFramePngDataUrl()
@@ -844,6 +927,10 @@ export class VideoExporter {
         this.endExportAnimationDrive?.();
         this.setRotationY(startRotationY);
         this.stateStore.set('rotationY', startRotationY);
+        if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
+          this.setLightsRotation(startLightsRotation);
+          this.stateStore.set('lightsRotation', startLightsRotation);
+        }
         this.scene.background = originalBackground;
         this.renderer.setClearColor(originalClearColor, originalClearAlpha);
         this.renderer.setClearAlpha(originalClearAlpha);
