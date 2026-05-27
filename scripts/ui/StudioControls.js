@@ -235,6 +235,10 @@ export class StudioControls {
       this.stateStore.set('lensFlare.spinDuringOrbit', enabled);
       this.eventBus.emit('studio:lens-flare-spin-during-orbit', enabled);
     });
+    this.ui.inputs.lensFlareKeyLightConnect?.addEventListener('click', () => {
+      const connected = !this.stateStore.getState().lensFlare?.keyLightConnected;
+      this.eventBus.emit('studio:lens-flare-key-light-connected', connected);
+    });
     this.ui.inputs.godRaysQuality?.addEventListener('change', (event) => {
       const value = event.target.value;
       this.stateStore.set('godRays.quality', value);
@@ -749,6 +753,7 @@ export class StudioControls {
         flare.spinDuringOrbit ?? state.godRays?.spinDuringOrbit
       );
     }
+    this.ui.syncLensFlareKeyLightConnectButton?.();
     this.ui.updateLensFlareControlsDisabled();
 
     const godRays = normalizeGodRaysState(

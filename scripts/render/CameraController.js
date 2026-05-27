@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { setCameraOrbitFromAngles } from '../camera/isometricView.js';
+import {
+  DEFAULT_CAMERA_POSITION,
+  DEFAULT_CAMERA_TARGET,
+} from '../camera/cameraDefaults.js';
 function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
 }
@@ -32,6 +36,7 @@ export class CameraController {
       altLightRotateSensitivity = 0.5,
       altLightHeightSensitivity = 0.1,
       onModelBoundsChanged = null,
+      onPoseChanged = null,
     } = {},
   ) {
     this.camera = camera;
@@ -45,6 +50,7 @@ export class CameraController {
       onShiftHdriRotate,
       onShiftHdriRotateEnd,
       onModelBoundsChanged,
+      onPoseChanged,
     };
     this.altLightRotateSensitivity = altLightRotateSensitivity;
     this.altLightHeightSensitivity = altLightHeightSensitivity ?? 0.15;
@@ -110,7 +116,10 @@ export class CameraController {
     /** @type {{ position: THREE.Vector3, target: THREE.Vector3, tilt: number, minPolar: number, maxPolar: number, minAzimuth: number, maxAzimuth: number, enableRotate: boolean, enablePan: boolean } | null} */
     this._isometricRestoreSnapshot = null;
 
+    this._suppressPoseEvents = false;
+
     this._bindAltInteractions();
+    this._bindOrbitPoseSync();
   }
 
   isIsometricModeActive() {
@@ -119,6 +128,98 @@ export class CameraController {
 
   getControls() {
     return this.controls;
+  }
+
+  getPose() {
+    const target = this.controls?.target;
+    const distance = target
+      ? this.camera.position.distanceTo(target)
+      : 0;
+    return {
+      position: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
+      distance,
+    };
+  }
+
+  emitPoseChanged({ persist = true } = {}) {
+    this.callbacks.onPoseChanged?.({ ...this.getPose(), persist });
+  }
+
+  _emitPoseChanged(options) {
+    this.emitPoseChanged(options);
+  }
+
+  /**
+   * Set camera world position; orbit target stays fixed (view angle and distance may change).
+   */
+  setWorldPosition(x, y, z) {
+    if (this._isometricModeActive) return;
+    this._cancelFocusAnimation();
+    this._suppressPoseEvents = true;
+    this.camera.position.set(x, y, z);
+    this.controls.update();
+    this._applyTilt();
+    this._suppressPoseEvents = false;
+    this._emitPoseChanged();
+  }
+
+  /**
+   * Dolly along the camera→target axis to a fixed distance from the orbit target.
+   */
+  setDistance(distance) {
+    if (this._isometricModeActive) return;
+    this._cancelFocusAnimation();
+    const target = this.controls?.target;
+    if (!target) return;
+
+    const nextDistance = Math.max(0.01, Number(distance) || 0.01);
+    const offset = new THREE.Vector3().subVectors(this.camera.position, target);
+    let direction;
+    if (offset.lengthSq() < 1e-10) {
+      direction = defaultModelViewDirection();
+    } else {
+      direction = offset.normalize();
+    }
+
+    this._suppressPoseEvents = true;
+    this.camera.position.copy(target).add(direction.multiplyScalar(nextDistance));
+    this.controls.update();
+    this._applyTilt();
+    this._suppressPoseEvents = false;
+    this._emitPoseChanged();
+  }
+
+  resetWorldPose() {
+    this._cancelFocusAnimation();
+    this._suppressPoseEvents = true;
+    this.controls.target.set(
+      DEFAULT_CAMERA_TARGET.x,
+      DEFAULT_CAMERA_TARGET.y,
+      DEFAULT_CAMERA_TARGET.z,
+    );
+    this.camera.position.set(
+      DEFAULT_CAMERA_POSITION.x,
+      DEFAULT_CAMERA_POSITION.y,
+      DEFAULT_CAMERA_POSITION.z,
+    );
+    this.controls.update();
+    this._applyTilt();
+    this._suppressPoseEvents = false;
+    this._emitPoseChanged();
+  }
+
+  _bindOrbitPoseSync() {
+    if (!this.controls) return;
+    const commitPose = () => {
+      if (this._suppressPoseEvents || this._exportCameraDriveActive) return;
+      if (this.autoOrbitMode !== 'off') return;
+      this._emitPoseChanged({ persist: true });
+    };
+    this.controls.addEventListener('end', commitPose);
   }
 
   /**
@@ -202,6 +303,7 @@ export class CameraController {
     this._isometricRestoreSnapshot = null;
     this.controls?.update?.();
     this._applyTilt();
+    this._emitPoseChanged();
   }
 
   /**
@@ -234,6 +336,7 @@ export class CameraController {
     }
     this.controls.update();
     this._lockIsometricOrbitPose();
+    this._emitPoseChanged();
   }
 
   _releaseIsometricOrbitLimits() {
@@ -774,6 +877,7 @@ export class CameraController {
       if (this.autoOrbitMode === 'off') {
         this._applyTilt();
       }
+      this._emitPoseChanged();
     }
   }
 
@@ -841,6 +945,7 @@ export class CameraController {
         if (this.autoOrbitMode === 'off') {
           this._applyTilt();
         }
+        this._emitPoseChanged();
       },
     });
 
@@ -877,33 +982,46 @@ export class CameraController {
   }
 
   /**
-   * Apply a camera preset (front, three-quarter, top)
-   * @param {string} preset - Preset name ('front', 'three-quarter', 'top')
+   * Apply a camera preset (front, left, right, top)
+   * @param {string} preset - Preset name
    */
   applyCameraPreset(preset) {
-    if (!this.modelBounds) return;
-    const { center, radius } = this.modelBounds;
+    if (this._isometricModeActive) return;
+    this._cancelFocusAnimation();
+
+    const target =
+      this.modelBounds?.center?.clone()
+      ?? this.controls?.target?.clone()
+      ?? new THREE.Vector3(0, 1, 0);
+    const radius = this.modelBounds?.radius ?? 1;
     const distance = radius * 2.4 || 5;
-    const target = center.clone();
+    const yLift = radius * 0.2;
     let position;
-    
+
     if (preset === 'front') {
-      position = target.clone().add(new THREE.Vector3(0, radius * 0.2, distance));
+      position = target.clone().add(new THREE.Vector3(0, yLift, distance));
+    } else if (preset === 'left') {
+      position = target.clone().add(new THREE.Vector3(-distance, yLift, 0));
+    } else if (preset === 'right') {
+      position = target.clone().add(new THREE.Vector3(distance, yLift, 0));
+    } else if (preset === 'top') {
+      position = target.clone().add(new THREE.Vector3(0, distance, 0.0001));
     } else if (preset === 'three-quarter') {
       position = target
         .clone()
-        .add(new THREE.Vector3(distance, radius * 0.4, distance));
-    } else if (preset === 'top') {
-      position = target.clone().add(new THREE.Vector3(0, distance, 0.0001));
+        .add(new THREE.Vector3(distance, yLift * 2, distance));
     }
-    
+
     if (position) {
+      this._suppressPoseEvents = true;
       this.camera.position.copy(position);
       this.controls.target.copy(target);
       this.controls.update();
       if (this.autoOrbitMode === 'off') {
         this._applyTilt();
       }
+      this._suppressPoseEvents = false;
+      this._emitPoseChanged();
     }
   }
 

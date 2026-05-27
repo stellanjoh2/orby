@@ -1059,23 +1059,48 @@ export class MeshControls {
     }
   }
 
-  sync(state) {
-    this.ui.inputs.scale.value = state.scale;
-    this.helpers.updateValueLabel('scale', state.scale, 'multiplier');
-    this.ui.inputs.yOffset.value = state.yOffset;
-    this.helpers.updateValueLabel('yOffset', state.yOffset, 'distance');
+  syncTransformSliders(values) {
+    if (!values) return;
+    if (this.ui.inputs.scale) {
+      this.ui.inputs.scale.value = values.scale;
+      this.helpers.updateValueLabel('scale', values.scale, 'multiplier');
+    }
+    if (this.ui.inputs.xOffset) {
+      this.ui.inputs.xOffset.value = values.xOffset;
+      this.helpers.updateValueLabel('xOffset', values.xOffset, 'distance');
+    }
+    if (this.ui.inputs.yOffset) {
+      this.ui.inputs.yOffset.value = values.yOffset;
+      this.helpers.updateValueLabel('yOffset', values.yOffset, 'distance');
+    }
+    if (this.ui.inputs.zOffset) {
+      this.ui.inputs.zOffset.value = values.zOffset;
+      this.helpers.updateValueLabel('zOffset', values.zOffset, 'distance');
+    }
     if (this.ui.inputs.rotationX) {
-      this.ui.inputs.rotationX.value = state.rotationX ?? 0;
-      this.helpers.updateValueLabel('rotationX', state.rotationX ?? 0, 'angle');
+      this.ui.inputs.rotationX.value = values.rotationX;
+      this.helpers.updateValueLabel('rotationX', values.rotationX, 'angle');
     }
     if (this.ui.inputs.rotationY) {
-      this.ui.inputs.rotationY.value = state.rotationY ?? 0;
-      this.helpers.updateValueLabel('rotationY', state.rotationY ?? 0, 'angle');
+      this.ui.inputs.rotationY.value = values.rotationY;
+      this.helpers.updateValueLabel('rotationY', values.rotationY, 'angle');
     }
     if (this.ui.inputs.rotationZ) {
-      this.ui.inputs.rotationZ.value = state.rotationZ ?? 0;
-      this.helpers.updateValueLabel('rotationZ', state.rotationZ ?? 0, 'angle');
+      this.ui.inputs.rotationZ.value = values.rotationZ;
+      this.helpers.updateValueLabel('rotationZ', values.rotationZ, 'angle');
     }
+  }
+
+  sync(state) {
+    this.syncTransformSliders({
+      scale: state.scale,
+      xOffset: state.xOffset ?? 0,
+      yOffset: state.yOffset,
+      zOffset: state.zOffset ?? 0,
+      rotationX: state.rotationX ?? 0,
+      rotationY: state.rotationY ?? 0,
+      rotationZ: state.rotationZ ?? 0,
+    });
     if (this.ui.inputs.materialBrightness) {
       const brightness = state.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
       this.ui.inputs.materialBrightness.value = brightness;

@@ -25,6 +25,7 @@ import { StudioControls } from './ui/StudioControls.js';
 import { GoboControls } from './ui/GoboControls.js';
 import { RenderControls } from './ui/RenderControls.js';
 import { LensControls } from './ui/LensControls.js';
+import { ViewPresetsControls } from './ui/ViewPresetsControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
@@ -126,6 +127,7 @@ export class UIManager {
     this.goboControls = new GoboControls(this.eventBus, this.stateStore, this, this.helpers);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
     this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.viewPresetsControls = new ViewPresetsControls(this.eventBus, this.stateStore, this);
     this.isometricControls = new IsometricControls(
       this.eventBus,
       this.stateStore,
@@ -322,6 +324,7 @@ export class UIManager {
       godRaysClampMax: q('#godRaysClampMax'),
       godRaysBlur: q('#godRaysBlur'),
       lensFlareSpinDuringOrbit: q('#lensFlareSpinDuringOrbit'),
+      lensFlareKeyLightConnect: q('#lensFlareKeyLightConnect'),
       godRaysQuality: q('#godRaysQuality'),
       anamorphicBloomEnabled: q('#anamorphicBloomEnabled'),
       anamorphicBloomStrength: q('#anamorphicBloomStrength'),
@@ -480,6 +483,10 @@ export class UIManager {
       fisheyeStrength: q('#fisheyeStrength'),
       fisheyeCylindricalRatio: q('#fisheyeCylindricalRatio'),
       cameraTilt: q('#cameraTilt'),
+      cameraPosX: q('#cameraPosX'),
+      cameraPosY: q('#cameraPosY'),
+      cameraPosZ: q('#cameraPosZ'),
+      cameraDistance: q('#cameraDistance'),
       exposure: q('#exposure'),
       autoExposure: q('#autoExposure'),
       manualClipPlanes: q('#manualClipPlanes'),
@@ -606,6 +613,7 @@ export class UIManager {
     this.goboControls.bind();
     this.renderControls.bind();
     this.lensControls.bind();
+    this.viewPresetsControls.bind();
     this.isometricControls.bind();
     this.animationControls.bind();
     this.resetControls.bind();
@@ -1193,11 +1201,37 @@ export class UIManager {
     
     // Disable lens flare controls if not enabled
     this.setControlDisabled(
-      ['lensFlareRotation', 'lensFlareHeight', 'lensFlareHalo', 'lensFlareStreakLength', 'lensFlareSunDiscScale', 'lensFlareSunDiscBlur', 'lensFlareSunDiscColor', 'lensFlareDiscGlowIntensity', 'lensFlareDiscGlowSize', 'lensFlareDiscGlowColor', 'lensFlareColor', 'lensFlareQuality'],
+      [
+        'lensFlareRotation',
+        'lensFlareHeight',
+        'lensFlareHalo',
+        'lensFlareStreakLength',
+        'lensFlareSunDiscScale',
+        'lensFlareSunDiscBlur',
+        'lensFlareSunDiscColor',
+        'lensFlareDiscGlowIntensity',
+        'lensFlareDiscGlowSize',
+        'lensFlareDiscGlowColor',
+        'lensFlareColor',
+        'lensFlareQuality',
+        'lensFlareSpinDuringOrbit',
+        'lensFlareKeyLightConnect',
+      ],
       !enabled,
     );
-    
+
     // Block muting handled by applyBlockStates via syncControls
+  }
+
+  syncLensFlareKeyLightConnectButton() {
+    const btn = this.inputs.lensFlareKeyLightConnect;
+    if (!btn) return;
+    const connected = !!this.stateStore.getState().lensFlare?.keyLightConnected;
+    btn.textContent = connected
+      ? 'Disconnect Key Light Position'
+      : 'Connect Key Light Position';
+    btn.setAttribute('aria-pressed', connected ? 'true' : 'false');
+    btn.classList.toggle('is-active', connected);
   }
 
   updateGodRaysControlsDisabled() {
@@ -2335,6 +2369,7 @@ export class UIManager {
         flare.spinDuringOrbit ?? state.godRays?.spinDuringOrbit
       );
     }
+    this.syncLensFlareKeyLightConnectButton();
     if (this.inputs.godRaysQuality) {
       this.inputs.godRaysQuality.value = godRays?.quality ?? 'medium';
     }
@@ -2804,6 +2839,7 @@ export class UIManager {
     this.goboControls.sync(state);
     this.renderControls.sync(state);
     this.lensControls.sync(state);
+    this.viewPresetsControls.sync(state);
     this.isometricControls.sync(state);
     this.applyBlockStates(state);
     this.scheduleAllRangeSliderFills();
@@ -2906,6 +2942,11 @@ export class UIManager {
 
     this.lensControls?.setFovDisabled?.(fisheyeOn);
     this.setControlDisabled('cameraTilt', isoOn);
+    this.setControlDisabled('cameraPosX', isoOn);
+    this.setControlDisabled('cameraPosY', isoOn);
+    this.setControlDisabled('cameraPosZ', isoOn);
+    this.setControlDisabled('cameraDistance', isoOn);
+    this.viewPresetsControls?.setDisabled(isoOn);
     this.setControlDisabled('fisheyeEnabled', isoOn);
     this.setBlockMuted('isometric', !isoOn);
     this.setBlockMuted('auto-orbit', isoOn);

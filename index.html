@@ -2297,6 +2297,54 @@
                   <span class="value" data-output="cameraTilt">0°</span>
                 </label>
                 <label class="slider-line">
+                  <span data-tooltip="Camera world position along X axis">Position X</span>
+                  <input
+                    id="cameraPosX"
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value="0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraPosX">0.00m</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Camera world position along Y axis">Position Y</span>
+                  <input
+                    id="cameraPosY"
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value="1.5"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraPosY">1.50m</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Camera world position along Z axis">Position Z</span>
+                  <input
+                    id="cameraPosZ"
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value="6"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraPosZ">6.00m</span>
+                </label>
+                <label class="slider-line">
+                  <span data-tooltip="Distance from camera to orbit target">Distance</span>
+                  <input
+                    id="cameraDistance"
+                    type="range"
+                    min="0.5"
+                    max="50"
+                    value="6.02"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraDistance">6.02m</span>
+                </label>
+                <label class="slider-line">
                   <span data-tooltip="Overall scene brightness">Exposure</span>
                   <input
                     id="exposure"
@@ -2353,6 +2401,28 @@
                   />
                   <span class="value" data-output="cameraClipFar">100</span>
                 </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="view-presets">
+                  <div class="block-title">View Presets</div>
+                  <div
+                    class="view-preset-grid"
+                    role="group"
+                    aria-label="View presets"
+                  >
+                    <button type="button" class="lens-preset-btn" data-view-preset="front" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Front</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-view-preset="left" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Left</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-view-preset="right" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Right</span>
+                    </button>
+                    <button type="button" class="lens-preset-btn" data-view-preset="top" aria-pressed="false">
+                      <span class="lens-preset-btn__focal">Top</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens">
@@ -3358,6 +3428,15 @@
                       <span class="sr-only">Animate lens flare streaks during camera auto-orbit</span>
                     </label>
                   </label>
+                  <button
+                    id="lensFlareKeyLightConnect"
+                    class="ghost-btn small"
+                    type="button"
+                    aria-pressed="false"
+                    data-tooltip="Match key-light direction to lens flare rotation and height"
+                  >
+                    Connect Key Light Position
+                  </button>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="volumetric-scattering">

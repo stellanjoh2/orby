@@ -220,6 +220,30 @@ export class UIHelpers {
    * Setup global slider fill updates for all range inputs
    * This ensures all sliders get the fill effect automatically
    */
+  /**
+   * While a range slider or color chip is held, state writes still apply but
+   * StateStore.notify (full UI sync) waits until pointer release.
+   */
+  setupDeferredControlNotify() {
+    const isDeferredControl = (el) =>
+      el instanceof HTMLInputElement
+      && (el.type === 'range' || el.type === 'color')
+      && !el.disabled;
+
+    const onPointerDown = (event) => {
+      if (!isDeferredControl(event.target)) return;
+      this.stateStore.beginDeferredNotify();
+    };
+
+    const onPointerEnd = () => {
+      this.stateStore.endDeferredNotify();
+    };
+
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('pointerup', onPointerEnd, true);
+    document.addEventListener('pointercancel', onPointerEnd, true);
+  }
+
   setupSliderFillUpdates() {
     // Add global listener for all slider inputs
     document.addEventListener('input', (event) => {
@@ -227,6 +251,8 @@ export class UIHelpers {
         this.updateSliderFill(event.target);
       }
     }, true); // Use capture phase to catch all events
+
+    this.setupDeferredControlNotify();
 
     this.markToggleOnlySliderLines();
 

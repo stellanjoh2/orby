@@ -20,6 +20,10 @@ import {
   godRaysStateAfterSectionReset,
   godRaysStateForResetCompare,
 } from '../GodRaysEffect.js';
+import {
+  DEFAULT_CAMERA_POSITION,
+  defaultCameraDistance,
+} from '../camera/cameraDefaults.js';
 
 /**
  * For each `data-reset` value in the markup, the set of state paths whose
@@ -82,6 +86,8 @@ const RESET_DIRTY_PATHS = {
   isometric: ['camera.isometric'],
   camera: [
     'camera.tilt',
+    'camera.worldPosition',
+    'camera.distance',
     'camera.autoOrbit', 'camera.handheld',
     'exposure', 'autoExposure',
     'camera.clipPlanes',
@@ -573,6 +579,9 @@ export class ResetControls {
       this.stateStore.set('lightsHeight', defaults.lightsHeight ?? 5);
       this.stateStore.set('lightsAutoRotate', defaults.lightsAutoRotate);
       this.stateStore.set('showLightIndicators', defaults.showLightIndicators ?? false);
+      if (this.stateStore.getState().lensFlare?.keyLightConnected) {
+        this.eventBus.emit('studio:lens-flare-key-light-connected', false);
+      }
       this.stateStore.set('lensFlare', defaults.lensFlare);
       this.stateStore.set('lensFlare.enabled', defaults.lensFlare.enabled);
       this.stateStore.set('godRays', defaults.godRays);
@@ -845,6 +854,9 @@ export class ResetControls {
             
           case 'hdri':
             this.eventBus.emit('studio:hdri-clear-custom');
+            if (this.stateStore.getState().lensFlare?.keyLightConnected) {
+              this.eventBus.emit('studio:lens-flare-key-light-connected', false);
+            }
             this.stateStore.batch(() => {
               this.stateStore.set('hdri', defaults.hdri);
               this.stateStore.set('hdriCustomName', defaults.hdriCustomName ?? null);
@@ -879,6 +891,9 @@ export class ResetControls {
             break;
           
           case 'lens-flare':
+            if (this.stateStore.getState().lensFlare?.keyLightConnected) {
+              this.eventBus.emit('studio:lens-flare-key-light-connected', false);
+            }
             this.stateStore.set('lensFlare', defaults.lensFlare);
             this.eventBus.emit('studio:lens-flare-enabled', defaults.lensFlare.enabled);
             this.eventBus.emit('studio:lens-flare-rotation', defaults.lensFlare.rotation);
@@ -1233,6 +1248,12 @@ export class ResetControls {
             this.stateStore.batch(() => {
               this.stateStore.set('lookFilterPreset', 'custom');
               this.stateStore.set('camera.tilt', defaults.camera.tilt ?? 0);
+              this.stateStore.set(
+                'camera.worldPosition',
+                { ...DEFAULT_CAMERA_POSITION },
+              );
+              this.stateStore.set('camera.distance', defaultCameraDistance());
+              this.stateStore.set('camera.viewPreset', null);
               this.stateStore.set('camera.autoOrbit', defaults.camera.autoOrbit ?? 'off');
               this.stateStore.set('camera.handheld', defaults.camera.handheld ?? 'off');
               this.stateStore.set('exposure', defaults.exposure);
@@ -1256,6 +1277,7 @@ export class ResetControls {
             });
             // Emit events to update the scene
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
+            this.eventBus.emit('camera:reset');
             this.eventBus.emit('camera:auto-orbit', defaults.camera.autoOrbit ?? 'off');
             this.eventBus.emit('camera:handheld', defaults.camera.handheld ?? 'off');
             this.eventBus.emit('scene:exposure', defaults.exposure);

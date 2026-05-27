@@ -622,7 +622,7 @@ function renderMarketingSiteNavHtml(fields, options) {
       linkClass: 'orby-marketing-scroll-nav__link',
       contactClass: 'orby-marketing-scroll-nav__contact',
     },
-    { includeContact: false },
+    { includeContact: false, includeBonusPages: false },
   );
 
   const brand =
@@ -668,13 +668,17 @@ function renderMarketingSiteNavHtml(fields, options) {
  */
 function renderMarketingSiteNavLinks(fields, classes, options = {}) {
   const { linkClass, contactClass } = classes;
-  const { includeContact = true, includeStats = false } = options;
+  const { includeContact = true, includeStats = false, includeBonusPages = true } = options;
   const items = [
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.aboutHref)}">About</a>`,
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.supportHref)}">Support</a>`,
-    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.privacyHref)}">Privacy Policy</a>`,
-    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.creditsHref)}">Credits</a>`,
-    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.brandHref)}">Brand</a>`,
+    ...(includeBonusPages
+      ? [
+          `<a class="${linkClass}" href="${escapeMarketingHtml(fields.privacyHref)}">Privacy Policy</a>`,
+          `<a class="${linkClass}" href="${escapeMarketingHtml(fields.creditsHref)}">Credits</a>`,
+          `<a class="${linkClass}" href="${escapeMarketingHtml(fields.brandHref)}">Brand</a>`,
+        ]
+      : []),
     includeStats
       ? `<a class="${linkClass}" href="${escapeMarketingHtml(fields.statsHref)}">Statistics</a>`
       : '',

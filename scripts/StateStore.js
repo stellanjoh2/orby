@@ -14,6 +14,10 @@ import { deepClone } from './utils/deepClone.js';
 import { migrateLegacyGroundKeys } from './state/migrateLegacyGroundKeys.js';
 import { GOBO_UI_DEFAULT } from './render/GoboProjection.js';
 import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
+import {
+  DEFAULT_CAMERA_POSITION,
+  defaultCameraDistance,
+} from './camera/cameraDefaults.js';
 
 export class StateStore {
   constructor() {
@@ -223,6 +227,10 @@ export class StateStore {
         discGlowColor: '#ff8844',
         /** Procedural streak spin (iTime) — only while camera auto-orbit is active. */
         spinDuringOrbit: false,
+        /** When true, key-light rotate/height follow lens-flare rotation/height. */
+        keyLightConnected: false,
+        /** Pre-connect key-light pose; set when connecting, cleared on disconnect. */
+        keyLightRestore: null,
         anamorphicBloom: {
           enabled: false,
           quality: 'medium',
@@ -295,6 +303,11 @@ export class StateStore {
         lensFocalMm: null,
         lensSensorId: 'aps-c',
         tilt: 0,
+        /** World-space camera position (OrbitControls). Distance is camera ↔ target length. */
+        worldPosition: { ...DEFAULT_CAMERA_POSITION },
+        distance: defaultCameraDistance(),
+        /** Active view preset button, or null after manual orbit. */
+        viewPreset: null,
         /** Rule-of-thirds / crosshair / diagonal overlay in viewport (16×9 letterbox). */
         compositionGridEnabled: false,
         /** Dark strokes instead of light — for bright scenes. */
@@ -373,6 +386,8 @@ export class StateStore {
     this.subscribers = new Set();
     /** When > 0, `set` / `setTopLevelBundle` / `reset` defer `notify` until outermost batch ends. */
     this._batchDepth = 0;
+    /** When > 0, slider/color scrubbing — state updates apply but UI sync waits until release. */
+    this._deferNotifyDepth = 0;
   }
 
   getState() {
@@ -400,9 +415,21 @@ export class StateStore {
   }
 
   _notifyIfIdle() {
-    if (this._batchDepth === 0) {
+    if (this._batchDepth === 0 && this._deferNotifyDepth === 0) {
       this.notify();
     }
+  }
+
+  /** Coalesce notify while scrubbing a range slider or color chip (pointer held). */
+  beginDeferredNotify() {
+    this._deferNotifyDepth += 1;
+  }
+
+  endDeferredNotify() {
+    if (this._deferNotifyDepth > 0) {
+      this._deferNotifyDepth -= 1;
+    }
+    this._notifyIfIdle();
   }
 
   /**
@@ -438,12 +465,10 @@ export class StateStore {
       fn();
     } finally {
       this._batchDepth -= 1;
-      if (this._batchDepth === 0) {
-        this.notify();
-      }
       if (this._batchDepth < 0) {
         this._batchDepth = 0;
       }
+      this._notifyIfIdle();
     }
   }
 

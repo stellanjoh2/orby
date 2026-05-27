@@ -36,6 +36,7 @@ import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js
 import { MaterialController } from './render/MaterialController.js';
 import { reapplySvgExtrudeProceduralFromState } from './render/SvgExtrudeSurfaceShader.js';
 import { LensFlareController } from './render/LensFlareController.js';
+import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
 import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
@@ -354,11 +355,15 @@ export class SceneManager {
       onModelBoundsChanged: (bounds) => {
         this._syncShadowCameraBounds(bounds);
       },
+      onPoseChanged: (pose) => {
+        this.eventBus.emit('camera:pose-changed', pose);
+      },
     });
     this.controls = this.cameraController.getControls();
     this.camera.position.set(0, 1.5, 6);
     this.controls.target.set(0, 1, 0);
     this.controls.update();
+    this.cameraController.emitPoseChanged();
 
     this.modelRoot = new THREE.Group();
     this.scene.add(this.modelRoot);
@@ -414,47 +419,41 @@ export class SceneManager {
     this.transformControlsScale.showZ = true;
     this.transformControlsScale.visible = false;
     this.scene.add(this.transformControlsScale);
+
+    this._gizmoDragActive = false;
     
     // Disable OrbitControls when dragging any widget
-    const handleTranslateDraggingChanged = (event) => {
+    const handleGizmoDraggingChanged = (event) => {
       const controls = this.cameraController?.getControls();
       if (controls) {
         controls.enabled = !event.value;
       }
-    };
-    
-    const handleRotateDraggingChanged = (event) => {
-      const controls = this.cameraController?.getControls();
-      if (controls) {
-        controls.enabled = !event.value;
+      if (event.value) {
+        this._gizmoDragActive = true;
+      } else if (this._gizmoDragActive) {
+        this._gizmoDragActive = false;
+        this._commitTransformFromGizmo();
       }
     };
     
-    const handleScaleDraggingChanged = (event) => {
-      const controls = this.cameraController?.getControls();
-      if (controls) {
-        controls.enabled = !event.value;
+    this.transformControlsTranslate.addEventListener('dragging-changed', handleGizmoDraggingChanged);
+    this.transformControlsRotate.addEventListener('dragging-changed', handleGizmoDraggingChanged);
+    this.transformControlsScale.addEventListener('dragging-changed', handleGizmoDraggingChanged);
+    
+    const handleGizmoChange = () => {
+      if (this.transformControlsScale.object === this.modelRoot) {
+        const avgScale = (
+          this.modelRoot.scale.x + this.modelRoot.scale.y + this.modelRoot.scale.z
+        ) / 3;
+        this.modelRoot.scale.setScalar(avgScale);
+      }
+      if (this._gizmoDragActive) {
+        this._updateTransformSliderUI();
       }
     };
-    
-    this.transformControlsTranslate.addEventListener('dragging-changed', handleTranslateDraggingChanged);
-    this.transformControlsRotate.addEventListener('dragging-changed', handleRotateDraggingChanged);
-    this.transformControlsScale.addEventListener('dragging-changed', handleScaleDraggingChanged);
-    
-    // Sync widget changes back to state/UI
-    const handleChange = () => {
-      if (this.modelRoot && (this.transformControlsTranslate.object === this.modelRoot || this.transformControlsRotate.object === this.modelRoot || this.transformControlsScale.object === this.modelRoot)) {
-        // For scale widget, ensure uniform scaling (all axes the same)
-        if (this.transformControlsScale.object === this.modelRoot) {
-          const avgScale = (this.modelRoot.scale.x + this.modelRoot.scale.y + this.modelRoot.scale.z) / 3;
-          this.modelRoot.scale.setScalar(avgScale);
-        }
-        this._syncTransformFromGizmo();
-      }
-    };
-    this.transformControlsTranslate.addEventListener('change', handleChange);
-    this.transformControlsRotate.addEventListener('change', handleChange);
-    this.transformControlsScale.addEventListener('change', handleChange);
+    this.transformControlsTranslate.addEventListener('change', handleGizmoChange);
+    this.transformControlsRotate.addEventListener('change', handleGizmoChange);
+    this.transformControlsScale.addEventListener('change', handleGizmoChange);
 
     this.diagnosticsController = new MeshDiagnosticsController({
       scene: this.scene,
@@ -1580,10 +1579,83 @@ export class SceneManager {
 
   setLensFlareRotation(value) {
     this.lensFlareController?.setRotation(value);
+    this._syncKeyLightFromLensFlareIfConnected();
   }
 
   setLensFlareHeight(value) {
     this.lensFlareController?.setHeight(value);
+    this._syncKeyLightFromLensFlareIfConnected();
+  }
+
+  /**
+   * Toggle key-light sync to lens-flare sun direction (rotation + elevation).
+   * @param {boolean} connected
+   */
+  setLensFlareKeyLightConnected(connected) {
+    const state = this.stateStore.getState();
+    const flare = state.lensFlare ?? {};
+    const wasConnected = !!flare.keyLightConnected;
+
+    if (connected && !wasConnected) {
+      const restore = {
+        rotate: state.lights?.key?.rotate ?? 0,
+        height: state.lights?.key?.height ?? 5,
+      };
+      this.stateStore.batch(() => {
+        this.stateStore.set('lensFlare.keyLightRestore', restore);
+        this.stateStore.set('lensFlare.keyLightConnected', true);
+      });
+      this._syncKeyLightFromLensFlareIfConnected();
+    } else if (!connected && wasConnected) {
+      const restore = flare.keyLightRestore;
+      if (restore) {
+        this._applyKeyLightFromLensFlareSync(restore.rotate, restore.height);
+      }
+      this.stateStore.batch(() => {
+        this.stateStore.set('lensFlare.keyLightRestore', null);
+        this.stateStore.set('lensFlare.keyLightConnected', false);
+      });
+    }
+
+    this.ui?.syncLensFlareKeyLightConnectButton?.();
+  }
+
+  _syncKeyLightFromLensFlareIfConnected() {
+    const flare = this.stateStore.getState().lensFlare;
+    if (!flare?.keyLightConnected) return;
+
+    const { rotate, height } = keyLightParamsFromLensFlare(
+      flare.rotation ?? 0,
+      flare.height ?? 0,
+      this.stateStore.getState().lightsRotation ?? 0,
+    );
+    this._applyKeyLightFromLensFlareSync(rotate, height);
+  }
+
+  _applyKeyLightFromLensFlareSync(rotate, height) {
+    this._applyingKeyLightFromLensFlare = true;
+    try {
+      this.stateStore.batch(() => {
+        this.stateStore.set('lights.key.rotate', rotate);
+        this.stateStore.set('lights.key.height', height);
+      });
+      this.lightsController?.updateLightProperty('key', 'rotate', rotate);
+      this.lightsController?.updateLightProperty('key', 'height', height);
+      if (this.ui?.inputs?.keyLightRotate) {
+        this.ui.inputs.keyLightRotate.value = rotate;
+        this.ui.updateValueLabel('keyLightRotate', rotate, 'angle');
+      }
+      if (this.ui?.inputs?.keyLightHeight) {
+        this.ui.inputs.keyLightHeight.value = height;
+        this.ui.updateValueLabel('keyLightHeight', height, 'decimal');
+      }
+      this.updateLightIndicators();
+      if (this.goboProjection?.enabled) {
+        this.goboProjection.syncUniformsOnScene(this._getGoboSceneTargets());
+      }
+    } finally {
+      this._applyingKeyLightFromLensFlare = false;
+    }
   }
 
   setLensFlareColor(value) {
@@ -2391,6 +2463,7 @@ export class SceneManager {
     // Update light indicators if visible
     this.updateLightIndicators();
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
+    this._syncKeyLightFromLensFlareIfConnected();
   }
 
   /**
@@ -3218,38 +3291,61 @@ export class SceneManager {
   }
 
   /**
-   * Sync transform values from gizmo back to state/UI
-   * Called when user drags the transform controls
+   * Read current transform values from the live model root (gizmo / scene source of truth).
    */
-  _syncTransformFromGizmo() {
+  _readTransformValuesFromModelRoot() {
+    if (!this.modelRoot) {
+      return {
+        scale: 1,
+        xOffset: 0,
+        yOffset: 0,
+        zOffset: 0,
+        rotationX: 0,
+        rotationY: 0,
+        rotationZ: 0,
+      };
+    }
+    return {
+      scale: this.modelRoot.scale.x,
+      xOffset: this.modelRoot.position.x,
+      yOffset: this.modelRoot.position.y,
+      zOffset: this.modelRoot.position.z,
+      rotationX: THREE.MathUtils.radToDeg(this.modelRoot.rotation.x),
+      rotationY: THREE.MathUtils.radToDeg(this.modelRoot.rotation.y),
+      rotationZ: THREE.MathUtils.radToDeg(this.modelRoot.rotation.z),
+    };
+  }
+
+  /** Update transform sliders from the live gizmo pose (no stateStore notify). */
+  _updateTransformSliderUI() {
+    if (!this.modelRoot || !this.ui?.meshControls) return;
+    this.ui.meshControls.syncTransformSliders(this._readTransformValuesFromModelRoot());
+  }
+
+  /**
+   * Commit transform values from gizmo to state/UI (once per drag, not every frame).
+   */
+  _commitTransformFromGizmo() {
     if (!this.modelRoot) return;
-    
-    // Extract transform values from modelRoot
-    const scale = this.modelRoot.scale.x; // Assuming uniform scale
-    const xOffset = this.modelRoot.position.x;
-    const yOffset = this.modelRoot.position.y;
-    const zOffset = this.modelRoot.position.z;
-    const rotationX = THREE.MathUtils.radToDeg(this.modelRoot.rotation.x);
-    const rotationY = THREE.MathUtils.radToDeg(this.modelRoot.rotation.y);
-    const rotationZ = THREE.MathUtils.radToDeg(this.modelRoot.rotation.z);
-    
-    // Update state store
-    this.stateStore.set('scale', scale);
-    this.stateStore.set('xOffset', xOffset);
-    this.stateStore.set('yOffset', yOffset);
-    this.stateStore.set('zOffset', zOffset);
-    this.stateStore.set('rotationX', rotationX);
-    this.stateStore.set('rotationY', rotationY);
-    this.stateStore.set('rotationZ', rotationZ);
-    
-    // Emit events to update UI sliders (using correct event names)
-    this.eventBus.emit('mesh:scale', scale);
-    this.eventBus.emit('mesh:xOffset', xOffset);
-    this.eventBus.emit('mesh:yOffset', yOffset);
-    this.eventBus.emit('mesh:zOffset', zOffset);
-    this.eventBus.emit('mesh:rotationX', rotationX);
-    this.eventBus.emit('mesh:rotationY', rotationY);
-    this.eventBus.emit('mesh:rotationZ', rotationZ);
+
+    const values = this._readTransformValuesFromModelRoot();
+
+    this.stateStore.batch(() => {
+      this.stateStore.set('scale', values.scale);
+      this.stateStore.set('xOffset', values.xOffset);
+      this.stateStore.set('yOffset', values.yOffset);
+      this.stateStore.set('zOffset', values.zOffset);
+      this.stateStore.set('rotationX', values.rotationX);
+      this.stateStore.set('rotationY', values.rotationY);
+      this.stateStore.set('rotationZ', values.rotationZ);
+    });
+
+    this._updateTransformSliderUI();
+  }
+
+  /** @deprecated alias — immediate commit after pivot ops etc. */
+  _syncTransformFromGizmo() {
+    this._commitTransformFromGizmo();
   }
 
   setScale(value) {

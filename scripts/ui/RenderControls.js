@@ -21,6 +21,10 @@ import {
   sanitizeAmbientOcclusion,
 } from '../constants.js';
 import { ToneCurveController } from './ToneCurveController.js';
+import {
+  DEFAULT_CAMERA_POSITION,
+  defaultCameraDistance,
+} from '../camera/cameraDefaults.js';
 
 const ANAMORPHIC_BLOOM_INPUT_KEYS = [
   'anamorphicBloomEnabled',
@@ -489,6 +493,66 @@ export class RenderControls {
       this.eventBus.emit('camera:tilt', value);
     });
     if (this.ui.inputs.cameraTilt) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraTilt);
+
+    const emitCameraWorldPosition = (position) => {
+      if (this.stateStore.getState().camera?.isometric?.enabled) return;
+      this.stateStore.set('camera.worldPosition', { ...position });
+      this.eventBus.emit('camera:world-position', position);
+    };
+
+    this.ui.inputs.cameraPosX?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('cameraPosX', value, 'distance');
+      const pos = {
+        ...(this.stateStore.getState().camera?.worldPosition ?? DEFAULT_CAMERA_POSITION),
+      };
+      pos.x = value;
+      emitCameraWorldPosition(pos);
+    });
+    if (this.ui.inputs.cameraPosX) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraPosX);
+    }
+
+    this.ui.inputs.cameraPosY?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('cameraPosY', value, 'distance');
+      const pos = {
+        ...(this.stateStore.getState().camera?.worldPosition ?? DEFAULT_CAMERA_POSITION),
+      };
+      pos.y = value;
+      emitCameraWorldPosition(pos);
+    });
+    if (this.ui.inputs.cameraPosY) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraPosY);
+    }
+
+    this.ui.inputs.cameraPosZ?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('cameraPosZ', value, 'distance');
+      const pos = {
+        ...(this.stateStore.getState().camera?.worldPosition ?? DEFAULT_CAMERA_POSITION),
+      };
+      pos.z = value;
+      emitCameraWorldPosition(pos);
+    });
+    if (this.ui.inputs.cameraPosZ) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraPosZ);
+    }
+
+    this.ui.inputs.cameraDistance?.addEventListener('input', (event) => {
+      if (this.stateStore.getState().camera?.isometric?.enabled) return;
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('cameraDistance', value, 'distance');
+      this.stateStore.set('camera.distance', value);
+      this.eventBus.emit('camera:distance', value);
+    });
+    if (this.ui.inputs.cameraDistance) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.cameraDistance);
+    }
     
     // Camera Auto-Orbit
     this.ui.inputs.cameraAutoOrbit.forEach((radio) => {
@@ -1190,6 +1254,10 @@ export class RenderControls {
       this.ui.inputs.cameraTilt.value = tilt;
       this.helpers.updateValueLabel('cameraTilt', tilt, 'angle');
     }
+    this.syncCameraWorldPose({
+      position: cam.worldPosition ?? DEFAULT_CAMERA_POSITION,
+      distance: cam.distance ?? defaultCameraDistance(),
+    });
     // Sync camera auto-orbit
     if (this.ui.inputs.cameraAutoOrbit) {
       const autoOrbitValue = cam.autoOrbit ?? 'off';
@@ -1416,6 +1484,27 @@ export class RenderControls {
 
     this.toneCurveController?.syncFromState(state);
     this._syncExportSizeControls();
+  }
+
+  syncCameraWorldPose(pose) {
+    const position = pose?.position ?? DEFAULT_CAMERA_POSITION;
+    const distance = pose?.distance ?? defaultCameraDistance();
+    if (this.ui.inputs.cameraPosX) {
+      this.ui.inputs.cameraPosX.value = position.x;
+      this.helpers.updateValueLabel('cameraPosX', position.x, 'distance');
+    }
+    if (this.ui.inputs.cameraPosY) {
+      this.ui.inputs.cameraPosY.value = position.y;
+      this.helpers.updateValueLabel('cameraPosY', position.y, 'distance');
+    }
+    if (this.ui.inputs.cameraPosZ) {
+      this.ui.inputs.cameraPosZ.value = position.z;
+      this.helpers.updateValueLabel('cameraPosZ', position.z, 'distance');
+    }
+    if (this.ui.inputs.cameraDistance) {
+      this.ui.inputs.cameraDistance.value = distance;
+      this.helpers.updateValueLabel('cameraDistance', distance, 'distance');
+    }
   }
 
   /**

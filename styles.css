@@ -6466,8 +6466,9 @@ body.ui-hidden .shelf {
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* Camera → Lens: compact focal-length preset grid */
-.lens-preset-grid {
+/* Camera → Lens / View Presets: compact preset grid */
+.lens-preset-grid,
+.view-preset-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.4rem;
@@ -6532,7 +6533,9 @@ body.ui-hidden .shelf {
 }
 
 .subsection.is-muted .lens-preset-btn,
-.panel-block.is-muted .lens-preset-btn {
+.panel-block.is-muted .lens-preset-btn,
+.subsection.is-muted .view-preset-grid .lens-preset-btn,
+.panel-block.is-muted .view-preset-grid .lens-preset-btn {
   opacity: 0.45;
 }
 

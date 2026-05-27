@@ -782,6 +782,10 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-disc-glow-size', merged.discGlowSize);
         this.eventBus.emit('studio:lens-flare-disc-glow-color', merged.discGlowColor);
         this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
+        this.ui?.syncLensFlareKeyLightConnectButton?.();
+        if (merged.keyLightConnected) {
+          this.eventBus.emit('studio:lens-flare-key-light-sync');
+        }
       }
       if (payload.godRays) {
         const d = this.stateStore.getDefaults().godRays;

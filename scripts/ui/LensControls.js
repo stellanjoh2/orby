@@ -24,7 +24,7 @@ export class LensControls {
   }
 
   bind() {
-    const grid = document.querySelector('.lens-preset-grid');
+    const grid = document.querySelector('[data-subsection="lens"] .lens-preset-grid');
     if (grid) {
       this._presetButtons = [...grid.querySelectorAll('[data-lens-focal]')];
       this._presetButtons.forEach((btn) => {

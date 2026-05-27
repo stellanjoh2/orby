@@ -175,9 +175,23 @@ export class EventManager {
       }
     });
     eventBus.on('camera:reset', () => {
-      s.camera.position.set(0, 1.5, 6);
-      s.controls.target.set(0, 1, 0);
-      s.controls.update();
+      s.cameraController?.resetWorldPose?.();
+    });
+    eventBus.on('camera:world-position', (position) => {
+      if (!position) return;
+      s.cameraController?.setWorldPosition(position.x, position.y, position.z);
+    });
+    eventBus.on('camera:distance', (distance) => {
+      s.cameraController?.setDistance(distance);
+    });
+    eventBus.on('camera:pose-changed', (pose) => {
+      if (!pose?.position) return;
+      s.ui?.renderControls?.syncCameraWorldPose?.(pose);
+      if (pose.persist === false) return;
+      s.stateStore.batch(() => {
+        s.stateStore.set('camera.worldPosition', { ...pose.position });
+        s.stateStore.set('camera.distance', pose.distance);
+      });
     });
     eventBus.on('camera:get-state', () => {
       const state = {
@@ -203,6 +217,7 @@ export class EventManager {
         s.controls.target.set(state.target.x, state.target.y, state.target.z);
         s.controls.update();
       }
+      s.cameraController?.emitPoseChanged?.();
     });
     eventBus.on('camera:lock-orbit', () => {
       if (s.controls) {
@@ -255,6 +270,12 @@ export class EventManager {
     eventBus.on('studio:god-rays-blur', (enabled) => s.setGodRaysBlur(enabled));
     eventBus.on('studio:lens-flare-spin-during-orbit', (enabled) =>
       s.setLensFlareSpinDuringOrbit(enabled),
+    );
+    eventBus.on('studio:lens-flare-key-light-connected', (enabled) =>
+      s.setLensFlareKeyLightConnected(!!enabled),
+    );
+    eventBus.on('studio:lens-flare-key-light-sync', () =>
+      s._syncKeyLightFromLensFlareIfConnected(),
     );
     eventBus.on('studio:god-rays-quality', (value) => s.setGodRaysQuality(value));
     // Legacy saved scenes / presets
@@ -380,6 +401,14 @@ export class EventManager {
 
     // Lights events
     eventBus.on('lights:update', ({ lightId, property, value }) => {
+      if (
+        lightId === 'key'
+        && (property === 'height' || property === 'rotate')
+        && !s._applyingKeyLightFromLensFlare
+        && s.stateStore.getState().lensFlare?.keyLightConnected
+      ) {
+        s.setLensFlareKeyLightConnected(false);
+      }
       s.lightsController?.updateLightProperty(lightId, property, value);
       if (lightId === 'key' && property === 'castShadows') {
         s._applyKeyLightGoboShadowOverride();

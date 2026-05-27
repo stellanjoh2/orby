@@ -79,6 +79,7 @@ export class ToneCurveController {
     this.h = 1;
     this.drag = null;
     this.hover = null;
+    this._previewCurve = null;
     this._mounted = false;
     this._resizeObserver = null;
     this._onWindowResize = null;
@@ -276,12 +277,7 @@ export class ToneCurveController {
       c0[this.drag].y = pn.y;
     }
     const c = constrainMonotoneY(c0);
-    const prevLook = this.stateStore.getState().lookFilterPreset;
-    this.stateStore.set('toneCurve', c);
-    if (prevLook !== 'custom') {
-      this.stateStore.set('lookFilterPreset', 'custom');
-    }
-    this.eventBus.emit('ui:reset-section-touched', 'tone-curve');
+    this._previewCurve = c;
     this.eventBus.emit('render:tone-curve', c);
     this._draw();
   }
@@ -295,6 +291,18 @@ export class ToneCurveController {
   }
 
   _handlePointerUp(e) {
+    if (this.drag && this._previewCurve) {
+      const c = this._previewCurve;
+      const prevLook = this.stateStore.getState().lookFilterPreset;
+      this.stateStore.batch(() => {
+        this.stateStore.set('toneCurve', c);
+        if (prevLook !== 'custom') {
+          this.stateStore.set('lookFilterPreset', 'custom');
+        }
+      });
+      this.eventBus.emit('ui:reset-section-touched', 'tone-curve');
+      this._previewCurve = null;
+    }
     if (this.drag && this.canvas) {
       try {
         this.canvas.releasePointerCapture(e.pointerId);
@@ -309,7 +317,9 @@ export class ToneCurveController {
   _draw() {
     if (!this.ctx) return;
     const state = this.stateStore.getState();
-    const c = constrainMonotoneY(copyCurve(state.toneCurve));
+    const c = constrainMonotoneY(
+      copyCurve(this._previewCurve ?? state.toneCurve),
+    );
     const ctx = this.ctx;
     const w = this.w;
     const h = this.h;
