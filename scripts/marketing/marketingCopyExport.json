@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-27T14:47:51.119Z",
+    "generatedAt": "2026-05-27T20:01:12.230Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -93,8 +93,8 @@
       ],
       "lede": "Achieve photorealism without leaving the browser. Every tool you need to light, grade, and present your model is right here — reacting in real time while you orbit the shot.",
       "bullets": [
-        "Look Filter presets, luminance curve, and full color grade",
-        "Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, anamorphic streaks, and tone mapping",
+        "Look Filter presets, luminance curve, full color grade, and ACES filmic tone mapping",
+        "Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, and anamorphic streaks",
         "PBR / real materials — metalness, roughness, normals, and emissive as authored"
       ],
       "cta": null,
@@ -160,7 +160,7 @@
         "Looks this good,",
         "straight in the browser"
       ],
-      "lede": "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
+      "lede": "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, ACES filmic tone mapping, and color grading that makes real-time look anything but.",
       "bullets": null,
       "cta": null,
       "galleryCredits": []

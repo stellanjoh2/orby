@@ -1,0 +1,43 @@
+/**
+ * Horizontal frame inset — shared by dropzone, marketing sections, and scroll nav.
+ * Imported by styles.css (:root) and marketing scroll nav (legal pages).
+ */
+:root {
+  --orby-home-full-width: 160rem; /* 2560px */
+  --orby-home-inner-max-width: 111.875rem; /* 1790px @ 2560+ */
+  --orby-home-outer-shrink: clamp(
+    0.82,
+    min(1, calc(0.55 + 0.45 * (100vw / var(--orby-home-full-width)))),
+    1
+  );
+  --orby-home-padding: calc(
+    clamp(0.25rem, calc((100vw - 600px) / 15), 20rem) * var(--orby-home-outer-shrink)
+  );
+  --orby-home-padding-x: var(--orby-home-padding);
+}
+
+@media (min-width: 1200px) and (max-width: 1599px) {
+  :root {
+    --orby-home-padding-x: calc(
+      (
+          0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
+        ) * var(--orby-home-outer-shrink)
+    );
+  }
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --orby-home-padding-x: calc(
+      (
+          0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
+        ) * var(--orby-home-outer-shrink)
+    );
+  }
+}
+
+@media (min-width: 160rem) {
+  :root {
+    --orby-home-padding-x: calc((100vw - var(--orby-home-inner-max-width)) / 2);
+  }
+}

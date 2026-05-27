@@ -533,9 +533,24 @@ const FOOTER_GITHUB_ICON =
   '<span class="orby-marketing__footer-social-icon orby-marketing__footer-social-icon--github" aria-hidden="true"></span>';
 
 /**
- * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @typedef {Object} MarketingSiteNavFields
+ * @property {string} contactEmail
+ * @property {string} privacyHref
+ * @property {string} aboutHref
+ * @property {string} creditsHref
+ * @property {string} supportHref
+ * @property {string} statsHref
+ * @property {string} brandHref
+ * @property {string} githubHref
+ * @property {string} instagramHref
+ * @property {string} licenseHref
  */
-function getMarketingFooterFields(section) {
+
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @returns {MarketingSiteNavFields}
+ */
+export function getMarketingFooterFields(section) {
   return {
     contactEmail: section.footerContactEmail?.trim() || '',
     privacyHref: section.footerPrivacyHref?.trim() || './legal/privacy-policy.html',
@@ -548,6 +563,102 @@ function getMarketingFooterFields(section) {
     instagramHref: section.footerInstagramHref?.trim() || '',
     licenseHref: section.footerLicenseHref?.trim() || './LICENSE',
   };
+}
+
+/**
+ * Prefix site-root-relative hrefs for standalone pages (legal, about, support, …).
+ * @param {string} href
+ * @param {string} [base='./'] — e.g. `../` from `/about/index.html`
+ */
+export function prefixMarketingSiteHref(href, base = './') {
+  const trimmed = href?.trim() || '';
+  if (!trimmed || /^https?:\/\//i.test(trimmed) || trimmed.startsWith('mailto:')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/')) return trimmed;
+  const root = base.endsWith('/') ? base : `${base}/`;
+  if (trimmed.startsWith('./')) return `${root}${trimmed.slice(2)}`;
+  return `${root}${trimmed}`;
+}
+
+/**
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @param {string} [base='./']
+ * @returns {MarketingSiteNavFields}
+ */
+export function resolveMarketingSiteNavFields(section, base = './') {
+  const fields = getMarketingFooterFields(section);
+  return {
+    contactEmail: fields.contactEmail,
+    privacyHref: prefixMarketingSiteHref(fields.privacyHref, base),
+    aboutHref: prefixMarketingSiteHref(fields.aboutHref, base),
+    creditsHref: prefixMarketingSiteHref(fields.creditsHref, base),
+    supportHref: prefixMarketingSiteHref(fields.supportHref, base),
+    statsHref: prefixMarketingSiteHref(fields.statsHref, base),
+    brandHref: prefixMarketingSiteHref(fields.brandHref, base),
+    githubHref: fields.githubHref,
+    instagramHref: fields.instagramHref,
+    licenseHref: prefixMarketingSiteHref(fields.licenseHref, base),
+  };
+}
+
+/**
+ * @param {string} base
+ */
+export function resolveMarketingHomeHref(base = './') {
+  const root = base.endsWith('/') ? base : `${base}/`;
+  return `${root}index.html`;
+}
+
+/**
+ * @param {MarketingSiteNavFields} fields
+ * @param {{ mode: 'home' | 'legal', homeHref: string }} options
+ */
+function renderMarketingSiteNavHtml(fields, options) {
+  const { mode, homeHref } = options;
+  const links = renderMarketingSiteNavLinks(
+    fields,
+    {
+      linkClass: 'orby-marketing-scroll-nav__link',
+      contactClass: 'orby-marketing-scroll-nav__contact',
+    },
+    { includeContact: false },
+  );
+
+  const brand =
+    mode === 'legal'
+      ? `<a class="orby-marketing-scroll-nav__brand" href="${escapeMarketingHtml(homeHref)}" aria-label="Orby home">
+        <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
+      </a>`
+      : `<button type="button" class="orby-marketing-scroll-nav__brand" data-orby-marketing-scroll-top aria-label="Back to top">
+        <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
+      </button>`;
+
+  const browseExtraClass = 'dropzone-btn orby-marketing-scroll-nav__browse';
+  const browseAttrs =
+    mode === 'legal'
+      ? `data-orby-legal-browse="${escapeMarketingHtml(homeHref)}"`
+      : 'data-orby-marketing-browse';
+  const browseCta = orbyMagicButtonHtml('Browse Files', {
+    extraClass: browseExtraClass,
+    attrs: browseAttrs,
+  });
+
+  const navClass =
+    mode === 'legal'
+      ? 'orby-marketing-scroll-nav orby-marketing-scroll-nav--legal'
+      : 'orby-marketing-scroll-nav';
+  const ariaHidden = mode === 'home' ? ' aria-hidden="true"' : '';
+  const dataAttr =
+    mode === 'legal' ? ' data-orby-legal-site-nav' : ' data-orby-marketing-scroll-nav';
+
+  return `<nav class="${navClass}"${dataAttr} aria-label="Site"${ariaHidden}>
+    <div class="orby-marketing-scroll-nav__bar">
+      ${brand}
+      <div class="orby-marketing-scroll-nav__links">${links.join('')}</div>
+      <div class="orby-marketing-scroll-nav__cta">${browseCta}</div>
+    </div>
+  </nav>`;
 }
 
 /**
@@ -581,29 +692,23 @@ function renderMarketingSiteNavLinks(fields, classes, options = {}) {
  */
 export function renderMarketingScrollNav(section) {
   const fields = getMarketingFooterFields(section);
-  const links = renderMarketingSiteNavLinks(
-    fields,
-    {
-      linkClass: 'orby-marketing-scroll-nav__link',
-      contactClass: 'orby-marketing-scroll-nav__contact',
-    },
-    { includeContact: false },
-  );
-
-  const browseCta = orbyMagicButtonHtml('Browse Files', {
-    extraClass: 'dropzone-btn orby-marketing-scroll-nav__browse',
-    attrs: 'data-orby-marketing-browse',
+  return renderMarketingSiteNavHtml(fields, {
+    mode: 'home',
+    homeHref: './index.html',
   });
+}
 
-  return `<nav class="orby-marketing-scroll-nav" data-orby-marketing-scroll-nav aria-label="Site" aria-hidden="true">
-    <div class="orby-marketing-scroll-nav__bar">
-      <button type="button" class="orby-marketing-scroll-nav__brand" data-orby-marketing-scroll-top aria-label="Back to top">
-        <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
-      </button>
-      <div class="orby-marketing-scroll-nav__links">${links.join('')}</div>
-      <div class="orby-marketing-scroll-nav__cta">${browseCta}</div>
-    </div>
-  </nav>`;
+/**
+ * Fixed top nav for standalone legal / docs pages (always visible).
+ * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @param {string} [base='../']
+ */
+export function renderLegalSiteNav(section, base = '../') {
+  const fields = resolveMarketingSiteNavFields(section, base);
+  return renderMarketingSiteNavHtml(fields, {
+    mode: 'legal',
+    homeHref: resolveMarketingHomeHref(base),
+  });
 }
 
 function renderFooterMeta(section, options = {}) {

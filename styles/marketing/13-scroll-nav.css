@@ -1,5 +1,9 @@
 /* Fixed top nav — revealed on scroll up (see orbyMarketingScrollNav.js) */
+@import url('../orby-home-padding-x.css');
+
 .orby-marketing-scroll-nav {
+  --ui-orby-pill-pad-block-normal: calc(0.52rem * 1.2);
+  --ui-orby-pill-pad-inline-normal: calc(1.9rem * 1.2);
   --orby-marketing-split-media-ref-width: 160rem; /* 2560px — match marketing ramp */
   --orby-scroll-nav-height-ramp: clamp(
     0,
@@ -56,7 +60,8 @@
   box-sizing: border-box;
 }
 
-.orby-marketing-scroll-nav__brand {
+.orby-marketing-scroll-nav__brand,
+a.orby-marketing-scroll-nav__brand {
   justify-self: start;
   display: inline-flex;
   align-items: center;
@@ -71,15 +76,19 @@
   background: none;
   color: var(--brand-primary, #c4ff00);
   cursor: pointer;
+  text-decoration: none;
   transition: color 0.16s ease;
 }
 
 .orby-marketing-scroll-nav__brand:hover,
-.orby-marketing-scroll-nav__brand:focus-visible {
+.orby-marketing-scroll-nav__brand:focus-visible,
+a.orby-marketing-scroll-nav__brand:hover,
+a.orby-marketing-scroll-nav__brand:focus-visible {
   color: #fff;
 }
 
-.orby-marketing-scroll-nav__brand:focus-visible {
+.orby-marketing-scroll-nav__brand:focus-visible,
+a.orby-marketing-scroll-nav__brand:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
   outline-offset: 4px;
   border-radius: 2px;
@@ -243,7 +252,7 @@ html.orby-window-resizing body.dropzone-visible
   animation-play-state: paused;
 }
 
-html:not(.orby-home-scroll) .orby-marketing-scroll-nav,
+html:not(.orby-home-scroll):not(.orby-legal-site-nav) .orby-marketing-scroll-nav,
 .orby-marketing-scroll-nav[hidden] {
   display: none !important;
 }

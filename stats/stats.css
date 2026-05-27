@@ -8,8 +8,8 @@ body.legal-doc--stats {
   min-height: 100vh;
 }
 
-body.legal-doc--stats .legal-top {
-  flex-shrink: 0;
+html.orby-legal-site-nav body.legal-doc--stats .legal-wrap--stats {
+  padding-top: clamp(5rem, 10vh, 6rem);
 }
 
 body.legal-doc--stats .legal-wrap--stats {

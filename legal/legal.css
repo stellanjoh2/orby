@@ -3,6 +3,9 @@
  * Self-contained; does not import the main app stylesheet.
  */
 
+@import url('../styles/orby-magic-btn.css');
+@import url('../styles/marketing/13-scroll-nav.css');
+
 @font-face {
   font-family: 'Mattone Regular';
   src: url('../assets/fonts/Mattone-Regular.woff2') format('woff2');
@@ -124,7 +127,47 @@ body.legal-doc {
   top: 1rem;
 }
 
-/* Top bar — minimal product legal header */
+/* Site nav (marketing scroll strip — always visible on legal pages) */
+html.orby-legal-site-nav .orby-marketing-scroll-nav--legal {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+html.orby-legal-site-nav .legal-top {
+  display: none;
+}
+
+html.orby-legal-site-nav .legal-wrap {
+  padding-top: clamp(6.5rem, 12vw, 7.75rem);
+}
+
+/* Nav text links only — Browse uses <button.orby-magic-btn> (same as marketing; not .legal-doc a) */
+.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link {
+  text-decoration: none;
+}
+
+.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link,
+.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link:visited {
+  color: var(--brand-primary, #c4ff00);
+}
+
+.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link:hover,
+.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link:focus-visible {
+  color: #fff;
+}
+
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link[aria-current='page'] {
+  color: #fff;
+}
+
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link[aria-current='page']::after {
+  width: 100%;
+  left: 0;
+}
+
+/* Top bar — minimal product legal header (hidden when site nav is mounted) */
 .legal-top {
   position: sticky;
   top: 0;
@@ -764,22 +807,22 @@ body.legal-doc--about .legal-foot {
   }
 }
 
-/* Magic pill CTA — beat .legal-doc a underline / lime hover */
-body.legal-doc--about a.orby-magic-btn {
+/* In-page magic pill links (not scroll-nav — that uses <button> like marketing) */
+body.legal-doc a.orby-magic-btn {
   text-decoration: none;
   color: var(--brand-primary, #c4ff00);
 }
 
-body.legal-doc--about a.orby-magic-btn:hover,
-body.legal-doc--about a.orby-magic-btn:focus-visible {
+body.legal-doc a.orby-magic-btn:hover,
+body.legal-doc a.orby-magic-btn:focus-visible {
   color: var(--orby-black, #080808);
   text-decoration: none;
 }
 
-body.legal-doc--about a.orby-magic-btn:hover .orby-magic-btn__label,
-body.legal-doc--about a.orby-magic-btn:hover .orby-magic-btn__arrow,
-body.legal-doc--about a.orby-magic-btn:focus-visible .orby-magic-btn__label,
-body.legal-doc--about a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
+body.legal-doc a.orby-magic-btn:hover .orby-magic-btn__label,
+body.legal-doc a.orby-magic-btn:hover .orby-magic-btn__arrow,
+body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__label,
+body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   color: var(--orby-black, #080808);
 }
 

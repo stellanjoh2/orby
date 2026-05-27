@@ -21,6 +21,8 @@
  * 2. Use CSS filters on .drop-logo and .demo-logotype (see below)
  */
 
+@import url('orby-home-padding-x.css');
+
 @font-face {
   font-family: 'Mattone Regular';
   src: url('./assets/fonts/Mattone-Regular.woff2') format('woff2');
@@ -143,22 +145,7 @@
   --muted-section-text-scale: 0.5625;
   /* Studio shelf / settings chrome — 1 on mobile landing; scaled on desktop (see below) */
   --studio-ui-scale: 1;
-  /*
-   * Home hero frame insets — shared by .dropzone and #orby-marketing so marketing
-   * content width matches the dropzone inner edges (left/right of the frame).
-   * Full original padding @ 2560+; scales down gently when viewport narrows.
-   */
-  --orby-home-full-width: 160rem; /* 2560px — reference for “full” outer inset */
-  --orby-home-inner-max-width: 111.875rem; /* 1790px — content width @ 2560+ */
-  --orby-home-outer-shrink: clamp(
-    0.82,
-    min(1, calc(0.55 + 0.45 * (100vw / var(--orby-home-full-width)))),
-    1
-  );
-  --orby-home-padding: calc(
-    clamp(0.25rem, calc((100vw - 600px) / 15), 20rem) * var(--orby-home-outer-shrink)
-  );
-  --orby-home-padding-x: var(--orby-home-padding);
+  /* Home hero frame insets — see orby-home-padding-x.css (--orby-home-padding-x) */
   --orby-home-padding-y: var(--orby-home-padding);
   /* Hero credits — same gutter as showcase gallery (--orby-marketing-col-gap); 112px @ 2560 */
   --orby-hero-credit-gutter-wide-factor: clamp(
@@ -182,11 +169,6 @@
 /* Big screens: extra horizontal inset only — vertical inset follows height */
 @media (min-width: 1200px) and (max-width: 1599px) {
   :root {
-    --orby-home-padding-x: calc(
-      (
-          0.1 * 100vw + 0.8 * clamp(0.25rem, calc((100vw - 600px) / 15), 20rem)
-        ) * var(--orby-home-outer-shrink)
-    );
     --orby-home-padding-y: min(
       calc(
         0.06 * 100vh + 0.8 * clamp(0.35rem, calc((100vh - 500px) / 12), 4.5rem)
@@ -198,25 +180,11 @@
 
 @media (min-width: 1600px) {
   :root {
-    --orby-home-padding-x: calc(
-      (
-          0.1 * 100vw + 0.8 * clamp(4rem, calc((100vw - 1440px) / 2), 14rem)
-        ) * var(--orby-home-outer-shrink)
-    );
     --orby-home-padding-y: min(
       calc(
         0.1 * 100vh + 0.8 * clamp(3rem, calc((100vh - 720px) / 10 + 3rem), 5rem)
       ),
       max(0.35rem, calc((100vh - 460px) / 2))
-    );
-  }
-}
-
-/* 2560+ — widen inner frame to 1790px (marketing + dropzone share --orby-home-padding-x) */
-@media (min-width: 160rem) {
-  :root {
-    --orby-home-padding-x: calc(
-      (100vw - var(--orby-home-inner-max-width)) / 2
     );
   }
 }
@@ -2714,6 +2682,8 @@ body.export-overlay-debug #dropzone {
   --comp-pic-h: min(100cqh, calc(100cqw * 9 / 16));
   /* Opacity fade only (no stroke trim). JS reads this for hide timeout. */
   --composition-grid-fade-duration: 0.1s;
+  --comp-guide-alpha: 0.52;
+  --comp-guide-alpha-muted: 0.26;
 }
 
 /* Only when visible: `display: flex` must not apply while `[hidden]` or it overrides UA display:none */
@@ -2744,7 +2714,7 @@ body.export-overlay-debug #dropzone {
 
 .composition-grid-overlay__viewport-guides line {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.52);
+  stroke: rgba(255, 255, 255, var(--comp-guide-alpha));
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
   stroke-linecap: butt;
@@ -2752,7 +2722,7 @@ body.export-overlay-debug #dropzone {
 }
 
 .composition-grid-overlay--inverted .composition-grid-overlay__viewport-guides line {
-  stroke: rgba(0, 0, 0, 0.52);
+  stroke: rgba(0, 0, 0, var(--comp-guide-alpha));
 }
 
 /* Full-width horizontal thirds — avoids SVG meet-letterboxing shortening lines on wide panels */
@@ -2770,7 +2740,7 @@ body.export-overlay-debug #dropzone {
   height: 2px;
   margin: 0;
   padding: 0;
-  background: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, var(--comp-guide-alpha));
   transform: translateY(-50%);
 }
 
@@ -2783,7 +2753,7 @@ body.export-overlay-debug #dropzone {
 }
 
 .composition-grid-overlay--inverted .composition-grid-overlay__thirds-horizontal-line {
-  background: rgba(0, 0, 0, 0.52);
+  background: rgba(0, 0, 0, var(--comp-guide-alpha));
 }
 
 @supports not (width: 1cqw) {
@@ -2832,7 +2802,7 @@ body.export-overlay-debug #dropzone {
 .composition-grid-overlay__lines line,
 .composition-grid-overlay__lines circle {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.52);
+  stroke: rgba(255, 255, 255, var(--comp-guide-alpha));
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
   stroke-linecap: butt;
@@ -2841,7 +2811,19 @@ body.export-overlay-debug #dropzone {
 
 .composition-grid-overlay--inverted .composition-grid-overlay__lines line,
 .composition-grid-overlay--inverted .composition-grid-overlay__lines circle {
-  stroke: rgba(0, 0, 0, 0.52);
+  stroke: rgba(0, 0, 0, var(--comp-guide-alpha));
+}
+
+/* Broadcast action safe — 90% of 16×9 picture (5% inset); half opacity of primary guides */
+.composition-grid-overlay__action-safe {
+  fill: none;
+  stroke: rgba(255, 255, 255, var(--comp-guide-alpha-muted));
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.composition-grid-overlay--inverted .composition-grid-overlay__action-safe {
+  stroke: rgba(0, 0, 0, var(--comp-guide-alpha-muted));
 }
 
 .dropzone {

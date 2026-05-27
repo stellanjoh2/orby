@@ -98,8 +98,8 @@ export const MARKETING_SECTIONS = [
     lede:
       'Achieve photorealism without leaving the browser. Every tool you need to light, grade, and present your model is right here — reacting in real time while you orbit the shot.',
     bullets: [
-      'Look Filter presets, luminance curve, and full color grade',
-      'Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, anamorphic streaks, and tone mapping',
+      'Look Filter presets, luminance curve, full color grade, and ACES filmic tone mapping',
+      'Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, and anamorphic streaks',
       'PBR / real materials — metalness, roughness, normals, and emissive as authored',
     ],
     layout: 'media-left',
@@ -194,7 +194,7 @@ export const MARKETING_SECTIONS = [
     eyebrow: 'Rendering',
     title: 'Looks this good,\nstraight in the browser',
     lede:
-      "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, and color grading that makes real-time look anything but.",
+      "Product visualization, automotive, architecture, game assets, scanned meshes — whatever you're working with, Orby treats it like a hero. Cinematic post-processing, HDR environments, ACES filmic tone mapping, and color grading that makes real-time look anything but.",
     gallery: [
       {
         src: './assets/marketing/orby-marketing-promo1.jpg',
@@ -216,6 +216,17 @@ export const MARKETING_SECTIONS = [
           sourceLabel: 'Fab',
           sourceHref:
             'https://www.fab.com/listings/1b2f7565-c9ad-433e-9a19-96c6687a55cd',
+        },
+      },
+      {
+        src: './assets/marketing/orby-marketing-promo3.jpg',
+        alt: '2018 Porsche 911 Carrera GTS hero render in Orby',
+        imageCredit: {
+          title: '2018 Porsche 911',
+          artist: 'Outlaw Games',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/2018-porsche-911-04f556e0a2aa425185dcee7f7f1e2ff1',
         },
       },
     ],
