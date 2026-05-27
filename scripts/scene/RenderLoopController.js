@@ -206,6 +206,10 @@ export class RenderLoopController {
     ];
   }
 
+  isRunning() {
+    return this._running;
+  }
+
   start() {
     if (this._running) return;
     this._running = true;

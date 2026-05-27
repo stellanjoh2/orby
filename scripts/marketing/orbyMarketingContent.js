@@ -31,6 +31,7 @@
  * @property {MarketingGallerySlide[]} [flipGallery] — 2+ frames; GIF-like fast flip (see flipGalleryIntervalMs)
  * @property {number} [flipGalleryIntervalMs] — ms between frames (default 1000)
  * @property {number} [flipGalleryFadeMs] — crossfade seconds; 0 = hard cut (default 0)
+ * @property {MarketingImageCredit} [imageCredit] — listed on the credits page only (not shown on the card)
  */
 
 /**
@@ -103,7 +104,15 @@ export const MARKETING_SECTIONS = [
     ],
     layout: 'media-left',
     imageSrc: './assets/marketing/present-cinema-look.png',
-    imageAlt: 'Cinematic look filter preset in Orby',
+    videoSrc: './assets/marketing/orby-marketing-microreel.mp4',
+    imageAlt: 'Lighting and grading a model in Orby',
+    imageCredit: {
+      title: '(FREE) Porsche 911 Carrera 4S',
+      artist: 'Lionsharp Studios',
+      sourceLabel: 'Sketchfab',
+      sourceHref:
+        'https://sketchfab.com/3d-models/free-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf',
+    },
   },
   {
     type: 'split',
@@ -247,7 +256,8 @@ export const MARKETING_SECTIONS = [
     ],
     layout: 'media-right',
     imageSrc: './assets/images/creative-look-glass.png',
-    imageAlt: 'Glass stylized surface on extruded geometry',
+    videoSrc: './assets/marketing/orby-feature-3dlogo.mp4',
+    imageAlt: 'SVG extrude — logotype as layered 3D geometry in Orby',
   },
   {
     type: 'split',
@@ -262,8 +272,8 @@ export const MARKETING_SECTIONS = [
       'SVG silhouette or flat color, plus GLB from SVG extrude',
     ],
     layout: 'media-left',
-    imageSrc: './assets/marketing/export-golden-look.png',
-    imageAlt: 'Golden hour look on a product render',
+    imageSrc: './assets/marketing/orby-feature-sendit.jpg',
+    imageAlt: 'Export stills, video, and sequences from Orby',
   },
   {
     type: 'marquee',
@@ -407,6 +417,13 @@ export const MARKETING_SECTIONS = [
         videoPoster: true,
         imageSrc: './assets/marketing/orby-feature-lensflare.jpg',
         imageAlt: 'Product render with lens flare and chromatic aberration in Orby',
+        imageCredit: {
+          title: 'Space Station 3',
+          artist: 're1monsen',
+          sourceLabel: 'Sketchfab',
+          sourceHref:
+            'https://sketchfab.com/3d-models/space-station-3-a7a6ad10261149cab31aa394bfcf8940',
+        },
       },
       {
         title: 'Color Reference',

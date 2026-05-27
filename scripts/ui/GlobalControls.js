@@ -411,15 +411,13 @@ export class GlobalControls {
         }
       }
 
-      // L - Toggle 3-point lighting
+      // L - Toggle 3-point lighting (delegate to shelf handler — syncs key/fill/rim/ambient)
       if (key === 'l') {
         event.preventDefault();
-        const current = this.stateStore.getState().lightsEnabled;
-        this.stateStore.set('lightsEnabled', !current);
-        this.eventBus.emit('lights:enabled', !current);
-        if (this.ui.inputs.lightsEnabled) {
-          this.ui.inputs.lightsEnabled.checked = !current;
-        }
+        const input = this.ui.inputs.lightsEnabled;
+        if (!input) return;
+        input.checked = !input.checked;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
       // O - Toggle demo logotype (Orby branded screensaver)
@@ -689,10 +687,12 @@ export class GlobalControls {
       this.ui.inputs.hdriStrength.value = hdriSliderValue;
       this.helpers.updateValueLabel('hdriStrength', hdriSliderValue, 'decimal');
     }
-    this.stateStore.set('lightsEnabled', false);
-    this.eventBus.emit('lights:enabled', false);
     if (this.ui.inputs.lightsEnabled) {
       this.ui.inputs.lightsEnabled.checked = false;
+      this.ui.inputs.lightsEnabled.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      this.stateStore.set('lightsEnabled', false);
+      this.eventBus.emit('lights:enabled', false);
     }
     this.stateStore.set('aberration.enabled', false);
     this.eventBus.emit('render:aberration', this.stateStore.getState().aberration);

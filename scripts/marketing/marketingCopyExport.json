@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-25T15:00:57.632Z",
+    "generatedAt": "2026-05-27T10:04:19.104Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -31,7 +31,7 @@
       "label": "Browse Files",
       "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
     },
-    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. Load test object · Debug 404 (temp)",
+    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. Load test object · Preview export overlay · Debug 404 (temp)",
     "secondaryLinks": [
       {
         "label": "privacy policy",
@@ -42,6 +42,11 @@
         "label": "Load test object",
         "href": "#",
         "type": "dev"
+      },
+      {
+        "label": "Preview export overlay",
+        "href": "#",
+        "type": "link"
       },
       {
         "label": "Debug 404 (temp)",
@@ -92,7 +97,13 @@
         "Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, anamorphic streaks, and tone mapping",
         "PBR / real materials — metalness, roughness, normals, and emissive as authored"
       ],
-      "cta": null
+      "cta": null,
+      "imageCredit": {
+        "title": "(FREE) Porsche 911 Carrera 4S",
+        "artist": "Lionsharp Studios",
+        "sourceLabel": "Sketchfab",
+        "sourceHref": "https://sketchfab.com/3d-models/free-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf"
+      }
     },
     {
       "order": 3,

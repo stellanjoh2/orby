@@ -56,7 +56,8 @@ body.legal-doc--stats .legal-wrap--stats > h1.legal-stats__title {
   background: var(--legal-surface);
 }
 
-.legal-stats__value {
+/* Beat .legal-doc p { color: var(--legal-text) } — same pattern as p.legal-meta */
+.legal-doc p.legal-stats__value {
   margin: 0;
   font-family: var(--legal-brand-headline);
   font-size: 112px;
@@ -185,7 +186,7 @@ body.legal-doc--stats h2.legal-stats__formats-title {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .legal-stats__value {
+  .legal-doc p.legal-stats__value {
     transition: none;
   }
 }

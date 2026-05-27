@@ -146,7 +146,6 @@ function createStateApplySteps() {
       apply: (s, state) => {
         s.lightsMaster = state.lightsMaster ?? 0.30;
         s.lightsController?.setMaster(s.lightsMaster, state.lights);
-        s.setLightsEnabled(state.lightsEnabled ?? false);
         s.setLightsRotation(state.lightsRotation ?? 0);
         s.setLightsHeight(state.lightsHeight ?? 5);
         s.setShowLightIndicators(state.showLightIndicators ?? false);
@@ -169,17 +168,13 @@ function createStateApplySteps() {
             if (config.rotate !== undefined) {
               s.lightsController?.updateLightProperty(lightId, 'rotate', config.rotate);
             }
-            if (config.enabled !== undefined) {
-              s.lightsController?.updateLightProperty(lightId, 'enabled', config.enabled);
-            }
-            if (config.castShadows !== undefined) {
-              s.lightsController?.updateLightProperty(lightId, 'castShadows', config.castShadows);
-            }
             if (config.color !== undefined) {
               s.lightsController?.updateLightProperty(lightId, 'color', config.color);
             }
           });
         }
+        // After per-light sliders/colors — `setLightsEnabled` owns enabled + shadow sync.
+        s.setLightsEnabled(state.lightsEnabled ?? false);
       },
     },
     {

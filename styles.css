@@ -2522,6 +2522,180 @@ html.orby-dropzone-shell-pending .workspace {
   outline: none;
 }
 
+/* Offline PNG sequence: hide live WebGL (renderToScreen=false clears canvas each frame) */
+.viewport.is-offline-export-capture #webgl {
+  visibility: hidden;
+}
+
+.viewport.is-offline-export-capture > .viewport-load-spinner {
+  display: none;
+}
+
+.viewport-offline-export[hidden] {
+  display: none !important;
+}
+
+.viewport-offline-export {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(1rem, 4vw, 4.5rem);
+  box-sizing: border-box;
+  background: var(--orby-app-bg);
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Dropzone debug — hide hero so the export overlay layout is visible */
+body.export-overlay-debug #dropzone {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.viewport-offline-export__home {
+  position: absolute;
+  top: clamp(1rem, 4vw, 4.5rem);
+  left: clamp(1rem, 4vw, 4.5rem);
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  font-family: var(--brand-font-mattone-regular);
+  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.viewport-offline-export__home:hover {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.viewport-offline-export__center {
+  width: min(100%, 54rem);
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.viewport-offline-export__title {
+  margin: 0 0 0.65em;
+  font-family: var(--brand-font-mattone-regular);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.viewport-offline-export__progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35em 0.45em;
+  margin: 0 0 clamp(1.35rem, 3vw, 1.85rem);
+  line-height: 1.25;
+}
+
+.viewport-offline-export__progress-leading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+}
+
+.viewport-offline-export__spinner {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  animation: viewport-load-spin 0.6s linear infinite;
+}
+
+.viewport-offline-export__stat {
+  font-family: var(--brand-font-mattone-regular);
+  font-size: 48px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: rgba(255, 255, 255, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+
+.viewport-offline-export__progress-sep {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport-offline-export__spinner {
+    animation-duration: 3s;
+  }
+}
+
+.viewport-offline-export__table-wrap {
+  width: 100%;
+  max-height: min(58vh, 32rem);
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.viewport-offline-export__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(0.84rem, 1.6vw, 0.92rem);
+  line-height: 1.4;
+}
+
+.viewport-offline-export__section-row th {
+  padding: 0.7rem 0.9rem 0.4rem;
+  font-family: var(--brand-font-mattone-regular);
+  font-size: clamp(0.76rem, 1.4vw, 0.82rem);
+  font-weight: inherit;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--brand-lime, #c4ff00);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.viewport-offline-export__section-row:first-child th {
+  border-top: none;
+  padding-top: 0.5rem;
+}
+
+.viewport-offline-export__table th[scope='row'] {
+  width: 42%;
+  padding: 0.22rem 0.65rem 0.22rem 0.85rem;
+  font-weight: inherit;
+  text-align: left;
+  vertical-align: top;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+}
+
+.viewport-offline-export__table td {
+  padding: 0.22rem 0.85rem 0.22rem 0;
+  vertical-align: top;
+  color: rgba(255, 255, 255, 0.9);
+  word-break: break-word;
+}
+
+.viewport-offline-export__table tbody tr:not(.viewport-offline-export__section-row):hover td,
+.viewport-offline-export__table tbody tr:not(.viewport-offline-export__section-row):hover th[scope='row'] {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+
 #webgl:focus,
 #webgl:focus-visible {
   outline: none;

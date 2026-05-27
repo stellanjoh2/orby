@@ -116,6 +116,18 @@ ui.init();
 
 window.orby = { eventBus, stateStore, ui, scene, gamepad, tooltips };
 
+/** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
+try {
+  const q = new URLSearchParams(window.location.search);
+  if (q.get('exportOverlayDebug') === '1' && !document.documentElement.classList.contains('mobile-landing')) {
+    requestAnimationFrame(() => {
+      ui.toggleOfflineExportOverlayPreview?.();
+    });
+  }
+} catch {
+  /* URL blocked */
+}
+
 if (!document.documentElement.classList.contains('mobile-landing')) {
   const scheduleMarketing =
     typeof window.requestIdleCallback === 'function'

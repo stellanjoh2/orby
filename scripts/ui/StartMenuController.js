@@ -139,6 +139,7 @@ export class StartMenuController {
     this.fileInput = null;
     this.browseButton = null;
     this.loadTestLink = null;
+    this.debugExportOverlayLink = null;
     this.loadMeshButton = null;
     this.logotypeAnimation = null;
     this.infoLogotypeAnimation = null;
@@ -219,6 +220,7 @@ export class StartMenuController {
     this.fileInput = document.querySelector('#fileInput');
     this.browseButton = document.querySelector('#browseButton');
     this.loadTestLink = document.querySelector('#loadTestLink');
+    this.debugExportOverlayLink = document.querySelector('#debugExportOverlayLink');
     this.loadMeshButton = this.ui.buttons?.loadMesh;
     this.logotypeAnimation = document.querySelector('#logotypeAnimation');
     this.infoLogotypeAnimation = document.querySelector('#infoLogotypeAnimation');
@@ -291,6 +293,19 @@ export class StartMenuController {
         await this.loadTestObject();
       });
     }
+
+    if (this.debugExportOverlayLink) {
+      this.debugExportOverlayLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        this.ui?.toggleOfflineExportOverlayPreview?.();
+      });
+    }
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !this.ui?._offlineExportPreviewActive) return;
+      this.ui.hideOfflineExportOverlay?.();
+      this.ui.showToast?.('Export overlay preview closed', 2200, { notification: false });
+    });
 
     // File input change
     this.fileInput.addEventListener('change', (event) => {

@@ -30,6 +30,10 @@ import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
+import {
+  buildOfflineExportOverlaySummary,
+  OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB,
+} from './render/offlineExportOverlaySummary.js';
 import { DemoLogotypeController } from './ui/DemoLogotypeController.js';
 import { BugReportController } from './ui/BugReportController.js';
 import { ShelfOverlaySuppression } from './ui/ShelfOverlaySuppression.js';
@@ -104,6 +108,7 @@ export class UIManager {
 
   init() {
     this.cacheDom();
+    this.bindOfflineExportOverlayHome();
     this.uiSounds = new UISounds();
     if (this.dom.uiSoundsEnabled) {
       this.dom.uiSoundsEnabled.checked = this.uiSounds.enabled;
@@ -225,6 +230,12 @@ export class UIManager {
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
     this.dom.canvas = q('#webgl');
+    this.dom.viewport = q('.viewport');
+    this.dom.offlineExportOverlay = q('#viewportOfflineExportOverlay');
+    this.dom.offlineExportHome = q('#viewportOfflineExportHome');
+    this.dom.offlineExportSummary = q('#viewportOfflineExportSummary');
+    this.dom.offlineExportFrame = q('#viewportOfflineExportFrame');
+    this.dom.offlineExportElapsed = q('#viewportOfflineExportElapsed');
     this.dom.fullscreenToggle = q('#fullscreenToggle');
     this.dom.loadSpinner = q('#viewportLoadSpinner');
     this.dom.loadSpinnerElapsed = q('#viewportLoadSpinnerElapsed');
@@ -1747,6 +1758,175 @@ export class UIManager {
     const on = this._loadSpinnerDepth > 0;
     el.classList.toggle('is-visible', on);
     el.setAttribute('aria-hidden', on ? 'false' : 'true');
+  }
+
+  bindOfflineExportOverlayHome() {
+    if (this._offlineExportHomeBound) return;
+    this._offlineExportHomeBound = true;
+    this.dom.offlineExportHome?.addEventListener('click', () => {
+      this._onOfflineExportHomeClick();
+    });
+  }
+
+  _onOfflineExportHomeClick() {
+    if (this._offlineExportPreviewActive) {
+      this.showMessageAlert(
+        'Close the export overlay preview?',
+        'Preview',
+        {
+          confirm: true,
+          cancelLabel: 'Stay',
+          okLabel: 'Close',
+          onConfirm: () => this.hideOfflineExportOverlay(),
+        },
+      );
+      return;
+    }
+    if (!this._offlineExportCancellable) return;
+    this.showMessageAlert(
+      'This will cancel the PNG sequence render in progress. Rendering stops after the current frame finishes — partial frames are discarded and no ZIP is downloaded.',
+      'Cancel render?',
+      {
+        confirm: true,
+        cancelLabel: 'Keep rendering',
+        okLabel: 'Cancel render',
+        modalTone: 'caution',
+        onConfirm: () => {
+          this._offlineExportOnCancel?.();
+        },
+      },
+    );
+  }
+
+  /**
+   * Full-viewport black overlay with export progress + look summary during offline PNG capture.
+   * @param {Array<{ title: string, rows: Array<{ label: string, value: string }> }>} sections
+   * @param {{ cancellable?: boolean, onCancelExport?: () => void }} [options]
+   */
+  showOfflineExportOverlay(sections, options = {}) {
+    this._offlineExportCancellable = !!options.cancellable;
+    this._offlineExportOnCancel = options.onCancelExport ?? null;
+
+    if (this.dom.offlineExportHome) {
+      this.dom.offlineExportHome.textContent = this._offlineExportPreviewActive
+        ? 'Home / Close preview'
+        : 'Home / Cancel render';
+      this.dom.offlineExportHome.setAttribute(
+        'aria-label',
+        this._offlineExportCancellable ? 'Cancel render' : 'Close export overlay',
+      );
+    }
+
+    this.dom.viewport?.classList.add('is-offline-export-capture');
+    const overlay = this.dom.offlineExportOverlay;
+    if (overlay) {
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+    this._offlineExportElapsedStart = performance.now();
+    this._renderOfflineExportSummary(sections);
+    this.updateOfflineExportOverlayProgress({ frameIndex: 0, totalFrames: 0 });
+  }
+
+  /**
+   * @param {{ frameIndex: number, totalFrames: number }} progress
+   */
+  updateOfflineExportOverlayProgress({ frameIndex = 0, totalFrames = 0 } = {}) {
+    const frameEl = this.dom.offlineExportFrame;
+    const elapsedEl = this.dom.offlineExportElapsed;
+    if (frameEl) {
+      const total = Math.max(0, totalFrames);
+      const current = Math.max(0, Math.min(frameIndex, total || frameIndex));
+      frameEl.textContent = total > 0
+        ? `Frame ${current} / ${total}`
+        : 'Preparing…';
+    }
+    if (elapsedEl && this._offlineExportElapsedStart) {
+      const wholeSec = Math.max(
+        0,
+        Math.floor((performance.now() - this._offlineExportElapsedStart) / 1000),
+      );
+      elapsedEl.textContent = `${wholeSec}s`;
+    }
+  }
+
+  hideOfflineExportOverlay() {
+    this.dom.viewport?.classList.remove('is-offline-export-capture');
+    const overlay = this.dom.offlineExportOverlay;
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    if (this.dom.offlineExportSummary) {
+      this.dom.offlineExportSummary.replaceChildren();
+    }
+    this._offlineExportElapsedStart = 0;
+    this._offlineExportPreviewActive = false;
+    this._offlineExportCancellable = false;
+    this._offlineExportOnCancel = null;
+    document.body.classList.remove('export-overlay-debug');
+  }
+
+  /**
+   * Toggle full export overlay for layout QA from the dropzone (no render running).
+   */
+  toggleOfflineExportOverlayPreview() {
+    if (this._offlineExportPreviewActive) {
+      this.hideOfflineExportOverlay();
+      this.showToast?.('Export overlay preview closed', 2200, { notification: false });
+      return;
+    }
+    const video = {
+      ...OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB,
+      ...(this.exportSettings?.video || {}),
+      format: 'png',
+    };
+    const durationSec = video.durationSec ?? 5;
+    const fps = video.fps ?? 24;
+    const totalFrames = Math.max(2, Math.round(durationSec * fps));
+
+    const sections = buildOfflineExportOverlaySummary({
+      exportJob: { ...video, clipCount: 0 },
+      assetName: '',
+      animationClipLabel: null,
+    });
+
+    document.body.classList.add('export-overlay-debug');
+    this._offlineExportPreviewActive = true;
+    this.showOfflineExportOverlay(sections, { cancellable: false });
+    this.updateOfflineExportOverlayProgress({
+      frameIndex: Math.min(24, totalFrames),
+      totalFrames,
+    });
+    this.showToast?.('Export overlay preview — Esc or link again to close', 3600, {
+      notification: false,
+    });
+  }
+
+  _renderOfflineExportSummary(sections) {
+    const tbody = this.dom.offlineExportSummary;
+    if (!tbody || !Array.isArray(sections)) return;
+    tbody.replaceChildren();
+    for (const section of sections) {
+      const sectionRow = document.createElement('tr');
+      sectionRow.className = 'viewport-offline-export__section-row';
+      const sectionTh = document.createElement('th');
+      sectionTh.colSpan = 2;
+      sectionTh.textContent = section.title || '';
+      sectionRow.appendChild(sectionTh);
+      tbody.appendChild(sectionRow);
+
+      for (const row of section.rows || []) {
+        const tr = document.createElement('tr');
+        const th = document.createElement('th');
+        th.scope = 'row';
+        th.textContent = row.label || '';
+        const td = document.createElement('td');
+        td.textContent = row.value || '—';
+        tr.append(th, td);
+        tbody.appendChild(tr);
+      }
+    }
   }
 
   extractAnimationName(fullName) {

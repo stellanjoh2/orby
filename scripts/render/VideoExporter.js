@@ -10,6 +10,7 @@ import {
   exportSpinSequenceLabel,
   exportSpinToastLabel,
 } from './exportVideoMovements.js';
+import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
 
 export class VideoExporter {
   constructor({
@@ -27,6 +28,10 @@ export class VideoExporter {
     resetRendererViewportToCanvas,
     /** Same clear + bloom guard as interactive `SceneManager.render()` before composer captures. */
     prepareComposerCapture,
+    /** Lens flare / god rays prep — must run before each offline capture frame. */
+    beforeComposerRender,
+    /** Same pass sequence as still PNG export (`ImageExporter.exportPng`). */
+    renderComposerPassForExport,
     setRotationY,
     beginExportOrbitDrive = () => {},
     applyExportOrbitDriveFrame = () => {},
@@ -42,6 +47,7 @@ export class VideoExporter {
     getCurrentAssetMetadata,
     getHdriBackgroundEnabled,
     getAnimationClipCount = () => 0,
+    getAnimationClipLabel = () => null,
     handleResize,
   } = {}) {
     this.renderer = renderer;
@@ -57,6 +63,8 @@ export class VideoExporter {
     this.ensureComposerBuffersMatchRenderer = ensureComposerBuffersMatchRenderer;
     this.resetRendererViewportToCanvas = resetRendererViewportToCanvas;
     this.prepareComposerCapture = prepareComposerCapture;
+    this.beforeComposerRender = beforeComposerRender;
+    this.renderComposerPassForExport = renderComposerPassForExport;
     this.setRotationY = setRotationY;
     this.beginExportOrbitDrive = beginExportOrbitDrive;
     this.applyExportOrbitDriveFrame = applyExportOrbitDriveFrame;
@@ -72,7 +80,13 @@ export class VideoExporter {
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
     this.getHdriBackgroundEnabled = getHdriBackgroundEnabled;
     this.getAnimationClipCount = getAnimationClipCount;
+    this.getAnimationClipLabel = getAnimationClipLabel;
     this.handleResize = handleResize;
+    this._exportCancelRequested = false;
+  }
+
+  requestCancelExport() {
+    this._exportCancelRequested = true;
   }
 
   _downloadBlob(blob, fileName) {
@@ -180,16 +194,37 @@ export class VideoExporter {
     return true;
   }
 
-  _renderCurrentFrameToCanvas() {
+  /**
+   * Offline frame render — matches still PNG export (composer pass + viewport repair).
+   * @param {{ transparent?: boolean }} [opts]
+   */
+  _renderComposerFrameForCapture({ transparent = false } = {}) {
+    this.beforeComposerRender?.();
+    if (typeof this.renderComposerPassForExport === 'function') {
+      this.renderComposerPassForExport({ transparent });
+      return;
+    }
     if (this.composer) {
       this.ensureComposerBuffersMatchRenderer?.();
       this.resetRendererViewportToCanvas?.();
+      this.prepareComposerCapture?.();
       this.composer.render();
       this.resetRendererViewportToCanvas?.();
       return;
     }
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  _finishGpuFrame() {
+    const gl = this.renderer?.getContext?.();
+    if (gl && typeof gl.finish === 'function') {
+      gl.finish();
+    }
+  }
+
+  _renderCurrentFrameToCanvas() {
+    this._renderComposerFrameForCapture();
   }
 
   _renderAndCaptureCurrentFramePng() {
@@ -199,14 +234,11 @@ export class VideoExporter {
     const targetHeight = Math.max(1, Math.round(db.y));
 
     if (this.composer) {
-      this.ensureComposerBuffersMatchRenderer?.();
-      this.resetRendererViewportToCanvas?.();
-      this.prepareComposerCapture?.();
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
       try {
-        this.composer.render();
-        this.resetRendererViewportToCanvas?.();
+        this._renderComposerFrameForCapture();
+        this._finishGpuFrame();
         return this.imageExporter._captureComposerOutputAsPngDataUrl(
           targetWidth,
           targetHeight,
@@ -216,8 +248,8 @@ export class VideoExporter {
       }
     }
 
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.scene, this.camera);
+    this._renderComposerFrameForCapture();
+    this._finishGpuFrame();
     return this.renderer.domElement.toDataURL('image/png');
   }
 
@@ -230,14 +262,11 @@ export class VideoExporter {
     let postPixels = null;
 
     if (this.composer) {
-      this.ensureComposerBuffersMatchRenderer?.();
-      this.resetRendererViewportToCanvas?.();
-      this.prepareComposerCapture?.();
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
       try {
-        this.composer.render();
-        this.resetRendererViewportToCanvas?.();
+        this._renderComposerFrameForCapture({ transparent: true });
+        this._finishGpuFrame();
 
         const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
           type: THREE.UnsignedByteType,
@@ -420,6 +449,12 @@ export class VideoExporter {
       snapshot.previousSize.y,
     );
     this.syncPerspectiveProjection?.();
+  }
+
+  /** Repair GL viewport / composer RT size after offline capture (passes may leave partial viewport). */
+  _repairViewportAfterExport() {
+    this.ensureComposerBuffersMatchRenderer?.();
+    this.resetRendererViewportToCanvas?.();
   }
 
   _getSupportedRecorderMimeType() {
@@ -613,6 +648,7 @@ export class VideoExporter {
   }
 
   async exportVideo(settings = {}) {
+    this._exportCancelRequested = false;
     if (!this.getCurrentModel?.()) {
       this.ui?.showToast?.('Load a mesh before exporting video');
       return;
@@ -667,9 +703,32 @@ export class VideoExporter {
         '4K export is heavy on this browser/GPU and may use fallback encoding',
       );
     }
+    const isOfflinePngSequence = format === 'png';
+    if (isOfflinePngSequence) {
+      const summary = buildOfflineExportOverlaySummary({
+        exportJob: {
+          ...settings,
+          resolution,
+          durationSec,
+          fps,
+          movTransparent: shouldUseTransparentFrames,
+          clipCount: meshAnimation.clipCount,
+        },
+        assetName: baseName,
+        animationClipLabel: meshAnimation.include
+          ? this.getAnimationClipLabel?.(meshAnimation.clipIndex)
+          : null,
+      });
+      this.ui?.showOfflineExportOverlay?.(summary, {
+        cancellable: true,
+        onCancelExport: () => this.requestCancelExport(),
+      });
+      this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames });
+      await this._yieldUntilPaintCommitted();
+    }
     const sizeSnapshot = this._applyVideoExportSize(outputSize.width, outputSize.height);
     let spinnerActive = false;
-    if (typeof this.ui?.beginLoadSpinner === 'function') {
+    if (!isOfflinePngSequence && typeof this.ui?.beginLoadSpinner === 'function') {
       this.ui.beginLoadSpinner();
       spinnerActive = true;
       this.ui.beginLoadSpinnerElapsed?.();
@@ -712,6 +771,7 @@ export class VideoExporter {
           this.setRotationY(startRotationY);
           this.stateStore.set('rotationY', startRotationY);
           this._restoreVideoExportSize(sizeSnapshot);
+          this._repairViewportAfterExport();
           this.handleResize?.();
         }
         return;
@@ -725,7 +785,12 @@ export class VideoExporter {
         }
 
         const bufferedFiles = [];
+        let exportCancelled = false;
         for (let i = 0; i < totalFrames; i += 1) {
+          if (this._exportCancelRequested) {
+            exportCancelled = true;
+            break;
+          }
           const t = i / totalFrames;
           this._applyVideoExportFrame({
             movements, t, spinSettings, startRotationY, frameIndex: i, fps, meshAnimation,
@@ -736,10 +801,15 @@ export class VideoExporter {
           const blob = await (await fetch(dataUrl)).blob();
           const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
           bufferedFiles.push({ fileName, blob });
-          this.ui?.setLoadSpinnerElapsedFromStart?.();
+          this.ui?.updateOfflineExportOverlayProgress?.({
+            frameIndex: i + 1,
+            totalFrames,
+          });
         }
 
-        if (bufferedFiles.length > 0) {
+        if (exportCancelled) {
+          this.ui?.showToast?.('PNG export cancelled', 3200, { notification: false });
+        } else if (bufferedFiles.length > 0) {
           const zipped = await this._downloadSequenceAsZip({
             files: bufferedFiles,
             baseName,
@@ -759,12 +829,11 @@ export class VideoExporter {
               'ZIP unavailable; downloaded individual PNG files (browser may limit batch downloads)',
             );
           }
+          this.ui?.uiSounds?.playRenderFinished();
+          this.ui?.showToast?.(`Video sequence exported (${totalFrames} PNG frames)`, 3200, {
+            notification: false,
+          });
         }
-
-        this.ui?.uiSounds?.playRenderFinished();
-        this.ui?.showToast?.(`Video sequence exported (${totalFrames} PNG frames)`, 3200, {
-          notification: false,
-        });
       } catch (error) {
         console.error('Video export failed', error);
         this.ui?.showToast?.('Video export failed');
@@ -783,9 +852,11 @@ export class VideoExporter {
           this.backgroundController?.setHdriBackgroundEnabled(true);
         }
         this._restoreVideoExportSize(sizeSnapshot);
+        this._repairViewportAfterExport();
         this.handleResize?.();
       }
     } finally {
+      this.ui?.hideOfflineExportOverlay?.();
       if (spinnerActive && typeof this.ui?.endLoadSpinner === 'function') {
         this.ui.endLoadSpinner();
       }

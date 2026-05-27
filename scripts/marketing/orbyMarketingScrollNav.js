@@ -39,6 +39,24 @@ export function initMarketingScrollNav(options) {
     };
   }
 
+  let homeActive = true;
+  let lastY = window.scrollY;
+  let scrollUpAccum = 0;
+  let showTimer = null;
+  let ticking = false;
+
+  const setVisible = (visible) => {
+    nav.classList.toggle('orby-marketing-scroll-nav--visible', visible);
+    if (visible) {
+      nav.removeAttribute('aria-hidden');
+    } else {
+      nav.setAttribute('aria-hidden', 'true');
+    }
+  };
+
+  const isNavVisible = () => nav.classList.contains('orby-marketing-scroll-nav--visible');
+
+  setVisible(false);
   document.body.appendChild(nav);
 
   nav.addEventListener('click', (event) => {
@@ -54,23 +72,6 @@ export function initMarketingScrollNav(options) {
       onScrollTop();
     }
   });
-
-  let homeActive = true;
-  let lastY = window.scrollY;
-  let scrollUpAccum = 0;
-  let showTimer = null;
-  let ticking = false;
-
-  const isNavVisible = () => nav.classList.contains('orby-marketing-scroll-nav--visible');
-
-  const setVisible = (visible) => {
-    nav.classList.toggle('orby-marketing-scroll-nav--visible', visible);
-    if (visible) {
-      nav.removeAttribute('aria-hidden');
-    } else {
-      nav.setAttribute('aria-hidden', 'true');
-    }
-  };
 
   const hide = () => {
     if (showTimer != null) {
@@ -141,6 +142,7 @@ export function initMarketingScrollNav(options) {
         nav.removeAttribute('hidden');
         lastY = readScrollY();
         scrollUpAccum = 0;
+        if (lastY < HIDE_NEAR_TOP_Y) hide();
       } else {
         hide();
         nav.setAttribute('hidden', '');

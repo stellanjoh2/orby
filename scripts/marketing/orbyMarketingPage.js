@@ -44,8 +44,16 @@ async function loadSections() {
   return sectionsCache;
 }
 
+/** @returns {Promise<void>} */
 function ensureStylesheet() {
-  if (document.querySelector('link[data-orby-marketing-css]')) return;
+  const existing = document.querySelector('link[data-orby-marketing-css]');
+  if (existing instanceof HTMLLinkElement) {
+    if (existing.sheet) return Promise.resolve();
+    return new Promise((resolve) => {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => resolve(), { once: true });
+    });
+  }
   const version = document.querySelector('meta[name="orby-version"]')?.getAttribute('content');
   const href =
     version && version !== 'dev'
@@ -55,7 +63,11 @@ function ensureStylesheet() {
   link.rel = 'stylesheet';
   link.href = href;
   link.setAttribute('data-orby-marketing-css', '');
-  document.head.appendChild(link);
+  return new Promise((resolve) => {
+    link.addEventListener('load', () => resolve(), { once: true });
+    link.addEventListener('error', () => resolve(), { once: true });
+    document.head.appendChild(link);
+  });
 }
 
 function setScrollMode(enabled) {
@@ -419,7 +431,7 @@ export function initOrbyMarketingPage(options = {}) {
   });
   teardownScrollCueFade = bindScrollCueFade(scrollCue);
 
-  void loadSections().then((sections) => {
+  void Promise.all([loadSections(), ensureStylesheet()]).then(([sections]) => {
     if (destroyed) return;
     const ctaSection = sections.find((s) => s.type === 'cta');
     void import('./orbyMarketingScrollNav.js').then((scrollNavMod) => {

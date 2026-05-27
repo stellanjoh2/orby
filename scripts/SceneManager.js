@@ -351,7 +351,7 @@ export class SceneManager {
         this.ui?.syncControls?.(this.stateStore.getState());
       },
       onModelBoundsChanged: (bounds) => {
-        this.lightsController?.setModelBounds(bounds);
+        this._syncShadowCameraBounds(bounds);
       },
     });
     this.controls = this.cameraController.getControls();
@@ -930,6 +930,13 @@ export class SceneManager {
       resetRendererViewportToCanvas: () =>
         this.composerLifecycle.resetRendererViewportToCanvas(),
       prepareComposerCapture: () => this.composerLifecycle.prepareComposerCapture(),
+      beforeComposerRender: () => {
+        this.materialController?.syncImportGltfGlassMaterials?.();
+        this.lensFlareController?.prepareFrame(this.renderer);
+        this.godRaysController?.prepareFrame(this.renderer);
+      },
+      renderComposerPassForExport: (opts) =>
+        this.composerLifecycle.renderComposerPassForExport(opts),
       setRotationY: (value) => this.setRotationY(value),
       beginExportOrbitDrive: () => this.cameraController?.beginExportOrbitDrive?.(),
       applyExportOrbitDriveFrame: (t, spins) =>
@@ -958,6 +965,10 @@ export class SceneManager {
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
       getHdriBackgroundEnabled: () => this.hdriBackgroundEnabled,
       getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
+      getAnimationClipLabel: (index) => {
+        const clip = this.animationController?.animations?.[index];
+        return clip?.name || (clip ? `Clip ${index + 1}` : null);
+      },
       handleResize: () => this.handleResize(),
     });
 
@@ -1554,10 +1565,12 @@ export class SceneManager {
     );
     bg.setHdriShadowReceiverAoRadius(state.ambientOcclusion?.radius ?? 1);
     this._syncShadowModesHdriReceiver();
+    this._syncShadowCameraBounds();
   }
 
   _updateHdriShadowReceiverContact() {
     this.backgroundController?.updateHdriShadowReceiverFromModel?.(this.currentModel);
+    this._syncShadowCameraBounds();
   }
 
   setLensFlareEnabled(enabled) {
@@ -1892,6 +1905,7 @@ export class SceneManager {
   setGroundSolid(enabled) {
     this.groundController?.setSolidEnabled(enabled);
     this.backgroundController?.setGroundSolid(!!enabled);
+    this._syncShadowCameraBounds();
     this._updateBaseAppearAnimation();
     this._updateBaseGlassAppearAnimation();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
@@ -2093,6 +2107,7 @@ export class SceneManager {
     if (updateState && typeof newGroundY === 'number') {
       this.stateStore.set('groundY', newGroundY);
     }
+    this._syncShadowCameraBounds();
   }
 
   setGridScale(value) {
@@ -2232,10 +2247,36 @@ export class SceneManager {
     this.lightsController?.applySettings(lightsState);
   }
 
+  /**
+   * Master lights on with every per-light `enabled` false is an invalid rig (intensities stay 0).
+   * Ensure the default 3-point + ambient flags when turning the system on.
+   */
+  _ensureDefaultLightsRigInState() {
+    const state = this.stateStore.getState();
+    const lights = state.lights ?? {};
+    const anyOn = ['key', 'fill', 'rim', 'ambient'].some(
+      (id) => lights[id]?.enabled === true,
+    );
+    if (anyOn) return;
+    this.stateStore.batch(() => {
+      ['key', 'fill', 'rim', 'ambient'].forEach((id) => {
+        this.stateStore.set(`lights.${id}.enabled`, true);
+      });
+      if (state.lightsCastShadows) {
+        ['key', 'fill', 'rim'].forEach((id) => {
+          this.stateStore.set(`lights.${id}.castShadows`, true);
+        });
+      }
+    });
+  }
+
   setLightsEnabled(enabled) {
     this.lightsEnabled = !!enabled;
     // Keep in sync with StateStore (UI may set lightsCastShadows before this runs).
     this.lightsCastShadows = !!this.stateStore.getState().lightsCastShadows;
+    if (this.lightsEnabled) {
+      this._ensureDefaultLightsRigInState();
+    }
     const lightsState = this.stateStore.getState().lights;
     this.lightsController?.setEnabled(this.lightsEnabled, lightsState);
 
@@ -2260,16 +2301,50 @@ export class SceneManager {
   }
 
   _syncEffectiveCastShadows() {
-    const cast = this._isShadowTintActive();
-    this.lightsController?.setCastShadows(cast);
-    const lightsState = this.stateStore.getState().lights;
+    const globalCast = this._isShadowTintActive();
+    const lightsState = this.stateStore.getState().lights ?? {};
     ['key', 'fill', 'rim'].forEach((lightId) => {
-      this.lightsController?.updateLightProperty(lightId, 'castShadows', cast);
-      if (lightsState?.[lightId]) {
-        this.stateStore.set(`lights.${lightId}.castShadows`, cast);
-      }
+      const perLight = globalCast && lightsState[lightId]?.castShadows === true;
+      this.lightsController?.updateLightProperty(lightId, 'castShadows', perLight);
     });
     this._applyKeyLightGoboShadowOverride();
+  }
+
+  /**
+   * Horizontal radius from the model center to the shadow receive surface edge (podium / HDRI catcher).
+   * Keeps the directional shadow frustum large enough that out-of-map samples do not paint a square slab.
+   */
+  _getShadowReceiveSurfaceRadius(bounds) {
+    const center = bounds?.center;
+    if (!center) return 0;
+
+    const state = this.stateStore.getState();
+    if (state.groundSolid && this.groundController?.solidEnabled) {
+      const gc = this.groundController;
+      const podiumR = (gc.podiumBaseRadius ?? 2) * (gc.podiumScale ?? 1);
+      const px = gc.podium?.position?.x ?? 0;
+      const pz = gc.podium?.position?.z ?? 0;
+      return Math.hypot(center.x - px, center.z - pz) + podiumR + 0.35;
+    }
+
+    const recv = this.backgroundController?.hdriShadowReceiver;
+    if (
+      state.hdriReceiveShadowsAo
+      && state.hdriEnabled
+      && state.hdriBackground
+      && recv?.isActive?.()
+    ) {
+      return recv.getShadowCatcherRadius?.() ?? 0;
+    }
+
+    return 0;
+  }
+
+  _syncShadowCameraBounds(bounds = this.cameraController?.getModelBounds()) {
+    if (!bounds) return;
+    this.lightsController?.setModelBounds(bounds, {
+      receiveSurfaceRadius: this._getShadowReceiveSurfaceRadius(bounds),
+    });
   }
 
   /**
@@ -2295,10 +2370,7 @@ export class SceneManager {
   setShowLightIndicators(enabled) {
     this.lightsController?.setIndicatorsVisible(enabled);
     if (enabled) {
-      const bounds = this.cameraController?.getModelBounds();
-      if (bounds) {
-        this.lightsController?.setModelBounds(bounds);
-      }
+      this._syncShadowCameraBounds();
     }
   }
 
@@ -3533,7 +3605,20 @@ export class SceneManager {
       showFisheyePngExportBlockedAlert(this.ui);
       return;
     }
-    await this.videoExporter?.exportVideo(this._videoExportSettingsFromUi(settings));
+    const resumeRenderLoop = this.renderLoop?.isRunning?.() === true;
+    if (resumeRenderLoop) {
+      this.renderLoop.stop();
+    }
+    this._suppressResizeForExport = true;
+    try {
+      await this.videoExporter?.exportVideo(this._videoExportSettingsFromUi(settings));
+    } finally {
+      this._suppressResizeForExport = false;
+      this.handleResize();
+      if (resumeRenderLoop) {
+        this.renderLoop.start();
+      }
+    }
   }
 
   toggleExportVideoPreview(settings = {}) {

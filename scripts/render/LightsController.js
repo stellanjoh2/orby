@@ -3,16 +3,11 @@ import {
   SHADOW_MAP_SIZE_BY_QUALITY,
   normalizeShadowQuality,
   shadowBlurSamplesForQuality,
+  shadowCameraOrthoPaddingForQuality,
 } from '../config/shadowQuality.js';
 
 const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
 const MIN_SHADOW_BOUNDS_RADIUS = 0.5;
-const SHADOW_BOUNDS_PADDING_BY_QUALITY = {
-  low: 2.4,
-  medium: 2.0,
-  high: 1.6,
-  ultra: 1.2,
-};
 const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
   low: 10,
   medium: 8,
@@ -35,6 +30,8 @@ export class LightsController {
     this.lightsHeight = options.height ?? 5;
     this.autoRotateSpeed = options.autoRotateSpeed ?? 30;
     this.modelBounds = null;
+    /** Horizontal reach from shadow target center to the receive surface edge (base / catcher). */
+    this.receiveSurfaceRadius = 0;
     this.showIndicators = false;
     this.lightIndicators = null;
     this.shadowQuality = normalizeShadowQuality(options.shadowQuality);
@@ -131,17 +128,19 @@ export class LightsController {
 
   _applyShadowCameraBounds() {
     const center = this.modelBounds?.center;
-    const radius = Number.isFinite(this.modelBounds?.radius)
+    const meshRadius = Number.isFinite(this.modelBounds?.radius)
       ? Math.max(MIN_SHADOW_BOUNDS_RADIUS, this.modelBounds.radius)
       : 3;
-    const padding =
-      SHADOW_BOUNDS_PADDING_BY_QUALITY[this.shadowQuality]
-      ?? SHADOW_BOUNDS_PADDING_BY_QUALITY.medium;
+    const padding = shadowCameraOrthoPaddingForQuality(this.shadowQuality);
     const farMultiplier =
       SHADOW_FAR_MULTIPLIER_BY_QUALITY[this.shadowQuality]
       ?? SHADOW_FAR_MULTIPLIER_BY_QUALITY.medium;
-    const extent = radius * padding;
-    const farPlane = Math.max(20, radius * farMultiplier);
+    const meshExtent = meshRadius * padding;
+    const receiveReach = Number.isFinite(this.receiveSurfaceRadius)
+      ? Math.max(0, this.receiveSurfaceRadius)
+      : 0;
+    const extent = Math.max(meshExtent, receiveReach);
+    const farPlane = Math.max(20, Math.max(meshRadius, receiveReach) * farMultiplier);
     ['key', 'fill', 'rim'].forEach((lightId) => {
       const light = this.lights[lightId];
       if (!light?.isDirectionalLight || !light.shadow?.camera) return;
@@ -164,8 +163,11 @@ export class LightsController {
     return this.lights;
   }
 
-  setModelBounds(bounds) {
+  setModelBounds(bounds, options = {}) {
     this.modelBounds = bounds;
+    this.receiveSurfaceRadius = Number.isFinite(options.receiveSurfaceRadius)
+      ? Math.max(0, options.receiveSurfaceRadius)
+      : 0;
     this._applyShadowCameraBounds();
     if (this.showIndicators) {
       this.createIndicators();

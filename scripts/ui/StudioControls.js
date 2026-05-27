@@ -436,14 +436,6 @@ export class StudioControls {
         enabled,
         this.stateStore.getState().lightsEnabled !== false,
       );
-      ['key', 'fill', 'rim'].forEach((lightId) => {
-        this.stateStore.set(`lights.${lightId}.castShadows`, enabled);
-        this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: enabled });
-        const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
-        if (castShadowsInput) {
-          castShadowsInput.checked = enabled;
-        }
-      });
     });
 
     // Master light controls
@@ -485,8 +477,10 @@ export class StudioControls {
           if (enabledInput) enabledInput.checked = true;
         });
         this.stateStore.set('lightsCastShadows', true);
+        this.eventBus.emit('lights:cast-shadows', true);
         ['key', 'fill', 'rim'].forEach((lightId) => {
           this.stateStore.set(`lights.${lightId}.castShadows`, true);
+          this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: true });
           const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
           if (castShadowsInput) castShadowsInput.checked = true;
         });
@@ -497,9 +491,6 @@ export class StudioControls {
       }
 
       this.eventBus.emit('lights:enabled', enabled);
-      if (enabled) {
-        this.eventBus.emit('lights:cast-shadows', true);
-      }
       this.ui.updateLightSliderStates();
     });
     this.ui.inputs.lightsShadowQuality?.addEventListener('change', (event) => {

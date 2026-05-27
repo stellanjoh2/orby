@@ -1,3 +1,18 @@
+/**
+ * Directional shadow ortho half-extent = modelBounds.radius × padding (mesh fit).
+ * {@link LightsController} also expands the frustum to cover the solid base / HDRI catcher
+ * so receivers outside the mesh bbox do not get a false square shadow.
+ */
+export const SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY = {
+  low: 2.4,
+  medium: 2.0,
+  high: 1.6,
+  ultra: 1.2,
+};
+
+/** HdriShadowReceiver disc sizing — keep in sync with shadow camera padding above. */
+export const SHADOW_CATCHER_ORTHO_PADDING = 2.8;
+
 /** Shadow map resolution (texels per side) per lights Shadow Quality preset. */
 export const SHADOW_MAP_SIZE_BY_QUALITY = {
   low: 512,
@@ -42,6 +57,14 @@ export function shadowMapSizeForQuality(quality) {
 export function shadowBlurSamplesForQuality(quality) {
   const q = normalizeShadowQuality(quality);
   return SHADOW_BLUR_SAMPLES_BY_QUALITY[q] ?? SHADOW_BLUR_SAMPLES_BY_QUALITY.medium;
+}
+
+export function shadowCameraOrthoPaddingForQuality(quality) {
+  const q = normalizeShadowQuality(quality);
+  return (
+    SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY[q]
+    ?? SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY.medium
+  );
 }
 
 export function goboBlurModeForQuality(quality) {
