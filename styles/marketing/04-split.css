@@ -43,14 +43,6 @@
   overflow: visible;
 }
 
-/* Showcase / marquee — full site width; half the split cqi factor ≈ same scale as split column */
-.orby-marketing__showcase-copy,
-.orby-marketing__marquee-copy {
-  container-type: inline-size;
-  container-name: orby-section-copy;
-  --orby-section-headline-cqi-cap: 5.8;
-}
-
 .orby-marketing__split-copy .orby-marketing__lede {
   max-width: none;
 }

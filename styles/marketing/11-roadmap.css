@@ -26,11 +26,11 @@
 
 .orby-marketing__roadmap-lede {
   margin: 0;
-  max-width: var(--orby-marketing-centered-copy-measure);
+  max-width: var(--orby-marketing-feature-body-measure);
 }
 
 @media (min-width: 900px) {
-  .orby-marketing__roadmap-header {
+  .orby-marketing__roadmap-header .orby-marketing__title {
     max-width: var(--orby-marketing-feature-lede-measure);
   }
 }

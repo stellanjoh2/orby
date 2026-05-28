@@ -346,9 +346,9 @@ function renderPngMarqueeSection(section) {
   const duplicateHtml = renderPngMarqueeItems(items);
 
   return `<section class="orby-marketing__section orby-marketing__section--marquee" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
-    <div class="orby-marketing__marquee-copy">
+    <div class="orby-marketing__centered-copy">
       <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>
-      <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.title)}</h2>
+      <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>
     </div>
     <div
@@ -383,7 +383,7 @@ function renderShowcaseSection(section) {
     ? `<video class="orby-marketing__video" src="${escapeMarketingHtml(section.videoSrc)}" poster="${escapeMarketingHtml(section.gallery?.[0]?.src || section.imageSrc || '')}" ${MARKETING_VIDEO_HTML_ATTRS}></video>`
     : '';
   return `<section class="orby-marketing__section orby-marketing__section--showcase" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
-    <div class="orby-marketing__showcase-copy">
+    <div class="orby-marketing__centered-copy">
       <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>
       <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <p class="orby-marketing__lede" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>

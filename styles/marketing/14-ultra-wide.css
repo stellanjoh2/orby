@@ -1,0 +1,153 @@
+/*
+ * Ultra-wide marketing (2561px → 3840px).
+ * Frame + --orby-ultra-wide-factor live in orby-ultra-wide-home.css (:root).
+ * Site frame fixed @ 160rem (2560px), centered — mirror of 2560 layout, not full-bleed.
+ * Type / spacing scale 1:1 from the 2560 peak (factor 1 → 1.5). ≤2560 unchanged.
+ */
+
+@media (min-width: 2561px) {
+  #orby-marketing {
+    /* ~2560px content column, centered (independent of dropzone frost width) */
+    --orby-home-padding-x: calc(
+      (100vw - var(--orby-marketing-split-media-ref-width)) / 2
+    );
+    --orby-marketing-site-max: var(--orby-marketing-split-media-ref-width);
+
+    /* Scale shelves — sit at 1 from 1920→2560; multiply up above */
+    --orby-marketing-scale: var(--orby-ultra-wide-factor);
+    --orby-marketing-gutter-scale: var(--orby-ultra-wide-factor);
+    --orby-marketing-headline-scale: var(--orby-ultra-wide-factor);
+    --orby-marketing-mega-scale: var(--orby-ultra-wide-factor);
+
+    /* Peak @ 2560 px tokens → scale 1:1 with viewport */
+    --orby-marketing-lede-cta-gap: calc(54px * var(--orby-ultra-wide-factor));
+    --orby-footer-logotype-height: calc(40px * var(--orby-ultra-wide-factor));
+    --orby-footer-social-height: calc(32px * var(--orby-ultra-wide-factor));
+    --orby-footer-social-gap: calc(28px * var(--orby-ultra-wide-factor));
+    --orby-footer-lift: calc(36px * var(--orby-ultra-wide-factor));
+    --orby-marketing-footer-meta-size: calc(18px * var(--orby-ultra-wide-factor));
+    --orby-marketing-headline-actions-gap: calc(
+      92px * var(--orby-ultra-wide-factor)
+    );
+
+    --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
+    --orby-marketing-meta-size: calc(14px * var(--orby-ultra-wide-factor));
+    --orby-marketing-pro-card-body-size: calc(18px * var(--orby-ultra-wide-factor));
+    --orby-marketing-feature-list-size: calc(18px * var(--orby-ultra-wide-factor));
+    --orby-marketing-feature-lede-size: calc(22px * var(--orby-ultra-wide-factor));
+    --orby-marketing-intro-lede-size: calc(30px * var(--orby-ultra-wide-factor));
+    --orby-marketing-eyebrow-size: calc(14px * var(--orby-ultra-wide-factor));
+
+    --orby-section-headline-min: calc(68px * var(--orby-ultra-wide-factor));
+    --orby-section-headline-max: calc(68px * var(--orby-ultra-wide-factor));
+
+    --orby-marketing-media-radius: calc(24px * var(--orby-ultra-wide-factor));
+
+    --orby-marketing-split-media-target-h: calc(
+      37.5rem * var(--orby-ultra-wide-factor)
+    );
+  }
+
+  .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
+    --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
+    --dropzone-frame-radius: calc(72px * var(--orby-ultra-wide-factor));
+    --orby-intro-turntable-offset-x: calc(700px * var(--orby-ultra-wide-factor));
+    --orby-intro-turntable-offset-y: calc(50px * var(--orby-ultra-wide-factor));
+    /* Slightly tighter than 1.6 — 45px type was reading looser than 2560 @ 1.5× */
+    --orby-marketing-intro-lede-line: 1.52;
+  }
+
+  #orby-marketing .orby-marketing__png-marquee {
+    --orby-marketing-png-marquee-max-h: min(
+      calc(50rem * var(--orby-ultra-wide-factor)),
+      calc(800px * var(--orby-ultra-wide-factor))
+    );
+  }
+
+  #orby-marketing .orby-marketing__roadmap-chart {
+    --orby-roadmap-bar-height: calc(54px * var(--orby-ultra-wide-factor));
+    --orby-roadmap-launch-line-height: calc(21px * 1.1 * var(--orby-ultra-wide-factor));
+  }
+
+  #orby-marketing .orby-marketing__section--cta {
+    --orby-cta-button-scale: calc(1.2 * var(--orby-ultra-wide-factor));
+    --orby-cta-button-font-size: calc(16px * var(--orby-ultra-wide-factor));
+    --orby-cta-asset-max-h: calc(1150px * var(--orby-ultra-wide-factor));
+  }
+
+  #orby-marketing .orby-marketing__section--cta .orby-marketing__cta-stage {
+    /*
+     * CTA right PNG should mirror the 2560 composition while scaling up to 3840,
+     * like the dropzone deco assets.
+     */
+    --orby-cta-ultra-ramp: calc(
+      (var(--orby-ultra-wide-factor) - 1) / (var(--orby-ultra-wide-max-factor) - 1)
+    );
+    --orby-intro-scale-right: calc(
+      var(--orby-ultra-wide-factor) * (1 + 0.1 * var(--orby-cta-ultra-ramp))
+    );
+    --orby-intro-right-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
+    --orby-cta-asset-shift-y: calc(200px - 180px * var(--orby-cta-ultra-ramp));
+    --orby-cta-asset-max-h: min(
+      100dvh,
+      calc(
+        1150px * var(--orby-ultra-wide-factor) * (1 + 0.1 * var(--orby-cta-ultra-ramp))
+      )
+    );
+    --orby-cta-asset-max-w: min(
+      58vw,
+      calc(
+        920px * var(--orby-ultra-wide-factor) * (1 + 0.1 * var(--orby-cta-ultra-ramp))
+      )
+    );
+  }
+
+  #orby-marketing .orby-marketing__roadmap-year,
+  #orby-marketing .orby-marketing__roadmap-launch-label {
+    font-size: calc(21px * var(--orby-ultra-wide-factor));
+  }
+
+  #orby-marketing .orby-marketing__pro-card-title {
+    font-size: calc(22px * var(--orby-ultra-wide-factor));
+  }
+
+  #orby-marketing .orby-marketing__faq-icon {
+    font-size: calc(18px * var(--orby-ultra-wide-factor));
+  }
+
+  #orby-marketing .orby-marketing__faq-question {
+    font-size: calc(22px * var(--orby-ultra-wide-factor));
+  }
+
+  /*
+   * In Progress headline — wrap width scales with vw padding, not 1:1 with 68×factor type.
+   * Tie size to body measure so line breaks match the 2560 peak (~1 word wider @ 3840).
+   */
+  #orby-marketing .orby-marketing__section--in-progress .orby-marketing__title {
+    font-size: calc(
+      68px * var(--orby-marketing-feature-body-measure) /
+        var(--orby-marketing-feature-body-measure-peak)
+    );
+  }
+
+  /* Fixed top nav — same centered 2560 frame as marketing sections */
+  .orby-marketing-scroll-nav {
+    --orby-home-padding-x: calc(
+      (100vw - var(--orby-marketing-split-media-ref-width, 160rem)) / 2
+    );
+    --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
+    --drop-hero-magic-btn-width: calc(192px * var(--orby-ultra-wide-factor));
+    --orby-scroll-nav-height: calc(5.25rem * var(--orby-ultra-wide-factor));
+    --orby-footer-logotype-height: calc(40px * var(--orby-ultra-wide-factor));
+    --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
+  }
+
+  .orby-marketing-scroll-nav__links {
+    font-size: calc(18px * var(--orby-ultra-wide-factor));
+  }
+
+  .orby-marketing-scroll-nav__link::after,
+  .orby-marketing-scroll-nav__contact::after {
+    bottom: calc(-8px * var(--orby-ultra-wide-factor));
+  }
+}

@@ -1,0 +1,68 @@
+/**
+ * Ultra-wide home frame + dropzone (2561px → 3840px).
+ * Shared with marketing via --orby-ultra-wide-factor on :root.
+ * Query starts at 2561px — ≤2560 unchanged.
+ *
+ * Dropzone frost aligns to marketing site frame (160rem centered).
+ * Corner deco — +20% size @ 3840; dragon LL nudged down (ramps from 2560 anchors).
+ */
+:root {
+  --orby-ultra-wide-factor: 1;
+  --orby-ultra-wide-max-factor: 1.5; /* 3840 / 2560 */
+}
+
+@media (min-width: 2561px) {
+  :root {
+    --orby-ultra-wide-factor: min(
+      var(--orby-ultra-wide-max-factor),
+      calc(100vw / var(--orby-home-full-width))
+    );
+    --orby-hero-credit-inset: calc(112px * var(--orby-ultra-wide-factor));
+  }
+
+  html:not(.mobile-landing) body.dropzone-visible .dropzone,
+  html:not(.mobile-landing) .dropzone {
+    /* Match intro headline / marketing site frame — not the wider 1790×factor frost */
+    --dropzone-padding-x: calc(
+      (100vw - var(--orby-home-full-width)) / 2
+    );
+
+    --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
+    /* Deco — +20% @ 3840 (1 → 1.2); 2560 anchors below 2561px */
+    --drop-hero-deco-wide-factor: calc(
+      1 + 0.4 * (var(--orby-ultra-wide-factor) - 1)
+    );
+    --drop-hero-magic-btn-width: calc(192px * var(--orby-ultra-wide-factor));
+
+    --dropzone-frame-stroke: calc(2px * var(--orby-ultra-wide-factor));
+    --dropzone-frame-radius: calc(72px * var(--orby-ultra-wide-factor));
+
+    --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
+  }
+
+  html:not(.mobile-landing) .dropzone-hero-credit {
+    font-size: calc(14px * var(--orby-ultra-wide-factor));
+  }
+
+  /* Secondary copy + shortcuts — scale 52rem / 680px caps with drop UI (was fixed px @ 3840) */
+  html:not(.mobile-landing) .drop-secondary {
+    max-width: min(calc(52rem * var(--orby-ultra-wide-factor)), 92vw);
+  }
+
+  html:not(.mobile-landing) .drop-note {
+    max-width: clamp(90%, 85vw, calc(680px * var(--orby-ultra-wide-factor)));
+  }
+
+  /* Dragon (LL) — ramps from 2560; +40px up @ 3840 only */
+  html.orby-home-scroll:not(.mobile-landing)
+    .dropzone
+    > .dropzone-hero-deco
+    .dropzone-hero-deco__slot--ll {
+    top: calc(
+      290px + 110px * var(--drop-hero-deco-ramp) +
+        900px * (var(--orby-ultra-wide-factor) - 1) - 50px -
+        40px * (var(--orby-ultra-wide-factor) - 1) /
+          (var(--orby-ultra-wide-max-factor) - 1)
+    );
+  }
+}

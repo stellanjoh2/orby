@@ -136,6 +136,13 @@
   color: color-mix(in srgb, var(--orby-marketing-on-white-ink) 88%, transparent);
 }
 
+/* Body copy width — split feature measure; headline uses full copy column for wrap */
+@media (min-width: 900px) {
+  .orby-marketing__section--in-progress .orby-marketing__split-copy .orby-marketing__lede {
+    max-width: var(--orby-marketing-feature-body-measure);
+  }
+}
+
 .orby-marketing__section--in-progress .orby-marketing__split-bleed,
 .orby-marketing__section--in-progress .orby-marketing__split-media,
 .orby-marketing__section--in-progress .orby-marketing__split-copy,

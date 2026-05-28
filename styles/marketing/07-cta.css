@@ -64,12 +64,17 @@
   top: auto;
   bottom: var(--orby-cta-asset-lift);
   max-height: var(--orby-cta-asset-max-h);
-  max-width: min(58vw, 920px);
+  max-width: var(--orby-cta-asset-max-w, min(58vw, 920px));
   width: auto;
   height: auto;
   object-fit: contain;
   object-position: right bottom;
-  transform: translate3d(8%, 200px, 0) scale(var(--orby-intro-scale-right, 1));
+  transform: translate3d(
+      var(--orby-cta-asset-shift-x, 8%),
+      var(--orby-cta-asset-shift-y, 200px),
+      0
+    )
+    scale(var(--orby-intro-scale-right, 1));
 }
 
 .orby-marketing__cta-center {

@@ -22,6 +22,7 @@
  */
 
 @import url('./styles/orby-home-padding-x.css');
+@import url('./styles/orby-ultra-wide-home.css');
 
 @font-face {
   font-family: 'Mattone Regular';

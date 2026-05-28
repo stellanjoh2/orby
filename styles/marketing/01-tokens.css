@@ -1,7 +1,7 @@
 #orby-marketing {
   /*
    * Downscale — exactly 1 @ 1440px; drops immediately below (boosted linear, not 1:1 vw).
-   * Does not affect dropzone frame (--orby-home-padding-x).
+   * Ultra-wide frame + factor: orby-ultra-wide-home.css (--orby-ultra-wide-factor on :root).
    */
   --orby-marketing-ref-width: 90rem; /* 1440px */
   --orby-marketing-scale-min: 0.72;
@@ -180,9 +180,11 @@
   --orby-marketing-faq-inner-pad-top: calc(
     var(--orby-marketing-gap-big) - 70px * var(--orby-marketing-gutter-scale)
   );
-  /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560+) */
+  /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560, 2560px @ 3840+) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
   --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
+  /* Centered feature lede — ~980px @ 2560, ~1469px @ 3840 (61.2rem × scale) */
+  --orby-marketing-centered-lede-max: calc(61.2rem * var(--orby-marketing-scale));
   /*
    * Informative / supporting type — ramps 1920→2560 (headlines keep headline-scale).
    * Support 14px @ 2560 → 0.9rem @ 1920; list 15px→18px; feature lede 18px→22px; intro lede 22px→30px.
@@ -226,6 +228,7 @@
     calc(22px + 8px * (1 - var(--orby-marketing-wide-type-ramp))),
     30px
   );
+  --orby-marketing-intro-lede-line: 1.6;
   --orby-marketing-feature-copy-span: calc(
     (100vw - var(--orby-marketing-col-gap)) / 2 - var(--orby-home-padding-x)
   );
@@ -238,8 +241,15 @@
   --orby-marketing-feature-copy-span-inset: calc(
     var(--orby-marketing-feature-copy-span) - var(--orby-marketing-gutter-text-inset)
   );
-  /* White 22px ledes — same line length as split / pro copy columns */
+  /* White 22px ledes — split copy column minus seam inset */
   --orby-marketing-feature-lede-measure: var(--orby-marketing-feature-copy-span-inset);
+  /* Feature body width — half-row copy column @ padding edge (~834px @ 2560; scales @ 3840) */
+  --orby-marketing-feature-body-measure: var(--orby-marketing-feature-copy-span);
+  /* 2560 peak — headline wrap/font ratio anchor (ultra-wide In Progress title) */
+  --orby-marketing-feature-body-measure-peak: calc(
+    (var(--orby-marketing-split-media-ref-width) - 112px) / 2 -
+      (var(--orby-marketing-split-media-ref-width) - 111.875rem) / 2
+  );
   --orby-marketing-grid-col-3up: calc((100% - 2 * var(--orby-marketing-col-gap)) / 3);
   --orby-marketing-grid-col-3up-inset: calc(
     var(--orby-marketing-grid-col-3up) - var(--orby-marketing-gutter-text-inset)
@@ -251,7 +261,7 @@
   );
   --orby-marketing-grid-col-2up-inset: var(--orby-marketing-section-headline-measure);
   /*
-   * Centered body (showcase, pro, FAQ) — wider than split-column measure on desktop.
+   * Centered body (centered features, pro, FAQ) — wider than split-column measure on desktop.
    * Below 2560: gains width via split-media-shrink; narrow viewports via media-shrink.
    */
   --orby-marketing-centered-copy-measure: min(
@@ -298,7 +308,7 @@
       var(--orby-marketing-feature-list-size) * var(--orby-marketing-feature-list-line) *
       var(--orby-marketing-wide-type-ramp)
   );
-  /* Copy block → media below (showcase gallery, pro cards, stacked split features) */
+  /* Copy block → media below (centered features, pro cards, stacked split features) */
   --orby-marketing-feature-body-media-gap: var(--orby-marketing-col-gap);
   --orby-marketing-col-gap-half: calc(var(--orby-marketing-col-gap) / 2);
   /* Side-by-side mega CTAs — tighter than ½ col gutter (~48px @ 1920) */
@@ -333,18 +343,20 @@
   --orby-section-headline-offset: calc(0.25rem * var(--orby-marketing-headline-scale));
 }
 
-/* Home dropzone — informative copy + Browse pill (support ramp only) */
-.dropzone {
-  --orby-marketing-wide-type-ramp: clamp(
-    0,
-    calc((var(--orby-marketing-split-media-ref-width, 160rem) - 100vw) / 40rem),
-    1
-  );
-  --orby-marketing-support-size: clamp(
-    14px,
-    calc(14px + 0.4px * var(--orby-marketing-wide-type-ramp)),
-    0.9rem
-  );
+/* Home dropzone — informative copy + Browse pill (support ramp only; ultra-wide in orby-ultra-wide-home.css) */
+@media (max-width: 2560px) {
+  .dropzone {
+    --orby-marketing-wide-type-ramp: clamp(
+      0,
+      calc((var(--orby-marketing-split-media-ref-width, 160rem) - 100vw) / 40rem),
+      1
+    );
+    --orby-marketing-support-size: clamp(
+      14px,
+      calc(14px + 0.4px * var(--orby-marketing-wide-type-ramp)),
+      0.9rem
+    );
+  }
 }
 
 /* ?uiCrop=1 — production behavior (kept for side-by-side checks in dev) */

@@ -1,37 +1,22 @@
 /**
- * PNG marquee backdrop — same Lottie logotype as the dropzone hero.
- * Loads when the marquee block nears the viewport; plays only while on screen.
+ * PNG marquee backdrop — static site-width logotype.
+ * (Lottie data.json includes static orby + orbiting O; mid-orbit reads as a duplicate.)
  */
-import { prefersReducedMotion } from '../ui/modalReveal.js';
-import { ensureLottie } from '../ui/lottieLoader.js';
-
-const LOGOTYPE_JSON = './assets/animations/data.json';
+const LOGOTYPE_SVG = './assets/images/orby-logotype.svg';
 const IO_OPTIONS = { root: null, rootMargin: '240px 0px', threshold: 0.05 };
 
-function shouldAnimateLogotype() {
-  if (prefersReducedMotion()) return false;
-  if (document.documentElement.classList.contains('safari-browser')) return false;
-  return true;
-}
-
 /**
- * @param {HTMLElement} container
+ * @param {HTMLElement} slot
  */
-function styleLogotypeMedia(container) {
-  const media = container.querySelector('svg, canvas');
-  if (!media) return;
-  media.style.width = '100%';
-  media.style.height = 'auto';
-  media.style.display = 'block';
-}
-
-/**
- * @param {import('lottie-web').AnimationItem | null | undefined} instance
- */
-function freezeLogotype(instance) {
-  if (!instance) return;
-  instance.pause();
-  instance.goToAndStop(0, true);
+function mountStaticLogotype(slot) {
+  slot.replaceChildren();
+  const img = document.createElement('img');
+  img.src = LOGOTYPE_SVG;
+  img.alt = '';
+  img.decoding = 'async';
+  img.loading = 'lazy';
+  img.setAttribute('aria-hidden', 'true');
+  slot.appendChild(img);
 }
 
 /**
@@ -43,59 +28,19 @@ export function initPngMarqueeLogotype(root) {
   const block = root.querySelector('[data-orby-marketing-png-marquee]');
   if (!slot || !block) return () => {};
 
-  /** @type {import('lottie-web').AnimationItem | null} */
-  let animation = null;
-  let loadScheduled = false;
+  let mounted = false;
   let destroyed = false;
 
-  const syncPlayback = (isVisible) => {
-    if (!animation) return;
-    if (isVisible && shouldAnimateLogotype()) {
-      animation.play();
-      return;
-    }
-    animation.pause();
-  };
-
-  const ensureAnimation = async () => {
-    if (animation || destroyed || loadScheduled) return;
-    loadScheduled = true;
-    try {
-      const lottie = await ensureLottie();
-      animation = lottie.loadAnimation({
-        container: slot,
-        renderer: 'svg',
-        loop: true,
-        autoplay: false,
-        path: LOGOTYPE_JSON,
-        rendererSettings: {
-          preserveAspectRatio: 'xMidYMid meet',
-          progressiveLoad: false,
-          hideOnTransparent: true,
-        },
-      });
-
-      animation.addEventListener('DOMLoaded', () => {
-        styleLogotypeMedia(slot);
-        if (!shouldAnimateLogotype()) {
-          freezeLogotype(animation);
-        }
-      });
-    } catch (err) {
-      console.error('[orby-marketing] PNG marquee logotype failed to load', err);
-      loadScheduled = false;
-    }
+  const ensureLogotype = () => {
+    if (mounted || destroyed) return;
+    mounted = true;
+    mountStaticLogotype(slot);
   };
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.target !== block) return;
-      if (entry.isIntersecting) {
-        void ensureAnimation();
-        syncPlayback(true);
-      } else {
-        syncPlayback(false);
-      }
+      if (entry.isIntersecting) ensureLogotype();
     });
   }, IO_OPTIONS);
 
@@ -104,8 +49,7 @@ export function initPngMarqueeLogotype(root) {
   return () => {
     destroyed = true;
     observer.disconnect();
-    animation?.destroy();
-    animation = null;
     slot.replaceChildren();
+    mounted = false;
   };
 }
