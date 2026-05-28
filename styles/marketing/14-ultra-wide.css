@@ -43,6 +43,7 @@
     --orby-section-headline-max: calc(68px * var(--orby-ultra-wide-factor));
 
     --orby-marketing-media-radius: calc(24px * var(--orby-ultra-wide-factor));
+    --orby-marketing-section-radius: calc(92px * var(--orby-ultra-wide-factor));
     --orby-marketing-ultra-ramp: calc(
       (var(--orby-ultra-wide-factor) - 1) / (var(--orby-ultra-wide-max-factor) - 1)
     );
@@ -56,7 +57,7 @@
 
   .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
     --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
-    --dropzone-frame-radius: calc(72px * var(--orby-ultra-wide-factor));
+    --dropzone-frame-radius: calc(92px * var(--orby-ultra-wide-factor));
     --orby-intro-turntable-offset-x: calc(700px * var(--orby-ultra-wide-factor));
     --orby-intro-turntable-offset-y: calc(50px * var(--orby-ultra-wide-factor));
     /* Slightly tighter than 1.6 — 45px type was reading looser than 2560 @ 1.5× */
@@ -120,11 +121,15 @@
   }
 
   #orby-marketing .orby-marketing__faq-icon {
-    font-size: calc(18px * var(--orby-ultra-wide-factor));
+    font-size: calc(
+      var(--orby-marketing-pro-card-title-size, 22px) * var(--orby-ultra-wide-factor)
+    );
   }
 
   #orby-marketing .orby-marketing__faq-question {
-    font-size: calc(22px * var(--orby-ultra-wide-factor));
+    font-size: calc(
+      var(--orby-marketing-pro-card-title-size, 22px) * var(--orby-ultra-wide-factor)
+    );
   }
 
   /*

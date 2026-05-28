@@ -193,6 +193,9 @@ html.safari-browser .orby-marketing__pro-card-video {
   position: relative;
   z-index: 1;
   background: var(--orby-marketing-panel-bg);
+  border-top-left-radius: var(--orby-marketing-section-radius);
+  border-top-right-radius: var(--orby-marketing-section-radius);
+  overflow: hidden;
   /* No section padding-top — avoids stacking on pro-faq-gap */
   padding: 0 0 var(--orby-marketing-faq-pad-bottom);
 }
@@ -218,10 +221,6 @@ html.safari-browser .orby-marketing__pro-card-video {
 
 .orby-marketing__faq-header .orby-marketing__title {
   margin-bottom: 0;
-}
-
-.orby-marketing__faq-header .orby-marketing__eyebrow + .orby-marketing__title {
-  margin-top: var(--orby-marketing-eyebrow-headline-gap);
 }
 
 /* Legacy — FAQ no longer renders a lede; hide if an old cached bundle injects one */
@@ -305,7 +304,7 @@ html.safari-browser .orby-marketing__pro-card-video {
   align-items: center;
   justify-content: center;
   color: var(--brand-primary, #c4ff00);
-  font-size: 18px;
+  font-size: var(--orby-marketing-pro-card-title-size);
   line-height: 1.2;
   width: 1.25em;
   height: 1.25em;
@@ -326,7 +325,7 @@ html.safari-browser .orby-marketing__pro-card-video {
   margin: 0;
   font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
     sans-serif);
-  font-size: 18px;
+  font-size: var(--orby-marketing-pro-card-title-size);
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: -0.01em;

@@ -4,6 +4,7 @@
  * Scroll scrub uses rAF + IntersectionObserver — no ScrollTrigger plugin.
  */
 import { gsap, prefersReducedMotion } from './marketingMotion.js';
+import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
 /** @type {const} */
 export const INTRO_TURNTABLE_SEQUENCE = {
@@ -473,7 +474,8 @@ export function initIntroTurntable(root) {
   let frames = new Array(sourceIndices.length);
   let paintedFrame = -1;
   let scrollScrubActive = false;
-  let scrollRaf = 0;
+  /** @type {(() => void) | null} */
+  let unsubscribeScrollScrub = null;
   /** @type {(() => void) | null} */
   let detachScrollScrub = null;
   /** @type {IntersectionObserver | null} */
@@ -521,26 +523,14 @@ export function initIntroTurntable(root) {
     if (scrollScrubActive || prefersReducedMotion()) return;
     scrollScrubActive = true;
 
-    const onScroll = () => {
-      if (scrollRaf) return;
-      scrollRaf = window.requestAnimationFrame(() => {
-        scrollRaf = 0;
-        paintFromScroll();
-      });
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
+    unsubscribeScrollScrub = subscribeMarketingScroll(paintFromScroll);
+    paintFromScroll();
     detachScrollScrub = () => {
-      window.removeEventListener('scroll', onScroll);
-      if (scrollRaf) {
-        window.cancelAnimationFrame(scrollRaf);
-        scrollRaf = 0;
-      }
+      unsubscribeScrollScrub?.();
+      unsubscribeScrollScrub = null;
       scrollScrubActive = false;
       detachScrollScrub = null;
     };
-
-    paintFromScroll();
   };
 
   /** Attach scroll scrub only while the section is near the viewport — detach on exit. */

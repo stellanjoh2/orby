@@ -291,14 +291,14 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
 }
 
 .orby-marketing__showcase-credit {
-  font-size: var(--orby-marketing-pro-card-title-size, 18px);
+  font-size: 12px;
 }
 
 .orby-marketing__figure-credit {
   font-size: var(--orby-marketing-support-size);
 }
 
-.orby-marketing__media-credit-link {
+.orby-marketing__figure-credit .orby-marketing__media-credit-link {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 0.14em;
@@ -306,12 +306,36 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
   pointer-events: auto;
 }
 
-.orby-marketing__media-credit-link:hover {
+.orby-marketing__figure-credit .orby-marketing__media-credit-link:hover {
   text-decoration-color: currentColor;
 }
 
-.orby-marketing__media-credit-link:focus-visible {
+.orby-marketing__figure-credit .orby-marketing__media-credit-link:focus-visible {
   outline: 2px solid var(--brand-primary, #c4ff00);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Showcase — white underline only; global a { color: text-link } is hard to read on photos */
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link,
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:visited,
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:hover,
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  text-decoration-color: color-mix(in srgb, #fff 72%, transparent);
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:hover,
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:focus-visible {
+  text-decoration-color: #fff;
+}
+
+.orby-marketing__showcase-credit .orby-marketing__media-credit-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, #fff 65%, transparent);
   outline-offset: 2px;
   border-radius: 2px;
 }

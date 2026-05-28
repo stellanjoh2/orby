@@ -13,7 +13,7 @@
   padding: env(safe-area-inset-top, 0px) var(--orby-home-padding-x)
     env(safe-area-inset-bottom, 0px);
   overflow: visible;
-  background: var(--brand-primary, #c4ff00);
+  background: transparent;
   --brand-text: var(--orby-marketing-on-lime-ink);
   color: var(--brand-text);
   --orby-cta-asset-lift: clamp(
@@ -37,6 +37,17 @@
     --orby-cta-button-scale: 1;
     --orby-cta-button-font-size: var(--orby-marketing-support-size);
   }
+}
+
+/* Lime fill — ::before; all four corners match section radius (92px @ 2560) */
+.orby-marketing__section--cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--brand-primary, #c4ff00);
+  border-radius: var(--orby-marketing-section-radius);
+  pointer-events: none;
 }
 
 /* Seam into In Progress unveil — pin handles the handoff; no extra ::after band */

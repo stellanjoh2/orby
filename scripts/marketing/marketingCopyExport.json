@@ -243,7 +243,7 @@
       "order": 10,
       "type": "pro",
       "id": "orby-marketing-pro",
-      "eyebrow": "LIGHT CONTROL",
+      "eyebrow": "THERE'S MORE",
       "title": "Goes a lot deeper\nthan you think",
       "titleLines": [
         "Goes a lot deeper",
@@ -308,7 +308,6 @@
       "order": 12,
       "type": "faq",
       "id": "orby-marketing-faq",
-      "eyebrow": "FAQ",
       "title": "Questions, answered",
       "titleLines": [
         "Questions, answered"

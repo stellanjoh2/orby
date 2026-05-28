@@ -2,8 +2,9 @@
  * In Progress — fixed white endcap behind scrolling lime CTA (no second lime curtain).
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
+import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
-const SCROLL_OPTS = { passive: true };
+const RESIZE_OPTS = { passive: true };
 /** In Progress interactive once lime CTA has cleared the top by this much (vh). */
 const REVEAL_LEAD_VH = 0.03;
 
@@ -28,6 +29,8 @@ export function initInProgressCurtainReveal(root) {
   let raf = 0;
   let endcapOn = false;
   let scrollBound = false;
+  /** @type {(() => void) | null} */
+  let unsubscribeScroll = null;
   /** @type {IntersectionObserver | null} */
   let proximityObserver = null;
 
@@ -48,7 +51,7 @@ export function initInProgressCurtainReveal(root) {
     stage.classList.toggle('is-revealed', endcapOn && top <= -revealPx);
   };
 
-  const onScroll = () => {
+  const onResize = () => {
     if (raf) return;
     raf = requestAnimationFrame(sync);
   };
@@ -56,21 +59,20 @@ export function initInProgressCurtainReveal(root) {
   const bindScrollSync = () => {
     if (scrollBound) return;
     scrollBound = true;
-    window.addEventListener('scroll', onScroll, SCROLL_OPTS);
+    unsubscribeScroll = subscribeMarketingScroll(sync);
     sync();
   };
 
   const unbindScrollSync = () => {
     if (!scrollBound) return;
     scrollBound = false;
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    window.removeEventListener('scroll', onScroll, SCROLL_OPTS);
+    unsubscribeScroll?.();
+    unsubscribeScroll = null;
     endcapOn = false;
     stage.classList.remove('is-endcap-active', 'is-revealed');
   };
 
-  window.addEventListener('resize', onScroll, SCROLL_OPTS);
+  window.addEventListener('resize', onResize, RESIZE_OPTS);
 
   if (typeof IntersectionObserver === 'function') {
     proximityObserver = new IntersectionObserver(
@@ -91,7 +93,9 @@ export function initInProgressCurtainReveal(root) {
     proximityObserver?.disconnect();
     proximityObserver = null;
     unbindScrollSync();
-    window.removeEventListener('resize', onScroll, SCROLL_OPTS);
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    window.removeEventListener('resize', onResize, RESIZE_OPTS);
     endcapOn = false;
     stage.classList.remove('is-endcap-active', 'is-revealed');
   };

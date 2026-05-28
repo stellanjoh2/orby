@@ -84,16 +84,16 @@ function renderFlipGalleryAttrs(intervalMs, fadeMs) {
 
 /**
  * @param {MarketingGallerySlide[]} slides
- * @param {{ square?: boolean, eager?: boolean }} [options]
+ * @param {{ square?: boolean }} [options]
  */
 function renderFlipGallerySlideImages(slides, options = {}) {
-  const { square = false, eager = true } = options;
+  const { square = false } = options;
   const sizeAttrs = square ? ' width="640" height="640"' : '';
-  const loading = eager ? ' loading="eager"' : ' loading="lazy"';
   return slides
     .map((slide, index) => {
       const active = index === 0 ? ' is-active' : '';
-      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" decoding="async"${sizeAttrs}${loading} />`;
+      const lazy = index === 0 ? '' : ' loading="lazy"';
+      return `<img class="orby-marketing__showcase-img${active}" src="${escapeMarketingHtml(slide.src)}" alt="${escapeMarketingHtml(slide.alt)}" decoding="async"${sizeAttrs}${lazy} />`;
     })
     .join('\n        ');
 }
@@ -412,7 +412,7 @@ function renderProCard(card) {
   const media = flipSlides
     ? `<div class="orby-marketing__pro-card-media orby-marketing__pro-card-media--flip" ${renderFlipGalleryAttrs(card.flipGalleryIntervalMs, card.flipGalleryFadeMs)}>
           <span class="orby-marketing__media-ph" aria-hidden="true"></span>
-          ${renderFlipGallerySlideImages(flipSlides, { square: true, eager: true })}
+          ${renderFlipGallerySlideImages(flipSlides, { square: true })}
         </div>`
     : videoSrc
       ? `<div class="orby-marketing__pro-card-media">
@@ -448,7 +448,7 @@ function renderProSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--pro" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__pro">
       <header class="orby-marketing__pro-header">
-        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || 'Light Control')}</p>
+        <p class="orby-marketing__eyebrow">${escapeMarketingHtml(section.eyebrow || "THERE'S MORE")}</p>
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title">${renderIntroHeadline(section.title)}</h2>
         ${ledeBlock}
       </header>
@@ -459,7 +459,7 @@ function renderProSection(section) {
   </section>`;
 }
 
-/** FAQ: eyebrow + title only — never render a white lede above the lime headline. */
+/** FAQ: lime headline only — never render eyebrow or white lede above it. */
 function renderFaqSection(section) {
   const items = (section.faq ?? [])
     .map(
@@ -476,7 +476,6 @@ function renderFaqSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--faq" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
     <div class="orby-marketing__inner orby-marketing__faq">
       <header class="orby-marketing__faq-header">
-        <p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow || 'FAQ')}</p>
         <h2 class="orby-marketing__title brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.title)}</h2>
       </header>
       <div class="orby-marketing__faq-grid">

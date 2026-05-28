@@ -129,6 +129,16 @@ function createGalleryController(mask) {
   let visibilityObserver = null;
   let visible = false;
 
+  const preloadFlipFrames = () => {
+    if (!isFlipGallery || imgs.length < 2) return;
+    imgs.slice(1).forEach((img) => {
+      void whenImageReady(img);
+    });
+  };
+
+  const flipFrameNeedsLoad = (img) =>
+    isFlipGallery && img && (!img.complete || img.naturalWidth === 0);
+
   const updateDots = (activeIndex) => {
     if (!dotButtons.length) return;
     dotButtons.forEach((btn, i) => {
@@ -224,6 +234,16 @@ function createGalleryController(mask) {
     const current = imgs[index];
     const next = imgs[nextIndex];
     if (!next || nextIndex === index) return;
+
+    if (flipFrameNeedsLoad(next)) {
+      if (tweening) return;
+      tweening = true;
+      void whenImageReady(next).then(() => {
+        tweening = false;
+        setActive(nextIndex, animate);
+      });
+      return;
+    }
 
     const applyClasses = () => {
       imgs.forEach((img, i) => {
@@ -323,10 +343,6 @@ function createGalleryController(mask) {
     timer = window.setInterval(tick, cycleMs);
   };
 
-  if (isFlipGallery && imgs.length >= 2) {
-    void Promise.all(imgs.map((img) => whenImageReady(img)));
-  }
-
   const stop = () => {
     if (timer != null) {
       window.clearInterval(timer);
@@ -387,15 +403,22 @@ function createGalleryController(mask) {
     visibilityObserver = new IntersectionObserver(
       ([entry]) => {
         visible = Boolean(entry?.isIntersecting);
-        if (visible) restartAutoplay();
-        else stop();
+        if (visible) {
+          preloadFlipFrames();
+          restartAutoplay();
+        } else {
+          stop();
+        }
       },
       { threshold: 0.2 },
     );
     visibilityObserver.observe(mask);
     const rect = mask.getBoundingClientRect();
     visible = rect.bottom > 0 && rect.top < window.innerHeight;
-    if (visible) restartAutoplay();
+    if (visible) {
+      preloadFlipFrames();
+      restartAutoplay();
+    }
   };
 
   const unbindInteraction = () => {
@@ -411,9 +434,16 @@ function createGalleryController(mask) {
     setKeyboardEnabled(false);
   };
 
+  const syncVisible = () => {
+    const rect = mask.getBoundingClientRect();
+    visible = rect.bottom > 0 && rect.top < window.innerHeight;
+  };
+
   const onSlideRevealed = () => {
     if (isSimpleGallery) void mountStaticCredit(index);
     else void revealCredit(index);
+    syncVisible();
+    restartAutoplay();
   };
 
   mask.addEventListener('orby-marketing-showcase-slide', onSlideRevealed);
@@ -437,6 +467,7 @@ function createGalleryController(mask) {
       creditTween?.kill();
       gsap.killTweensOf(imgs);
       mask.removeEventListener('orby-marketing-showcase-slide', onSlideRevealed);
+      controllers.delete(mask);
     },
   };
 }
@@ -444,10 +475,17 @@ function createGalleryController(mask) {
 /**
  * @param {HTMLElement} mask
  */
+function ensureGalleryController(mask) {
+  let controller = controllers.get(mask);
+  if (!controller) {
+    controller = createGalleryController(mask);
+    controllers.set(mask, controller);
+  }
+  return controller;
+}
+
 export function prepareShowcaseGalleryCredit(mask) {
-  const controller = controllers.get(mask) ?? createGalleryController(mask);
-  controllers.set(mask, controller);
-  controller.prepareCredit();
+  ensureGalleryController(mask).prepareCredit();
 }
 
 /**
@@ -455,27 +493,20 @@ export function prepareShowcaseGalleryCredit(mask) {
  * @returns {() => void}
  */
 function initGalleryMask(mask) {
-  const controller = controllers.get(mask) ?? createGalleryController(mask);
-  controllers.set(mask, controller);
-  controller.prepareCredit();
+  const controller = ensureGalleryController(mask);
 
   const imgs = mask.querySelectorAll('.orby-marketing__showcase-img');
   if (!imgs.length) return () => controller.destroy();
 
   const section = mask.closest('.orby-marketing__section');
-  if (section?.dataset.orbyMarketingRevealed === '1') {
-    controller.start();
-  } else if (section) {
-    const observer = new MutationObserver(() => {
-      if (section.dataset.orbyMarketingRevealed === '1') {
-        observer.disconnect();
-        controller.start();
-      }
-    });
-    observer.observe(section, {
-      attributes: true,
-      attributeFilter: ['data-orby-marketing-revealed'],
-    });
+  const alreadyRevealed = section?.dataset.orbyMarketingRevealed === '1';
+
+  if (alreadyRevealed) {
+    // Mount can complete after scroll reveal — sync credits + autoplay without
+    // prepareCredit(), which would wipe credits already shown by showcase-slide.
+    controller.onSlideRevealed();
+  } else {
+    controller.prepareCredit();
   }
 
   return () => controller.destroy();

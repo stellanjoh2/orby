@@ -167,18 +167,20 @@
   --orby-marketing-eyebrow-headline-gap: var(--orby-marketing-feature-copy-gap);
   /* Section headline → lede (showcase / pro / FAQ) */
   --orby-marketing-headline-body-gap: calc(32px * var(--orby-marketing-scale));
-  /* Split / showcase / pro media corners — 24px @ 1440, scales down with type */
+  /* Split / pro card media corners — 24px @ 1440, scales down with type */
   --orby-marketing-media-radius: clamp(
     calc(12px * var(--orby-marketing-scale)),
     1.667vw,
     calc(24px * var(--orby-marketing-scale))
   );
+  /* FAQ / CTA section tops — 92px @ 2560 */
+  --orby-marketing-section-radius: clamp(16px, 3.59375vw, 92px);
   /* Lime feature headlines — explicit; block .title-line rows ignore parent h2 leading */
   --orby-marketing-section-headline-line: 1.1;
   /*
    * Pro → Roadmap dark seam: one gap-big (192px @ 1440) on .orby-marketing__section--pro padding-bottom only.
    * Do not stack faq-pad-top on the section — that doubled the band (192 + 122 ≈ 314+ on screen).
-   * Inside the gray FAQ panel, pad before eyebrow/headline (gap-big − 70px ≈ 122px @ 1440).
+   * Inside the gray FAQ panel, pad before headline (gap-big − 70px ≈ 122px @ 1440).
    */
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   --orby-marketing-faq-inner-pad-top: calc(
@@ -209,7 +211,7 @@
     calc(14px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
     16px
   );
-  /* Pro card — lime title 18px @ 1920, 22px @ 2560; gray body 14px @ 1920, 18px @ 2560 */
+  /* Pro card + FAQ lime question — 18px @ 1920, 22px @ 2560; gray body 14px @ 1920, 18px @ 2560 */
   --orby-marketing-pro-card-title-size: clamp(
     18px,
     calc(18px + 4px * (1 - var(--orby-marketing-wide-type-ramp))),

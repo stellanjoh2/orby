@@ -312,7 +312,7 @@ export const MARKETING_SECTIONS = [
   {
     type: 'pro',
     id: 'orby-marketing-pro',
-    eyebrow: 'LIGHT CONTROL',
+    eyebrow: "THERE'S MORE",
     title: 'Goes a lot deeper\nthan you think',
     lede:
       "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
@@ -467,9 +467,8 @@ export const MARKETING_SECTIONS = [
   {
     type: 'faq',
     id: 'orby-marketing-faq',
-    eyebrow: 'FAQ',
     title: 'Questions, answered',
-    /* No lede — eyebrow + headline only. Roadmap→FAQ dark seam = gap-big on roadmap padding-bottom. */
+    /* No lede — headline only. Roadmap→FAQ dark seam = gap-big on roadmap padding-bottom. */
     faq: [
       {
         question: 'Who is Orby for?',

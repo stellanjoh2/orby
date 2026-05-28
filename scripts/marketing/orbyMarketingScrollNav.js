@@ -3,6 +3,7 @@
  */
 import { MARKETING_SECTIONS } from './orbyMarketingContent.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
+import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
 /** Hide when near the top unless the user already revealed the nav by scrolling up. */
 const HIDE_NEAR_TOP_Y = 48;
@@ -244,6 +245,8 @@ function initSiteNavNow(options) {
   let lastShownAt = 0;
   /** @type {(() => void) | null} */
   let onSubpageResize = null;
+  /** @type {(() => void) | null} */
+  let unsubscribeScroll = null;
 
   const setVisible = (visible) => {
     nav.classList.toggle('orby-marketing-scroll-nav--visible', visible);
@@ -331,7 +334,6 @@ function initSiteNavNow(options) {
     performance.now() - directionChangedAt >= DIRECTION_SETTLE_MS;
 
   const update = () => {
-    ticking = false;
     if (!homeActive) return;
 
     const y = readScrollY();
@@ -366,14 +368,8 @@ function initSiteNavNow(options) {
     }
   };
 
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(update);
-  };
-
   if (mode === 'home') {
-    window.addEventListener('scroll', onScroll, { passive: true });
+    unsubscribeScroll = subscribeMarketingScroll(update);
     hide();
   } else {
     onSubpageResize = () => {
@@ -409,7 +405,8 @@ function initSiteNavNow(options) {
     },
     destroy() {
       hide();
-      window.removeEventListener('scroll', onScroll);
+      unsubscribeScroll?.();
+      unsubscribeScroll = null;
       if (onSubpageResize) {
         window.removeEventListener('resize', onSubpageResize);
         window.removeEventListener('orientationchange', onSubpageResize);

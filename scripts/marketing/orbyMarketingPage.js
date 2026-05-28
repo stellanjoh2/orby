@@ -16,6 +16,7 @@ import {
   unbindMarketingCopyEmail,
 } from './orbyMarketingCopyEmail.js';
 import { buildMarketingMarkup } from './orbyMarketingTemplates.js';
+import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
 /** Mega sections (intro + CTA) — fire when the block is actually on screen */
 const MEGA_REVEAL_IO = { root: null, rootMargin: '0px 0px -22% 0px', threshold: 0.32 };
@@ -125,10 +126,8 @@ function createScrollCue(onExplore) {
 /** Fade the scroll cue out quickly once the user scrolls down. */
 function bindScrollCueFade(cue) {
   const fadeThreshold = 48;
-  let ticking = false;
 
   const update = () => {
-    ticking = false;
     if (!cue || cue.hidden) return;
     document.documentElement.classList.toggle(
       'orby-scroll-cue-faded',
@@ -136,16 +135,10 @@ function bindScrollCueFade(cue) {
     );
   };
 
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(update);
-  };
-
-  window.addEventListener('scroll', onScroll, { passive: true });
+  const unsubscribe = subscribeMarketingScroll(update);
   update();
   return () => {
-    window.removeEventListener('scroll', onScroll);
+    unsubscribe();
     document.documentElement.classList.remove('orby-scroll-cue-faded');
   };
 }
@@ -182,17 +175,82 @@ export function initOrbyMarketingPage(options = {}) {
   let marketingAnchor = null;
   let destroyed = false;
 
-  function releaseEnhancements() {
+  function releaseDeferredEnhancements() {
     teardownIntroTurntable?.();
     teardownIntroTurntable = null;
-    teardownShowcaseGallery?.();
-    teardownShowcaseGallery = null;
     teardownPngMarqueeLogotype?.();
     teardownPngMarqueeLogotype = null;
     teardownPngMarqueePerf?.();
     teardownPngMarqueePerf = null;
     teardownInProgressCurtain?.();
     teardownInProgressCurtain = null;
+  }
+
+  function releaseEnhancements() {
+    releaseDeferredEnhancements();
+    teardownShowcaseGallery?.();
+    teardownShowcaseGallery = null;
+  }
+
+  /** @type {Promise<void> | null} */
+  let deferredEnhancementsPromise = null;
+
+  async function attachShowcaseGallery() {
+    if (!root || destroyed || teardownShowcaseGallery) return;
+    try {
+      const showcaseGallery = await import('./orbyMarketingShowcaseGallery.js');
+      teardownShowcaseGallery = showcaseGallery.initShowcaseGallery(root);
+    } catch (err) {
+      console.error('[orby-marketing] showcase gallery failed to init', err);
+    }
+  }
+
+  /** Turntable, marquee, curtain — idle only; showcase mounts with the page. */
+  async function attachDeferredEnhancements() {
+    if (!root || destroyed) return;
+    if (deferredEnhancementsPromise) return deferredEnhancementsPromise;
+
+    deferredEnhancementsPromise = (async () => {
+      releaseDeferredEnhancements();
+
+      try {
+        const introTurntable = await import('./orbyMarketingIntroTurntable.js');
+        teardownIntroTurntable = introTurntable.initIntroTurntable(root);
+        introTurntable.refreshIntroTurntableScrollTriggers();
+      } catch (err) {
+        console.error('[orby-marketing] intro turntable failed to init', err);
+      }
+
+      try {
+        const pngLogotype = await import('./orbyMarketingPngMarqueeLogotype.js');
+        teardownPngMarqueeLogotype = pngLogotype.initPngMarqueeLogotype(root);
+      } catch (err) {
+        console.error('[orby-marketing] PNG marquee logotype failed to init', err);
+      }
+
+      try {
+        const pngMarquee = await import('./orbyMarketingPngMarquee.js');
+        teardownPngMarqueePerf = pngMarquee.initPngMarqueePerformance(root);
+      } catch (err) {
+        console.error('[orby-marketing] PNG marquee performance hooks failed', err);
+      }
+
+      try {
+        const inProgressCurtain = await import('./orbyMarketingInProgressCurtain.js');
+        teardownInProgressCurtain = inProgressCurtain.initInProgressCurtainReveal(root);
+      } catch (err) {
+        console.error('[orby-marketing] In Progress curtain reveal failed to init', err);
+      }
+    })().finally(() => {
+      deferredEnhancementsPromise = null;
+    });
+
+    return deferredEnhancementsPromise;
+  }
+
+  async function attachAllEnhancements() {
+    await attachShowcaseGallery();
+    await attachDeferredEnhancements();
   }
 
   function disconnectRevealObservers() {
@@ -256,44 +314,18 @@ export function initOrbyMarketingPage(options = {}) {
 
   /** Each enhancer loads on its own — one failure must not block intro turntable, etc. */
   async function attachMarketingEnhancements() {
-    if (!root || destroyed) return;
+    await attachAllEnhancements();
+  }
 
-    releaseEnhancements();
-
-    try {
-      const introTurntable = await import('./orbyMarketingIntroTurntable.js');
-      teardownIntroTurntable = introTurntable.initIntroTurntable(root);
-      introTurntable.refreshIntroTurntableScrollTriggers();
-    } catch (err) {
-      console.error('[orby-marketing] intro turntable failed to init', err);
-    }
-
-    try {
-      const showcaseGallery = await import('./orbyMarketingShowcaseGallery.js');
-      teardownShowcaseGallery = showcaseGallery.initShowcaseGallery(root);
-    } catch (err) {
-      console.error('[orby-marketing] showcase gallery failed to init', err);
-    }
-
-    try {
-      const pngLogotype = await import('./orbyMarketingPngMarqueeLogotype.js');
-      teardownPngMarqueeLogotype = pngLogotype.initPngMarqueeLogotype(root);
-    } catch (err) {
-      console.error('[orby-marketing] PNG marquee logotype failed to init', err);
-    }
-
-    try {
-      const pngMarquee = await import('./orbyMarketingPngMarquee.js');
-      teardownPngMarqueePerf = pngMarquee.initPngMarqueePerformance(root);
-    } catch (err) {
-      console.error('[orby-marketing] PNG marquee performance hooks failed', err);
-    }
-
-    try {
-      const inProgressCurtain = await import('./orbyMarketingInProgressCurtain.js');
-      teardownInProgressCurtain = inProgressCurtain.initInProgressCurtainReveal(root);
-    } catch (err) {
-      console.error('[orby-marketing] In Progress curtain reveal failed to init', err);
+  function scheduleDeferredEnhancements() {
+    const run = () => {
+      if (destroyed || !root) return;
+      void attachDeferredEnhancements();
+    };
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(run, { timeout: 1200 });
+    } else {
+      setTimeout(run, 200);
     }
   }
 
@@ -310,17 +342,12 @@ export function initOrbyMarketingPage(options = {}) {
   function resumeForHome() {
     attachMarketingToDom();
     if (!root) return;
+    const wasSuspended = root.classList.contains('orby-marketing--suspended');
     root.hidden = false;
     root.classList.remove('orby-marketing--suspended');
     setScrollMode(true);
-    if (
-      !teardownIntroTurntable ||
-      !teardownShowcaseGallery ||
-      !teardownPngMarqueeLogotype ||
-      !teardownPngMarqueePerf ||
-      !teardownInProgressCurtain
-    ) {
-      void attachMarketingEnhancements();
+    if (wasSuspended) {
+      void attachAllEnhancements();
     }
     syncMarketingMedia(true);
   }
@@ -379,18 +406,12 @@ export function initOrbyMarketingPage(options = {}) {
     const marketingVideo = await import('./orbyMarketingVideo.js');
     marketingVideo.initMarketingVideos(root);
 
+    await attachShowcaseGallery();
+
     attachRevealObserver();
     syncHomeState();
 
-    const runEnhancements = () => {
-      if (destroyed || !root) return;
-      void attachMarketingEnhancements();
-    };
-    if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(runEnhancements, { timeout: 1200 });
-    } else {
-      setTimeout(runEnhancements, 200);
-    }
+    scheduleDeferredEnhancements();
   }
 
   function scheduleMount() {

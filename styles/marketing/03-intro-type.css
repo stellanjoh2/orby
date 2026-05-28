@@ -28,7 +28,7 @@
   --orby-intro-turntable-fit-scale: 0.85;
   --orby-intro-turntable-offset-x: 700px;
   --orby-intro-turntable-offset-y: 50px;
-  --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
+  --dropzone-frame-radius: clamp(16px, 3.59375vw, 92px);
   --drop-hero-wide-factor: clamp(
     0.78,
     calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),

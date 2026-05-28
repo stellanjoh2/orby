@@ -2879,7 +2879,7 @@ body.export-overlay-debug #dropzone {
   --dropzone-padding-y: var(--orby-home-padding-y);
   /* Magic-card style frame (CodePen gayane-gasparyan/jOmaBQK) — stroke & radius preserved */
   --dropzone-frame-stroke: 2px;
-  --dropzone-frame-radius: clamp(16px, 4.5vw, 72px);
+  --dropzone-frame-radius: clamp(16px, 3.59375vw, 92px);
   /*
    * Hero scale — full @ 2560; ~78% @ 1920 (logo, headline, Browse pill, frosted frame).
    */
