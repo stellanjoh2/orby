@@ -116,6 +116,20 @@ await esbuild.build({
   }
 });
 
+// Standalone legal/docs pages (about, credits, privacy, …) — not part of entry.js
+mkdirSync(join(distDir, 'scripts', 'marketing'), { recursive: true });
+await esbuild.build({
+  entryPoints: [join(__dirname, 'scripts', 'marketing', 'orbyLegalSiteNav.js')],
+  bundle: true,
+  minify: true,
+  sourcemap: false,
+  format: 'esm',
+  target: ['es2020'],
+  outfile: join(distDir, 'scripts', 'marketing', 'orbyLegalSiteNav.js'),
+  treeShaking: true,
+  legalComments: 'none',
+});
+
 mkdirSync(join(distDir, 'scripts'), { recursive: true });
 cpSync(join(__dirname, 'scripts', 'orbyEntryGate.js'), join(distDir, 'scripts', 'orbyEntryGate.js'));
 cpSync(join(__dirname, 'scripts', 'orbyStatsBeacon.js'), join(distDir, 'scripts', 'orbyStatsBeacon.js'));
