@@ -4,7 +4,7 @@
  */
 (function () {
   var STORAGE_KEY = 'orby_site_gate_verified';
-  var EXPECTED_ACCESS_PHRASE = 'hellotest555';
+  var EXPECTED_ACCESS_PHRASE = 'hellotest456';
 
   function ensureGateMarkup() {
     if (document.getElementById('orby-entry-gate')) return;
