@@ -89,5 +89,5 @@ export function getTurntablePreloadConcurrency() {
 
 /** @returns {number} */
 export function getShowcaseCycleMs() {
-  return getMarketingPerformanceTier() === 'full' ? 5200 : 7800;
+  return getMarketingPerformanceTier() === 'full' ? 4000 : 7800;
 }
