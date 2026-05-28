@@ -1257,7 +1257,7 @@ export class UIManager {
       ? 'Disconnect Key Light Position'
       : 'Connect Key Light Position';
     btn.setAttribute('aria-pressed', connected ? 'true' : 'false');
-    btn.classList.toggle('is-active', connected);
+    btn.classList.toggle('active', connected);
   }
 
   updateGodRaysControlsDisabled() {
@@ -2993,9 +2993,8 @@ export class UIManager {
     const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
     this.setBlockMuted('lens-flare', !lensEnabled || isoOn);
 
-    // Mute sliders when god rays are off (see updateGodRaysControlsDisabled); keep the
-    // section chrome visible under HDRI so the reset control stays reachable after tweaks.
-    this.setBlockMuted('volumetric-scattering', !currentState.hdriEnabled || isoOn);
+    const godRaysOn = !!currentState.hdriEnabled && !!currentState.godRays?.enabled;
+    this.setBlockMuted('volumetric-scattering', !godRaysOn || isoOn);
     
     // Lights block - only muted if lightsEnabled is false
     this.setBlockMuted('lights', !currentState.lightsEnabled);

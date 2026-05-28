@@ -649,7 +649,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 #isoOrbitStep.ghost-btn,
 #isoAssetRotateStep.ghost-btn,
 #isoPanUnlock.ghost-btn,
-#creativeLookPauseAnimations.ghost-btn {
+#creativeLookPauseAnimations.ghost-btn,
+#lensFlareKeyLightConnect.ghost-btn {
   color: var(--text-dim);
   /* Match .ghost-btn / .accent-action-btn 0.2s; opacity eases mute ↔ unmute */
   transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s ease;
@@ -662,7 +663,8 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 #isoOrbitStep.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #isoAssetRotateStep.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #isoPanUnlock.ghost-btn:hover:not(:disabled):not(.is-disabled),
-#creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled) {
+#creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled),
+#lensFlareKeyLightConnect.ghost-btn:hover:not(:disabled):not(.is-disabled) {
   background: var(--accent);
   color: var(--brand-text);
   box-shadow: var(--ui-accent-outer-glow);
@@ -4329,10 +4331,12 @@ a.about-highlight:focus-visible {
 .subsection.is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
 .subsection.is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
 .subsection.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled),
+.subsection.is-muted #lensFlareKeyLightConnect.ghost-btn:not(:disabled):not(.is-disabled),
 .panel-block.is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
 .panel-block.is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
 .panel-block.is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
-.panel-block.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled) {
+.panel-block.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled),
+.panel-block.is-muted #lensFlareKeyLightConnect.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
 
@@ -6654,7 +6658,8 @@ body.ui-hidden .shelf {
   color: var(--text-dim);
 }
 
-#isoPanUnlock.ghost-btn.active {
+#isoPanUnlock.ghost-btn.active,
+#lensFlareKeyLightConnect.ghost-btn.active {
   background: var(--accent);
   color: var(--brand-text);
   box-shadow: var(--ui-accent-outer-glow);
@@ -6806,7 +6811,7 @@ body.ui-hidden .shelf {
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  background: var(--orby-black);
+  background: color-mix(in srgb, var(--orby-black) 35%, transparent);
 }
 
 .tone-curve-canvas {
@@ -6817,7 +6822,7 @@ body.ui-hidden .shelf {
   cursor: crosshair;
   touch-action: none;
   vertical-align: top;
-  background: var(--orby-black);
+  background: transparent;
 }
 
 .histogram-warning {

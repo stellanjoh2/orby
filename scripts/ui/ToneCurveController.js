@@ -1,5 +1,4 @@
 import { evalToneCurveAt, normalizeToneCurve } from '../math/toneCurvePchip.js';
-import { ORBY_BLACK } from '../constants.js';
 
 /**
  * Four-handle luminance curve: (0, blackY), p1, p2, (1, whiteY), Catmull–Rom-style spline.
@@ -10,7 +9,6 @@ const MIN_CSS_W = 220;
 const MIN_CSS_H = 220;
 const BRAND = '#c4ff00';
 
-const BG = ORBY_BLACK;
 const DIAG_ALPHA = 0.28125; // identity reference (solid), visible on app black
 const MARGIN = 0.02;
 
@@ -112,7 +110,7 @@ export class ToneCurveController {
   bind() {
     this.canvas = document.getElementById('toneCurveCanvas');
     if (!this.canvas) return;
-    this.ctx = this.canvas.getContext('2d', { alpha: false });
+    this.ctx = this.canvas.getContext('2d', { alpha: true });
   }
 
   /** Mount canvas observers/listeners when the Curve fold-out is open. */
@@ -173,8 +171,7 @@ export class ToneCurveController {
     this._onPointerUp = null;
     this._onPointerLeave = null;
     if (this.ctx) {
-      this.ctx.fillStyle = BG;
-      this.ctx.fillRect(0, 0, this.w, this.h);
+      this.ctx.clearRect(0, 0, this.w, this.h);
     }
   }
 
@@ -324,8 +321,7 @@ export class ToneCurveController {
     const w = this.w;
     const h = this.h;
 
-    ctx.fillStyle = BG;
-    ctx.fillRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h);
 
     const pDiag0 = { x: 0, y: 0 };
     const pDiag1 = { x: 1, y: 1 };
