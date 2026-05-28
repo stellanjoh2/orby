@@ -1,0 +1,25 @@
+/**
+ * Orby site top nav — one stylesheet for the marketing homepage and all subpages.
+ * Magic pill + scroll nav bar + ultra-wide ramp (same cascade everywhere).
+ */
+@import url('./orby-magic-btn.css');
+@import url('./marketing/13-scroll-nav.css');
+@import url('./orby-ultra-wide-home.css');
+@import url('./marketing/14-ultra-wide.css');
+
+/* Subpages — always show the fixed nav (class set by orbyMarketingScrollNav.js) */
+html.orby-legal-site-nav .orby-marketing-scroll-nav {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  /* Match marketing nav sizing context (avoid legal page root scale drift). */
+  font-size: 16px;
+}
+
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link,
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:visited,
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:hover,
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:focus-visible {
+  text-decoration: none;
+}

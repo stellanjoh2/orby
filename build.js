@@ -119,13 +119,13 @@ await esbuild.build({
 // Standalone legal/docs pages (about, credits, privacy, …) — not part of entry.js
 mkdirSync(join(distDir, 'scripts', 'marketing'), { recursive: true });
 await esbuild.build({
-  entryPoints: [join(__dirname, 'scripts', 'marketing', 'orbyLegalSiteNav.js')],
+  entryPoints: [join(__dirname, 'scripts', 'marketing', 'orbyMarketingScrollNav.js')],
   bundle: true,
   minify: true,
   sourcemap: false,
   format: 'esm',
   target: ['es2020'],
-  outfile: join(distDir, 'scripts', 'marketing', 'orbyLegalSiteNav.js'),
+  outfile: join(distDir, 'scripts', 'marketing', 'orbyMarketingScrollNav.js'),
   treeShaking: true,
   legalComments: 'none',
 });
@@ -184,6 +184,24 @@ if (existsSync(join(__dirname, 'styles', 'marketing'))) {
 if (existsSync(join(__dirname, 'styles', 'orby-magic-btn.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   cpSync(join(__dirname, 'styles', 'orby-magic-btn.css'), join(distDir, 'styles', 'orby-magic-btn.css'));
+}
+if (existsSync(join(__dirname, 'styles', 'orby-site-nav.css'))) {
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(join(__dirname, 'styles', 'orby-site-nav.css'), join(distDir, 'styles', 'orby-site-nav.css'));
+}
+if (existsSync(join(__dirname, 'styles', 'orby-ultra-wide-home.css'))) {
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(
+    join(__dirname, 'styles', 'orby-ultra-wide-home.css'),
+    join(distDir, 'styles', 'orby-ultra-wide-home.css'),
+  );
+}
+if (existsSync(join(__dirname, 'styles', 'orby-home-padding-x.css'))) {
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(
+    join(__dirname, 'styles', 'orby-home-padding-x.css'),
+    join(distDir, 'styles', 'orby-home-padding-x.css'),
+  );
 }
 cpSync('LICENSE', join(distDir, 'LICENSE'));
 cpSync('ASSETS_LICENSE.md', join(distDir, 'ASSETS_LICENSE.md'));

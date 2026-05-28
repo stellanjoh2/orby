@@ -42,6 +42,11 @@
     --orby-section-headline-max: calc(68px * var(--orby-ultra-wide-factor));
 
     --orby-marketing-media-radius: calc(24px * var(--orby-ultra-wide-factor));
+    --orby-marketing-ultra-ramp: calc(
+      (var(--orby-ultra-wide-factor) - 1) / (var(--orby-ultra-wide-max-factor) - 1)
+    );
+    /* 1x @ 2560 -> 2x @ 3840 */
+    --orby-marketing-magic-btn-stroke-scale: calc(1 + var(--orby-marketing-ultra-ramp));
 
     --orby-marketing-split-media-target-h: calc(
       37.5rem * var(--orby-ultra-wide-factor)
@@ -83,21 +88,21 @@
     --orby-cta-ultra-ramp: calc(
       (var(--orby-ultra-wide-factor) - 1) / (var(--orby-ultra-wide-max-factor) - 1)
     );
-    --orby-intro-scale-right: calc(
-      var(--orby-ultra-wide-factor) * (1 + 0.1 * var(--orby-cta-ultra-ramp))
-    );
+    --orby-cta-ultra-size-trim: calc(1 - 0.12 * var(--orby-cta-ultra-ramp));
+    --orby-cta-asset-shift-x: calc(8% + 240px * var(--orby-cta-ultra-ramp));
+    --orby-intro-scale-right: 1;
     --orby-intro-right-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
     --orby-cta-asset-shift-y: calc(200px - 180px * var(--orby-cta-ultra-ramp));
     --orby-cta-asset-max-h: min(
       100dvh,
       calc(
-        1150px * var(--orby-ultra-wide-factor) * (1 + 0.1 * var(--orby-cta-ultra-ramp))
+        1150px * var(--orby-ultra-wide-factor) * var(--orby-cta-ultra-size-trim)
       )
     );
     --orby-cta-asset-max-w: min(
       58vw,
       calc(
-        920px * var(--orby-ultra-wide-factor) * (1 + 0.1 * var(--orby-cta-ultra-ramp))
+        920px * var(--orby-ultra-wide-factor) * var(--orby-cta-ultra-size-trim)
       )
     );
   }
@@ -130,15 +135,14 @@
     );
   }
 
-  /* Fixed top nav — same centered 2560 frame as marketing sections */
+  /* Fixed top nav — scale chrome @ 3840; link inset matches marketing frame */
   .orby-marketing-scroll-nav {
     --orby-home-padding-x: calc(
       (100vw - var(--orby-marketing-split-media-ref-width, 160rem)) / 2
     );
     --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
     --drop-hero-magic-btn-width: calc(192px * var(--orby-ultra-wide-factor));
-    --orby-scroll-nav-height: calc(5.25rem * var(--orby-ultra-wide-factor));
-    --orby-footer-logotype-height: calc(40px * var(--orby-ultra-wide-factor));
+    --orby-scroll-nav-height: calc(84px * var(--orby-ultra-wide-factor));
     --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
   }
 
@@ -149,5 +153,27 @@
   .orby-marketing-scroll-nav__link::after,
   .orby-marketing-scroll-nav__contact::after {
     bottom: calc(-8px * var(--orby-ultra-wide-factor));
+  }
+
+  /*
+   * Keep section CTAs (e.g. "Load Sample Object", "Request Preview") at the
+   * same vertical scale as the 3840 nav "Browse Files" magic pill.
+   */
+  #orby-marketing .orby-marketing__split-cta .orby-magic-btn {
+    min-height: calc(3.65rem * var(--orby-ultra-wide-factor) * 0.88);
+    font-size: var(--orby-marketing-support-size);
+    --orby-magic-btn-stroke: calc(1.5px * var(--orby-marketing-magic-btn-stroke-scale));
+  }
+
+  #orby-marketing .orby-marketing__split-cta .orby-magic-btn .orby-magic-btn__inner {
+    padding: calc(
+        var(--ui-orby-pill-pad-block-normal) * var(--orby-ultra-wide-factor) * 0.88
+      )
+      calc(var(--ui-orby-pill-pad-inline-normal) * var(--orby-ultra-wide-factor));
+    gap: calc(0.5rem * var(--orby-ultra-wide-factor));
+  }
+
+  #orby-marketing .orby-marketing__cta-actions .orby-magic-btn.orby-magic-btn--on-lime {
+    --orby-magic-btn-stroke: calc(1.5px * var(--orby-marketing-magic-btn-stroke-scale));
   }
 }

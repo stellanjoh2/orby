@@ -217,6 +217,24 @@
   box-shadow: none;
 }
 
+/*
+ * Match the shared Browse/nav button width system through 2560px.
+ * 3840+ keeps the existing in-progress mono width behavior.
+ */
+@media (max-width: 160rem) {
+  .orby-marketing__section--in-progress .orby-magic-btn--mono {
+    --drop-hero-wide-factor: clamp(
+      0.78,
+      calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
+      1
+    );
+    --drop-hero-magic-btn-width: calc(
+      168px + 24px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
+    );
+    min-width: var(--drop-hero-magic-btn-width);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orby-marketing__section--in-progress {
     padding: 0 0 var(--orby-marketing-gap-big);

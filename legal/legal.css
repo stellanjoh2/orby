@@ -3,8 +3,7 @@
  * Self-contained; does not import the main app stylesheet.
  */
 
-@import url('../styles/orby-magic-btn.css');
-@import url('../styles/marketing/13-scroll-nav.css');
+@import url('../styles/orby-site-nav.css');
 
 @font-face {
   font-family: 'Mattone Regular';
@@ -86,6 +85,7 @@
   --legal-lead-line: 1.62;
   --legal-secondary-size: 0.9375rem;
   --legal-sub-size: 1rem;
+  --legal-ultra-scale: 1;
 }
 
 *,
@@ -127,100 +127,9 @@ body.legal-doc {
   top: 1rem;
 }
 
-/* Site nav (marketing scroll strip — always visible on legal pages) */
-html.orby-legal-site-nav .orby-marketing-scroll-nav--legal {
-  display: block;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-html.orby-legal-site-nav .legal-top {
-  display: none;
-}
-
 html.orby-legal-site-nav .legal-wrap {
-  padding-top: clamp(6.5rem, 12vw, 7.75rem);
-}
-
-/* Nav text links only — Browse uses <button.orby-magic-btn> (same as marketing; not .legal-doc a) */
-.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link {
-  text-decoration: none;
-}
-
-.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link,
-.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link:visited {
-  color: var(--brand-primary, #c4ff00);
-}
-
-.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link:hover,
-.legal-doc .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__link:focus-visible {
-  color: #fff;
-}
-
-html.orby-legal-site-nav .orby-marketing-scroll-nav__link[aria-current='page'] {
-  color: #fff;
-}
-
-html.orby-legal-site-nav .orby-marketing-scroll-nav__link[aria-current='page']::after {
-  width: 100%;
-  left: 0;
-}
-
-/* Top bar — minimal product legal header (hidden when site nav is mounted) */
-.legal-top {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 0.85rem 1.25rem;
-  background: rgba(10, 10, 10, 0.92);
-  border-bottom: 1px solid var(--legal-border);
-  backdrop-filter: blur(12px);
-}
-
-.legal-top__brand {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  letter-spacing: 0.02em;
-}
-
-.legal-top__brand a {
-  color: var(--legal-text);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.legal-top__brand a:hover {
-  color: #fff;
-}
-
-.legal-top__sep {
-  color: var(--legal-faint);
-  font-weight: 400;
-}
-
-.legal-top__crumb {
-  color: var(--legal-muted);
-  font-weight: 400;
-}
-
-.legal-top__back {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--legal-muted);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.legal-top__back:hover {
-  color: var(--legal-accent);
+  /* JS keeps this synced to actual fixed-nav height */
+  padding-top: calc(var(--orby-legal-nav-offset, 10rem) + env(safe-area-inset-top, 0px));
 }
 
 /* Main column */
@@ -353,6 +262,43 @@ body.legal-doc:not(.legal-doc--about) strong {
 @media (min-width: 1200px) {
   :root {
     --legal-max: 56rem;
+  }
+}
+
+@media (min-width: 1281px) {
+  /*
+   * Ultra-wide type ramp (2560 → 3840) — scales all rem-based legal copy.
+   * Site nav uses px tokens in 13-scroll-nav.css so it stays marketing-matched.
+   */
+  html:has(body.legal-doc) {
+    font-size: calc(16px * var(--legal-ultra-scale));
+  }
+
+  .legal-wrap {
+    padding-top: calc(var(--orby-legal-nav-offset, 10rem) + env(safe-area-inset-top, 0px));
+    padding-right: 2rem;
+    padding-bottom: 5rem;
+    padding-left: 2rem;
+  }
+
+  html.orby-legal-site-nav .legal-wrap {
+    padding-top: calc(var(--orby-legal-nav-offset, 10rem) + env(safe-area-inset-top, 0px));
+  }
+
+  /* Scale fixed-pixel brand blocks that don't follow rem sizing */
+  .legal-brand-logo-grid--logotype-hero .legal-brand-logo-card__stage {
+    min-height: calc(408px * var(--legal-ultra-scale));
+    height: calc(408px * var(--legal-ultra-scale));
+  }
+
+  .legal-brand-logo-grid--symbol .legal-brand-logo-card__stage img {
+    width: min(calc(404px * var(--legal-ultra-scale)), 100%);
+    height: min(calc(404px * var(--legal-ultra-scale)), 100%);
+  }
+
+  body.legal-doc--about {
+    --legal-about-body-size: 1.375rem;
+    --legal-about-intro-size: 1.75rem;
   }
 }
 
@@ -738,14 +684,9 @@ body.legal-doc--about .legal-about a:not(.orby-magic-btn):hover {
   text-decoration-color: rgba(196, 255, 0, 0.55);
 }
 
-body.legal-doc--about .legal-top__back:hover,
 body.legal-doc--about .legal-foot a:hover {
   color: #fff;
   text-decoration-color: rgba(255, 255, 255, 0.72);
-}
-
-body.legal-doc--about .legal-top__back {
-  text-decoration: none;
 }
 
 .legal-about {
@@ -1321,6 +1262,6 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
 
 @media (min-width: 720px) {
   body.legal-doc--brand .legal-wrap {
-    max-width: 56rem;
+    max-width: var(--legal-max);
   }
 }

@@ -610,49 +610,41 @@ export function resolveMarketingHomeHref(base = './') {
   return `${root}index.html`;
 }
 
+/** Shared top-nav link set — same on the marketing homepage and all subpages. */
+const SITE_NAV_LINK_OPTIONS = {
+  includeContact: false,
+  includeBonusPages: true,
+  includeStats: true,
+  includeGithub: false,
+};
+
 /**
  * @param {MarketingSiteNavFields} fields
- * @param {{ mode: 'home' | 'legal', homeHref: string }} options
+ * @param {{ homeHref: string, brandScrollTop?: boolean }} options
  */
 function renderMarketingSiteNavHtml(fields, options) {
-  const { mode, homeHref } = options;
+  const { homeHref, brandScrollTop = false } = options;
   const links = renderMarketingSiteNavLinks(
     fields,
     {
       linkClass: 'orby-marketing-scroll-nav__link',
       contactClass: 'orby-marketing-scroll-nav__contact',
     },
-    { includeContact: false, includeBonusPages: false },
+    SITE_NAV_LINK_OPTIONS,
   );
 
-  const brand =
-    mode === 'legal'
-      ? `<a class="orby-marketing-scroll-nav__brand" href="${escapeMarketingHtml(homeHref)}" aria-label="Orby home">
+  const brandActionAttr = brandScrollTop ? ' data-orby-marketing-scroll-top' : '';
+  const brandAria = brandScrollTop ? 'Back to top' : 'Orby home';
+  const brand = `<a class="orby-marketing-scroll-nav__brand" href="${escapeMarketingHtml(homeHref)}"${brandActionAttr} aria-label="${brandAria}">
         <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
-      </a>`
-      : `<button type="button" class="orby-marketing-scroll-nav__brand" data-orby-marketing-scroll-top aria-label="Back to top">
-        <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
-      </button>`;
+      </a>`;
 
-  const browseExtraClass = 'dropzone-btn orby-marketing-scroll-nav__browse';
-  const browseAttrs =
-    mode === 'legal'
-      ? `data-orby-legal-browse="${escapeMarketingHtml(homeHref)}"`
-      : 'data-orby-marketing-browse';
   const browseCta = orbyMagicButtonHtml('Browse Files', {
-    extraClass: browseExtraClass,
-    attrs: browseAttrs,
+    extraClass: 'dropzone-btn orby-marketing-scroll-nav__browse',
+    attrs: 'data-orby-marketing-browse',
   });
 
-  const navClass =
-    mode === 'legal'
-      ? 'orby-marketing-scroll-nav orby-marketing-scroll-nav--legal'
-      : 'orby-marketing-scroll-nav';
-  const ariaHidden = mode === 'home' ? ' aria-hidden="true"' : '';
-  const dataAttr =
-    mode === 'legal' ? ' data-orby-legal-site-nav' : ' data-orby-marketing-scroll-nav';
-
-  return `<nav class="${navClass}"${dataAttr} aria-label="Site"${ariaHidden}>
+  return `<nav class="orby-marketing-scroll-nav" data-orby-marketing-scroll-nav aria-label="Site" aria-hidden="true">
     <div class="orby-marketing-scroll-nav__bar">
       ${brand}
       <div class="orby-marketing-scroll-nav__links">${links.join('')}</div>
@@ -668,7 +660,12 @@ function renderMarketingSiteNavHtml(fields, options) {
  */
 function renderMarketingSiteNavLinks(fields, classes, options = {}) {
   const { linkClass, contactClass } = classes;
-  const { includeContact = true, includeStats = false, includeBonusPages = true } = options;
+  const {
+    includeContact = true,
+    includeStats = false,
+    includeBonusPages = true,
+    includeGithub = true,
+  } = options;
   const items = [
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.aboutHref)}">About</a>`,
     `<a class="${linkClass}" href="${escapeMarketingHtml(fields.supportHref)}">Support</a>`,
@@ -682,7 +679,9 @@ function renderMarketingSiteNavLinks(fields, classes, options = {}) {
     includeStats
       ? `<a class="${linkClass}" href="${escapeMarketingHtml(fields.statsHref)}">Statistics</a>`
       : '',
-    `<a class="${linkClass}" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
+    includeGithub
+      ? `<a class="${linkClass}" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`
+      : '',
     includeContact && fields.contactEmail
       ? `<button type="button" class="${linkClass} ${contactClass}" data-orby-marketing-copy-email="${escapeMarketingHtml(fields.contactEmail)}">Contact</button>`
       : '',
@@ -691,27 +690,16 @@ function renderMarketingSiteNavLinks(fields, classes, options = {}) {
 }
 
 /**
- * Fixed top strip — revealed when the user scrolls up on the marketing page.
+ * Site top nav — one template for the marketing homepage and all subpages.
  * @param {import('./orbyMarketingContent.js').MarketingSection} section
+ * @param {string} [base='./'] — e.g. `../` from `/about/index.html`
  */
-export function renderMarketingScrollNav(section) {
-  const fields = getMarketingFooterFields(section);
+export function renderSiteNav(section, base = './') {
+  const fields =
+    base === './' ? getMarketingFooterFields(section) : resolveMarketingSiteNavFields(section, base);
   return renderMarketingSiteNavHtml(fields, {
-    mode: 'home',
-    homeHref: './index.html',
-  });
-}
-
-/**
- * Fixed top nav for standalone legal / docs pages (always visible).
- * @param {import('./orbyMarketingContent.js').MarketingSection} section
- * @param {string} [base='../']
- */
-export function renderLegalSiteNav(section, base = '../') {
-  const fields = resolveMarketingSiteNavFields(section, base);
-  return renderMarketingSiteNavHtml(fields, {
-    mode: 'legal',
     homeHref: resolveMarketingHomeHref(base),
+    brandScrollTop: base === './',
   });
 }
 

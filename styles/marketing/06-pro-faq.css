@@ -265,11 +265,20 @@ html.safari-browser .orby-marketing__pro-card-video {
     1.8vw,
     calc(1.25rem * var(--orby-marketing-scale))
   );
+  align-items: start;
   min-width: 0;
 }
 
 .orby-marketing__faq-body {
-  display: contents;
+  grid-column: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(
+    calc(0.42rem * var(--orby-marketing-scale)),
+    0.9vw,
+    calc(0.55rem * var(--orby-marketing-scale))
+  );
 }
 
 .orby-marketing__faq-icon {
@@ -298,9 +307,7 @@ html.safari-browser .orby-marketing__pro-card-video {
 }
 
 .orby-marketing__faq-question {
-  grid-column: 2;
-  grid-row: 1;
-  margin: 0 0 0.55rem;
+  margin: 0;
   font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
     sans-serif);
   font-size: 18px;
@@ -311,8 +318,6 @@ html.safari-browser .orby-marketing__pro-card-video {
 }
 
 .orby-marketing__faq-answer {
-  grid-column: 2;
-  grid-row: 2;
   margin: 0;
   max-width: calc(100% - var(--orby-marketing-gutter-text-inset));
   font-size: var(--orby-marketing-feature-list-size);

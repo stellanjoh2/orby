@@ -2,8 +2,9 @@
 @import url('../orby-home-padding-x.css');
 
 .orby-marketing-scroll-nav {
-  --ui-orby-pill-pad-block-normal: calc(0.52rem * 1.2);
-  --ui-orby-pill-pad-inline-normal: calc(1.9rem * 1.2);
+  /* px-based — immune to legal subpage html { font-size } rem scaling */
+  --ui-orby-pill-pad-block-normal: calc(8.32px * 1.2);
+  --ui-orby-pill-pad-inline-normal: calc(30.4px * 1.2);
   --orby-marketing-split-media-ref-width: 160rem; /* 2560px — match marketing ramp */
   --orby-scroll-nav-height-ramp: clamp(
     0,
@@ -11,10 +12,9 @@
     1
   );
   /* 92px @ 2560 → ~84px @ 1920 (Browse pill height unchanged) */
-  --orby-scroll-nav-height: calc(5.25rem + 0.5rem * var(--orby-scroll-nav-height-ramp));
-  /* Footer parity — logotype 40px */
-  --orby-footer-logotype-ratio: 1676.82 / 694.27;
-  --orby-footer-logotype-height: 40px;
+  --orby-scroll-nav-height: calc(84px + 8px * var(--orby-scroll-nav-height-ramp));
+  --orby-scroll-nav-logotype-ratio: 1676.82 / 694.27;
+  --orby-scroll-nav-magic-v-scale: 0.88;
   /* Dropzone Browse pill ramps (mirrors .dropzone) */
   --drop-hero-wide-factor: clamp(
     0.78,
@@ -24,8 +24,25 @@
   --drop-hero-magic-btn-width: calc(
     168px + 24px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
   );
-  --orby-scroll-nav-magic-v-scale: 0.88;
-  --orby-marketing-support-size: clamp(0.75rem, 1.2vw, 0.9rem);
+  /* Shared nav chrome height — logotype and Browse pill always match */
+  --orby-scroll-nav-chrome-height: calc(
+    58.4px * var(--drop-hero-wide-factor) * var(--orby-scroll-nav-magic-v-scale)
+  );
+  --orby-marketing-support-size: clamp(12px, 1.2vw, 14.4px);
+  /*
+   * Logo / Browse inset — match showcase gallery gutters (112px @ 2560),
+   * not the wider home copy column (--orby-home-padding-x).
+   */
+  --orby-scroll-nav-gutter-scale: clamp(
+    0.84,
+    calc(0.84 + 0.16 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-scroll-nav-edge-x: calc(112px * var(--orby-scroll-nav-gutter-scale));
+  /* Reserve right side so links don't run under the Browse pill */
+  --orby-scroll-nav-cta-reserve: calc(
+    var(--drop-hero-magic-btn-width) + var(--orby-scroll-nav-edge-x) + 24px
+  );
 
   position: fixed;
   top: 0;
@@ -49,27 +66,34 @@
   pointer-events: auto;
 }
 
+/* Ultra-wide — gallery gutter scales with --orby-ultra-wide-factor (168px @ 3840) */
+@media (min-width: 2561px) {
+  .orby-marketing-scroll-nav {
+    --orby-scroll-nav-edge-x: calc(112px * var(--orby-ultra-wide-factor, 1));
+  }
+}
+
 .orby-marketing-scroll-nav__bar {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.5rem);
+  position: relative;
+  box-sizing: border-box;
   min-height: var(--orby-scroll-nav-height);
   height: var(--orby-scroll-nav-height);
-  padding: 0 var(--orby-home-padding-x, 1.5rem);
-  box-sizing: border-box;
+  padding: 0;
 }
 
 .orby-marketing-scroll-nav__brand,
 a.orby-marketing-scroll-nav__brand {
-  justify-self: start;
+  position: absolute;
+  left: var(--orby-scroll-nav-edge-x);
+  top: 50%;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   flex-shrink: 0;
-  width: calc(var(--orby-footer-logotype-height) * var(--orby-footer-logotype-ratio));
-  height: var(--orby-footer-logotype-height);
-  max-width: min(42vw, 10.5rem);
+  width: calc(var(--orby-scroll-nav-chrome-height) * var(--orby-scroll-nav-logotype-ratio));
+  height: var(--orby-scroll-nav-chrome-height);
+  max-width: min(42vw, calc(168px * var(--drop-hero-wide-factor)));
   margin: 0;
   padding: 0;
   border: none;
@@ -77,6 +101,7 @@ a.orby-marketing-scroll-nav__brand {
   color: var(--brand-primary, #c4ff00);
   cursor: pointer;
   text-decoration: none;
+  transform: translateY(-50%);
   transition: color 0.16s ease;
 }
 
@@ -110,21 +135,26 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
 }
 
 .orby-marketing-scroll-nav__links {
-  justify-self: center;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: clamp(calc(1.125rem + 1ch), calc(2.2vw + 1ch), calc(1.75rem + 1ch));
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--orby-scroll-nav-height);
+  height: var(--orby-scroll-nav-height);
   margin: 0;
-  padding: 0 clamp(0.5rem, 1.5vw, 1.25rem);
+  /* Align with dropzone / headline left edge (--orby-home-padding-x on :root) */
+  padding-inline: var(--orby-home-padding-x, 1.5rem) var(--orby-scroll-nav-cta-reserve);
   font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
     sans-serif);
   font-size: 18px;
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: -0.01em;
-  text-align: center;
+  text-align: left;
 }
 
 .orby-marketing-scroll-nav__link,
@@ -184,11 +214,16 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
 
 /* Browse magic pill — same look as dropzone, slightly shorter */
 .orby-marketing-scroll-nav__cta {
-  justify-self: end;
+  position: absolute;
+  right: var(--orby-scroll-nav-edge-x);
+  top: 50%;
+  z-index: 2;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-shrink: 0;
+  transform: translateY(-50%);
 }
 
 .orby-marketing-scroll-nav__cta .orby-magic-btn-host,
@@ -204,9 +239,8 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
 .orby-marketing-scroll-nav__cta .orby-magic-btn.dropzone-btn {
   width: var(--drop-hero-magic-btn-width);
   min-width: var(--drop-hero-magic-btn-width);
-  min-height: calc(
-    3.65rem * var(--drop-hero-wide-factor) * var(--orby-scroll-nav-magic-v-scale)
-  );
+  height: var(--orby-scroll-nav-chrome-height);
+  min-height: var(--orby-scroll-nav-chrome-height);
   font-size: var(--orby-marketing-support-size);
 }
 
@@ -217,7 +251,7 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
         var(--orby-scroll-nav-magic-v-scale)
     )
     calc(var(--ui-orby-pill-pad-inline-normal) * var(--drop-hero-wide-factor));
-  gap: calc(0.5rem * var(--drop-hero-wide-factor));
+  gap: calc(8px * var(--drop-hero-wide-factor));
 }
 
 .orby-marketing-scroll-nav__cta .orby-magic-btn.dropzone-btn .orby-magic-btn__arrow {
@@ -265,30 +299,27 @@ html:not(.orby-home-scroll):not(.orby-legal-site-nav) .orby-marketing-scroll-nav
 
 @media (max-width: 720px) {
   .orby-marketing-scroll-nav__bar {
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
     height: auto;
     min-height: var(--orby-scroll-nav-height);
     padding-block: 0.35rem;
   }
 
-  .orby-marketing-scroll-nav__brand {
-    grid-column: 1;
-    grid-row: 1;
-    max-width: min(36vw, 7.5rem);
+  .orby-marketing-scroll-nav__brand,
+  a.orby-marketing-scroll-nav__brand {
+    top: calc(0.35rem + var(--orby-scroll-nav-height) / 2);
+    max-width: min(36vw, calc(120px * var(--drop-hero-wide-factor)));
   }
 
   .orby-marketing-scroll-nav__cta {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
+    top: calc(0.35rem + var(--orby-scroll-nav-height) / 2);
   }
 
   .orby-marketing-scroll-nav__links {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-self: stretch;
-    padding-inline: 0;
+    height: auto;
+    min-height: 0;
+    margin-top: var(--orby-scroll-nav-height);
+    padding-inline: var(--orby-home-padding-x, 1.5rem);
+    padding-bottom: 0.25rem;
     font-size: 15px;
     gap: calc(0.875rem + 1ch) calc(1rem + 1ch);
   }

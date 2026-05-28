@@ -169,6 +169,16 @@ body.legal-doc--stats h2.legal-stats__formats-title {
   color: var(--legal-accent-hover);
 }
 
+@media (min-width: 2561px) {
+  .legal-doc p.legal-stats__value {
+    font-size: calc(112px * var(--legal-ultra-scale, 1));
+  }
+
+  body.legal-doc--stats .legal-wrap--stats > h1.legal-stats__title {
+    margin-bottom: calc(48px * var(--legal-ultra-scale, 1));
+  }
+}
+
 @media (max-width: 540px) {
   body.legal-doc--stats .legal-wrap--stats {
     --legal-stats-content-width: min(100%, 22rem);
