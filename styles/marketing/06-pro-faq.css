@@ -188,7 +188,7 @@ html.safari-browser .orby-marketing__pro-card-video {
   color: var(--orby-marketing-text-dim);
 }
 
-/* FAQ panel — dark seam above is pro padding-bottom (gap-big); inner pad before copy */
+/* FAQ panel — dark seam above is pro padding-bottom (gap-big); inner pad = gap-big before headline */
 #orby-marketing .orby-marketing__section.orby-marketing__section--faq {
   position: relative;
   z-index: 1;

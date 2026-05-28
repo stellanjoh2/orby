@@ -114,23 +114,10 @@
     font-size: calc(21px * var(--orby-ultra-wide-factor));
   }
 
-  #orby-marketing .orby-marketing__pro-card-title {
-    font-size: calc(
-      var(--orby-marketing-pro-card-title-size, 22px) * var(--orby-ultra-wide-factor)
-    );
-  }
-
-  #orby-marketing .orby-marketing__faq-icon {
-    font-size: calc(
-      var(--orby-marketing-pro-card-title-size, 22px) * var(--orby-ultra-wide-factor)
-    );
-  }
-
-  #orby-marketing .orby-marketing__faq-question {
-    font-size: calc(
-      var(--orby-marketing-pro-card-title-size, 22px) * var(--orby-ultra-wide-factor)
-    );
-  }
+  /*
+   * Pro card + FAQ lime type — scale via --orby-marketing-pro-card-title-size above
+   * (22px × factor @ 3840 = 33px). Do not multiply again on the selectors.
+   */
 
   /*
    * In Progress headline — wrap width scales with vw padding, not 1:1 with 68×factor type.

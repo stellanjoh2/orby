@@ -53,7 +53,7 @@
     max-width: clamp(90%, 85vw, calc(680px * var(--orby-ultra-wide-factor)));
   }
 
-  /* Dragon (LL) — ramps from 2560; +40px up @ 3840 only; base +100px up for viewport clip */
+  /* Dragon (LL) — ramps from 2560; +90px up @ 3840 so feet aren’t cropped */
   html.orby-home-scroll:not(.mobile-landing)
     .dropzone
     > .dropzone-hero-deco
@@ -61,8 +61,31 @@
     top: calc(
       190px + 80px * var(--drop-hero-deco-ramp) +
         900px * (var(--orby-ultra-wide-factor) - 1) - 50px -
-        40px * (var(--orby-ultra-wide-factor) - 1) /
+        90px * (var(--orby-ultra-wide-factor) - 1) /
           (var(--orby-ultra-wide-max-factor) - 1)
+    );
+  }
+}
+
+/*
+ * Hero deco fine-tune — 3840 only (2561–3839 keep ramped anchors above).
+ * Girl +40px right; dragon +20px right, +160px up.
+ */
+@media (min-width: 3840px) {
+  html:not(.mobile-landing) .dropzone-hero-deco__slot--ur {
+    right: calc(-100px - 40px);
+  }
+
+  html.orby-home-scroll:not(.mobile-landing)
+    .dropzone
+    > .dropzone-hero-deco
+    .dropzone-hero-deco__slot--ll {
+    left: calc(60px + 30px * var(--drop-hero-deco-ramp) + 20px);
+    top: calc(
+      190px + 80px * var(--drop-hero-deco-ramp) +
+        900px * (var(--orby-ultra-wide-factor) - 1) - 50px -
+        90px * (var(--orby-ultra-wide-factor) - 1) /
+          (var(--orby-ultra-wide-max-factor) - 1) - 160px
     );
   }
 }

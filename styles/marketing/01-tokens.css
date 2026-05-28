@@ -179,12 +179,11 @@
   --orby-marketing-section-headline-line: 1.1;
   /*
    * Pro → Roadmap dark seam: one gap-big (192px @ 1440) on .orby-marketing__section--pro padding-bottom only.
-   * Do not stack faq-pad-top on the section — that doubled the band (192 + 122 ≈ 314+ on screen).
-   * Inside the gray FAQ panel, pad before headline (gap-big − 70px ≈ 122px @ 1440).
+   * FAQ gray panel — gap-big − 16px before headline (176px @ 2560, ~264px @ 3840).
    */
   --orby-marketing-pro-faq-gap: var(--orby-marketing-gap-big);
   --orby-marketing-faq-inner-pad-top: calc(
-    var(--orby-marketing-gap-big) - 70px * var(--orby-marketing-gutter-scale)
+    var(--orby-marketing-gap-big) - 16px * var(--orby-marketing-gutter-scale)
   );
   /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560, 2560px @ 3840+) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
