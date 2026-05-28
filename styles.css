@@ -21,7 +21,7 @@
  * 2. Use CSS filters on .drop-logo and .demo-logotype (see below)
  */
 
-@import url('orby-home-padding-x.css');
+@import url('./styles/orby-home-padding-x.css');
 
 @font-face {
   font-family: 'Mattone Regular';
