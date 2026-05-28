@@ -2,6 +2,9 @@ import * as esbuild from 'esbuild';
 import { readFileSync, writeFileSync, cpSync, existsSync, rmSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { bundleMarketingCss } from './scripts/marketing/bundleMarketingCss.mjs';
+import { buildFontAwesomeSubset } from './scripts/buildFontAwesomeSubset.mjs';
+import { injectAllSubpageSiteNav } from './scripts/marketing/injectSubpageSiteNav.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -98,6 +101,11 @@ if (existsSync(distDir)) {
   rmSync(distDir, { recursive: true });
 }
 
+const faSubset = await buildFontAwesomeSubset();
+console.log(
+  `🎯 Font Awesome subset (${faSubset.iconCount} icons, ${faSubset.cssBytes} CSS + ${faSubset.fontBytes} woff2)`,
+);
+
 // Build JavaScript bundle
 // Note: Three.js is kept external (loaded via import map in HTML)
 await esbuild.build({
@@ -164,6 +172,13 @@ if (existsSync(join(__dirname, 'scripts', 'vendor'))) {
   });
 }
 cpSync('styles.css', join(distDir, 'styles.css'));
+if (existsSync(join(__dirname, 'styles', 'fontawesome', 'orby-icons.css'))) {
+  mkdirSync(join(distDir, 'styles', 'fontawesome'), { recursive: true });
+  cpSync(
+    join(__dirname, 'styles', 'fontawesome', 'orby-icons.css'),
+    join(distDir, 'styles', 'fontawesome', 'orby-icons.css'),
+  );
+}
 if (existsSync(join(__dirname, 'styles', 'orby-home-padding-x.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   cpSync(
@@ -173,13 +188,25 @@ if (existsSync(join(__dirname, 'styles', 'orby-home-padding-x.css'))) {
 }
 if (existsSync(join(__dirname, 'styles', 'orby-marketing.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
-  cpSync(join(__dirname, 'styles', 'orby-marketing.css'), join(distDir, 'styles', 'orby-marketing.css'));
-}
-if (existsSync(join(__dirname, 'styles', 'marketing'))) {
-  mkdirSync(join(distDir, 'styles'), { recursive: true });
-  cpSync(join(__dirname, 'styles', 'marketing'), join(distDir, 'styles', 'marketing'), {
-    recursive: true,
+  const { bytes: marketingCssBytes } = await bundleMarketingCss({
+    outPath: join(distDir, 'styles', 'orby-marketing.css'),
   });
+  console.log(`📄 Bundled styles/orby-marketing.css (${marketingCssBytes} bytes)`);
+}
+/** Homepage scroll cue + lazy nav CSS — not in the marketing bundle entry. */
+const MARKETING_DIST_PARTIALS = [
+  '09-scroll-cue-responsive.css',
+  '13-scroll-nav.css',
+  '14-ultra-wide.css',
+];
+const marketingPartialsDir = join(__dirname, 'styles', 'marketing');
+if (existsSync(marketingPartialsDir)) {
+  const marketingDistDir = join(distDir, 'styles', 'marketing');
+  mkdirSync(marketingDistDir, { recursive: true });
+  for (const name of MARKETING_DIST_PARTIALS) {
+    const src = join(marketingPartialsDir, name);
+    if (existsSync(src)) cpSync(src, join(marketingDistDir, name));
+  }
 }
 if (existsSync(join(__dirname, 'styles', 'orby-magic-btn.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
@@ -228,6 +255,11 @@ if (existsSync(join(__dirname, 'stats'))) {
     const statsHtml = readFileSync(join(__dirname, 'stats', 'index.html'), 'utf-8');
     writeFileSync(statsIndexPath, injectStatsApiUrl(statsHtml));
   }
+}
+
+const { updated: subpageNavUpdated } = injectAllSubpageSiteNav({ root: distDir });
+if (subpageNavUpdated > 0) {
+  console.log(`🧭 Injected subpage site nav into ${subpageNavUpdated} HTML files`);
 }
 
 // Copy CNAME for GitHub Pages

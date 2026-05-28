@@ -1,14 +1,14 @@
 /**
- * Marketing section reveals — word stagger on headlines and body copy (ledes);
- * media: preload plate then blur-in inside the 16∶9 mask (no slide-up).
+ * Marketing section reveals — word stagger on headlines only;
+ * body copy (ledes, eyebrows) fades up as a block. Media: preload plate then blur-in.
  */
-import gsap from 'gsap';
 import {
+  gsap,
+  prefersReducedMotion,
   wrapWordsForBigMessage,
   BIG_MESSAGE_STAGGER_CLASS,
   TEXT_REVEAL_PACE,
-} from '../ui/bigMessageHeadlineReveal.js';
-import { prefersReducedMotion } from '../ui/modalReveal.js';
+} from './marketingMotion.js';
 import {
   addPlaceholderFadeOut,
   clearMarketingMediaFilter,
@@ -33,6 +33,11 @@ const listStagger = 0.08 * TEXT_REVEAL_PACE;
 const ctaRevealDur = 0.38 * TEXT_REVEAL_PACE;
 const ctaStagger = 0.08 * TEXT_REVEAL_PACE;
 const cardRevealDur = 0.45 * TEXT_REVEAL_PACE;
+/** Pro cards reveal when each card enters view — not when the section header does. */
+const PRO_CARD_REVEAL_IO = { root: null, rootMargin: '0px 0px -8% 0px', threshold: 0.14 };
+
+/** @type {WeakMap<HTMLElement, IntersectionObserver>} */
+const proCardRevealObservers = new WeakMap();
 /**
  * Mega sections (intro hero, lime CTA, …) — large headline + optional lede + CTAs.
  * @see MEGA_REVEAL_IO in orbyMarketingPage.js
@@ -149,7 +154,7 @@ export function preloadSectionMedia(sectionEl) {
   if (!sectionEl) return Promise.resolve();
   const media = [
     ...sectionEl.querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img.is-active, .orby-marketing__pro-card-img, .orby-marketing__intro-asset:not(.orby-marketing__intro-turntable-wrap)',
+      '.orby-marketing__figure-media, .orby-marketing__figure-img, .orby-marketing__showcase-img.is-active, .orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__intro-asset:not(.orby-marketing__intro-turntable-wrap)',
     ),
   ].filter(shouldPreloadMarketingElement);
   return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
@@ -183,6 +188,36 @@ function resumeMarketingMagicBtnRim(sectionEl) {
     void btn.offsetWidth;
     btn.classList.remove('orby-magic-btn--rim-kick');
   });
+}
+
+function isMarketingHeadline(el) {
+  if (!el) return false;
+  return (
+    el.classList.contains('orby-marketing__title') ||
+    el.classList.contains('orby-marketing__title--intro') ||
+    el.classList.contains('orby-marketing__title--cta')
+  );
+}
+
+function prepareBodyCopy(el, liftY = blockLiftY) {
+  if (!el) return;
+  gsap.set(el, { opacity: 0, y: liftY });
+}
+
+function revealBodyCopy(el, tl, position = 0, options = {}) {
+  if (!el) return;
+  const liftY = options.liftY ?? blockLiftY;
+  tl.fromTo(
+    el,
+    { opacity: 0, y: liftY },
+    {
+      opacity: 1,
+      y: 0,
+      duration: options.duration ?? blockRevealDur,
+      ease: options.ease ?? 'power2.out',
+    },
+    position,
+  );
 }
 
 function prepareHeadline(el, liftY = headLiftY) {
@@ -427,7 +462,7 @@ function prepareSplitSection(sectionEl) {
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
 
   prepareHeadline(title, headLiftY);
-  if (lede) prepareHeadline(lede, headLiftY);
+  if (lede) prepareBodyCopy(lede);
 
   if (list) gsap.set(list.querySelectorAll('li'), { opacity: 0, y: 12 });
 
@@ -478,7 +513,7 @@ function prepareMegaSection(sectionEl) {
   const title = sectionEl.querySelector('.orby-marketing__title--intro');
   const lede = sectionEl.querySelector('.orby-marketing__lede');
   prepareHeadline(title, megaHeadLiftY);
-  if (lede?.textContent?.trim()) prepareHeadline(lede, megaBlockLiftY);
+  if (lede?.textContent?.trim()) prepareBodyCopy(lede, megaBlockLiftY);
   const ctas = [...sectionEl.querySelectorAll('.orby-marketing__cta')];
   if (ctas.length) gsap.set(ctas, { opacity: 0, y: 12 });
 }
@@ -495,7 +530,7 @@ function revealMegaSection(sectionEl, tl) {
     ease: 'power3.out',
   });
   if (ledeHasCopy) {
-    revealHeadline(lede, tl, `>-=${megaBlockOverlap}`, {
+    revealBodyCopy(lede, tl, `>-=${megaBlockOverlap}`, {
       liftY: megaBlockLiftY,
       ease: 'power3.out',
     });
@@ -520,9 +555,10 @@ function revealMegaSection(sectionEl, tl) {
 }
 
 function prepareStandardSection(sectionEl) {
-  sectionEl
-    .querySelectorAll('[data-orby-marketing-reveal="text"]')
-    .forEach((el) => prepareHeadline(el, headLiftY));
+  sectionEl.querySelectorAll('[data-orby-marketing-reveal="text"]').forEach((el) => {
+    if (isMarketingHeadline(el)) prepareHeadline(el, headLiftY);
+    else prepareBodyCopy(el);
+  });
 
   sectionEl.querySelectorAll('[data-orby-marketing-reveal="media"]').forEach(prepareMarketingMask);
 
@@ -541,7 +577,7 @@ function prepareProSection(sectionEl) {
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
 
   prepareHeadline(title, headLiftY);
-  if (lede) prepareHeadline(lede, headLiftY);
+  if (lede) prepareBodyCopy(lede);
 
   gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]'), {
     opacity: 0,
@@ -549,24 +585,172 @@ function prepareProSection(sectionEl) {
   });
 
   sectionEl.querySelectorAll('[data-orby-marketing-gallery-flip]').forEach(prepareMarketingMask);
+  sectionEl
+    .querySelectorAll('.orby-marketing__pro-card-media:not(.orby-marketing__pro-card-media--flip)')
+    .forEach(prepareProCardMedia);
 }
 
-/** Pro-card flip galleries skip split/showcase revealMedia — show the first frame when cards land. */
-function revealProFlipGalleries(sectionEl) {
-  sectionEl.querySelectorAll('[data-orby-marketing-gallery-flip]').forEach((mask) => {
-    const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
-    if (!imgs.length) return;
-    const activeIndex = Math.max(0, imgs.findIndex((img) => img.classList.contains('is-active')));
-    imgs.forEach((img, i) => {
-      gsap.set(img, {
-        opacity: i === activeIndex ? 1 : 0,
-        zIndex: i === activeIndex ? 1 : 0,
-        clearProps: 'filter',
-      });
-      if (i === activeIndex) img.classList.add('is-loaded');
-    });
+function prepareProCardMedia(mediaEl) {
+  if (!mediaEl) return;
+  setMediaPlaceholderOpacity(mediaEl, 1);
+  const media = mediaEl.querySelector('.orby-marketing__pro-card-video, .orby-marketing__pro-card-img');
+  if (media) prepareMediaElement(media);
+}
+
+/**
+ * @param {HTMLElement} cardEl
+ * @returns {Promise<void>}
+ */
+function preloadProCardMedia(cardEl) {
+  const media = [
+    ...cardEl.querySelectorAll(
+      '.orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__showcase-img.is-active',
+    ),
+  ].filter(shouldPreloadMarketingElement);
+  return Promise.all(media.map((el) => whenMediaReady(el, { decode: false })));
+}
+
+/**
+ * @param {HTMLElement} mask
+ */
+function revealProFlipGallery(mask) {
+  const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
+  if (!imgs.length) {
     setMediaPlaceholderOpacity(mask, 0);
+    return;
+  }
+  const activeIndex = Math.max(0, imgs.findIndex((img) => img.classList.contains('is-active')));
+  const active = imgs[activeIndex];
+  imgs.forEach((img, i) => {
+    if (i !== activeIndex) {
+      gsap.set(img, { opacity: 0, zIndex: 0, clearProps: 'filter' });
+      return;
+    }
+    gsap.set(img, { zIndex: 1 });
   });
+  if (!active) {
+    setMediaPlaceholderOpacity(mask, 0);
+    return;
+  }
+  const useBlur = shouldUseMediaBlurReveal();
+  gsap.fromTo(
+    active,
+    { opacity: 0, ...(useBlur ? { filter: `blur(${mediaBlurPx}px)` } : {}) },
+    {
+      opacity: 1,
+      ...(useBlur ? { filter: 'blur(0px)' } : {}),
+      duration: mediaRevealDur,
+      ease: mediaEase,
+      onComplete: () => {
+        clearMarketingMediaFilter(active);
+        setMediaPlaceholderOpacity(mask, 0);
+        active.classList.add('is-loaded');
+      },
+    },
+  );
+}
+
+/**
+ * @param {HTMLElement} mediaWrap
+ * @param {HTMLImageElement | HTMLVideoElement} media
+ * @param {gsap.core.Timeline} tl
+ * @param {string | number} position
+ */
+function revealProCardMedia(mediaWrap, media, tl, position) {
+  const useBlur = shouldUseMediaBlurReveal() && !(media instanceof HTMLVideoElement);
+  tl.add(() => whenMediaReady(media), position);
+  tl.fromTo(
+    media,
+    { opacity: 0, ...(useBlur ? { filter: `blur(${mediaBlurPx}px)` } : {}) },
+    {
+      opacity: 1,
+      ...(useBlur ? { filter: 'blur(0px)' } : {}),
+      duration: mediaRevealDur,
+      ease: mediaEase,
+      onStart: () => {
+        media.classList.add('is-loaded');
+        if (media instanceof HTMLVideoElement) playMarketingVideo(media);
+      },
+      onComplete: () => {
+        clearMarketingMediaFilter(media);
+        setMediaPlaceholderOpacity(mediaWrap, 0);
+      },
+    },
+    `${position}+=0`,
+  );
+}
+
+/**
+ * @param {HTMLElement} cardEl
+ */
+function revealProCard(cardEl) {
+  if (!cardEl || cardEl.dataset.orbyMarketingProCardRevealed === '1') return;
+  cardEl.dataset.orbyMarketingProCardRevealed = '1';
+
+  const mediaWrap = cardEl.querySelector('.orby-marketing__pro-card-media');
+  const isFlip = mediaWrap?.hasAttribute('data-orby-marketing-gallery-flip');
+  const media = isFlip
+    ? null
+    : mediaWrap?.querySelector('.orby-marketing__pro-card-video, .orby-marketing__pro-card-img');
+
+  const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+  tl.fromTo(
+    cardEl,
+    { opacity: 0, y: blockLiftY },
+    { opacity: 1, y: 0, duration: cardRevealDur, ease: mediaEase },
+  );
+
+  if (isFlip && mediaWrap) {
+    tl.add(() => revealProFlipGallery(mediaWrap), `-=${blockOverlap}`);
+  } else if (media && mediaWrap) {
+    revealProCardMedia(mediaWrap, media, tl, `-=${blockOverlap}`);
+  } else if (mediaWrap) {
+    tl.add(() => setMediaPlaceholderOpacity(mediaWrap, 0), `-=${blockOverlap}`);
+  }
+}
+
+function disconnectProCardReveals(sectionEl) {
+  const observer = proCardRevealObservers.get(sectionEl);
+  observer?.disconnect();
+  proCardRevealObservers.delete(sectionEl);
+}
+
+/**
+ * @param {HTMLElement} sectionEl
+ */
+function scheduleProCardReveals(sectionEl) {
+  disconnectProCardReveals(sectionEl);
+  const cards = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]')].filter(
+    (card) => card.dataset.orbyMarketingProCardRevealed !== '1',
+  );
+  if (!cards.length) return;
+
+  if (prefersReducedMotion()) {
+    cards.forEach((card) => {
+      revealProCard(card);
+    });
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const card = entry.target;
+        observer.unobserve(card);
+        void preloadProCardMedia(card).then(() => revealProCard(card));
+      }
+    },
+    PRO_CARD_REVEAL_IO,
+  );
+
+  cards.forEach((card) => observer.observe(card));
+  proCardRevealObservers.set(sectionEl, observer);
+}
+
+/** Pro-card flip galleries — fade the active slide when the card lands. */
+function revealProFlipGalleries(sectionEl) {
+  sectionEl.querySelectorAll('[data-orby-marketing-gallery-flip]').forEach(revealProFlipGallery);
 }
 
 function revealProSection(sectionEl, tl) {
@@ -576,24 +760,8 @@ function revealProSection(sectionEl, tl) {
 
   revealBlock(eyebrow, tl, 0);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
-  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
-
-  const cards = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]')];
-  if (cards.length) {
-    tl.fromTo(
-      cards,
-      { opacity: 0, y: blockLiftY },
-      {
-        opacity: 1,
-        y: 0,
-        duration: cardRevealDur,
-        stagger: 0.09 * TEXT_REVEAL_PACE,
-        ease: mediaEase,
-      },
-      lede || title ? `>-=${blockOverlap}` : 0,
-    );
-  }
-  tl.add(() => revealProFlipGalleries(sectionEl), cards.length ? `>-=${blockOverlap}` : 0);
+  if (lede) revealBodyCopy(lede, tl, `>-=${blockOverlap}`);
+  scheduleProCardReveals(sectionEl);
 }
 
 function prepareRoadmapSection(sectionEl) {
@@ -604,7 +772,7 @@ function prepareRoadmapSection(sectionEl) {
   if (eyebrow) gsap.set(eyebrow, { opacity: 0, y: blockLiftY });
 
   prepareHeadline(title, headLiftY);
-  if (lede) prepareHeadline(lede, headLiftY);
+  if (lede) prepareBodyCopy(lede);
 
   gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="roadmap-bar"]'), {
     opacity: 0,
@@ -619,7 +787,7 @@ function revealRoadmapSection(sectionEl, tl) {
 
   revealBlock(eyebrow, tl, 0);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
-  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
+  if (lede) revealBodyCopy(lede, tl, `>-=${blockOverlap}`);
 
   const bars = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="roadmap-bar"]')];
   if (bars.length) {
@@ -639,9 +807,10 @@ function revealRoadmapSection(sectionEl, tl) {
 }
 
 function prepareFaqSection(sectionEl) {
-  sectionEl
-    .querySelectorAll('[data-orby-marketing-reveal="text"]')
-    .forEach((el) => prepareHeadline(el, headLiftY));
+  sectionEl.querySelectorAll('[data-orby-marketing-reveal="text"]').forEach((el) => {
+    if (isMarketingHeadline(el)) prepareHeadline(el, headLiftY);
+    else prepareBodyCopy(el);
+  });
   gsap.set(sectionEl.querySelectorAll('[data-orby-marketing-reveal="faq-item"]'), {
     opacity: 0,
     y: blockLiftY,
@@ -654,7 +823,7 @@ function revealFaqSection(sectionEl, tl) {
   const lede = sectionEl.querySelector('.orby-marketing__faq-lede');
 
   revealBlock(eyebrow, tl, 0);
-  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
+  if (lede) revealBodyCopy(lede, tl, `>-=${blockOverlap}`);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
 
   const items = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="faq-item"]')];
@@ -706,7 +875,7 @@ function revealSplitSection(sectionEl, tl) {
 
   revealBlock(eyebrow, tl, 0);
   revealHeadline(title, tl, `>-=${blockOverlap}`);
-  if (lede) revealHeadline(lede, tl, `>-=${blockOverlap}`);
+  if (lede) revealBodyCopy(lede, tl, `>-=${blockOverlap}`);
   if (list) revealList(list, tl, `>-=${blockOverlap}`);
 
   const magicBtn = sectionEl.querySelector('.orby-magic-btn');
@@ -731,7 +900,12 @@ function revealSplitSection(sectionEl, tl) {
 function revealStandardSection(sectionEl, tl) {
   const textBlocks = [...sectionEl.querySelectorAll('[data-orby-marketing-reveal="text"]')];
   for (let i = 0; i < textBlocks.length; i++) {
-    revealHeadline(textBlocks[i], tl, i === 0 ? 0 : `>-=${blockOverlap}`);
+    const position = i === 0 ? 0 : `>-=${blockOverlap}`;
+    if (isMarketingHeadline(textBlocks[i])) {
+      revealHeadline(textBlocks[i], tl, position);
+    } else {
+      revealBodyCopy(textBlocks[i], tl, position);
+    }
   }
 
   const list = sectionEl.querySelector('.orby-marketing__list');
@@ -772,7 +946,7 @@ export function showInProgressStatic(sectionEl) {
 
   sectionEl
     .querySelectorAll(
-      '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img',
+      '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__png-marquee-img',
     )
     .forEach((el) => {
       el.classList.add('is-loaded');
@@ -806,7 +980,7 @@ export function revealMarketingSection(sectionEl) {
     sectionEl.classList.add('orby-marketing__section--revealed');
     sectionEl
       .querySelectorAll(
-        '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__png-marquee-img',
+        '.orby-marketing__figure-media, .orby-marketing__showcase-img, .orby-marketing__pro-card-img, .orby-marketing__pro-card-video, .orby-marketing__png-marquee-img',
       )
       .forEach((el) => {
         el.classList.add('is-loaded');
@@ -830,6 +1004,15 @@ export function revealMarketingSection(sectionEl) {
           revealFigureCredit(mask);
         }
       });
+    if (isProSection(sectionEl)) {
+      sectionEl.querySelectorAll('[data-orby-marketing-reveal="pro-card"]').forEach((card) => {
+        card.dataset.orbyMarketingProCardRevealed = '1';
+      });
+      sectionEl.querySelectorAll('.orby-marketing__pro-card-media').forEach((mediaWrap) => {
+        setMediaPlaceholderOpacity(mediaWrap, 0);
+      });
+      revealProFlipGalleries(sectionEl);
+    }
     const clearTargets = isIntroTurntableSection(sectionEl)
       ? sectionEl.querySelectorAll('*:not(.orby-marketing__intro-turntable-wrap):not(.orby-marketing__intro-turntable-canvas):not(.orby-marketing__intro-turntable-poster)')
       : sectionEl.querySelectorAll('*');
@@ -876,6 +1059,7 @@ export function prepareMarketingSections(root) {
 /** Stop in-flight GSAP when leaving the home page (studio session). */
 export function cancelAllMarketingMotion(root) {
   if (!root) return;
+  root.querySelectorAll('.orby-marketing__section--pro').forEach(disconnectProCardReveals);
   gsap.killTweensOf(
     root.querySelectorAll(
       '*:not(.orby-marketing__intro-turntable-wrap):not(.orby-marketing__intro-turntable-canvas):not(.orby-marketing__intro-turntable-poster)',

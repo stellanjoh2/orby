@@ -1,25 +1,73 @@
 /**
  * Orby site top nav — one stylesheet for the marketing homepage and all subpages.
- * Magic pill + scroll nav bar + ultra-wide ramp (same cascade everywhere).
+ * Depends on orby-magic-btn.css, marketing/13-scroll-nav.css, orby-ultra-wide-home.css,
+ * and marketing/14-ultra-wide.css (link or @import those before this file).
  */
-@import url('./orby-magic-btn.css');
-@import url('./marketing/13-scroll-nav.css');
-@import url('./orby-ultra-wide-home.css');
-@import url('./marketing/14-ultra-wide.css');
 
-/* Subpages — always show the fixed nav (class set by orbyMarketingScrollNav.js) */
+/* Subpages — fixed nav + layout tokens (class on <html> before first paint) */
+html.orby-legal-site-nav {
+  --orby-home-full-width: 2560px;
+  --orby-marketing-split-media-ref-width: 2560px;
+  --orby-ultra-wide-max-factor: 1.5;
+  --orby-scroll-nav-height-ramp: clamp(
+    0,
+    calc((160rem - 100vw) / 40rem),
+    1
+  );
+  --orby-legal-scroll-nav-height: calc(84px + 8px * var(--orby-scroll-nav-height-ramp));
+  --orby-legal-ultra-ramp: clamp(0, calc((100vw - 2560px) / 1280px), 1);
+  --legal-ultra-scale: calc(1 + 0.375 * var(--orby-legal-ultra-ramp));
+  /* Match syncSubpageNavOffset(nav): bar height + 108px breathing room */
+  --orby-legal-nav-offset: calc(var(--orby-legal-scroll-nav-height) + 108px);
+}
+
+@media (min-width: 2560px) {
+  html.orby-legal-site-nav {
+    --legal-max: calc(896px + 544px * var(--orby-legal-ultra-ramp));
+  }
+}
+
+@media (min-width: 2561px) {
+  html.orby-legal-site-nav {
+    --orby-ultra-wide-factor: min(
+      var(--orby-ultra-wide-max-factor),
+      calc(100vw / var(--orby-home-full-width))
+    );
+    --orby-legal-scroll-nav-height: calc(84px * var(--orby-ultra-wide-factor));
+    --orby-legal-nav-offset: calc(var(--orby-legal-scroll-nav-height) + 108px);
+  }
+}
+
 html.orby-legal-site-nav .orby-marketing-scroll-nav {
   display: block;
-  opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  /* No fade-in on subpage load / navigation — bar is in HTML before first paint. */
+  transition: none;
   /* Match marketing nav sizing context (avoid legal page root scale drift). */
   font-size: 16px;
+}
+
+/* Fallback chrome until nav markup exists (non-HTML fallback pages only). */
+html.orby-legal-site-nav:not(:has([data-orby-marketing-scroll-nav]))::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 13;
+  height: calc(var(--orby-legal-scroll-nav-height, 84px) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  background: var(--orby-marketing-panel-bg, var(--orby-surface-muted, #151515));
+  pointer-events: none;
 }
 
 html.orby-legal-site-nav .orby-marketing-scroll-nav__link,
 html.orby-legal-site-nav .orby-marketing-scroll-nav__link:visited,
 html.orby-legal-site-nav .orby-marketing-scroll-nav__link:hover,
-html.orby-legal-site-nav .orby-marketing-scroll-nav__link:focus-visible {
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:focus-visible,
+html.orby-legal-site-nav .orby-marketing-scroll-nav__brand {
+  -webkit-tap-highlight-color: transparent;
   text-decoration: none;
 }

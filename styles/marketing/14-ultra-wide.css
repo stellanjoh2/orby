@@ -32,6 +32,7 @@
 
     --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
     --orby-marketing-meta-size: calc(14px * var(--orby-ultra-wide-factor));
+    --orby-marketing-pro-card-title-size: calc(22px * var(--orby-ultra-wide-factor));
     --orby-marketing-pro-card-body-size: calc(18px * var(--orby-ultra-wide-factor));
     --orby-marketing-feature-list-size: calc(18px * var(--orby-ultra-wide-factor));
     --orby-marketing-feature-lede-size: calc(22px * var(--orby-ultra-wide-factor));
@@ -113,7 +114,9 @@
   }
 
   #orby-marketing .orby-marketing__pro-card-title {
-    font-size: calc(22px * var(--orby-ultra-wide-factor));
+    font-size: calc(
+      var(--orby-marketing-pro-card-title-size, 22px) * var(--orby-ultra-wide-factor)
+    );
   }
 
   #orby-marketing .orby-marketing__faq-icon {
@@ -133,6 +136,13 @@
       68px * var(--orby-marketing-feature-body-measure) /
         var(--orby-marketing-feature-body-measure-peak)
     );
+  }
+
+  /* Footer — same gutters + logotype scale as scroll nav */
+  #orby-marketing .orby-marketing__footer-bar {
+    --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
+    --orby-footer-edge-x: calc(112px * var(--orby-ultra-wide-factor));
+    --orby-footer-brand-height: calc(58.4px * var(--orby-ultra-wide-factor) * 0.88);
   }
 
   /* Fixed top nav — scale chrome @ 3840; link inset matches marketing frame */

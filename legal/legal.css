@@ -1,16 +1,17 @@
 /**
  * Orby — shared styles for standalone legal pages (privacy, credits, about, terms, etc.).
  * Self-contained; does not import the main app stylesheet.
+ *
+ * Subpages link nav deps + orby-site-nav.css before this file (see about/index.html).
+ * Preload Mattone + Geist woff2 in <head> before CSS to avoid swap layout shift.
  */
-
-@import url('../styles/orby-site-nav.css');
 
 @font-face {
   font-family: 'Mattone Regular';
   src: url('../assets/fonts/Mattone-Regular.woff2') format('woff2');
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -18,7 +19,7 @@
   src: url('../assets/fonts/Mattone-Bold.ttf') format('truetype');
   font-style: normal;
   font-weight: 700;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -26,7 +27,7 @@
   src: url('../assets/fonts/Geist-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -34,7 +35,7 @@
   src: url('../assets/fonts/Geist-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -42,7 +43,7 @@
   src: url('../assets/fonts/Geist-Regular.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -50,7 +51,7 @@
   src: url('../assets/fonts/Geist-Regular.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -58,7 +59,7 @@
   src: url('../assets/fonts/Geist-Regular.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }
 
 :root {
@@ -86,6 +87,8 @@
   --legal-secondary-size: 0.9375rem;
   --legal-sub-size: 1rem;
   --legal-ultra-scale: 1;
+  /* 1920 → 2560 straight shrink; 1 @ 2560+ (ultra ramp is separate) */
+  --legal-desktop-shrink: 1;
 }
 
 *,
@@ -267,11 +270,11 @@ body.legal-doc:not(.legal-doc--about) strong {
 
 @media (min-width: 1281px) {
   /*
-   * Ultra-wide type ramp (2560 → 3840) — scales all rem-based legal copy.
+   * Ultra-wide (2560 → 3840) via JS --legal-ultra-scale; 1920 shrink in block below.
    * Site nav uses px tokens in 13-scroll-nav.css so it stays marketing-matched.
    */
   html:has(body.legal-doc) {
-    font-size: calc(16px * var(--legal-ultra-scale));
+    font-size: calc(16px * var(--legal-desktop-shrink) * var(--legal-ultra-scale));
   }
 
   .legal-wrap {
@@ -299,6 +302,17 @@ body.legal-doc:not(.legal-doc--about) strong {
   body.legal-doc--about {
     --legal-about-body-size: 1.375rem;
     --legal-about-intro-size: 1.75rem;
+  }
+}
+
+/* 1920×1080 band — straight ~12% down; ramps back to 1 @ 2560 (ultra steps unchanged) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  html:has(body.legal-doc) {
+    --legal-desktop-shrink: clamp(
+      0.88,
+      calc(0.88 + 0.12 * (100vw - 1920px) / 640px),
+      1
+    );
   }
 }
 

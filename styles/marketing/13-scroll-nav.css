@@ -28,7 +28,12 @@
   --orby-scroll-nav-chrome-height: calc(
     58.4px * var(--drop-hero-wide-factor) * var(--orby-scroll-nav-magic-v-scale)
   );
-  --orby-marketing-support-size: clamp(12px, 1.2vw, 14.4px);
+  /* 14px @ 1920, 14.4px @ 2560 — match #orby-marketing support ramp (not 1.2vw) */
+  --orby-marketing-support-size: clamp(
+    14px,
+    calc(14px + 0.4px * (1 - var(--orby-scroll-nav-height-ramp))),
+    14.4px
+  );
   /*
    * Logo / Browse inset — match showcase gallery gutters (112px @ 2560),
    * not the wider home copy column (--orby-home-padding-x).
@@ -43,6 +48,8 @@
   --orby-scroll-nav-cta-reserve: calc(
     var(--drop-hero-magic-btn-width) + var(--orby-scroll-nav-edge-x) + 24px
   );
+  --orby-scroll-nav-show-duration: 0.22s;
+  --orby-scroll-nav-hide-duration: 0.33s; /* 50% slower slide-out on scroll down */
 
   position: fixed;
   top: 0;
@@ -51,19 +58,26 @@
   z-index: 13;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
-  background: color-mix(in srgb, var(--orby-black, #080808) 80%, transparent);
-  opacity: 0;
+  background: var(--orby-marketing-panel-bg, var(--orby-surface-muted, #151515));
   visibility: hidden;
+  opacity: 0;
   pointer-events: none;
+  transform: translate3d(0, calc(-100% - env(safe-area-inset-top, 0px)), 0);
   transition:
-    opacity 0.18s ease,
-    visibility 0.18s ease;
+    transform var(--orby-scroll-nav-hide-duration) cubic-bezier(0.16, 1, 0.3, 1),
+    opacity calc(var(--orby-scroll-nav-hide-duration) * 0.72) ease,
+    visibility 0s linear var(--orby-scroll-nav-hide-duration);
 }
 
 .orby-marketing-scroll-nav--visible {
-  opacity: 1;
   visibility: visible;
+  opacity: 1;
   pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform var(--orby-scroll-nav-show-duration) cubic-bezier(0.16, 1, 0.3, 1),
+    opacity calc(var(--orby-scroll-nav-show-duration) * 0.72) ease,
+    visibility 0s linear 0s;
 }
 
 /* Ultra-wide — gallery gutter scales with --orby-ultra-wide-factor (168px @ 3840) */
@@ -82,7 +96,9 @@
 }
 
 .orby-marketing-scroll-nav__brand,
-a.orby-marketing-scroll-nav__brand {
+.orby-marketing-scroll-nav__brand:visited,
+a.orby-marketing-scroll-nav__brand,
+a.orby-marketing-scroll-nav__brand:visited {
   position: absolute;
   left: var(--orby-scroll-nav-edge-x);
   top: 50%;
@@ -105,15 +121,14 @@ a.orby-marketing-scroll-nav__brand {
   transition: color 0.16s ease;
 }
 
-.orby-marketing-scroll-nav__brand:hover,
-.orby-marketing-scroll-nav__brand:focus-visible,
-a.orby-marketing-scroll-nav__brand:hover,
-a.orby-marketing-scroll-nav__brand:focus-visible {
+.orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:hover,
+.orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:focus-visible,
+.orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:visited:hover,
+.orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:visited:focus-visible {
   color: #fff;
 }
 
-.orby-marketing-scroll-nav__brand:focus-visible,
-a.orby-marketing-scroll-nav__brand:focus-visible {
+.orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
   outline-offset: 4px;
   border-radius: 2px;
@@ -212,7 +227,7 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
   border-radius: 2px;
 }
 
-/* Browse magic pill — same look as dropzone, slightly shorter */
+/* Browse — flat lime outline (no glow / spin) */
 .orby-marketing-scroll-nav__cta {
   position: absolute;
   right: var(--orby-scroll-nav-edge-x);
@@ -226,25 +241,29 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
   transform: translateY(-50%);
 }
 
-.orby-marketing-scroll-nav__cta .orby-magic-btn-host,
-.orby-marketing-scroll-nav__cta .orby-magic-btn.dropzone-btn {
-  --orby-magic-btn-bleed: calc(6px * var(--drop-hero-wide-factor));
-  --orby-magic-btn-glow-blur: calc(10px * var(--drop-hero-wide-factor));
-  --orby-magic-btn-rim-a: calc(5px * var(--drop-hero-wide-factor));
-  --orby-magic-btn-rim-b: calc(10px * var(--drop-hero-wide-factor));
-  --orby-magic-btn-rim-c: calc(16px * var(--drop-hero-wide-factor));
+.orby-marketing-scroll-nav__cta .orby-magic-btn-host {
+  --orby-magic-btn-bleed: 0px;
+  --orby-magic-btn-glow-blur: 0px;
+  --orby-magic-btn-rim-a: 0px;
+  --orby-magic-btn-rim-b: 0px;
+  --orby-magic-btn-rim-c: 0px;
+  --orby-magic-btn-glow-pad: 0px;
   --orby-magic-btn-stroke: calc(1.5px * var(--drop-hero-wide-factor));
+  padding: 0;
+  margin: 0;
 }
 
-.orby-marketing-scroll-nav__cta .orby-magic-btn.dropzone-btn {
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline {
   width: var(--drop-hero-magic-btn-width);
   min-width: var(--drop-hero-magic-btn-width);
   height: var(--orby-scroll-nav-chrome-height);
   min-height: var(--orby-scroll-nav-chrome-height);
   font-size: var(--orby-marketing-support-size);
+  color: var(--brand-primary, #c4ff00);
+  transition: color 0.16s ease;
 }
 
-.orby-marketing-scroll-nav__cta .orby-magic-btn.dropzone-btn .orby-magic-btn__inner {
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline .orby-magic-btn__inner {
   font-size: inherit;
   padding: calc(
       var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor) *
@@ -252,38 +271,56 @@ a.orby-marketing-scroll-nav__brand:focus-visible {
     )
     calc(var(--ui-orby-pill-pad-inline-normal) * var(--drop-hero-wide-factor));
   gap: calc(8px * var(--drop-hero-wide-factor));
+  transform: none;
+  transition: none;
 }
 
-.orby-marketing-scroll-nav__cta .orby-magic-btn.dropzone-btn .orby-magic-btn__arrow {
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline .orby-magic-btn__arrow {
   width: 1.125em;
   height: 1.125em;
+  transform: none;
+  transition: color 0.16s ease;
 }
 
-html.orby-dropzone-glow-scrolling body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::before,
-html.orby-dropzone-glow-scrolling body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::after,
-html.orby-dropzone-glow-off-screen body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::before,
-html.orby-dropzone-glow-off-screen body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::after,
-html.orby-dropzone-glow-tab-hidden body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::before,
-html.orby-dropzone-glow-tab-hidden body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::after,
-html.orby-window-resizing body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::before,
-html.orby-window-resizing body.dropzone-visible
-  .orby-marketing-scroll-nav__cta
-  .orby-magic-btn::after {
-  animation-play-state: paused;
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline .orby-magic-btn__fill {
+  display: none;
+}
+
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline::after {
+  content: none;
+  display: none;
+}
+
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline::before {
+  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, #c4ff00);
+  background: transparent;
+  animation: none;
+  box-shadow: none;
+  filter: none;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:hover,
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:focus-visible {
+  color: var(--orby-black, #080808);
+  outline: none;
+}
+
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:hover::before,
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:focus-visible::before {
+  background: #fff;
+  border-color: #fff;
+  box-shadow: none;
+  filter: none;
+}
+
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:hover .orby-magic-btn__inner,
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:focus-visible .orby-magic-btn__inner,
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:hover .orby-magic-btn__arrow,
+.orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline:focus-visible .orby-magic-btn__arrow {
+  transform: none;
 }
 
 html:not(.orby-home-scroll):not(.orby-legal-site-nav) .orby-marketing-scroll-nav,
@@ -328,6 +365,12 @@ html:not(.orby-home-scroll):not(.orby-legal-site-nav) .orby-marketing-scroll-nav
 @media (prefers-reduced-motion: reduce) {
   .orby-marketing-scroll-nav {
     transition: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .orby-marketing-scroll-nav:not(.orby-marketing-scroll-nav--visible) {
+    opacity: 0;
   }
 
   .orby-marketing-scroll-nav__link::after,

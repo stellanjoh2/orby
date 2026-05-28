@@ -1,8 +1,7 @@
 /**
  * Auto-cycling showcase gallery, dot nav, arrow keys, and lower-third credits.
  */
-import gsap from 'gsap';
-import { prefersReducedMotion } from '../ui/modalReveal.js';
+import { gsap, prefersReducedMotion } from './marketingMotion.js';
 import {
   escapeMarketingHtml,
   formatMarketingImageCreditHtml,

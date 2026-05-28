@@ -6,6 +6,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { injectAllSubpageSiteNav } from './marketing/injectSubpageSiteNav.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -100,5 +101,13 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, '0.0.0.0', () => {
+  try {
+    const { updated } = injectAllSubpageSiteNav({ root });
+    if (updated > 0) {
+      console.log(`Injected subpage site nav into ${updated} HTML file(s)`);
+    }
+  } catch (err) {
+    console.warn('[Orby] Subpage nav inject skipped:', err?.message || err);
+  }
   console.log(`Orby dev server → http://127.0.0.1:${port}/  (Ctrl+C to stop)`);
 });

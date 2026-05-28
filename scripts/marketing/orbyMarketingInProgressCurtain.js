@@ -27,6 +27,9 @@ export function initInProgressCurtainReveal(root) {
 
   let raf = 0;
   let endcapOn = false;
+  let scrollBound = false;
+  /** @type {IntersectionObserver | null} */
+  let proximityObserver = null;
 
   const sync = () => {
     raf = 0;
@@ -50,13 +53,44 @@ export function initInProgressCurtainReveal(root) {
     raf = requestAnimationFrame(sync);
   };
 
-  sync();
-  window.addEventListener('scroll', onScroll, SCROLL_OPTS);
+  const bindScrollSync = () => {
+    if (scrollBound) return;
+    scrollBound = true;
+    window.addEventListener('scroll', onScroll, SCROLL_OPTS);
+    sync();
+  };
+
+  const unbindScrollSync = () => {
+    if (!scrollBound) return;
+    scrollBound = false;
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    window.removeEventListener('scroll', onScroll, SCROLL_OPTS);
+    endcapOn = false;
+    stage.classList.remove('is-endcap-active', 'is-revealed');
+  };
+
   window.addEventListener('resize', onScroll, SCROLL_OPTS);
 
+  if (typeof IntersectionObserver === 'function') {
+    proximityObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries.find((e) => e.target === ctaSection);
+        if (!entry) return;
+        if (entry.isIntersecting) bindScrollSync();
+        else unbindScrollSync();
+      },
+      { root: null, rootMargin: '40% 0px', threshold: 0 },
+    );
+    proximityObserver.observe(ctaSection);
+  } else {
+    bindScrollSync();
+  }
+
   return () => {
-    if (raf) cancelAnimationFrame(raf);
-    window.removeEventListener('scroll', onScroll, SCROLL_OPTS);
+    proximityObserver?.disconnect();
+    proximityObserver = null;
+    unbindScrollSync();
     window.removeEventListener('resize', onScroll, SCROLL_OPTS);
     endcapOn = false;
     stage.classList.remove('is-endcap-active', 'is-revealed');

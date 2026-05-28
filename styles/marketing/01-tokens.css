@@ -154,12 +154,16 @@
   --orby-marketing-feature-copy-gap: calc(36px * var(--orby-marketing-scale));
   /* In Progress white panel — body copy → Request Preview */
   --orby-marketing-lede-cta-gap: 54px;
-  /* Marketing footer — logotype 40px, social 32px, 18px legal line */
+  /* Marketing footer — logotype 40px, social 32px; meta line 14px @ 1920 → 18px @ 2560 */
   --orby-footer-logotype-height: 40px;
   --orby-footer-social-height: 32px;
   --orby-footer-social-gap: 28px;
   --orby-footer-lift: 36px;
-  --orby-marketing-footer-meta-size: 18px;
+  --orby-marketing-footer-meta-size: clamp(
+    14px,
+    calc(14px + 4px * (1 - var(--orby-marketing-wide-type-ramp))),
+    18px
+  );
   --orby-marketing-eyebrow-headline-gap: var(--orby-marketing-feature-copy-gap);
   /* Section headline → lede (showcase / pro / FAQ) */
   --orby-marketing-headline-body-gap: calc(32px * var(--orby-marketing-scale));
@@ -187,7 +191,7 @@
   --orby-marketing-centered-lede-max: calc(61.2rem * var(--orby-marketing-scale));
   /*
    * Informative / supporting type — ramps 1920→2560 (headlines keep headline-scale).
-   * Support 14px @ 2560 → 0.9rem @ 1920; list 15px→18px; feature lede 18px→22px; intro lede 22px→30px.
+   * Support / gray copy 14px @ 1920 → 14px @ 2560; pro titles 18→22px; lede 22→30px intro.
    */
   --orby-marketing-wide-type-ramp: clamp(
     0,
@@ -196,24 +200,29 @@
   );
   --orby-marketing-support-size: clamp(
     14px,
-    calc(14px + 0.4px * var(--orby-marketing-wide-type-ramp)),
-    0.9rem
+    calc(14px + 0.4px * (1 - var(--orby-marketing-wide-type-ramp))),
+    14px
   );
-  /* Footer meta line — 14px @ 2560, 16px @ 1920 */
+  /* Footer meta line — 14px @ 1920, 16px @ 2560 */
   --orby-marketing-meta-size: clamp(
     14px,
-    calc(14px + 2px * var(--orby-marketing-wide-type-ramp)),
+    calc(14px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
     16px
   );
-  /* Pro card gray copy — 18px @ 2560, 15px @ 1920 */
+  /* Pro card — lime title 18px @ 1920, 22px @ 2560; gray body 14px @ 1920, 18px @ 2560 */
+  --orby-marketing-pro-card-title-size: clamp(
+    18px,
+    calc(18px + 4px * (1 - var(--orby-marketing-wide-type-ramp))),
+    22px
+  );
   --orby-marketing-pro-card-body-size: clamp(
-    15px,
-    calc(15px + 3px * (1 - var(--orby-marketing-wide-type-ramp))),
+    14px,
+    calc(14px + 4px * (1 - var(--orby-marketing-wide-type-ramp))),
     18px
   );
   --orby-marketing-feature-list-size: clamp(
-    15px,
-    calc(15px + 3px * (1 - var(--orby-marketing-wide-type-ramp))),
+    14px,
+    calc(14px + 4px * (1 - var(--orby-marketing-wide-type-ramp))),
     1.125rem
   );
   --orby-marketing-feature-list-line: 1.55;
@@ -353,8 +362,8 @@
     );
     --orby-marketing-support-size: clamp(
       14px,
-      calc(14px + 0.4px * var(--orby-marketing-wide-type-ramp)),
-      0.9rem
+      calc(14px + 0.4px * (1 - var(--orby-marketing-wide-type-ramp))),
+      14px
     );
   }
 }

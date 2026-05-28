@@ -1,12 +1,9 @@
 /**
  * Intro turntable — canvas sequence driven by natural scroll (no pin / scroll-jack).
  * Web delivery: WebP/JPEG frames, fetch + createImageBitmap, static poster on slow/narrow viewports.
+ * Scroll scrub uses rAF + IntersectionObserver — no ScrollTrigger plugin.
  */
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { prefersReducedMotion } from '../ui/modalReveal.js';
-
-gsap.registerPlugin(ScrollTrigger);
+import { gsap, prefersReducedMotion } from './marketingMotion.js';
 
 /** @type {const} */
 export const INTRO_TURNTABLE_SEQUENCE = {
@@ -30,14 +27,29 @@ export const INTRO_TURNTABLE_SEQUENCE = {
   },
 };
 
-const SCROLL_TRIGGER_ID = 'orby-intro-turntable';
 const PRELOAD_CONCURRENCY = 12;
+const SCROLL_ACTIVATE_ROOT_MARGIN = '240px 0px';
 const MAX_DPR = 2;
 const STATIC_MAX_WIDTH_PX = 767;
 /** Below 1920, layout math uses these refs so resize does not re-center the car. */
 export const INTRO_TURNTABLE_LAYOUT_REF_WIDTH_PX = 1920;
 export const INTRO_TURNTABLE_LAYOUT_REF_HEIGHT_PX = 1080;
 const INTRO_TURNTABLE_NARROW_MQ = `(max-width: ${INTRO_TURNTABLE_LAYOUT_REF_WIDTH_PX - 1}px)`;
+
+/** @type {(() => void) | null} */
+let activeTurntableRepaint = null;
+
+/**
+ * Maps section position to 0–1 — same range as ScrollTrigger start/end top bottom → bottom top.
+ * @param {HTMLElement} section
+ */
+function computeSectionScrollProgress(section) {
+  const rect = section.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const range = vh + rect.height;
+  if (range <= 0) return 0;
+  return Math.min(1, Math.max(0, (vh - rect.top) / range));
+}
 
 /** @type {TurntableFrame[] | null} */
 let frameCache = null;
@@ -460,9 +472,19 @@ export function initIntroTurntable(root) {
   /** @type {TurntableFrame[]} */
   let frames = new Array(sourceIndices.length);
   let paintedFrame = -1;
-  let scrollTrigger = null;
+  let scrollScrubActive = false;
+  let scrollRaf = 0;
+  /** @type {(() => void) | null} */
+  let detachScrollScrub = null;
+  /** @type {IntersectionObserver | null} */
+  let scrollActivateObserver = null;
   let resizeObserver = null;
   let resizeTimer = 0;
+
+  const currentScrubIndex = () =>
+    scrollScrubActive
+      ? computeSectionScrollProgress(section) * Math.max(0, frames.length - 1)
+      : 0;
 
   const paint = (scrubIndex) => {
     const idx = Math.min(frames.length - 1, Math.max(0, Math.round(scrubIndex)));
@@ -474,13 +496,13 @@ export function initIntroTurntable(root) {
     drawFrame(ctx, frame, metrics.bitmapW, metrics.bitmapH);
   };
 
+  const paintFromScroll = () => {
+    paint(currentScrubIndex());
+  };
+
   const onResize = () => {
     paintedFrame = -1;
-    paint(
-      scrollTrigger
-        ? scrollTrigger.progress * Math.max(0, frames.length - 1)
-        : 0,
-    );
+    paintFromScroll();
   };
 
   const scheduleResize = () => {
@@ -496,19 +518,51 @@ export function initIntroTurntable(root) {
   };
 
   const attachScrollScrub = () => {
-    if (scrollTrigger || prefersReducedMotion()) return;
-    scrollTrigger = ScrollTrigger.create({
-      id: SCROLL_TRIGGER_ID,
-      trigger: section,
-      start: 'top bottom',
-      end: 'bottom top',
-      invalidateOnRefresh: true,
-      onUpdate: (self) => {
-        paint(self.progress * Math.max(0, frames.length - 1));
+    if (scrollScrubActive || prefersReducedMotion()) return;
+    scrollScrubActive = true;
+
+    const onScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = window.requestAnimationFrame(() => {
+        scrollRaf = 0;
+        paintFromScroll();
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    detachScrollScrub = () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollRaf) {
+        window.cancelAnimationFrame(scrollRaf);
+        scrollRaf = 0;
+      }
+      scrollScrubActive = false;
+      detachScrollScrub = null;
+    };
+
+    paintFromScroll();
+  };
+
+  /** Attach scroll scrub only while the section is near the viewport — detach on exit. */
+  const bindScrollScrubVisibility = () => {
+    if (prefersReducedMotion() || typeof IntersectionObserver !== 'function') {
+      attachScrollScrub();
+      return;
+    }
+
+    scrollActivateObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries.find((e) => e.target === section);
+        if (!entry) return;
+        if (entry.isIntersecting) {
+          attachScrollScrub();
+        } else {
+          detachScrollScrub?.();
+        }
       },
-    });
-    onResize();
-    ScrollTrigger.refresh();
+      { root: null, rootMargin: SCROLL_ACTIVATE_ROOT_MARGIN, threshold: 0 },
+    );
+    scrollActivateObserver.observe(section);
   };
 
   const applyLoadedFrames = (loaded) => {
@@ -516,12 +570,7 @@ export function initIntroTurntable(root) {
     frames = loaded;
     paintedFrame = -1;
     markReady();
-    paint(
-      scrollTrigger
-        ? scrollTrigger.progress * Math.max(0, frames.length - 1)
-        : 0,
-    );
-    attachScrollScrub();
+    paintFromScroll();
   };
 
   const paintFirstCached = () => {
@@ -551,15 +600,19 @@ export function initIntroTurntable(root) {
   resizeObserver?.observe(stage ?? canvas.parentElement ?? canvas);
   window.addEventListener('resize', scheduleResize, { passive: true });
 
+  activeTurntableRepaint = onResize;
   paintFirstCached();
+  bindScrollScrubVisibility();
   void preloadIntroTurntableFrames().then(applyLoadedFrames);
 
   return () => {
+    activeTurntableRepaint = null;
     window.clearTimeout(resizeTimer);
     resizeObserver?.disconnect();
     window.removeEventListener('resize', scheduleResize);
-    scrollTrigger?.kill();
-    scrollTrigger = null;
+    scrollActivateObserver?.disconnect();
+    scrollActivateObserver = null;
+    detachScrollScrub?.();
     frames = [];
     paintedFrame = -1;
   };
@@ -567,9 +620,7 @@ export function initIntroTurntable(root) {
 
 /** @param {HTMLElement} [root] */
 export function killIntroTurntableScrollTriggers(root) {
-  ScrollTrigger.getAll().forEach((st) => {
-    if (st.vars?.id === SCROLL_TRIGGER_ID) st.kill();
-  });
+  activeTurntableRepaint = null;
   if (root) {
     root
       .querySelectorAll('.orby-marketing__section--intro-turntable')
@@ -582,7 +633,7 @@ export function killIntroTurntableScrollTriggers(root) {
   }
 }
 
-/** Batch ScrollTrigger layout after marketing enhancements mount. */
+/** Repaint turntable canvas after marketing layout shifts (replaces ScrollTrigger.refresh). */
 export function refreshIntroTurntableScrollTriggers() {
-  ScrollTrigger.refresh();
+  activeTurntableRepaint?.();
 }

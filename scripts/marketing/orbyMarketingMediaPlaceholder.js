@@ -1,7 +1,7 @@
 /**
  * Dark lazy-load plate — real DOM layer (Safari-safe); fades with media via GSAP opacity.
  */
-import gsap from 'gsap';
+import { gsap } from './marketingMotion.js';
 
 const PLACEHOLDER_CLASS = 'orby-marketing__media-ph';
 

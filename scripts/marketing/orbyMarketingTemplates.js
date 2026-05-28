@@ -640,7 +640,7 @@ function renderMarketingSiteNavHtml(fields, options) {
       </a>`;
 
   const browseCta = orbyMagicButtonHtml('Browse Files', {
-    extraClass: 'dropzone-btn orby-marketing-scroll-nav__browse',
+    extraClass: 'orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse',
     attrs: 'data-orby-marketing-browse',
   });
 
@@ -701,6 +701,16 @@ export function renderSiteNav(section, base = './') {
     homeHref: resolveMarketingHomeHref(base),
     brandScrollTop: base === './',
   });
+}
+
+/** Static HTML for subpages — embed via `npm run inject:subpage-site-nav` (see injectSubpageSiteNav.mjs). */
+export function renderStaticSubpageSiteNav(section, base = '../') {
+  return renderSiteNav(section, base)
+    .replace(
+      'class="orby-marketing-scroll-nav"',
+      'class="orby-marketing-scroll-nav orby-marketing-scroll-nav--visible"',
+    )
+    .replace(' aria-hidden="true"', '');
 }
 
 function renderFooterMeta(section, options = {}) {

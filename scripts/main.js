@@ -103,24 +103,32 @@ const stateStore = new StateStore();
 const ui = new UIManager(eventBus, stateStore);
 const tooltips = new TooltipController();
 const scene = new SceneManager(eventBus, stateStore, ui);
-const gamepad = new GamepadController({
-  cameraController: scene.cameraController,
-  stateStore,
-  eventBus,
-  uiManager: ui,
-  sceneManager: scene,
-});
 
-ui.init();
+/** Gamepad poll loop — deferred until first studio entrance (see UIManager.ensureStudioUiReady). */
+let gamepad = null;
+function ensureGamepad() {
+  if (gamepad) return gamepad;
+  gamepad = new GamepadController({
+    cameraController: scene.cameraController,
+    stateStore,
+    eventBus,
+    uiManager: ui,
+    sceneManager: scene,
+  });
+  return gamepad;
+}
+
+ui.initShell();
 // WebGL studio boots on first model load (see SceneManager.ensureStudioReady).
 
-window.orby = { eventBus, stateStore, ui, scene, gamepad, tooltips };
+window.orby = { eventBus, stateStore, ui, scene, tooltips, ensureGamepad, get gamepad() { return gamepad; } };
 
 /** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
 try {
   const q = new URLSearchParams(window.location.search);
   if (q.get('exportOverlayDebug') === '1' && !document.documentElement.classList.contains('mobile-landing')) {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
+      await ui.ensureStudioUiReady();
       ui.toggleOfflineExportOverlayPreview?.();
     });
   }

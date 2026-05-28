@@ -169,6 +169,13 @@ body.legal-doc--stats h2.legal-stats__formats-title {
   color: var(--legal-accent-hover);
 }
 
+/* Big numbers use px — follow legal 1920→2560 shrink (rem copy uses html font-size) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .legal-doc p.legal-stats__value {
+    font-size: calc(112px * var(--legal-desktop-shrink, 0.88));
+  }
+}
+
 @media (min-width: 2561px) {
   .legal-doc p.legal-stats__value {
     font-size: calc(112px * var(--legal-ultra-scale, 1));

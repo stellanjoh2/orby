@@ -89,6 +89,13 @@
   animation-play-state: running;
 }
 
+/* Pause the loop during scroll — same signal as dropzone glow (StartMenuController). */
+html.orby-dropzone-glow-scrolling
+  .orby-marketing__png-marquee--playing
+  .orby-marketing__png-marquee-track {
+  animation-play-state: paused;
+}
+
 .orby-marketing__png-marquee-group {
   display: flex;
   flex: 0 0 auto;
@@ -284,7 +291,7 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
 }
 
 .orby-marketing__showcase-credit {
-  font-size: 18px;
+  font-size: var(--orby-marketing-pro-card-title-size, 18px);
 }
 
 .orby-marketing__figure-credit {

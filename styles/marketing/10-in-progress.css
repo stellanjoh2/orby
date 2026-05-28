@@ -76,8 +76,8 @@
   min-height: 100dvh;
   padding: 0;
   padding-bottom: calc(
-    3.25rem + var(--orby-footer-lift, 36px) + var(--orby-footer-logotype-height, 40px) +
-      var(--orby-marketing-footer-meta-size, 18px) * 1.45
+    3.25rem + var(--orby-footer-lift, 36px) + var(--orby-footer-brand-height, 51px) +
+      var(--orby-marketing-footer-meta-size, 14px) * 1.45
   );
   overflow-x: clip;
   background: #fff;

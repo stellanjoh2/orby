@@ -1,6 +1,6 @@
 /**
  * Homepage marketing one-pager — mounted below the dropzone hero.
- * Kept separate from the studio runtime: lazy DOM, lazy CSS, no Three.js coupling.
+ * Kept separate from the studio runtime: idle-mounted DOM/CSS, no Three.js coupling.
  * `html.orby-marketing-reduced` is set from main.js via marketingPerformanceTier.js.
  * `html.orby-marketing-ui-crop` (?uiCrop=1) is toggled from main.js at boot.
  */
@@ -113,7 +113,8 @@ function createScrollCue(onExplore) {
   cue.className = 'orby-marketing-scroll-cue';
   cue.setAttribute('data-orby-marketing-scroll-cue', '');
   cue.setAttribute('aria-label', MARKETING_SCROLL_CUE_ARIA_LABEL);
-  cue.innerHTML = '<span class="orby-marketing-scroll-cue__icon" aria-hidden="true"></span>';
+  cue.innerHTML =
+    '<span class="orby-marketing-scroll-cue__label">Learn More</span><span class="orby-marketing-scroll-cue__icon" aria-hidden="true"></span>';
   cue.addEventListener('click', () => {
     onExplore();
   });
@@ -123,25 +124,16 @@ function createScrollCue(onExplore) {
 
 /** Fade the scroll cue out quickly once the user scrolls down. */
 function bindScrollCueFade(cue) {
-  const fadeStart = 1;
-  const fadeEnd = 48;
+  const fadeThreshold = 48;
   let ticking = false;
 
   const update = () => {
     ticking = false;
     if (!cue || cue.hidden) return;
-    const y = window.scrollY;
-    if (y <= fadeStart) {
-      cue.classList.remove('orby-marketing-scroll-cue--hidden');
-      cue.style.removeProperty('opacity');
-      cue.style.removeProperty('pointer-events');
-      return;
-    }
-    const t = Math.min(1, (y - fadeStart) / (fadeEnd - fadeStart));
-    cue.classList.toggle('orby-marketing-scroll-cue--hidden', t >= 1);
-    cue.style.opacity = String(1 - t);
-    if (t >= 1) cue.style.pointerEvents = 'none';
-    else cue.style.removeProperty('pointer-events');
+    document.documentElement.classList.toggle(
+      'orby-scroll-cue-faded',
+      window.scrollY > fadeThreshold,
+    );
   };
 
   const onScroll = () => {
@@ -152,11 +144,14 @@ function bindScrollCueFade(cue) {
 
   window.addEventListener('scroll', onScroll, { passive: true });
   update();
-  return () => window.removeEventListener('scroll', onScroll);
+  return () => {
+    window.removeEventListener('scroll', onScroll);
+    document.documentElement.classList.remove('orby-scroll-cue-faded');
+  };
 }
 
 /**
- * @param {{ lazy?: boolean }} [options]
+ * @param {{ lazy?: boolean }} [options] — `lazy: true` (default) mounts on idle; `false` mounts immediately.
  */
 export function initOrbyMarketingPage(options = {}) {
   if (shouldSkipMarketing()) {
@@ -351,7 +346,8 @@ export function initOrbyMarketingPage(options = {}) {
 
   async function mount() {
     if (destroyed || root) return;
-    ensureStylesheet();
+    await ensureStylesheet();
+    await import('./marketingMotion.js');
     const [sections, reveals] = await Promise.all([
       loadSections(),
       import('./orbyMarketingReveals.js'),
@@ -384,10 +380,17 @@ export function initOrbyMarketingPage(options = {}) {
     marketingVideo.initMarketingVideos(root);
 
     attachRevealObserver();
-
-    await attachMarketingEnhancements();
-
     syncHomeState();
+
+    const runEnhancements = () => {
+      if (destroyed || !root) return;
+      void attachMarketingEnhancements();
+    };
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(runEnhancements, { timeout: 1200 });
+    } else {
+      setTimeout(runEnhancements, 200);
+    }
   }
 
   function scheduleMount() {
@@ -400,61 +403,66 @@ export function initOrbyMarketingPage(options = {}) {
     return mountPromise;
   }
 
-  function onFirstScrollIntent() {
-    if (!lazy || root) return;
-    scheduleMount();
+  /** @type {import('./orbyMarketingContent.js').MarketingSection[] | null} */
+  let sectionsForNav = null;
+
+  function ensureScrollNav() {
+    if (scrollNav) return;
+    const boot = (sections) => {
+      if (scrollNav || !sections) return;
+      sectionsForNav = sections;
+      const ctaSection = sections.find((s) => s.type === 'cta');
+      void import('./orbyMarketingScrollNav.js').then((scrollNavMod) => {
+        if (destroyed || scrollNav) return;
+        scrollNav = scrollNavMod.initMarketingScrollNav({
+          section: ctaSection,
+          onScrollTop: scrollToTop,
+        });
+        bindMarketingCopyEmail(root);
+        syncHomeState();
+      });
+    };
+    if (sectionsForNav) {
+      boot(sectionsForNav);
+      return;
+    }
+    void loadSections().then(boot);
   }
 
   bodyObserver = new MutationObserver(syncHomeState);
   bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-  window.addEventListener(
-    'wheel',
-    (event) => {
-      if (!isDropzoneHome() || event.deltaY <= 0) return;
-      onFirstScrollIntent();
-    },
-    { passive: true },
-  );
-
-  window.addEventListener(
-    'touchmove',
-    () => {
-      if (!isDropzoneHome()) return;
-      onFirstScrollIntent();
-    },
-    { passive: true, once: true },
-  );
-
   scrollCue = createScrollCue(() => {
+    ensureScrollNav();
     scrollToMarketing(scheduleMount);
   });
   teardownScrollCueFade = bindScrollCueFade(scrollCue);
 
-  void Promise.all([loadSections(), ensureStylesheet()]).then(([sections]) => {
+  void loadSections().then((sections) => {
     if (destroyed) return;
-    const ctaSection = sections.find((s) => s.type === 'cta');
-    void import('./orbyMarketingScrollNav.js').then((scrollNavMod) => {
-      if (destroyed || scrollNav) return;
-      scrollNav = scrollNavMod.initMarketingScrollNav({
-        section: ctaSection,
-        onScrollTop: scrollToTop,
-      });
-      bindMarketingCopyEmail(root);
-      syncHomeState();
-    });
+    sectionsForNav = sections;
   });
 
   if (lazy) {
-    const runMount = () => {
-      if (!destroyed && isDropzoneHome()) scheduleMount();
+    const preMount = () => {
+      if (destroyed) return;
+      void loadSections().then((sections) => {
+        if (destroyed) return;
+        sectionsForNav = sections;
+        ensureScrollNav();
+        scheduleMount();
+      });
     };
     if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(runMount, { timeout: 400 });
+      requestIdleCallback(preMount, { timeout: 2500 });
     } else {
-      setTimeout(runMount, 200);
+      setTimeout(preMount, 800);
     }
   } else {
+    void loadSections().then((sections) => {
+      sectionsForNav = sections;
+      ensureScrollNav();
+    });
     scheduleMount();
   }
 

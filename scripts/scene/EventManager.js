@@ -12,6 +12,7 @@ export class EventManager {
 
   /** @param {import('../SceneManager.js').SceneManager} s */
   async loadOrbySceneFromUserFile(s, file) {
+    await s.ui?.ensureStudioUiReady?.();
     const result = await s.ui?.sceneSettingsManager?.loadOrbyFromFile(file);
     if (result?.success) {
       s.ui.syncControls?.(s.stateStore.getState());

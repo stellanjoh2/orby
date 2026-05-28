@@ -105,9 +105,22 @@ export class UIManager {
     this._activeToastEl = null;
     /** @type {ReturnType<typeof setTimeout> | null} */
     this._activeToastTimer = null;
+    /** Dropzone shell only until first model / .orby load. */
+    this._studioUiReady = false;
+    /** @type {Promise<void> | null} */
+    this._studioUiPromise = null;
   }
 
+  /** Full init (dropzone + studio). Prefer initShell() on marketing home boot. */
   init() {
+    this.initShell();
+    this._initStudioUi();
+  }
+
+  /**
+   * Dropzone, toasts, and start menu only — defer studio control modules until first load.
+   */
+  initShell() {
     this.cacheDom();
     this.bindOfflineExportOverlayHome();
     this.uiSounds = new UISounds();
@@ -116,12 +129,37 @@ export class UIManager {
     }
     this.shelfOverlay = new ShelfOverlaySuppression(this);
     this.modalOverlays = new UIManagerModalOverlays(this);
-
-    // Initialize helpers
-    this.helpers = new UIHelpers(this.eventBus, this.stateStore, this);
-    
-    // Initialize control modules
     this.startMenuController = new StartMenuController(this.eventBus, this);
+    this.demoLogotype = new DemoLogotypeController();
+    this.bugReport = new BugReportController(this);
+    this.startMenuController.init();
+    this.demoLogotype.init();
+    this.bugReport.init();
+  }
+
+  /**
+   * Idempotent — studio shelves, control bindings, and scene settings restore.
+   * @returns {Promise<void>}
+   */
+  ensureStudioUiReady() {
+    if (this._studioUiReady) return Promise.resolve();
+    if (this._studioUiPromise) return this._studioUiPromise;
+    this._studioUiPromise = Promise.resolve()
+      .then(() => {
+        this._initStudioUi();
+        this._studioUiReady = true;
+        window.orby?.ensureGamepad?.();
+      })
+      .finally(() => {
+        this._studioUiPromise = null;
+      });
+    return this._studioUiPromise;
+  }
+
+  _initStudioUi() {
+    if (this._studioUiReady) return;
+
+    this.helpers = new UIHelpers(this.eventBus, this.stateStore, this);
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
     this.goboControls = new GoboControls(this.eventBus, this.stateStore, this, this.helpers);
@@ -137,17 +175,7 @@ export class UIManager {
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
-    this.demoLogotype = new DemoLogotypeController();
-    this.bugReport = new BugReportController(this);
 
-    // Initialize start menu
-    this.startMenuController.init();
-
-    // Initialize demo logotype
-    this.demoLogotype.init();
-    this.bugReport.init();
-    
-    // Initialize SceneSettingsManager
     this.sceneSettingsManager = new SceneSettingsManager(
       this.eventBus,
       this.stateStore,
@@ -159,18 +187,16 @@ export class UIManager {
         setLightColorControlsDisabled: (disabled) => this.setLightColorControlsDisabled(disabled),
         setLightsRotationDisabled: (disabled) => this.setLightsRotationDisabled(disabled),
         setEffectControlsDisabled: (controls, disabled) => this.setEffectControlsDisabled(controls, disabled),
-      }
+      },
     );
-    
+
     this.bindEvents();
     this.stateStore.subscribe((state) => this.syncControls(state));
     this.syncControls(this.stateStore.getState());
-    // Initialize panel header visibility
     const initialTab = this.activeTab || 'mesh';
     document.querySelectorAll('.panel-header-title').forEach((header) => {
       header.classList.toggle('visible', header.dataset.header === initialTab);
     });
-
     this.bindFullscreenToggle();
   }
 
@@ -2834,6 +2860,7 @@ export class UIManager {
   }
 
   syncControls(state) {
+    if (!this._studioUiReady) return;
     this.meshControls.sync(state);
     this.studioControls.sync(state);
     this.goboControls.sync(state);

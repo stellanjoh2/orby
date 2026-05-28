@@ -323,6 +323,7 @@ export class ModelLifecycleManager {
   async loadFile(file, options = {}) {
     const s = this.scene;
     if (!file) return;
+    await s.ui.ensureStudioUiReady();
     await s.ensureStudioReady();
     const previousFile = s.currentFile;
     const hadExistingModel = !!s.currentModel;
@@ -399,6 +400,7 @@ export class ModelLifecycleManager {
   async loadFileBundle(files) {
     const s = this.scene;
     if (!files?.length) return;
+    await s.ui.ensureStudioUiReady();
     await s.ensureStudioReady();
     s.ui.setDropzoneVisible(false);
     await s.syncViewportSize();

@@ -166,9 +166,23 @@
   gap: var(--orby-cta-button-inner-gap);
 }
 
-/* Footer — brand + centered legal copy + social (also on white In Progress panel) */
+/*
+ * Footer — mirrors scroll nav chrome: logo @ gallery gutter, links @ --orby-home-padding-x,
+ * social @ right gutter (In Progress white panel + any future footer use).
+ */
 .orby-marketing__footer-bar {
   --orby-footer-logotype-ratio: 1676.82 / 694.27;
+  --drop-hero-wide-factor: clamp(
+    0.78,
+    calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
+    1
+  );
+  --orby-footer-edge-x: calc(112px * var(--orby-marketing-gutter-scale));
+  --orby-footer-brand-height: calc(58.4px * var(--drop-hero-wide-factor) * 0.88);
+  --orby-footer-social-reserve: calc(
+    var(--orby-footer-edge-x) + 2 * var(--orby-footer-social-height) +
+      var(--orby-footer-social-gap) + 1.5rem
+  );
   position: absolute;
   z-index: 10;
   pointer-events: auto;
@@ -178,26 +192,25 @@
     var(--orby-footer-lift) +
       max(calc(1.25rem * var(--orby-marketing-scale)), env(safe-area-inset-bottom, 0px))
   );
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: var(--orby-footer-logotype-height);
-  gap: clamp(0.75rem, 2vw, 1.5rem);
-  margin: 0;
-  padding: 0 var(--orby-home-padding-x);
   box-sizing: border-box;
+  min-height: var(--orby-footer-brand-height);
+  margin: 0;
+  padding: 0;
   color: var(--brand-text);
 }
 
 .orby-marketing__footer-brand {
-  justify-self: start;
+  position: absolute;
+  left: var(--orby-footer-edge-x);
+  bottom: 0;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   flex-shrink: 0;
-  width: calc(var(--orby-footer-logotype-height) * var(--orby-footer-logotype-ratio));
-  height: var(--orby-footer-logotype-height);
-  max-width: min(42vw, 10.5rem);
+  width: calc(var(--orby-footer-brand-height) * var(--orby-footer-logotype-ratio));
+  height: var(--orby-footer-brand-height);
+  max-width: min(42vw, calc(168px * var(--drop-hero-wide-factor)));
   margin: 0;
   padding: 0;
   border: none;
@@ -234,14 +247,18 @@
 }
 
 .orby-marketing__footer-meta-copy {
-  justify-self: stretch;
-  align-self: center;
-  width: 100%;
-  margin: 0;
-  max-width: none;
-  padding-inline: clamp(0.5rem, 1.5vw, 1.25rem);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   box-sizing: border-box;
-  text-align: center;
+  width: 100%;
+  min-height: var(--orby-footer-brand-height);
+  margin: 0;
+  padding: 0 var(--orby-footer-social-reserve) 0 var(--orby-home-padding-x);
+  max-width: none;
+  text-align: left;
   font-size: var(--orby-marketing-footer-meta-size);
   line-height: 1.45;
   letter-spacing: -0.01em;
@@ -249,7 +266,10 @@
 }
 
 .orby-marketing__footer-social {
-  justify-self: end;
+  position: absolute;
+  right: var(--orby-footer-edge-x);
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;

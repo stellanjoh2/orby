@@ -9,6 +9,9 @@
     "restart": "node -e \"require('child_process').execSync('lsof -ti :8000 | xargs kill -9 2>/dev/null||true',{stdio:'inherit'})\" && node scripts/static-dev-server.mjs",
     "dev:python": "python3 -m http.server 8000 --bind 0.0.0.0",
     "build": "node build.js",
+    "bundle:marketing-css": "node scripts/marketing/bundleMarketingCss.mjs",
+    "subset:fontawesome": "node scripts/buildFontAwesomeSubset.mjs",
+    "inject:subpage-nav": "node scripts/marketing/injectSubpageSiteNav.mjs",
     "encode:turntable": "node scripts/marketing/encodeIntroTurntableFrames.mjs",
     "encode:png-marquee": "node scripts/marketing/encodePngMarquee.mjs",
     "export:marketing-copy": "node scripts/marketing/exportMarketingCopy.mjs",
@@ -26,6 +29,8 @@
     "postprocessing": "^6.36.4"
   },
   "devDependencies": {
-    "sharp": "^0.34.5"
+    "@fortawesome/fontawesome-free": "^6.5.1",
+    "sharp": "^0.34.5",
+    "subset-font": "^2.3.0"
   }
 }

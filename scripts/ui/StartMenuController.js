@@ -353,15 +353,17 @@ export class StartMenuController {
   /**
    * While the home page scrolls: pause dropzone + magic-btn glow (CSS) and Lottie; resume after scroll idle.
    * @see html.orby-dropzone-glow-scrolling in styles.css
+   * @see html.orby-dropzone-viewport-clipped in styles.css
    */
   bindDropzoneGradientScrollPause() {
     if (typeof window === 'undefined') return;
     let endTimer = null;
+    let scrollRaf = 0;
     const END_MS = 160;
     const SCROLL_CLASS = 'orby-dropzone-glow-scrolling';
     const OFF_SCREEN_CLASS = 'orby-dropzone-glow-off-screen';
 
-    const syncOffScreenGlow = () => {
+    const syncDropzoneScrollPerf = () => {
       const offScreen =
         document.body.classList.contains('dropzone-visible') &&
         !this.isDropzoneHeroInView();
@@ -369,21 +371,24 @@ export class StartMenuController {
       if (offScreen) {
         this.animationInstance?.pause();
       }
+      this.syncDropzoneViewportClip();
     };
 
     const pauseForScroll = () => {
       if (!prefersReducedMotion()) {
         document.documentElement.classList.add(SCROLL_CLASS);
       }
-      syncOffScreenGlow();
+      syncDropzoneScrollPerf();
       if (shouldPlayLogotypeLottie() && this.isDropzoneHeroInView()) {
         this.animationInstance?.pause();
       }
     };
     const resumeAfterScroll = () => {
-      document.documentElement.classList.remove(SCROLL_CLASS);
       endTimer = null;
-      syncOffScreenGlow();
+      if (document.documentElement.classList.contains(SCROLL_CLASS)) {
+        document.documentElement.classList.remove(SCROLL_CLASS);
+      }
+      syncDropzoneScrollPerf();
       if (
         shouldPlayLogotypeLottie() &&
         document.body.classList.contains('dropzone-visible') &&
@@ -393,20 +398,28 @@ export class StartMenuController {
         this.animationInstance.play();
       }
     };
+
+    const runScrollFrame = () => {
+      scrollRaf = 0;
+      if (!document.body.classList.contains('dropzone-visible')) {
+        document.documentElement.classList.remove(OFF_SCREEN_CLASS);
+        document.documentElement.classList.remove('orby-dropzone-viewport-clipped');
+        if (endTimer !== null) {
+          window.clearTimeout(endTimer);
+          resumeAfterScroll();
+        }
+        return;
+      }
+      pauseForScroll();
+      if (endTimer !== null) window.clearTimeout(endTimer);
+      endTimer = window.setTimeout(resumeAfterScroll, END_MS);
+    };
+
     window.addEventListener(
       'scroll',
       () => {
-        if (!document.body.classList.contains('dropzone-visible')) {
-          document.documentElement.classList.remove(OFF_SCREEN_CLASS);
-          if (endTimer !== null) {
-            window.clearTimeout(endTimer);
-            resumeAfterScroll();
-          }
-          return;
-        }
-        pauseForScroll();
-        if (endTimer !== null) window.clearTimeout(endTimer);
-        endTimer = window.setTimeout(resumeAfterScroll, END_MS);
+        if (scrollRaf) return;
+        scrollRaf = window.requestAnimationFrame(runScrollFrame);
       },
       { passive: true },
     );
@@ -420,6 +433,7 @@ export class StartMenuController {
     };
     document.addEventListener('visibilitychange', onVisibility);
     onVisibility();
+    syncDropzoneScrollPerf();
   }
 
   handleDropEvent(event, emitFile) {
@@ -568,6 +582,24 @@ export class StartMenuController {
     if (!this.dropzone) return false;
     const rect = this.dropzone.getBoundingClientRect();
     return rect.bottom > 0 && rect.top < window.innerHeight;
+  }
+
+  /**
+   * Re-enable .viewport clip once home scroll moves the hero — keeps overflow:visible at rest
+   * so corner deco is not cropped; see html.orby-dropzone-viewport-clipped in styles.css.
+   */
+  shouldClipDropzoneViewport() {
+    if (!this.dropzone || !document.documentElement.classList.contains('orby-home-scroll')) {
+      return false;
+    }
+    if (!this.isDropzoneHeroInView()) return true;
+    return this.dropzone.getBoundingClientRect().top < 0;
+  }
+
+  syncDropzoneViewportClip() {
+    const clip =
+      document.body.classList.contains('dropzone-visible') && this.shouldClipDropzoneViewport();
+    document.documentElement.classList.toggle('orby-dropzone-viewport-clipped', clip);
   }
 
   /** After `.drop-logo` CSS `logotypeReveal` completes (fallback timeout ~750ms). */

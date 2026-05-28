@@ -65,6 +65,22 @@
   min-width: 0;
 }
 
+/* Hidden until per-card scroll reveal (see orbyMarketingReveals.js) */
+.orby-marketing__section--pro.orby-marketing__section--pending [data-orby-marketing-reveal='pro-card'] {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+}
+
+.orby-marketing__section--pro.orby-marketing__section--pending
+  .orby-marketing__pro-card-video,
+.orby-marketing__section--pro.orby-marketing__section--pending
+  .orby-marketing__pro-card-img,
+.orby-marketing__section--pro.orby-marketing__section--pending
+  .orby-marketing__pro-card-media--flip
+  .orby-marketing__showcase-img.is-active {
+  opacity: 0;
+}
+
 .orby-marketing__pro-card-surface {
   --orby-media-radius: var(--orby-marketing-media-radius);
   display: flex;
@@ -156,7 +172,7 @@ html.safari-browser .orby-marketing__pro-card-video {
   margin: 0 0 calc(1.15rem * var(--orby-marketing-scale));
   font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
     sans-serif);
-  font-size: 22px;
+  font-size: var(--orby-marketing-pro-card-title-size);
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: -0.01em;

@@ -15,6 +15,7 @@
 @import url('./marketing/12-gradient-text.css');
 @import url('./marketing/07-cta.css');
 @import url('./marketing/08-toast-reduced-motion.css');
-@import url('./marketing/09-scroll-cue-responsive.css');
+/* 09-scroll-cue — loaded in index.html <head> before dropzone scroll */
 @import url('./marketing/10-in-progress.css');
+/* Nav deps load in index.html <head> before lazy marketing CSS — do not re-import here. */
 @import url('./orby-site-nav.css');

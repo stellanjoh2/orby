@@ -2936,9 +2936,6 @@ body.export-overlay-debug #dropzone {
   backdrop-filter: blur(var(--dropzone-frost-blur)) saturate(1.1);
   background: linear-gradient(var(--dropzone-frost-fill), var(--dropzone-frost-fill));
   pointer-events: none;
-  transition:
-    -webkit-backdrop-filter 0.35s ease,
-    backdrop-filter 0.35s ease;
 }
 
 .dropzone > * {
@@ -2955,6 +2952,23 @@ html:not(.mobile-landing) body.dropzone-visible .viewport,
 html:not(.mobile-landing) body.dropzone-visible .dropzone {
   overflow: visible;
   clip-path: none;
+}
+
+/*
+ * Home scroll perf — clip the 200dvh hero-deco slab once scroll moves the hero
+ * (html.orby-dropzone-viewport-clipped toggled in StartMenuController).
+ */
+html.orby-home-scroll.orby-dropzone-viewport-clipped:not(.mobile-landing)
+  body.dropzone-visible
+  .workspace,
+html.orby-home-scroll.orby-dropzone-viewport-clipped:not(.mobile-landing)
+  body.dropzone-visible
+  .viewport,
+html.orby-home-scroll.orby-dropzone-viewport-clipped:not(.mobile-landing)
+  body.dropzone-visible
+  .dropzone {
+  overflow: hidden;
+  clip-path: inset(0);
 }
 
 /*
@@ -2977,7 +2991,7 @@ html:not(.mobile-landing) body.dropzone-visible .dropzone {
 html.orby-home-scroll .dropzone > .dropzone-hero-deco .dropzone-hero-deco__slot--ll {
   bottom: auto;
   left: 90px;
-  top: 100px;
+  top: 0;
 }
 
 .dropzone-hero-deco__slot {
@@ -2994,7 +3008,7 @@ html.orby-home-scroll .dropzone > .dropzone-hero-deco .dropzone-hero-deco__slot-
 }
 
 .dropzone-hero-deco__slot--ll {
-  bottom: -260px;
+  bottom: -160px;
   left: 90px;
 }
 
@@ -3052,8 +3066,8 @@ html:not(.mobile-landing) .dropzone-hero-deco__img {
   }
 
   html.orby-home-scroll .dropzone > .dropzone-hero-deco .dropzone-hero-deco__slot--ll {
-    /* LL — @1920: 60 / 290; @2560: 90 / 400 */
-    top: calc(290px + 110px * var(--drop-hero-deco-ramp));
+    /* LL — @1920: 60 / 190; @2560: 90 / 270 (ramp 0→80px over 1920–2560) */
+    top: calc(190px + 80px * var(--drop-hero-deco-ramp));
     left: calc(60px + 30px * var(--drop-hero-deco-ramp));
   }
 
