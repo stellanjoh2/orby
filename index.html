@@ -2906,78 +2906,6 @@
                 </label>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="bloom">
-                  <div class="block-title has-toggle">
-                    <span>Bloom</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom" data-tooltip="Reset Bloom settings">
-                        <i class="fa-solid fa-rotate-left"></i>
-                        <span class="sr-only">Reset</span>
-                      </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable bloom glow effect">
-                        <input type="checkbox" id="toggleBloom" checked />
-                        <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Bloom</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div
-                    class="effect-foldout effect-foldout--expanded effect-foldout--md"
-                    data-effect-foldout="bloom"
-                    aria-hidden="false"
-                  >
-                  <label class="slider-line">
-                    <span>Threshold</span>
-                    <input
-                      id="bloomThreshold"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="1"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="bloomThreshold">1.00</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Strength</span>
-                    <input
-                      id="bloomStrength"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="0.2"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="bloomStrength">0.20</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Radius</span>
-                    <input
-                      id="bloomRadius"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.2"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="bloomRadius">0.20</span>
-                  </label>
-                  <label class="color-line">
-                    <span>Color</span>
-                    <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
-                  </label>
-                  <label class="select-line">
-                    <span>Quality</span>
-                    <select id="bloomQuality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="high">High</option>
-                      <option value="ultra">Ultra</option>
-                    </select>
-                  </label>
-                  </div>
-                </div>
-                <div class="panel-block-divider"></div>
                 <div class="subsection">
                   <div class="block-title has-toggle">
                     <span>Histogram</span>
@@ -3214,46 +3142,66 @@
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="vignette">
+                <div class="subsection" data-subsection="ambient-occlusion">
                   <div class="block-title has-toggle">
-                    <span>Vignette</span>
+                    <span>Ambient Occlusion</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette" data-tooltip="Reset Vignette settings">
+                      <button class="block-reset-btn" data-reset="ambient-occlusion" aria-label="Reset Ambient Occlusion" data-tooltip="Reset ambient occlusion settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable vignette darkening at frame edges">
-                        <input type="checkbox" id="toggleVignette" />
+                      <label class="effect-toggle" data-tooltip="Screen-space AO (N8AO). Uses WebGL post-processing; off by default. Turn off Render Quality → Low if this stays disabled there.">
+                        <input type="checkbox" id="toggleAmbientOcclusion" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Vignette</span>
+                        <span class="sr-only">Enable Ambient Occlusion</span>
                       </label>
                     </div>
                   </div>
                   <div
-                    class="effect-foldout effect-foldout--collapsed"
-                    data-effect-foldout="vignette"
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="ambient-occlusion"
                     aria-hidden="true"
                   >
                   <label class="slider-line">
                     <span>Intensity</span>
                     <input
-                      id="vignetteIntensity"
+                      id="ambientOcclusionIntensity"
                       type="range"
-                      min="0"
-                      max="1"
-                      value="0.5"
-                      step="0.01"
+                      min="0.25"
+                      max="20"
+                      value="3"
+                      step="0.25"
                     />
-                    <span class="value" data-output="vignetteIntensity">0.50</span>
+                    <span class="value" data-output="ambientOcclusionIntensity">3.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="ambientOcclusionRadius"
+                      type="range"
+                      min="0.1"
+                      max="12"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="ambientOcclusionRadius">1.00</span>
                   </label>
                   <label class="color-line">
-                    <span>Color</span>
+                    <span>Colour</span>
                     <input
                       type="color"
-                      id="vignetteColor"
+                      id="ambientOcclusionColor"
                       class="color-chip"
                       value="#080808"
                     />
+                  </label>
+                  <label class="select-line">
+                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Ultra: full resolution + Ultra N8AO preset.">AO Quality</span>
+                    <select id="ambientOcclusionQuality" aria-label="Ambient Occlusion quality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="max">Ultra</option>
+                    </select>
                   </label>
                   </div>
                 </div>
@@ -3311,6 +3259,217 @@
                       <option value="ultra">Ultra</option>
                     </select>
                     <span class="value" aria-hidden="true"></span>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="volumetric-scattering">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Volumetric light rays — follows Lens Flare rotation and height (virtual sun mesh)">Light Rays</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Light Rays" data-tooltip="Reset Light Rays settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable light rays from the sun">
+                        <input type="checkbox" id="godRaysEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Light Rays</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
+                    data-effect-foldout="volumetric-scattering"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="godRaysColor"
+                      class="color-chip"
+                      value="#ffe8c4"
+                    />
+                  </label>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Size of the virtual sun mesh that casts rays (1 = full default disc)"
+                  >
+                    <span>Sun size</span>
+                    <input
+                      id="godRaysLightScale"
+                      type="range"
+                      min="0.08"
+                      max="1.25"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysLightScale">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Overall opacity of the light rays composite">
+                    <span>Opacity</span>
+                    <input
+                      id="godRaysOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysOpacity">1</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Ray density — higher reaches farther across the frame">
+                    <span>Density</span>
+                    <input
+                      id="godRaysDensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.96"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDensity">0.96</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Illumination decay along each ray sample (lower = faster falloff)">
+                    <span>Decay</span>
+                    <input
+                      id="godRaysDecay"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.92"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDecay">0.92</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Weight of each ray sample">
+                    <span>Weight</span>
+                    <input
+                      id="godRaysWeight"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysWeight">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Exposure multiplier after radial blur">
+                    <span>Exposure</span>
+                    <input
+                      id="godRaysExposure"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.6"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysExposure">0.6</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Maximum output intensity clamp">
+                    <span>Clamp Max</span>
+                    <input
+                      id="godRaysClampMax"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysClampMax">1</span>
+                  </label>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
+                  >
+                    <span>Blur mask</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="godRaysBlur" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Blur sun mask before radial blur</span>
+                    </label>
+                  </label>
+                  <label class="select-line" data-tooltip="Resolution scale and sample count preset">
+                    <span>Quality</span>
+                    <select id="godRaysQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="bloom">
+                  <div class="block-title has-toggle">
+                    <span>Bloom</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom" data-tooltip="Reset Bloom settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable bloom glow effect">
+                        <input type="checkbox" id="toggleBloom" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Bloom</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--expanded effect-foldout--md"
+                    data-effect-foldout="bloom"
+                    aria-hidden="false"
+                  >
+                  <label class="slider-line">
+                    <span>Threshold</span>
+                    <input
+                      id="bloomThreshold"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomThreshold">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="bloomStrength"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomStrength">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="bloomRadius"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomRadius">0.20</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
+                  </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="bloomQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
                   </label>
                   </div>
                 </div>
@@ -3586,145 +3745,6 @@
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="volumetric-scattering">
-                  <div class="block-title has-toggle">
-                    <span data-tooltip="Volumetric light rays — follows Lens Flare rotation and height (virtual sun mesh)">Light Rays</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Light Rays" data-tooltip="Reset Light Rays settings">
-                        <i class="fa-solid fa-rotate-left"></i>
-                        <span class="sr-only">Reset</span>
-                      </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable light rays from the sun">
-                        <input type="checkbox" id="godRaysEnabled" />
-                        <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Light Rays</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div
-                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
-                    data-effect-foldout="volumetric-scattering"
-                    aria-hidden="true"
-                  >
-                  <label class="color-line">
-                    <span>Color</span>
-                    <input
-                      type="color"
-                      id="godRaysColor"
-                      class="color-chip"
-                      value="#ffe8c4"
-                    />
-                  </label>
-                  <label
-                    class="slider-line"
-                    data-tooltip="Size of the virtual sun mesh that casts rays (1 = full default disc)"
-                  >
-                    <span>Sun size</span>
-                    <input
-                      id="godRaysLightScale"
-                      type="range"
-                      min="0.08"
-                      max="1.25"
-                      value="0.4"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysLightScale">0.4</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Overall opacity of the light rays composite">
-                    <span>Opacity</span>
-                    <input
-                      id="godRaysOpacity"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="1"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysOpacity">1</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Ray density — higher reaches farther across the frame">
-                    <span>Density</span>
-                    <input
-                      id="godRaysDensity"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.96"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysDensity">0.96</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Illumination decay along each ray sample (lower = faster falloff)">
-                    <span>Decay</span>
-                    <input
-                      id="godRaysDecay"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.92"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysDecay">0.92</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Weight of each ray sample">
-                    <span>Weight</span>
-                    <input
-                      id="godRaysWeight"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.4"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysWeight">0.4</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Exposure multiplier after radial blur">
-                    <span>Exposure</span>
-                    <input
-                      id="godRaysExposure"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="0.6"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysExposure">0.6</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Maximum output intensity clamp">
-                    <span>Clamp Max</span>
-                    <input
-                      id="godRaysClampMax"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="1"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysClampMax">1</span>
-                  </label>
-                  <label
-                    class="slider-line"
-                    data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
-                  >
-                    <span>Blur mask</span>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="godRaysBlur" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Blur sun mask before radial blur</span>
-                    </label>
-                  </label>
-                  <label class="select-line" data-tooltip="Resolution scale and sample count preset">
-                    <span>Quality</span>
-                    <select id="godRaysQuality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="high">High</option>
-                      <option value="ultra">Ultra</option>
-                    </select>
-                  </label>
-                  </div>
-                </div>
-                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens-dirt">
                   <div class="block-title has-toggle">
                     <span>Lens Dirt</span>
@@ -3802,66 +3822,46 @@
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="ambient-occlusion">
+                <div class="subsection" data-subsection="vignette">
                   <div class="block-title has-toggle">
-                    <span>Ambient Occlusion</span>
+                    <span>Vignette</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="ambient-occlusion" aria-label="Reset Ambient Occlusion" data-tooltip="Reset ambient occlusion settings">
+                      <button class="block-reset-btn" data-reset="vignette" aria-label="Reset Vignette" data-tooltip="Reset Vignette settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Screen-space AO (N8AO). Uses WebGL post-processing; off by default. Turn off Render Quality → Low if this stays disabled there.">
-                        <input type="checkbox" id="toggleAmbientOcclusion" />
+                      <label class="effect-toggle" data-tooltip="Enable/disable vignette darkening at frame edges">
+                        <input type="checkbox" id="toggleVignette" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Ambient Occlusion</span>
+                        <span class="sr-only">Enable Vignette</span>
                       </label>
                     </div>
                   </div>
                   <div
-                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
-                    data-effect-foldout="ambient-occlusion"
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="vignette"
                     aria-hidden="true"
                   >
                   <label class="slider-line">
                     <span>Intensity</span>
                     <input
-                      id="ambientOcclusionIntensity"
+                      id="vignetteIntensity"
                       type="range"
-                      min="0.25"
-                      max="20"
-                      value="3"
-                      step="0.25"
+                      min="0"
+                      max="1"
+                      value="0.5"
+                      step="0.01"
                     />
-                    <span class="value" data-output="ambientOcclusionIntensity">3.00</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Radius</span>
-                    <input
-                      id="ambientOcclusionRadius"
-                      type="range"
-                      min="0.1"
-                      max="12"
-                      value="1"
-                      step="0.05"
-                    />
-                    <span class="value" data-output="ambientOcclusionRadius">1.00</span>
+                    <span class="value" data-output="vignetteIntensity">0.50</span>
                   </label>
                   <label class="color-line">
-                    <span>Colour</span>
+                    <span>Color</span>
                     <input
                       type="color"
-                      id="ambientOcclusionColor"
+                      id="vignetteColor"
                       class="color-chip"
                       value="#080808"
                     />
-                  </label>
-                  <label class="select-line">
-                    <span data-tooltip="Low: half-res buffer + lighter N8AO samples. Medium: half-res + balanced denoise (default). Ultra: full resolution + Ultra N8AO preset.">AO Quality</span>
-                    <select id="ambientOcclusionQuality" aria-label="Ambient Occlusion quality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="max">Ultra</option>
-                    </select>
                   </label>
                   </div>
                 </div>
