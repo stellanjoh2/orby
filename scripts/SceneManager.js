@@ -146,6 +146,8 @@ export class SceneManager {
     this.autoRotateSpeed = 0;
     this.cameraAutoOrbit = initialState.camera?.autoOrbit ?? 'off';
     this.cameraHandheld = initialState.camera?.handheld ?? 'off';
+    /** Suppress mode-change toasts during settings restore / batch apply. */
+    this._suppressModeChangeToasts = 0;
     this.lightsMaster = initialState.lightsMaster ?? 0.30;
     this.lightsEnabled = initialState.lightsEnabled ?? true;
     this.lightsRotation = initialState.lightsRotation ?? 0;
@@ -1149,7 +1151,12 @@ export class SceneManager {
   // registerEvents() - Moved to EventManager.js
 
   async applyStateSnapshot(state) {
-    await this.stateApplier.apply(state);
+    this._suppressModeChangeToasts += 1;
+    try {
+      await this.stateApplier.apply(state);
+    } finally {
+      this._suppressModeChangeToasts = Math.max(0, this._suppressModeChangeToasts - 1);
+    }
   }
 
   /**
@@ -2000,17 +2007,35 @@ export class SceneManager {
     this.groundController?.setWireOpacity(value);
   }
 
-  setCameraAutoOrbit(mode) {
-    this.cameraAutoOrbit = mode ?? 'off';
-    this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
-    this.lensFlareController?.refreshProceduralSpin?.();
+  setAutoRotateSpeed(speed, { silent = false } = {}) {
+    const next = Number(speed) || 0;
+    if (next === this.autoRotateSpeed) return;
+    this.autoRotateSpeed = next;
+    if (!silent && this._suppressModeChangeToasts === 0) {
+      this.ui?.showModeChangeToast?.('autoRotate', next);
+    }
   }
 
-  setCameraHandheld(mode) {
+  setCameraAutoOrbit(mode, { silent = false } = {}) {
+    const next = mode ?? 'off';
+    if (next === this.cameraAutoOrbit) return;
+    this.cameraAutoOrbit = next;
+    this.cameraController?.setAutoOrbit(this.cameraAutoOrbit);
+    this.lensFlareController?.refreshProceduralSpin?.();
+    if (!silent && this._suppressModeChangeToasts === 0) {
+      this.ui?.showModeChangeToast?.('autoOrbit', next);
+    }
+  }
+
+  setCameraHandheld(mode, { silent = false } = {}) {
     let m = mode ?? 'off';
     if (m === 'medium') m = 'high';
+    if (m === this.cameraHandheld) return;
     this.cameraHandheld = m;
     this.cameraController?.setHandheldMode(this.cameraHandheld);
+    if (!silent && this._suppressModeChangeToasts === 0) {
+      this.ui?.showModeChangeToast?.('handheld', m);
+    }
   }
 
   setGroundY(value) {
@@ -3439,11 +3464,11 @@ export class SceneManager {
 
     if (this.cameraAutoOrbit !== 'off') {
       this.stateStore.set('camera.autoOrbit', 'off');
-      this.setCameraAutoOrbit('off');
+      this.setCameraAutoOrbit('off', { silent: true });
     }
     if (this.cameraHandheld !== 'off') {
       this.stateStore.set('camera.handheld', 'off');
-      this.setCameraHandheld('off');
+      this.setCameraHandheld('off', { silent: true });
     }
 
     if (!cc?.isIsometricModeActive?.()) {
@@ -3724,6 +3749,31 @@ export class SceneManager {
       return;
     }
     this.exportMovementPreview?.start(this._videoExportSettingsFromUi(settings));
+  }
+
+  saveExportVideoCameraBookmark() {
+    if (!this.cameraController?.saveExportFramingBookmark?.()) return;
+    this.ui?.setExportVideoCameraBookmarkAvailable?.(true, {
+      previewActive: !!this.exportMovementPreview?.isActive?.(),
+    });
+    this.ui?.showToast?.('Camera framing saved for this session');
+  }
+
+  restoreExportVideoCameraBookmark() {
+    if (!this.cameraController?.restoreExportFramingBookmark?.()) {
+      this.ui?.showToast?.('No saved camera framing');
+      return;
+    }
+    const tilt = this.cameraController.currentTilt ?? 0;
+    const pose = this.cameraController.getPose();
+    this.stateStore.batch(() => {
+      this.stateStore.set('camera.worldPosition', { ...pose.position });
+      this.stateStore.set('camera.distance', pose.distance);
+      this.stateStore.set('camera.tilt', tilt);
+    });
+    this.ui?.renderControls?.syncCameraWorldPose?.(pose);
+    this.ui?.syncControls?.(this.stateStore.getState());
+    this.ui?.showToast?.('Camera framing restored');
   }
 
   _videoExportSettingsFromUi(settings = {}) {

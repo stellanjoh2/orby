@@ -379,7 +379,7 @@
                 </span>
               </button></span>
             </div>
-            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">glTF</strong>/<strong class="brand-highlight">GLB</strong> and <strong class="brand-highlight">SVG</strong> extrusion. Your files stay local and private and will never be trained on AI. Read more on our&nbsp;<a href="./legal/privacy-policy.html" class="drop-link">privacy policy</a>&nbsp;page. For the best experience, go full screen. This site is still <span class="drop-under-construction">under construction</span> and bugs may occur.<br /><a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="#" id="debugExportOverlayLink" class="drop-link">Preview export overlay</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a><br /><br /><span class="drop-shortcuts-row"><span class="drop-shortcuts-inline"><strong>V</strong> — Hide UI · <strong>F</strong> — Focus camera · <strong>Q/W/E/R</strong> — Select / move / rotate / scale · <strong>1/2/3/4</strong> — Display modes</span></span></p>
+            <p class="drop-secondary">Orby is optimized for <strong class="brand-highlight">glTF</strong>/<strong class="brand-highlight">GLB</strong> and <strong class="brand-highlight">SVG</strong> extrusion. Your files stay local and private and will never be trained on AI. Read more on our&nbsp;<a href="./legal/privacy-policy.html" class="drop-link">privacy policy</a>&nbsp;page. For the best experience, go full screen. This site is still <span class="drop-under-construction">under construction</span> and bugs may occur. · <a href="#" id="loadTestLink" class="drop-link">Load test object</a> · <a href="#" id="debugExportOverlayLink" class="drop-link">Preview export overlay</a> · <a href="/?orby404Debug=1" id="debug404Link" class="drop-link">Debug 404 (temp)</a><br /><br /><span class="drop-shortcuts-row"><span class="drop-shortcuts-inline"><strong>V</strong> — Hide UI · <strong>F</strong> — Focus camera · <strong>Q/W/E/R</strong> — Select / move / rotate / scale · <strong>1/2/3/4</strong> — Display modes</span></span></p>
             <div class="dropzone-hero-credits">
               <p class="dropzone-hero-credit">
                 <span class="dropzone-hero-credit__label">Featured Dropzone Artists:</span>
@@ -620,6 +620,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="fresnel"
+                    aria-hidden="true"
+                  >
                   <label class="color-line">
                     <span>Color</span>
                     <input
@@ -653,9 +658,10 @@
                     />
                     <span class="value" data-output="fresnelStrength">0.30</span>
                   </label>
+                  </div>
                 </div>
-                <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="clay">
+                <div class="panel-block-divider" id="claySubsectionDivider" hidden></div>
+                <div class="subsection" data-subsection="clay" hidden>
                   <div class="block-title has-reset">
                     <span>Clay</span>
                     <button class="block-reset-btn" data-reset="clay" aria-label="Reset Clay" data-tooltip="Reset Clay settings">
@@ -730,6 +736,11 @@
                       <span class="sr-only">Always show wireframe</span>
                     </label>
                   </label>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="wireframe-settings"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Only Visible Faces</span>
                     <label class="effect-toggle" data-tooltip="Hide wireframe lines on back-facing surfaces">
@@ -755,6 +766,7 @@
                       value="#c4ff00"
                     />
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="creative-look" data-block="creative-look">
@@ -897,6 +909,11 @@
                       <span class="sr-only">Enable SVG color override</span>
                     </label>
                   </label>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="svg-color-override"
+                    aria-hidden="true"
+                  >
                   <label class="color-line">
                     <span data-tooltip="Fill color when Color Override is enabled">Color</span>
                     <input
@@ -907,6 +924,7 @@
                     />
                   </label>
                   <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
+                  </div>
                   <label class="select-line">
                     <span data-tooltip="Procedural PBR surface detail (roughness and metalness variation)">Surface</span>
                     <select id="svgExtrudeSurfacePreset" aria-label="SVG extrude surface material">
@@ -987,6 +1005,11 @@
                       <span class="sr-only">Toggle UV checker overlay</span>
                     </label>
                   </label>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="uv-checker"
+                    aria-hidden="true"
+                  >
                   <label class="select-line">
                     <span data-tooltip="Pick the checker pattern. Vibrant uses Atlux's colored map; Monochrome is grayscale and reads better on already-colored meshes.">UV Checker Style</span>
                     <select id="uvCheckerStyle" aria-label="UV Checker Style">
@@ -1006,6 +1029,7 @@
                     />
                     <span class="value" data-output="uvCheckerScale">1.00</span>
                   </label>
+                  </div>
                   <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
                   <p class="panel-hint advanced-import-hint">
                     Blended transparent surfaces are sorted per mesh in WebGL—not like Sketchfab’s viewer. The two controls below usually matter most;
@@ -1250,6 +1274,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="grid"
+                    aria-hidden="true"
+                  >
                   <label class="color-line">
                     <span>Color</span>
                     <input
@@ -1310,6 +1339,7 @@
                   <button id="gridSnap" class="ghost-btn small" type="button">
                     Snap to Mesh
                   </button>
+                  </div>
                 </div>
               </div>
 
@@ -1405,6 +1435,11 @@
                     </label>
                   </div>
                 </div>
+                <div
+                  class="effect-foldout effect-foldout--expanded effect-foldout--md"
+                  data-effect-foldout="hdri"
+                  aria-hidden="false"
+                >
                 <input
                   type="file"
                   id="hdriFileInput"
@@ -1500,8 +1535,9 @@
                     <input type="checkbox" id="hdriReceiveShadowsAo" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Receive shadows and ambient occlusion on HDRI backdrop</span>
+                    </label>
                   </label>
-                </label>
+                </div>
               </div>
 
               <div class="panel-block" data-block="background">
@@ -1538,6 +1574,11 @@
                     </label>
                   </div>
                 </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed"
+                  data-effect-foldout="base"
+                  aria-hidden="true"
+                >
                 <label class="color-line">
                     <span>Color</span>
                     <input
@@ -1615,6 +1656,11 @@
                         </label>
                       </div>
                     </div>
+                    <div
+                      class="effect-foldout effect-foldout--collapsed"
+                      data-effect-foldout="base-glass"
+                      aria-hidden="true"
+                    >
                     <label class="slider-line">
                       <span data-tooltip="Base tone under the reflection — black to white (mid gray is neutral).">Brightness</span>
                       <input
@@ -1651,7 +1697,9 @@
                       />
                       <span class="value" data-output="baseGlassAmount">0.50</span>
                     </label>
+                    </div>
                   </div>
+                </div>
                 </div>
               </div>
 
@@ -1670,6 +1718,11 @@
                     </label>
                   </div>
                 </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-effect-foldout="backdrop"
+                  aria-hidden="true"
+                >
                 <label class="color-line">
                     <span>Color</span>
                     <input
@@ -1687,6 +1740,11 @@
                       <span class="sr-only">Enable backdrop texture</span>
                     </label>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="backdrop-texture"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span data-tooltip="Texture tiling scale (higher = finer paper grain)">Texture Scale</span>
                     <input
@@ -1699,6 +1757,7 @@
                     />
                     <span class="value" data-output="backdropTextureScale">1.80</span>
                   </label>
+                  </div>
                   <label class="slider-line">
                     <span data-tooltip="Uniform size of the backdrop wall">Scale</span>
                     <input
@@ -1750,6 +1809,7 @@
                 <button id="backdropSnap" class="ghost-btn small" type="button" data-tooltip="Align backdrop floor to mesh base">
                   Snap to Mesh
                 </button>
+                </div>
               </div>
 
               <div class="panel-block lights" data-block="lights">
@@ -1768,6 +1828,11 @@
                   </div>
                 </div>
 
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--xl"
+                  data-effect-foldout="lights-rig"
+                  aria-hidden="true"
+                >
                 <!-- Global Light Controls -->
                 <div class="subsection" data-subsection="globalLights">
                   <label class="slider-line">
@@ -1822,80 +1887,6 @@
                       <span class="sr-only">Show spotlights</span>
                     </label>
                   </label>
-                  <div class="panel-block-divider"></div>
-                  <div class="subsection" data-subsection="lightsShadows">
-                    <div class="block-title has-toggle has-reset">
-                      <span>Shadows</span>
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <button class="block-reset-btn" data-reset="lights-shadows" aria-label="Reset Shadows" data-tooltip="Reset shadow settings">
-                          <i class="fa-solid fa-rotate-left"></i>
-                          <span class="sr-only">Reset</span>
-                        </button>
-                        <label class="effect-toggle" data-tooltip="Enable/disable shadow casting from 3-point lights">
-                          <input type="checkbox" id="lightsCastShadows" />
-                          <span class="effect-indicator" aria-hidden="true"></span>
-                          <span class="sr-only">Enable shadows</span>
-                        </label>
-                      </div>
-                    </div>
-                  <label class="select-line">
-                    <span data-tooltip="Shadow map resolution for 3-point lights">Quality</span>
-                    <select id="lightsShadowQuality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="high">High</option>
-                      <option value="ultra">Ultra</option>
-                    </select>
-                  </label>
-                  <label class="color-line">
-                    <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
-                    <input type="color" id="lightsShadowColor" class="color-chip" value="#080808" />
-                  </label>
-                  <label class="slider-line">
-                    <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra (current default).">Softness</span>
-                    <input
-                      id="lightsShadowSoftness"
-                      type="range"
-                      min="0"
-                      max="4"
-                      step="0.05"
-                      value="4"
-                    />
-                    <span class="value" data-output="lightsShadowSoftness">4.00</span>
-                  </label>
-                  <label class="slider-line">
-                    <span data-tooltip="How strong the shadow tint is. Lower for softer, less solid shadows.">Opacity</span>
-                    <input
-                      id="lightsShadowOpacity"
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value="0.25"
-                    />
-                    <span class="value" data-output="lightsShadowOpacity">0.25</span>
-                  </label>
-                  <label class="slider-line">
-                    <span data-tooltip="Negative values pull shadows tighter to contact points; too low can add acne artifacts">Offset</span>
-                    <input
-                      id="lightsShadowContactOffset"
-                      type="range"
-                      min="-0.0005"
-                      max="0.0002"
-                      step="0.00001"
-                      value="-0.0001"
-                    />
-                    <span class="value" data-output="lightsShadowContactOffset">-0.0001</span>
-                  </label>
-                  <label class="slider-line">
-                    <span data-tooltip="For thin single-surface meshes (foliage/cards), cast shadows from both sides to reduce holes.">Two-Sided Cast</span>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="lightsShadowTwoSided" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable two-sided shadow casting</span>
-                    </label>
-                    <span class="value" aria-hidden="true"></span>
-                  </label>
                 </div>
 
                 <div class="panel-block-divider"></div>
@@ -1927,6 +1918,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="key-light"
+                    aria-hidden="true"
+                  >
                 <label class="color-line light-color-row" data-light="key">
                     <span>Color</span>
                   <input type="color" class="color-chip light-chip" value="#ffdfc9" />
@@ -2067,6 +2063,7 @@
                       </label>
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 <div class="panel-block-divider"></div>
@@ -2087,6 +2084,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="fill-light"
+                    aria-hidden="true"
+                  >
                   <label class="color-line light-color-row" data-light="fill">
                     <span>Color</span>
                     <input type="color" class="color-chip light-chip" value="#b0c7ff" />
@@ -2135,6 +2137,7 @@
                       <span class="sr-only">Cast shadows</span>
                   </label>
                 </label>
+                  </div>
                 </div>
 
                 <div class="panel-block-divider"></div>
@@ -2155,6 +2158,11 @@
                   </label>
                 </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="rim-light"
+                    aria-hidden="true"
+                  >
                   <label class="color-line light-color-row" data-light="rim">
                     <span>Color</span>
                     <input type="color" class="color-chip light-chip" value="#a0eaf9" />
@@ -2203,6 +2211,7 @@
                       <span class="sr-only">Cast shadows</span>
                     </label>
                 </label>
+                  </div>
               </div>
 
                 <div class="panel-block-divider"></div>
@@ -2223,6 +2232,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="ambient-light"
+                    aria-hidden="true"
+                  >
                   <label class="color-line light-color-row" data-light="ambient">
                     <span>Color</span>
                     <input type="color" class="color-chip light-chip" value="#7c8ca6" />
@@ -2239,8 +2253,91 @@
                     />
                     <span class="value" data-output="ambientLightStrength">0.48</span>
                   </label>
+                  </div>
                 </div>
-              </div>
+
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="lightsShadows">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Shadows</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="lights-shadows" aria-label="Reset Shadows" data-tooltip="Reset shadow settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable shadow casting from 3-point lights">
+                        <input type="checkbox" id="lightsCastShadows" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable shadows</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="lights-shadows"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span data-tooltip="Shadow map resolution for 3-point lights">Quality</span>
+                    <select id="lightsShadowQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  <label class="color-line">
+                    <span data-tooltip="Color of shadowed areas. Black gives the darkest shadows.">Shadow Color</span>
+                    <input type="color" id="lightsShadowColor" class="color-chip" value="#080808" />
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra (current default).">Softness</span>
+                    <input
+                      id="lightsShadowSoftness"
+                      type="range"
+                      min="0"
+                      max="4"
+                      step="0.05"
+                      value="4"
+                    />
+                    <span class="value" data-output="lightsShadowSoftness">4.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="How strong the shadow tint is. Lower for softer, less solid shadows.">Opacity</span>
+                    <input
+                      id="lightsShadowOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.25"
+                    />
+                    <span class="value" data-output="lightsShadowOpacity">0.25</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Negative values pull shadows tighter to contact points; too low can add acne artifacts">Offset</span>
+                    <input
+                      id="lightsShadowContactOffset"
+                      type="range"
+                      min="-0.0005"
+                      max="0.0002"
+                      step="0.00001"
+                      value="-0.0001"
+                    />
+                    <span class="value" data-output="lightsShadowContactOffset">-0.0001</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="For thin single-surface meshes (foliage/cards), cast shadows from both sides to reduce holes.">Two-Sided Cast</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="lightsShadowTwoSided" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Enable two-sided shadow casting</span>
+                    </label>
+                    <span class="value" aria-hidden="true"></span>
+                  </label>
+                  </div>
+                </div>
+                </div>
               </div>
 
               <div class="panel-block">
@@ -2346,6 +2443,11 @@
                   />
                   <span class="value" data-output="cameraDistance">6.02m</span>
                 </label>
+                <div
+                  class="effect-foldout effect-foldout--expanded"
+                  data-effect-foldout="manual-exposure"
+                  aria-hidden="false"
+                >
                 <label class="slider-line">
                   <span data-tooltip="Overall scene brightness">Exposure</span>
                   <input
@@ -2358,6 +2460,7 @@
                   />
                   <span class="value" data-output="exposure">1.00</span>
                 </label>
+                </div>
                 <label class="slider-line">
                   <span>Auto Exposure</span>
                   <label class="effect-toggle" data-tooltip="Automatically adjust exposure for optimal brightness">
@@ -2523,6 +2626,11 @@
                     </div>
                   </div>
                   <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="isometric"
+                    aria-hidden="true"
+                  >
+                  <div
                     class="iso-controls-stack"
                     role="group"
                     aria-label="Isometric Camera presets"
@@ -2573,6 +2681,7 @@
                   >
                     Unlock Camera Pan
                   </button>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fisheye">
@@ -2596,6 +2705,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="fisheye"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span data-tooltip="Target horizontal field of view; vertical FOV is derived so the shader matches the projection (avoids black edges)">Horizontal</span>
                     <input
@@ -2632,6 +2746,7 @@
                     />
                     <span class="value" data-output="fisheyeCylindricalRatio">4.00</span>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="auto-orbit">
@@ -2673,6 +2788,196 @@
               </div>
 
               <div class="panel-block">
+                <div class="subsection">
+                  <div class="block-title has-reset">
+                    <span>Color & Tone</span>
+                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone" data-tooltip="Reset Color & Tone settings">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <span class="sr-only">Reset</span>
+                    </button>
+                  </div>
+                <label class="slider-line slider-line--temperature">
+                  <span>Temperature</span>
+                  <input
+                    id="cameraTemperature"
+                    type="range"
+                    min="2000"
+                    max="10000"
+                    value="6000"
+                    step="50"
+                  />
+                  <span class="value" data-output="cameraTemperature">6000K</span>
+                </label>
+                <label class="slider-line slider-line--tint">
+                  <span>Tint</span>
+                  <input
+                    id="cameraTint"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraTint">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Contrast</span>
+                  <input
+                    id="cameraContrast"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraContrast">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Highlights</span>
+                  <input
+                    id="cameraHighlights"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraHighlights">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Shadows</span>
+                  <input
+                    id="cameraShadows"
+                    type="range"
+                    min="-50"
+                    max="50"
+                    value="0"
+                    step="1"
+                  />
+                    <span class="value" data-output="cameraShadows">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Saturation</span>
+                  <input
+                    id="cameraSaturation"
+                    type="range"
+                    min="0"
+                    max="2"
+                    value="1.0"
+                    step="0.01"
+                  />
+                  <span class="value" data-output="cameraSaturation">1.00</span>
+                </label>
+                <label class="slider-line">
+                  <span>Clarity</span>
+                  <input
+                    id="cameraClarity"
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraClarity">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Fade</span>
+                  <input
+                    id="cameraFade"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraFade">0</span>
+                </label>
+                <label class="slider-line">
+                  <span>Sharpness</span>
+                  <input
+                    id="cameraSharpness"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="value" data-output="cameraSharpness">0</span>
+                </label>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="bloom">
+                  <div class="block-title has-toggle">
+                    <span>Bloom</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom" data-tooltip="Reset Bloom settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable bloom glow effect">
+                        <input type="checkbox" id="toggleBloom" checked />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Bloom</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--expanded effect-foldout--md"
+                    data-effect-foldout="bloom"
+                    aria-hidden="false"
+                  >
+                  <label class="slider-line">
+                    <span>Threshold</span>
+                    <input
+                      id="bloomThreshold"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomThreshold">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Strength</span>
+                    <input
+                      id="bloomStrength"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomStrength">0.20</span>
+                  </label>
+                  <label class="slider-line">
+                    <span>Radius</span>
+                    <input
+                      id="bloomRadius"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.2"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="bloomRadius">0.20</span>
+                  </label>
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
+                  </label>
+                  <label class="select-line">
+                    <span>Quality</span>
+                    <select id="bloomQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
                 <div class="subsection">
                   <div class="block-title has-toggle">
                     <span>Histogram</span>
@@ -2909,124 +3214,6 @@
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection">
-                  <div class="block-title has-reset">
-                    <span>Color & Tone</span>
-                    <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone" data-tooltip="Reset Color & Tone settings">
-                      <i class="fa-solid fa-rotate-left"></i>
-                      <span class="sr-only">Reset</span>
-                    </button>
-                  </div>
-                <label class="slider-line slider-line--temperature">
-                  <span>Temperature</span>
-                  <input
-                    id="cameraTemperature"
-                    type="range"
-                    min="2000"
-                    max="10000"
-                    value="6000"
-                    step="50"
-                  />
-                  <span class="value" data-output="cameraTemperature">6000K</span>
-                </label>
-                <label class="slider-line slider-line--tint">
-                  <span>Tint</span>
-                  <input
-                    id="cameraTint"
-                    type="range"
-                    min="-100"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraTint">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Contrast</span>
-                  <input
-                    id="cameraContrast"
-                    type="range"
-                    min="0"
-                    max="2"
-                    value="1.0"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="cameraContrast">1.00</span>
-                </label>
-                <label class="slider-line">
-                  <span>Highlights</span>
-                  <input
-                    id="cameraHighlights"
-                    type="range"
-                    min="-100"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraHighlights">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Shadows</span>
-                  <input
-                    id="cameraShadows"
-                    type="range"
-                    min="-50"
-                    max="50"
-                    value="0"
-                    step="1"
-                  />
-                    <span class="value" data-output="cameraShadows">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Saturation</span>
-                  <input
-                    id="cameraSaturation"
-                    type="range"
-                    min="0"
-                    max="2"
-                    value="1.0"
-                    step="0.01"
-                  />
-                  <span class="value" data-output="cameraSaturation">1.00</span>
-                </label>
-                <label class="slider-line">
-                  <span>Clarity</span>
-                  <input
-                    id="cameraClarity"
-                    type="range"
-                    min="-100"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraClarity">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Fade</span>
-                  <input
-                    id="cameraFade"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraFade">0</span>
-                </label>
-                <label class="slider-line">
-                  <span>Sharpness</span>
-                  <input
-                    id="cameraSharpness"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value="0"
-                    step="1"
-                  />
-                  <span class="value" data-output="cameraSharpness">0</span>
-                </label>
-                </div>
-                <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="vignette">
                   <div class="block-title has-toggle">
                     <span>Vignette</span>
@@ -3042,6 +3229,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="vignette"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Intensity</span>
                     <input
@@ -3063,6 +3255,7 @@
                       value="#080808"
                     />
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="dof">
@@ -3080,6 +3273,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="dof"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Focus</span>
                     <input
@@ -3114,72 +3312,7 @@
                     </select>
                     <span class="value" aria-hidden="true"></span>
                   </label>
-                </div>
-                <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="bloom">
-                  <div class="block-title has-toggle">
-                    <span>Bloom</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="bloom" aria-label="Reset Bloom" data-tooltip="Reset Bloom settings">
-                        <i class="fa-solid fa-rotate-left"></i>
-                        <span class="sr-only">Reset</span>
-                      </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable bloom glow effect">
-                        <input type="checkbox" id="toggleBloom" checked />
-                        <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Bloom</span>
-                      </label>
-                    </div>
                   </div>
-                  <label class="slider-line">
-                    <span>Threshold</span>
-                    <input
-                      id="bloomThreshold"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="1"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="bloomThreshold">1.00</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Strength</span>
-                    <input
-                      id="bloomStrength"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="0.2"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="bloomStrength">0.20</span>
-                  </label>
-                  <label class="slider-line">
-                    <span>Radius</span>
-                    <input
-                      id="bloomRadius"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.2"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="bloomRadius">0.20</span>
-                  </label>
-                  <label class="color-line">
-                    <span>Color</span>
-                    <input type="color" id="bloomColor" class="color-chip" value="#ffe9cc" />
-                  </label>
-                  <label class="select-line">
-                    <span>Quality</span>
-                    <select id="bloomQuality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="high">High</option>
-                      <option value="ultra">Ultra</option>
-                    </select>
-                  </label>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="anamorphic-lens-flare">
@@ -3197,6 +3330,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="anamorphic-lens-flare"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Strength</span>
                     <input
@@ -3270,6 +3408,7 @@
                       <option value="ultra">Ultra</option>
                     </select>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens-flare">
@@ -3287,6 +3426,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
+                    data-effect-foldout="lens-flare"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Rotation</span>
                     <input
@@ -3439,6 +3583,7 @@
                   >
                     Connect Key Light Position
                   </button>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="volumetric-scattering">
@@ -3456,6 +3601,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
+                    data-effect-foldout="volumetric-scattering"
+                    aria-hidden="true"
+                  >
                   <label class="color-line">
                     <span>Color</span>
                     <input
@@ -3572,6 +3722,7 @@
                       <option value="ultra">Ultra</option>
                     </select>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="lens-dirt">
@@ -3589,6 +3740,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="lens-dirt"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Strength</span>
                     <input
@@ -3608,6 +3764,7 @@
                     <span>Dirt tint</span>
                     <input type="color" id="lensDirtTintColor" class="color-chip" value="#ffffff" />
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="grain">
@@ -3625,6 +3782,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="grain"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Strength</span>
                     <input
@@ -3637,6 +3799,7 @@
                     />
                     <span class="value" data-output="grainIntensity">0.20</span>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="ambient-occlusion">
@@ -3654,6 +3817,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="ambient-occlusion"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span>Intensity</span>
                     <input
@@ -3695,6 +3863,7 @@
                       <option value="max">Ultra</option>
                     </select>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="aberration">
@@ -3712,6 +3881,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="aberration"
+                    aria-hidden="true"
+                  >
                   <label class="slider-line">
                     <span data-tooltip="Overall radial red/blue channel separation magnitude.">Amount</span>
                     <input
@@ -3724,6 +3898,7 @@
                     />
                     <span class="value" data-output="aberrationAmount">0.0006</span>
                   </label>
+                  </div>
                 </div>
               </div>
 
@@ -3743,6 +3918,11 @@
                       </label>
                     </div>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                    data-effect-foldout="color-checker"
+                    aria-hidden="true"
+                  >
                   <button
                     type="button"
                     id="colorCheckerRawToggle"
@@ -3802,6 +3982,7 @@
                     />
                     <span class="value" data-output="colorCheckerScale">0.06×</span>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="composition-guides">
@@ -3813,6 +3994,11 @@
                       <span class="sr-only">Show composition guides</span>
                     </label>
                   </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="composition-guides"
+                    aria-hidden="true"
+                  >
                   <label class="select-line">
                     <span data-tooltip="Light lines suit dark footage; dark lines suit bright scenes.">Colour</span>
                     <select id="compositionGuidesColor" aria-label="Composition guides colour">
@@ -3820,6 +4006,7 @@
                       <option value="dark">Dark</option>
                     </select>
                   </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="cinematic-letterbox">
@@ -4039,15 +4226,36 @@
                       <span class="value" data-output="exportTiltAngle">15°</span>
                     </label>
                   </div>
-                  <button
-                    type="button"
-                    id="exportVideoPreviewButton"
-                    class="accent-action-btn export-video-preview-btn"
-                    data-tooltip="Preview the selected movements in the viewport without rendering frames"
-                  >
-                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                    <span class="export-video-preview__label">Preview Movement</span>
-                  </button>
+                  <div class="export-video-preview-actions">
+                    <button
+                      type="button"
+                      id="exportVideoPreviewButton"
+                      class="accent-action-btn export-video-preview-btn"
+                      data-tooltip="Preview the selected movements in the viewport without rendering frames"
+                    >
+                      <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                      <span class="export-video-preview__label">Preview Movement</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="exportVideoCameraSaveButton"
+                      class="accent-action-btn export-video-camera-btn"
+                      data-tooltip="Remember this camera framing for this session (position, target, and tilt)"
+                    >
+                      <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                      <span>Save Camera</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="exportVideoCameraRestoreButton"
+                      class="accent-action-btn export-video-camera-btn"
+                      disabled
+                      data-tooltip="Restore the camera framing you saved this session"
+                    >
+                      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                      <span>Restore Camera</span>
+                    </button>
+                  </div>
                   <div id="exportMeshAnimationsSettings" class="export-option-group" hidden>
                     <label class="slider-line">
                       <span data-tooltip="Play a GLB animation clip during export and preview">Embed Animations</span>

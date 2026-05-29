@@ -901,6 +901,12 @@ export class RenderControls {
         ...(this.ui.exportSettings.video || {}),
       });
     });
+    this.ui.buttons.exportVideoCameraSave?.addEventListener('click', () => {
+      this.eventBus.emit('export:video-camera-bookmark-save');
+    });
+    this.ui.buttons.exportVideoCameraRestore?.addEventListener('click', () => {
+      this.eventBus.emit('export:video-camera-bookmark-restore');
+    });
 
     if (this.ui.inputs.lookFilterPresetsOpen) {
       const updateLookFilterGrid = (open) => {

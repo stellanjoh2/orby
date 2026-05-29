@@ -497,6 +497,8 @@ export class ResetControls {
       this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
       this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
       });
+      this.eventBus.emit('scene:batch-apply-start');
+      try {
       this.eventBus.emit('mesh:shading', defaults.shading);
       this.eventBus.emit('mesh:scale', defaults.scale);
       this.eventBus.emit('mesh:xOffset', defaults.xOffset ?? 0);
@@ -545,6 +547,9 @@ export class ResetControls {
 
       this.ui.syncUIFromState();
       this.helpers.showToast('Mesh settings reset', 3200, { notification: false });
+      } finally {
+        this.eventBus.emit('scene:batch-apply-end');
+      }
     };
 
     const resetStudio = () => {
@@ -697,6 +702,8 @@ export class ResetControls {
       this.stateStore.set('toneMapping', defaults.toneMapping);
       this.stateStore.set('lookFilterPreset', 'none');
       });
+      this.eventBus.emit('scene:batch-apply-start');
+      try {
       this.eventBus.emit('render:dof', defaults.dof);
       this.ui.setEffectControlsDisabled(
         ['dofFocus', 'dofAperture', 'dofQuality'],
@@ -775,6 +782,9 @@ export class ResetControls {
 
       this.ui.syncUIFromState();
       this.helpers.showToast('FX settings reset', 3200, { notification: false });
+      } finally {
+        this.eventBus.emit('scene:batch-apply-end');
+      }
     };
 
     this.ui.buttons.resetMesh?.addEventListener('click', resetMesh);
@@ -1276,6 +1286,8 @@ export class ResetControls {
               );
             });
             // Emit events to update the scene
+            this.eventBus.emit('scene:batch-apply-start');
+            try {
             this.eventBus.emit('camera:tilt', defaults.camera.tilt ?? 0);
             this.eventBus.emit('camera:reset');
             this.eventBus.emit('camera:auto-orbit', defaults.camera.autoOrbit ?? 'off');
@@ -1302,6 +1314,9 @@ export class ResetControls {
             );
             // Sync UI to reflect the reset values
             this.ui.syncControls(this.stateStore.getState());
+            } finally {
+              this.eventBus.emit('scene:batch-apply-end');
+            }
             break;
 
           case 'isometric': {

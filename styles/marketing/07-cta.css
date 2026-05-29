@@ -1,7 +1,7 @@
-/* CTA — one viewport of lime; scrolls over fixed white In Progress endcap (10-in-progress.css) */
+/* CTA — one viewport of lime; white In Progress follows in document flow (10-in-progress.css) */
 .orby-marketing__section--cta {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   box-sizing: border-box;
   height: 100dvh;
   min-height: 100dvh;
@@ -10,10 +10,13 @@
   align-items: center;
   justify-content: center;
   margin: 0;
-  padding: env(safe-area-inset-top, 0px) var(--orby-home-padding-x)
-    env(safe-area-inset-bottom, 0px);
-  overflow: visible;
-  background: transparent;
+  padding-top: max(0px, env(safe-area-inset-top, 0px));
+  padding-right: var(--orby-home-padding-x);
+  padding-bottom: 0;
+  padding-left: var(--orby-home-padding-x);
+  overflow: hidden;
+  background: var(--brand-primary, #c4ff00);
+  border-radius: var(--orby-marketing-section-radius);
   --brand-text: var(--orby-marketing-on-lime-ink);
   color: var(--brand-text);
   --orby-cta-asset-lift: clamp(
@@ -30,6 +33,15 @@
   --orby-cta-button-pad-inline: calc(2.65rem * var(--orby-cta-button-scale));
   --orby-cta-button-inner-gap: calc(0.5rem * var(--orby-cta-button-scale));
   --orby-cta-button-stroke: calc(1.5px * var(--orby-cta-button-scale));
+  --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
+  --orby-intro-left-nudge: clamp(100px, 26vw, 350px);
+  /* Hummingbird — top-left of lime @ 2560 (below rounded corner + safe area) */
+  --orby-cta-hummingbird-inset-top: clamp(4.5rem, 10vh, 7.5rem);
+  /* Horizontal nudge on `left` (transform % was ignoring px bumps) */
+  --orby-cta-hummingbird-offset-x: 100px;
+  --orby-cta-hummingbird-shift-y: 0px;
+  --orby-intro-scale-left: min(1, calc(88dvh / 1041));
+  --orby-cta-asset-max-h: min(88dvh, 1150px);
 }
 
 @media (max-width: 159.99rem) {
@@ -37,22 +49,6 @@
     --orby-cta-button-scale: 1;
     --orby-cta-button-font-size: var(--orby-marketing-support-size);
   }
-}
-
-/* Lime fill — ::before; all four corners match section radius (92px @ 2560) */
-.orby-marketing__section--cta::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: var(--brand-primary, #c4ff00);
-  border-radius: var(--orby-marketing-section-radius);
-  pointer-events: none;
-}
-
-/* Seam into In Progress unveil — pin handles the handoff; no extra ::after band */
-.orby-marketing__section--cta::after {
-  content: none;
 }
 
 /* Stage bleeds above the lime edge (taller box); clip bottom so PNG never extends the page */
@@ -68,12 +64,46 @@
   --orby-intro-scale-right: min(1, calc(88dvh / 1225));
   --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
   --orby-intro-right-nudge: clamp(100px, 26vw, 350px);
+  --orby-intro-left-nudge: clamp(100px, 26vw, 350px);
+  --orby-cta-asset-right-lift: calc(
+    var(--orby-cta-asset-lift) + clamp(1.5rem, 6vh, 4.5rem)
+  );
   --orby-cta-asset-max-h: min(88dvh, 1150px);
 }
 
+/*
+ * Left — intro-asset-right.png (hummingbird). Top-left anchor (not % center — large
+ * negative translateY only leaves the tail visible at the bottom of the viewport).
+ */
+.orby-marketing__section--cta > .orby-marketing__intro-asset--left {
+  position: absolute;
+  z-index: 3;
+  top: var(--orby-cta-hummingbird-inset-top);
+  bottom: auto;
+  left: calc(
+    var(--orby-intro-edge-inset) - var(--orby-intro-left-nudge, 350px) +
+      var(--orby-cta-hummingbird-offset-x, 0px)
+  );
+  right: auto;
+  max-height: var(--orby-cta-asset-max-h);
+  max-width: var(--orby-cta-asset-max-w, min(58vw, 920px));
+  width: auto;
+  height: auto;
+  pointer-events: none;
+  object-fit: contain;
+  object-position: left top;
+  transform: translate3d(
+      var(--orby-cta-asset-left-shift-x, -8%),
+      var(--orby-cta-hummingbird-shift-y, 0px),
+      0
+    )
+    scale(var(--orby-intro-scale-left, 1));
+}
+
+/* Right — intro-asset-left.png */
 .orby-marketing__section--cta .orby-marketing__intro-asset--right {
   top: auto;
-  bottom: var(--orby-cta-asset-lift);
+  bottom: var(--orby-cta-asset-right-lift);
   max-height: var(--orby-cta-asset-max-h);
   max-width: var(--orby-cta-asset-max-w, min(58vw, 920px));
   width: auto;
@@ -82,7 +112,7 @@
   object-position: right bottom;
   transform: translate3d(
       var(--orby-cta-asset-shift-x, 8%),
-      var(--orby-cta-asset-shift-y, 200px),
+      var(--orby-cta-asset-shift-y, 100px),
       0
     )
     scale(var(--orby-intro-scale-right, 1));
@@ -91,8 +121,10 @@
 .orby-marketing__cta-center {
   position: relative;
   z-index: 4;
+  box-sizing: border-box;
   width: min(var(--orby-marketing-site-max), 100%);
   margin-inline: auto;
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
   text-align: center;
   display: flex;
   flex-direction: column;

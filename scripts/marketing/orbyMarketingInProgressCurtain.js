@@ -1,102 +1,37 @@
 /**
- * In Progress — fixed white endcap behind scrolling lime CTA (no second lime curtain).
+ * In Progress — enable interaction when the white panel is on screen.
+ * Lime CTA → In Progress is normal document scroll (no fixed endcap / clip sync).
  */
 import { prefersReducedMotion } from '../ui/modalReveal.js';
-import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
-
-const RESIZE_OPTS = { passive: true };
-/** In Progress interactive once lime CTA has cleared the top by this much (vh). */
-const REVEAL_LEAD_VH = 0.03;
 
 /**
  * @param {HTMLElement} root
  */
 export function initInProgressCurtainReveal(root) {
   const stage = root?.querySelector('[data-orby-marketing-in-progress-reveal]');
-  const ctaSection = root?.querySelector('.orby-marketing__section--cta');
-  if (!stage || !ctaSection) return () => {};
-
-  const section = stage.querySelector('.orby-marketing__section--in-progress');
-  if (!section) return () => {};
+  const section = stage?.querySelector('.orby-marketing__section--in-progress');
+  if (!stage || !section) return () => {};
 
   if (prefersReducedMotion()) {
-    stage.classList.add('is-endcap-active', 'is-revealed');
-    return () => {
-      stage.classList.remove('is-endcap-active', 'is-revealed');
-    };
+    stage.classList.add('is-revealed');
+    return () => stage.classList.remove('is-revealed');
   }
 
-  let raf = 0;
-  let endcapOn = false;
-  let scrollBound = false;
-  /** @type {(() => void) | null} */
-  let unsubscribeScroll = null;
-  /** @type {IntersectionObserver | null} */
-  let proximityObserver = null;
-
-  const sync = () => {
-    raf = 0;
-    const { top } = ctaSection.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const revealPx = vh * REVEAL_LEAD_VH;
-
-    /*
-     * On: lime top flush with viewport (scroll down into handoff).
-     * Off: as soon as lime drops below top (scroll back up) — no 3vh linger (white band).
-     */
-    if (!endcapOn && top <= 0) endcapOn = true;
-    else if (endcapOn && top > 0) endcapOn = false;
-
-    stage.classList.toggle('is-endcap-active', endcapOn);
-    stage.classList.toggle('is-revealed', endcapOn && top <= -revealPx);
-  };
-
-  const onResize = () => {
-    if (raf) return;
-    raf = requestAnimationFrame(sync);
-  };
-
-  const bindScrollSync = () => {
-    if (scrollBound) return;
-    scrollBound = true;
-    unsubscribeScroll = subscribeMarketingScroll(sync);
-    sync();
-  };
-
-  const unbindScrollSync = () => {
-    if (!scrollBound) return;
-    scrollBound = false;
-    unsubscribeScroll?.();
-    unsubscribeScroll = null;
-    endcapOn = false;
-    stage.classList.remove('is-endcap-active', 'is-revealed');
-  };
-
-  window.addEventListener('resize', onResize, RESIZE_OPTS);
-
-  if (typeof IntersectionObserver === 'function') {
-    proximityObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries.find((e) => e.target === ctaSection);
-        if (!entry) return;
-        if (entry.isIntersecting) bindScrollSync();
-        else unbindScrollSync();
-      },
-      { root: null, rootMargin: '40% 0px', threshold: 0 },
-    );
-    proximityObserver.observe(ctaSection);
-  } else {
-    bindScrollSync();
+  if (typeof IntersectionObserver !== 'function') {
+    stage.classList.add('is-revealed');
+    return () => stage.classList.remove('is-revealed');
   }
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      stage.classList.toggle('is-revealed', entry.isIntersecting);
+    },
+    { root: null, rootMargin: '0px', threshold: 0.12 },
+  );
+  observer.observe(section);
 
   return () => {
-    proximityObserver?.disconnect();
-    proximityObserver = null;
-    unbindScrollSync();
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    window.removeEventListener('resize', onResize, RESIZE_OPTS);
-    endcapOn = false;
-    stage.classList.remove('is-endcap-active', 'is-revealed');
+    observer.disconnect();
+    stage.classList.remove('is-revealed');
   };
 }

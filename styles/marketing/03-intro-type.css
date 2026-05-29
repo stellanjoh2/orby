@@ -28,7 +28,7 @@
   --orby-intro-turntable-fit-scale: 0.85;
   --orby-intro-turntable-offset-x: 700px;
   --orby-intro-turntable-offset-y: 50px;
-  --dropzone-frame-radius: clamp(16px, 3.59375vw, 92px);
+  --dropzone-frame-radius: clamp(16px, 4.375vw, 112px);
   --drop-hero-wide-factor: clamp(
     0.78,
     calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
@@ -296,6 +296,12 @@ html.orby-marketing-reduced
   .orby-marketing__section--cta.orby-marketing__section--revealed
   .orby-marketing__intro-asset {
   will-change: auto;
+}
+
+.orby-marketing__intro-asset--left {
+  left: calc(var(--orby-intro-edge-inset) - var(--orby-intro-left-nudge, 350px));
+  right: auto;
+  transform: translate3d(-8%, -50%, 0) scale(var(--orby-intro-scale-left, 1));
 }
 
 .orby-marketing__intro-asset--right {

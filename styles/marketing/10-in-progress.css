@@ -1,47 +1,21 @@
 /*
- * In Progress — fixed white endcap behind the scrolling lime CTA.
- * Lime CTA (.orby-marketing__section--cta) scrolls above it (z-index 2).
- * Spacer adds scroll runway after lime clears. Endcap visibility gated in orbyMarketingInProgressCurtain.js.
+ * In Progress — white panel in normal document flow after the lime CTA.
+ * No fixed endcap or scroll-synced clip (see orbyMarketingInProgressCurtain.js).
  */
 
 .orby-marketing {
   position: relative;
-  z-index: 1;
 }
 
-/* Scroll runway only — must not stack above fixed In Progress endcap (was blank white sheet). */
-.orby-marketing__in-progress-reveal-spacer {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
-  pointer-events: none;
-}
-
+/*
+ * Pull white up under the lime CTA’s bottom corner arcs (transparent outside
+ * border-radius shows this layer, not --orby-marketing-bg / page black).
+ */
 .orby-marketing__in-progress-reveal {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
-  visibility: hidden;
-  pointer-events: none;
+  position: relative;
+  z-index: 0;
+  margin-top: calc(-1 * var(--orby-marketing-section-radius));
   background: #fff;
-  transform: translate3d(0, 100%, 0);
-  clip-path: inset(100% 0 0 0);
-  transition: none;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
-
-.orby-marketing__in-progress-reveal.is-endcap-active {
-  visibility: visible;
-  transform: translate3d(0, 0, 0);
-  clip-path: none;
 }
 
 .orby-marketing__in-progress-reveal.is-revealed {
@@ -56,18 +30,18 @@
 
 .orby-marketing__in-progress-panel {
   position: relative;
-  z-index: 1;
   min-height: 100dvh;
   overflow: hidden;
   box-sizing: border-box;
   background: #fff;
-  padding-block: max(0px, env(safe-area-inset-top, 0px))
-    max(0px, env(safe-area-inset-bottom, 0px));
+  padding-top: calc(
+    max(0px, env(safe-area-inset-top, 0px)) + var(--orby-marketing-section-radius)
+  );
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
 }
 
 .orby-marketing__section--in-progress {
   position: relative;
-  z-index: 0;
   display: flex;
   align-items: center;
   justify-content: center;

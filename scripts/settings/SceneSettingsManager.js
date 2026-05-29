@@ -400,6 +400,8 @@ export class SceneSettingsManager {
         return { success: false, message: 'Invalid scene settings - missing required fields' };
       }
 
+      this.eventBus.emit('scene:batch-apply-start');
+      try {
       this.stateStore.batch(() => {
       // Apply Mesh settings (including transforms)
       if (payload.shading !== undefined) {
@@ -1381,6 +1383,9 @@ export class SceneSettingsManager {
       this.eventBus.emit('scene:settings-restored');
 
       return { success: true, message: 'Scene settings applied' };
+      } finally {
+        this.eventBus.emit('scene:batch-apply-end');
+      }
     } catch (error) {
       console.error('Error applying pasted scene settings:', error);
       return { success: false, message: 'Invalid pasted scene settings — could not parse JSON' };

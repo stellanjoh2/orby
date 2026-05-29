@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ORBY_BLACK, RENDER_QUALITY } from '../constants.js';
+import { ORBY_BLACK } from '../constants.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
@@ -201,24 +201,69 @@ export class ImageExporter {
   }
 
   /**
-   * PNG 1×/2× output size. 1× uses the current preview density (Medium/Low/Ultra).
-   * 2×+ uses Ultra-equivalent density so full-res export works while previewing in Medium.
+   * Largest square texture / renderbuffer the current GL context can allocate.
+   * Browsers may also clamp `canvas.width` below this.
+   */
+  _getMaxExportPixelDimension() {
+    const gl = this.renderer.getContext();
+    if (!gl) return 8192;
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 8192;
+    const maxRb = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || maxTex;
+    return Math.max(1, Math.min(maxTex, maxRb, 16384));
+  }
+
+  /**
+   * Scale down export dimensions when they exceed GPU / canvas limits (avoids clamped
+   * backing stores with crop/readback still sized for the requested resolution).
+   */
+  _clampExportPixelSize(width, height) {
+    const cap = this._getMaxExportPixelDimension();
+    let w = Math.max(1, Math.round(width));
+    let h = Math.max(1, Math.round(height));
+    if (w <= cap && h <= cap) {
+      return { width: w, height: h };
+    }
+    const fit = Math.min(cap / w, cap / h);
+    return {
+      width: Math.max(1, Math.floor(w * fit)),
+      height: Math.max(1, Math.floor(h * fit)),
+    };
+  }
+
+  /**
+   * PNG 1×/2× output size — multiples of the current preview backing store
+   * (logical viewport × preview pixel ratio), not a separate Ultra density tier.
    * @param {number} scale — 1 or 2 from the export UI
    */
   _resolveExportPixelSize(scale) {
     const logical = fullViewportLogicalSize(this.renderer);
     const previewDensity = Math.max(1e-6, this.renderer.getPixelRatio());
-    const ultraDensity = Math.min(
-      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
-      RENDER_QUALITY.max.maxPixelRatio,
-    );
     const s = Math.max(0.25, Number(scale) || 1);
-    const density = s > 1 ? ultraDensity : previewDensity;
-    return {
-      width: Math.max(1, Math.round(logical.x * density * s)),
-      height: Math.max(1, Math.round(logical.y * density * s)),
-      density,
-    };
+    const { width, height } = this._clampExportPixelSize(
+      logical.x * previewDensity * s,
+      logical.y * previewDensity * s,
+    );
+    return { width, height, density: previewDensity };
+  }
+
+  /**
+   * Resize renderer + post stack for export; returns true backing-store pixels after clamp.
+   * @returns {{ width: number, height: number }}
+   */
+  _setExportFramebufferSize(targetWidth, targetHeight) {
+    const { width, height } = this._clampExportPixelSize(targetWidth, targetHeight);
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(width, height, false);
+    const synced = this._syncRendererInternalSizeToCanvasBackingStore();
+    this.camera.aspect = synced.width / Math.max(1e-6, synced.height);
+    if (this.syncPostProcessingForLogicalSize) {
+      this.syncPostProcessingForLogicalSize(synced.width, synced.height);
+    } else if (this.composer) {
+      this.composer.setPixelRatio(1);
+      this.composer.setSize(synced.width, synced.height);
+    }
+    this._ensureComposerMatchesDrawingBuffer({ strict: true });
+    return synced;
   }
 
   /** Full backing-store viewport in logical units (pixelRatio should be 1 during export). */
@@ -244,9 +289,20 @@ export class ImageExporter {
     const r = this.renderer;
     const composer = this.composer;
     if (!composer) return null;
+    this._ensureComposerMatchesDrawingBuffer({ strict: true });
     const outputRT = getComposerOutputRenderTarget(composer);
     const targetWidth = Math.max(1, outputRT?.width ?? fallbackWidth ?? 1);
     const targetHeight = Math.max(1, outputRT?.height ?? fallbackHeight ?? 1);
+    const fw = Math.max(1, fallbackWidth ?? 1);
+    const fh = Math.max(1, fallbackHeight ?? 1);
+    if (
+      outputRT
+      && (targetWidth !== fw || targetHeight !== fh)
+    ) {
+      console.warn(
+        `PNG export: composer buffer ${targetWidth}×${targetHeight} ≠ framebuffer ${fw}×${fh}.`,
+      );
+    }
     const byteRT = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
       type: THREE.UnsignedByteType,
       format: THREE.RGBAFormat,
@@ -273,12 +329,35 @@ export class ImageExporter {
   ) {
     const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight);
     if (!capture) return '';
-    return this._pixelsToFlippedPngDataUrl(
-      capture.pixels,
-      capture.width,
-      capture.height,
-      { cinematicLetterbox219 },
-    );
+    const fw = Math.max(1, fallbackWidth ?? 1);
+    const fh = Math.max(1, fallbackHeight ?? 1);
+    let { pixels, width, height } = capture;
+    if (width !== fw || height !== fh) {
+      pixels = this._resampleRgba(pixels, width, height, fw, fh);
+      width = fw;
+      height = fh;
+    }
+    return this._pixelsToFlippedPngDataUrl(pixels, width, height, {
+      cinematicLetterbox219,
+    });
+  }
+
+  /** Nearest-neighbor resize when composer RT and canvas backing store diverge. */
+  _resampleRgba(src, srcW, srcH, dstW, dstH) {
+    const dst = new Uint8Array(dstW * dstH * 4);
+    for (let y = 0; y < dstH; y += 1) {
+      const sy = Math.min(srcH - 1, Math.floor((y / dstH) * srcH));
+      for (let x = 0; x < dstW; x += 1) {
+        const sx = Math.min(srcW - 1, Math.floor((x / dstW) * srcW));
+        const si = (sy * srcW + sx) * 4;
+        const di = (y * dstW + x) * 4;
+        dst[di] = src[si];
+        dst[di + 1] = src[si + 1];
+        dst[di + 2] = src[si + 2];
+        dst[di + 3] = src[si + 3];
+      }
+    }
+    return dst;
   }
 
   /**
@@ -299,28 +378,14 @@ export class ImageExporter {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportPixelSize(scale);
 
-    const canvas = this.renderer.domElement;
-
-    // Set renderer size and pixel ratio
-    // Use pixel ratio of 1 for exact resolution control
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(targetWidth, targetHeight, false);
-    const { width: exportW, height: exportH } =
-      this._syncRendererInternalSizeToCanvasBackingStore();
-
-    this.camera.aspect = exportW / Math.max(1e-6, exportH);
-    if (this.syncPostProcessingForLogicalSize) {
-      this.syncPostProcessingForLogicalSize(exportW, exportH);
-    } else if (this.composer) {
-      this.composer.setPixelRatio(1);
-      this.composer.setSize(exportW, exportH);
-    }
+    const { width: exportW, height: exportH } = this._setExportFramebufferSize(
+      targetWidth,
+      targetHeight,
+    );
     const exportFovScale = this.isLensDistortionActive?.() ? 1.06 : 1;
     if (this.syncPerspectiveProjection) {
       this.syncPerspectiveProjection({ fovScale: exportFovScale });
     }
-
-    this._ensureComposerMatchesDrawingBuffer({ strict: true });
 
     const prevComposerRenderToScreen = this.composer?.renderToScreen;
     if (this.composer) {
@@ -353,7 +418,7 @@ export class ImageExporter {
     const th = exportH;
     let dataUrl = this.composer
       ? this._captureComposerOutputAsPngDataUrl(tw, th, { cinematicLetterbox219 })
-      : canvas.toDataURL('image/png');
+      : this.renderer.domElement.toDataURL('image/png');
     if (!this.composer && cinematicLetterbox219) {
       dataUrl = await this._compositeCinematicLetterbox219OntoPngDataUrl(dataUrl, tw, th);
     }
@@ -746,6 +811,7 @@ export class ImageExporter {
     const renderHeight = Math.ceil(cropHeight * scale);
     const fullRenderWidth = Math.round(width * scale);
     const fullRenderHeight = Math.round(height * scale);
+    const clamped = this._clampExportPixelSize(fullRenderWidth, fullRenderHeight);
 
     return {
       pixelMinX,
@@ -756,9 +822,10 @@ export class ImageExporter {
       cropHeight,
       renderWidth,
       renderHeight,
-      fullRenderWidth,
-      fullRenderHeight,
+      fullRenderWidth: clamped.width,
+      fullRenderHeight: clamped.height,
       scale,
+      exportDensity: density,
     };
   }
 
@@ -939,19 +1006,12 @@ export class ImageExporter {
       this.postPipeline.renderPass.clearAlpha = 0;
     }
     
-    // Resize renderer and composer at the specified scale
-    // fullRenderWidth/Height are already scaled, so pixel ratio stays at 1 for exact resolution
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(cropInfo.fullRenderWidth, cropInfo.fullRenderHeight, false);
-    const { width: exportW, height: exportH } =
-      this._syncRendererInternalSizeToCanvasBackingStore();
-    this.camera.aspect = exportW / Math.max(1e-6, exportH);
-    if (this.syncPostProcessingForLogicalSize) {
-      this.syncPostProcessingForLogicalSize(exportW, exportH);
-    } else if (this.composer) {
-      this.composer.setPixelRatio(1);
-      this.composer.setSize(exportW, exportH);
-    }
+    const { width: exportW, height: exportH } = this._setExportFramebufferSize(
+      cropInfo.fullRenderWidth,
+      cropInfo.fullRenderHeight,
+    );
+    cropInfo.actualFullRenderWidth = exportW;
+    cropInfo.actualFullRenderHeight = exportH;
     if (this.syncPerspectiveProjection) {
       this.syncPerspectiveProjection();
     }
@@ -1000,9 +1060,21 @@ export class ImageExporter {
       }
 
       const capture = this._readComposerOutputPixels(exportW, exportH);
-      const fullPixels = capture?.pixels ?? null;
+      let fullPixels = capture?.pixels ?? null;
       const captureW = capture?.width ?? exportW;
       const captureH = capture?.height ?? exportH;
+      if (
+        fullPixels
+        && (captureW !== exportW || captureH !== exportH)
+      ) {
+        fullPixels = this._resampleRgba(
+          fullPixels,
+          captureW,
+          captureH,
+          exportW,
+          exportH,
+        );
+      }
 
       // Debug: Check if we got any content
       // Sample multiple points to check for content
@@ -1073,32 +1145,25 @@ export class ImageExporter {
       
       // Composite: Use RGB from post-processed buffer for opaque pixels, direct render RGB for edge pixels
       // This prevents dark outlines by using clean mesh colors at edges instead of darkened post-processed values
-      for (let i = 0; i < fullPixels.length; i += 4) {
+      const pixelCount = exportW * exportH;
+      for (let p = 0; p < pixelCount; p += 1) {
+        const i = p * 4;
         const directAlpha = alphaPixels[i + 3];
-        const postR = fullPixels[i];
-        const postG = fullPixels[i + 1];
-        const postB = fullPixels[i + 2];
         const directR = alphaPixels[i];
         const directG = alphaPixels[i + 1];
         const directB = alphaPixels[i + 2];
-        
+
         // Use mesh alpha only - no expansion for bloom outside mesh borders
         fullPixels[i + 3] = directAlpha;
-        
+
         if (directAlpha === 0) {
-          // Fully transparent: zero RGB to prevent any background bleed
-          fullPixels[i] = 0;     // R
-          fullPixels[i + 1] = 0;  // G
-          fullPixels[i + 2] = 0;  // B
+          fullPixels[i] = 0;
+          fullPixels[i + 1] = 0;
+          fullPixels[i + 2] = 0;
         } else if (directAlpha < 255) {
-          // Edge pixels (partial alpha): use direct render RGB for clean mesh colors
-          // Direct render has proper lighting without post-processing darkening
-          fullPixels[i] = directR;     // R
-          fullPixels[i + 1] = directG;  // G
-          fullPixels[i + 2] = directB;  // B
-        } else {
-          // Fully opaque pixels: use post-processed RGB (with all effects)
-          // RGB already set from post-processed canvas
+          fullPixels[i] = directR;
+          fullPixels[i + 1] = directG;
+          fullPixels[i + 2] = directB;
         }
       }
       
@@ -1107,8 +1172,8 @@ export class ImageExporter {
       // Write pixels to our render target
       const dataTexture = new THREE.DataTexture(
         fullPixels,
-        captureW,
-        captureH,
+        exportW,
+        exportH,
         THREE.RGBAFormat,
         THREE.UnsignedByteType,
       );
@@ -1195,12 +1260,29 @@ export class ImageExporter {
   _extractCroppedImage(renderTarget, cropInfo, state) {
     const tightPadding = 3; // px around opaque content (edge soften may use partial alpha)
 
+    const exportDensity =
+      Number.isFinite(cropInfo.exportDensity) && cropInfo.exportDensity > 0
+        ? cropInfo.exportDensity
+        : state.originalPixelRatio;
+    const coordHeight = state.originalSize.y * exportDensity;
+    const plannedW = cropInfo.fullRenderWidth;
+    const plannedH = cropInfo.fullRenderHeight;
+    const actualW = cropInfo.actualFullRenderWidth ?? renderTarget.width;
+    const actualH = cropInfo.actualFullRenderHeight ?? renderTarget.height;
+    const scaleX = plannedW > 0 ? actualW / plannedW : 1;
+    const scaleY = plannedH > 0 ? actualH / plannedH : 1;
+
     // Calculate crop coordinates in render target space (coarse AABB region)
-    const cropX = Math.floor(cropInfo.pixelMinX * cropInfo.scale);
-    const actualHeight = state.originalSize.y * state.originalPixelRatio;
-    const cropY = Math.floor((actualHeight - cropInfo.pixelMaxY) * cropInfo.scale);
-    const cropW = Math.ceil(cropInfo.renderWidth);
-    const cropH = Math.ceil(cropInfo.renderHeight);
+    const cropX = Math.floor(cropInfo.pixelMinX * cropInfo.scale * scaleX);
+    const cropY = Math.floor((coordHeight - cropInfo.pixelMaxY) * cropInfo.scale * scaleY);
+    const cropW = Math.max(
+      1,
+      Math.min(actualW - cropX, Math.ceil(cropInfo.renderWidth * scaleX)),
+    );
+    const cropH = Math.max(
+      1,
+      Math.min(actualH - cropY, Math.ceil(cropInfo.renderHeight * scaleY)),
+    );
 
     const regionPixels = new Uint8Array(cropW * cropH * 4);
     this.renderer.readRenderTargetPixels(

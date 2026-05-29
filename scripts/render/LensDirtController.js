@@ -118,35 +118,26 @@ export class LensDirtController {
    */
   updateExposureFactor() {
     if (!this.lensDirtPass) return;
-    
-    // Get average luminance from auto-exposure
-    const luminance = THREE.MathUtils.clamp(
-      this.getAverageLuminance?.() ?? 0,
-      0,
-      1,
-    );
-    
-    // Get current exposure value from auto-exposure
-    const currentExposure = this.getCurrentExposure?.() ?? this.baseExposure;
-    
-    // Calculate exposure multiplier: when exposure is low (underexposed bright scene),
-    // multiplier is high (lens dirt more visible). When exposure is high (overexposed dark scene),
-    // multiplier is low (lens dirt less visible).
-    // Normalize by base exposure to get a multiplier
-    const exposureMultiplier = THREE.MathUtils.clamp(
-      this.baseExposure / Math.max(currentExposure, 0.1), // Prevent division by zero
-      0.5, // Minimum multiplier
-      3.0, // Maximum multiplier
-    );
-    
-    // Combine luminance and exposure multiplier
-    // Higher luminance + lower exposure = more lens dirt visibility
-    const exposureFactor = THREE.MathUtils.clamp(
-      luminance * exposureMultiplier,
-      0,
-      1,
-    );
-    
+
+    const luminance = THREE.MathUtils.clamp(this.getAverageLuminance?.() ?? 0, 0, 1);
+
+    const autoExposureOn = this.stateStore?.getState()?.autoExposure === true;
+    let exposureFactor;
+
+    if (autoExposureOn) {
+      const currentExposure = this.getCurrentExposure?.() ?? this.baseExposure;
+      // Compensate for auto-exposure pull — bright views get lower exposure, more dirt headroom.
+      const exposureMultiplier = THREE.MathUtils.clamp(
+        this.baseExposure / Math.max(currentExposure, 0.1),
+        0.5,
+        3.0,
+      );
+      exposureFactor = THREE.MathUtils.clamp(luminance * exposureMultiplier, 0, 1);
+    } else {
+      // Manual exposure: do not divide down by high exposure (was hiding dirt @ exposure > ~1).
+      exposureFactor = luminance;
+    }
+
     this.lensDirtPass.uniforms.exposureFactor.value = exposureFactor;
   }
 

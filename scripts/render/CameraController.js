@@ -116,6 +116,9 @@ export class CameraController {
     /** @type {{ position: THREE.Vector3, target: THREE.Vector3, tilt: number, minPolar: number, maxPolar: number, minAzimuth: number, maxAzimuth: number, enableRotate: boolean, enablePan: boolean } | null} */
     this._isometricRestoreSnapshot = null;
 
+    /** Session-only export framing bookmark (position, target, tilt). */
+    this._exportFramingBookmark = null;
+
     this._suppressPoseEvents = false;
 
     this._bindAltInteractions();
@@ -673,6 +676,37 @@ export class CameraController {
       this.currentTilt = startTilt;
     }
     this._applyTilt({ uncapped: true });
+  }
+
+  /** Remember current orbit framing for this session (video export panel). */
+  saveExportFramingBookmark() {
+    if (!this.controls) return false;
+    this._exportFramingBookmark = {
+      position: this.camera.position.clone(),
+      target: this.controls.target.clone(),
+      tilt: this.currentTilt,
+    };
+    return true;
+  }
+
+  hasExportFramingBookmark() {
+    return !!this._exportFramingBookmark;
+  }
+
+  /** Restore session export framing bookmark; no-op when preview/export drive is active. */
+  restoreExportFramingBookmark() {
+    const sn = this._exportFramingBookmark;
+    if (!sn || !this.controls || this._exportCameraDriveActive) return false;
+    this._cancelFocusAnimation();
+    this._suppressPoseEvents = true;
+    this.camera.position.copy(sn.position);
+    this.controls.target.copy(sn.target);
+    this.currentTilt = sn.tilt;
+    this.controls.update();
+    this._applyTilt();
+    this._suppressPoseEvents = false;
+    this._emitPoseChanged({ persist: true });
+    return true;
   }
 
   endExportCameraDrive() {

@@ -35,9 +35,10 @@
     --drop-hero-magic-btn-width: calc(192px * var(--orby-ultra-wide-factor));
 
     --dropzone-frame-stroke: calc(2px * var(--orby-ultra-wide-factor));
-    --dropzone-frame-radius: calc(92px * var(--orby-ultra-wide-factor));
+    --dropzone-frame-radius: calc(112px * var(--orby-ultra-wide-factor));
 
     --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
+    --orby-dropzone-secondary-size: calc(16px * var(--orby-ultra-wide-factor));
   }
 
   html:not(.mobile-landing) .dropzone-hero-credit {

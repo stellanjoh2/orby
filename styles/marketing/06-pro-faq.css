@@ -205,8 +205,13 @@ html.safari-browser .orby-marketing__pro-card-video {
   padding-bottom: 0;
 }
 
+/* Overlap FAQ seam — rounded lime top sits on the gray panel (no transparent corner wedges) */
 .orby-marketing__section--faq + .orby-marketing__section--cta {
-  margin-top: 0;
+  margin-top: calc(-1 * var(--orby-marketing-section-radius));
+  padding-top: calc(
+    max(0px, env(safe-area-inset-top, 0px)) + var(--orby-marketing-section-radius)
+  );
+  z-index: 2;
 }
 
 /* FAQ header — same column cqi scale as split feature headlines */

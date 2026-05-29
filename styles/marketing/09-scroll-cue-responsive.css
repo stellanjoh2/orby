@@ -103,9 +103,12 @@ html.orby-scroll-cue-faded .orby-marketing-scroll-cue {
 
 @media (max-width: 1100px) {
   .orby-marketing__intro-stage,
+  .orby-marketing__section--cta,
   .orby-marketing__cta-stage {
     --orby-intro-edge-inset: clamp(0.25rem, 10vw, 3rem);
     --orby-intro-right-nudge: clamp(60px, 16vw, 200px);
+    --orby-intro-left-nudge: clamp(60px, 16vw, 200px);
+    --orby-intro-scale-left: min(1, calc(78dvh / 1041));
     --orby-intro-scale-right: min(1, calc(78dvh / 1225));
   }
 }
@@ -128,8 +131,10 @@ html.orby-scroll-cue-faded .orby-marketing-scroll-cue {
   }
 
   .orby-marketing__intro-stage,
+  .orby-marketing__section--cta,
   .orby-marketing__cta-stage {
     --orby-intro-edge-inset: clamp(0px, 6vw, 1.5rem);
+    --orby-intro-scale-left: min(1, calc(70dvh / 1041));
     --orby-intro-scale-right: min(1, calc(70dvh / 1225));
     --orby-cta-asset-max-h: min(72dvh, 900px);
   }
@@ -137,6 +142,7 @@ html.orby-scroll-cue-faded .orby-marketing-scroll-cue {
 
 @media (max-width: 520px) {
   .orby-marketing__intro-stage,
+  .orby-marketing__section--cta > .orby-marketing__intro-asset--left,
   .orby-marketing__cta-stage {
     display: none;
   }

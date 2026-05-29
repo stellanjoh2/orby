@@ -60,7 +60,7 @@ export class EventManager {
       s.setSceneGeometryWireframe(false);
     });
     eventBus.on('mesh:auto-rotate', (speed) => {
-      s.autoRotateSpeed = speed;
+      s.setAutoRotateSpeed(speed);
     });
     eventBus.on('mesh:clay-color', (value) => {
       s.setClaySettings({ color: value });
@@ -527,9 +527,22 @@ export class EventManager {
       ),
     );
     eventBus.on('export:svg-glb', () => s.exportSvgGlb());
+    eventBus.on('scene:batch-apply-start', () => {
+      s._suppressModeChangeToasts += 1;
+    });
+    eventBus.on('scene:batch-apply-end', () => {
+      s._suppressModeChangeToasts = Math.max(0, s._suppressModeChangeToasts - 1);
+    });
+
     eventBus.on('export:video', (payload) => s.exportVideo(payload));
     eventBus.on('export:video-preview-toggle', (payload) =>
       s.toggleExportVideoPreview(payload),
+    );
+    eventBus.on('export:video-camera-bookmark-save', () =>
+      s.saveExportVideoCameraBookmark(),
+    );
+    eventBus.on('export:video-camera-bookmark-restore', () =>
+      s.restoreExportVideoCameraBookmark(),
     );
     
     // App events

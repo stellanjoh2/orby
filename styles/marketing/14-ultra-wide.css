@@ -43,7 +43,7 @@
     --orby-section-headline-max: calc(68px * var(--orby-ultra-wide-factor));
 
     --orby-marketing-media-radius: calc(24px * var(--orby-ultra-wide-factor));
-    --orby-marketing-section-radius: calc(92px * var(--orby-ultra-wide-factor));
+    --orby-marketing-section-radius: calc(112px * var(--orby-ultra-wide-factor));
     --orby-marketing-ultra-ramp: calc(
       (var(--orby-ultra-wide-factor) - 1) / (var(--orby-ultra-wide-max-factor) - 1)
     );
@@ -57,7 +57,7 @@
 
   .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
     --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
-    --dropzone-frame-radius: calc(92px * var(--orby-ultra-wide-factor));
+    --dropzone-frame-radius: calc(112px * var(--orby-ultra-wide-factor));
     --orby-intro-turntable-offset-x: calc(700px * var(--orby-ultra-wide-factor));
     --orby-intro-turntable-offset-y: calc(50px * var(--orby-ultra-wide-factor));
     /* Slightly tighter than 1.6 — 45px type was reading looser than 2560 @ 1.5× */
@@ -82,6 +82,7 @@
     --orby-cta-asset-max-h: calc(1150px * var(--orby-ultra-wide-factor));
   }
 
+  #orby-marketing .orby-marketing__section--cta,
   #orby-marketing .orby-marketing__section--cta .orby-marketing__cta-stage {
     /*
      * CTA right PNG should mirror the 2560 composition while scaling up to 3840,
@@ -92,9 +93,14 @@
     );
     --orby-cta-ultra-size-trim: calc(1 - 0.12 * var(--orby-cta-ultra-ramp));
     --orby-cta-asset-shift-x: calc(8% + 240px * var(--orby-cta-ultra-ramp));
+    --orby-cta-asset-left-shift-x: calc(-8% - 240px * var(--orby-cta-ultra-ramp));
     --orby-intro-scale-right: 1;
+    --orby-intro-scale-left: 1;
     --orby-intro-right-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
-    --orby-cta-asset-shift-y: calc(200px - 180px * var(--orby-cta-ultra-ramp));
+    --orby-intro-left-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
+    --orby-cta-hummingbird-inset-top: calc(clamp(4.5rem, 10vh, 7.5rem) * var(--orby-ultra-wide-factor));
+    --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-ultra-wide-factor));
+    --orby-cta-asset-shift-y: calc(100px - 140px * var(--orby-cta-ultra-ramp));
     --orby-cta-asset-max-h: min(
       100dvh,
       calc(

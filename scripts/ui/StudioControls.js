@@ -1037,7 +1037,6 @@ export class StudioControls {
     this.ui.setControlDisabled('lightsShadowOpacity', mute);
     this.ui.setControlDisabled('lightsShadowContactOffset', mute);
     this.ui.setControlDisabled('lightsShadowTwoSided', mute);
-    this.ui.setBlockMuted('lightsShadows', mute);
   }
 }
 

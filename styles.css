@@ -1789,7 +1789,7 @@ html.orby-gate-unlocked .orby-entry-gate,
   width: var(--drop-hero-magic-btn-width, 192px);
   min-width: var(--drop-hero-magic-btn-width, 192px);
   min-height: calc(3.65rem * var(--drop-hero-wide-factor));
-  /* Match .drop-secondary — --orby-marketing-support-size (14px @ 2560, 0.9rem @ 1920) */
+  /* --orby-marketing-support-size (14px @ 2560; drop-secondary uses --orby-dropzone-secondary-size) */
   font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
 }
 
@@ -2881,7 +2881,7 @@ body.export-overlay-debug #dropzone {
   --dropzone-padding-y: var(--orby-home-padding-y);
   /* Magic-card style frame (CodePen gayane-gasparyan/jOmaBQK) — stroke & radius preserved */
   --dropzone-frame-stroke: 2px;
-  --dropzone-frame-radius: clamp(16px, 3.59375vw, 92px);
+  --dropzone-frame-radius: clamp(16px, 4.375vw, 112px);
   /*
    * Hero scale — full @ 2560; ~78% @ 1920 (logo, headline, Browse pill, frosted frame).
    */
@@ -3326,7 +3326,10 @@ html.orby-marketing-reduced body.dropzone-visible .dropzone::before {
 
 .drop-secondary {
   color: var(--text-dim);
-  font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
+  font-size: var(
+    --orby-dropzone-secondary-size,
+    var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem))
+  );
   letter-spacing: -0.01em;
   line-height: 1.5;
   opacity: 0;
@@ -3423,6 +3426,8 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
   /* Inset inside lighter panel cards (.panel-block) */
   --shelf-card-padding: 1.2rem;
+  /* Headline inset — match card horizontal padding for symmetric section headers */
+  --shelf-section-inset: var(--shelf-card-padding);
   --shelf-scrollbar-edge-offset: 12px;
   --shelf-scroll-end-pad: 1.25rem;
   /* Panel footer: last card → version line, logo → shelf bottom (symmetrical) */
@@ -3489,6 +3494,7 @@ html:not(.mobile-landing) .shelf {
   --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
   /* 16px @ 1920, 1.2rem @ 2560 — card inner gutter */
   --shelf-card-padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-section-inset: var(--shelf-card-padding);
   --shelf-scrollbar-edge-offset: calc(12px * var(--studio-ui-scale));
   --shelf-scroll-end-pad: calc(1.25rem * var(--studio-ui-scale));
   --shelf-footer-outer-gap: calc(1.75rem * var(--studio-ui-scale));
@@ -4239,7 +4245,7 @@ a.about-highlight:focus-visible {
 
 /* Subtle divider line within panel blocks - only spans content width */
 .panel-block-divider {
-  margin: 1rem 0;
+  margin: var(--shelf-section-inset) 0;
   border-top: 1px solid var(--stroke);
   border-bottom: none;
   max-width: 100%;
@@ -4264,7 +4270,7 @@ a.about-highlight:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent);
-  margin-bottom: var(--shelf-stack-gap);
+  margin-bottom: var(--shelf-section-inset);
   font-weight: 400;
 }
 
@@ -5774,6 +5780,16 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   gap: var(--shelf-control-gap);
 }
 
+.export-video-preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.export-video-preview-actions .accent-action-btn {
+  width: 100%;
+}
+
 /* Scene footer controls in Studio tab (same spacing, no export-specific nesting semantics). */
 .scene-controls {
   display: flex;
@@ -6245,8 +6261,8 @@ body.ui-hidden .shelf {
 
 /* Histogram visualization */
 .histogram-container {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0;
+  margin-bottom: 0;
   position: relative;
   max-height: 0;
   opacity: 0;
@@ -6259,6 +6275,8 @@ body.ui-hidden .shelf {
    * fixed 320px used to clip the canvas bottom when width × 9/16 > 320. */
   max-height: min(60vh, 640px);
   opacity: 1;
+  padding-top: var(--shelf-section-inset);
+  padding-bottom: 0.5rem;
 }
 
 @supports (container-type: inline-size) {
@@ -6276,7 +6294,59 @@ body.ui-hidden .shelf {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
-  margin-bottom: -0.35rem; /* pull the divider a bit closer when hidden */
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Camera & FX — toggle-revealed effect settings */
+.effect-foldout {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.effect-foldout--expanded {
+  max-height: 28rem;
+  opacity: 1;
+  padding-top: var(--shelf-section-inset);
+}
+
+.effect-foldout--expanded.effect-foldout--md {
+  max-height: 52rem;
+}
+
+.effect-foldout--expanded.effect-foldout--lg {
+  max-height: 80rem;
+}
+
+.effect-foldout--expanded.effect-foldout--xl {
+  max-height: 120rem;
+}
+
+.effect-foldout--collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+}
+
+/*
+ * Toggle + foldout rows — stable header position (collapsed or expanded).
+ * Vertical inset comes from .panel-block padding; title gap to controls lives on
+ * the foldout (padding-top when expanded), not title margin.
+ */
+.block-title.has-toggle:has(
+    + .effect-foldout,
+    + .histogram-container,
+    + .look-filter-presets-container,
+    + .tone-curve-foldout,
+    + .clip-planes-foldout,
+    + .creative-look-foldout
+  ) {
+  margin-bottom: 0;
 }
 
 /* Camera — manual render distance near/far sliders */
@@ -6290,19 +6360,21 @@ body.ui-hidden .shelf {
 .clip-planes-foldout--expanded {
   max-height: 6.5rem;
   opacity: 1;
+  padding-top: var(--shelf-section-inset);
 }
 
 .clip-planes-foldout--collapsed {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
-  margin-bottom: -0.2rem;
+  margin-bottom: 0;
+  padding-top: 0;
 }
 
 /* Tone curve — fold-out panel (like histogram) */
 .tone-curve-foldout {
-  margin-top: 0.45rem;
-  margin-bottom: 0.25rem;
+  margin-top: 0;
+  margin-bottom: 0;
   position: relative;
   max-height: 0;
   opacity: 0;
@@ -6313,18 +6385,21 @@ body.ui-hidden .shelf {
 .tone-curve-foldout--expanded {
   max-height: min(90vh, 640px); /* full-width square canvas; taller than old 400px cap */
   opacity: 1;
+  padding-top: var(--shelf-section-inset);
+  margin-bottom: 0.25rem;
 }
 
 .tone-curve-foldout--collapsed {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
-  margin-bottom: -0.2rem;
+  margin-bottom: 0;
+  padding-top: 0;
 }
 
 /* Look filter presets (Camera & FX) */
 .look-filter-presets-container {
-  margin-top: 0.45rem;
+  margin-top: 0;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
@@ -6334,18 +6409,20 @@ body.ui-hidden .shelf {
 .look-filter-presets-container--expanded {
   max-height: 40rem;
   opacity: 1;
+  padding-top: var(--shelf-section-inset);
 }
 
 .look-filter-presets-container--collapsed {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
-  margin-bottom: -0.2rem;
+  margin-bottom: 0;
+  padding-top: 0;
 }
 
 /* Object tab — Shader Lab fold-out (matches Look Filters behavior) */
 .creative-look-foldout {
-  margin-top: 0.45rem;
+  margin-top: 0;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
@@ -6355,13 +6432,15 @@ body.ui-hidden .shelf {
 .creative-look-foldout--expanded {
   max-height: 56rem;
   opacity: 1;
+  padding-top: var(--shelf-section-inset);
 }
 
 .creative-look-foldout--collapsed {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
-  margin-bottom: -0.2rem;
+  margin-bottom: 0;
+  padding-top: 0;
 }
 
 .creative-look-heading-actions {

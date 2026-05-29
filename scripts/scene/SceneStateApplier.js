@@ -36,14 +36,14 @@ function createStateApplySteps() {
     {
       id: 'mesh-auto-rotate',
       apply: (s, state) => {
-        s.autoRotateSpeed = state.autoRotate;
+        s.setAutoRotateSpeed(state.autoRotate, { silent: true });
       },
     },
     {
       id: 'camera-orbit-handheld',
       apply: (s, state) => {
-        s.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off');
-        s.setCameraHandheld(state.camera?.handheld ?? 'off');
+        s.setCameraAutoOrbit(state.camera?.autoOrbit ?? 'off', { silent: true });
+        s.setCameraHandheld(state.camera?.handheld ?? 'off', { silent: true });
       },
     },
     {

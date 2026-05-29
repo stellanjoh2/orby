@@ -1,3 +1,4 @@
+import { applyEffectFoldouts, applyMeshFoldouts, applyStudioFoldouts } from './ui/effectFoldouts.js';
 import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
@@ -19,6 +20,11 @@ import {
 } from './constants.js';
 import { normalizeGodRaysState } from './GodRaysEffect.js';
 import { SceneSettingsManager } from './settings/SceneSettingsManager.js';
+import {
+  MODE_CHANGE_TOAST_DURATION_MS,
+  formatModeChangeToastMessage,
+  modeChangeToastGroupKey,
+} from './ui/modeChangeToast.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
 import { StudioControls } from './ui/StudioControls.js';
@@ -101,10 +107,14 @@ export class UIManager {
     /** @type {Array<{ text: string, durationMs: number, toastOptions: object }>} */
     this._toastQueue = [];
     this._toastQueueActive = false;
+    /** Session-only video export camera bookmark (restore enabled when true). */
+    this._exportVideoCameraBookmarkSaved = false;
     /** @type {HTMLElement | null} */
     this._activeToastEl = null;
     /** @type {ReturnType<typeof setTimeout> | null} */
     this._activeToastTimer = null;
+    /** Resolves the queued toast currently on screen (see _presentToast). */
+    this._activeToastResolve = null;
     /** Dropzone shell only until first model / .orby load. */
     this._studioUiReady = false;
     /** @type {Promise<void> | null} */
@@ -299,6 +309,7 @@ export class UIManager {
     this.dom.fullscreenPromptYes = q('#orbyFullscreenPromptYes');
     this.dom.stats = q('#meshStats');
     this.dom.fbxMapSlotsDivider = q('#fbxMapSlotsDivider');
+    this.dom.claySubsectionDivider = q('#claySubsectionDivider');
     this.dom.svgExtrudePanelBlock = q('#svgExtrudePanelBlock');
     this.dom.studioBaseGlassPanel = q('#studioBaseGlassPanel');
     this.dom.animationBlock = q('#animationBlock');
@@ -570,6 +581,8 @@ export class UIManager {
       exportSvgGlb: q('#exportSvgGlbButton'),
       exportVideo: q('#exportVideoButton'),
       exportVideoPreview: q('#exportVideoPreviewButton'),
+      exportVideoCameraSave: q('#exportVideoCameraSaveButton'),
+      exportVideoCameraRestore: q('#exportVideoCameraRestoreButton'),
       copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
       loadSceneButtons: document.querySelectorAll('.load-scene-settings'),
       saveOrbyButtons: document.querySelectorAll('.save-orby-scene'),
@@ -626,6 +639,13 @@ export class UIManager {
       const key = subsection.dataset.subsection;
       if (key) {
         this.dom.subsections[key] = subsection;
+      }
+    });
+    this.dom.effectFoldouts = {};
+    document.querySelectorAll('[data-effect-foldout]').forEach((el) => {
+      const key = el.dataset.effectFoldout;
+      if (key) {
+        this.dom.effectFoldouts[key] = el;
       }
     });
     // Start menu visibility is managed by StartMenuController
@@ -1069,6 +1089,24 @@ export class UIManager {
       this.buttons.exportVideo.disabled = !!active;
       this.buttons.exportVideo.classList.toggle('is-disabled', !!active);
     }
+    this.setExportVideoCameraBookmarkAvailable(this._exportVideoCameraBookmarkSaved, {
+      previewActive: !!active,
+    });
+  }
+
+  /** Enable restore once a session camera bookmark exists; optionally mute save/restore during preview. */
+  setExportVideoCameraBookmarkAvailable(hasBookmark, { previewActive = false } = {}) {
+    this._exportVideoCameraBookmarkSaved = !!hasBookmark;
+    const save = this.buttons.exportVideoCameraSave;
+    const restore = this.buttons.exportVideoCameraRestore;
+    if (save) {
+      save.disabled = previewActive;
+      save.classList.toggle('is-disabled', previewActive);
+    }
+    if (restore) {
+      restore.disabled = previewActive || !hasBookmark;
+      restore.classList.toggle('is-disabled', previewActive || !hasBookmark);
+    }
   }
 
   /**
@@ -1349,7 +1387,85 @@ export class UIManager {
     void this._drainToastQueue();
   }
 
-  _clearActiveToast() {
+  /**
+   * Transient toast when cycling mesh auto-rotate, camera auto-orbit, or handheld.
+   * Reuses the active toast when the same mode group changes in quick succession.
+   * Bypasses the toast queue so rapid keyboard cycling cannot block later toasts.
+   * @param {'autoRotate' | 'autoOrbit' | 'handheld'} kind
+   * @param {number | string} value
+   */
+  showModeChangeToast(kind, value) {
+    const message = formatModeChangeToastMessage(kind, value);
+    if (!message) return;
+
+    const groupKey = modeChangeToastGroupKey(kind);
+    const durationMs = MODE_CHANGE_TOAST_DURATION_MS;
+
+    if (this._activeToastEl?.dataset?.toastGroup === groupKey) {
+      const label = this._activeToastEl.querySelector('.toast-message');
+      if (label) label.textContent = message;
+      this._scheduleActiveToastDismiss(durationMs);
+      return;
+    }
+
+    this._toastQueue = this._toastQueue.filter(
+      (item) => item.toastOptions?.toastGroup !== groupKey,
+    );
+    this._presentImmediateToast(message, durationMs, {
+      notification: false,
+      toastGroup: groupKey,
+    });
+  }
+
+  /**
+   * Show a toast outside the queue (mode changes). Unblocks any queued toast first.
+   * @param {string} message
+   * @param {number} durationMs
+   * @param {{ notification?: boolean, toastGroup?: string }} [toastOptions]
+   */
+  _presentImmediateToast(message, durationMs, toastOptions = {}) {
+    const template = this.dom.toastTemplate?.content?.firstElementChild;
+    if (!template) return;
+
+    this._resolveActiveToastPresentation();
+    this._clearActiveToastElement();
+
+    const toast = template.cloneNode(true);
+    toast.querySelector('.toast-message').textContent = message;
+    if (toastOptions.toastGroup) {
+      toast.dataset.toastGroup = toastOptions.toastGroup;
+    }
+    document.body.appendChild(toast);
+    this._activeToastEl = toast;
+    this._scheduleActiveToastDismiss(durationMs);
+  }
+
+  /** @param {number} durationMs */
+  _scheduleActiveToastDismiss(durationMs) {
+    if (this._activeToastTimer) {
+      clearTimeout(this._activeToastTimer);
+      this._activeToastTimer = null;
+    }
+    const toast = this._activeToastEl;
+    if (!toast) return;
+    this._activeToastTimer = setTimeout(() => {
+      toast.remove();
+      if (this._activeToastEl === toast) {
+        this._activeToastEl = null;
+      }
+      this._activeToastTimer = null;
+      this._resolveActiveToastPresentation();
+    }, durationMs);
+  }
+
+  _resolveActiveToastPresentation() {
+    if (!this._activeToastResolve) return;
+    const resolve = this._activeToastResolve;
+    this._activeToastResolve = null;
+    resolve();
+  }
+
+  _clearActiveToastElement() {
     if (this._activeToastTimer) {
       clearTimeout(this._activeToastTimer);
       this._activeToastTimer = null;
@@ -1358,6 +1474,11 @@ export class UIManager {
       this._activeToastEl.remove();
     }
     this._activeToastEl = null;
+  }
+
+  _clearActiveToast() {
+    this._resolveActiveToastPresentation();
+    this._clearActiveToastElement();
   }
 
   /**
@@ -1379,17 +1500,21 @@ export class UIManager {
 
     const toast = template.cloneNode(true);
     toast.querySelector('.toast-message').textContent = text;
+    if (toastOptions?.toastGroup) {
+      toast.dataset.toastGroup = toastOptions.toastGroup;
+    }
     document.body.appendChild(toast);
     this._activeToastEl = toast;
 
     return new Promise((resolve) => {
+      this._activeToastResolve = resolve;
       this._activeToastTimer = setTimeout(() => {
         toast.remove();
         if (this._activeToastEl === toast) {
           this._activeToastEl = null;
         }
         this._activeToastTimer = null;
-        resolve();
+        this._resolveActiveToastPresentation();
       }, durationMs);
     });
   }
@@ -2890,6 +3015,14 @@ export class UIManager {
     this.setControlDisabled(ids, disabled);
   }
 
+  setEffectFoldoutOpen(key, open) {
+    const el = this.dom.effectFoldouts?.[key];
+    if (!el) return;
+    el.classList.toggle('effect-foldout--collapsed', !open);
+    el.classList.toggle('effect-foldout--expanded', open);
+    el.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
   setClipPlanesFoldoutOpen(open) {
     const el = this.dom.clipPlanesFoldout;
     if (!el) return;
@@ -2947,8 +3080,7 @@ export class UIManager {
     // Each block is evaluated independently based on its own state property
     // This ensures only the correct block is muted when its toggle is changed
     
-    // HDRI block - only muted if hdriEnabled is false
-    this.setBlockMuted('hdri', !currentState.hdriEnabled);
+    // HDRI foldout — open state handled in applyStudioFoldouts
 
     this.setBlockMuted('creative-look', !currentState.creativeLook?.enabled);
 
@@ -2975,7 +3107,6 @@ export class UIManager {
     this.setControlDisabled('cameraDistance', isoOn);
     this.viewPresetsControls?.setDisabled(isoOn);
     this.setControlDisabled('fisheyeEnabled', isoOn);
-    this.setBlockMuted('isometric', !isoOn);
     this.setBlockMuted('auto-orbit', isoOn);
     this.setBlockMuted('handheld', isoOn);
     this.setRadioGroupDisabled(this.inputs.cameraAutoOrbit, isoOn);
@@ -2989,17 +3120,11 @@ export class UIManager {
       });
     }
 
-    // Lens flare block - requires both HDRI and lens flare to be enabled
-    const lensEnabled = !!currentState.hdriEnabled && !!currentState.lensFlare?.enabled;
-    this.setBlockMuted('lens-flare', !lensEnabled || isoOn);
-
-    const godRaysOn = !!currentState.hdriEnabled && !!currentState.godRays?.enabled;
-    this.setBlockMuted('volumetric-scattering', !godRaysOn || isoOn);
+    // Lens flare / god rays foldouts — open state handled in applyEffectFoldouts
     
-    // Lights block - only muted if lightsEnabled is false
-    this.setBlockMuted('lights', !currentState.lightsEnabled);
+    // Lights / base / backdrop foldouts — applyStudioFoldouts
     
-    // Base platform — muted when disabled; Base Glass panel only exists once base is enabled
+    // Base Glass panel only exists once base is enabled
     const podiumOn = !!currentState.groundSolid;
     const glassOn = !!(
       currentState.baseGlassSurface ??
@@ -3009,8 +3134,6 @@ export class UIManager {
     if (this.dom.studioBaseGlassPanel) {
       this.dom.studioBaseGlassPanel.hidden = !podiumOn;
     }
-    this.setBlockMuted('base', !podiumOn);
-    this.setBlockMuted('base-glass', !glassOn);
     this.setControlDisabled(
       [
         'groundSolidColor',
@@ -3027,7 +3150,6 @@ export class UIManager {
     this.setControlDisabled('baseGlassAmount', !glassOn);
 
     const backdropOn = !!currentState.backdropEnabled;
-    this.setBlockMuted('backdrop', !backdropOn);
     this.setControlDisabled(
       [
         'backdropColor',
@@ -3046,48 +3168,29 @@ export class UIManager {
       !(backdropOn && !!currentState.backdropTextureEnabled),
     );
 
-    // Grid block - only muted if groundWire is false
+    // Grid foldout — open state handled in applyMeshFoldouts
     const gridOn = !!currentState.groundWire;
-    this.setBlockMuted('grid', !gridOn);
     this.setControlDisabled(
       ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale', 'gridSnap'],
       !gridOn,
     );
-    
-    // DOF block - only muted if dof.enabled is false
-    this.setBlockMuted('dof', !currentState.dof?.enabled);
 
-    this.setBlockMuted(
-      'vignette',
-      !isVignetteUiEnabled(currentState.camera ?? {}),
-    );
+    applyEffectFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
+    applyStudioFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
+    applyMeshFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
 
-    this.setBlockMuted('fisheye', !fisheyeOn || isoOn);
-    
-    // Bloom block - only muted if bloom.enabled is false
-    this.setBlockMuted('bloom', !currentState.bloom?.enabled);
+    const clayOn = currentState.shading === 'clay';
+    if (this.dom.subsections?.clay) {
+      this.dom.subsections.clay.hidden = !clayOn;
+    }
+    if (this.dom.claySubsectionDivider) {
+      this.dom.claySubsectionDivider.hidden = !clayOn;
+    }
 
-    const abOn = !!currentState.lensFlare?.anamorphicBloom?.enabled;
-    this.setBlockMuted(
-      'anamorphic-lens-flare',
-      !(isBloomPipelineActive(currentState) && abOn),
-    );
-
-    // Lens dirt block - only muted if lens dirt disabled
-    this.setBlockMuted('lens-dirt', !currentState.lensDirt?.enabled);
-    
-    // Grain block - only muted if grain.enabled is false
-    this.setBlockMuted('grain', !currentState.grain?.enabled);
-    
-    // Aberration block - only muted if aberration.enabled is false
-    this.setBlockMuted('aberration', !currentState.aberration?.enabled);
-
-    this.setBlockMuted('color-checker', !currentState.colorChecker?.enabled);
-
-    this.setBlockMuted(
-      'composition-guides',
-      !currentState.camera?.compositionGridEnabled,
-    );
+    const keyLightOn =
+      !!currentState.lightsEnabled &&
+      currentState.lights?.key?.enabled === true;
+    this.setControlDisabled('keyLightGoboBtn', !keyLightOn);
 
     this.setBlockMuted(
       'cinematic-letterbox',
@@ -3095,13 +3198,7 @@ export class UIManager {
         !currentState.camera?.cinematicLetterbox219,
     );
 
-    this.setBlockMuted(
-      'ambient-occlusion',
-      !currentState.ambientOcclusion?.enabled,
-    );
-
-    // Fresnel block - only muted if fresnel.enabled is false
-    this.setBlockMuted('fresnel', !currentState.fresnel?.enabled);
+    // Fresnel foldout — open state handled in applyMeshFoldouts
 
     const svgExtrudeOn = !!currentState.svgExtrude?.enabled;
     if (this.dom.svgExtrudePanelBlock) {

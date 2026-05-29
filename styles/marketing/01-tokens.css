@@ -173,8 +173,8 @@
     1.667vw,
     calc(24px * var(--orby-marketing-scale))
   );
-  /* FAQ / CTA section tops — 92px @ 2560 */
-  --orby-marketing-section-radius: clamp(16px, 3.59375vw, 92px);
+  /* FAQ / CTA section corners — 112px @ 2560 (matches dropzone frame) */
+  --orby-marketing-section-radius: clamp(16px, 4.375vw, 112px);
   /* Lime feature headlines — explicit; block .title-line rows ignore parent h2 leading */
   --orby-marketing-section-headline-line: 1.1;
   /*
@@ -206,6 +206,12 @@
   );
   /* Footer meta line — 14px @ 1920, 16px @ 2560 */
   --orby-marketing-meta-size: clamp(
+    14px,
+    calc(14px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
+    16px
+  );
+  /* Home dropzone secondary copy — 14px @ 1920, 16px @ 2560 (Browse pill uses support-size) */
+  --orby-dropzone-secondary-size: clamp(
     14px,
     calc(14px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
     16px
@@ -365,6 +371,11 @@
       14px,
       calc(14px + 0.4px * (1 - var(--orby-marketing-wide-type-ramp))),
       14px
+    );
+    --orby-dropzone-secondary-size: clamp(
+      14px,
+      calc(14px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),
+      16px
     );
   }
 }

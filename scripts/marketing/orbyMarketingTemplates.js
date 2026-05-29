@@ -198,8 +198,7 @@ function renderInProgressSection(section, ctaSection) {
     : 'orby-marketing__split-bleed orby-marketing__split-bleed--media-right';
   const revealDir = mediaLeft ? 'rtl' : 'ltr';
 
-  return `<div class="orby-marketing__in-progress-reveal-spacer" data-orby-marketing-in-progress-spacer aria-hidden="true"></div>
-  <div class="orby-marketing__in-progress-reveal" data-orby-marketing-in-progress-reveal>
+  return `<div class="orby-marketing__in-progress-reveal" data-orby-marketing-in-progress-reveal>
     <div class="orby-marketing__in-progress-panel" data-orby-marketing-in-progress-panel>
       <section class="orby-marketing__section orby-marketing__section--in-progress" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
         <div class="${bleedClass}">
@@ -487,10 +486,20 @@ function renderFaqSection(section) {
 
 function renderCtaSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--cta" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
+    <img
+      class="orby-marketing__intro-asset orby-marketing__intro-asset--left"
+      src="./assets/marketing/intro-asset-right.png"
+      alt=""
+      width="1440"
+      height="1041"
+      decoding="async"
+      aria-hidden="true"
+      data-orby-marketing-intro-asset="left"
+    />
     <div class="orby-marketing__cta-stage" aria-hidden="true">
       <img
         class="orby-marketing__intro-asset orby-marketing__intro-asset--right"
-        src="./assets/marketing/intro-asset-right.png"
+        src="./assets/marketing/intro-asset-left.png"
         alt=""
         width="1300"
         height="1225"
