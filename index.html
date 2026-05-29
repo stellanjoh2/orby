@@ -3588,16 +3588,16 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="volumetric-scattering">
                   <div class="block-title has-toggle">
-                    <span data-tooltip="pmndrs God Rays — follows Lens Flare rotation and height (virtual sun mesh)">God Rays</span>
+                    <span data-tooltip="Volumetric light rays — follows Lens Flare rotation and height (virtual sun mesh)">Light Rays</span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Volumetric Scattering" data-tooltip="Reset Volumetric Scattering settings">
+                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Light Rays" data-tooltip="Reset Light Rays settings">
                         <i class="fa-solid fa-rotate-left"></i>
                         <span class="sr-only">Reset</span>
                       </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable sun volumetric scattering">
+                      <label class="effect-toggle" data-tooltip="Enable/disable light rays from the sun">
                         <input type="checkbox" id="godRaysEnabled" />
                         <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Volumetric Scattering</span>
+                        <span class="sr-only">Enable Light Rays</span>
                       </label>
                     </div>
                   </div>
@@ -3630,7 +3630,7 @@
                     />
                     <span class="value" data-output="godRaysLightScale">0.4</span>
                   </label>
-                  <label class="slider-line" data-tooltip="Overall opacity of the god rays composite">
+                  <label class="slider-line" data-tooltip="Overall opacity of the light rays composite">
                     <span>Opacity</span>
                     <input
                       id="godRaysOpacity"
@@ -4931,9 +4931,9 @@
                         rel="noopener noreferrer"
                         class="about-highlight"
                         style="text-decoration: underline; text-underline-offset: 0.15em;"
-                        >pmndrs postprocessing — God Rays</a
+                        >pmndrs postprocessing — GodRays</a
                       >
-                      — volumetric light shafts in Orby
+                      — Light Rays in Orby
                     </li>
                     <li>
                       •

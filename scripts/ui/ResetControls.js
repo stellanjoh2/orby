@@ -159,7 +159,7 @@ const BLOCK_RESET_TOASTS = {
   'creative-look': 'Creative look reset',
   hdri: 'HDRI reset',
   'lens-flare': 'Lens flare reset',
-  'volumetric-scattering': 'Volumetric scattering reset',
+  'volumetric-scattering': 'Light Rays reset',
   lights: 'Lights reset',
   'lights-shadows': 'Shadows reset',
   keyLight: 'Key light reset',
