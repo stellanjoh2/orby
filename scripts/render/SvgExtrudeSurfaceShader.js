@@ -29,13 +29,35 @@ export function getSvgExtrudeSurfacePresetIndex(presetId) {
  * @param {THREE.Material} material
  */
 export function resolveSvgSurfacePreviousHook(material) {
+  const live = material.onBeforeCompile;
+
+  if (typeof live === 'function' && live.__orbySvgSurfPatch) {
+    const stored = material.userData?.svgExtrudeProceduralPrevious;
+    if (typeof stored === 'function' && !stored.__orbySvgSurfPatch) {
+      return stored;
+    }
+  }
+
+  // Shadow tint / gobo must stay outside Fresnel in the compile chain — never skip them.
+  if (
+    material.userData?.shadowTintPatched &&
+    typeof material.userData.shadowTintOnBeforeCompile === 'function'
+  ) {
+    return material.userData.shadowTintOnBeforeCompile;
+  }
+  if (
+    material.userData?.goboPatched &&
+    typeof material.userData.goboOnBeforeCompile === 'function'
+  ) {
+    return material.userData.goboOnBeforeCompile;
+  }
+
   if (
     material.userData?.fresnelPatched &&
     typeof material.userData.fresnelOnBeforeCompile === 'function'
   ) {
     return material.userData.fresnelOnBeforeCompile;
   }
-  const live = material.onBeforeCompile;
   if (typeof live === 'function' && !live.__orbySvgSurfPatch && !live.__orbyFresnelShaderPatch) {
     return live;
   }

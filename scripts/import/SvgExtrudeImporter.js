@@ -134,9 +134,22 @@ export class SvgExtrudeImporter {
     if (!this.svgText) {
       throw new Error('No SVG source available for depth update');
     }
-    const depth = clampDepth(nextDepth);
-    this.currentDepth = depth;
-    const rebuilt = this._buildGroup(depth, this.currentNormalAngleDeg);
+    const newDepth = clampDepth(nextDepth);
+    const oldDepth = this.currentDepth;
+    if (
+      oldDepth > 0 &&
+      Math.abs(newDepth - oldDepth) > 1e-6 &&
+      Object.keys(this.currentColorDepths).length > 0
+    ) {
+      const ratio = newDepth / oldDepth;
+      const scaled = {};
+      Object.entries(this.currentColorDepths).forEach(([color, depthValue]) => {
+        scaled[color] = clampDepth(Number(depthValue) * ratio);
+      });
+      this.currentColorDepths = scaled;
+    }
+    this.currentDepth = newDepth;
+    const rebuilt = this._buildGroup(newDepth, this.currentNormalAngleDeg);
     if (!this.group) {
       this.group = rebuilt;
       return this.group;

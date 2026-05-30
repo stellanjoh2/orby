@@ -44,6 +44,8 @@ export class VideoExporter {
     beginExportAnimationDrive = () => {},
     applyExportAnimationDriveFrame = () => {},
     endExportAnimationDrive = () => {},
+    /** ShaderLab / creative-look `uTime` — export loop does not run the interactive rAF step. */
+    applyCreativeLookExportFrame = () => {},
     getCurrentModel,
     getCurrentFile,
     getCurrentAssetMetadata,
@@ -78,6 +80,7 @@ export class VideoExporter {
     this.beginExportAnimationDrive = beginExportAnimationDrive;
     this.applyExportAnimationDriveFrame = applyExportAnimationDriveFrame;
     this.endExportAnimationDrive = endExportAnimationDrive;
+    this.applyCreativeLookExportFrame = applyCreativeLookExportFrame;
     this.getCurrentModel = getCurrentModel;
     this.getCurrentFile = getCurrentFile;
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
@@ -169,6 +172,9 @@ export class VideoExporter {
       && typeof fps === 'number'
     ) {
       this.applyExportAnimationDriveFrame?.(frameIndex, fps);
+    }
+    if (typeof frameIndex === 'number' && typeof fps === 'number' && fps > 0) {
+      this.applyCreativeLookExportFrame?.(frameIndex, fps);
     }
   }
 

@@ -756,7 +756,7 @@ export class MaterialController {
     if (this.fresnelSettings?.enabled) {
       this.applyFresnelToModel(this.currentModel);
     }
-    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
+    this.reapplySvgExtrudeSurfaceShaders();
   }
 
   /**
@@ -1728,7 +1728,7 @@ export class MaterialController {
     this.updateWireframeOverlay();
     this.uvCheckerOverlay.rebuild();
     this.applyFresnelToModel(this.currentModel);
-    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, mode);
+    this.reapplySvgExtrudeSurfaceShaders();
     this._applyCreativeLookOverride();
     this._applyRenderedImportGltfGlassPresentation(this.currentModel);
 
@@ -2324,7 +2324,7 @@ export class MaterialController {
       if (this.fresnelSettings?.enabled) {
         this.applyFresnelToModel(this.currentModel);
       }
-      reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
+      this.reapplySvgExtrudeSurfaceShaders();
     }
   }
 
@@ -2522,7 +2522,22 @@ export class MaterialController {
       Math.min(5.0, this.fresnelSettings.radius || 1),
     );
     this.applyFresnelToModel(this.currentModel);
-    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
+    this.reapplySvgExtrudeSurfaceShaders();
+  }
+
+  /**
+   * SVG brushed/car-paint hooks must sit inside shadow tint; re-apply tint after surface patches.
+   */
+  reapplySvgExtrudeSurfaceShaders() {
+    if (!this.currentModel) return;
+    reapplySvgExtrudeProceduralFromState(
+      this.currentModel,
+      this.stateStore,
+      this.currentShading,
+    );
+    if (this.shadowTintStrength > 0) {
+      this.applyShadowTintToObject(this.currentModel);
+    }
   }
 
   applyFresnelToModel(root) {
@@ -2863,7 +2878,7 @@ export class MaterialController {
       } else {
         this._restoreClayMaterialSurfaces();
       }
-      reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
+      this.reapplySvgExtrudeSurfaceShaders();
       return;
     }
 
@@ -3005,7 +3020,7 @@ export class MaterialController {
     if (this.fresnelSettings?.enabled) {
       this.applyFresnelToModel(this.currentModel);
     }
-    reapplySvgExtrudeProceduralFromState(this.currentModel, this.stateStore, this.currentShading);
+    this.reapplySvgExtrudeSurfaceShaders();
   }
 
   /**

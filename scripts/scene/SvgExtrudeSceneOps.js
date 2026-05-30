@@ -27,6 +27,9 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
   );
   scene.setReverseNormals(scene.stateStore.getState().advanced?.reverseNormals ?? false);
   scene.refreshBoneHelpers();
+  scene.cameraController?.refreshModelBounds?.(scene.currentModel);
+  scene._syncShadowCameraBounds?.();
+  scene._applyShadowTintToScene?.();
   if (scene.currentFile) {
     scene.updateStatsUI(scene.currentFile, scene.currentModel, scene.currentAssetMetadata);
   }
@@ -63,7 +66,7 @@ export function sanitizeSvgExtrudeColorDepths(colorDepths, stateStore) {
     if (!availableColors.includes(color)) return;
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return;
-    sanitized[color] = Math.max(0.01, Math.min(1.0, numeric));
+    sanitized[color] = Math.max(0.01, Math.min(2.0, numeric));
   });
   return sanitized;
 }

@@ -34,7 +34,6 @@ import { ModelLoader } from './render/ModelLoader.js';
 import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { MaterialController } from './render/MaterialController.js';
-import { reapplySvgExtrudeProceduralFromState } from './render/SvgExtrudeSurfaceShader.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -963,6 +962,10 @@ export class SceneManager {
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
       endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
+      applyCreativeLookExportFrame: (frameIndex, fps) => {
+        const elapsed = frameIndex / Math.max(1, fps);
+        this.materialController?.updateCreativeLookTime?.(elapsed);
+      },
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
@@ -2893,11 +2896,27 @@ export class SceneManager {
     this.eventBus.emit('ui:advanced-glass-visible', { visible: hasHeuristicGlass });
   }
 
-  setSvgExtrudeDepth(depth) {
-    runSvgExtrudeImporterMutation(this, () => this.svgExtrudeImporter.setDepth(depth), {
-      logLabel: 'update SVG extrusion depth',
-      toastOnError: 'Could not update SVG depth',
-    });
+  setSvgExtrudeDepth(depth, options = {}) {
+    const { updateState = true } = options;
+    const numeric = Number(depth);
+    const clamped = Number.isFinite(numeric) ? Math.max(0.01, Math.min(2.0, numeric)) : 0.2;
+    const ok = runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setDepth(clamped),
+      {
+        logLabel: 'update SVG extrusion depth',
+        toastOnError: 'Could not update SVG depth',
+      },
+    );
+    if (!ok || !updateState) return;
+    this.stateStore.set('svgExtrude.depth', this.svgExtrudeImporter.getDepth());
+    this.stateStore.set(
+      'svgExtrude.colorDepths',
+      sanitizeSvgExtrudeColorDepths(
+        this.svgExtrudeImporter.getColorDepths(),
+        this.stateStore,
+      ),
+    );
   }
 
   setSvgExtrudeNormalAngle(normalAngle) {
@@ -3257,11 +3276,7 @@ export class SceneManager {
       }
     }
     if (!this.currentModel || !this.isSvgExtrudeModel) return;
-    reapplySvgExtrudeProceduralFromState(
-      this.currentModel,
-      this.stateStore,
-      this.currentShading,
-    );
+    this.materialController?.reapplySvgExtrudeSurfaceShaders();
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {

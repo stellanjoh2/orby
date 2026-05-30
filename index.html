@@ -870,7 +870,7 @@
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Global depth for all imported SVG fills">Depth</span>
+                    <span data-tooltip="Overall extrusion depth; scales every layer together (including per-color overrides)">Depth</span>
                     <input
                       id="svgExtrudeDepth"
                       type="range"
@@ -901,6 +901,7 @@
                       <span class="sr-only">Flip SVG extrusion direction</span>
                     </label>
                   </label>
+                  <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
                   <label class="slider-line">
                     <span data-tooltip="Replace all imported SVG fills with one chosen color">Color Override</span>
                     <label class="effect-toggle">
@@ -923,7 +924,6 @@
                       value="#7ed321"
                     />
                   </label>
-                  <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
                   </div>
                   <label class="select-line">
                     <span data-tooltip="Procedural PBR surface detail (roughness and metalness variation)">Surface</span>
@@ -2315,12 +2315,12 @@
                     <span class="value" data-output="lightsShadowOpacity">0.25</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Negative values pull shadows tighter to contact points; too low can add acne artifacts">Offset</span>
+                    <span data-tooltip="Negative pulls shadows onto the surface (tighter contact). Positive adds a gap. Scales with model size automatically.">Offset</span>
                     <input
                       id="lightsShadowContactOffset"
                       type="range"
-                      min="-0.0005"
-                      max="0.0002"
+                      min="-0.002"
+                      max="0.0005"
                       step="0.00001"
                       value="-0.0001"
                     />

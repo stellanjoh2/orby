@@ -367,7 +367,7 @@ export class MeshControls {
       const value = parseFloat(input.value);
       const clampedValue = kind === 'offset'
         ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
-        : (Number.isFinite(value) ? Math.max(0.01, Math.min(1.0, value)) : 0.2);
+        : (Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2);
       const sliderLine = input.closest('.slider-line');
       const numberInput = sliderLine?.querySelector('input[type="number"]');
       if (numberInput) {
@@ -410,7 +410,7 @@ export class MeshControls {
       const value = parseFloat(input.value);
       const clampedValue = kind === 'offset'
         ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
-        : (Number.isFinite(value) ? Math.max(0.01, Math.min(1.0, value)) : 0.2);
+        : (Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2);
       input.value = clampedValue.toFixed(2);
       const sliderLine = input.closest('.slider-line');
       const rangeInput = sliderLine?.querySelector('input[type="range"]');
@@ -1435,12 +1435,12 @@ export class MeshControls {
     }
     container.style.display = '';
 
-    const rows = palette
+    const rows = `<div class="svg-extrude-note">Fine-tune each fill. The Depth slider above scales all layers together.</div>${palette
       .map((color, index) => {
         const depth = Number.isFinite(Number(overrides[color]))
           ? Number(overrides[color])
           : globalDepth;
-        const safeDepth = Math.max(0.01, Math.min(1.0, depth));
+        const safeDepth = Math.max(0.01, Math.min(2.0, depth));
         const offset = Number.isFinite(Number(offsets[color])) ? Number(offsets[color]) : 0;
         const safeOffset = Math.max(-1.0, Math.min(1.0, offset));
         return `
@@ -1449,8 +1449,8 @@ export class MeshControls {
     <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
     Depth ${index + 1}
   </span>
-  <input type="range" min="0.01" max="1" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
-  <input type="number" min="0.01" max="1" step="0.01" class="svg-extrude-inline-number" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth value ${index + 1} (${color.toUpperCase()})" />
+  <input type="range" min="0.01" max="2" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
+  <input type="number" min="0.01" max="2" step="0.01" class="svg-extrude-inline-number" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth value ${index + 1} (${color.toUpperCase()})" />
 </label>
 <label class="slider-line">
   <span>
@@ -1461,7 +1461,7 @@ export class MeshControls {
   <input type="number" min="-1" max="1" step="0.01" class="svg-extrude-inline-number" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position value ${index + 1} (${color.toUpperCase()})" />
 </label>`;
       })
-      .join('');
+      .join('')}`;
 
     container.innerHTML = rows;
     const shouldDisable = !enabled;
