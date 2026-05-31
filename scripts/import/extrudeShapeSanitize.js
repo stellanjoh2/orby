@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { withStockCapTriangulation } from './extrudeCapTriangulation.js';
 
 const DUP_EPS = 1e-5;
 
@@ -172,35 +171,4 @@ export function geometryHasSpikeEdges(geometry, spikeRatio = 5) {
   }
 
   return false;
-}
-
-/**
- * @param {THREE.Shape} shape
- * @param {Object} extrudeOptions
- * @param {typeof THREE.ExtrudeGeometry} ExtrudeGeometry
- * @param {Object} [bevelSettings]
- * @returns {THREE.ExtrudeGeometry}
- */
-export function buildExtrudeGeometrySafe(shape, extrudeOptions, ExtrudeGeometry, bevelSettings = {}) {
-  const buildGeometry = (bevel) => new ExtrudeGeometry(shape, {
-    ...extrudeOptions,
-    ...(bevel ?? bevelSettings),
-  });
-
-  const isBroken = (geometry) => geometryHasNaNPositions(geometry) || geometryHasSpikeEdges(geometry);
-
-  let geometry = buildGeometry(bevelSettings);
-  if (isBroken(geometry)) {
-    geometry.dispose();
-    geometry = withStockCapTriangulation(() => buildGeometry(bevelSettings));
-  }
-  if (geometryHasNaNPositions(geometry) && bevelSettings?.bevelEnabled) {
-    geometry.dispose();
-    geometry = withStockCapTriangulation(() => buildGeometry({ bevelEnabled: false }));
-  }
-  if (isBroken(geometry)) {
-    geometry.dispose();
-    geometry = withStockCapTriangulation(() => buildGeometry({ bevelEnabled: false }));
-  }
-  return geometry;
 }

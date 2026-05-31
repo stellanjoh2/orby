@@ -7,6 +7,7 @@ import {
 } from './extrudeBevel.js';
 import {
   normalizeExtrudeDetail,
+  resolveBevelSideCurveSegments,
   resolveExtrudeDetailSettings,
 } from './extrudeDetail.js';
 import { withPatchedCapTriangulation } from './extrudeCapTriangulation.js';
@@ -20,10 +21,7 @@ import {
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
-import {
-  buildExtrudeGeometrySafe,
-  sanitizeShapeForExtrudeGeometry,
-} from './extrudeShapeSanitize.js';
+import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
 import { densifyShapeForExtrudeCaps } from './extrudeDensify.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
@@ -352,20 +350,33 @@ export class SvgExtrudeImporter {
    * @returns {THREE.BufferGeometry}
    */
   _extrudeShapeWithBevel(shape, extrudeSettings, bevelSettings, detailSettings, creaseAngleRad) {
-    const denseShape = this._densifyShapeForTriangulation(shape, detailSettings);
-    const curveSegments = 16;
-    const safeShape = sanitizeShapeForExtrudeGeometry(denseShape, curveSegments);
-    let geometry = withPatchedCapTriangulation(() => buildExtrudeGeometrySafe(safeShape, {
+    const denseShape = densifyShapeForExtrudeCaps(shape, detailSettings);
+    const bevelEnabled = !!bevelSettings?.bevelEnabled;
+    const curveSegments = bevelEnabled
+      ? resolveBevelSideCurveSegments(this.currentDetail, detailSettings.curveSegments)
+      : detailSettings.curveSegments;
+
+    const buildGeometry = (sourceShape, bevel) => withPatchedCapTriangulation(() => new THREE.ExtrudeGeometry(sourceShape, {
       ...extrudeSettings,
       curveSegments,
-    }, THREE.ExtrudeGeometry, bevelSettings));
+      ...(bevel ?? bevelSettings),
+    }));
+
+    let geometry = buildGeometry(denseShape, bevelSettings);
+    let sourceShape = denseShape;
+    if (geometryHasNaNPositions(geometry) && bevelEnabled) {
+      geometry.dispose();
+      sourceShape = sanitizeShapeForExtrudeGeometry(denseShape, curveSegments);
+      geometry = buildGeometry(sourceShape, bevelSettings);
+    }
+    if (geometryHasNaNPositions(geometry) && bevelEnabled) {
+      geometry.dispose();
+      geometry = buildGeometry(sourceShape, { bevelEnabled: false });
+    }
+
     const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
     geometry.dispose();
     return smoothedGeometry;
-  }
-
-  _densifyShapeForTriangulation(shape, detailSettings) {
-    return densifyShapeForExtrudeCaps(shape, detailSettings);
   }
 
   _normalizeGeometrySpace(group) {
