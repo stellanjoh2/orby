@@ -540,6 +540,11 @@ export class EventManager {
     eventBus.on('export:video-preview-toggle', (payload) =>
       s.toggleExportVideoPreview(payload),
     );
+    eventBus.on('export:movement-preview-stop', () => {
+      if (s.exportMovementPreview?.isActive?.()) {
+        s.exportMovementPreview.stop({ silent: true });
+      }
+    });
     eventBus.on('export:video-camera-bookmark-save', () =>
       s.saveExportVideoCameraBookmark(),
     );

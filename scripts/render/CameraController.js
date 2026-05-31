@@ -600,7 +600,7 @@ export class CameraController {
    * Begin timed export camera path (orbit and/or dolly zoom from current framing).
    */
   beginExportCameraDrive() {
-    if (!this.controls) return;
+    if (!this.controls || this._exportCameraDriveActive) return;
     this._preExportCameraControls = {
       pan: this.controls.enablePan,
       rotate: this.controls.enableRotate,
@@ -722,6 +722,11 @@ export class CameraController {
       this.controls.enableRotate = this._preExportCameraControls.rotate;
       this.controls.enableZoom = this._preExportCameraControls.zoom;
       this.controls.enableDamping = this._preExportCameraControls.damping;
+    } else if (this.controls && this.autoOrbitMode === 'off') {
+      this.controls.enablePan = true;
+      this.controls.enableRotate = true;
+      this.controls.enableZoom = true;
+      this.controls.enableDamping = true;
     }
     this._preExportCameraControls = null;
     this.controls?.update?.();

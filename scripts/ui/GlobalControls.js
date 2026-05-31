@@ -78,6 +78,10 @@ export class GlobalControls {
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
         if (target === this.ui.activeTab) return;
+        const previousTab = this.ui.activeTab;
+        if (previousTab === 'export' && target !== 'export') {
+          this.eventBus.emit('export:movement-preview-stop');
+        }
         this.ui.uiSounds?.playSelect();
         this.ui.activeTab = target;
         this.ui.dom.tabs.forEach((button) => {

@@ -122,9 +122,8 @@ export class ExportMovementPreview {
   stop({ silent = false } = {}) {
     if (!this._active) return;
     this._applyFrame(0, 0);
-    if (this._cameraDriveStarted) {
-      this.endExportCameraDrive();
-    }
+    // Always end drives — idempotent, and guards against flag desync leaving orbit locked.
+    this.endExportCameraDrive();
     this.endExportAnimationDrive();
     this.setRotationY(this._startRotationY);
     this.stateStore.set('rotationY', this._startRotationY);
