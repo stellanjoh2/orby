@@ -3504,6 +3504,7 @@ export class SceneManager {
     });
 
     this._updateTransformSliderUI();
+    this.eventBus.emit('ui:reset-section-touched', 'transform');
   }
 
   /** @deprecated alias — immediate commit after pivot ops etc. */

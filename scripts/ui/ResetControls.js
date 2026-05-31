@@ -318,7 +318,10 @@ export class ResetControls {
     const defaults = this._cachedDefaults ?? this.stateStore.getDefaults();
     for (const button of this._resetButtons) {
       const type = (button.dataset.reset ?? '').trim();
-      if (!this._touchedResetTypes.has(type)) {
+      // Transform: show whenever values differ from defaults. Gizmo drags and
+      // programmatic slider sync do not fire input/change on panel controls.
+      const requiresTouch = type !== 'transform';
+      if (requiresTouch && !this._touchedResetTypes.has(type)) {
         button.classList.remove('is-dirty');
         continue;
       }
