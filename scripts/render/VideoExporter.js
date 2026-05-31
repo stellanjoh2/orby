@@ -4,6 +4,7 @@ import {
   exportVideoMovementLabel,
   hasExportVideoMovement,
   needsExportCameraDrive,
+  needsExportFovDrive,
   normalizeExportVideoMovements,
   normalizeExportMeshAnimationSettings,
   normalizeExportSpinSettings,
@@ -41,6 +42,9 @@ export class VideoExporter {
     beginExportCameraDrive = () => {},
     applyExportCameraDriveFrame = () => {},
     endExportCameraDrive = () => {},
+    beginExportFovDrive = () => {},
+    applyExportFovDriveFrame = () => {},
+    endExportFovDrive = () => {},
     beginExportAnimationDrive = () => {},
     applyExportAnimationDriveFrame = () => {},
     endExportAnimationDrive = () => {},
@@ -77,6 +81,9 @@ export class VideoExporter {
     this.beginExportCameraDrive = beginExportCameraDrive;
     this.applyExportCameraDriveFrame = applyExportCameraDriveFrame;
     this.endExportCameraDrive = endExportCameraDrive;
+    this.beginExportFovDrive = beginExportFovDrive;
+    this.applyExportFovDriveFrame = applyExportFovDriveFrame;
+    this.endExportFovDrive = endExportFovDrive;
     this.beginExportAnimationDrive = beginExportAnimationDrive;
     this.applyExportAnimationDriveFrame = applyExportAnimationDriveFrame;
     this.endExportAnimationDrive = endExportAnimationDrive;
@@ -165,6 +172,9 @@ export class VideoExporter {
         tilt: movements.tilt,
         tiltAngle: movements.tiltAngle,
       });
+    }
+    if (needsExportFovDrive(movements)) {
+      this.applyExportFovDriveFrame?.(t, movements.fovOffset);
     }
     if (
       meshAnimation?.include
@@ -812,6 +822,9 @@ export class VideoExporter {
       if (needsExportCameraDrive(movements)) {
         this.beginExportCameraDrive?.();
       }
+      if (needsExportFovDrive(movements)) {
+        this.beginExportFovDrive?.();
+      }
       this.beginExportAnimationDrive?.(meshAnimation);
 
       if (format === 'mp4') {
@@ -842,6 +855,9 @@ export class VideoExporter {
         } finally {
           if (needsExportCameraDrive(movements)) {
             this.endExportCameraDrive?.();
+          }
+          if (needsExportFovDrive(movements)) {
+            this.endExportFovDrive?.();
           }
           this.endExportAnimationDrive?.();
           this.setRotationY(startRotationY);
@@ -929,6 +945,9 @@ export class VideoExporter {
       } finally {
         if (needsExportCameraDrive(movements)) {
           this.endExportCameraDrive?.();
+        }
+        if (needsExportFovDrive(movements)) {
+          this.endExportFovDrive?.();
         }
         this.endExportAnimationDrive?.();
         this.setRotationY(startRotationY);

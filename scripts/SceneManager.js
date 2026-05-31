@@ -994,6 +994,10 @@ export class SceneManager {
           this.setCameraAutoOrbit(this.cameraAutoOrbit);
         }
       },
+      beginExportFovDrive: () => this.cameraController?.beginExportFovDrive?.(),
+      applyExportFovDriveFrame: (t, fovOffset) =>
+        this.cameraController?.applyExportFovDriveFrame?.(t, fovOffset),
+      endExportFovDrive: () => this.cameraController?.endExportFovDrive?.(),
       beginExportAnimationDrive: (opts) => this.animationController?.beginExportDrive?.(opts),
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
@@ -1030,6 +1034,10 @@ export class SceneManager {
           this.setCameraAutoOrbit(this.cameraAutoOrbit);
         }
       },
+      beginExportFovDrive: () => this.cameraController?.beginExportFovDrive?.(),
+      applyExportFovDriveFrame: (t, fovOffset) =>
+        this.cameraController?.applyExportFovDriveFrame?.(t, fovOffset),
+      endExportFovDrive: () => this.cameraController?.endExportFovDrive?.(),
       beginExportAnimationDrive: (opts) => this.animationController?.beginExportDrive?.(opts),
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
@@ -2304,6 +2312,7 @@ export class SceneManager {
     if (updateState) this.stateStore.set('backdropEnabled', on);
     this._updateBackdropAppearAnimation();
     this._syncShadowAndGobo();
+    this._syncShadowCameraBounds();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
 
@@ -2311,12 +2320,14 @@ export class SceneManager {
     this.groundController?.setBackdropScale(value);
     if (updateState) this.stateStore.set('backdropScale', value);
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
+    this._syncShadowCameraBounds();
   }
 
   setBackdropWidth(value, { updateState = true } = {}) {
     this.groundController?.setBackdropWidth(value);
     if (updateState) this.stateStore.set('backdropWidth', value);
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
+    this._syncShadowCameraBounds();
   }
 
   setBackdropColor(color, { updateState = true } = {}) {
@@ -2327,12 +2338,14 @@ export class SceneManager {
   setBackdropRotation(value, { updateState = true } = {}) {
     this.groundController?.setBackdropRotation(value);
     if (updateState) this.stateStore.set('backdropRotation', value);
+    this._syncShadowCameraBounds();
   }
 
   setBackdropY(value, { updateState = true } = {}) {
     this.groundController?.setBackdropY(value);
     if (updateState) this.stateStore.set('backdropY', value);
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
+    this._syncShadowCameraBounds();
   }
 
   setBackdropTextureEnabled(enabled, { updateState = true } = {}) {
@@ -2365,6 +2378,8 @@ export class SceneManager {
     if (!this.stateStore.getState().backdropEnabled) {
       this.setBackdropEnabled(true);
       this.stateStore.set('backdropEnabled', true);
+    } else {
+      this._syncShadowCameraBounds();
     }
     this.ui?.showToast?.(
       'Backdrop snapped to mesh',
@@ -2456,12 +2471,24 @@ export class SceneManager {
     if (!center) return 0;
 
     const state = this.stateStore.getState();
+    let radius = 0;
+
     if (state.groundSolid && this.groundController?.solidEnabled) {
       const gc = this.groundController;
       const podiumR = (gc.podiumBaseRadius ?? 2) * (gc.podiumScale ?? 1);
       const px = gc.podium?.position?.x ?? 0;
       const pz = gc.podium?.position?.z ?? 0;
-      return Math.hypot(center.x - px, center.z - pz) + podiumR + 0.35;
+      radius = Math.max(
+        radius,
+        Math.hypot(center.x - px, center.z - pz) + podiumR + 0.35,
+      );
+    }
+
+    if (state.backdropEnabled && this.groundController?.backdropEnabled) {
+      radius = Math.max(
+        radius,
+        this.groundController.getShadowReceiveRadiusFromCenter(center) ?? 0,
+      );
     }
 
     const recv = this.backgroundController?.hdriShadowReceiver;
@@ -2471,10 +2498,10 @@ export class SceneManager {
       && state.hdriBackground
       && recv?.isActive?.()
     ) {
-      return recv.getShadowCatcherRadius?.() ?? 0;
+      radius = Math.max(radius, recv.getShadowCatcherRadius?.() ?? 0);
     }
 
-    return 0;
+    return radius;
   }
 
   _syncShadowCameraBounds(bounds = this.cameraController?.getModelBounds()) {

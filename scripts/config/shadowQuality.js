@@ -13,6 +13,9 @@ export const SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY = {
 /** HdriShadowReceiver disc sizing — keep in sync with shadow camera padding above. */
 export const SHADOW_CATCHER_ORTHO_PADDING = 2.8;
 
+/** Extra margin when fitting the shadow frustum to the studio cyclorama. */
+export const STUDIO_BACKDROP_SHADOW_REACH_PADDING = 0.5;
+
 /** Shadow map resolution (texels per side) per lights Shadow Quality preset. */
 export const SHADOW_MAP_SIZE_BY_QUALITY = {
   low: 512,

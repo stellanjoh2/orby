@@ -6,6 +6,7 @@ import {
   DEFAULT_CAMERA_POSITION,
   DEFAULT_CAMERA_TARGET,
 } from '../camera/cameraDefaults.js';
+import { clampFovDeg } from '../camera/lensPresets.js';
 function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
 }
@@ -96,6 +97,8 @@ export class CameraController {
     this._exportCameraDriveActive = false;
     this._exportCameraSnapshot = null;
     this._preExportCameraControls = null;
+    this._exportFovDriveActive = false;
+    this._exportStartFov = null;
 
     this.altRightDragging = false;
     this.shiftRightDragging = false;
@@ -733,6 +736,40 @@ export class CameraController {
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
     }
+  }
+
+  /** Begin timed FOV animation from current lens FOV (independent of orbit/dolly drive). */
+  beginExportFovDrive() {
+    if (this._exportFovDriveActive) return;
+    this._exportStartFov = this.camera?.fov ?? 45;
+    this._exportFovDriveActive = true;
+  }
+
+  /**
+   * @param {number} t — progress in [0, 1] over export duration
+   * @param {number} [fovOffset] — degrees added linearly from start FOV (±40 max)
+   */
+  applyExportFovDriveFrame(t, fovOffset = 0) {
+    if (!this._exportFovDriveActive || !Number.isFinite(this._exportStartFov)) return;
+    const offset = Number(fovOffset) || 0;
+    if (offset === 0) return;
+    const u = THREE.MathUtils.clamp(typeof t === 'number' ? t : 0, 0, 1);
+    this.camera.fov = clampFovDeg(this._exportStartFov + offset * u);
+    this.camera.updateProjectionMatrix();
+  }
+
+  endExportFovDrive() {
+    if (!this._exportFovDriveActive) return;
+    if (Number.isFinite(this._exportStartFov) && this.camera) {
+      this.camera.fov = this._exportStartFov;
+      this.camera.updateProjectionMatrix();
+    }
+    this._exportFovDriveActive = false;
+    this._exportStartFov = null;
+  }
+
+  isExportFovDriving() {
+    return !!this._exportFovDriveActive;
   }
 
   isExportCameraDriving() {

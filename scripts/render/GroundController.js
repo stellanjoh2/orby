@@ -18,6 +18,10 @@ import {
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
+import { STUDIO_BACKDROP_SHADOW_REACH_PADDING } from '../config/shadowQuality.js';
+
+const _backdropShadowCorner = new THREE.Vector3();
+const _backdropShadowBox = new THREE.Box3();
 
 const _backdropRestPos = new THREE.Vector3();
 const _backdropRestEuler = new THREE.Euler();
@@ -993,6 +997,35 @@ export class GroundController {
    * World bounds at full resting scale — used for auto clip planes so near/far
    * does not chase the scale-in/out tween (which warps the whole view).
    */
+  /**
+   * Max distance from a world center (usually the loaded mesh) to any backdrop corner.
+   * Used to expand directional shadow ortho frusta so cyclorama shadows are not clipped.
+   */
+  getShadowReceiveRadiusFromCenter(center) {
+    if (!this.backdropEnabled || !this.backdrop || !center) return 0;
+    const box = this.getBackdropRestWorldBox(_backdropShadowBox);
+    if (box.isEmpty()) return 0;
+
+    let maxReach = 0;
+    const { min, max } = box;
+    for (let xi = 0; xi < 2; xi += 1) {
+      for (let yi = 0; yi < 2; yi += 1) {
+        for (let zi = 0; zi < 2; zi += 1) {
+          _backdropShadowCorner.set(
+            xi ? max.x : min.x,
+            yi ? max.y : min.y,
+            zi ? max.z : min.z,
+          );
+          maxReach = Math.max(
+            maxReach,
+            _backdropShadowCorner.distanceTo(center),
+          );
+        }
+      }
+    }
+    return maxReach + STUDIO_BACKDROP_SHADOW_REACH_PADDING;
+  }
+
   getBackdropRestWorldBox(target = new THREE.Box3()) {
     if (!this.backdrop?.geometry) return target.makeEmpty();
     const geom = this.backdrop.geometry;

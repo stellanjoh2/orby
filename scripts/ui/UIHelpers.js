@@ -26,6 +26,7 @@ export class UIHelpers {
 
     const formatMap = {
       angle: { decimals: 0, unit: '°' },
+      signedAngle: { decimals: 0, unit: '°', signed: true },
       distance: { decimals: 2, unit: 'm' },
       multiplier: { decimals: 2, unit: '×' },
       decimal: { decimals: 2, unit: '' },
@@ -35,7 +36,8 @@ export class UIHelpers {
     const config = formatMap[type] || formatMap.decimal;
     const dec = decimals !== null ? decimals : config.decimals;
     const formatted = dec === 0 ? Math.round(value).toString() : value.toFixed(dec);
-    return config.unit ? `${formatted}${config.unit}` : formatted;
+    const signed = config.signed && value > 0 ? '+' : '';
+    return config.unit ? `${signed}${formatted}${config.unit}` : `${signed}${formatted}`;
   }
 
   /**

@@ -769,6 +769,20 @@ export class MeshControls {
       );
     }
 
+    if (this.ui.inputs.exportFovOffset) {
+      this.ui.inputs.exportFovOffset.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.ui.exportSettings.video.fovOffset = value;
+        this.helpers.updateValueLabel('exportFovOffset', value, 'signedAngle');
+      });
+      this.helpers.updateValueLabel(
+        'exportFovOffset',
+        this.ui.exportSettings.video.fovOffset ?? 0,
+        'signedAngle',
+      );
+    }
+
     if (this.ui.inputs.exportMeshAnimationsEmbed) {
       this.ui.inputs.exportMeshAnimationsEmbed.addEventListener('change', (event) => {
         this.ui.exportSettings.video.meshAnimationsInclude = !!event.target.checked;

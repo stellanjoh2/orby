@@ -274,21 +274,31 @@ float orbyFbm3(vec3 p) {
 mat3 orbyNormalMatrix() {
   return mat3( vOrbyNm0, vOrbyNm1, vOrbyNm2 );
 }
+vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
+  vec3 t = cross( ref, n );
+  if ( dot( t, t ) < 1e-8 ) {
+    t = cross( refAlt, n );
+  }
+  if ( dot( t, t ) < 1e-8 ) {
+    return n;
+  }
+  t = normalize( t );
+  vec3 b = normalize( cross( n, t ) );
+  return normalize( tn.x * t + tn.y * b + tn.z * n );
+}
 vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
-  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize * scale;
-  vec3 blend = abs( localNormal );
+  vec3 n = normalize( localNormal );
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize;
+  vec3 blend = abs( n );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
-  vec2 uvX = p.zy * scale;
-  vec2 uvY = p.xz * scale;
-  vec2 uvZ = p.xy * scale;
-  vec3 tx = texture2D( uOrbyNormalMap, uvX ).xyz * 2.0 - 1.0;
-  vec3 ty = texture2D( uOrbyNormalMap, uvY ).xyz * 2.0 - 1.0;
-  vec3 tz = texture2D( uOrbyNormalMap, uvZ ).xyz * 2.0 - 1.0;
-  tx = vec3( tx.xy + localNormal.zy, tx.z * localNormal.x );
-  ty = vec3( ty.y + localNormal.y, ty.xz + localNormal.xz );
-  tz = vec3( tz.xy + localNormal.xy, tz.z * localNormal.z );
-  return normalize( tx * blend.x + ty * blend.y + tz * blend.z );
+  vec3 tX = texture2D( uOrbyNormalMap, p.zy * scale ).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D( uOrbyNormalMap, p.xz * scale ).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D( uOrbyNormalMap, p.xy * scale ).xyz * 2.0 - 1.0;
+  vec3 nx = orbyTriplanarAxisNormal( n, tX, vec3( 0.0, 1.0, 0.0 ), vec3( 0.0, 0.0, 1.0 ) );
+  vec3 ny = orbyTriplanarAxisNormal( n, tY, vec3( 0.0, 0.0, 1.0 ), vec3( 1.0, 0.0, 0.0 ) );
+  vec3 nz = orbyTriplanarAxisNormal( n, tZ, vec3( 1.0, 0.0, 0.0 ), vec3( 0.0, 1.0, 0.0 ) );
+  return normalize( nx * blend.x + ny * blend.y + nz * blend.z );
 }
 `;
 
@@ -578,7 +588,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     material.userData.svgExtrudeProceduralPatched = true;
     material.userData.svgExtrudeProceduralOnBeforeCompile = hook;
     material.customProgramCacheKey = () =>
-      `orbySvgSurf:v7:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
+      `orbySvgSurf:v10:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
     material.needsUpdate = true;
     ensureSvgExtrudeFresnelChain(material);
     return true;
@@ -586,7 +596,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
 
   material.userData.svgExtrudeProceduralUniforms = uniformRefs;
   material.customProgramCacheKey = () =>
-    `orbySvgSurf:v7:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
+    `orbySvgSurf:v10:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
   if (presetOrScaleChanged) {
     material.needsUpdate = true;
   } else if (strengthChanged) {

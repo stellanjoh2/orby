@@ -1,3 +1,18 @@
+export const EXPORT_FOV_OFFSET_MIN = -40;
+export const EXPORT_FOV_OFFSET_MAX = 40;
+
+/** @param {unknown} value — degrees relative to current FOV at export start (0 = no change) */
+export function normalizeExportFovOffset(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(EXPORT_FOV_OFFSET_MAX, Math.max(EXPORT_FOV_OFFSET_MIN, n));
+}
+
+/** @param {{ fovOffset?: unknown }} [movements] */
+export function needsExportFovDrive(movements) {
+  return Math.abs(normalizeExportFovOffset(movements?.fovOffset)) > 0;
+}
+
 /**
  * Normalize video export movement toggles from UI / legacy `mode` settings.
  * @param {Record<string, unknown>} [settings]
@@ -25,6 +40,7 @@ export function normalizeExportVideoMovements(settings = {}) {
   const tiltAngle = Number.isFinite(Number(settings.tiltAngle))
     ? Math.min(180, Math.max(0, Number(settings.tiltAngle)))
     : 15;
+  const fovOffset = normalizeExportFovOffset(settings.fovOffset);
 
   return {
     turntable,
@@ -35,6 +51,7 @@ export function normalizeExportVideoMovements(settings = {}) {
     tiltRight,
     zoomDistance,
     tiltAngle,
+    fovOffset,
     zoom: zoomIn ? 'in' : zoomOut ? 'out' : null,
     tilt: tiltLeft ? 'left' : tiltRight ? 'right' : null,
   };

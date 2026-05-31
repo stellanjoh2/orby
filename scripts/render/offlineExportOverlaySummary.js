@@ -22,6 +22,7 @@ export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
   tiltRight: false,
   zoomDistance: 1.5,
   tiltAngle: 15,
+  fovOffset: 0,
   durationSec: 5,
   fps: 24,
   resolution: '1080p',
@@ -60,6 +61,10 @@ function describeMovements(movements, spinSettings) {
   if (movements.zoomOut) parts.push(`Dolly out (${movements.zoomDistance}m)`);
   if (movements.tiltLeft) parts.push(`Tilt left (${movements.tiltAngle}°)`);
   if (movements.tiltRight) parts.push(`Tilt right (${movements.tiltAngle}°)`);
+  if (movements.fovOffset) {
+    const sign = movements.fovOffset > 0 ? '+' : '';
+    parts.push(`FOV ${sign}${movements.fovOffset}°`);
+  }
   if (spinSettings?.rotationDegrees) {
     parts.push(exportSpinToastLabel(spinSettings));
   }
