@@ -1,0 +1,122 @@
+import * as THREE from 'three';
+import { applyExtrudeBoxUvs } from './extrudeBoxUvs.js';
+import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
+
+export const DEFAULT_EXTRUDE_DEPTH = 0.2;
+export const MIN_EXTRUDE_DEPTH = 0.01;
+export const MAX_EXTRUDE_DEPTH = 2.0;
+export const DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG = 30;
+export const MIN_EXTRUDE_NORMAL_ANGLE_DEG = 0;
+export const MAX_EXTRUDE_NORMAL_ANGLE_DEG = 180;
+export const MIN_EXTRUDE_COLOR_OFFSET = -1.0;
+export const MAX_EXTRUDE_COLOR_OFFSET = 1.0;
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function clampExtrudeDepth(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_EXTRUDE_DEPTH;
+  return Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, numeric));
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function clampExtrudeNormalAngleDeg(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+  return Math.max(
+    MIN_EXTRUDE_NORMAL_ANGLE_DEG,
+    Math.min(MAX_EXTRUDE_NORMAL_ANGLE_DEG, numeric),
+  );
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function clampExtrudeColorOffset(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(MIN_EXTRUDE_COLOR_OFFSET, Math.min(MAX_EXTRUDE_COLOR_OFFSET, numeric));
+}
+
+/**
+ * @param {THREE.Object3D} node
+ */
+export function disposeExtrudeMeshNode(node) {
+  node.traverse?.((child) => {
+    if (!child.isMesh) return;
+    child.geometry?.dispose?.();
+    if (Array.isArray(child.material)) {
+      child.material.forEach((mat) => mat?.dispose?.());
+    } else {
+      child.material?.dispose?.();
+    }
+  });
+}
+
+/**
+ * @param {THREE.Group} targetGroup
+ * @param {THREE.Group} sourceGroup
+ */
+export function replaceExtrudeGroupChildren(targetGroup, sourceGroup) {
+  while (targetGroup.children.length) {
+    const child = targetGroup.children[0];
+    disposeExtrudeMeshNode(child);
+    targetGroup.remove(child);
+  }
+
+  while (sourceGroup.children.length) {
+    targetGroup.add(sourceGroup.children[0]);
+  }
+
+  targetGroup.name = sourceGroup.name;
+  targetGroup.userData = { ...sourceGroup.userData };
+  targetGroup.scale.copy(sourceGroup.scale);
+  targetGroup.position.copy(sourceGroup.position);
+  targetGroup.rotation.copy(sourceGroup.rotation);
+}
+
+/**
+ * @param {THREE.Group | null} existingGroup
+ * @param {THREE.Group} rebuiltGroup
+ * @returns {THREE.Group}
+ */
+export function preserveExtrudeGroupOnRebuild(existingGroup, rebuiltGroup) {
+  if (!existingGroup) return rebuiltGroup;
+  replaceExtrudeGroupChildren(existingGroup, rebuiltGroup);
+  return existingGroup;
+}
+
+export function applyExtrudeDirectionOffset(group, flipDirection, defaultDepth) {
+  group.traverse((child) => {
+    if (!child.isMesh || !child.geometry) return;
+    const depth = clampExtrudeDepth(child.userData?.orbySvgEffectiveDepth ?? defaultDepth);
+    const colorOffset = clampExtrudeColorOffset(child.userData?.orbySvgColorOffset ?? 0);
+    const directionOffset = (flipDirection ? 1 : -1) * depth * 0.5;
+    child.geometry.translate(0, 0, directionOffset + colorOffset);
+    child.geometry.computeBoundingBox();
+    child.geometry.computeBoundingSphere();
+  });
+}
+
+/**
+ * Cap normal fix + box UVs on extruded meshes tagged with `orbySvgExtrude`.
+ *
+ * @param {THREE.Group} group
+ * @param {number} creaseAngleRad
+ */
+export function finalizeExtrudeGroupGeometry(group, creaseAngleRad) {
+  group.traverse((child) => {
+    if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
+    let geom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
+    if (geom !== child.geometry) {
+      child.geometry.dispose();
+    }
+    child.geometry = applyExtrudeBoxUvs(geom);
+  });
+}

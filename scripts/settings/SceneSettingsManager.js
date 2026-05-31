@@ -1,3 +1,5 @@
+import { clampExtrudeBevelAmount } from '../import/extrudeBevel.js';
+import { DEFAULT_EXTRUDE_DEPTH, resolveSvgExtrudeDefaults } from '../import/extrudeDefaults.js';
 import {
   sanitizeDof,
   sanitizeAmbientOcclusion,
@@ -73,22 +75,27 @@ export class SceneSettingsManager {
       creativeLook: state.creativeLook,
       fresnel: state.fresnel,
       subsurface: state.subsurface,
-      svgExtrude: {
-        enabled: !!state.svgExtrude?.enabled,
-        availableColors: Array.isArray(state.svgExtrude?.availableColors)
-          ? [...state.svgExtrude.availableColors]
-          : [],
-        depth: state.svgExtrude?.depth ?? 0.2,
-        normalAngle: state.svgExtrude?.normalAngle ?? 45,
-        colorDepths: state.svgExtrude?.colorDepths ?? {},
-        colorOffsets: state.svgExtrude?.colorOffsets ?? {},
-        flipDirection: !!state.svgExtrude?.flipDirection,
-        colorOverride: !!state.svgExtrude?.colorOverride,
-        overrideColor: state.svgExtrude?.overrideColor ?? '#7ed321',
-        surfacePreset: state.svgExtrude?.surfacePreset ?? 'none',
-        surfaceScale: state.svgExtrude?.surfaceScale ?? 1.0,
-        surfaceStrength: state.svgExtrude?.surfaceStrength ?? 1.0,
-      },
+      svgExtrude: (() => {
+        const svg = resolveSvgExtrudeDefaults(state.svgExtrude);
+        return {
+          enabled: !!state.svgExtrude?.enabled,
+          availableColors: Array.isArray(state.svgExtrude?.availableColors)
+            ? [...state.svgExtrude.availableColors]
+            : [],
+          depth: svg.depth,
+          normalAngle: svg.normalAngle,
+          colorDepths: svg.colorDepths,
+          colorOffsets: svg.colorOffsets,
+          flipDirection: svg.flipDirection,
+          colorOverride: svg.colorOverride,
+          overrideColor: svg.overrideColor,
+          surfacePreset: svg.surfacePreset,
+          surfaceScale: svg.surfaceScale,
+          surfaceStrength: svg.surfaceStrength,
+          bevelAmount: svg.bevelAmount,
+          detail: svg.detail,
+        };
+      })(),
       advanced: {
         reverseNormals: !!state.advanced?.reverseNormals,
         transparencyFix: state.advanced?.transparencyFix ?? 'default',
@@ -534,6 +541,16 @@ export class SceneSettingsManager {
       if (payload.svgExtrude?.normalAngle !== undefined) {
         this.stateStore.set('svgExtrude.normalAngle', payload.svgExtrude.normalAngle);
         this.eventBus.emit('mesh:svg-extrude-normal-angle', payload.svgExtrude.normalAngle);
+      }
+      if (payload.svgExtrude?.bevelAmount !== undefined) {
+        const depth = Number(this.stateStore.getState().svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
+        const amount = clampExtrudeBevelAmount(payload.svgExtrude.bevelAmount, depth);
+        this.stateStore.set('svgExtrude.bevelAmount', amount);
+        this.eventBus.emit('mesh:svg-extrude-bevel', { amount });
+      }
+      if (payload.svgExtrude?.detail !== undefined) {
+        this.stateStore.set('svgExtrude.detail', payload.svgExtrude.detail);
+        this.eventBus.emit('mesh:svg-extrude-detail', payload.svgExtrude.detail);
       }
       if (payload.svgExtrude?.colorDepths !== undefined) {
         this.stateStore.set('svgExtrude.colorDepths', payload.svgExtrude.colorDepths || {});

@@ -18,6 +18,7 @@ import {
   DEFAULT_CAMERA_POSITION,
   defaultCameraDistance,
 } from './camera/cameraDefaults.js';
+import { DEFAULT_SVG_EXTRUDE_STATE } from './import/extrudeDefaults.js';
 
 export class StateStore {
   constructor() {
@@ -54,27 +55,14 @@ export class StateStore {
         align: 'left',
         tracking: 0,
         lineHeight: 1,
-        /** @type {'low' | 'medium' | 'high'} — cap/side curve sampling for 3D extrude. */
+        /** @type {'low' | 'medium' | 'high' | 'ultra'} — cap/side curve sampling for 3D extrude. */
         detail: 'medium',
         /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
         previewScale: 1,
         /** Letter fill for 2D preview and 3D extrude. */
         fillColor: '#ffffff',
       },
-      svgExtrude: {
-        enabled: false,
-        depth: 0.2,
-        normalAngle: 45,
-        availableColors: [],
-        colorDepths: {},
-        colorOffsets: {},
-        flipDirection: false,
-        colorOverride: false,
-        overrideColor: '#7ed321',
-        surfacePreset: 'none',
-        surfaceScale: 1.0,
-        surfaceStrength: 1.0,
-      },
+      svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
       advanced: {
         reverseNormals: false,
         /** @type {'default' | 'opaqueBlend' | 'frontFace' | 'opaqueAndFrontFace'} */

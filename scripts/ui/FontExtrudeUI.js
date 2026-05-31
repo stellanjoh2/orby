@@ -4,6 +4,7 @@ import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import { FontExtrudeController } from '../scene/FontExtrudeController.js';
 import { FontFamilyPicker } from './FontFamilyPicker.js';
 import {
+  bindExtrudeBevelControls,
   bindSvgExtrudeControls,
   syncSvgExtrudeControls,
   FONT_EXTRUDE_POST_GEN_CONTROLS_HTML,
@@ -44,7 +45,7 @@ export class FontExtrudeUI {
     this._stateUnsub = null;
     /** @type {FontFamilyPicker | null} */
     this.familyPicker = null;
-    this._fontExtrudeTimers = { depth: null, normal: null, colorDebounce: new Map() };
+    this._fontExtrudeTimers = { depth: null, normal: null, bevel: null, colorDebounce: new Map() };
     /** @type {ResizeObserver | null} */
     this._previewResizeObs = null;
     /** @type {number} */
@@ -121,11 +122,12 @@ export class FontExtrudeUI {
             </select>
           </label>
           <label class="select-line">
-            <span data-tooltip="Curve smoothness on letters — higher adds more geometry">Detail</span>
+            <span data-tooltip="Curve smoothness on letters — Ultra is very dense; best for hero exports or small type">Detail</span>
             <select id="fontExtrudeDetail" aria-label="Extrusion detail">
               <option value="low">Low</option>
               <option value="medium" selected>Medium</option>
               <option value="high">High</option>
+              <option value="ultra">Ultra</option>
             </select>
           </label>
           <label class="color-line font-extrude-fill-color">
@@ -162,6 +164,7 @@ export class FontExtrudeUI {
       postGen: block.querySelector('#fontExtrudePostGen'),
       meshDepth: block.querySelector('#fontExtrudeMeshDepth'),
       meshAngle: block.querySelector('#fontExtrudeMeshAngle'),
+      bevelAmount: block.querySelector('#fontExtrudeBevelAmount'),
       surfacePreset: block.querySelector('#fontExtrudeSurfacePreset'),
       surfaceScale: block.querySelector('#fontExtrudeSurfaceScale'),
       surfaceStrength: block.querySelector('#fontExtrudeSurfaceStrength'),
@@ -225,6 +228,9 @@ export class FontExtrudeUI {
       this.ui.uiSounds?.playSelect();
       const value = normalizeFontExtrudeDetail(els.detail.value);
       this.stateStore.set('fontExtrude.detail', value);
+      if (this._hasFontMesh()) {
+        this.getScene()?.setSvgExtrudeDetail?.(value);
+      }
     });
     els.previewScale?.addEventListener('input', () => {
       const value = Number(els.previewScale.value);
@@ -244,6 +250,7 @@ export class FontExtrudeUI {
     });
 
     bindSvgExtrudeControls(this._fontExtrudeCtx());
+    bindExtrudeBevelControls(this._fontExtrudeCtx());
 
     const onFillColorChange = () => {
       const color = normalizeGlyphFillHex(els.fillColor?.value);
@@ -303,6 +310,8 @@ export class FontExtrudeUI {
         depthOutputKey: 'fontExtrudeMeshDepth',
         normalAngle: els.meshAngle,
         normalAngleOutputKey: 'fontExtrudeMeshAngle',
+        bevelAmount: els.bevelAmount,
+        bevelAmountOutputKey: 'fontExtrudeBevelAmount',
         surfacePreset: els.surfacePreset,
         surfaceScale: els.surfaceScale,
         surfaceScaleOutputKey: 'fontExtrudeSurfaceScale',

@@ -869,30 +869,7 @@
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
-                  <label class="slider-line">
-                    <span data-tooltip="Overall extrusion depth; scales every layer together (including per-color overrides)">Depth</span>
-                    <input
-                      id="svgExtrudeDepth"
-                      type="range"
-                      min="0.01"
-                      max="2"
-                      step="0.01"
-                      value="0.2"
-                    />
-                    <span class="value" data-output="svgExtrudeDepth">0.20</span>
-                  </label>
-                  <label class="slider-line">
-                    <span data-tooltip="Controls surface smoothing (0 = faceted edges, higher = smoother highlights)">Angle</span>
-                    <input
-                      id="svgExtrudeNormalAngle"
-                      type="range"
-                      min="0"
-                      max="180"
-                      step="1"
-                      value="45"
-                    />
-                    <span class="value" data-output="svgExtrudeNormalAngle">45°</span>
-                  </label>
+                  <div id="svgExtrudeCoreControlsMount" class="svg-extrude-core-controls"></div>
                   <label class="slider-line">
                     <span data-tooltip="Inverts extrusion direction along the Z axis">Flip Direction</span>
                     <label class="effect-toggle">

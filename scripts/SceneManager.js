@@ -65,10 +65,22 @@ import {
   showFisheyePngExportBlockedAlert,
 } from './export/fisheyeExportAlert.js';
 import {
+  supportsExtrudeBevel,
   runSvgExtrudeImporterMutation,
   sanitizeSvgExtrudeColorDepths,
   sanitizeSvgExtrudeColorOffsets,
 } from './scene/SvgExtrudeSceneOps.js';
+import {
+  clampExtrudeBevelAmount,
+} from './import/extrudeBevel.js';
+import {
+  DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+  MAX_EXTRUDE_DEPTH,
+  MIN_EXTRUDE_DEPTH,
+} from './import/extrudeDefaults.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { normalizeIsometricState } from './camera/isometricPresets.js';
@@ -2923,7 +2935,9 @@ export class SceneManager {
   setSvgExtrudeDepth(depth, options = {}) {
     const { updateState = true } = options;
     const numeric = Number(depth);
-    const clamped = Number.isFinite(numeric) ? Math.max(0.01, Math.min(2.0, numeric)) : 0.2;
+    const clamped = Number.isFinite(numeric)
+      ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, numeric))
+      : DEFAULT_EXTRUDE_DEPTH;
     const ok = runSvgExtrudeImporterMutation(
       this,
       () => this.svgExtrudeImporter.setDepth(clamped),
@@ -2941,6 +2955,16 @@ export class SceneManager {
         this.stateStore,
       ),
     );
+    if (supportsExtrudeBevel(this.svgExtrudeImporter)) {
+      const newDepth = this.svgExtrudeImporter.getDepth();
+      const prevBevel = this.stateStore.getState().svgExtrude?.bevelAmount ?? 0;
+      const clampedBevel = clampExtrudeBevelAmount(prevBevel, newDepth);
+      if (Math.abs(clampedBevel - prevBevel) > 1e-6) {
+        this.setSvgExtrudeBevel({ amount: clampedBevel }, { updateState: true });
+      } else {
+        this.stateStore.set('svgExtrude.bevelAmount', this.svgExtrudeImporter.getBevelAmount());
+      }
+    }
   }
 
   setSvgExtrudeNormalAngle(normalAngle) {
@@ -2952,6 +2976,40 @@ export class SceneManager {
         toastOnError: 'Could not update SVG angle',
       },
     );
+  }
+
+  setSvgExtrudeBevel(settings = {}, options = {}) {
+    const { updateState = true } = options;
+    if (!supportsExtrudeBevel(this.svgExtrudeImporter)) return;
+    const depth = this.svgExtrudeImporter.getDepth();
+    const amount = clampExtrudeBevelAmount(settings.amount, depth);
+    const ok = runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setBevelSettings({ amount }),
+      {
+        logLabel: 'update extrude bevel',
+        toastOnError: 'Could not update bevel',
+      },
+    );
+    if (!ok || !updateState) return;
+    this.stateStore.set('svgExtrude.bevelAmount', this.svgExtrudeImporter.getBevelAmount());
+  }
+
+  setSvgExtrudeDetail(detail, options = {}) {
+    const { updateState = true } = options;
+    if (!this.svgExtrudeImporter || typeof this.svgExtrudeImporter.setDetail !== 'function') {
+      return;
+    }
+    const ok = runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setDetail(detail),
+      {
+        logLabel: 'update extrude detail',
+        toastOnError: 'Could not update extrusion detail',
+      },
+    );
+    if (!ok || !updateState) return;
+    this.stateStore.set('svgExtrude.detail', this.svgExtrudeImporter.getDetail());
   }
 
   setSvgExtrudeColorDepths(colorDepths = {}, options = {}) {
@@ -2976,7 +3034,7 @@ export class SceneManager {
     const numericDepth = Number(depth);
     if (!Number.isFinite(numericDepth)) return;
     const state = this.stateStore.getState();
-    const baseDepth = Number(state.svgExtrude?.depth ?? 0.2);
+    const baseDepth = Number(state.svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
     const existing = { ...(state.svgExtrude?.colorDepths || {}) };
     const clamped = Math.max(0.01, Math.min(2.0, numericDepth));
     if (Math.abs(clamped - baseDepth) < 0.0001) {

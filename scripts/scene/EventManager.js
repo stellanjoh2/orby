@@ -97,6 +97,8 @@ export class EventManager {
     eventBus.on('mesh:fbx-pbr-uv-channel', (channel) => s.setFbxPbrUvChannel(channel));
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
+    eventBus.on('mesh:svg-extrude-bevel', (payload) => s.setSvgExtrudeBevel(payload ?? {}));
+    eventBus.on('mesh:svg-extrude-detail', (detail) => s.setSvgExtrudeDetail(detail));
     eventBus.on('mesh:svg-extrude-color-depths', (payload) => s.setSvgExtrudeColorDepths(payload));
     eventBus.on('mesh:svg-extrude-color-depth', (payload) => s.setSvgExtrudeColorDepth(payload));
     eventBus.on('mesh:svg-extrude-color-offsets', (payload) => s.setSvgExtrudeColorOffsets(payload));

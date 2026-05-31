@@ -5,6 +5,14 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
 import { LONG_TOAST_CHAR_THRESHOLD } from '../UIManager.js';
+import { clampExtrudeBevelAmount } from '../import/extrudeBevel.js';
+import {
+  DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+} from '../import/extrudeDefaults.js';
+import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
 import { easeOutExpo, SCALE_TOGGLE_IN_MS } from './toggleScaleAnimation.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
@@ -93,10 +101,13 @@ export class ModelLifecycleManager {
       s.stateStore.set('svgExtrude.flipDirection', false);
       return;
     }
-    const nextDepth = svgExtrude.depth ?? s.stateStore.getState()?.svgExtrude?.depth ?? 0.2;
+    const nextDepth =
+      svgExtrude.depth ?? s.stateStore.getState()?.svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH;
     s.stateStore.set('svgExtrude.depth', nextDepth);
     const nextNormalAngle =
-      svgExtrude.normalAngle ?? s.stateStore.getState()?.svgExtrude?.normalAngle ?? 45;
+      svgExtrude.normalAngle ??
+      s.stateStore.getState()?.svgExtrude?.normalAngle ??
+      DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
     s.stateStore.set('svgExtrude.normalAngle', nextNormalAngle);
     const flipDirection = !!(
       svgExtrude.flipDirection ?? s.stateStore.getState()?.svgExtrude?.flipDirection
@@ -120,14 +131,26 @@ export class ModelLifecycleManager {
     });
     s.stateStore.set('svgExtrude.colorDepths', nextColorDepths);
     s.stateStore.set('svgExtrude.colorOffsets', nextColorOffsets);
+    const nextBevelAmount = clampExtrudeBevelAmount(
+      svgExtrude.bevelAmount ??
+        s.stateStore.getState()?.svgExtrude?.bevelAmount ??
+        DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+      nextDepth,
+    );
+    s.stateStore.set('svgExtrude.bevelAmount', nextBevelAmount);
+    const nextDetail = normalizeExtrudeDetail(
+      svgExtrude.detail ?? s.stateStore.getState()?.svgExtrude?.detail ?? 'medium',
+    );
+    s.stateStore.set('svgExtrude.detail', nextDetail);
     s.setSvgExtrudeColorDepths(nextColorDepths, { updateState: false });
     s.setSvgExtrudeColorOffsets(nextColorOffsets, { updateState: false });
     s.setSvgExtrudeFlipDirection(flipDirection, { updateState: false });
+    s.setSvgExtrudeBevel({ amount: nextBevelAmount }, { updateState: false });
     const svgState = s.stateStore.getState().svgExtrude || {};
     s.setSvgExtrudeColorOverride(
       {
         enabled: !!svgState.colorOverride,
-        color: svgState.overrideColor ?? '#7ed321',
+        color: svgState.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
       },
       { updateState: false },
     );
@@ -352,6 +375,8 @@ export class ModelLifecycleManager {
         svgExtrudeColorDepths: svgExtrudeState.colorDepths || {},
         svgExtrudeColorOffsets: svgExtrudeState.colorOffsets || {},
         svgExtrudeFlipDirection: !!svgExtrudeState.flipDirection,
+        svgExtrudeBevelAmount: svgExtrudeState.bevelAmount ?? 0,
+        svgExtrudeDetail: svgExtrudeState.detail ?? 'medium',
       });
       this.setModel(asset.object, asset.animations ?? []);
       this.applyAssetMetadata(asset);

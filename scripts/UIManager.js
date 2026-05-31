@@ -36,7 +36,7 @@ import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
-import { ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
+import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import {
@@ -278,6 +278,7 @@ export class UIManager {
 
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
+    ensureSvgExtrudeCoreControlsMounted();
     ensureSvgExtrudeSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
@@ -388,6 +389,8 @@ export class UIManager {
       materialRoughness: q('#materialRoughness'),
       materialEmissive: q('#materialEmissive'),
       svgExtrudeDepth: q('#svgExtrudeDepth'),
+      svgExtrudeBevelAmount: q('#svgExtrudeBevelAmount'),
+      svgExtrudeDetail: q('#svgExtrudeDetail'),
       svgExtrudeNormalAngle: q('#svgExtrudeNormalAngle'),
       svgExtrudeFlipDirection: q('#svgExtrudeFlipDirection'),
       svgExtrudeColorOverride: q('#svgExtrudeColorOverride'),

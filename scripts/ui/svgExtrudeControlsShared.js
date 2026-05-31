@@ -1,4 +1,19 @@
 import {
+  clampExtrudeBevelAmount,
+  maxExtrudeBevelAmount,
+} from '../import/extrudeBevel.js';
+import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
+import {
+  DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
+  MAX_EXTRUDE_DEPTH,
+  MIN_EXTRUDE_DEPTH,
+  MIN_EXTRUDE_NORMAL_ANGLE_DEG,
+  MAX_EXTRUDE_NORMAL_ANGLE_DEG,
+} from '../import/extrudeDefaults.js';
+import {
   clampSurfaceStrength,
   getSvgExtrudeSurfacePresetConfig,
   SVG_EXTRUDE_SURFACE_PRESETS,
@@ -30,15 +45,188 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
               </select>
             </label>
             <label class="slider-line">
-              <span data-tooltip="Pattern size in mesh-local units (uniform tiling; rotates with the model). Procedural surfaces use world space.">Scale</span>
+              <span data-tooltip="Pattern size in mesh-local units (uniform on caps, sides, and bevels; rotates with the model)">Surface Scale</span>
               <input id="${scaleId}" type="range" min="0.2" max="10" step="0.05" value="1" />
               <span class="value" data-output="${scaleOutput}">1.00</span>
             </label>
             <label class="slider-line svg-extrude-surface-strength-line">
-              <span data-tooltip="Normal-map bump intensity (map presets only)">Strength</span>
+              <span data-tooltip="Normal-map bump intensity (map presets only)">Surface Strength</span>
               <input id="${strengthId}" type="range" min="0" max="2" step="0.01" value="1" />
               <span class="value" data-output="${strengthOutput}">1.00</span>
             </label>`;
+}
+
+/**
+ * @param {{
+ *   id?: string,
+ *   outputKey?: string,
+ *   label?: string,
+ *   tooltip?: string,
+ *   value?: number,
+ * }} [options]
+ */
+export function buildExtrudeDepthSliderHtml(options = {}) {
+  const id = options.id ?? 'svgExtrudeDepth';
+  const outputKey = options.outputKey ?? 'svgExtrudeDepth';
+  const label = options.label ?? 'Depth';
+  const tooltip =
+    options.tooltip ??
+    'Overall extrusion depth; scales every layer together (including per-color overrides)';
+  const value = Number(options.value ?? DEFAULT_EXTRUDE_DEPTH) || DEFAULT_EXTRUDE_DEPTH;
+  return `
+            <label class="slider-line">
+              <span data-tooltip="${tooltip}">${label}</span>
+              <input
+                id="${id}"
+                type="range"
+                min="${MIN_EXTRUDE_DEPTH}"
+                max="${MAX_EXTRUDE_DEPTH}"
+                step="0.01"
+                value="${value}"
+              />
+              <span class="value" data-output="${outputKey}">${value.toFixed(2)}</span>
+            </label>`;
+}
+
+/**
+ * @param {{
+ *   id?: string,
+ *   outputKey?: string,
+ *   label?: string,
+ *   tooltip?: string,
+ *   ariaLabel?: string,
+ *   value?: number,
+ * }} [options]
+ */
+export function buildExtrudeAngleSliderHtml(options = {}) {
+  const id = options.id ?? 'svgExtrudeNormalAngle';
+  const outputKey = options.outputKey ?? 'svgExtrudeNormalAngle';
+  const label = options.label ?? 'Angle';
+  const tooltip =
+    options.tooltip ??
+    'Controls surface smoothing (0 = faceted edges, higher = smoother highlights)';
+  const ariaLabel = options.ariaLabel ? ` aria-label="${options.ariaLabel}"` : '';
+  const value =
+    Number(options.value ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG) ||
+    DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+  return `
+            <label class="slider-line">
+              <span data-tooltip="${tooltip}">${label}</span>
+              <input
+                id="${id}"
+                type="range"
+                min="${MIN_EXTRUDE_NORMAL_ANGLE_DEG}"
+                max="${MAX_EXTRUDE_NORMAL_ANGLE_DEG}"
+                step="1"
+                value="${value}"${ariaLabel}
+              />
+              <span class="value" data-output="${outputKey}">${value}°</span>
+            </label>`;
+}
+
+/**
+ * @param {{
+ *   id?: string,
+ *   outputKey?: string,
+ *   label?: string,
+ *   tooltip?: string,
+ *   depth?: number,
+ *   value?: number,
+ * }} [options]
+ */
+export function buildExtrudeBevelSliderHtml(options = {}) {
+  const id = options.id ?? 'svgExtrudeBevelAmount';
+  const outputKey = options.outputKey ?? 'svgExtrudeBevelAmount';
+  const label = options.label ?? 'Bevel Amount';
+  const tooltip =
+    options.tooltip ??
+    'Straight chamfer on cap edges (inward). Max 10% of depth — outline stays full size';
+  const depth = Number(options.depth ?? DEFAULT_EXTRUDE_DEPTH) || DEFAULT_EXTRUDE_DEPTH;
+  const maxBevel = maxExtrudeBevelAmount(depth);
+  const amount = clampExtrudeBevelAmount(options.value ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT, depth);
+  const step = Math.max(0.001, maxBevel / 50);
+  return `
+            <label class="slider-line">
+              <span data-tooltip="${tooltip}">${label}</span>
+              <input
+                id="${id}"
+                type="range"
+                min="0"
+                max="${maxBevel}"
+                step="${step}"
+                value="${amount}"
+              />
+              <span class="value" data-output="${outputKey}">${amount.toFixed(2)}</span>
+            </label>`;
+}
+
+/**
+ * @param {{
+ *   id?: string,
+ *   label?: string,
+ *   tooltip?: string,
+ *   value?: 'low' | 'medium' | 'high' | string,
+ * }} [options]
+ */
+export function buildExtrudeDetailSelectHtml(options = {}) {
+  const id = options.id ?? 'svgExtrudeDetail';
+  const label = options.label ?? 'Detail';
+  const tooltip =
+    options.tooltip ??
+    'Cap and side tessellation — Ultra is very dense; best for hero exports or simple shapes';
+  const value = normalizeExtrudeDetail(options.value ?? 'medium');
+  return `
+            <label class="select-line">
+              <span data-tooltip="${tooltip}">${label}</span>
+              <select id="${id}" aria-label="Extrusion detail">
+                <option value="low"${value === 'low' ? ' selected' : ''}>Low</option>
+                <option value="medium"${value === 'medium' ? ' selected' : ''}>Medium</option>
+                <option value="high"${value === 'high' ? ' selected' : ''}>High</option>
+                <option value="ultra"${value === 'ultra' ? ' selected' : ''}>Ultra</option>
+              </select>
+            </label>`;
+}
+
+/**
+ * Depth, bevel, and smoothing angle sliders for SVG / font extrude panels.
+ *
+ * @param {{
+ *   depth?: { id?: string, outputKey?: string, label?: string, tooltip?: string, value?: number },
+ *   bevel?: { id?: string, outputKey?: string, label?: string, tooltip?: string, depth?: number, value?: number },
+ *   angle?: { id?: string, outputKey?: string, label?: string, tooltip?: string, ariaLabel?: string, value?: number },
+ *   detail?: { id?: string, label?: string, tooltip?: string, value?: 'low' | 'medium' | 'high' | 'ultra' | string } | false,
+ * }} [sections]
+ */
+export function buildExtrudeCoreControlsHtml(sections = {}) {
+  const depthOpts = sections.depth ?? {};
+  const bevelOpts = {
+    depth: depthOpts.value ?? DEFAULT_EXTRUDE_DEPTH,
+    ...(sections.bevel ?? {}),
+  };
+  const parts = [
+    buildExtrudeDepthSliderHtml(depthOpts),
+    buildExtrudeBevelSliderHtml(bevelOpts),
+  ];
+  if (sections.detail !== false) {
+    parts.push(buildExtrudeDetailSelectHtml(sections.detail ?? {}));
+  }
+  parts.push(buildExtrudeAngleSliderHtml(sections.angle ?? {}));
+  return parts.join('');
+}
+
+/** Mount depth / bevel / angle controls into the SVG Extrude panel. */
+export function ensureSvgExtrudeCoreControlsMounted() {
+  const mount = document.getElementById('svgExtrudeCoreControlsMount');
+  if (!mount) return;
+  if (
+    mount.dataset.mounted === '1' &&
+    mount.querySelector('#svgExtrudeDepth') &&
+    mount.querySelector('#svgExtrudeDetail option[value="ultra"]')
+  ) {
+    return;
+  }
+  mount.innerHTML = buildExtrudeCoreControlsHtml();
+  mount.dataset.mounted = '1';
 }
 
 /** Mount shared surface controls into the SVG Extrude panel (replaces static index.html copy). */
@@ -88,19 +276,34 @@ export function bindSvgExtrudeControls(ctx) {
 
   inputs.depth?.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
-    const clampedValue = Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2;
+    const clampedValue = Number.isFinite(value)
+      ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
+      : DEFAULT_EXTRUDE_DEPTH;
     helpers.updateValueLabel(inputs.depthOutputKey, clampedValue, 'decimal');
     stateStore.set('svgExtrude.depth', clampedValue);
+    const prevBevel = stateStore.getState().svgExtrude?.bevelAmount ?? 0;
+    const clampedBevel = clampExtrudeBevelAmount(prevBevel, clampedValue);
+    const svg = { ...(stateStore.getState().svgExtrude || {}), depth: clampedValue };
+    if (clampedBevel !== prevBevel) {
+      stateStore.set('svgExtrude.bevelAmount', clampedBevel);
+      svg.bevelAmount = clampedBevel;
+    }
+    syncExtrudeBevelControlInputs(ctx, svg, true);
     if (timers.depth) clearTimeout(timers.depth);
     timers.depth = setTimeout(() => {
       eventBus.emit('mesh:svg-extrude-depth', clampedValue);
+      if (inputs.bevelAmount && clampedBevel !== prevBevel) {
+        eventBus.emit('mesh:svg-extrude-bevel', { amount: clampedBevel });
+      }
     }, 45);
   });
   if (inputs.depth) helpers.enableSliderKeyboardStepping(inputs.depth);
 
   inputs.normalAngle?.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
-    const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(180, value)) : 45;
+    const clampedValue = Number.isFinite(value)
+      ? Math.max(MIN_EXTRUDE_NORMAL_ANGLE_DEG, Math.min(MAX_EXTRUDE_NORMAL_ANGLE_DEG, value))
+      : DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
     helpers.updateValueLabel(inputs.normalAngleOutputKey, clampedValue, 'angle');
     stateStore.set('svgExtrude.normalAngle', clampedValue);
     if (timers.normal) clearTimeout(timers.normal);
@@ -109,6 +312,13 @@ export function bindSvgExtrudeControls(ctx) {
     }, 45);
   });
   if (inputs.normalAngle) helpers.enableSliderKeyboardStepping(inputs.normalAngle);
+
+  inputs.detail?.addEventListener('change', (event) => {
+    ui.uiSounds?.playSelect?.();
+    const value = normalizeExtrudeDetail(event?.target?.value);
+    stateStore.set('svgExtrude.detail', value);
+    eventBus.emit('mesh:svg-extrude-detail', value);
+  });
 
   inputs.surfacePreset?.addEventListener('change', (event) => {
     const preset = event?.target?.value || 'none';
@@ -143,7 +353,7 @@ export function bindSvgExtrudeControls(ctx) {
 
   inputs.colorOverride?.addEventListener('change', (event) => {
     const enabled = !!event.target.checked;
-    const color = inputs.overrideColor?.value || '#7ed321';
+    const color = inputs.overrideColor?.value || DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR;
     stateStore.set('svgExtrude.colorOverride', enabled);
     eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
   });
@@ -168,8 +378,8 @@ export function bindSvgExtrudeControls(ctx) {
           ? Math.max(-1.0, Math.min(1.0, value))
           : 0
         : Number.isFinite(value)
-          ? Math.max(0.01, Math.min(2.0, value))
-          : 0.2;
+          ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
+          : DEFAULT_EXTRUDE_DEPTH;
     const sliderLine = input.closest('.slider-line');
     const numberInput = sliderLine?.querySelector('input[type="number"]');
     if (numberInput) numberInput.value = clampedValue.toFixed(2);
@@ -213,8 +423,8 @@ export function bindSvgExtrudeControls(ctx) {
           ? Math.max(-1.0, Math.min(1.0, value))
           : 0
         : Number.isFinite(value)
-          ? Math.max(0.01, Math.min(2.0, value))
-          : 0.2;
+          ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
+          : DEFAULT_EXTRUDE_DEPTH;
     input.value = clampedValue.toFixed(2);
     const sliderLine = input.closest('.slider-line');
     const rangeInput = sliderLine?.querySelector('input[type="range"]');
@@ -240,6 +450,48 @@ export function bindSvgExtrudeControls(ctx) {
   inputs.colorDepths?.addEventListener('change', onColorDepthChange);
 }
 
+function syncExtrudeBevelControlInputs(ctx, svg, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  const depth = Number(svg.depth ?? DEFAULT_EXTRUDE_DEPTH);
+  const maxBevel = maxExtrudeBevelAmount(depth);
+  const amount = clampExtrudeBevelAmount(svg.bevelAmount ?? 0, depth);
+
+  if (inputs.bevelAmount) {
+    inputs.bevelAmount.max = String(maxBevel);
+    inputs.bevelAmount.step = String(Math.max(0.001, maxBevel / 50));
+    if (document.activeElement !== inputs.bevelAmount) {
+      inputs.bevelAmount.value = amount;
+      helpers.updateValueLabel(inputs.bevelAmountOutputKey, amount, 'decimal');
+    }
+    ui.setControlDisabled(inputs.bevelAmount, !canEdit);
+  }
+}
+
+/**
+ * Bevel controls for font and SVG extrude (stored in svgExtrude state).
+ * @param {Object} ctx — same shape as bindSvgExtrudeControls
+ */
+export function bindExtrudeBevelControls(ctx) {
+  const { inputs, stateStore, eventBus, ui, helpers, timers } = ctx;
+
+  inputs.bevelAmount?.addEventListener('input', (event) => {
+    const depth = Number(stateStore.getState().svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
+    const maxBevel = maxExtrudeBevelAmount(depth);
+    const value = parseFloat(event.target.value);
+    const clampedValue = Number.isFinite(value)
+      ? Math.max(0, Math.min(maxBevel, value))
+      : 0;
+    helpers.updateValueLabel(inputs.bevelAmountOutputKey, clampedValue, 'decimal');
+    stateStore.set('svgExtrude.bevelAmount', clampedValue);
+    syncExtrudeBevelControlInputs(ctx, stateStore.getState().svgExtrude || {}, true);
+    if (timers.bevel) clearTimeout(timers.bevel);
+    timers.bevel = setTimeout(() => {
+      eventBus.emit('mesh:svg-extrude-bevel', { amount: clampedValue });
+    }, 45);
+  });
+  if (inputs.bevelAmount) helpers.enableSliderKeyboardStepping(inputs.bevelAmount);
+}
+
 /**
  * @param {Object} ctx
  * @param {Record<string, HTMLElement | null>} ctx.inputs
@@ -257,20 +509,30 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
   const canEdit = enabled;
 
   if (inputs.depth) {
-    const depth = svg.depth ?? 0.2;
+    const depth = svg.depth ?? DEFAULT_EXTRUDE_DEPTH;
     if (document.activeElement !== inputs.depth) {
       inputs.depth.value = depth;
       helpers.updateValueLabel(inputs.depthOutputKey, depth, 'decimal');
     }
     ui.setControlDisabled(inputs.depth, !canEdit);
+    if (inputs.bevelAmount) {
+      syncExtrudeBevelControlInputs(ctx, svg, canEdit);
+    }
   }
   if (inputs.normalAngle) {
-    const normalAngle = svg.normalAngle ?? 45;
+    const normalAngle = svg.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
     if (document.activeElement !== inputs.normalAngle) {
       inputs.normalAngle.value = normalAngle;
       helpers.updateValueLabel(inputs.normalAngleOutputKey, normalAngle, 'angle');
     }
     ui.setControlDisabled(inputs.normalAngle, !canEdit);
+  }
+  if (inputs.detail) {
+    const detail = normalizeExtrudeDetail(svg.detail ?? 'medium');
+    if (document.activeElement !== inputs.detail) {
+      inputs.detail.value = detail;
+    }
+    ui.setControlDisabled(inputs.detail, !canEdit);
   }
   if (inputs.surfacePreset) {
     inputs.surfacePreset.value = svg.surfacePreset ?? 'none';
@@ -296,7 +558,7 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
   }
   if (inputs.overrideColor) {
     const overrideEnabled = !!svg.colorOverride;
-    const color = svg.overrideColor ?? '#7ed321';
+    const color = svg.overrideColor ?? DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR;
     if (document.activeElement !== inputs.overrideColor) {
       inputs.overrideColor.value = color;
     }
@@ -317,7 +579,7 @@ export function renderSvgColorDepthControls(container, state, ui) {
     : [];
   const overrides = state.svgExtrude?.colorDepths || {};
   const offsets = state.svgExtrude?.colorOffsets || {};
-  const globalDepth = Number(state.svgExtrude?.depth ?? 0.2);
+  const globalDepth = Number(state.svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
 
   if (!enabled) {
     container.innerHTML = '';
@@ -377,16 +639,29 @@ export function renderSvgColorDepthControls(container, state, ui) {
 /** Depth + smoothing — shown after the first 3D text generate (rebuilds existing mesh). */
 export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
           <div id="fontExtrudePostGen" class="font-extrude-post-gen" hidden>
-            <label class="slider-line">
-              <span data-tooltip="Overall extrusion depth for generated text">Depth</span>
-              <input id="fontExtrudeMeshDepth" type="range" min="0.01" max="2" step="0.01" value="0.2" />
-              <span class="value" data-output="fontExtrudeMeshDepth">0.20</span>
-            </label>
-            <label class="slider-line">
-              <span data-tooltip="Controls surface smoothing on letter edges (0 = faceted, higher = smoother)">Smoothing Angle</span>
-              <input id="fontExtrudeMeshAngle" type="range" min="0" max="180" step="1" value="45" aria-label="Smoothing angle" />
-              <span class="value" data-output="fontExtrudeMeshAngle">45°</span>
-            </label>
+            ${buildExtrudeCoreControlsHtml({
+              depth: {
+                id: 'fontExtrudeMeshDepth',
+                outputKey: 'fontExtrudeMeshDepth',
+                label: 'Depth',
+                tooltip: 'Overall extrusion depth for generated text',
+              },
+              bevel: {
+                id: 'fontExtrudeBevelAmount',
+                outputKey: 'fontExtrudeBevelAmount',
+                tooltip:
+                  'Straight chamfer on cap edges (inward). Max 10% of depth — font outline stays full size',
+              },
+              detail: false,
+              angle: {
+                id: 'fontExtrudeMeshAngle',
+                outputKey: 'fontExtrudeMeshAngle',
+                label: 'Smoothing Angle',
+                tooltip:
+                  'Controls surface smoothing on letter edges (0 = faceted, higher = smoother)',
+                ariaLabel: 'Smoothing angle',
+              },
+            })}
             ${buildSvgExtrudeSurfaceControlsHtml({
               presetId: 'fontExtrudeSurfacePreset',
               scaleId: 'fontExtrudeSurfaceScale',

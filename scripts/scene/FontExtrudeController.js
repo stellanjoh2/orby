@@ -2,6 +2,11 @@ import * as opentype from '../vendor/opentype.module.js';
 import { FontExtrudeImporter, normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
 import { LocalFontPreviewCache } from './localFontPreviewCache.js';
+import {
+  DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+} from '../import/extrudeDefaults.js';
 
 const DEFAULT_FONT_SIZE = 72;
 const PREVIEW_LAYOUT_WIDTH = 520;
@@ -176,13 +181,14 @@ export class FontExtrudeController {
     );
     const group = this.fontExtrudeImporter.buildFromLayout(layout, {
       sourceName: this.fontLabel || 'Text',
-      depth: options.depth ?? svgState.depth ?? 0.2,
-      normalAngleDeg: options.normalAngleDeg ?? svgState.normalAngle ?? 45,
+      depth: options.depth ?? svgState.depth ?? DEFAULT_EXTRUDE_DEPTH,
+      normalAngleDeg: options.normalAngleDeg ?? svgState.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
       colorDepths: options.colorDepths ?? svgState.colorDepths ?? {},
       colorOffsets: options.colorOffsets ?? svgState.colorOffsets ?? {},
       flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
       detail: options.detail ?? fontState.detail ?? 'medium',
       fillColor,
+      bevelAmount: options.bevelAmount ?? svgState.bevelAmount ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT,
     });
     group.userData.orbyFontGenerated = true;
     group.userData.orbyFontExtrude = true;
@@ -242,6 +248,8 @@ export class FontExtrudeController {
         colorOffsets: this.fontExtrudeImporter.getColorOffsets(),
         colors: this.fontExtrudeImporter.getAvailableColors(),
         flipDirection: this.fontExtrudeImporter.getFlipDirection(),
+        bevelAmount: this.fontExtrudeImporter.getBevelAmount(),
+        detail: this.fontExtrudeImporter.getDetail(),
         importer: this.fontExtrudeImporter,
       },
     });

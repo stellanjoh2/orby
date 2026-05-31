@@ -1,21 +1,30 @@
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
-import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
+import {
+  clampExtrudeBevelAmount,
+  DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+  resolveExtrudeBevelSettings,
+} from './extrudeBevel.js';
+import {
+  applyExtrudeDirectionOffset,
+  clampExtrudeColorOffset,
+  clampExtrudeDepth,
+  clampExtrudeNormalAngleDeg,
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  finalizeExtrudeGroupGeometry,
+  preserveExtrudeGroupOnRebuild,
+} from './extrudeImporterShared.js';
+import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
 import {
   FONT_EXTRUDE_TARGET_CAP_HEIGHT,
-  resolveFontExtrudeSampling,
-} from './fontExtrudeSampling.js';
+  normalizeExtrudeDetail,
+  resolveBevelSideCurveSegments,
+  resolveExtrudeDetailSettings,
+} from './extrudeDetail.js';
 import { opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
-const DEFAULT_DEPTH = 0.2;
-const MIN_DEPTH = 0.01;
-const MAX_DEPTH = 2.0;
-const DEFAULT_NORMAL_ANGLE_DEG = 45;
-const MIN_NORMAL_ANGLE_DEG = 0;
-const MAX_NORMAL_ANGLE_DEG = 180;
-const MIN_COLOR_OFFSET = -1.0;
-const MAX_COLOR_OFFSET = 1.0;
 const DEFAULT_GLYPH_FILL = '#ffffff';
 
 /** @param {string} [value] */
@@ -26,20 +35,8 @@ export function normalizeGlyphFillHex(value) {
   return DEFAULT_GLYPH_FILL;
 }
 
-const clampDepth = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return DEFAULT_DEPTH;
-  return Math.max(MIN_DEPTH, Math.min(MAX_DEPTH, numeric));
-};
-
-const clampNormalAngleDeg = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return DEFAULT_NORMAL_ANGLE_DEG;
-  return Math.max(MIN_NORMAL_ANGLE_DEG, Math.min(MAX_NORMAL_ANGLE_DEG, numeric));
-};
-
 /**
- * Direct opentype glyph → THREE.Shape → ExtrudeGeometry (no SVG, no densify).
+ * Direct opentype glyph → THREE.Shape → stock ExtrudeGeometry (no custom cap triangulation).
  */
 export class FontExtrudeImporter {
   constructor() {
@@ -47,15 +44,17 @@ export class FontExtrudeImporter {
     this.group = null;
     /** @type {Array<{ glyphPath: import('../vendor/opentype.module.js').Path }>} */
     this._glyphEntries = [];
-    this.currentDepth = DEFAULT_DEPTH;
-    this.currentNormalAngleDeg = DEFAULT_NORMAL_ANGLE_DEG;
+    this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
+    this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentFillColor = DEFAULT_GLYPH_FILL;
     this.currentColorPalette = [DEFAULT_GLYPH_FILL];
     this.currentFlipDirection = false;
+    this.currentBevelAmount = DEFAULT_EXTRUDE_BEVEL_AMOUNT;
     this._layoutFontSize = 72;
-    this._sampling = resolveFontExtrudeSampling('medium');
+    /** @type {'low' | 'medium' | 'high' | 'ultra'} */
+    this._detailLevel = 'medium';
   }
 
   /**
@@ -75,26 +74,30 @@ export class FontExtrudeImporter {
       throw new Error('Text has no filled paths to extrude');
     }
     this.sourceName = options.sourceName || 'Text';
-    this.currentDepth = clampDepth(options.depth ?? this.currentDepth);
-    this.currentNormalAngleDeg = clampNormalAngleDeg(
+    this.currentDepth = clampExtrudeDepth(options.depth ?? this.currentDepth);
+    this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(
       options.normalAngleDeg ?? this.currentNormalAngleDeg,
     );
     this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
     this.currentColorOffsets = { ...(options.colorOffsets || this.currentColorOffsets || {}) };
     this.currentFlipDirection = !!(options.flipDirection ?? this.currentFlipDirection);
+    this.currentBevelAmount = clampExtrudeBevelAmount(
+      options.bevelAmount ?? this.currentBevelAmount,
+      this.currentDepth,
+    );
     if (options.fillColor) {
       this.currentFillColor = normalizeGlyphFillHex(options.fillColor);
       this.currentColorPalette = [this.currentFillColor];
     }
     this._layoutFontSize = Number(layout?.fontSize) > 0 ? Number(layout.fontSize) : 72;
-    this._sampling = resolveFontExtrudeSampling(options.detail ?? 'medium');
+    this._detailLevel = normalizeExtrudeDetail(options.detail ?? this._detailLevel);
     this.group = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
     return this.group;
   }
 
   setDepth(nextDepth) {
     if (!this._glyphEntries.length) throw new Error('No font layout available for depth update');
-    const newDepth = clampDepth(nextDepth);
+    const newDepth = clampExtrudeDepth(nextDepth);
     const oldDepth = this.currentDepth;
     if (
       oldDepth > 0 &&
@@ -104,17 +107,21 @@ export class FontExtrudeImporter {
       const ratio = newDepth / oldDepth;
       const scaled = {};
       Object.entries(this.currentColorDepths).forEach(([color, depthValue]) => {
-        scaled[color] = clampDepth(Number(depthValue) * ratio);
+        scaled[color] = clampExtrudeDepth(Number(depthValue) * ratio);
       });
       this.currentColorDepths = scaled;
     }
     this.currentDepth = newDepth;
+    this.currentBevelAmount = clampExtrudeBevelAmount(
+      this.currentBevelAmount,
+      this.currentDepth,
+    );
     return this._rebuildPreserveGroup();
   }
 
   setNormalAngleDeg(nextNormalAngleDeg) {
     if (!this._glyphEntries.length) throw new Error('No font layout available');
-    this.currentNormalAngleDeg = clampNormalAngleDeg(nextNormalAngleDeg);
+    this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(nextNormalAngleDeg);
     return this._rebuildPreserveGroup();
   }
 
@@ -124,7 +131,7 @@ export class FontExtrudeImporter {
     Object.entries(nextColorDepths || {}).forEach(([color, depthValue]) => {
       if (typeof color !== 'string') return;
       const key = color.toLowerCase();
-      const depth = clampDepth(depthValue);
+      const depth = clampExtrudeDepth(depthValue);
       if (Number.isFinite(depth)) sanitized[key] = depth;
     });
     this.currentColorDepths = sanitized;
@@ -139,7 +146,7 @@ export class FontExtrudeImporter {
       const key = color.toLowerCase();
       const numericOffset = Number(offsetValue);
       if (!Number.isFinite(numericOffset)) return;
-      sanitized[key] = Math.max(MIN_COLOR_OFFSET, Math.min(MAX_COLOR_OFFSET, numericOffset));
+      sanitized[key] = clampExtrudeColorOffset(numericOffset);
     });
     this.currentColorOffsets = sanitized;
     return this._rebuildPreserveGroup();
@@ -148,6 +155,26 @@ export class FontExtrudeImporter {
   setFlipDirection(enabled) {
     if (!this._glyphEntries.length) throw new Error('No font layout available');
     this.currentFlipDirection = !!enabled;
+    return this._rebuildPreserveGroup();
+  }
+
+  /**
+   * @param {{ amount?: unknown }} [settings]
+   */
+  setBevelSettings(settings = {}) {
+    if (!this._glyphEntries.length) throw new Error('No font layout available');
+    if (settings.amount !== undefined) {
+      this.currentBevelAmount = clampExtrudeBevelAmount(
+        settings.amount,
+        this.currentDepth,
+      );
+    }
+    return this._rebuildPreserveGroup();
+  }
+
+  setDetail(nextDetail) {
+    if (!this._glyphEntries.length) throw new Error('No font layout available');
+    this._detailLevel = normalizeExtrudeDetail(nextDetail);
     return this._rebuildPreserveGroup();
   }
 
@@ -179,13 +206,17 @@ export class FontExtrudeImporter {
     return !!this.currentFlipDirection;
   }
 
+  getBevelAmount() {
+    return this.currentBevelAmount;
+  }
+
+  getDetail() {
+    return this._detailLevel;
+  }
+
   _rebuildPreserveGroup() {
     const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
-    }
-    this._replaceChildren(this.group, rebuilt);
+    this.group = preserveExtrudeGroupOnRebuild(this.group, rebuilt);
     return this.group;
   }
 
@@ -198,14 +229,12 @@ export class FontExtrudeImporter {
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
     group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
-    const creaseAngleRad = THREE.MathUtils.degToRad(clampNormalAngleDeg(normalAngleDeg));
+    const creaseAngleRad = THREE.MathUtils.degToRad(clampExtrudeNormalAngleDeg(normalAngleDeg));
     const fillHex = this.currentFillColor.toLowerCase();
     const effectiveDepth = Number.isFinite(this.currentColorDepths?.[fillHex])
-      ? clampDepth(this.currentColorDepths[fillHex])
+      ? clampExtrudeDepth(this.currentColorDepths[fillHex])
       : depth;
-    const effectiveOffset = Number.isFinite(Number(this.currentColorOffsets?.[fillHex]))
-      ? Math.max(MIN_COLOR_OFFSET, Math.min(MAX_COLOR_OFFSET, Number(this.currentColorOffsets[fillHex])))
-      : 0;
+    const effectiveOffset = clampExtrudeColorOffset(this.currentColorOffsets?.[fillHex]);
 
     const baseColor = new THREE.Color(this.currentFillColor);
     const material = new THREE.MeshStandardMaterial({
@@ -215,18 +244,40 @@ export class FontExtrudeImporter {
       side: THREE.FrontSide,
     });
 
+    const xyNormalizeScale = FONT_EXTRUDE_TARGET_CAP_HEIGHT / this._layoutFontSize;
+    const bevelSettings = resolveExtrudeBevelSettings({
+      amount: this.currentBevelAmount,
+      depth: effectiveDepth,
+      xyNormalizeScale,
+    });
+    const bevelEnabled = !!bevelSettings.bevelEnabled;
+    const detailSettings = resolveExtrudeDetailSettings(this._detailLevel, { bevelEnabled });
+    const curveSegments = bevelEnabled
+      ? resolveBevelSideCurveSegments(this._detailLevel, detailSettings.curveSegments)
+      : detailSettings.curveSegments;
     const extrudeSettings = {
       depth: effectiveDepth,
       steps: 1,
-      curveSegments: this._sampling.sideSegments,
-      bevelEnabled: false,
+      curveSegments,
+      ...bevelSettings,
     };
 
     let meshCount = 0;
     for (const { glyphPath } of this._glyphEntries) {
-      const shapes = opentypePathToShapes(glyphPath, this._sampling.curveDivisions);
+      const shapes = opentypePathToShapes(glyphPath, detailSettings.curveDivisions);
       for (const shape of shapes) {
-        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const extrudeOptions = {
+          ...extrudeSettings,
+          curveSegments,
+        };
+        let geometry = new THREE.ExtrudeGeometry(shape, extrudeOptions);
+        if (geometryHasNaNPositions(geometry) && bevelSettings?.bevelEnabled) {
+          geometry.dispose();
+          geometry = new THREE.ExtrudeGeometry(shape, {
+            ...extrudeOptions,
+            bevelEnabled: false,
+          });
+        }
         const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
         geometry.dispose();
         const mesh = new THREE.Mesh(smoothedGeometry, material.clone());
@@ -255,16 +306,8 @@ export class FontExtrudeImporter {
     }
 
     this._normalizeFontGeometrySpace(group, this._layoutFontSize);
-    this._applyDirectionOffset(group, this.currentFlipDirection);
-
-    group.traverse((child) => {
-      if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
-      const nextGeom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
-      if (nextGeom !== child.geometry) {
-        child.geometry.dispose();
-        child.geometry = nextGeom;
-      }
-    });
+    applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
+    finalizeExtrudeGroupGeometry(group, creaseAngleRad);
 
     return group;
   }
@@ -302,48 +345,5 @@ export class FontExtrudeImporter {
         child.geometry.computeBoundingSphere();
       });
     }
-  }
-
-  _applyDirectionOffset(group, flipDirection) {
-    group.traverse((child) => {
-      if (!child.isMesh || !child.geometry) return;
-      const depth = clampDepth(child.userData?.orbySvgEffectiveDepth ?? this.currentDepth);
-      const colorOffset = Math.max(
-        MIN_COLOR_OFFSET,
-        Math.min(MAX_COLOR_OFFSET, Number(child.userData?.orbySvgColorOffset ?? 0)),
-      );
-      const directionOffset = (flipDirection ? 1 : -1) * depth * 0.5;
-      child.geometry.translate(0, 0, directionOffset + colorOffset);
-      child.geometry.computeBoundingBox();
-      child.geometry.computeBoundingSphere();
-    });
-  }
-
-  _replaceChildren(targetGroup, sourceGroup) {
-    while (targetGroup.children.length) {
-      const child = targetGroup.children[0];
-      this._disposeNode(child);
-      targetGroup.remove(child);
-    }
-    while (sourceGroup.children.length) {
-      targetGroup.add(sourceGroup.children[0]);
-    }
-    targetGroup.name = sourceGroup.name;
-    targetGroup.userData = { ...sourceGroup.userData };
-    targetGroup.scale.copy(sourceGroup.scale);
-    targetGroup.position.copy(sourceGroup.position);
-    targetGroup.rotation.copy(sourceGroup.rotation);
-  }
-
-  _disposeNode(node) {
-    node.traverse?.((child) => {
-      if (!child.isMesh) return;
-      child.geometry?.dispose?.();
-      if (Array.isArray(child.material)) {
-        child.material.forEach((mat) => mat?.dispose?.());
-      } else {
-        child.material?.dispose?.();
-      }
-    });
   }
 }

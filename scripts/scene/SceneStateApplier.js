@@ -237,6 +237,12 @@ function createStateApplySteps() {
         if (state.svgExtrude?.normalAngle !== undefined) {
           s.setSvgExtrudeNormalAngle(state.svgExtrude.normalAngle);
         }
+        if (state.svgExtrude?.bevelAmount !== undefined) {
+          s.setSvgExtrudeBevel(
+            { amount: state.svgExtrude.bevelAmount },
+            { updateState: false },
+          );
+        }
         if (state.svgExtrude?.colorDepths !== undefined) {
           s.setSvgExtrudeColorDepths(state.svgExtrude.colorDepths, { updateState: false });
         }

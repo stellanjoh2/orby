@@ -3618,6 +3618,7 @@ export class MaterialController {
     const baseColor = new THREE.Color(fillHex);
     const visibleColor = this._diffuseColorWithBrightness(baseColor);
     const linear = { r: baseColor.r, g: baseColor.g, b: baseColor.b };
+    const colorOverrideEnabled = !!this.stateStore?.getState()?.svgExtrude?.colorOverride;
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.userData?.orbyFontExtrude) return;
@@ -3625,6 +3626,8 @@ export class MaterialController {
       child.userData.orbySvgBaseColor = fillHex;
       child.userData.orbySvgGroupedColor = fillHex;
       child.userData.orbySvgBaseColorLinear = linear;
+
+      if (colorOverrideEnabled) return;
 
       const patchBase = (mat) => {
         if (!mat?.color || mat.userData?.orbyCreativeLook) return;

@@ -1,90 +1,34 @@
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
-import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
+import {
+  clampExtrudeBevelAmount,
+  DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+  resolveExtrudeBevelSettings,
+} from './extrudeBevel.js';
+import {
+  normalizeExtrudeDetail,
+  resolveExtrudeDetailSettings,
+} from './extrudeDetail.js';
+import { withPatchedCapTriangulation } from './extrudeCapTriangulation.js';
+import {
+  applyExtrudeDirectionOffset,
+  clampExtrudeColorOffset,
+  clampExtrudeDepth,
+  clampExtrudeNormalAngleDeg,
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  finalizeExtrudeGroupGeometry,
+  preserveExtrudeGroupOnRebuild,
+} from './extrudeImporterShared.js';
+import {
+  buildExtrudeGeometrySafe,
+  sanitizeShapeForExtrudeGeometry,
+} from './extrudeShapeSanitize.js';
+import { densifyShapeForExtrudeCaps } from './extrudeDensify.js';
 import { SVGLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
-const DEFAULT_DEPTH = 0.2;
-const MIN_DEPTH = 0.01;
-const MAX_DEPTH = 2.0;
-const DEFAULT_NORMAL_ANGLE_DEG = 45;
-const MIN_NORMAL_ANGLE_DEG = 0;
-const MAX_NORMAL_ANGLE_DEG = 180;
-const MIN_COLOR_OFFSET = -1.0;
-const MAX_COLOR_OFFSET = 1.0;
 const COLOR_GROUP_QUANTIZE_STEP = 24;
-const DENSIFY_MIN_SEGMENTS = 40;
-const DENSIFY_MAX_SEGMENTS = 120;
-const DENSIFY_MAX_POINTS_PER_RING = 3000;
-
-const clampDepth = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return DEFAULT_DEPTH;
-  return Math.max(MIN_DEPTH, Math.min(MAX_DEPTH, numeric));
-};
-
-const clampNormalAngleDeg = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return DEFAULT_NORMAL_ANGLE_DEG;
-  return Math.max(MIN_NORMAL_ANGLE_DEG, Math.min(MAX_NORMAL_ANGLE_DEG, numeric));
-};
-
-const densifyRing = (ring, targetSegmentLength, maxPoints = DENSIFY_MAX_POINTS_PER_RING) => {
-  const source = Array.isArray(ring) ? ring : [];
-  if (source.length < 2 || !Number.isFinite(targetSegmentLength) || targetSegmentLength <= 0) {
-    return source;
-  }
-
-  const closed =
-    source.length > 2 &&
-    source[0].distanceToSquared(source[source.length - 1]) < 1e-10;
-  const base = closed ? source.slice(0, -1) : source.slice();
-  if (base.length < 2) return source;
-
-  const dense = [];
-  const edgeCount = base.length;
-  for (let i = 0; i < edgeCount; i += 1) {
-    const a = base[i];
-    const b = base[(i + 1) % edgeCount];
-    if (!a || !b) continue;
-    dense.push(new THREE.Vector2(a.x, a.y));
-    const edgeLen = a.distanceTo(b);
-    const steps = Math.max(1, Math.ceil(edgeLen / targetSegmentLength));
-    for (let s = 1; s < steps; s += 1) {
-      if (dense.length >= maxPoints) break;
-      const t = s / steps;
-      dense.push(new THREE.Vector2(
-        THREE.MathUtils.lerp(a.x, b.x, t),
-        THREE.MathUtils.lerp(a.y, b.y, t),
-      ));
-    }
-    if (dense.length >= maxPoints) break;
-  }
-
-  if (dense.length >= 3 && closed) {
-    dense.push(dense[0].clone());
-  }
-  return dense.length >= 3 ? dense : source;
-};
-
-const ringPerimeter = (ring) => {
-  const source = Array.isArray(ring) ? ring : [];
-  if (source.length < 2) return 0;
-  const closed =
-    source.length > 2 &&
-    source[0].distanceToSquared(source[source.length - 1]) < 1e-10;
-  const base = closed ? source.slice(0, -1) : source.slice();
-  if (base.length < 2) return 0;
-
-  let total = 0;
-  for (let i = 0; i < base.length; i += 1) {
-    const a = base[i];
-    const b = base[(i + 1) % base.length];
-    if (!a || !b) continue;
-    total += a.distanceTo(b);
-  }
-  return total;
-};
 
 const quantizeColorChannel = (value) => {
   const n = Number(value);
@@ -102,12 +46,15 @@ export class SvgExtrudeImporter {
     this.svgText = '';
     this.sourceName = 'SVG';
     this.group = null;
-    this.currentDepth = DEFAULT_DEPTH;
-    this.currentNormalAngleDeg = DEFAULT_NORMAL_ANGLE_DEG;
+    this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
+    this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentColorPalette = [];
     this.currentFlipDirection = false;
+    this.currentBevelAmount = DEFAULT_EXTRUDE_BEVEL_AMOUNT;
+    /** @type {'low' | 'medium' | 'high' | 'ultra'} */
+    this.currentDetail = 'medium';
   }
 
   async loadFromFile(file, options = {}) {
@@ -121,11 +68,18 @@ export class SvgExtrudeImporter {
     }
     this.svgText = svgText;
     this.sourceName = sourceName;
-    this.currentDepth = clampDepth(options.depth ?? this.currentDepth);
-    this.currentNormalAngleDeg = clampNormalAngleDeg(options.normalAngleDeg ?? this.currentNormalAngleDeg);
+    this.currentDepth = clampExtrudeDepth(options.depth ?? this.currentDepth);
+    this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(
+      options.normalAngleDeg ?? this.currentNormalAngleDeg,
+    );
     this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
     this.currentColorOffsets = { ...(options.colorOffsets || this.currentColorOffsets || {}) };
     this.currentFlipDirection = !!(options.flipDirection ?? this.currentFlipDirection);
+    this.currentBevelAmount = clampExtrudeBevelAmount(
+      options.bevelAmount ?? this.currentBevelAmount,
+      this.currentDepth,
+    );
+    this.currentDetail = normalizeExtrudeDetail(options.detail ?? this.currentDetail);
     this.group = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
     return this.group;
   }
@@ -134,7 +88,7 @@ export class SvgExtrudeImporter {
     if (!this.svgText) {
       throw new Error('No SVG source available for depth update');
     }
-    const newDepth = clampDepth(nextDepth);
+    const newDepth = clampExtrudeDepth(nextDepth);
     const oldDepth = this.currentDepth;
     if (
       oldDepth > 0 &&
@@ -144,18 +98,40 @@ export class SvgExtrudeImporter {
       const ratio = newDepth / oldDepth;
       const scaled = {};
       Object.entries(this.currentColorDepths).forEach(([color, depthValue]) => {
-        scaled[color] = clampDepth(Number(depthValue) * ratio);
+        scaled[color] = clampExtrudeDepth(Number(depthValue) * ratio);
       });
       this.currentColorDepths = scaled;
     }
     this.currentDepth = newDepth;
-    const rebuilt = this._buildGroup(newDepth, this.currentNormalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
+    this.currentBevelAmount = clampExtrudeBevelAmount(
+      this.currentBevelAmount,
+      this.currentDepth,
+    );
+    return this._rebuildPreserveGroup(newDepth, this.currentNormalAngleDeg);
+  }
+
+  /**
+   * @param {{ amount?: unknown }} [settings]
+   */
+  setBevelSettings(settings = {}) {
+    if (!this.svgText) {
+      throw new Error('No SVG source available for bevel update');
     }
-    this._replaceChildren(this.group, rebuilt);
-    return this.group;
+    if (settings.amount !== undefined) {
+      this.currentBevelAmount = clampExtrudeBevelAmount(
+        settings.amount,
+        this.currentDepth,
+      );
+    }
+    return this._rebuildPreserveGroup();
+  }
+
+  setDetail(nextDetail) {
+    if (!this.svgText) {
+      throw new Error('No SVG source available for detail update');
+    }
+    this.currentDetail = normalizeExtrudeDetail(nextDetail);
+    return this._rebuildPreserveGroup();
   }
 
   setColorOffsets(nextColorOffsets = {}) {
@@ -168,31 +144,18 @@ export class SvgExtrudeImporter {
       const key = color.toLowerCase();
       const numericOffset = Number(offsetValue);
       if (!Number.isFinite(numericOffset)) return;
-      sanitized[key] = Math.max(MIN_COLOR_OFFSET, Math.min(MAX_COLOR_OFFSET, numericOffset));
+      sanitized[key] = clampExtrudeColorOffset(numericOffset);
     });
     this.currentColorOffsets = sanitized;
-    const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
-    }
-    this._replaceChildren(this.group, rebuilt);
-    return this.group;
+    return this._rebuildPreserveGroup();
   }
 
   setNormalAngleDeg(nextNormalAngleDeg) {
     if (!this.svgText) {
       throw new Error('No SVG source available for normal angle update');
     }
-    const normalAngleDeg = clampNormalAngleDeg(nextNormalAngleDeg);
-    this.currentNormalAngleDeg = normalAngleDeg;
-    const rebuilt = this._buildGroup(this.currentDepth, normalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
-    }
-    this._replaceChildren(this.group, rebuilt);
-    return this.group;
+    this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(nextNormalAngleDeg);
+    return this._rebuildPreserveGroup(this.currentDepth, this.currentNormalAngleDeg);
   }
 
   setColorDepths(nextColorDepths = {}) {
@@ -203,18 +166,12 @@ export class SvgExtrudeImporter {
     Object.entries(nextColorDepths || {}).forEach(([color, depthValue]) => {
       if (typeof color !== 'string') return;
       const key = color.toLowerCase();
-      const depth = clampDepth(depthValue);
+      const depth = clampExtrudeDepth(depthValue);
       if (!Number.isFinite(depth)) return;
       sanitized[key] = depth;
     });
     this.currentColorDepths = sanitized;
-    const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
-    }
-    this._replaceChildren(this.group, rebuilt);
-    return this.group;
+    return this._rebuildPreserveGroup();
   }
 
   setFlipDirection(enabled) {
@@ -222,12 +179,12 @@ export class SvgExtrudeImporter {
       throw new Error('No SVG source available for direction update');
     }
     this.currentFlipDirection = !!enabled;
-    const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
-    if (!this.group) {
-      this.group = rebuilt;
-      return this.group;
-    }
-    this._replaceChildren(this.group, rebuilt);
+    return this._rebuildPreserveGroup();
+  }
+
+  _rebuildPreserveGroup(depth = this.currentDepth, normalAngleDeg = this.currentNormalAngleDeg) {
+    const rebuilt = this._buildGroup(depth, normalAngleDeg);
+    this.group = preserveExtrudeGroupOnRebuild(this.group, rebuilt);
     return this.group;
   }
 
@@ -255,6 +212,37 @@ export class SvgExtrudeImporter {
     return !!this.currentFlipDirection;
   }
 
+  getBevelAmount() {
+    return this.currentBevelAmount;
+  }
+
+  getDetail() {
+    return this.currentDetail;
+  }
+
+  _computeSvgXyNormalizeScale(data) {
+    const box = new THREE.Box2();
+    box.makeEmpty();
+    for (const path of data.paths || []) {
+      const shapes = SVGLoader.createShapes(path);
+      for (const shape of shapes || []) {
+        const extracted = shape.extractPoints?.(12);
+        for (const point of extracted?.shape || []) {
+          box.expandByPoint(point);
+        }
+        for (const hole of extracted?.holes || []) {
+          for (const point of hole) {
+            box.expandByPoint(point);
+          }
+        }
+      }
+    }
+    const size = new THREE.Vector2();
+    box.getSize(size);
+    const maxXY = Math.max(size.x, size.y);
+    return maxXY > 0 ? 2.0 / maxXY : 1;
+  }
+
   _buildGroup(depth, normalAngleDeg) {
     const data = this.loader.parse(this.svgText);
     const group = new THREE.Group();
@@ -264,13 +252,13 @@ export class SvgExtrudeImporter {
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
     group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
-    const creaseAngleRad = THREE.MathUtils.degToRad(clampNormalAngleDeg(normalAngleDeg));
+    const creaseAngleRad = THREE.MathUtils.degToRad(clampExtrudeNormalAngleDeg(normalAngleDeg));
+    const xyNormalizeScale = this._computeSvgXyNormalizeScale(data);
 
     const extrudeSettings = {
       depth,
       steps: 1,
-      curveSegments: 16,
-      bevelEnabled: false,
+      curveSegments: 1,
     };
 
     let meshCount = 0;
@@ -298,11 +286,9 @@ export class SvgExtrudeImporter {
       const perColorDepth = this.currentColorDepths?.[groupedHex] ?? this.currentColorDepths?.[exactHex];
       const perColorOffset = this.currentColorOffsets?.[groupedHex] ?? this.currentColorOffsets?.[exactHex];
       const effectiveDepth = Number.isFinite(perColorDepth)
-        ? clampDepth(perColorDepth)
+        ? clampExtrudeDepth(perColorDepth)
         : depth;
-      const effectiveOffset = Number.isFinite(Number(perColorOffset))
-        ? Math.max(MIN_COLOR_OFFSET, Math.min(MAX_COLOR_OFFSET, Number(perColorOffset)))
-        : 0;
+      const effectiveOffset = clampExtrudeColorOffset(perColorOffset);
       const material = new THREE.MeshStandardMaterial({
         color: baseColor,
         roughness: DEFAULT_MATERIAL_ROUGHNESS,
@@ -311,14 +297,21 @@ export class SvgExtrudeImporter {
       });
 
       for (const shape of shapes) {
-        const denseShape = this._densifyShapeForTriangulation(shape);
-        const geometry = new THREE.ExtrudeGeometry(denseShape, {
-          ...extrudeSettings,
+        const bevelSettings = resolveExtrudeBevelSettings({
+          amount: this.currentBevelAmount,
           depth: effectiveDepth,
+          xyNormalizeScale,
         });
-        // Smooth curved surfaces while preserving sharper corners via crease angle.
-        const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
-        geometry.dispose();
+        const detailSettings = resolveExtrudeDetailSettings(this.currentDetail, {
+          bevelEnabled: !!bevelSettings.bevelEnabled,
+        });
+        const smoothedGeometry = this._extrudeShapeWithBevel(
+          shape,
+          { ...extrudeSettings, depth: effectiveDepth },
+          bevelSettings,
+          detailSettings,
+          creaseAngleRad,
+        );
         const mesh = new THREE.Mesh(smoothedGeometry, material.clone());
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -345,74 +338,34 @@ export class SvgExtrudeImporter {
     this.currentColorPalette = [...colorPaletteSet].sort();
 
     this._normalizeGeometrySpace(group);
-    this._applyDirectionOffset(group, this.currentFlipDirection);
-
-    group.traverse((child) => {
-      if (!child.isMesh || !child.geometry || !child.userData?.orbySvgExtrude) return;
-      const nextGeom = fixExtrudedSvgCapFaceOrientations(child.geometry, creaseAngleRad);
-      if (nextGeom !== child.geometry) {
-        child.geometry.dispose();
-        child.geometry = nextGeom;
-      }
-    });
+    applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
+    finalizeExtrudeGroupGeometry(group, creaseAngleRad);
 
     return group;
   }
 
-  _densifyShapeForTriangulation(shape) {
-    if (!shape?.extractPoints) return shape;
-    const extracted = shape.extractPoints(18);
-    const contour = extracted?.shape || [];
-    if (!contour.length) return shape;
+  /**
+   * @param {THREE.Shape} shape
+   * @param {Object} extrudeSettings
+   * @param {Object} bevelSettings
+   * @param {number} creaseAngleRad
+   * @returns {THREE.BufferGeometry}
+   */
+  _extrudeShapeWithBevel(shape, extrudeSettings, bevelSettings, detailSettings, creaseAngleRad) {
+    const denseShape = this._densifyShapeForTriangulation(shape, detailSettings);
+    const curveSegments = 16;
+    const safeShape = sanitizeShapeForExtrudeGeometry(denseShape, curveSegments);
+    let geometry = withPatchedCapTriangulation(() => buildExtrudeGeometrySafe(safeShape, {
+      ...extrudeSettings,
+      curveSegments,
+    }, THREE.ExtrudeGeometry, bevelSettings));
+    const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
+    geometry.dispose();
+    return smoothedGeometry;
+  }
 
-    const bounds = new THREE.Box2();
-    bounds.makeEmpty();
-    contour.forEach((p) => bounds.expandByPoint(p));
-    if (bounds.isEmpty()) return shape;
-
-    const size = new THREE.Vector2();
-    bounds.getSize(size);
-    const maxDim = Math.max(size.x, size.y);
-    if (!Number.isFinite(maxDim) || maxDim <= 0) return shape;
-
-    const contourPerimeter = ringPerimeter(contour);
-    const byPerimeter = THREE.MathUtils.clamp(
-      Math.round(contourPerimeter * 0.2),
-      DENSIFY_MIN_SEGMENTS,
-      DENSIFY_MAX_SEGMENTS,
-    );
-    const byDimension = THREE.MathUtils.clamp(
-      Math.round(maxDim * 0.45),
-      DENSIFY_MIN_SEGMENTS,
-      DENSIFY_MAX_SEGMENTS,
-    );
-    // Bias toward denser rings to reduce long cap diagonals in logo-like glyphs.
-    const desiredSegments = Math.max(byPerimeter, byDimension);
-    const targetSegmentLength = contourPerimeter > 0
-      ? contourPerimeter / desiredSegments
-      : maxDim / desiredSegments;
-
-    const denseContour = densifyRing(contour, targetSegmentLength);
-    if (denseContour.length < 3) return shape;
-
-    const rebuilt = new THREE.Shape();
-    rebuilt.moveTo(denseContour[0].x, denseContour[0].y);
-    for (let i = 1; i < denseContour.length; i += 1) {
-      rebuilt.lineTo(denseContour[i].x, denseContour[i].y);
-    }
-
-    (extracted?.holes || []).forEach((hole) => {
-      const denseHole = densifyRing(hole, targetSegmentLength);
-      if (denseHole.length < 3) return;
-      const holePath = new THREE.Path();
-      holePath.moveTo(denseHole[0].x, denseHole[0].y);
-      for (let i = 1; i < denseHole.length; i += 1) {
-        holePath.lineTo(denseHole[i].x, denseHole[i].y);
-      }
-      rebuilt.holes.push(holePath);
-    });
-
-    return rebuilt;
+  _densifyShapeForTriangulation(shape, detailSettings) {
+    return densifyShapeForExtrudeCaps(shape, detailSettings);
   }
 
   _normalizeGeometrySpace(group) {
@@ -451,53 +404,6 @@ export class SvgExtrudeImporter {
         child.geometry.computeBoundingSphere();
       });
     }
-  }
-
-  _replaceChildren(targetGroup, sourceGroup) {
-    while (targetGroup.children.length) {
-      const child = targetGroup.children[0];
-      this._disposeNode(child);
-      targetGroup.remove(child);
-    }
-
-    // Move all children safely; mutating the source array while iterating
-    // with forEach can skip items and make parts of the SVG disappear.
-    while (sourceGroup.children.length) {
-      targetGroup.add(sourceGroup.children[0]);
-    }
-
-    targetGroup.name = sourceGroup.name;
-    targetGroup.userData = { ...sourceGroup.userData };
-    targetGroup.scale.copy(sourceGroup.scale);
-    targetGroup.position.copy(sourceGroup.position);
-    targetGroup.rotation.copy(sourceGroup.rotation);
-  }
-
-  _applyDirectionOffset(group, flipDirection) {
-    group.traverse((child) => {
-      if (!child.isMesh || !child.geometry) return;
-      const depth = clampDepth(child.userData?.orbySvgEffectiveDepth ?? this.currentDepth);
-      const colorOffset = Math.max(
-        MIN_COLOR_OFFSET,
-        Math.min(MAX_COLOR_OFFSET, Number(child.userData?.orbySvgColorOffset ?? 0)),
-      );
-      const directionOffset = (flipDirection ? 1 : -1) * depth * 0.5;
-      child.geometry.translate(0, 0, directionOffset + colorOffset);
-      child.geometry.computeBoundingBox();
-      child.geometry.computeBoundingSphere();
-    });
-  }
-
-  _disposeNode(node) {
-    node.traverse?.((child) => {
-      if (!child.isMesh) return;
-      child.geometry?.dispose?.();
-      if (Array.isArray(child.material)) {
-        child.material.forEach((mat) => mat?.dispose?.());
-      } else {
-        child.material?.dispose?.();
-      }
-    });
   }
 
 }

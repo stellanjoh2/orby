@@ -14,6 +14,7 @@ import {
 } from '../render/CreativeLookMaterials.js';
 import {
   bindSvgExtrudeControls,
+  bindExtrudeBevelControls,
   syncSvgExtrudeControls,
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
@@ -37,7 +38,7 @@ export class MeshControls {
       brightness: false,
       emissive: false,
     };
-    this.svgExtrudeTimers = { depth: null, normal: null, colorDebounce: new Map() };
+    this.svgExtrudeTimers = { depth: null, normal: null, bevel: null, colorDebounce: new Map() };
     this.stlSmoothingDebounceTimer = null;
   }
 
@@ -46,6 +47,9 @@ export class MeshControls {
       inputs: {
         depth: this.ui.inputs.svgExtrudeDepth,
         depthOutputKey: 'svgExtrudeDepth',
+        bevelAmount: this.ui.inputs.svgExtrudeBevelAmount,
+        bevelAmountOutputKey: 'svgExtrudeBevelAmount',
+        detail: this.ui.inputs.svgExtrudeDetail,
         normalAngle: this.ui.inputs.svgExtrudeNormalAngle,
         normalAngleOutputKey: 'svgExtrudeNormalAngle',
         surfacePreset: this.ui.inputs.svgExtrudeSurfacePreset,
@@ -220,6 +224,7 @@ export class MeshControls {
     }
 
     bindSvgExtrudeControls(this._svgExtrudeCtx());
+    bindExtrudeBevelControls(this._svgExtrudeCtx());
     this.ui.inputs.reverseNormals?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       this.stateStore.set('advanced.reverseNormals', enabled);

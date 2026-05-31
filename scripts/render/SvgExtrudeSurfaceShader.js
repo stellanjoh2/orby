@@ -102,31 +102,56 @@ function getNormalMapTexture(url) {
 }
 
 /**
- * Object-space anchor for triplanar (geometry bbox center — rotates with the mesh).
+ * Object-space triplanar anchor + inverse bbox size (isotropic tiling on caps/sides/bevels).
+ * Font extrude normalizes XY without Z — uncorrected triplanar stretches oblique faces.
  * @param {THREE.Mesh} mesh
- * @returns {{ origin: THREE.Vector3 } | null}
+ * @returns {{ origin: THREE.Vector3, invSize: THREE.Vector3 } | null}
  */
-export function computeMeshLocalNormalOrigin(mesh) {
+export function computeExtrudeSurfaceMappingBounds(mesh) {
   const geom = mesh?.geometry;
   if (!geom) return null;
   if (!geom.boundingBox) geom.computeBoundingBox();
   if (!geom.boundingBox || geom.boundingBox.isEmpty()) return null;
-  return { origin: geom.boundingBox.getCenter(new THREE.Vector3()) };
+  const origin = geom.boundingBox.getCenter(new THREE.Vector3());
+  const size = new THREE.Vector3();
+  geom.boundingBox.getSize(size);
+  const invSize = new THREE.Vector3(
+    1 / Math.max(size.x, 1e-5),
+    1 / Math.max(size.y, 1e-5),
+    1 / Math.max(size.z, 1e-5),
+  );
+  return { origin, invSize };
+}
+
+/** @deprecated Use computeExtrudeSurfaceMappingBounds */
+export function computeMeshLocalNormalOrigin(mesh) {
+  const bounds = computeExtrudeSurfaceMappingBounds(mesh);
+  return bounds ? { origin: bounds.origin } : null;
 }
 
 /**
  * @param {object} uniformRefs
- * @param {{ origin: THREE.Vector3 } | null} bounds
+ * @param {{ origin: THREE.Vector3, invSize?: THREE.Vector3 } | null} bounds
  */
 function setNormalBoundsUniforms(uniformRefs, bounds) {
   if (!uniformRefs.uOrbyNormalOrigin) {
     uniformRefs.uOrbyNormalOrigin = { value: new THREE.Vector3() };
   }
+  if (!uniformRefs.uOrbyNormalInvSize) {
+    uniformRefs.uOrbyNormalInvSize = { value: new THREE.Vector3(1, 1, 1) };
+  }
   const o = uniformRefs.uOrbyNormalOrigin.value;
+  const inv = uniformRefs.uOrbyNormalInvSize.value;
   if (bounds) {
     o.copy(bounds.origin);
+    if (bounds.invSize) {
+      inv.copy(bounds.invSize);
+    } else {
+      inv.set(1, 1, 1);
+    }
   } else {
     o.set(0, 0, 0);
+    inv.set(1, 1, 1);
   }
 }
 
@@ -234,6 +259,7 @@ uniform float uOrbyScale;
 uniform float uOrbyNormalStrength;
 uniform sampler2D uOrbyNormalMap;
 uniform vec3 uOrbyNormalOrigin;
+uniform vec3 uOrbyNormalInvSize;
 float orbyQ(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
 }
@@ -249,7 +275,7 @@ mat3 orbyNormalMatrix() {
   return mat3( vOrbyNm0, vOrbyNm1, vOrbyNm2 );
 }
 vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
-  vec3 p = localPos;
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize * scale;
   vec3 blend = abs( localNormal );
   blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
   blend /= ( blend.x + blend.y + blend.z );
@@ -314,7 +340,7 @@ const NORMAL_INJECT_AFTER_MAPS = /* glsl */ `	#include <normal_fragment_maps>
 	// orby_svg_norm
 	if ( uOrbyNormalStrength > 0.0001 ) {
 		vec3 orbyLocalTn = orbyTriplanarNormalObject(
-			vOrbyLocalPos - uOrbyNormalOrigin,
+			vOrbyLocalPos,
 			normalize( vOrbyLocalNormal ),
 			uOrbyScale
 		);
@@ -328,7 +354,7 @@ const NORMAL_INJECT_LEGACY = /* glsl */ `	#include <normal_fragment>
 	// orby_svg_norm
 	if ( uOrbyNormalStrength > 0.0001 ) {
 		vec3 orbyLocalTn = orbyTriplanarNormalObject(
-			vOrbyLocalPos - uOrbyNormalOrigin,
+			vOrbyLocalPos,
 			normalize( vOrbyLocalNormal ),
 			uOrbyScale
 		);
@@ -441,6 +467,7 @@ function applyShaderPatches(shader, uniformRefs) {
   shader.uniforms.uOrbyNormalStrength = uniformRefs.uOrbyNormalStrength;
   shader.uniforms.uOrbyNormalMap = uniformRefs.uOrbyNormalMap;
   shader.uniforms.uOrbyNormalOrigin = uniformRefs.uOrbyNormalOrigin;
+  shader.uniforms.uOrbyNormalInvSize = uniformRefs.uOrbyNormalInvSize;
 }
 
 /**
@@ -551,7 +578,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
     material.userData.svgExtrudeProceduralPatched = true;
     material.userData.svgExtrudeProceduralOnBeforeCompile = hook;
     material.customProgramCacheKey = () =>
-      `orbySvgSurf:v6:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
+      `orbySvgSurf:v7:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
     material.needsUpdate = true;
     ensureSvgExtrudeFresnelChain(material);
     return true;
@@ -559,7 +586,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
 
   material.userData.svgExtrudeProceduralUniforms = uniformRefs;
   material.customProgramCacheKey = () =>
-    `orbySvgSurf:v6:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
+    `orbySvgSurf:v7:${presetId}:${scale.toFixed(3)}:${normalStrength.toFixed(3)}`;
   if (presetOrScaleChanged) {
     material.needsUpdate = true;
   } else if (strengthChanged) {
@@ -655,15 +682,15 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
     if (stripSurface) {
       mats.forEach((m) => removeSvgExtrudeProceduralFromMaterial(m));
     } else {
-      const normalBounds =
-        config.kind === 'normalMap' ? computeMeshLocalNormalOrigin(child) : null;
+      const mappingBounds =
+        config.kind === 'normalMap' ? computeExtrudeSurfaceMappingBounds(child) : null;
       mats.forEach((m) => {
         if (m?.isMeshStandardMaterial || m?.isMeshPhysicalMaterial) {
           applySvgExtrudeSurfaceToMaterial(m, {
             preset: presetId,
             scale,
             strength,
-            normalBounds,
+            normalBounds: mappingBounds,
           });
         }
       });

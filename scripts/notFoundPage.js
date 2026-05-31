@@ -49,7 +49,7 @@ const NOT_FOUND_PRESET = {
     enabled: true,
     availableColors: ['#c6d400'],
     depth: 0.2,
-    normalAngle: 45,
+    normalAngle: 30,
     colorDepths: {},
     colorOffsets: {},
     flipDirection: false,

@@ -312,12 +312,16 @@ export class ModelLoader {
     const colorDepths = options.svgExtrudeColorDepths || {};
     const colorOffsets = options.svgExtrudeColorOffsets || {};
     const flipDirection = !!options.svgExtrudeFlipDirection;
+    const bevelAmount = options.svgExtrudeBevelAmount;
+    const detail = options.svgExtrudeDetail;
     const object = await this.svgExtrudeImporter.loadFromFile(file, {
       depth,
       normalAngleDeg,
       colorDepths,
       colorOffsets,
       flipDirection,
+      bevelAmount,
+      detail,
     });
     const assetName = file.name.replace(/\.[^/.]+$/, '') || 'SVG';
     return {
@@ -337,6 +341,8 @@ export class ModelLoader {
         colorOffsets: this.svgExtrudeImporter.getColorOffsets(),
         colors: this.svgExtrudeImporter.getAvailableColors(),
         flipDirection: this.svgExtrudeImporter.getFlipDirection(),
+        bevelAmount: this.svgExtrudeImporter.getBevelAmount(),
+        detail: this.svgExtrudeImporter.getDetail(),
         importer: this.svgExtrudeImporter,
       },
     };

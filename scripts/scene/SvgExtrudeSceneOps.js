@@ -9,6 +9,11 @@ export function isFontExtrudeImporter(importer) {
   return !!importer && typeof importer.getFillColor === 'function';
 }
 
+/** @param {unknown} importer */
+export function supportsExtrudeBevel(importer) {
+  return !!importer && typeof importer.setBevelSettings === 'function';
+}
+
 /**
  * Keep {@link FontExtrudeImporter} fill in sync with `fontExtrude.fillColor` before depth/angle rebuilds.
  * @param {import('../SceneManager.js').SceneManager} scene
@@ -49,6 +54,11 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
   scene.materialController.prepareMesh(scene.currentModel);
   scene.setShading(scene.currentShading);
   const svgState = scene.stateStore.getState().svgExtrude || {};
+  const fillHex = syncFontExtrudeFillOnImporter(scene);
+  if (fillHex) {
+    scene.applyFontExtrudeFillColor(fillHex);
+  }
+  // Color override must run after fill sync — otherwise font fill overwrites the override.
   scene.setSvgExtrudeColorOverride(
     {
       enabled: !!svgState.colorOverride,
@@ -57,10 +67,6 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
     { updateState: false },
   );
   scene.setReverseNormals(scene.stateStore.getState().advanced?.reverseNormals ?? false);
-  const fillHex = syncFontExtrudeFillOnImporter(scene);
-  if (fillHex) {
-    scene.applyFontExtrudeFillColor(fillHex);
-  }
   scene.refreshBoneHelpers();
   scene.cameraController?.refreshModelBounds?.(scene.currentModel);
   scene._syncShadowCameraBounds?.();
