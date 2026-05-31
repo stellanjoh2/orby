@@ -258,6 +258,7 @@ function createStateApplySteps() {
             {
               preset: state.svgExtrude.surfacePreset,
               scale: state.svgExtrude.surfaceScale,
+              strength: state.svgExtrude.surfaceStrength,
             },
             { updateState: false },
           );

@@ -2,6 +2,37 @@
  * Shared rebuild path after {@link SvgExtrudeImporter} mutates geometry.
  */
 
+import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+
+/** @param {unknown} importer */
+export function isFontExtrudeImporter(importer) {
+  return !!importer && typeof importer.getFillColor === 'function';
+}
+
+/**
+ * Keep {@link FontExtrudeImporter} fill in sync with `fontExtrude.fillColor` before depth/angle rebuilds.
+ * @param {import('../SceneManager.js').SceneManager} scene
+ * @returns {string | null}
+ */
+export function syncFontExtrudeFillOnImporter(scene) {
+  const importer = scene.svgExtrudeImporter;
+  if (!isFontExtrudeImporter(importer)) return null;
+  const isFont =
+    !!scene.currentModel?.userData?.orbyFontGenerated ||
+    !!scene.materialController?._isFontExtrudeModel?.(scene.currentModel);
+  if (!isFont) return null;
+  const fillHex = normalizeGlyphFillHex(
+    scene.stateStore.getState()?.fontExtrude?.fillColor ?? importer.getFillColor(),
+  );
+  importer.currentFillColor = fillHex;
+  importer.currentColorPalette = [fillHex];
+  const available = scene.stateStore.getState()?.svgExtrude?.availableColors ?? [];
+  if (available.length !== 1 || available[0] !== fillHex) {
+    scene.stateStore.set('svgExtrude.availableColors', [fillHex]);
+  }
+  return fillHex;
+}
+
 /**
  * @param {import('../SceneManager.js').SceneManager} scene
  * @returns {boolean}
@@ -26,6 +57,10 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
     { updateState: false },
   );
   scene.setReverseNormals(scene.stateStore.getState().advanced?.reverseNormals ?? false);
+  const fillHex = syncFontExtrudeFillOnImporter(scene);
+  if (fillHex) {
+    scene.applyFontExtrudeFillColor(fillHex);
+  }
   scene.refreshBoneHelpers();
   scene.cameraController?.refreshModelBounds?.(scene.currentModel);
   scene._syncShadowCameraBounds?.();
@@ -45,6 +80,7 @@ export function runSvgExtrudeImporterMutation(scene, mutateImporter, options = {
   const { logLabel = 'update SVG extrude', toastOnError = 'Could not update SVG' } = options;
   if (!canMutateSvgExtrudeImporter(scene)) return false;
   try {
+    syncFontExtrudeFillOnImporter(scene);
     mutateImporter();
     rebuildSvgExtrudeMeshesAfterImporterChange(scene);
     return true;

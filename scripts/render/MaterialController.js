@@ -7,10 +7,13 @@ import {
   creativeOrderedDitherPixelScale,
   normalizeCreativeLookPreset,
 } from './CreativeLookMaterials.js';
+import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
-  applySvgExtrudeProceduralToMaterial,
+  applySvgExtrudeSurfaceToMaterial,
+  ensureSvgExtrudeFresnelChain,
+  getSvgExtrudeSurfacePresetConfig,
   isFresnelLinkedInSvgSurfaceChain,
-  reapplySvgExtrudeProceduralFromState,
+  reapplySvgExtrudeSurfaceFromState,
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
@@ -37,6 +40,8 @@ const GLTF_FULL_OPACITY_BLEND_THRESHOLD = 0.989;
 export const SUBSURFACE_FEATURE_ENABLED = false;
 const SUBSURFACE_EPS = 0.001;
 const DEFAULT_SUBSURFACE_SCATTER_TINT = '#ffd4b8';
+/** Bump when Fresnel GLSL inject changes (forces one recompile per material). */
+const FRESNEL_SHADER_INJECT_VERSION = 3;
 
 /** Ensure fresnel color uniform stays a THREE.Color (Three may replace .value on recompile). */
 function setFresnelColorUniform(uniform, cssColor) {
@@ -46,6 +51,80 @@ function setFresnelColorUniform(uniform, cssColor) {
     v.set(hex);
   } else {
     uniform.value = new THREE.Color(hex);
+  }
+}
+
+/** Append GLSL immediately after the first matching include (keeps a single `#include`). */
+function appendAfterShaderInclude(fragmentShader, includeName, suffix) {
+  const bare = `#include <${includeName}>`;
+  const tabbed = `\t${bare}`;
+  if (fragmentShader.includes(tabbed)) {
+    return fragmentShader.replace(tabbed, `${tabbed}${suffix}`);
+  }
+  if (fragmentShader.includes(bare)) {
+    return fragmentShader.replace(bare, `${bare}${suffix}`);
+  }
+  return fragmentShader;
+}
+
+/** Insert GLSL immediately before the first matching include (include line stays once). */
+function insertBeforeShaderInclude(fragmentShader, includeName, prefix) {
+  const bare = `#include <${includeName}>`;
+  const tabbed = `\t${bare}`;
+  if (fragmentShader.includes(tabbed)) {
+    return fragmentShader.replace(tabbed, `${prefix}\n${tabbed}`);
+  }
+  if (fragmentShader.includes(bare)) {
+    return fragmentShader.replace(bare, `${prefix}\n${bare}`);
+  }
+  return fragmentShader;
+}
+
+const FRESNEL_UNIFORM_DECL = /* glsl */ `
+        uniform vec3 fresnelColor;
+        uniform float fresnelStrength;
+        uniform float fresnelPower;
+`;
+
+const FRESNEL_LIGHTS_INJECT = /* glsl */ `
+        vec3 fresnelNormal = normalize( normal );
+        vec3 fresnelViewDir = normalize( vViewPosition );
+        float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
+        vec3 fresnelContribution = fresnelColor * fresnelTerm * fresnelStrength;
+        reflectedLight.directDiffuse += fresnelContribution;
+        totalEmissiveRadiance += fresnelContribution;
+`;
+
+function markFresnelShaderInjectCurrent(material) {
+  if (material?.userData) {
+    material.userData.orbyFresnelGlslVersion = FRESNEL_SHADER_INJECT_VERSION;
+  }
+}
+
+function needsFresnelShaderRecompile(material) {
+  return (
+    material?.userData?.orbyFresnelGlslVersion !== FRESNEL_SHADER_INJECT_VERSION
+  );
+}
+
+function injectFresnelFragmentShader(shader) {
+  if (!shader.fragmentShader.includes('uniform vec3 fresnelColor')) {
+    shader.fragmentShader = appendAfterShaderInclude(
+      shader.fragmentShader,
+      'common',
+      FRESNEL_UNIFORM_DECL,
+    );
+  }
+  if (!shader.fragmentShader.includes('fresnelContribution')) {
+    const before = shader.fragmentShader;
+    shader.fragmentShader = insertBeforeShaderInclude(
+      shader.fragmentShader,
+      'lights_fragment_end',
+      FRESNEL_LIGHTS_INJECT,
+    );
+    if (shader.fragmentShader === before) {
+      console.warn('[Orby] Fresnel: could not find #include <lights_fragment_end> in material shader');
+    }
   }
 }
 
@@ -2530,7 +2609,7 @@ export class MaterialController {
    */
   reapplySvgExtrudeSurfaceShaders() {
     if (!this.currentModel) return;
-    reapplySvgExtrudeProceduralFromState(
+    reapplySvgExtrudeSurfaceFromState(
       this.currentModel,
       this.stateStore,
       this.currentShading,
@@ -2673,8 +2752,9 @@ export class MaterialController {
 
     if (!needsFresnel) {
       if (material?.userData?.fresnelPatched) {
-        const svgIdx = material.userData.svgExtrudeProceduralPresetIndex;
+        const svgPreset = material.userData.svgExtrudeSurfacePresetId ?? 'none';
         const svgScale = material.userData.svgExtrudeProceduralScale;
+        const svgStrength = material.userData.svgExtrudeSurfaceStrength;
         const hadSvg = !!material.userData.svgExtrudeProceduralPatched;
         const base = resolveFresnelBaseOnBeforeCompile(material);
         const shadowHook = material.userData.shadowTintOnBeforeCompile;
@@ -2695,10 +2775,12 @@ export class MaterialController {
         delete material.userData.fresnelPatched;
         delete material.userData.fresnelUniforms;
         delete material.userData.fresnelOnBeforeCompile;
-        if (hadSvg && svgIdx >= 1) {
-          applySvgExtrudeProceduralToMaterial(material, {
-            presetIndex: svgIdx,
+        if (hadSvg && getSvgExtrudeSurfacePresetConfig(svgPreset).kind !== 'none') {
+          applySvgExtrudeSurfaceToMaterial(material, {
+            preset: svgPreset,
             scale: svgScale ?? 1,
+            strength: svgStrength,
+            normalBounds: material.userData?.svgExtrudeNormalBounds ?? null,
           });
         } else {
           material.needsUpdate = true;
@@ -2737,22 +2819,40 @@ export class MaterialController {
           delete material.userData.fresnelPatched;
           delete material.userData.fresnelUniforms;
         } else if (!material.onBeforeCompile || material.onBeforeCompile !== material.userData.fresnelOnBeforeCompile) {
-          if (
-            material.userData?.svgExtrudeProceduralPatched &&
-            !isFresnelLinkedInSvgSurfaceChain(material)
-          ) {
-            const idx = material.userData.svgExtrudeProceduralPresetIndex;
-            const scale = material.userData.svgExtrudeProceduralScale ?? 1;
-            removeSvgExtrudeProceduralFromMaterial(material);
-            if (idx >= 1) {
-              applySvgExtrudeProceduralToMaterial(material, { presetIndex: idx, scale });
+          if (material.userData?.svgExtrudeProceduralPatched) {
+            if (ensureSvgExtrudeFresnelChain(material)) {
+              return;
+            }
+            if (!isFresnelLinkedInSvgSurfaceChain(material)) {
+              const preset = material.userData.svgExtrudeSurfacePresetId ?? 'none';
+              const scale = material.userData.svgExtrudeProceduralScale ?? 1;
+              const strength = material.userData.svgExtrudeSurfaceStrength;
+              removeSvgExtrudeProceduralFromMaterial(material);
+              if (getSvgExtrudeSurfacePresetConfig(preset).kind !== 'none') {
+                applySvgExtrudeSurfaceToMaterial(material, {
+                  preset,
+                  scale,
+                  strength,
+                  normalBounds: material.userData?.svgExtrudeNormalBounds ?? null,
+                });
+              }
             }
             return;
           }
-          if (material.userData?.svgExtrudeProceduralPatched) {
+          material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
+          material.needsUpdate = true;
+          return;
+        } else if (material.userData?.svgExtrudeProceduralPatched) {
+          if (ensureSvgExtrudeFresnelChain(material)) {
             return;
           }
-          material.onBeforeCompile = material.userData.fresnelOnBeforeCompile;
+          if (needsFresnelShaderRecompile(material)) {
+            markFresnelShaderInjectCurrent(material);
+            material.needsUpdate = true;
+          }
+          return;
+        } else if (needsFresnelShaderRecompile(material)) {
+          markFresnelShaderInjectCurrent(material);
           material.needsUpdate = true;
           return;
         } else {
@@ -2770,9 +2870,20 @@ export class MaterialController {
     }
 
     // Create new patch - this handles both new materials and re-patching
+    const svgPatched = !!material.userData?.svgExtrudeProceduralPatched;
+    const svgHook = material.userData?.svgExtrudeProceduralOnBeforeCompile;
     let original = material.userData.originalOnBeforeCompile;
     if (typeof original !== 'function' || isOrbyShaderPatchHook(original)) {
-      original = resolveFresnelBaseOnBeforeCompile(material);
+      if (svgPatched) {
+        const chainBase = material.userData.svgExtrudeProceduralPrevious;
+        if (typeof chainBase === 'function' && !chainBase.__orbyFresnelShaderPatch) {
+          original = chainBase;
+        } else {
+          original = resolveFresnelBaseOnBeforeCompile(material);
+        }
+      } else {
+        original = resolveFresnelBaseOnBeforeCompile(material);
+      }
       material.userData.originalOnBeforeCompile = original;
     }
 
@@ -2802,40 +2913,22 @@ export class MaterialController {
       shader.uniforms.fresnelStrength = fresnelUniforms.strength;
       shader.uniforms.fresnelPower = fresnelUniforms.power;
 
-      if (!shader.fragmentShader.includes('uniform vec3 fresnelColor')) {
-        shader.fragmentShader = shader.fragmentShader.replace(
-          '#include <common>',
-          `
-        #include <common>
-        uniform vec3 fresnelColor;
-        uniform float fresnelStrength;
-        uniform float fresnelPower;
-      `,
-        );
-      }
-      if (!shader.fragmentShader.includes('fresnelContribution')) {
-        shader.fragmentShader = shader.fragmentShader.replace(
-          '#include <lights_fragment_end>',
-          `
-        #include <lights_fragment_end>
-        vec3 fresnelNormal = normalize( normal );
-        vec3 fresnelViewDir = normalize( vViewPosition );
-        float fresnelTerm = pow( max(0.0, 1.0 - abs(dot(fresnelNormal, fresnelViewDir))), fresnelPower );
-        vec3 fresnelContribution = fresnelColor * fresnelTerm * fresnelStrength;
-        reflectedLight.directDiffuse += fresnelContribution;
-        totalEmissiveRadiance += fresnelContribution;
-      `,
-        );
-      }
+      injectFresnelFragmentShader(shader);
 
       // Ensure uniforms are stored after shader compilation
       material.userData.fresnelUniforms = fresnelUniforms;
     };
     fresnelOnBeforeCompile.__orbyFresnelShaderPatch = true;
 
-    material.onBeforeCompile = fresnelOnBeforeCompile;
-    material.userData.fresnelOnBeforeCompile = fresnelOnBeforeCompile; // Store reference for restoration
+    material.userData.fresnelOnBeforeCompile = fresnelOnBeforeCompile;
     material.userData.fresnelPatched = true;
+    if (svgPatched && typeof svgHook === 'function') {
+      material.userData.svgExtrudeProceduralPrevious = fresnelOnBeforeCompile;
+      material.onBeforeCompile = svgHook;
+    } else {
+      material.onBeforeCompile = fresnelOnBeforeCompile;
+    }
+    markFresnelShaderInjectCurrent(material);
     material.needsUpdate = true;
   }
 
@@ -3501,6 +3594,72 @@ export class MaterialController {
 
   getOriginalMaterial(mesh) {
     return this.originalMaterials.get(mesh);
+  }
+
+  /** @param {THREE.Object3D | null | undefined} [root] */
+  _isFontExtrudeModel(root = this.currentModel) {
+    if (!root) return false;
+    if (root.userData?.orbyFontGenerated) return true;
+    let found = false;
+    root.traverse((child) => {
+      if (found || !child.isMesh) return;
+      if (child.userData?.orbyFontExtrude) found = true;
+    });
+    return found;
+  }
+
+  /**
+   * Live fill color for Generate from Font meshes (preview + post-generate 3D).
+   * @param {string} hex
+   */
+  setFontExtrudeFillColor(hex) {
+    if (!this.currentModel || !this._isFontExtrudeModel()) return;
+    const fillHex = normalizeGlyphFillHex(hex);
+    const baseColor = new THREE.Color(fillHex);
+    const visibleColor = this._diffuseColorWithBrightness(baseColor);
+    const linear = { r: baseColor.r, g: baseColor.g, b: baseColor.b };
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.userData?.orbyFontExtrude) return;
+
+      child.userData.orbySvgBaseColor = fillHex;
+      child.userData.orbySvgGroupedColor = fillHex;
+      child.userData.orbySvgBaseColorLinear = linear;
+
+      const patchBase = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(baseColor);
+        mat.needsUpdate = true;
+      };
+      const patchVisible = (mat) => {
+        if (!mat?.color || mat.userData?.orbyCreativeLook) return;
+        mat.color.copy(visibleColor);
+        mat.needsUpdate = true;
+      };
+
+      const original = this.originalMaterials.get(child);
+      if (original) {
+        if (Array.isArray(original)) original.forEach(patchBase);
+        else patchBase(original);
+      }
+
+      const live = child.material;
+      if (Array.isArray(live)) live.forEach(patchVisible);
+      else patchVisible(live);
+    });
+
+    if (this.creativeLookSettings?.enabled) {
+      this._applyCreativeLookOverride();
+    } else {
+      if (this.fresnelSettings?.enabled) {
+        this.applyFresnelToModel(this.currentModel);
+      }
+      this.reapplySvgExtrudeSurfaceShaders();
+    }
+
+    if (this.onMaterialUpdate) {
+      this.onMaterialUpdate();
+    }
   }
 
   isClayMaterial(mesh) {

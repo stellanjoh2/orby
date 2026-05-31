@@ -50,6 +50,7 @@ import {
 import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 import { lightsAutoRotateDegreesPerSecond } from './config/lightsAutoRotate.js';
 import { ImageExporter } from './render/ImageExporter.js';
+import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
 import { HistogramController } from './render/HistogramController.js';
@@ -133,6 +134,29 @@ export class SceneManager {
 
   async ensureStudioReady() {
     return ensureStudioActive(this);
+  }
+
+  /**
+   * Enter the studio with no model (HDRI + controls only) — for text tools / debugging.
+   * @param {{ openFontPanel?: boolean, skipSound?: boolean }} [options]
+   */
+  async enterBlankStudio(options = {}) {
+    await this.ui.ensureStudioUiReady();
+    await this.ensureStudioReady();
+    this.ui.setDropzoneVisible(false);
+    await this.syncViewportSize();
+    this.startRenderLoop();
+    this.ui.updateTitle('Blank canvas');
+    this.ui.updateTopBarDetail('No model — generate text or import a file');
+    this.ui.revealShelf({ skipSound: options.skipSound !== false });
+    this.ui.syncControls(this.stateStore.getState());
+    if (options.openFontPanel !== false) {
+      this.stateStore.set('fontExtrude.panelOpen', true);
+      this.ui.setEffectFoldoutOpen('font-extrude', true);
+    }
+    this.ui.showToast('Blank canvas — generate text or import a file', 3200, {
+      notification: false,
+    });
   }
 
   async shutdownStudio() {
@@ -3274,9 +3298,23 @@ export class SceneManager {
       if (settings.scale !== undefined) {
         this.stateStore.set('svgExtrude.surfaceScale', settings.scale);
       }
+      if (settings.strength !== undefined) {
+        this.stateStore.set('svgExtrude.surfaceStrength', settings.strength);
+      }
     }
     if (!this.currentModel || !this.isSvgExtrudeModel) return;
     this.materialController?.reapplySvgExtrudeSurfaceShaders();
+  }
+
+  /** Live update fill on font-generated meshes (no SVG “color override” toggle). */
+  applyFontExtrudeFillColor(hex) {
+    const fillHex = normalizeGlyphFillHex(hex);
+    const importer = this.svgExtrudeImporter;
+    if (importer && typeof importer.getFillColor === 'function') {
+      importer.currentFillColor = fillHex;
+      importer.currentColorPalette = [fillHex];
+    }
+    this.materialController?.setFontExtrudeFillColor?.(fillHex);
   }
 
   setSvgExtrudeColorOverride(settings = {}, options = {}) {

@@ -57,6 +57,7 @@ const NOT_FOUND_PRESET = {
     overrideColor: '#7ed321',
     surfacePreset: 'none',
     surfaceScale: 1,
+    surfaceStrength: 1,
   },
   advanced: {
     reverseNormals: false,

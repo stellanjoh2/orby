@@ -76,4 +76,5 @@ export function applyMeshFoldouts(state, setOpen) {
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,
   );
+  setOpen('font-extrude', !!state.fontExtrude?.panelOpen);
 }

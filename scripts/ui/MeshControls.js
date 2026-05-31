@@ -12,6 +12,11 @@ import {
   CREATIVE_LOOK_PRESETS,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
+import {
+  bindSvgExtrudeControls,
+  syncSvgExtrudeControls,
+  renderSvgColorDepthControls,
+} from './svgExtrudeControlsShared.js';
 
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -32,10 +37,33 @@ export class MeshControls {
       brightness: false,
       emissive: false,
     };
-    this.svgDepthDebounceTimer = null;
-    this.svgNormalDebounceTimer = null;
+    this.svgExtrudeTimers = { depth: null, normal: null, colorDebounce: new Map() };
     this.stlSmoothingDebounceTimer = null;
-    this.svgColorDebounceTimers = new Map();
+  }
+
+  _svgExtrudeCtx() {
+    return {
+      inputs: {
+        depth: this.ui.inputs.svgExtrudeDepth,
+        depthOutputKey: 'svgExtrudeDepth',
+        normalAngle: this.ui.inputs.svgExtrudeNormalAngle,
+        normalAngleOutputKey: 'svgExtrudeNormalAngle',
+        surfacePreset: this.ui.inputs.svgExtrudeSurfacePreset,
+        surfaceScale: this.ui.inputs.svgExtrudeSurfaceScale,
+        surfaceScaleOutputKey: 'svgExtrudeSurfaceScale',
+        surfaceStrength: this.ui.inputs.svgExtrudeSurfaceStrength,
+        surfaceStrengthOutputKey: 'svgExtrudeSurfaceStrength',
+        flipDirection: this.ui.inputs.svgExtrudeFlipDirection,
+        colorOverride: this.ui.inputs.svgExtrudeColorOverride,
+        overrideColor: this.ui.inputs.svgExtrudeColor,
+        colorDepths: this.ui.inputs.svgExtrudeColorDepths,
+      },
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+      ui: this.ui,
+      helpers: this.helpers,
+      timers: this.svgExtrudeTimers,
+    };
   }
 
   bind() {
@@ -191,54 +219,7 @@ export class MeshControls {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.materialEmissive);
     }
 
-    this.ui.inputs.svgExtrudeDepth?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const clampedValue = Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2;
-      this.helpers.updateValueLabel('svgExtrudeDepth', clampedValue, 'decimal');
-      this.stateStore.set('svgExtrude.depth', clampedValue);
-      if (this.svgDepthDebounceTimer) {
-        clearTimeout(this.svgDepthDebounceTimer);
-      }
-      this.svgDepthDebounceTimer = setTimeout(() => {
-        this.eventBus.emit('mesh:svg-extrude-depth', clampedValue);
-      }, 45);
-    });
-    if (this.ui.inputs.svgExtrudeDepth) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeDepth);
-    this.ui.inputs.svgExtrudeNormalAngle?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(180, value)) : 45;
-      this.helpers.updateValueLabel('svgExtrudeNormalAngle', clampedValue, 'angle');
-      this.stateStore.set('svgExtrude.normalAngle', clampedValue);
-      if (this.svgNormalDebounceTimer) {
-        clearTimeout(this.svgNormalDebounceTimer);
-      }
-      this.svgNormalDebounceTimer = setTimeout(() => {
-        this.eventBus.emit('mesh:svg-extrude-normal-angle', clampedValue);
-      }, 45);
-    });
-    if (this.ui.inputs.svgExtrudeNormalAngle) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeNormalAngle);
-    this.ui.inputs.svgExtrudeSurfacePreset?.addEventListener('change', (event) => {
-      const preset = event?.target?.value || 'none';
-      const scale = Number(this.stateStore.getState().svgExtrude?.surfaceScale ?? 1) || 1.0;
-      this.stateStore.set('svgExtrude.surfacePreset', preset);
-      this.eventBus.emit('mesh:svg-extrude-surface', { preset, scale });
-    });
-    this.ui.inputs.svgExtrudeSurfaceScale?.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value);
-      const scale = Number.isFinite(value) ? Math.max(0.2, Math.min(10, value)) : 1.0;
-      const preset = this.stateStore.getState().svgExtrude?.surfacePreset ?? 'none';
-      this.helpers.updateValueLabel('svgExtrudeSurfaceScale', scale, 'decimal');
-      this.stateStore.set('svgExtrude.surfaceScale', scale);
-      this.eventBus.emit('mesh:svg-extrude-surface', { preset, scale });
-    });
-    if (this.ui.inputs.svgExtrudeSurfaceScale) {
-      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.svgExtrudeSurfaceScale);
-    }
-    this.ui.inputs.svgExtrudeFlipDirection?.addEventListener('change', (event) => {
-      const enabled = !!event.target.checked;
-      this.stateStore.set('svgExtrude.flipDirection', enabled);
-      this.eventBus.emit('mesh:svg-extrude-flip-direction', enabled);
-    });
+    bindSvgExtrudeControls(this._svgExtrudeCtx());
     this.ui.inputs.reverseNormals?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       this.stateStore.set('advanced.reverseNormals', enabled);
@@ -346,96 +327,6 @@ export class MeshControls {
     if (this.ui.inputs.glassBody) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.glassBody);
     }
-    this.ui.inputs.svgExtrudeColorOverride?.addEventListener('change', (event) => {
-      const enabled = !!event.target.checked;
-      const color = this.ui.inputs.svgExtrudeColor?.value || '#7ed321';
-      this.stateStore.set('svgExtrude.colorOverride', enabled);
-      this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
-    });
-    this.ui.inputs.svgExtrudeColor?.addEventListener('input', (event) => {
-      const color = event.target.value;
-      const enabled = !!(this.stateStore.getState().svgExtrude?.colorOverride);
-      this.stateStore.set('svgExtrude.overrideColor', color);
-      this.eventBus.emit('mesh:svg-extrude-color-override', { enabled, color });
-    });
-    this.ui.inputs.svgExtrudeColorDepths?.addEventListener('input', (event) => {
-      const input = event.target;
-      if (!input || input.tagName !== 'INPUT' || input.type !== 'range') return;
-      const color = input.dataset.color;
-      const kind = input.dataset.kind || 'depth';
-      if (!color) return;
-      const value = parseFloat(input.value);
-      const clampedValue = kind === 'offset'
-        ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
-        : (Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2);
-      const sliderLine = input.closest('.slider-line');
-      const numberInput = sliderLine?.querySelector('input[type="number"]');
-      if (numberInput) {
-        numberInput.value = clampedValue.toFixed(2);
-      }
-      if (kind === 'offset') {
-        const currentOffsets = {
-          ...(this.stateStore.getState().svgExtrude?.colorOffsets || {}),
-          [color]: clampedValue,
-        };
-        this.stateStore.set('svgExtrude.colorOffsets', currentOffsets);
-      } else {
-        const currentDepths = {
-          ...(this.stateStore.getState().svgExtrude?.colorDepths || {}),
-          [color]: clampedValue,
-        };
-        this.stateStore.set('svgExtrude.colorDepths', currentDepths);
-      }
-      const timerKey = `${kind}:${color}`;
-      const existingTimer = this.svgColorDebounceTimers.get(timerKey);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-      }
-      const timer = setTimeout(() => {
-        if (kind === 'offset') {
-          this.eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: clampedValue });
-        } else {
-          this.eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
-        }
-        this.svgColorDebounceTimers.delete(timerKey);
-      }, 50);
-      this.svgColorDebounceTimers.set(timerKey, timer);
-    });
-    this.ui.inputs.svgExtrudeColorDepths?.addEventListener('change', (event) => {
-      const input = event.target;
-      if (!input || input.tagName !== 'INPUT' || input.type !== 'number') return;
-      const color = input.dataset.color;
-      const kind = input.dataset.kind || 'depth';
-      if (!color) return;
-      const value = parseFloat(input.value);
-      const clampedValue = kind === 'offset'
-        ? (Number.isFinite(value) ? Math.max(-1.0, Math.min(1.0, value)) : 0)
-        : (Number.isFinite(value) ? Math.max(0.01, Math.min(2.0, value)) : 0.2);
-      input.value = clampedValue.toFixed(2);
-      const sliderLine = input.closest('.slider-line');
-      const rangeInput = sliderLine?.querySelector('input[type="range"]');
-      if (rangeInput) rangeInput.value = String(clampedValue);
-
-      if (kind === 'offset') {
-        const currentOffsets = {
-          ...(this.stateStore.getState().svgExtrude?.colorOffsets || {}),
-          [color]: clampedValue,
-        };
-        this.stateStore.set('svgExtrude.colorOffsets', currentOffsets);
-      } else {
-        const currentDepths = {
-          ...(this.stateStore.getState().svgExtrude?.colorDepths || {}),
-          [color]: clampedValue,
-        };
-        this.stateStore.set('svgExtrude.colorDepths', currentDepths);
-      }
-      if (kind === 'offset') {
-        this.eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: clampedValue });
-      } else {
-        this.eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
-      }
-    });
-
     // Transform controls
     this.ui.inputs.scale.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -1136,38 +1027,7 @@ export class MeshControls {
         this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
       }
     }
-    if (this.ui.inputs.svgExtrudeDepth) {
-      const depth = state.svgExtrude?.depth ?? 0.2;
-      this.ui.inputs.svgExtrudeDepth.value = depth;
-      this.helpers.updateValueLabel('svgExtrudeDepth', depth, 'decimal');
-      this.ui.setControlDisabled('svgExtrudeDepth', !state.svgExtrude?.enabled);
-    }
-    if (this.ui.inputs.svgExtrudeNormalAngle) {
-      const enabled = !!state.svgExtrude?.enabled;
-      const normalAngle = state.svgExtrude?.normalAngle ?? 45;
-      this.ui.inputs.svgExtrudeNormalAngle.value = normalAngle;
-      this.helpers.updateValueLabel('svgExtrudeNormalAngle', normalAngle, 'angle');
-      this.ui.setControlDisabled('svgExtrudeNormalAngle', !enabled);
-    }
-    if (this.ui.inputs.svgExtrudeSurfacePreset) {
-      const enabled = !!state.svgExtrude?.enabled;
-      const preset = state.svgExtrude?.surfacePreset ?? 'none';
-      this.ui.inputs.svgExtrudeSurfacePreset.value = preset;
-      this.ui.setControlDisabled('svgExtrudeSurfacePreset', !enabled);
-    }
-    if (this.ui.inputs.svgExtrudeSurfaceScale) {
-      const enabled = !!state.svgExtrude?.enabled;
-      const raw = Number(state.svgExtrude?.surfaceScale ?? 1) || 1.0;
-      const scale = Math.max(0.2, Math.min(10, raw));
-      this.ui.inputs.svgExtrudeSurfaceScale.value = scale;
-      this.helpers.updateValueLabel('svgExtrudeSurfaceScale', scale, 'decimal');
-      this.ui.setControlDisabled('svgExtrudeSurfaceScale', !enabled);
-    }
-    if (this.ui.inputs.svgExtrudeFlipDirection) {
-      const enabled = !!state.svgExtrude?.enabled;
-      this.ui.inputs.svgExtrudeFlipDirection.checked = !!state.svgExtrude?.flipDirection;
-      this.ui.setControlDisabled('svgExtrudeFlipDirection', !enabled);
-    }
+    syncSvgExtrudeControls(this._svgExtrudeCtx(), state, { requireEnabled: true });
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
     }
@@ -1273,19 +1133,6 @@ export class MeshControls {
       }
     }
     this.refreshAdvancedGlassControls(state);
-    if (this.ui.inputs.svgExtrudeColorOverride) {
-      const enabled = !!state.svgExtrude?.enabled;
-      const overrideEnabled = !!state.svgExtrude?.colorOverride;
-      this.ui.inputs.svgExtrudeColorOverride.checked = overrideEnabled;
-      this.ui.setControlDisabled('svgExtrudeColorOverride', !enabled);
-    }
-    if (this.ui.inputs.svgExtrudeColor) {
-      const enabled = !!state.svgExtrude?.enabled;
-      const overrideEnabled = !!state.svgExtrude?.colorOverride;
-      const color = state.svgExtrude?.overrideColor ?? '#7ed321';
-      this.ui.inputs.svgExtrudeColor.value = color;
-      this.ui.setControlDisabled('svgExtrudeColor', !(enabled && overrideEnabled));
-    }
     this.renderSvgColorDepthControls(state);
     this.ui.inputs.clayColor.value = state.clay.color;
     if (this.ui.inputs.clayNormalMap) {
@@ -1406,69 +1253,7 @@ export class MeshControls {
   }
 
   renderSvgColorDepthControls(state) {
-    const container = this.ui.inputs.svgExtrudeColorDepths;
-    if (!container) return;
-    const enabled = !!state.svgExtrude?.enabled;
-    const palette = Array.isArray(state.svgExtrude?.availableColors)
-      ? state.svgExtrude.availableColors
-      : [];
-    const overrides = state.svgExtrude?.colorDepths || {};
-    const offsets = state.svgExtrude?.colorOffsets || {};
-    const globalDepth = Number(state.svgExtrude?.depth ?? 0.2);
-
-    if (!enabled) {
-      container.innerHTML = '';
-      container.style.display = 'none';
-      return;
-    }
-
-    if (palette.length === 0) {
-      container.innerHTML = '<div class="svg-extrude-note">Per-color controls appear after importing an SVG with fill colors.</div>';
-      container.style.display = '';
-      return;
-    }
-
-    if (palette.length === 1) {
-      container.innerHTML = '<div class="svg-extrude-note">Only one fill color detected, so per-color controls are hidden.</div>';
-      container.style.display = '';
-      return;
-    }
-    container.style.display = '';
-
-    const rows = `<div class="svg-extrude-note">Fine-tune each fill. The Depth slider above scales all layers together.</div>${palette
-      .map((color, index) => {
-        const depth = Number.isFinite(Number(overrides[color]))
-          ? Number(overrides[color])
-          : globalDepth;
-        const safeDepth = Math.max(0.01, Math.min(2.0, depth));
-        const offset = Number.isFinite(Number(offsets[color])) ? Number(offsets[color]) : 0;
-        const safeOffset = Math.max(-1.0, Math.min(1.0, offset));
-        return `
-<label class="slider-line">
-  <span>
-    <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
-    Depth ${index + 1}
-  </span>
-  <input type="range" min="0.01" max="2" step="0.005" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth ${index + 1} (${color.toUpperCase()})" title="Depth for ${color.toUpperCase()}" />
-  <input type="number" min="0.01" max="2" step="0.01" class="svg-extrude-inline-number" value="${safeDepth.toFixed(2)}" data-color="${color}" data-kind="depth" aria-label="Per-color depth value ${index + 1} (${color.toUpperCase()})" />
-</label>
-<label class="slider-line">
-  <span>
-    <span class="color-chip" style="background:${color}; pointer-events:none;" title="${color.toUpperCase()}"></span>
-    Position ${index + 1}
-  </span>
-  <input type="range" min="-1" max="1" step="0.005" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position ${index + 1} (${color.toUpperCase()})" title="Position for ${color.toUpperCase()}" />
-  <input type="number" min="-1" max="1" step="0.01" class="svg-extrude-inline-number" value="${safeOffset.toFixed(2)}" data-color="${color}" data-kind="offset" aria-label="Per-color position value ${index + 1} (${color.toUpperCase()})" />
-</label>`;
-      })
-      .join('')}`;
-
-    container.innerHTML = rows;
-    const shouldDisable = !enabled;
-    container.querySelectorAll('input[type="range"]').forEach((input) => {
-      input.disabled = shouldDisable;
-      input.classList.toggle('is-disabled-handle', shouldDisable);
-    });
+    renderSvgColorDepthControls(this.ui.inputs.svgExtrudeColorDepths, state, this.ui);
   }
 }
 

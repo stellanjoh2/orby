@@ -48,6 +48,19 @@ export class StateStore {
         /** 0 = first UV (`uv`), 1 = second (`uv2`) — Three.js Texture.channel for detail maps only; base color stays on `uv`. */
         pbrUvChannel: 0,
       },
+      fontExtrude: {
+        panelOpen: false,
+        /** @type {'left' | 'center' | 'right'} */
+        align: 'left',
+        tracking: 0,
+        lineHeight: 1,
+        /** @type {'low' | 'medium' | 'high'} — cap/side curve sampling for 3D extrude. */
+        detail: 'medium',
+        /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
+        previewScale: 1,
+        /** Letter fill for 2D preview and 3D extrude. */
+        fillColor: '#ffffff',
+      },
       svgExtrude: {
         enabled: false,
         depth: 0.2,
@@ -60,6 +73,7 @@ export class StateStore {
         overrideColor: '#7ed321',
         surfacePreset: 'none',
         surfaceScale: 1.0,
+        surfaceStrength: 1.0,
       },
       advanced: {
         reverseNormals: false,

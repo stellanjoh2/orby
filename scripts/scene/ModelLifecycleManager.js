@@ -137,6 +137,7 @@ export class ModelLifecycleManager {
         {
           preset: surfacePreset,
           scale: svgState.surfaceScale ?? 1,
+          strength: svgState.surfaceStrength ?? 1,
         },
         { updateState: false },
       );

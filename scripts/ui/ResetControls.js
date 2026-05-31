@@ -112,7 +112,7 @@ const RESET_DIRTY_PATHS = {
     'svgExtrude.depth', 'svgExtrude.normalAngle',
     'svgExtrude.colorDepths', 'svgExtrude.colorOffsets',
     'svgExtrude.flipDirection', 'svgExtrude.colorOverride',
-    'svgExtrude.overrideColor', 'svgExtrude.surfacePreset', 'svgExtrude.surfaceScale',
+    'svgExtrude.overrideColor', 'svgExtrude.surfacePreset', 'svgExtrude.surfaceScale', 'svgExtrude.surfaceStrength',
   ],
   advanced: [
     'advanced.reverseNormals', 'advanced.transparencyFix',
@@ -452,6 +452,7 @@ export class ResetControls {
       this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
       this.stateStore.set('svgExtrude.surfacePreset', defaults.svgExtrude?.surfacePreset ?? 'none');
       this.stateStore.set('svgExtrude.surfaceScale', defaults.svgExtrude?.surfaceScale ?? 1.0);
+      this.stateStore.set('svgExtrude.surfaceStrength', defaults.svgExtrude?.surfaceStrength ?? 1.0);
       this.stateStore.set('advanced.reverseNormals', defaults.advanced?.reverseNormals ?? false);
       this.stateStore.set(
         'advanced.transparencyFix',
@@ -529,6 +530,7 @@ export class ResetControls {
       this.eventBus.emit('mesh:svg-extrude-surface', {
         preset: defaults.svgExtrude?.surfacePreset ?? 'none',
         scale: defaults.svgExtrude?.surfaceScale ?? 1.0,
+        strength: defaults.svgExtrude?.surfaceStrength ?? 1.0,
       });
       this.eventBus.emit('mesh:reverse-normals', defaults.advanced?.reverseNormals ?? false);
       this.eventBus.emit('mesh:transparency-fix');
@@ -1438,6 +1440,7 @@ export class ResetControls {
               this.stateStore.set('svgExtrude.overrideColor', defaults.svgExtrude?.overrideColor ?? '#7ed321');
               this.stateStore.set('svgExtrude.surfacePreset', defaults.svgExtrude?.surfacePreset ?? 'none');
               this.stateStore.set('svgExtrude.surfaceScale', defaults.svgExtrude?.surfaceScale ?? 1.0);
+              this.stateStore.set('svgExtrude.surfaceStrength', defaults.svgExtrude?.surfaceStrength ?? 1.0);
             });
             this.eventBus.emit('mesh:svg-extrude-depth', defaults.svgExtrude?.depth ?? 0.2);
             this.eventBus.emit('mesh:svg-extrude-normal-angle', defaults.svgExtrude?.normalAngle ?? 45);
@@ -1451,6 +1454,7 @@ export class ResetControls {
             this.eventBus.emit('mesh:svg-extrude-surface', {
               preset: defaults.svgExtrude?.surfacePreset ?? 'none',
               scale: defaults.svgExtrude?.surfaceScale ?? 1.0,
+              strength: defaults.svgExtrude?.surfaceStrength ?? 1.0,
             });
             this.ui.syncUIFromState();
             break;

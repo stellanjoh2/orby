@@ -138,6 +138,7 @@ export class StartMenuController {
     this.dropzone = null;
     this.fileInput = null;
     this.browseButton = null;
+    this.blankCanvasLink = null;
     this.loadTestLink = null;
     this.debugExportOverlayLink = null;
     this.loadMeshButton = null;
@@ -219,6 +220,7 @@ export class StartMenuController {
     this.dropzone = document.querySelector('#dropzone');
     this.fileInput = document.querySelector('#fileInput');
     this.browseButton = document.querySelector('#browseButton');
+    this.blankCanvasLink = document.querySelector('#blankCanvasLink');
     this.loadTestLink = document.querySelector('#loadTestLink');
     this.debugExportOverlayLink = document.querySelector('#debugExportOverlayLink');
     this.loadMeshButton = this.ui.buttons?.loadMesh;
@@ -285,6 +287,13 @@ export class StartMenuController {
     this.browseButton.addEventListener('click', () => {
       this.fileInput.click();
     });
+
+    if (this.blankCanvasLink) {
+      this.blankCanvasLink.addEventListener('click', async (event) => {
+        event.preventDefault();
+        await this.openBlankCanvas();
+      });
+    }
 
     // Load Test Object link click
     if (this.loadTestLink) {
@@ -1011,6 +1020,23 @@ export class StartMenuController {
     };
 
     tryInit();
+  }
+
+  /**
+   * Studio without a mesh — useful for font / text tool debugging.
+   */
+  async openBlankCanvas() {
+    const scene = window.orby?.scene;
+    if (!scene?.enterBlankStudio) {
+      this.ui.showToast('Studio not ready');
+      return;
+    }
+    try {
+      await scene.enterBlankStudio({ openFontPanel: true, skipSound: true });
+    } catch (error) {
+      console.error('Failed to open blank canvas', error);
+      this.ui.showToast('Could not open blank canvas');
+    }
   }
 
   /**

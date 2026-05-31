@@ -35,6 +35,8 @@ import { ViewPresetsControls } from './ui/ViewPresetsControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
 import { AnimationControls } from './ui/AnimationControls.js';
+import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
+import { ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import {
@@ -184,6 +186,15 @@ export class UIManager {
     );
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
     this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
+    this.fontExtrudeUI = new FontExtrudeUI(
+      this.eventBus,
+      this.stateStore,
+      this,
+      () => window.orby?.scene,
+      this.helpers,
+    );
+    this.fontExtrudeUI.mount();
+    this.fontExtrudeUI.bind();
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
 
     this.sceneSettingsManager = new SceneSettingsManager(
@@ -267,6 +278,7 @@ export class UIManager {
 
   cacheDom() {
     const q = (sel) => document.querySelector(sel);
+    ensureSvgExtrudeSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
     this.dom.offlineExportOverlay = q('#viewportOfflineExportOverlay');
@@ -383,6 +395,7 @@ export class UIManager {
       svgExtrudeColorDepths: q('#svgExtrudeColorDepths'),
       svgExtrudeSurfacePreset: q('#svgExtrudeSurfacePreset'),
       svgExtrudeSurfaceScale: q('#svgExtrudeSurfaceScale'),
+      svgExtrudeSurfaceStrength: q('#svgExtrudeSurfaceStrength'),
       reverseNormals: q('#reverseNormals'),
       centerPivot: q('#centerPivot'),
       stlSmoothingControls: q('#stlSmoothingControls'),
