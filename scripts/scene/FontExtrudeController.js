@@ -1,4 +1,4 @@
-import * as opentype from '../vendor/opentype.module.js';
+import * as opentype from 'opentype';
 import { FontExtrudeImporter, normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
 import { LocalFontPreviewCache } from './localFontPreviewCache.js';

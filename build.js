@@ -116,7 +116,7 @@ await esbuild.build({
   format: 'esm',
   target: ['es2020'],
   outfile: 'dist/scripts/entry.js',
-  external: ['three'], // Keep Three.js external (loaded via import map)
+  external: ['three', 'opentype'], // Loaded via import map (vendor copy; not bundled — has Node fs paths)
   treeShaking: true,
   legalComments: 'none',
   banner: {
