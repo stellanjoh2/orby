@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { verticalFovForAspectPreservingHorizontalFov } from '../camera/lensPresets.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import {
   exportVideoMovementLabel,
@@ -50,6 +51,8 @@ export class VideoExporter {
     endExportAnimationDrive = () => {},
     /** ShaderLab / creative-look `uTime` — export loop does not run the interactive rAF step. */
     applyCreativeLookExportFrame = () => {},
+    /** Film grain `time` — export loop does not run RenderLoopController grain-time. */
+    applyGrainExportFrame = () => {},
     getCurrentModel,
     getCurrentFile,
     getCurrentAssetMetadata,
@@ -88,6 +91,7 @@ export class VideoExporter {
     this.applyExportAnimationDriveFrame = applyExportAnimationDriveFrame;
     this.endExportAnimationDrive = endExportAnimationDrive;
     this.applyCreativeLookExportFrame = applyCreativeLookExportFrame;
+    this.applyGrainExportFrame = applyGrainExportFrame;
     this.getCurrentModel = getCurrentModel;
     this.getCurrentFile = getCurrentFile;
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
@@ -185,6 +189,7 @@ export class VideoExporter {
     }
     if (typeof frameIndex === 'number' && typeof fps === 'number' && fps > 0) {
       this.applyCreativeLookExportFrame?.(frameIndex, fps);
+      this.applyGrainExportFrame?.(frameIndex, fps);
     }
   }
 
@@ -237,6 +242,13 @@ export class VideoExporter {
    * @param {{ transparent?: boolean }} [opts]
    */
   _renderComposerFrameForCapture({ transparent = false } = {}) {
+    const db = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(db);
+    const targetWidth = Math.max(1, Math.round(db.x));
+    const targetHeight = Math.max(1, Math.round(db.y));
+    this.imageExporter?._ensureComposerMatchesDrawingBuffer?.({ strict: true });
+    this.imageExporter?._setExportViewport?.(targetWidth, targetHeight);
+
     this.beforeComposerRender?.();
     if (typeof this.renderComposerPassForExport === 'function') {
       this.renderComposerPassForExport({ transparent });
@@ -466,14 +478,46 @@ export class VideoExporter {
     const previousPixelRatio = this.renderer.getPixelRatio();
     const previousAspect = this.camera.aspect;
 
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(width, height, false);
-    this.camera.aspect = width / Math.max(1e-6, height);
-    this.camera.updateProjectionMatrix();
-    this.syncPostProcessingForLogicalSize?.(width, height);
-    this.syncPerspectiveProjection?.();
+    const synced = this.imageExporter?._setExportFramebufferSize
+      ? this.imageExporter._setExportFramebufferSize(width, height)
+      : (() => {
+          this.renderer.setPixelRatio(1);
+          this.renderer.setSize(width, height, false);
+          return { width, height };
+        })();
 
-    return { previousSize, previousPixelRatio, previousAspect };
+    const exportFovScale = this.imageExporter?.isLensDistortionActive?.() ? 1.06 : 1;
+    const newAspect = synced.width / Math.max(1e-6, synced.height);
+    const state = this.stateStore?.getState?.();
+    const lensDistortionActive = this.imageExporter?.isLensDistortionActive?.() === true;
+    const fisheyeActive = !!state?.fisheye?.enabled;
+
+    this.syncPerspectiveProjection?.({ fovScale: exportFovScale });
+
+    // 1080p/1440p/2160p are 16∶9; a wider studio viewport keeps the same vertical FOV but
+    // shows more horizontally — export looked zoomed-in without this adjustment.
+    if (
+      !fisheyeActive
+      && !lensDistortionActive
+      && Math.abs(previousAspect - newAspect) > 1e-4
+    ) {
+      const baseVfov = state?.camera?.fov ?? this.camera?.fov ?? 45;
+      const adjusted = verticalFovForAspectPreservingHorizontalFov(
+        baseVfov,
+        previousAspect,
+        newAspect,
+      );
+      this.camera.fov = adjusted * exportFovScale;
+      this.camera.updateProjectionMatrix();
+    }
+
+    return {
+      previousSize,
+      previousPixelRatio,
+      previousAspect,
+      exportWidth: synced.width,
+      exportHeight: synced.height,
+    };
   }
 
   _restoreVideoExportSize(snapshot) {

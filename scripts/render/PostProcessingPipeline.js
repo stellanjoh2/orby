@@ -476,6 +476,19 @@ export class PostProcessingPipeline {
   }
 
   /**
+   * Deterministic grain phase for offline export (no interactive rAF loop).
+   * @param {number} elapsedSec — wall time from clip start (frameIndex / fps)
+   */
+  setGrainTimeForExport(elapsedSec) {
+    if (!this.grainTintPass?.enabled || !this.grainTintPass.uniforms?.time) {
+      return;
+    }
+    const t = Math.max(0, Number(elapsedSec) || 0);
+    this.grainTime = t * 60;
+    this.grainTintPass.uniforms.time.value = this.grainTime;
+  }
+
+  /**
    * Set contrast adjustment
    * @param {number} value - Contrast value (0-2, default 1.0)
    */

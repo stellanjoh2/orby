@@ -607,17 +607,9 @@ export class SceneManager {
     this.godRaysController.init(initialState);
     this.godRaysController.setHdriEnabled(this.hdriEnabled);
     
-    // Initialize histogram controller
-    const histogramContainer = document.querySelector('#histogramContainer');
-    if (histogramContainer) {
-      this.histogramController = new HistogramController(
-        this.renderer,
-        this.canvas,
-        histogramContainer,
-        this.composer // Pass composer so it can read from the correct render target
-      );
-      const histogramState = this.stateStore.getState();
-      this.histogramController.setEnabled(histogramState.histogramEnabled ?? false);
+    // Histogram is created lazily on first enable (see setHistogramEnabled).
+    if (this.stateStore.getState().histogramEnabled) {
+      this.setHistogramEnabled(true);
     }
 
     this.stateApplier = new SceneStateApplier(this);
@@ -1005,6 +997,10 @@ export class SceneManager {
       applyCreativeLookExportFrame: (frameIndex, fps) => {
         const elapsed = frameIndex / Math.max(1, fps);
         this.materialController?.updateCreativeLookTime?.(elapsed);
+      },
+      applyGrainExportFrame: (frameIndex, fps) => {
+        const elapsed = frameIndex / Math.max(1, fps);
+        this.postPipeline?.setGrainTimeForExport?.(elapsed);
       },
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
@@ -2850,6 +2846,41 @@ export class SceneManager {
 
   updateGrain(settings) {
     this.postPipeline?.updateGrain(settings);
+  }
+
+  /** @returns {import('./render/HistogramController.js').HistogramController | null} */
+  ensureHistogramController() {
+    if (this.histogramController) return this.histogramController;
+    const histogramContainer = document.querySelector('#histogramContainer');
+    if (!histogramContainer || !this.renderer) return null;
+    this.histogramController = new HistogramController(
+      this.renderer,
+      this.canvas,
+      histogramContainer,
+      this.composer,
+    );
+    return this.histogramController;
+  }
+
+  /**
+   * Live histogram readback + UI — only allocated while the toggle is on.
+   * @param {boolean} enabled
+   */
+  setHistogramEnabled(enabled) {
+    const on = !!enabled;
+    if (on) {
+      this.ensureHistogramController()?.setEnabled(true);
+      return;
+    }
+    if (this.histogramController) {
+      this.histogramController.dispose();
+      this.histogramController = null;
+    }
+    const container = document.querySelector('#histogramContainer');
+    if (container) {
+      container.classList.toggle('histogram-container--collapsed', true);
+      container.classList.toggle('histogram-container--expanded', false);
+    }
   }
 
   updateAberration(settings) {

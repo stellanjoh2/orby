@@ -152,7 +152,7 @@ const main = async () => {
   console.log(
     `Wrote ${outputPath} (${(glb.byteLength / 1024).toFixed(1)} KB, color ${color}, animations: ${clipSummary || 'none'})`,
   );
-};
+a};
 
 main().catch((err) => {
   console.error(err);

@@ -328,9 +328,7 @@ export class EventManager {
     });
     eventBus.on('render:tone-mapping', (value) => s.setToneMapping(value));
     eventBus.on('render:histogram-enabled', (enabled) => {
-      if (s.histogramController) {
-        s.histogramController.setEnabled(enabled);
-      }
+      s.setHistogramEnabled?.(enabled);
     });
     eventBus.on('camera:composition-grid', (payload) => {
       let enabled;

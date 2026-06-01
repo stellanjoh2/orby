@@ -43,8 +43,7 @@ export class GamepadController {
     }
 
     if (typeof navigator?.getGamepads === 'function') {
-      this.connected = true;
-      this.poll(performance.now());
+      this._syncConnectedPads();
     } else {
       console.info('Gamepad API not available in this browser.');
     }
@@ -53,10 +52,43 @@ export class GamepadController {
   dispose() {
     window.removeEventListener('gamepadconnected', this.handleConnect);
     window.removeEventListener('gamepaddisconnected', this.handleDisconnect);
-    if (this.animationFrame) {
+    this._stopPolling();
+  }
+
+  /** @returns {boolean} */
+  _hasConnectedGamepad() {
+    const pads = navigator.getGamepads?.() ?? [];
+    return pads.some((pad) => pad && pad.connected);
+  }
+
+  _syncConnectedPads() {
+    if (!this._hasConnectedGamepad()) {
+      this.connected = false;
+      this.activeIndex = null;
+      this._stopPolling();
+      return;
+    }
+    this.connected = true;
+    if (this.activeIndex == null) {
+      this.getActiveGamepad();
+    }
+    this._startPolling();
+  }
+
+  _startPolling() {
+    if (this.animationFrame != null) return;
+    this.animationFrame = requestAnimationFrame(this.poll);
+  }
+
+  _stopPolling() {
+    if (this.animationFrame != null) {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
     }
+    this.lastTimestamp = null;
+    this.orbitVelocity.yaw = 0;
+    this.orbitVelocity.pitch = 0;
+    this.zoomVelocity = 0;
   }
 
   handleConnect(event) {
@@ -65,6 +97,7 @@ export class GamepadController {
     }
     this.connected = true;
     this.buttonStates.clear();
+    this._startPolling();
     if (this.ui?.showToast) {
       this.ui.showToast('GAMEPAD CONNECTED', 3200, { notification: false });
     }
@@ -75,19 +108,21 @@ export class GamepadController {
       this.activeIndex = null;
       this.buttonStates.clear();
     }
-    const pads = navigator.getGamepads?.() ?? [];
-    const stillConnected = pads.some((pad) => pad && pad.connected);
-    this.connected = stillConnected;
+    this._syncConnectedPads();
   }
 
   poll(timestamp) {
-    if (!this.connected) {
-      this.animationFrame = requestAnimationFrame(this.poll);
+    this.animationFrame = null;
+
+    if (!this.connected || !this._hasConnectedGamepad()) {
+      this.connected = false;
+      this.activeIndex = null;
+      this.buttonStates.clear();
       return;
     }
 
     if (!this.scene?.isStudioReady) {
-      this.animationFrame = requestAnimationFrame(this.poll);
+      this._startPolling();
       return;
     }
 
@@ -101,7 +136,7 @@ export class GamepadController {
       this.handleButtons(gamepad, delta);
     }
 
-    this.animationFrame = requestAnimationFrame(this.poll);
+    this._startPolling();
   }
 
   getActiveGamepad() {

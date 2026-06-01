@@ -52,6 +52,41 @@ export function clampFovDeg(fovDeg, min = FOV_MIN, max = FOV_MAX) {
 }
 
 /**
+ * When the render aspect changes (viewport → 16∶9 export) but framing should match the
+ * viewport, adjust vertical FOV so horizontal FOV stays constant (Three.js uses vertical FOV).
+ *
+ * @param {number} verticalFovDeg
+ * @param {number} fromAspect — width / height before resize
+ * @param {number} toAspect — width / height after resize
+ * @returns {number}
+ */
+export function verticalFovForAspectPreservingHorizontalFov(
+  verticalFovDeg,
+  fromAspect,
+  toAspect,
+) {
+  const vfov = Number(verticalFovDeg);
+  const fromAr = Number(fromAspect);
+  const toAr = Number(toAspect);
+  if (
+    !Number.isFinite(vfov)
+    || !Number.isFinite(fromAr)
+    || !Number.isFinite(toAr)
+    || fromAr <= 0
+    || toAr <= 0
+  ) {
+    return vfov;
+  }
+  if (Math.abs(fromAr - toAr) < 1e-5) {
+    return clampFovDeg(vfov);
+  }
+  const vfovRad = (vfov * Math.PI) / 180;
+  const hfovRad = 2 * Math.atan(Math.tan(vfovRad * 0.5) * fromAr);
+  const newVfovRad = 2 * Math.atan(Math.tan(hfovRad * 0.5) / toAr);
+  return clampFovDeg((newVfovRad * 180) / Math.PI);
+}
+
+/**
  * Whether stored FOV still matches the preset + sensor combo (slider was not tweaked away).
  */
 export function fovMatchesLensPreset(fovDeg, focalMm, sensorId) {
