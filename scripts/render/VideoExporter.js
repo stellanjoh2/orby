@@ -53,6 +53,9 @@ export class VideoExporter {
     applyCreativeLookExportFrame = () => {},
     /** Film grain `time` — export loop does not run RenderLoopController grain-time. */
     applyGrainExportFrame = () => {},
+    beginFontTextRevealExportDrive = () => {},
+    applyFontTextRevealExportFrame = () => {},
+    endFontTextRevealExportDrive = () => {},
     getCurrentModel,
     getCurrentFile,
     getCurrentAssetMetadata,
@@ -92,6 +95,9 @@ export class VideoExporter {
     this.endExportAnimationDrive = endExportAnimationDrive;
     this.applyCreativeLookExportFrame = applyCreativeLookExportFrame;
     this.applyGrainExportFrame = applyGrainExportFrame;
+    this.beginFontTextRevealExportDrive = beginFontTextRevealExportDrive;
+    this.applyFontTextRevealExportFrame = applyFontTextRevealExportFrame;
+    this.endFontTextRevealExportDrive = endFontTextRevealExportDrive;
     this.getCurrentModel = getCurrentModel;
     this.getCurrentFile = getCurrentFile;
     this.getCurrentAssetMetadata = getCurrentAssetMetadata;
@@ -190,6 +196,7 @@ export class VideoExporter {
     if (typeof frameIndex === 'number' && typeof fps === 'number' && fps > 0) {
       this.applyCreativeLookExportFrame?.(frameIndex, fps);
       this.applyGrainExportFrame?.(frameIndex, fps);
+      this.applyFontTextRevealExportFrame?.(frameIndex, fps);
     }
   }
 
@@ -870,6 +877,7 @@ export class VideoExporter {
         this.beginExportFovDrive?.();
       }
       this.beginExportAnimationDrive?.(meshAnimation);
+      this.beginFontTextRevealExportDrive?.();
 
       if (format === 'mp4') {
         this.ui?.showToast?.(
@@ -904,6 +912,7 @@ export class VideoExporter {
             this.endExportFovDrive?.();
           }
           this.endExportAnimationDrive?.();
+          this.endFontTextRevealExportDrive?.();
           this.setRotationY(startRotationY);
           this.stateStore.set('rotationY', startRotationY);
           if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
@@ -994,6 +1003,7 @@ export class VideoExporter {
           this.endExportFovDrive?.();
         }
         this.endExportAnimationDrive?.();
+        this.endFontTextRevealExportDrive?.();
         this.setRotationY(startRotationY);
         this.stateStore.set('rotationY', startRotationY);
         if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {

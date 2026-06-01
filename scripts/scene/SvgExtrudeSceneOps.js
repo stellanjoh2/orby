@@ -71,6 +71,7 @@ export function rebuildSvgExtrudeMeshesAfterImporterChange(scene) {
   scene.cameraController?.refreshModelBounds?.(scene.currentModel);
   scene._syncShadowCameraBounds?.();
   scene._applyShadowTintToScene?.();
+  scene.fontTextRevealController?.bindModel?.(scene.currentModel);
   if (scene.currentFile) {
     scene.updateStatsUI(scene.currentFile, scene.currentModel, scene.currentAssetMetadata);
   }

@@ -81,6 +81,19 @@ export function exportVideoMovementLabel(movements) {
   return parts.length ? parts.join('_') : 'static';
 }
 
+/** @type {readonly [22.5, 45, 90]} */
+export const EXPORT_SUBTLE_SPIN_DEGREES = [22.5, 45, 90];
+
+/** @param {unknown} value @returns {0 | 22.5 | 45 | 90} */
+export function normalizeExportSubtleSpinDegrees(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  for (const degrees of EXPORT_SUBTLE_SPIN_DEGREES) {
+    if (Math.abs(n - degrees) < 1e-6) return degrees;
+  }
+  return 0;
+}
+
 /** @param {unknown} spins — 0 = no full 360° laps; 1 or 2 = full 360° laps */
 export function normalizeExportSpins(spins) {
   const n = Number(spins);
@@ -92,7 +105,7 @@ export function normalizeExportSpins(spins) {
  * @param {Record<string, unknown>} [settings]
  * @returns {{
  *   fullSpins: 0 | 1 | 2,
- *   subtleSpinDegrees: 0 | 45 | 90,
+ *   subtleSpinDegrees: 0 | 22.5 | 45 | 90,
  *   spinDirection: 'forward' | 'reverse',
  *   sign: 1 | -1,
  *   rotationDegrees: number,
@@ -101,10 +114,7 @@ export function normalizeExportSpins(spins) {
  */
 export function normalizeExportSpinSettings(settings = {}) {
   const fullSpins = normalizeExportSpins(settings.spins);
-  let subtleSpinDegrees = Number(settings.subtleSpinDegrees);
-  if (subtleSpinDegrees !== 45 && subtleSpinDegrees !== 90) {
-    subtleSpinDegrees = 0;
-  }
+  const subtleSpinDegrees = normalizeExportSubtleSpinDegrees(settings.subtleSpinDegrees);
   const spinDirection = settings.spinDirection === 'reverse' ? 'reverse' : 'forward';
   const sign = spinDirection === 'reverse' ? -1 : 1;
   const rotationDegrees = fullSpins > 0 ? fullSpins * 360 : subtleSpinDegrees;

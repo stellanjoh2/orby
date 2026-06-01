@@ -13,6 +13,7 @@ import {
   DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
 } from '../import/extrudeDefaults.js';
 import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
+import { isFontExtrudeRevealModel } from './FontTextRevealController.js';
 import { easeOutExpo, SCALE_TOGGLE_IN_MS } from './toggleScaleAnimation.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
@@ -71,6 +72,7 @@ export class ModelLifecycleManager {
     s.lensFlareController?.setModelRoot(null);
     s.godRaysController?.setModelRoot(null);
     s.animationController.dispose();
+    s.fontTextRevealController?.unbind?.();
     s.currentAssetMetadata = null;
     s.svgExtrudeImporter = null;
     s.isSvgExtrudeModel = false;
@@ -242,6 +244,9 @@ export class ModelLifecycleManager {
       s.updateMaterialsEnvironment(s.scene.environment, intensity);
     }
     s.animationController.setModel(s.currentModel, animations);
+    if (isFontExtrudeRevealModel(s.currentModel)) {
+      s.fontTextRevealController?.bindModel?.(s.currentModel);
+    }
 
     requestAnimationFrame(() => {
       const studio = s.stateStore.getState();
@@ -301,6 +306,16 @@ export class ModelLifecycleManager {
   _scaleInMeshOnSpawn(object) {
     const s = this.scene;
     if (!object || s.currentModel !== object) return;
+    if (object.userData?.orbyFontGenerated || isFontExtrudeRevealModel(object)) {
+      s.fontTextRevealController?.bindModel?.(object);
+      const revealDuration = Number(
+        s.stateStore.getState()?.fontExtrude?.revealDurationSec ?? 0,
+      );
+      if (revealDuration > 0) {
+        object.visible = true;
+        return;
+      }
+    }
     if (this._meshSpawnScaleRaf) {
       cancelAnimationFrame(this._meshSpawnScaleRaf);
       this._meshSpawnScaleRaf = 0;

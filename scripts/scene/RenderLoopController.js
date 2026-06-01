@@ -159,6 +159,13 @@ export class RenderLoopController {
         },
       },
       {
+        id: 'font-text-reveal',
+        when: (_ctx, s) => s.fontTextRevealController?.shouldRunLiveUpdate?.(s),
+        run: (delta, s) => {
+          s.fontTextRevealController.update(delta);
+        },
+      },
+      {
         id: 'diagnostics',
         when: (ctx) => ctx.diagnosticsActive,
         run: (delta, s) => {

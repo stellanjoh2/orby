@@ -18,6 +18,10 @@ export function easeInCubic(t) {
   return t * t * t;
 }
 
+export function easeOutCubic(t) {
+  return 1 - (1 - t) ** 3;
+}
+
 /** Initial mutable state for {@link stepToggleScaleAnimation}. */
 export function createToggleScaleContext() {
   return {

@@ -60,7 +60,11 @@ export class StateStore {
         /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
         previewScale: 1,
         /** Letter fill for 2D preview and 3D extrude. */
-        fillColor: '#ffffff',
+        fillColor: '#808080',
+        /** Total seconds until the last character finishes scale-in (0 = off). */
+        revealDurationSec: 2,
+        /** @type {'scale' | 'fade' | 'slideUp' | 'pop' | 'rotate' | 'elastic'} */
+        revealType: 'scale',
       },
       svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
       advanced: {

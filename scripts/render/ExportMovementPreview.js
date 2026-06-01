@@ -29,6 +29,9 @@ export class ExportMovementPreview {
     beginExportAnimationDrive = () => {},
     applyExportAnimationDriveFrame = () => {},
     endExportAnimationDrive = () => {},
+    beginFontTextRevealExportDrive = () => {},
+    applyFontTextRevealExportFrame = () => {},
+    endFontTextRevealExportDrive = () => {},
     onActiveChange = () => {},
   } = {}) {
     this.stateStore = stateStore;
@@ -46,6 +49,9 @@ export class ExportMovementPreview {
     this.beginExportAnimationDrive = beginExportAnimationDrive;
     this.applyExportAnimationDriveFrame = applyExportAnimationDriveFrame;
     this.endExportAnimationDrive = endExportAnimationDrive;
+    this.beginFontTextRevealExportDrive = beginFontTextRevealExportDrive;
+    this.applyFontTextRevealExportFrame = applyFontTextRevealExportFrame;
+    this.endFontTextRevealExportDrive = endFontTextRevealExportDrive;
     this.onActiveChange = onActiveChange;
 
     this._active = false;
@@ -111,6 +117,7 @@ export class ExportMovementPreview {
     }
     // Always enter export session (hold pose or drive clip) when GLB has animations.
     this.beginExportAnimationDrive(this._meshAnimation);
+    this.beginFontTextRevealExportDrive();
     this._applyFrame(0, 0);
 
     this._active = true;
@@ -137,6 +144,7 @@ export class ExportMovementPreview {
     this.endExportCameraDrive();
     this.endExportFovDrive();
     this.endExportAnimationDrive();
+    this.endFontTextRevealExportDrive();
     this.setRotationY(this._startRotationY);
     this.stateStore.set('rotationY', this._startRotationY);
     if (this._lightsAutoRotate && typeof this.setLightsRotation === 'function') {
@@ -178,6 +186,9 @@ export class ExportMovementPreview {
     }
     if (this._meshAnimation.include && typeof frameIndex === 'number' && this._fps > 0) {
       this.applyExportAnimationDriveFrame(frameIndex, this._fps);
+    }
+    if (typeof frameIndex === 'number' && this._fps > 0) {
+      this.applyFontTextRevealExportFrame(frameIndex, this._fps);
     }
     if (this._lightsAutoRotate && typeof this.setLightsRotation === 'function') {
       const lightsRotation = lightsRotationForExportFrame(

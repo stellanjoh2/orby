@@ -7280,6 +7280,26 @@ html.mobile-landing .mobile-warning .brand-highlight {
   margin-top: 0.35rem;
 }
 
+.font-extrude-animation {
+  margin-top: 0.35rem;
+}
+
+.font-extrude-reveal-preview {
+  margin-bottom: 0.1rem;
+}
+
+.font-extrude-reveal-preview #fontExtrudeRevealScrub {
+  flex: 1;
+}
+
+.font-extrude-reveal-time {
+  font-size: var(--shelf-label-font-size);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.8ch;
+  text-align: right;
+}
+
 .font-extrude-generate {
   width: 100%;
   margin-top: 0.5rem;

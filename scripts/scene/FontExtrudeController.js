@@ -11,7 +11,7 @@ import {
 const DEFAULT_FONT_SIZE = 72;
 const PREVIEW_LAYOUT_WIDTH = 520;
 const GLYPH_CHUNK_SIZE = 48;
-const DEFAULT_PREVIEW_FILL = '#ffffff';
+const DEFAULT_PREVIEW_FILL = '#808080';
 /** Text extrudes toward the camera (flip on); not exposed in the font panel. */
 const FONT_EXTRUDE_FLIP_DIRECTION = true;
 

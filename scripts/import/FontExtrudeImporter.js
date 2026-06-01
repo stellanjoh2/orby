@@ -25,7 +25,7 @@ import {
 import { opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
-const DEFAULT_GLYPH_FILL = '#ffffff';
+const DEFAULT_GLYPH_FILL = '#808080';
 
 /** @param {string} [value] */
 export function normalizeGlyphFillHex(value) {
@@ -263,7 +263,12 @@ export class FontExtrudeImporter {
     };
 
     let meshCount = 0;
+    let glyphIndex = 0;
     for (const { glyphPath } of this._glyphEntries) {
+      const glyphGroup = new THREE.Group();
+      glyphGroup.userData.orbyFontGlyphGroup = true;
+      glyphGroup.userData.orbyFontGlyphIndex = glyphIndex;
+
       const shapes = opentypePathToShapes(glyphPath, detailSettings.curveDivisions);
       for (const shape of shapes) {
         const extrudeOptions = {
@@ -286,6 +291,7 @@ export class FontExtrudeImporter {
         mesh.userData.orbySvgExtrude = true;
         mesh.userData.orbyFontExtrude = true;
         mesh.userData.orbyFontGenerated = true;
+        mesh.userData.orbyFontGlyphIndex = glyphIndex;
         mesh.userData.orbySvgEffectiveDepth = effectiveDepth;
         mesh.userData.orbySvgColorOffset = effectiveOffset;
         mesh.userData.orbySvgBaseColor = this.currentFillColor;
@@ -295,10 +301,17 @@ export class FontExtrudeImporter {
           g: baseColor.g,
           b: baseColor.b,
         };
-        group.add(mesh);
+        glyphGroup.add(mesh);
         meshCount += 1;
       }
+
+      if (glyphGroup.children.length) {
+        group.add(glyphGroup);
+        glyphIndex += 1;
+      }
     }
+
+    group.userData.orbyFontGlyphCount = glyphIndex;
 
     material.dispose();
     if (!meshCount) {
@@ -308,8 +321,40 @@ export class FontExtrudeImporter {
     this._normalizeFontGeometrySpace(group, this._layoutFontSize);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
     finalizeExtrudeGroupGeometry(group, creaseAngleRad);
+    this._centerGlyphGroupPivots(group);
 
     return group;
+  }
+
+  /**
+   * Scale each glyph group from its ink center (character-by-character reveal).
+   * @param {THREE.Group} group
+   */
+  _centerGlyphGroupPivots(group) {
+    group.updateMatrixWorld(true);
+    group.children.forEach((glyphGroup) => {
+      if (!glyphGroup.userData?.orbyFontGlyphGroup) return;
+
+      const box = new THREE.Box3().setFromObject(glyphGroup);
+      if (box.isEmpty()) return;
+
+      const centerWorld = box.getCenter(new THREE.Vector3());
+      const childStates = glyphGroup.children.map((child) => {
+        const worldPos = new THREE.Vector3();
+        child.getWorldPosition(worldPos);
+        return { child, worldPos };
+      });
+
+      const centerLocal = group.worldToLocal(centerWorld.clone());
+      glyphGroup.position.copy(centerLocal);
+      glyphGroup.updateMatrixWorld(true);
+
+      for (const { child, worldPos } of childStates) {
+        child.position.copy(glyphGroup.worldToLocal(worldPos));
+      }
+      glyphGroup.updateMatrixWorld(true);
+      glyphGroup.userData.orbyFontGlyphPivotFixed = true;
+    });
   }
 
   /**

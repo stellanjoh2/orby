@@ -14,6 +14,10 @@ import {
   MAX_EXTRUDE_NORMAL_ANGLE_DEG,
 } from '../import/extrudeDefaults.js';
 import {
+  FONT_REVEAL_TYPE_OPTIONS,
+  DEFAULT_FONT_REVEAL_TYPE,
+} from '../scene/fontTextRevealTypes.js';
+import {
   clampSurfaceStrength,
   getSvgExtrudeSurfacePresetConfig,
   SVG_EXTRUDE_SURFACE_PRESETS,
@@ -636,6 +640,67 @@ export function renderSvgColorDepthControls(container, state, ui) {
   });
 }
 
+function buildFontRevealTypeOptionsHtml() {
+  return FONT_REVEAL_TYPE_OPTIONS.map(
+    (opt) =>
+      `<option value="${opt.id}"${
+        opt.id === DEFAULT_FONT_REVEAL_TYPE ? ' selected' : ''
+      }>${opt.label}</option>`,
+  ).join('');
+}
+
+/** Reveal animation — after Surface, only visible once 3D text exists. */
+export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
+            <div class="font-extrude-animation" id="fontExtrudeAnimation">
+              <label class="select-line font-extrude-reveal-type">
+                <span data-tooltip="Per-letter reveal style (GSAP-inspired eases)">Reveal type</span>
+                <select id="fontExtrudeRevealType" aria-label="Reveal animation type">
+                  ${buildFontRevealTypeOptionsHtml()}
+                </select>
+              </label>
+              <label class="slider-line font-extrude-reveal-duration">
+                <span data-tooltip="Character-by-character reveal. Last letter finishes at this time. 0 = off.">Reveal duration</span>
+                <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
+                <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
+              </label>
+              <div class="font-extrude-reveal-preview animation-controls">
+                <button
+                  type="button"
+                  id="fontExtrudeRevealPlay"
+                  class="animation-play-btn"
+                  disabled
+                  aria-label="Play reveal animation"
+                  data-tooltip="Loop preview from the first letter"
+                >
+                  <i class="fa-solid fa-play" aria-hidden="true"></i>
+                  <span class="sr-only">Play</span>
+                </button>
+                <button
+                  type="button"
+                  id="fontExtrudeRevealPause"
+                  class="animation-play-btn"
+                  disabled
+                  aria-label="Pause reveal animation"
+                  data-tooltip="Pause loop preview"
+                >
+                  <i class="fa-solid fa-pause" aria-hidden="true"></i>
+                  <span class="sr-only">Pause</span>
+                </button>
+                <input
+                  type="range"
+                  id="fontExtrudeRevealScrub"
+                  min="0"
+                  max="1"
+                  step="0.001"
+                  value="1"
+                  disabled
+                  aria-label="Reveal animation progress"
+                />
+                <span class="font-extrude-reveal-time" id="fontExtrudeRevealTime">0.0s</span>
+              </div>
+            </div>
+`;
+
 /** Depth + smoothing — shown after the first 3D text generate (rebuilds existing mesh). */
 export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
           <div id="fontExtrudePostGen" class="font-extrude-post-gen" hidden>
@@ -670,5 +735,6 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
               strengthOutput: 'fontExtrudeSurfaceStrength',
               presetAriaLabel: 'Font extrude surface material',
             })}
+            ${FONT_EXTRUDE_ANIMATION_CONTROLS_HTML}
           </div>
 `;

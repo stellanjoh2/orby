@@ -18,6 +18,7 @@ import {
   syncSvgExtrudeControls,
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
+import { normalizeExportSubtleSpinDegrees } from '../render/exportVideoMovements.js';
 
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -840,7 +841,7 @@ export class MeshControls {
       const video = this.ui.exportSettings.video || {};
       const fullSpins = video.spins === 0 || video.spins === 2 ? video.spins : 1;
       const subtleEnabled = fullSpins === 0;
-      const subtleDegrees = video.subtleSpinDegrees === 90 ? 90 : video.subtleSpinDegrees === 45 ? 45 : 0;
+      const subtleDegrees = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
       const spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
 
       document.querySelectorAll('[data-video-spins]').forEach((btn) => {
@@ -853,7 +854,7 @@ export class MeshControls {
         subtleWrap.classList.toggle('is-muted', !subtleEnabled);
       }
       document.querySelectorAll('[data-video-subtle-spins]').forEach((btn) => {
-        const degrees = parseInt(btn.dataset.videoSubtleSpins, 10);
+        const degrees = normalizeExportSubtleSpinDegrees(parseFloat(btn.dataset.videoSubtleSpins));
         btn.classList.toggle('active', subtleEnabled && degrees === subtleDegrees);
         if ('disabled' in btn) btn.disabled = !subtleEnabled;
         btn.classList.toggle('is-disabled', !subtleEnabled);
@@ -876,12 +877,12 @@ export class MeshControls {
     document.querySelectorAll('[data-video-subtle-spins]').forEach((button) => {
       button.addEventListener('click', () => {
         if (button.disabled) return;
-        const degrees = parseInt(button.dataset.videoSubtleSpins, 10);
-        if (degrees !== 45 && degrees !== 90) return;
+        const degrees = parseFloat(button.dataset.videoSubtleSpins);
+        const normalized = normalizeExportSubtleSpinDegrees(degrees);
+        if (!normalized) return;
         const video = this.ui.exportSettings.video;
-        const current =
-          video.subtleSpinDegrees === 90 ? 90 : video.subtleSpinDegrees === 45 ? 45 : 0;
-        video.subtleSpinDegrees = current === degrees ? 0 : degrees;
+        const current = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
+        video.subtleSpinDegrees = current === normalized ? 0 : normalized;
         syncExportSpinUi();
       });
     });

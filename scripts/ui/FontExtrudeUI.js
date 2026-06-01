@@ -9,6 +9,14 @@ import {
   syncSvgExtrudeControls,
   FONT_EXTRUDE_POST_GEN_CONTROLS_HTML,
 } from './svgExtrudeControlsShared.js';
+import {
+  clampFontRevealDurationSec,
+  DEFAULT_FONT_REVEAL_DURATION_SEC,
+} from '../scene/FontTextRevealController.js';
+import {
+  DEFAULT_FONT_REVEAL_TYPE,
+  normalizeFontRevealType,
+} from '../scene/fontTextRevealTypes.js';
 
 /**
  * Object panel — Generate from Font (2D preview + extrude).
@@ -132,7 +140,7 @@ export class FontExtrudeUI {
           </label>
           <label class="color-line font-extrude-fill-color">
             <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
-            <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#ffffff" />
+            <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
           ${FONT_EXTRUDE_POST_GEN_CONTROLS_HTML}
           <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
@@ -169,6 +177,12 @@ export class FontExtrudeUI {
       surfaceScale: block.querySelector('#fontExtrudeSurfaceScale'),
       surfaceStrength: block.querySelector('#fontExtrudeSurfaceStrength'),
       fillColor: block.querySelector('#fontExtrudeFillColor'),
+      revealDuration: block.querySelector('#fontExtrudeRevealDuration'),
+      revealType: block.querySelector('#fontExtrudeRevealType'),
+      revealPlay: block.querySelector('#fontExtrudeRevealPlay'),
+      revealPause: block.querySelector('#fontExtrudeRevealPause'),
+      revealScrub: block.querySelector('#fontExtrudeRevealScrub'),
+      revealTime: block.querySelector('#fontExtrudeRevealTime'),
       generate: block.querySelector('#fontExtrudeGenerate'),
     };
 
@@ -262,6 +276,62 @@ export class FontExtrudeUI {
     els.fillColor?.addEventListener('input', onFillColorChange);
     els.fillColor?.addEventListener('change', onFillColorChange);
 
+    els.revealDuration?.addEventListener('input', () => {
+      const value = clampFontRevealDurationSec(els.revealDuration.value);
+      this.stateStore.set('fontExtrude.revealDurationSec', value);
+      this.ui.updateValueLabel('fontExtrudeRevealDuration', `${value.toFixed(1)}s`);
+      this._withRevealController((controller, model) => {
+        controller.onDurationChange?.(model);
+      });
+    });
+
+    els.revealType?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const value = normalizeFontRevealType(els.revealType.value);
+      this.stateStore.set('fontExtrude.revealType', value);
+      this._withRevealController((controller, model) => {
+        controller.onRevealTypeChange?.(model);
+      });
+    });
+
+    els.revealPlay?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      this._withRevealController((controller, model) => {
+        if (!controller.ensureBoundToModel(model)) {
+          this.ui.showToast('Reveal needs 3D text — click Generate 3D Text first');
+          return;
+        }
+        if (controller.getDurationSec() <= 0) {
+          this.ui.showToast('Set reveal duration above 0 to preview');
+          return;
+        }
+        if (controller.getGlyphCount() <= 0) {
+          this.ui.showToast('No letters to animate — regenerate 3D text');
+          return;
+        }
+        controller.startPreview(model);
+      });
+    });
+
+    els.revealPause?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      this._withRevealController((controller, model) => {
+        if (!controller.pausePreview?.(model)) {
+          this.ui.showToast('Reveal needs 3D text — click Generate 3D Text first');
+        }
+      });
+    });
+
+    els.revealScrub?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this._withRevealController((controller, model) => {
+        controller.scrubPreview?.(value, model);
+      });
+    });
+
+    this._onRevealPreviewTime = (payload) => this.syncRevealPreviewControls(payload);
+    this._attachRevealPreviewCallback();
+
     this._stateUnsub = this.stateStore.subscribe((state) => this.syncFromState(state));
 
     this._onFontGenerated = () => this.syncPostGenControlsVisibility();
@@ -300,6 +370,77 @@ export class FontExtrudeUI {
     if (this.els.postGen) {
       this.els.postGen.hidden = !show;
     }
+    if (show) {
+      this._attachRevealPreviewCallback();
+      this.syncRevealPreviewControlsFromController();
+    }
+  }
+
+  _attachRevealPreviewCallback() {
+    this._withRevealController((controller) => {
+      if (controller.onPreviewTimeUpdate === this._onRevealPreviewTime) return;
+      controller.onPreviewTimeUpdate = this._onRevealPreviewTime;
+      this.syncRevealPreviewControlsFromController();
+    });
+  }
+
+  syncRevealPreviewControlsFromController() {
+    const controller = this._revealController();
+    if (!controller) {
+      this.syncRevealPreviewControls({ elapsed: 0, duration: 0, playing: false });
+      return;
+    }
+    this.syncRevealPreviewControls({
+      elapsed: controller.getPreviewElapsed?.() ?? 0,
+      duration: controller.getDurationSec?.() ?? 0,
+      playing: controller.isPreviewPlaying?.() ?? false,
+    });
+  }
+
+  /**
+   * @param {{ elapsed: number, duration: number, playing: boolean }} payload
+   */
+  syncRevealPreviewControls({ elapsed, duration, playing }) {
+    const enabled = duration > 0 && this._hasFontMesh();
+    const { els } = this;
+
+    if (els.revealPlay) {
+      els.revealPlay.disabled = !enabled || playing;
+      els.revealPlay.setAttribute('aria-label', 'Play reveal animation');
+    }
+
+    if (els.revealPause) {
+      els.revealPause.disabled = !enabled || !playing;
+    }
+
+    if (els.revealScrub) {
+      els.revealScrub.disabled = !enabled;
+      if (document.activeElement !== els.revealScrub) {
+        const progress = duration > 0 ? elapsed / duration : 1;
+        els.revealScrub.value = String(Math.max(0, Math.min(1, progress)));
+      }
+    }
+
+    if (els.revealTime) {
+      els.revealTime.textContent = `${Math.max(0, elapsed).toFixed(1)}s`;
+    }
+  }
+
+  _revealController() {
+    return this.getScene()?.fontTextRevealController ?? null;
+  }
+
+  _revealModel() {
+    return this.getScene()?.currentModel ?? null;
+  }
+
+  _withRevealController(run) {
+    const scene = this.getScene();
+    const controller = scene?.fontTextRevealController;
+    const model = scene?.currentModel;
+    if (!controller || !model) return;
+    controller.ensureBoundToModel?.(model);
+    run(controller, model, scene);
   }
 
   _fontExtrudeCtx() {
@@ -332,6 +473,19 @@ export class FontExtrudeUI {
     if (this.els.fillColor && document.activeElement !== this.els.fillColor) {
       this.els.fillColor.value = fill;
     }
+    const revealDuration = clampFontRevealDurationSec(
+      state?.fontExtrude?.revealDurationSec ?? DEFAULT_FONT_REVEAL_DURATION_SEC,
+    );
+    if (this.els.revealDuration && document.activeElement !== this.els.revealDuration) {
+      this.els.revealDuration.value = String(revealDuration);
+      this.ui.updateValueLabel('fontExtrudeRevealDuration', `${revealDuration.toFixed(1)}s`);
+    }
+    const revealType = normalizeFontRevealType(
+      state?.fontExtrude?.revealType ?? DEFAULT_FONT_REVEAL_TYPE,
+    );
+    if (this.els.revealType && document.activeElement !== this.els.revealType) {
+      this.els.revealType.value = revealType;
+    }
   }
 
   destroy() {
@@ -345,6 +499,11 @@ export class FontExtrudeUI {
     }
     this._stateUnsub?.();
     this._stateUnsub = null;
+    const controller = this.getScene()?.fontTextRevealController;
+    if (controller?.onPreviewTimeUpdate === this._onRevealPreviewTime) {
+      controller.onPreviewTimeUpdate = null;
+    }
+    this._onRevealPreviewTime = null;
     if (this._previewCoalesceRaf) cancelAnimationFrame(this._previewCoalesceRaf);
     this._previewCoalesceRaf = 0;
     this._previewPending = false;
@@ -518,7 +677,7 @@ export class FontExtrudeUI {
       lineHeight: Number(this.els.lineHeight?.value ?? fontState.lineHeight ?? 1),
       detail: normalizeFontExtrudeDetail(this.els.detail?.value ?? fontState.detail ?? 'medium'),
       fillColor: normalizeGlyphFillHex(
-        this.els.fillColor?.value ?? fontState.fillColor ?? '#ffffff',
+        this.els.fillColor?.value ?? fontState.fillColor ?? '#808080',
       ),
       maxWidth: Math.max(120, previewWidth - pad * 2),
     };

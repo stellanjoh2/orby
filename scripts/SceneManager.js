@@ -53,6 +53,7 @@ import { ImageExporter } from './render/ImageExporter.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
+import { FontTextRevealController } from './scene/FontTextRevealController.js';
 import { HistogramController } from './render/HistogramController.js';
 import { SvgGlbExporter } from './export/SvgGlbExporter.js';
 import { EventManager } from './scene/EventManager.js';
@@ -258,6 +259,10 @@ export class SceneManager {
         this.ui.updateAnimationTime(current, duration),
       onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
       getFileName: () => this.currentFile?.name ?? 'model.glb',
+    });
+    this.fontTextRevealController = new FontTextRevealController({
+      stateStore: this.stateStore,
+      onNeedRender: () => this.render(),
     });
 
     this._ccToggleCtx = createToggleScaleContext();
@@ -1002,6 +1007,12 @@ export class SceneManager {
         const elapsed = frameIndex / Math.max(1, fps);
         this.postPipeline?.setGrainTimeForExport?.(elapsed);
       },
+      beginFontTextRevealExportDrive: () =>
+        this.fontTextRevealController?.beginExportDrive?.(),
+      applyFontTextRevealExportFrame: (frameIndex, fps) =>
+        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps),
+      endFontTextRevealExportDrive: () =>
+        this.fontTextRevealController?.endExportDrive?.(),
       getCurrentModel: () => this.currentModel,
       getCurrentFile: () => this.currentFile,
       getCurrentAssetMetadata: () => this.currentAssetMetadata,
@@ -1038,6 +1049,12 @@ export class SceneManager {
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
       endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
+      beginFontTextRevealExportDrive: () =>
+        this.fontTextRevealController?.beginExportDrive?.(),
+      applyFontTextRevealExportFrame: (frameIndex, fps) =>
+        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps),
+      endFontTextRevealExportDrive: () =>
+        this.fontTextRevealController?.endExportDrive?.(),
       onActiveChange: (active) => {
         this.ui?.setExportVideoPreviewActive?.(active);
       },
