@@ -54,17 +54,27 @@ export class StateStore {
         /** @type {'left' | 'center' | 'right'} */
         align: 'left',
         tracking: 0,
+        /** @type {'metrics' | 'optical' | 'none'} — metrics = font Auto / pair tables */
+        kerning: 'metrics',
         lineHeight: 1,
         /** @type {'low' | 'medium' | 'high' | 'ultra'} — cap/side curve sampling for 3D extrude. */
         detail: 'medium',
         /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
-        previewScale: 1,
+        previewScale: 0.65,
         /** Letter fill for 2D preview and 3D extrude. */
         fillColor: '#808080',
         /** Total seconds until the last character finishes scale-in (0 = off). */
         revealDurationSec: 2,
         /** @type {'scale' | 'fade' | 'slideUp' | 'pop' | 'rotate' | 'elastic'} */
         revealType: 'scale',
+        /** Preview playback mode: true loops continuously, false stops at end. */
+        revealLoop: true,
+        /** Per-glyph Z travel distance before landing in place. */
+        revealSlideDepth: 0.18,
+        /** Fraction of each glyph slot used to complete Z travel (0.1–1). */
+        revealSlideTime: 0.45,
+        /** Z-travel start direction for reveal slide depth. */
+        revealSlideDirection: 'back',
       },
       svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
       advanced: {

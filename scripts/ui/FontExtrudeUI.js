@@ -11,12 +11,22 @@ import {
 } from './svgExtrudeControlsShared.js';
 import {
   clampFontRevealDurationSec,
+  clampFontRevealSlideDepth,
+  clampFontRevealSlideTime,
   DEFAULT_FONT_REVEAL_DURATION_SEC,
+  DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
+  DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
+  DEFAULT_FONT_REVEAL_SLIDE_TIME,
 } from '../scene/FontTextRevealController.js';
 import {
   DEFAULT_FONT_REVEAL_TYPE,
+  normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
 } from '../scene/fontTextRevealTypes.js';
+import {
+  DEFAULT_FONT_KERNING_MODE,
+  normalizeFontKerningMode,
+} from '../scene/fontKerning.js';
 
 /**
  * Object panel — Generate from Font (2D preview + extrude).
@@ -49,6 +59,8 @@ export class FontExtrudeUI {
     this._fontsLoadPromise = null;
     this._generating = false;
     this._fonts = [];
+    this._fontFamilies = [];
+    this._fontFamilyByPostscript = new Map();
     this._bound = false;
     this._stateUnsub = null;
     /** @type {FontFamilyPicker | null} */
@@ -65,6 +77,7 @@ export class FontExtrudeUI {
   static PREVIEW_SCALE_MIN = 0.15;
   /** 1× = fill preview; higher zooms in (may crop at edges). */
   static PREVIEW_SCALE_MAX = 3;
+  static PREVIEW_SCALE_DEFAULT = 0.65;
 
   mount() {
     if (this.root) return;
@@ -88,40 +101,54 @@ export class FontExtrudeUI {
           </div>
         </div>
         <div
-          class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+          class="effect-foldout effect-foldout--collapsed effect-foldout--xl"
           data-effect-foldout="font-extrude"
           aria-hidden="true"
         >
-          <label class="font-extrude-text-wrap">
-            <textarea id="fontExtrudeText" rows="3" placeholder="Type your text…" spellcheck="false"></textarea>
-          </label>
-          <label class="select-line font-extrude-family-line">
-            <span data-tooltip="System fonts load when you turn on this section or open the font list (browser permission)">Font</span>
-            <div id="fontExtrudeFamilyPicker" class="font-extrude-family-picker" aria-label="Font family"></div>
-          </label>
-          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
-            <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
-            <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
-          </div>
-          <div class="font-extrude-preview-wrap">
-            <canvas id="fontExtrudePreview" class="font-extrude-preview" aria-label="Text preview"></canvas>
+          <div class="font-extrude-live-editor" id="fontExtrudeLiveEditor">
+            <canvas id="fontExtrudePreview" class="font-extrude-preview" aria-hidden="true"></canvas>
+            <textarea
+              id="fontExtrudeText"
+              rows="3"
+              placeholder="Type your text…"
+              spellcheck="false"
+              aria-label="Text"
+            ></textarea>
           </div>
           <label class="slider-line">
             <span data-tooltip="1× fills the preview box; higher zooms in (may crop). Lower shows more margin around the type.">Preview scale</span>
-            <input id="fontExtrudePreviewScale" type="range" min="0.15" max="3" step="0.05" value="1" />
-            <span class="value" data-output="fontExtrudePreviewScale">1.00×</span>
+            <input id="fontExtrudePreviewScale" type="range" min="0.15" max="3" step="0.05" value="0.65" />
+            <span class="value" data-output="fontExtrudePreviewScale">0.65×</span>
+          </label>
+          <label class="select-line font-extrude-family-line font-extrude-typo-family-line">
+            <span data-tooltip="System fonts load when you turn on this section or open the font list (browser permission)">Typeface</span>
+            <div id="fontExtrudeFamilyPicker" class="font-extrude-family-picker" aria-label="Font family"></div>
+          </label>
+          <label class="select-line font-extrude-style-line">
+            <span data-tooltip="Choose weight/style available for the selected typeface">Style</span>
+            <select id="fontExtrudeVariant" aria-label="Typeface style">
+              <option value="">Regular</option>
+            </select>
+          </label>
+          <label class="select-line font-extrude-kerning-line">
+            <span data-tooltip="Auto uses the font's built-in kerning pairs. Optical tightens spacing by glyph shape (approximate).">Kerning</span>
+            <select id="fontExtrudeKerning" aria-label="Kerning mode">
+              <option value="metrics" selected>Auto</option>
+              <option value="optical">Optical</option>
+              <option value="none">None</option>
+            </select>
           </label>
           <label class="slider-line">
-            <span data-tooltip="Letter-spacing in thousandths of an em">Tracking</span>
+            <span data-tooltip="Letter-spacing in thousandths of an em">Letter Spacing</span>
             <input id="fontExtrudeTracking" type="range" min="-100" max="200" step="1" value="0" />
             <span class="value" data-output="fontExtrudeTracking">0</span>
           </label>
           <label class="slider-line">
-            <span data-tooltip="Vertical gap between lines (use Enter in the text box for new lines)">Line height</span>
+            <span data-tooltip="Vertical gap between lines (use Enter in the text box for new lines)">Line Height</span>
             <input id="fontExtrudeLineHeight" type="range" min="0.1" max="2.5" step="0.05" value="1" />
             <span class="value" data-output="fontExtrudeLineHeight">1.00×</span>
           </label>
-          <label class="select-line">
+          <label class="select-line font-extrude-align-line">
             <span data-tooltip="Horizontal alignment of each line">Align</span>
             <select id="fontExtrudeAlign" aria-label="Text alignment">
               <option value="left">Left</option>
@@ -129,18 +156,22 @@ export class FontExtrudeUI {
               <option value="right">Right</option>
             </select>
           </label>
+          <div id="fontExtrudeFileFallback" class="font-extrude-file-fallback" hidden>
+            <input type="file" id="fontExtrudeFile" class="sr-only" accept=".ttf,.otf,.woff,.woff2,font/*" />
+            <button type="button" id="fontExtrudeFileBtn" class="ghost-btn small">Load .ttf / .otf…</button>
+          </div>
+          <label class="color-line font-extrude-fill-color">
+            <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
+            <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
+          </label>
           <label class="select-line">
-            <span data-tooltip="Curve smoothness on letters — Ultra is very dense; best for hero exports or small type">Detail</span>
-            <select id="fontExtrudeDetail" aria-label="Extrusion detail">
+            <span data-tooltip="Curve smoothness on letters — Ultra is very dense; best for hero exports or small type">Mesh Detail</span>
+            <select id="fontExtrudeDetail" aria-label="Mesh detail">
               <option value="low">Low</option>
               <option value="medium" selected>Medium</option>
               <option value="high">High</option>
               <option value="ultra">Ultra</option>
             </select>
-          </label>
-          <label class="color-line font-extrude-fill-color">
-            <span data-tooltip="Fill color for 2D preview and generated 3D text">Color</span>
-            <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
           ${FONT_EXTRUDE_POST_GEN_CONTROLS_HTML}
           <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
@@ -159,12 +190,14 @@ export class FontExtrudeUI {
       foldout: block.querySelector('[data-effect-foldout="font-extrude"]'),
       text: block.querySelector('#fontExtrudeText'),
       familyPicker: block.querySelector('#fontExtrudeFamilyPicker'),
+      variant: block.querySelector('#fontExtrudeVariant'),
       fileFallback: block.querySelector('#fontExtrudeFileFallback'),
       fileInput: block.querySelector('#fontExtrudeFile'),
       fileBtn: block.querySelector('#fontExtrudeFileBtn'),
-      previewWrap: block.querySelector('.font-extrude-preview-wrap'),
+      liveEditor: block.querySelector('#fontExtrudeLiveEditor'),
       preview: block.querySelector('#fontExtrudePreview'),
       tracking: block.querySelector('#fontExtrudeTracking'),
+      kerning: block.querySelector('#fontExtrudeKerning'),
       lineHeight: block.querySelector('#fontExtrudeLineHeight'),
       detail: block.querySelector('#fontExtrudeDetail'),
       previewScale: block.querySelector('#fontExtrudePreviewScale'),
@@ -178,9 +211,12 @@ export class FontExtrudeUI {
       surfaceStrength: block.querySelector('#fontExtrudeSurfaceStrength'),
       fillColor: block.querySelector('#fontExtrudeFillColor'),
       revealDuration: block.querySelector('#fontExtrudeRevealDuration'),
+      revealSlideDepth: block.querySelector('#fontExtrudeRevealSlideDepth'),
+      revealSlideTime: block.querySelector('#fontExtrudeRevealSlideTime'),
+      revealSlideDirection: block.querySelector('#fontExtrudeRevealSlideDirection'),
       revealType: block.querySelector('#fontExtrudeRevealType'),
       revealPlay: block.querySelector('#fontExtrudeRevealPlay'),
-      revealPause: block.querySelector('#fontExtrudeRevealPause'),
+      revealLoop: block.querySelector('#fontExtrudeRevealLoop'),
       revealScrub: block.querySelector('#fontExtrudeRevealScrub'),
       revealTime: block.querySelector('#fontExtrudeRevealTime'),
       generate: block.querySelector('#fontExtrudeGenerate'),
@@ -222,14 +258,30 @@ export class FontExtrudeUI {
       this.schedulePreview();
       this.updateGenerateState();
     });
+    els.text?.addEventListener('focus', () => {
+      void this.ensureFontsReady();
+    });
+    els.text?.addEventListener('scroll', () => {
+      this.schedulePreview();
+    });
     els.fileBtn?.addEventListener('click', () => els.fileInput?.click());
     els.fileInput?.addEventListener('change', () => {
       void this.onFontFileSelected();
+    });
+    els.variant?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      void this.onFontVariantChange();
     });
     els.tracking?.addEventListener('input', () => {
       const value = Number(els.tracking.value);
       this.stateStore.set('fontExtrude.tracking', value);
       this.ui.updateValueLabel('fontExtrudeTracking', value, 'integer');
+      this.schedulePreview();
+    });
+    els.kerning?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const value = normalizeFontKerningMode(els.kerning.value);
+      this.stateStore.set('fontExtrude.kerning', value);
       this.schedulePreview();
     });
     els.lineHeight?.addEventListener('input', () => {
@@ -285,6 +337,33 @@ export class FontExtrudeUI {
       });
     });
 
+    els.revealSlideDepth?.addEventListener('input', () => {
+      const value = clampFontRevealSlideDepth(els.revealSlideDepth.value);
+      this.stateStore.set('fontExtrude.revealSlideDepth', value);
+      this.ui.updateValueLabel('fontExtrudeRevealSlideDepth', value, 'decimal');
+      this._withRevealController((controller, model) => {
+        controller.onDurationChange?.(model);
+      });
+    });
+
+    els.revealSlideTime?.addEventListener('input', () => {
+      const value = clampFontRevealSlideTime(els.revealSlideTime.value);
+      this.stateStore.set('fontExtrude.revealSlideTime', value);
+      this.ui.updateValueLabel('fontExtrudeRevealSlideTime', `${Math.round(value * 100)}%`);
+      this._withRevealController((controller, model) => {
+        controller.onDurationChange?.(model);
+      });
+    });
+
+    els.revealSlideDirection?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const value = normalizeFontRevealSlideDirection(els.revealSlideDirection.value);
+      this.stateStore.set('fontExtrude.revealSlideDirection', value);
+      this._withRevealController((controller, model) => {
+        controller.onDurationChange?.(model);
+      });
+    });
+
     els.revealType?.addEventListener('change', () => {
       this.ui.uiSounds?.playSelect();
       const value = normalizeFontRevealType(els.revealType.value);
@@ -292,6 +371,12 @@ export class FontExtrudeUI {
       this._withRevealController((controller, model) => {
         controller.onRevealTypeChange?.(model);
       });
+    });
+
+    els.revealLoop?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const enabled = !!els.revealLoop.checked;
+      this.stateStore.set('fontExtrude.revealLoop', enabled);
     });
 
     els.revealPlay?.addEventListener('click', () => {
@@ -309,16 +394,11 @@ export class FontExtrudeUI {
           this.ui.showToast('No letters to animate — regenerate 3D text');
           return;
         }
-        controller.startPreview(model);
-      });
-    });
-
-    els.revealPause?.addEventListener('click', () => {
-      this.ui.uiSounds?.playSelect();
-      this._withRevealController((controller, model) => {
-        if (!controller.pausePreview?.(model)) {
-          this.ui.showToast('Reveal needs 3D text — click Generate 3D Text first');
+        if (controller.isPreviewPlaying()) {
+          controller.pausePreview(model);
+          return;
         }
+        controller.startPreview(model);
       });
     });
 
@@ -343,17 +423,20 @@ export class FontExtrudeUI {
     this.eventBus.on('font:generated', this._onFontGenerated);
     this.eventBus.on('scene:model-load-complete', this._onModelLoadComplete);
 
-    if (this.els.previewWrap && typeof ResizeObserver !== 'undefined') {
+    if (this.els.liveEditor && typeof ResizeObserver !== 'undefined') {
       this._previewResizeObs = new ResizeObserver(() => {
         if (this._syncPreviewCanvasSize()) this.schedulePreview();
       });
-      this._previewResizeObs.observe(this.els.previewWrap);
+      this._previewResizeObs.observe(this.els.liveEditor);
     }
     this._syncPreviewCanvasSize();
 
     this.updateGenerateState();
     this.syncExtrudeControls(this.stateStore.getState());
     this.syncPostGenControlsVisibility();
+    if (this.stateStore.getState()?.fontExtrude?.panelOpen) {
+      void this.ensureFontsReady();
+    }
   }
 
   _hasFontMesh() {
@@ -405,12 +488,15 @@ export class FontExtrudeUI {
     const { els } = this;
 
     if (els.revealPlay) {
-      els.revealPlay.disabled = !enabled || playing;
-      els.revealPlay.setAttribute('aria-label', 'Play reveal animation');
-    }
-
-    if (els.revealPause) {
-      els.revealPause.disabled = !enabled || !playing;
+      els.revealPlay.disabled = !enabled;
+      els.revealPlay.setAttribute('aria-pressed', playing ? 'true' : 'false');
+      els.revealPlay.setAttribute('aria-label', playing ? 'Pause reveal animation' : 'Play reveal animation');
+      els.revealPlay.dataset.tooltip = playing ? 'Pause reveal preview' : 'Play reveal preview';
+      const icon = els.revealPlay.querySelector('i');
+      if (icon) {
+        icon.classList.toggle('fa-play', !playing);
+        icon.classList.toggle('fa-pause', playing);
+      }
     }
 
     if (els.revealScrub) {
@@ -480,11 +566,35 @@ export class FontExtrudeUI {
       this.els.revealDuration.value = String(revealDuration);
       this.ui.updateValueLabel('fontExtrudeRevealDuration', `${revealDuration.toFixed(1)}s`);
     }
+    const revealSlideDepth = clampFontRevealSlideDepth(
+      state?.fontExtrude?.revealSlideDepth ?? DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
+    );
+    if (this.els.revealSlideDepth && document.activeElement !== this.els.revealSlideDepth) {
+      this.els.revealSlideDepth.value = String(revealSlideDepth);
+      this.ui.updateValueLabel('fontExtrudeRevealSlideDepth', revealSlideDepth, 'decimal');
+    }
+    const revealSlideTime = clampFontRevealSlideTime(
+      state?.fontExtrude?.revealSlideTime ?? DEFAULT_FONT_REVEAL_SLIDE_TIME,
+    );
+    if (this.els.revealSlideTime && document.activeElement !== this.els.revealSlideTime) {
+      this.els.revealSlideTime.value = String(revealSlideTime);
+      this.ui.updateValueLabel('fontExtrudeRevealSlideTime', `${Math.round(revealSlideTime * 100)}%`);
+    }
+    const revealSlideDirection = normalizeFontRevealSlideDirection(
+      state?.fontExtrude?.revealSlideDirection ?? DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
+    );
+    if (this.els.revealSlideDirection && document.activeElement !== this.els.revealSlideDirection) {
+      this.els.revealSlideDirection.value = revealSlideDirection;
+    }
     const revealType = normalizeFontRevealType(
       state?.fontExtrude?.revealType ?? DEFAULT_FONT_REVEAL_TYPE,
     );
     if (this.els.revealType && document.activeElement !== this.els.revealType) {
       this.els.revealType.value = revealType;
+    }
+    const revealLoop = state?.fontExtrude?.revealLoop !== false;
+    if (this.els.revealLoop && document.activeElement !== this.els.revealLoop) {
+      this.els.revealLoop.checked = revealLoop;
     }
   }
 
@@ -529,6 +639,10 @@ export class FontExtrudeUI {
       this.els.tracking.value = String(fontState.tracking);
       this.ui.updateValueLabel('fontExtrudeTracking', fontState.tracking, 'integer');
     }
+    const kerning = normalizeFontKerningMode(fontState.kerning ?? DEFAULT_FONT_KERNING_MODE);
+    if (this.els.kerning && document.activeElement !== this.els.kerning) {
+      this.els.kerning.value = kerning;
+    }
     if (this.els.lineHeight && Number.isFinite(fontState.lineHeight)) {
       this.els.lineHeight.value = String(fontState.lineHeight);
       this.ui.updateValueLabel('fontExtrudeLineHeight', fontState.lineHeight, 'multiplier');
@@ -565,17 +679,56 @@ export class FontExtrudeUI {
   }
 
   async initFonts() {
-    this._fonts = await this.controller.getAvailableFonts();
-    if (!this._fonts.length) {
+    this._fontFamilies = await this.controller.getAvailableFonts();
+    this._fontFamilyByPostscript.clear();
+
+    if (!this._fontFamilies.length) {
+      this._fonts = [];
       this.els.fileFallback.hidden = false;
       this.familyPicker?.populate([]);
       this.familyPicker?.setDisabled(true);
+      this._setVariantOptions([]);
       return;
+    }
+
+    this._fonts = this._fontFamilies.map((familyGroup) => ({
+      family: familyGroup.family,
+      postscriptName: familyGroup.defaultPostscriptName,
+    }));
+    for (const familyGroup of this._fontFamilies) {
+      for (const variant of familyGroup.variants || []) {
+        this._fontFamilyByPostscript.set(variant.postscriptName, familyGroup);
+      }
     }
 
     this.els.fileFallback.hidden = true;
     this.familyPicker?.populate(this._fonts);
     this.familyPicker?.setDisabled(false);
+    this._setVariantOptions([]);
+    await this._loadDefaultFontIfNeeded();
+  }
+
+  /** Auto-select Arial (or closest sans) so the live editor is ready to type. */
+  async _loadDefaultFontIfNeeded() {
+    if (this.controller.font) {
+      this.schedulePreview();
+      return;
+    }
+    const postscriptName = await this.controller.resolveDefaultPostscriptName();
+    if (!postscriptName) return;
+
+    const familyGroup = this._fontFamilyByPostscript.get(postscriptName) ?? null;
+    const label = this._familyLabelForPostscript(postscriptName);
+    this.familyPicker?.setValue(postscriptName, label);
+    this._setVariantOptions(familyGroup?.variants || [], postscriptName);
+
+    try {
+      await this.controller.loadFont(postscriptName);
+      this.schedulePreview();
+      this.updateGenerateState();
+    } catch (err) {
+      console.warn('[Orby] Could not load default font', postscriptName, err);
+    }
   }
 
   /**
@@ -584,7 +737,7 @@ export class FontExtrudeUI {
    */
   _syncPreviewCanvasSize() {
     const canvas = this.els.preview;
-    const wrap = this.els.previewWrap;
+    const wrap = this.els.liveEditor;
     if (!canvas || !wrap) return false;
 
     const cssW = Math.max(1, Math.round(wrap.clientWidth));
@@ -620,6 +773,8 @@ export class FontExtrudeUI {
 
   async onFontFamilyChange() {
     const psName = this.familyPicker?.getValue();
+    const familyGroup = this._fontFamilyByPostscript.get(psName) ?? null;
+    this._setVariantOptions(familyGroup?.variants || [], psName);
     this._previewGeneration += 1;
     this.clearPreviewCanvas();
     if (!psName) {
@@ -627,6 +782,23 @@ export class FontExtrudeUI {
       this.updateGenerateState();
       return;
     }
+    try {
+      await this.controller.loadFont(psName);
+      this.ui.showToast(`Font: ${this.controller.fontLabel}`, 2400, { notification: false });
+    } catch (err) {
+      console.warn(err);
+      this.ui.showToast('Could not load font');
+    }
+    this.updateGenerateState();
+    this.schedulePreview();
+  }
+
+  async onFontVariantChange() {
+    const psName = this.els.variant?.value || this.familyPicker?.getValue();
+    if (!psName) return;
+    this.familyPicker?.setValue(psName, this._familyLabelForPostscript(psName));
+    this._previewGeneration += 1;
+    this.clearPreviewCanvas();
     try {
       await this.controller.loadFont(psName);
       this.ui.showToast(`Font: ${this.controller.fontLabel}`, 2400, { notification: false });
@@ -647,6 +819,10 @@ export class FontExtrudeUI {
       await this.controller.loadFont(file);
       const previewCss = await this.controller.registerFilePreview('__file__', file);
       this.familyPicker?.setCustomEntry('__file__', file.name, previewCss);
+      this._setVariantOptions(
+        [{ postscriptName: '__file__', styleLabel: 'Regular', fullName: file.name }],
+        '__file__',
+      );
       this.ui.showToast(`Font: ${this.controller.fontLabel}`, 2400, { notification: false });
     } catch (err) {
       console.warn(err);
@@ -674,6 +850,7 @@ export class FontExtrudeUI {
     return {
       align,
       tracking: Number(this.els.tracking?.value ?? fontState.tracking ?? 0),
+      kerning: normalizeFontKerningMode(this.els.kerning?.value ?? fontState.kerning),
       lineHeight: Number(this.els.lineHeight?.value ?? fontState.lineHeight ?? 1),
       detail: normalizeFontExtrudeDetail(this.els.detail?.value ?? fontState.detail ?? 'medium'),
       fillColor: normalizeGlyphFillHex(
@@ -685,10 +862,14 @@ export class FontExtrudeUI {
 
   getPreviewScale() {
     const fontState = this.stateStore.getState()?.fontExtrude || {};
-    const value = Number(this.els.previewScale?.value ?? fontState.previewScale ?? 1);
+    const value = Number(
+      this.els.previewScale?.value ?? fontState.previewScale ?? FontExtrudeUI.PREVIEW_SCALE_DEFAULT,
+    );
+    const fallback =
+      Number.isFinite(value) && value > 0 ? value : FontExtrudeUI.PREVIEW_SCALE_DEFAULT;
     return Math.max(
       FontExtrudeUI.PREVIEW_SCALE_MIN,
-      Math.min(FontExtrudeUI.PREVIEW_SCALE_MAX, value),
+      Math.min(FontExtrudeUI.PREVIEW_SCALE_MAX, fallback),
     );
   }
 
@@ -739,7 +920,11 @@ export class FontExtrudeUI {
     const inkCenterX = (bounds.minX + bounds.maxX) * 0.5;
     const targetCenterX = layout.align === 'center' ? layoutMaxW * 0.5 : inkCenterX;
     const slotLeft = pad + availW * 0.5 - targetCenterX * scale;
-    const slotTop = pad + availH * 0.5 - ((bounds.minY + bounds.maxY) * 0.5) * scale;
+    let slotTop = pad + availH * 0.5 - ((bounds.minY + bounds.maxY) * 0.5) * scale;
+    const textarea = this.els.text;
+    if (textarea && scale > 0) {
+      slotTop -= textarea.scrollTop / scale;
+    }
     ctx.save();
     // Paths from opentype.js are already canvas Y-down (glyph Y is negated in getPath).
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -766,6 +951,32 @@ export class FontExtrudeUI {
           ? 'Enter text to generate'
           : 'Extrude preview text into a 3D mesh';
     }
+  }
+
+  _familyLabelForPostscript(postscriptName) {
+    const familyGroup = this._fontFamilyByPostscript.get(postscriptName);
+    return familyGroup?.family || postscriptName || '— Select font —';
+  }
+
+  _setVariantOptions(variants, selectedPostscript = '') {
+    const variantSelect = this.els.variant;
+    if (!variantSelect) return;
+    const active = selectedPostscript || variantSelect.value || '';
+    variantSelect.innerHTML = '';
+    for (const variant of variants || []) {
+      const option = document.createElement('option');
+      option.value = variant.postscriptName;
+      option.textContent = variant.styleLabel || variant.fullName || variant.postscriptName;
+      if (option.value === active) option.selected = true;
+      variantSelect.appendChild(option);
+    }
+    if (!variantSelect.options.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Regular';
+      variantSelect.appendChild(option);
+    }
+    variantSelect.disabled = variantSelect.options.length <= 1;
   }
 
   async onGenerate() {

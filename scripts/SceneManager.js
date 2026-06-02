@@ -2102,6 +2102,7 @@ export class SceneManager {
     this.groundController?.setGroundY(value);
     this.backgroundController?.setGroundY(value);
     this._updateHdriShadowReceiverContact();
+    this._syncShadowCameraBounds();
   }
 
   setGridY(value) {
@@ -2490,10 +2491,16 @@ export class SceneManager {
       const gc = this.groundController;
       const podiumR = (gc.podiumBaseRadius ?? 2) * (gc.podiumScale ?? 1);
       const px = gc.podium?.position?.x ?? 0;
+      const py = gc.podium?.position?.y ?? 0;
       const pz = gc.podium?.position?.z ?? 0;
+      const podiumHeight = Math.max(0, gc.groundHeight ?? 0);
+      const centerToTopY = Math.abs((center.y ?? 0) - py);
+      const centerToBottomY = Math.abs((center.y ?? 0) - (py - podiumHeight));
+      const verticalReach = Math.max(centerToTopY, centerToBottomY);
+      const horizontalReach = Math.hypot(center.x - px, center.z - pz) + podiumR;
       radius = Math.max(
         radius,
-        Math.hypot(center.x - px, center.z - pz) + podiumR + 0.35,
+        Math.hypot(horizontalReach, verticalReach) + 0.35,
       );
     }
 

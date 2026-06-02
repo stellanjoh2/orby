@@ -2975,27 +2975,13 @@ export class MaterialController {
       return;
     }
 
-    // For non-clay materials, apply environment and blurriness as normal
-    // IMPORTANT: Always read the latest values from stateStore to ensure we have the most current user settings
-    // This prevents values from "resetting" when HDRI blurriness changes
+    // For non-clay materials, only sync environment map/intensity.
+    // Keep user-authored material surface values (metalness/roughness) intact while editing HDRI.
     const state = this.stateStore?.getState();
     const rawGlassRef = state?.advanced?.glassReflection;
     const glassEnvMul = Number.isFinite(Number(rawGlassRef))
       ? Math.min(4, Math.max(0, Number(rawGlassRef)))
       : 2;
-    const rawMetalness = state?.material?.metalness ?? this.materialSettings.metalness ?? 0.0;
-    const rawRoughness =
-      state?.material?.roughness ?? this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
-    const currentMetalness = Number.isFinite(Number(rawMetalness))
-      ? Math.min(1, Math.max(0, Number(rawMetalness)))
-      : 0;
-    const currentRoughness = Number.isFinite(Number(rawRoughness))
-      ? Math.min(1, Math.max(0, Number(rawRoughness)))
-      : DEFAULT_MATERIAL_ROUGHNESS;
-
-    // Also update materialSettings to keep them in sync
-    this.materialSettings.metalness = currentMetalness;
-    this.materialSettings.roughness = currentRoughness;
     
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.material) return;
@@ -3085,24 +3071,14 @@ export class MaterialController {
           }
 
           const isGlass = material.userData?.isGlass || this.isWindowMesh(child);
-          if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) {
-            if (isGlass) {
-              material.metalness = 0.0;
-              if (material.transparent) {
-                material.depthWrite = false;
-              }
-            } else {
-              material.metalness = currentMetalness;
-              if (hdriBlurriness > 0) {
-                const blurRoughness =
-                  currentRoughness + (1.0 - currentRoughness) * hdriBlurriness;
-                material.roughness = Math.min(1.0, blurRoughness);
-              } else {
-                material.roughness = currentRoughness;
-              }
+          if (
+            isGlass &&
+            (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)
+          ) {
+            material.metalness = 0.0;
+            if (material.transparent) {
+              material.depthWrite = false;
             }
-          } else if (material.roughness !== undefined && !isGlass) {
-            material.roughness = currentRoughness;
           }
 
           material.needsUpdate = true;

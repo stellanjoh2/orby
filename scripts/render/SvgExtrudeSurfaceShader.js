@@ -82,22 +82,32 @@ export function getSvgExtrudeSurfacePresetIndex(presetId) {
   return PRESET_TO_INDEX[presetId] ?? 0;
 }
 
+function resolveNormalMapUrl(url) {
+  if (!url) return '';
+  if (/^(?:https?:)?\/\//.test(url) || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+  const normalized = String(url).replace(/^\.?\//, '');
+  return new URL(`../../${normalized}`, import.meta.url).href;
+}
+
 function getNormalMapTexture(url) {
-  if (!url) return null;
-  if (normalTextureCache.has(url)) {
-    return normalTextureCache.get(url);
+  const resolvedUrl = resolveNormalMapUrl(url);
+  if (!resolvedUrl) return null;
+  if (normalTextureCache.has(resolvedUrl)) {
+    return normalTextureCache.get(resolvedUrl);
   }
   if (!normalTextureLoader) {
     normalTextureLoader = new THREE.TextureLoader();
   }
-  const tex = normalTextureLoader.load(url);
+  const tex = normalTextureLoader.load(resolvedUrl);
   tex.wrapS = tex.wrapT = THREE.MirroredRepeatWrapping;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
   if ('colorSpace' in tex && THREE.NoColorSpace) {
     tex.colorSpace = THREE.NoColorSpace;
   }
-  normalTextureCache.set(url, tex);
+  normalTextureCache.set(resolvedUrl, tex);
   return tex;
 }
 

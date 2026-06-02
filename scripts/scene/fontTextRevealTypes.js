@@ -7,6 +7,7 @@
  * @typedef {{
  *   group: import('three').Object3D,
  *   restPosition: import('three').Vector3,
+ *   restRotationY: number,
  *   restRotationZ: number,
  *   slideDistance: number,
  *   meshMaterials: Array<{ mat: import('three').Material, opacity: number, transparent: boolean }>,
@@ -14,8 +15,16 @@
  */
 
 /** @typedef {'scale' | 'fade' | 'slideUp' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
+/** @typedef {'back' | 'front'} FontRevealSlideDirection */
 
 export const DEFAULT_FONT_REVEAL_TYPE = 'scale';
+export const DEFAULT_FONT_REVEAL_SLIDE_DEPTH = 0.18;
+export const DEFAULT_FONT_REVEAL_SLIDE_TIME = 0.45;
+export const DEFAULT_FONT_REVEAL_SLIDE_DIRECTION = 'back';
+export const MIN_FONT_REVEAL_SLIDE_DEPTH = 0;
+export const MAX_FONT_REVEAL_SLIDE_DEPTH = 2.5;
+export const MIN_FONT_REVEAL_SLIDE_TIME = 0.1;
+export const MAX_FONT_REVEAL_SLIDE_TIME = 1;
 
 /** @type {ReadonlyArray<{ id: FontRevealTypeId, label: string, ease: string, tooltip: string }>} */
 export const FONT_REVEAL_TYPE_OPTIONS = [
@@ -34,8 +43,8 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
   {
     id: 'slideUp',
     label: 'Slide Up',
-    ease: 'power2.out',
-    tooltip: 'Rise into place — like gsap.from({ y: "40%" })',
+    ease: 'expo.out (soft)',
+    tooltip: 'Rise into place with a long soft landing — steep start, gentle settle',
   },
   {
     id: 'pop',
@@ -47,7 +56,7 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
     id: 'rotate',
     label: 'Rotate',
     ease: 'power2.out',
-    tooltip: 'Flip in on Z — like gsap.from({ rotation: -90 })',
+    tooltip: 'Turn in on Y — uses true 3D depth as letters face the camera',
   },
   {
     id: 'elastic',
@@ -58,11 +67,20 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
 ];
 
 const VALID_IDS = new Set(FONT_REVEAL_TYPE_OPTIONS.map((o) => o.id));
+const VALID_SLIDE_DIRECTIONS = new Set(['back', 'front']);
 
 /** @param {unknown} value @returns {FontRevealTypeId} */
 export function normalizeFontRevealType(value) {
   const id = typeof value === 'string' ? value : '';
   return VALID_IDS.has(id) ? /** @type {FontRevealTypeId} */ (id) : DEFAULT_FONT_REVEAL_TYPE;
+}
+
+/** @param {unknown} value @returns {FontRevealSlideDirection} */
+export function normalizeFontRevealSlideDirection(value) {
+  const direction = typeof value === 'string' ? value : '';
+  return VALID_SLIDE_DIRECTIONS.has(direction)
+    ? /** @type {FontRevealSlideDirection} */ (direction)
+    : DEFAULT_FONT_REVEAL_SLIDE_DIRECTION;
 }
 
 /** @param {number} t @returns {number} */
@@ -78,6 +96,20 @@ export function easePower2Out(t) {
 /** @param {number} t @returns {number} */
 export function easePower3Out(t) {
   return 1 - (1 - t) ** 3;
+}
+
+/**
+ * Depth slide / Slide Up outro — fast early travel, long soft landing (AE-style, gentler than full expo.out).
+ * @param {number} t linear 0–1 through the slide window
+ * @returns {number}
+ */
+export function easeSlideSoftOut(t) {
+  const u = Math.max(0, Math.min(1, t));
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  const expo = 1 - 2 ** (-7 * u);
+  const power5 = 1 - (1 - u) ** 5;
+  return expo * 0.55 + power5 * 0.45;
 }
 
 /**
@@ -112,8 +144,9 @@ export function easeForRevealType(type, t) {
       return easeBackOut(clamped, 1.7);
     case 'elastic':
       return easeElasticOut(clamped);
-    case 'rotate':
     case 'slideUp':
+      return easeSlideSoftOut(clamped);
+    case 'rotate':
     case 'scale':
     default:
       return easePower2Out(clamped);
@@ -161,7 +194,21 @@ export function computeGlyphRevealEase(
   return easeForRevealType(type, raw);
 }
 
-const _ROTATE_START = -Math.PI / 2;
+/** @param {unknown} value */
+export function clampFontRevealSlideDepth(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_FONT_REVEAL_SLIDE_DEPTH;
+  return Math.max(MIN_FONT_REVEAL_SLIDE_DEPTH, Math.min(MAX_FONT_REVEAL_SLIDE_DEPTH, numeric));
+}
+
+/** @param {unknown} value */
+export function clampFontRevealSlideTime(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_FONT_REVEAL_SLIDE_TIME;
+  return Math.max(MIN_FONT_REVEAL_SLIDE_TIME, Math.min(MAX_FONT_REVEAL_SLIDE_TIME, numeric));
+}
+
+const _ROTATE_Y_START = -Math.PI / 2;
 
 /**
  * @param {FontRevealTypeId} type
@@ -169,16 +216,23 @@ const _ROTATE_START = -Math.PI / 2;
  * @param {{
  *   group: import('three').Object3D,
  *   restPosition: import('three').Vector3,
+ *   restRotationY: number,
  *   restRotationZ: number,
  *   slideDistance: number,
  *   meshMaterials: Array<{ mat: import('three').Material, opacity: number, transparent: boolean }>,
  * }} state
+ * @param {{ rawProgress?: number, slideDepth?: number, slideTime?: number, slideDirection?: FontRevealSlideDirection }} [options]
  */
-export function applyRevealPoseToGlyph(type, eased, state) {
-  const { group, restPosition, restRotationZ, slideDistance, meshMaterials } = state;
+export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
+  const { group, restPosition, restRotationY, restRotationZ, slideDistance, meshMaterials } = state;
   const e = eased;
+  const raw = Math.max(0, Math.min(1, Number(options.rawProgress) || 0));
+  const slideDepth = clampFontRevealSlideDepth(options.slideDepth);
+  const slideTime = clampFontRevealSlideTime(options.slideTime);
+  const slideDirection = normalizeFontRevealSlideDirection(options.slideDirection);
 
   group.position.copy(restPosition);
+  group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
   group.scale.set(1, 1, 1);
 
@@ -207,7 +261,7 @@ export function applyRevealPoseToGlyph(type, eased, state) {
     }
 
     case 'rotate':
-      group.rotation.z = restRotationZ + _ROTATE_START * (1 - Math.max(0, Math.min(1, e)));
+      group.rotation.y = restRotationY + _ROTATE_Y_START * (1 - Math.max(0, Math.min(1, e)));
       group.visible = e > 0.001;
       break;
 
@@ -219,19 +273,28 @@ export function applyRevealPoseToGlyph(type, eased, state) {
       break;
     }
   }
+
+  if (slideDepth > 0) {
+    const travelLinear = Math.max(0, Math.min(1, raw / Math.max(0.001, slideTime)));
+    const travelEased = easeSlideSoftOut(travelLinear);
+    const directionSign = slideDirection === 'front' ? 1 : -1;
+    group.position.z = restPosition.z + directionSign * slideDepth * (1 - travelEased);
+  }
 }
 
 /**
  * @param {{
  *   group: import('three').Object3D,
  *   restPosition: import('three').Vector3,
+ *   restRotationY: number,
  *   restRotationZ: number,
  *   meshMaterials: Array<{ mat: import('three').Material, opacity: number, transparent: boolean }>,
  * }} state
  */
 export function resetRevealGlyphPose(state) {
-  const { group, restPosition, restRotationZ, meshMaterials } = state;
+  const { group, restPosition, restRotationY, restRotationZ, meshMaterials } = state;
   group.position.copy(restPosition);
+  group.rotation.y = restRotationY;
   group.rotation.z = restRotationZ;
   group.scale.set(1, 1, 1);
   group.visible = true;

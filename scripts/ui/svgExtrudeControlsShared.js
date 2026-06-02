@@ -649,19 +649,36 @@ function buildFontRevealTypeOptionsHtml() {
   ).join('');
 }
 
-/** Reveal animation — after Surface, only visible once 3D text exists. */
+/** Reveal animation — only visible once 3D text exists. */
 export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
             <div class="font-extrude-animation" id="fontExtrudeAnimation">
               <label class="select-line font-extrude-reveal-type">
-                <span data-tooltip="Per-letter reveal style (GSAP-inspired eases)">Reveal type</span>
+                <span data-tooltip="Per-letter reveal style (GSAP-inspired eases)">Reveal Type</span>
                 <select id="fontExtrudeRevealType" aria-label="Reveal animation type">
                   ${buildFontRevealTypeOptionsHtml()}
                 </select>
               </label>
               <label class="slider-line font-extrude-reveal-duration">
-                <span data-tooltip="Character-by-character reveal. Last letter finishes at this time. 0 = off.">Reveal duration</span>
+                <span data-tooltip="Character-by-character reveal. Last letter finishes at this time. 0 = off.">Reveal Duration</span>
                 <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
                 <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
+              </label>
+              <label class="slider-line font-extrude-reveal-slide-depth">
+                <span data-tooltip="How far each letter starts in depth before sliding into place">Slide Depth</span>
+                <input id="fontExtrudeRevealSlideDepth" type="range" min="0" max="2.5" step="0.01" value="0.18" />
+                <span class="value" data-output="fontExtrudeRevealSlideDepth">0.18</span>
+              </label>
+              <label class="slider-line font-extrude-reveal-slide-time">
+                <span data-tooltip="Share of each letter's slot for depth travel. 100% uses the full slot and shows the soft ease-out landing best.">Slide Time</span>
+                <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="1" step="0.01" value="0.45" />
+                <span class="value" data-output="fontExtrudeRevealSlideTime">45%</span>
+              </label>
+              <label class="select-line font-extrude-reveal-slide-direction">
+                <span data-tooltip="Choose whether depth travel starts from behind or from camera side">Slide Direction</span>
+                <select id="fontExtrudeRevealSlideDirection" aria-label="Reveal slide direction">
+                  <option value="back" selected>From back</option>
+                  <option value="front">From front</option>
+                </select>
               </label>
               <div class="font-extrude-reveal-preview animation-controls">
                 <button
@@ -670,22 +687,18 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   class="animation-play-btn"
                   disabled
                   aria-label="Play reveal animation"
-                  data-tooltip="Loop preview from the first letter"
+                  data-tooltip="Play reveal preview"
                 >
                   <i class="fa-solid fa-play" aria-hidden="true"></i>
-                  <span class="sr-only">Play</span>
+                  <span class="sr-only">Play or pause</span>
                 </button>
-                <button
-                  type="button"
-                  id="fontExtrudeRevealPause"
-                  class="animation-play-btn"
-                  disabled
-                  aria-label="Pause reveal animation"
-                  data-tooltip="Pause loop preview"
-                >
-                  <i class="fa-solid fa-pause" aria-hidden="true"></i>
-                  <span class="sr-only">Pause</span>
-                </button>
+                <div class="font-extrude-reveal-loop-control" data-tooltip="When off, preview plays once and stops">
+                  <span class="font-extrude-reveal-loop-label">Loop</span>
+                  <label class="effect-toggle font-extrude-reveal-loop-toggle">
+                    <input type="checkbox" id="fontExtrudeRevealLoop" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                  </label>
+                </div>
                 <input
                   type="range"
                   id="fontExtrudeRevealScrub"
@@ -708,7 +721,7 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
               depth: {
                 id: 'fontExtrudeMeshDepth',
                 outputKey: 'fontExtrudeMeshDepth',
-                label: 'Depth',
+                label: 'Extrude Depth',
                 tooltip: 'Overall extrusion depth for generated text',
               },
               bevel: {
@@ -727,14 +740,17 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
                 ariaLabel: 'Smoothing angle',
               },
             })}
-            ${buildSvgExtrudeSurfaceControlsHtml({
-              presetId: 'fontExtrudeSurfacePreset',
-              scaleId: 'fontExtrudeSurfaceScale',
-              scaleOutput: 'fontExtrudeSurfaceScale',
-              strengthId: 'fontExtrudeSurfaceStrength',
-              strengthOutput: 'fontExtrudeSurfaceStrength',
-              presetAriaLabel: 'Font extrude surface material',
-            })}
+            <div class="font-extrude-surface-group">
+              ${buildSvgExtrudeSurfaceControlsHtml({
+                presetId: 'fontExtrudeSurfacePreset',
+                scaleId: 'fontExtrudeSurfaceScale',
+                scaleOutput: 'fontExtrudeSurfaceScale',
+                strengthId: 'fontExtrudeSurfaceStrength',
+                strengthOutput: 'fontExtrudeSurfaceStrength',
+                presetAriaLabel: 'Font extrude surface material',
+              })}
+            </div>
+            <div class="font-extrude-divider" aria-hidden="true"></div>
             ${FONT_EXTRUDE_ANIMATION_CONTROLS_HTML}
           </div>
 `;

@@ -1,7 +1,12 @@
 import * as opentype from 'opentype';
 import { FontExtrudeImporter, normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
+import {
+  getPairKerningPx,
+  normalizeFontKerningMode,
+} from './fontKerning.js';
 import { LocalFontPreviewCache } from './localFontPreviewCache.js';
+import { resolveDefaultFontPostscript } from './fontExtrudeDefaultFont.js';
 import {
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   DEFAULT_EXTRUDE_DEPTH,
@@ -15,7 +20,7 @@ const DEFAULT_PREVIEW_FILL = '#808080';
 /** Text extrudes toward the camera (flip on); not exposed in the font panel. */
 const FONT_EXTRUDE_FLIP_DIRECTION = true;
 
-/** Local Font Access returns one entry per face; collapse to one row per family for the UI. */
+/** Local Font Access returns one entry per face; group rows per family for the UI. */
 function localFontFamilyKey(entry) {
   const family = (entry.family || '').trim();
   if (family) return family.toLowerCase();
@@ -44,34 +49,116 @@ function localFontFaceRank(entry) {
   return 5;
 }
 
+function parseNumericFontWeight(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function localFontStyleLabel(entry) {
+  const weightNum = parseNumericFontWeight(entry.weight);
+  const rawStyle = String(entry.style || '').trim();
+  const normalizedStyle = rawStyle.toLowerCase();
+  const hasItalic = /\b(italic|oblique)\b/.test(normalizedStyle);
+
+  let weightLabel = '';
+  if (weightNum != null) {
+    if (weightNum <= 250) weightLabel = 'Thin';
+    else if (weightNum <= 350) weightLabel = 'Light';
+    else if (weightNum <= 450) weightLabel = 'Regular';
+    else if (weightNum <= 550) weightLabel = 'Medium';
+    else if (weightNum <= 650) weightLabel = 'Semibold';
+    else if (weightNum <= 750) weightLabel = 'Bold';
+    else if (weightNum <= 850) weightLabel = 'Heavy';
+    else weightLabel = 'Black';
+  } else if (rawStyle) {
+    weightLabel = rawStyle
+      .replace(/\bitalic\b/gi, '')
+      .replace(/\boblique\b/gi, '')
+      .trim();
+  } else {
+    const hay = `${entry.fullName || ''} ${entry.postscriptName || ''}`.toLowerCase();
+    if (/\bthin\b/.test(hay)) weightLabel = 'Thin';
+    else if (/\blight\b/.test(hay)) weightLabel = 'Light';
+    else if (/\b(regular|book|roman|normal)\b/.test(hay)) weightLabel = 'Regular';
+    else if (/\bmedium\b/.test(hay)) weightLabel = 'Medium';
+    else if (/\b(semibold|demi)\b/.test(hay)) weightLabel = 'Semibold';
+    else if (/\bbold\b/.test(hay)) weightLabel = 'Bold';
+    else if (/\b(heavy|extrabold|ultrabold)\b/.test(hay)) weightLabel = 'Heavy';
+    else if (/\bblack\b/.test(hay)) weightLabel = 'Black';
+  }
+
+  if (!weightLabel) weightLabel = 'Regular';
+  return hasItalic ? `${weightLabel} Italic` : weightLabel;
+}
+
+function localFontVariantSortScore(entry) {
+  const weightNum = parseNumericFontWeight(entry.weight);
+  const style = String(entry.styleRaw || entry.style || '').toLowerCase();
+  const italicBias = /\b(italic|oblique)\b/.test(style) ? 1 : 0;
+  return (weightNum ?? 400) + italicBias;
+}
+
 /**
- * @param {Array<{ family?: string, fullName?: string, postscriptName?: string, style?: string }>} fonts
- * @returns {Array<{ family: string, postscriptName: string, fullName?: string }>}
+ * @param {Array<{ family?: string, fullName?: string, postscriptName?: string, style?: string, weight?: number | string }>} fonts
+ * @returns {Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>}
  */
-function pickRepresentativeLocalFonts(fonts) {
-  /** @type {Map<string, { family: string, postscriptName: string, fullName?: string, rank: number }>} */
+function groupLocalFontsByFamily(fonts) {
+  /** @type {Map<string, { family: string, defaultPostscriptName: string, defaultRank: number, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>} */
   const byFamily = new Map();
   for (const entry of fonts) {
     const key = localFontFamilyKey(entry);
     const postscriptName = entry.postscriptName || entry.fullName;
     if (!key || !postscriptName) continue;
     const rank = localFontFaceRank(entry);
-    const candidate = {
-      family: entry.family || entry.fullName || postscriptName,
+    const variant = {
       postscriptName,
       fullName: entry.fullName,
-      rank,
+      styleLabel: localFontStyleLabel(entry),
+      weight: parseNumericFontWeight(entry.weight),
+      styleRaw: String(entry.style || ''),
     };
     const prev = byFamily.get(key);
-    if (
-      !prev ||
-      rank < prev.rank ||
-      (rank === prev.rank && postscriptName.length < prev.postscriptName.length)
-    ) {
-      byFamily.set(key, candidate);
+    if (!prev) {
+      byFamily.set(key, {
+        family: entry.family || entry.fullName || postscriptName,
+        defaultPostscriptName: postscriptName,
+        defaultRank: rank,
+        variants: [variant],
+      });
+      continue;
     }
+    if (
+      rank < prev.defaultRank ||
+      (rank === prev.defaultRank && postscriptName.length < prev.defaultPostscriptName.length)
+    ) {
+      prev.defaultPostscriptName = postscriptName;
+      prev.defaultRank = rank;
+    }
+    prev.variants.push(variant);
   }
-  const list = [...byFamily.values()].map(({ rank: _rank, ...rest }) => rest);
+  const list = [...byFamily.values()].map((familyGroup) => {
+    const deduped = new Map();
+    for (const variant of familyGroup.variants) {
+      if (!deduped.has(variant.postscriptName)) deduped.set(variant.postscriptName, variant);
+    }
+    const variants = [...deduped.values()].sort((a, b) => {
+      const scoreA = localFontVariantSortScore(a);
+      const scoreB = localFontVariantSortScore(b);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return (a.styleLabel || '').localeCompare(b.styleLabel || '', undefined, {
+        sensitivity: 'base',
+      });
+    });
+    return {
+      family: familyGroup.family,
+      defaultPostscriptName: familyGroup.defaultPostscriptName,
+      variants,
+    };
+  });
   list.sort((a, b) => a.family.localeCompare(b.family, undefined, { sensitivity: 'base' }));
   return list;
 }
@@ -148,17 +235,22 @@ export class FontExtrudeController {
   }
 
   /**
-   * @returns {Promise<Array<{ family: string, postscriptName: string, fullName?: string }>>}
+   * @returns {Promise<Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>>}
    */
   async getAvailableFonts() {
     if (!this._localFontsSupported) return [];
     try {
       const fonts = await window.queryLocalFonts();
-      return pickRepresentativeLocalFonts(fonts);
+      return groupLocalFontsByFamily(fonts);
     } catch (err) {
       console.warn('[Orby] Local Font Access denied or unavailable', err);
       return [];
     }
+  }
+
+  /** Arial / Helvetica / Liberation Sans — first match on this device. */
+  async resolveDefaultPostscriptName() {
+    return resolveDefaultFontPostscript();
   }
 
   /**
@@ -275,6 +367,7 @@ export class FontExtrudeController {
 
     const fontSize = DEFAULT_FONT_SIZE;
     const tracking = Number(options.tracking ?? 0);
+    const kerning = normalizeFontKerningMode(options.kerning);
     const lineHeightMul = Number(options.lineHeight ?? 1);
     const fill =
       options.fillColor ??
@@ -298,6 +391,9 @@ export class FontExtrudeController {
       const lineText = lines[lineIndex];
       const segments = [];
       let x = 0;
+      /** @type {import('../vendor/opentype.module.js').Glyph | null} */
+      let prevGlyph = null;
+      let prevX = 0;
       const glyphs = [...lineText];
       for (let i = 0; i < glyphs.length; i += 1) {
         if (i > 0 && i % GLYPH_CHUNK_SIZE === 0) {
@@ -306,7 +402,27 @@ export class FontExtrudeController {
         const char = glyphs[i];
         const glyph = font.charToGlyph(char);
         if (!glyph || glyph.unicode === undefined) continue;
+
+        if (prevGlyph) {
+          const step = this._glyphAdvance(prevGlyph, font, fontSize, tracking);
+          const provisionalX = prevX + step;
+          x =
+            provisionalX +
+            getPairKerningPx(
+              kerning,
+              font,
+              prevGlyph,
+              glyph,
+              prevX,
+              provisionalX,
+              y,
+              fontSize,
+            );
+        }
+
         segments.push({ glyph, x });
+        prevGlyph = glyph;
+        prevX = x;
         x += this._glyphAdvance(glyph, font, fontSize, tracking);
       }
 

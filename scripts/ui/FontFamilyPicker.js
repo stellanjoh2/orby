@@ -203,6 +203,7 @@ export class FontFamilyPicker {
     search?.addEventListener('input', () => {
       this._filter = (search instanceof HTMLInputElement ? search.value : '').trim().toLowerCase();
       this._applyFilter(this._filter);
+      this._scrollToFirstVisibleOption();
       if (this._open) this._startObserver();
     });
     search?.addEventListener('keydown', (e) => {
@@ -210,6 +211,19 @@ export class FontFamilyPicker {
         e.stopPropagation();
         this.close();
         this.trigger?.focus();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this._firstVisibleOption()?.focus();
+        return;
+      }
+      if (e.key === 'Enter') {
+        const first = this._firstVisibleOption();
+        if (first) {
+          e.preventDefault();
+          first.click();
+        }
       }
     });
 
@@ -236,6 +250,14 @@ export class FontFamilyPicker {
       const match = !filter || family.includes(filter);
       li.hidden = !match;
     }
+  }
+
+  _firstVisibleOption() {
+    return this.listbox?.querySelector('.font-extrude-family-option:not([hidden])') ?? null;
+  }
+
+  _scrollToFirstVisibleOption() {
+    this._firstVisibleOption()?.scrollIntoView({ block: 'nearest' });
   }
 
   _startObserver() {

@@ -5,8 +5,15 @@ import {
 } from './fontTextRevealDuration.js';
 import {
   applyRevealPoseToGlyph,
+  clampFontRevealSlideDepth,
+  clampFontRevealSlideTime,
+  computeGlyphSlotProgress,
   computeGlyphRevealEase,
   DEFAULT_FONT_REVEAL_TYPE,
+  DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
+  DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
+  DEFAULT_FONT_REVEAL_SLIDE_TIME,
+  normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
   resetRevealGlyphPose,
 } from './fontTextRevealTypes.js';
@@ -17,7 +24,16 @@ export {
   MAX_FONT_REVEAL_DURATION_SEC,
   clampFontRevealDurationSec,
 } from './fontTextRevealDuration.js';
-export { DEFAULT_FONT_REVEAL_TYPE, normalizeFontRevealType } from './fontTextRevealTypes.js';
+export {
+  DEFAULT_FONT_REVEAL_TYPE,
+  DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
+  DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
+  DEFAULT_FONT_REVEAL_SLIDE_TIME,
+  clampFontRevealSlideDepth,
+  clampFontRevealSlideTime,
+  normalizeFontRevealSlideDirection,
+  normalizeFontRevealType,
+} from './fontTextRevealTypes.js';
 
 /** @param {THREE.Object3D | null | undefined} model */
 export function isFontExtrudeRevealModel(model) {
@@ -71,6 +87,26 @@ export class FontTextRevealController {
 
   getRevealType() {
     return normalizeFontRevealType(this.stateStore?.getState()?.fontExtrude?.revealType);
+  }
+
+  getSlideDepth() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealSlideDepth;
+    return clampFontRevealSlideDepth(raw ?? DEFAULT_FONT_REVEAL_SLIDE_DEPTH);
+  }
+
+  getSlideTime() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealSlideTime;
+    return clampFontRevealSlideTime(raw ?? DEFAULT_FONT_REVEAL_SLIDE_TIME);
+  }
+
+  getSlideDirection() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealSlideDirection;
+    return normalizeFontRevealSlideDirection(raw ?? DEFAULT_FONT_REVEAL_SLIDE_DIRECTION);
+  }
+
+  isLoopEnabled() {
+    const loop = this.stateStore?.getState()?.fontExtrude?.revealLoop;
+    return loop !== false;
   }
 
   isEnabled() {
@@ -168,6 +204,7 @@ export class FontTextRevealController {
       return {
         group,
         restPosition: group.position.clone(),
+        restRotationY: group.rotation.y,
         restRotationZ: group.rotation.z,
         slideDistance,
         meshMaterials,
@@ -282,8 +319,9 @@ export class FontTextRevealController {
   startPreview(model) {
     const target = model ?? this._boundModel;
     if (!this.ensureBoundToModel(target)) return false;
+    const duration = this.getDurationSec();
 
-    if (this._previewMode === 'idle') {
+    if (this._previewMode === 'idle' || this._elapsed >= Math.max(0, duration - 1e-4)) {
       this._elapsed = 0;
       this.applyAtTime(0);
     }
@@ -377,10 +415,19 @@ export class FontTextRevealController {
     }
 
     const type = this.getRevealType();
+    const slideDepth = this.getSlideDepth();
+    const slideTime = this.getSlideTime();
+    const slideDirection = this.getSlideDirection();
     for (let i = 0; i < count; i += 1) {
       const state = this._glyphStates[i];
+      const rawProgress = computeGlyphSlotProgress(i, count, elapsedSec, duration);
       const eased = computeGlyphRevealEase(type, i, count, elapsedSec, duration);
-      applyRevealPoseToGlyph(type, eased, state);
+      applyRevealPoseToGlyph(type, eased, state, {
+        rawProgress,
+        slideDepth,
+        slideTime,
+        slideDirection,
+      });
     }
 
     this._boundModel?.updateMatrixWorld?.(true);
@@ -454,8 +501,15 @@ export class FontTextRevealController {
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     this._elapsed += d;
     if (this._elapsed >= duration) {
-      this._elapsed = 0;
-      this.applyAtTime(0);
+      if (this.isLoopEnabled()) {
+        this._elapsed = 0;
+        this.applyAtTime(0);
+      } else {
+        this._elapsed = duration;
+        this._previewMode = 'paused';
+        this._stopPreviewLoop();
+        this.applyAtTime(duration);
+      }
       this._notifyPreviewTime();
       return;
     }
