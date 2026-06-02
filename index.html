@@ -721,21 +721,20 @@
                 -->
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="wireframe">
-                  <div class="block-title has-reset">
+                  <div class="block-title has-toggle has-reset">
                     <span>Wireframe</span>
-                    <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe" data-tooltip="Reset Wireframe settings">
-                      <i class="fa-solid fa-rotate-left"></i>
-                      <span class="sr-only">Reset</span>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="wireframe" aria-label="Reset Wireframe" data-tooltip="Reset Wireframe settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show wireframe overlay on all display modes">
+                        <input type="checkbox" id="wireframeAlwaysOn" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable wireframe overlay</span>
+                      </label>
+                    </div>
                   </div>
-                  <label class="slider-line">
-                    <span>Always On</span>
-                    <label class="effect-toggle" data-tooltip="Show wireframe overlay on all display modes">
-                      <input type="checkbox" id="wireframeAlwaysOn" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Always show wireframe</span>
-                    </label>
-                  </label>
                   <div
                     class="effect-foldout effect-foldout--collapsed"
                     data-effect-foldout="wireframe-settings"
@@ -1478,7 +1477,7 @@
                   <span class="value" data-output="hdriRotation">0°</span>
                 </label>
                 <label class="slider-line">
-                  <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only Background Color (below) is shown; HDRI still lights the model.">Render Backdrop</span>
+                  <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only the solid background color is shown; HDRI still lights the model.">Render Backdrop</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriBackground" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -1496,11 +1495,22 @@
                 </div>
               </div>
 
-              <div class="panel-block" data-block="background">
+              <div
+                class="panel-block panel-block--compact-head"
+                data-block="background"
+                id="studioBackgroundPanel"
+                hidden
+              >
                 <div class="block-title has-reset">
-                  <span>Background Color</span>
-                  <button class="block-reset-btn" data-reset="background" aria-label="Reset Background" data-tooltip="Reset Background Color">
-                        <i class="fa-solid fa-rotate-left"></i>
+                  <span data-tooltip="Solid viewport background when HDRI lighting is off">Background</span>
+                  <button
+                    type="button"
+                    class="block-reset-btn"
+                    data-reset="background"
+                    aria-label="Reset Background"
+                    data-tooltip="Reset background color"
+                  >
+                    <i class="fa-solid fa-rotate-left"></i>
                     <span class="sr-only">Reset</span>
                   </button>
                 </div>
@@ -1661,9 +1671,9 @@
 
               <div class="panel-block" data-block="backdrop">
                 <div class="block-title has-toggle has-reset">
-                  <span>Studio Backdrop</span>
+                  <span>Studio</span>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="block-reset-btn" data-reset="backdrop" aria-label="Reset Studio Backdrop" data-tooltip="Reset Studio Backdrop settings">
+                    <button class="block-reset-btn" data-reset="backdrop" aria-label="Reset Studio" data-tooltip="Reset Studio settings">
                       <i class="fa-solid fa-rotate-left"></i>
                       <span class="sr-only">Reset</span>
                     </button>
@@ -3883,7 +3893,6 @@
                     type="button"
                     id="colorCheckerRawToggle"
                     class="accent-action-btn color-checker-raw-toggle"
-                    style="margin-bottom: 0.75rem;"
                     aria-pressed="false"
                     data-tooltip="Same as Display → Unlit on the Object tab: neutral mesh view for comparing grade + chart. Toggle off restores your previous display mode."
                   >
@@ -3977,7 +3986,7 @@
                 </div>
               </div>
 
-              <div class="panel-block">
+              <div class="panel-block panel-block--compact-head">
                 <div class="block-title">
                   <span>Quality</span>
                 </div>

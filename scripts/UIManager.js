@@ -1252,6 +1252,7 @@ export class UIManager {
       this.inputs.hdriUploadBtn.disabled = !enabled;
       this.inputs.hdriUploadBtn.classList.toggle('is-disabled', !enabled);
     }
+    this.updateHdriBackgroundFallbackVisibility(enabled);
     // Block muting handled by applyBlockStates via syncControls
     this.inputs.hdriBackground.disabled = !enabled;
     this.updateHdriReceiveShadowsAoDisabled();
@@ -1266,6 +1267,14 @@ export class UIManager {
     this.updateHdriReceiveShadowsAoDisabled();
     this.updateLensFlareControlsDisabled();
     this.updateGodRaysControlsDisabled();
+  }
+
+  updateHdriBackgroundFallbackVisibility(hdriEnabled = this.inputs.hdriEnabled?.checked) {
+    const panel =
+      this.dom.blocks?.background ??
+      document.getElementById('studioBackgroundPanel');
+    if (!panel) return;
+    panel.hidden = !!hdriEnabled;
   }
 
   updateHdriReceiveShadowsAoDisabled() {
@@ -3198,6 +3207,8 @@ export class UIManager {
     applyEffectFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
     applyStudioFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
     applyMeshFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
+
+    this.updateHdriBackgroundFallbackVisibility(currentState.hdriEnabled);
 
     const clayOn = currentState.shading === 'clay';
     if (this.dom.subsections?.clay) {

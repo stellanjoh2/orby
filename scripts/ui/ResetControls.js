@@ -171,7 +171,7 @@ const BLOCK_RESET_TOASTS = {
   base: 'Base reset',
   'base-glass': 'Base glass reset',
   backdrop: 'Backdrop reset',
-  background: 'Background reset',
+  background: 'Background color reset',
   grid: 'Grid reset',
   dof: 'Depth of field reset',
   bloom: 'Bloom reset',
@@ -218,6 +218,8 @@ export class ResetControls {
    * Reset icons are hidden by default. They appear once the user actually
    * interacts with a control inside that section — sliders, color pickers,
    * checkboxes, dropdowns, or `<button>` clicks like "Snap to Mesh".
+   * Reveal toggles (row before a foldout), section headline toggles, and
+   * `<details>` expand/collapse do not count.
    *
    * Comparing state against `getDefaults()` directly is not enough because
    * the app does plenty of automatic startup normalization (HDRI mood
@@ -252,6 +254,16 @@ export class ResetControls {
     // them on every state change (slider drags fire many notifications/sec).
     this._cachedDefaults = this.stateStore.getDefaults();
 
+    const isRevealOnlyFoldoutToggle = (el) => {
+      const input =
+        el instanceof HTMLInputElement
+          ? el
+          : el.closest?.('.effect-toggle input[type="checkbox"], .effect-toggle input[type="radio"]');
+      if (!(input instanceof HTMLInputElement)) return false;
+      const row = input.closest('.slider-line');
+      return !!row?.matches(':has(+ .effect-foldout)');
+    };
+
     const markTouched = (target) => {
       if (!(target instanceof Element)) return false;
       // Clicks/inputs on the reset button itself don't count as touching
@@ -263,6 +275,11 @@ export class ResetControls {
       // not count as a "change" the user can undo with reset — the section's
       // settings haven't actually moved away from defaults yet.
       if (target.closest('.block-title')) return false;
+      // Row toggle immediately before a foldout (e.g. Advanced → UV Checker) —
+      // reveals nested controls only; inner sliders/selects mark the section.
+      if (isRevealOnlyFoldoutToggle(target)) return false;
+      // `<details>` / Rare Fixes — expand/collapse is not a setting change.
+      if (target.closest('summary')) return false;
       for (const { type, scope } of this._resetScopes) {
         if (scope?.contains(target)) {
           this._touchedResetTypes.add(type);
@@ -283,6 +300,7 @@ export class ResetControls {
     const handleClick = (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+      if (target.closest('summary')) return;
       const button = target.closest('button');
       if (!button) return;
       markTouched(button);

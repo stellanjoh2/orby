@@ -1683,6 +1683,10 @@ html.orby-gate-unlocked .orby-entry-gate,
 }
 
 /* ColorChecker “Reference colors” — full-width toggle; On = filled accent like hover */
+.effect-foldout .color-checker-raw-toggle {
+  margin-bottom: var(--shelf-row-gap);
+}
+
 .color-checker-raw-toggle.color-checker-raw-toggle--on {
   opacity: 1;
   background: var(--accent);
@@ -3419,7 +3423,9 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --slider-value-col: 2.5rem; /* ~4 digits at 0.8rem; longer values ellipsize for now */
   /* --shelf-g: tab chrome bleed; --shelf-panel-gutter: equal H/V between shell bg and scroll cards */
   --shelf-stack-gap: 12px; /* section / block vertical rhythm @ 2560×1440 */
-  --shelf-row-gap: calc(var(--shelf-stack-gap) * 0.8); /* control rows (was 0.6rem) */
+  --shelf-row-gap: var(--shelf-stack-gap); /* label-to-label gap between control rows */
+  /* Match pill select height so slider / color / select labels share one stride */
+  --shelf-control-row-min-height: calc(0.7rem + var(--shelf-headline-font-size) * 1.25);
   --shelf-control-gap: 1rem; /* accent button stacks (Scene, Export) */
   --shelf-rhythm: var(--shelf-stack-gap);
   --shelf-g: calc(var(--shelf-rhythm) / 2);
@@ -3488,7 +3494,10 @@ html:not(.mobile-landing) .shelf {
   --shelf-g: calc(var(--shelf-rhythm) / 2);
   /* 12px @ 2560 (scale 1), 10px @ 1920 (scale 0.75); 2560 unchanged */
   --shelf-stack-gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
-  --shelf-row-gap: calc(var(--shelf-stack-gap) * 0.8);
+  --shelf-row-gap: var(--shelf-stack-gap);
+  --shelf-control-row-min-height: calc(
+    (0.7rem + var(--shelf-headline-font-size) * 1.25) * var(--studio-ui-scale)
+  );
   /* Scene/Export stacks: 16px @ 2560, 10px @ 1920 */
   --shelf-control-gap: calc(10px + 6px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
   --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
@@ -4731,7 +4740,8 @@ button.advanced-info-doc-btn {
   grid-template-columns: 108px auto minmax(0, 1fr);
   gap: 0.35rem;
   align-items: center;
-  margin-bottom: 0.45rem;
+  min-height: var(--shelf-control-row-min-height);
+  margin-bottom: var(--shelf-row-gap);
   font-size: var(--shelf-label-font-size);
 }
 
@@ -4755,6 +4765,7 @@ button.advanced-info-doc-btn {
 .select-line {
   display: grid;
   align-items: center;
+  min-height: var(--shelf-control-row-min-height);
   margin-bottom: var(--shelf-row-gap);
   font-size: var(--shelf-label-font-size);
 }
@@ -4766,6 +4777,35 @@ button.advanced-info-doc-btn {
 
 .color-line {
   grid-template-columns: 1fr auto;
+}
+
+/* Small sections (Background, …) — title-to-control gap matches control row rhythm */
+.panel-block--compact-head > .block-title {
+  margin-bottom: var(--shelf-row-gap);
+}
+
+/* Wireframe-style — headline, master row, then nested foldout */
+.subsection > .block-title:has(+ :is(.slider-line, .select-line, .color-line) + .effect-foldout) {
+  margin-bottom: var(--shelf-row-gap);
+}
+
+/*
+ * Shelf vertical rhythm — rows use margin-bottom between siblings only.
+ * No extra gap before a foldout, after the last row, or at card bottom (padding handles inset).
+ */
+:is(.panel-block, .subsection)
+  > :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
+:is(.panel-block, .subsection)
+  > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout) {
+  margin-bottom: 0;
+}
+
+:is(.panel-block, .subsection) > .effect-foldout:last-child
+  :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
+:is(.panel-block, .subsection)
+  > .effect-foldout:has(~ :last-child[hidden])
+  :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child {
+  margin-bottom: 0;
 }
 
 .select-line {
@@ -5147,7 +5187,7 @@ input[type='range']:disabled::-moz-range-thumb {
 
 #svgExtrudeColorDepths .slider-line {
   grid-template-columns: 90px 1fr 58px;
-  margin-bottom: 0.45rem;
+  margin-bottom: var(--shelf-row-gap);
   column-gap: 0.3rem;
 }
 
@@ -6327,6 +6367,13 @@ body.ui-hidden .shelf {
   padding-top: var(--shelf-section-inset);
 }
 
+/* Wireframe / UV Checker / … — row then foldout: one row-gap, not title inset + row margin */
+:is(.panel-block, .subsection)
+  > :is(.slider-line, .color-line, .select-line)
+  + .effect-foldout.effect-foldout--expanded {
+  padding-top: var(--shelf-row-gap);
+}
+
 .effect-foldout--expanded.effect-foldout--md {
   max-height: 52rem;
 }
@@ -7115,7 +7162,7 @@ html.mobile-landing .mobile-warning .brand-highlight {
 /* Object panel — Generate from Font (live editor = canvas + transparent textarea) */
 .font-extrude-live-editor {
   position: relative;
-  margin: 0 0 0.65rem;
+  margin: 0 0 var(--shelf-row-gap);
   width: 100%;
   height: 7.5rem;
   min-height: 7.5rem;
@@ -7186,27 +7233,24 @@ html.mobile-landing .mobile-warning .brand-highlight {
   -webkit-box-shadow: none !important;
 }
 
-.font-extrude-typo-family-line {
-  margin-bottom: 0.4rem;
-}
-
-.font-extrude-style-line {
-  margin-bottom: 0.1rem;
-}
-
 .font-extrude-typo-row {
   display: grid;
-  gap: 0.45rem;
-  margin-bottom: 0.45rem;
+  gap: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-row-gap);
 }
 
 .font-extrude-typo-row--pair {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.font-extrude-typo-row > :where(.select-line, .slider-line) {
+  margin-bottom: 0;
+}
+
 .font-extrude-typo-row--pair .select-line,
 .font-extrude-typo-row--pair .slider-line {
   min-width: 0;
+  min-height: auto;
 }
 
 .font-extrude-typo-row--pair .select-line {
@@ -7217,10 +7261,6 @@ html.mobile-landing .mobile-warning .brand-highlight {
 .font-extrude-typo-row--pair .select-line > span:first-child {
   font-size: 0.73rem;
   color: var(--text-dim);
-}
-
-.font-extrude-align-line {
-  margin-bottom: 0.1rem;
 }
 
 .font-extrude-file-fallback {
@@ -7381,10 +7421,6 @@ html.mobile-landing .mobile-warning .brand-highlight {
 .font-extrude-divider {
   margin: 0.55rem 0 0.65rem;
   border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-}
-
-.font-extrude-reveal-preview {
-  margin-bottom: 0.1rem;
 }
 
 .font-extrude-reveal-loop-control {
