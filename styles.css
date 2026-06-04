@@ -7658,9 +7658,32 @@ html.mobile-landing .mobile-warning .brand-highlight {
   margin-top: 0.35rem;
 }
 
+.font-extrude-animation .font-extrude-reveal-emissive .color-line:last-child {
+  margin-bottom: 0;
+}
+
+.font-extrude-animation .font-extrude-reveal-preview.animation-controls {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.font-extrude-reveal-preview-divider {
+  margin-top: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
 .font-extrude-divider {
   margin: 0.55rem 0 0.65rem;
   border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.font-extrude-animation > .font-extrude-reveal-slide-direction {
+  margin-bottom: 0;
+}
+
+.font-extrude-reveal-emissive-divider {
+  margin-top: 0.65rem;
+  margin-bottom: 0.65rem;
 }
 
 .font-extrude-reveal-loop-control {

@@ -3,6 +3,8 @@
  * Easing names mirror common GSAP defaults (power1/2/3, back, elastic).
  */
 
+import { restoreRevealGlyphEmissive } from './fontTextRevealEmissive.js';
+
 /**
  * @typedef {{
  *   group: import('three').Object3D,
@@ -10,7 +12,13 @@
  *   restRotationY: number,
  *   restRotationZ: number,
  *   slideDistance: number,
- *   meshMaterials: Array<{ mat: import('three').Material, opacity: number, transparent: boolean }>,
+ *   meshMaterials: Array<{
+ *     mat: import('three').Material,
+ *     opacity: number,
+ *     transparent: boolean,
+ *     restEmissive: import('three').Color,
+ *     restEmissiveIntensity: number,
+ *   }>,
  * }} RevealGlyphState
  */
 
@@ -226,7 +234,13 @@ const _ROTATE_Y_START = -Math.PI / 2;
  *   restRotationY: number,
  *   restRotationZ: number,
  *   slideDistance: number,
- *   meshMaterials: Array<{ mat: import('three').Material, opacity: number, transparent: boolean }>,
+ *   meshMaterials: Array<{
+ *     mat: import('three').Material,
+ *     opacity: number,
+ *     transparent: boolean,
+ *     restEmissive: import('three').Color,
+ *     restEmissiveIntensity: number,
+ *   }>,
  * }} state
  * @param {{ rawProgress?: number, slideDepth?: number, slideTime?: number, slideDirection?: FontRevealSlideDirection }} [options]
  */
@@ -302,7 +316,13 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
  *   restPosition: import('three').Vector3,
  *   restRotationY: number,
  *   restRotationZ: number,
- *   meshMaterials: Array<{ mat: import('three').Material, opacity: number, transparent: boolean }>,
+ *   meshMaterials: Array<{
+ *     mat: import('three').Material,
+ *     opacity: number,
+ *     transparent: boolean,
+ *     restEmissive: import('three').Color,
+ *     restEmissiveIntensity: number,
+ *   }>,
  * }} state
  */
 export function resetRevealGlyphPose(state) {
@@ -317,4 +337,5 @@ export function resetRevealGlyphPose(state) {
     mat.transparent = transparent;
     mat.needsUpdate = true;
   }
+  restoreRevealGlyphEmissive(state);
 }

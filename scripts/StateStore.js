@@ -79,6 +79,12 @@ export class StateStore {
         revealSlideTime: 0.45,
         /** Z-travel start direction for reveal slide depth. */
         revealSlideDirection: 'back',
+        /** Per-letter emissive during reveal, fading to rest after each glyph lands. */
+        revealEmissiveSlam: false,
+        revealEmissiveStrength: 1,
+        /** Seconds for emissive to decay after each letter lands. */
+        revealEmissiveDecaySec: 0.35,
+        revealEmissiveColor: '#c4ff00',
       },
       svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
       advanced: {

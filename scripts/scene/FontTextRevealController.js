@@ -17,6 +17,18 @@ import {
   normalizeFontRevealType,
   resetRevealGlyphPose,
 } from './fontTextRevealTypes.js';
+import {
+  applyRevealEmissiveSlam,
+  clampFontRevealEmissiveDecaySec,
+  clampFontRevealEmissiveStrength,
+  DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
+  DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC,
+  DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
+  DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH,
+  captureMaterialEmissiveRest,
+  normalizeFontRevealEmissiveColor,
+  normalizeFontRevealEmissiveSlamEnabled,
+} from './fontTextRevealEmissive.js';
 
 export {
   DEFAULT_FONT_REVEAL_DURATION_SEC,
@@ -34,6 +46,16 @@ export {
   normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
 } from './fontTextRevealTypes.js';
+export {
+  DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
+  DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC,
+  DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
+  DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH,
+  clampFontRevealEmissiveDecaySec,
+  clampFontRevealEmissiveStrength,
+  normalizeFontRevealEmissiveColor,
+  normalizeFontRevealEmissiveSlamEnabled,
+} from './fontTextRevealEmissive.js';
 
 /** @param {THREE.Object3D | null | undefined} model */
 export function isFontExtrudeRevealModel(model) {
@@ -107,6 +129,28 @@ export class FontTextRevealController {
   isLoopEnabled() {
     const loop = this.stateStore?.getState()?.fontExtrude?.revealLoop;
     return loop !== false;
+  }
+
+  isEmissiveSlamEnabled() {
+    return normalizeFontRevealEmissiveSlamEnabled(
+      this.stateStore?.getState()?.fontExtrude?.revealEmissiveSlam ??
+        DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
+    );
+  }
+
+  getEmissiveSlamStrength() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealEmissiveStrength;
+    return clampFontRevealEmissiveStrength(raw ?? DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH);
+  }
+
+  getEmissiveSlamDecaySec() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealEmissiveDecaySec;
+    return clampFontRevealEmissiveDecaySec(raw ?? DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC);
+  }
+
+  getEmissiveSlamColor() {
+    const raw = this.stateStore?.getState()?.fontExtrude?.revealEmissiveColor;
+    return normalizeFontRevealEmissiveColor(raw ?? DEFAULT_FONT_REVEAL_EMISSIVE_COLOR);
   }
 
   isEnabled() {
@@ -186,17 +230,20 @@ export class FontTextRevealController {
       const size = box.getSize(new THREE.Vector3());
       const slideDistance = Math.max(size.y * 0.75, 0.08);
 
-      /** @type {Array<{ mat: THREE.Material, opacity: number, transparent: boolean }>} */
+      /** @type {RevealGlyphState['meshMaterials']} */
       const meshMaterials = [];
       group.traverse((child) => {
         if (!child.isMesh || !child.material) return;
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const mat of mats) {
           if (!mat) continue;
+          const { restEmissive, restEmissiveIntensity } = captureMaterialEmissiveRest(mat);
           meshMaterials.push({
             mat,
             opacity: Number.isFinite(mat.opacity) ? mat.opacity : 1,
             transparent: !!mat.transparent,
+            restEmissive,
+            restEmissiveIntensity,
           });
         }
       });
@@ -418,6 +465,10 @@ export class FontTextRevealController {
     const slideDepth = this.getSlideDepth();
     const slideTime = this.getSlideTime();
     const slideDirection = this.getSlideDirection();
+    const emissiveEnabled = this.isEmissiveSlamEnabled();
+    const emissiveStrength = this.getEmissiveSlamStrength();
+    const emissiveDecaySec = this.getEmissiveSlamDecaySec();
+    const emissiveColor = this.getEmissiveSlamColor();
     for (let i = 0; i < count; i += 1) {
       const state = this._glyphStates[i];
       const rawProgress = computeGlyphSlotProgress(i, count, elapsedSec, duration);
@@ -427,6 +478,16 @@ export class FontTextRevealController {
         slideDepth,
         slideTime,
         slideDirection,
+      });
+      applyRevealEmissiveSlam(state, {
+        enabled: emissiveEnabled,
+        strength: emissiveStrength,
+        decaySec: emissiveDecaySec,
+        colorHex: emissiveColor,
+        glyphIndex: i,
+        glyphCount: count,
+        elapsedSec,
+        totalDurationSec: duration,
       });
     }
 
@@ -528,6 +589,13 @@ export class FontTextRevealController {
    * @param {THREE.Object3D | null | undefined} [model]
    */
   onRevealTypeChange(model) {
+    this._applySettingsChange(model);
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  onRevealEmissiveChange(model) {
     this._applySettingsChange(model);
   }
 

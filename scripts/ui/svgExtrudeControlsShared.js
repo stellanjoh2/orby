@@ -658,17 +658,17 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   ${buildFontRevealTypeOptionsHtml()}
                 </select>
               </label>
-              <label class="slider-line font-extrude-reveal-duration">
+              <label class="slider-line slider-line--track-short font-extrude-reveal-duration">
                 <span data-tooltip="Character-by-character reveal. Last letter finishes at this time. 0 = off.">Reveal Duration</span>
                 <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
                 <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
               </label>
-              <label class="slider-line font-extrude-reveal-slide-depth">
+              <label class="slider-line slider-line--track-short font-extrude-reveal-slide-depth">
                 <span data-tooltip="How far each letter starts in depth before sliding into place">Slide Depth</span>
                 <input id="fontExtrudeRevealSlideDepth" type="range" min="0" max="2.5" step="0.01" value="0.18" />
                 <span class="value" data-output="fontExtrudeRevealSlideDepth">0.18</span>
               </label>
-              <label class="slider-line font-extrude-reveal-slide-time">
+              <label class="slider-line slider-line--track-short font-extrude-reveal-slide-time">
                 <span data-tooltip="Share of each letter's slot for depth travel. 100% uses the full slot and shows the soft ease-out landing best.">Slide Time</span>
                 <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="1" step="0.01" value="0.45" />
                 <span class="value" data-output="fontExtrudeRevealSlideTime">45%</span>
@@ -680,6 +680,32 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   <option value="front">From front</option>
                 </select>
               </label>
+              <div class="font-extrude-divider font-extrude-reveal-emissive-divider" aria-hidden="true"></div>
+              <div class="font-extrude-reveal-emissive" role="group" aria-label="Emissive reveal">
+                <label class="slider-line slider-line--toggle-only font-extrude-reveal-emissive-slam">
+                  <span data-tooltip="Each letter reveals with emissive glow, then fades to rest after it lands">Emissive Slam</span>
+                  <label class="effect-toggle font-extrude-reveal-emissive-toggle">
+                    <input type="checkbox" id="fontExtrudeRevealEmissiveSlam" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Emissive slam on reveal</span>
+                  </label>
+                </label>
+                <label class="slider-line slider-line--track-short font-extrude-reveal-emissive-strength">
+                  <span data-tooltip="Emissive intensity while each letter is revealing and during fade-out">Emissive Strength</span>
+                  <input id="fontExtrudeRevealEmissiveStrength" type="range" min="0" max="2" step="0.05" value="1" />
+                  <span class="value" data-output="fontExtrudeRevealEmissiveStrength">1.00</span>
+                </label>
+                <label class="slider-line slider-line--track-short font-extrude-reveal-emissive-decay">
+                  <span data-tooltip="How long emissive fades to rest after each letter lands">Emissive Time</span>
+                  <input id="fontExtrudeRevealEmissiveDecay" type="range" min="0.05" max="0.8" step="0.01" value="0.35" />
+                  <span class="value" data-output="fontExtrudeRevealEmissiveDecay">0.35s</span>
+                </label>
+                <label class="color-line font-extrude-reveal-emissive-color">
+                  <span data-tooltip="Emissive color mixed in at peak flash">Emissive Color</span>
+                  <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
+                </label>
+              </div>
+              <div class="font-extrude-divider font-extrude-reveal-preview-divider" aria-hidden="true"></div>
               <div class="font-extrude-reveal-preview animation-controls">
                 <button
                   type="button"

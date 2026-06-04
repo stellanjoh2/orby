@@ -11,12 +11,20 @@ import {
 } from './svgExtrudeControlsShared.js';
 import {
   clampFontRevealDurationSec,
+  clampFontRevealEmissiveDecaySec,
+  clampFontRevealEmissiveStrength,
   clampFontRevealSlideDepth,
   clampFontRevealSlideTime,
   DEFAULT_FONT_REVEAL_DURATION_SEC,
+  DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
+  DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC,
+  DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
+  DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH,
   DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
   DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
   DEFAULT_FONT_REVEAL_SLIDE_TIME,
+  normalizeFontRevealEmissiveColor,
+  normalizeFontRevealEmissiveSlamEnabled,
 } from '../scene/FontTextRevealController.js';
 import {
   DEFAULT_FONT_REVEAL_TYPE,
@@ -214,6 +222,10 @@ export class FontExtrudeUI {
       revealSlideDepth: block.querySelector('#fontExtrudeRevealSlideDepth'),
       revealSlideTime: block.querySelector('#fontExtrudeRevealSlideTime'),
       revealSlideDirection: block.querySelector('#fontExtrudeRevealSlideDirection'),
+      revealEmissiveSlam: block.querySelector('#fontExtrudeRevealEmissiveSlam'),
+      revealEmissiveStrength: block.querySelector('#fontExtrudeRevealEmissiveStrength'),
+      revealEmissiveDecay: block.querySelector('#fontExtrudeRevealEmissiveDecay'),
+      revealEmissiveColor: block.querySelector('#fontExtrudeRevealEmissiveColor'),
       revealType: block.querySelector('#fontExtrudeRevealType'),
       revealPlay: block.querySelector('#fontExtrudeRevealPlay'),
       revealLoop: block.querySelector('#fontExtrudeRevealLoop'),
@@ -372,6 +384,41 @@ export class FontExtrudeUI {
         controller.onRevealTypeChange?.(model);
       });
     });
+
+    const onRevealEmissiveChange = () => {
+      this._withRevealController((controller, model) => {
+        controller.onRevealEmissiveChange?.(model);
+      });
+      this._syncRevealEmissiveControlsDisabled();
+    };
+
+    els.revealEmissiveSlam?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      this.stateStore.set('fontExtrude.revealEmissiveSlam', !!els.revealEmissiveSlam.checked);
+      onRevealEmissiveChange();
+    });
+
+    els.revealEmissiveStrength?.addEventListener('input', () => {
+      const value = clampFontRevealEmissiveStrength(els.revealEmissiveStrength.value);
+      this.stateStore.set('fontExtrude.revealEmissiveStrength', value);
+      this.ui.updateValueLabel('fontExtrudeRevealEmissiveStrength', value, 'decimal');
+      onRevealEmissiveChange();
+    });
+
+    els.revealEmissiveDecay?.addEventListener('input', () => {
+      const value = clampFontRevealEmissiveDecaySec(els.revealEmissiveDecay.value);
+      this.stateStore.set('fontExtrude.revealEmissiveDecaySec', value);
+      this.ui.updateValueLabel('fontExtrudeRevealEmissiveDecay', `${value.toFixed(2)}s`);
+      onRevealEmissiveChange();
+    });
+
+    const onRevealEmissiveColorChange = () => {
+      const color = normalizeFontRevealEmissiveColor(els.revealEmissiveColor?.value);
+      this.stateStore.set('fontExtrude.revealEmissiveColor', color);
+      onRevealEmissiveChange();
+    };
+    els.revealEmissiveColor?.addEventListener('input', onRevealEmissiveColorChange);
+    els.revealEmissiveColor?.addEventListener('change', onRevealEmissiveColorChange);
 
     els.revealLoop?.addEventListener('change', () => {
       this.ui.uiSounds?.playSelect();
@@ -595,6 +642,59 @@ export class FontExtrudeUI {
     const revealLoop = state?.fontExtrude?.revealLoop !== false;
     if (this.els.revealLoop && document.activeElement !== this.els.revealLoop) {
       this.els.revealLoop.checked = revealLoop;
+    }
+    const revealEmissiveSlam = normalizeFontRevealEmissiveSlamEnabled(
+      state?.fontExtrude?.revealEmissiveSlam ?? DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
+    );
+    if (this.els.revealEmissiveSlam && document.activeElement !== this.els.revealEmissiveSlam) {
+      this.els.revealEmissiveSlam.checked = revealEmissiveSlam;
+    }
+    const revealEmissiveStrength = clampFontRevealEmissiveStrength(
+      state?.fontExtrude?.revealEmissiveStrength ?? DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH,
+    );
+    if (
+      this.els.revealEmissiveStrength &&
+      document.activeElement !== this.els.revealEmissiveStrength
+    ) {
+      this.els.revealEmissiveStrength.value = String(revealEmissiveStrength);
+      this.ui.updateValueLabel(
+        'fontExtrudeRevealEmissiveStrength',
+        revealEmissiveStrength,
+        'decimal',
+      );
+    }
+    const revealEmissiveDecaySec = clampFontRevealEmissiveDecaySec(
+      state?.fontExtrude?.revealEmissiveDecaySec ?? DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC,
+    );
+    if (this.els.revealEmissiveDecay && document.activeElement !== this.els.revealEmissiveDecay) {
+      this.els.revealEmissiveDecay.value = String(revealEmissiveDecaySec);
+      this.ui.updateValueLabel(
+        'fontExtrudeRevealEmissiveDecay',
+        `${revealEmissiveDecaySec.toFixed(2)}s`,
+      );
+    }
+    const revealEmissiveColor = normalizeFontRevealEmissiveColor(
+      state?.fontExtrude?.revealEmissiveColor ?? DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
+    );
+    if (
+      this.els.revealEmissiveColor &&
+      document.activeElement !== this.els.revealEmissiveColor
+    ) {
+      this.els.revealEmissiveColor.value = revealEmissiveColor;
+    }
+    this._syncRevealEmissiveControlsDisabled();
+  }
+
+  _syncRevealEmissiveControlsDisabled() {
+    const enabled = !!this.els.revealEmissiveSlam?.checked;
+    const disable = !enabled;
+    for (const el of [
+      this.els.revealEmissiveStrength,
+      this.els.revealEmissiveDecay,
+      this.els.revealEmissiveColor,
+    ]) {
+      if (!el) continue;
+      el.disabled = disable;
     }
   }
 
