@@ -22,6 +22,8 @@ import {
   applyChromaticAberrationToPass,
 } from './chromaticAberration.js';
 import { ColorAdjustController } from './ColorAdjustController.js';
+import { GradingController } from './GradingController.js';
+import { BloomCompositeController } from './BloomCompositeController.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
   AMBIENT_OCCLUSION_INTENSITY_MIN,
@@ -36,6 +38,8 @@ import {
   foldAnamorphicStreakAngleDeg,
   resolveAmbientOcclusionQualityTier,
   resolveAnamorphicBloomQualityTier,
+  USE_MERGED_GRADING_PASS,
+  USE_MERGED_BLOOM_COMPOSITE_PASS,
 } from '../constants.js';
 
 export class PostProcessingPipeline {
@@ -86,13 +90,32 @@ export class PostProcessingPipeline {
 
     this.filmPass = new FilmPass(0.0, 0.0, 648, false);
     this.filmPass.enabled = false;
-    this.bloomTintPass = new ShaderPass(BloomTintShader);
+
     const abTier0 = resolveAnamorphicBloomQualityTier(ANAMORPHIC_BLOOM_QUALITY_DEFAULT);
     this._anamorphicBloomSampleRadius = abTier0.sampleRadius;
-    this.anamorphicBloomPass = new ShaderPass(
-      buildAnamorphicBloomShader(abTier0.sampleRadius),
-    );
-    this.anamorphicBloomPass.enabled = false;
+
+    /** @type {import('./BloomCompositeController.js').BloomCompositeController | null} */
+    this.bloomCompositeController = null;
+    this.bloomCompositePass = null;
+    this.bloomTintPass = null;
+    this.anamorphicBloomPass = null;
+
+    if (USE_MERGED_BLOOM_COMPOSITE_PASS) {
+      this.bloomCompositeController = new BloomCompositeController(
+        this.renderer,
+        abTier0.sampleRadius,
+      );
+      this.bloomCompositePass = this.bloomCompositeController.getPass();
+      this.bloomTintPass = this.bloomCompositePass;
+      this.anamorphicBloomPass = this.bloomCompositePass;
+    } else {
+      this.bloomTintPass = new ShaderPass(BloomTintShader);
+      this.anamorphicBloomPass = new ShaderPass(
+        buildAnamorphicBloomShader(abTier0.sampleRadius),
+      );
+      this.anamorphicBloomPass.enabled = false;
+    }
+
     this.grainTintPass = new ShaderPass(GrainTintShader);
     this.grainTintPass.enabled = false;
     this.grainTime = 0;
@@ -106,7 +129,6 @@ export class PostProcessingPipeline {
     if (this.aberrationPass.uniforms?.aspectRatio) {
       this.aberrationPass.uniforms.aspectRatio.value = abAsp;
     }
-    this.exposurePass = new ShaderPass(ExposureShader);
 
     this.fxaaPass = new ShaderPass(FXAAShader);
     const pixelRatio = this.renderer.getPixelRatio();
@@ -116,13 +138,32 @@ export class PostProcessingPipeline {
 
     this.aberrationPass.renderToScreen = false;
     this.fxaaPass.renderToScreen = false;
-    this.exposurePass.renderToScreen = false;
 
-    this.colorAdjust = new ColorAdjustController(this.renderer);
-    this.colorAdjustPass = this.colorAdjust.getPass();
+    /** @type {import('./GradingController.js').GradingController | null} */
+    this.gradingController = null;
+    this.gradingPass = null;
+    this.exposurePass = null;
+    this.colorAdjustPass = null;
+    this.toneMappingPass = null;
+    /** @type {import('./ColorAdjustController.js').ColorAdjustController | import('./GradingController.js').GradingController | null} */
+    this.colorAdjust = null;
 
-    this.toneMappingPass = new ShaderPass(ToneMappingShader);
-    this.toneMappingPass.renderToScreen = false;
+    if (USE_MERGED_GRADING_PASS) {
+      this.gradingController = new GradingController(this.renderer);
+      this.gradingPass = this.gradingController.getPass();
+      this.gradingPass.renderToScreen = false;
+      this.colorAdjust = this.gradingController;
+      this.exposurePass = this.gradingPass;
+      this.colorAdjustPass = this.gradingPass;
+      this.toneMappingPass = this.gradingPass;
+    } else {
+      this.exposurePass = new ShaderPass(ExposureShader);
+      this.exposurePass.renderToScreen = false;
+      this.colorAdjust = new ColorAdjustController(this.renderer);
+      this.colorAdjustPass = this.colorAdjust.getPass();
+      this.toneMappingPass = new ShaderPass(ToneMappingShader);
+      this.toneMappingPass.renderToScreen = false;
+    }
 
     /** Full-frame lens distortion / fisheye (after CA — aberration runs post-grade so saturation does not kill fringes). */
     this.lensDistortionPass = new ShaderPass(LensDistortionShader);
@@ -134,15 +175,23 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.bokehPass);
     this.composer.addPass(this.godRaysPass);
     this.composer.addPass(this.bloomPass);
-    this.composer.addPass(this.bloomTintPass);
-    this.composer.addPass(this.anamorphicBloomPass);
+    if (USE_MERGED_BLOOM_COMPOSITE_PASS) {
+      this.composer.addPass(this.bloomCompositePass);
+    } else {
+      this.composer.addPass(this.bloomTintPass);
+      this.composer.addPass(this.anamorphicBloomPass);
+    }
     this.composer.addPass(this.lensDirtPass);
     this.composer.addPass(this.filmPass);
     this.composer.addPass(this.grainTintPass);
     this.composer.addPass(this.fxaaPass);
-    this.composer.addPass(this.exposurePass);
-    this.composer.addPass(this.colorAdjustPass);
-    this.composer.addPass(this.toneMappingPass);
+    if (USE_MERGED_GRADING_PASS) {
+      this.composer.addPass(this.gradingPass);
+    } else {
+      this.composer.addPass(this.exposurePass);
+      this.composer.addPass(this.colorAdjustPass);
+      this.composer.addPass(this.toneMappingPass);
+    }
     // Chromatic aberration after grading + tone map so low-saturation looks (e.g. Noir) keep visible channel separation.
     this.composer.addPass(this.aberrationPass);
     this.composer.addPass(this.lensDistortionPass);
@@ -154,15 +203,23 @@ export class PostProcessingPipeline {
       { pass: this.bokehPass, key: 'bokehPass' },
       { pass: this.godRaysPass, key: 'godRaysPass' },
       { pass: this.bloomPass, key: 'bloomPass' },
-      { pass: this.bloomTintPass, key: 'bloomTintPass' },
-      { pass: this.anamorphicBloomPass, key: 'anamorphicBloomPass' },
+      ...(USE_MERGED_BLOOM_COMPOSITE_PASS
+        ? [{ pass: this.bloomCompositePass, key: 'bloomCompositePass' }]
+        : [
+            { pass: this.bloomTintPass, key: 'bloomTintPass' },
+            { pass: this.anamorphicBloomPass, key: 'anamorphicBloomPass' },
+          ]),
       { pass: this.lensDirtPass, key: 'lensDirtPass' },
       { pass: this.filmPass, key: 'filmPass' },
       { pass: this.grainTintPass, key: 'grainTintPass' },
       { pass: this.fxaaPass, key: 'fxaaPass' },
-      { pass: this.exposurePass, key: 'exposurePass' },
-      { pass: this.colorAdjustPass, key: 'colorAdjustPass' },
-      { pass: this.toneMappingPass, key: 'toneMappingPass' },
+      ...(USE_MERGED_GRADING_PASS
+        ? [{ pass: this.gradingPass, key: 'gradingPass' }]
+        : [
+            { pass: this.exposurePass, key: 'exposurePass' },
+            { pass: this.colorAdjustPass, key: 'colorAdjustPass' },
+            { pass: this.toneMappingPass, key: 'toneMappingPass' },
+          ]),
       { pass: this.aberrationPass, key: 'aberrationPass' },
       { pass: this.lensDistortionPass, key: 'lensDistortionPass' },
     ];
@@ -253,6 +310,17 @@ export class PostProcessingPipeline {
     if (this.bloomPass) {
       this.bloomPass.enabled = active;
     }
+    if (this.bloomCompositeController) {
+      if (!active) {
+        this.bloomCompositeController.setBloomTint(false);
+      } else {
+        this.bloomPass.threshold = settings.threshold;
+        this.bloomPass.strength = settings.strength;
+        this.bloomPass.radius = settings.radius;
+        this.bloomCompositeController.setBloomTint(true, settings);
+      }
+      return;
+    }
     if (this.bloomTintPass) {
       this.bloomTintPass.enabled = active;
     }
@@ -261,8 +329,6 @@ export class PostProcessingPipeline {
     this.bloomPass.strength = settings.strength;
     this.bloomPass.radius = settings.radius;
     this.bloomTintPass.uniforms.tint.value = new THREE.Color(settings.color);
-    // Increase tint strength significantly so bloom color is very noticeable
-    // 200% stronger = 3x multiplier (was 2.5, now 7.5)
     const tintStrength = THREE.MathUtils.clamp(settings.strength * 7.5, 0, 15.0);
     this.bloomTintPass.uniforms.strength.value = tintStrength;
   }
@@ -294,6 +360,10 @@ export class PostProcessingPipeline {
    * @param {{ forceOff?: boolean }} [opts]
    */
   updateAnamorphicBloom(settings, { forceOff = false } = {}) {
+    if (this.bloomCompositeController) {
+      this.bloomCompositeController.setAnamorphic(settings, { forceOff });
+      return;
+    }
     if (!this.anamorphicBloomPass) return;
     if (forceOff || !settings?.enabled) {
       this.anamorphicBloomPass.enabled = false;
@@ -445,17 +515,19 @@ export class PostProcessingPipeline {
    * @param {string} value - Tone mapping mode ('none', 'reinhard', 'aces-filmic')
    */
   setToneMapping(value) {
+    if (this.gradingController) {
+      this.gradingController.setToneMapping(value);
+      return;
+    }
     if (value === 'linear') value = 'none';
-    // Map UI values to shader pass values (0=none, 2=reinhard, 4=aces-filmic)
     const toneMappingMap = {
       'none': 0,
       'reinhard': 2,
       'aces-filmic': 4,
     };
-    
-    const toneMappingValue = toneMappingMap[value] ?? 4; // Default to ACES Filmic
-    
-    // Update the tone mapping shader pass
+
+    const toneMappingValue = toneMappingMap[value] ?? 4;
+
     if (this.toneMappingPass) {
       this.toneMappingPass.uniforms.toneMappingType.value = toneMappingValue;
     }
@@ -486,6 +558,18 @@ export class PostProcessingPipeline {
     const t = Math.max(0, Number(elapsedSec) || 0);
     this.grainTime = t * 60;
     this.grainTintPass.uniforms.time.value = this.grainTime;
+  }
+
+  /**
+   * Set manual / auto exposure multiplier
+   * @param {number} value
+   */
+  setExposure(value) {
+    if (this.gradingController) {
+      this.gradingController.setExposure(value);
+    } else if (this.exposurePass?.uniforms?.exposure) {
+      this.exposurePass.uniforms.exposure.value = value;
+    }
   }
 
   /**
@@ -586,6 +670,10 @@ export class PostProcessingPipeline {
    * @param {number} value - Vignette intensity (0-1, default 0)
    */
   setVignette(value) {
+    if (this.gradingController) {
+      this.gradingController.setVignette(value);
+      return;
+    }
     if (this.toneMappingPass) {
       this.toneMappingPass.uniforms.vignetteIntensity.value = value;
     }
@@ -596,6 +684,10 @@ export class PostProcessingPipeline {
    * @param {string} color - Vignette color (hex string, default '#080808')
    */
   setVignetteColor(color) {
+    if (this.gradingController) {
+      this.gradingController.setVignetteColor(color);
+      return;
+    }
     if (this.toneMappingPass) {
       this.toneMappingPass.uniforms.vignetteColor.value = new THREE.Color(color);
     }

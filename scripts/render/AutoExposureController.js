@@ -7,11 +7,12 @@ import { resetRendererFullViewport } from '../render/resetRendererFullViewport.j
  * exposure, and smoothly interpolates to the target value.
  */
 export class AutoExposureController {
-  constructor({ renderer, scene, camera, exposurePass, stateStore, onExposureChange }) {
+  constructor({ renderer, scene, camera, exposurePass, setExposure, stateStore, onExposureChange }) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.exposurePass = exposurePass;
+    this.setExposureUniform = typeof setExposure === 'function' ? setExposure : null;
     this.stateStore = stateStore;
     this.onExposureChange = onExposureChange; // Callback to update UI when exposure changes
 
@@ -57,8 +58,14 @@ export class AutoExposureController {
     this.enabled = initialState.autoExposure ?? false;
 
     // Set initial exposure
-    if (this.exposurePass) {
-      this.exposurePass.uniforms.exposure.value = this.currentExposure;
+    this._writeExposureUniform(this.currentExposure);
+  }
+
+  _writeExposureUniform(value) {
+    if (this.setExposureUniform) {
+      this.setExposureUniform(value);
+    } else if (this.exposurePass?.uniforms?.exposure) {
+      this.exposurePass.uniforms.exposure.value = value;
     }
   }
 
@@ -94,9 +101,7 @@ export class AutoExposureController {
    */
   setExposure(value) {
     this.currentExposure = value;
-    if (this.exposurePass) {
-      this.exposurePass.uniforms.exposure.value = value;
-    }
+    this._writeExposureUniform(value);
     // Update UI display in real-time (even when auto-exposure is enabled)
     if (this.onExposureChange) {
       this.onExposureChange(value);

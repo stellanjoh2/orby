@@ -362,6 +362,18 @@ export function sanitizeDof(dof) {
   return { ...dof, focus, quality };
 }
 
+/**
+ * Single fullscreen pass for exposure → color adjust → tone map (+ vignette).
+ * Set false to restore the legacy three-pass chain (rollback).
+ */
+export const USE_MERGED_GRADING_PASS = true;
+
+/**
+ * Bloom tint + anamorphic streak in one pass after UnrealBloomPass.
+ * Set false to restore the legacy two-pass chain (rollback).
+ */
+export const USE_MERGED_BLOOM_COMPOSITE_PASS = true;
+
 /** @typedef {'max' | 'medium' | 'low'} RenderQualityTierId */
 
 export const RENDER_QUALITY_DEFAULT = /** @type {const} */ ('medium');

@@ -590,6 +590,7 @@ export class SceneManager {
       scene: this.scene,
       camera: this.camera,
       exposurePass: this.exposurePass,
+      setExposure: (value) => this.postPipeline?.setExposure(value),
       stateStore: this.stateStore,
       onExposureChange: (value) => {
         // Update UI display in real-time when auto-exposure changes exposure
@@ -1108,7 +1109,9 @@ export class SceneManager {
       this.postPipeline.aberrationPass.uniforms.aspectRatio.value =
         height > 0 ? width / height : 1;
     }
-    if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution?.value) {
+    if (this.postPipeline?.bloomCompositeController) {
+      this.postPipeline.bloomCompositeController.setResolution(width, height);
+    } else if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution?.value) {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
     this.groundController?.resizeBaseReflector?.(width, height);

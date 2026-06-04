@@ -95,6 +95,89 @@ void main() {
   };
 }
 
+/**
+ * Bloom tint then anamorphic streak (same order as the legacy two-pass chain).
+ * Anamorphic taps apply bloom tint per sample so behavior matches tint → streak passes.
+ * @param {number} sampleRadius
+ */
+export function buildBloomCompositeShader(sampleRadius) {
+  const R = Math.max(1, Math.min(64, Math.floor(sampleRadius)));
+  const fragmentShader = `
+#define SAMPLE_RADIUS ${R}
+#define STREAK_LENGTH_SCALE 6.0
+varying vec2 vUv;
+uniform sampler2D tDiffuse;
+uniform vec3 bloomTint;
+uniform float bloomTintStrength;
+uniform vec2 resolution;
+uniform vec2 streakDir;
+uniform float threshold;
+uniform float soften;
+uniform float anamorphicStrength;
+uniform float spread;
+uniform vec3 streakTint;
+
+float linLum(vec3 c) {
+  return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec3 applyBloomTint(vec3 rgb) {
+  if (bloomTintStrength < 0.0001) {
+    return rgb;
+  }
+  float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
+  float mask = smoothstep(0.6, 1.2, luminance);
+  return rgb + bloomTint * mask * bloomTintStrength;
+}
+
+void main() {
+  vec4 color = texture2D(tDiffuse, vUv);
+  vec3 rgb = applyBloomTint(color.rgb);
+
+  if (anamorphicStrength < 0.0001) {
+    gl_FragColor = vec4(rgb, color.a);
+    return;
+  }
+
+  vec2 px = vec2(1.0 / max(resolution.x, 1.0), 1.0 / max(resolution.y, 1.0));
+  vec2 duv = vec2(streakDir.x * px.x, streakDir.y * px.y);
+  float sigma = float(SAMPLE_RADIUS) * 0.58 + 1.0e-4;
+  float wsum = 0.0;
+  float maskBlur = 0.0;
+  for (int i = -SAMPLE_RADIUS; i <= SAMPLE_RADIUS; i++) {
+    float fi = float(i);
+    float w = exp(-(fi * fi) / (2.0 * sigma * sigma));
+    vec2 off = duv * (fi * spread * STREAK_LENGTH_SCALE);
+    vec3 s = applyBloomTint(texture2D(tDiffuse, vUv + off).rgb);
+    float lu = linLum(s);
+    float h = smoothstep(threshold - soften, threshold + soften, lu);
+    maskBlur += h * w;
+    wsum += w;
+  }
+  maskBlur /= max(wsum, 1.0e-5);
+  vec3 streak = streakTint * maskBlur * anamorphicStrength;
+  gl_FragColor = vec4(rgb + streak, color.a);
+}
+`;
+
+  return {
+    uniforms: {
+      tDiffuse: { value: null },
+      bloomTint: { value: new THREE.Color('#ffe9cc') },
+      bloomTintStrength: { value: 0.0 },
+      resolution: { value: new THREE.Vector2(1, 1) },
+      streakDir: { value: new THREE.Vector2(1, 0) },
+      threshold: { value: 0.7 },
+      soften: { value: 0.12 },
+      anamorphicStrength: { value: 0.0 },
+      spread: { value: 0.2 },
+      streakTint: { value: new THREE.Color('#7ec8ff') },
+    },
+    vertexShader: bloomTintVertex,
+    fragmentShader,
+  };
+}
+
 const grainTintVertex = `
 varying vec2 vUv;
 void main() {
@@ -535,6 +618,274 @@ export const ColorAdjustShader = {
   },
   vertexShader: colorAdjustVertex,
   fragmentShader: colorAdjustFragment,
+};
+
+const gradingVertex = colorAdjustVertex;
+
+const gradingFragment = `
+varying vec2 vUv;
+uniform sampler2D tDiffuse;
+uniform float exposure;
+uniform float contrast;
+uniform float hue;
+uniform float saturation;
+uniform float temperature;
+uniform float tint;
+uniform float highlights;
+uniform float shadows;
+uniform float clarity;
+uniform float fade;
+uniform float sharpness;
+uniform vec2 resolution;
+uniform float bypass;
+uniform sampler2D toneCurveLut;
+uniform float toneHdrTailSlope;
+uniform float toneCurveIdentity;
+uniform float toneMappingType;
+uniform float vignetteIntensity;
+uniform vec3 vignetteColor;
+
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float CONTRAST_PIVOT = 0.18;
+const float CONTRAST_AMOUNT_MIN = 0.18;
+const float EPSILON = 1e-5;
+
+vec3 applyContrast(vec3 color, float amount) {
+  float a = max(amount, CONTRAST_AMOUNT_MIN);
+  if (abs(a - 1.0) < 0.0001) {
+    return color;
+  }
+  return (color - vec3(CONTRAST_PIVOT)) * a + vec3(CONTRAST_PIVOT);
+}
+
+vec3 applySaturation(vec3 color, float amount) {
+  if (abs(amount - 1.0) < 0.0001) {
+    return color;
+  }
+  float luma = dot(color, LUMA);
+  return mix(vec3(luma), color, amount);
+}
+
+vec3 applyWhiteBalance(vec3 color, float temperature, float tint) {
+  if (abs(temperature) < 0.0001 && abs(tint) < 0.0001) {
+    return color;
+  }
+  float tempOffset = temperature * 0.2;
+  float tintOffset = tint * 0.12;
+  vec3 tempScale = vec3(
+    1.0 + tempOffset,
+    1.0,
+    1.0 - tempOffset
+  );
+  vec3 tintScale = vec3(
+    1.0 + tintOffset,
+    1.0 - tintOffset * 2.0,
+    1.0 + tintOffset
+  );
+  vec3 balance = max(tempScale * tintScale, vec3(0.05));
+  vec3 balanced = clamp(color * balance, 0.0, 4.0);
+  float srcLuma = dot(color, LUMA);
+  float balancedLuma = max(dot(balanced, LUMA), EPSILON);
+  float scale = srcLuma / balancedLuma;
+  return clamp(balanced * scale, 0.0, 4.0);
+}
+
+vec3 applyHue(vec3 color, float hueDegrees) {
+  if (abs(hueDegrees) < 0.0001) {
+    return color;
+  }
+  const mat3 RGB_TO_YIQ = mat3(
+    0.299, 0.587, 0.114,
+    0.596, -0.274, -0.322,
+    0.211, -0.523, 0.312
+  );
+  const mat3 YIQ_TO_RGB = mat3(
+    1.0, 0.956, 0.621,
+    1.0, -0.272, -0.647,
+    1.0, -1.106, 1.703
+  );
+  vec3 yiq = RGB_TO_YIQ * color;
+  float angle = radians(hueDegrees);
+  float cosA = cos(angle);
+  float sinA = sin(angle);
+  mat2 rot = mat2(cosA, -sinA, sinA, cosA);
+  yiq.yz = rot * yiq.yz;
+  return clamp(YIQ_TO_RGB * yiq, 0.0, 4.0);
+}
+
+vec3 applyTonalRanges(
+  vec3 color,
+  float highlights,
+  float shadows
+) {
+  if (abs(highlights) < 0.0001 && abs(shadows) < 0.0001) {
+    return color;
+  }
+  float luma = dot(color, LUMA);
+  float highlightMask = smoothstep(0.45, 1.0, luma);
+  float shadowMask = 1.0 - smoothstep(0.1, 0.8, luma);
+  float highlightsMultiplier = 0.25 * (1.0 + 1.0 * abs(highlights));
+  float highlightDelta = highlights * highlightsMultiplier * highlightMask;
+  float shadowDelta = shadows * 0.25 * shadowMask;
+  float totalDelta = highlightDelta + shadowDelta;
+  float targetLuma = luma + totalDelta;
+  float adjustment = targetLuma - luma;
+  return color + vec3(adjustment);
+}
+
+vec3 applyClarity(vec3 color, float amount) {
+  if (abs(amount) < 0.0001) {
+    return color;
+  }
+  float luma = dot(color, LUMA);
+  float midtoneMask = smoothstep(0.2, 0.5, luma) * (1.0 - smoothstep(0.5, 0.8, luma));
+  float clarityAmount = amount * 0.01;
+  vec3 enhanced = (color - vec3(0.5)) * (1.0 + clarityAmount * midtoneMask) + vec3(0.5);
+  return mix(color, enhanced, midtoneMask * 0.5);
+}
+
+vec3 applyFade(vec3 color, float amount) {
+  if (abs(amount) < 0.0001) {
+    return color;
+  }
+  float fadeAmount = amount * 0.01;
+  return mix(color, vec3(0.5), fadeAmount * (1.0 - dot(color, LUMA)));
+}
+
+float sampleToneLut(float x) {
+  x = clamp(x, 0.0, 1.0);
+  float u = (floor(x * 255.0) + 0.5) / 256.0;
+  return texture2D(toneCurveLut, vec2(u, 0.5)).r;
+}
+
+vec3 applyLumaToneCurve(vec3 c) {
+  if (toneCurveIdentity > 0.5) {
+    return c;
+  }
+  float l = dot(c, LUMA);
+  if (l < 1e-5) {
+    return c;
+  }
+  float l2;
+  if (l <= 1.0) {
+    l2 = sampleToneLut(l);
+  } else {
+    float y1 = sampleToneLut(1.0);
+    float dEnd = max(toneHdrTailSlope, 0.0);
+    l2 = y1 + (l - 1.0) * dEnd;
+  }
+  return clamp(c * (l2 / l), 0.0, 4.0);
+}
+
+vec3 applySharpnessExposed(
+  sampler2D tex,
+  vec2 uv,
+  vec2 res,
+  float amount,
+  float exposureScale
+) {
+  if (abs(amount) < 0.0001) {
+    return texture2D(tex, uv).rgb * exposureScale;
+  }
+  if (res.x < 2.0 || res.y < 2.0) {
+    return texture2D(tex, uv).rgb * exposureScale;
+  }
+  vec2 pixelSize = 1.0 / res;
+  vec3 center = texture2D(tex, uv).rgb * exposureScale;
+  vec3 left = texture2D(tex, uv + vec2(-pixelSize.x, 0.0)).rgb * exposureScale;
+  vec3 right = texture2D(tex, uv + vec2(pixelSize.x, 0.0)).rgb * exposureScale;
+  vec3 top = texture2D(tex, uv + vec2(0.0, -pixelSize.y)).rgb * exposureScale;
+  vec3 bottom = texture2D(tex, uv + vec2(0.0, pixelSize.y)).rgb * exposureScale;
+  vec3 blur = (left + right + top + bottom) * 0.25;
+  float sharpAmount = amount * 0.01;
+  vec3 sharp = center + (center - blur) * sharpAmount;
+  return max(sharp, vec3(0.0));
+}
+
+vec3 ACESFilmicToneMapping(vec3 color) {
+  color *= 0.8;
+  float a = 2.51;
+  float b = 0.03;
+  float c = 2.43;
+  float d = 0.59;
+  float e = 0.14;
+  return clamp((color * (a * color + b)) / (color * (c * color + d) + e), 0.0, 1.0);
+}
+
+vec3 ReinhardToneMapping(vec3 color) {
+  return color / (1.0 + color);
+}
+
+void main() {
+  vec4 color = texture2D(tDiffuse, vUv);
+  vec3 rgb = color.rgb * exposure;
+
+  if (bypass <= 0.5) {
+    vec3 adjusted = max(rgb, vec3(0.0));
+    if (abs(sharpness) > 0.0001) {
+      adjusted = applySharpnessExposed(tDiffuse, vUv, resolution, sharpness, exposure);
+    }
+    adjusted = applyContrast(adjusted, contrast);
+    adjusted = applySaturation(adjusted, saturation);
+    adjusted = applyHue(adjusted, hue);
+    adjusted = applyWhiteBalance(adjusted, temperature, tint);
+    adjusted = applyTonalRanges(adjusted, highlights, shadows);
+    adjusted = applyClarity(adjusted, clarity);
+    adjusted = applyFade(adjusted, fade);
+    adjusted = applyLumaToneCurve(adjusted);
+    rgb = max(adjusted, vec3(0.0));
+  }
+
+  vec4 mapped;
+  if (toneMappingType < 2.0) {
+    mapped = vec4(rgb, color.a);
+  } else if (toneMappingType < 3.5) {
+    mapped = vec4(ReinhardToneMapping(rgb), color.a);
+  } else {
+    mapped = vec4(ACESFilmicToneMapping(rgb), color.a);
+  }
+
+  if (vignetteIntensity > 0.0001) {
+    vec2 center = vec2(0.5, 0.5);
+    float dist = distance(vUv, center);
+    float start = mix(0.3, 0.0, vignetteIntensity);
+    float end = mix(1.0, 0.6, vignetteIntensity * 0.5);
+    float vignetteMask = smoothstep(start, end, dist);
+    float power = mix(1.0, 3.0, vignetteIntensity);
+    vignetteMask = pow(vignetteMask, power);
+    float vignetteStrength = vignetteMask * vignetteIntensity;
+    mapped.rgb = mix(mapped.rgb, mapped.rgb * vignetteColor, vignetteStrength);
+  }
+
+  gl_FragColor = mapped;
+}
+`;
+
+export const GradingShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    exposure: { value: 1.0 },
+    contrast: { value: 1.0 },
+    hue: { value: 0.0 },
+    saturation: { value: 1.0 },
+    temperature: { value: 0.0 },
+    tint: { value: 0.0 },
+    highlights: { value: 0.0 },
+    shadows: { value: 0.0 },
+    clarity: { value: 0.0 },
+    fade: { value: 0.0 },
+    sharpness: { value: 0.0 },
+    resolution: { value: new THREE.Vector2(1, 1) },
+    bypass: { value: 1.0 },
+    toneCurveLut: { value: null },
+    toneHdrTailSlope: { value: 1.0 },
+    toneCurveIdentity: { value: 1.0 },
+    toneMappingType: { value: 4 },
+    vignetteIntensity: { value: 0.0 },
+    vignetteColor: { value: new THREE.Color('#080808') },
+  },
+  vertexShader: gradingVertex,
+  fragmentShader: gradingFragment,
 };
 
 const lensDirtVertex = `
