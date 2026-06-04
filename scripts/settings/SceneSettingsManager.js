@@ -167,6 +167,7 @@ export class SceneSettingsManager {
       lightsShadowTwoSided: state.lightsShadowTwoSided,
       gobo: state.gobo,
       background: state.background,
+      backgroundGradient: state.backgroundGradient,
       // Camera/Render settings
       camera: {
         fov: state.camera?.fov,
@@ -1374,6 +1375,10 @@ export class SceneSettingsManager {
       if (payload.background !== undefined) {
         this.stateStore.set('background', payload.background);
         this.eventBus.emit('scene:background', payload.background);
+      }
+      if (payload.backgroundGradient !== undefined) {
+        this.stateStore.set('backgroundGradient', payload.backgroundGradient);
+        this.eventBus.emit('scene:background-gradient', payload.backgroundGradient);
       }
 
       // Apply vignette LAST - after all other settings to ensure it's not overridden

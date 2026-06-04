@@ -14,7 +14,7 @@
  * }} RevealGlyphState
  */
 
-/** @typedef {'scale' | 'fade' | 'slideUp' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
+/** @typedef {'scale' | 'fade' | 'slideUp' | 'slideDown' | 'pop' | 'rotate' | 'elastic'} FontRevealTypeId */
 /** @typedef {'back' | 'front'} FontRevealSlideDirection */
 
 export const DEFAULT_FONT_REVEAL_TYPE = 'scale';
@@ -44,7 +44,13 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
     id: 'slideUp',
     label: 'Slide Up',
     ease: 'expo.out (soft)',
-    tooltip: 'Rise into place with a long soft landing — steep start, gentle settle',
+    tooltip: 'Rise into place from below — steep start, gentle settle',
+  },
+  {
+    id: 'slideDown',
+    label: 'Slide Down',
+    ease: 'expo.out (soft)',
+    tooltip: 'Drop into place from above — steep start, gentle settle',
   },
   {
     id: 'pop',
@@ -145,6 +151,7 @@ export function easeForRevealType(type, t) {
     case 'elastic':
       return easeElasticOut(clamped);
     case 'slideUp':
+    case 'slideDown':
       return easeSlideSoftOut(clamped);
     case 'rotate':
     case 'scale':
@@ -248,9 +255,16 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       break;
 
     case 'slideUp':
-      group.position.y = restPosition.y + slideDistance * (1 - Math.max(0, Math.min(1, e)));
-      group.visible = e > 0.001;
+    case 'slideDown': {
+      const slideEased = Math.max(0, Math.min(1, e));
+      const yOffset = slideDistance * (1 - slideEased);
+      group.position.y =
+        type === 'slideUp'
+          ? restPosition.y - yOffset
+          : restPosition.y + yOffset;
+      group.visible = slideEased > 0.001;
       break;
+    }
 
     case 'pop':
     case 'elastic': {

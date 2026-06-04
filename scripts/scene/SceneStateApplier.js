@@ -289,6 +289,7 @@ function createStateApplySteps() {
       id: 'background-tone-hdri-strength',
       apply: (s, state) => {
         s.backgroundController?.setColor(state.background);
+        s.backgroundGradientController?.setConfig(state.backgroundGradient ?? {});
         s.setToneMapping(state.toneMapping ?? 'aces-filmic');
         s.setHdriStrength(state.hdriStrength ?? 2);
       },

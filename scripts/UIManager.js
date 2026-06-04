@@ -1,4 +1,5 @@
 import { applyEffectFoldouts, applyMeshFoldouts, applyStudioFoldouts } from './ui/effectFoldouts.js';
+import { isBackgroundFallbackActive } from './render/backgroundFallback.js';
 import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
@@ -27,6 +28,7 @@ import {
 } from './ui/modeChangeToast.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
+import { MapInspectControls } from './ui/MapInspectControls.js';
 import { StudioControls } from './ui/StudioControls.js';
 import { GoboControls } from './ui/GoboControls.js';
 import { RenderControls } from './ui/RenderControls.js';
@@ -38,6 +40,7 @@ import { AnimationControls } from './ui/AnimationControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
 import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
+import { BackgroundGradientControls } from './ui/BackgroundGradientControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import {
   buildOfflineExportOverlaySummary,
@@ -173,9 +176,21 @@ export class UIManager {
 
     this.helpers = new UIHelpers(this.eventBus, this.stateStore, this);
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.mapInspectControls = new MapInspectControls(this.eventBus, this.stateStore, this);
+    this.mapInspectControls.setModelAccessors(
+      () => window.orby?.scene?.currentModel ?? null,
+      (mesh) => window.orby?.scene?.materialController?.isWindowMesh(mesh) ?? false,
+      () => window.orby?.scene?.materialController?.originalMaterials ?? null,
+    );
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
     this.goboControls = new GoboControls(this.eventBus, this.stateStore, this, this.helpers);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.backgroundGradientControls = new BackgroundGradientControls(
+      this.eventBus,
+      this.stateStore,
+      this,
+      this.helpers,
+    );
     this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
     this.viewPresetsControls = new ViewPresetsControls(this.eventBus, this.stateStore, this);
     this.isometricControls = new IsometricControls(
@@ -525,6 +540,11 @@ export class UIManager {
       fresnelRadius: q('#fresnelRadius'),
       fresnelStrength: q('#fresnelStrength'),
       backgroundColor: q('#backgroundColor'),
+      backgroundGradientEnabled: q('#backgroundGradientEnabled'),
+      backgroundGradientStopColor: q('#backgroundGradientStopColor'),
+      backgroundGradientAngle: q('#backgroundGradientAngle'),
+      backgroundGradientCenterX: q('#backgroundGradientCenterX'),
+      backgroundGradientCenterY: q('#backgroundGradientCenterY'),
       cameraFov: q('#cameraFov'),
       lensSensor: q('#lensSensor'),
       isometricEnabled: q('#isometricEnabled'),
@@ -674,9 +694,11 @@ export class UIManager {
     // Bind all control modules
     this.globalControls.bind();
     this.meshControls.bind();
+    this.mapInspectControls.bind();
     this.studioControls.bind();
     this.goboControls.bind();
     this.renderControls.bind();
+    this.backgroundGradientControls.bind();
     this.lensControls.bind();
     this.viewPresetsControls.bind();
     this.isometricControls.bind();
@@ -1252,7 +1274,7 @@ export class UIManager {
       this.inputs.hdriUploadBtn.disabled = !enabled;
       this.inputs.hdriUploadBtn.classList.toggle('is-disabled', !enabled);
     }
-    this.updateHdriBackgroundFallbackVisibility(enabled);
+    this.updateHdriBackgroundFallbackVisibility();
     // Block muting handled by applyBlockStates via syncControls
     this.inputs.hdriBackground.disabled = !enabled;
     this.updateHdriReceiveShadowsAoDisabled();
@@ -1269,12 +1291,12 @@ export class UIManager {
     this.updateGodRaysControlsDisabled();
   }
 
-  updateHdriBackgroundFallbackVisibility(hdriEnabled = this.inputs.hdriEnabled?.checked) {
+  updateHdriBackgroundFallbackVisibility(state = this.stateStore.getState()) {
     const panel =
       this.dom.blocks?.background ??
       document.getElementById('studioBackgroundPanel');
     if (!panel) return;
-    panel.hidden = !!hdriEnabled;
+    panel.hidden = !isBackgroundFallbackActive(state);
   }
 
   updateHdriReceiveShadowsAoDisabled() {
@@ -3019,6 +3041,7 @@ export class UIManager {
     this.studioControls.sync(state);
     this.goboControls.sync(state);
     this.renderControls.sync(state);
+    this.backgroundGradientControls.sync(state);
     this.lensControls.sync(state);
     this.viewPresetsControls.sync(state);
     this.isometricControls.sync(state);
@@ -3208,7 +3231,7 @@ export class UIManager {
     applyStudioFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
     applyMeshFoldouts(currentState, (key, open) => this.setEffectFoldoutOpen(key, open));
 
-    this.updateHdriBackgroundFallbackVisibility(currentState.hdriEnabled);
+    this.updateHdriBackgroundFallbackVisibility(currentState);
 
     const clayOn = currentState.shading === 'clay';
     if (this.dom.subsections?.clay) {

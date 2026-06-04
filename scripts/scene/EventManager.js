@@ -95,6 +95,8 @@ export class EventManager {
     });
     eventBus.on('mesh:fbx-invert-normal-y', (enabled) => s.setFbxInvertNormalY(enabled));
     eventBus.on('mesh:fbx-pbr-uv-channel', (channel) => s.setFbxPbrUvChannel(channel));
+    eventBus.on('mesh:map-inspect-preview', (slot) => s.setMapInspectPreview(slot));
+    eventBus.on('mesh:map-inspect-clear', () => s.clearMapInspectPreview());
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
     eventBus.on('mesh:svg-extrude-bevel', (payload) => s.setSvgExtrudeBevel(payload ?? {}));
@@ -460,6 +462,9 @@ export class EventManager {
 
     // Scene/Background events
     eventBus.on('scene:background', (color) => s.backgroundController?.setColor(color));
+    eventBus.on('scene:background-gradient', (config) => {
+      s.backgroundGradientController?.setConfig(config);
+    });
     eventBus.on('scene:exposure', (value) => {
       s.autoExposureController?.setManualExposure(value);
       // Update UI display

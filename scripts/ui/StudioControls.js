@@ -82,6 +82,7 @@ export class StudioControls {
       const enabled = event.target.checked;
       this.stateStore.set('hdriBackground', enabled);
       this.eventBus.emit('studio:hdri-background', enabled);
+      this.ui.updateHdriBackgroundFallbackVisibility?.();
       this.ui.updateHdriReceiveShadowsAoDisabled?.();
     });
     this.ui.inputs.hdriReceiveShadowsAo?.addEventListener('change', (event) => {

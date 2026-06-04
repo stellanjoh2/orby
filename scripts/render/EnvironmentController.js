@@ -17,6 +17,8 @@ export class EnvironmentController {
     rotation = 0,
     fallbackColor = ORBY_BLACK,
     onEnvironmentMapUpdated = null,
+    /** When HDRI is not drawing the backdrop, hand background back to BackgroundController. */
+    onReleaseSceneBackground = null,
   } = {}) {
     this.scene = scene;
     this.renderer = renderer;
@@ -30,6 +32,7 @@ export class EnvironmentController {
     this.blurriness = blurriness;
     this.rotation = rotation;
     this.fallbackColor = fallbackColor;
+    this.onReleaseSceneBackground = onReleaseSceneBackground;
 
     this.textureLoader = new THREE.TextureLoader();
     this.hdriLoader = new RGBELoader();
@@ -336,6 +339,14 @@ export class EnvironmentController {
     return texture;
   }
 
+  _releaseSceneBackground() {
+    if (typeof this.onReleaseSceneBackground === 'function') {
+      this.onReleaseSceneBackground();
+      return;
+    }
+    this.scene.background = null;
+  }
+
   _applyEnvironment(forceMaterialSync = false) {
     const usingLowResPreview =
       this.currentLowResTexture &&
@@ -349,7 +360,7 @@ export class EnvironmentController {
     if (!hdriActive) {
       this.scene.environment = null;
       this.scene.environmentIntensity = 0;
-      this.scene.background = null;
+      this._releaseSceneBackground();
       if (forceMaterialSync) {
         this._lastNotifiedEnvTexture = null;
         this._lastNotifiedEnvIntensity = null;
@@ -416,7 +427,7 @@ export class EnvironmentController {
         this.scene.backgroundIntensity = this.strength;
       }
     } else {
-      this.scene.background = null;
+      this._releaseSceneBackground();
       if ('backgroundBlurriness' in this.scene) {
         this.scene.backgroundBlurriness = 0;
         this.scene.backgroundIntensity = 1;

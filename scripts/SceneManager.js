@@ -41,6 +41,7 @@ import { AutoExposureController } from './render/AutoExposureController.js';
 import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
+import { BackgroundGradientController } from './render/backgroundGradient/BackgroundGradientController.js';
 import {
   GoboProjectionController,
   GOBO_UI_DEFAULT,
@@ -428,6 +429,13 @@ export class SceneManager {
       camera: this.camera,
       initialColor: initialState.background ?? '#080808',
     });
+    this.backgroundGradientController = new BackgroundGradientController({
+      renderer: this.renderer,
+      scene: this.scene,
+      backgroundController: this.backgroundController,
+    });
+    this.backgroundController.setGradientController(this.backgroundGradientController);
+    this.backgroundGradientController.setConfig(initialState.backgroundGradient ?? {});
 
     this.transformController = new TransformController({
       modelRoot: this.modelRoot,
@@ -745,6 +753,8 @@ export class SceneManager {
     this.goboProjection = null;
     this.backgroundController?.dispose?.();
     this.backgroundController = null;
+    this.backgroundGradientController?.dispose?.();
+    this.backgroundGradientController = null;
     this.materialController?.clear?.();
 
     if (this.composer?.renderTarget1) {
@@ -888,6 +898,7 @@ export class SceneManager {
       blurriness: this.hdriBlurriness,
       rotation: this.hdriRotation,
       fallbackColor: this.backgroundController?.getColor() ?? '#080808',
+      onReleaseSceneBackground: () => this.backgroundController?.refreshAppearance?.(),
       onEnvironmentMapUpdated: (texture, intensity) => {
         this.updateMaterialsEnvironment(texture, intensity);
       },
@@ -2040,6 +2051,14 @@ export class SceneManager {
 
   updateUvCheckerOverlayTransforms() {
     this.materialController?.updateUvCheckerOverlayTransforms();
+  }
+
+  setMapInspectPreview(slot) {
+    this.materialController?.mapInspectPreview?.preview(slot);
+  }
+
+  clearMapInspectPreview() {
+    this.materialController?.mapInspectPreview?.clear();
   }
 
   setGroundSolid(enabled) {
@@ -3798,6 +3817,9 @@ export class SceneManager {
     this.camera.aspect = finalWidth / Math.max(1, finalHeight);
     this.syncPerspectiveCameraFovAndLens();
     this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
+    const dbSize = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(dbSize);
+    this.backgroundGradientController?.handleResize?.(dbSize.x, dbSize.y);
   }
 
   async exportPng(settings = {}) {

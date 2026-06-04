@@ -65,7 +65,7 @@ export class StateStore {
         fillColor: '#808080',
         /** Total seconds until the last character finishes scale-in (0 = off). */
         revealDurationSec: 2,
-        /** @type {'scale' | 'fade' | 'slideUp' | 'pop' | 'rotate' | 'elastic'} */
+        /** @type {'scale' | 'fade' | 'slideUp' | 'slideDown' | 'pop' | 'rotate' | 'elastic'} */
         revealType: 'scale',
         /** Preview playback mode: true loops continuously, false stops at end. */
         revealLoop: true,
@@ -374,6 +374,17 @@ export class StateStore {
       renderQuality: 'medium',
       toneMapping: 'aces-filmic',
       background: '#080808',
+      backgroundGradient: {
+        enabled: false,
+        type: 'linear',
+        angle: 180,
+        centerX: 50,
+        centerY: 50,
+        stops: [
+          { color: '#080808', position: 0 },
+          { color: '#c4ff00', position: 100 },
+        ],
+      },
       lookFilterPreset: 'none',
       lookFilterPresetsOpen: false,
       /** Object tab — fold-out for Shader Lab (stylized materials). */

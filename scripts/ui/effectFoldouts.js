@@ -2,6 +2,7 @@ import {
   isBloomPipelineActive,
   isVignetteUiEnabled,
 } from '../constants.js';
+import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
 
 /**
  * Progressive disclosure for Camera & FX — child controls fold out when a
@@ -53,6 +54,7 @@ export function applyStudioFoldouts(state, setOpen) {
   setOpen('base-glass', podiumOn && glassOn);
   setOpen('backdrop', backdropOn);
   setOpen('backdrop-texture', backdropOn && !!state.backdropTextureEnabled);
+  setOpen('background-gradient', !!state.backgroundGradient?.enabled && isBackgroundFallbackActive(state));
   setOpen('lights-rig', lightsOn);
   setOpen('lights-shadows', lightsOn && !!state.lightsCastShadows);
   setOpen('key-light', lightsOn && state.lights?.key?.enabled === true);

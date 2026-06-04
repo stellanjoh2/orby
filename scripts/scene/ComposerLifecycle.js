@@ -75,7 +75,10 @@ export class ComposerLifecycle {
     const r = this.renderer;
     const bg = this.scene.background;
     if (bg == null) {
-      const hex = this.backgroundController?.getColor() ?? '#080808';
+      const gradient = this.backgroundController?.gradientController;
+      const hex = gradient?.isActive?.()
+        ? gradient.getFallbackColor()
+        : this.backgroundController?.getColor() ?? '#080808';
       r.setClearColor(new THREE.Color(hex), 1);
       return;
     }

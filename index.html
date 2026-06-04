@@ -74,6 +74,8 @@
     />
     <link rel="stylesheet" href="./styles/fontawesome/orby-icons.css" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles/background-gradient.css" />
+    <link rel="stylesheet" href="./styles/map-inspect.css" />
     <link rel="stylesheet" href="./styles/marketing/09-scroll-cue-responsive.css" />
     <script>
       (function () {
@@ -418,6 +420,37 @@
             <span id="viewportLoadSpinnerElapsed" class="viewport-load-spinner__elapsed" hidden></span>
           </div>
           <div id="demoLogotype" class="demo-logotype"></div>
+          <div
+            id="mapPreviewPanel"
+            class="map-preview-panel"
+            hidden
+            role="dialog"
+            aria-modal="false"
+            aria-label="Texture map preview"
+          >
+            <div class="map-preview-panel__chrome">
+              <div class="load-settings-header map-preview-panel__header">
+                <button
+                  type="button"
+                  id="mapPreviewPanelDrag"
+                  class="map-preview-panel__drag"
+                  aria-label="Drag panel"
+                >
+                  <span class="map-preview-panel__grip" aria-hidden="true"></span>
+                </button>
+                <div id="mapPreviewPanelTabs" class="map-preview-panel__tabs"></div>
+                <button
+                  type="button"
+                  id="mapPreviewPanelClose"
+                  class="close-btn"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="map-preview-panel__body">
+                <img id="mapPreviewPanelImage" class="map-preview-panel__image" alt="" />
+              </div>
+            </div>
+          </div>
         </section>
 
         <aside class="shelf is-shelf-hidden" id="shelf">
@@ -469,6 +502,16 @@
                     <img src="./assets/images/modeicon-wire.png" alt="Wire" />
                   </label>
                 </div>
+              </div>
+
+              <div class="panel-block" id="mapInspectBlock" hidden>
+                <div class="block-title">Maps</div>
+                <div
+                  id="mapInspectGrid"
+                  class="map-inspect-grid"
+                  role="group"
+                  aria-label="Texture map preview"
+                ></div>
               </div>
 
               <div class="panel-block">
@@ -1366,7 +1409,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.632 · 2026-06-02 12:35:59 UTC</div>
+              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -1502,7 +1545,7 @@
                 hidden
               >
                 <div class="block-title has-reset">
-                  <span data-tooltip="Solid viewport background when HDRI lighting is off">Background</span>
+                  <span data-tooltip="Solid color or gradient behind the scene when Render Backdrop is off — HDRI still lights the model">Background</span>
                   <button
                     type="button"
                     class="block-reset-btn"
@@ -1523,6 +1566,59 @@
                     value="#080808"
                   />
                 </label>
+                <label class="slider-line">
+                  <span data-tooltip="Multi-stop linear or radial gradient — overrides the flat color when on">Gradient</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="backgroundGradientEnabled" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable gradient background</span>
+                  </label>
+                </label>
+                <div
+                  id="backgroundGradientFoldout"
+                  class="effect-foldout effect-foldout--collapsed bg-gradient-foldout"
+                  data-effect-foldout="background-gradient"
+                  aria-hidden="true"
+                >
+                  <div class="bg-gradient-preview-wrap">
+                    <canvas
+                      id="backgroundGradientPreview"
+                      class="bg-gradient-preview"
+                      aria-label="Gradient preview — drag stops (max 3), click empty bar to add"
+                      role="img"
+                    ></canvas>
+                  </div>
+                  <label class="color-line bg-gradient-stop-color-line">
+                    <span>Stop color</span>
+                    <input
+                      type="color"
+                      id="backgroundGradientStopColor"
+                      class="color-chip"
+                      value="#080808"
+                    />
+                  </label>
+                  <div class="bg-gradient-type-toggle export-button-group">
+                    <button type="button" data-bg-gradient-type="linear" class="export-option-btn active">Linear</button>
+                    <button type="button" data-bg-gradient-type="radial" class="export-option-btn">Radial</button>
+                  </div>
+                  <label class="slider-line" id="backgroundGradientAngleRow">
+                    <span data-tooltip="Gradient direction — same convention as CSS linear-gradient (0° = up)">Angle</span>
+                    <input id="backgroundGradientAngle" type="range" min="0" max="360" step="1" value="180" />
+                    <span class="value" data-output="backgroundGradientAngle">180°</span>
+                  </label>
+                  <div id="backgroundGradientCenterRow" hidden>
+                    <label class="slider-line">
+                      <span>Center X</span>
+                      <input id="backgroundGradientCenterX" type="range" min="0" max="100" step="1" value="50" />
+                      <span class="value" data-output="backgroundGradientCenterX">50%</span>
+                    </label>
+                    <label class="slider-line">
+                      <span>Center Y</span>
+                      <input id="backgroundGradientCenterY" type="range" min="0" max="100" step="1" value="50" />
+                      <span class="value" data-output="backgroundGradientCenterY">50%</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div class="panel-block" data-block="base">
@@ -2331,7 +2427,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.632 · 2026-06-02 12:35:59 UTC</div>
+              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4047,7 +4143,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.632 · 2026-06-02 12:35:59 UTC</div>
+              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4304,7 +4400,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.632 · 2026-06-02 12:35:59 UTC</div>
+              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4951,7 +5047,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.632 · 2026-06-02 12:35:59 UTC</div>
+              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

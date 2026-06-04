@@ -72,7 +72,7 @@ const RESET_DIRTY_PATHS = {
     'backdropEnabled', 'backdropScale', 'backdropWidth', 'backdropColor',
     'backdropRotation', 'backdropY', 'backdropTextureEnabled', 'backdropTextureScale',
   ],
-  background: ['background'],
+  background: ['background', 'backgroundGradient'],
   grid: ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale'],
   dof: ['dof'],
   bloom: ['bloom'],
@@ -171,7 +171,7 @@ const BLOCK_RESET_TOASTS = {
   base: 'Base reset',
   'base-glass': 'Base glass reset',
   backdrop: 'Backdrop reset',
-  background: 'Background color reset',
+  background: 'Background color and gradient reset',
   grid: 'Grid reset',
   dof: 'Depth of field reset',
   bloom: 'Bloom reset',
@@ -579,6 +579,7 @@ export class ResetControls {
       this.stateStore.set('backdropTextureScale', defaults.backdropTextureScale ?? 1.8);
       this.stateStore.set('groundWireColor', defaults.groundWireColor);
       this.stateStore.set('background', defaults.background);
+      this.stateStore.set('backgroundGradient', defaults.backgroundGradient);
       this.stateStore.set('lights', defaults.lights);
       this.stateStore.set('lightsEnabled', defaults.lightsEnabled);
       this.stateStore.set('lightsMaster', defaults.lightsMaster);
@@ -656,7 +657,8 @@ export class ResetControls {
       );
       this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
       this.eventBus.emit('scene:background', defaults.background);
-      
+      this.eventBus.emit('scene:background-gradient', defaults.backgroundGradient);
+
       Object.keys(defaults.lights).forEach((lightId) => {
         const light = defaults.lights[lightId];
         this.eventBus.emit('lights:update', { lightId, property: 'color', value: light.color });
@@ -1117,7 +1119,9 @@ export class ResetControls {
             
           case 'background':
             this.stateStore.set('background', defaults.background);
+            this.stateStore.set('backgroundGradient', defaults.backgroundGradient);
             this.eventBus.emit('scene:background', defaults.background);
+            this.eventBus.emit('scene:background-gradient', defaults.backgroundGradient);
             this.ui.syncUIFromState();
             break;
             

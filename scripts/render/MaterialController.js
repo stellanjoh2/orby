@@ -17,6 +17,7 @@ import {
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
+import { MapInspectPreview } from './MapInspectPreview.js';
 import {
   applyShadowTintToObject as patchShadowTintOnObject,
   clearShadowTintFromObject as patchClearShadowTintFromObject,
@@ -195,6 +196,8 @@ export class MaterialController {
     this.wireframeOverlayMeshes = null;
     /** UV Checker overlay (Atlux map) — extracted to keep this controller focused on materials/shading. */
     this.uvCheckerOverlay = new UvCheckerOverlay();
+    /** Hover preview for Object → Maps channel inspection. */
+    this.mapInspectPreview = new MapInspectPreview(this);
     this.unlitMode = false;
 
     // Settings
@@ -1556,6 +1559,7 @@ export class MaterialController {
 
   setShading(mode) {
     if (!this.currentModel) return;
+    this.mapInspectPreview?.clear();
     this.currentShading = mode;
     const modelHasEmissive = this._modelHasAnyEmissiveBaseline();
     this.currentModel.traverse((child) => {
@@ -3540,6 +3544,7 @@ export class MaterialController {
   }
 
   clear() {
+    this.mapInspectPreview?.clear();
     this.disposeFbxUserTextures(this.currentModel);
     this.clearWireframeOverlay();
     this.uvCheckerOverlay.setModel(null);

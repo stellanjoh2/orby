@@ -30,8 +30,19 @@ export class BackgroundController {
       groundY: 0,
     });
 
+    /** @type {import('./backgroundGradient/BackgroundGradientController.js').BackgroundGradientController | null} */
+    this.gradientController = null;
+
     // Initialize clear color
     this._applyClearColor();
+  }
+
+  /**
+   * @param {import('./backgroundGradient/BackgroundGradientController.js').BackgroundGradientController | null} controller
+   */
+  setGradientController(controller) {
+    this.gradientController = controller;
+    this.refreshAppearance();
   }
   
   /**
@@ -79,7 +90,11 @@ export class BackgroundController {
       this.backgroundSphere.material.color.set(colorStr);
     }
     
-    // Apply the color if HDRI background is off
+    this.refreshAppearance();
+  }
+
+  /** Re-apply flat color or delegate to the gradient controller. */
+  refreshAppearance() {
     this._applyClearColor();
   }
   
@@ -89,7 +104,7 @@ export class BackgroundController {
   setHdriBackgroundEnabled(enabled) {
     this.hdriBackgroundEnabled = enabled;
     this.hdriShadowReceiver?.setHdriBackgroundEnabled(enabled);
-    this._applyClearColor();
+    this.refreshAppearance();
   }
   
   /**
@@ -98,7 +113,7 @@ export class BackgroundController {
   setHdriEnabled(enabled) {
     this.hdriEnabled = enabled;
     this.hdriShadowReceiver?.setHdriEnabled(enabled);
-    this._applyClearColor();
+    this.refreshAppearance();
   }
 
   setReceiveShadowsAoEnabled(enabled) {
@@ -141,6 +156,10 @@ export class BackgroundController {
       return;
     }
     
+    if (this.gradientController?.applyIfActive?.()) {
+      return;
+    }
+
     // HDRI background is off - show solid color
     // CRITICAL: scene.background MUST be null for clear color to show
     this.scene.background = null;

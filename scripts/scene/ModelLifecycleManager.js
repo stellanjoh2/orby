@@ -86,6 +86,7 @@ export class ModelLifecycleManager {
     s.eventBus.emit('ui:advanced-glass-visible', { visible: false });
     s._emitStlSmoothingControlsVisibility();
     s.eventBus.emit('ui:center-pivot-enabled', { enabled: false });
+    s.eventBus.emit('scene:model-cleared');
   }
 
   applyAssetMetadata(asset = {}) {

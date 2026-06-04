@@ -3617,13 +3617,13 @@ html:not(.mobile-landing) .shelf .panel-header-title {
 
 html:not(.mobile-landing) .shelf .hdri-grid {
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
-  margin-bottom: calc(1.1rem * var(--studio-ui-scale));
-  padding: calc(0.75rem * var(--studio-ui-scale)) 0;
+  margin-bottom: var(--shelf-row-gap);
+  padding: calc(0.75rem * var(--studio-ui-scale)) 0 0;
 }
 
 html:not(.mobile-landing) .shelf .mode-icons {
   gap: var(--shelf-picker-grid-gap);
-  padding: var(--shelf-stack-gap) 0;
+  padding: 0;
 }
 
 /* Shader Lab — 4-column picker grid, smaller spheres than Studio HDRI */
@@ -4615,7 +4615,7 @@ a.about-highlight:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   justify-items: center;
   align-items: center;
-  padding: var(--shelf-stack-gap) 0;
+  padding: 0;
   width: 100%;
   gap: var(--shelf-picker-grid-gap);
 }
@@ -4683,6 +4683,15 @@ a.about-highlight:focus-visible {
 .mode-icon:has(input:checked)::before {
   border-color: var(--accent);
   transform: translate(-50%, -50%);
+}
+
+/* Maps pin preview — hide Display ring while a map channel is active on the mesh */
+.mode-icons.is-map-inspect-active .mode-icon:has(input:checked)::before {
+  border-color: transparent;
+}
+
+.mode-icons.is-map-inspect-active .mode-icon:has(input:checked):hover img {
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .mode-icon:has(input:checked):hover img {
@@ -5613,9 +5622,9 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
-  margin-bottom: 1.1rem;
-  /* 0.75rem @ 2560 — original HDRI grid vertical inset (not shelf stack rhythm) */
-  padding: 0.75rem 0;
+  margin-bottom: var(--shelf-row-gap);
+  /* Top inset only — card padding handles bottom inset (same as segmented / accent buttons) */
+  padding: 0.75rem 0 0;
 }
 
 .hdri-icon {
@@ -5766,7 +5775,6 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   position: relative;
   z-index: 2;
   pointer-events: none;
-  transition: transform 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
 
 .hdri-icon--upload .hdri-icon__plus {
@@ -5784,9 +5792,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   background: var(--accent-muted);
 }
 
-.hdri-icon--upload:hover:not(:disabled):not(.is-disabled) .hdri-icon__plus {
-  color: var(--text);
-  transform: scale(1.08);
+.hdri-icon--upload:hover:not(:disabled):not(.is-disabled)::before {
+  border-color: var(--accent);
 }
 
 .hdri-icon--upload.is-loaded .hdri-icon__disc {
@@ -5805,10 +5812,6 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .hdri-icon--upload.is-loaded:hover:not(:disabled):not(.is-disabled) .hdri-icon__disc {
   background: var(--accent);
   box-shadow: var(--ui-accent-outer-glow);
-}
-
-.hdri-icon--upload.is-loaded:hover:not(:disabled):not(.is-disabled) .hdri-icon__check {
-  transform: scale(1.06);
 }
 
 .hdri-icon--upload.active::before {
