@@ -1,4 +1,5 @@
 import { evalToneCurveAt, normalizeToneCurve } from '../math/toneCurvePchip.js';
+import { ORBY_LIME } from '../constants.js';
 
 /**
  * Four-handle luminance curve: (0, blackY), p1, p2, (1, whiteY), Catmull–Rom-style spline.
@@ -7,10 +8,17 @@ import { evalToneCurveAt, normalizeToneCurve } from '../math/toneCurvePchip.js';
 const MIN_GAP = 0.06;
 const MIN_CSS_W = 220;
 const MIN_CSS_H = 220;
-const BRAND = '#c4ff00';
 
 const DIAG_ALPHA = 0.28125; // identity reference (solid), visible on app black
 const MARGIN = 0.02;
+
+function orbyLimeRgba(alpha) {
+  const h = ORBY_LIME.slice(1);
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function clamp(n, a, b) {
   return Math.min(b, Math.max(a, n));
@@ -332,7 +340,7 @@ export class ToneCurveController {
     const K0 = this.fromNormToPix({ x: 0, y: c.blackY });
     const K5 = this.fromNormToPix({ x: 1, y: c.whiteY });
 
-    ctx.strokeStyle = `rgba(196, 255, 0, ${DIAG_ALPHA})`;
+    ctx.strokeStyle = orbyLimeRgba(DIAG_ALPHA);
     ctx.lineWidth = 1 * this.dpr;
     ctx.beginPath();
     ctx.moveTo(A.x, A.y);
@@ -340,7 +348,7 @@ export class ToneCurveController {
     ctx.stroke();
 
     const steps = 120;
-    ctx.strokeStyle = BRAND;
+    ctx.strokeStyle = ORBY_LIME;
     ctx.lineWidth = 2 * this.dpr;
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -363,7 +371,7 @@ export class ToneCurveController {
       const r = r0 * scale;
       ctx.beginPath();
       ctx.arc(P.x, P.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = BRAND;
+      ctx.fillStyle = ORBY_LIME;
       ctx.fill();
       ctx.strokeStyle = 'rgba(2, 3, 5, 0.95)';
       ctx.lineWidth = 2 * this.dpr;

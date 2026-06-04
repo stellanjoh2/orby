@@ -8,8 +8,7 @@ import {
   sampleGradientColorAt,
 } from '../render/backgroundGradient/backgroundGradientCanvas.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
-
-const BRAND = '#c4ff00';
+import { ORBY_LIME } from '../constants.js';
 const MIN_STOP_GAP = 1;
 
 /**
@@ -228,7 +227,7 @@ export class BackgroundGradientControls {
       const selected = i === this.selectedStopIndex;
       ctx.beginPath();
       ctx.fillStyle = stop.color;
-      ctx.strokeStyle = selected ? BRAND : 'rgba(255,255,255,0.85)';
+      ctx.strokeStyle = selected ? ORBY_LIME : 'rgba(255,255,255,0.85)';
       ctx.lineWidth = selected ? 3 * (window.devicePixelRatio || 1) : 2 * (window.devicePixelRatio || 1);
       const r = 7 * (window.devicePixelRatio || 1);
       ctx.arc(x, y, r, 0, Math.PI * 2);

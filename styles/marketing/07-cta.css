@@ -416,3 +416,46 @@
   outline-offset: 3px;
   border-radius: 2px;
 }
+
+/*
+ * Below 1920 — MacBook band: CTA PNGs −25% vs vw/1920 base; 1920+ unchanged.
+ */
+@media (max-width: 1919px) {
+  .orby-marketing__section--cta,
+  .orby-marketing__section--cta .orby-marketing__cta-stage,
+  .orby-marketing__cta-stage {
+    --orby-cta-narrow-scale: calc(
+      clamp(0.78, calc(100vw / 1920px), 1) * 0.75
+    );
+    --orby-cta-asset-max-w: min(
+      calc(58vw * var(--orby-cta-narrow-scale)),
+      calc(920px * var(--orby-cta-narrow-scale))
+    );
+    --orby-cta-asset-max-h: min(
+      88dvh,
+      calc(1150px * var(--orby-cta-narrow-scale))
+    );
+    --orby-intro-left-nudge: clamp(
+      calc(100px * var(--orby-cta-narrow-scale)),
+      calc(26vw * var(--orby-cta-narrow-scale)),
+      calc(350px * var(--orby-cta-narrow-scale))
+    );
+    --orby-intro-right-nudge: var(--orby-intro-left-nudge);
+    --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-cta-narrow-scale));
+    --orby-cta-asset-shift-x: calc(8% * var(--orby-cta-narrow-scale));
+    --orby-cta-asset-left-shift-x: calc(-8% * var(--orby-cta-narrow-scale));
+    --orby-cta-asset-shift-y: calc(100px * var(--orby-cta-narrow-scale));
+    --orby-intro-scale-left: min(
+      1,
+      calc(88dvh / 1041 * var(--orby-cta-narrow-scale))
+    );
+    --orby-intro-scale-right: min(
+      1,
+      calc(88dvh / 1225 * var(--orby-cta-narrow-scale))
+    );
+  }
+
+  .orby-marketing__footer-bar {
+    --orby-footer-edge-x: var(--orby-marketing-edge-inset, var(--orby-home-padding-x));
+  }
+}

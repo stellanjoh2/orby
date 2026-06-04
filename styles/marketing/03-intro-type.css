@@ -163,12 +163,12 @@ html.orby-home-scroll .orby-marketing__section--intro-turntable .orby-marketing_
 }
 
 /*
- * Below 1920 — freeze turntable art direction to the 1920 band (no responsive shift / center pop).
+ * Below 1920 — MacBook band: turntable 150px left; 1920+ unchanged.
  */
 @media (max-width: 1919px) {
   .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
     --orby-intro-turntable-object-position: 52% 38%;
-    --orby-intro-turntable-offset-x: 750px;
+    --orby-intro-turntable-offset-x: 500px;
     --orby-intro-turntable-offset-y: 50px;
     --orby-intro-turntable-fit-scale: 0.85;
   }

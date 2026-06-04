@@ -250,7 +250,7 @@ const PRESET_SPECS = {
     },
     bloom: {
       enabled: true,
-      strength: 0.48,
+      strength: 0.10,
       threshold: 0.68,
       color: '#ff66ee',
     },

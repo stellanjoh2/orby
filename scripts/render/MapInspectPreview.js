@@ -73,6 +73,7 @@ export class MapInspectPreview {
   }
 
   clear() {
+    const hadPreview = !!this.activeSlot;
     const mc = this.materialController;
     const model = mc?.currentModel;
     if (model) {
@@ -86,6 +87,11 @@ export class MapInspectPreview {
     this._createdMaterials.forEach((mat) => mat?.dispose?.());
     this._createdMaterials = [];
     this.activeSlot = null;
+
+    // Sliders still update materialSettings while preview is pinned; apply to restored clones.
+    if (hadPreview && mc) {
+      mc.updateMaterials();
+    }
   }
 
   /**

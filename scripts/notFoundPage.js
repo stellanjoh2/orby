@@ -1,7 +1,8 @@
 import './main.js';
 import * as THREE from 'three';
-import { DEFAULT_MATERIAL_BRIGHTNESS } from './constants.js';
+import { DEFAULT_MATERIAL_BRIGHTNESS, ORBY_LIME } from './constants.js';
 import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
+import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
 
 /** Default fit is ~radius × 1.87; 404 hero sits closer but not tight on the mesh. */
 const NOT_FOUND_CAMERA_DISTANCE_FACTOR = 0.62;
@@ -30,7 +31,7 @@ const NOT_FOUND_PRESET = {
   },
   wireframe: {
     alwaysOn: false,
-    color: '#c4ff00',
+    color: ORBY_LIME,
     onlyVisibleFaces: true,
     hideMesh: false,
   },
@@ -97,7 +98,7 @@ const NOT_FOUND_PRESET = {
   groundWire: false,
   groundSolidColor: '#808080',
   baseColor: '#e8e8e8',
-  groundWireColor: '#c4ff00',
+  groundWireColor: ORBY_LIME,
   groundWireOpacity: 1,
   groundY: -0.28860217332839966,
   gridY: -0.28860217332839966,
@@ -158,7 +159,7 @@ const NOT_FOUND_PRESET = {
   showLightIndicators: false,
   lightsCastShadows: false,
   lightsShadowQuality: 'medium',
-  lightsShadowSoftness: 4,
+  lightsShadowSoftness: DEFAULT_LIGHTS_SHADOW_SOFTNESS,
   lightsShadowColor: '#080808',
   lightsShadowOpacity: 0.25,
   lightsShadowContactOffset: -0.0001,

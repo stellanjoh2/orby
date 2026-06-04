@@ -44,6 +44,15 @@
     1
   );
   --orby-scroll-nav-edge-x: calc(112px * var(--orby-scroll-nav-gutter-scale));
+  --orby-scroll-nav-brand-max-width: min(42vw, calc(168px * var(--drop-hero-wide-factor)));
+  /* Links start after the logotype — not under it when padding-x is narrower than the mark */
+  --orby-scroll-nav-brand-reserve: calc(
+    var(--orby-scroll-nav-edge-x) + var(--orby-scroll-nav-brand-max-width) + 1.25rem
+  );
+  --orby-scroll-nav-links-inset-left: max(
+    var(--orby-home-padding-x),
+    var(--orby-scroll-nav-brand-reserve)
+  );
   /* Reserve right side so links don't run under the Browse pill */
   --orby-scroll-nav-cta-reserve: calc(
     var(--drop-hero-magic-btn-width) + var(--orby-scroll-nav-edge-x) + 24px
@@ -87,6 +96,20 @@
   }
 }
 
+/* Below 1920 — logo + Browse pill use narrow gallery inset (orby-home-padding-x.css) */
+@media (max-width: 1919px) {
+  .orby-marketing-scroll-nav {
+    --orby-scroll-nav-edge-x: var(
+      --orby-marketing-edge-inset,
+      var(--orby-home-padding-x, 1.5rem)
+    );
+    --orby-scroll-nav-links-inset-left: max(
+      var(--orby-home-padding-x),
+      var(--orby-scroll-nav-brand-reserve)
+    );
+  }
+}
+
 .orby-marketing-scroll-nav__bar {
   position: relative;
   box-sizing: border-box;
@@ -109,7 +132,7 @@ a.orby-marketing-scroll-nav__brand:visited {
   flex-shrink: 0;
   width: calc(var(--orby-scroll-nav-chrome-height) * var(--orby-scroll-nav-logotype-ratio));
   height: var(--orby-scroll-nav-chrome-height);
-  max-width: min(42vw, calc(168px * var(--drop-hero-wide-factor)));
+  max-width: var(--orby-scroll-nav-brand-max-width);
   margin: 0;
   padding: 0;
   border: none;
@@ -161,8 +184,9 @@ a.orby-marketing-scroll-nav__brand:visited {
   min-height: var(--orby-scroll-nav-height);
   height: var(--orby-scroll-nav-height);
   margin: 0;
-  /* Align with dropzone / headline left edge (--orby-home-padding-x on :root) */
-  padding-inline: var(--orby-home-padding-x, 1.5rem) var(--orby-scroll-nav-cta-reserve);
+  /* Dropzone / headline edge, but never under the logotype (--orby-scroll-nav-brand-reserve) */
+  padding-inline: var(--orby-scroll-nav-links-inset-left, var(--orby-home-padding-x, 1.5rem))
+    var(--orby-scroll-nav-cta-reserve);
   font-family: var(--brand-font-mattone-regular, 'Mattone Regular', 'Cal Sans', 'Geist', system-ui,
     sans-serif);
   font-size: 18px;

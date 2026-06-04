@@ -1,4 +1,9 @@
-import { applyEffectFoldouts, applyMeshFoldouts, applyStudioFoldouts } from './ui/effectFoldouts.js';
+import {
+  applyEffectFoldouts,
+  applyMeshFoldouts,
+  applyStudioFoldouts,
+  applyToggleSectionMute,
+} from './ui/effectFoldouts.js';
 import { isBackgroundFallbackActive } from './render/backgroundFallback.js';
 import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
@@ -36,6 +41,7 @@ import { LensControls } from './ui/LensControls.js';
 import { ViewPresetsControls } from './ui/ViewPresetsControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
+import { initInfoSections, openInfoSectionTarget } from './ui/infoSections.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
 import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
@@ -52,34 +58,10 @@ import { ShelfOverlaySuppression } from './ui/ShelfOverlaySuppression.js';
 import { UISounds } from './ui/UISounds.js';
 import { UIManagerModalOverlays } from './ui/UIManagerModalOverlays.js';
 import { mergeAberrationSettings } from './render/chromaticAberration.js';
+import { inferToastCaution, resolveToastIconKind } from './ui/toastVariant.js';
 
 /** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
 export const LONG_TOAST_CHAR_THRESHOLD = 110;
-
-/** Match user-facing warnings/errors for automatic caution SFX (override with `caution: false` on showToast). */
-function inferToastCaution(text) {
-  const s = String(text).toLowerCase();
-  return (
-    /\bunsupported\b|\bunrecognized\b|\binvalid\b|\bcouldn't\b|\bcould not\b|\bfailed\b|\bnot supported\b|\bno supported\b|\berror\b|\bwarning\b/.test(s)
-    || /not available yet/.test(s)
-    || /\bunable\b/.test(s)
-    || /\bload a mesh\b/.test(s)
-    || /\bno model\b/.test(s)
-  );
-}
-
-/** Match success / neutral-positive feedback for notification SFX (does not override caution when both match). */
-function inferToastPositive(text) {
-  if (inferToastCaution(text)) return false;
-  const s = String(text).toLowerCase();
-  return (
-    /\bloaded\b|\bcopied\b|\bexported\b|\bexport complete\b|\bsaved\b|\bsuccess\b|\bcomplete\b|\bconnected\b|\bthanks\b|\brestored\b|\bapplied\b|\bsnapped\b/.test(s)
-    || /\bcopied to clipboard\b/.test(s)
-    || /\bsettings reset\b/.test(s)
-    || /^model loaded\b/.test(s.trim())
-    || /^folder loaded\b/.test(s.trim())
-  );
-}
 
 /** Long modals and alerts without explicit tone — caution for errors, notification otherwise. */
 function inferModalTone(text) {
@@ -607,6 +589,8 @@ export class UIManager {
       exportMeshAnimationsEmbed: q('#exportMeshAnimationsEmbed'),
       exportMeshAnimationsSettings: q('#exportMeshAnimationsSettings'),
       fbxMapFileInput: q('#fbxMapFileInput'),
+      fbxMapMaterial: q('#fbxMapMaterial'),
+      fbxMapMaterialLine: q('#fbxMapMaterialLine'),
       fbxMapInvertNormalY: q('#fbxMapInvertNormalY'),
       fbxMapPbrUvChannel: q('#fbxMapPbrUvChannel'),
     };
@@ -710,18 +694,7 @@ export class UIManager {
     this.helpers.setupSliderFillUpdates();
     this.helpers.setupValueLabelInlineEdit();
 
-    // Quick Navigation (Information tab) smooth scrolling
-    const infoQuicknavLinks = document.querySelectorAll('.info-quicknav a[href^="#"]');
-    infoQuicknavLinks.forEach((link) => {
-      link.addEventListener('click', (event) => {
-        const href = link.getAttribute('href');
-        if (!href) return;
-        const target = document.querySelector(href);
-        if (!target) return;
-    event.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
+    initInfoSections();
 
     document.querySelectorAll('[data-open-info-section]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -730,7 +703,9 @@ export class UIManager {
         tabButton?.click();
         const scrollToTarget = () => {
           const el = sel ? document.querySelector(sel) : null;
-          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (!el) return;
+          openInfoSectionTarget(el);
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         requestAnimationFrame(() => {
           requestAnimationFrame(scrollToTarget);
@@ -1424,7 +1399,7 @@ export class UIManager {
   }
 
   /**
-   * @param {{ caution?: boolean, notification?: boolean, modalTone?: 'caution' | 'notification' | 'none' }} [toastOptions] `caution` / `notification` override inference when set to true; `false` disables that cue.
+   * @param {{ caution?: boolean, notification?: boolean, success?: boolean, icon?: false | 'success' | 'info', modalTone?: 'caution' | 'notification' | 'none' }} [toastOptions] `caution` / `notification` override inference when set to true; `false` disables that cue. `icon` forces or hides toast icons.
    */
   showToast(message, durationMs = 3200, toastOptions = {}) {
     const text = typeof message === 'string' ? message : String(message ?? '');
@@ -1439,22 +1414,26 @@ export class UIManager {
   }
 
   /**
-   * Transient toast when cycling mesh auto-rotate, camera auto-orbit, or handheld.
+   * Transient toast when cycling mesh turntable, camera auto-orbit, handheld,
+   * display mode, or map preview.
    * Reuses the active toast when the same mode group changes in quick succession.
    * Bypasses the toast queue so rapid keyboard cycling cannot block later toasts.
-   * @param {'autoRotate' | 'autoOrbit' | 'handheld'} kind
+   * @param {import('./ui/modeChangeToast.js').ModeToastKind} kind
    * @param {number | string} value
+   * @param {{ mapPreviewCleared?: boolean }} [options]
    */
-  showModeChangeToast(kind, value) {
-    const message = formatModeChangeToastMessage(kind, value);
+  showModeChangeToast(kind, value, options = {}) {
+    const message = formatModeChangeToastMessage(kind, value, options);
     if (!message) return;
 
     const groupKey = modeChangeToastGroupKey(kind);
     const durationMs = MODE_CHANGE_TOAST_DURATION_MS;
 
     if (this._activeToastEl?.dataset?.toastGroup === groupKey) {
-      const label = this._activeToastEl.querySelector('.toast-message');
-      if (label) label.textContent = message;
+      this._configureToastElement(this._activeToastEl, message, {
+        notification: false,
+        toastGroup: groupKey,
+      });
       this._scheduleActiveToastDismiss(durationMs);
       return;
     }
@@ -1482,10 +1461,7 @@ export class UIManager {
     this._clearActiveToastElement();
 
     const toast = template.cloneNode(true);
-    toast.querySelector('.toast-message').textContent = message;
-    if (toastOptions.toastGroup) {
-      toast.dataset.toastGroup = toastOptions.toastGroup;
-    }
+    this._configureToastElement(toast, message, toastOptions);
     document.body.appendChild(toast);
     this._activeToastEl = toast;
     this._scheduleActiveToastDismiss(durationMs);
@@ -1533,6 +1509,26 @@ export class UIManager {
   }
 
   /**
+   * @param {HTMLElement} toast
+   * @param {string} text
+   * @param {{ caution?: boolean, success?: boolean, icon?: false | 'success' | 'info', toastGroup?: string }} [toastOptions]
+   */
+  _configureToastElement(toast, text, toastOptions = {}) {
+    toast.querySelector('.toast-message').textContent = text;
+    const iconKind = resolveToastIconKind(text, toastOptions);
+    if (iconKind) {
+      toast.dataset.toastIcon = iconKind;
+    } else {
+      delete toast.dataset.toastIcon;
+    }
+    if (toastOptions.toastGroup) {
+      toast.dataset.toastGroup = toastOptions.toastGroup;
+    } else {
+      delete toast.dataset.toastGroup;
+    }
+  }
+
+  /**
    * Show one toast and resolve when its display duration ends.
    * @param {{ text: string, durationMs: number, toastOptions: object }} item
    * @returns {Promise<void>}
@@ -1550,10 +1546,7 @@ export class UIManager {
     this._clearActiveToast();
 
     const toast = template.cloneNode(true);
-    toast.querySelector('.toast-message').textContent = text;
-    if (toastOptions?.toastGroup) {
-      toast.dataset.toastGroup = toastOptions.toastGroup;
-    }
+    this._configureToastElement(toast, text, toastOptions);
     document.body.appendChild(toast);
     this._activeToastEl = toast;
 
@@ -3134,7 +3127,17 @@ export class UIManager {
     
     // HDRI foldout — open state handled in applyStudioFoldouts
 
-    this.setBlockMuted('creative-look', !currentState.creativeLook?.enabled);
+    applyToggleSectionMute(currentState, (key, muted) => this.setBlockMuted(key, muted));
+
+    const isoOn = !!currentState.camera?.isometric?.enabled;
+    this.setBlockMuted(
+      'auto-orbit',
+      isoOn || currentState.camera?.autoOrbit === 'off',
+    );
+    this.setBlockMuted(
+      'handheld',
+      isoOn || currentState.camera?.handheld === 'off',
+    );
 
     const creativeLookLocksMaterial = !!currentState.creativeLook?.enabled;
     this.setBlockMuted('material', creativeLookLocksMaterial);
@@ -3148,7 +3151,6 @@ export class UIManager {
       creativeLookLocksMaterial,
     );
 
-    const isoOn = !!currentState.camera?.isometric?.enabled;
     const fisheyeOn = !!currentState.fisheye?.enabled;
 
     this.lensControls?.setFovDisabled?.(fisheyeOn);
@@ -3159,8 +3161,6 @@ export class UIManager {
     this.setControlDisabled('cameraDistance', isoOn);
     this.viewPresetsControls?.setDisabled(isoOn);
     this.setControlDisabled('fisheyeEnabled', isoOn);
-    this.setBlockMuted('auto-orbit', isoOn);
-    this.setBlockMuted('handheld', isoOn);
     this.setRadioGroupDisabled(this.inputs.cameraAutoOrbit, isoOn);
     this.setRadioGroupDisabled(this.inputs.cameraHandheld, isoOn);
     if (isoOn) {
@@ -3245,12 +3245,6 @@ export class UIManager {
       !!currentState.lightsEnabled &&
       currentState.lights?.key?.enabled === true;
     this.setControlDisabled('keyLightGoboBtn', !keyLightOn);
-
-    this.setBlockMuted(
-      'cinematic-letterbox',
-      !currentState.camera?.compositionGridEnabled ||
-        !currentState.camera?.cinematicLetterbox219,
-    );
 
     // Fresnel foldout — open state handled in applyMeshFoldouts
 

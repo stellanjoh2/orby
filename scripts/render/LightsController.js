@@ -6,6 +6,7 @@ import {
   shadowBlurSamplesForQuality,
   shadowCameraOrthoPaddingForQuality,
   effectiveDirectionalShadowRadius,
+  DEFAULT_LIGHTS_SHADOW_SOFTNESS,
 } from '../config/shadowQuality.js';
 const MIN_SHADOW_BOUNDS_RADIUS = 0.5;
 const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
@@ -100,7 +101,7 @@ export class LightsController {
 
   _normalizeShadowSoftness(value) {
     const raw = Number(value);
-    if (!Number.isFinite(raw)) return 4;
+    if (!Number.isFinite(raw)) return DEFAULT_LIGHTS_SHADOW_SOFTNESS;
     return Math.min(4, Math.max(0, raw));
   }
 

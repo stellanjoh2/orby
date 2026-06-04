@@ -1,0 +1,9 @@
+/**
+ * Brand lime — single CSS source of truth.
+ * Change --orby-lime here; app UI, legal pages, and magic buttons follow via --brand-primary / --legal-accent.
+ * Mirror in JS: ORBY_LIME in scripts/constants.js
+ */
+:root {
+  --orby-lime: #c4ff00;
+  --brand-lime: var(--orby-lime);
+}

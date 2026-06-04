@@ -1,5 +1,6 @@
 import { normalizeStoredGoboScale, GOBO_UI_DEFAULT } from '../render/GoboProjection.js';
 import { DEFAULT_GOBO_SOFTNESS } from '../config/gobos.js';
+import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from '../config/shadowQuality.js';
 import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DEFAULT_MATERIAL_METALNESS,
@@ -152,7 +153,7 @@ function createStateApplySteps() {
         s.setLightsAutoRotate(state.lightsAutoRotate ?? false);
         s.setLightsCastShadows(state.lightsCastShadows ?? false);
         s.setLightsShadowQuality(state.lightsShadowQuality ?? 'medium');
-        s.setLightsShadowSoftness(state.lightsShadowSoftness ?? 4);
+        s.setLightsShadowSoftness(state.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS);
         s.setLightsShadowColor(state.lightsShadowColor ?? '#080808');
         s.setLightsShadowOpacity(state.lightsShadowOpacity ?? 0.25);
         s.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0001);

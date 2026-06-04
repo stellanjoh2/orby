@@ -41,3 +41,29 @@
     --orby-home-padding-x: calc((100vw - var(--orby-home-inner-max-width)) / 2);
   }
 }
+
+/*
+ * Below 1920 — copy column ~1360px @ 1710 (unchanged from first pass).
+ * Chrome inset (gallery, nav/footer logo + buttons) ramps separately — ~48px @ 1710
+ * (~half the 94px gutter @ 1920), → ~94px @ 1919. 1920px+ unchanged.
+ */
+@media (max-width: 1919px) {
+  :root {
+    --orby-home-narrow-content-ratio: clamp(
+      0.657,
+      calc(
+        0.795 + (0.657 - 0.795) * (100vw - 1710px) / (1920px - 1710px)
+      ),
+      0.795
+    );
+    --orby-home-padding-x: calc(
+      100vw * (1 - var(--orby-home-narrow-content-ratio)) / 2
+    );
+    /* Showcase + nav/footer chrome only — not the copy column (--orby-home-padding-x) */
+    --orby-marketing-edge-inset: clamp(
+      48px,
+      calc(48px + 46px * (100vw - 1710px) / (1920px - 1710px)),
+      94px
+    );
+  }
+}

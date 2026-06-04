@@ -5,12 +5,21 @@ import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
 /** Default near-black — app surfaces, lime CTAs, scene background, letterbox mattes. */
 export const ORBY_BLACK = '#080808';
 
+/** Brand lime — logotype, CTAs, wireframe default, UI accents. Mirror: --orby-lime in styles/orby-brand-tokens.css */
+export const ORBY_LIME = '#c4ff00';
+
 /** Perspective camera clip when Manual Render Distance is off — generous, unchanged on mesh load. */
 export const DEFAULT_CAMERA_NEAR = 0.1;
 export const DEFAULT_CAMERA_FAR = 5000;
 
-/** Target max axis after import normalization (see ModelLoader.normalizeImportScale). */
+/** Target max axis after import normalization (see normalizeImportScale). */
 export const STUDIO_IMPORT_TARGET_MAX_DIMENSION = 2.0;
+
+/**
+ * Skip import scaling when max axis is already within this fraction of
+ * {@link STUDIO_IMPORT_TARGET_MAX_DIMENSION} (6% → ~1.88–2.12 units at target 2).
+ */
+export const STUDIO_IMPORT_SCALE_TOLERANCE = 0.06;
 
 /** ColorChecker Classic card width (~356 mm) in normalized studio units. */
 export const COLOR_CHECKER_PHYSICAL_WIDTH = 0.356;

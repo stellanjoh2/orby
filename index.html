@@ -517,7 +517,11 @@
               <div class="panel-block" id="fbxMapSlotsBlock" hidden>
                 <div class="subsection" data-subsection="fbxMapSlots" id="fbxMapSlotsSubsection">
                   <div class="block-title">Map Slots</div>
-                  <p class="panel-hint map-slots-hint">FBX — choose files from disk. Slot textures share one UV transform: we prefer Albedo, then Normal, then other maps (matches FBX tiling). Assign Base Color first when you can. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
+                  <p class="panel-hint map-slots-hint">FBX — pick a material target, then assign maps per part (rack vs fish). Textures apply only to the selected material. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
+                  <label class="select-line map-slot-material-line" id="fbxMapMaterialLine" hidden>
+                    <span data-tooltip="FBX files often duplicate materials per mesh; we group by material name.">Material</span>
+                    <select id="fbxMapMaterial" aria-label="Material to assign textures to"></select>
+                  </label>
                   <label class="select-line map-slot-uv-line">
                     <span data-tooltip="Roughness, metallic, AO, ORM, etc. can use UV2 if your bake used a second set. Normal maps always use UV1 here — Three.js builds tangents from the first UV only.">Detail maps UV</span>
                     <select id="fbxMapPbrUvChannel" aria-label="UV channel for detail maps">
@@ -1014,7 +1018,7 @@
                     </label>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Move the mesh so its bounding-box center sits on the transform origin. Keeps the model in place on screen; fixes off-axis auto-rotate. Turn off to restore the file's original pivot.">Center Pivot</span>
+                    <span data-tooltip="Move the mesh so its bounding-box center sits on the transform origin. Keeps the model in place on screen; fixes off-axis turntable spin. Turn off to restore the file's original pivot.">Center Pivot</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="centerPivot" disabled />
                       <span class="effect-indicator" aria-hidden="true"></span>
@@ -1286,7 +1290,7 @@
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection">
-                  <div class="block-title">Auto Rotate</div>
+                  <div class="block-title">Turntable</div>
                   <div class="segmented compact">
                     <label>
                       <input type="radio" name="autorotate" value="0" checked />
@@ -2401,16 +2405,16 @@
                     <input type="color" id="lightsShadowColor" class="color-chip" value="#080808" />
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra (current default).">Softness</span>
+                    <span data-tooltip="0 = harder shadow edge. Higher values = softer penumbra.">Softness</span>
                     <input
                       id="lightsShadowSoftness"
                       type="range"
                       min="0"
                       max="4"
                       step="0.05"
-                      value="4"
+                      value="0.25"
                     />
-                    <span class="value" data-output="lightsShadowSoftness">4.00</span>
+                    <span class="value" data-output="lightsShadowSoftness">0.25</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="How strong the shadow tint is. Lower for softer, less solid shadows.">Opacity</span>
@@ -3016,7 +3020,7 @@
                 </label>
                 </div>
                 <div class="panel-block-divider"></div>
-                <div class="subsection">
+                <div class="subsection" data-subsection="histogram">
                   <div class="block-title has-toggle">
                     <span>Histogram</span>
                     <label class="effect-toggle" data-tooltip="Show/hide exposure histogram">
@@ -3026,40 +3030,40 @@
                     </label>
                   </div>
                   <div id="histogramContainer" class="histogram-container histogram-container--collapsed"></div>
-                  <div class="panel-block-divider"></div>
-                  <div class="subsection tone-curve-sub">
-                    <div class="block-title has-toggle has-reset">
-                      <span>Curve</span>
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <button
-                          class="block-reset-btn"
-                          data-reset="tone-curve"
-                          aria-label="Reset curve"
-                          data-tooltip="Reset"
-                        >
-                          <i class="fa-solid fa-rotate-left"></i>
-                          <span class="sr-only">Reset</span>
-                        </button>
-                        <label class="effect-toggle" data-tooltip="Show or hide the Tone Curve">
-                          <input type="checkbox" id="toneCurveOpen" />
-                          <span class="effect-indicator" aria-hidden="true"></span>
-                          <span class="sr-only">Show Tone Curve</span>
-                        </label>
-                      </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection tone-curve-sub" data-subsection="tone-curve">
+                  <div class="block-title has-toggle has-reset">
+                    <span>Curve</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button
+                        class="block-reset-btn"
+                        data-reset="tone-curve"
+                        aria-label="Reset curve"
+                        data-tooltip="Reset"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Show or hide the Tone Curve">
+                        <input type="checkbox" id="toneCurveOpen" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Show Tone Curve</span>
+                      </label>
                     </div>
-                    <div
-                      id="toneCurveContainer"
-                      class="tone-curve-foldout tone-curve-foldout--collapsed"
-                    >
-                      <div class="tone-curve-canvas-wrap">
-                        <canvas
-                          id="toneCurveCanvas"
-                          class="tone-curve-canvas"
-                          width="400"
-                          height="400"
-                          aria-label="Tone Curve"
-                        ></canvas>
-                      </div>
+                  </div>
+                  <div
+                    id="toneCurveContainer"
+                    class="tone-curve-foldout tone-curve-foldout--collapsed"
+                  >
+                    <div class="tone-curve-canvas-wrap">
+                      <canvas
+                        id="toneCurveCanvas"
+                        class="tone-curve-canvas"
+                        width="400"
+                        height="400"
+                        aria-label="Tone Curve"
+                      ></canvas>
                     </div>
                   </div>
                 </div>
@@ -3369,145 +3373,6 @@
                       <option value="ultra">Ultra</option>
                     </select>
                     <span class="value" aria-hidden="true"></span>
-                  </label>
-                  </div>
-                </div>
-                <div class="panel-block-divider"></div>
-                <div class="subsection" data-subsection="volumetric-scattering">
-                  <div class="block-title has-toggle">
-                    <span data-tooltip="Volumetric light rays — follows Lens Flare rotation and height (virtual sun mesh)">Light Rays</span>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Light Rays" data-tooltip="Reset Light Rays settings">
-                        <i class="fa-solid fa-rotate-left"></i>
-                        <span class="sr-only">Reset</span>
-                      </button>
-                      <label class="effect-toggle" data-tooltip="Enable/disable light rays from the sun">
-                        <input type="checkbox" id="godRaysEnabled" />
-                        <span class="effect-indicator" aria-hidden="true"></span>
-                        <span class="sr-only">Enable Light Rays</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div
-                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
-                    data-effect-foldout="volumetric-scattering"
-                    aria-hidden="true"
-                  >
-                  <label class="color-line">
-                    <span>Color</span>
-                    <input
-                      type="color"
-                      id="godRaysColor"
-                      class="color-chip"
-                      value="#ffe8c4"
-                    />
-                  </label>
-                  <label
-                    class="slider-line"
-                    data-tooltip="Size of the virtual sun mesh that casts rays (1 = full default disc)"
-                  >
-                    <span>Sun size</span>
-                    <input
-                      id="godRaysLightScale"
-                      type="range"
-                      min="0.08"
-                      max="1.25"
-                      value="0.4"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysLightScale">0.4</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Overall opacity of the light rays composite">
-                    <span>Opacity</span>
-                    <input
-                      id="godRaysOpacity"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="1"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysOpacity">1</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Ray density — higher reaches farther across the frame">
-                    <span>Density</span>
-                    <input
-                      id="godRaysDensity"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.96"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysDensity">0.96</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Illumination decay along each ray sample (lower = faster falloff)">
-                    <span>Decay</span>
-                    <input
-                      id="godRaysDecay"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.92"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysDecay">0.92</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Weight of each ray sample">
-                    <span>Weight</span>
-                    <input
-                      id="godRaysWeight"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="0.4"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysWeight">0.4</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Exposure multiplier after radial blur">
-                    <span>Exposure</span>
-                    <input
-                      id="godRaysExposure"
-                      type="range"
-                      min="0"
-                      max="2"
-                      value="0.6"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysExposure">0.6</span>
-                  </label>
-                  <label class="slider-line" data-tooltip="Maximum output intensity clamp">
-                    <span>Clamp Max</span>
-                    <input
-                      id="godRaysClampMax"
-                      type="range"
-                      min="0"
-                      max="1"
-                      value="1"
-                      step="0.01"
-                    />
-                    <span class="value" data-output="godRaysClampMax">1</span>
-                  </label>
-                  <label
-                    class="slider-line"
-                    data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
-                  >
-                    <span>Blur mask</span>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="godRaysBlur" checked />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Blur sun mask before radial blur</span>
-                    </label>
-                  </label>
-                  <label class="select-line" data-tooltip="Resolution scale and sample count preset">
-                    <span>Quality</span>
-                    <select id="godRaysQuality">
-                      <option value="low">Low</option>
-                      <option value="medium" selected>Medium</option>
-                      <option value="high">High</option>
-                      <option value="ultra">Ultra</option>
-                    </select>
                   </label>
                   </div>
                 </div>
@@ -3852,6 +3717,145 @@
                   >
                     Connect Key Light Position
                   </button>
+                  </div>
+                </div>
+                <div class="panel-block-divider"></div>
+                <div class="subsection" data-subsection="volumetric-scattering">
+                  <div class="block-title has-toggle">
+                    <span data-tooltip="Volumetric light rays — follows Lens Flare rotation and height (virtual sun mesh)">Light Rays</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <button class="block-reset-btn" data-reset="volumetric-scattering" aria-label="Reset Light Rays" data-tooltip="Reset Light Rays settings">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="sr-only">Reset</span>
+                      </button>
+                      <label class="effect-toggle" data-tooltip="Enable/disable light rays from the sun">
+                        <input type="checkbox" id="godRaysEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable Light Rays</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed effect-foldout--lg"
+                    data-effect-foldout="volumetric-scattering"
+                    aria-hidden="true"
+                  >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="godRaysColor"
+                      class="color-chip"
+                      value="#ffe8c4"
+                    />
+                  </label>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Size of the virtual sun mesh that casts rays (1 = full default disc)"
+                  >
+                    <span>Sun size</span>
+                    <input
+                      id="godRaysLightScale"
+                      type="range"
+                      min="0.08"
+                      max="1.25"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysLightScale">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Overall opacity of the light rays composite">
+                    <span>Opacity</span>
+                    <input
+                      id="godRaysOpacity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysOpacity">1</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Ray density — higher reaches farther across the frame">
+                    <span>Density</span>
+                    <input
+                      id="godRaysDensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.96"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDensity">0.96</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Illumination decay along each ray sample (lower = faster falloff)">
+                    <span>Decay</span>
+                    <input
+                      id="godRaysDecay"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.92"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysDecay">0.92</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Weight of each ray sample">
+                    <span>Weight</span>
+                    <input
+                      id="godRaysWeight"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="0.4"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysWeight">0.4</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Exposure multiplier after radial blur">
+                    <span>Exposure</span>
+                    <input
+                      id="godRaysExposure"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="0.6"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysExposure">0.6</span>
+                  </label>
+                  <label class="slider-line" data-tooltip="Maximum output intensity clamp">
+                    <span>Clamp Max</span>
+                    <input
+                      id="godRaysClampMax"
+                      type="range"
+                      min="0"
+                      max="1"
+                      value="1"
+                      step="0.01"
+                    />
+                    <span class="value" data-output="godRaysClampMax">1</span>
+                  </label>
+                  <label
+                    class="slider-line"
+                    data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
+                  >
+                    <span>Blur mask</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="godRaysBlur" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Blur sun mask before radial blur</span>
+                    </label>
+                  </label>
+                  <label class="select-line" data-tooltip="Resolution scale and sample count preset">
+                    <span>Quality</span>
+                    <select id="godRaysQuality">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
                   </div>
                 </div>
                 <div class="panel-block-divider"></div>
@@ -4476,34 +4480,6 @@
                 </button>
               </div>
 
-              <!-- Quick Navigation for Information tab -->
-              <div class="panel-block info-panel-block info-panel-block--compact">
-                <div class="block-title">
-                  <i class="fa-solid fa-list" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>
-                  Quick Navigation
-                </div>
-                <nav class="info-quicknav" aria-label="Information sections">
-                  <a href="#info-sounds">UI Sounds</a>
-                  <a href="#info-shortcuts">Shortcuts</a>
-                  <a href="#info-mouse">Mouse</a>
-                  <a href="#info-gamepad">Gamepad</a>
-                  <a href="#info-about">About Orby</a>
-                  <a href="#info-privacy">Privacy</a>
-                  <a href="#info-features">Key Features</a>
-                  <a href="#info-faq">Feature FAQ</a>
-                  <a href="#info-look-filters">Look Filters</a>
-                  <a href="#info-tone-curve">Tone Curve</a>
-                  <a href="#info-svg-extrude">SVG Extrude</a>
-                  <a href="#info-transparency">Transparency</a>
-                  <a href="#info-performance">Performance</a>
-                  <a href="#info-learn">Learn More</a>
-                  <a href="./support/">Support</a>
-                  <a href="#info-legal">Legal</a>
-                  <a href="#info-credits">Credits</a>
-                  <a href="#info-changelog">Latest Changes</a>
-                </nav>
-              </div>
-
               <div class="panel-block info-panel-block info-panel-block--compact" id="info-sounds">
                 <div class="block-title has-toggle">
                   <span>
@@ -4562,17 +4538,26 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Quick switch display modes</span>
+                    <span class="shortcut-action">
+                      Display modes
+                      <span class="shortcut-note">(1 Shaded · 2 Unlit · 3 Clay · 4 Wireframe)</span>
+                    </span>
                     <span class="shortcut-keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></span>
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Play / Pause animation</span>
+                    <span class="shortcut-action">
+                      Cycle camera Auto Orbit
+                      <span class="shortcut-note">(Off · Slow · Fast)</span>
+                    </span>
                     <span class="shortcut-keys"><kbd>Space</kbd></span>
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Scrub animation frame-by-frame</span>
+                    <span class="shortcut-action">
+                      Scrub animation timeline
+                      <span class="shortcut-note">(when a clip is loaded; play/pause is UI-only)</span>
+                    </span>
                     <span class="shortcut-keys"><kbd>←</kbd> <kbd>→</kbd></span>
                   </div>
                   
@@ -4615,7 +4600,10 @@
                   </div>
                   
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Toggle Auto Rotate on/off</span>
+                    <span class="shortcut-action">
+                      Cycle mesh Turntable speeds
+                      <span class="shortcut-note">(Off · Normal · Fast)</span>
+                    </span>
                     <span class="shortcut-keys"><kbd>A</kbd></span>
                   </div>
                   
@@ -4640,12 +4628,15 @@
                   </div>
 
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Apply studio preset</span>
+                    <span class="shortcut-action">
+                      Cycle wireframe overlay modes
+                      <span class="shortcut-note">(off → visible faces → always on → hide mesh)</span>
+                    </span>
                     <span class="shortcut-keys"><kbd>X</kbd></span>
                   </div>
 
                   <div class="shortcut-row">
-                    <span class="shortcut-action">Exit Auto Orbit</span>
+                    <span class="shortcut-action">Close open modals / panels</span>
                     <span class="shortcut-keys"><kbd>Esc</kbd></span>
                   </div>
                 </div>
@@ -4673,6 +4664,11 @@
                   <div class="shortcut-row">
                     <span class="shortcut-action">Pan camera</span>
                     <span class="shortcut-keys"><kbd>Right Click</kbd> + drag</span>
+                  </div>
+                  
+                  <div class="shortcut-row">
+                    <span class="shortcut-action">Zoom / dolly</span>
+                    <span class="shortcut-keys"><kbd>Scroll</kbd> · <kbd>Middle Click</kbd> + drag</span>
                   </div>
                   
                   <div class="shortcut-row">
@@ -4734,7 +4730,7 @@
                   <span class="shortcut-keys"><kbd>D-pad Left</kbd> · <kbd>D-pad Right</kbd></span>
                 </div>
                 <div class="shortcut-row">
-                  <span class="shortcut-action">Cycle Auto Rotate speeds</span>
+                  <span class="shortcut-action">Cycle Turntable speeds</span>
                   <span class="shortcut-keys"><kbd>Cross / A</kbd></span>
                 </div>
                 <div class="shortcut-row">
@@ -4756,7 +4752,7 @@
                 <div class="block-title"><i class="fa-solid fa-circle-info" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>About Orby</div>
                 <div class="about-content">
                   <p><span class="about-highlight">Orby</span> is a <span class="about-highlight">completely free</span>, <span class="about-highlight">zero-install</span>, <span class="about-highlight">drag-and-drop</span> 3D model viewer that makes any model look stunning in seconds. It's perfect for <span class="about-highlight">AI-generated 3D</span> (Meshy, Tripo, Luma, CSM, etc.), <span class="about-highlight">game assets</span>, <span class="about-highlight">product visualization</span>, and everything in between.</p>
-                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio: <span class="about-highlight">HDR environments</span>, <span class="about-highlight">Look Filter Presets</span>, <span class="about-highlight">a Luminance Tone Curve</span>, <span class="about-highlight">Shader Lab</span> stylized materials, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, exports from stills and vectors to <span class="about-highlight">turntable video</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
+                  <p><span class="about-highlight">No accounts</span>, <span class="about-highlight">no waiting</span>, <span class="about-highlight">no uploads</span>—just drop your file and get a full artist-grade studio: <span class="about-highlight">HDR environments</span>, <span class="about-highlight">Look Filter Presets</span>, <span class="about-highlight">a Luminance Tone Curve</span>, <span class="about-highlight">Shader Lab</span> stylized materials, <span class="about-highlight">texture map preview</span>, <span class="about-highlight">SVG &amp; font extrusion</span>, <span class="about-highlight">real depth of field</span>, <span class="about-highlight">selective bloom</span>, <span class="about-highlight">film grain</span>, <span class="about-highlight">tonemapping</span>, <span class="about-highlight">3-point lighting</span>, exports from stills and vectors to <span class="about-highlight">turntable video</span>, and <span class="about-highlight">pro controls</span> that react instantly.</p>
                 <p>This project is an ongoing experiment in vibe-coding and self-directed learning. Coming from a design background with no formal development experience, I use Orby as a canvas to explore modern web technologies and real-time 3D on the web.</p>
                 </div>
               </div>
@@ -4781,27 +4777,27 @@
                   <div class="block-title"><i class="fa-solid fa-wand-magic-sparkles" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Key Features</div>
                   <div class="about-content">
                     <ul>
-                      <li>• <span class="about-highlight">Real-time 3D model viewer</span> — Load and view GLB, GLTF, OBJ, FBX, and more with instant preview and smooth interactions</li>
-                      <li>• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, Auto Orbit mode, camera presets, and adjustable FOV for the perfect shot</li>
+                      <li>• <span class="about-highlight">Real-time 3D model viewer</span> — Load GLB, GLTF (single file or folder with textures), OBJ, FBX (drop the FBX plus texture PNGs in one folder), STL, USDZ / USD when the package uses a text USDA stage, and SVG for extruded logos. Models are auto-scaled to a consistent studio size on import.</li>
+                      <li>• <span class="about-highlight">Intuitive camera system</span> — Smooth orbit controls, focus on object, mesh Turntable, camera Auto Orbit, Isometric Camera presets, Handheld shake, fisheye lens, and adjustable FOV for the perfect shot</li>
                       <li>• <span class="about-highlight">Professional transform widgets</span> — Interactive gizmos (W=Move, E=Rotate, R=Scale, Q=Select) for precise object manipulation with click-to-select</li>
-                      <li>• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Wireframe, Clay, and Unlit to view your models in different contexts</li>
-                      <li>• <span class="about-highlight">Material controls</span> — Adjust brightness, metalness, roughness, and emissive glow in real time to fine-tune materials</li>
+                      <li>• <span class="about-highlight">Multiple shading modes</span> — Switch between Shaded, Unlit, Clay, and Wireframe (<kbd>1</kbd>–<kbd>4</kbd>) to view your models in different contexts; wireframe overlay modes cycle with <kbd>X</kbd></li>
+                      <li>• <span class="about-highlight">Material controls &amp; Maps preview</span> — Adjust brightness, metalness, roughness, and emissive glow; inspect texture maps (albedo, normal, ORM, etc.) on the Object tab; assign FBX material slots per part</li>
                       <li>• <span class="about-highlight">Shader Lab</span> — Go beyond standard glTF materials: enable stylized presets (metallic chrome, physical glass, animated FX, and more) that temporarily replace the mesh materials—tune motion and scale, then switch off to restore your original look</li>
                       <li>• <span class="about-highlight">HDRI environment lighting</span> — Preset environments or custom <strong>.hdr</strong> / <strong>.exr</strong> / <strong>.jpg</strong> / <strong>.png</strong> upload, with adjustable strength, rotation, and blur</li>
-                      <li>• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, master intensity, and Auto Rotate</li>
+                      <li>• <span class="about-highlight">Professional 3-point lighting</span> — Key, fill, rim, and ambient lights with individual controls, key-light gobo projection, master intensity, and lights Auto Rotate</li>
                     </ul>
                   </div>
                 </div>
                 <div class="panel-block info-panel-block info-panel-block--tall">
                   <div class="about-content">
                     <ul>
-                      <li>• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, film grain, chromatic aberration, lens dirt, and full color &amp; tone grading for cinematic results</li>
-                      <li>• <span class="about-highlight">Look Filter Presets</span> — One-tap style presets in Camera (thumbnail grid) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
+                      <li>• <span class="about-highlight">Advanced post-processing</span> — Bloom, depth of field, lens flare, Light Rays (volumetric god rays), Ambient Occlusion (N8AO), film grain, chromatic aberration, lens dirt, and full color &amp; tone grading for cinematic results</li>
+                      <li>• <span class="about-highlight">Look Filter Presets</span> — Ten one-tap style presets in Camera &amp; FX (Studio, Noir, Mood, Vintage, Cinema, Frost, Golden, Dream, Neon, and more) that combine color grade, curve, grain, CA, and more; “None” restores defaults</li>
                       <li>• <span class="about-highlight">Histogram &amp; exposure tools</span> — Live luminance histogram (optional), auto exposure, and manual exposure for predictable brightness</li>
                       <li>• <span class="about-highlight">Luminance Tone Curve</span> — Four draggable handles (black, two mids, white); smooth spline + baked 256-step LUT for response shaping, optional fold-out next to the histogram</li>
-                      <li>• <span class="about-highlight">SVG-to-3D extrusion workflow</span> — Drop SVG logos and convert fills into editable 3D meshes with per-color depth and position controls</li>
-                      <li>• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls</li>
-                      <li>• <span class="about-highlight">Deep export toolkit</span> — PNG stills (1×/2×, optional transparency); vector SVG (silhouette or flat filled color); GLB from SVG extrusions for other apps and AR; turntable <strong>video</strong> as MP4 (H.264), plus numbered PNG sequences in a zip—control length, spins, FPS, resolution, and encode quality for deliverables and social-ready clips</li>
+                      <li>• <span class="about-highlight">SVG &amp; font-to-3D workflows</span> — Drop SVG logos or type live text into 3D meshes with per-color depth, bevels, reveal animations, and procedural surface presets</li>
+                      <li>• <span class="about-highlight">Animation playback</span> — Play, pause, and scrub through model animations with timeline controls (scrub with <kbd>←</kbd> / <kbd>→</kbd> when a clip is loaded)</li>
+                      <li>• <span class="about-highlight">Deep export toolkit</span> — PNG stills (1×/2×, optional transparency); vector SVG (silhouette or flat filled color); GLB from SVG extrusions for other apps and AR; turntable <strong>video</strong> as MP4 (H.264) or numbered PNG sequences in a zip—combine turntable, orbit, and dolly; control length, spins, FPS, resolution, and encode quality</li>
                     </ul>
                   </div>
                 </div>
@@ -4818,7 +4814,7 @@
 
                     <div>
                       <h4>Display Modes</h4>
-                      <p><strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model. You can also enable a wireframe overlay on any display mode, or hide the mesh entirely to see only the wireframe.</p>
+                      <p><strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model. Press <kbd>1</kbd>–<kbd>4</kbd> to switch (Shaded, Unlit, Clay, Wireframe). You can also enable a wireframe overlay on any display mode, or hide the mesh entirely—press <kbd>X</kbd> to cycle overlay modes.</p>
                     </div>
 
                     <div>
@@ -4842,12 +4838,12 @@
 
                     <div>
                       <h4>3-Point Lighting</h4>
-                      <p>Professional lighting setup with four lights: <strong>Key</strong> (main light), <strong>Fill</strong> (softens shadows), <strong>Rim</strong> (separates object from background), and <strong>Ambient</strong> (overall scene brightness). Adjust each light's color, intensity, and position to create the perfect look.</p>
+                      <p>Professional lighting setup with four lights: <strong>Key</strong> (main light), <strong>Fill</strong> (softens shadows), <strong>Rim</strong> (separates object from background), and <strong>Ambient</strong> (overall scene brightness). Adjust each light's color, intensity, and position. The key light supports <strong>Gobo</strong> projection—patterned shadows from palm, leaf, tree, and other presets. Drag with <kbd>Alt</kbd> + right-click to rotate the rig; <kbd>Shift</kbd> + right-click rotates the HDRI dome.</p>
                     </div>
 
                     <div>
                       <h4>Post-Processing Effects</h4>
-                      <p><strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Chromatic Aberration:</strong> Splits color channels slightly at the edges. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere. <strong>Color &amp; Tone</strong> (contrast, temperature, H/S/L, highlights/shadows, clarity, fade, sharpness, vignette) and <strong>tone mapping</strong> (e.g. ACES) sit in the Camera tab alongside exposure.</p>
+                      <p><strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Chromatic Aberration:</strong> Splits color channels slightly at the edges. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Light Rays:</strong> Volumetric god rays that follow the lens-flare sun direction. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere. <strong>Ambient Occlusion (N8AO):</strong> Screen-space contact shadows—GPU-heavy; off by default. <strong>Fisheye Lens:</strong> Barrel distortion post effect. <strong>Color &amp; Tone</strong> (contrast, temperature, H/S/L, highlights/shadows, clarity, fade, sharpness, vignette) and <strong>tone mapping</strong> (e.g. ACES) sit in the Camera &amp; FX tab alongside exposure.</p>
                     </div>
                   </div>
                 </div>
@@ -4856,22 +4852,22 @@
                   <div class="about-content">
                     <div>
                       <h4>Camera Controls</h4>
-                      <p><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll to zoom in/out. <strong>Focus:</strong> Press F to automatically frame your model. <strong>Auto Orbit:</strong> Automatically orbits the camera around your model with smooth multi-axis movement—perfect for screensaver-style presentations. Press Esc to exit. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look Filters</strong>, and the rest of Color &amp; Tone for a full grade.</p>
+                      <p><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll or middle-click and drag. <strong>Focus:</strong> Press <kbd>F</kbd> to automatically frame your model. <strong>Auto Orbit:</strong> Automatically orbits the camera around your model—cycle Off / Slow / Fast with <kbd>Space</kbd> or use the Camera &amp; FX tab (disabled while Isometric Camera is on). <strong>Handheld:</strong> Procedural camera shake (Off / Subtle / Strong). <strong>Isometric Camera:</strong> RTS-style locked view with presets; pan optional via Unlock. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look Filters</strong>, and the rest of Color &amp; Tone for a full grade.</p>
                     </div>
 
                     <div>
                       <h4>Histogram</h4>
-                      <p>A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure. Toggle it on from the Camera tab; it sits in a fold-out under the heading, same idea as the curve (see below).</p>
+                      <p>A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure. Toggle it on from the Camera &amp; FX tab; it sits in a fold-out under the heading, same idea as the curve (see below).</p>
                     </div>
 
                     <div>
                       <h4 id="info-tone-curve">Tone Curve</h4>
-                      <p>A <strong>luminance</strong> response curve with four draggable handles—output at black, two mid-tones, and output at white (Catmull–Rom-style tangents, baked lookup table in the grade). It shapes how tones map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
+                      <p>A <strong>luminance</strong> response curve with four draggable handles—output at black, two mid-tones, and output at white (Catmull–Rom-style tangents, baked lookup table in the grade). It shapes how tones map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera &amp; FX (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
                     </div>
 
                     <div>
                       <h4 id="info-look-filters">Look Filter Presets</h4>
-                      <p>Under <strong>Camera → Look Filters</strong>, pick a thumbnail preset (Studio, Noir, Golden, etc.) for a one-tap look: color grade, tone curve, bloom, grain, chromatic aberration, and more are applied together. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</p>
+                      <p>Under <strong>Camera &amp; FX → Look Filters</strong>, pick a thumbnail preset for a one-tap look: <strong>None, Studio, Noir, Mood, Vintage, Cinema, Frost, Golden, Dream,</strong> and <strong>Neon</strong> combine color grade, tone curve, bloom, grain, chromatic aberration, and more. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</p>
                     </div>
                   </div>
                 </div>
@@ -4885,7 +4881,7 @@
 
                     <div>
                       <h4>Scene Settings</h4>
-                      <p>Copy and paste all your settings (lighting, camera, effects, materials, tone curve, Look Filter selection, histogram/curve panel toggles, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
+                      <p>Copy and paste all your settings (lighting, camera, effects, materials, tone curve, Look Filter selection, histogram/curve panel toggles, SVG &amp; font extrude, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
                     </div>
                   </div>
                 </div>
@@ -4903,8 +4899,40 @@
                     <li><span class="about-highlight">Flip Direction:</span> Inverts front/back extrusion direction.</li>
                     <li><span class="about-highlight">Color Override:</span> Replaces imported SVG fill colors with a single chosen color.</li>
                     <li><span class="about-highlight">Per-Color Depth/Position:</span> Fine-tune each detected fill color independently for layered logo effects.</li>
+                    <li><span class="about-highlight">Surface presets:</span> Optional procedural surface detail (scale and strength) on extruded meshes.</li>
                     <li><span class="about-highlight">Scene Settings:</span> SVG extrude controls are included when copying or pasting scene settings.</li>
                     <li><span class="about-highlight">SVG to GLB Export:</span> Exported SVG meshes are saved as opaque GLB materials for predictable shading across viewers.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="panel-block info-panel-block info-panel-block--compact" id="info-font-extrude">
+                <div class="block-title"><i class="fa-solid fa-font" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Generate from Font</div>
+                <div class="about-content">
+                  <p>
+                    Type live text and extrude it into a 3D mesh—no SVG required. Open <span class="about-highlight">Object → Generate from Font</span> (below mesh stats on the Object tab).
+                  </p>
+                  <ul>
+                    <li><span class="about-highlight">Live preview:</span> Edit text, pick a font family and style, adjust tracking, kerning, line height, and alignment before generating.</li>
+                    <li><span class="about-highlight">Custom fonts:</span> Load <strong>.ttf</strong> / <strong>.otf</strong> files, or use built-in families.</li>
+                    <li><span class="about-highlight">Extrusion:</span> Depth, bevel, smoothing angle, fill color, and mesh detail—same post-generate controls as SVG extrude.</li>
+                    <li><span class="about-highlight">Reveal animations:</span> Play slide-in or other reveal types on the extruded text with scrub, loop, and duration controls.</li>
+                    <li><span class="about-highlight">Scene Settings:</span> Font extrude state is included when copying or pasting scene settings.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="panel-block info-panel-block info-panel-block--compact" id="info-maps">
+                <div class="block-title"><i class="fa-solid fa-image" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Maps Preview</div>
+                <div class="about-content">
+                  <p>
+                    After loading a textured model, the <span class="about-highlight">Object → Maps</span> grid lists detected texture slots (albedo, normal, roughness, metallic, emissive, and packed ORM/MR maps).
+                  </p>
+                  <ul>
+                    <li><span class="about-highlight">Click a thumbnail</span> to pin a live map preview on the mesh in the viewport.</li>
+                    <li><span class="about-highlight">Floating panel:</span> Opens a larger preview with channel tabs; drag to reposition. Press <kbd>Esc</kbd> to close.</li>
+                    <li><span class="about-highlight">FBX Map Slots:</span> For FBX imports, pick a material target and assign maps per part when textures were not embedded.</li>
+                    <li><span class="about-highlight">Display modes:</span> Re-click the active display mode icon to unpins the preview; switching modes clears the overlay.</li>
                   </ul>
                 </div>
               </div>
@@ -4938,7 +4966,7 @@
                     </div>
                     <div>
                       <h4>Are there settings I can adjust?</h4>
-                      <p>Under <span class="about-highlight">Mesh → Advanced</span>, <strong>Transparency Mode</strong> and <strong>Stabilize Layered Transparency</strong> change how blended surfaces are drawn — but they can’t fix assets where unrelated surfaces are packed into a single blended material. For best results, authors should split meshes, use <strong>MASK</strong> over <strong>BLEND</strong> where possible, and use <span class="about-highlight">KHR_materials_transmission</span> for proper glass.</p>
+                      <p>Under <span class="about-highlight">Object → Advanced</span>, <strong>Transparency Mode</strong> and <strong>Stabilize Layered Transparency</strong> change how blended surfaces are drawn — but they can’t fix assets where unrelated surfaces are packed into a single blended material. Expand <strong>Rare Fixes — Transmission &amp; Glass</strong> for heuristic glass controls (opacity, tint, flip normal Y, front faces only). For best results, authors should split meshes, use <strong>MASK</strong> over <strong>BLEND</strong> where possible, and use <span class="about-highlight">KHR_materials_transmission</span> for proper glass.</p>
                     </div>
                     <div>
                       <h4>Further reading</h4>
@@ -4964,14 +4992,14 @@
                   </p>
                   <ul>
                     <li><span class="about-highlight">Very cheap (almost free):</span> exposure, contrast, saturation, tint, temperature, fade, and the <strong>luminance tone curve</strong> (evaluated in the same color pass). These are light math per pixel.</li>
-                    <li><span class="about-highlight">Medium cost:</span> vignette, clarity, sharpness, Fresnel. These add extra calculations or an extra pass, but are usually fine on modern GPUs.</li>
-                    <li><span class="about-highlight">Heavier effects:</span> depth of field, bloom, lens dirt, film grain, chromatic aberration, FXAA, and some histogram/auto-exposure work. These often require additional buffers and multiple full-screen passes and will have the biggest impact on frame rate.</li>
+                    <li><span class="about-highlight">Medium cost:</span> vignette, clarity, sharpness, Fresnel, fisheye lens. These add extra calculations or an extra pass, but are usually fine on modern GPUs.</li>
+                    <li><span class="about-highlight">Heavier effects:</span> depth of field, bloom, lens flare, Light Rays, lens dirt, film grain, chromatic aberration, FXAA, Ambient Occlusion (N8AO), and some histogram/auto-exposure work. These often require additional buffers and multiple full-screen passes and will have the biggest impact on frame rate.</li>
                   </ul>
                   <p>
                     Turning an effect <strong>on</strong> is usually the biggest step in cost. Increasing intensity (for example, bloom strength from 0.3 to 0.6) changes the look more than the performance. The real performance lever is how many heavy effects you run at the same time.
                   </p>
                   <p>
-                    If Orby feels slow, start by disabling the heavier effects (Depth of Field, Bloom, Lens Dirt, Grain, Chromatic Aberration, FXAA), or run the browser window a bit smaller so the internal render resolution is lower. For quick look-dev, stick to the cheaper color & tone controls first, then enable the cinematic effects at the end when you are close to final.
+                    If Orby feels slow, start by disabling the heavier effects (Depth of Field, Bloom, Light Rays, N8AO, Lens Dirt, Grain, Chromatic Aberration, FXAA), or run the browser window a bit smaller so the internal render resolution is lower. For quick look-dev, stick to the cheaper color &amp; tone controls first, then enable the cinematic effects at the end when you are close to final.
                   </p>
                 </div>
               </div>
@@ -4991,10 +5019,16 @@
                           <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file" target="_blank" rel="noreferrer">OBJ</a> — Wavefront 3D object format
                         </li>
                         <li>
-                          <a href="https://en.wikipedia.org/wiki/FBX" target="_blank" rel="noreferrer">FBX</a> — Autodesk 3D format
+                          <a href="https://en.wikipedia.org/wiki/FBX" target="_blank" rel="noreferrer">FBX</a> — Autodesk 3D format (drop the FBX plus texture PNGs in one folder)
                         </li>
                         <li>
                           <a href="https://en.wikipedia.org/wiki/STL_(file_format)" target="_blank" rel="noreferrer">STL</a> — Stereolithography format
+                        </li>
+                        <li>
+                          <a href="https://en.wikipedia.org/wiki/Universal_Scene_Description" target="_blank" rel="noreferrer">USD / USDZ</a> — Apple AR format (text USDA stages; binary USDC not supported in-browser here)
+                        </li>
+                        <li>
+                          <a href="https://en.wikipedia.org/wiki/Scalable_Vector_Graphics" target="_blank" rel="noreferrer">SVG</a> — Vector logos for extrusion to 3D
                         </li>
                       </ul>
                     </li>
@@ -5089,9 +5123,19 @@
               </div>
 
               <div class="panel-block info-panel-block info-panel-block--compact" id="info-changelog">
-                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Latest Changes (May 20):</div>
+                <div class="block-title"><i class="fa-solid fa-code" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Recent Updates</div>
                 <div class="about-content">
-                  <div>Homepage performance on slower desktops without layout changes. co-authored-by: Cursor <cursoragent@cursor.com>.</div>
+                  <ul>
+                    <li>• Object <strong>Maps</strong> inspector — preview texture slots on the mesh; FBX material slot assignment and packed ORM detection</li>
+                    <li>• <strong>Generate from Font</strong> — live text preview, kerning, reveal animations, and extrusion controls</li>
+                    <li>• <strong>Light Rays</strong> (volumetric god rays) and <strong>Ambient Occlusion</strong> (N8AO) in Camera &amp; FX</li>
+                    <li>• <strong>Isometric Camera</strong>, Handheld shake, studio background gradients, and export FOV animation</li>
+                    <li>• Post-processing pass merge for better GPU performance on heavy FX stacks</li>
+                  </ul>
+                  <p>
+                    Full history:
+                    <a href="https://github.com/stellanjoh2/orby" target="_blank" rel="noreferrer" class="about-highlight" style="text-decoration: underline; text-underline-offset: 0.15em;">github.com/stellanjoh2/orby</a>
+                  </p>
                 </div>
               </div>
 
@@ -5110,7 +5154,20 @@
     </div>
 
     <template id="toastTemplate">
-      <div class="toast">
+      <div class="toast" role="status" aria-live="polite">
+        <span class="toast-icon toast-icon--success" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="9" r="9" fill="currentColor"/>
+            <path d="M5.25 9.15L7.65 11.55L12.75 6.45" stroke="var(--orby-black)" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="toast-icon toast-icon--info" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="9" r="9" fill="currentColor"/>
+            <path d="M9 8.1V12.15" stroke="var(--orby-black)" stroke-width="1.65" stroke-linecap="round"/>
+            <circle cx="9" cy="5.55" r="0.9" fill="var(--orby-black)"/>
+          </svg>
+        </span>
         <span class="toast-message"></span>
       </div>
     </template>

@@ -1,9 +1,9 @@
 /*
  * Brand Color System
  *
- * To change the main brand color, simply update:
- * - --brand-primary: The main brand color (currently neon yellow #c4ff00)
- * - --brand-secondary: The secondary accent color (currently orange #ff4500)
+ * To change the main brand color, update --orby-lime in styles/orby-brand-tokens.css
+ * (and ORBY_LIME in scripts/constants.js for studio defaults).
+ * Also update --brand-secondary for the secondary accent (currently orange #ff4500).
  *
  * All accent-related colors (--accent, --accent-strong, --accent-border, etc.)
  * will automatically derive from these two base colors using CSS color-mix().
@@ -21,6 +21,7 @@
  * 2. Use CSS filters on .drop-logo and .demo-logotype (see below)
  */
 
+@import url('./styles/orby-brand-tokens.css');
 @import url('./styles/orby-home-padding-x.css');
 @import url('./styles/orby-ultra-wide-home.css');
 
@@ -124,6 +125,8 @@
   --shelf-label-font-size: 14px;
   /* Lime section headlines (.block-title) and compact preset grids (Lens, ISO, …) */
   --shelf-headline-font-size: 12px;
+  /* Tab name only (Object, Studio, …) — 28px @ 2560×1440 reference */
+  --shelf-tab-title-font-size: 28px;
   /* Horizontal gap between paired large CTAs (marketing CTA, dropzone, fullscreen prompts) */
   --orby-big-dual-btn-gap: 36px;
   /* Big headline → CTA row (thank-you, Return Home, marketing lime CTA) */
@@ -165,6 +168,11 @@
     1
   );
   --orby-hero-credit-inset: calc(112px * var(--orby-hero-credit-gutter-scale));
+  /* Bottom-left viewport chrome — home frame; studio overrides on html:not(.mobile-landing) */
+  --viewport-chrome-inset-x: var(--orby-home-padding-x);
+  --viewport-chrome-inset-y: var(--orby-home-padding-y);
+  --viewport-load-spinner-lift: 192px;
+  --shelf-inset: 48px;
 }
 
 /* Big screens: extra horizontal inset only — vertical inset follows height */
@@ -190,6 +198,11 @@
   }
 }
 
+html:not(.mobile-landing) body.dropzone-visible {
+  --viewport-chrome-inset-x: var(--orby-home-padding-x);
+  --viewport-chrome-inset-y: var(--orby-home-padding-y);
+}
+
 /*
  * Studio UI density — designed @ 2560×1440; scale shelf + settings chrome on smaller
  * desktops so 1080p feels like the 2560 layout (dropzone keeps its own hero factor).
@@ -202,9 +215,15 @@ html:not(.mobile-landing) {
     min(100vw / var(--orby-studio-ref-width), 100dvh / var(--orby-studio-ref-height)),
     1
   );
+  --shelf-inset: calc(48px * var(--studio-ui-scale));
+  --viewport-chrome-inset-x: var(--shelf-inset);
+  --viewport-chrome-inset-y: var(--shelf-inset);
+  --viewport-load-spinner-lift: calc(192px * var(--studio-ui-scale));
+  --ui-frosted-blur: calc(15px * var(--studio-ui-scale));
   --app-settings-chrome-radius: calc(18px * var(--studio-ui-scale));
   --shelf-label-font-size: calc(14px * var(--studio-ui-scale));
   --shelf-headline-font-size: calc(12px * var(--studio-ui-scale));
+  --shelf-tab-title-font-size: calc(28px * var(--studio-ui-scale));
   --ui-accent-action-font-size: calc(0.8rem * var(--studio-ui-scale));
   --color-chip-w: calc(92px * var(--studio-ui-scale));
   --ui-orby-pill-pad-block: calc(0.52rem * var(--studio-ui-scale));
@@ -288,16 +307,17 @@ body[data-theme='aqua'] {
   --orby-app-bg: var(--orby-black);
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
   --orby-surface-muted: #151515;
+  /* Frosted dark chrome — shelf, toasts, and other main-UI overlays */
+  --ui-frosted-blur: 15px;
 }
 
 :root,
 body[data-theme='violet'] {
-  /* Brand Colors - Change these to swap the main brand color */
-  --brand-primary: #c4ff00;
+  /* Brand Colors — lime from orby-brand-tokens.css; secondary accent here */
+  --brand-primary: var(--orby-lime);
   --brand-secondary: #ff4500;
   
-  /* Inverted brand primary for text selection (1:1 color inversion) */
-  /* Calculated: RGB(196, 255, 0) -> RGB(59, 0, 255) = #3b00ff */
+  /* Inverted brand primary (1:1 RGB inversion of --orby-lime); recalc when lime changes */
   --brand-primary-inverted: #3b00ff;
   
   /* Base Colors */
@@ -305,7 +325,8 @@ body[data-theme='violet'] {
   --panel: #0d081f;
   --panel-alt: #160c2f;
   /* Shelf hierarchy: dark frosted shell; cards slightly lifted (controls ghost 0.15 brightest) */
-  --shelf-bg: rgba(8, 8, 8, 0.78);
+  --ui-frosted-bg: rgba(8, 8, 8, 0.78);
+  --shelf-bg: var(--ui-frosted-bg);
   --shelf-card-bg: rgba(255, 255, 255, 0.054);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f5f1ff;
@@ -343,18 +364,16 @@ body[data-theme='violet'] {
 }
 
 body[data-theme='aqua'] {
-  /* Brand Colors - Change these to swap the main brand color */
-  --brand-primary: #c4ff00;
+  --brand-primary: var(--orby-lime);
   --brand-secondary: #ff4500;
-  
-  /* Inverted brand primary for text selection (1:1 color inversion) */
   --brand-primary-inverted: #3b00ff;
   
   /* Base Colors */
   --bg: var(--orby-app-bg);
   --panel: #0d111c;
   --panel-alt: #121726;
-  --shelf-bg: rgba(8, 8, 8, 0.82);
+  --ui-frosted-bg: rgba(8, 8, 8, 0.82);
+  --shelf-bg: var(--ui-frosted-bg);
   --shelf-card-bg: rgba(255, 255, 255, 0.048);
   --stroke: rgba(255, 255, 255, 0.15);
   --text: #f1f4ff;
@@ -1857,7 +1876,7 @@ html.orby-gate-unlocked .orby-entry-gate,
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
   font-family: inherit;
   font-size: clamp(0.9rem, 1.1vw, 1rem);
   font-weight: 700;
@@ -1881,7 +1900,7 @@ html.orby-gate-unlocked .orby-entry-gate,
   z-index: 1;
   inset: 0;
   border-radius: inherit;
-  background: var(--brand-primary, #c4ff00);
+  background: var(--brand-primary, var(--orby-lime));
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);
@@ -2125,7 +2144,7 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime {
   background: var(--brand-text, var(--orby-black));
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
   transition:
     background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
     color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2134,7 +2153,7 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime:hover,
 .orby-magic-btn--on-lime.orby-magic-btn--solid-lime:focus-visible {
   background: color-mix(in srgb, var(--brand-text, var(--orby-black)) 86%, white);
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
   outline: none;
 }
 
@@ -2162,7 +2181,7 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:hover,
 .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:focus-visible {
   background: var(--brand-text, var(--orby-black));
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
   outline: none;
 }
 
@@ -2193,7 +2212,7 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 
 .orby-magic-btn--dialog-ghost {
   background: rgba(0, 0, 0, 0.42);
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
   transition: color var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2220,11 +2239,11 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 }
 
 .orby-magic-btn--dialog-ghost:active .orby-magic-btn__fill {
-  background: color-mix(in srgb, var(--brand-primary, #c4ff00) 92%, var(--orby-black));
+  background: color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 92%, var(--orby-black));
 }
 
 .orby-magic-btn--dialog-accent {
-  background: var(--brand-primary, #c4ff00);
+  background: var(--brand-primary, var(--orby-lime));
   color: var(--brand-text, var(--orby-black));
   transition:
     background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2639,7 +2658,7 @@ body.export-overlay-debug #dropzone {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: left;
-  color: var(--brand-lime, #c4ff00);
+  color: var(--brand-lime);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -3072,8 +3091,8 @@ html:not(.mobile-landing) .dropzone-hero-deco__img {
   }
 
   html.orby-home-scroll .dropzone > .dropzone-hero-deco .dropzone-hero-deco__slot--ll {
-    /* LL — @1920: 60 / 190; @2560: 90 / 270 (ramp 0→80px over 1920–2560) */
-    top: calc(190px + 80px * var(--drop-hero-deco-ramp));
+    /* LL — @1920: 60 / 190; @2560: 90 / 230 (ramp 0→40px over 1920–2560) */
+    top: calc(190px + 40px * var(--drop-hero-deco-ramp));
     left: calc(60px + 30px * var(--drop-hero-deco-ramp));
   }
 
@@ -3163,13 +3182,54 @@ html.mobile-landing .dropzone-hero-credits {
   display: none;
 }
 
-/* Below 1920 — no corner art or artist credits (wide-desktop home only) */
+/*
+ * Below 1920 — MacBook band (~1710): corner art, credits, fine-tuned positions.
+ * 1920–2560 rules above are unchanged.
+ */
 @media (max-width: 1919px) {
-  html:not(.mobile-landing) .dropzone > .dropzone-hero-deco,
+  html:not(.mobile-landing) .dropzone {
+    --drop-hero-deco-narrow-scale: clamp(0.78, calc(100vw / 1920px), 1);
+    --drop-hero-deco-ramp: 0;
+    --drop-hero-deco-wide-factor: calc(0.936 * var(--drop-hero-deco-narrow-scale));
+    /* Frost frame + inner copy — 48px taller total (−24px top/bottom inset) */
+    --dropzone-padding-y: max(0.35rem, calc(var(--orby-home-padding-y) - 24px));
+  }
+
   html:not(.mobile-landing) body.dropzone-visible #dropzone > .dropzone-hero-credits {
-    display: none !important;
-    visibility: hidden;
-    pointer-events: none;
+    --orby-hero-credit-inset: var(--orby-marketing-edge-inset, var(--orby-hero-credit-inset));
+  }
+
+  html:not(.mobile-landing) .dropzone-hero-credit {
+    font-size: 14px;
+  }
+
+  /* Girl (UR) — +50px down, +100px right vs 1920-band anchor */
+  html:not(.mobile-landing) .dropzone-hero-deco__slot--ur {
+    top: calc(-150px * var(--drop-hero-deco-narrow-scale) + 50px);
+    right: calc(-100px * var(--drop-hero-deco-narrow-scale) - 100px);
+  }
+
+  html:not(.orby-home-scroll):not(.mobile-landing) .dropzone-hero-deco__slot--ll {
+    bottom: calc(-160px * var(--drop-hero-deco-narrow-scale) - 40px);
+    left: calc(90px * var(--drop-hero-deco-narrow-scale) - 100px);
+  }
+
+  /* Dragon (LL) — +190px down, −100px left vs 1920-band anchor */
+  html.orby-home-scroll:not(.mobile-landing)
+    .dropzone
+    > .dropzone-hero-deco
+    .dropzone-hero-deco__slot--ll {
+    top: calc(190px * var(--drop-hero-deco-narrow-scale) + 190px);
+    left: calc(60px * var(--drop-hero-deco-narrow-scale) - 100px);
+  }
+
+  html.orby-home-scroll:not(.mobile-landing)
+    .dropzone
+    > .dropzone-hero-deco
+    .dropzone-hero-deco__slot--ll
+    .dropzone-hero-deco__img {
+    transform: translate(-6%, -2%) scale(calc(2 * var(--drop-hero-deco-wide-factor)));
+    transform-origin: 0% 0%;
   }
 }
 
@@ -3416,9 +3476,7 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 }
 
 .shelf {
-  /* Inset of panel box from the browser chrome (top / right / bottom) */
-  --shelf-inset: 48px;
-  /* Slider rows: fixed label + value gutters so every track ends on the same line */
+  /* Inset of panel box from the browser chrome (top / right / bottom) — --shelf-inset on :root / html */
   --slider-label-col: 90px;
   --slider-value-col: 2.5rem; /* ~4 digits at 0.8rem; longer values ellipsize for now */
   /* --shelf-g: tab chrome bleed; --shelf-panel-gutter: equal H/V between shell bg and scroll cards */
@@ -3452,11 +3510,11 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-reveal-dur: 0.45s;
   --shelf-reveal-ease: cubic-bezier(0.4, 0, 0.2, 1);
   width: clamp(320px, 23vw, 380px);
-  background: var(--shelf-bg);
+  background: var(--ui-frosted-bg);
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
   /* Fallback for browsers without dvh, then prefer dynamic viewport height */
   height: calc(100vh - 2 * var(--shelf-inset));
   height: calc(100dvh - 2 * var(--shelf-inset));
@@ -3489,7 +3547,6 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 
 html:not(.mobile-landing) .shelf {
   font-size: calc(1rem * var(--studio-ui-scale));
-  --shelf-inset: calc(48px * var(--studio-ui-scale));
   --slider-label-col: calc(90px * var(--studio-ui-scale));
   --shelf-g: calc(var(--shelf-rhythm) / 2);
   /* 12px @ 2560 (scale 1), 10px @ 1920 (scale 0.75); 2560 unchanged */
@@ -3516,8 +3573,6 @@ html:not(.mobile-landing) .shelf {
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
   --shelf-picker-grid-gap: calc(8px * var(--studio-ui-scale));
   width: calc(380px * var(--studio-ui-scale));
-  backdrop-filter: blur(calc(15px * var(--studio-ui-scale)));
-  -webkit-backdrop-filter: blur(calc(15px * var(--studio-ui-scale)));
 }
 
 html:not(.mobile-landing) .shelf.is-shelf-hidden {
@@ -3560,17 +3615,17 @@ html:not(.mobile-landing) .shelf .rotation-notch i {
 }
 
 html:not(.mobile-landing) .shelf .slider-line input[type='range'] {
-  height: calc(4px * var(--studio-ui-scale));
+  height: calc(2px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .slider-line input[type='range']::-webkit-slider-runnable-track {
-  height: calc(4px * var(--studio-ui-scale));
-  border-radius: calc(2px * var(--studio-ui-scale));
+  height: calc(2px * var(--studio-ui-scale));
+  border-radius: calc(1px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .slider-line input[type='range']::-moz-range-track {
-  height: calc(4px * var(--studio-ui-scale));
-  border-radius: calc(2px * var(--studio-ui-scale));
+  height: calc(2px * var(--studio-ui-scale));
+  border-radius: calc(1px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf input[type='range']::-webkit-slider-thumb {
@@ -3581,6 +3636,19 @@ html:not(.mobile-landing) .shelf input[type='range']::-webkit-slider-thumb {
 html:not(.mobile-landing) .shelf input[type='range']::-moz-range-thumb {
   width: calc(12px * var(--studio-ui-scale));
   height: calc(12px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .subsection.is-muted input[type='range']::-webkit-slider-thumb,
+html:not(.mobile-landing) .shelf .panel-block.is-muted input[type='range']::-webkit-slider-thumb {
+  width: calc(10px * var(--studio-ui-scale));
+  height: calc(10px * var(--studio-ui-scale));
+  margin-top: calc(-4px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .subsection.is-muted input[type='range']::-moz-range-thumb,
+html:not(.mobile-landing) .shelf .panel-block.is-muted input[type='range']::-moz-range-thumb {
+  width: calc(10px * var(--studio-ui-scale));
+  height: calc(10px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .slider-line .value-inline-input {
@@ -3609,9 +3677,9 @@ html:not(.mobile-landing) .shelf .effect-toggle input:focus-visible + .effect-in
   outline-offset: calc(2px * var(--studio-ui-scale));
 }
 
-/* Tab headline (Object, Studio, …) — 2rem is root-sized; HDRI grid used vw not shelf width */
+/* Tab headline (Object, Studio, …) — 28px @ 2560; scales with --studio-ui-scale */
 html:not(.mobile-landing) .shelf .panel-header-title {
-  font-size: calc(2rem * var(--studio-ui-scale));
+  font-size: var(--shelf-tab-title-font-size);
   margin: 0.95rem 0 var(--shelf-stack-gap) 0;
 }
 
@@ -3685,7 +3753,7 @@ html:not(.mobile-landing) .shelf .font-extrude-family-trigger:focus-visible {
     color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
-/* Segmented pills (Auto Rotate, etc.) — min-height/padding were root rem */
+/* Segmented pills (Turntable, etc.) — min-height/padding were root rem */
 html:not(.mobile-landing) .shelf .segmented {
   gap: calc(0.4rem * var(--studio-ui-scale));
 }
@@ -3721,7 +3789,7 @@ html:not(.mobile-landing) .shelf .info-orby-mark:focus-visible {
   outline-offset: calc(3px * var(--studio-ui-scale));
 }
 
-/* Information tab — prose/quicknav/shortcuts use root rem or inline px */
+/* Information tab — prose/shortcuts use root rem or inline px */
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content {
   font-size: calc(0.9rem * var(--studio-ui-scale));
 }
@@ -3757,15 +3825,6 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content kbd {
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .bug-report-panel-description {
   font-size: calc(0.88rem * var(--studio-ui-scale));
   margin-bottom: calc(1rem * var(--studio-ui-scale));
-}
-
-html:not(.mobile-landing) .shelf .panel[data-panel='info'] nav.info-quicknav {
-  font-size: calc(0.85rem * var(--studio-ui-scale)) !important;
-  gap: calc(0.4rem * var(--studio-ui-scale)) calc(0.75rem * var(--studio-ui-scale)) !important;
-}
-
-html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-quicknav a {
-  margin-bottom: calc(0.25rem * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-note {
@@ -3809,8 +3868,8 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype-contai
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype {
-  width: min(calc(300px * var(--studio-ui-scale)), 100%);
-  max-width: min(calc(300px * var(--studio-ui-scale)), 100%);
+  width: var(--info-logotype-width);
+  max-width: var(--info-logotype-width);
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .microcopy {
@@ -3851,16 +3910,8 @@ html:not(.mobile-landing) .viewport > .viewport-fullscreen-btn i {
 }
 
 html:not(.mobile-landing) .viewport > .demo-logotype {
-  bottom: clamp(
-    calc(1rem * var(--studio-ui-scale)),
-    calc(4vw * var(--studio-ui-scale)),
-    calc(4.5rem * var(--studio-ui-scale))
-  );
-  left: clamp(
-    calc(1rem * var(--studio-ui-scale)),
-    calc(4vw * var(--studio-ui-scale)),
-    calc(4.5rem * var(--studio-ui-scale))
-  );
+  bottom: var(--viewport-chrome-inset-y);
+  left: var(--viewport-chrome-inset-x);
   width: min(
     calc(440px * var(--studio-ui-scale)),
     calc(100vw - 2rem * var(--studio-ui-scale)),
@@ -3870,16 +3921,8 @@ html:not(.mobile-landing) .viewport > .demo-logotype {
 }
 
 html:not(.mobile-landing) .viewport > .viewport-load-spinner {
-  bottom: clamp(
-    calc(1rem * var(--studio-ui-scale)),
-    calc(4vw * var(--studio-ui-scale)),
-    calc(4.5rem * var(--studio-ui-scale))
-  );
-  left: clamp(
-    calc(1rem * var(--studio-ui-scale)),
-    calc(4vw * var(--studio-ui-scale)),
-    calc(4.5rem * var(--studio-ui-scale))
-  );
+  bottom: calc(var(--viewport-chrome-inset-y) + var(--viewport-load-spinner-lift));
+  left: var(--viewport-chrome-inset-x);
   gap: calc(12px * var(--studio-ui-scale));
   width: auto;
   height: calc(70px * var(--studio-ui-scale));
@@ -4040,8 +4083,8 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
 }
 
 .info-logotype {
-  width: min(300px, 100%);
-  max-width: min(300px, 92vw);
+  width: var(--info-logotype-width, 66%);
+  max-width: var(--info-logotype-width, 66%);
   height: auto;
   display: flex;
   justify-content: center;
@@ -4213,13 +4256,15 @@ a.about-highlight:focus-visible {
 
 .panel[data-panel='info'] {
   position: relative;
+  /* Information tab logotype — ~two-thirds of shelf content width @ all breakpoints */
+  --info-logotype-width: 66%;
 }
 
 /* Tab name only (Object, Studio, …). Do not use --brand-font-headline for in-panel section labels — those are .block-title. */
 .panel-header-title {
   font-family: var(--brand-font-headline);
   display: none;
-  font-size: 2rem;
+  font-size: var(--shelf-tab-title-font-size);
   letter-spacing: 0;
   font-weight: 400;
   line-height: 1;
@@ -4625,7 +4670,7 @@ a.about-highlight:focus-visible {
 .mode-icon {
   position: relative;
   display: block;
-  box-sizing: content-box;
+  box-sizing: border-box;
   width: var(--shelf-picker-sphere-ring);
   height: var(--shelf-picker-sphere-ring);
   cursor: pointer;
@@ -4653,6 +4698,19 @@ a.about-highlight:focus-visible {
   transform-origin: center center;
 }
 
+/* Full ring hit target — img is smaller than the ring; absolute children alone miss the outer band */
+.mode-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--shelf-picker-sphere-ring);
+  height: var(--shelf-picker-sphere-ring);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
 .mode-icon img {
   position: absolute;
   left: 50%;
@@ -4664,13 +4722,20 @@ a.about-highlight:focus-visible {
   margin: 0;
   transition: transform 0.2s ease;
   z-index: 0;
+  pointer-events: none;
   transform: translate(-50%, -50%);
   transform-origin: center center;
   object-fit: cover;
   /* Free floating - no background or border when unselected */
 }
 
-.mode-icon:hover img {
+.mode-icon:hover,
+.mode-icon:focus-within {
+  z-index: 3;
+}
+
+.mode-icon:not(:has(input:checked)):hover img,
+.mode-icon:not(:has(input:checked)):focus-within img {
   transform: translate(-50%, -50%) scale(1.1);
 }
 
@@ -4690,15 +4755,6 @@ a.about-highlight:focus-visible {
 /* Maps pin preview — hide Display ring while a map channel is active on the mesh */
 .mode-icons.is-map-inspect-active .mode-icon:has(input:checked)::before {
   border-color: transparent;
-}
-
-.mode-icons.is-map-inspect-active .mode-icon:has(input:checked):hover img {
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-.mode-icon:has(input:checked):hover img {
-  transform: translate(-50%, -50%)
-    scale(calc(1.1 + 2px / var(--shelf-picker-sphere-img)));
 }
 
 .panel-hint.map-slots-hint {
@@ -5036,8 +5092,8 @@ button.advanced-info-doc-btn {
   justify-self: stretch;
   width: 100%;
   min-width: 0;
-  height: 4px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   position: relative;
   /* Remove default track styling */
   -webkit-appearance: none;
@@ -5052,14 +5108,14 @@ button.advanced-info-doc-btn {
 /* WebKit slider track with fill effect */
 .slider-line input[type='range']::-webkit-slider-runnable-track {
   width: 100%;
-  height: 4px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-end, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
@@ -5072,8 +5128,8 @@ button.advanced-info-doc-btn {
     to right,
     rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-end, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
@@ -5086,8 +5142,8 @@ button.advanced-info-doc-btn {
     to right,
     rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
+    color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
@@ -5110,14 +5166,14 @@ button.advanced-info-doc-btn {
 /* Firefox slider track with fill effect */
 .slider-line input[type='range']::-moz-range-track {
   width: 100%;
-  height: 4px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 30%, transparent) var(--slider-fill-end, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
@@ -5131,8 +5187,8 @@ button.advanced-info-doc-btn {
     to right,
     rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--accent) 60%, transparent) var(--slider-fill-end, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
@@ -5145,8 +5201,8 @@ button.advanced-info-doc-btn {
     to right,
     rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-start, 0%),
-    color-mix(in srgb, var(--text-dim) 25%, transparent) var(--slider-fill-end, 0%),
+    color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--text-dim) 45%, transparent) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
     rgba(255, 255, 255, 0.15) 100%
   );
@@ -5434,11 +5490,11 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   opacity: 0.9;
 }
 
-/* Load indicator — favicon, bottom-left (inset matches .demo-logotype) */
+/* Load indicator — favicon, bottom-left (inset matches toast + .demo-logotype) */
 .viewport-load-spinner {
   position: absolute;
-  bottom: clamp(1rem, 4vw, 4.5rem);
-  left: clamp(1rem, 4vw, 4.5rem);
+  bottom: calc(var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem)) + var(--viewport-load-spinner-lift, 192px));
+  left: var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem));
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -5520,8 +5576,8 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
 /* Demo Logotype - Bottom Left Corner */
 .demo-logotype {
   position: absolute;
-  bottom: clamp(1rem, 4vw, 4.5rem);
-  left: clamp(1rem, 4vw, 4.5rem);
+  bottom: var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem));
+  left: var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem));
   width: min(440px, calc(100vw - 2rem), max(160px, 38vw));
   max-width: 440px;
   height: auto;
@@ -5773,7 +5829,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   object-fit: cover;
 }
 
-.hdri-icon:hover:not(:disabled):not(.is-disabled) img {
+.hdri-icon:not(.active):hover:not(:disabled):not(.is-disabled) img {
   transform: translate(-50%, -50%) scale(1.1);
 }
 
@@ -5787,12 +5843,6 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .hdri-icon.active::before {
   border-color: var(--accent);
   transform: translate(-50%, -50%);
-}
-
-/* Active + hover: 1.1 + 1px radius so thumbnail meets the lime ring */
-.hdri-icon.active:hover:not(:disabled):not(.is-disabled) img {
-  transform: translate(-50%, -50%)
-    scale(calc(1.1 + 2px / var(--shelf-hdri-sphere-img)));
 }
 
 .hdri-icon__sphere {
@@ -5829,13 +5879,8 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   transform: translate(-50%, -50%);
 }
 
-#creativeLookGrid .hdri-icon:hover:not(:disabled):not(.is-disabled) img {
+#creativeLookGrid .hdri-icon:not(.active):hover:not(:disabled):not(.is-disabled) img {
   transform: translate(-50%, -50%) scale(1.1);
-}
-
-#creativeLookGrid .hdri-icon.active:hover:not(:disabled):not(.is-disabled) img {
-  transform: translate(-50%, -50%)
-    scale(calc(1.1 + 2px / var(--shelf-picker-sphere-img)));
 }
 
 .hdri-icon__sphere--placeholder {
@@ -6166,41 +6211,88 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 }
 
 .toast {
+  --toast-bottom: max(var(--viewport-chrome-inset-y, 1.5rem), env(safe-area-inset-bottom, 0px));
+  --toast-inline: var(--viewport-chrome-inset-x, 1.5rem);
   position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.75rem 1.25rem;
-  background: rgba(6, 12, 24, 0.8);
+  bottom: var(--toast-bottom);
+  left: var(--toast-inline);
+  right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: min(28rem, calc(100vw - 2 * var(--toast-inline)));
+  padding: 0.62rem 1.05rem 0.62rem 0.72rem;
+  background: var(--ui-frosted-bg);
   border: none;
   border-radius: 999px;
+  color: var(--text);
   letter-spacing: -0.01em;
   font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.35;
   text-transform: none;
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  box-shadow: 0 10px 36px color-mix(in srgb, var(--orby-black) 42%, transparent);
   animation: toast 3s ease forwards;
   pointer-events: none;
   z-index: 15;
 }
 
-/* Marketing copy-toast — above #orby-marketing and lime CTA */
+.toast-icon {
+  display: none;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.toast-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.toast-icon--success {
+  color: var(--brand-primary);
+}
+
+.toast-icon--info {
+  color: color-mix(in srgb, var(--text) 42%, transparent);
+}
+
+.toast[data-toast-icon="success"] .toast-icon--success,
+.toast[data-toast-icon="info"] .toast-icon--info {
+  display: inline-flex;
+}
+
+.toast:not([data-toast-icon]) {
+  padding-inline: 1.05rem;
+}
+
+.toast-message {
+  min-width: 0;
+}
+
+/* Marketing home — same frame inset as studio UI */
 html.orby-home-scroll .toast {
   z-index: 100060;
-  bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem));
 }
 
 @keyframes toast {
   0% {
     opacity: 0;
-    transform: translate(-50%, 20px);
+    transform: translateY(12px);
   }
   10%,
   90% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, 10px);
+    transform: translateY(6px);
   }
 }
 
@@ -6299,8 +6391,8 @@ input[type='range']::-webkit-slider-thumb {
     height 0.15s ease,
     background 0.2s ease,
     box-shadow 0.15s ease;
-  /* Center the thumb vertically on the track: (thumb height - track height) / 2 = (12 - 4) / 2 = 4px */
-  margin-top: -4px;
+  /* Center the thumb vertically on the track: (12 - 2) / 2 = 5px */
+  margin-top: -5px;
 }
 
 input[type='range']:disabled::-webkit-slider-thumb {
@@ -6309,15 +6401,20 @@ input[type='range']:disabled::-webkit-slider-thumb {
   cursor: not-allowed;
 }
 
-/* Muted shelf sections: gray thumbs */
+/* Muted shelf sections: gray thumbs (2px smaller than active) */
 .subsection.is-muted input[type='range']::-webkit-slider-thumb,
 .panel-block.is-muted input[type='range']::-webkit-slider-thumb {
+  width: 10px;
+  height: 10px;
+  margin-top: -4px;
   background: #999 !important;
   box-shadow: none !important;
 }
 
 .subsection.is-muted input[type='range']::-moz-range-thumb,
 .panel-block.is-muted input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
   background: #999 !important;
   box-shadow: none !important;
 }
@@ -6920,22 +7017,80 @@ body.ui-hidden .shelf {
 }
 
 /*
- * Information tab — tuned content-visibility placeholders + merged stacks (same card look, smaller scroll units).
+ * Information tab — collapsible sections (details.info-section) + content-visibility when expanded.
  */
-.panel[data-panel='info'] .info-panel-block--compact {
+.panel[data-panel='info'] details.info-section:not([open]) {
+  contain-intrinsic-size: auto 3.75rem;
+}
+
+.panel[data-panel='info'] details.info-section[open].info-panel-block--compact {
   contain-intrinsic-size: auto 11rem;
 }
 
-.panel[data-panel='info'] .info-panel-block--medium {
+.panel[data-panel='info'] details.info-section[open].info-panel-block--medium {
   contain-intrinsic-size: auto 17rem;
 }
 
-.panel[data-panel='info'] .info-panel-block--tall {
+.panel[data-panel='info'] details.info-section[open].info-panel-block--tall {
   contain-intrinsic-size: auto 26rem;
 }
 
-.panel[data-panel='info'] .info-panel-block--faq-part {
+.panel[data-panel='info'] details.info-section[open].info-panel-block--faq-part {
   contain-intrinsic-size: auto 20rem;
+}
+
+.panel[data-panel='info'] details.info-section {
+  content-visibility: auto;
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__summary::marker {
+  content: '';
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__summary::after {
+  content: '';
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: auto;
+  margin-right: 0.15rem;
+  border-right: 2px solid var(--text-dim);
+  border-bottom: 2px solid var(--text-dim);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.panel[data-panel='info'] details.info-section[open] > .info-section__summary::after {
+  transform: rotate(-135deg);
+  margin-top: 0.15rem;
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__summary .block-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__body {
+  padding-top: var(--shelf-rhythm);
+}
+
+.panel[data-panel='info'] details.info-section > .info-section__body > .shortcuts-grid:first-child,
+.panel[data-panel='info'] details.info-section > .info-section__body > .about-content:first-child {
+  margin-top: 0;
 }
 
 .panel[data-panel='info'] {
@@ -7017,20 +7172,6 @@ body.ui-hidden .shelf {
 
 .panel[data-panel='info'] .info-panel-stack {
   margin-bottom: var(--shelf-panel-gutter);
-}
-
-/* Information tab quick navigation */
-.info-quicknav {
-  display: flex !important;
-  flex-wrap: wrap;
-  gap: 0.4rem 0.75rem;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-}
-
-.info-quicknav a {
-  display: block;
-  margin-bottom: 0;
 }
 
 .histogram-container canvas {
@@ -7545,26 +7686,26 @@ html.mobile-landing .mobile-warning .brand-highlight {
   flex: 1;
   align-self: center;
   min-width: 0;
-  height: 4px;
+  height: 2px;
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
 }
 
 .font-extrude-reveal-preview #fontExtrudeRevealScrub::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   background: rgba(255, 255, 255, 0.15);
 }
 
 .font-extrude-reveal-preview #fontExtrudeRevealScrub::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   background: rgba(255, 255, 255, 0.15);
 }
 
 .font-extrude-reveal-preview #fontExtrudeRevealScrub::-webkit-slider-thumb {
-  margin-top: -4px;
+  margin-top: -5px;
 }
 
 .font-extrude-reveal-preview #fontExtrudeRevealScrub::-moz-range-thumb {

@@ -10,6 +10,7 @@ import {
   mapInspectFindEntryForSlot,
   mapInspectPanelTabs,
   mapInspectPreviewContext,
+  mapInspectSlotLabel,
   textureToDataUrl,
   textureToPreviewUrl,
   watchPendingMapTextures,
@@ -36,6 +37,8 @@ export class MapInspectControls {
     this._panelOpen = false;
     /** @type {(() => void) | null} */
     this._textureWatchDispose = null;
+    /** @type {number} */
+    this._suppressModeToasts = 0;
   }
 
   bind() {
@@ -52,12 +55,25 @@ export class MapInspectControls {
 
     this._onDisplayModeClick = (event) => {
       if (!this._pinnedSlot) return;
-      if (!event.target.closest('.mode-icon')) return;
-      // Capture before radio change — also handles re-clicking the already-selected mode
-      // (e.g. Shaded) which does not fire `change` while a map preview is pinned.
-      this._unpinPreview();
+      const modeIcon = event.target.closest('.mode-icon');
+      if (!modeIcon) return;
+      const nextMode = modeIcon.querySelector('input[name="shading"]')?.value;
+      const currentMode = this.stateStore.getState().shading;
+      if (nextMode && nextMode !== currentMode) {
+        // Display mode change clears preview in mesh:shading (EventManager toast includes that).
+        return;
+      }
+      // Re-clicking the active mode (e.g. Shaded) unpins without firing mesh:shading.
+      this._unpinPreview({ toast: true });
     };
     this._displayModeIcons()?.addEventListener('click', this._onDisplayModeClick, true);
+
+    this.eventBus.on('scene:batch-apply-start', () => {
+      this._suppressModeToasts += 1;
+    });
+    this.eventBus.on('scene:batch-apply-end', () => {
+      this._suppressModeToasts = Math.max(0, this._suppressModeToasts - 1);
+    });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && this._panelOpen) {
@@ -84,7 +100,7 @@ export class MapInspectControls {
       this.refresh();
     });
     this.eventBus.on('scene:model-cleared', () => this.reset());
-    this.eventBus.on('mesh:shading', () => this._unpinPreview({ toastOnShading: true }));
+    this.eventBus.on('mesh:shading', () => this._unpinPreview());
   }
 
   /**
@@ -247,7 +263,7 @@ export class MapInspectControls {
       if (opts.entry?.packed) {
         this._togglePackedEntry(opts.entry);
       } else if (this._pinnedSlot === opts.id) {
-        this._unpinPreview();
+        this._unpinPreview({ toast: true });
       } else {
         this._pinSlot(opts.id);
       }
@@ -272,10 +288,21 @@ export class MapInspectControls {
 
     const idx = slots.indexOf(this._pinnedSlot);
     if (idx === slots.length - 1) {
-      this._unpinPreview();
+      this._unpinPreview({ toast: true });
     } else {
       this._pinSlot(slots[idx + 1]);
     }
+  }
+
+  /**
+   * @param {string} slotId
+   */
+  _toastMapPreview(slotId) {
+    const entry = mapInspectFindEntryForSlot(this._textureMaps, slotId);
+    const sub = entry?.packed ? entry.packedSlots?.find((s) => s.id === slotId) : null;
+    const label = sub?.label ?? mapInspectSlotLabel(slotId);
+    if (!label) return;
+    this.ui.showModeChangeToast?.('mapPreview', label);
   }
 
   _refreshPackedTileChrome() {
@@ -304,9 +331,13 @@ export class MapInspectControls {
 
   /**
    * @param {string} slotId
+   * @param {{ toast?: boolean }} [opts]
    */
-  _pinSlot(slotId) {
+  _pinSlot(slotId, opts = {}) {
     if (!slotId || slotId === 'viewMaps') return;
+
+    const prev = this._pinnedSlot;
+    const { toast = true } = opts;
     this._pinnedSlot = slotId;
     this._setDisplaySuspended(true);
     this._updateTileSelection();
@@ -317,12 +348,17 @@ export class MapInspectControls {
       this._syncPanelImage();
     }
     this.eventBus.emit('mesh:map-inspect-preview', slotId);
+
+    if (toast && this._suppressModeToasts === 0 && slotId !== prev) {
+      this._toastMapPreview(slotId);
+    }
   }
 
   /**
-   * @param {{ toastOnShading?: boolean }} [opts]
+   * @param {{ toast?: boolean }} [opts]
    */
   _unpinPreview(opts = {}) {
+    const { toast = false } = opts;
     const hadPin = !!this._pinnedSlot;
     this._pinnedSlot = null;
     if (hadPin) {
@@ -331,10 +367,8 @@ export class MapInspectControls {
     this._updateTileSelection();
     this._refreshPackedTileChrome();
     this.eventBus.emit('mesh:map-inspect-clear');
-    if (hadPin && opts.toastOnShading) {
-      this.ui.showToast?.('Map preview cleared — display mode changed', 2800, {
-        notification: false,
-      });
+    if (hadPin && toast && this._suppressModeToasts === 0) {
+      this.ui.showModeChangeToast?.('mapPreview', 'cleared');
     }
   }
 

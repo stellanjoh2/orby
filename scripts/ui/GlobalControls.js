@@ -112,7 +112,7 @@ export class GlobalControls {
     });
   }
 
-  /** Segmented controls (e.g. Auto Rotate, Auto Orbit, Handheld) — randomized tap sounds. */
+  /** Segmented controls (e.g. Turntable, Auto Orbit, Handheld) — randomized tap sounds. */
   bindSegmentedSelectSounds() {
     const shelf = this.ui.dom.shelf;
     if (!shelf) return;
@@ -547,7 +547,7 @@ export class GlobalControls {
         }
       }
 
-      // A - Toggle auto-rotate
+      // A - Cycle mesh turntable speeds
       if (key === 'a') {
         event.preventDefault();
         const current = this.stateStore.getState().autoRotate;

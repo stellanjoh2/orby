@@ -60,7 +60,9 @@
     > .dropzone-hero-deco
     .dropzone-hero-deco__slot--ll {
     top: calc(
-      190px + 80px * var(--drop-hero-deco-ramp) +
+      190px + 40px * var(--drop-hero-deco-ramp) +
+        40px * (var(--orby-ultra-wide-factor) - 1) /
+          (var(--orby-ultra-wide-max-factor) - 1) +
         900px * (var(--orby-ultra-wide-factor) - 1) - 50px -
         90px * (var(--orby-ultra-wide-factor) - 1) /
           (var(--orby-ultra-wide-max-factor) - 1)
@@ -70,7 +72,7 @@
 
 /*
  * Hero deco fine-tune — 3840 only (2561–3839 keep ramped anchors above).
- * Girl +40px right; dragon +20px right, +160px up.
+ * Girl +40px right; dragon +20px right, +260px up.
  */
 @media (min-width: 3840px) {
   html:not(.mobile-landing) .dropzone-hero-deco__slot--ur {
@@ -83,10 +85,12 @@
     .dropzone-hero-deco__slot--ll {
     left: calc(60px + 30px * var(--drop-hero-deco-ramp) + 20px);
     top: calc(
-      190px + 80px * var(--drop-hero-deco-ramp) +
+      190px + 40px * var(--drop-hero-deco-ramp) +
+        40px * (var(--orby-ultra-wide-factor) - 1) /
+          (var(--orby-ultra-wide-max-factor) - 1) +
         900px * (var(--orby-ultra-wide-factor) - 1) - 50px -
         90px * (var(--orby-ultra-wide-factor) - 1) /
-          (var(--orby-ultra-wide-max-factor) - 1) - 160px
+          (var(--orby-ultra-wide-max-factor) - 1) - 260px
     );
   }
 }

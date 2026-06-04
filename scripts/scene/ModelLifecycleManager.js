@@ -15,12 +15,25 @@ import {
 import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
 import { isFontExtrudeRevealModel } from './FontTextRevealController.js';
 import { easeOutExpo, SCALE_TOGGLE_IN_MS } from './toggleScaleAnimation.js';
+import {
+  analyzeFbxMaterials,
+  defaultFbxActiveMaterialKey,
+  formatFbxMaterialReportAppendix,
+  fbxMaterialReportModalTitle,
+} from '../import/fbxMaterialReport.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
 const FBX_IMPORT_WIP_ALERT_BODY =
   'FBX import is still a work in progress. Phong/Lambert materials are converted to PBR so mesh sliders behave like GLB; ' +
   'UV sets, packed maps, and external textures may still differ from your DCC. ' +
   'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
+
+function buildFbxImportAlert(object) {
+  const report = analyzeFbxMaterials(object);
+  const appendix = formatFbxMaterialReportAppendix(report);
+  const body = appendix ? `${FBX_IMPORT_WIP_ALERT_BODY}\n\n${appendix}` : FBX_IMPORT_WIP_ALERT_BODY;
+  return { report, body, title: fbxMaterialReportModalTitle(report) };
+}
 
 /**
  * Model load, replace, clear, dispose, and first-load presentation (camera fade, scale-in).
@@ -55,6 +68,7 @@ export class ModelLifecycleManager {
     const s = this.scene;
     if (!s.modelRoot) return;
     s.stateStore.set('fbxMapSlots.enabled', false);
+    s.stateStore.set('fbxMapSlots.activeMaterial', '');
     s.stateStore.set('fbxMapSlots.invertNormalY', false);
     s.stateStore.set('fbxMapSlots.pbrUvChannel', 0);
     s.diagnosticsController.clearBoneHelpers();
@@ -350,14 +364,29 @@ export class ModelLifecycleManager {
     this._meshSpawnScaleRaf = requestAnimationFrame(tick);
   }
 
-  _configureFbxAfterLoad(file) {
+  _configureFbxAfterLoad(file, object) {
     const s = this.scene;
     const isFbx = typeof file?.name === 'string' && file.name.toLowerCase().endsWith('.fbx');
     s.stateStore.set('fbxMapSlots.enabled', isFbx);
     if (isFbx) {
+      const report = analyzeFbxMaterials(object);
+      s.stateStore.set('fbxMapSlots.activeMaterial', defaultFbxActiveMaterialKey(report));
       s.eventBus.emit('scene:fbx-map-slots-reset');
+      s.eventBus.emit('scene:fbx-material-report', { report });
     }
     return isFbx;
+  }
+
+  _presentFbxImportFeedback(object) {
+    const s = this.scene;
+    const { report, body, title } = buildFbxImportAlert(object);
+    if (report.shouldShowDetails) {
+      console.info('[Orby] FBX material report', report);
+    }
+    s.ui.showMessageAlert(body, title, {
+      okLabel: 'CONTINUE',
+      modalTone: report.hasUntexturedMaterials ? 'caution' : 'none',
+    });
   }
 
   async loadFile(file, options = {}) {
@@ -396,16 +425,13 @@ export class ModelLifecycleManager {
       });
       this.setModel(asset.object, asset.animations ?? []);
       this.applyAssetMetadata(asset);
-      const isFbx = this._configureFbxAfterLoad(file);
+      const isFbx = this._configureFbxAfterLoad(file, asset.object);
       s.updateStatsUI(file, asset.object, asset.gltfMetadata);
       s.ui.updateTopBarDetail(`${file.name} — Idle`);
       if (options.silent) {
         s.ui.showToast('Model reloaded', 3200, { notification: false });
       } else if (isFbx) {
-        s.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
-          okLabel: 'CONTINUE',
-          modalTone: 'none',
-        });
+        this._presentFbxImportFeedback(asset.object);
       } else {
         s.ui.showToast('Model loaded', 3200, { notification: false });
       }
@@ -457,13 +483,10 @@ export class ModelLifecycleManager {
       }
       this.setModel(asset.object, asset.animations ?? []);
       this.applyAssetMetadata(asset);
-      const isFbx = this._configureFbxAfterLoad(sourceFile);
+      const isFbx = this._configureFbxAfterLoad(sourceFile, asset.object);
       s.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
       if (isFbx) {
-        s.ui.showMessageAlert(FBX_IMPORT_WIP_ALERT_BODY, 'FBX — work in progress', {
-          okLabel: 'CONTINUE',
-          modalTone: 'none',
-        });
+        this._presentFbxImportFeedback(asset.object);
       } else {
         s.ui.showToast('Folder loaded', 3200, { notification: false });
       }

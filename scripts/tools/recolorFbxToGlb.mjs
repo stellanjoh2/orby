@@ -9,8 +9,9 @@ import path from 'node:path';
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { ORBY_LIME } from '../constants.js';
 
-const BRAND_LIME = '#c4ff00';
+const BRAND_LIME = ORBY_LIME;
 
 /** GLTFExporter binary mode uses FileReader (browser-only). */
 if (typeof globalThis.FileReader === 'undefined') {

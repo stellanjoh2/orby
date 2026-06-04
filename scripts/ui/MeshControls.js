@@ -19,6 +19,10 @@ import {
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
 import { normalizeExportSubtleSpinDegrees } from '../render/exportVideoMovements.js';
+import {
+  analyzeFbxMaterials,
+  getFbxUserSlotFileNamesForMaterial,
+} from '../import/fbxMaterialReport.js';
 
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -98,12 +102,18 @@ export class MeshControls {
     });
 
     this._pendingFbxMapSlot = null;
+    this._fbxMaterialOptions = [];
 
     const openFbxMapPicker = (slot) => {
       if (!slot) return;
       this._pendingFbxMapSlot = slot;
       this.ui.inputs.fbxMapFileInput?.click();
     };
+
+    this.ui.inputs.fbxMapMaterial?.addEventListener('change', (event) => {
+      const key = event?.target?.value ?? '';
+      this.eventBus.emit('mesh:fbx-active-material', { materialKey: key });
+    });
 
     document.querySelectorAll('.map-slot-choose[data-fbx-map-slot], .map-slot-file[data-fbx-map-slot]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -115,7 +125,10 @@ export class MeshControls {
         event.stopPropagation();
         const slot = btn.getAttribute('data-fbx-map-clear');
         if (!slot) return;
-        this.eventBus.emit('mesh:fbx-map-clear', { slot });
+        this.eventBus.emit('mesh:fbx-map-clear', {
+          slot,
+          materialKey: this._getFbxActiveMaterialKey(),
+        });
       });
     });
     this.ui.inputs.fbxMapFileInput?.addEventListener('change', (event) => {
@@ -124,19 +137,33 @@ export class MeshControls {
       event.target.value = '';
       this._pendingFbxMapSlot = null;
       if (!file || !slot) return;
-      this.eventBus.emit('mesh:fbx-map-slot', { slot, file });
+      this.eventBus.emit('mesh:fbx-map-slot', {
+        slot,
+        file,
+        materialKey: this._getFbxActiveMaterialKey(),
+      });
     });
     this.eventBus.on('scene:fbx-map-applied', (payload) => {
-      this._syncFbxMapSlotRow(payload?.slot, payload?.name);
+      if (this._fbxMapSlotMatchesActiveMaterial(payload?.materialKey)) {
+        this._syncFbxMapSlotRow(payload?.slot, payload?.name);
+      }
     });
     this.eventBus.on('scene:fbx-map-cleared', (payload) => {
-      this._syncFbxMapSlotRow(payload?.slot, '');
+      if (this._fbxMapSlotMatchesActiveMaterial(payload?.materialKey)) {
+        this._syncFbxMapSlotRow(payload?.slot, '');
+      }
     });
     this.eventBus.on('scene:fbx-map-slots-reset', () => {
-      document.querySelectorAll('[data-fbx-map-row]').forEach((control) => {
-        const slot = control.getAttribute('data-fbx-map-row');
-        this._syncFbxMapSlotRow(slot, '');
-      });
+      this._refreshFbxMaterialSelect();
+      this._syncAllFbxMapSlotRows();
+    });
+    this.eventBus.on('scene:fbx-material-report', () => {
+      this._refreshFbxMaterialSelect();
+      this._syncAllFbxMapSlotRows();
+    });
+    this.eventBus.on('scene:fbx-active-material', () => {
+      this._syncFbxMaterialSelectFromState();
+      this._syncAllFbxMapSlotRows();
     });
 
     this.ui.inputs.fbxMapInvertNormalY?.addEventListener('change', (event) => {
@@ -401,7 +428,7 @@ export class MeshControls {
     });
     if (this.ui.inputs.rotationZ) this.helpers.enableSliderKeyboardStepping(this.ui.inputs.rotationZ);
 
-    // Auto-rotate
+    // Turntable (mesh auto-rotate)
     this.ui.inputs.autoRotate.forEach((input) => {
       input.addEventListener('change', () => {
         if (input.checked) {
@@ -1103,6 +1130,16 @@ export class MeshControls {
       }
       this.ui.setControlDisabled('uvCheckerScale', !state.advanced?.uvChecker);
     }
+    if (this.ui.inputs.fbxMapMaterialLine) {
+      const fbxOn = !!state.fbxMapSlots?.enabled;
+      if (fbxOn && !this._fbxMaterialOptions?.length) {
+        this._refreshFbxMaterialSelect();
+      }
+      const showMat = fbxOn && (this._fbxMaterialOptions?.length ?? 0) > 1;
+      this.ui.inputs.fbxMapMaterialLine.hidden = !showMat;
+      this.ui.setControlDisabled('fbxMapMaterial', !showMat);
+      if (showMat) this._syncFbxMaterialSelectFromState();
+    }
     if (this.ui.inputs.fbxMapInvertNormalY) {
       const fbxOn = !!state.fbxMapSlots?.enabled;
       this.ui.inputs.fbxMapInvertNormalY.checked = !!state.fbxMapSlots?.invertNormalY;
@@ -1281,6 +1318,76 @@ export class MeshControls {
 
     // Wireframe mode now uses the overlay system, so overlay controls are always enabled
     // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode
+  }
+
+  _getFbxActiveMaterialKey() {
+    return this.stateStore.getState()?.fbxMapSlots?.activeMaterial ?? '';
+  }
+
+  _fbxMapSlotMatchesActiveMaterial(materialKey) {
+    const active = this._getFbxActiveMaterialKey();
+    const key = materialKey ?? active;
+    return !active || !key || active === key;
+  }
+
+  _refreshFbxMaterialSelect() {
+    const select = this.ui.inputs.fbxMapMaterial;
+    const line = this.ui.inputs.fbxMapMaterialLine;
+    if (!select) return;
+
+    const model = window.orby?.scene?.currentModel;
+    if (!model) {
+      this._fbxMaterialOptions = [];
+      select.replaceChildren();
+      if (line) line.hidden = true;
+      return;
+    }
+
+    const report = analyzeFbxMaterials(model);
+    this._fbxMaterialOptions = report.materials;
+    const active = this._getFbxActiveMaterialKey();
+    const activeValid = report.materials.some((m) => m.key === active);
+    const selectedKey = activeValid ? active : report.materials[0]?.key ?? '';
+
+    if (!activeValid && selectedKey) {
+      this.stateStore.set('fbxMapSlots.activeMaterial', selectedKey);
+    }
+
+    select.replaceChildren();
+    for (const entry of report.materials) {
+      const opt = document.createElement('option');
+      opt.value = entry.key;
+      const meshLabel = entry.meshCount === 1 ? '1 mesh' : `${entry.meshCount} meshes`;
+      opt.textContent = `${entry.name} (${meshLabel})`;
+      select.appendChild(opt);
+    }
+    select.value = selectedKey;
+
+    if (line) line.hidden = report.materialCount <= 1;
+  }
+
+  _syncFbxMaterialSelectFromState() {
+    const select = this.ui.inputs.fbxMapMaterial;
+    if (!select) return;
+    const active = this._getFbxActiveMaterialKey();
+    if (active && [...select.options].some((o) => o.value === active)) {
+      select.value = active;
+    }
+  }
+
+  _syncAllFbxMapSlotRows() {
+    const materialKey = this._getFbxActiveMaterialKey();
+    const model = window.orby?.scene?.currentModel;
+    const originals = window.orby?.scene?.materialController?.originalMaterials;
+    const names =
+      model && originals
+        ? getFbxUserSlotFileNamesForMaterial(model, originals, materialKey)
+        : {};
+
+    document.querySelectorAll('[data-fbx-map-row]').forEach((control) => {
+      const slot = control.getAttribute('data-fbx-map-row');
+      this._syncFbxMapSlotRow(slot, names[slot] ?? '');
+    });
   }
 
   /**

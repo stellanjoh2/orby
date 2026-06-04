@@ -15,6 +15,7 @@ import { animateModalClose, animateModalOpen } from './modalReveal.js';
 import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import { GOBO_UI_DEFAULT } from '../render/GoboProjection.js';
 import { DEFAULT_GOBO_SOFTNESS } from '../config/gobos.js';
+import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from '../config/shadowQuality.js';
 import {
   emitGodRaysStudioEvents,
   godRaysStateAfterSectionReset,
@@ -595,7 +596,7 @@ export class ResetControls {
       this.stateStore.set('godRays', defaults.godRays);
       this.stateStore.set('lightsCastShadows', defaults.lightsCastShadows);
       this.stateStore.set('lightsShadowQuality', defaults.lightsShadowQuality ?? 'medium');
-      this.stateStore.set('lightsShadowSoftness', defaults.lightsShadowSoftness ?? 4);
+      this.stateStore.set('lightsShadowSoftness', defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS);
       this.stateStore.set('lightsShadowColor', defaults.lightsShadowColor ?? '#080808');
       this.stateStore.set('lightsShadowOpacity', defaults.lightsShadowOpacity ?? 0.25);
       this.stateStore.set(
@@ -673,7 +674,7 @@ export class ResetControls {
       this.eventBus.emit('lights:shadow-settings', {
         castShadows: defaults.lightsCastShadows,
         quality: defaults.lightsShadowQuality ?? 'medium',
-        softness: defaults.lightsShadowSoftness ?? 4,
+        softness: defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS,
         color: defaults.lightsShadowColor ?? '#080808',
         opacity: defaults.lightsShadowOpacity ?? 0.25,
         contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
@@ -954,7 +955,7 @@ export class ResetControls {
               );
               this.stateStore.set(
                 'lightsShadowSoftness',
-                defaults.lightsShadowSoftness ?? 4,
+                defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS,
               );
               this.stateStore.set(
                 'lightsShadowColor',
@@ -989,7 +990,7 @@ export class ResetControls {
             this.eventBus.emit('lights:height', defaults.lightsHeight ?? 5);
             this.eventBus.emit('lights:shadow-settings', {
               quality: defaults.lightsShadowQuality ?? 'medium',
-              softness: defaults.lightsShadowSoftness ?? 4,
+              softness: defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS,
               color: defaults.lightsShadowColor ?? '#080808',
               opacity: defaults.lightsShadowOpacity ?? 0.25,
               contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
@@ -1001,7 +1002,7 @@ export class ResetControls {
             {
               const castShadows = defaults.lightsCastShadows ?? false;
               const shadowQuality = defaults.lightsShadowQuality ?? 'medium';
-              const shadowSoftness = defaults.lightsShadowSoftness ?? 4;
+              const shadowSoftness = defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS;
               const shadowColor = defaults.lightsShadowColor ?? '#080808';
               const shadowOpacity = defaults.lightsShadowOpacity ?? 0.25;
               const shadowContactOffset = defaults.lightsShadowContactOffset ?? -0.0001;

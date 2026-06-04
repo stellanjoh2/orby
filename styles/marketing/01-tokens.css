@@ -136,7 +136,7 @@
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
   /* Body copy — Geist Light, same as legal About manifesto */
   --orby-marketing-body-weight: 300;
-  --orby-marketing-headline: var(--brand-primary, #c4ff00);
+  --orby-marketing-headline: var(--brand-primary, var(--orby-lime));
   --orby-marketing-panel-bg: var(--orby-surface-muted, #151515);
   /* Ink on lime (CTA) — matches FAQ panel, softer than --orby-black */
   --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
@@ -332,8 +332,13 @@
   /* Mega headline → body / dual CTAs (intro lede, lime CTA) — fixed px */
   --orby-marketing-headline-actions-gap: 92px;
   --orby-marketing-gutter: var(--orby-marketing-col-gap);
-  /* FAQ panel — bottom band matches other section seams */
-  --orby-marketing-faq-pad-bottom: var(--orby-marketing-gap-big);
+  /*
+   * FAQ panel — visible gray band before lime CTA (gap-big @ 2560).
+   * CTA overlap pulls up by --orby-marketing-section-radius; pad includes that radius.
+   */
+  --orby-marketing-faq-pad-bottom: calc(
+    var(--orby-marketing-gap-big) + var(--orby-marketing-section-radius)
+  );
   /* Mega headlines — full size at 1440; shrink via min(vw, 2× column cqi) + mega scale */
   --orby-mega-headline-min: calc(2.75rem * var(--orby-marketing-mega-scale));
   --orby-mega-headline-max: calc(10.5rem * var(--orby-marketing-mega-scale));
@@ -357,6 +362,13 @@
   --orby-section-headline-vw: 5.8;
   --orby-section-headline-cqi-cap: 11.6;
   --orby-section-headline-offset: calc(0.25rem * var(--orby-marketing-headline-scale));
+}
+
+/* Below 1920 — showcase full-bleed inset tracks narrow laptop frame (orby-home-padding-x.css) */
+@media (max-width: 1919px) {
+  #orby-marketing {
+    --orby-marketing-gutter: var(--orby-marketing-edge-inset, var(--orby-marketing-col-gap));
+  }
 }
 
 /* Home dropzone — informative copy + Browse pill (support ramp only; ultra-wide in orby-ultra-wide-home.css) */

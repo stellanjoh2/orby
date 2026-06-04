@@ -4,10 +4,10 @@
  */
 
 /** Flat 1-bit palette: solid fills only, no per-frame getComputedStyle */
-import { ORBY_BLACK } from '../constants.js';
+import { ORBY_BLACK, ORBY_LIME } from '../constants.js';
 
 const HIST_BG = ORBY_BLACK;
-const HIST_BAR = '#c4ff00';
+const HIST_BAR = ORBY_LIME;
 const HIST_BAR_WARN = '#ff9632';
 const HIST_BAR_SEVERE = '#ff6464';
 

@@ -710,6 +710,11 @@ export class SceneSettingsManager {
         this.stateStore.set('fbxMapSlots', merged);
         this.eventBus.emit('mesh:fbx-invert-normal-y', !!merged.invertNormalY);
         this.eventBus.emit('mesh:fbx-pbr-uv-channel', merged.pbrUvChannel === 1 ? 1 : 0);
+        if (merged.activeMaterial) {
+          this.eventBus.emit('mesh:fbx-active-material', {
+            materialKey: merged.activeMaterial,
+          });
+        }
       }
       if (payload.svgColorDetail !== undefined) {
         const level = payload.svgColorDetail;

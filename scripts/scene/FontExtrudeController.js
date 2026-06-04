@@ -1,5 +1,6 @@
 import * as opentype from 'opentype';
 import { FontExtrudeImporter, normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { opentypePathHasArea } from '../import/opentypePathToShape.js';
 import {
   getPairKerningPx,
@@ -324,6 +325,7 @@ export class FontExtrudeController {
       this.stateStore.getState()?.fontExtrude?.fillColor ?? DEFAULT_PREVIEW_FILL,
     );
     this.stateStore.set('svgExtrude.availableColors', [fillColor]);
+    normalizeImportScale(group);
     scene.modelLifecycle.setModel(group, []);
     scene.modelLifecycle.applyAssetMetadata({
       gltfMetadata: {

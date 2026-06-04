@@ -7,6 +7,7 @@ import {
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
+  ORBY_LIME,
 } from './constants.js';
 import { defaultAberration } from './render/chromaticAberration.js';
 import { normalizeToneCurve } from './math/toneCurvePchip.js';
@@ -14,6 +15,7 @@ import { deepClone } from './utils/deepClone.js';
 import { migrateLegacyGroundKeys } from './state/migrateLegacyGroundKeys.js';
 import { GOBO_UI_DEFAULT } from './render/GoboProjection.js';
 import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
+import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
 import {
   DEFAULT_CAMERA_POSITION,
   defaultCameraDistance,
@@ -44,6 +46,8 @@ export class StateStore {
       /** Shown when the loaded source file is `.fbx` — manual texture slot assignment. */
       fbxMapSlots: {
         enabled: false,
+        /** Material name group key for Map Slots (FBX often clones one material per mesh). */
+        activeMaterial: '',
         /** DirectX-style normal maps vs OpenGL — toggles tangent Y via normalScale. */
         invertNormalY: false,
         /** 0 = first UV (`uv`), 1 = second (`uv2`) — Three.js Texture.channel for detail maps only; base color stays on `uv`. */
@@ -154,14 +158,14 @@ export class StateStore {
       backdropTextureEnabled: false,
       backdropTextureScale: 1.8,
       groundSolidColor: '#808080',
-      groundWireColor: '#c4ff00',
+      groundWireColor: ORBY_LIME,
       clay: {
         color: '#808080',
         normalMap: true,
       },
       wireframe: {
         alwaysOn: false,
-        color: '#c4ff00',
+        color: ORBY_LIME,
         onlyVisibleFaces: true,
         hideMesh: false,
       },
@@ -204,8 +208,8 @@ export class StateStore {
       lightsCastShadows: false,
       /** 3-point light shadow map quality preset. */
       lightsShadowQuality: 'medium',
-      /** Directional shadow softness radius (0 = harder edges, 4 = soft default). */
-      lightsShadowSoftness: 4,
+      /** Directional shadow softness radius (0 = harder edges, 4 = max penumbra). */
+      lightsShadowSoftness: DEFAULT_LIGHTS_SHADOW_SOFTNESS,
       /** Tint color for shadowed areas (black = darkest shadows). */
       lightsShadowColor: '#080808',
       /** How strongly the shadow tint is applied (0 = none, 1 = full). */
@@ -382,7 +386,7 @@ export class StateStore {
         centerY: 50,
         stops: [
           { color: '#080808', position: 0 },
-          { color: '#c4ff00', position: 100 },
+          { color: ORBY_LIME, position: 100 },
         ],
       },
       lookFilterPreset: 'none',

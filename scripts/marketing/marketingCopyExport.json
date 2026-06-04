@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-05-27T20:01:12.230Z",
+    "generatedAt": "2026-06-04T18:12:06.292Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -31,12 +31,17 @@
       "label": "Browse Files",
       "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
     },
-    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. Load test object · Preview export overlay · Debug 404 (temp)",
+    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. · Blank canvas · Load test object · Preview export overlay · Debug 404 (temp)",
     "secondaryLinks": [
       {
         "label": "privacy policy",
         "href": "./legal/privacy-policy.html",
         "type": "policy"
+      },
+      {
+        "label": "Blank canvas",
+        "href": "#",
+        "type": "link"
       },
       {
         "label": "Load test object",
@@ -97,13 +102,7 @@
         "Real lenses — depth of field, chromatic aberration, lens flare, lens dirt, bloom, grain, and anamorphic streaks",
         "PBR / real materials — metalness, roughness, normals, and emissive as authored"
       ],
-      "cta": null,
-      "imageCredit": {
-        "title": "(FREE) Porsche 911 Carrera 4S",
-        "artist": "Lionsharp Studios",
-        "sourceLabel": "Sketchfab",
-        "sourceHref": "https://sketchfab.com/3d-models/free-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf"
-      }
+      "cta": null
     },
     {
       "order": 3,
@@ -308,6 +307,7 @@
       "order": 12,
       "type": "faq",
       "id": "orby-marketing-faq",
+      "eyebrow": null,
       "title": "Questions, answered",
       "titleLines": [
         "Questions, answered"

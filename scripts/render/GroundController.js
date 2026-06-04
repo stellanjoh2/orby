@@ -15,6 +15,7 @@ import {
   DEFAULT_BASE_GLASS_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  ORBY_LIME,
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
@@ -374,7 +375,7 @@ export class GroundController {
     this.solidEnabled = options.solidEnabled ?? false;
     this.wireEnabled = options.wireEnabled ?? false;
     this.solidColor = options.solidColor ?? '#31363f';
-    this.wireColor = options.wireColor ?? '#c4ff00';
+    this.wireColor = options.wireColor ?? ORBY_LIME;
     this.wireOpacity = options.wireOpacity ?? 1.0;
     this.groundY = options.groundY ?? 0;
     this.gridY = options.gridY ?? 0;

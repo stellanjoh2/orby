@@ -56,8 +56,12 @@ export class EventManager {
     eventBus.on('mesh:rotationY', (value) => s.setRotationY(value));
     eventBus.on('mesh:rotationZ', (value) => s.setRotationZ(value));
     eventBus.on('mesh:shading', (mode) => {
+      const hadMapPreview = !!s.materialController?.mapInspectPreview?.activeSlot;
       s.setShading(mode);
       s.setSceneGeometryWireframe(false);
+      if (s._suppressModeChangeToasts === 0) {
+        s.ui?.showModeChangeToast?.('displayMode', mode, { mapPreviewCleared: hadMapPreview });
+      }
     });
     eventBus.on('mesh:auto-rotate', (speed) => {
       s.setAutoRotateSpeed(speed);
@@ -98,6 +102,10 @@ export class EventManager {
     });
     eventBus.on('mesh:fbx-invert-normal-y', (enabled) => s.setFbxInvertNormalY(enabled));
     eventBus.on('mesh:fbx-pbr-uv-channel', (channel) => s.setFbxPbrUvChannel(channel));
+    eventBus.on('mesh:fbx-active-material', (payload) => {
+      const key = payload?.materialKey ?? payload;
+      s.setFbxActiveMaterial(typeof key === 'string' ? key : '');
+    });
     eventBus.on('mesh:map-inspect-preview', (slot) => s.setMapInspectPreview(slot));
     eventBus.on('mesh:map-inspect-clear', () => s.clearMapInspectPreview());
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));

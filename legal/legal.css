@@ -6,6 +6,8 @@
  * Preload Mattone + Geist woff2 in <head> before CSS to avoid swap layout shift.
  */
 
+@import url('../styles/orby-brand-tokens.css');
+
 @font-face {
   font-family: 'Mattone Regular';
   src: url('../assets/fonts/Mattone-Regular.woff2') format('woff2');
@@ -72,7 +74,7 @@
   --legal-text: rgba(255, 255, 255, 0.7);
   --legal-muted: rgba(255, 255, 255, 0.62);
   --legal-faint: rgba(255, 255, 255, 0.38);
-  --legal-accent: #c4ff00;
+  --legal-accent: var(--orby-lime);
   --legal-accent-hover: #d4ff44;
   /* ~832px at 16px root — comfortable measure for legal copy */
   --legal-max: 52rem;
@@ -765,7 +767,7 @@ body.legal-doc--about .legal-foot {
 /* In-page magic pill links (not scroll-nav — that uses <button> like marketing) */
 body.legal-doc a.orby-magic-btn {
   text-decoration: none;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
 }
 
 body.legal-doc a.orby-magic-btn:hover,

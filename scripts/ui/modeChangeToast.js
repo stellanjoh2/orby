@@ -1,11 +1,13 @@
-/** @typedef {'autoRotate' | 'autoOrbit' | 'handheld'} ModeToastKind */
+/** @typedef {'autoRotate' | 'autoOrbit' | 'handheld' | 'displayMode' | 'mapPreview'} ModeToastKind */
 
 export const MODE_CHANGE_TOAST_DURATION_MS = 2000;
 
 const MODE_PREFIX = {
-  autoRotate: 'Auto rotate',
+  autoRotate: 'Turntable',
   autoOrbit: 'Auto orbit',
   handheld: 'Handheld',
+  displayMode: 'Display',
+  mapPreview: 'Map preview',
 };
 
 const MODE_LABELS = {
@@ -25,16 +27,37 @@ const MODE_LABELS = {
     high: 'Strong',
     medium: 'Strong',
   },
+  displayMode: {
+    shaded: 'Shaded',
+    textures: 'Unlit',
+    clay: 'Clay',
+    wireframe: 'Wireframe',
+  },
 };
 
 /**
  * @param {ModeToastKind} kind
  * @param {number | string} rawValue
+ * @param {{ mapPreviewCleared?: boolean }} [options]
  * @returns {string | null}
  */
-export function formatModeChangeToastMessage(kind, rawValue) {
+export function formatModeChangeToastMessage(kind, rawValue, options = {}) {
   const prefix = MODE_PREFIX[kind];
   if (!prefix) return null;
+
+  if (kind === 'displayMode') {
+    const label = MODE_LABELS.displayMode[String(rawValue ?? '')];
+    if (!label) return null;
+    const base = `${prefix} · ${label}`;
+    return options.mapPreviewCleared ? `${base} — map preview ended` : base;
+  }
+
+  if (kind === 'mapPreview') {
+    if (rawValue === 'cleared') return `${prefix} · Cleared`;
+    const label = typeof rawValue === 'string' && rawValue ? rawValue : null;
+    if (!label) return null;
+    return `${prefix} · ${label}`;
+  }
 
   let value = rawValue;
   if (kind === 'autoRotate') {

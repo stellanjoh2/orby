@@ -49,6 +49,7 @@ import {
   normalizeStoredGoboScale,
 } from './render/GoboProjection.js';
 import { DEFAULT_GOBO_TEXTURE_ID, DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
+import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
 import { lightsAutoRotateDegreesPerSecond } from './config/lightsAutoRotate.js';
 import { ImageExporter } from './render/ImageExporter.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
@@ -223,7 +224,7 @@ export class SceneManager {
     );
     this.lightsShadowSoftness = Number.isFinite(initialState.lightsShadowSoftness)
       ? initialState.lightsShadowSoftness
-      : 4;
+      : DEFAULT_LIGHTS_SHADOW_SOFTNESS;
     this.lightsShadowContactOffset = Number.isFinite(
       initialState.lightsShadowContactOffset,
     )
@@ -2666,7 +2667,9 @@ export class SceneManager {
 
   setLightsShadowSoftness(value) {
     const raw = Number(value);
-    this.lightsShadowSoftness = Number.isFinite(raw) ? Math.min(4, Math.max(0, raw)) : 4;
+    this.lightsShadowSoftness = Number.isFinite(raw)
+      ? Math.min(4, Math.max(0, raw))
+      : DEFAULT_LIGHTS_SHADOW_SOFTNESS;
     this.lightsController?.setShadowSoftness(this.lightsShadowSoftness);
     this.applyRenderQualitySettings();
     this._syncShadowAndGobo();
@@ -3001,23 +3004,28 @@ export class SceneManager {
   }
 
   /**
-   * Apply a user-picked image to all non-glass mesh materials (FBX Map Slots UI).
-   * @param {{ slot: string, file: File }} payload
+   * Apply a user-picked image to FBX mesh materials (Map Slots UI; optional material target).
+   * @param {{ slot: string, file: File, materialKey?: string }} payload
    */
   async applyFbxMapSlot(payload = {}) {
     const slot = payload?.slot;
     const file = payload?.file;
     if (!slot || !file || !this.currentModel) return;
-    if (!this.stateStore.getState()?.fbxMapSlots?.enabled) return;
+    const fbxState = this.stateStore.getState()?.fbxMapSlots;
+    if (!fbxState?.enabled) return;
+    const materialKey = payload?.materialKey ?? fbxState.activeMaterial ?? null;
 
     const url = URL.createObjectURL(file);
     try {
       const tex = await this.textureLoader.loadAsync(url);
       tex.userData.orbyFbxUserTexture = true;
       tex.userData.orbyFbxBlobUrl = url;
-      this.materialController.applyFbxSlotTexture(slot, tex);
+      this.materialController.applyFbxSlotTexture(slot, tex, {
+        materialKey,
+        fileName: file.name,
+      });
       this.clearMapInspectPreview();
-      this.eventBus.emit('scene:fbx-map-applied', { slot, name: file.name });
+      this.eventBus.emit('scene:fbx-map-applied', { slot, name: file.name, materialKey });
       this.ui?.showToast?.(`Texture applied — ${file.name}`, 3200, { notification: false });
     } catch (err) {
       console.error('FBX map slot load failed', err);
@@ -3029,11 +3037,19 @@ export class SceneManager {
   clearFbxMapSlot(payload = {}) {
     const slot = payload?.slot;
     if (!slot || !this.currentModel) return;
-    if (!this.stateStore.getState()?.fbxMapSlots?.enabled) return;
+    const fbxState = this.stateStore.getState()?.fbxMapSlots;
+    if (!fbxState?.enabled) return;
+    const materialKey = payload?.materialKey ?? fbxState.activeMaterial ?? null;
 
-    this.materialController.clearFbxSlotTexture(slot);
+    this.materialController.clearFbxSlotTexture(slot, { materialKey });
     this.clearMapInspectPreview();
-    this.eventBus.emit('scene:fbx-map-cleared', { slot });
+    this.eventBus.emit('scene:fbx-map-cleared', { slot, materialKey });
+  }
+
+  setFbxActiveMaterial(materialKey) {
+    const key = typeof materialKey === 'string' ? materialKey : '';
+    this.stateStore.set('fbxMapSlots.activeMaterial', key);
+    this.eventBus.emit('scene:fbx-active-material', { materialKey: key });
   }
 
   setFbxInvertNormalY(enabled) {

@@ -3,8 +3,10 @@
  * Keep in sync with the .orby-magic-btn block in styles.css.
  */
 
+@import url('./orby-brand-tokens.css');
+
 :root {
-  --brand-primary: #c4ff00;
+  --brand-primary: var(--orby-lime);
   --text-link: #7e6bff;
   --orby-black: #080808;
   --brand-text: #080808;
@@ -56,7 +58,7 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, var(--orby-lime));
   font-family: inherit;
   font-size: clamp(0.9rem, 1.1vw, 1rem);
   font-weight: 700;
@@ -81,7 +83,7 @@
   z-index: 1;
   inset: 0;
   border-radius: inherit;
-  background: var(--brand-primary, #c4ff00);
+  background: var(--brand-primary, var(--orby-lime));
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--orby-magic-btn-fill-speed) cubic-bezier(0.16, 1, 0.3, 1);

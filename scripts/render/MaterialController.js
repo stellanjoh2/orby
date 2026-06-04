@@ -17,6 +17,7 @@ import {
   reapplySvgExtrudeSurfaceFromState,
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
+import { materialMatchesFbxGroup } from '../import/fbxMaterialReport.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import { MapInspectPreview } from './MapInspectPreview.js';
 import {
@@ -32,6 +33,7 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  ORBY_LIME,
 } from '../constants.js';
 
 /** BLEND materials at/above this opacity are treated as fully opaque (optional alpha-hash + force-opaque modes). */
@@ -249,7 +251,7 @@ export class MaterialController {
     this.wireframeSettings = {
       ...(initialState.wireframe || {
         alwaysOn: false,
-        color: '#c4ff00',
+        color: ORBY_LIME,
         onlyVisibleFaces: true,
         hideMesh: false,
       }),
@@ -2203,6 +2205,11 @@ export class MaterialController {
   }
 
   updateMaterials() {
+    // Object → Maps preview swaps transient MeshBasicMaterials on the mesh; shaded clones
+    // are parked in MapInspectPreview._savedMaterials. Patching child.material here would
+    // miss the parked materials and leave a stale restore (brightness pop after unpin).
+    if (this.mapInspectPreview?.activeSlot) return;
+
     // Update existing materials in all modes (except wireframe which has its own color)
     // Material controls now apply to both Color/Textures modes AND Clay mode
     if (this.currentModel && (this.currentShading === 'shaded' || this.currentShading === 'textures' || this.currentShading === 'clay')) {
@@ -3171,8 +3178,15 @@ export class MaterialController {
     material.needsUpdate = true;
   }
 
-  applyFbxSlotTexture(slot, texture) {
+  /**
+   * @param {string} slot
+   * @param {import('three').Texture} texture
+   * @param {{ materialKey?: string | null, fileName?: string }} [options]
+   */
+  applyFbxSlotTexture(slot, texture, options = {}) {
     if (!this.currentModel || !texture) return;
+    const materialKey = options.materialKey || null;
+    const fileName = options.fileName || '';
 
     const allowed = new Set([
       'albedo',
@@ -3202,8 +3216,15 @@ export class MaterialController {
       if (!orig) return;
 
       const assignOne = (mat, geom) => {
+        if (!materialMatchesFbxGroup(mat, materialKey)) return mat;
         const m = this._ensureStandardForFbxSlot(mat);
         m.userData.orbyFbxSlotMaps = true;
+        if (fileName) {
+          m.userData.orbyFbxSlotFileNames = {
+            ...(m.userData.orbyFbxSlotFileNames || {}),
+            [slot]: fileName,
+          };
+        }
         this._disposePreviousFbxSlotTexture(m, slot);
         const texForMat = texture.clone();
         texForMat.userData.orbyFbxUserTexture = true;
@@ -3241,11 +3262,13 @@ export class MaterialController {
   }
 
   /**
-   * Remove a user-assigned Map Slot texture from all mesh materials.
+   * Remove a user-assigned Map Slot texture from mesh materials.
    * @param {string} slot - albedo | normal | orm | roughness | metallic | occlusion | displacement | emissive | opacity
+   * @param {{ materialKey?: string | null }} [options]
    */
-  clearFbxSlotTexture(slot) {
+  clearFbxSlotTexture(slot, options = {}) {
     if (!this.currentModel) return;
+    const materialKey = options.materialKey || null;
 
     const allowed = new Set([
       'albedo',
@@ -3266,8 +3289,14 @@ export class MaterialController {
       if (!orig) return;
 
       const clearOne = (mat) => {
+        if (!materialMatchesFbxGroup(mat, materialKey)) return;
         this._disposePreviousFbxSlotTexture(mat, slot);
         this._clearTextureFromMaterialSlot(mat, slot);
+        if (mat.userData?.orbyFbxSlotFileNames) {
+          const next = { ...mat.userData.orbyFbxSlotFileNames };
+          delete next[slot];
+          mat.userData.orbyFbxSlotFileNames = next;
+        }
         this._refreshAllFbxSlotTransformsForMaterial(mat);
         mat.needsUpdate = true;
       };

@@ -76,6 +76,9 @@ export function goboBlurModeForQuality(quality) {
   return GOBO_BLUR_MODE_BY_QUALITY[q] ?? GOBO_BLUR_MODE_BY_QUALITY.medium;
 }
 
+/** Default lights Softness slider value (0 = hard edge, 4 = max penumbra). */
+export const DEFAULT_LIGHTS_SHADOW_SOFTNESS = 0.25;
+
 const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
 
 /**

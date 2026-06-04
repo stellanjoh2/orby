@@ -130,7 +130,7 @@ Perfect for models exported from:
 | Toggle 3-point lighting | `L` |
 | Toggle base (solid ground) | `P` |
 | Toggle render backdrop | `B` |
-| Toggle auto-rotate | `A` |
+| Toggle turntable | `A` |
 | Cycle HDRI presets | `[` / `]` |
 
 ---
@@ -175,7 +175,7 @@ Orby fully supports gamepad input for a console-like experience.
 
 | Action | Control |
 |--------|---------|
-| Toggle auto-rotate | **Cross / A** |
+| Toggle turntable | **Cross / A** |
 | Cycle render modes (Clay / Wireframe / Unlit) | **Circle / B** |
 | Reset camera framing | **Square / X** |
 | Toggle UI visibility | **Triangle / Y** |

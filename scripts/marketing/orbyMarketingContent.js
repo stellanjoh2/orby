@@ -106,13 +106,6 @@ export const MARKETING_SECTIONS = [
     imageSrc: './assets/marketing/present-cinema-look.png',
     videoSrc: './assets/marketing/orby-marketing-microreel.mp4',
     imageAlt: 'Lighting and grading a model in Orby',
-    imageCredit: {
-      title: '(FREE) Porsche 911 Carrera 4S',
-      artist: 'Lionsharp Studios',
-      sourceLabel: 'Sketchfab',
-      sourceHref:
-        'https://sketchfab.com/3d-models/free-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf',
-    },
   },
   {
     type: 'split',

@@ -50,12 +50,12 @@ function prefersReducedMotion() {
 
 const DROPZONE_HERO_DECO_OPACITY = 0.92;
 
-/** Corner JPGs + artist credits — wide desktop only (matches styles.css 1920px breakpoint). */
+/** Corner JPGs + hero credits — desktop home (below 1920: scaled in CSS). */
 function shouldShowDropzoneHeroArt() {
   if (document.documentElement.classList.contains('mobile-landing')) return false;
   return (
     typeof window.matchMedia === 'function' &&
-    window.matchMedia('(min-width: 1920px)').matches
+    window.matchMedia('(min-width: 900px)').matches
   );
 }
 

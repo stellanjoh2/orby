@@ -463,6 +463,16 @@ export function mapInspectPreviewProp(slotId) {
   return PREVIEW_PROP_BY_ID[slotId] ?? null;
 }
 
+/**
+ * @param {MapInspectSlotId | string | null | undefined} slotId
+ * @returns {string | null}
+ */
+export function mapInspectSlotLabel(slotId) {
+  if (!slotId) return null;
+  const def = MAP_TEXTURE_SLOT_DEFS.find((d) => d.id === slotId);
+  return def?.label ?? null;
+}
+
 export function clearMapInspectThumbCache() {
   thumbCache.clear();
 }

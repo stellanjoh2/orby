@@ -6,40 +6,9 @@ import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/j
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/USDZLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
-import {
-  DEFAULT_MATERIAL_ROUGHNESS,
-  STUDIO_IMPORT_TARGET_MAX_DIMENSION,
-} from '../constants.js';
+import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
+import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
-
-/** Below target × ratio → scale up on import (e.g. Sketchfab GLB with 0.01 node scale). */
-const IMPORT_SCALE_MIN_RATIO = 0.25;
-/** Above target × ratio → scale down on import (legacy FBX cm/m extremes). */
-const IMPORT_SCALE_MAX_RATIO = 10;
-
-/**
- * Uniformly scale a loaded root so its world AABB max dimension sits near {@link STUDIO_IMPORT_TARGET_MAX_DIMENSION}.
- * Skips assets already in the Orby-friendly band so intentional ~2-unit glTF is unchanged.
- */
-function normalizeImportScale(object) {
-  if (!object) return;
-  object.updateMatrixWorld(true);
-  const bounds = new THREE.Box3().setFromObject(object);
-  if (!bounds || bounds.isEmpty()) return;
-  const size = bounds.getSize(new THREE.Vector3());
-  const maxDimension = Math.max(size.x, size.y, size.z);
-  if (!Number.isFinite(maxDimension) || maxDimension <= 0) return;
-
-  const target = STUDIO_IMPORT_TARGET_MAX_DIMENSION;
-  const minThreshold = target * IMPORT_SCALE_MIN_RATIO;
-  const maxThreshold = target * IMPORT_SCALE_MAX_RATIO;
-  if (maxDimension >= minThreshold && maxDimension <= maxThreshold) return;
-
-  const uniformScale = target / maxDimension;
-  if (!Number.isFinite(uniformScale) || uniformScale <= 0) return;
-  object.scale.multiplyScalar(uniformScale);
-  object.updateMatrixWorld(true);
-}
 /** Mixamo / FBX Phong shininess is usually 0–100; map to PBR roughness. */
 const FBX_PHONG_SHININESS_ROUGHNESS_RANGE = 100;
 
@@ -323,6 +292,7 @@ export class ModelLoader {
       bevelAmount,
       detail,
     });
+    normalizeImportScale(object);
     const assetName = file.name.replace(/\.[^/.]+$/, '') || 'SVG';
     return {
       object,

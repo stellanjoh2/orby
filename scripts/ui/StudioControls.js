@@ -11,6 +11,7 @@ import {
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
 } from '../constants.js';
+import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from '../config/shadowQuality.js';
 
 export class StudioControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -940,7 +941,7 @@ export class StudioControls {
     if (this.ui.inputs.lightsShadowSoftness) {
       const softness = Number.isFinite(state.lightsShadowSoftness)
         ? state.lightsShadowSoftness
-        : 4;
+        : DEFAULT_LIGHTS_SHADOW_SOFTNESS;
       this.ui.inputs.lightsShadowSoftness.value = softness;
       this.helpers.updateValueLabel('lightsShadowSoftness', softness, 'decimal', 2);
     }

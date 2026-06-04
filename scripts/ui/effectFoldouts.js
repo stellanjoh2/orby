@@ -67,16 +67,86 @@ export function applyStudioFoldouts(state, setOpen) {
  * Progressive disclosure for Object tab — toggles, display modes, and nested options.
  */
 export function applyMeshFoldouts(state, setOpen) {
-  const wireframeRelevant =
-    state.shading === 'wireframe' || !!state.wireframe?.alwaysOn;
+  const wireframeActive = isWireframeSectionActive(state);
 
   setOpen('fresnel', !!state.fresnel?.enabled);
   setOpen('grid', !!state.groundWire);
-  setOpen('wireframe-settings', wireframeRelevant);
+  setOpen('wireframe-settings', wireframeActive);
   setOpen('uv-checker', !!state.advanced?.uvChecker);
   setOpen(
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,
   );
   setOpen('font-extrude', !!state.fontExtrude?.panelOpen);
+}
+
+/** Wireframe overlay settings apply in wireframe display mode or when always-on is enabled. */
+export function isWireframeSectionActive(state) {
+  return state.shading === 'wireframe' || !!state.wireframe?.alwaysOn;
+}
+
+/**
+ * Dim shelf section headlines (and nested controls via `.is-muted` CSS) when a parent
+ * toggle is off — same visual language as Shader Lab and per-light subsections.
+ */
+export function applyToggleSectionMute(state, setMuted) {
+  const isoOn = !!state.camera?.isometric?.enabled;
+  const fisheyeOn = !!state.fisheye?.enabled;
+  const lightsOn = !!state.lightsEnabled;
+  const wireframeActive = isWireframeSectionActive(state);
+  const podiumOn = !!state.groundSolid;
+  const glassOn = !!(
+    state.baseGlassSurface ??
+    state.podiumReflectMesh ??
+    false
+  );
+  const backdropOn = !!state.backdropEnabled;
+  const lensFlareOn = !!state.hdriEnabled && !!state.lensFlare?.enabled;
+  const godRaysOn = !!state.hdriEnabled && !!state.godRays?.enabled;
+  const abOn = !!state.lensFlare?.anamorphicBloom?.enabled;
+
+  // Object tab
+  setMuted('fresnel', !state.fresnel?.enabled);
+  setMuted('wireframe', !wireframeActive);
+  setMuted('creative-look', !state.creativeLook?.enabled);
+  setMuted('grid', !state.groundWire);
+  setMuted('font-extrude', !state.fontExtrude?.panelOpen);
+
+  // Studio tab
+  setMuted('hdri', !state.hdriEnabled);
+  setMuted('base', !podiumOn);
+  setMuted('base-glass', !(podiumOn && glassOn));
+  setMuted('backdrop', !backdropOn);
+  setMuted('lights', !lightsOn);
+  setMuted('keyLight', !(lightsOn && state.lights?.key?.enabled === true));
+  setMuted('fillLight', !(lightsOn && state.lights?.fill?.enabled === true));
+  setMuted('rimLight', !(lightsOn && state.lights?.rim?.enabled === true));
+  setMuted('ambientLight', !(lightsOn && state.lights?.ambient?.enabled === true));
+  setMuted('lightsShadows', !(lightsOn && !!state.lightsCastShadows));
+
+  // Camera tab
+  setMuted('histogram', !state.histogramEnabled);
+  setMuted('tone-curve', !state.toneCurveOpen);
+  setMuted('look-filters', !state.lookFilterPresetsOpen);
+  setMuted('isometric', !isoOn);
+  setMuted('fisheye', !fisheyeOn || isoOn);
+
+  // Camera & FX tab
+  setMuted('ambient-occlusion', !state.ambientOcclusion?.enabled);
+  setMuted('dof', !state.dof?.enabled);
+  setMuted('volumetric-scattering', !godRaysOn || isoOn);
+  setMuted('bloom', !state.bloom?.enabled);
+  setMuted('anamorphic-lens-flare', !isBloomPipelineActive(state) || !abOn);
+  setMuted('lens-flare', !lensFlareOn || isoOn);
+  setMuted('lens-dirt', !state.lensDirt?.enabled);
+  setMuted('grain', !state.grain?.enabled);
+  setMuted('vignette', !isVignetteUiEnabled(state.camera ?? {}));
+  setMuted('aberration', !state.aberration?.enabled);
+  setMuted('color-checker', !state.colorChecker?.enabled);
+  setMuted('composition-guides', !state.camera?.compositionGridEnabled);
+  setMuted(
+    'cinematic-letterbox',
+    !state.camera?.compositionGridEnabled ||
+      !state.camera?.cinematicLetterbox219,
+  );
 }

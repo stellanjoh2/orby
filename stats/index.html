@@ -41,25 +41,23 @@
     <a class="legal-skip" href="#main">Skip to content</a>
 
     <main id="main" class="legal-wrap legal-wrap--stats">
-      <h1 class="legal-stats__title">Statistics</h1>
+      <h1>Statistics</h1>
 
-      <section class="legal-stats__grid" aria-label="Usage totals">
-        <article class="legal-stats__card">
-          <p class="legal-stats__value" id="statsPageViews" aria-live="polite">0</p>
+      <section class="legal-stats__totals" aria-label="Usage totals">
+        <div class="legal-stats__total-row">
           <p class="legal-stats__label">Page visits</p>
-        </article>
-        <article class="legal-stats__card">
-          <p class="legal-stats__value" id="statsAssetsLoaded" aria-live="polite">0</p>
+          <p class="legal-stats__value" id="statsPageViews" aria-live="polite">0</p>
+        </div>
+        <div class="legal-stats__total-row">
           <p class="legal-stats__label">Assets loaded</p>
-        </article>
+          <p class="legal-stats__value" id="statsAssetsLoaded" aria-live="polite">0</p>
+        </div>
       </section>
 
       <section class="legal-stats__formats" aria-labelledby="statsFormatsHeading">
         <h2 class="legal-stats__formats-title" id="statsFormatsHeading">Top formats</h2>
         <ol class="legal-stats__formats-list" id="statsFormatsList"></ol>
       </section>
-
-      <p class="legal-stats__meta" id="statsMeta">Loading…</p>
 
       <p class="legal-stats__disclaimer">
         We don’t collect personal data. These numbers are anonymous totals only: we count page
@@ -68,6 +66,8 @@
         models or filenames. For more detail, see our
         <a href="../legal/privacy-policy.html">Privacy Policy</a>.
       </p>
+
+      <p class="legal-stats__meta" id="statsMeta">Loading…</p>
     </main>
 
     <script type="module" src="../scripts/marketing/orbyMarketingScrollNav.js"></script>
