@@ -6,6 +6,7 @@ import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { HDRI_CUSTOM_ID, HDRI_PRESET_ORDER, HDRI_STRENGTH_UNIT } from '../config/hdri.js';
 import { revealShelfPanelHeadline } from './panelHeadlineReveal.js';
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
+import { ensureInfoPanelProseLoaded } from './loadInfoPanelProse.js';
 
 export class GlobalControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
@@ -84,6 +85,9 @@ export class GlobalControls {
         }
         this.ui.uiSounds?.playSelect();
         this.ui.activeTab = target;
+        if (target === 'info') {
+          void ensureInfoPanelProseLoaded();
+        }
         this.ui.dom.tabs.forEach((button) => {
           const isActive = button.dataset.tab === target;
           button.classList.toggle('active', isActive);

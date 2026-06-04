@@ -41,7 +41,8 @@ import { LensControls } from './ui/LensControls.js';
 import { ViewPresetsControls } from './ui/ViewPresetsControls.js';
 import { IsometricControls } from './ui/IsometricControls.js';
 import { GlobalControls } from './ui/GlobalControls.js';
-import { initInfoSections, openInfoSectionTarget } from './ui/infoSections.js';
+import { openInfoSectionTarget } from './ui/infoSections.js';
+import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
 import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
@@ -694,21 +695,21 @@ export class UIManager {
     this.helpers.setupSliderFillUpdates();
     this.helpers.setupValueLabelInlineEdit();
 
-    initInfoSections();
-
     document.querySelectorAll('[data-open-info-section]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const sel = btn.getAttribute('data-open-info-section');
-        const tabButton = document.querySelector('[data-tab="info"]');
-        tabButton?.click();
-        const scrollToTarget = () => {
-          const el = sel ? document.querySelector(sel) : null;
-          if (!el) return;
-          openInfoSectionTarget(el);
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        };
-        requestAnimationFrame(() => {
-          requestAnimationFrame(scrollToTarget);
+        void ensureInfoPanelProseLoaded().then(() => {
+          const tabButton = document.querySelector('[data-tab="info"]');
+          tabButton?.click();
+          const scrollToTarget = () => {
+            const el = sel ? document.querySelector(sel) : null;
+            if (!el) return;
+            openInfoSectionTarget(el);
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          };
+          requestAnimationFrame(() => {
+            requestAnimationFrame(scrollToTarget);
+          });
         });
       });
     });
