@@ -100,6 +100,24 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
+.map-inspect-tile__channel {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  z-index: 2;
+  min-width: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--orby-black) 82%, transparent);
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 /* Floating map preview — shelf chrome, top-left inset */
 .map-preview-panel {
   position: fixed;

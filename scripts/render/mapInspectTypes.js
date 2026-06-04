@@ -7,15 +7,28 @@
 
 /** @typedef {'r' | 'g' | 'b'} OrmChannel */
 
+/** @typedef {'orm' | 'mr' | 'or' | 'ao-metal'} OrmPackType */
+
+/**
+ * @typedef {Object} MapInspectPackedSlot
+ * @property {MapInspectSlotId} id
+ * @property {string} label
+ * @property {string} prop
+ * @property {OrmChannel} channel
+ */
+
 /**
  * @typedef {Object} MapInspectEntry
- * @property {MapInspectSlotId} id
+ * @property {string} id
  * @property {string} label
  * @property {string} prop
  * @property {import('three').Texture} texture
  * @property {OrmChannel | null} [channel] Preview one ORM channel (R=AO, G=roughness, B=metallic).
  * @property {number} [variantCount] Distinct textures for this slot across all materials.
  * @property {number} [materialCount] Materials that assign this map.
+ * @property {boolean} [packed] Multiple ORM slots share this texture — one grid tile.
+ * @property {OrmPackType} [packType]
+ * @property {MapInspectPackedSlot[]} [packedSlots]
  */
 
 export const MAP_TEXTURE_SLOT_DEFS = [
@@ -30,6 +43,8 @@ export const MAP_TEXTURE_SLOT_DEFS = [
   { id: 'bump', label: 'Bump', prop: 'bumpMap' },
 ];
 
+const ORM_SLOT_IDS = ['ao', 'roughness', 'metallic'];
+
 const PREVIEW_PROP_BY_ID = Object.fromEntries(
   MAP_TEXTURE_SLOT_DEFS.map((def) => [def.id, def.prop]),
 );
@@ -42,6 +57,74 @@ const ORM_CHANNEL_BY_SLOT = {
 
 /** @type {Map<string, string>} `${uuid}:${size}:${channelKey}` → data URL */
 const thumbCache = new Map();
+
+/**
+ * @param {import('three').Texture | null | undefined} a
+ * @param {import('three').Texture | null | undefined} b
+ */
+function sameTexture(a, b) {
+  return !!a?.isTexture && !!b?.isTexture && a.uuid === b.uuid;
+}
+
+/**
+ * Detect glTF-style channel packing on a material (full ORM or partial MR/OR).
+ * @param {import('three').Material | null | undefined} mat
+ * @returns {{ texture: import('three').Texture, packType: OrmPackType, slots: MapInspectPackedSlot[] } | null}
+ */
+export function getOrmPackForMaterial(mat) {
+  if (!mat) return null;
+
+  const ao = mat.aoMap;
+  const rough = mat.roughnessMap;
+  const metal = mat.metalnessMap;
+
+  if (sameTexture(ao, rough) && sameTexture(rough, metal)) {
+    return {
+      texture: ao,
+      packType: 'orm',
+      slots: [
+        { id: 'ao', label: 'AO', prop: 'aoMap', channel: 'r' },
+        { id: 'roughness', label: 'Roughness', prop: 'roughnessMap', channel: 'g' },
+        { id: 'metallic', label: 'Metallic', prop: 'metalnessMap', channel: 'b' },
+      ],
+    };
+  }
+
+  if (sameTexture(rough, metal)) {
+    return {
+      texture: rough,
+      packType: 'mr',
+      slots: [
+        { id: 'roughness', label: 'Roughness', prop: 'roughnessMap', channel: 'g' },
+        { id: 'metallic', label: 'Metallic', prop: 'metalnessMap', channel: 'b' },
+      ],
+    };
+  }
+
+  if (sameTexture(ao, rough)) {
+    return {
+      texture: ao,
+      packType: 'or',
+      slots: [
+        { id: 'ao', label: 'AO', prop: 'aoMap', channel: 'r' },
+        { id: 'roughness', label: 'Roughness', prop: 'roughnessMap', channel: 'g' },
+      ],
+    };
+  }
+
+  if (sameTexture(ao, metal)) {
+    return {
+      texture: ao,
+      packType: 'ao-metal',
+      slots: [
+        { id: 'ao', label: 'AO', prop: 'aoMap', channel: 'r' },
+        { id: 'metallic', label: 'Metallic', prop: 'metalnessMap', channel: 'b' },
+      ],
+    };
+  }
+
+  return null;
+}
 
 /**
  * @param {import('three').Texture | null | undefined} texture
@@ -67,13 +150,126 @@ export function getOrmChannelForMaterialSlot(mat, slotId) {
   const tex = mat[prop];
   if (!tex?.isTexture) return null;
 
-  const ao = mat.aoMap;
-  const rough = mat.roughnessMap;
-  const metal = mat.metalnessMap;
-  if (!ao || !rough || !metal) return null;
-  if (ao.uuid !== rough.uuid || rough.uuid !== metal.uuid) return null;
+  const pack = getOrmPackForMaterial(mat);
+  if (!pack) return null;
 
-  return ORM_CHANNEL_BY_SLOT[slotId];
+  const slot = pack.slots.find((s) => s.id === slotId);
+  if (!slot || pack.texture.uuid !== tex.uuid) return null;
+
+  return slot.channel;
+}
+
+/**
+ * @param {OrmPackType} packType
+ * @returns {string}
+ */
+function ormPackTypeLabel(packType) {
+  switch (packType) {
+    case 'orm':
+      return 'ORM';
+    case 'mr':
+      return 'MR';
+    case 'or':
+      return 'OR';
+    case 'ao-metal':
+      return 'AO / Metallic';
+    default:
+      return 'Packed';
+  }
+}
+
+/**
+ * @param {OrmChannel} channel
+ * @returns {string}
+ */
+export function ormChannelLabel(channel) {
+  if (channel === 'r') return 'AO (red)';
+  if (channel === 'g') return 'Roughness (green)';
+  return 'Metallic (blue)';
+}
+
+/**
+ * Collapse ORM-family slots that share one texture into a single grid entry.
+ * @param {MapInspectEntry[]} entries
+ * @returns {MapInspectEntry[]}
+ */
+function collapsePackedOrmEntries(entries) {
+  /** @type {Map<string, MapInspectEntry[]>} */
+  const byTexture = new Map();
+
+  for (const entry of entries) {
+    if (!ORM_SLOT_IDS.includes(entry.id)) continue;
+    const uuid = entry.texture.uuid;
+    if (!byTexture.has(uuid)) byTexture.set(uuid, []);
+    byTexture.get(uuid).push(entry);
+  }
+
+  /** @type {Set<string>} */
+  const removeIds = new Set();
+  /** @type {Map<string, MapInspectEntry>} */
+  const packedByFirstSlot = new Map();
+
+  for (const group of byTexture.values()) {
+    if (group.length < 2) continue;
+
+    const order = ORM_SLOT_IDS;
+    group.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+
+    const texture = group[0].texture;
+    /** @type {MapInspectPackedSlot[]} */
+    const packedSlots = group.map((entry) => ({
+      id: entry.id,
+      label: entry.label,
+      prop: entry.prop,
+      channel: entry.channel ?? ORM_CHANNEL_BY_SLOT[entry.id],
+    }));
+
+    const packType =
+      packedSlots.length === 3
+        ? 'orm'
+        : packedSlots.some((s) => s.id === 'ao') && packedSlots.some((s) => s.id === 'metallic')
+          ? 'ao-metal'
+          : packedSlots.some((s) => s.id === 'ao')
+            ? 'or'
+            : 'mr';
+
+    const packed = {
+      id: `packed:${texture.uuid}`,
+      label: group.map((e) => e.label).join(' / '),
+      prop: group[0].prop,
+      texture,
+      channel: null,
+      packed: true,
+      packType,
+      packedSlots,
+      variantCount: Math.max(...group.map((g) => g.variantCount ?? 1)),
+      materialCount: Math.max(...group.map((g) => g.materialCount ?? 1)),
+    };
+
+    packedByFirstSlot.set(packedSlots[0].id, packed);
+    group.forEach((entry) => removeIds.add(entry.id));
+  }
+
+  if (removeIds.size === 0) return entries;
+
+  /** @type {MapInspectEntry[]} */
+  const result = [];
+  /** @type {Set<string>} */
+  const inserted = new Set();
+
+  for (const def of MAP_TEXTURE_SLOT_DEFS) {
+    const packed = packedByFirstSlot.get(def.id);
+    if (packed && !inserted.has(packed.id)) {
+      result.push(packed);
+      inserted.add(packed.id);
+      continue;
+    }
+    if (removeIds.has(def.id)) continue;
+    const entry = entries.find((e) => e.id === def.id);
+    if (entry) result.push(entry);
+  }
+
+  return result;
 }
 
 /**
@@ -124,30 +320,132 @@ export function collectMeshTextureMaps(model, isGlassMesh, originalMaterials) {
     }
   });
 
-  return MAP_TEXTURE_SLOT_DEFS.filter((def) => slots.has(def.id)).map((def) => {
-    const data = slots.get(def.id);
-    return {
-      id: def.id,
-      label: def.label,
-      prop: def.prop,
-      texture: data.texture,
-      channel: data.channel,
-      variantCount: data.uuids.size,
-      materialCount: data.materialCount,
-    };
-  });
+  return collapsePackedOrmEntries(
+    MAP_TEXTURE_SLOT_DEFS.filter((def) => slots.has(def.id)).map((def) => {
+      const data = slots.get(def.id);
+      return {
+        id: def.id,
+        label: def.label,
+        prop: def.prop,
+        texture: data.texture,
+        channel: data.channel,
+        variantCount: data.uuids.size,
+        materialCount: data.materialCount,
+      };
+    }),
+  );
+}
+
+/**
+ * @param {MapInspectEntry} entry
+ * @param {MapInspectSlotId | string} [slotId]
+ * @returns {{ texture: import('three').Texture, channel: OrmChannel | null, label: string }}
+ */
+export function mapInspectPreviewContext(entry, slotId) {
+  if (entry.packed && slotId) {
+    const sub = entry.packedSlots?.find((s) => s.id === slotId);
+    if (sub) {
+      return { texture: entry.texture, channel: sub.channel, label: sub.label };
+    }
+  }
+  return {
+    texture: entry.texture,
+    channel: entry.channel ?? null,
+    label: entry.label,
+  };
+}
+
+/**
+ * @param {MapInspectEntry[]} maps
+ * @param {string | null | undefined} slotId
+ * @returns {MapInspectEntry | null}
+ */
+export function mapInspectFindEntryForSlot(maps, slotId) {
+  if (!slotId) return null;
+  for (const entry of maps) {
+    if (entry.packed) {
+      if (entry.packedSlots?.some((s) => s.id === slotId)) return entry;
+    } else if (entry.id === slotId) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+/**
+ * @param {MapInspectEntry} entry
+ * @param {string | null | undefined} slotId
+ */
+export function mapInspectEntryContainsSlot(entry, slotId) {
+  if (!slotId) return false;
+  if (entry.packed) return entry.packedSlots?.some((s) => s.id === slotId) ?? false;
+  return entry.id === slotId;
+}
+
+/**
+ * Default pin / panel slot for the first grid entry.
+ * @param {MapInspectEntry[]} maps
+ * @returns {string | null}
+ */
+export function mapInspectDefaultSlotId(maps) {
+  const first = maps[0];
+  if (!first) return null;
+  if (first.packed) return first.packedSlots?.[0]?.id ?? null;
+  return first.id;
+}
+
+/**
+ * Flat list of panel tab targets (packed entries expand to one tab per channel).
+ * @param {MapInspectEntry[]} maps
+ * @returns {Array<{ entry: MapInspectEntry, slotId: string, label: string, channel: OrmChannel | null }>}
+ */
+export function mapInspectPanelTabs(maps) {
+  /** @type {Array<{ entry: MapInspectEntry, slotId: string, label: string, channel: OrmChannel | null }>} */
+  const tabs = [];
+  for (const entry of maps) {
+    if (entry.packed && entry.packedSlots?.length) {
+      for (const sub of entry.packedSlots) {
+        tabs.push({
+          entry,
+          slotId: sub.id,
+          label: sub.label,
+          channel: sub.channel,
+        });
+      }
+    } else {
+      tabs.push({
+        entry,
+        slotId: entry.id,
+        label: entry.label,
+        channel: entry.channel ?? null,
+      });
+    }
+  }
+  return tabs;
 }
 
 /**
  * @param {MapInspectEntry} entry
  * @returns {string}
  */
-export function mapInspectEntryTooltip(entry) {
+export function mapInspectEntryTooltip(entry, slotId) {
+  if (entry.packed) {
+    const parts = [entry.label, `${ormPackTypeLabel(entry.packType)} packed map`];
+    if (slotId) {
+      const sub = entry.packedSlots?.find((s) => s.id === slotId);
+      if (sub) parts.push(ormChannelLabel(sub.channel));
+    } else {
+      parts.push('Click to preview — click again to cycle channels');
+    }
+    if ((entry.variantCount ?? 1) > 1) {
+      parts.push(`${entry.variantCount} unique maps across materials`);
+    }
+    return parts.join(' — ');
+  }
+
   const parts = [entry.label];
   if (entry.channel) {
-    const channelName =
-      entry.channel === 'r' ? 'AO (red)' : entry.channel === 'g' ? 'Roughness (green)' : 'Metallic (blue)';
-    parts.push(`ORM — ${channelName} channel`);
+    parts.push(`ORM — ${ormChannelLabel(entry.channel)} channel`);
   }
   if ((entry.variantCount ?? 1) > 1) {
     parts.push(`${entry.variantCount} unique maps across materials`);
@@ -248,8 +546,8 @@ export function textureToDataUrl(texture, size = 128, channel = null) {
  * @param {MapInspectEntry} entry
  * @returns {string | null}
  */
-export function textureToPreviewUrl(entry) {
-  const { texture, channel } = entry;
+export function textureToPreviewUrl(entry, slotId) {
+  const { texture, channel } = mapInspectPreviewContext(entry, slotId);
   if (!texture) return null;
 
   if (!channel) {

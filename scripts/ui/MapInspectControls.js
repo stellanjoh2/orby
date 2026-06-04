@@ -4,7 +4,12 @@
 import {
   clearMapInspectThumbCache,
   collectMeshTextureMaps,
+  mapInspectDefaultSlotId,
+  mapInspectEntryContainsSlot,
   mapInspectEntryTooltip,
+  mapInspectFindEntryForSlot,
+  mapInspectPanelTabs,
+  mapInspectPreviewContext,
   textureToDataUrl,
   textureToPreviewUrl,
   watchPendingMapTextures,
@@ -114,7 +119,8 @@ export class MapInspectControls {
     }
 
     const pinnedStillValid =
-      this._pinnedSlot && this._textureMaps.some((entry) => entry.id === this._pinnedSlot);
+      this._pinnedSlot &&
+      this._textureMaps.some((entry) => mapInspectEntryContainsSlot(entry, this._pinnedSlot));
     if (!pinnedStillValid) {
       this._unpinPreview();
     }
@@ -143,14 +149,21 @@ export class MapInspectControls {
     this._grid.replaceChildren();
 
     for (const entry of this._textureMaps) {
-      const thumb = textureToDataUrl(entry.texture, 96, entry.channel);
+      const pinnedChannel = entry.packed
+        ? entry.packedSlots?.find((s) => s.id === this._pinnedSlot)?.channel ?? null
+        : entry.channel ?? null;
+      const thumb = entry.packed
+        ? textureToDataUrl(entry.texture, 96, null)
+        : textureToDataUrl(entry.texture, 96, entry.channel);
       this._grid.appendChild(
         this._createTile({
+          entry,
           id: entry.id,
           label: entry.label,
-          tooltip: mapInspectEntryTooltip(entry),
+          tooltip: mapInspectEntryTooltip(entry, this._pinnedSlot),
           thumbSrc: thumb,
           variantCount: entry.variantCount ?? 1,
+          packedChannel: pinnedChannel,
           isAction: false,
         }),
       );
@@ -171,7 +184,16 @@ export class MapInspectControls {
   }
 
   /**
-   * @param {{ id: string, label: string, tooltip: string, thumbSrc: string | null, variantCount: number, isAction: boolean }} opts
+   * @param {{
+   *   entry?: import('../render/mapInspectTypes.js').MapInspectEntry,
+   *   id: string,
+   *   label: string,
+   *   tooltip: string,
+   *   thumbSrc: string | null,
+   *   variantCount: number,
+   *   packedChannel?: import('../render/mapInspectTypes.js').OrmChannel | null,
+   *   isAction: boolean,
+   * }} opts
    */
   _createTile(opts) {
     const btn = document.createElement('button');
@@ -206,15 +228,25 @@ export class MapInspectControls {
       btn.appendChild(badge);
     }
 
+    if (!opts.isAction && opts.entry?.packed && opts.packedChannel) {
+      const channelBadge = document.createElement('span');
+      channelBadge.className = 'map-inspect-tile__channel';
+      channelBadge.textContent = opts.packedChannel.toUpperCase();
+      channelBadge.setAttribute('aria-hidden', 'true');
+      btn.appendChild(channelBadge);
+    }
+
     btn.addEventListener('click', () => {
       if (opts.id === 'viewMaps') {
         this.ui.uiSounds?.playSelect?.();
-        const initial = this._pinnedSlot ?? this._textureMaps[0]?.id ?? null;
+        const initial = this._pinnedSlot ?? mapInspectDefaultSlotId(this._textureMaps);
         this.openPanel(initial);
         return;
       }
 
-      if (this._pinnedSlot === opts.id) {
+      if (opts.entry?.packed) {
+        this._togglePackedEntry(opts.entry);
+      } else if (this._pinnedSlot === opts.id) {
         this._unpinPreview();
       } else {
         this._pinSlot(opts.id);
@@ -226,6 +258,51 @@ export class MapInspectControls {
   }
 
   /**
+   * @param {import('../render/mapInspectTypes.js').MapInspectEntry} entry
+   */
+  _togglePackedEntry(entry) {
+    const slots = entry.packedSlots?.map((s) => s.id) ?? [];
+    if (slots.length === 0) return;
+
+    const pinnedInPack = this._pinnedSlot && slots.includes(this._pinnedSlot);
+    if (!pinnedInPack) {
+      this._pinSlot(slots[0]);
+      return;
+    }
+
+    const idx = slots.indexOf(this._pinnedSlot);
+    if (idx === slots.length - 1) {
+      this._unpinPreview();
+    } else {
+      this._pinSlot(slots[idx + 1]);
+    }
+  }
+
+  _refreshPackedTileChrome() {
+    if (!this._grid) return;
+    this._grid.querySelectorAll('.map-inspect-tile[data-map-slot]').forEach((tile) => {
+      const entry = this._textureMaps.find((e) => e.id === tile.dataset.mapSlot);
+      if (!entry?.packed) return;
+
+      tile.dataset.tooltip = mapInspectEntryTooltip(entry, this._pinnedSlot);
+
+      const channel = entry.packedSlots?.find((s) => s.id === this._pinnedSlot)?.channel ?? null;
+      let badge = tile.querySelector('.map-inspect-tile__channel');
+      if (channel) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'map-inspect-tile__channel';
+          badge.setAttribute('aria-hidden', 'true');
+          tile.appendChild(badge);
+        }
+        badge.textContent = channel.toUpperCase();
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
+
+  /**
    * @param {string} slotId
    */
   _pinSlot(slotId) {
@@ -233,6 +310,7 @@ export class MapInspectControls {
     this._pinnedSlot = slotId;
     this._setDisplaySuspended(true);
     this._updateTileSelection();
+    this._refreshPackedTileChrome();
     if (this._panelOpen) {
       this._modalSlot = slotId;
       this._syncModalTabActive();
@@ -251,6 +329,7 @@ export class MapInspectControls {
       this._setDisplaySuspended(false);
     }
     this._updateTileSelection();
+    this._refreshPackedTileChrome();
     this.eventBus.emit('mesh:map-inspect-clear');
     if (hadPin && opts.toastOnShading) {
       this.ui.showToast?.('Map preview cleared — display mode changed', 2800, {
@@ -263,8 +342,10 @@ export class MapInspectControls {
     if (!this._grid) return;
     this._grid.querySelectorAll('.map-inspect-tile[data-map-slot]').forEach((tile) => {
       const slot = tile.dataset.mapSlot;
-      tile.classList.toggle('is-pinned', !!this._pinnedSlot && slot === this._pinnedSlot);
-      tile.setAttribute('aria-pressed', tile.classList.contains('is-pinned') ? 'true' : 'false');
+      const entry = this._textureMaps.find((e) => e.id === slot);
+      const isPinned = !!this._pinnedSlot && mapInspectEntryContainsSlot(entry ?? { id: slot }, this._pinnedSlot);
+      tile.classList.toggle('is-pinned', isPinned);
+      tile.setAttribute('aria-pressed', isPinned ? 'true' : 'false');
     });
   }
 
@@ -273,7 +354,11 @@ export class MapInspectControls {
 
     this._panelOpen = true;
     this._panel.hidden = false;
-    this._modalSlot = initialSlotId ?? this._textureMaps[0]?.id ?? null;
+    const resolved =
+      initialSlotId && mapInspectFindEntryForSlot(this._textureMaps, initialSlotId)
+        ? initialSlotId
+        : mapInspectDefaultSlotId(this._textureMaps);
+    this._modalSlot = resolved;
     this._renderPanelTabs();
     this._syncPanelImage();
     this._positionPanelDefault();
@@ -295,33 +380,33 @@ export class MapInspectControls {
     if (!this._panelTabs) return;
     this._panelTabs.replaceChildren();
 
-    for (const entry of this._textureMaps) {
-      const thumb = textureToDataUrl(entry.texture, 48, entry.channel);
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'map-preview-panel__tab';
-      tab.dataset.mapTab = entry.id;
-      tab.setAttribute('aria-label', mapInspectEntryTooltip(entry));
-      tab.title = mapInspectEntryTooltip(entry);
+    for (const tab of mapInspectPanelTabs(this._textureMaps)) {
+      const thumb = textureToDataUrl(tab.entry.texture, 48, tab.channel);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'map-preview-panel__tab';
+      btn.dataset.mapTab = tab.slotId;
+      btn.setAttribute('aria-label', mapInspectEntryTooltip(tab.entry, tab.slotId));
+      btn.title = mapInspectEntryTooltip(tab.entry, tab.slotId);
 
       if (thumb) {
         const img = document.createElement('img');
         img.src = thumb;
         img.alt = '';
         img.draggable = false;
-        tab.appendChild(img);
+        btn.appendChild(img);
       }
 
-      tab.classList.toggle('is-active', entry.id === this._modalSlot);
-      tab.addEventListener('click', () => {
-        this._modalSlot = entry.id;
+      btn.classList.toggle('is-active', tab.slotId === this._modalSlot);
+      btn.addEventListener('click', () => {
+        this._modalSlot = tab.slotId;
         this._syncModalTabActive();
         this._syncPanelImage();
-        this._pinSlot(entry.id);
+        this._pinSlot(tab.slotId);
         this.ui.uiSounds?.playSelect?.();
       });
 
-      this._panelTabs.appendChild(tab);
+      this._panelTabs.appendChild(btn);
     }
   }
 
@@ -334,18 +419,20 @@ export class MapInspectControls {
 
   _syncPanelImage() {
     if (!this._panelImage) return;
-    const entry = this._textureMaps.find((m) => m.id === this._modalSlot) ?? this._textureMaps[0];
-    if (!entry?.texture) {
+    const entry = mapInspectFindEntryForSlot(this._textureMaps, this._modalSlot) ?? this._textureMaps[0];
+    const slotId = this._modalSlot ?? mapInspectDefaultSlotId(this._textureMaps);
+    const ctx = entry ? mapInspectPreviewContext(entry, slotId) : null;
+    if (!ctx?.texture) {
       this._panelImage.removeAttribute('src');
       this._panelImage.alt = '';
       return;
     }
 
-    const url = textureToPreviewUrl(entry);
+    const url = textureToPreviewUrl(entry, slotId);
     if (url) {
       this._panelImage.src = url;
     }
-    this._panelImage.alt = entry.label;
+    this._panelImage.alt = ctx.label;
   }
 
   _positionPanelDefault() {

@@ -120,27 +120,6 @@ export class MapInspectPreview {
       });
     }
 
-    if (prop === 'normalMap') {
-      this.materialController._ensureTangentsForNormalMapping?.(this.materialController.currentModel);
-      if ('colorSpace' in tex && THREE.NoColorSpace) {
-        tex.colorSpace = THREE.NoColorSpace;
-      }
-      const lit = new THREE.MeshStandardMaterial({
-        color: 0x9a9a9a,
-        normalMap: tex,
-        normalMapType: originalMat.normalMapType ?? THREE.TangentSpaceNormalMap,
-        roughness: 0.58,
-        metalness: 0,
-        side,
-        transparent,
-        opacity,
-      });
-      if (originalMat.normalScale?.clone) {
-        lit.normalScale = originalMat.normalScale.clone();
-      }
-      return lit;
-    }
-
     return new THREE.MeshBasicMaterial({
       map: tex,
       color: 0xffffff,
