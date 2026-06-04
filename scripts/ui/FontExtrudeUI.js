@@ -128,8 +128,18 @@ export class FontExtrudeUI {
             <input id="fontExtrudePreviewScale" type="range" min="0.15" max="3" step="0.05" value="0.65" />
             <span class="value" data-output="fontExtrudePreviewScale">0.65×</span>
           </label>
+          <div id="fontExtrudeSystemFontsPrompt" class="font-extrude-system-fonts-prompt" hidden>
+            <button
+              type="button"
+              id="fontExtrudeAllowSystemFonts"
+              class="ghost-btn small"
+              data-tooltip="Your browser will ask to access fonts installed on this device"
+            >
+              Allow system fonts…
+            </button>
+          </div>
           <label class="select-line font-extrude-family-line font-extrude-typo-family-line">
-            <span data-tooltip="System fonts load when you turn on this section or open the font list (browser permission)">Typeface</span>
+            <span data-tooltip="Click Allow system fonts, or open this list after permission is granted">Typeface</span>
             <div id="fontExtrudeFamilyPicker" class="font-extrude-family-picker" aria-label="Font family"></div>
           </label>
           <label class="select-line font-extrude-style-line">
@@ -197,6 +207,8 @@ export class FontExtrudeUI {
       panelOpen: block.querySelector('#fontExtrudePanelOpen'),
       foldout: block.querySelector('[data-effect-foldout="font-extrude"]'),
       text: block.querySelector('#fontExtrudeText'),
+      systemFontsPrompt: block.querySelector('#fontExtrudeSystemFontsPrompt'),
+      allowSystemFonts: block.querySelector('#fontExtrudeAllowSystemFonts'),
       familyPicker: block.querySelector('#fontExtrudeFamilyPicker'),
       variant: block.querySelector('#fontExtrudeVariant'),
       fileFallback: block.querySelector('#fontExtrudeFileFallback'),
@@ -244,7 +256,10 @@ export class FontExtrudeUI {
     if (this.els.familyPicker) {
       this.familyPicker = new FontFamilyPicker(this.els.familyPicker, {
         getPreviewFontFamily: (ps) => this.controller.getPreviewFontFamily(ps),
-        onPrepare: () => this.ensureFontsReady(),
+        onPrepare: () => {
+          this._primeLocalFontAccess();
+          return this.ensureFontsReady({ fromUserGesture: true });
+        },
         onChange: () => void this.onFontFamilyChange(),
         ui: this.ui,
       });
@@ -263,7 +278,16 @@ export class FontExtrudeUI {
       const open = !!event.target.checked;
       this.stateStore.set('fontExtrude.panelOpen', open);
       this.ui.setEffectFoldoutOpen('font-extrude', open);
-      if (open) void this.ensureFontsReady();
+      if (open) {
+        this._primeLocalFontAccess();
+        void this.ensureFontsReady({ fromUserGesture: true }).then(() => {
+          this._syncPreviewCanvasSize();
+          this.schedulePreview();
+          this._syncLiveEditorPreviewMode();
+        });
+      } else {
+        this._syncSystemFontsPromptVisibility();
+      }
     });
 
     els.text?.addEventListener('input', () => {
@@ -271,7 +295,16 @@ export class FontExtrudeUI {
       this.updateGenerateState();
     });
     els.text?.addEventListener('focus', () => {
-      void this.ensureFontsReady();
+      this._primeLocalFontAccess();
+      void this.ensureFontsReady({ fromUserGesture: true });
+    });
+    els.allowSystemFonts?.addEventListener('click', () => {
+      this.ui.uiSounds?.playSelect();
+      this.controller.resetLocalFontAccessQuery();
+      this._fontsInitialized = false;
+      this._fontsLoadPromise = null;
+      this._primeLocalFontAccess();
+      void this.ensureFontsReady({ fromUserGesture: true });
     });
     els.text?.addEventListener('scroll', () => {
       this.schedulePreview();
@@ -477,12 +510,14 @@ export class FontExtrudeUI {
       this._previewResizeObs.observe(this.els.liveEditor);
     }
     this._syncPreviewCanvasSize();
+    this._syncLiveEditorPreviewMode();
 
     this.updateGenerateState();
     this.syncExtrudeControls(this.stateStore.getState());
     this.syncPostGenControlsVisibility();
+    this._syncSystemFontsPromptVisibility();
     if (this.stateStore.getState()?.fontExtrude?.panelOpen) {
-      void this.ensureFontsReady();
+      this._syncSystemFontsPromptVisibility();
     }
   }
 
@@ -757,28 +792,59 @@ export class FontExtrudeUI {
 
     this.syncExtrudeControls(state);
     this.syncPostGenControlsVisibility();
+    this._syncSystemFontsPromptVisibility();
   }
 
   /**
-   * Request system fonts only after the user enables this section or opens the font list
-   * (Local Font Access permission — not on app startup).
+   * Start `queryLocalFonts()` in the same turn as a click/focus so the browser can show its prompt.
    */
-  async ensureFontsReady() {
+  _primeLocalFontAccess() {
+    this.controller.beginLocalFontAccessQuery();
+  }
+
+  _syncSystemFontsPromptVisibility() {
+    const prompt = this.els.systemFontsPrompt;
+    if (!prompt) return;
+    const show =
+      this.controller.supportsLocalFonts &&
+      !this._fontsInitialized &&
+      !this.controller.font;
+    prompt.hidden = !show;
+  }
+
+  /**
+   * Load system font catalog after user gesture (see `_primeLocalFontAccess`).
+   * @param {{ fromUserGesture?: boolean }} [options]
+   */
+  async ensureFontsReady({ fromUserGesture = false } = {}) {
     if (this._fontsInitialized) return;
+    if (!fromUserGesture && this.controller.supportsLocalFonts) {
+      this._syncSystemFontsPromptVisibility();
+      return;
+    }
     if (!this._fontsLoadPromise) {
       this._fontsLoadPromise = this.initFonts()
-        .then(() => {
-          this._fontsInitialized = true;
+        .then((ok) => {
+          if (ok) this._fontsInitialized = true;
         })
         .finally(() => {
           this._fontsLoadPromise = null;
           this.updateGenerateState();
+          this._syncSystemFontsPromptVisibility();
         });
     }
     await this._fontsLoadPromise;
   }
 
+  /**
+   * @returns {Promise<boolean>} true when system fonts are ready (or file-only mode is set up)
+   */
   async initFonts() {
+    if (this.controller.supportsLocalFonts && !this.controller.hasLocalFontAccessQueryStarted()) {
+      this._syncSystemFontsPromptVisibility();
+      return false;
+    }
+
     this._fontFamilies = await this.controller.getAvailableFonts();
     this._fontFamilyByPostscript.clear();
 
@@ -788,7 +854,23 @@ export class FontExtrudeUI {
       this.familyPicker?.populate([]);
       this.familyPicker?.setDisabled(true);
       this._setVariantOptions([]);
-      return;
+      this._syncLiveEditorPreviewMode();
+      this._syncSystemFontsPromptVisibility();
+      if (this.controller.supportsLocalFonts) {
+        const perm = await this.controller.getLocalFontsPermissionState();
+        const msg =
+          perm === 'denied'
+            ? 'System font access was blocked — reset the site permission in browser settings, or load a .ttf / .otf file.'
+            : 'Could not load system fonts — click Allow system fonts, or load a .ttf / .otf file.';
+        this.ui.showToast(msg, 5600, { notification: false });
+      } else {
+        this.ui.showToast(
+          'Load a .ttf or .otf file to preview and generate text (system fonts unavailable in this browser).',
+          5200,
+          { notification: false },
+        );
+      }
+      return false;
     }
 
     this._fonts = this._fontFamilies.map((familyGroup) => ({
@@ -802,10 +884,12 @@ export class FontExtrudeUI {
     }
 
     this.els.fileFallback.hidden = true;
+    if (this.els.systemFontsPrompt) this.els.systemFontsPrompt.hidden = true;
     this.familyPicker?.populate(this._fonts);
     this.familyPicker?.setDisabled(false);
     this._setVariantOptions([]);
     await this._loadDefaultFontIfNeeded();
+    return true;
   }
 
   /** Auto-select Arial (or closest sans) so the live editor is ready to type. */
@@ -826,8 +910,10 @@ export class FontExtrudeUI {
       await this.controller.loadFont(postscriptName);
       this.schedulePreview();
       this.updateGenerateState();
+      this._syncLiveEditorPreviewMode();
     } catch (err) {
       console.warn('[Orby] Could not load default font', postscriptName, err);
+      this._syncLiveEditorPreviewMode();
     }
   }
 
@@ -880,6 +966,7 @@ export class FontExtrudeUI {
     if (!psName) {
       this.controller.font = null;
       this.updateGenerateState();
+      this._syncLiveEditorPreviewMode();
       return;
     }
     try {
@@ -891,6 +978,7 @@ export class FontExtrudeUI {
     }
     this.updateGenerateState();
     this.schedulePreview();
+    this._syncLiveEditorPreviewMode();
   }
 
   async onFontVariantChange() {
@@ -908,6 +996,7 @@ export class FontExtrudeUI {
     }
     this.updateGenerateState();
     this.schedulePreview();
+    this._syncLiveEditorPreviewMode();
   }
 
   async onFontFileSelected() {
@@ -917,6 +1006,8 @@ export class FontExtrudeUI {
     this.clearPreviewCanvas();
     try {
       await this.controller.loadFont(file);
+      this._fontsInitialized = true;
+      if (this.els.systemFontsPrompt) this.els.systemFontsPrompt.hidden = true;
       const previewCss = await this.controller.registerFilePreview('__file__', file);
       this.familyPicker?.setCustomEntry('__file__', file.name, previewCss);
       this._setVariantOptions(
@@ -930,6 +1021,14 @@ export class FontExtrudeUI {
     }
     this.updateGenerateState();
     this.schedulePreview();
+    this._syncLiveEditorPreviewMode();
+  }
+
+  /** Canvas preview drives glyph color; show plain textarea text until a font is loaded. */
+  _syncLiveEditorPreviewMode() {
+    const wrap = this.els.liveEditor;
+    if (!wrap) return;
+    wrap.classList.toggle('font-extrude-live-editor--preview-active', !!this.controller.font);
   }
 
   /** Padding used for layout width and preview fit (keep in sync). */
@@ -991,13 +1090,22 @@ export class FontExtrudeUI {
 
     if (!this.controller.font) {
       this.clearPreviewCanvas();
+      this._syncLiveEditorPreviewMode();
       return;
     }
 
     this._syncPreviewCanvasSize();
 
     const text = this.els.text?.value ?? '';
-    const layout = await this.controller.layoutTextAsync(text, this.getOptions());
+    let layout;
+    try {
+      layout = await this.controller.layoutTextAsync(text, this.getOptions());
+    } catch (err) {
+      console.warn('[Orby] Font preview layout failed', err);
+      this.clearPreviewCanvas();
+      this._syncLiveEditorPreviewMode();
+      return;
+    }
     if (generation !== this._previewGeneration) return;
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1033,6 +1141,7 @@ export class FontExtrudeUI {
     ctx.translate(-bounds.minX, -bounds.minY);
     this.controller.drawPreview(ctx, layout);
     ctx.restore();
+    this._syncLiveEditorPreviewMode();
 
     if (this._previewPending) {
       this.schedulePreview();
@@ -1082,7 +1191,17 @@ export class FontExtrudeUI {
   async onGenerate() {
     if (this._generating) return;
     const text = this.els.text?.value ?? '';
-    if (!text.trim() || !this.controller.font) return;
+    if (!text.trim()) return;
+    if (!this.controller.font) {
+      this.ui.showToast(
+        this.controller.supportsLocalFonts
+          ? 'Select a typeface or load a .ttf / .otf file first'
+          : 'Load a .ttf or .otf file first — system fonts are unavailable in this browser',
+        4200,
+        { notification: false },
+      );
+      return;
+    }
 
     this._generating = true;
     this.updateGenerateState();
@@ -1091,9 +1210,13 @@ export class FontExtrudeUI {
 
     try {
       const scene = this.getScene();
-      await scene?.ensureStudioReady();
+      if (!scene) {
+        throw new Error('Studio is not ready — refresh the page and try again');
+      }
+      await scene.ensureStudioReady();
       const group = await this.controller.generateMesh(text, this.getOptions());
-      await this.controller.addToScene(group);
+      const added = await this.controller.addToScene(group);
+      if (!added) return;
       this.stateStore.set('fontExtrude.panelOpen', true);
       if (this.els.panelOpen) this.els.panelOpen.checked = true;
       this.ui.setEffectFoldoutOpen('font-extrude', true);

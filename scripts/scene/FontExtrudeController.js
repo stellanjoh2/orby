@@ -186,11 +186,55 @@ export class FontExtrudeController {
     this.lastGeneratedGroup = null;
     this._localFontsSupported =
       typeof window !== 'undefined' && typeof window.queryLocalFonts === 'function';
+    /** @type {Promise<FontData[]> | null} */
+    this._localFontsQueryPromise = null;
     this.previewCache = new LocalFontPreviewCache();
   }
 
   get supportsLocalFonts() {
     return this._localFontsSupported;
+  }
+
+  /** Clear a failed/denied query so the user can retry from a button click. */
+  resetLocalFontAccessQuery() {
+    this._localFontsQueryPromise = null;
+  }
+
+  /**
+   * Start `queryLocalFonts()` synchronously inside a click/key handler so Chrome can show
+   * the permission prompt (transient user activation is lost after `await`).
+   * @returns {boolean}
+   */
+  hasLocalFontAccessQueryStarted() {
+    return !!this._localFontsQueryPromise;
+  }
+
+  beginLocalFontAccessQuery() {
+    if (!this._localFontsSupported) return false;
+    if (!this._localFontsQueryPromise) {
+      this._localFontsQueryPromise = window.queryLocalFonts().catch((err) => {
+        this._localFontsQueryPromise = null;
+        throw err;
+      });
+    }
+    return true;
+  }
+
+  /** @returns {Promise<'granted' | 'denied' | 'prompt' | 'unknown'>} */
+  async getLocalFontsPermissionState() {
+    if (!this._localFontsSupported || !navigator.permissions?.query) return 'unknown';
+    try {
+      const status = await navigator.permissions.query(
+        /** @type {PermissionDescriptor} */ ({ name: 'local-fonts' }),
+      );
+      return status.state === 'granted' ||
+        status.state === 'denied' ||
+        status.state === 'prompt'
+        ? status.state
+        : 'unknown';
+    } catch {
+      return 'unknown';
+    }
   }
 
   /**
@@ -239,9 +283,9 @@ export class FontExtrudeController {
    * @returns {Promise<Array<{ family: string, defaultPostscriptName: string, variants: Array<{ postscriptName: string, fullName?: string, styleLabel: string, weight: number | null, styleRaw: string }> }>>}
    */
   async getAvailableFonts() {
-    if (!this._localFontsSupported) return [];
+    if (!this._localFontsSupported || !this._localFontsQueryPromise) return [];
     try {
-      const fonts = await window.queryLocalFonts();
+      const fonts = await this._localFontsQueryPromise;
       return groupLocalFontsByFamily(fonts);
     } catch (err) {
       console.warn('[Orby] Local Font Access denied or unavailable', err);

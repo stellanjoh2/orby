@@ -7442,8 +7442,8 @@ html.mobile-landing .mobile-warning .brand-highlight {
   border: none;
   border-radius: 0;
   background: transparent;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
   caret-color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -7456,6 +7456,12 @@ html.mobile-landing .mobile-warning .brand-highlight {
   appearance: none;
 }
 
+/* Typed glyphs render on the canvas; keep textarea text transparent once a font is loaded. */
+.font-extrude-live-editor.font-extrude-live-editor--preview-active textarea {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
 .font-extrude-live-editor textarea::placeholder {
   color: color-mix(in srgb, var(--text) 42%, transparent);
   -webkit-text-fill-color: color-mix(in srgb, var(--text) 42%, transparent);
@@ -7463,6 +7469,9 @@ html.mobile-landing .mobile-warning .brand-highlight {
 
 .font-extrude-live-editor textarea::selection {
   background: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.font-extrude-live-editor.font-extrude-live-editor--preview-active textarea::selection {
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
@@ -7505,6 +7514,14 @@ html.mobile-landing .mobile-warning .brand-highlight {
 
 .font-extrude-file-fallback {
   margin: -0.25rem 0 0.5rem;
+}
+
+.font-extrude-system-fonts-prompt {
+  margin: 0 0 var(--shelf-row-gap);
+}
+
+.font-extrude-system-fonts-prompt .ghost-btn {
+  width: 100%;
 }
 
 /* Generate from Font — family picker with lazy typeface previews */
