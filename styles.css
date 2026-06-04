@@ -4331,8 +4331,9 @@ a.about-highlight:focus-visible {
     .select-line select,
     .ghost-btn:not(:disabled):not(.is-disabled),
     .panel-hint,
-    .map-slot-row > span:first-child,
-    .map-slot-name,
+    .map-slot-label,
+    .map-slot-choose,
+    .map-slot-file,
     .advanced-import-details summary,
     .svg-extrude-note,
     .look-filter-tile
@@ -4346,8 +4347,9 @@ a.about-highlight:focus-visible {
     .select-line select,
     .ghost-btn:not(:disabled):not(.is-disabled),
     .panel-hint,
-    .map-slot-row > span:first-child,
-    .map-slot-name,
+    .map-slot-label,
+    .map-slot-choose,
+    .map-slot-file,
     .advanced-import-details summary,
     .svg-extrude-note,
     .look-filter-tile
@@ -4746,27 +4748,121 @@ button.advanced-info-doc-btn {
 
 .map-slot-row {
   display: grid;
-  grid-template-columns: 108px auto minmax(0, 1fr);
-  gap: 0.35rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 58%);
+  column-gap: 0.65rem;
   align-items: center;
   min-height: var(--shelf-control-row-min-height);
   margin-bottom: var(--shelf-row-gap);
   font-size: var(--shelf-label-font-size);
 }
 
-.map-slot-row > span:first-child {
+.map-slot-label {
   color: var(--text-dim);
   letter-spacing: -0.01em;
+  min-width: 0;
 }
 
-.map-slot-name {
-  display: block;
+.map-slot-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
   min-width: 0;
+  width: 100%;
+}
+
+/* Map Slots are texture pickers only — never shelf color chips */
+#fbxMapSlotsSubsection input[type='color'],
+#fbxMapSlotsSubsection .color-chip {
+  display: none !important;
+}
+
+.map-slot-choose,
+.map-slot-file {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
   font-size: var(--shelf-label-font-size);
-  color: var(--text-muted, var(--text-dim));
+  line-height: 1.2;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.map-slot-choose {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+}
+
+.map-slot-file {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: right;
+  color: var(--text);
+}
+
+.map-slot-choose:hover,
+.map-slot-choose:focus-visible,
+.map-slot-file:hover,
+.map-slot-file:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+.map-slot-clear[hidden] {
+  display: none !important;
+}
+
+.map-slot-file[hidden] {
+  display: none !important;
+}
+
+.map-slot-clear {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.62rem;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    background 0.12s ease;
+}
+
+.map-slot-control--has-file:hover .map-slot-clear:not([hidden]),
+.map-slot-control--has-file:focus-within .map-slot-clear:not([hidden]) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.map-slot-clear:hover,
+.map-slot-clear:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  outline: none;
+}
+
+.map-slots-invert-divider {
+  margin-top: 0.15rem;
+}
+
+:is(.panel-block, .subsection) > .map-slots-invert-line:last-child {
+  margin-bottom: 0;
 }
 
 .slider-line,
@@ -4910,8 +5006,9 @@ button.advanced-info-doc-btn {
     .select-line > span:first-child,
     .select-line select,
     .panel-hint,
-    .map-slot-row > span:first-child,
-    .map-slot-name,
+    .map-slot-label,
+    .map-slot-choose,
+    .map-slot-file,
     .advanced-import-details summary,
     .svg-extrude-note
   ),
@@ -4922,8 +5019,9 @@ button.advanced-info-doc-btn {
     .select-line > span:first-child,
     .select-line select,
     .panel-hint,
-    .map-slot-row > span:first-child,
-    .map-slot-name,
+    .map-slot-label,
+    .map-slot-choose,
+    .map-slot-file,
     .advanced-import-details summary,
     .svg-extrude-note
   ) {

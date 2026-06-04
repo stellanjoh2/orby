@@ -98,33 +98,44 @@ export class MeshControls {
     });
 
     this._pendingFbxMapSlot = null;
-    document.querySelectorAll('[data-fbx-map-slot]').forEach((btn) => {
+
+    const openFbxMapPicker = (slot) => {
+      if (!slot) return;
+      this._pendingFbxMapSlot = slot;
+      this.ui.inputs.fbxMapFileInput?.click();
+    };
+
+    document.querySelectorAll('.map-slot-choose[data-fbx-map-slot], .map-slot-file[data-fbx-map-slot]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this._pendingFbxMapSlot = btn.getAttribute('data-fbx-map-slot');
-        this.ui.inputs.fbxMapFileInput?.click();
+        openFbxMapPicker(btn.getAttribute('data-fbx-map-slot'));
+      });
+    });
+    document.querySelectorAll('[data-fbx-map-clear]').forEach((btn) => {
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const slot = btn.getAttribute('data-fbx-map-clear');
+        if (!slot) return;
+        this.eventBus.emit('mesh:fbx-map-clear', { slot });
       });
     });
     this.ui.inputs.fbxMapFileInput?.addEventListener('change', (event) => {
       const file = event.target.files?.[0];
       const slot = this._pendingFbxMapSlot;
       event.target.value = '';
+      this._pendingFbxMapSlot = null;
       if (!file || !slot) return;
       this.eventBus.emit('mesh:fbx-map-slot', { slot, file });
     });
     this.eventBus.on('scene:fbx-map-applied', (payload) => {
-      const slot = payload?.slot;
-      const name = typeof payload?.name === 'string' ? payload.name : '';
-      const label = document.querySelector(`[data-fbx-map-filename="${slot}"]`);
-      if (label) {
-        const short = name.length > 30 ? `${name.slice(0, 28)}…` : name;
-        label.textContent = short || '—';
-        label.title = name;
-      }
+      this._syncFbxMapSlotRow(payload?.slot, payload?.name);
+    });
+    this.eventBus.on('scene:fbx-map-cleared', (payload) => {
+      this._syncFbxMapSlotRow(payload?.slot, '');
     });
     this.eventBus.on('scene:fbx-map-slots-reset', () => {
-      document.querySelectorAll('[data-fbx-map-filename]').forEach((el) => {
-        el.textContent = '—';
-        el.title = '';
+      document.querySelectorAll('[data-fbx-map-row]').forEach((control) => {
+        const slot = control.getAttribute('data-fbx-map-row');
+        this._syncFbxMapSlotRow(slot, '');
       });
     });
 
@@ -1270,6 +1281,34 @@ export class MeshControls {
 
     // Wireframe mode now uses the overlay system, so overlay controls are always enabled
     // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode
+  }
+
+  /**
+   * @param {string | undefined} slot
+   * @param {string} [name]
+   */
+  _syncFbxMapSlotRow(slot, name = '') {
+    if (!slot) return;
+    const control = document.querySelector(`[data-fbx-map-row="${slot}"]`);
+    const choose = control?.querySelector('.map-slot-choose');
+    const file = control?.querySelector('.map-slot-file');
+    const clear = control?.querySelector('.map-slot-clear');
+    const fullName = typeof name === 'string' ? name.trim() : '';
+    const hasFile = fullName.length > 0;
+
+    control?.classList.toggle('map-slot-control--has-file', hasFile);
+    if (choose) choose.hidden = hasFile;
+    if (file) {
+      file.hidden = !hasFile;
+      const short = fullName.length > 22 ? `${fullName.slice(0, 20)}…` : fullName;
+      file.textContent = short;
+      file.title = fullName;
+      file.setAttribute('aria-label', fullName ? `Replace ${fullName}` : 'Replace texture');
+    }
+    if (clear) {
+      clear.hidden = !hasFile;
+      clear.tabIndex = hasFile ? 0 : -1;
+    }
   }
 
   renderSvgColorDepthControls(state) {

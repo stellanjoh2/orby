@@ -40,7 +40,8 @@
     "tree",
     "upload",
     "volume-high",
-    "wand-magic-sparkles"
+    "wand-magic-sparkles",
+    "xmark"
   ],
   "codepoints": [
     "0x2b",
@@ -48,6 +49,7 @@
     "0xf004",
     "0xf008",
     "0xf00c",
+    "0xf00d",
     "0xf019",
     "0xf028",
     "0xf02d",

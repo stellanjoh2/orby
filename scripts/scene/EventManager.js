@@ -93,6 +93,9 @@ export class EventManager {
     eventBus.on('mesh:fbx-map-slot', (payload) => {
       void s.applyFbxMapSlot(payload);
     });
+    eventBus.on('mesh:fbx-map-clear', (payload) => {
+      s.clearFbxMapSlot(payload);
+    });
     eventBus.on('mesh:fbx-invert-normal-y', (enabled) => s.setFbxInvertNormalY(enabled));
     eventBus.on('mesh:fbx-pbr-uv-channel', (channel) => s.setFbxPbrUvChannel(channel));
     eventBus.on('mesh:map-inspect-preview', (slot) => s.setMapInspectPreview(slot));

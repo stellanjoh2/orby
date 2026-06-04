@@ -113,6 +113,7 @@ import {
 import {
   shadowMapSizeForQuality,
   normalizeShadowQuality,
+  shadowCameraOrthoPaddingForQuality,
 } from './config/shadowQuality.js';
 
 export class SceneManager {
@@ -2498,17 +2499,25 @@ export class SceneManager {
   /**
    * Horizontal radius from the model center to the shadow receive surface edge (podium / HDRI catcher).
    * Keeps the directional shadow frustum large enough that out-of-map samples do not paint a square slab.
+   * Solid-base scale only enlarges the visual floor — shadow maps stay mesh-focused so Base scale
+   * does not dilute contact-shadow resolution.
    */
   _getShadowReceiveSurfaceRadius(bounds) {
     const center = bounds?.center;
     if (!center) return 0;
 
     const state = this.stateStore.getState();
+    const meshRadius = Number.isFinite(bounds?.radius)
+      ? Math.max(0.5, bounds.radius)
+      : 1;
+    const shadowPad = shadowCameraOrthoPaddingForQuality(
+      normalizeShadowQuality(state.lightsShadowQuality),
+    );
     let radius = 0;
 
     if (state.groundSolid && this.groundController?.solidEnabled) {
       const gc = this.groundController;
-      const podiumR = (gc.podiumBaseRadius ?? 2) * (gc.podiumScale ?? 1);
+      const visualPodiumR = (gc.podiumBaseRadius ?? 2) * (gc.podiumScale ?? 1);
       const px = gc.podium?.position?.x ?? 0;
       const py = gc.podium?.position?.y ?? 0;
       const pz = gc.podium?.position?.z ?? 0;
@@ -2516,7 +2525,12 @@ export class SceneManager {
       const centerToTopY = Math.abs((center.y ?? 0) - py);
       const centerToBottomY = Math.abs((center.y ?? 0) - (py - podiumHeight));
       const verticalReach = Math.max(centerToTopY, centerToBottomY);
-      const horizontalReach = Math.hypot(center.x - px, center.z - pz) + podiumR;
+      const horizontalOffset = Math.hypot(center.x - px, center.z - pz);
+      const meshFootprintR = horizontalOffset + meshRadius * shadowPad + 0.35;
+      const horizontalReach = Math.min(
+        horizontalOffset + visualPodiumR,
+        meshFootprintR,
+      );
       radius = Math.max(
         radius,
         Math.hypot(horizontalReach, verticalReach) + 0.35,
@@ -2999,8 +3013,7 @@ export class SceneManager {
       tex.userData.orbyFbxUserTexture = true;
       tex.userData.orbyFbxBlobUrl = url;
       this.materialController.applyFbxSlotTexture(slot, tex);
-      const shading = this.stateStore.getState()?.shading ?? 'shaded';
-      this.materialController.setShading(shading);
+      this.clearMapInspectPreview();
       this.eventBus.emit('scene:fbx-map-applied', { slot, name: file.name });
       this.ui?.showToast?.(`Texture applied — ${file.name}`, 3200, { notification: false });
     } catch (err) {
@@ -3008,6 +3021,16 @@ export class SceneManager {
       URL.revokeObjectURL(url);
       this.ui?.showToast?.('Could not load texture');
     }
+  }
+
+  clearFbxMapSlot(payload = {}) {
+    const slot = payload?.slot;
+    if (!slot || !this.currentModel) return;
+    if (!this.stateStore.getState()?.fbxMapSlots?.enabled) return;
+
+    this.materialController.clearFbxSlotTexture(slot);
+    this.clearMapInspectPreview();
+    this.eventBus.emit('scene:fbx-map-cleared', { slot });
   }
 
   setFbxInvertNormalY(enabled) {

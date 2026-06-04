@@ -514,8 +514,8 @@
                 ></div>
               </div>
 
-              <div class="panel-block">
-                <div class="subsection" data-subsection="fbxMapSlots" id="fbxMapSlotsSubsection" hidden>
+              <div class="panel-block" id="fbxMapSlotsBlock" hidden>
+                <div class="subsection" data-subsection="fbxMapSlots" id="fbxMapSlotsSubsection">
                   <div class="block-title">Map Slots</div>
                   <p class="panel-hint map-slots-hint">FBX — choose files from disk. Slot textures share one UV transform: we prefer Albedo, then Normal, then other maps (matches FBX tiling). Assign Base Color first when you can. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
                   <label class="select-line map-slot-uv-line">
@@ -527,16 +527,97 @@
                   </label>
                   <input type="file" id="fbxMapFileInput" class="sr-only" accept="image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" tabindex="-1" aria-hidden="true" />
                   <div class="map-slot-row">
-                    <span>Albedo</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="albedo">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="albedo" title="">—</span>
+                    <span class="map-slot-label">Albedo</span>
+                    <div class="map-slot-control" data-fbx-map-row="albedo">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="albedo">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="albedo" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="albedo" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="map-slot-row">
-                    <span>Normal</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="normal">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="normal" title="">—</span>
+                    <span class="map-slot-label">Normal</span>
+                    <div class="map-slot-control" data-fbx-map-row="normal">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="normal">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="normal" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="normal" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
                   </div>
-                  <label class="slider-line">
+                  <div class="map-slot-row">
+                    <span class="map-slot-label" data-tooltip="Single texture: ambient occlusion in red, roughness in green, metallic in blue">ORM Packed</span>
+                    <div class="map-slot-control" data-fbx-map-row="orm">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="orm">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="orm" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="orm" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Roughness</span>
+                    <div class="map-slot-control" data-fbx-map-row="roughness">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="roughness">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="roughness" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="roughness" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Metallic</span>
+                    <div class="map-slot-control" data-fbx-map-row="metallic">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="metallic">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="metallic" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="metallic" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Occlusion</span>
+                    <div class="map-slot-control" data-fbx-map-row="occlusion">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="occlusion">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="occlusion" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="occlusion" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Displacement</span>
+                    <div class="map-slot-control" data-fbx-map-row="displacement">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="displacement">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="displacement" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="displacement" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Emissive</span>
+                    <div class="map-slot-control" data-fbx-map-row="emissive">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="emissive">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="emissive" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="emissive" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="map-slot-row">
+                    <span class="map-slot-label">Opacity</span>
+                    <div class="map-slot-control" data-fbx-map-row="opacity">
+                      <button type="button" class="map-slot-choose" data-fbx-map-slot="opacity">Choose</button>
+                      <button type="button" class="map-slot-file" data-fbx-map-slot="opacity" hidden data-tooltip="Replace texture"></button>
+                      <button type="button" class="map-slot-clear" data-fbx-map-clear="opacity" hidden aria-label="Remove texture" data-tooltip="Remove texture">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="panel-block-divider map-slots-invert-divider" aria-hidden="true"></div>
+                  <label class="slider-line map-slots-invert-line">
                     <span data-tooltip="If lighting looks inverted (bumps look like dents), turn this on. Fixes many DirectX vs OpenGL normal maps.">Invert normal Y</span>
                     <label class="effect-toggle" data-tooltip="Flip tangent-space Y (green) for normal maps">
                       <input type="checkbox" id="fbxMapInvertNormalY" />
@@ -545,43 +626,10 @@
                     </label>
                     <span class="value" aria-hidden="true"></span>
                   </label>
-                  <div class="map-slot-row">
-                    <span>ORM Packed</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="orm" data-tooltip="Single texture: ambient occlusion in red, roughness in green, metallic in blue">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="orm" title="">—</span>
-                  </div>
-                  <div class="map-slot-row">
-                    <span>Roughness</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="roughness">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="roughness" title="">—</span>
-                  </div>
-                  <div class="map-slot-row">
-                    <span>Metallic</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="metallic">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="metallic" title="">—</span>
-                  </div>
-                  <div class="map-slot-row">
-                    <span>Occlusion</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="occlusion">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="occlusion" title="">—</span>
-                  </div>
-                  <div class="map-slot-row">
-                    <span>Displacement</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="displacement">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="displacement" title="">—</span>
-                  </div>
-                  <div class="map-slot-row">
-                    <span>Emissive</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="emissive">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="emissive" title="">—</span>
-                  </div>
-                  <div class="map-slot-row">
-                    <span>Opacity</span>
-                    <button type="button" class="ghost-btn small map-slot-btn" data-fbx-map-slot="opacity">Choose…</button>
-                    <span class="map-slot-name" data-fbx-map-filename="opacity" title="">—</span>
-                  </div>
                 </div>
-                <div class="panel-block-divider" id="fbxMapSlotsDivider" hidden></div>
+              </div>
+
+              <div class="panel-block">
                 <div class="subsection" data-subsection="material">
                   <div class="block-title has-reset">
                     <span>Material</span>
@@ -1409,7 +1457,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
+              <div class="info-version-tag">v0.5.637 · 2026-06-04 13:08:52 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2427,7 +2475,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
+              <div class="info-version-tag">v0.5.637 · 2026-06-04 13:08:52 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4143,7 +4191,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
+              <div class="info-version-tag">v0.5.637 · 2026-06-04 13:08:52 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4400,7 +4448,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
+              <div class="info-version-tag">v0.5.637 · 2026-06-04 13:08:52 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -5047,7 +5095,7 @@
                 </div>
               </div>
 
-              <div class="info-version-tag">v0.5.634 · 2026-06-04 11:54:07 UTC</div>
+              <div class="info-version-tag">v0.5.637 · 2026-06-04 13:08:52 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

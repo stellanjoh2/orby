@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   CREATIVE_CHROME_BASE_HEX,
   createCreativeLookMaterial,
@@ -3186,8 +3187,6 @@ export class MaterialController {
     ]);
     if (!allowed.has(slot)) return;
 
-    this._configureFbxTexture(texture, slot);
-
     if (this._getPbrUvChannelIndex() === 1) {
       this.currentModel.traverse((child) => {
         if (!child.isMesh || !child.geometry?.attributes?.uv) return;
@@ -3206,7 +3205,13 @@ export class MaterialController {
         const m = this._ensureStandardForFbxSlot(mat);
         m.userData.orbyFbxSlotMaps = true;
         this._disposePreviousFbxSlotTexture(m, slot);
-        this._assignTextureToMaterialSlot(m, slot, texture, geom);
+        const texForMat = texture.clone();
+        texForMat.userData.orbyFbxUserTexture = true;
+        if (texture.userData?.orbyFbxBlobUrl) {
+          texForMat.userData.orbyFbxBlobUrl = texture.userData.orbyFbxBlobUrl;
+        }
+        this._configureFbxTexture(texForMat, slot);
+        this._assignTextureToMaterialSlot(m, slot, texForMat, geom);
         this._refreshAllFbxSlotTransformsForMaterial(m);
         m.needsUpdate = true;
         return m;
@@ -3229,7 +3234,98 @@ export class MaterialController {
       this._ensureTangentsForNormalMapping(this.currentModel);
     }
 
+    this._reapplyFbxUserTextureColorSpaces(this.currentModel);
     this.applyTransparencyPipeline(this.currentModel);
+    const mode = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
+    this.setShading(mode);
+  }
+
+  /**
+   * Remove a user-assigned Map Slot texture from all mesh materials.
+   * @param {string} slot - albedo | normal | orm | roughness | metallic | occlusion | displacement | emissive | opacity
+   */
+  clearFbxSlotTexture(slot) {
+    if (!this.currentModel) return;
+
+    const allowed = new Set([
+      'albedo',
+      'normal',
+      'orm',
+      'roughness',
+      'metallic',
+      'occlusion',
+      'displacement',
+      'emissive',
+      'opacity',
+    ]);
+    if (!allowed.has(slot)) return;
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || this.isWindowMesh(child)) return;
+      const orig = this.originalMaterials.get(child);
+      if (!orig) return;
+
+      const clearOne = (mat) => {
+        this._disposePreviousFbxSlotTexture(mat, slot);
+        this._clearTextureFromMaterialSlot(mat, slot);
+        this._refreshAllFbxSlotTransformsForMaterial(mat);
+        mat.needsUpdate = true;
+      };
+
+      if (Array.isArray(orig)) {
+        for (const m of orig) clearOne(m);
+      } else {
+        clearOne(orig);
+      }
+    });
+
+    const mode = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
+    this.setShading(mode);
+    this.applyTransparencyPipeline(this.currentModel);
+  }
+
+  /**
+   * @param {THREE.Material} material
+   * @param {string} slot
+   */
+  _clearTextureFromMaterialSlot(material, slot) {
+    if (slot === 'albedo') {
+      if (material.map?.userData?.orbyFbxUserTexture) material.map = null;
+      return;
+    }
+    if (slot === 'normal') {
+      if (material.normalMap?.userData?.orbyFbxUserTexture) material.normalMap = null;
+      return;
+    }
+    if (slot === 'roughness') {
+      if (material.roughnessMap?.userData?.orbyFbxUserTexture) material.roughnessMap = null;
+      return;
+    }
+    if (slot === 'metallic') {
+      if (material.metalnessMap?.userData?.orbyFbxUserTexture) material.metalnessMap = null;
+      return;
+    }
+    if (slot === 'occlusion') {
+      if (material.aoMap?.userData?.orbyFbxUserTexture) material.aoMap = null;
+      return;
+    }
+    if (slot === 'displacement') {
+      if (material.displacementMap?.userData?.orbyFbxUserTexture) material.displacementMap = null;
+      return;
+    }
+    if (slot === 'orm') {
+      for (const key of ['aoMap', 'roughnessMap', 'metalnessMap']) {
+        if (material[key]?.userData?.orbyFbxUserTexture) material[key] = null;
+      }
+      return;
+    }
+    if (slot === 'emissive') {
+      if (material.emissiveMap?.userData?.orbyFbxUserTexture) material.emissiveMap = null;
+      return;
+    }
+    if (slot === 'opacity') {
+      if (material.alphaMap?.userData?.orbyFbxUserTexture) material.alphaMap = null;
+    }
   }
 
   _disposePreviousFbxSlotTexture(material, slot) {
@@ -3335,17 +3431,84 @@ export class MaterialController {
     this.setShading(mode);
   }
 
+  _fbxSlotUsesSrgbColorSpace(slot) {
+    return slot === 'albedo' || slot === 'emissive';
+  }
+
+  _applyFbxSlotTextureColorSpace(texture, slot) {
+    if (!texture || !('colorSpace' in texture)) return;
+    if (this._fbxSlotUsesSrgbColorSpace(slot)) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    } else if (THREE.NoColorSpace) {
+      // Normal / roughness / metallic / AO / ORM / displacement / opacity are data — not color.
+      texture.colorSpace = THREE.NoColorSpace;
+    }
+    texture.needsUpdate = true;
+  }
+
+  _resetFbxUserTextureUvTransform(texture) {
+    if (!texture?.isTexture) return;
+    texture.offset.set(0, 0);
+    texture.repeat.set(1, 1);
+    texture.rotation = 0;
+    texture.center.set(0.5, 0.5);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.needsUpdate = true;
+  }
+
   _configureFbxTexture(texture, slot) {
     texture.userData.orbyFbxUserTexture = true;
-    texture.needsUpdate = true;
-    if ('colorSpace' in texture) {
-      const srgbSlots = new Set(['albedo', 'emissive']);
-      texture.colorSpace = srgbSlots.has(slot) ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace;
-    }
+    this._resetFbxUserTextureUvTransform(texture);
+    this._applyFbxSlotTextureColorSpace(texture, slot);
     if (slot === 'normal') {
       texture.flipY = false;
     }
     this._setTextureUvChannelForSlot(texture, slot);
+  }
+
+  /** Re-apply color space on every user Map Slot texture (fixes textures loaded before configure). */
+  _reapplyFbxUserTextureColorSpaces(root) {
+    if (!root) return;
+    const slotMap = [
+      ['map', 'albedo'],
+      ['normalMap', 'normal'],
+      ['roughnessMap', 'roughness'],
+      ['metalnessMap', 'metallic'],
+      ['aoMap', 'occlusion'],
+      ['emissiveMap', 'emissive'],
+      ['alphaMap', 'opacity'],
+      ['displacementMap', 'displacement'],
+    ];
+    this._forEachImportMaterial(root, (material) => {
+      for (const [prop, slot] of slotMap) {
+        const tex = material[prop];
+        if (!tex?.isTexture || !tex.userData?.orbyFbxUserTexture) continue;
+        this._applyFbxSlotTextureColorSpace(tex, slot);
+      }
+      const ormTex = material.aoMap;
+      if (
+        ormTex?.isTexture &&
+        ormTex.userData?.orbyFbxUserTexture &&
+        material.roughnessMap === ormTex &&
+        material.metalnessMap === ormTex
+      ) {
+        this._applyFbxSlotTextureColorSpace(ormTex, 'orm');
+      }
+      this._syncFbxNormalMapOrientation(material);
+    });
+  }
+
+  _syncFbxNormalMapOrientation(material) {
+    const nm = material?.normalMap;
+    const albedo = material?.map;
+    if (!nm?.isTexture || !nm.userData?.orbyFbxUserTexture) return;
+    if (albedo?.isTexture) {
+      nm.flipY = albedo.flipY;
+    } else {
+      nm.flipY = false;
+    }
+    nm.needsUpdate = true;
   }
 
   _ensureUv2ForAo(geometry) {
@@ -3400,7 +3563,7 @@ export class MaterialController {
   }
 
   /**
-   * Prefer albedo, then any already-assigned PBR map (embedded FBX textures often carry correct tiling).
+   * Prefer user-assigned Map Slot textures, then embedded FBX maps (often carry correct tiling).
    * Excludes `excludeTexture` when picking (e.g. the texture just assigned).
    */
   _pickUvReferenceTexture(material, excludeTexture) {
@@ -3414,6 +3577,16 @@ export class MaterialController {
       'alphaMap',
       'displacementMap',
     ];
+    for (const key of keys) {
+      const t = material[key];
+      if (
+        t?.isTexture &&
+        t !== excludeTexture &&
+        t.userData?.orbyFbxUserTexture
+      ) {
+        return t;
+      }
+    }
     for (const key of keys) {
       const t = material[key];
       if (t?.isTexture && t !== excludeTexture) return t;
@@ -3438,7 +3611,11 @@ export class MaterialController {
    */
   _refreshAllFbxSlotTransformsForMaterial(material) {
     const ref = this._pickUvReferenceTexture(material, null);
-    if (!ref?.isTexture) return;
+    if (!ref?.isTexture) {
+      this._resetAllUserFbxSlotTextureTransforms(material);
+      this._syncFbxNormalMapOrientation(material);
+      return;
+    }
     const seen = new Set([ref.uuid]);
     const slotKeys = [
       'normalMap',
@@ -3452,24 +3629,75 @@ export class MaterialController {
     for (const key of slotKeys) {
       const t = material[key];
       if (!t?.isTexture || seen.has(t.uuid)) continue;
+      if (t.userData?.orbyFbxUserTexture) {
+        this._copyUvTransform(ref, t);
+      } else if (!ref.userData?.orbyFbxUserTexture) {
+        this._copyUvTransform(ref, t);
+      }
       seen.add(t.uuid);
-      this._copyUvTransform(ref, t);
+    }
+    this._syncFbxNormalMapOrientation(material);
+  }
+
+  _resetAllUserFbxSlotTextureTransforms(material) {
+    const keys = [
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'alphaMap',
+      'displacementMap',
+    ];
+    for (const key of keys) {
+      const t = material[key];
+      if (t?.isTexture && t.userData?.orbyFbxUserTexture) {
+        this._resetFbxUserTextureUvTransform(t);
+      }
+    }
+  }
+
+  /**
+   * FBX exports are sometimes non-indexed; computeTangents requires an index buffer.
+   * @returns {THREE.BufferGeometry}
+   */
+  _ensureIndexedGeometryForTangents(geom, root) {
+    if (!geom || geom.index) return geom;
+    try {
+      const merged = mergeVertices(geom);
+      if (!merged?.index) return geom;
+      if (merged !== geom) {
+        root?.traverse?.((m) => {
+          if (m.isMesh && m.geometry === geom) m.geometry = merged;
+        });
+      }
+      return merged;
+    } catch (_) {
+      return geom;
     }
   }
 
   /** Tangents must match UVs for correct normal mapping; some FBX meshes ship without usable tangents. */
   _ensureTangentsForNormalMapping(root) {
+    const prepared = new WeakSet();
     root?.traverse?.((child) => {
       if (!child.isMesh || !child.geometry) return;
-      const geom = child.geometry;
+      let geom = child.geometry;
+      if (prepared.has(geom)) return;
       if (
-        !geom.index ||
         !geom.attributes?.position ||
         !geom.attributes?.normal ||
         !geom.attributes?.uv ||
         typeof geom.computeTangents !== 'function'
       ) {
         return;
+      }
+      geom = this._ensureIndexedGeometryForTangents(geom, root);
+      if (!geom.index) return;
+      prepared.add(geom);
+      if (geom.attributes.tangent) {
+        geom.deleteAttribute('tangent');
       }
       try {
         geom.computeTangents();
@@ -3487,6 +3715,7 @@ export class MaterialController {
     if (slot === 'normal') {
       material.normalMap = texture;
       material.normalMapType = THREE.TangentSpaceNormalMap;
+      material.bumpMap = null;
       if (!material.normalScale) {
         material.normalScale = new THREE.Vector2(1, 1);
       }

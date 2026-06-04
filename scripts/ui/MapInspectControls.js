@@ -68,7 +68,16 @@ export class MapInspectControls {
       }
       this.refresh();
     });
-    this.eventBus.on('scene:fbx-map-applied', () => this.refresh());
+    this.eventBus.on('scene:fbx-map-applied', () => {
+      clearMapInspectThumbCache();
+      this._unpinPreview();
+      this.refresh();
+    });
+    this.eventBus.on('scene:fbx-map-cleared', () => {
+      clearMapInspectThumbCache();
+      this._unpinPreview();
+      this.refresh();
+    });
     this.eventBus.on('scene:model-cleared', () => this.reset());
     this.eventBus.on('mesh:shading', () => this._unpinPreview({ toastOnShading: true }));
   }

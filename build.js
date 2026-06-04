@@ -172,6 +172,14 @@ if (existsSync(join(__dirname, 'scripts', 'vendor'))) {
   });
 }
 cpSync('styles.css', join(distDir, 'styles.css'));
+/** Shelf partials linked from index.html — must land in dist for GitHub Pages. */
+const SHELF_STYLE_PARTIALS = ['map-inspect.css', 'background-gradient.css'];
+for (const name of SHELF_STYLE_PARTIALS) {
+  const src = join(__dirname, 'styles', name);
+  if (!existsSync(src)) continue;
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(src, join(distDir, 'styles', name));
+}
 if (existsSync(join(__dirname, 'styles', 'fontawesome', 'orby-icons.css'))) {
   mkdirSync(join(distDir, 'styles', 'fontawesome'), { recursive: true });
   cpSync(

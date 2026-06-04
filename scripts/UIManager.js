@@ -336,7 +336,7 @@ export class UIManager {
     this.dom.fullscreenPromptNo = q('#orbyFullscreenPromptNo');
     this.dom.fullscreenPromptYes = q('#orbyFullscreenPromptYes');
     this.dom.stats = q('#meshStats');
-    this.dom.fbxMapSlotsDivider = q('#fbxMapSlotsDivider');
+    this.dom.fbxMapSlotsBlock = q('#fbxMapSlotsBlock');
     this.dom.claySubsectionDivider = q('#claySubsectionDivider');
     this.dom.svgExtrudePanelBlock = q('#svgExtrudePanelBlock');
     this.dom.studioBaseGlassPanel = q('#studioBaseGlassPanel');
@@ -3259,13 +3259,8 @@ export class UIManager {
       this.dom.svgExtrudePanelBlock.hidden = !svgExtrudeOn;
     }
 
-    const fbxSlots = this.dom.subsections?.fbxMapSlots;
-    if (fbxSlots) {
-      const on = !!currentState.fbxMapSlots?.enabled;
-      fbxSlots.hidden = !on;
-    }
-    if (this.dom.fbxMapSlotsDivider) {
-      this.dom.fbxMapSlotsDivider.hidden = !currentState.fbxMapSlots?.enabled;
+    if (this.dom.fbxMapSlotsBlock) {
+      this.dom.fbxMapSlotsBlock.hidden = !currentState.fbxMapSlots?.enabled;
     }
   }
 
