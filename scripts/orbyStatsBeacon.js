@@ -53,13 +53,29 @@ function postEvent(event, extra = {}) {
   }).catch(() => {});
 }
 
+const PAGE_VIEW_SESSION_KEY = 'orby_stats_page_view_sent';
+
+/**
+ * One page-visit signal per tab session — browsing About → Stats → Credits doesn't inflate the total.
+ * Uses sessionStorage only (cleared when the tab closes); not sent to the server.
+ */
+function recordPageViewOncePerSession() {
+  try {
+    if (sessionStorage.getItem(PAGE_VIEW_SESSION_KEY) === '1') return;
+    sessionStorage.setItem(PAGE_VIEW_SESSION_KEY, '1');
+  } catch {
+    /* Private mode / blocked storage — count this load anyway. */
+  }
+  recordStatsEvent('page_view');
+}
+
 /** @param {'page_view' | 'asset_loaded'} event */
 export function recordStatsEvent(event) {
   postEvent(event);
 }
 
 export function recordPageView() {
-  recordStatsEvent('page_view');
+  recordPageViewOncePerSession();
 }
 
 /** @param {File | null | undefined} [file] */

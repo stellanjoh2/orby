@@ -71,3 +71,14 @@ html.orby-legal-site-nav .orby-marketing-scroll-nav__brand {
   -webkit-tap-highlight-color: transparent;
   text-decoration: none;
 }
+
+/* Beat .legal-doc a — same hover as marketing homepage (lime → white + underline bar) */
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link,
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:visited {
+  color: var(--brand-primary, var(--orby-lime));
+}
+
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:hover,
+html.orby-legal-site-nav .orby-marketing-scroll-nav__link:focus-visible {
+  color: #fff;
+}
