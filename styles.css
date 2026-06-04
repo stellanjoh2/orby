@@ -3160,15 +3160,13 @@ html:not(.orby-home-scroll) .dropzone-hero-credits {
 
 .dropzone-hero-credit a {
   color: var(--text-link);
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--text-link) 55%, transparent);
-  text-underline-offset: 0.14em;
+  /* No underline — vertical-rl + word-stagger spans leak purple decoration pixels at link starts */
+  text-decoration: none;
 }
 
 .dropzone-hero-credit a:hover,
 .dropzone-hero-credit a:focus-visible {
   color: var(--brand-primary);
-  text-decoration-color: currentColor;
 }
 
 @media (min-width: 1920px) and (max-width: 2559px) {
