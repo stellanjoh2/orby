@@ -63,7 +63,7 @@
 
 .orby-marketing__png-marquee-logotype-mark {
   aspect-ratio: 1676.82 / 694.27;
-  background-color: var(--orby-lime);
+  background-color: var(--orby-purple);
   -webkit-mask-image: url('../../assets/images/orby-logotype.svg');
   mask-image: url('../../assets/images/orby-logotype.svg');
   -webkit-mask-repeat: no-repeat;

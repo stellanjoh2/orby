@@ -20,6 +20,21 @@ function linearGradientEndpoints(cssAngleDeg, width, height) {
 }
 
 /**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} width
+ * @param {number} height
+ * @param {import('./backgroundGradientDefaults.js').BackgroundGradientConfig} config
+ * @param {CanvasGradient} gradient
+ */
+function fillCanvasGradient(ctx, width, height, config, gradient) {
+  for (const stop of sortedBackgroundGradientStops(config.stops)) {
+    gradient.addColorStop(stop.position / 100, stop.color);
+  }
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+/**
  * Draw a multi-stop gradient into a 2D canvas context.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} width
@@ -41,12 +56,22 @@ export function drawBackgroundGradient(ctx, width, height, config) {
     gradient = ctx.createLinearGradient(x0, y0, x1, y1);
   }
 
-  for (const stop of sortedBackgroundGradientStops(normalized.stops)) {
-    gradient.addColorStop(stop.position / 100, stop.color);
-  }
+  fillCanvasGradient(ctx, width, height, normalized, gradient);
+}
 
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
+/**
+ * Horizontal stop strip for the gradient editor — maps stop position 0–100% left-to-right
+ * regardless of linear angle or radial type (the scene uses {@link drawBackgroundGradient}).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} width
+ * @param {number} height
+ * @param {import('./backgroundGradientDefaults.js').BackgroundGradientConfig} config
+ */
+export function drawBackgroundGradientStopStrip(ctx, width, height, config) {
+  const normalized = normalizeBackgroundGradient(config);
+  ctx.clearRect(0, 0, width, height);
+  const gradient = ctx.createLinearGradient(0, 0, width, 0);
+  fillCanvasGradient(ctx, width, height, normalized, gradient);
 }
 
 /**

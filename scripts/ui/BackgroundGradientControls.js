@@ -4,7 +4,7 @@ import {
   normalizeBackgroundGradient,
 } from '../render/backgroundGradient/backgroundGradientDefaults.js';
 import {
-  drawBackgroundGradient,
+  drawBackgroundGradientStopStrip,
   sampleGradientColorAt,
 } from '../render/backgroundGradient/backgroundGradientCanvas.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
@@ -213,7 +213,7 @@ export class BackgroundGradientControls {
       this.preview.width = width;
       this.preview.height = height;
     }
-    drawBackgroundGradient(this.previewCtx, width, height, gradient);
+    drawBackgroundGradientStopStrip(this.previewCtx, width, height, gradient);
     this._drawStopHandles(gradient, width, height);
   }
 
