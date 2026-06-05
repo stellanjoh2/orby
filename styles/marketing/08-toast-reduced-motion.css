@@ -8,7 +8,7 @@
   margin: 0;
   padding: calc(0.62rem * var(--orby-marketing-scale)) calc(1.05rem * var(--orby-marketing-scale));
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 22%, transparent);
   background: color-mix(in srgb, var(--orby-black, #080808) 92%, transparent);
   box-shadow:
     0 10px 36px color-mix(in srgb, var(--orby-black, #080808) 42%, transparent),
@@ -19,7 +19,7 @@
   font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 1.35;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;

@@ -2,7 +2,6 @@
  * PNG marquee backdrop — static site-width logotype.
  * (Lottie data.json includes static orby + orbiting O; mid-orbit reads as a duplicate.)
  */
-const LOGOTYPE_SVG = './assets/images/orby-logotype.svg';
 const IO_OPTIONS = { root: null, rootMargin: '240px 0px', threshold: 0.05 };
 
 /**
@@ -10,13 +9,11 @@ const IO_OPTIONS = { root: null, rootMargin: '240px 0px', threshold: 0.05 };
  */
 function mountStaticLogotype(slot) {
   slot.replaceChildren();
-  const img = document.createElement('img');
-  img.src = LOGOTYPE_SVG;
-  img.alt = '';
-  img.decoding = 'async';
-  img.loading = 'lazy';
-  img.setAttribute('aria-hidden', 'true');
-  slot.appendChild(img);
+  const mark = document.createElement('span');
+  mark.className = 'orby-marketing__png-marquee-logotype-mark';
+  mark.setAttribute('role', 'img');
+  mark.setAttribute('aria-label', 'Orby');
+  slot.appendChild(mark);
 }
 
 /**

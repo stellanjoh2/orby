@@ -1,9 +1,18 @@
 /**
- * Brand lime — single CSS source of truth.
- * Change --orby-lime here; app UI, legal pages, and magic buttons follow via --brand-primary / --legal-accent.
- * Mirror in JS: ORBY_LIME in scripts/constants.js
+ * Orby brand colors — single CSS source of truth.
+ * Change tokens here; app UI, legal, marketing, and support follow.
+ * Mirror in JS: ORBY_* in scripts/constants.js
  */
 :root {
-  --orby-lime: #c4ff00;
+  /* Orby Lime — logotype, primary actions, wireframe default */
+  --orby-lime: #94ff1d;
+  /* Orby Purple — inverted lime; UI accents, gradients */
+  --orby-purple: #6b00e2;
+  /* Orby Purple Bright — 50% brighter than --orby-purple (50% mix with white → #b580f1) */
+  --orby-purple-bright: color-mix(in srgb, var(--orby-purple) 50%, white);
+  /* Orby Pink — official red; warnings, blocker severity, under-construction, critical alerts */
+  --orby-pink: #ff1d76;
+  /* Softer Orby Pink — inline errors, destructive hints (50% mix with white → #ff8ebb) */
+  --orby-pink-muted: color-mix(in srgb, var(--orby-pink) 50%, white);
   --brand-lime: var(--orby-lime);
 }

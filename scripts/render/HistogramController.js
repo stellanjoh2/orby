@@ -4,12 +4,12 @@
  */
 
 /** Flat 1-bit palette: solid fills only, no per-frame getComputedStyle */
-import { ORBY_BLACK, ORBY_LIME } from '../constants.js';
+import { ORBY_BLACK, ORBY_LIME, ORBY_PINK } from '../constants.js';
 
 const HIST_BG = ORBY_BLACK;
 const HIST_BAR = ORBY_LIME;
 const HIST_BAR_WARN = '#ff9632';
-const HIST_BAR_SEVERE = '#ff6464';
+const HIST_BAR_SEVERE = ORBY_PINK;
 
 export class HistogramController {
   constructor(renderer, canvas, containerElement, composer = null) {

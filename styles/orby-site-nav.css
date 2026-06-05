@@ -59,7 +59,7 @@ html.orby-legal-site-nav:not(:has([data-orby-marketing-scroll-nav]))::before {
   height: calc(var(--orby-legal-scroll-nav-height, 84px) + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   box-sizing: border-box;
-  background: var(--orby-marketing-panel-bg, var(--orby-surface-muted, #151515));
+  background: var(--orby-marketing-panel-bg, var(--orby-surface-muted, #202020));
   pointer-events: none;
 }
 

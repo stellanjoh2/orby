@@ -8,9 +8,9 @@
  * All accent-related colors (--accent, --accent-strong, --accent-border, etc.)
  * will automatically derive from these two base colors using CSS color-mix().
  *
- * Semantic palette (not derived from brand):
- * - --danger: Soft coral for inline error/destructive hints
- * - --warning: Strong red for critical notices; same hue as bug-report “blocker” severity
+ * Semantic palette (Orby Pink family — see orby-brand-tokens.css):
+ * - --danger: Softer Orby Pink for inline error/destructive hints
+ * - --warning: Orby Pink for critical notices; same hue as bug-report “blocker” severity
  *
  * Note: color-mix() requires modern browsers (Chrome 111+, Firefox 113+, Safari 16.2+)
  * For older browser support, you may need to manually set the derived colors.
@@ -115,9 +115,9 @@
   --brand-font-headline: 'Mattone Bold', 'Cal Sans', 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --brand-font-mattone-regular: 'Mattone Regular', 'Cal Sans', 'Geist', system-ui, -apple-system,
     BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --danger: #ff7b7b;
+  --danger: var(--orby-pink-muted);
   /* Critical alerts — matches bug-report severity “blocker” dot */
-  --warning: #dc2626;
+  --warning: var(--orby-pink);
   /* Right-hand settings shelf and centered modals (paste scene settings, bug report) */
   --app-settings-chrome-radius: 18px;
   /* Object shelf Scene / Export pills, modal footers — keep in sync */
@@ -307,7 +307,7 @@ body[data-theme='aqua'] {
   --orby-black: #080808;
   --orby-app-bg: var(--orby-black);
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
-  --orby-surface-muted: #151515;
+  --orby-surface-muted: #202020;
   /* Frosted dark chrome — shelf, toasts, and other main-UI overlays */
   --ui-frosted-blur: 15px;
 }
@@ -318,8 +318,8 @@ body[data-theme='violet'] {
   --brand-primary: var(--orby-lime);
   --brand-secondary: #ff4500;
   
-  /* Inverted brand primary (1:1 RGB inversion of --orby-lime); recalc when lime changes */
-  --brand-primary-inverted: #3b00ff;
+  /* Official purple — inverted brand lime */
+  --brand-primary-inverted: var(--orby-purple);
   
   /* Base Colors */
   --bg: var(--orby-app-bg);
@@ -342,8 +342,8 @@ body[data-theme='violet'] {
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 22.5%, transparent);
   /* Brighter hover color for links / interactive text */
   --accent-hover: color-mix(in srgb, var(--brand-primary) 40%, white 60%);
-  /* Inline prose links — purple default, brand primary (lime) on hover */
-  --text-link: #7e6bff;
+  /* Inline prose links — bright purple default, brand primary (lime) on hover */
+  --text-link: var(--orby-purple-bright);
   --text-link-hover: var(--brand-primary);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 65%, transparent);
   /* Perf: no outer halo on button/slider hovers — color fill only */
@@ -367,7 +367,7 @@ body[data-theme='violet'] {
 body[data-theme='aqua'] {
   --brand-primary: var(--orby-lime);
   --brand-secondary: #ff4500;
-  --brand-primary-inverted: #3b00ff;
+  --brand-primary-inverted: var(--orby-purple);
   
   /* Base Colors */
   --bg: var(--orby-app-bg);
@@ -387,7 +387,7 @@ body[data-theme='aqua'] {
   --accent-shadow: color-mix(in srgb, var(--brand-primary) 35%, transparent);
   --accent-muted: color-mix(in srgb, var(--brand-primary) 18%, transparent);
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 17.5%, transparent);
-  --text-link: #7e6bff;
+  --text-link: var(--orby-purple-bright);
   --text-link-hover: var(--brand-primary);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 55%, transparent);
   --ui-accent-outer-glow: none;
@@ -501,7 +501,7 @@ body.orby-not-found-active.orby-not-found-fade-ready #webgl {
   padding: clamp(1rem, 2vw, 1.5rem) clamp(1.1rem, 3vw, 2rem);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.45),
-    0 0 24px rgba(196, 255, 0, 0.12);
+    0 0 24px color-mix(in srgb, var(--orby-lime) 12%, transparent);
 }
 
 .orby-not-found-title {
@@ -2392,7 +2392,6 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 .drop-link:focus-visible {
   color: var(--text-link-hover);
   opacity: 1;
-  text-decoration: underline;
 }
 
 .dropzone-btn:not(.orby-magic-btn):active {
@@ -3378,7 +3377,7 @@ html.orby-marketing-reduced body.dropzone-visible .dropzone::before {
 
 /* Construction notice on dropzone secondary copy */
 .drop-secondary .drop-under-construction {
-  color: #ca8a04;
+  color: var(--orby-pink);
   font-weight: 700;
 }
 
@@ -4705,7 +4704,8 @@ a.about-highlight:focus-visible {
   z-index: 2;
 }
 
-.mode-icon img {
+.mode-icon img,
+.mode-icon__flat {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -4719,8 +4719,16 @@ a.about-highlight:focus-visible {
   pointer-events: none;
   transform: translate(-50%, -50%);
   transform-origin: center center;
+}
+
+.mode-icon img {
   object-fit: cover;
   /* Free floating - no background or border when unselected */
+}
+
+/* Unlit — flat brand lime disc (replaces modeicon-unlit.png) */
+.mode-icon__flat {
+  background: var(--orby-lime);
 }
 
 .mode-icon:hover,
@@ -4729,7 +4737,9 @@ a.about-highlight:focus-visible {
 }
 
 .mode-icon:not(:has(input:checked)):hover img,
-.mode-icon:not(:has(input:checked)):focus-within img {
+.mode-icon:not(:has(input:checked)):focus-within img,
+.mode-icon:not(:has(input:checked)):hover .mode-icon__flat,
+.mode-icon:not(:has(input:checked)):focus-within .mode-icon__flat {
   transform: translate(-50%, -50%) scale(1.1);
 }
 
@@ -6294,7 +6304,7 @@ html.orby-home-scroll .toast {
 .tooltip {
   position: absolute;
   padding: 0.5rem 0.75rem;
-  background: var(--orby-surface-muted, #151515);
+  background: var(--orby-surface-muted, #202020);
   border: none;
   border-radius: 6px;
   color: var(--text);
@@ -7215,7 +7225,7 @@ body.ui-hidden .shelf {
 }
 
 .histogram-warning--overexposed {
-  background: #ff6464;
+  background: var(--orby-pink);
 }
 
 .histogram-warning--close {

@@ -137,7 +137,7 @@
   /* Body copy — Geist Light, same as legal About manifesto */
   --orby-marketing-body-weight: 300;
   --orby-marketing-headline: var(--brand-primary, var(--orby-lime));
-  --orby-marketing-panel-bg: var(--orby-surface-muted, #151515);
+  --orby-marketing-panel-bg: var(--orby-surface-muted, #202020);
   /* Ink on lime (CTA) — matches FAQ panel, softer than --orby-black */
   --orby-marketing-on-lime-ink: var(--orby-marketing-panel-bg);
   /* Ink on white (In Progress) — type, icons, strokes; fills stay --orby-black */

@@ -169,6 +169,19 @@ export class FontTextRevealController {
     return this._glyphStates.length;
   }
 
+  /**
+   * Re-capture per-glyph rest emissive after Material emissive/brightness slider changes.
+   */
+  refreshMaterialEmissiveRest() {
+    for (const state of this._glyphStates) {
+      for (const entry of state.meshMaterials) {
+        const captured = captureMaterialEmissiveRest(entry.mat);
+        entry.restEmissive.copy(captured.restEmissive);
+        entry.restEmissiveIntensity = captured.restEmissiveIntensity;
+      }
+    }
+  }
+
   shouldRunLiveUpdate(scene) {
     if (this._previewRaf) return false;
     if (this._exportDriveActive) return false;
@@ -604,6 +617,13 @@ export class FontTextRevealController {
    */
   _applySettingsChange(model) {
     this.ensureBoundToModel(model ?? this._boundModel);
+    const duration = this.getDurationSec();
+    if (
+      this._glyphStates.length &&
+      (!this.isEmissiveSlamEnabled() || this._elapsed >= duration - 1e-4)
+    ) {
+      this.refreshMaterialEmissiveRest();
+    }
     if (!this._glyphStates.length) {
       this._notifyPreviewTime();
       return;
@@ -617,7 +637,6 @@ export class FontTextRevealController {
       this._requestRender();
       return;
     }
-    const duration = this.getDurationSec();
     if (this._previewMode === 'playing' || this._previewMode === 'paused') {
       this._elapsed = Math.min(this._elapsed, duration);
       this.applyAtTime(this._elapsed);

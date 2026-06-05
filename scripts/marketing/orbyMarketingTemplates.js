@@ -472,9 +472,11 @@ function renderFaqSection(section) {
   const items = (section.faq ?? [])
     .map(
       (item) => `<article class="orby-marketing__faq-item" data-orby-marketing-reveal="faq-item">
-        <div class="orby-marketing__faq-icon">${FAQ_ICON_SVG}</div>
         <div class="orby-marketing__faq-body">
-          <h3 class="orby-marketing__faq-question">${escapeMarketingHtml(item.question)}</h3>
+          <div class="orby-marketing__faq-question-row">
+            <div class="orby-marketing__faq-icon">${FAQ_ICON_SVG}</div>
+            <h3 class="orby-marketing__faq-question">${escapeMarketingHtml(item.question)}</h3>
+          </div>
           <p class="orby-marketing__faq-answer">${escapeMarketingHtml(item.answer)}</p>
         </div>
       </article>`,

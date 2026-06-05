@@ -71,6 +71,7 @@ export class EventManager {
     });
     eventBus.on('mesh:material-brightness', (brightness) => {
       s.materialController?.setMaterialBrightness(brightness);
+      s.fontTextRevealController?.refreshMaterialEmissiveRest?.();
     });
     eventBus.on('mesh:material-metalness', (metalness) => {
       s.materialController?.setMaterialMetalness(metalness);
@@ -80,6 +81,12 @@ export class EventManager {
     });
     eventBus.on('mesh:material-emissive', (emissive) => {
       s.materialController?.setMaterialEmissive(emissive);
+      const reveal = s.fontTextRevealController;
+      if (!reveal) return;
+      reveal.refreshMaterialEmissiveRest?.();
+      if (reveal._previewMode === 'playing' || reveal._previewMode === 'paused') {
+        reveal.applyAtTime(reveal._elapsed);
+      }
     });
     /* Subsurface events — enable with SUBSURFACE_FEATURE_ENABLED in MaterialController.js.
     eventBus.on('mesh:subsurface-translucency', (value) => {

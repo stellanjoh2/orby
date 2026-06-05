@@ -84,7 +84,7 @@ export class StateStore {
         revealEmissiveStrength: 1,
         /** Seconds for emissive to decay after each letter lands. */
         revealEmissiveDecaySec: 0.35,
-        revealEmissiveColor: '#c4ff00',
+        revealEmissiveColor: ORBY_LIME,
       },
       svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
       advanced: {

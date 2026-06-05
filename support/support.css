@@ -12,7 +12,7 @@ body.legal-doc--support {
   --accent: var(--legal-accent);
   --brand-primary: var(--legal-accent);
   --brand-text: var(--orby-black);
-  --warning: #ef4444;
+  --warning: var(--orby-pink);
 }
 
 .legal-support-bug-report {

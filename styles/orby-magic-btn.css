@@ -7,7 +7,7 @@
 
 :root {
   --brand-primary: var(--orby-lime);
-  --text-link: #7e6bff;
+  --text-link: var(--orby-purple-bright, #b580f1);
   --orby-black: #080808;
   --brand-text: #080808;
 }

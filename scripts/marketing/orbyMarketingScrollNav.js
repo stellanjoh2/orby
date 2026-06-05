@@ -7,20 +7,10 @@ import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
-/** Hide when near the top unless the user already revealed the nav by scrolling up. */
+/** Hero strip — nav stays hidden while the dropzone headline is in view. */
 const HIDE_NEAR_TOP_Y = 48;
-/** Page position — must be past hero seam before scroll-up can count toward reveal. */
-const REVEAL_MIN_SCROLL_Y = 200;
-/** Cumulative scroll-up (px) in one gesture before reveal fires — ignores 1–2px trackpad noise. */
-const REVEAL_SCROLL_UP_ACCUM = 72;
 const SCROLL_DELTA = 0.5;
-const SHOW_DELAY_MS = 80;
-/** Ignore reveal/hide toggles briefly after the scroll direction flips (fast up/down slams). */
-const DIRECTION_SETTLE_MS = 170;
-/** After animating out, hold off reveal so the bar does not bounce back in. */
-const HIDE_COOLDOWN_MS = 300;
-/** After reveal, hold off hide so a quick reversal does not snap the bar shut. */
-const SHOW_COOLDOWN_MS = 240;
+const SHOW_DELAY_MS = 60;
 
 /**
  * @param {string} pathname
@@ -180,28 +170,29 @@ export function initSiteNav(options) {
   /** @type {ReturnType<typeof initSiteNav> | null} */
   let controller = null;
   let destroyed = false;
+  let pendingHomeActive = true;
 
   const run = () => {
-    if (destroyed) return;
-    controller = initSiteNavNow({ section, onScrollTop, mode, base });
+    if (destroyed || controller) return;
+    controller = initSiteNavNow({ section, onScrollTop, mode, base, homeActive: pendingHomeActive });
   };
 
-  if (siteNavStylesPresent()) {
-    run();
-  } else {
-    void ensureSiteNavStyles().then(run);
-  }
+  // Attach scroll logic immediately — CSS can load in parallel.
+  run();
+  void ensureSiteNavStyles();
 
   return {
     get nav() {
       return controller?.nav ?? null;
     },
     setHomeActive(active) {
+      pendingHomeActive = active;
       controller?.setHomeActive(active);
     },
     destroy() {
       destroyed = true;
       controller?.destroy();
+      controller = null;
     },
   };
 }
@@ -212,6 +203,7 @@ export function initSiteNav(options) {
  *   onScrollTop?: () => void;
  *   mode?: 'home' | 'subpage';
  *   base?: string;
+ *   homeActive?: boolean;
  * }} options
  */
 function initSiteNavNow(options) {
@@ -220,6 +212,7 @@ function initSiteNavNow(options) {
     onScrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' }),
     mode = 'home',
     base = './',
+    homeActive: initialHomeActive = true,
   } = options;
   if (!section) {
     return {
@@ -246,16 +239,9 @@ function initSiteNavNow(options) {
     document.body.appendChild(nav);
   }
 
-  let homeActive = true;
-  let lastY = window.scrollY;
-  let scrollUpAccum = 0;
+  let homeActive = initialHomeActive;
   let showTimer = null;
   let ticking = false;
-  /** @type {-1 | 0 | 1} -1 up, 1 down */
-  let scrollDirection = 0;
-  let directionChangedAt = 0;
-  let lastHiddenAt = 0;
-  let lastShownAt = 0;
   /** @type {(() => void) | null} */
   let onSubpageResize = null;
   /** @type {(() => void) | null} */
@@ -318,15 +304,19 @@ function initSiteNavNow(options) {
     }
   });
 
+  function readScrollY() {
+    return window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+  }
+
+  let lastY = readScrollY();
+
   const hide = () => {
     if (isMobileHome) return;
     if (showTimer != null) {
       window.clearTimeout(showTimer);
       showTimer = null;
     }
-    scrollUpAccum = 0;
     if (!isNavVisible()) return;
-    lastHiddenAt = performance.now();
     setVisible(false);
   };
 
@@ -334,28 +324,9 @@ function initSiteNavNow(options) {
     if (showTimer != null || isNavVisible()) return;
     showTimer = window.setTimeout(() => {
       showTimer = null;
-      scrollUpAccum = 0;
-      lastShownAt = performance.now();
       setVisible(true);
     }, SHOW_DELAY_MS);
   };
-
-  const readScrollY = () =>
-    window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-
-  const markDirection = (nextDirection) => {
-    if (scrollDirection === nextDirection) return;
-    scrollDirection = nextDirection;
-    directionChangedAt = performance.now();
-    scrollUpAccum = 0;
-    if (showTimer != null) {
-      window.clearTimeout(showTimer);
-      showTimer = null;
-    }
-  };
-
-  const directionIsSettled = () =>
-    performance.now() - directionChangedAt >= DIRECTION_SETTLE_MS;
 
   const update = () => {
     if (!homeActive || isMobileHome) return;
@@ -363,32 +334,19 @@ function initSiteNavNow(options) {
     const y = readScrollY();
     const delta = y - lastY;
     lastY = y;
-    const now = performance.now();
 
-    if (y < HIDE_NEAR_TOP_Y) {
-      if (isNavVisible()) return;
+    if (y <= HIDE_NEAR_TOP_Y) {
       hide();
       return;
     }
 
     if (delta > SCROLL_DELTA) {
-      markDirection(1);
-      if (now - lastShownAt < SHOW_COOLDOWN_MS) return;
       hide();
       return;
     }
 
     if (delta < -SCROLL_DELTA) {
-      markDirection(-1);
-      if (!directionIsSettled()) return;
-      if (now - lastHiddenAt < HIDE_COOLDOWN_MS) return;
-      if (y < REVEAL_MIN_SCROLL_Y || isNavVisible()) return;
-
-      scrollUpAccum += -delta;
-      if (scrollUpAccum >= REVEAL_SCROLL_UP_ACCUM) {
-        scheduleShow();
-      }
-      return;
+      scheduleShow();
     }
   };
 
@@ -416,12 +374,7 @@ function initSiteNavNow(options) {
       if (active) {
         nav.removeAttribute('hidden');
         lastY = readScrollY();
-        scrollUpAccum = 0;
-        scrollDirection = 0;
-        directionChangedAt = 0;
-        lastHiddenAt = 0;
-        lastShownAt = 0;
-        if (lastY < HIDE_NEAR_TOP_Y && !isMobileHome) hide();
+        if (lastY <= HIDE_NEAR_TOP_Y && !isMobileHome) hide();
       } else {
         hide();
         nav.setAttribute('hidden', '');

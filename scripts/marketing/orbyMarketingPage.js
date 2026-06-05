@@ -228,6 +228,10 @@ export function initOrbyMarketingPage(options = {}) {
 
   const mobile = isMobileLanding();
   const lazy = options.lazy !== false && !mobile;
+  // Enable document scroll + scroll-nav CSS visibility before idle mount.
+  if (!mobile) {
+    setScrollMode(true);
+  }
   let root = null;
   let scrollCue = null;
   let teardownScrollCueFade = null;
@@ -434,7 +438,10 @@ export function initOrbyMarketingPage(options = {}) {
 
   function syncHomeState() {
     if (destroyed) return;
-    const home = isDropzoneHome() || isMobileLanding();
+    const home =
+      isDropzoneHome() ||
+      isMobileLanding() ||
+      document.documentElement.classList.contains(SCROLL_CLASS);
     if (scrollCue) {
       scrollCue.hidden = !home || isMobileLanding();
     }
@@ -545,10 +552,13 @@ export function initOrbyMarketingPage(options = {}) {
 
   function bootMarketingChrome() {
     if (destroyed) return;
-    if (mobile) setScrollMode(true);
-    ensureScrollNav();
+    setScrollMode(true);
     scheduleMount();
   }
+
+  void primeSections();
+  // Wire scroll-up nav reveal as soon as marketing boots — do not wait for mount idle.
+  ensureScrollNav();
 
   bodyObserver = new MutationObserver(syncHomeState);
   bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });

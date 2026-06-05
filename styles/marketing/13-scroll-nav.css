@@ -67,7 +67,7 @@
   z-index: 13;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
-  background: var(--orby-marketing-panel-bg, var(--orby-surface-muted, #151515));
+  background: var(--orby-marketing-panel-bg, var(--orby-surface-muted, #202020));
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
@@ -137,7 +137,7 @@ a.orby-marketing-scroll-nav__brand:visited {
   padding: 0;
   border: none;
   background: none;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
   cursor: pointer;
   text-decoration: none;
   transform: translateY(-50%);
@@ -152,7 +152,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 }
 
 .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
   outline-offset: 4px;
   border-radius: 2px;
 }
@@ -201,7 +201,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 .orby-marketing-scroll-nav__contact {
   position: relative;
   display: inline-block;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
   text-decoration: none;
   transition: color 0.16s ease;
 }
@@ -246,7 +246,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 
 .orby-marketing-scroll-nav__link:focus-visible,
 .orby-marketing-scroll-nav__contact:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
   outline-offset: 3px;
   border-radius: 2px;
 }
@@ -283,7 +283,7 @@ a.orby-marketing-scroll-nav__brand:visited {
   height: var(--orby-scroll-nav-chrome-height);
   min-height: var(--orby-scroll-nav-chrome-height);
   font-size: var(--orby-marketing-support-size);
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
   transition: color 0.16s ease;
 }
 
@@ -316,7 +316,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 }
 
 .orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline::before {
-  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, #c4ff00);
+  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, #94ff1d);
   background: transparent;
   animation: none;
   box-shadow: none;

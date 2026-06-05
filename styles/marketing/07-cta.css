@@ -15,7 +15,7 @@
   padding-bottom: 0;
   padding-left: var(--orby-home-padding-x);
   overflow: hidden;
-  background: var(--brand-primary, #c4ff00);
+  background: var(--brand-primary, #94ff1d);
   border-radius: var(--orby-marketing-section-radius);
   --brand-text: var(--orby-marketing-on-lime-ink);
   color: var(--brand-text);
@@ -265,11 +265,11 @@
 
 .orby-marketing__footer-brand:hover,
 .orby-marketing__footer-brand:focus-visible {
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
 }
 
 .orby-marketing__footer-brand:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
   outline-offset: 4px;
   border-radius: 2px;
 }
@@ -343,11 +343,11 @@
 
 .orby-marketing__footer-social-link:hover,
 .orby-marketing__footer-social-link:focus-visible {
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
 }
 
 .orby-marketing__footer-social-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
   outline-offset: 4px;
   border-radius: 4px;
 }

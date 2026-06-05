@@ -161,7 +161,7 @@ html.mobile-landing .orby-marketing-scroll-nav__menu-toggle {
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: var(--brand-primary, #c4ff00);
+  color: var(--brand-primary, #94ff1d);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transform: translateY(-50%);
@@ -197,6 +197,6 @@ html.mobile-landing
 }
 
 html.mobile-landing .orby-marketing-scroll-nav__menu-toggle:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
   outline-offset: 3px;
 }

@@ -75,7 +75,7 @@
   --legal-muted: rgba(255, 255, 255, 0.62);
   --legal-faint: rgba(255, 255, 255, 0.38);
   --legal-accent: var(--orby-lime);
-  --legal-accent-hover: #d4ff44;
+  --legal-accent-hover: color-mix(in srgb, var(--orby-lime) 72%, white);
   /* ~832px at 16px root — comfortable measure for legal copy */
   --legal-max: 52rem;
   --legal-font: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
@@ -216,8 +216,7 @@ html.orby-legal-site-nav .legal-wrap {
 
 .legal-doc a {
   color: var(--legal-accent);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  text-decoration: none;
 }
 
 .legal-doc a:hover {
@@ -365,7 +364,6 @@ body.legal-doc--credits {
 
 .legal-credits-toc a:hover {
   color: var(--legal-accent);
-  text-decoration: underline;
 }
 
 .legal-credits-section {
@@ -432,7 +430,7 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 }
 
 .legal-credits-card:hover {
-  border-color: rgba(196, 255, 0, 0.22);
+  border-color: color-mix(in srgb, var(--orby-lime) 22%, transparent);
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -450,7 +448,6 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 
 .legal-credits-card__name a:hover {
   color: var(--legal-accent-hover);
-  text-decoration: underline;
 }
 
 .legal-credits-card__name-inline {
@@ -487,8 +484,8 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 
 .legal-credits-card__tag--cc0 {
   color: var(--legal-accent);
-  border-color: rgba(196, 255, 0, 0.35);
-  background: rgba(196, 255, 0, 0.08);
+  border-color: color-mix(in srgb, var(--orby-lime) 35%, transparent);
+  background: color-mix(in srgb, var(--orby-lime) 8%, transparent);
 }
 
 .legal-credits-asset__license {
@@ -657,8 +654,8 @@ body.legal-doc--credits .legal-credits-asset__meta a {
 }
 
 .legal-callout--lime {
-  background: rgba(196, 255, 0, 0.06);
-  border-color: rgba(196, 255, 0, 0.2);
+  background: color-mix(in srgb, var(--orby-lime) 6%, transparent);
+  border-color: color-mix(in srgb, var(--orby-lime) 20%, transparent);
   border-left-color: var(--legal-accent);
 }
 
@@ -697,7 +694,7 @@ body.legal-doc--about .legal-about a:not(.orby-magic-btn) {
 
 body.legal-doc--about .legal-about a:not(.orby-magic-btn):hover {
   color: var(--legal-accent);
-  text-decoration-color: rgba(196, 255, 0, 0.55);
+  text-decoration-color: color-mix(in srgb, var(--orby-lime) 55%, transparent);
 }
 
 body.legal-doc--about .legal-foot a:hover {
@@ -880,7 +877,7 @@ body.legal-doc a.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
   margin: 0;
   min-height: 1.25rem;
   font-size: 0.82rem;
-  color: #ff6b6b;
+  color: var(--orby-pink);
 }
 
 .orby-entry-gate__submit {
@@ -1034,7 +1031,8 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
 }
 
 @media (max-width: 519px) {
-  .legal-brand-logo-grid--pairs {
+  .legal-brand-logo-grid--pairs,
+  .legal-brand-logo-grid--combinations {
     grid-template-columns: 1fr;
   }
 }
@@ -1089,7 +1087,122 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
   background: #fff;
 }
 
-.legal-brand-logo-card__stage img {
+.legal-brand-logo-card--purple .legal-brand-logo-card__stage {
+  background: var(--orby-purple);
+}
+
+.legal-brand-logo-card--pink .legal-brand-logo-card__stage {
+  background: var(--orby-pink);
+}
+
+.legal-brand-logo-card--purple-bright .legal-brand-logo-card__stage {
+  background: var(--orby-purple-bright);
+}
+
+.legal-brand-logo-card--surface-muted .legal-brand-logo-card__stage {
+  background: #202020;
+}
+
+.legal-brand-logo-grid--combinations {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.legal-brand-logo-grid--combinations .legal-brand-logo-card__stage {
+  min-height: 9rem;
+  padding: 1.25rem 1rem;
+}
+
+.legal-brand-logo-grid--combinations .legal-brand-logo-card__frame--logotype {
+  --legal-brand-mark-width: min(8.5rem, 100%);
+  padding: 0;
+}
+
+/* Mask silhouette (no embedded styles) — exact brand fills via background-color */
+.legal-brand-logo-card__mark--fill {
+  display: block;
+  flex: 0 0 auto;
+  width: 8.5rem;
+  max-width: 100%;
+  aspect-ratio: 1676.82 / 694.27;
+  background-color: var(--legal-brand-mark-fill, var(--orby-lime));
+  -webkit-mask: url('../assets/images/orby-logotype-mask.svg') center / contain no-repeat;
+  mask: url('../assets/images/orby-logotype-mask.svg') center / contain no-repeat;
+}
+
+.legal-brand-logo-card__mark--fill.legal-brand-logo-card__mark--lime {
+  --legal-brand-mark-fill: var(--orby-lime);
+}
+
+.legal-brand-logo-card__mark--fill.legal-brand-logo-card__mark--purple {
+  --legal-brand-mark-fill: var(--orby-purple);
+}
+
+.legal-brand-logo-card__mark--fill.legal-brand-logo-card__mark--purple-bright {
+  --legal-brand-mark-fill: var(--orby-purple-bright);
+}
+
+.legal-brand-logo-card__mark--fill.legal-brand-logo-card__mark--pink {
+  --legal-brand-mark-fill: var(--orby-pink);
+}
+
+.legal-brand-logo-card__mark--fill.legal-brand-logo-card__mark--black {
+  --legal-brand-mark-fill: var(--orby-black);
+}
+
+.legal-brand-logo-card__mark--fill.legal-brand-logo-card__mark--white {
+  --legal-brand-mark-fill: #fff;
+}
+
+.legal-brand-logo-grid--combinations-renders {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.legal-brand-logo-card--render .legal-brand-logo-card__stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.legal-brand-logo-card--render .legal-brand-logo-card__stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.legal-brand-logo-card__render {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+}
+
+.legal-brand-logo-card__mark--overlay {
+  position: relative;
+  z-index: 2;
+  width: 66%;
+  max-width: none;
+}
+
+@media (max-width: 719px) {
+  .legal-brand-logo-grid--combinations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .legal-brand-logo-grid--combinations-renders {
+    grid-template-columns: 1fr;
+  }
+}
+
+.legal-brand-logo-card__stage img:not(.legal-brand-logo-card__render) {
   display: block;
   width: var(--legal-brand-mark-width);
   max-width: 100%;
