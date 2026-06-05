@@ -54,7 +54,7 @@ html.mobile-landing #orby-marketing {
   --orby-intro-headline-min: clamp(1.85rem, 9vw, 2.65rem);
   --orby-intro-headline-max: clamp(2.1rem, 10.5vw, 3rem);
   --orby-intro-headline-vw: 9.5;
-  --orby-marketing-png-marquee-max-h: clamp(45px, 9.5vw, 69px);
+  --orby-marketing-png-marquee-max-h: 40svh;
   --orby-marketing-png-marquee-gap: clamp(1.875rem, 10vw, 3.125rem);
 }
 
@@ -567,10 +567,13 @@ html.mobile-landing .orby-marketing__faq-answer {
 /* ── Perfect transparency PNG marquee (~50% smaller, +25% gap) ── */
 
 html.mobile-landing .orby-marketing__png-marquee {
+  /* Must override .orby-marketing__png-marquee { --orby-marketing-png-marquee-max-h: 550px… } */
+  --orby-marketing-png-marquee-max-h: 40svh;
   --orby-marketing-png-marquee-gap: clamp(1.875rem, 10vw, 3.125rem);
 }
 
 html.mobile-landing .orby-marketing__png-marquee-img {
+  width: auto;
   height: var(--orby-marketing-png-marquee-max-h);
   max-height: var(--orby-marketing-png-marquee-max-h);
 }
