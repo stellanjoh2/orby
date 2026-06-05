@@ -65,8 +65,7 @@
       "SVG"
     ],
     "underConstructionLabel": "under construction",
-    "keyboardShortcuts": "V — Hide UI · F — Focus camera · Q/W/E/R — Select / move / rotate / scale · 1/2/3/4 — Display modes",
-    "mobileWarning": "This app is not optimized for mobile devices. Please use a desktop browser for the best experience."
+    "keyboardShortcuts": "V — Hide UI · F — Focus camera · Q/W/E/R — Select / move / rotate / scale · 1/2/3/4 — Display modes"
   },
   "scrollCue": {
     "ariaLabel": "Scroll to learn about Orby"

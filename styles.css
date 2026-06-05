@@ -7222,36 +7222,6 @@ body.ui-hidden .shelf {
   background: #ff9632;
 }
 
-/* Landing notice (legacy — hidden on mobile landing; see orby-mobile-landing-shell.css) */
-#mobileWarning {
-  display: none;
-}
-
-/* Mobile Warning (desktop-centered modal fallback; normally hidden via #mobileWarning) */
-.mobile-warning {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10000;
-  background: rgba(10, 10, 10, 0.85);
-  border: 1px solid var(--stroke);
-  border-radius: 8px;
-  padding: 1.5rem 2rem;
-  max-width: 90%;
-  width: 400px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(22px);
-}
-
-.mobile-warning p {
-  margin: 0;
-  color: var(--text);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
 /* Object panel — Generate from Font (live editor = canvas + transparent textarea) */
 .font-extrude-live-editor {
   position: relative;

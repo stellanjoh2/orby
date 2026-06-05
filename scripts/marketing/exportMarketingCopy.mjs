@@ -114,11 +114,6 @@ async function readHeroDropzone(indexHtml) {
     indexHtml.match(/id="browseButton"[\s\S]*?orby-magic-btn__label">([^<]+)</)?.[1]?.trim() ??
     'Browse';
 
-  const mobileBlock = indexHtml.match(
-    /<div class="mobile-warning"[^>]*>[\s\S]*?<p>([\s\S]*?)<\/p>/,
-  );
-  const mobileWarning = mobileBlock ? stripHtml(mobileBlock[1]) : '';
-
   const secondaryBlock = indexHtml.match(/<p class="drop-secondary">([\s\S]*?)<\/p>/);
   const secondaryHtml = secondaryBlock?.[1] ?? '';
   let secondaryPlain = secondaryHtml.replace(/<span class="drop-shortcuts-row">[\s\S]*/i, '');
@@ -154,7 +149,6 @@ async function readHeroDropzone(indexHtml) {
     highlightedTermsInSecondary: ['glTF', 'GLB', 'SVG'],
     underConstructionLabel: 'under construction',
     keyboardShortcuts,
-    mobileWarning,
   };
 }
 

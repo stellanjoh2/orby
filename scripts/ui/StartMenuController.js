@@ -148,7 +148,6 @@ export class StartMenuController {
     this.infoAnimationInstance = null;
 
     /** Mobile splash — avoid double fire from animation + timeout */
-    this._mobileSplashMessageDone = false;
     this._desktopDropzoneTextRevealed = false;
     /** First visit: defer dropzone fade-in until fonts settle + idle so Lottie/GSAP/main chunk can warm up */
     this._dropzoneShellReady = false;
@@ -226,7 +225,6 @@ export class StartMenuController {
     this.loadMeshButton = this.ui.buttons?.loadMesh;
     this.logotypeAnimation = document.querySelector('#logotypeAnimation');
     this.infoLogotypeAnimation = document.querySelector('#infoLogotypeAnimation');
-    this.mobileWarning = document.querySelector('#mobileWarning');
     this.dropPrimary = document.querySelector('.drop-primary');
     this.dropSecondary = document.querySelector('.drop-secondary');
     this.dropzoneHeroCredit = document.querySelector('.dropzone-hero-credit');
@@ -611,30 +609,7 @@ export class StartMenuController {
     document.documentElement.classList.toggle('orby-dropzone-viewport-clipped', clip);
   }
 
-  /** After `.drop-logo` CSS `logotypeReveal` completes (fallback timeout ~750ms). */
-  scheduleMobileSplashAfterLogoReveal() {
-    if (!document.documentElement.classList.contains('mobile-landing')) return;
-
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      window.clearTimeout(fallbackTimer);
-      this.logotypeAnimation.removeEventListener('animationend', onEnd);
-      this.revealMobileSplashMessage();
-    };
-
-    const onEnd = (event) => {
-      if (event.target !== this.logotypeAnimation) return;
-      if (!String(event.animationName || '').includes('logotypeReveal')) return;
-      finish();
-    };
-
-    this.logotypeAnimation.addEventListener('animationend', onEnd);
-    const fallbackTimer = window.setTimeout(finish, 750);
-  }
-
-  /** Desktop start menu — same cue as mobile: after logo `logotypeReveal` ends. */
+  /** Desktop start menu — after logo `logotypeReveal` ends. */
   scheduleDesktopDropzoneTextAfterLogo() {
     if (document.documentElement.classList.contains('mobile-landing')) return;
 
@@ -845,65 +820,10 @@ export class StartMenuController {
   }
 
   /**
-   * Mobile splash message: waits for logo timing from schedule/reveal callers.
-   * Stagger-in words with GSAP after wrapping copy in spans.
-   */
-  revealMobileSplashMessage() {
-    if (!document.documentElement.classList.contains('mobile-landing')) return;
-    if (this._mobileSplashMessageDone || !this.mobileWarning) return;
-    this._mobileSplashMessageDone = true;
-
-    const p = this.mobileWarning.querySelector('p');
-    gsap.killTweensOf(this.mobileWarning);
-
-    if (!p) {
-      gsap.set(this.mobileWarning, {
-        visibility: 'visible',
-        opacity: 1,
-        pointerEvents: 'auto',
-      });
-      this.mobileWarning.setAttribute('aria-hidden', 'false');
-      return;
-    }
-
-    wrapWordsForStagger(p);
-    const words = [...p.querySelectorAll(`.${STAGGER_CLASS}`)];
-    const reduced = prefersReducedMotion();
-
-    if (words.length) gsap.killTweensOf(words);
-
-    this.mobileWarning.setAttribute('aria-hidden', 'false');
-    gsap.set(this.mobileWarning, {
-      visibility: 'visible',
-      opacity: 1,
-      pointerEvents: 'auto',
-    });
-
-    if (reduced) {
-      gsap.set(p, { opacity: 1 });
-      if (words.length) gsap.set(words, { opacity: 1, y: 0 });
-      return;
-    }
-
-    const targets = words.length ? words : [p];
-    gsap.fromTo(
-      targets,
-      { opacity: 0, y: 14 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.28 * TEXT_REVEAL_PACE,
-        stagger: 0.022 * TEXT_REVEAL_PACE,
-        ease: 'power2.out',
-        overwrite: true,
-      },
-    );
-  }
-
-  /**
    * Initialize Lottie animation for logotype
    */
   initLogotypeAnimation() {
+    if (document.documentElement.classList.contains('mobile-landing')) return;
     if (!this.logotypeAnimation) {
       console.warn('Animation container not found');
       return;
@@ -933,8 +853,6 @@ export class StartMenuController {
         if (this.animationInstance) {
           this.animationInstance.addEventListener('DOMLoaded', () => {
             window.clearTimeout(shellRevealWatchdog);
-            const isMobileSplash =
-              document.documentElement.classList.contains('mobile-landing');
             styleLogotypeMedia(this.logotypeAnimation);
             if (!shouldPlayLogotypeLottie()) {
               freezeLogotypeLottie(this.animationInstance);
@@ -948,14 +866,8 @@ export class StartMenuController {
                   this.logotypeAnimation.style.transform = 'scale(0.85)';
                   this.logotypeAnimation.offsetHeight;
                   this.logotypeAnimation.classList.add('reveal');
-                  if (isMobileSplash) {
-                    this.scheduleMobileSplashAfterLogoReveal();
-                  } else {
-                    this.scheduleDesktopDropzoneTextAfterLogo();
-                  }
+                  this.scheduleDesktopDropzoneTextAfterLogo();
                 });
-              } else if (isMobileSplash) {
-                requestAnimationFrame(() => this.revealMobileSplashMessage());
               } else {
                 requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
               }
@@ -970,15 +882,7 @@ export class StartMenuController {
         window.clearTimeout(shellRevealWatchdog);
         console.error('Failed to load logotype animation:', error);
         void this.ensureDropzoneShellReady({ fast: true }).then(() => {
-          if (
-            document.documentElement.classList.contains('mobile-landing')
-          ) {
-            requestAnimationFrame(() => this.revealMobileSplashMessage());
-          } else {
-            requestAnimationFrame(() =>
-              this.revealDesktopDropzoneIntroText(),
-            );
-          }
+          requestAnimationFrame(() => this.revealDesktopDropzoneIntroText());
         });
       }
     };
