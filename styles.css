@@ -7266,9 +7266,7 @@ html.mobile-landing body {
 html.mobile-landing #app {
   background-color: var(--orby-app-bg) !important;
   background: var(--orby-app-bg) !important;
-  min-height: 100vh !important;
-  min-height: 100dvh !important;
-  min-height: -webkit-fill-available !important;
+  min-height: 100svh !important;
   height: auto !important;
 }
 
