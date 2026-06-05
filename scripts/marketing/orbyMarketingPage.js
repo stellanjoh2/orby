@@ -17,6 +17,7 @@ import {
   unbindMarketingCopyEmail,
 } from './orbyMarketingCopyEmail.js';
 import { buildMarketingMarkup } from './orbyMarketingTemplates.js';
+import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
 /** Mega sections (intro + CTA) — fire when the block is actually on screen */
@@ -43,6 +44,12 @@ async function loadSections() {
   const mod = await import('./orbyMarketingContent.js');
   sectionsCache = mod.MARKETING_SECTIONS;
   return sectionsCache;
+}
+
+/** Mobile landing hides roadmap in CSS — omit markup and reveal work entirely. */
+function sectionsForMarkup(sections) {
+  if (!isMobileLanding()) return sections;
+  return sections.filter((section) => section.type !== 'roadmap');
 }
 
 /** @returns {Promise<void>} */
@@ -283,9 +290,11 @@ export function initOrbyMarketingPage(options = {}) {
       releaseDeferredEnhancements();
 
       try {
-        const introTurntable = await import('./orbyMarketingIntroTurntable.js');
-        teardownIntroTurntable = introTurntable.initIntroTurntable(root);
-        introTurntable.refreshIntroTurntableScrollTriggers();
+        if (!isMobileLanding()) {
+          const introTurntable = await import('./orbyMarketingIntroTurntable.js');
+          teardownIntroTurntable = introTurntable.initIntroTurntable(root);
+          introTurntable.refreshIntroTurntableScrollTriggers();
+        }
       } catch (err) {
         console.error('[orby-marketing] intro turntable failed to init', err);
       }
@@ -442,6 +451,7 @@ export function initOrbyMarketingPage(options = {}) {
 
   async function mount() {
     if (destroyed || root) return;
+    await ensureSiteNavStyles();
     await ensureStylesheet();
     await import('./marketingMotion.js');
     const [sections, reveals] = await Promise.all([
@@ -456,7 +466,7 @@ export function initOrbyMarketingPage(options = {}) {
     root.id = MARKETING_ROOT_ID;
     root.setAttribute('role', 'region');
     root.setAttribute('aria-label', 'About Orby');
-    root.innerHTML = buildMarketingMarkup(sections);
+    root.innerHTML = buildMarketingMarkup(sectionsForMarkup(sections));
     app.appendChild(root);
     bindMarketingInteractions(root);
     bindMarketingCopyEmail(root);

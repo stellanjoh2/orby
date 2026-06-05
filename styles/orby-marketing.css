@@ -18,5 +18,4 @@
 /* 09-scroll-cue — loaded in index.html <head> before dropzone scroll */
 @import url('./marketing/10-in-progress.css');
 @import url('./marketing/15-mobile.css');
-/* Nav deps load in index.html <head> before lazy marketing CSS — do not re-import here. */
-@import url('./orby-site-nav.css');
+/* Site nav CSS loads via ensureSiteNavStyles() before orby-marketing.css — not bundled here. */

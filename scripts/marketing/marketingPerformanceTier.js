@@ -2,6 +2,7 @@
  * Homepage / marketing capability tier — gates motion, decode, and GPU work
  * without changing layout.
  */
+import { isMobileLanding } from '../orbyMobileLanding.js';
 import { prefersReducedMotion } from '../ui/modalReveal.js';
 
 /** @typedef {'full' | 'reduced'} MarketingPerformanceTier */
@@ -15,6 +16,10 @@ let tierCache = null;
 export function getMarketingPerformanceTier() {
   if (tierCache) return tierCache;
   if (prefersReducedMotion()) {
+    tierCache = 'reduced';
+    return tierCache;
+  }
+  if (typeof document !== 'undefined' && isMobileLanding()) {
     tierCache = 'reduced';
     return tierCache;
   }
