@@ -1,42 +1,11 @@
 /**
- * Mobile landing — scoped to html.mobile-landing only (iPhone / ?orbyMobile=1).
- * Do not use bare max-width queries here; desktop/tablet layouts stay unchanged.
+ * Mobile landing — marketing layout only (html.mobile-landing).
+ * App shell + scroll viewport: styles/orby-mobile-landing-shell.css (via styles.css).
  */
 
 html.mobile-landing {
-  /* Instrument-like side gutters (~20–24px on phone) */
-  --orby-home-padding-x: clamp(1.25rem, 5vw, 1.5rem);
   --orby-marketing-edge-inset: var(--orby-home-padding-x);
-  --orby-scroll-nav-edge-x: var(--orby-home-padding-x);
-  --orby-footer-edge-x: var(--orby-home-padding-x);
   --orby-marketing-nav-offset: calc(var(--orby-scroll-nav-height, 64px) + env(safe-area-inset-top, 0px));
-  height: auto !important;
-  min-height: 100svh;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-html.mobile-landing body {
-  height: auto !important;
-  min-height: 100svh;
-  overflow: visible;
-  overflow-anchor: none;
-}
-
-html.mobile-landing #app {
-  min-height: 100svh !important;
-  height: auto !important;
-}
-
-/* Kill desktop home-scroll dvh chain — it reflows when mobile browser chrome shows/hides */
-html.mobile-landing.orby-home-scroll #app {
-  min-height: 100svh !important;
-  height: auto !important;
-}
-
-html.mobile-landing.orby-home-scroll .workspace {
-  min-height: 0 !important;
-  height: auto !important;
 }
 
 html.mobile-landing .orby-marketing__section--intro.orby-marketing__section--intro-turntable,

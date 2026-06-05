@@ -24,6 +24,7 @@
 @import url('./styles/orby-brand-tokens.css');
 @import url('./styles/orby-home-padding-x.css');
 @import url('./styles/orby-ultra-wide-home.css');
+@import url('./styles/orby-mobile-landing-shell.css');
 
 @font-face {
   font-family: 'Mattone Regular';
@@ -3173,11 +3174,6 @@ html:not(.orby-home-scroll) .dropzone-hero-credits {
   .dropzone-hero-credit {
     font-size: 12px;
   }
-}
-
-html.mobile-landing .dropzone-hero-deco,
-html.mobile-landing .dropzone-hero-credits {
-  display: none;
 }
 
 /*
@@ -7226,7 +7222,7 @@ body.ui-hidden .shelf {
   background: #ff9632;
 }
 
-/* Landing notice (shown only inside mobile splash layout — see html.mobile-landing rules) */
+/* Landing notice (legacy — hidden on mobile landing; see orby-mobile-landing-shell.css) */
 #mobileWarning {
   display: none;
 }
@@ -7254,73 +7250,6 @@ body.ui-hidden .shelf {
   color: var(--text);
   font-size: 0.9rem;
   line-height: 1.5;
-}
-
-/* ── Mobile landing (html.mobile-landing from orbyMobileLandingBoot.js + scripts/main.js) ── */
-html.mobile-landing,
-html.mobile-landing body {
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
-}
-
-html.mobile-landing #app {
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
-  min-height: 100svh !important;
-  height: auto !important;
-}
-
-html.mobile-landing .workspace {
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
-  flex: none !important;
-  min-height: 0 !important;
-  height: auto !important;
-}
-
-html.mobile-landing .viewport {
-  clip-path: none !important;
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
-  flex: none !important;
-  width: 100% !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
-  position: relative !important;
-}
-
-html.mobile-landing #webgl {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none;
-  background: var(--orby-app-bg) !important;
-  background-color: var(--orby-app-bg) !important;
-}
-
-html.mobile-landing .dropzone {
-  display: none !important;
-}
-
-html.mobile-landing #mobileWarning,
-html.mobile-landing .drop-logo,
-html.mobile-landing .drop-primary,
-html.mobile-landing .dropzone-actions,
-html.mobile-landing .drop-secondary {
-  display: none !important;
-}
-
-html.mobile-landing .viewport-fullscreen-btn,
-html.mobile-landing .viewport-load-spinner {
-  display: none !important;
-}
-
-html.mobile-landing #shelf {
-  display: none !important;
-}
-
-html.mobile-landing .demo-logotype {
-  display: none !important;
 }
 
 /* Object panel — Generate from Font (live editor = canvas + transparent textarea) */

@@ -208,6 +208,13 @@ if (existsSync(join(__dirname, 'styles', 'orby-brand-tokens.css'))) {
     join(distDir, 'styles', 'orby-brand-tokens.css'),
   );
 }
+if (existsSync(join(__dirname, 'styles', 'orby-mobile-landing-shell.css'))) {
+  mkdirSync(join(distDir, 'styles'), { recursive: true });
+  cpSync(
+    join(__dirname, 'styles', 'orby-mobile-landing-shell.css'),
+    join(distDir, 'styles', 'orby-mobile-landing-shell.css'),
+  );
+}
 if (existsSync(join(__dirname, 'styles', 'orby-marketing.css'))) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   const { bytes: marketingCssBytes } = await bundleMarketingCss({

@@ -1,0 +1,101 @@
+/**
+ * Mobile landing app shell — html.mobile-landing from orbyMobileLandingBoot.js.
+ * Scroll viewport (svh), hide studio chrome. Loaded via styles.css @import (first paint).
+ * Marketing typography/layout: styles/marketing/15-mobile.css.
+ */
+
+html.mobile-landing {
+  --orby-home-padding-x: clamp(1.25rem, 5vw, 1.5rem);
+  --orby-scroll-nav-edge-x: var(--orby-home-padding-x);
+  --orby-footer-edge-x: var(--orby-home-padding-x);
+  height: auto !important;
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+html.mobile-landing,
+html.mobile-landing body {
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
+}
+
+html.mobile-landing body {
+  height: auto !important;
+  min-height: 100svh;
+  overflow: visible;
+  overflow-anchor: none;
+}
+
+html.mobile-landing #app {
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
+  min-height: 100svh !important;
+  height: auto !important;
+}
+
+/* Kill desktop home-scroll dvh chain — it reflows when mobile browser chrome shows/hides */
+html.mobile-landing.orby-home-scroll #app {
+  min-height: 100svh !important;
+  height: auto !important;
+}
+
+html.mobile-landing.orby-home-scroll .workspace {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+html.mobile-landing .workspace {
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
+  flex: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+html.mobile-landing .viewport {
+  clip-path: none !important;
+  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-app-bg) !important;
+  flex: none !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  position: relative !important;
+}
+
+html.mobile-landing #webgl {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none;
+  background: var(--orby-app-bg) !important;
+  background-color: var(--orby-app-bg) !important;
+}
+
+html.mobile-landing .dropzone,
+html.mobile-landing .dropzone-hero-deco,
+html.mobile-landing .dropzone-hero-credits {
+  display: none !important;
+}
+
+html.mobile-landing #mobileWarning,
+html.mobile-landing .drop-logo,
+html.mobile-landing .drop-primary,
+html.mobile-landing .dropzone-actions,
+html.mobile-landing .drop-secondary {
+  display: none !important;
+}
+
+html.mobile-landing .viewport-fullscreen-btn,
+html.mobile-landing .viewport-load-spinner {
+  display: none !important;
+}
+
+html.mobile-landing #shelf {
+  display: none !important;
+}
+
+html.mobile-landing .demo-logotype {
+  display: none !important;
+}
