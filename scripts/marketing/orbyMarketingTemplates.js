@@ -674,7 +674,7 @@ function renderMarketingSiteNavHtml(fields, options) {
       ${menuToggle}
       <div class="orby-marketing-scroll-nav__cta">${browseCta}</div>
     </div>
-    <div class="orby-marketing-scroll-nav__menu" id="orby-site-nav-menu" data-orby-marketing-nav-menu hidden>
+    <div class="orby-marketing-scroll-nav__menu" id="orby-site-nav-menu" data-orby-marketing-nav-menu aria-hidden="true">
       <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--overlay">${links.join('')}</div>
     </div>
   </nav>`;

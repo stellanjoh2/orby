@@ -313,11 +313,13 @@ export function initOrbyMarketingPage(options = {}) {
         console.error('[orby-marketing] PNG marquee performance hooks failed', err);
       }
 
-      try {
-        const inProgressCurtain = await import('./orbyMarketingInProgressCurtain.js');
-        teardownInProgressCurtain = inProgressCurtain.initInProgressCurtainReveal(root);
-      } catch (err) {
-        console.error('[orby-marketing] In Progress curtain reveal failed to init', err);
+      if (!isMobileLanding()) {
+        try {
+          const inProgressCurtain = await import('./orbyMarketingInProgressCurtain.js');
+          teardownInProgressCurtain = inProgressCurtain.initInProgressCurtainReveal(root);
+        } catch (err) {
+          console.error('[orby-marketing] In Progress curtain reveal failed to init', err);
+        }
       }
     })().finally(() => {
       deferredEnhancementsPromise = null;
@@ -453,8 +455,8 @@ export function initOrbyMarketingPage(options = {}) {
     if (destroyed || root) return;
     await ensureSiteNavStyles();
     await ensureStylesheet();
-    await import('./marketingMotion.js');
-    const [sections, reveals] = await Promise.all([
+    const [, sections, reveals] = await Promise.all([
+      import('./marketingMotion.js'),
       loadSections(),
       import('./orbyMarketingReveals.js'),
     ]);
@@ -580,9 +582,11 @@ export function initOrbyMarketingPage(options = {}) {
       destroyed = true;
       unbindMarketingCopyEmail();
       teardownMobileDesktopOnlyModal?.();
-      void import('./orbyMarketingIntroTurntable.js').then((mod) => {
-        mod.clearIntroTurntablePreload();
-      });
+      if (!isMobileLanding()) {
+        void import('./orbyMarketingIntroTurntable.js').then((mod) => {
+          mod.clearIntroTurntablePreload();
+        });
+      }
       releaseEnhancements();
       if (root) {
         void import('./orbyMarketingVideo.js').then((mod) => mod.teardownMarketingVideos(root));

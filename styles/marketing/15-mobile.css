@@ -190,11 +190,94 @@ html.mobile-landing .orby-marketing-scroll-nav__menu {
   background: color-mix(in srgb, var(--orby-marketing-panel-bg, #151515) 96%, transparent);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  will-change: transform;
+  transform: translate3d(100%, 0, 0);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.38s;
 }
 
-html.mobile-landing .orby-marketing-scroll-nav__menu[hidden] {
-  display: none !important;
+html.mobile-landing .orby-marketing-scroll-nav--menu-open .orby-marketing-scroll-nav__menu {
+  transform: translate3d(0, 0, 0);
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__link,
+html.mobile-landing
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__contact {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__links--overlay
+  > :nth-child(1) {
+  transition-delay: 0.14s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__links--overlay
+  > :nth-child(2) {
+  transition-delay: 0.21s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__links--overlay
+  > :nth-child(3) {
+  transition-delay: 0.28s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__links--overlay
+  > :nth-child(4) {
+  transition-delay: 0.35s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__links--overlay
+  > :nth-child(5) {
+  transition-delay: 0.42s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__links--overlay
+  > :nth-child(6) {
+  transition-delay: 0.49s;
+}
+
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__link,
+html.mobile-landing
+  .orby-marketing-scroll-nav--menu-open
+  .orby-marketing-scroll-nav__menu
+  .orby-marketing-scroll-nav__contact {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
 }
 
 html.mobile-landing .orby-marketing-scroll-nav__links--inline {
@@ -228,6 +311,41 @@ html.mobile-landing.orby-nav-menu-open {
 
 html.mobile-landing.orby-nav-menu-open body {
   overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.mobile-landing .orby-marketing-scroll-nav__menu,
+  html.mobile-landing
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__link,
+  html.mobile-landing
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__contact {
+    transition: none !important;
+  }
+
+  html.mobile-landing .orby-marketing-scroll-nav__menu {
+    transform: none;
+  }
+
+  html.mobile-landing
+    .orby-marketing-scroll-nav:not(.orby-marketing-scroll-nav--menu-open)
+    .orby-marketing-scroll-nav__menu {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  html.mobile-landing
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__link,
+  html.mobile-landing
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__contact {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Desktop/tablet nav keeps inline links in the bar */
@@ -719,6 +837,18 @@ html.mobile-landing .orby-marketing__footer-meta-sep {
 html.mobile-landing .orby-marketing__in-progress-panel,
 html.mobile-landing .orby-marketing__section--in-progress {
   min-height: 100svh;
+}
+
+/* No scroll-sync curtain on mobile — section and footer stay interactive. */
+html.mobile-landing .orby-marketing__in-progress-reveal,
+html.mobile-landing .orby-marketing__section--in-progress {
+  pointer-events: auto;
+}
+
+html.mobile-landing
+  .orby-marketing__in-progress-reveal:not(.is-revealed)
+  .orby-marketing__footer-bar--on-white {
+  pointer-events: auto;
 }
 
 html.mobile-landing
