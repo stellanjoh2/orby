@@ -556,6 +556,8 @@ export class ImageExporter {
           blurdelta: 64,
           linefilter: false,
           roundcoords: 2,
+          // Fill-only paths: ImageTracer's default stroke-width 1 reads as bold outlines at edges.
+          strokewidth: 0,
         },
         preserveHighlights: false,
       };
@@ -575,6 +577,7 @@ export class ImageExporter {
           linefilter: false,
           // -1: full float path coords; fewer integer-rounding steps → fewer vector microgaps
           roundcoords: -1,
+          strokewidth: 0,
         },
         preserveHighlights: true,
       };
@@ -593,6 +596,7 @@ export class ImageExporter {
         blurdelta: 20,
         linefilter: false,
         roundcoords: -1,
+        strokewidth: 0,
       },
       preserveHighlights: true,
     };
@@ -612,11 +616,16 @@ export class ImageExporter {
 
     const state = this._saveState();
     const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
+    const originalFxaaEnabled = this.postPipeline?.fxaaPass?.enabled;
     const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
     try {
       // Disable bloom for vector capture to avoid large glow fields in traced SVG
       if (this.postPipeline?.bloomPass) {
         this.postPipeline.bloomPass.enabled = false;
+      }
+      // FXAA softens edges into semi-transparent fringe pixels that trace as light halos / jagged slivers.
+      if (this.postPipeline?.fxaaPass) {
+        this.postPipeline.fxaaPass.enabled = false;
       }
       if (this.postPipeline?.renderPass) {
         this.postPipeline.renderPass.clearAlpha = 0;
@@ -638,9 +647,11 @@ export class ImageExporter {
       const svg = await this._vectorizeWithOptions(dataUrl, options, {
         preserveHighlights,
         alphaMask: true,
-        rasterSeamHealIterations: 3,
-        hairlineSeamStroke: true,
+        rasterSeamHealIterations: 1,
+        stripPathStrokes: true,
+        singleSeamFringePass: true,
         colorSafetyNet: true,
+        colorSafetyNetDetail: detail,
       });
       if (!svg) {
         throw new Error('Vectorization failed (ImageTracer unavailable or mask load error)');
@@ -649,6 +660,9 @@ export class ImageExporter {
     } finally {
       if (this.postPipeline?.bloomPass && originalBloomEnabled !== undefined) {
         this.postPipeline.bloomPass.enabled = originalBloomEnabled;
+      }
+      if (this.postPipeline?.fxaaPass && originalFxaaEnabled !== undefined) {
+        this.postPipeline.fxaaPass.enabled = originalFxaaEnabled;
       }
       if (this.postPipeline?.renderPass) {
         this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
@@ -1488,12 +1502,15 @@ export class ImageExporter {
                 neighborLumMax: 215,
                 minVotes: 2,
               });
-              // Second pass: slightly looser (more mid tones as anchors) for stubborn microgaps
-              this._healLuminanceSeamFringe(imageData, bgKey, {
-                centerLumMin: 218,
-                neighborLumMax: 232,
-                minVotes: 3,
-              });
+              // Second pass: slightly looser (more mid tones as anchors) for stubborn microgaps.
+              // Skipped for color SVG — it often paints a bright fringe band at silhouettes.
+              if (!processing.singleSeamFringePass) {
+                this._healLuminanceSeamFringe(imageData, bgKey, {
+                  centerLumMin: 218,
+                  neighborLumMax: 232,
+                  minVotes: 3,
+                });
+              }
             }
             const seamIt = Number(processing.rasterSeamHealIterations) || 0;
             if (seamIt > 0 && !processing.silhouetteBinary) {
@@ -1519,6 +1536,9 @@ export class ImageExporter {
             if (processing.hairlineSeamStroke && processing.alphaMask && !processing.silhouetteBinary) {
               svgstr = this._addHairlineSeamStrokesToSvg(svgstr);
             }
+            if (processing.stripPathStrokes) {
+              svgstr = this._stripSvgPathStrokes(svgstr);
+            }
             if (
               svgstr
               && processing.colorSafetyNet
@@ -1526,7 +1546,9 @@ export class ImageExporter {
               && !processing.silhouetteBinary
               && !processing.silhouetteBinaryLuma
             ) {
-              svgstr = this._prependColorSafetyNetLayer(svgstr, imageData, bgKey);
+              svgstr = this._prependColorSafetyNetLayer(svgstr, imageData, bgKey, {
+                detail: processing.colorSafetyNetDetail,
+              });
             }
           }
           if (svgstr && processing.removeWhiteBackground) {
@@ -1819,41 +1841,148 @@ export class ImageExporter {
     }
   }
 
-  _meanForegroundRgb(imageData, keyRgb) {
+  _foregroundBoundingBox(imageData, keyRgb) {
     const [kr, kg, kb] = keyRgb;
-    const d = imageData.data;
-    let s = 0;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) continue;
-      r += d[i];
-      g += d[i + 1];
-      b += d[i + 2];
-      s += 1;
+    const { data, width, height } = imageData;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (y * width + x) * 4;
+        if (data[i] === kr && data[i + 1] === kg && data[i + 2] === kb) continue;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
     }
-    if (s < 1) return null;
-    return {
-      r: Math.round(r / s),
-      g: Math.round(g / s),
-      b: Math.round(b / s),
-    };
+    if (maxX < minX || maxY < minY) return null;
+    return { minX, minY, maxX, maxY };
   }
 
-  _imageDataToFlatForegroundColor(imageData, keyRgb, mean) {
+  /**
+   * Grid resolution for the regional safety-net blocker: finer cells track local shading
+   * so gap-fill reads closer to the traced artwork than one global average.
+   */
+  _getSafetyNetGridDimensions(detail, width, height, bbox) {
+    const level = detail === 'low' || detail === 'medium' ? detail : 'high';
+    const minGrid = level === 'low' ? 8 : level === 'medium' ? 12 : 16;
+    const maxGrid = level === 'low' ? 14 : level === 'medium' ? 20 : 28;
+    const targetCellPx = level === 'low' ? 44 : level === 'medium' ? 32 : 24;
+    const fw = Math.max(1, bbox.maxX - bbox.minX + 1);
+    const fh = Math.max(1, bbox.maxY - bbox.minY + 1);
+    const cols = Math.min(maxGrid, Math.max(minGrid, Math.ceil(fw / targetCellPx)));
+    const rows = Math.min(maxGrid, Math.max(minGrid, Math.ceil(fh / targetCellPx)));
+    // Keep roughly square cells relative to image aspect.
+    const aspect = width / Math.max(1, height);
+    if (aspect > 1.35) {
+      return { cols: Math.min(maxGrid, Math.round(cols * aspect ** 0.35)), rows };
+    }
+    if (aspect < 0.74) {
+      return { cols, rows: Math.min(maxGrid, Math.round(rows / aspect ** 0.35)) };
+    }
+    return { cols, rows };
+  }
+
+  /**
+   * Per-cell average RGB over the cropped art footprint. Empty cells inherit the nearest
+   * filled neighbor so the blocker layer stays continuous under the traced vectors.
+   */
+  _computeRegionalForegroundMeans(imageData, keyRgb, gridCols, gridRows) {
+    const [kr, kg, kb] = keyRgb;
+    const { data, width, height } = imageData;
+    const accum = Array.from({ length: gridCols * gridRows }, () => ({ r: 0, g: 0, b: 0, n: 0 }));
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (y * width + x) * 4;
+        if (data[i] === kr && data[i + 1] === kg && data[i + 2] === kb) continue;
+        const cx = Math.min(gridCols - 1, Math.floor((x / width) * gridCols));
+        const cy = Math.min(gridRows - 1, Math.floor((y / height) * gridRows));
+        const cell = accum[cy * gridCols + cx];
+        cell.r += data[i];
+        cell.g += data[i + 1];
+        cell.b += data[i + 2];
+        cell.n += 1;
+      }
+    }
+
+    const means = accum.map((cell) => {
+      if (cell.n < 1) return null;
+      return {
+        r: Math.round(cell.r / cell.n),
+        g: Math.round(cell.g / cell.n),
+        b: Math.round(cell.b / cell.n),
+      };
+    });
+
+    let fallback = null;
+    for (const mean of means) {
+      if (!mean) continue;
+      if (!fallback) {
+        fallback = { ...mean };
+        continue;
+      }
+      fallback = {
+        r: Math.round((fallback.r + mean.r) / 2),
+        g: Math.round((fallback.g + mean.g) / 2),
+        b: Math.round((fallback.b + mean.b) / 2),
+      };
+    }
+    if (!fallback) return null;
+
+    const filled = means.slice();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let cy = 0; cy < gridRows; cy += 1) {
+        for (let cx = 0; cx < gridCols; cx += 1) {
+          const idx = cy * gridCols + cx;
+          if (filled[idx]) continue;
+          const neighbors = [
+            [cx - 1, cy],
+            [cx + 1, cy],
+            [cx, cy - 1],
+            [cx, cy + 1],
+          ];
+          for (const [nx, ny] of neighbors) {
+            if (nx < 0 || ny < 0 || nx >= gridCols || ny >= gridRows) continue;
+            const neighbor = filled[ny * gridCols + nx];
+            if (!neighbor) continue;
+            filled[idx] = { ...neighbor };
+            changed = true;
+            break;
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < filled.length; i += 1) {
+      if (!filled[i]) filled[i] = { ...fallback };
+    }
+    return filled;
+  }
+
+  _imageDataToRegionalFlatForegroundColor(imageData, keyRgb, cellMeans, gridCols, gridRows) {
     const [kr, kg, kb] = keyRgb;
     const d = imageData.data;
     const { width, height } = imageData;
     const out = new ImageData(width, height);
     const o = out.data;
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) {
-        o[i] = d[i];
-        o[i + 1] = d[i + 1];
-        o[i + 2] = d[i + 2];
-        o[i + 3] = d[i + 3];
-      } else {
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (y * width + x) * 4;
+        if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) {
+          o[i] = kr;
+          o[i + 1] = kg;
+          o[i + 2] = kb;
+          o[i + 3] = d[i + 3];
+          continue;
+        }
+        const cx = Math.min(gridCols - 1, Math.floor((x / width) * gridCols));
+        const cy = Math.min(gridRows - 1, Math.floor((y / height) * gridRows));
+        const mean = cellMeans[cy * gridCols + cx];
         o[i] = mean.r;
         o[i + 1] = mean.g;
         o[i + 2] = mean.b;
@@ -1864,19 +1993,45 @@ export class ImageExporter {
   }
 
   /**
-   * One solid-color trace of the same footprint as the art: gaps in the top layer show
-   * this mean field color instead of white/empty (not pixel-perfect, but no “see-through”).
+   * Regional flat-color trace under the art: gaps in the top layer show local mean colors
+   * instead of white/empty (not pixel-perfect, but no “see-through”).
+   * @param {{ detail?: 'low'|'medium'|'high' }} [opts]
    */
-  _prependColorSafetyNetLayer(mainSvg, imageData, keyRgb) {
+  _prependColorSafetyNetLayer(mainSvg, imageData, keyRgb, opts = {}) {
     if (typeof window === 'undefined' || !window.ImageTracer?.imagedataToSVG) return mainSvg;
     if (typeof window.DOMParser === 'undefined' || !window.XMLSerializer) return mainSvg;
     const [kr, kg, kb] = keyRgb;
-    const mean = this._meanForegroundRgb(imageData, keyRgb);
-    if (!mean) return mainSvg;
-    const flat = this._imageDataToFlatForegroundColor(imageData, keyRgb, mean);
+    const bbox = this._foregroundBoundingBox(imageData, keyRgb);
+    if (!bbox) return mainSvg;
+
+    const { width, height } = imageData;
+    const { cols: gridCols, rows: gridRows } = this._getSafetyNetGridDimensions(
+      opts.detail,
+      width,
+      height,
+      bbox,
+    );
+    const cellMeans = this._computeRegionalForegroundMeans(imageData, keyRgb, gridCols, gridRows);
+    if (!cellMeans) return mainSvg;
+
+    const flat = this._imageDataToRegionalFlatForegroundColor(
+      imageData,
+      keyRgb,
+      cellMeans,
+      gridCols,
+      gridRows,
+    );
+
+    const paletteMap = new Map();
+    paletteMap.set(`${kr},${kg},${kb}`, { r: kr, g: kg, b: kb, a: 255 });
+    for (const mean of cellMeans) {
+      paletteMap.set(`${mean.r},${mean.g},${mean.b}`, { r: mean.r, g: mean.g, b: mean.b, a: 255 });
+    }
+    const pal = Array.from(paletteMap.values());
+
     const safetyOptions = {
       colorsampling: 0,
-      numberofcolors: 2,
+      numberofcolors: pal.length,
       colorquantcycles: 1,
       mincolorratio: 0,
       pathomit: 0,
@@ -1890,10 +2045,8 @@ export class ImageExporter {
       viewbox: false,
       desc: false,
       scale: 1,
-      pal: [
-        { r: kr, g: kg, b: kb, a: 255 },
-        { r: mean.r, g: mean.g, b: mean.b, a: 255 },
-      ],
+      strokewidth: 0,
+      pal,
     };
     let net;
     try {
@@ -1917,6 +2070,7 @@ export class ImageExporter {
       const g = mainDoc.createElementNS(NS, 'g');
       g.setAttribute('id', 'orby-safety-net');
       g.setAttribute('data-orby', 'color-safety-net');
+      g.setAttribute('data-orby-safety-grid', `${gridCols}x${gridRows}`);
       g.setAttribute('aria-hidden', 'true');
       g.setAttribute('style', 'pointer-events: none;');
       const fromNet = netRoot.querySelectorAll('path, rect, polygon, polyline, circle, ellipse');
@@ -1939,6 +2093,54 @@ export class ImageExporter {
       console.warn('safety net merge failed', e);
     }
     return mainSvg;
+  }
+
+  /**
+   * Remove same-color outline strokes ImageTracer emits (and any leftover seam-stroke attrs).
+   * Fill-only paths avoid the bold “double edge” look at color boundaries and silhouettes.
+   */
+  _stripSvgPathStrokes(svgString) {
+    if (typeof window === 'undefined' || !window.DOMParser) return svgString;
+    try {
+      const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
+      const parseErr = doc.querySelector('parsererror');
+      if (parseErr) return svgString;
+      const root = doc.documentElement;
+      if (!root || root.localName.toLowerCase() !== 'svg') return svgString;
+
+      const strip = (el) => {
+        el.setAttribute('stroke', 'none');
+        el.removeAttribute('stroke-width');
+        el.removeAttribute('stroke-linejoin');
+        el.removeAttribute('stroke-linecap');
+        el.removeAttribute('stroke-miterlimit');
+        el.removeAttribute('paint-order');
+        el.removeAttribute('vector-effect');
+        const st = el.getAttribute('style');
+        if (st) {
+          const next = st
+            .replace(/stroke[^;]*/gi, '')
+            .replace(/stroke-width[^;]*/gi, '')
+            .replace(/paint-order[^;]*/gi, '')
+            .replace(/;+/g, ';')
+            .replace(/^;|;$/g, '')
+            .trim();
+          if (next) {
+            el.setAttribute('style', next);
+          } else {
+            el.removeAttribute('style');
+          }
+        }
+      };
+
+      root.querySelectorAll('path, rect, polygon, polyline, circle, ellipse').forEach(strip);
+      if (window.XMLSerializer) {
+        return new window.XMLSerializer().serializeToString(root);
+      }
+    } catch (e) {
+      console.warn('strip path strokes failed', e);
+    }
+    return svgString;
   }
 
   /**
