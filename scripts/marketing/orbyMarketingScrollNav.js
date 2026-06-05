@@ -2,6 +2,7 @@
  * Fixed top nav — marketing homepage (scroll-up reveal) and subpages (always visible).
  */
 import { MARKETING_SECTIONS } from './orbyMarketingContent.js';
+import { gsap, prefersReducedMotion } from './marketingMotion.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
 
@@ -152,7 +153,21 @@ function initMobileNavMenu(nav) {
     return () => {};
   }
 
+  const menuLinks = menu.querySelectorAll(
+    '.orby-marketing-scroll-nav__link, .orby-marketing-scroll-nav__contact',
+  );
+  let menuTween = null;
+
+  const resetMenuMotion = () => {
+    menuTween?.kill();
+    menuTween = null;
+    gsap.killTweensOf([menu, menuLinks]);
+    gsap.set(menu, { clearProps: 'transform,opacity' });
+    gsap.set(menuLinks, { clearProps: 'opacity,transform' });
+  };
+
   const close = () => {
+    resetMenuMotion();
     nav.classList.remove('orby-marketing-scroll-nav--menu-open');
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', 'Open menu');
@@ -166,6 +181,32 @@ function initMobileNavMenu(nav) {
     toggle.setAttribute('aria-label', 'Close menu');
     menu.hidden = false;
     document.documentElement.classList.add('orby-nav-menu-open');
+
+    resetMenuMotion();
+
+    if (prefersReducedMotion()) {
+      gsap.set(menu, { x: 0, opacity: 1 });
+      gsap.set(menuLinks, { opacity: 1, y: 0 });
+      return;
+    }
+
+    gsap.set(menu, { x: '100%', opacity: 1 });
+    gsap.set(menuLinks, { opacity: 0, y: 18 });
+
+    menuTween = gsap
+      .timeline({ defaults: { ease: 'power3.out' } })
+      .to(menu, { x: 0, duration: 0.38 }, 0)
+      .to(
+        menuLinks,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.3,
+          stagger: 0.07,
+          ease: 'power2.out',
+        },
+        0.14,
+      );
   };
 
   const onToggleClick = (event) => {
