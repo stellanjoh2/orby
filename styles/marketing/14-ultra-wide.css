@@ -53,6 +53,10 @@
     --orby-marketing-split-media-target-h: calc(
       37.5rem * var(--orby-ultra-wide-factor)
     );
+    --orby-marketing-png-marquee-max-h: min(
+      calc(50rem * var(--orby-ultra-wide-factor)),
+      calc(800px * var(--orby-ultra-wide-factor))
+    );
   }
 
   .orby-marketing__section--intro.orby-marketing__section--intro-turntable {
@@ -62,13 +66,6 @@
     --orby-intro-turntable-offset-y: calc(50px * var(--orby-ultra-wide-factor));
     /* Slightly tighter than 1.6 — 45px type was reading looser than 2560 @ 1.5× */
     --orby-marketing-intro-lede-line: 1.52;
-  }
-
-  #orby-marketing .orby-marketing__png-marquee {
-    --orby-marketing-png-marquee-max-h: min(
-      calc(50rem * var(--orby-ultra-wide-factor)),
-      calc(800px * var(--orby-ultra-wide-factor))
-    );
   }
 
   #orby-marketing .orby-marketing__roadmap-chart {

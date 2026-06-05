@@ -50,6 +50,7 @@ html.mobile-landing #orby-marketing {
   --orby-intro-headline-min: clamp(1.85rem, 9vw, 2.65rem);
   --orby-intro-headline-max: clamp(2.1rem, 10.5vw, 3rem);
   --orby-intro-headline-vw: 9.5;
+  /* PNG marquee — 40svh on phone (desktop clamp: 01-tokens.css) */
   --orby-marketing-png-marquee-max-h: 40svh;
   --orby-marketing-png-marquee-gap: clamp(1.875rem, 10vw, 3.125rem);
 }
@@ -680,20 +681,6 @@ html.mobile-landing .orby-marketing__faq-answer {
 
 html.mobile-landing .orby-marketing__png-marquee-viewport {
   padding-block: clamp(0.55rem, 1.65svh, 1.38rem);
-}
-
-/* ── Perfect transparency PNG marquee (~50% smaller, +25% gap) ── */
-
-html.mobile-landing .orby-marketing__png-marquee {
-  /* Must override .orby-marketing__png-marquee { --orby-marketing-png-marquee-max-h: 550px… } */
-  --orby-marketing-png-marquee-max-h: 40svh;
-  --orby-marketing-png-marquee-gap: clamp(1.875rem, 10vw, 3.125rem);
-}
-
-html.mobile-landing .orby-marketing__png-marquee-img {
-  width: auto;
-  height: var(--orby-marketing-png-marquee-max-h);
-  max-height: var(--orby-marketing-png-marquee-max-h);
 }
 
 /* ── Roadmap hidden on mobile ── */

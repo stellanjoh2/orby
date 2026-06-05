@@ -199,6 +199,16 @@
     calc((var(--orby-marketing-split-media-ref-width) - 100vw) / 40rem),
     1
   );
+  /*
+   * PNG marquee cutouts — 550px @ 1920; full @ 2560 (800px / 50rem).
+   * Mobile: html.mobile-landing #orby-marketing → 40svh.
+   */
+  --orby-marketing-png-marquee-max-h: clamp(
+    550px,
+    calc(550px + 250px * (1 - var(--orby-marketing-wide-type-ramp))),
+    min(50rem, calc(800px * var(--orby-marketing-scale)))
+  );
+  --orby-marketing-png-marquee-gap: calc(300px * var(--orby-marketing-gutter-scale));
   --orby-marketing-support-size: clamp(
     14px,
     calc(14px + 0.4px * (1 - var(--orby-marketing-wide-type-ramp))),
