@@ -353,6 +353,12 @@ html:not(.orby-home-scroll):not(.orby-legal-site-nav):not(.mobile-landing)
   display: none !important;
 }
 
+/* Desktop — inline links only; overlay menu is mobile-landing (15-mobile.css). */
+html:not(.mobile-landing) .orby-marketing-scroll-nav__menu-toggle,
+html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
+  display: none !important;
+}
+
 @media (min-width: 900px) {
   .orby-marketing-scroll-nav__links {
     white-space: nowrap;
