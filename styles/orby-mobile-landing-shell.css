@@ -103,6 +103,7 @@ html.mobile-landing .demo-logotype {
 
 html.mobile-landing .orby-marketing-scroll-nav {
   --orby-scroll-nav-height: calc(56px + env(safe-area-inset-top, 0px));
+  display: block !important;
   visibility: visible;
   opacity: 1;
   pointer-events: auto;

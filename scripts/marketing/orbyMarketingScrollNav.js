@@ -394,7 +394,7 @@ function initSiteNavNow(options) {
 
   if (mode === 'home' && !isMobileHome) {
     unsubscribeScroll = subscribeMarketingScroll(update);
-    hide();
+    setVisible(false);
   } else if (mode === 'subpage') {
     onSubpageResize = () => {
       if (ticking) return;

@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { dirname, join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { MARKETING_SECTIONS } from './orbyMarketingContent.js';
-import { renderStaticSubpageSiteNav } from './orbyMarketingTemplates.js';
+import { renderSiteNav, renderStaticSubpageSiteNav } from './orbyMarketingTemplates.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -40,6 +40,25 @@ export function formatSubpageSiteNavBlock(base = '../') {
 
   return renderStaticSubpageSiteNav(ctaSection, base)
     .trim()
+    .split('\n')
+    .map((line) => `    ${line}`)
+    .join('\n');
+}
+
+/** Homepage — static nav in index.html; mobile CSS keeps it visible, desktop JS reveals on scroll. */
+export function formatHomepageSiteNavBlock(base = './') {
+  const ctaSection = MARKETING_SECTIONS.find((section) => section.type === 'cta');
+  if (!ctaSection) {
+    throw new Error('MARKETING_SECTIONS is missing a CTA section for site nav fields');
+  }
+
+  return renderSiteNav(ctaSection, base)
+    .trim()
+    .replace(
+      'class="orby-marketing-scroll-nav"',
+      'class="orby-marketing-scroll-nav orby-marketing-scroll-nav--mobile-fixed"',
+    )
+    .replace(' aria-hidden="true"', '')
     .split('\n')
     .map((line) => `    ${line}`)
     .join('\n');

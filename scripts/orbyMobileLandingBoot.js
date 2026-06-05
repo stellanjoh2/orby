@@ -82,18 +82,22 @@
 
   applyMobileLandingBootClasses();
 
-  function preloadMobileScrollNavStyles() {
-    if (!shouldShowMobileLanding()) return;
-    var href = './styles/marketing/13-scroll-nav.css';
+  function preloadMobileStylesheet(href, attr) {
     var links = document.querySelectorAll('link[rel="stylesheet"]');
     for (var i = 0; i < links.length; i++) {
-      if (links[i].href && links[i].href.indexOf('13-scroll-nav.css') !== -1) return;
+      if (links[i].href && links[i].href.indexOf(href) !== -1) return;
     }
     var link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = href;
-    link.setAttribute('data-orby-mobile-scroll-nav-css', '');
+    link.setAttribute(attr, '');
     document.head.appendChild(link);
+  }
+
+  function preloadMobileScrollNavStyles() {
+    if (!shouldShowMobileLanding()) return;
+    preloadMobileStylesheet('./styles/marketing/13-scroll-nav.css', 'data-orby-mobile-scroll-nav-css');
+    preloadMobileStylesheet('./styles/orby-mobile-landing-shell.css', 'data-orby-mobile-shell-css');
   }
 
   preloadMobileScrollNavStyles();
