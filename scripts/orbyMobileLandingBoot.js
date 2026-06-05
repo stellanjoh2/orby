@@ -60,7 +60,7 @@
 
   function ensureMobileLandingClass() {
     if (typeof document === 'undefined' || !shouldShowMobileLanding()) return false;
-    document.documentElement.classList.add('mobile-landing');
+    document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
     return true;
   }
 
@@ -81,4 +81,20 @@
   };
 
   applyMobileLandingBootClasses();
+
+  function preloadMobileScrollNavStyles() {
+    if (!shouldShowMobileLanding()) return;
+    var href = './styles/marketing/13-scroll-nav.css';
+    var links = document.querySelectorAll('link[rel="stylesheet"]');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].href && links[i].href.indexOf('13-scroll-nav.css') !== -1) return;
+    }
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.setAttribute('data-orby-mobile-scroll-nav-css', '');
+    document.head.appendChild(link);
+  }
+
+  preloadMobileScrollNavStyles();
 })(typeof window !== 'undefined' ? window : {});

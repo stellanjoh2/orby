@@ -48,7 +48,7 @@ function isMobileLandingImpl() {
 
 function ensureMobileLandingClassImpl() {
   if (!shouldShowMobileLandingImpl()) return false;
-  document.documentElement.classList.add('mobile-landing');
+  document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
   return true;
 }
 
@@ -89,7 +89,7 @@ export function isMobileLanding() {
   return callApi('isMobileLanding');
 }
 
-/** Idempotent — adds html.mobile-landing only (not orby-home-scroll). */
+/** Idempotent — adds html.mobile-landing and html.orby-home-scroll. */
 export function ensureMobileLandingClass() {
   return callApi('ensureMobileLandingClass');
 }

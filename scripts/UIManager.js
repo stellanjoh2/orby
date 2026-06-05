@@ -1349,7 +1349,10 @@ export class UIManager {
   }
 
   setDropzoneVisible(visible) {
-    if (!visible) {
+    if (
+      !visible &&
+      !document.documentElement.classList.contains('mobile-landing')
+    ) {
       document.documentElement.classList.remove('orby-home-scroll');
     }
     if (this.startMenuController) {

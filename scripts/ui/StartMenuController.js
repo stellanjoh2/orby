@@ -363,6 +363,12 @@ export class StartMenuController {
    * @see html.orby-dropzone-viewport-clipped in styles.css
    */
   bindDropzoneGradientScrollPause() {
+    if (
+      typeof document !== 'undefined' &&
+      document.documentElement.classList.contains('mobile-landing')
+    ) {
+      return;
+    }
     if (typeof window === 'undefined') return;
     let endTimer = null;
     let scrollRaf = 0;

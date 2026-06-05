@@ -20,7 +20,7 @@ html.mobile-landing #orby-marketing {
   --orby-marketing-space-lg: clamp(2.64rem, 7.92svh, 3.63rem);
   --orby-marketing-space-md: clamp(1.65rem, 4.62svh, 2.31rem);
   --orby-marketing-space-sm: clamp(0.99rem, 2.64svh, 1.32rem);
-  --orby-marketing-gap-big: clamp(2.64rem, 6.6svh, 3.63rem);
+  --orby-marketing-gap-big: clamp(3.3rem, 8.25svh, 4.54rem);
   --orby-marketing-col-gap: clamp(1.65rem, 5.28vw, 2.31rem);
   --orby-marketing-feature-body-media-gap: clamp(1.65rem, 5.28vw, 2.31rem);
   --orby-marketing-headline-actions-gap: clamp(0.87rem, 2.75svh, 1.39rem);
@@ -30,8 +30,8 @@ html.mobile-landing #orby-marketing {
   --orby-marketing-lede-cta-gap: 3.71rem;
   --orby-marketing-peer-gap: 2.48rem;
   --orby-marketing-mobile-cta-gap: clamp(0.94rem, 3.52vw, 1.21rem);
-  --orby-marketing-pro-faq-gap: clamp(2.64rem, 6.6svh, 3.63rem);
-  --orby-marketing-faq-pad-bottom: clamp(2.64rem, 6.6svh, 3.63rem);
+  --orby-marketing-pro-faq-gap: clamp(3.3rem, 8.25svh, 4.54rem);
+  --orby-marketing-faq-pad-bottom: clamp(3.3rem, 8.25svh, 4.54rem);
   --orby-marketing-faq-inner-pad-top: clamp(1.65rem, 4.4svh, 2.31rem);
   --orby-marketing-faq-grid-row-gap: clamp(1.93rem, 5.5svh, 2.75rem);
   --orby-footer-social-gap: 1.93rem;
@@ -53,6 +53,29 @@ html.mobile-landing #orby-marketing {
   /* PNG marquee — 40svh on phone (desktop clamp: 01-tokens.css) */
   --orby-marketing-png-marquee-max-h: 40svh;
   --orby-marketing-png-marquee-gap: clamp(1.875rem, 10vw, 3.125rem);
+}
+
+/*
+ * Desktop below-fold sections use content-visibility: auto + contain-intrinsic-size.
+ * When skipped sections paint on scroll (especially scrolling back up), placeholder
+ * height swaps for real layout and the page jumps — worse with overflow-anchor: none.
+ */
+html.mobile-landing .orby-marketing__section--split,
+html.mobile-landing .orby-marketing__section--showcase,
+html.mobile-landing .orby-marketing__section--marquee,
+html.mobile-landing .orby-marketing__section--pro,
+html.mobile-landing .orby-marketing__section--faq,
+html.mobile-landing .orby-marketing__section--cta {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+}
+
+/* Desktop marketing partials still ship 100dvh — keep in-progress on stable svh. */
+html.mobile-landing .orby-marketing__in-progress-panel,
+html.mobile-landing .orby-marketing__section--in-progress {
+  min-height: 100svh;
+  height: auto;
+  max-height: none;
 }
 
 html.mobile-landing .orby-marketing-scroll-cue {
@@ -359,6 +382,7 @@ html.mobile-landing .orby-marketing__section--intro-turntable .orby-marketing__i
   width: 100%;
   max-width: none;
   min-height: calc(100svh - var(--orby-marketing-nav-offset));
+  min-height: calc(-webkit-fill-available - var(--orby-marketing-nav-offset));
   margin: 0;
   padding:
     clamp(0.61rem, 1.98svh, 0.99rem)
@@ -788,11 +812,6 @@ html.mobile-landing .orby-marketing__footer-meta-copy {
 
 html.mobile-landing .orby-marketing__footer-meta-sep {
   padding-inline: 0.28em;
-}
-
-html.mobile-landing .orby-marketing__in-progress-panel,
-html.mobile-landing .orby-marketing__section--in-progress {
-  min-height: 100svh;
 }
 
 /* No scroll-sync curtain on mobile — section and footer stay interactive. */

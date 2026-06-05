@@ -347,7 +347,8 @@ a.orby-marketing-scroll-nav__brand:visited {
   transform: none;
 }
 
-html:not(.orby-home-scroll):not(.orby-legal-site-nav) .orby-marketing-scroll-nav,
+html:not(.orby-home-scroll):not(.orby-legal-site-nav):not(.mobile-landing)
+  .orby-marketing-scroll-nav,
 .orby-marketing-scroll-nav[hidden] {
   display: none !important;
 }
