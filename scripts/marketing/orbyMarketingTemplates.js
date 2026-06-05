@@ -276,9 +276,18 @@ function renderIntroSection(section) {
         </div>
       </div>
       <div class="orby-marketing__intro-center">
+      <p class="orby-marketing__intro-mobile-notice">This site is best experienced on larger screens — the studio only works on desktops.</p>
+      <div class="orby-marketing__intro-center-stack">
       ${section.eyebrow ? `<p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>` : ''}
       <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${renderMarketingBodyHtml(section.lede, section.gradientPhrases)}</p>
+      <div class="orby-marketing__intro-actions">
+        ${orbyMagicButtonHtml('Browse Files', {
+          extraClass: 'orby-marketing__intro-browse',
+          attrs: 'data-orby-marketing-browse',
+        })}
+      </div>
+      </div>
     </div>
   </section>`;
 }
@@ -652,11 +661,21 @@ function renderMarketingSiteNavHtml(fields, options) {
     attrs: 'data-orby-marketing-browse',
   });
 
+  const menuToggle = `<button type="button" class="orby-marketing-scroll-nav__menu-toggle" data-orby-marketing-nav-toggle aria-expanded="false" aria-controls="orby-site-nav-menu" aria-label="Open menu">
+        <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+        <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+        <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+      </button>`;
+
   return `<nav class="orby-marketing-scroll-nav" data-orby-marketing-scroll-nav aria-label="Site" aria-hidden="true">
     <div class="orby-marketing-scroll-nav__bar">
       ${brand}
-      <div class="orby-marketing-scroll-nav__links">${links.join('')}</div>
+      <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--inline">${links.join('')}</div>
+      ${menuToggle}
       <div class="orby-marketing-scroll-nav__cta">${browseCta}</div>
+    </div>
+    <div class="orby-marketing-scroll-nav__menu" id="orby-site-nav-menu" data-orby-marketing-nav-menu hidden>
+      <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--overlay">${links.join('')}</div>
     </div>
   </nav>`;
 }

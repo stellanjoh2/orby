@@ -141,6 +141,61 @@ function scheduleSubpageNavOffsetSync(nav) {
   });
 }
 
+function initMobileNavMenu(nav) {
+  if (!document.documentElement.classList.contains('mobile-landing')) {
+    return () => {};
+  }
+
+  const toggle = nav.querySelector('[data-orby-marketing-nav-toggle]');
+  const menu = nav.querySelector('[data-orby-marketing-nav-menu]');
+  if (!(toggle instanceof HTMLButtonElement) || !(menu instanceof HTMLElement)) {
+    return () => {};
+  }
+
+  const close = () => {
+    nav.classList.remove('orby-marketing-scroll-nav--menu-open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open menu');
+    menu.hidden = true;
+    document.documentElement.classList.remove('orby-nav-menu-open');
+  };
+
+  const open = () => {
+    nav.classList.add('orby-marketing-scroll-nav--menu-open');
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', 'Close menu');
+    menu.hidden = false;
+    document.documentElement.classList.add('orby-nav-menu-open');
+  };
+
+  const onToggleClick = (event) => {
+    event.preventDefault();
+    if (nav.classList.contains('orby-marketing-scroll-nav--menu-open')) close();
+    else open();
+  };
+
+  const onMenuClick = (event) => {
+    if (event.target.closest('.orby-marketing-scroll-nav__link, .orby-marketing-scroll-nav__contact')) {
+      close();
+    }
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') close();
+  };
+
+  toggle.addEventListener('click', onToggleClick);
+  menu.addEventListener('click', onMenuClick);
+  document.addEventListener('keydown', onKeyDown);
+
+  return () => {
+    close();
+    toggle.removeEventListener('click', onToggleClick);
+    menu.removeEventListener('click', onMenuClick);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+}
+
 /**
  * @param {{
  *   section: import('./orbyMarketingContent.js').MarketingSection | undefined;
@@ -259,12 +314,23 @@ function initSiteNavNow(options) {
 
   const isNavVisible = () => nav.classList.contains('orby-marketing-scroll-nav--visible');
 
+  /** @type {(() => void) | null} */
+  let teardownMobileNavMenu = null;
+
+  const isMobileHome =
+    mode === 'home' && document.documentElement.classList.contains('mobile-landing');
+
   if (mode === 'subpage') {
     nav.classList.add('orby-marketing-scroll-nav--visible');
+    nav.removeAttribute('aria-hidden');
+  } else if (isMobileHome) {
+    nav.classList.add('orby-marketing-scroll-nav--visible', 'orby-marketing-scroll-nav--mobile-fixed');
     nav.removeAttribute('aria-hidden');
   } else {
     setVisible(false);
   }
+
+  teardownMobileNavMenu = initMobileNavMenu(nav);
 
   const homeHref = resolveHomeHref(base);
   if (mode === 'subpage') {
@@ -296,6 +362,7 @@ function initSiteNavNow(options) {
   });
 
   const hide = () => {
+    if (isMobileHome) return;
     if (showTimer != null) {
       window.clearTimeout(showTimer);
       showTimer = null;
@@ -334,7 +401,7 @@ function initSiteNavNow(options) {
     performance.now() - directionChangedAt >= DIRECTION_SETTLE_MS;
 
   const update = () => {
-    if (!homeActive) return;
+    if (!homeActive || isMobileHome) return;
 
     const y = readScrollY();
     const delta = y - lastY;
@@ -368,10 +435,10 @@ function initSiteNavNow(options) {
     }
   };
 
-  if (mode === 'home') {
+  if (mode === 'home' && !isMobileHome) {
     unsubscribeScroll = subscribeMarketingScroll(update);
     hide();
-  } else {
+  } else if (mode === 'subpage') {
     onSubpageResize = () => {
       if (ticking) return;
       ticking = true;
@@ -397,7 +464,7 @@ function initSiteNavNow(options) {
         directionChangedAt = 0;
         lastHiddenAt = 0;
         lastShownAt = 0;
-        if (lastY < HIDE_NEAR_TOP_Y) hide();
+        if (lastY < HIDE_NEAR_TOP_Y && !isMobileHome) hide();
       } else {
         hide();
         nav.setAttribute('hidden', '');
@@ -405,6 +472,8 @@ function initSiteNavNow(options) {
     },
     destroy() {
       hide();
+      teardownMobileNavMenu?.();
+      teardownMobileNavMenu = null;
       unsubscribeScroll?.();
       unsubscribeScroll = null;
       if (onSubpageResize) {

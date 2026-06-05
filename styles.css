@@ -7269,29 +7269,27 @@ html.mobile-landing #app {
   min-height: 100vh !important;
   min-height: 100dvh !important;
   min-height: -webkit-fill-available !important;
+  height: auto !important;
 }
 
 html.mobile-landing .workspace {
   background-color: var(--orby-app-bg) !important;
   background: var(--orby-app-bg) !important;
-  flex: 1 !important;
-  min-height: 100vh !important;
-  min-height: 100dvh !important;
-  min-height: -webkit-fill-available !important;
+  flex: none !important;
+  min-height: 0 !important;
+  height: auto !important;
 }
 
 html.mobile-landing .viewport {
   clip-path: none !important;
   background-color: var(--orby-app-bg) !important;
   background: var(--orby-app-bg) !important;
-  flex: 1 !important;
+  flex: none !important;
   width: 100% !important;
-  min-height: 100vh !important;
-  min-height: 100svh !important;
-  min-height: 100dvh !important;
-  min-height: -webkit-fill-available !important;
+  min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
+  position: relative !important;
 }
 
 html.mobile-landing #webgl {
@@ -7302,43 +7300,12 @@ html.mobile-landing #webgl {
   background-color: var(--orby-app-bg) !important;
 }
 
-html.mobile-landing .dropzone::before {
-  content: none !important;
-}
-
 html.mobile-landing .dropzone {
-  opacity: 1 !important;
-  animation: none !important;
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 3 !important;
-  box-sizing: border-box !important;
-  width: 100vw !important;
-  min-height: 100vh !important;
-  min-height: 100svh !important;
-  min-height: 100dvh !important;
-  min-height: -webkit-fill-available !important;
-  padding-top: calc(env(safe-area-inset-top, 0px) + clamp(0.75rem, 3vmin, 1.5rem));
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(0.75rem, 3vmin, 1.5rem));
-  padding-left: calc(env(safe-area-inset-left, 0px) + clamp(1rem, 5vw, 1.5rem));
-  padding-right: calc(env(safe-area-inset-right, 0px) + clamp(1rem, 5vw, 1.5rem));
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
-  background-image: none !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: clamp(1rem, 4vmin, 1.75rem);
-  --dropzone-padding-x: clamp(1rem, 5vw, 1.5rem);
-  --dropzone-padding-y: clamp(1rem, 5vmin, 2rem);
+  display: none !important;
 }
 
-html.mobile-landing #mobileWarning {
-  display: block !important;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
+html.mobile-landing #mobileWarning,
+html.mobile-landing .drop-logo,
 html.mobile-landing .drop-primary,
 html.mobile-landing .dropzone-actions,
 html.mobile-landing .drop-secondary {
@@ -7356,47 +7323,6 @@ html.mobile-landing #shelf {
 
 html.mobile-landing .demo-logotype {
   display: none !important;
-}
-
-html.mobile-landing .drop-logo {
-  /* ~25% smaller than prior mobile splash sizing */
-  width: min(
-    72vw,
-    max(66px, min(150px, 39vw)),
-    19vh
-  );
-  margin-bottom: 0;
-}
-
-html.mobile-landing .mobile-warning {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: none;
-  z-index: 2;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  max-width: min(30rem, 94vw);
-  width: 100%;
-  text-align: center;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-html.mobile-landing .mobile-warning p {
-  margin: 0;
-  font-family: var(--brand-font-headline);
-  font-size: clamp(1.75rem, 7.5vmin, 2.25rem);
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--text);
-}
-
-html.mobile-landing .mobile-warning .brand-highlight {
-  color: var(--brand-primary);
-  font-weight: 700;
 }
 
 /* Object panel — Generate from Font (live editor = canvas + transparent textarea) */

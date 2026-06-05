@@ -154,6 +154,11 @@ html.orby-home-scroll .orby-marketing__section--intro-turntable .orby-marketing_
   container-name: orby-intro-copy;
 }
 
+/* Mobile template wraps copy in .intro-center-stack — flatten on desktop so lede measure is unchanged */
+html:not(.mobile-landing) .orby-marketing__intro-center-stack {
+  display: contents;
+}
+
 .orby-marketing__section--intro-turntable .orby-marketing__title--intro {
   margin-inline: 0;
   width: max-content;

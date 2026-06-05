@@ -185,7 +185,7 @@
   --orby-marketing-faq-inner-pad-top: calc(
     var(--orby-marketing-gap-big) - 16px * var(--orby-marketing-gutter-scale)
   );
-  /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560, 2560px @ 3840+) */
+  /* Match dropzone frame inner width (:root --orby-home-padding-x; 1790px @ 2560, fluid → 2560px @ 3840) */
   --orby-marketing-site-max: calc(100vw - 2 * var(--orby-home-padding-x));
   --orby-marketing-copy-max: calc(41rem * var(--orby-marketing-scale));
   /* Centered feature lede — ~980px @ 2560, ~1469px @ 3840 (61.2rem × scale) */

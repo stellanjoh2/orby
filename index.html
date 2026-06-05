@@ -41,6 +41,13 @@
         pointer-events: none !important;
         transform: translate3d(0, -100%, 0) !important;
       }
+      html.mobile-landing .orby-marketing-scroll-nav.orby-marketing-scroll-nav--visible,
+      html.mobile-landing .orby-marketing-scroll-nav.orby-marketing-scroll-nav--mobile-fixed {
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: none !important;
+      }
     </style>
     <!-- Entry gate: false = open site immediately (HTML + phrase logic stay in this file). true = require access phrase + periodic re-check. -->
     <script>
@@ -153,7 +160,7 @@
           return false;
         }
         if (mobileLandingForced() || mobileDevice()) {
-          document.documentElement.classList.add('mobile-landing');
+          document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
         }
       })();
     </script>

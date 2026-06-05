@@ -136,17 +136,25 @@ try {
   /* URL blocked */
 }
 
-if (!document.documentElement.classList.contains('mobile-landing')) {
-  const scheduleMarketing =
-    typeof window.requestIdleCallback === 'function'
-      ? window.requestIdleCallback.bind(window)
-      : (cb) => window.setTimeout(cb, 1600);
-  scheduleMarketing(() => {
+{
+  const isMobileLanding = document.documentElement.classList.contains('mobile-landing');
+  const bootMarketing = () => {
     import('./marketing/orbyMarketingPage.js')
-      .then((mod) => mod.initOrbyMarketingPage())
+      .then((mod) =>
+        mod.initOrbyMarketingPage(isMobileLanding ? { lazy: false } : undefined),
+      )
       .catch((err) => {
         console.warn('[Orby] Marketing page module failed to load', err);
       });
-  });
+  };
+  if (isMobileLanding) {
+    bootMarketing();
+  } else {
+    const scheduleMarketing =
+      typeof window.requestIdleCallback === 'function'
+        ? window.requestIdleCallback.bind(window)
+        : (cb) => window.setTimeout(cb, 1600);
+    scheduleMarketing(bootMarketing);
+  }
 }
 
