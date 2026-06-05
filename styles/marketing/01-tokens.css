@@ -144,6 +144,7 @@
   --orby-marketing-on-white-ink: color-mix(in srgb, var(--orby-black, #080808) 88%, white);
   /* Standard vertical seam between major blocks — 192px @ 1440; scales with gutter-scale */
   --orby-marketing-gap-big: calc(192px * var(--orby-marketing-gutter-scale));
+  --font-mono: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
   /* Eyebrow / preheader — 14px @ 2560, 11px @ 1920 */
   --orby-marketing-eyebrow-size: clamp(
     calc(0.72rem * var(--orby-marketing-scale)),

@@ -330,9 +330,10 @@ html.orby-marketing-reduced
 
 .orby-marketing__eyebrow {
   margin: 0 0 var(--orby-marketing-eyebrow-headline-gap);
+  font-family: var(--font-mono);
   font-size: var(--orby-marketing-eyebrow-size);
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.242em;
   text-transform: uppercase;
   color: var(--orby-marketing-text-dim);
 }

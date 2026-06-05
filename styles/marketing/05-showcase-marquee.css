@@ -80,13 +80,6 @@
   animation-play-state: running;
 }
 
-/* Pause the loop during scroll — same signal as dropzone glow (StartMenuController). */
-html.orby-dropzone-glow-scrolling
-  .orby-marketing__png-marquee--playing
-  .orby-marketing__png-marquee-track {
-  animation-play-state: paused;
-}
-
 .orby-marketing__png-marquee-group {
   display: flex;
   flex: 0 0 auto;
