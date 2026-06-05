@@ -11,6 +11,7 @@ import {
   SCROLL_CLASS,
   STYLES_HREF,
 } from './orbyMarketingConstants.js';
+import { isMobileLanding } from '../orbyMobileLanding.js';
 import {
   bindMarketingCopyEmail,
   unbindMarketingCopyEmail,
@@ -27,10 +28,6 @@ function isMegaRevealSection(section) {
 }
 
 let sectionsCache = null;
-
-function isMobileLanding() {
-  return document.documentElement.classList.contains('mobile-landing');
-}
 
 function shouldSkipMarketing() {
   const path = window.location.pathname || '/';
@@ -222,7 +219,8 @@ export function initOrbyMarketingPage(options = {}) {
     return { destroy() {} };
   }
 
-  const lazy = options.lazy !== false && !isMobileLanding();
+  const mobile = isMobileLanding();
+  const lazy = options.lazy !== false && !mobile;
   let root = null;
   let scrollCue = null;
   let teardownScrollCueFade = null;
@@ -521,47 +519,48 @@ export function initOrbyMarketingPage(options = {}) {
     void loadSections().then(boot);
   }
 
+  /** @type {Promise<void> | undefined} */
+  let sectionsPrimed;
+
+  function primeSections() {
+    if (sectionsPrimed) return sectionsPrimed;
+    sectionsPrimed = loadSections().then((sections) => {
+      if (destroyed) return;
+      sectionsForNav = sections;
+    });
+    return sectionsPrimed;
+  }
+
+  function bootMarketingChrome() {
+    if (destroyed) return;
+    if (mobile) setScrollMode(true);
+    ensureScrollNav();
+    scheduleMount();
+  }
+
   bodyObserver = new MutationObserver(syncHomeState);
   bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-  if (!isMobileLanding()) {
+  if (!mobile) {
     scrollCue = createScrollCue(() => {
       ensureScrollNav();
       scrollToMarketing(scheduleMount);
     });
     teardownScrollCueFade = bindScrollCueFade(scrollCue);
-  } else {
-    setScrollMode(true);
-    ensureScrollNav();
-    scheduleMount();
   }
 
-  void loadSections().then((sections) => {
-    if (destroyed) return;
-    sectionsForNav = sections;
-  });
+  const startBoot = () => {
+    void primeSections().then(() => bootMarketingChrome());
+  };
 
   if (lazy) {
-    const preMount = () => {
-      if (destroyed) return;
-      void loadSections().then((sections) => {
-        if (destroyed) return;
-        sectionsForNav = sections;
-        ensureScrollNav();
-        scheduleMount();
-      });
-    };
     if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(preMount, { timeout: 2500 });
+      requestIdleCallback(startBoot, { timeout: 2500 });
     } else {
-      setTimeout(preMount, 800);
+      setTimeout(startBoot, 800);
     }
   } else {
-    void loadSections().then((sections) => {
-      sectionsForNav = sections;
-      ensureScrollNav();
-    });
-    scheduleMount();
+    startBoot();
   }
 
   syncHomeState();

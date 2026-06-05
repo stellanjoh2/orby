@@ -107,63 +107,7 @@
       })();
     </script>
     <!-- Before first paint on mobile — avoid one-frame desktop dropzone flash until main.js runs -->
-    <script>
-      (function () {
-        function mobileLandingForced() {
-          try {
-            if (
-              typeof window !== 'undefined' &&
-              window.__ORBY_DEBUG_MOBILE_LANDING__ === true
-            ) {
-              return true;
-            }
-          } catch (e) {}
-          try {
-            if (
-              typeof sessionStorage !== 'undefined' &&
-              sessionStorage.getItem('orby_mobile_landing') === '1'
-            ) {
-              return true;
-            }
-          } catch (e) {}
-          try {
-            var q =
-              typeof location !== 'undefined'
-                ? new URLSearchParams(location.search)
-                : null;
-            if (q && (q.get('orbyMobile') === '1' || q.has('mobileLanding')))
-              return true;
-          } catch (e) {}
-          return false;
-        }
-        function mobileDevice() {
-          var ua =
-            typeof navigator !== 'undefined'
-              ? navigator.userAgent || ''
-              : '';
-          if (
-            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-              ua,
-            )
-          ) {
-            return true;
-          }
-          try {
-            if (
-              typeof window !== 'undefined' &&
-              window.matchMedia &&
-              window.matchMedia('(max-width: 768px)').matches
-            ) {
-              return true;
-            }
-          } catch (e) {}
-          return false;
-        }
-        if (mobileLandingForced() || mobileDevice()) {
-          document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
-        }
-      })();
-    </script>
+    <script src="./scripts/orbyMobileLandingBoot.js"></script>
     <!-- Empty in source; CI may set via BUG_REPORT_API_URL (see build.js). -->
     <meta name="orby-version" content="dev" />
     <meta name="orby-bug-report-api" content="" />

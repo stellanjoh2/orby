@@ -5,38 +5,12 @@ import { UIManager } from './UIManager.js';
 import { SceneManager } from './SceneManager.js';
 import { GamepadController } from './input/GamepadController.js';
 import { TooltipController } from './ui/TooltipController.js';
-
-// Detect mobile devices
-function isMobileDevice() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-         (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
-}
-
-/**
- * Debug the mobile splash on a desktop browser without emulating UA.
- * Options (any one):
- * - URL query: ?orbyMobile=1
- * - sessionStorage (Application tab → Session storage): key orby_mobile_landing = 1
- * - Console before reload: window.__ORBY_DEBUG_MOBILE_LANDING__ = true
- */
-function isForcedMobileLandingDebug() {
-  try {
-    if (typeof window !== 'undefined' && window.__ORBY_DEBUG_MOBILE_LANDING__ === true) {
-      return true;
-    }
-    const q = new URLSearchParams(window.location.search);
-    if (q.get('orbyMobile') === '1') return true;
-    if (q.has('mobileLanding')) return true;
-    if (sessionStorage.getItem('orby_mobile_landing') === '1') return true;
-  } catch {
-    /* sessionStorage / URL blocked */
-  }
-  return false;
-}
-
-function shouldShowMobileLanding() {
-  return isForcedMobileLandingDebug() || isMobileDevice();
-}
+import {
+  ensureMobileLandingClass,
+  isForcedMobileLandingDebug,
+  isMobileDevice,
+  isMobileLanding,
+} from './orbyMobileLanding.js';
 
 /**
  * Safari has heavier repaint/compositing cost for large animated blur layers.
@@ -65,14 +39,13 @@ function setMobileSplashChromeMetaTags() {
   ensureContentMeta('apple-mobile-web-app-status-bar-style', 'black');
 }
 
-// Show mobile warning if on mobile; CSS (html.mobile-landing) hides the rest of the UI
-if (shouldShowMobileLanding()) {
+// Head boot (orbyMobileLandingBoot.js) applies html.mobile-landing before first paint.
+if (ensureMobileLandingClass()) {
   if (isForcedMobileLandingDebug() && !isMobileDevice()) {
     console.info(
       '[Orby] Mobile landing UI forced for debugging. Remove ?orbyMobile=1, clear sessionStorage orby_mobile_landing, or unset __ORBY_DEBUG_MOBILE_LANDING__.',
     );
   }
-  document.documentElement.classList.add('mobile-landing');
   setMobileSplashChromeMetaTags();
 }
 
@@ -126,7 +99,7 @@ window.orby = { eventBus, stateStore, ui, scene, tooltips, ensureGamepad, get ga
 /** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
 try {
   const q = new URLSearchParams(window.location.search);
-  if (q.get('exportOverlayDebug') === '1' && !document.documentElement.classList.contains('mobile-landing')) {
+  if (q.get('exportOverlayDebug') === '1' && !isMobileLanding()) {
     requestAnimationFrame(async () => {
       await ui.ensureStudioUiReady();
       ui.toggleOfflineExportOverlayPreview?.();
@@ -137,17 +110,17 @@ try {
 }
 
 {
-  const isMobileLanding = document.documentElement.classList.contains('mobile-landing');
+  const mobileLanding = isMobileLanding();
   const bootMarketing = () => {
     import('./marketing/orbyMarketingPage.js')
       .then((mod) =>
-        mod.initOrbyMarketingPage(isMobileLanding ? { lazy: false } : undefined),
+        mod.initOrbyMarketingPage(mobileLanding ? { lazy: false } : undefined),
       )
       .catch((err) => {
         console.warn('[Orby] Marketing page module failed to load', err);
       });
   };
-  if (isMobileLanding) {
+  if (mobileLanding) {
     bootMarketing();
   } else {
     const scheduleMarketing =

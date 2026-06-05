@@ -140,6 +140,10 @@ await esbuild.build({
 
 mkdirSync(join(distDir, 'scripts'), { recursive: true });
 cpSync(join(__dirname, 'scripts', 'orbyEntryGate.js'), join(distDir, 'scripts', 'orbyEntryGate.js'));
+cpSync(
+  join(__dirname, 'scripts', 'orbyMobileLandingBoot.js'),
+  join(distDir, 'scripts', 'orbyMobileLandingBoot.js'),
+);
 cpSync(join(__dirname, 'scripts', 'orbyStatsBeacon.js'), join(distDir, 'scripts', 'orbyStatsBeacon.js'));
 
 // Copy HTML (refresh version banners from VERSION for deterministic deploys)

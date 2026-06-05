@@ -2,6 +2,7 @@
  * Fixed top nav — marketing homepage (scroll-up reveal) and subpages (always visible).
  */
 import { MARKETING_SECTIONS } from './orbyMarketingContent.js';
+import { isMobileLanding } from '../orbyMobileLanding.js';
 import { gsap, prefersReducedMotion } from './marketingMotion.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
@@ -143,7 +144,7 @@ function scheduleSubpageNavOffsetSync(nav) {
 }
 
 function initMobileNavMenu(nav) {
-  if (!document.documentElement.classList.contains('mobile-landing')) {
+  if (!isMobileLanding()) {
     return () => {};
   }
 
@@ -358,8 +359,7 @@ function initSiteNavNow(options) {
   /** @type {(() => void) | null} */
   let teardownMobileNavMenu = null;
 
-  const isMobileHome =
-    mode === 'home' && document.documentElement.classList.contains('mobile-landing');
+  const isMobileHome = mode === 'home' && isMobileLanding();
 
   if (mode === 'subpage') {
     nav.classList.add('orby-marketing-scroll-nav--visible');

@@ -7256,7 +7256,7 @@ body.ui-hidden .shelf {
   line-height: 1.5;
 }
 
-/* ── Mobile landing (html.mobile-landing from inline head script + scripts/main.js) ── */
+/* ── Mobile landing (html.mobile-landing from orbyMobileLandingBoot.js + scripts/main.js) ── */
 html.mobile-landing,
 html.mobile-landing body {
   background-color: var(--orby-app-bg) !important;
