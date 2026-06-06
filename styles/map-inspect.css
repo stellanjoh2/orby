@@ -118,13 +118,14 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-/* Floating map preview — shelf chrome, top-left inset */
+/* Floating map preview — shelf chrome, top-left inset; body size set from texture aspect in JS */
 .map-preview-panel {
   position: fixed;
   z-index: 120;
   top: var(--shelf-inset, 48px);
   left: var(--shelf-inset, 48px);
-  width: min(520px, calc(100vw - 2 * var(--shelf-inset, 48px)));
+  width: auto;
+  max-width: calc(100vw - 2 * var(--shelf-inset, 48px));
   pointer-events: none;
 }
 
@@ -136,6 +137,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--shelf-stack-gap, 12px);
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   padding: var(--shelf-card-padding, 1.2rem);
   border-radius: var(--app-settings-chrome-radius, 18px);
   background: var(--shelf-bg, rgba(8, 8, 8, 0.78));
@@ -143,6 +147,7 @@
   -webkit-backdrop-filter: blur(15px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .map-preview-panel__header {
@@ -231,9 +236,9 @@
 
 .map-preview-panel__body {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
   min-height: 0;
   border-radius: 6px;
   overflow: hidden;
@@ -271,25 +276,19 @@
 .map-preview-panel__image {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 50vh;
-  object-fit: contain;
+  height: 100%;
 }
 
 @media (max-width: 720px) {
   .map-preview-panel {
-    width: min(520px, calc(100vw - 2 * var(--shelf-inset, 24px)));
-  }
-
-  .map-preview-panel__image {
-    max-height: 42vh;
+    max-width: calc(100vw - 2 * var(--shelf-inset, 24px));
   }
 }
 
 html:not(.mobile-landing) .map-preview-panel {
   top: calc(48px * var(--studio-ui-scale));
   left: calc(48px * var(--studio-ui-scale));
-  width: min(520px, calc(100vw - 96px * var(--studio-ui-scale)));
+  max-width: calc(100vw - 96px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .map-preview-panel__chrome {

@@ -66,9 +66,6 @@ function promoteFbxClassicMaterialToStandard(material) {
     depthTest: material.depthTest,
     toneMapped: material.toneMapped !== false,
     premultipliedAlpha: !!material.premultipliedAlpha,
-    skinning: !!material.skinning,
-    morphTargets: !!material.morphTargets,
-    morphNormals: !!material.morphNormals,
   });
 
   if (material.userData && typeof material.userData === 'object') {

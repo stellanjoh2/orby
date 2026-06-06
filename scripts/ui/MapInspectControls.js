@@ -64,6 +64,7 @@ export class MapInspectControls {
     this._block = document.getElementById('mapInspectBlock');
     this._grid = document.getElementById('mapInspectGrid');
     this._panel = document.getElementById('mapPreviewPanel');
+    this._panelBody = this._panel?.querySelector('.map-preview-panel__body') ?? null;
     this._panelTabs = document.getElementById('mapPreviewPanelTabs');
     this._panelImage = document.getElementById('mapPreviewPanelImage');
     this._panelClose = document.getElementById('mapPreviewPanelClose');
@@ -80,6 +81,7 @@ export class MapInspectControls {
 
     this._panelClose?.addEventListener('click', () => this.closePanel());
     this._panelZoom?.addEventListener('click', () => this.openFullsize());
+    this._panelImage?.addEventListener('load', () => this._fitPanelToImage());
     this._fullsizeClose?.addEventListener('click', () => this.closeFullsize());
     this._fullsizeViewport?.addEventListener('pointerdown', (event) => this._startFullsizePan(event));
     this._fullsizeImage?.addEventListener('load', () => {
@@ -87,9 +89,11 @@ export class MapInspectControls {
       this._centerFullsizeImage();
     });
     this._onFullsizeResize = () => {
-      if (!this._fullsizeOpen) return;
-      if (this._cacheFullsizeLayout()) {
+      if (this._fullsizeOpen && this._cacheFullsizeLayout()) {
         this._clampFullsizePan();
+      }
+      if (this._panelOpen) {
+        this._fitPanelToImage();
       }
     };
     window.addEventListener('resize', this._onFullsizeResize);
@@ -452,6 +456,9 @@ export class MapInspectControls {
     this._renderPanelTabs();
     this._syncPanelImage();
     this._positionPanelDefault();
+    requestAnimationFrame(() => {
+      if (this._panelOpen) this._fitPanelToImage();
+    });
     if (this._modalSlot) {
       this._pinSlot(this._modalSlot);
     }
@@ -565,6 +572,7 @@ export class MapInspectControls {
     if (!ctx?.texture) {
       this._panelImage.removeAttribute('src');
       this._panelImage.alt = '';
+      this._resetPanelBodySize();
       return;
     }
 
@@ -573,6 +581,59 @@ export class MapInspectControls {
       this._panelImage.src = url;
     }
     this._panelImage.alt = ctx.label;
+    if (this._panelImage.complete && this._panelImage.naturalWidth > 0) {
+      this._fitPanelToImage();
+    }
+  }
+
+  _resetPanelBodySize() {
+    if (!this._panelBody) return;
+    this._panelBody.style.width = '';
+    this._panelBody.style.height = '';
+  }
+
+  /**
+   * @returns {number}
+   */
+  _getShelfInsetPx() {
+    const shelf = document.getElementById('shelf');
+    const insetStr =
+      (shelf ? getComputedStyle(shelf).getPropertyValue('--shelf-inset').trim() : '') ||
+      getComputedStyle(document.documentElement).getPropertyValue('--shelf-inset').trim() ||
+      '48px';
+    return parseFloat(insetStr) || 48;
+  }
+
+  _fitPanelToImage() {
+    if (!this._panelOpen || !this._panelImage || !this._panelBody) return;
+
+    const iw = this._panelImage.naturalWidth;
+    const ih = this._panelImage.naturalHeight;
+    if (!iw || !ih) return;
+
+    const maxDim = window.innerHeight * 0.5;
+    const aspect = iw / ih;
+    let bodyW = aspect >= 1 ? maxDim : maxDim * aspect;
+    let bodyH = aspect >= 1 ? maxDim / aspect : maxDim;
+
+    const chrome = this._panel?.querySelector('.map-preview-panel__chrome');
+    if (chrome) {
+      const style = getComputedStyle(chrome);
+      const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const inset = this._getShelfInsetPx();
+      const maxBodyW = window.innerWidth - inset * 2 - padX;
+      if (bodyW > maxBodyW) {
+        const scale = maxBodyW / bodyW;
+        bodyW *= scale;
+        bodyH *= scale;
+      }
+    }
+
+    this._panelBody.style.width = `${Math.round(bodyW)}px`;
+    this._panelBody.style.height = `${Math.round(bodyH)}px`;
+    if (this._panel) {
+      this._panel.style.width = 'auto';
+    }
   }
 
   _syncFullsizeImage() {
