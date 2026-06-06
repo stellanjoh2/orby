@@ -374,6 +374,7 @@
             id="fileInput"
             class="sr-only"
             accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg,.orby"
+            aria-label="Import 3D model file"
           />
           <button
             id="fullscreenToggle"
@@ -718,14 +719,14 @@
                     />
                     <span class="value" data-output="materialEmissive">0.00</span>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span>Normal Map</span>
                     <label class="effect-toggle" data-tooltip="Use tangent-space normal maps in Shaded and Clay (full PBR materials only)">
                       <input type="checkbox" id="clayNormalMap" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Toggle normal maps in shaded and clay modes</span>
                     </label>
-                  </label>
+                  </div>
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="fresnel">
@@ -863,22 +864,22 @@
                     data-effect-foldout="wireframe-settings"
                     aria-hidden="true"
                   >
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span>Only Visible Faces</span>
                     <label class="effect-toggle" data-tooltip="Hide wireframe lines on back-facing surfaces">
                       <input type="checkbox" id="wireframeOnlyVisibleFaces" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Show wireframe only on visible faces</span>
                     </label>
-                  </label>
-                  <label class="slider-line">
+                  </div>
+                  <div class="slider-line">
                     <span>Hide Mesh</span>
                     <label class="effect-toggle" data-tooltip="Hide the underlying mesh to show only wireframe">
                       <input type="checkbox" id="wireframeHideMesh" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Hide mesh</span>
                     </label>
-                  </label>
+                  </div>
                   <label class="color-line">
                     <span>Color</span>
                     <input
@@ -992,23 +993,23 @@
                     </button>
                   </div>
                   <div id="svgExtrudeCoreControlsMount" class="svg-extrude-core-controls"></div>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span data-tooltip="Inverts extrusion direction along the Z axis">Flip Direction</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="svgExtrudeFlipDirection" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Flip SVG extrusion direction</span>
                     </label>
-                  </label>
+                  </div>
                   <div id="svgExtrudeColorDepths" data-tooltip="Per-color depth and position controls for detected SVG fills"></div>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span data-tooltip="Replace all imported SVG fills with one chosen color">Color Override</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="svgExtrudeColorOverride" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Enable SVG color override</span>
                     </label>
-                  </label>
+                  </div>
                   <div
                     class="effect-foldout effect-foldout--collapsed"
                     data-effect-foldout="svg-color-override"
@@ -1037,31 +1038,31 @@
                       <span class="sr-only">Reset</span>
                     </button>
                   </div>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span data-tooltip="Reverse mesh normal direction on the current model">Reverse Normals</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="reverseNormals" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Reverse normal direction</span>
                     </label>
-                  </label>
-                  <label class="slider-line">
+                  </div>
+                  <div class="slider-line">
                     <span data-tooltip="Move the mesh so its bounding-box center sits on the transform origin. Keeps the model in place on screen; fixes off-axis turntable spin. Turn off to restore the file's original pivot.">Center Pivot</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="centerPivot" disabled />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Center pivot on geometry</span>
                     </label>
-                  </label>
+                  </div>
                   <div id="stlSmoothingControls" hidden>
-                    <label class="slider-line">
+                    <div class="slider-line">
                       <span data-tooltip="Average STL face normals at corners. STL files only store triangle facets — smoothing is computed on import and can be adjusted here.">Smooth Shading</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="stlSmoothShading" checked />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Toggle STL smooth shading</span>
                       </label>
-                    </label>
+                    </div>
                     <label class="slider-line slider-line--track-short">
                       <span data-tooltip="Controls how sharply creases stay faceted (0 = all facets, higher = smoother curved areas). Only applies when Smooth Shading is on.">Smoothing Angle</span>
                       <input
@@ -1075,14 +1076,14 @@
                       <span class="value" data-output="stlSmoothingAngle">40°</span>
                     </label>
                   </div>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span data-tooltip="Tile a UV checker map across the model so you can spot stretching and seams. Texture by Atlux.">UV Checker</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="uvChecker" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Toggle UV checker overlay</span>
                     </label>
-                  </label>
+                  </div>
                   <div
                     class="effect-foldout effect-foldout--collapsed"
                     data-effect-foldout="uv-checker"
@@ -1121,7 +1122,7 @@
                       <option value="opaqueAndFrontFace">Solid + front faces</option>
                     </select>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span
                       data-tooltip="Uses light dither so stacked blended surfaces sort more predictably (common on Sketchfab). Turn off if hair or cloth looks too grainy."
                       >Stabilize Layered Transparency</span>
@@ -1130,15 +1131,15 @@
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Stabilize Layered Transparency</span>
                     </label>
-                  </label>
+                  </div>
                   <details class="advanced-import-details">
                     <summary>
                       <span class="block-title-name">
                         <span>Rare Fixes — Transmission &amp; Glass</span>
-                        <span class="dev-badge" data-tooltip="This feature is still under development" tabindex="0" role="img" aria-label="This feature is still under development"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                        <span class="dev-badge" data-tooltip="This feature is still under development" aria-hidden="true"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
                       </span>
                     </summary>
-                    <label class="slider-line">
+                    <div class="slider-line">
                       <span
                         data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
                         >Flip Glass Normal Y</span>
@@ -1147,8 +1148,8 @@
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Flip glass normal map Y</span>
                       </label>
-                    </label>
-                    <label class="slider-line">
+                    </div>
+                    <div class="slider-line">
                       <span
                         data-tooltip="Front-side only for those same materials—not for whole-body BLEND characters (use Transparency Mode)."
                         >Glass: Front Faces Only</span>
@@ -1157,7 +1158,7 @@
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Glass front faces only</span>
                       </label>
-                    </label>
+                    </div>
                   </details>
                   <p class="panel-hint advanced-import-hint">
                     Blended transparent surfaces are sorted per mesh in WebGL. Fine glass often needs glTF transmission or separate materials from the author.
@@ -1457,12 +1458,14 @@
                     step="0.001"
                     value="0"
                     disabled
+                    aria-label="Animation timeline"
                   />
                   <span id="animationTime">0:00</span>
                 </div>
-                <div class="select-line">
-                  <select id="animationSelect" disabled></select>
-                </div>
+                <label class="select-line">
+                  <span class="sr-only">Animation clip</span>
+                  <select id="animationSelect" disabled aria-label="Animation clip"></select>
+                </label>
               </div>
 
               <div class="panel-block">
@@ -1600,22 +1603,22 @@
                   />
                   <span class="value" data-output="hdriRotation">0°</span>
                 </label>
-                <label class="slider-line">
+                <div class="slider-line">
                   <span data-tooltip="On: the HDRI is drawn behind the scene. Off: only the solid background color is shown; HDRI still lights the model.">Render Backdrop</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriBackground" checked />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Render HDRI as viewport backdrop</span>
                   </label>
-                </label>
-                <label class="slider-line">
+                </div>
+                <div class="slider-line">
                   <span data-tooltip="Invisible floor at Ground Y under the model: Ambient Occlusion for contact on the HDRI; 3-point lights + Cast Shadows for directional shadow maps. Uses Ground Y (snap to mesh if it floats).">Receive Shadows + AO</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="hdriReceiveShadowsAo" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Receive shadows and ambient occlusion on HDRI backdrop</span>
                     </label>
-                  </label>
+                  </div>
                 </div>
               </div>
 
@@ -1647,14 +1650,14 @@
                     value="#080808"
                   />
                 </label>
-                <label class="slider-line">
+                <div class="slider-line">
                   <span data-tooltip="Multi-stop linear or radial gradient — overrides the flat color when on">Gradient</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="backgroundGradientEnabled" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable gradient background</span>
                   </label>
-                </label>
+                </div>
                 <div
                   id="backgroundGradientFoldout"
                   class="effect-foldout effect-foldout--collapsed bg-gradient-foldout"
@@ -2014,22 +2017,22 @@
                     />
                     <span class="value" data-output="lightsRotation">0°</span>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span>Auto Rotate</span>
                     <label class="effect-toggle" data-tooltip="Rotate lights around the object (360° every 10s; matches 10s PNG/MP4 export when enabled)">
                       <input type="checkbox" id="lightsAutoRotate" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Auto rotate lights</span>
                     </label>
-                  </label>
-                  <label class="slider-line">
+                  </div>
+                  <div class="slider-line">
                     <span data-tooltip="Show visual indicators for light positions">Show Spotlights</span>
                     <label class="effect-toggle" data-tooltip="Display light position indicators in the viewport">
                       <input type="checkbox" id="showLightIndicators" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Show spotlights</span>
                     </label>
-                  </label>
+                  </div>
                 </div>
 
                 <div class="panel-block-divider"></div>
@@ -2106,27 +2109,27 @@
                     />
                     <span class="value" data-output="keyLightRotate">0°</span>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span>Cast Shadows</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="keyLightCastShadows" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Cast shadows</span>
                     </label>
-                  </label>
+                  </div>
                   <div
                     id="keyLightGoboFoldout"
                     class="creative-look-foldout creative-look-foldout--collapsed"
                   >
                     <div class="creative-look-foldout-body">
-                      <label class="slider-line slider-line--toggle-only">
+                      <div class="slider-line slider-line--toggle-only">
                         <span data-tooltip="Project the selected gobo pattern from the key light">Gobo</span>
                         <label class="effect-toggle">
                           <input type="checkbox" id="goboEnabled" />
                           <span class="effect-indicator" aria-hidden="true"></span>
                           <span class="sr-only">Enable gobo projection</span>
                         </label>
-                      </label>
+                      </div>
                       <div class="hdri-grid" id="goboGrid">
                         <button
                           type="button"
@@ -2272,14 +2275,14 @@
                     />
                     <span class="value" data-output="fillLightRotate">0°</span>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span>Cast Shadows</span>
                   <label class="effect-toggle">
                       <input type="checkbox" id="fillLightCastShadows" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Cast shadows</span>
                   </label>
-                </label>
+                </div>
                   </div>
                 </div>
 
@@ -2346,14 +2349,14 @@
                   />
                     <span class="value" data-output="rimLightRotate">0°</span>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span>Cast Shadows</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="rimLightCastShadows" />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Cast shadows</span>
                     </label>
-                </label>
+                </div>
                   </div>
               </div>
 
@@ -2422,7 +2425,7 @@
                   >
                   <label class="select-line">
                     <span data-tooltip="Shadow map resolution for 3-point lights">Quality</span>
-                    <select id="lightsShadowQuality">
+                    <select id="lightsShadowQuality" aria-label="Shadow quality">
                       <option value="low">Low</option>
                       <option value="medium" selected>Medium</option>
                       <option value="high">High</option>
@@ -2469,7 +2472,7 @@
                     />
                     <span class="value" data-output="lightsShadowContactOffset">-0.0001</span>
                   </label>
-                  <label class="slider-line">
+                  <div class="slider-line">
                     <span data-tooltip="For thin single-surface meshes (foliage/cards), cast shadows from both sides to reduce holes.">Two-Sided Cast</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="lightsShadowTwoSided" />
@@ -2477,7 +2480,7 @@
                       <span class="sr-only">Enable two-sided shadow casting</span>
                     </label>
                     <span class="value" aria-hidden="true"></span>
-                  </label>
+                  </div>
                   </div>
                 </div>
                 </div>
@@ -2604,22 +2607,22 @@
                   <span class="value" data-output="exposure">1.00</span>
                 </label>
                 </div>
-                <label class="slider-line">
+                <div class="slider-line">
                   <span>Auto Exposure</span>
                   <label class="effect-toggle" data-tooltip="Automatically adjust exposure for optimal brightness">
                     <input type="checkbox" id="autoExposure" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable auto exposure</span>
                   </label>
-                </label>
-                <label class="slider-line">
+                </div>
+                <div class="slider-line">
                   <span>Manual Render Distance</span>
                   <label class="effect-toggle" data-tooltip="Rare override — set near/far manually for telephoto or isometric shots when AO banding appears on the backdrop">
                     <input type="checkbox" id="manualClipPlanes" />
                     <span class="effect-indicator" aria-hidden="true"></span>
                     <span class="sr-only">Enable manual render distance</span>
                   </label>
-                </label>
+                </div>
                 <div
                   id="clipPlanesFoldout"
                   class="clip-planes-foldout clip-planes-foldout--collapsed"
@@ -3398,7 +3401,7 @@
                   </label>
                   <label class="select-line">
                     <span>Quality</span>
-                    <select id="dofQuality" data-tooltip="Three.js BokehPass (same approach as threejsdemos Depth of Field Gallery). Quality scales blur strength; Low is a bit gentler on GPU.">
+                    <select id="dofQuality" aria-label="Depth of field quality" data-tooltip="Three.js BokehPass (same approach as threejsdemos Depth of Field Gallery). Quality scales blur strength; Low is a bit gentler on GPU.">
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high" selected>High</option>
@@ -3471,7 +3474,7 @@
                   </label>
                   <label class="select-line">
                     <span>Quality</span>
-                    <select id="bloomQuality">
+                    <select id="bloomQuality" aria-label="Bloom quality">
                       <option value="low">Low</option>
                       <option value="medium" selected>Medium</option>
                       <option value="high">High</option>
@@ -3567,7 +3570,7 @@
                   </label>
                   <label class="select-line">
                     <span>Quality</span>
-                    <select id="anamorphicBloomQuality">
+                    <select id="anamorphicBloomQuality" aria-label="Anamorphic bloom quality">
                       <option value="low">Low</option>
                       <option value="medium" selected>Medium</option>
                       <option value="high">High</option>
@@ -3722,14 +3725,14 @@
                   </label>
                   <label class="select-line">
                     <span>Quality</span>
-                    <select id="lensFlareQuality" data-tooltip="Lowers ghost/dirt sample counts — same look, less GPU work (not feature cutoffs)">
+                    <select id="lensFlareQuality" aria-label="Lens flare quality" data-tooltip="Lowers ghost/dirt sample counts — same look, less GPU work (not feature cutoffs)">
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high" selected>High</option>
                       <option value="ultra">Ultra</option>
                     </select>
                   </label>
-                  <label
+                  <div
                     class="slider-line"
                     data-tooltip="Animate flare streaks with iTime — only while camera auto-orbit is on (off by default)"
                   >
@@ -3739,7 +3742,7 @@
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Animate lens flare streaks during camera auto-orbit</span>
                     </label>
-                  </label>
+                  </div>
                   <button
                     id="lensFlareKeyLightConnect"
                     class="ghost-btn small"
@@ -3868,7 +3871,7 @@
                     />
                     <span class="value" data-output="godRaysClampMax">1</span>
                   </label>
-                  <label
+                  <div
                     class="slider-line"
                     data-tooltip="Blur the sun mask before radial blur (reduces artifacts)"
                   >
@@ -3878,10 +3881,10 @@
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Blur sun mask before radial blur</span>
                     </label>
-                  </label>
+                  </div>
                   <label class="select-line" data-tooltip="Resolution scale and sample count preset">
                     <span>Quality</span>
-                    <select id="godRaysQuality">
+                    <select id="godRaysQuality" aria-label="God rays quality">
                       <option value="low">Low</option>
                       <option value="medium" selected>Medium</option>
                       <option value="high">High</option>
@@ -4180,14 +4183,14 @@
                 </label>
                 <label class="select-line">
                   <span>Anti-Aliasing</span>
-                  <select id="antiAliasing">
+                  <select id="antiAliasing" aria-label="Anti-aliasing">
                     <option value="none">None</option>
                     <option value="fxaa" selected>FXAA</option>
                   </select>
                 </label>
                 <label class="select-line">
                   <span>Tone Mapping</span>
-                  <select id="toneMapping">
+                  <select id="toneMapping" aria-label="Tone mapping">
                     <option value="none">None</option>
                     <option value="reinhard">Reinhard</option>
                     <option value="aces-filmic" selected>ACES Filmic</option>
@@ -4415,17 +4418,18 @@
                     </button>
                   </div>
                   <div id="exportMeshAnimationsSettings" class="export-option-group" hidden>
-                    <label class="slider-line">
+                    <div class="slider-line">
                       <span data-tooltip="Play a GLB animation clip during export and preview">Embed Animations</span>
                       <label class="effect-toggle">
                         <input type="checkbox" id="exportMeshAnimationsEmbed" />
                         <span class="effect-indicator" aria-hidden="true"></span>
                         <span class="sr-only">Embed GLB animations in video export</span>
                       </label>
-                    </label>
-                    <div id="exportMeshAnimationClipWrap" class="select-line" hidden>
-                      <select id="exportMeshAnimationSelect" data-tooltip="Which GLB animation clip to play during export"></select>
                     </div>
+                    <label id="exportMeshAnimationClipWrap" class="select-line" hidden>
+                      <span class="sr-only">Export animation clip</span>
+                      <select id="exportMeshAnimationSelect" aria-label="Export animation clip" data-tooltip="Which GLB animation clip to play during export"></select>
+                    </label>
                   </div>
                   <div class="panel-block-divider" aria-hidden="true"></div>
                   <div class="export-option-group">
@@ -4630,10 +4634,12 @@
           <button type="button" id="closeLoadSceneSettings" class="close-btn" aria-label="Close"></button>
         </div>
         <p class="load-settings-description">Paste your scene settings JSON below and click Apply. This includes all visual settings: lighting, camera position and angle, post-processing, materials, and object transforms (scale, position, rotation).</p>
+        <label class="sr-only" for="loadSceneSettingsText">Scene settings JSON</label>
         <textarea
           id="loadSceneSettingsText"
           placeholder="Paste scene settings JSON here..."
           rows="10"
+          aria-label="Scene settings JSON"
         ></textarea>
         <div class="load-settings-actions">
           <button id="applySceneSettings" class="ghost-btn">
