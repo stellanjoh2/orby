@@ -5096,6 +5096,31 @@ button.advanced-info-doc-btn {
   grid-column: 3;
 }
 
+.select-line select {
+  grid-column: 2;
+  justify-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 1.6rem 0.35rem 0.7rem;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--shelf-headline-font-size);
+  line-height: 1.25;
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+.select-line select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
+}
+
 .slider-line {
   grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
   column-gap: 0.45rem;
@@ -5928,31 +5953,6 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 
 #animationBlock {
   --slider-label-col: calc(5.25rem * var(--studio-ui-scale, 1));
-}
-
-.select-line select {
-  grid-column: 2;
-  justify-self: stretch;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  border: none;
-  border-radius: 999px;
-  padding: 0.35rem 1.6rem 0.35rem 0.7rem;
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--shelf-headline-font-size);
-  line-height: 1.25;
-  appearance: none;
-  background-color: rgba(255, 255, 255, 0.15);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.6rem center;
-}
-
-.select-line select:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
 .hdri-grid {

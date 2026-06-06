@@ -161,7 +161,7 @@ export class MeshDiagnosticsController {
 
   setJointScale(scale) {
     const next = THREE.MathUtils.clamp(
-      Number(scale) || 1,
+      Number(scale) || 0.5,
       JOINT_SCALE_MIN,
       JOINT_SCALE_MAX,
     );

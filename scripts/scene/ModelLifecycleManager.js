@@ -254,6 +254,8 @@ export class ModelLifecycleManager {
     s.diagnosticsController.setJointScale(state.animation?.jointScale ?? 0.5);
     s.diagnosticsController.setBoneStrokeWidth(state.animation?.boneStrokeWidth ?? 2);
     s.diagnosticsController.setHideMesh(false);
+    s.stateStore.set('animation.showBones', false);
+    s.stateStore.set('animation.hideMesh', false);
     const hasSkinnedSkeleton = s.diagnosticsController.hasSkinnedSkeleton();
     s.ui.syncAnimationShowBones(false, hasSkinnedSkeleton);
     s.ui.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });

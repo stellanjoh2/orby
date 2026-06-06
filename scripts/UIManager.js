@@ -79,8 +79,6 @@ export class UIManager {
     this.dom = {};
     this.activeTab = 'mesh';
     this.uiHidden = false;
-    this.currentAnimationDuration = 0;
-    this.animationPlaying = false;
     this.shelfRevealed = false;
     /** @type {import('./ui/ShelfOverlaySuppression.js').ShelfOverlaySuppression | null} */
     this.shelfOverlay = null;
@@ -122,6 +120,7 @@ export class UIManager {
    */
   initShell() {
     this.cacheDom();
+    this.animationControls = new AnimationControls(this.eventBus, this);
     this.bindOfflineExportOverlayHome();
     this.uiSounds = new UISounds();
     if (this.dom.uiSoundsEnabled) {
@@ -186,7 +185,6 @@ export class UIManager {
       this.helpers,
     );
     this.globalControls = new GlobalControls(this.eventBus, this.stateStore, this, this.helpers);
-    this.animationControls = new AnimationControls(this.eventBus, this.stateStore, this);
     this.fontExtrudeUI = new FontExtrudeUI(
       this.eventBus,
       this.stateStore,
@@ -2190,151 +2188,39 @@ export class UIManager {
   }
 
   extractAnimationName(fullName) {
-    if (!fullName) return 'Animation';
-    
-    // Split by pipe if present
-    const parts = fullName.split('|');
-    
-    // Find the most meaningful part (usually the last or middle part that's not common prefixes)
-    let namePart = fullName;
-    if (parts.length > 1) {
-      // Skip common prefixes like "Armature", "baselayer", etc.
-      const meaningfulParts = parts.filter(part => {
-        const lower = part.toLowerCase();
-        return !['armature', 'baselayer', 'mixamo', 'root'].includes(lower);
-      });
-      namePart = meaningfulParts.length > 0 ? meaningfulParts[meaningfulParts.length - 1] : parts[parts.length - 1];
-    }
-    
-    // Convert underscores to spaces and title case
-    return namePart
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, char => char.toUpperCase())
-      .trim();
+    return this.animationControls?.extractAnimationName(fullName) ?? 'Animation';
   }
 
   setAnimationClips(clips) {
-    this.dom.animationSelect.innerHTML = '';
-    if (!clips?.length) {
-      this.dom.animationBlock.hidden = true;
-      this.animationPlaying = false;
-      this.dom.playPause.disabled = true;
-      this.dom.animationScrub.disabled = true;
-      this.dom.animationSelect.disabled = true; // Disable dropdown when no clips
-      this.setAnimationSpeedEnabled(false);
-      this.setAnimationClipModeEnabled(false);
-      this.syncAnimationReverse(false, false);
-      this.syncAnimationShowBones(false, false);
-      this.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
-      this.syncAnimationBoneStroke({ visible: false, enabled: false });
-      this.syncAnimationJointScale({ visible: false, enabled: false });
-      return;
-    }
-    clips.forEach((clip, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      const displayName = this.extractAnimationName(clip.name);
-      option.textContent = displayName;
-      this.dom.animationSelect.appendChild(option);
-    });
-    this.dom.animationBlock.hidden = false;
-    this.dom.playPause.disabled = false;
-    this.dom.animationScrub.disabled = false;
-    this.dom.animationSelect.disabled = false; // Enable dropdown when clips are available
-    this.setAnimationSpeedEnabled(true);
-    this.setAnimationClipModeEnabled(true);
-    this.currentAnimationDuration = clips[0].seconds ?? 0;
+    this.animationControls?.setAnimationClips(clips);
   }
 
   syncAnimationClipSelect(index) {
-    const select = this.dom.animationSelect;
-    if (!select || select.options.length === 0) return;
-    const next = String(index);
-    if (select.value !== next) {
-      select.value = next;
-    }
+    this.animationControls?.syncAnimationClipSelect(index);
   }
 
   setAnimationClipModeEnabled(enabled) {
-    this.dom.animationClipModeSegmented
-      ?.querySelectorAll('input[type="radio"]')
-      .forEach((input) => {
-        input.disabled = !enabled;
-      });
+    this.animationControls?.setAnimationClipModeEnabled(enabled);
   }
 
   syncAnimationClipMode(mode, available) {
-    const next = mode === 'cycle' ? 'cycle' : 'loop';
-    if (available !== undefined) {
-      this.setAnimationClipModeEnabled(available);
-    }
-    const input = this.dom.animationClipModeSegmented?.querySelector(
-      `input[type="radio"][value="${next}"]`,
-    );
-    if (input) {
-      input.checked = true;
-    }
+    this.animationControls?.syncAnimationClipMode(mode, available);
   }
 
   syncAnimationShowBones(checked, available) {
-    const input = this.inputs.animationShowBones;
-    if (!input) return;
-    input.checked = !!checked;
-    if (available !== undefined) {
-      input.disabled = !available;
-    }
+    this.animationControls?.syncAnimationShowBones(checked, available);
   }
 
-  syncAnimationJointScale({ visible, enabled, value } = {}) {
-    const row = this.dom.animationJointScaleRow;
-    const slider = this.inputs.animationJointScale;
-    if (row && visible !== undefined) {
-      row.hidden = !visible;
-    }
-    if (slider) {
-      if (enabled !== undefined) {
-        slider.disabled = !enabled;
-      }
-      if (value !== undefined && document.activeElement !== slider) {
-        slider.value = String(value);
-        this.helpers?.updateValueLabel('animationJointScale', value, 'decimal');
-        this.helpers?.updateSliderFill?.(slider);
-      }
-    }
+  syncAnimationJointScale(options) {
+    this.animationControls?.syncAnimationJointScale(options);
   }
 
-  syncAnimationBoneStroke({ visible, enabled, value } = {}) {
-    const row = this.dom.animationBoneStrokeRow;
-    const slider = this.inputs.animationBoneStrokeWidth;
-    if (row && visible !== undefined) {
-      row.hidden = !visible;
-    }
-    if (slider) {
-      if (enabled !== undefined) {
-        slider.disabled = !enabled;
-      }
-      if (value !== undefined && document.activeElement !== slider) {
-        slider.value = String(value);
-        this.helpers?.updateValueLabel('animationBoneStrokeWidth', value, 'decimal');
-        this.helpers?.updateSliderFill?.(slider);
-      }
-    }
+  syncAnimationBoneStroke(options) {
+    this.animationControls?.syncAnimationBoneStroke(options);
   }
 
-  syncAnimationHideMesh({ visible, enabled, checked } = {}) {
-    const row = this.dom.animationHideMeshRow;
-    const input = this.inputs.animationHideMesh;
-    if (row && visible !== undefined) {
-      row.hidden = !visible;
-    }
-    if (input) {
-      if (enabled !== undefined) {
-        input.disabled = !enabled;
-      }
-      if (checked !== undefined) {
-        input.checked = !!checked;
-      }
-    }
+  syncAnimationHideMesh(options) {
+    this.animationControls?.syncAnimationHideMesh(options);
   }
 
   setExportVideoAnimationClips(clips) {
@@ -2404,57 +2290,19 @@ export class UIManager {
   }
 
   setAnimationSpeedEnabled(enabled) {
-    this.dom.animationSpeedSegmented
-      ?.querySelectorAll('input[type="radio"]')
-      .forEach((input) => {
-        input.disabled = !enabled;
-      });
-    if (this.inputs.animationReverse) {
-      this.inputs.animationReverse.disabled = !enabled;
-    }
+    this.animationControls?.setAnimationSpeedEnabled(enabled);
   }
 
   syncAnimationReverse(checked, available) {
-    const input = this.inputs.animationReverse;
-    if (!input) return;
-    if (available !== undefined) {
-      input.disabled = !available;
-    }
-    if (checked !== undefined) {
-      input.checked = !!checked;
-    }
+    this.animationControls?.syncAnimationReverse(checked, available);
   }
 
   setAnimationPlaying(playing) {
-    this.animationPlaying = playing;
-    const button = this.dom.playPause;
-    const icon = button?.querySelector('i');
-    const srLabel = button?.querySelector('.sr-only');
-
-    if (icon) {
-      icon.classList.toggle('fa-play', !playing);
-      icon.classList.toggle('fa-pause', playing);
-    }
-
-    if (srLabel) {
-      srLabel.textContent = playing ? 'Pause' : 'Play';
-    }
-
-    button?.setAttribute('aria-label', playing ? 'Pause animation' : 'Play animation');
+    this.animationControls?.setAnimationPlaying(playing);
   }
 
   updateAnimationTime(current, duration) {
-    if (!duration) return;
-    const clamp = Math.max(0, Math.min(current, duration));
-    const minutes = Math.floor(clamp / 60)
-      .toString()
-      .padStart(1, '0');
-    const seconds = Math.floor(clamp % 60)
-      .toString()
-      .padStart(2, '0');
-    this.dom.animationTime.textContent = `${minutes}:${seconds}`;
-    const progress = duration === 0 ? 0 : clamp / duration;
-    this.dom.animationScrub.value = progress;
+    this.animationControls?.updateAnimationTime(current, duration);
   }
 
   syncMeshControls(state) {

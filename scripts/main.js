@@ -74,6 +74,7 @@ void import('./marketing/marketingPerformanceTier.js')
 const eventBus = new EventBus();
 const stateStore = new StateStore();
 const ui = new UIManager(eventBus, stateStore);
+ui.initShell();
 const tooltips = new TooltipController();
 const scene = new SceneManager(eventBus, stateStore, ui);
 
@@ -91,7 +92,6 @@ function ensureGamepad() {
   return gamepad;
 }
 
-ui.initShell();
 // WebGL studio boots on first model load (see SceneManager.ensureStudioReady).
 
 window.orby = { eventBus, stateStore, ui, scene, tooltips, ensureGamepad, get gamepad() { return gamepad; } };

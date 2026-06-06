@@ -261,30 +261,8 @@ export class SceneManager {
     this.modelLoader = new ModelLoader();
     this.modelLifecycle = new ModelLifecycleManager(this);
     this.svgGlbExporter = new SvgGlbExporter();
-    this.animationController = new AnimationController({
-      onClipsChanged: (clips) => {
-        this.ui.setAnimationClips(clips);
-        this.ui.setExportVideoAnimationClips(clips);
-        this.ui.syncAnimationReverse(
-          this.animationController.playbackReverse,
-          !!clips?.length,
-        );
-        this.ui.syncAnimationClipMode(
-          this.animationController.clipPlaybackMode,
-          !!clips?.length,
-        );
-      },
-      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
-      onTimeUpdate: (current, duration) =>
-        this.ui.updateAnimationTime(current, duration),
-      onClipIndexChanged: (index) => this.ui.syncAnimationClipSelect(index),
-      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
-      getFileName: () => this.currentFile?.name ?? 'model.glb',
-    });
-    this.animationController.setClipPlaybackMode(
-      this.stateStore.getState().animation?.clipPlaybackMode ?? 'loop',
-    );
-    this.ui.syncAnimationClipMode(this.animationController.clipPlaybackMode, false);
+    this.animationController = this._createAnimationController();
+    this._syncAnimationControllerFromState();
     this.fontTextRevealController = new FontTextRevealController({
       stateStore: this.stateStore,
       onNeedRender: () => this.render(),
@@ -750,30 +728,8 @@ export class SceneManager {
     this._skipCameraFlightOnNextModelLoad = false;
     this.ui?.updateTitle?.('Orby');
     this.ui?.updateTopBarDetail?.('');
-    this.animationController = new AnimationController({
-      onClipsChanged: (clips) => {
-        this.ui.setAnimationClips(clips);
-        this.ui.setExportVideoAnimationClips(clips);
-        this.ui.syncAnimationReverse(
-          this.animationController.playbackReverse,
-          !!clips?.length,
-        );
-        this.ui.syncAnimationClipMode(
-          this.animationController.clipPlaybackMode,
-          !!clips?.length,
-        );
-      },
-      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
-      onTimeUpdate: (current, duration) =>
-        this.ui.updateAnimationTime(current, duration),
-      onClipIndexChanged: (index) => this.ui.syncAnimationClipSelect(index),
-      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
-      getFileName: () => this.currentFile?.name ?? 'model.glb',
-    });
-    this.animationController.setClipPlaybackMode(
-      this.stateStore.getState().animation?.clipPlaybackMode ?? 'loop',
-    );
-    this.ui?.syncAnimationClipMode?.(this.animationController.clipPlaybackMode, false);
+    this.animationController = this._createAnimationController();
+    this._syncAnimationControllerFromState();
 
     this.meshClickHandler?.detach?.();
 
@@ -3891,6 +3847,39 @@ export class SceneManager {
     this.diagnosticsController.clearBoneHelpers();
   }
 
+  _createAnimationController() {
+    return new AnimationController({
+      onClipsChanged: (clips) => {
+        this.ui.setAnimationClips(clips);
+        this.ui.setExportVideoAnimationClips(clips);
+        this.ui.syncAnimationReverse(
+          this.animationController.playbackReverse,
+          !!clips?.length,
+        );
+        this.ui.syncAnimationClipMode(
+          this.animationController.clipPlaybackMode,
+          !!clips?.length,
+        );
+      },
+      onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
+      onTimeUpdate: (current, duration) =>
+        this.ui.updateAnimationTime(current, duration),
+      onClipIndexChanged: (index) => this.ui.syncAnimationClipSelect(index),
+      onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
+      getFileName: () => this.currentFile?.name ?? 'model.glb',
+    });
+  }
+
+  _syncAnimationControllerFromState() {
+    this.animationController.setClipPlaybackMode(
+      this.stateStore.getState().animation?.clipPlaybackMode ?? 'loop',
+    );
+    this.ui?.syncAnimationClipMode?.(
+      this.animationController.clipPlaybackMode,
+      false,
+    );
+  }
+
   refreshBoneHelpers() {
     this.diagnosticsController.refreshBoneHelpers(this.currentShading);
   }
@@ -3932,7 +3921,7 @@ export class SceneManager {
   }
 
   setAnimationJointScale(scale, { updateUi = true } = {}) {
-    if (!this.diagnosticsController) return 1;
+    if (!this.diagnosticsController) return 0.5;
 
     const next = this.diagnosticsController.setJointScale(scale);
     this.stateStore.set('animation.jointScale', next);
