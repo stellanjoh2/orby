@@ -942,7 +942,7 @@ export class StartMenuController {
       return;
     }
     try {
-      await scene.enterBlankStudio({ openFontPanel: true, skipSound: true });
+      await scene.enterBlankStudio({ skipSound: true });
     } catch (error) {
       console.error('Failed to open blank canvas', error);
       this.ui.showToast('Could not open blank canvas');

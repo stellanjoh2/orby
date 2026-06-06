@@ -639,6 +639,22 @@ const SITE_NAV_LINK_OPTIONS = {
 
 /**
  * @param {MarketingSiteNavFields} fields
+ */
+function renderMarketingSiteNavMenuSocial(fields) {
+  const links = [
+    fields.instagramHref
+      ? `<a class="orby-marketing-scroll-nav__menu-social-link" href="${escapeMarketingHtml(fields.instagramHref)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><span class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--instagram" aria-hidden="true"></span></a>`
+      : '',
+    `<a class="orby-marketing-scroll-nav__menu-social-link" href="${escapeMarketingHtml(fields.githubHref)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><span class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--github" aria-hidden="true"></span></a>`,
+  ]
+    .filter(Boolean)
+    .join('');
+
+  return `<div class="orby-marketing-scroll-nav__menu-social">${links}</div>`;
+}
+
+/**
+ * @param {MarketingSiteNavFields} fields
  * @param {{ homeHref: string, brandScrollTop?: boolean }} options
  */
 function renderMarketingSiteNavHtml(fields, options) {
@@ -678,6 +694,7 @@ function renderMarketingSiteNavHtml(fields, options) {
     </div>
     <div class="orby-marketing-scroll-nav__menu" id="orby-site-nav-menu" data-orby-marketing-nav-menu aria-hidden="true">
       <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--overlay">${links.join('')}</div>
+      ${renderMarketingSiteNavMenuSocial(fields)}
     </div>
   </nav>`;
 }

@@ -28,6 +28,7 @@ import {
   captureMaterialEmissiveRest,
   normalizeFontRevealEmissiveColor,
   normalizeFontRevealEmissiveSlamEnabled,
+  restoreRevealGlyphEmissive,
 } from './fontTextRevealEmissive.js';
 
 export {
@@ -180,6 +181,19 @@ export class FontTextRevealController {
         entry.restEmissiveIntensity = captured.restEmissiveIntensity;
       }
     }
+  }
+
+  _restoreAllGlyphEmissive() {
+    for (const state of this._glyphStates) {
+      restoreRevealGlyphEmissive(state);
+    }
+  }
+
+  _shouldHoldRevealEmissiveOverlay(elapsedSec, duration) {
+    if (!this.isEmissiveSlamEnabled() || this.getEmissiveSlamStrength() <= 0) return false;
+    if (this._previewMode === 'playing') return true;
+    if (this._previewMode === 'paused' && elapsedSec < duration - 1e-4) return true;
+    return false;
   }
 
   shouldRunLiveUpdate(scene) {
@@ -504,6 +518,10 @@ export class FontTextRevealController {
       });
     }
 
+    if (!this._shouldHoldRevealEmissiveOverlay(elapsedSec, duration)) {
+      this._restoreAllGlyphEmissive();
+    }
+
     this._boundModel?.updateMatrixWorld?.(true);
   }
 
@@ -572,17 +590,24 @@ export class FontTextRevealController {
     if (this._previewMode !== 'playing' || !this.isEnabled()) return;
 
     const duration = this.getDurationSec();
+    const decaySec =
+      this.isEmissiveSlamEnabled() && this.getEmissiveSlamStrength() > 0
+        ? this.getEmissiveSlamDecaySec()
+        : 0;
+    const endTime = duration + decaySec;
     const d = typeof delta === 'number' && Number.isFinite(delta) ? delta : 0;
     this._elapsed += d;
     if (this._elapsed >= duration) {
       if (this.isLoopEnabled()) {
         this._elapsed = 0;
         this.applyAtTime(0);
+      } else if (decaySec > 0 && this._elapsed < endTime) {
+        this.applyAtTime(this._elapsed);
       } else {
-        this._elapsed = duration;
+        this._elapsed = decaySec > 0 ? endTime : duration;
         this._previewMode = 'paused';
         this._stopPreviewLoop();
-        this.applyAtTime(duration);
+        this.applyAtTime(this._elapsed);
       }
       this._notifyPreviewTime();
       return;
@@ -618,6 +643,9 @@ export class FontTextRevealController {
   _applySettingsChange(model) {
     this.ensureBoundToModel(model ?? this._boundModel);
     const duration = this.getDurationSec();
+    if (this._glyphStates.length && !this.isEmissiveSlamEnabled()) {
+      this._restoreAllGlyphEmissive();
+    }
     if (
       this._glyphStates.length &&
       (!this.isEmissiveSlamEnabled() || this._elapsed >= duration - 1e-4)

@@ -365,7 +365,32 @@ html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
   }
 }
 
+/* Mobile landing — lock nav chrome inset after desktop ramp rules above */
+@media (max-width: 1919px) {
+  html.mobile-landing .orby-marketing-scroll-nav {
+    --orby-scroll-nav-edge-x: var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x));
+  }
+}
+
 @media (max-width: 720px) {
+  html.mobile-landing .orby-marketing-scroll-nav__bar {
+    height: var(--orby-scroll-nav-height);
+    min-height: var(--orby-scroll-nav-height);
+    padding-block: 0;
+  }
+
+  html.mobile-landing .orby-marketing-scroll-nav__brand,
+  html.mobile-landing a.orby-marketing-scroll-nav__brand {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  html.mobile-landing .orby-marketing-scroll-nav__links--inline {
+    display: none !important;
+    margin-top: 0;
+    padding: 0;
+  }
+
   .orby-marketing-scroll-nav__bar {
     height: auto;
     min-height: var(--orby-scroll-nav-height);

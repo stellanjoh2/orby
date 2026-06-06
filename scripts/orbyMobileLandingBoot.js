@@ -58,16 +58,32 @@
     );
   }
 
-  function ensureMobileLandingClass() {
+  function isLegalSubpage() {
+    try {
+      return (
+        typeof document !== 'undefined' &&
+        document.documentElement.classList.contains('orby-legal-site-nav')
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function applyMobileLandingClasses() {
     if (typeof document === 'undefined' || !shouldShowMobileLanding()) return false;
-    document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
+    document.documentElement.classList.add('mobile-landing');
+    if (!isLegalSubpage()) {
+      document.documentElement.classList.add('orby-home-scroll');
+    }
     return true;
   }
 
+  function ensureMobileLandingClass() {
+    return applyMobileLandingClasses();
+  }
+
   function applyMobileLandingBootClasses() {
-    if (typeof document === 'undefined' || !shouldShowMobileLanding()) return false;
-    document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
-    return true;
+    return applyMobileLandingClasses();
   }
 
   global.__ORBY_MOBILE_LANDING__ = {
@@ -94,10 +110,33 @@
     document.head.appendChild(link);
   }
 
+  function resolveAssetBase() {
+    try {
+      var script = document.currentScript;
+      var src = script && (script.getAttribute('src') || script.src || '');
+      if (src) {
+        var base = src.replace(/scripts\/orbyMobileLandingBoot\.js(?:\?.*)?$/, '');
+        if (base && base !== src) return base;
+      }
+    } catch (e) {}
+    return './';
+  }
+
   function preloadMobileScrollNavStyles() {
     if (!shouldShowMobileLanding()) return;
-    preloadMobileStylesheet('./styles/marketing/13-scroll-nav.css', 'data-orby-mobile-scroll-nav-css');
-    preloadMobileStylesheet('./styles/orby-mobile-landing-shell.css', 'data-orby-mobile-shell-css');
+    var base = resolveAssetBase();
+    preloadMobileStylesheet(
+      base + 'styles/marketing/13-scroll-nav.css',
+      'data-orby-mobile-scroll-nav-css',
+    );
+    preloadMobileStylesheet(
+      base + 'styles/orby-mobile-landing-shell.css',
+      'data-orby-mobile-shell-css',
+    );
+    preloadMobileStylesheet(
+      base + 'styles/marketing/15-mobile.css',
+      'data-orby-mobile-marketing-css',
+    );
   }
 
   preloadMobileScrollNavStyles();

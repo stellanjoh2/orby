@@ -16,3 +16,27 @@
   --orby-pink-muted: color-mix(in srgb, var(--orby-pink) 50%, white);
   --brand-lime: var(--orby-lime);
 }
+
+/* Native browser scrollbar — lime thumb on brand black (Chrome, Brave, Safari, Firefox) */
+html {
+  scrollbar-color: var(--orby-lime) var(--orby-black, #080808);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--orby-black, #080808);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--orby-lime);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--orby-lime) 80%, white);
+}

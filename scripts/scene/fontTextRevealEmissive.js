@@ -131,7 +131,7 @@ export function applyRevealEmissiveSlam(state, options = {}) {
   if (!meshMaterials.length) return;
 
   if (!enabled || strength <= 0) {
-    // Material emissive slider owns rest state when slam is off.
+    restoreRevealGlyphEmissive(state);
     return;
   }
 

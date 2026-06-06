@@ -86,6 +86,8 @@ export class FontExtrudeUI {
   /** 1× = fill preview; higher zooms in (may crop at edges). */
   static PREVIEW_SCALE_MAX = 3;
   static PREVIEW_SCALE_DEFAULT = 0.65;
+  /** Default copy shown in the live editor on first open (~66% of preview width at default scale). */
+  static DEFAULT_PREVIEW_TEXT = 'Type your text';
 
   mount() {
     if (this.root) return;
@@ -118,10 +120,10 @@ export class FontExtrudeUI {
             <textarea
               id="fontExtrudeText"
               rows="3"
-              placeholder="Type your text…"
+              placeholder="Enter text…"
               spellcheck="false"
               aria-label="Text"
-            ></textarea>
+            >Type your text</textarea>
           </div>
           <label class="slider-line">
             <span data-tooltip="1× fills the preview box; higher zooms in (may crop). Lower shows more margin around the type.">Preview scale</span>
@@ -170,7 +172,7 @@ export class FontExtrudeUI {
             <span data-tooltip="Horizontal alignment of each line">Align</span>
             <select id="fontExtrudeAlign" aria-label="Text alignment">
               <option value="left">Left</option>
-              <option value="center">Center</option>
+              <option value="center" selected>Center</option>
               <option value="right">Right</option>
             </select>
           </label>
@@ -767,7 +769,8 @@ export class FontExtrudeUI {
     }
     this.ui.setEffectFoldoutOpen('font-extrude', !!fontState.panelOpen);
 
-    const align = fontState.align === 'center' || fontState.align === 'right' ? fontState.align : 'left';
+    const align =
+      fontState.align === 'left' || fontState.align === 'right' ? fontState.align : 'center';
     if (this.els.align) this.els.align.value = align;
 
     if (this.els.tracking && Number.isFinite(fontState.tracking)) {
@@ -1028,7 +1031,130 @@ export class FontExtrudeUI {
   _syncLiveEditorPreviewMode() {
     const wrap = this.els.liveEditor;
     if (!wrap) return;
-    wrap.classList.toggle('font-extrude-live-editor--preview-active', !!this.controller.font);
+    const active = !!this.controller.font;
+    wrap.classList.toggle('font-extrude-live-editor--preview-active', active);
+    if (!active) this._resetTextareaEditorStyles();
+  }
+
+  /** @returns {string} */
+  _activeFontPostscriptName() {
+    return this.els.variant?.value || this.familyPicker?.getValue() || '';
+  }
+
+  /** Measure CSS baseline offset from the top of a line box (px). */
+  _measureTextareaBaselineOffset(fontFamily, fontSizePx) {
+    const font = this.controller.font;
+    if (font && (!fontFamily || fontFamily === 'inherit')) {
+      const upm = font.unitsPerEm || 1000;
+      return (font.ascender / upm) * fontSizePx;
+    }
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return fontSizePx * 0.75;
+    ctx.font = `${fontSizePx}px ${fontFamily}`;
+    const metrics = ctx.measureText('Hg');
+    if (Number.isFinite(metrics.fontBoundingBoxAscent)) return metrics.fontBoundingBoxAscent;
+    if (Number.isFinite(metrics.actualBoundingBoxAscent)) return metrics.actualBoundingBoxAscent;
+    return fontSizePx * 0.75;
+  }
+
+  /** Drop inline layout overrides so shelf CSS applies before a font loads. */
+  _resetTextareaEditorStyles() {
+    const ta = this.els.text;
+    if (!ta) return;
+    for (const prop of [
+      'font-family',
+      'font-size',
+      'line-height',
+      'letter-spacing',
+      'font-kerning',
+      'text-align',
+      'padding-top',
+      'padding-right',
+      'padding-bottom',
+      'padding-left',
+      'white-space',
+      'overflow-wrap',
+    ]) {
+      ta.style.removeProperty(prop);
+    }
+  }
+
+  /**
+   * Match textarea metrics to the canvas preview so the caret tracks glyph positions.
+   * @param {Awaited<ReturnType<import('../scene/FontExtrudeController.js').FontExtrudeController['layoutTextAsync']>>} layout
+   * @param {{ slotLeft: number, slotTop: number, scale: number, bounds: { minX: number, minY: number, maxX: number, maxY: number }, cssW: number, pad: number }} viewport
+   */
+  async _syncTextareaToPreview(layout, viewport) {
+    const ta = this.els.text;
+    if (!ta || !this.controller.font) return;
+
+    const options = this.getOptions();
+    const { slotLeft, slotTop, scale, bounds, cssW, pad } = viewport;
+    const fontSizePx = layout.fontSize * scale;
+    const lineHeightPx = layout.fontSize * options.lineHeight * scale;
+    const letterSpacingPx = (options.tracking / 1000) * fontSizePx;
+    const postscriptName = this._activeFontPostscriptName();
+    const fontFamily = postscriptName
+      ? await this.controller.getPreviewFontFamily(postscriptName)
+      : 'inherit';
+
+    const firstLineY = layout.lines?.[0]?.y ?? layout.fontSize * 0.85;
+    const baselineScreenY = slotTop + (firstLineY - bounds.minY) * scale;
+    const baselineOffset = this._measureTextareaBaselineOffset(fontFamily, fontSizePx);
+    const paddingTop = baselineScreenY - baselineOffset;
+
+    const layoutOriginLeft = slotLeft - bounds.minX * scale;
+    const blockWidth = Math.max(layout.maxWidth ?? layout.width ?? 1, 1) * scale;
+    const blockLeft = layoutOriginLeft;
+
+    ta.style.fontFamily = fontFamily;
+    ta.style.fontSize = `${fontSizePx}px`;
+    ta.style.lineHeight = `${lineHeightPx}px`;
+    ta.style.letterSpacing = `${letterSpacingPx}px`;
+    ta.style.fontKerning = options.kerning === 'none' ? 'none' : 'auto';
+    ta.style.textAlign = layout.align;
+    ta.style.whiteSpace = 'pre';
+    ta.style.overflowWrap = 'normal';
+    ta.style.paddingTop = `${paddingTop}px`;
+    if (layout.align === 'center') {
+      ta.style.paddingLeft = `${blockLeft}px`;
+      ta.style.paddingRight = `${Math.max(pad, cssW - blockLeft - blockWidth)}px`;
+    } else if (layout.align === 'right') {
+      ta.style.paddingLeft = `${Math.max(pad, blockLeft)}px`;
+      ta.style.paddingRight = `${pad}px`;
+    } else {
+      ta.style.paddingLeft = `${blockLeft}px`;
+      ta.style.paddingRight = `${pad}px`;
+    }
+    ta.style.paddingBottom = `${pad}px`;
+  }
+
+  /**
+   * Shared fit/center transform for canvas preview and textarea caret sync.
+   * @param {Awaited<ReturnType<import('../scene/FontExtrudeController.js').FontExtrudeController['layoutTextAsync']>>} layout
+   */
+  _computePreviewViewport(layout) {
+    const cssW = Math.max(1, this._previewCssWidth);
+    const cssH = Math.max(1, this._previewCssHeight);
+    const userZoom = this.getPreviewScale();
+    const pad = this._previewLayoutPad();
+    const availW = Math.max(1, cssW - pad * 2);
+    const availH = Math.max(1, cssH - pad * 2);
+    const bounds = this.controller.getLayoutPreviewBounds(layout);
+    const contentW = Math.max(bounds.maxX - bounds.minX, 1);
+    const contentH = Math.max(bounds.maxY - bounds.minY, 1);
+    const fitScale = Math.min(availW / contentW, availH / contentH);
+    const scale = fitScale * userZoom;
+    const inkCenterX = (bounds.minX + bounds.maxX) * 0.5;
+    const inkCenterY = (bounds.minY + bounds.maxY) * 0.5;
+    const slotLeft = pad + availW * 0.5 - (inkCenterX - bounds.minX) * scale;
+    let slotTop = pad + availH * 0.5 - (inkCenterY - bounds.minY) * scale;
+    const textarea = this.els.text;
+    if (textarea) {
+      slotTop -= textarea.scrollTop;
+    }
+    return { slotLeft, slotTop, scale, bounds, cssW, cssH, pad };
   }
 
   /** Padding used for layout width and preview fit (keep in sync). */
@@ -1039,11 +1165,11 @@ export class FontExtrudeUI {
   getOptions() {
     const fontState = this.stateStore.getState()?.fontExtrude || {};
     const align =
-      this.els.align?.value === 'center' || this.els.align?.value === 'right'
+      this.els.align?.value === 'left' || this.els.align?.value === 'right'
         ? this.els.align.value
-        : fontState.align === 'center' || fontState.align === 'right'
+        : fontState.align === 'left' || fontState.align === 'right'
           ? fontState.align
-          : 'left';
+          : 'center';
     const previewWidth = this._previewCssWidth || this.els.preview?.clientWidth || 520;
     const pad = this._previewLayoutPad();
     return {
@@ -1112,27 +1238,9 @@ export class FontExtrudeUI {
     ctx.fillStyle = ORBY_BLACK;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const cssW = Math.max(1, this._previewCssWidth);
-    const cssH = Math.max(1, this._previewCssHeight);
+    const viewport = this._computePreviewViewport(layout);
+    const { slotLeft, slotTop, scale, bounds, cssW } = viewport;
     const dpr = canvas.width / cssW;
-    const userZoom = this.getPreviewScale();
-    const pad = this._previewLayoutPad();
-    const availW = Math.max(1, cssW - pad * 2);
-    const availH = Math.max(1, cssH - pad * 2);
-    const bounds = this.controller.getLayoutPreviewBounds(layout);
-    const contentW = Math.max(bounds.maxX - bounds.minX, 1);
-    const contentH = Math.max(bounds.maxY - bounds.minY, 1);
-    const fitScale = Math.min(availW / contentW, availH / contentH);
-    const scale = fitScale * userZoom;
-    const layoutMaxW = Math.max(layout.maxWidth ?? availW, contentW);
-    const inkCenterX = (bounds.minX + bounds.maxX) * 0.5;
-    const targetCenterX = layout.align === 'center' ? layoutMaxW * 0.5 : inkCenterX;
-    const slotLeft = pad + availW * 0.5 - targetCenterX * scale;
-    let slotTop = pad + availH * 0.5 - ((bounds.minY + bounds.maxY) * 0.5) * scale;
-    const textarea = this.els.text;
-    if (textarea && scale > 0) {
-      slotTop -= textarea.scrollTop / scale;
-    }
     ctx.save();
     // Paths from opentype.js are already canvas Y-down (glyph Y is negated in getPath).
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1142,6 +1250,8 @@ export class FontExtrudeUI {
     this.controller.drawPreview(ctx, layout);
     ctx.restore();
     this._syncLiveEditorPreviewMode();
+    await this._syncTextareaToPreview(layout, viewport);
+    if (generation !== this._previewGeneration) return;
 
     if (this._previewPending) {
       this.schedulePreview();

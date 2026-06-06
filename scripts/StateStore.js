@@ -56,7 +56,7 @@ export class StateStore {
       fontExtrude: {
         panelOpen: false,
         /** @type {'left' | 'center' | 'right'} */
-        align: 'left',
+        align: 'center',
         tracking: 0,
         /** @type {'metrics' | 'optical' | 'none'} — metrics = font Auto / pair tables */
         kerning: 'metrics',

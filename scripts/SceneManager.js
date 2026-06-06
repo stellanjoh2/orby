@@ -154,7 +154,7 @@ export class SceneManager {
 
   /**
    * Enter the studio with no model (HDRI + controls only) — for text tools / debugging.
-   * @param {{ openFontPanel?: boolean, skipSound?: boolean }} [options]
+   * @param {{ skipSound?: boolean }} [options]
    */
   async enterBlankStudio(options = {}) {
     await this.ui.ensureStudioUiReady();
@@ -166,10 +166,6 @@ export class SceneManager {
     this.ui.updateTopBarDetail('No model — generate text or import a file');
     this.ui.revealShelf({ skipSound: options.skipSound !== false });
     this.ui.syncControls(this.stateStore.getState());
-    if (options.openFontPanel !== false) {
-      this.stateStore.set('fontExtrude.panelOpen', true);
-      this.ui.setEffectFoldoutOpen('font-extrude', true);
-    }
     this.ui.showToast('Blank canvas — generate text or import a file', 3200, {
       notification: false,
     });

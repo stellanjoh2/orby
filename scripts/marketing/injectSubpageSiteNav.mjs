@@ -24,9 +24,51 @@ export const SUBPAGE_SITE_NAV_TARGETS = [
 ];
 
 export const SUBPAGE_SITE_NAV_MARKER = '    <!-- orby:subpage-site-nav -->';
+export const SUBPAGE_MOBILE_BOOT_MARKER = '    <!-- orby:subpage-mobile-boot -->';
 
 const LEGACY_NAV_RE =
   /\n[ \t]*<nav\s[^>]*class="[^"]*orby-marketing-scroll-nav[^"]*"[^>]*>[\s\S]*?<\/nav>/;
+
+/**
+ * @param {string} base
+ * @returns {string}
+ */
+export function formatSubpageMobileBootBlock(base = '../') {
+  return `${SUBPAGE_MOBILE_BOOT_MARKER}
+    <script src="${base}scripts/orbyMobileLandingBoot.js"></script>
+    <link rel="stylesheet" href="${base}styles/orby-mobile-landing-shell.css" />
+    <link rel="stylesheet" href="${base}styles/marketing/15-mobile.css" />`;
+}
+
+/**
+ * @param {string} html
+ * @param {string} base
+ * @returns {string}
+ */
+export function injectSubpageMobileBootIntoHtml(html, base = '../') {
+  if (html.includes(SUBPAGE_MOBILE_BOOT_MARKER)) {
+    return html;
+  }
+
+  const bootBlock = formatSubpageMobileBootBlock(base);
+  const viewportRe = /<meta name="viewport"[^>]*>/;
+  if (viewportRe.test(html)) {
+    return html.replace(viewportRe, (match) => `${match}\n${bootBlock}`);
+  }
+
+  throw new Error('No viewport meta found for mobile boot injection');
+}
+
+/**
+ * @param {string} html
+ * @param {string} base
+ * @returns {string}
+ */
+export function injectSubpageHeadIntoHtml(html, base = '../') {
+  let next = injectSubpageMobileBootIntoHtml(html, base);
+  next = injectSubpageSiteNavIntoHtml(next, base);
+  return next;
+}
 
 /**
  * @param {string} base
@@ -96,7 +138,7 @@ export function injectSubpageSiteNavFile(filePath, options = {}) {
   }
 
   const before = readFileSync(absPath, 'utf8');
-  const after = injectSubpageSiteNavIntoHtml(before, base);
+  const after = injectSubpageHeadIntoHtml(before, base);
   const changed = after !== before;
   if (changed) {
     writeFileSync(absPath, after);
@@ -118,7 +160,7 @@ export function injectAllSubpageSiteNav(options = {}) {
     if (!existsSync(filePath)) continue;
 
     const before = readFileSync(filePath, 'utf8');
-    const after = injectSubpageSiteNavIntoHtml(before, target.base);
+    const after = injectSubpageHeadIntoHtml(before, target.base);
     if (after === before) continue;
 
     if (!dryRun) {

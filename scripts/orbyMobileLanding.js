@@ -46,9 +46,16 @@ function isMobileLandingImpl() {
   return document.documentElement.classList.contains('mobile-landing');
 }
 
+function isLegalSubpageImpl() {
+  return document.documentElement.classList.contains('orby-legal-site-nav');
+}
+
 function ensureMobileLandingClassImpl() {
   if (!shouldShowMobileLandingImpl()) return false;
-  document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
+  document.documentElement.classList.add('mobile-landing');
+  if (!isLegalSubpageImpl()) {
+    document.documentElement.classList.add('orby-home-scroll');
+  }
   return true;
 }
 

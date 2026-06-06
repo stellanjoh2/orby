@@ -6,8 +6,11 @@
 
 html.mobile-landing {
   --orby-home-padding-x: clamp(1.25rem, 5vw, 1.5rem);
-  --orby-scroll-nav-edge-x: var(--orby-home-padding-x);
-  --orby-footer-edge-x: var(--orby-home-padding-x);
+  /* Nav chrome + overlay menu share one inset (px — immune to legal rem scaling) */
+  --orby-mobile-nav-edge-x: clamp(16px, 5vw, 24px);
+  --orby-scroll-nav-edge-x: var(--orby-mobile-nav-edge-x);
+  --orby-footer-edge-x: var(--orby-mobile-nav-edge-x);
+  --orby-marketing-edge-inset: var(--orby-mobile-nav-edge-x);
   --orby-marketing-nav-offset: calc(56px + env(safe-area-inset-top, 0px));
   height: auto !important;
   min-height: 100svh;
@@ -128,6 +131,7 @@ html.mobile-landing .orby-marketing-scroll-nav__bar {
 
 html.mobile-landing .orby-marketing-scroll-nav__brand,
 html.mobile-landing a.orby-marketing-scroll-nav__brand {
+  left: var(--orby-mobile-nav-edge-x);
   top: 50%;
   width: calc(var(--orby-scroll-nav-chrome-height) * var(--orby-scroll-nav-logotype-ratio, 2.415));
   height: var(--orby-scroll-nav-chrome-height);
@@ -147,7 +151,8 @@ html.mobile-landing .orby-marketing-scroll-nav__links--inline {
 html.mobile-landing .orby-marketing-scroll-nav__menu-toggle {
   position: absolute;
   top: 50%;
-  right: var(--orby-scroll-nav-edge-x);
+  /* 44px hit target — nudge right so 22px bars align with menu link column */
+  right: calc(var(--orby-mobile-nav-edge-x) - 11px);
   z-index: 15;
   display: inline-flex;
   flex-direction: column;

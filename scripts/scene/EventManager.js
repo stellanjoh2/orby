@@ -84,7 +84,12 @@ export class EventManager {
       const reveal = s.fontTextRevealController;
       if (!reveal) return;
       reveal.refreshMaterialEmissiveRest?.();
-      if (reveal._previewMode === 'playing' || reveal._previewMode === 'paused') {
+      if (reveal._previewMode === 'playing') {
+        reveal.applyAtTime(reveal._elapsed);
+      } else if (
+        reveal._previewMode === 'paused' &&
+        reveal._elapsed < reveal.getDurationSec() - 1e-4
+      ) {
         reveal.applyAtTime(reveal._elapsed);
       }
     });
