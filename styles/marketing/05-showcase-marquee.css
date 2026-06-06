@@ -63,7 +63,7 @@
 
 .orby-marketing__png-marquee-logotype-mark {
   aspect-ratio: 1676.82 / 694.27;
-  background-color: var(--orby-purple);
+  background-color: var(--orby-lime);
   -webkit-mask-image: url('../../assets/images/orby-logotype.svg');
   mask-image: url('../../assets/images/orby-logotype.svg');
   -webkit-mask-repeat: no-repeat;
@@ -248,12 +248,12 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
 }
 
 .orby-marketing__showcase-dot.is-active {
-  background: var(--brand-primary, #94ff1d);
+  background: var(--brand-primary, #c4ff00);
   transform: scale(1.2);
 }
 
 .orby-marketing__showcase-dot:focus-visible {
-  outline: 2px solid var(--brand-primary, #94ff1d);
+  outline: 2px solid var(--brand-primary, #c4ff00);
   outline-offset: 3px;
 }
 
@@ -262,7 +262,7 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
 }
 
 .orby-marketing__showcase-mask:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
   outline-offset: 3px;
 }
 
@@ -302,7 +302,7 @@ html.orby-marketing-reduced .orby-marketing__section--revealed .orby-marketing__
 }
 
 .orby-marketing__figure-credit .orby-marketing__media-credit-link:focus-visible {
-  outline: 2px solid var(--brand-primary, #94ff1d);
+  outline: 2px solid var(--brand-primary, #c4ff00);
   outline-offset: 2px;
   border-radius: 2px;
 }

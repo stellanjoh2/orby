@@ -369,7 +369,7 @@ function renderPngMarqueeSection(section) {
         <div
           class="orby-marketing__png-marquee-logotype-inner"
           data-orby-marketing-png-marquee-logotype
-        ></div>
+        ><span class="orby-marketing__png-marquee-logotype-mark" role="img" aria-label="Orby"></span></div>
       </div>
       <div class="orby-marketing__png-marquee-viewport">
         <div class="orby-marketing__png-marquee-track">

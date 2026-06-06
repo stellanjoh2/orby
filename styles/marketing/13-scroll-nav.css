@@ -137,7 +137,7 @@ a.orby-marketing-scroll-nav__brand:visited {
   padding: 0;
   border: none;
   background: none;
-  color: var(--brand-primary, #94ff1d);
+  color: var(--brand-primary, #c4ff00);
   cursor: pointer;
   text-decoration: none;
   transform: translateY(-50%);
@@ -152,7 +152,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 }
 
 .orby-marketing-scroll-nav a.orby-marketing-scroll-nav__brand:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
   outline-offset: 4px;
   border-radius: 2px;
 }
@@ -201,7 +201,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 .orby-marketing-scroll-nav__contact {
   position: relative;
   display: inline-block;
-  color: var(--brand-primary, #94ff1d);
+  color: var(--brand-primary, #c4ff00);
   text-decoration: none;
   transition: color 0.16s ease;
 }
@@ -246,7 +246,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 
 .orby-marketing-scroll-nav__link:focus-visible,
 .orby-marketing-scroll-nav__contact:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
   outline-offset: 3px;
   border-radius: 2px;
 }
@@ -283,7 +283,7 @@ a.orby-marketing-scroll-nav__brand:visited {
   height: var(--orby-scroll-nav-chrome-height);
   min-height: var(--orby-scroll-nav-chrome-height);
   font-size: var(--orby-marketing-support-size);
-  color: var(--brand-primary, #94ff1d);
+  color: var(--brand-primary, #c4ff00);
   transition: color 0.16s ease;
 }
 
@@ -316,7 +316,7 @@ a.orby-marketing-scroll-nav__brand:visited {
 }
 
 .orby-marketing-scroll-nav__cta .orby-magic-btn.orby-magic-btn--nav-outline::before {
-  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, #94ff1d);
+  border: var(--orby-magic-btn-stroke) solid var(--brand-primary, #c4ff00);
   background: transparent;
   animation: none;
   box-shadow: none;
@@ -357,14 +357,6 @@ html:not(.orby-home-scroll):not(.orby-legal-site-nav):not(.mobile-landing)
 html:not(.mobile-landing) .orby-marketing-scroll-nav__menu-toggle,
 html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
   display: none !important;
-}
-
-/* Subpages — viewport mobile nav even before/without html.mobile-landing (see orby-site-nav.css). */
-@media (max-width: 768px) {
-  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-toggle,
-  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu {
-    display: block !important;
-  }
 }
 
 @media (min-width: 900px) {

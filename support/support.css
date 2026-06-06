@@ -480,7 +480,7 @@ body.legal-doc--support {
 }
 
 .legal-support-glossary-nav a:hover {
-  color: var(--legal-accent);
+  color: var(--text-link);
 }
 
 .legal-support-glossary__group {
@@ -534,7 +534,7 @@ body.legal-doc--support {
 }
 
 .legal-support-glossary dd a {
-  color: var(--legal-accent);
+  color: var(--text-link);
 }
 
 .legal-support-glossary dd kbd {

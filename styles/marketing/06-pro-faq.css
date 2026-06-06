@@ -309,7 +309,7 @@ html.safari-browser .orby-marketing__pro-card-video {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--brand-primary, #94ff1d);
+  color: var(--brand-primary, #c4ff00);
   font-size: var(--orby-marketing-pro-card-title-size);
   line-height: 1.2;
   /* Match the question's first line box; SVG is centered inside. */
@@ -333,7 +333,7 @@ html.safari-browser .orby-marketing__pro-card-video {
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: -0.01em;
-  color: var(--brand-primary, #94ff1d);
+  color: var(--brand-primary, #c4ff00);
 }
 
 .orby-marketing__faq-answer {

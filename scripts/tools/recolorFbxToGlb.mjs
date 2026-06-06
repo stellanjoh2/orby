@@ -2,7 +2,7 @@
  * One-off CLI: load FBX, set mesh materials to a solid color, export GLB (with animations).
  *
  * Usage:
- *   node scripts/tools/recolorFbxToGlb.mjs <input.fbx> [output.glb] [--color=#94ff1d]
+ *   node scripts/tools/recolorFbxToGlb.mjs <input.fbx> [output.glb] [--color=#c4ff00]
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -127,7 +127,7 @@ const main = async () => {
   const { positional, color } = parseArgs(process.argv.slice(2));
   const inputPath = positional[0];
   if (!inputPath) {
-    console.error('Usage: node scripts/tools/recolorFbxToGlb.mjs <input.fbx> [output.glb] [--color=#94ff1d]');
+    console.error('Usage: node scripts/tools/recolorFbxToGlb.mjs <input.fbx> [output.glb] [--color=#c4ff00]');
     process.exit(1);
   }
 

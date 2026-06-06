@@ -8,6 +8,7 @@ const IO_OPTIONS = { root: null, rootMargin: '240px 0px', threshold: 0.05 };
  * @param {HTMLElement} slot
  */
 function mountStaticLogotype(slot) {
+  if (slot.querySelector('.orby-marketing__png-marquee-logotype-mark')) return;
   slot.replaceChildren();
   const mark = document.createElement('span');
   mark.className = 'orby-marketing__png-marquee-logotype-mark';
@@ -42,6 +43,10 @@ export function initPngMarqueeLogotype(root) {
   }, IO_OPTIONS);
 
   observer.observe(block);
+
+  if (block.getBoundingClientRect().bottom >= 0 && block.getBoundingClientRect().top <= window.innerHeight) {
+    ensureLogotype();
+  }
 
   return () => {
     destroyed = true;

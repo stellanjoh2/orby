@@ -131,13 +131,13 @@ body.legal-doc--stats h2.legal-stats__formats-title {
 }
 
 .legal-stats__disclaimer a {
-  color: var(--legal-accent);
+  color: var(--text-link);
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
 
 .legal-stats__disclaimer a:hover {
-  color: var(--legal-accent-hover);
+  color: var(--text-link-hover);
 }
 
 @media (min-width: 2561px) {

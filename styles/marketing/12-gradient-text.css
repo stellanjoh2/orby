@@ -1,12 +1,12 @@
-/* Animated lime ↔ purple emphasis — one gradient sweep across the whole phrase */
+/* Animated lime ↔ blue emphasis — one gradient sweep across the whole phrase */
 
 .orby-marketing__gradient-text {
   background: linear-gradient(
     to right,
-    var(--orby-marketing-headline, var(--brand-primary, #94ff1d)) 18%,
-    var(--text-link, #b580f1) 42%,
-    var(--orby-marketing-headline, var(--brand-primary, #94ff1d)) 66%,
-    var(--text-link, #b580f1) 90%
+    var(--orby-marketing-headline, var(--brand-primary, #c4ff00)) 18%,
+    var(--text-link, #00c4ff) 42%,
+    var(--orby-marketing-headline, var(--brand-primary, #c4ff00)) 66%,
+    var(--text-link, #00c4ff) 90%
   );
   -webkit-background-clip: text;
   background-clip: text;

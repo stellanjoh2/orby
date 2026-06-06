@@ -824,7 +824,7 @@ class TransformControlsGizmo extends Object3D {
 		matRed.opacity = 0.5;
 
 		const matGreen = gizmoMaterial.clone();
-		matGreen.color.setHex( 0x94ff1d );
+		matGreen.color.setHex( 0xc4ff00 );
 		matGreen.opacity = 0.5;
 
 		const matBlue = gizmoMaterial.clone();
@@ -836,7 +836,7 @@ class TransformControlsGizmo extends Object3D {
 		matRedTransparent.opacity = 0.5;
 
 		const matGreenTransparent = gizmoMaterial.clone();
-		matGreenTransparent.color.setHex( 0x94ff1d );
+		matGreenTransparent.color.setHex( 0xc4ff00 );
 		matGreenTransparent.opacity = 0.5;
 
 		const matBlueTransparent = gizmoMaterial.clone();

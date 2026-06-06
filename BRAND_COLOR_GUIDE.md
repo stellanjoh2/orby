@@ -5,19 +5,21 @@
 Orby brand colors are defined once in `styles/orby-brand-tokens.css` and mirrored in `scripts/constants.js`:
 
 ```css
---orby-lime: #94ff1d;         /* Orby Lime — logotype, primary actions */
---orby-purple: #6b00e2;       /* Orby Purple — inverted lime; UI accents */
---orby-purple-bright: #b580f1;  /* Orby Purple Bright — 50% brighter (50% mix with white) */
---orby-pink: #ff1d76;         /* Orby Pink — official red; warnings, severity */
---orby-pink-muted: #ff8ebb;    /* Softer Orby Pink — inline errors (50% mix with white) */
+--orby-lime: #c4ff00;         /* Orby Lime — logotype, primary actions */
+--orby-purple: #3b00ff;       /* Orby Purple — inverted lime; UI accents */
+--orby-blue: #00c4ff;         /* Orby Blue — inline text links on dark UI */
+--orby-pink: #ff00c4;         /* Orby Pink — warnings, under-construction, severity */
+--orby-pink-muted: #ff80e2;    /* Softer Orby Pink — inline errors (50% mix with white) */
+--text-link: var(--orby-blue);
+--text-link-hover: var(--orby-lime);
 ```
 
 ```js
-export const ORBY_LIME = '#94ff1d';
-export const ORBY_PURPLE = '#6b00e2';
-export const ORBY_PURPLE_BRIGHT = '#b580f1';
-export const ORBY_PINK = '#ff1d76';
-export const ORBY_PINK_MUTED = '#ff8ebb';
+export const ORBY_LIME = '#c4ff00';
+export const ORBY_PURPLE = '#3b00ff';
+export const ORBY_BLUE = '#00c4ff';
+export const ORBY_PINK = '#ff00c4';
+export const ORBY_PINK_MUTED = '#ff80e2';
 ```
 
 `styles.css` maps these to theme tokens:
@@ -25,10 +27,11 @@ export const ORBY_PINK_MUTED = '#ff8ebb';
 ```css
 --brand-primary: var(--orby-lime);
 --brand-primary-inverted: var(--orby-purple);
---text-link: var(--orby-purple-bright);
 --warning: var(--orby-pink);
 --danger: var(--orby-pink-muted);
 ```
+
+(`--text-link` and `--text-link-hover` live in `orby-brand-tokens.css`.)
 
 **Secondary accent** (`--brand-secondary`, currently orange `#ff4500`) is still set per theme in `styles.css`.
 
@@ -43,7 +46,7 @@ All other brand-related colors automatically derive from lime/purple using CSS `
 - `--accent-glow` → Derived from `--brand-secondary`
 - `--brand-glow` → Derived from `--brand-primary`
 - `--drop-outline`, `--drop-fill` → Derived from brand colors
-- Text selection color → Uses `--text-link` (purple)
+- Text selection color → Uses `--text-link` (Orby Blue)
 - `.brand-highlight` text → Uses `--brand-primary`
 
 ✅ **UI Elements (Automatic via CSS variables):**
@@ -75,7 +78,7 @@ If you want to dynamically recolor the logotype SVG via JavaScript, you can use 
 ```javascript
 /**
  * Recolor logotype SVG to match brand primary color
- * @param {string} brandColor - Hex color (e.g., '#94ff1d')
+ * @param {string} brandColor - Hex color (e.g., '#c4ff00')
  */
 function recolorLogotype(brandColor) {
   const logotypes = document.querySelectorAll('#logotypeAnimation svg, #demoLogotype svg, #infoLogotypeAnimation svg');
@@ -96,7 +99,7 @@ function recolorLogotype(brandColor) {
 }
 
 // Usage:
-// recolorLogotype('#94ff1d'); // Call after Lottie animation loads
+// recolorLogotype('#c4ff00'); // Call after Lottie animation loads
 ```
 
 ## Orby Purple
@@ -104,18 +107,24 @@ function recolorLogotype(brandColor) {
 The official purple is the inverted Orby Lime:
 - **CSS:** `--orby-purple` / `--brand-primary-inverted`
 - **JS:** `ORBY_PURPLE`
-- **Current:** `#6b00e2` (inverted from `#94ff1d`)
+- **Current:** `#3b00ff` (inverted from `#c4ff00`)
 
-**Orby Purple Bright** (`--orby-purple-bright` / `ORBY_PURPLE_BRIGHT`) is 50% brighter — for inline text links on dark UI. Base purple is used for inverted brand accents, gradients, and selection where noted.
+## Orby Blue
 
-Used for inline links, text selection, and gradient accents alongside Orby Lime.
+Official inline text link color on dark UI:
+- **CSS:** `--orby-blue` / `--text-link`
+- **JS:** `ORBY_BLUE`
+- **Current:** `#00c4ff`
+- **Hover:** `--text-link-hover` → Orby Lime
+
+Used for inline links, text selection, gradient text accents, and prose anchors in the app and legal subpages.
 
 ## Orby Pink
 
 The official red — use for warnings, blocker severity, under-construction notices, export warnings, and critical alerts:
 - **CSS:** `--orby-pink` / `--warning`
 - **JS:** `ORBY_PINK`
-- **Current:** `#ff1d76`
+- **Current:** `#ff00c4`
 
 **Softer Orby Pink** (`--orby-pink-muted` / `ORBY_PINK_MUTED`) is 50% mixed with white — for inline errors and destructive hints via `--danger`.
 

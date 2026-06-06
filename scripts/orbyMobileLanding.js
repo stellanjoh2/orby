@@ -50,8 +50,26 @@ function isLegalSubpageImpl() {
   return document.documentElement.classList.contains('orby-legal-site-nav');
 }
 
+function isLegalSubpageMobileViewportImpl() {
+  if (!isLegalSubpageImpl()) return false;
+  try {
+    return window.matchMedia(`(max-width: ${MOBILE_LANDING_MAX_WIDTH_PX}px)`).matches;
+  } catch {
+    return false;
+  }
+}
+
+function shouldApplyMobileLandingClassesImpl() {
+  return shouldShowMobileLandingImpl() || isLegalSubpageMobileViewportImpl();
+}
+
 function ensureMobileLandingClassImpl() {
-  if (!shouldShowMobileLandingImpl()) return false;
+  if (!shouldApplyMobileLandingClassesImpl()) {
+    if (isLegalSubpageImpl()) {
+      document.documentElement.classList.remove('mobile-landing');
+    }
+    return false;
+  }
   document.documentElement.classList.add('mobile-landing');
   if (!isLegalSubpageImpl()) {
     document.documentElement.classList.add('orby-home-scroll');

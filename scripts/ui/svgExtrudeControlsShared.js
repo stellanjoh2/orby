@@ -702,7 +702,7 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 </label>
                 <label class="color-line font-extrude-reveal-emissive-color">
                   <span data-tooltip="Emissive color mixed in at peak flash">Emissive Color</span>
-                  <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#94ff1d" />
+                  <input type="color" id="fontExtrudeRevealEmissiveColor" class="color-chip" value="#c4ff00" />
                 </label>
               </div>
               <div class="font-extrude-divider font-extrude-reveal-preview-divider" aria-hidden="true"></div>

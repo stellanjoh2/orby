@@ -342,9 +342,6 @@ body[data-theme='violet'] {
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 22.5%, transparent);
   /* Brighter hover color for links / interactive text */
   --accent-hover: color-mix(in srgb, var(--brand-primary) 40%, white 60%);
-  /* Inline prose links — bright purple default, brand primary (lime) on hover */
-  --text-link: var(--orby-purple-bright);
-  --text-link-hover: var(--brand-primary);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 65%, transparent);
   /* Perf: no outer halo on button/slider hovers — color fill only */
   --ui-accent-outer-glow: none;
@@ -387,8 +384,6 @@ body[data-theme='aqua'] {
   --accent-shadow: color-mix(in srgb, var(--brand-primary) 35%, transparent);
   --accent-muted: color-mix(in srgb, var(--brand-primary) 18%, transparent);
   --accent-glow: color-mix(in srgb, var(--brand-secondary) 17.5%, transparent);
-  --text-link: var(--orby-purple-bright);
-  --text-link-hover: var(--brand-primary);
   --brand-glow: color-mix(in srgb, var(--brand-primary) 55%, transparent);
   --ui-accent-outer-glow: none;
   --ui-accent-outer-glow-compact: none;

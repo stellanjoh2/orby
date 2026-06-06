@@ -6,19 +6,22 @@ import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
 export const ORBY_BLACK = '#080808';
 
 /** Orby Lime — logotype, CTAs, wireframe default, UI accents. Mirror: --orby-lime */
-export const ORBY_LIME = '#94ff1d';
+export const ORBY_LIME = '#c4ff00';
 
 /** Orby Purple — inverted lime; UI accents, gradients. Mirror: --orby-purple */
-export const ORBY_PURPLE = '#6b00e2';
+export const ORBY_PURPLE = '#3b00ff';
 
-/** Orby Purple Bright — 50% brighter than ORBY_PURPLE (50% mix with white). Mirror: --orby-purple-bright */
-export const ORBY_PURPLE_BRIGHT = '#b580f1';
+/** Orby Purple Bright — lighter purple for UI accents and gradients. Mirror: --orby-purple-bright */
+export const ORBY_PURPLE_BRIGHT = '#9d80ff';
+
+/** Orby Blue — inline text links on dark UI. Mirror: --orby-blue / --text-link */
+export const ORBY_BLUE = '#00c4ff';
 
 /** Orby Pink — official red; warnings, blocker severity, critical alerts. Mirror: --orby-pink */
-export const ORBY_PINK = '#ff1d76';
+export const ORBY_PINK = '#ff00c4';
 
 /** Softer Orby Pink — inline errors, destructive hints (50% mix with white). Mirror: --orby-pink-muted */
-export const ORBY_PINK_MUTED = '#ff8ebb';
+export const ORBY_PINK_MUTED = '#ff80e2';
 
 /** Perspective camera clip when Manual Render Distance is off — generous, unchanged on mesh load. */
 export const DEFAULT_CAMERA_NEAR = 0.1;

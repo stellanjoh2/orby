@@ -5,14 +5,18 @@
  */
 :root {
   /* Orby Lime — logotype, primary actions, wireframe default */
-  --orby-lime: #94ff1d;
+  --orby-lime: #c4ff00;
   /* Orby Purple — inverted lime; UI accents, gradients */
-  --orby-purple: #6b00e2;
-  /* Orby Purple Bright — 50% brighter than --orby-purple (50% mix with white → #b580f1) */
-  --orby-purple-bright: color-mix(in srgb, var(--orby-purple) 50%, white);
+  --orby-purple: #3b00ff;
+  /* Orby Purple Bright — lighter purple for UI accents and gradients */
+  --orby-purple-bright: #9d80ff;
+  /* Orby Blue — inline text links on dark UI */
+  --orby-blue: #00c4ff;
+  --text-link: var(--orby-blue);
+  --text-link-hover: var(--orby-lime);
   /* Orby Pink — official red; warnings, blocker severity, under-construction, critical alerts */
-  --orby-pink: #ff1d76;
-  /* Softer Orby Pink — inline errors, destructive hints (50% mix with white → #ff8ebb) */
+  --orby-pink: #ff00c4;
+  /* Softer Orby Pink — inline errors, destructive hints (50% mix with white → #ff80e2) */
   --orby-pink-muted: color-mix(in srgb, var(--orby-pink) 50%, white);
   --brand-lime: var(--orby-lime);
 }

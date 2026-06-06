@@ -228,12 +228,12 @@ html.orby-legal-site-nav .legal-wrap {
 }
 
 .legal-doc a {
-  color: var(--legal-accent);
+  color: var(--text-link);
   text-decoration: none;
 }
 
 .legal-doc a:hover {
-  color: var(--legal-accent-hover);
+  color: var(--text-link-hover);
 }
 
 .legal-doc strong {
@@ -266,7 +266,7 @@ body.legal-doc:not(.legal-doc--about) strong {
 }
 
 .legal-foot a:hover {
-  color: var(--legal-accent);
+  color: var(--text-link-hover);
 }
 
 @media (min-width: 640px) {
@@ -376,7 +376,7 @@ body.legal-doc--credits {
 }
 
 .legal-credits-toc a:hover {
-  color: var(--legal-accent);
+  color: var(--text-link);
 }
 
 .legal-credits-section {
@@ -455,12 +455,12 @@ body.legal-doc--credits .legal-credits-grid > .legal-credits-card {
 }
 
 .legal-credits-card__name a {
-  color: var(--legal-accent);
+  color: var(--text-link);
   text-decoration: none;
 }
 
 .legal-credits-card__name a:hover {
-  color: var(--legal-accent-hover);
+  color: var(--text-link-hover);
 }
 
 .legal-credits-card__name-inline {
@@ -706,8 +706,8 @@ body.legal-doc--about .legal-about a:not(.orby-magic-btn) {
 }
 
 body.legal-doc--about .legal-about a:not(.orby-magic-btn):hover {
-  color: var(--legal-accent);
-  text-decoration-color: color-mix(in srgb, var(--orby-lime) 55%, transparent);
+  color: var(--text-link);
+  text-decoration-color: color-mix(in srgb, var(--orby-blue) 55%, transparent);
 }
 
 body.legal-doc--about .legal-foot a:hover {

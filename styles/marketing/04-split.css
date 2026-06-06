@@ -83,7 +83,7 @@
 }
 
 .orby-marketing__figure-mask--gallery:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
   outline-offset: 3px;
 }
 

@@ -140,7 +140,7 @@
 
 .orby-marketing__roadmap-launch-line {
   width: 1px;
-  background: var(--brand-primary, #94ff1d);
+  background: var(--brand-primary, #c4ff00);
 }
 
 .orby-marketing__roadmap-lanes {
@@ -219,7 +219,7 @@
 
 .orby-marketing__roadmap-bar--done:hover,
 .orby-marketing__roadmap-bar--done:focus-visible {
-  background: var(--brand-primary, #94ff1d);
+  background: var(--brand-primary, #c4ff00);
   color: var(--orby-black, #080808);
 }
 
@@ -227,7 +227,7 @@
 .orby-marketing__roadmap-bar--todo:focus-visible,
 .orby-marketing__roadmap-bar--future:hover,
 .orby-marketing__roadmap-bar--future:focus-visible {
-  background: var(--orby-purple, #6b00e2);
+  background: var(--orby-purple, #3b00ff);
   color: rgba(255, 255, 255, 0.96);
 }
 
@@ -238,23 +238,23 @@
 }
 
 .orby-marketing__roadmap-bar--done {
-  background: color-mix(in srgb, var(--brand-primary, #94ff1d) 25%, transparent);
-  color: var(--brand-primary, #94ff1d);
+  background: color-mix(in srgb, var(--brand-primary, #c4ff00) 25%, transparent);
+  color: var(--brand-primary, #c4ff00);
 }
 
 .orby-marketing__roadmap-bar--active {
-  background: var(--brand-primary, #94ff1d);
+  background: var(--brand-primary, #c4ff00);
   color: var(--orby-black, #080808);
 }
 
 .orby-marketing__roadmap-bar--todo {
-  background: var(--orby-purple, #6b00e2);
+  background: var(--orby-purple, #3b00ff);
   color: rgba(255, 255, 255, 0.92);
 }
 
 .orby-marketing__roadmap-bar--future {
-  background: color-mix(in srgb, var(--orby-purple, #6b00e2) 25%, transparent);
-  color: var(--orby-purple, #6b00e2);
+  background: color-mix(in srgb, var(--orby-purple, #3b00ff) 25%, transparent);
+  color: var(--orby-purple, #3b00ff);
 }
 
 .orby-marketing__roadmap-bar-label {
@@ -312,21 +312,21 @@
 }
 
 .orby-marketing__roadmap-legend-dot--completed {
-  background: color-mix(in srgb, var(--brand-primary, #94ff1d) 25%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-primary, #94ff1d) 55%, transparent);
+  background: color-mix(in srgb, var(--brand-primary, #c4ff00) 25%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
 }
 
 .orby-marketing__roadmap-legend-dot--active {
-  background: var(--brand-primary, #94ff1d);
+  background: var(--brand-primary, #c4ff00);
 }
 
 .orby-marketing__roadmap-legend-dot--upcoming {
-  background: var(--orby-purple, #6b00e2);
+  background: var(--orby-purple, #3b00ff);
 }
 
 .orby-marketing__roadmap-legend-dot--future {
-  background: color-mix(in srgb, var(--orby-purple, #6b00e2) 25%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orby-purple, #6b00e2) 55%, transparent);
+  background: color-mix(in srgb, var(--orby-purple, #3b00ff) 25%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orby-purple, #3b00ff) 55%, transparent);
 }
 
 /* 1920 band — axis labels match pro card titles (18px); 21px @ 2560 unchanged */
@@ -351,7 +351,7 @@
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  color: var(--brand-primary, #94ff1d);
+  color: var(--brand-primary, #c4ff00);
   white-space: nowrap;
 }
 

@@ -69,8 +69,29 @@
     }
   }
 
+  function isLegalSubpageMobileViewport() {
+    if (!isLegalSubpage()) return false;
+    try {
+      return (
+        window.matchMedia &&
+        window.matchMedia('(max-width: ' + MOBILE_LANDING_MAX_WIDTH_PX + 'px)').matches
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function shouldApplyMobileLandingClasses() {
+    return shouldShowMobileLanding() || isLegalSubpageMobileViewport();
+  }
+
   function applyMobileLandingClasses() {
-    if (typeof document === 'undefined' || !shouldShowMobileLanding()) return false;
+    if (typeof document === 'undefined' || !shouldApplyMobileLandingClasses()) {
+      if (typeof document !== 'undefined' && isLegalSubpage()) {
+        document.documentElement.classList.remove('mobile-landing');
+      }
+      return false;
+    }
     document.documentElement.classList.add('mobile-landing');
     if (!isLegalSubpage()) {
       document.documentElement.classList.add('orby-home-scroll');
@@ -99,12 +120,7 @@
   applyMobileLandingBootClasses();
 
   function syncLegalSubpageMobileLanding() {
-    if (typeof document === 'undefined' || !isLegalSubpage()) return;
-    if (shouldShowMobileLanding()) {
-      document.documentElement.classList.add('mobile-landing');
-    } else {
-      document.documentElement.classList.remove('mobile-landing');
-    }
+    applyMobileLandingClasses();
   }
 
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
@@ -145,7 +161,7 @@
   }
 
   function preloadMobileScrollNavStyles() {
-    if (!shouldShowMobileLanding()) return;
+    if (!shouldApplyMobileLandingClasses()) return;
     var base = resolveAssetBase();
     preloadMobileStylesheet(
       base + 'styles/marketing/13-scroll-nav.css',
