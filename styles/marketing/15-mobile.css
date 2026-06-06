@@ -16,31 +16,31 @@ html.mobile-landing .orby-marketing__section--cta {
 }
 
 html.mobile-landing #orby-marketing {
-  /* Vertical rhythm — +10% over prior mobile pass */
-  --orby-marketing-space-lg: clamp(2.64rem, 7.92svh, 3.63rem);
-  --orby-marketing-space-md: clamp(1.65rem, 4.62svh, 2.31rem);
-  --orby-marketing-space-sm: clamp(0.99rem, 2.64svh, 1.32rem);
-  --orby-marketing-gap-big: clamp(3.3rem, 8.25svh, 4.54rem);
-  --orby-marketing-col-gap: clamp(1.65rem, 5.28vw, 2.31rem);
-  --orby-marketing-feature-body-media-gap: clamp(1.65rem, 5.28vw, 2.31rem);
+  /* Vertical rhythm — +15% over prior mobile pass (copy blocks + section pads) */
+  --orby-marketing-space-lg: clamp(3.04rem, 9.11svh, 4.17rem);
+  --orby-marketing-space-md: clamp(1.9rem, 5.31svh, 2.66rem);
+  --orby-marketing-space-sm: clamp(1.14rem, 3.04svh, 1.52rem);
+  --orby-marketing-gap-big: clamp(3.8rem, 9.49svh, 5.22rem);
+  --orby-marketing-col-gap: clamp(1.9rem, 6.07vw, 2.66rem);
+  --orby-marketing-feature-body-media-gap: clamp(1.9rem, 6.07vw, 2.66rem);
   /* Split features — list → media; ~2× base gap (not literal 10×) */
   --orby-marketing-feature-list-media-gap: clamp(
-    calc(3.75rem - 10px),
-    calc(7.5svh - 10px),
-    calc(5rem - 10px)
+    calc(4.31rem - 10px),
+    calc(8.63svh - 10px),
+    calc(5.75rem - 10px)
   );
-  --orby-marketing-headline-actions-gap: clamp(0.87rem, 2.75svh, 1.39rem);
-  --orby-marketing-headline-body-gap: clamp(0.58rem, 1.76svh, 0.81rem);
-  --orby-marketing-feature-copy-gap: clamp(0.58rem, 1.76svh, 0.81rem);
-  --orby-marketing-eyebrow-headline-gap: clamp(0.58rem, 1.76svh, 0.81rem);
-  --orby-marketing-lede-cta-gap: 3.71rem;
-  --orby-marketing-peer-gap: 2.48rem;
-  --orby-marketing-mobile-cta-gap: clamp(0.94rem, 3.52vw, 1.21rem);
-  --orby-marketing-pro-faq-gap: clamp(3.3rem, 8.25svh, 4.54rem);
-  --orby-marketing-faq-pad-bottom: clamp(3.3rem, 8.25svh, 4.54rem);
-  --orby-marketing-faq-inner-pad-top: clamp(1.65rem, 4.4svh, 2.31rem);
-  --orby-marketing-faq-grid-row-gap: clamp(1.93rem, 5.5svh, 2.75rem);
-  --orby-footer-social-gap: 1.93rem;
+  --orby-marketing-headline-actions-gap: clamp(1rem, 3.16svh, 1.6rem);
+  --orby-marketing-headline-body-gap: clamp(0.67rem, 2.02svh, 0.93rem);
+  --orby-marketing-feature-copy-gap: clamp(0.67rem, 2.02svh, 0.93rem);
+  --orby-marketing-eyebrow-headline-gap: clamp(0.67rem, 2.02svh, 0.93rem);
+  --orby-marketing-lede-cta-gap: 4.27rem;
+  --orby-marketing-peer-gap: 2.85rem;
+  --orby-marketing-mobile-cta-gap: clamp(1.08rem, 4.05vw, 1.39rem);
+  --orby-marketing-pro-faq-gap: clamp(3.8rem, 9.49svh, 5.22rem);
+  --orby-marketing-faq-pad-bottom: clamp(3.8rem, 9.49svh, 5.22rem);
+  --orby-marketing-faq-inner-pad-top: clamp(1.9rem, 5.06svh, 2.66rem);
+  --orby-marketing-faq-grid-row-gap: clamp(2.22rem, 6.33svh, 3.16rem);
+  --orby-footer-social-gap: 2.22rem;
   --orby-marketing-feature-body-measure: 100%;
   --orby-marketing-feature-lede-measure: 100%;
   --orby-marketing-centered-copy-measure: 100%;
@@ -56,9 +56,13 @@ html.mobile-landing #orby-marketing {
   --orby-intro-headline-min: clamp(1.85rem, 9vw, 2.65rem);
   --orby-intro-headline-max: clamp(2.1rem, 10.5vw, 3rem);
   --orby-intro-headline-vw: 9.5;
-  /* PNG marquee — 40svh on phone (desktop clamp: 01-tokens.css) */
-  --orby-marketing-png-marquee-max-h: 40svh;
-  --orby-marketing-png-marquee-gap: clamp(1.875rem, 10vw, 3.125rem);
+  /* PNG marquee — 36svh on phone (−10%); wider item gap (+10%) */
+  --orby-marketing-png-marquee-max-h: 36svh;
+  --orby-marketing-png-marquee-gap: clamp(2.06rem, 11vw, 3.44rem);
+  /* Body copy — ~15% tighter line height on mobile */
+  --orby-marketing-feature-lede-line: 1.36;
+  --orby-marketing-feature-list-line: 1.3175;
+  --orby-marketing-intro-lede-line: 1.36;
 }
 
 /*
@@ -732,6 +736,10 @@ html.mobile-landing .orby-marketing__eyebrow {
   margin-bottom: var(--orby-marketing-eyebrow-headline-gap);
 }
 
+html.mobile-landing .orby-marketing__list {
+  gap: 0.63rem;
+}
+
 /* Media credits — ~50% smaller, unified size */
 html.mobile-landing .orby-marketing__showcase-credit,
 html.mobile-landing .orby-marketing__figure-credit {
@@ -852,6 +860,65 @@ html.mobile-landing .orby-marketing__faq-answer {
 
 html.mobile-landing .orby-marketing__png-marquee-viewport {
   padding-block: clamp(0.55rem, 1.65svh, 1.38rem);
+}
+
+/* PNG marquee backdrop — height-fit purple symbol (full width crops vertically on phone) */
+html.mobile-landing .orby-marketing__png-marquee-logotype {
+  align-items: stretch;
+  justify-content: center;
+}
+
+html.mobile-landing .orby-marketing__png-marquee-logotype-inner {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  padding-inline: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+html.mobile-landing .orby-marketing__png-marquee-logotype-mark {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 552.78 / 552.8;
+  -webkit-mask-image: url('../../assets/images/favicon.svg');
+  mask-image: url('../../assets/images/favicon.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  transform-origin: center center;
+  will-change: transform;
+  /* Match .orby-marketing__png-marquee-track loop — counter-clockwise “pushes” cutouts */
+  animation: orbyMarketingPngMarqueeSymbolSpin 52s linear infinite;
+  animation-play-state: paused;
+}
+
+html.mobile-landing
+  .orby-marketing__png-marquee--playing
+  .orby-marketing__png-marquee-logotype-mark {
+  animation-play-state: running;
+}
+
+@keyframes orbyMarketingPngMarqueeSymbolSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.mobile-landing .orby-marketing__png-marquee-logotype-mark {
+    animation: none;
+    will-change: auto;
+  }
 }
 
 /* ── Roadmap hidden on mobile ── */

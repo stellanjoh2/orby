@@ -84,8 +84,18 @@ function scheduleSubpageNavOffsetSync(nav) {
   });
 }
 
+function isMobileNavContext() {
+  if (isMobileLanding()) return true;
+  if (!document.documentElement.classList.contains('orby-legal-site-nav')) return false;
+  try {
+    return window.matchMedia('(max-width: 768px)').matches;
+  } catch {
+    return false;
+  }
+}
+
 function initMobileNavMenu(nav) {
-  if (!isMobileLanding()) {
+  if (!isMobileNavContext()) {
     return () => {};
   }
 

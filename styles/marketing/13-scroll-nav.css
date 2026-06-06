@@ -359,6 +359,14 @@ html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
   display: none !important;
 }
 
+/* Subpages — viewport mobile nav even before/without html.mobile-landing (see orby-site-nav.css). */
+@media (max-width: 768px) {
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-toggle,
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu {
+    display: block !important;
+  }
+}
+
 @media (min-width: 900px) {
   .orby-marketing-scroll-nav__links {
     white-space: nowrap;
@@ -391,23 +399,24 @@ html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
     padding: 0;
   }
 
-  .orby-marketing-scroll-nav__bar {
+  /* Wrapped inline nav — desktop/tablet narrow only; mobile landing uses hamburger overlay */
+  html:not(.mobile-landing) .orby-marketing-scroll-nav__bar {
     height: auto;
     min-height: var(--orby-scroll-nav-height);
     padding-block: 0.35rem;
   }
 
-  .orby-marketing-scroll-nav__brand,
-  a.orby-marketing-scroll-nav__brand {
+  html:not(.mobile-landing) .orby-marketing-scroll-nav__brand,
+  html:not(.mobile-landing) a.orby-marketing-scroll-nav__brand {
     top: calc(0.35rem + var(--orby-scroll-nav-height) / 2);
     max-width: min(36vw, calc(120px * var(--drop-hero-wide-factor)));
   }
 
-  .orby-marketing-scroll-nav__cta {
+  html:not(.mobile-landing) .orby-marketing-scroll-nav__cta {
     top: calc(0.35rem + var(--orby-scroll-nav-height) / 2);
   }
 
-  .orby-marketing-scroll-nav__links {
+  html:not(.mobile-landing) .orby-marketing-scroll-nav__links--inline {
     height: auto;
     min-height: 0;
     margin-top: var(--orby-scroll-nav-height);

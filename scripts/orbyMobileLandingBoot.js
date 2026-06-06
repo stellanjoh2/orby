@@ -98,6 +98,28 @@
 
   applyMobileLandingBootClasses();
 
+  function syncLegalSubpageMobileLanding() {
+    if (typeof document === 'undefined' || !isLegalSubpage()) return;
+    if (shouldShowMobileLanding()) {
+      document.documentElement.classList.add('mobile-landing');
+    } else {
+      document.documentElement.classList.remove('mobile-landing');
+    }
+  }
+
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    var legalMobileMql = window.matchMedia('(max-width: ' + MOBILE_LANDING_MAX_WIDTH_PX + 'px)');
+    var onLegalMobileChange = function () {
+      syncLegalSubpageMobileLanding();
+    };
+    syncLegalSubpageMobileLanding();
+    if (typeof legalMobileMql.addEventListener === 'function') {
+      legalMobileMql.addEventListener('change', onLegalMobileChange);
+    } else if (typeof legalMobileMql.addListener === 'function') {
+      legalMobileMql.addListener(onLegalMobileChange);
+    }
+  }
+
   function preloadMobileStylesheet(href, attr) {
     var links = document.querySelectorAll('link[rel="stylesheet"]');
     for (var i = 0; i < links.length; i++) {

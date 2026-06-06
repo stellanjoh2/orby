@@ -115,6 +115,19 @@ body.legal-doc {
   -webkit-font-smoothing: antialiased;
 }
 
+@media (max-width: 768px) {
+  html.orby-legal-site-nav body.legal-doc {
+    /* ~15% tighter body copy line height on mobile */
+    --legal-body-line: 1.428;
+    --legal-lead-line: 1.377;
+  }
+
+  html.orby-legal-site-nav body.legal-doc--about {
+    --legal-about-body-line: 1.513;
+    --legal-about-intro-line: 1.292;
+  }
+}
+
 .legal-skip {
   position: absolute;
   left: -9999px;
