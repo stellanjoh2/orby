@@ -354,9 +354,16 @@ html:not(.orby-home-scroll):not(.orby-legal-site-nav):not(.mobile-landing)
 }
 
 /* Desktop — inline links only; overlay menu is mobile-landing (15-mobile.css). */
-html:not(.mobile-landing) .orby-marketing-scroll-nav__menu-toggle,
-html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
+html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__menu-toggle,
+html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__menu {
   display: none !important;
+}
+
+@media (min-width: 769px) {
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-toggle,
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu {
+    display: none !important;
+  }
 }
 
 @media (min-width: 900px) {
@@ -392,23 +399,23 @@ html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
   }
 
   /* Wrapped inline nav — desktop/tablet narrow only; mobile landing uses hamburger overlay */
-  html:not(.mobile-landing) .orby-marketing-scroll-nav__bar {
+  html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__bar {
     height: auto;
     min-height: var(--orby-scroll-nav-height);
     padding-block: 0.35rem;
   }
 
-  html:not(.mobile-landing) .orby-marketing-scroll-nav__brand,
-  html:not(.mobile-landing) a.orby-marketing-scroll-nav__brand {
+  html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__brand,
+  html:not(.mobile-landing):not(.orby-legal-site-nav) a.orby-marketing-scroll-nav__brand {
     top: calc(0.35rem + var(--orby-scroll-nav-height) / 2);
     max-width: min(36vw, calc(120px * var(--drop-hero-wide-factor)));
   }
 
-  html:not(.mobile-landing) .orby-marketing-scroll-nav__cta {
+  html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__cta {
     top: calc(0.35rem + var(--orby-scroll-nav-height) / 2);
   }
 
-  html:not(.mobile-landing) .orby-marketing-scroll-nav__links--inline {
+  html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__links--inline {
     height: auto;
     min-height: 0;
     margin-top: var(--orby-scroll-nav-height);

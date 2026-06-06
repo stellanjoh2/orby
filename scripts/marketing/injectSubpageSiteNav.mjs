@@ -37,7 +37,8 @@ export function formatSubpageMobileBootBlock(base = '../') {
   return `${SUBPAGE_MOBILE_BOOT_MARKER}
     <script src="${base}scripts/orbyMobileLandingBoot.js"></script>
     <link rel="stylesheet" href="${base}styles/orby-mobile-landing-shell.css" />
-    <link rel="stylesheet" href="${base}styles/marketing/15-mobile.css" />`;
+    <link rel="stylesheet" href="${base}styles/marketing/15-mobile.css" />
+    <link rel="stylesheet" href="${base}styles/marketing/15-subpage-mobile-nav.css" />`;
 }
 
 /**
@@ -46,7 +47,18 @@ export function formatSubpageMobileBootBlock(base = '../') {
  * @returns {string}
  */
 export function injectSubpageMobileBootIntoHtml(html, base = '../') {
+  const subpageNavCss = `${base}styles/marketing/15-subpage-mobile-nav.css`;
+  const subpageNavLink = `<link rel="stylesheet" href="${subpageNavCss}" />`;
+
   if (html.includes(SUBPAGE_MOBILE_BOOT_MARKER)) {
+    if (!html.includes('15-subpage-mobile-nav.css')) {
+      const mobileCssRe = new RegExp(
+        `(<link rel="stylesheet" href="${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}styles/marketing/15-mobile\\.css" />)`,
+      );
+      if (mobileCssRe.test(html)) {
+        return html.replace(mobileCssRe, `$1\n    ${subpageNavLink}`);
+      }
+    }
     return html;
   }
 

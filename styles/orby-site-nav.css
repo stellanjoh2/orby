@@ -4,6 +4,8 @@
  * and marketing/14-ultra-wide.css (link or @import those before this file).
  */
 
+@import url('./marketing/15-subpage-mobile-nav.css');
+
 /* Subpages — fixed nav + layout tokens (class on <html> before first paint) */
 html.orby-legal-site-nav {
   --orby-home-full-width: 2560px;

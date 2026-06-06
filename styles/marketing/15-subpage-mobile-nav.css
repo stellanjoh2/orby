@@ -1,0 +1,355 @@
+/**
+ * Subpage mobile hamburger nav — mirrors 15-mobile.css nav block for html.orby-legal-site-nav.
+ * Loaded via orby-site-nav.css so subpages get overlay menu without html.mobile-landing.
+ */
+@media (max-width: 768px) {
+  html.orby-legal-site-nav .orby-marketing-scroll-nav {
+    --orby-scroll-nav-height: 56px;
+    --orby-scroll-nav-chrome-height: 32px;
+    --orby-scroll-nav-edge-x: var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x));
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    transition: none;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav--mobile-fixed {
+    transform: translate3d(0, 0, 0);
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__bar {
+    position: relative;
+    z-index: 14;
+    height: var(--orby-scroll-nav-height);
+    min-height: var(--orby-scroll-nav-height);
+    padding-block: 0;
+    overflow: hidden;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__brand,
+  html.orby-legal-site-nav a.orby-marketing-scroll-nav__brand {
+    left: var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x));
+    top: 50%;
+    width: calc(var(--orby-scroll-nav-chrome-height) * var(--orby-scroll-nav-logotype-ratio, 2.415));
+    height: var(--orby-scroll-nav-chrome-height);
+    max-width: min(36vw, 88px);
+    max-height: calc(var(--orby-scroll-nav-height) - 16px);
+    transform: translateY(-50%);
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__cta {
+    display: none !important;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-toggle {
+    position: absolute;
+    top: 50%;
+    right: calc(var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x)) - 11px);
+    z-index: 15;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--brand-primary, #c4ff00);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transform: translateY(-50%);
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+    transition:
+      transform 0.22s ease,
+      opacity 0.22s ease;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu-bar:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu-bar:nth-child(2) {
+    opacity: 0;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu-bar:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-toggle:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+    outline-offset: 3px;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu {
+    position: fixed;
+    inset: 0;
+    z-index: 12;
+    box-sizing: border-box;
+    padding:
+      calc(var(--orby-marketing-nav-offset, 56px) + 1.65rem)
+      max(var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x)), env(safe-area-inset-right, 0px))
+      max(1.65rem, env(safe-area-inset-bottom, 0px))
+      max(var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x)), env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--orby-marketing-panel-bg, #202020) 96%, transparent);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translate3d(100%, 0, 0);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0.38s;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav--menu-open .orby-marketing-scroll-nav__menu {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__link,
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__contact {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__links--overlay
+    > :nth-child(1) {
+    transition-delay: 0.14s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__links--overlay
+    > :nth-child(2) {
+    transition-delay: 0.21s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__links--overlay
+    > :nth-child(3) {
+    transition-delay: 0.28s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__links--overlay
+    > :nth-child(4) {
+    transition-delay: 0.35s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__links--overlay
+    > :nth-child(5) {
+    transition-delay: 0.42s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__links--overlay
+    > :nth-child(6) {
+    transition-delay: 0.49s;
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__link,
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__contact {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__links--inline {
+    display: none !important;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu .orby-marketing-scroll-nav__links--overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 1.65rem;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    font-size: clamp(1.76rem, 7.15vw, 2.15rem);
+    line-height: 1.15;
+    white-space: normal;
+    text-align: right;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu .orby-marketing-scroll-nav__link::after,
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu .orby-marketing-scroll-nav__contact::after {
+    bottom: -4px;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1.75rem;
+    width: 100%;
+    margin: 112px 0 0;
+    padding: 0;
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-link,
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-link:visited {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    color: var(--brand-primary, #c4ff00);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.18s ease;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-link:hover,
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-link:focus-visible {
+    color: #fff;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-link:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--brand-primary, #c4ff00) 55%, transparent);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: 100%;
+    mask-size: 100%;
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-icon--instagram {
+    -webkit-mask-image: url('../../assets/icons/Instagram_Glyph_Black.svg');
+    mask-image: url('../../assets/icons/Instagram_Glyph_Black.svg');
+  }
+
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social-icon--github {
+    -webkit-mask-image: url('../../assets/icons/GitHub_Invertocat_Black.svg');
+    mask-image: url('../../assets/icons/GitHub_Invertocat_Black.svg');
+  }
+
+  html.orby-legal-site-nav
+    .orby-marketing-scroll-nav--menu-open
+    .orby-marketing-scroll-nav__menu
+    .orby-marketing-scroll-nav__menu-social {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0.56s;
+  }
+
+  html.orby-legal-site-nav.orby-nav-menu-open {
+    overflow: hidden;
+  }
+
+  html.orby-legal-site-nav.orby-nav-menu-open body {
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.orby-legal-site-nav .orby-marketing-scroll-nav__menu,
+    html.orby-legal-site-nav
+      .orby-marketing-scroll-nav__menu
+      .orby-marketing-scroll-nav__link,
+    html.orby-legal-site-nav
+      .orby-marketing-scroll-nav__menu
+      .orby-marketing-scroll-nav__contact,
+    html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-social {
+      transition: none !important;
+    }
+
+    html.orby-legal-site-nav .orby-marketing-scroll-nav__menu {
+      transform: none;
+    }
+
+    html.orby-legal-site-nav
+      .orby-marketing-scroll-nav:not(.orby-marketing-scroll-nav--menu-open)
+      .orby-marketing-scroll-nav__menu {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    html.orby-legal-site-nav
+      .orby-marketing-scroll-nav--menu-open
+      .orby-marketing-scroll-nav__menu
+      .orby-marketing-scroll-nav__link,
+    html.orby-legal-site-nav
+      .orby-marketing-scroll-nav--menu-open
+      .orby-marketing-scroll-nav__menu
+      .orby-marketing-scroll-nav__contact {
+      opacity: 1;
+      transform: none;
+    }
+
+    html.orby-legal-site-nav
+      .orby-marketing-scroll-nav--menu-open
+      .orby-marketing-scroll-nav__menu
+      .orby-marketing-scroll-nav__menu-social {
+      opacity: 1;
+      transform: none;
+      transition-delay: 0s;
+    }
+  }
+}

@@ -71,14 +71,11 @@ html.mobile-landing #orby-marketing {
  * When skipped sections paint on scroll (especially scrolling back up), placeholder
  * height swaps for real layout and the page jumps — worse with overflow-anchor: none.
  */
-html.mobile-landing .orby-marketing__section--split,
-html.mobile-landing .orby-marketing__section--showcase,
-html.mobile-landing .orby-marketing__section--marquee,
-html.mobile-landing .orby-marketing__section--pro,
-html.mobile-landing .orby-marketing__section--faq,
-html.mobile-landing .orby-marketing__section--cta {
-  content-visibility: visible;
-  contain-intrinsic-size: none;
+html.mobile-landing .orby-marketing__section,
+html.mobile-landing .orby-marketing__in-progress-reveal,
+html.mobile-landing .orby-marketing__in-progress-panel {
+  content-visibility: visible !important;
+  contain-intrinsic-size: none !important;
 }
 
 /* Desktop marketing partials still ship 100dvh — keep in-progress on stable svh. */
@@ -448,9 +445,16 @@ html.orby-legal-site-nav.orby-nav-menu-open body {
 }
 
 /* Desktop/tablet nav keeps inline links in the bar */
-html:not(.mobile-landing) .orby-marketing-scroll-nav__menu-toggle,
-html:not(.mobile-landing) .orby-marketing-scroll-nav__menu {
+html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__menu-toggle,
+html:not(.mobile-landing):not(.orby-legal-site-nav) .orby-marketing-scroll-nav__menu {
   display: none !important;
+}
+
+@media (min-width: 769px) {
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu-toggle,
+  html.orby-legal-site-nav .orby-marketing-scroll-nav__menu {
+    display: none !important;
+  }
 }
 
 /* ── Intro — “Drop it in” hero, vertically centered on landing ── */
@@ -903,16 +907,8 @@ html.mobile-landing .orby-marketing__png-marquee-logotype-mark {
   -webkit-mask-position: center;
   mask-position: center;
   transform-origin: center center;
-  will-change: transform;
-  /* Match .orby-marketing__png-marquee-track loop — counter-clockwise “pushes” cutouts */
-  animation: orbyMarketingPngMarqueeSymbolSpin 52s linear infinite;
-  animation-play-state: paused;
-}
-
-html.mobile-landing
-  .orby-marketing__png-marquee--playing
-  .orby-marketing__png-marquee-logotype-mark {
-  animation-play-state: running;
+  will-change: auto;
+  animation: none;
 }
 
 @keyframes orbyMarketingPngMarqueeSymbolSpin {
@@ -937,20 +933,39 @@ html.mobile-landing .orby-marketing__section--roadmap {
   display: none !important;
 }
 
-/* ── CTA — feature-sized headline ── */
+/* ── FAQ + CTA — full-bleed panels (no desktop rounded-card overlap) ── */
+
+html.mobile-landing #orby-marketing .orby-marketing__section.orby-marketing__section--faq {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+html.mobile-landing .orby-marketing__section--faq + .orby-marketing__section--cta {
+  margin-top: 0;
+  padding-top: clamp(2.5rem, 8vw, 3.5rem);
+}
+
+html.mobile-landing .orby-marketing__in-progress-reveal {
+  margin-top: 0;
+}
+
+html.mobile-landing .orby-marketing__in-progress-panel {
+  padding-top: max(0px, env(safe-area-inset-top, 0px));
+}
+
+/* ── CTA — full-width lime band, content-height ── */
 
 html.mobile-landing .orby-marketing__section--cta {
   box-sizing: border-box;
-  width: calc(100% - 2 * var(--orby-home-padding-x));
+  width: 100%;
   height: auto;
   min-height: 0;
   max-height: none;
-  aspect-ratio: 1 / 1;
-  margin-inline: auto;
+  margin-inline: 0;
   padding:
-    clamp(1.65rem, 5.5vw, 2.2rem)
+    clamp(2.5rem, 8vw, 3.5rem)
     var(--orby-home-padding-x);
-  border-radius: var(--orby-marketing-media-radius);
+  border-radius: 0;
 }
 
 html.mobile-landing .orby-marketing__cta-center {
@@ -960,7 +975,7 @@ html.mobile-landing .orby-marketing__cta-center {
   justify-content: center;
   gap: var(--orby-marketing-mobile-cta-gap);
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 0;
 }
 

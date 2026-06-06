@@ -123,6 +123,17 @@
     applyMobileLandingClasses();
   }
 
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', syncLegalSubpageMobileLanding, {
+        once: true,
+      });
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('load', syncLegalSubpageMobileLanding, { once: true });
+    }
+  }
+
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     var legalMobileMql = window.matchMedia('(max-width: ' + MOBILE_LANDING_MAX_WIDTH_PX + 'px)');
     var onLegalMobileChange = function () {
@@ -174,6 +185,10 @@
     preloadMobileStylesheet(
       base + 'styles/marketing/15-mobile.css',
       'data-orby-mobile-marketing-css',
+    );
+    preloadMobileStylesheet(
+      base + 'styles/marketing/15-subpage-mobile-nav.css',
+      'data-orby-mobile-subpage-nav-css',
     );
   }
 

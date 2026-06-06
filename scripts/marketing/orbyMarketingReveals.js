@@ -17,6 +17,7 @@ import {
 import { playMarketingVideo } from './orbyMarketingVideo.js';
 import { prepareShowcaseGalleryCredit } from './orbyMarketingShowcaseGallery.js';
 import { killIntroTurntableScrollTriggers } from './orbyMarketingIntroTurntable.js';
+import { isMobileLanding } from '../orbyMobileLanding.js';
 import {
   shouldUseHeadlineWordStagger,
   shouldUseMediaBlurReveal,
@@ -55,6 +56,10 @@ const mediaBlurPx = 14;
 const mediaRevealDur = 0.88;
 const mediaEase = 'power3.out';
 const figureCreditInS = 0.48;
+
+function useInstantMarketingReveal() {
+  return prefersReducedMotion() || isMobileLanding();
+}
 
 function isSplitSection(sectionEl) {
   return sectionEl?.classList.contains('orby-marketing__section--split');
@@ -367,7 +372,7 @@ function prepareFigureCredit(mask) {
 function revealFigureCredit(mask) {
   const creditEl = mask?.querySelector('[data-orby-marketing-figure-credit]');
   if (!creditEl) return;
-  if (prefersReducedMotion()) {
+  if (useInstantMarketingReveal()) {
     gsap.set(creditEl, { opacity: 1, y: 0 });
     return;
   }
@@ -725,7 +730,7 @@ function scheduleProCardReveals(sectionEl) {
   );
   if (!cards.length) return;
 
-  if (prefersReducedMotion()) {
+  if (useInstantMarketingReveal()) {
     cards.forEach((card) => {
       revealProCard(card);
     });
@@ -975,7 +980,7 @@ export function revealMarketingSection(sectionEl) {
   }
   sectionEl.dataset.orbyMarketingRevealed = '1';
 
-  if (prefersReducedMotion()) {
+  if (useInstantMarketingReveal()) {
     sectionEl.classList.remove('orby-marketing__section--pending');
     sectionEl.classList.add('orby-marketing__section--revealed');
     sectionEl
@@ -1049,7 +1054,7 @@ export function revealMarketingSection(sectionEl) {
  * @param {HTMLElement} root
  */
 export function prepareMarketingSections(root) {
-  if (!root || prefersReducedMotion()) return;
+  if (!root || useInstantMarketingReveal()) return;
   root.querySelectorAll('.orby-marketing__section').forEach((section) => {
     if (section.classList.contains('orby-marketing__section--in-progress')) return;
     prepareSection(section);

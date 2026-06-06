@@ -13,6 +13,68 @@ body.legal-doc--support {
   --brand-primary: var(--legal-accent);
   --brand-text: var(--orby-black);
   --warning: var(--orby-pink);
+  --orby-support-jump-offset: calc(
+    var(--orby-legal-scroll-nav-height, 84px) + env(safe-area-inset-top, 0px) + 1.25rem
+  );
+}
+
+.legal-support-quicknav {
+  margin: 0 0 1.75rem;
+  padding: 1rem 1.15rem 0.95rem;
+  background: var(--legal-surface);
+  border: 1px solid var(--legal-border);
+  border-radius: 10px;
+}
+
+.legal-support-quicknav__label {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--legal-faint);
+}
+
+.legal-support-quicknav__label--sub {
+  margin-top: 1.35rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--legal-border);
+}
+
+.legal-support-quicknav__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+}
+
+.legal-support-quicknav__list--sub {
+  gap: 0.35rem 0.75rem;
+}
+
+.legal-support-quicknav__list li {
+  margin: 0;
+}
+
+.legal-support-quicknav a {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--legal-muted);
+  text-decoration: none;
+}
+
+.legal-support-quicknav a:hover,
+.legal-support-quicknav a:focus-visible {
+  color: var(--text-link);
+}
+
+.legal-support-export-callout,
+.legal-support-bug-report,
+.legal-support-section,
+.legal-support-glossary__group {
+  scroll-margin-top: var(--orby-support-jump-offset);
 }
 
 .legal-support-bug-report {
@@ -21,8 +83,6 @@ body.legal-doc--support {
   background: var(--legal-surface);
   border: 1px solid var(--legal-border);
   border-radius: 12px;
-  border-left: 3px solid var(--legal-accent);
-  scroll-margin-top: 5rem;
   overflow: hidden;
 }
 
@@ -323,7 +383,7 @@ body.legal-doc--support {
 
 .legal-support-bug-report .bug-report-actions {
   display: flex;
-  margin-top: 0.25rem;
+  margin-top: calc(0.25rem - 24px);
 }
 
 .legal-support-bug-report .bug-report-submit-wrap {
@@ -399,7 +459,6 @@ body.legal-doc--support {
 
 .legal-support-section {
   margin: 0 0 2.75rem;
-  scroll-margin-top: 5rem;
 }
 
 .legal-support-section h2 {
@@ -452,10 +511,6 @@ body.legal-doc--support {
   padding-left: 1.35rem;
 }
 
-.legal-support-glossary-section {
-  scroll-margin-top: 5rem;
-}
-
 .legal-support-glossary-nav {
   margin: 0 0 2rem;
   padding: 1rem 1.15rem;
@@ -485,7 +540,6 @@ body.legal-doc--support {
 
 .legal-support-glossary__group {
   margin: 0 0 2.5rem;
-  scroll-margin-top: 5rem;
 }
 
 .legal-support-glossary__group:last-child {
@@ -557,9 +611,9 @@ body.legal-doc--support {
   }
 }
 
-/* Match Credits / Privacy — space under “Last updated” before export callout */
+/* Space under “Last updated” before quick nav */
 body.legal-doc--support p.legal-meta {
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .legal-support-export-callout {
@@ -569,7 +623,6 @@ body.legal-doc--support p.legal-meta {
 .legal-doc--support .legal-callout--red {
   background: color-mix(in srgb, var(--warning) 14%, var(--legal-surface));
   border-color: color-mix(in srgb, var(--warning) 42%, transparent);
-  border-left-color: var(--warning);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--warning) 8%, transparent);
 }
 
@@ -579,6 +632,16 @@ body.legal-doc--support p.legal-meta {
 
 .legal-doc--support .legal-callout--red strong {
   color: #fca5a5;
+}
+
+.legal-doc--support .legal-callout--red a,
+.legal-doc--support .legal-callout--red a:visited {
+  color: var(--warning);
+}
+
+.legal-doc--support .legal-callout--red a:hover,
+.legal-doc--support .legal-callout--red a:focus-visible {
+  color: #fff;
 }
 
 .legal-doc--support .legal-callout--red .legal-callout__secondary {

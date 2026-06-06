@@ -7,6 +7,7 @@
     <script src="../scripts/orbyMobileLandingBoot.js"></script>
     <link rel="stylesheet" href="../styles/orby-mobile-landing-shell.css" />
     <link rel="stylesheet" href="../styles/marketing/15-mobile.css" />
+    <link rel="stylesheet" href="../styles/marketing/15-subpage-mobile-nav.css" />
     <title>Support — Orby</title>
     <meta
       name="description"
@@ -57,9 +58,40 @@
 
     <main id="main" class="legal-wrap">
       <h1>Support</h1>
-      <p class="legal-meta">Last updated: 25 May 2026</p>
+      <p class="legal-meta">Last updated: 6 June 2026</p>
 
-      <aside class="legal-callout legal-callout--red legal-support-export-callout">
+      <nav class="legal-support-quicknav" aria-label="On this page">
+        <p class="legal-support-quicknav__label">On this page</p>
+        <ul class="legal-support-quicknav__list">
+          <li><a href="#support-disclaimer">Disclaimer</a></li>
+          <li><a href="#report-issue">Report issue</a></li>
+          <li><a href="#file-formats">File formats</a></li>
+          <li><a href="#hdri">HDRI &amp; lighting</a></li>
+          <li><a href="#exports">Exports</a></li>
+          <li><a href="#transparency">Transparency &amp; glass</a></li>
+          <li><a href="#svg-extrude">SVG extrude</a></li>
+          <li><a href="#performance">Performance</a></li>
+          <li><a href="#scene-settings">Scene settings</a></li>
+          <li><a href="#glossary">Glossary</a></li>
+          <li><a href="#privacy">Privacy</a></li>
+        </ul>
+        <p class="legal-support-quicknav__label legal-support-quicknav__label--sub">Glossary</p>
+        <ul class="legal-support-quicknav__list legal-support-quicknav__list--sub">
+          <li><a href="#glossary-formats">Formats &amp; basics</a></li>
+          <li><a href="#glossary-materials">Materials</a></li>
+          <li><a href="#glossary-lighting">Lighting</a></li>
+          <li><a href="#glossary-camera">Camera</a></li>
+          <li><a href="#glossary-display">Display modes</a></li>
+          <li><a href="#glossary-post">Post &amp; color</a></li>
+          <li><a href="#glossary-orby">Orby features</a></li>
+          <li><a href="#glossary-tech">Technical</a></li>
+        </ul>
+      </nav>
+
+      <aside
+        id="support-disclaimer"
+        class="legal-callout legal-callout--red legal-support-export-callout"
+      >
         <p>
           <strong>Every source exports differently.</strong> Meshes from AI tools, game engines,
           Blender, marketplaces, and elsewhere can arrive at very different scales, brightness levels,
@@ -73,9 +105,24 @@
         <p>
           <strong>SVGs vary just as much.</strong> Files differ in complexity and quality — many
           layers, paths, and colors can glitch or behave oddly when imported directly, especially on
-          <a href="#svg-extrude">extrude</a>. If something looks wrong, check the source in a vector
-          editor first: simplify paths, flatten layers, or clean up the artwork. Complex multi-color
-          logos are the most common troublemakers.
+          <a href="#svg-extrude">extrude</a>. Bevels are especially finicky: rounding sharp corners
+          on extruded paths is surprisingly hard math, and it can chew up fonts and logos in ways that
+          look nothing like your source artwork. We are actively working on this — for now, try lower
+          bevel amounts or turn bevels off if a mark blows out. If something still looks wrong, check
+          the source in a vector editor first: simplify paths, flatten layers, or clean up the artwork.
+          Complex multi-color logos are the most common troublemakers.
+        </p>
+        <p id="fbx">
+          <strong>FBX is supported, but it is not the happy path.</strong> Orby was built around
+          <strong>GLB</strong> — FBX came later because so many pipelines still ship it. Unlike glTF 2.0,
+          there is no single PBR contract: materials may arrive as legacy Phong/Lambert setups, black
+          diffuse colors with albedo in separate images, packed ORM sheets with different channel orders,
+          or normals that need a Y flip. A lone <strong>.fbx</strong> drop often cannot find external
+          textures — drag in the whole export folder (FBX plus PNGs/JPEGs), or wire maps by hand under
+          <strong>Object → Map Slots</strong>. Duplicate materials per mesh, odd unit scales, and partial
+          texture sets are common; we keep improving the loader, but we cannot cover every exporter and
+          marketplace variant. When you have the choice, re-export as glTF 2.0 / GLB from the source app
+          first.
         </p>
         <p class="legal-callout__secondary">
           Orby is a free passion project — no ads, no subscriptions, no revenue. I read every report
@@ -265,26 +312,12 @@
         sends what you type in the report form above.
       </p>
 
-      <nav class="legal-credits-toc" aria-label="Help topics">
-        <p class="legal-credits-toc__label">Help topics</p>
-        <ul>
-          <li><a href="#file-formats">File formats</a></li>
-          <li><a href="#hdri">HDRI &amp; lighting</a></li>
-          <li><a href="#exports">Exports</a></li>
-          <li><a href="#transparency">Transparency &amp; glass</a></li>
-          <li><a href="#svg-extrude">SVG extrude</a></li>
-          <li><a href="#performance">Performance</a></li>
-          <li><a href="#scene-settings">Scene settings</a></li>
-          <li><a href="#glossary">Glossary</a></li>
-          <li><a href="#privacy">Privacy reminder</a></li>
-        </ul>
-      </nav>
-
       <section id="file-formats" class="legal-support-section">
         <h2>File formats &amp; loading</h2>
         <p class="legal-support-section__intro">
-          Orby is optimized for <strong>glTF / GLB</strong> and <strong>SVG extrusion</strong>. Other
-          formats load via Three.js loaders but may need extra care for materials and scale.
+          Orby is optimized for <strong>glTF / GLB</strong> and <strong>SVG extrusion</strong>. You can
+          also drop a saved <strong>.orby</strong> scene (settings + embedded model). Other formats load
+          via Three.js loaders but may need extra care for materials and scale.
         </p>
         <ul class="legal-support-faq">
           <li>
@@ -309,19 +342,35 @@
             </p>
           </li>
           <li>
+            <h3>.gltf with external files</h3>
+            <p>
+              A lone <strong>.gltf</strong> JSON file often cannot find its bins and textures. Drop the
+              <strong>whole export folder</strong> so sidecar files resolve — same idea as FBX + PNGs.
+            </p>
+          </li>
+          <li>
+            <h3>USDZ and binary USDC</h3>
+            <p>
+              Orby loads text <strong>USDA</strong> stages. Many USDZ packages use binary <strong>USDC</strong>
+              and may appear empty in the browser — prefer GLB when you can.
+            </p>
+          </li>
+          <li>
             <h3>Model looks tiny, huge, or off-center</h3>
             <p>
               Orby auto-frames on load. Use <strong>F</strong> to refocus, or transform tools
-              (<kbd>W</kbd> / <kbd>E</kbd> / <kbd>R</kbd>) if you need manual placement. Some FBX/OBJ
-              exports use different unit scales — zoom and framing usually recover a usable view.
+              (<kbd>W</kbd> / <kbd>E</kbd> / <kbd>R</kbd>) if you need manual placement. Some
+              <a href="#fbx">FBX</a>/OBJ exports use different unit scales — zoom and framing usually
+              recover a usable view.
             </p>
           </li>
           <li>
             <h3>Materials look flat or wrong compared to another viewer</h3>
             <p>
-              Check display mode (<strong>Shaded</strong> vs <strong>Unlit</strong> vs <strong>Clay</strong>).
-              Shader Lab presets temporarily replace materials — turn them off to see the imported glTF
-              look again. Marketplace assets often pack transparency into atlases; see
+              Check display mode under <strong>Object → Display</strong> (<strong>Shaded</strong> vs
+              <strong>Unlit</strong> vs <strong>Clay</strong>). <strong>Object → Shader Lab</strong> presets
+              temporarily replace materials — turn them off to see the imported glTF look again. Marketplace
+              assets often pack transparency into atlases; see
               <a href="#transparency">Transparency &amp; glass</a> below.
             </p>
           </li>
@@ -332,7 +381,7 @@
         <h2>HDRI &amp; environment lighting</h2>
         <p class="legal-support-section__intro">
           A 360° environment image lights the scene and drives reflections on metals, glass, and chrome
-          looks.
+          looks. HDRI presets and controls live under the <strong>Studio</strong> tab.
         </p>
         <ul class="legal-support-faq">
           <li>
@@ -365,9 +414,9 @@
           <li>
             <h3>Shader Lab and HDRI</h3>
             <p>
-              True Chrome and Glass follow the current HDRI (strength, rotation, blur). Animated Shader
-              Lab presets (Flow Field, Plasma, etc.) can be frozen so they stop drifting while the rest of
-              the scene still responds to the environment.
+              <strong>Object → Shader Lab</strong> True Chrome and Glass follow the current HDRI (strength,
+              rotation, blur). Animated Shader Lab presets (Flow Field, Plasma, etc.) can be frozen so they
+              stop drifting while the rest of the scene still responds to the environment.
             </p>
           </li>
         </ul>
@@ -385,7 +434,9 @@
         <h2>Exports</h2>
         <p class="legal-support-section__intro">
           Exports render the current view and settings on your GPU. Heavy post-processing and high
-          resolution increase time and memory use.
+          resolution increase time and memory use. If your machine can handle it, bump
+          <strong>Camera → Quality → Render Quality</strong> to <strong>Ultra</strong> before you export
+          — higher internal resolution and full-quality passes make PNGs and video noticeably crisper.
         </p>
         <ul class="legal-support-faq">
           <li>
@@ -401,8 +452,9 @@
             <p>
               <strong>Fisheye looks fine live but PNG export is not supported yet</strong> while the
               effect is on — you may see missing geometry, black patches, or a broken frame. Turn off
-              <strong>Fisheye Lens</strong> in the Render panel, export PNG, then turn fisheye back on.
-              <strong>MP4 video export still works</strong> with fisheye enabled.
+              <strong>Fisheye Lens</strong> under <strong>Camera</strong>, export PNG (or a numbered PNG
+              sequence), then turn fisheye back on. <strong>MP4 video export still works</strong> with
+              fisheye enabled.
             </p>
           </li>
           <li>
@@ -452,7 +504,7 @@
           <li>
             <h3>What to try in Orby</h3>
             <p>
-              Under <strong>Mesh → Advanced</strong>, try <strong>Transparency Mode</strong> and
+              Under <strong>Object → Advanced</strong>, try <strong>Transparency Mode</strong> and
               <strong>Stabilize Layered Transparency</strong>. These change draw order but cannot fix assets
               where unrelated surfaces were baked into one blended material.
             </p>
@@ -481,16 +533,20 @@
           <li>
             <h3>Controls</h3>
             <p>
-              <strong>Depth</strong> sets global extrusion; <strong>Angle</strong> controls normal smoothing;
-              <strong>Flip Direction</strong> inverts front/back; <strong>Color Override</strong> replaces fill
-              colors; per-color depth/position rows tune layered logos.
+              Under <strong>Object → SVG Extrude</strong>: <strong>Depth</strong> sets global extrusion;
+              <strong>Bevel Amount</strong> rounds corners (can be finicky on fonts and logos);
+              <strong>Angle</strong> controls normal smoothing; <strong>Flip Direction</strong> inverts
+              front/back; <strong>Color Override</strong> replaces fill colors; per-color depth/position
+              rows tune layered logos; <strong>Detail</strong> and <strong>Surface</strong> tune mesh quality
+              and procedural shading.
             </p>
           </li>
           <li>
             <h3>Scene JSON</h3>
             <p>
-              SVG extrude settings are included when you copy/paste scene settings in the app. They are not
-              stored on this support page — only in your local session.
+              SVG extrude settings are included when you <strong>Copy Scene Settings</strong> or save a
+              <strong>.orby</strong> file. They are not stored on this support page — only in your local
+              session.
             </p>
           </li>
         </ul>
@@ -516,10 +572,11 @@
           <li>
             <h3>Shadow-casting 3-point lights</h3>
             <p>
-              Under <strong>Lights → Shadows</strong>, enabling <strong>Cast Shadows</strong> makes the key,
-              fill, and rim spotlights render shadow maps every frame. That is powerful for product shots but
-              expensive — especially with soft shadows and when multiple lights cast at once. Per-light
-              shadow toggles add up quickly.
+              Under <strong>Studio → Lights → Shadows</strong>, enabling <strong>Cast Shadows</strong> makes
+              spotlights render shadow maps every frame. That is powerful for product shots but expensive —
+              especially with soft shadows and when multiple lights cast at once. Per-light shadow toggles
+              add up quickly. At <strong>Medium</strong> or <strong>Low</strong> Render Quality, global
+              shadows limit casting to the <strong>key light only</strong> (fill and rim stay off).
             </p>
             <p>
               <strong>Shadow Quality</strong> (Low → Ultra) sets shadow map resolution and filtering. Ultra
@@ -527,42 +584,43 @@
               at Medium; only go High or Ultra when you are polishing a still or export.
             </p>
             <p>
-              On the HDRI panel, <strong>Receive Shadows + AO</strong> adds a ground catcher under the model
-              so contact shadows and occlusion read on the backdrop. Turn it off when you do not need floor
-              contact — it is extra geometry and compositing work each frame.
+              On the <strong>Studio</strong> HDRI block, <strong>Receive Shadows + AO</strong> adds a ground
+              catcher under the model so contact shadows and occlusion read on the backdrop. Turn it off when
+              you do not need floor contact — it is extra geometry and compositing work each frame.
             </p>
           </li>
           <li>
             <h3>Ambient occlusion</h3>
             <p>
-              <strong>FX → Ambient Occlusion</strong> runs screen-space AO (N8AO) as an extra post pass. It
-              deepens creases and ground contact but costs GPU time on top of bloom, depth of field, and
+              <strong>Camera → Ambient Occlusion</strong> runs screen-space AO (N8AO) as an extra post pass.
+              It deepens creases and ground contact but costs GPU time on top of bloom, depth of field, and
               shadows. It is off by default for a reason. If the toggle stays disabled, check
-              <strong>Render → Quality → Render Quality</strong> — the Low tier forces AO off to save performance
-              (your saved settings return when you move back to Medium or Ultra).
+              <strong>Camera → Quality → Render Quality</strong> — the Low tier forces AO off to save
+              performance (your saved settings return when you move back to Medium or Ultra).
             </p>
           </li>
           <li>
             <h3>Ultra settings (global and per-effect)</h3>
             <p>
-              <strong>Render → Quality → Render Quality → Ultra</strong> is the top tier: higher device pixel
+              <strong>Camera → Quality → Render Quality → Ultra</strong> is the top tier: higher device pixel
               ratio (sharper internal resolution), full-resolution bloom, and no automatic shutoff of depth of
               field, bloom, AO, or FXAA. Medium lowers pixel ratio and runs bloom at half resolution; Low goes
               further and disables several heavy passes entirely while keeping your slider values saved.
             </p>
             <p>
-              Several FX blocks also have their own <strong>Quality → Ultra</strong> (depth of field, bloom,
-              anamorphic bloom, lens flare). Stacking Render Quality Ultra with multiple per-effect Ultra modes
-              is the fastest way to tank frame rate — fine for a hero frame, rough for live orbiting on a weak GPU.
+              Several <strong>Camera</strong> effect blocks also have their own <strong>Quality → Ultra</strong>
+              (depth of field, bloom, anamorphic bloom, lens flare). Stacking Render Quality Ultra with
+              multiple per-effect Ultra modes is the fastest way to tank frame rate — fine for a hero frame,
+              rough for live orbiting on a weak GPU.
             </p>
           </li>
           <li>
             <h3>Lens flare</h3>
             <p>
-              <strong>FX → Lens Flare</strong> simulates glare and streaks from bright areas in the scene. On
-              lower-spec machines it can drag performance noticeably, especially at <strong>Quality → Ultra</strong>
-              (the default). Try <strong>Optimized</strong> first, or disable flare while working and enable it
-              only for the final PNG or video export.
+              <strong>Camera → Lens Flare</strong> simulates glare and streaks from bright areas in the scene.
+              On lower-spec machines it can drag performance noticeably — default quality is <strong>High</strong>
+              (Low → Ultra available). Try <strong>Medium</strong> or <strong>Low</strong> first, or disable
+              flare while working and enable it only for the final PNG or video export.
             </p>
           </li>
           <li>
@@ -578,7 +636,8 @@
           <li>
             <h3>Practical recovery checklist</h3>
             <p>
-              If Orby feels slow: set <strong>Render Quality</strong> to Medium or Low; disable Cast Shadows or
+              If Orby feels slow: set <strong>Camera → Quality → Render Quality</strong> to Medium or Low;
+              disable Cast Shadows or
               drop shadow quality; turn off AO, lens flare, DOF, and bloom; shrink the browser window; avoid
               2× PNG export on a struggling GPU. Re-enable one cinematic layer at a time when you are close to final.
             </p>
@@ -589,9 +648,14 @@
       <section id="scene-settings" class="legal-support-section">
         <h2>Scene settings</h2>
         <p>
-          Copy/paste scene JSON from the app to save lighting, camera, effects, tone curve, Look Filter
-          selection, and panel toggles. Paste on the landing page or via the in-app loader. Settings are
-          local to your browser — they are not uploaded to Orby servers.
+          <strong>Copy Scene Settings</strong> / <strong>Paste Scene Settings</strong> — clipboard JSON for
+          lighting, camera, effects, tone curve, Look Filters, and panel toggles. Settings only; no embedded
+          mesh. Paste on the landing page or via the in-app loader.
+        </p>
+        <p>
+          <strong>Save .orby Scene</strong> / <strong>Load .orby Scene</strong> — a separate JSON archive
+          with your settings <em>and</em> embedded model (also droppable on the landing page). Both stay
+          local to your browser — nothing is uploaded to Orby servers.
         </p>
       </section>
 
@@ -634,9 +698,10 @@
                   The modern open standard for real-time 3D on the web.
                   <a href="https://en.wikipedia.org/wiki/glTF" target="_blank" rel="noopener noreferrer">glTF</a>
                   is the format; <strong>GLB</strong> is the single-file binary version; a
-                  <strong>.gltf</strong> file is often JSON plus separate textures. Orby is built around
-                  glTF 2.0 — best support for PBR materials, animations, and extensions like glass
-                  transmission.
+                  <strong>.gltf</strong> file is often JSON plus separate textures and usually needs a
+                  <strong>whole-folder drop</strong> (not a lone file) so bins and images resolve. Orby is
+                  built around glTF 2.0 — best support for PBR materials, animations, and extensions like
+                  glass transmission.
                 </dd>
               </div>
               <div>
@@ -644,8 +709,9 @@
                 <dd>
                   An older mesh format —
                   <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file" target="_blank" rel="noopener noreferrer">Wavefront OBJ</a>
-                  — geometry and basic materials only. No PBR, no animations. Fine for simple shapes;
-                  expect to tune materials manually in Orby.
+                  — geometry and basic materials only. No PBR, no animations; companion <strong>.mtl</strong>
+                  files are not wired up automatically. Fine for simple shapes; expect to tune materials
+                  manually in Orby.
                 </dd>
               </div>
               <div>
@@ -653,8 +719,10 @@
                 <dd>
                   Autodesk’s
                   <a href="https://en.wikipedia.org/wiki/FBX" target="_blank" rel="noopener noreferrer">FBX</a>
-                  exchange format, common in games and DCC tools. Loads in Orby but export quality varies
-                  — embedded textures, scale, and material setup depend on the source app.
+                  exchange format, common in games and DCC tools. Loads in Orby, but a lone
+                  <strong>.fbx</strong> often cannot find external textures — drop the whole export folder
+                  or assign maps under <strong>Object → Map Slots</strong>. Scale, material setup, and map
+                  packing vary widely by source app — see <a href="#fbx">the FBX disclaimer</a>.
                 </dd>
               </div>
               <div>
@@ -671,8 +739,9 @@
                 <dd>
                   Pixar’s
                   <a href="https://en.wikipedia.org/wiki/Universal_Scene_Description" target="_blank" rel="noopener noreferrer">Universal Scene Description</a>
-                  — used in film pipelines and Apple AR. Basic loading support; complex USD features may
-                  not translate fully.
+                  — used in film pipelines and Apple AR. Orby can load text <strong>USDA</strong> stages;
+                  many USDZ files use binary <strong>USDC</strong> and may show up empty in the browser.
+                  Prefer GLB when you can.
                 </dd>
               </div>
               <div>
@@ -800,7 +869,8 @@
                 <dd>
                   A texture that fakes small surface bumps and dents without extra geometry —
                   <a href="https://en.wikipedia.org/wiki/Normal_mapping" target="_blank" rel="noopener noreferrer">normal mapping</a>.
-                  Toggle normal maps under material options for Shaded and Clay modes.
+                  Toggle under <strong>Object → Material → Normal Map</strong> for Shaded and Clay modes
+                  (full PBR materials only).
                 </dd>
               </div>
               <div>
@@ -921,8 +991,8 @@
                 <dd>
                   A depth texture the GPU uses to cast shadows from spotlights —
                   <a href="https://en.wikipedia.org/wiki/Shadow_mapping" target="_blank" rel="noopener noreferrer">shadow mapping</a>.
-                  Enabling shadows on multiple 3-point lights is realistic but expensive — see
-                  <a href="#performance">Performance</a>.
+                  Under <strong>Studio → Lights → Shadows</strong>. Enabling shadows on multiple 3-point
+                  lights is realistic but expensive — see <a href="#performance">Performance</a>.
                 </dd>
               </div>
               <div>
@@ -939,7 +1009,7 @@
                 <dd>
                   An invisible floor under the model that catches contact shadows and
                   <a href="https://en.wikipedia.org/wiki/Ambient_occlusion" target="_blank" rel="noopener noreferrer">ambient occlusion</a>
-                  from the HDRI panel — helps products “sit” on a surface.
+                  on the <strong>Studio</strong> HDRI block — helps products “sit” on a surface.
                 </dd>
               </div>
             </dl>
@@ -988,7 +1058,8 @@
                 <dt>Auto Orbit</dt>
                 <dd>
                   The camera slowly spins around the model on its own — good for previews, turntables,
-                  and presentations. Press <kbd>Esc</kbd> to stop.
+                  and presentations. Press <kbd>Space</kbd> to cycle Off → Slow → Fast under
+                  <strong>Camera</strong>.
                 </dd>
               </div>
               <div>
@@ -1005,7 +1076,7 @@
                   Camera-style blur —
                   <a href="https://en.wikipedia.org/wiki/Depth_of_field" target="_blank" rel="noopener noreferrer">depth of field</a>
                   keeps the subject sharp and softens background (or foreground). A post effect under
-                  FX; heavier on performance at high quality.
+                  <strong>Camera</strong>; heavier on performance at high quality.
                 </dd>
               </div>
               <div>
@@ -1094,14 +1165,17 @@
                 <dd>
                   Streaks and ghosts from bright light sources in frame —
                   <a href="https://en.wikipedia.org/wiki/Lens_flare" target="_blank" rel="noopener noreferrer">lens flare</a>
-                  is decorative and can cost performance on low-end GPUs.
+                  under <strong>Camera</strong>. Quality runs Low → Ultra (default <strong>High</strong>);
+                  decorative and can cost performance on low-end GPUs.
                 </dd>
               </div>
               <div>
                 <dt>Lens dirt</dt>
                 <dd>
-                  Simulated smudges on a virtual camera lens — subtle atmosphere, not literal dirt on
-                  your screen.
+                  Simulated smudges on a virtual camera lens under <strong>Camera</strong> — subtle
+                  atmosphere, not literal dirt on your screen. It reads against <strong>bright areas</strong>
+                  (specular hits, windows, emissive parts), so a dark scene can look like nothing changed;
+                  orbit toward a highlight or bump <strong>Strength</strong> if you are not seeing it.
                 </dd>
               </div>
               <div>
@@ -1124,8 +1198,9 @@
                 <dd>
                   Maps HDR scene brightness into viewable range on your monitor —
                   <a href="https://en.wikipedia.org/wiki/Tone_mapping" target="_blank" rel="noopener noreferrer">tone mapping</a>
-                  is like a film print curve. Orby uses ACES Filmic for a cinematic rolloff in
-                  highlights.
+                  is like a film print curve. Orby defaults to <strong>ACES Filmic</strong> (also
+                  <strong>None</strong> or <strong>Reinhard</strong> under <strong>Camera → Quality</strong>)
+                  for a cinematic rolloff in highlights.
                 </dd>
               </div>
               <div>
@@ -1183,8 +1258,8 @@
                 <dd>
                   Darkening in crevices and contact points where light is occluded —
                   <a href="https://en.wikipedia.org/wiki/Ambient_occlusion" target="_blank" rel="noopener noreferrer">ambient occlusion</a>.
-                  Orby’s screen-space AO (N8AO) is an extra post pass — deepens detail but costs GPU
-                  time.
+                  Orby’s screen-space AO (N8AO) under <strong>Camera</strong> is an extra post pass —
+                  deepens detail but costs GPU time.
                 </dd>
               </div>
               <div>
@@ -1203,22 +1278,32 @@
               <div>
                 <dt>Shader Lab</dt>
                 <dd>
-                  Stylized material presets (chrome, glass, animated FX) that temporarily replace your
-                  imported materials. Turn off to restore the original glTF look.
+                  Stylized material presets under <strong>Object</strong> (chrome, glass, animated FX)
+                  that temporarily replace your imported materials. Turn off to restore the original
+                  glTF look.
                 </dd>
               </div>
               <div>
-                <dt>Look Filter Presets</dt>
+                <dt>Look Filters</dt>
                 <dd>
-                  One-tap style combos under Camera — color grade, curve, bloom, grain, CA, and more
-                  applied together. <strong>None</strong> resets those defaults.
+                  One-tap style combos under <strong>Camera → Look Filters</strong> — color grade, curve,
+                  bloom, grain, CA, and more applied together. <strong>None</strong> resets those defaults.
                 </dd>
               </div>
               <div>
-                <dt>Scene settings / .orby JSON</dt>
+                <dt>Scene settings</dt>
                 <dd>
-                  Copy-paste text that saves your full setup — lights, camera, FX, curve, Look Filter,
-                  panel toggles. Local to your browser; not uploaded to servers.
+                  <strong>Copy Scene Settings</strong> / <strong>Paste Scene Settings</strong> — clipboard
+                  JSON for your setup (lights, camera, effects, curve, Look Filters, panel toggles). Settings
+                  only; no embedded mesh. Local to your browser; not uploaded to servers.
+                </dd>
+              </div>
+              <div>
+                <dt>.orby scene file</dt>
+                <dd>
+                  <strong>Save .orby Scene</strong> / <strong>Load .orby Scene</strong> — a JSON archive
+                  with your settings <em>and</em> embedded model. Also droppable on the landing page as a
+                  <strong>.orby</strong> file. Distinct from copy/paste scene settings above.
                 </dd>
               </div>
               <div>
@@ -1238,8 +1323,8 @@
               <div>
                 <dt>Render Quality</dt>
                 <dd>
-                  Global performance tier (Low / Medium / Ultra) — changes internal resolution, bloom
-                  resolution, and which heavy passes stay enabled.
+                  Global performance tier under <strong>Camera → Quality</strong> (Low / Medium / Ultra) —
+                  changes internal resolution, bloom resolution, and which heavy passes stay enabled.
                 </dd>
               </div>
               <div>
@@ -1247,8 +1332,8 @@
                 <dd>
                   A reference
                   <a href="https://en.wikipedia.org/wiki/ColorChecker" target="_blank" rel="noopener noreferrer">ColorChecker</a>
-                  chart mesh you can drop into the scene to sanity-check white balance and exposure
-                  against known swatches.
+                  chart under <strong>Camera</strong> — toggle placement and scale to sanity-check white
+                  balance and exposure against known swatches.
                 </dd>
               </div>
               <div>

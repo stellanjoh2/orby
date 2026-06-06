@@ -16,6 +16,8 @@ html.mobile-landing {
   min-height: 100svh;
   overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 html.mobile-landing,

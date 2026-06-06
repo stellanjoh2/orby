@@ -346,6 +346,17 @@ export function initOrbyMarketingPage(options = {}) {
 
   function attachRevealObserver() {
     if (!root || revealObserver || !revealModule) return;
+    if (isMobileLanding()) {
+      root.querySelectorAll('.orby-marketing__section').forEach((section) => {
+        if (section.dataset.orbyMarketingRevealed === '1') return;
+        if (section.classList.contains('orby-marketing__section--in-progress')) return;
+        section.classList.add('orby-marketing__section--in-view');
+        void revealModule.preloadSectionMedia(section).then(() => {
+          revealModule.revealMarketingSection(section);
+        });
+      });
+      return;
+    }
     const onReveal = (observer, entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
