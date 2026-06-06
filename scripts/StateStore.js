@@ -115,13 +115,13 @@ export class StateStore {
          */
         uvChecker: false,
         /** Tiling multiplier for the UV checker overlay (1 = one tile per UV island). */
-        uvCheckerScale: 1,
+        uvCheckerScale: 5,
         /**
-         * Checker pattern style. `vibrant` = Atlux color UV map; `monochrome` = grayscale variant
-         * (better for reading shading + checker pattern together on textured meshes).
-         * @type {'vibrant' | 'monochrome'}
+         * Checker pattern style. `orby` = Orby brand checker; `classic` = Atlux color UV map;
+         * `monochrome` = grayscale variant (reads better on already-colored meshes).
+         * @type {'orby' | 'classic' | 'monochrome'}
          */
-        uvCheckerStyle: 'vibrant',
+        uvCheckerStyle: 'orby',
         /** STL imports: smooth vertex normals with a crease angle (see Object → Advanced). */
         stlSmoothShading: true,
         stlSmoothingAngle: 40,

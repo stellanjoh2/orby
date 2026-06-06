@@ -56,8 +56,9 @@ html.mobile-landing #orby-marketing {
   --orby-intro-headline-min: clamp(1.85rem, 9vw, 2.65rem);
   --orby-intro-headline-max: clamp(2.1rem, 10.5vw, 3rem);
   --orby-intro-headline-vw: 9.5;
-  /* PNG marquee — 36svh on phone (−10%); wider item gap (+10%) */
+  /* PNG marquee — symbol 36svh; cutouts ~15% smaller so they sit inside the mark */
   --orby-marketing-png-marquee-max-h: 36svh;
+  --orby-marketing-png-marquee-img-max-h: calc(var(--orby-marketing-png-marquee-max-h) * 0.85);
   --orby-marketing-png-marquee-gap: clamp(2.06rem, 11vw, 3.44rem);
   /* Body copy — ~15% tighter line height on mobile */
   --orby-marketing-feature-lede-line: 1.36;
@@ -862,6 +863,11 @@ html.mobile-landing .orby-marketing__faq-answer {
 
 html.mobile-landing .orby-marketing__png-marquee-viewport {
   padding-block: clamp(0.55rem, 1.65svh, 1.38rem);
+}
+
+html.mobile-landing .orby-marketing__png-marquee-img {
+  height: var(--orby-marketing-png-marquee-img-max-h, var(--orby-marketing-png-marquee-max-h));
+  max-height: var(--orby-marketing-png-marquee-img-max-h, var(--orby-marketing-png-marquee-max-h));
 }
 
 /* PNG marquee backdrop — square lime symbol, height-fit (never crop vertically) */

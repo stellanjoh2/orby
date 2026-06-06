@@ -1,8 +1,17 @@
 /**
  * Fork of THREE.TransformControls (r165) for Orby gizmo styling:
- * custom axis colors, 50% opacity at rest, per-axis hover at full opacity
+ * brand axis colors, 50% opacity at rest, per-axis hover at full opacity
  * (upstream highlights every hovered handle in yellow).
+ *
+ * Axes — X: Orby Pink, Y: Orby Lime, Z: Orby Blue; E ring: Orby Purple; track: Purple Bright.
  */
+import {
+	ORBY_BLUE,
+	ORBY_LIME,
+	ORBY_PINK,
+	ORBY_PURPLE,
+	ORBY_PURPLE_BRIGHT,
+} from '../constants.js';
 import {
 	BoxGeometry,
 	BufferGeometry,
@@ -40,6 +49,13 @@ const _changeEvent = { type: 'change' };
 const _mouseDownEvent = { type: 'mouseDown', mode: null };
 const _mouseUpEvent = { type: 'mouseUp', mode: null };
 const _objectChangeEvent = { type: 'objectChange' };
+
+/** @param {string} hex — e.g. '#c4ff00' */
+function orbyHex( hex ) {
+
+	return parseInt( hex.slice( 1 ), 16 );
+
+}
 
 class TransformControls extends Object3D {
 
@@ -820,42 +836,42 @@ class TransformControlsGizmo extends Object3D {
 		matHelper.opacity = 0.5;
 
 		const matRed = gizmoMaterial.clone();
-		matRed.color.setHex( 0xff1e50 );
+		matRed.color.setHex( orbyHex( ORBY_PINK ) );
 		matRed.opacity = 0.5;
 
 		const matGreen = gizmoMaterial.clone();
-		matGreen.color.setHex( 0xc4ff00 );
+		matGreen.color.setHex( orbyHex( ORBY_LIME ) );
 		matGreen.opacity = 0.5;
 
 		const matBlue = gizmoMaterial.clone();
-		matBlue.color.setHex( 0x00a5ff );
+		matBlue.color.setHex( orbyHex( ORBY_BLUE ) );
 		matBlue.opacity = 0.5;
 
 		const matRedTransparent = gizmoMaterial.clone();
-		matRedTransparent.color.setHex( 0xff1e50 );
+		matRedTransparent.color.setHex( orbyHex( ORBY_PINK ) );
 		matRedTransparent.opacity = 0.5;
 
 		const matGreenTransparent = gizmoMaterial.clone();
-		matGreenTransparent.color.setHex( 0xc4ff00 );
+		matGreenTransparent.color.setHex( orbyHex( ORBY_LIME ) );
 		matGreenTransparent.opacity = 0.5;
 
 		const matBlueTransparent = gizmoMaterial.clone();
-		matBlueTransparent.color.setHex( 0x00a5ff );
+		matBlueTransparent.color.setHex( orbyHex( ORBY_BLUE ) );
 		matBlueTransparent.opacity = 0.5;
 
 		const matWhiteTransparent = gizmoMaterial.clone();
 		matWhiteTransparent.opacity = 0.25;
 
 		const matYellowTransparent = gizmoMaterial.clone();
-		matYellowTransparent.color.setHex( 0xffdc00 );
+		matYellowTransparent.color.setHex( orbyHex( ORBY_PURPLE ) );
 		matYellowTransparent.opacity = 0.5;
 
 		const matYellow = gizmoMaterial.clone();
-		matYellow.color.setHex( 0xffdc00 );
+		matYellow.color.setHex( orbyHex( ORBY_PURPLE ) );
 		matYellow.opacity = 0.5;
 
 		const matGray = gizmoMaterial.clone();
-		matGray.color.setHex( 0x787878 );
+		matGray.color.setHex( orbyHex( ORBY_PURPLE_BRIGHT ) );
 
 		// reusable geometry (tube/stem radii 50% of stock three.js gizmo for a lighter look)
 

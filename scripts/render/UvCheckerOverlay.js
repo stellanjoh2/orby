@@ -35,21 +35,24 @@ import * as THREE from 'three';
  * @type {Record<string, string>}
  */
 const TEXTURE_URLS = {
-  vibrant: './assets/images/CustomUVChecker_byValle_1K.png',
+  orby: './assets/images/OrbyUVChecker_byValle_1K.png',
+  classic: './assets/images/CustomUVChecker_byValle_1K.png',
   monochrome: './assets/images/CustomUVChecker_byValle_1K-bw.png',
 };
-const DEFAULT_STYLE = 'vibrant';
+const DEFAULT_STYLE = 'orby';
 const SCALE_MIN = 0.05;
-const SCALE_MAX = 64;
+const SCALE_MAX = 10;
+const DEFAULT_SCALE = 5;
 
 function clampScale(value) {
-  if (!Number.isFinite(value)) return 1;
+  if (!Number.isFinite(value)) return DEFAULT_SCALE;
   return Math.max(SCALE_MIN, Math.min(SCALE_MAX, value));
 }
 
 function normalizeStyle(style) {
-  return Object.prototype.hasOwnProperty.call(TEXTURE_URLS, style)
-    ? style
+  const mapped = style === 'vibrant' ? 'classic' : style;
+  return Object.prototype.hasOwnProperty.call(TEXTURE_URLS, mapped)
+    ? mapped
     : DEFAULT_STYLE;
 }
 
@@ -58,13 +61,13 @@ export class UvCheckerOverlay {
     /** Current toggle state — `true` when the user has flipped UV Checker on under Advanced. */
     this.enabled = false;
     /** Tile multiplier; mirrored from `advanced.uvCheckerScale`. */
-    this.scale = 1;
+    this.scale = DEFAULT_SCALE;
     /** Active checker pattern; mirrored from `advanced.uvCheckerStyle`. */
     this.style = DEFAULT_STYLE;
     /** @type {THREE.Mesh[]|null} Live overlay clones, parented next to their source mesh. */
     this.overlayMeshes = null;
     /**
-     * Texture cache keyed by style (`'vibrant'`, `'monochrome'`, …). Each entry holds the
+     * Texture cache keyed by style (`'classic'`, `'monochrome'`, …). Each entry holds the
      * loaded `THREE.Texture` and any rebuild callbacks queued while it was in-flight.
      * @type {Map<string, { texture: THREE.Texture|null, loading: boolean, pending: Array<(t: THREE.Texture) => void> }>}
      */

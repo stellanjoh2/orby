@@ -107,8 +107,8 @@ export class SceneSettingsManager {
         flipGlassNormalMapY: !!state.advanced?.flipGlassNormalMapY,
         glassFrontFacesOnly: !!state.advanced?.glassFrontFacesOnly,
         uvChecker: !!state.advanced?.uvChecker,
-        uvCheckerScale: state.advanced?.uvCheckerScale ?? 1,
-        uvCheckerStyle: state.advanced?.uvCheckerStyle ?? 'vibrant',
+        uvCheckerScale: state.advanced?.uvCheckerScale ?? 5,
+        uvCheckerStyle: state.advanced?.uvCheckerStyle ?? 'orby',
         stlSmoothShading: state.advanced?.stlSmoothShading !== false,
         stlSmoothingAngle: state.advanced?.stlSmoothingAngle ?? 40,
         centerPivot: !!state.advanced?.centerPivot,
@@ -668,16 +668,19 @@ export class SceneSettingsManager {
       if (payload.advanced?.uvCheckerScale !== undefined) {
         const raw = Number(payload.advanced.uvCheckerScale);
         if (Number.isFinite(raw)) {
-          const scale = Math.max(0.05, Math.min(64, raw));
+          const scale = Math.max(0.05, Math.min(10, raw));
           this.stateStore.set('advanced.uvCheckerScale', scale);
           this.eventBus.emit('mesh:uv-checker-scale', scale);
         }
       }
       if (payload.advanced?.uvCheckerStyle !== undefined) {
-        const allowed = ['vibrant', 'monochrome'];
-        const style = allowed.includes(payload.advanced.uvCheckerStyle)
-          ? payload.advanced.uvCheckerStyle
-          : 'vibrant';
+        const allowed = ['orby', 'classic', 'monochrome'];
+        const mapped = payload.advanced.uvCheckerStyle === 'vibrant'
+          ? 'classic'
+          : payload.advanced.uvCheckerStyle;
+        const style = allowed.includes(mapped)
+          ? mapped
+          : 'orby';
         this.stateStore.set('advanced.uvCheckerStyle', style);
         this.eventBus.emit('mesh:uv-checker-style', style);
       }

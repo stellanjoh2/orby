@@ -491,11 +491,11 @@ export class ResetControls {
       this.stateStore.set('advanced.uvChecker', defaults.advanced?.uvChecker ?? false);
       this.stateStore.set(
         'advanced.uvCheckerScale',
-        defaults.advanced?.uvCheckerScale ?? 1,
+        defaults.advanced?.uvCheckerScale ?? 5,
       );
       this.stateStore.set(
         'advanced.uvCheckerStyle',
-        defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+        defaults.advanced?.uvCheckerStyle ?? 'orby',
       );
       this.stateStore.set(
         'advanced.stlSmoothShading',
@@ -539,11 +539,11 @@ export class ResetControls {
       this.eventBus.emit('mesh:uv-checker', defaults.advanced?.uvChecker ?? false);
       this.eventBus.emit(
         'mesh:uv-checker-scale',
-        defaults.advanced?.uvCheckerScale ?? 1,
+        defaults.advanced?.uvCheckerScale ?? 5,
       );
       this.eventBus.emit(
         'mesh:uv-checker-style',
-        defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+        defaults.advanced?.uvCheckerStyle ?? 'orby',
       );
       this.eventBus.emit('mesh:stl-smoothing');
       this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
@@ -1464,11 +1464,11 @@ export class ResetControls {
             this.stateStore.set('advanced.uvChecker', defaults.advanced?.uvChecker ?? false);
             this.stateStore.set(
               'advanced.uvCheckerScale',
-              defaults.advanced?.uvCheckerScale ?? 1,
+              defaults.advanced?.uvCheckerScale ?? 5,
             );
             this.stateStore.set(
               'advanced.uvCheckerStyle',
-              defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+              defaults.advanced?.uvCheckerStyle ?? 'orby',
             );
             this.stateStore.set(
               'advanced.stlSmoothShading',
@@ -1488,11 +1488,11 @@ export class ResetControls {
             this.eventBus.emit('mesh:uv-checker', defaults.advanced?.uvChecker ?? false);
             this.eventBus.emit(
               'mesh:uv-checker-scale',
-              defaults.advanced?.uvCheckerScale ?? 1,
+              defaults.advanced?.uvCheckerScale ?? 5,
             );
             this.eventBus.emit(
               'mesh:uv-checker-style',
-              defaults.advanced?.uvCheckerStyle ?? 'vibrant',
+              defaults.advanced?.uvCheckerStyle ?? 'orby',
             );
             this.eventBus.emit('mesh:stl-smoothing');
             this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);

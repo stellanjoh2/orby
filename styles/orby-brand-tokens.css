@@ -12,6 +12,8 @@
   --orby-purple-bright: #9d80ff;
   /* Orby Blue — inline text links on dark UI */
   --orby-blue: #00c4ff;
+  /* Magic button rims and marketing gradient text — purple accent, not links */
+  --orby-magic-accent: var(--orby-purple-bright);
   --text-link: var(--orby-blue);
   --text-link-hover: var(--orby-lime);
   /* Orby Pink — official red; warnings, blocker severity, under-construction, critical alerts */

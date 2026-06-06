@@ -8,6 +8,7 @@ Orby brand colors are defined once in `styles/orby-brand-tokens.css` and mirrore
 --orby-lime: #c4ff00;         /* Orby Lime — logotype, primary actions */
 --orby-purple: #3b00ff;       /* Orby Purple — inverted lime; UI accents */
 --orby-blue: #00c4ff;         /* Orby Blue — inline text links on dark UI */
+--orby-magic-accent: var(--orby-purple-bright); /* Magic button rims, gradient text */
 --orby-pink: #ff00c4;         /* Orby Pink — warnings, under-construction, severity */
 --orby-pink-muted: #ff80e2;    /* Softer Orby Pink — inline errors (50% mix with white) */
 --text-link: var(--orby-blue);
@@ -111,13 +112,15 @@ The official purple is the inverted Orby Lime:
 
 ## Orby Blue
 
-Official inline text link color on dark UI:
+Official inline text link color on dark UI (links only — not magic buttons or gradient text):
 - **CSS:** `--orby-blue` / `--text-link`
 - **JS:** `ORBY_BLUE`
 - **Current:** `#00c4ff`
 - **Hover:** `--text-link-hover` → Orby Lime
 
-Used for inline links, text selection, gradient text accents, and prose anchors in the app and legal subpages.
+Magic button rims and marketing gradient text use `--orby-magic-accent` (`--orby-purple-bright`).
+
+Used for inline links, text selection, and prose anchors in the app and legal subpages.
 
 ## Orby Pink
 

@@ -1032,9 +1032,10 @@
                     aria-hidden="true"
                   >
                   <label class="select-line">
-                    <span data-tooltip="Pick the checker pattern. Vibrant uses Atlux's colored map; Monochrome is grayscale and reads better on already-colored meshes.">UV Checker Style</span>
+                    <span data-tooltip="Pick the checker pattern. Orby is the default brand map; Classic uses Atlux's colored map; Monochrome is grayscale and reads better on already-colored meshes.">UV Checker Style</span>
                     <select id="uvCheckerStyle" aria-label="UV Checker Style">
-                      <option value="vibrant">Vibrant</option>
+                      <option value="orby">Orby</option>
+                      <option value="classic">Classic</option>
                       <option value="monochrome">Monochrome</option>
                     </select>
                   </label>
@@ -1043,24 +1044,15 @@
                     <input
                       id="uvCheckerScale"
                       type="range"
-                      min="0.25"
-                      max="8"
+                      min="0"
+                      max="10"
                       step="0.05"
-                      value="1"
+                      value="5"
                     />
-                    <span class="value" data-output="uvCheckerScale">1.00</span>
+                    <span class="value" data-output="uvCheckerScale">5.00</span>
                   </label>
                   </div>
                   <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
-                  <p class="panel-hint advanced-import-hint">
-                    Blended transparent surfaces are sorted per mesh in WebGL—not like Sketchfab’s viewer. The two controls below usually matter most;
-                    fine glass often needs glTF transmission or separate materials from the author.
-                  </p>
-                  <p class="panel-hint advanced-transparency-doc">
-                    <button type="button" class="drop-link advanced-info-doc-btn" data-open-info-section="#info-transparency">
-                      Read more under Information — Transparency
-                    </button>
-                  </p>
                   <label class="select-line">
                     <span
                       data-tooltip="Auto applies viewer defaults. Other modes trade sorting vs solid surfaces—try if layers look wrong."
@@ -1083,7 +1075,12 @@
                     </label>
                   </label>
                   <details class="advanced-import-details">
-                    <summary>Rare Fixes — Transmission &amp; Glass</summary>
+                    <summary>
+                      <span class="block-title-name">
+                        <span>Rare Fixes — Transmission &amp; Glass</span>
+                        <span class="dev-badge" data-tooltip="This feature is still under development" tabindex="0" role="img" aria-label="This feature is still under development"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                      </span>
+                    </summary>
                     <label class="slider-line">
                       <span
                         data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
@@ -1105,6 +1102,10 @@
                       </label>
                     </label>
                   </details>
+                  <p class="panel-hint advanced-import-hint">
+                    Blended transparent surfaces are sorted per mesh in WebGL. Fine glass often needs glTF transmission or separate materials from the author.
+                    <button type="button" class="drop-link advanced-info-doc-btn" data-open-info-section="#info-transparency">Read more under Information — Transparency</button>.
+                  </p>
                   <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
                     <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
                     <label class="slider-line slider-line--track-short">
@@ -3293,7 +3294,10 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="dof">
                   <div class="block-title has-toggle">
-                    <span>Depth of Field</span>
+                    <span class="block-title-name">
+                      <span>Depth of Field</span>
+                      <span class="dev-badge" data-tooltip="This feature is still under development" tabindex="0" role="img" aria-label="This feature is still under development"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <button class="block-reset-btn" data-reset="dof" aria-label="Reset Depth of Field" data-tooltip="Reset Depth of Field settings">
                         <i class="fa-solid fa-rotate-left"></i>

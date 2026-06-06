@@ -300,15 +300,15 @@ export class MeshControls {
       this.eventBus.emit('mesh:uv-checker', enabled);
     });
     this.ui.inputs.uvCheckerStyle?.addEventListener('change', (event) => {
-      const allowed = ['vibrant', 'monochrome'];
-      const value = event.target.value;
-      const style = allowed.includes(value) ? value : 'vibrant';
+      const allowed = ['orby', 'classic', 'monochrome'];
+      const value = event.target.value === 'vibrant' ? 'classic' : event.target.value;
+      const style = allowed.includes(value) ? value : 'orby';
       this.stateStore.set('advanced.uvCheckerStyle', style);
       this.eventBus.emit('mesh:uv-checker-style', style);
     });
     this.ui.inputs.uvCheckerScale?.addEventListener('input', (event) => {
       const raw = parseFloat(event.target.value);
-      const scale = Number.isFinite(raw) ? Math.max(0.25, Math.min(8, raw)) : 1;
+      const scale = Number.isFinite(raw) ? Math.max(0, Math.min(10, raw)) : 5;
       this.helpers.updateValueLabel('uvCheckerScale', scale, 'decimal');
       this.stateStore.set('advanced.uvCheckerScale', scale);
       this.eventBus.emit('mesh:uv-checker-scale', scale);
@@ -1115,14 +1115,15 @@ export class MeshControls {
       this.ui.inputs.uvChecker.checked = !!state.advanced?.uvChecker;
     }
     if (this.ui.inputs.uvCheckerStyle) {
-      const allowed = ['vibrant', 'monochrome'];
+      const allowed = ['orby', 'classic', 'monochrome'];
       const raw = state.advanced?.uvCheckerStyle;
-      this.ui.inputs.uvCheckerStyle.value = allowed.includes(raw) ? raw : 'vibrant';
+      const mapped = raw === 'vibrant' ? 'classic' : raw;
+      this.ui.inputs.uvCheckerStyle.value = allowed.includes(mapped) ? mapped : 'orby';
       this.ui.setControlDisabled('uvCheckerStyle', !state.advanced?.uvChecker);
     }
     if (this.ui.inputs.uvCheckerScale) {
-      const rawUv = Number(state.advanced?.uvCheckerScale ?? 1);
-      const uvScale = Number.isFinite(rawUv) ? Math.max(0.25, Math.min(8, rawUv)) : 1;
+      const rawUv = Number(state.advanced?.uvCheckerScale ?? 5);
+      const uvScale = Number.isFinite(rawUv) ? Math.max(0, Math.min(10, rawUv)) : 5;
       const active = document.activeElement === this.ui.inputs.uvCheckerScale;
       if (!active) {
         this.ui.inputs.uvCheckerScale.value = uvScale;

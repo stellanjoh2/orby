@@ -2038,14 +2038,15 @@ export class SceneManager {
   }
 
   setUvCheckerScale(scale) {
-    const safe = Number.isFinite(scale) ? Math.max(0.05, Math.min(64, scale)) : 1;
+    const safe = Number.isFinite(scale) ? Math.max(0.05, Math.min(10, scale)) : 5;
     this.stateStore.set('advanced.uvCheckerScale', safe);
     this.materialController?.setUvCheckerScale(safe);
   }
 
   setUvCheckerStyle(style) {
-    const allowed = ['vibrant', 'monochrome'];
-    const safe = allowed.includes(style) ? style : 'vibrant';
+    const mapped = style === 'vibrant' ? 'classic' : style;
+    const allowed = ['orby', 'classic', 'monochrome'];
+    const safe = allowed.includes(mapped) ? mapped : 'orby';
     this.stateStore.set('advanced.uvCheckerStyle', safe);
     this.materialController?.setUvCheckerStyle(safe);
   }
