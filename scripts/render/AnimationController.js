@@ -7,6 +7,7 @@ export class AnimationController {
     onPlayStateChanged = () => {},
     onTimeUpdate = () => {},
     onTopBarUpdate = () => {},
+    onClipIndexChanged = () => {},
     getFileName = () => 'model.glb',
   } = {}) {
     this.mixer = null;
@@ -17,12 +18,65 @@ export class AnimationController {
     this.onPlayStateChanged = onPlayStateChanged;
     this.onTimeUpdate = onTimeUpdate;
     this.onTopBarUpdate = onTopBarUpdate;
+    this.onClipIndexChanged = onClipIndexChanged;
     this.getFileName = getFileName;
     this._exportDriveActive = false;
     this._exportPoseHoldActive = false;
     this._exportDriveSnapshot = null;
     this._exportAction = null;
     this._exportClipIndex = 0;
+    this.playbackSpeed = 1;
+    this.playbackReverse = false;
+    this.clipPlaybackMode = 'loop';
+    this._handleClipFinished = this._handleClipFinished.bind(this);
+  }
+
+  _applyTimeScale() {
+    if (!this.currentAction) return;
+    const sign = this.playbackReverse ? -1 : 1;
+    this.currentAction.timeScale = this.playbackSpeed * sign;
+  }
+
+  setPlaybackSpeed(speed) {
+    const next = Number(speed);
+    if (!Number.isFinite(next) || next <= 0) return;
+    this.playbackSpeed = next;
+    this._applyTimeScale();
+  }
+
+  setPlaybackReverse(reverse) {
+    this.playbackReverse = !!reverse;
+    this._applyTimeScale();
+    return this.playbackReverse;
+  }
+
+  setClipPlaybackMode(mode) {
+    const next = mode === 'cycle' ? 'cycle' : 'loop';
+    this.clipPlaybackMode = next;
+    this._applyClipLoopSettings();
+    return this.clipPlaybackMode;
+  }
+
+  _applyClipLoopSettings() {
+    if (!this.currentAction) return;
+    if (this.clipPlaybackMode === 'cycle') {
+      this.currentAction.setLoop(THREE.LoopOnce, 1);
+      this.currentAction.clampWhenFinished = true;
+      return;
+    }
+    this.currentAction.setLoop(THREE.LoopRepeat, Infinity);
+    this.currentAction.clampWhenFinished = false;
+  }
+
+  _handleClipFinished(event) {
+    if (this._exportDriveActive || this._exportPoseHoldActive) return;
+    if (this.clipPlaybackMode !== 'cycle') return;
+    if (event.action !== this.currentAction) return;
+    if (!this.animations.length) return;
+    if (this.currentAction?.paused) return;
+
+    const nextIndex = (this.currentClipIndex + 1) % this.animations.length;
+    this.playClip(nextIndex);
   }
 
   isExportDriving() {
@@ -129,6 +183,7 @@ export class AnimationController {
 
   setModel(model, animations = []) {
     if (this.mixer) {
+      this.mixer.removeEventListener('finished', this._handleClipFinished);
       this.mixer.stopAllAction();
       this.mixer = null;
     }
@@ -143,6 +198,7 @@ export class AnimationController {
       return;
     }
     this.mixer = new THREE.AnimationMixer(model);
+    this.mixer.addEventListener('finished', this._handleClipFinished);
     this.animations = animations;
     this.currentClipIndex = 0;
     const formattedClips = animations.map((clip, index) => ({
@@ -165,8 +221,12 @@ export class AnimationController {
     }
     this.currentAction = this.mixer.clipAction(clip);
     this.currentAction.reset();
+    this._applyClipLoopSettings();
+    this._applyTimeScale();
     this.currentAction.play();
     this.onPlayStateChanged(true);
+    this.onClipIndexChanged(index);
+    this.onTimeUpdate(0, clip.duration);
     const fileName = this.getFileName();
     this.onTopBarUpdate(
       `${fileName} — ${clip.name || 'Clip'} (${formatTime(
@@ -204,6 +264,7 @@ export class AnimationController {
 
   dispose() {
     if (this.mixer) {
+      this.mixer.removeEventListener('finished', this._handleClipFinished);
       this.mixer.stopAllAction();
       this.mixer = null;
     }

@@ -560,6 +560,28 @@ export class EventManager {
     eventBus.on('animation:toggle', () => s.animationController.togglePlayback());
     eventBus.on('animation:scrub', (value) => s.animationController.scrub(value));
     eventBus.on('animation:select', (index) => s.animationController.selectAnimation(index));
+    eventBus.on('animation:speed', (speed) =>
+      s.animationController.setPlaybackSpeed(speed),
+    );
+    eventBus.on('animation:reverse', (enabled) =>
+      s.animationController.setPlaybackReverse(enabled),
+    );
+    eventBus.on('animation:clip-mode', (mode) => {
+      s.animationController.setClipPlaybackMode(mode);
+      s.stateStore.set('animation.clipPlaybackMode', mode === 'cycle' ? 'cycle' : 'loop');
+    });
+    eventBus.on('animation:show-bones', (enabled) =>
+      s.setAnimationShowBones(enabled),
+    );
+    eventBus.on('animation:joint-scale', (scale) =>
+      s.setAnimationJointScale(scale),
+    );
+    eventBus.on('animation:bone-stroke-width', (width) =>
+      s.setAnimationBoneStrokeWidth(width),
+    );
+    eventBus.on('animation:hide-mesh', (enabled) =>
+      s.setAnimationHideMesh(enabled),
+    );
 
     // Export events
     eventBus.on('export:png', (settings) => s.exportPng(settings));

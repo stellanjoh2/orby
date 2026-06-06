@@ -24,6 +24,48 @@ export class AnimationControls {
       const index = parseInt(event.target.value, 10);
       this.eventBus.emit('animation:select', index);
     });
+    this.ui.dom.animationClipModeSegmented
+      ?.querySelectorAll('input[type="radio"]')
+      .forEach((input) => {
+        input.addEventListener('change', () => {
+          if (!input.checked) return;
+          this.ui.uiSounds?.playSelect();
+          this.eventBus.emit('animation:clip-mode', input.value);
+        });
+      });
+    this.ui.dom.animationSpeedSegmented
+      ?.querySelectorAll('input[type="radio"]')
+      .forEach((input) => {
+        input.addEventListener('change', () => {
+          if (!input.checked) return;
+          this.eventBus.emit('animation:speed', parseFloat(input.value));
+        });
+      });
+    this.ui.inputs.animationReverse?.addEventListener('change', (event) => {
+      this.eventBus.emit('animation:reverse', event.target.checked);
+    });
+    this.ui.inputs.animationShowBones?.addEventListener('change', (event) => {
+      this.eventBus.emit('animation:show-bones', event.target.checked);
+    });
+    this.ui.inputs.animationHideMesh?.addEventListener('change', (event) => {
+      this.eventBus.emit('animation:hide-mesh', event.target.checked);
+    });
+    this.ui.inputs.animationJointScale?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.ui.helpers?.updateValueLabel('animationJointScale', value, 'decimal');
+      this.eventBus.emit('animation:joint-scale', value);
+    });
+    if (this.ui.inputs.animationJointScale) {
+      this.ui.helpers?.enableSliderKeyboardStepping?.(this.ui.inputs.animationJointScale);
+    }
+    this.ui.inputs.animationBoneStrokeWidth?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.ui.helpers?.updateValueLabel('animationBoneStrokeWidth', value, 'decimal');
+      this.eventBus.emit('animation:bone-stroke-width', value);
+    });
+    if (this.ui.inputs.animationBoneStrokeWidth) {
+      this.ui.helpers?.enableSliderKeyboardStepping?.(this.ui.inputs.animationBoneStrokeWidth);
+    }
   }
 
   extractAnimationName(fullName) {
@@ -53,6 +95,13 @@ export class AnimationControls {
       this.ui.dom.playPause.disabled = true;
       this.ui.dom.animationScrub.disabled = true;
       this.ui.dom.animationSelect.disabled = true; // Disable dropdown when no clips
+      this.setAnimationSpeedEnabled(false);
+      this.setAnimationClipModeEnabled(false);
+      this.ui.syncAnimationReverse(false, false);
+      this.ui.syncAnimationShowBones(false, false);
+      this.ui.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
+      this.ui.syncAnimationBoneStroke({ visible: false, enabled: false });
+      this.ui.syncAnimationJointScale({ visible: false, enabled: false });
       return;
     }
     clips.forEach((clip, index) => {
@@ -66,7 +115,25 @@ export class AnimationControls {
     this.ui.dom.playPause.disabled = false;
     this.ui.dom.animationScrub.disabled = false;
     this.ui.dom.animationSelect.disabled = false; // Enable dropdown when clips are available
+    this.setAnimationSpeedEnabled(true);
+    this.setAnimationClipModeEnabled(true);
     this.ui.currentAnimationDuration = clips[0].seconds ?? 0;
+  }
+
+  setAnimationClipModeEnabled(enabled) {
+    this.ui.dom.animationClipModeSegmented
+      ?.querySelectorAll('input[type="radio"]')
+      .forEach((input) => {
+        input.disabled = !enabled;
+      });
+  }
+
+  setAnimationSpeedEnabled(enabled) {
+    this.ui.dom.animationSpeedSegmented
+      ?.querySelectorAll('input[type="radio"]')
+      .forEach((input) => {
+        input.disabled = !enabled;
+      });
   }
 
   setAnimationPlaying(playing) {

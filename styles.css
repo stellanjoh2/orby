@@ -4655,6 +4655,20 @@ a.about-highlight:focus-visible {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.segmented.segmented--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.segmented.segmented--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Segmented pill row → control rows below (Animation playback speed, Turntable, …) */
+.subsection > .segmented,
+.panel-block > .segmented {
+  margin-bottom: var(--shelf-row-gap);
+}
+
 .segmented label {
   border: none;
   padding: 0.5rem 0.4rem;
@@ -5897,7 +5911,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   display: flex;
   gap: var(--shelf-row-gap);
   align-items: center;
-  margin-bottom: calc(var(--shelf-row-gap) + 0.1rem);
+  margin-bottom: var(--shelf-row-gap);
 }
 
 #animationScrub {
@@ -5910,6 +5924,10 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   font-variant-numeric: tabular-nums;
   min-width: 2.8ch;
   text-align: right;
+}
+
+#animationBlock {
+  --slider-label-col: calc(5.25rem * var(--studio-ui-scale, 1));
 }
 
 .select-line select {

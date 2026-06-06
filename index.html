@@ -1462,9 +1462,93 @@
                   <span id="animationTime">0:00</span>
                 </div>
                 <label class="select-line">
-                  <span class="sr-only">Animation clip</span>
+                  <span>Clip</span>
                   <select id="animationSelect" disabled aria-label="Animation clip"></select>
                 </label>
+                <div class="segmented compact segmented--2" id="animationClipModeSegmented">
+                  <label>
+                    <input type="radio" name="animationClipMode" value="loop" checked disabled />
+                    Loop Selected
+                  </label>
+                  <label>
+                    <input type="radio" name="animationClipMode" value="cycle" disabled />
+                    Cycle All
+                  </label>
+                </div>
+                <div class="panel-block-divider" aria-hidden="true"></div>
+                <div class="subsection">
+                  <div class="block-title">Playback speed</div>
+                  <div class="segmented compact segmented--4" id="animationSpeedSegmented">
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="0.1" disabled />
+                      0.1×
+                    </label>
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="0.25" disabled />
+                      0.25×
+                    </label>
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="0.5" disabled />
+                      0.5×
+                    </label>
+                    <label>
+                      <input type="radio" name="animationPlaybackSpeed" value="1" checked disabled />
+                      1.0×
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span>Reverse</span>
+                    <label class="effect-toggle" data-tooltip="Play the animation clip backwards">
+                      <input type="checkbox" id="animationReverse" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Reverse animation playback</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span>Show bones</span>
+                    <label class="effect-toggle" data-tooltip="Reveal the animated skeleton rig over the mesh">
+                      <input type="checkbox" id="animationShowBones" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show animation bones</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only" id="animationHideMeshRow" hidden>
+                    <span>Hide mesh</span>
+                    <label class="effect-toggle" data-tooltip="Hide the mesh completely and playback bones only">
+                      <input type="checkbox" id="animationHideMesh" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Hide mesh during bone playback</span>
+                    </label>
+                  </div>
+                  <label class="slider-line" id="animationBoneStrokeRow" hidden>
+                    <span>Bone stroke</span>
+                    <input
+                      id="animationBoneStrokeWidth"
+                      type="range"
+                      min="1"
+                      max="8"
+                      step="0.5"
+                      value="2"
+                      disabled
+                      aria-label="Bone line stroke width"
+                    />
+                    <span class="value" data-output="animationBoneStrokeWidth">2.0</span>
+                  </label>
+                  <label class="slider-line" id="animationJointScaleRow" hidden>
+                    <span>Joint scale</span>
+                    <input
+                      id="animationJointScale"
+                      type="range"
+                      min="0.25"
+                      max="3"
+                      step="0.05"
+                      value="0.5"
+                      disabled
+                      aria-label="Joint marker scale"
+                    />
+                    <span class="value" data-output="animationJointScale">0.50</span>
+                  </label>
+                </div>
               </div>
 
               <div class="panel-block">

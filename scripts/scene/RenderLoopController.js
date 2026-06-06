@@ -35,8 +35,7 @@ function buildFrameContext(scene) {
     backdropAppearActive:
       !!scene.groundController?.backdrop ||
       toggleScaleAnimActive(scene._backdropToggleCtx),
-    diagnosticsActive:
-      (scene.diagnosticsController?.boneHelpers?.length ?? 0) > 0,
+    diagnosticsActive: !!scene.diagnosticsController?.hasActiveDiagnostics?.(),
     wireframeOverlayActive:
       (scene.materialController?.wireframeOverlayMeshes?.length ?? 0) > 0,
     uvCheckerActive: !!scene.materialController?.uvCheckerOverlay?.enabled,

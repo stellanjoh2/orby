@@ -71,6 +71,7 @@ export class ModelLifecycleManager {
     const fbxDefaults = s.stateStore.getDefaults().fbxMapSlots;
     s.stateStore.set('fbxMapSlots', { ...fbxDefaults, enabled: false, activeMaterial: '' });
     s._fbxImportBundle = null;
+    s.setAnimationShowBones(false);
     s.diagnosticsController.clearBoneHelpers();
     s.materialController.clear();
     s.modelLoader.disposeObjectUrls();
@@ -250,6 +251,18 @@ export class ModelLifecycleManager {
     s._emitAdvancedAlphaPanelVisibility();
     s.setReverseNormals(state.advanced?.reverseNormals ?? false);
     s.diagnosticsController.setModel(object, state.shading);
+    s.diagnosticsController.setJointScale(state.animation?.jointScale ?? 0.5);
+    s.diagnosticsController.setBoneStrokeWidth(state.animation?.boneStrokeWidth ?? 2);
+    s.diagnosticsController.setHideMesh(false);
+    const hasSkinnedSkeleton = s.diagnosticsController.hasSkinnedSkeleton();
+    s.ui.syncAnimationShowBones(false, hasSkinnedSkeleton);
+    s.ui.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
+    s.ui.syncAnimationBoneStroke({
+      visible: false,
+      enabled: false,
+      value: state.animation?.boneStrokeWidth ?? 2,
+    });
+    s.ui.syncAnimationJointScale({ visible: false, enabled: false, value: state.animation?.jointScale ?? 0.5 });
     s.refreshBoneHelpers();
     if (state.fresnel?.enabled) {
       s.setFresnelSettings(state.fresnel);
@@ -259,6 +272,13 @@ export class ModelLifecycleManager {
       s.updateMaterialsEnvironment(s.scene.environment, intensity);
     }
     s.animationController.setModel(s.currentModel, animations);
+    s.animationController.setClipPlaybackMode(
+      state.animation?.clipPlaybackMode ?? 'loop',
+    );
+    s.ui.syncAnimationClipMode(
+      state.animation?.clipPlaybackMode ?? 'loop',
+      animations.length > 0,
+    );
     if (isFontExtrudeRevealModel(s.currentModel)) {
       s.fontTextRevealController?.bindModel?.(s.currentModel);
     }

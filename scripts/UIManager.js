@@ -332,6 +332,11 @@ export class UIManager {
     this.dom.animationSelect = q('#animationSelect');
     this.dom.playPause = q('#playPause');
     this.dom.animationScrub = q('#animationScrub');
+    this.dom.animationSpeedSegmented = q('#animationSpeedSegmented');
+    this.dom.animationClipModeSegmented = q('#animationClipModeSegmented');
+    this.dom.animationJointScaleRow = q('#animationJointScaleRow');
+    this.dom.animationBoneStrokeRow = q('#animationBoneStrokeRow');
+    this.dom.animationHideMeshRow = q('#animationHideMeshRow');
     this.dom.animationTime = q('#animationTime');
     this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
 
@@ -429,6 +434,11 @@ export class UIManager {
       wireframeColor: q('#wireframeColor'),
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
       wireframeHideMesh: q('#wireframeHideMesh'),
+      animationShowBones: q('#animationShowBones'),
+      animationReverse: q('#animationReverse'),
+      animationHideMesh: q('#animationHideMesh'),
+      animationJointScale: q('#animationJointScale'),
+      animationBoneStrokeWidth: q('#animationBoneStrokeWidth'),
       creativeLookEnabled: q('#creativeLookEnabled'),
       creativeLookPauseAnimations: q('#creativeLookPauseAnimations'),
       creativeLookShaderAnimationSpeed: q('#creativeLookShaderAnimationSpeed'),
@@ -2211,6 +2221,13 @@ export class UIManager {
       this.dom.playPause.disabled = true;
       this.dom.animationScrub.disabled = true;
       this.dom.animationSelect.disabled = true; // Disable dropdown when no clips
+      this.setAnimationSpeedEnabled(false);
+      this.setAnimationClipModeEnabled(false);
+      this.syncAnimationReverse(false, false);
+      this.syncAnimationShowBones(false, false);
+      this.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
+      this.syncAnimationBoneStroke({ visible: false, enabled: false });
+      this.syncAnimationJointScale({ visible: false, enabled: false });
       return;
     }
     clips.forEach((clip, index) => {
@@ -2224,7 +2241,100 @@ export class UIManager {
     this.dom.playPause.disabled = false;
     this.dom.animationScrub.disabled = false;
     this.dom.animationSelect.disabled = false; // Enable dropdown when clips are available
+    this.setAnimationSpeedEnabled(true);
+    this.setAnimationClipModeEnabled(true);
     this.currentAnimationDuration = clips[0].seconds ?? 0;
+  }
+
+  syncAnimationClipSelect(index) {
+    const select = this.dom.animationSelect;
+    if (!select || select.options.length === 0) return;
+    const next = String(index);
+    if (select.value !== next) {
+      select.value = next;
+    }
+  }
+
+  setAnimationClipModeEnabled(enabled) {
+    this.dom.animationClipModeSegmented
+      ?.querySelectorAll('input[type="radio"]')
+      .forEach((input) => {
+        input.disabled = !enabled;
+      });
+  }
+
+  syncAnimationClipMode(mode, available) {
+    const next = mode === 'cycle' ? 'cycle' : 'loop';
+    if (available !== undefined) {
+      this.setAnimationClipModeEnabled(available);
+    }
+    const input = this.dom.animationClipModeSegmented?.querySelector(
+      `input[type="radio"][value="${next}"]`,
+    );
+    if (input) {
+      input.checked = true;
+    }
+  }
+
+  syncAnimationShowBones(checked, available) {
+    const input = this.inputs.animationShowBones;
+    if (!input) return;
+    input.checked = !!checked;
+    if (available !== undefined) {
+      input.disabled = !available;
+    }
+  }
+
+  syncAnimationJointScale({ visible, enabled, value } = {}) {
+    const row = this.dom.animationJointScaleRow;
+    const slider = this.inputs.animationJointScale;
+    if (row && visible !== undefined) {
+      row.hidden = !visible;
+    }
+    if (slider) {
+      if (enabled !== undefined) {
+        slider.disabled = !enabled;
+      }
+      if (value !== undefined && document.activeElement !== slider) {
+        slider.value = String(value);
+        this.helpers?.updateValueLabel('animationJointScale', value, 'decimal');
+        this.helpers?.updateSliderFill?.(slider);
+      }
+    }
+  }
+
+  syncAnimationBoneStroke({ visible, enabled, value } = {}) {
+    const row = this.dom.animationBoneStrokeRow;
+    const slider = this.inputs.animationBoneStrokeWidth;
+    if (row && visible !== undefined) {
+      row.hidden = !visible;
+    }
+    if (slider) {
+      if (enabled !== undefined) {
+        slider.disabled = !enabled;
+      }
+      if (value !== undefined && document.activeElement !== slider) {
+        slider.value = String(value);
+        this.helpers?.updateValueLabel('animationBoneStrokeWidth', value, 'decimal');
+        this.helpers?.updateSliderFill?.(slider);
+      }
+    }
+  }
+
+  syncAnimationHideMesh({ visible, enabled, checked } = {}) {
+    const row = this.dom.animationHideMeshRow;
+    const input = this.inputs.animationHideMesh;
+    if (row && visible !== undefined) {
+      row.hidden = !visible;
+    }
+    if (input) {
+      if (enabled !== undefined) {
+        input.disabled = !enabled;
+      }
+      if (checked !== undefined) {
+        input.checked = !!checked;
+      }
+    }
   }
 
   setExportVideoAnimationClips(clips) {
@@ -2290,6 +2400,28 @@ export class UIManager {
     }
     if (select) {
       select.disabled = !embed;
+    }
+  }
+
+  setAnimationSpeedEnabled(enabled) {
+    this.dom.animationSpeedSegmented
+      ?.querySelectorAll('input[type="radio"]')
+      .forEach((input) => {
+        input.disabled = !enabled;
+      });
+    if (this.inputs.animationReverse) {
+      this.inputs.animationReverse.disabled = !enabled;
+    }
+  }
+
+  syncAnimationReverse(checked, available) {
+    const input = this.inputs.animationReverse;
+    if (!input) return;
+    if (available !== undefined) {
+      input.disabled = !available;
+    }
+    if (checked !== undefined) {
+      input.checked = !!checked;
     }
   }
 

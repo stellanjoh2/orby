@@ -192,6 +192,13 @@ export class StateStore {
         onlyVisibleFaces: true,
         hideMesh: false,
       },
+      animation: {
+        showBones: false,
+        hideMesh: false,
+        jointScale: 0.5,
+        boneStrokeWidth: 2,
+        clipPlaybackMode: 'loop',
+      },
       /** Stylized ShaderMaterial overrides for imported meshes (non-glass); off restores GLB materials. */
       creativeLook: {
         enabled: false,

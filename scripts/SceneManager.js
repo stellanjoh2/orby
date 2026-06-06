@@ -265,13 +265,26 @@ export class SceneManager {
       onClipsChanged: (clips) => {
         this.ui.setAnimationClips(clips);
         this.ui.setExportVideoAnimationClips(clips);
+        this.ui.syncAnimationReverse(
+          this.animationController.playbackReverse,
+          !!clips?.length,
+        );
+        this.ui.syncAnimationClipMode(
+          this.animationController.clipPlaybackMode,
+          !!clips?.length,
+        );
       },
       onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
       onTimeUpdate: (current, duration) =>
         this.ui.updateAnimationTime(current, duration),
+      onClipIndexChanged: (index) => this.ui.syncAnimationClipSelect(index),
       onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
       getFileName: () => this.currentFile?.name ?? 'model.glb',
     });
+    this.animationController.setClipPlaybackMode(
+      this.stateStore.getState().animation?.clipPlaybackMode ?? 'loop',
+    );
+    this.ui.syncAnimationClipMode(this.animationController.clipPlaybackMode, false);
     this.fontTextRevealController = new FontTextRevealController({
       stateStore: this.stateStore,
       onNeedRender: () => this.render(),
@@ -519,6 +532,13 @@ export class SceneManager {
     this.diagnosticsController = new MeshDiagnosticsController({
       scene: this.scene,
       modelRoot: this.modelRoot,
+      getLineResolution: () => {
+        const canvas = this.renderer?.domElement;
+        return {
+          width: canvas?.clientWidth || window.innerWidth || 1,
+          height: canvas?.clientHeight || window.innerHeight || 1,
+        };
+      },
     });
 
     this.materialController = new MaterialController({
@@ -538,6 +558,9 @@ export class SceneManager {
         this.currentShading = mode;
         this.diagnosticsController.setModel(this.currentModel, mode);
         this.refreshBoneHelpers();
+        if (this.diagnosticsController.showBones) {
+          this.diagnosticsController.refreshGhostMesh();
+        }
         // Apply current HDRI environment settings after shading change
         if (this.scene.environment) {
           const intensity = Math.max(0, this.hdriStrength);
@@ -731,13 +754,26 @@ export class SceneManager {
       onClipsChanged: (clips) => {
         this.ui.setAnimationClips(clips);
         this.ui.setExportVideoAnimationClips(clips);
+        this.ui.syncAnimationReverse(
+          this.animationController.playbackReverse,
+          !!clips?.length,
+        );
+        this.ui.syncAnimationClipMode(
+          this.animationController.clipPlaybackMode,
+          !!clips?.length,
+        );
       },
       onPlayStateChanged: (playing) => this.ui.setAnimationPlaying(playing),
       onTimeUpdate: (current, duration) =>
         this.ui.updateAnimationTime(current, duration),
+      onClipIndexChanged: (index) => this.ui.syncAnimationClipSelect(index),
       onTopBarUpdate: (detail) => this.ui.updateTopBarDetail(detail),
       getFileName: () => this.currentFile?.name ?? 'model.glb',
     });
+    this.animationController.setClipPlaybackMode(
+      this.stateStore.getState().animation?.clipPlaybackMode ?? 'loop',
+    );
+    this.ui?.syncAnimationClipMode?.(this.animationController.clipPlaybackMode, false);
 
     this.meshClickHandler?.detach?.();
 
@@ -1132,6 +1168,7 @@ export class SceneManager {
     }
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
+    this.diagnosticsController?.syncBoneLineResolution?.(width, height);
     this.syncPerspectiveCameraFovAndLens();
   }
 
@@ -3856,6 +3893,87 @@ export class SceneManager {
 
   refreshBoneHelpers() {
     this.diagnosticsController.refreshBoneHelpers(this.currentShading);
+  }
+
+  setAnimationShowBones(enabled, { updateUi = true } = {}) {
+    if (!this.diagnosticsController) return false;
+
+    const hasSkinned = this.diagnosticsController.hasSkinnedSkeleton();
+    const next = !!enabled && hasSkinned;
+    this.diagnosticsController.setShowBones(next);
+    if (next) {
+      const animation = this.stateStore.getState().animation ?? {};
+      this.diagnosticsController.setHideMesh(!!animation.hideMesh);
+    }
+    this.stateStore.set('animation.showBones', next);
+
+    if (updateUi) {
+      this.ui.syncAnimationShowBones(next, hasSkinned);
+      const animation = this.stateStore.getState().animation ?? {};
+      this.ui.syncAnimationBoneStroke({
+        visible: next,
+        enabled: next,
+        value: animation.boneStrokeWidth ?? 2,
+      });
+      this.ui.syncAnimationHideMesh({
+        visible: next,
+        enabled: next,
+        checked: !!animation.hideMesh,
+      });
+      this.ui.syncAnimationJointScale({
+        visible: next,
+        enabled: next,
+        value: animation.jointScale ?? 0.5,
+      });
+    }
+
+    this.render();
+    return next;
+  }
+
+  setAnimationJointScale(scale, { updateUi = true } = {}) {
+    if (!this.diagnosticsController) return 1;
+
+    const next = this.diagnosticsController.setJointScale(scale);
+    this.stateStore.set('animation.jointScale', next);
+
+    if (updateUi) {
+      this.ui.syncAnimationJointScale({ value: next });
+    }
+
+    this.render();
+    return next;
+  }
+
+  setAnimationBoneStrokeWidth(width, { updateUi = true } = {}) {
+    if (!this.diagnosticsController) return 2;
+
+    const next = this.diagnosticsController.setBoneStrokeWidth(width);
+    this.stateStore.set('animation.boneStrokeWidth', next);
+
+    if (updateUi) {
+      this.ui.syncAnimationBoneStroke({ value: next });
+    }
+
+    this.render();
+    return next;
+  }
+
+  setAnimationHideMesh(enabled, { updateUi = true } = {}) {
+    if (!this.diagnosticsController) return false;
+
+    const hasSkinned = this.diagnosticsController.hasSkinnedSkeleton();
+    const bonesOn = !!this.diagnosticsController.showBones;
+    const next = !!enabled && hasSkinned && bonesOn;
+    this.diagnosticsController.setHideMesh(next);
+    this.stateStore.set('animation.hideMesh', next);
+
+    if (updateUi) {
+      this.ui.syncAnimationHideMesh({ checked: next });
+    }
+
+    this.render();
+    return next;
   }
 
   applyCameraPreset(preset) {
