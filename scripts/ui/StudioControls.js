@@ -7,10 +7,18 @@ import { normalizeGodRaysState } from '../GodRaysEffect.js';
 import {
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
 } from '../constants.js';
+import {
+  bindBaseSurfaceControls,
+  syncBaseSurfaceControls,
+  bindBackdropSurfaceControls,
+  syncBackdropSurfaceControls,
+} from './svgExtrudeControlsShared.js';
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from '../config/shadowQuality.js';
 
 export class StudioControls {
@@ -19,6 +27,38 @@ export class StudioControls {
     this.stateStore = stateStore;
     this.ui = uiManager;
     this.helpers = helpers;
+  }
+
+  _baseSurfaceCtx() {
+    return {
+      inputs: {
+        surfacePreset: this.ui.inputs.baseSurfacePreset,
+        surfaceScale: this.ui.inputs.baseSurfaceScale,
+        surfaceScaleOutputKey: 'baseSurfaceScale',
+        surfaceStrength: this.ui.inputs.baseSurfaceStrength,
+        surfaceStrengthOutputKey: 'baseSurfaceStrength',
+      },
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+      ui: this.ui,
+      helpers: this.helpers,
+    };
+  }
+
+  _backdropSurfaceCtx() {
+    return {
+      inputs: {
+        surfacePreset: this.ui.inputs.backdropSurfacePreset,
+        surfaceScale: this.ui.inputs.backdropSurfaceScale,
+        surfaceScaleOutputKey: 'backdropSurfaceScale',
+        surfaceStrength: this.ui.inputs.backdropSurfaceStrength,
+        surfaceStrengthOutputKey: 'backdropSurfaceStrength',
+      },
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+      ui: this.ui,
+      helpers: this.helpers,
+    };
   }
 
   bind() {
@@ -312,6 +352,7 @@ export class StudioControls {
       this.stateStore.set('baseRoughness', value);
       this.eventBus.emit('studio:base-roughness', value);
     });
+    bindBaseSurfaceControls(this._baseSurfaceCtx());
     this.ui.inputs.baseGlassSurface?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
       const podiumUp = !!this.stateStore.getState().groundSolid;
@@ -365,18 +406,19 @@ export class StudioControls {
       this.ui.applyBlockStates?.(this.stateStore.getState());
     });
     this.helpers.bindColorInput('backdropColor', 'backdropColor', 'studio:backdrop-color');
-    this.ui.inputs.backdropTextureEnabled?.addEventListener('change', (event) => {
-      const enabled = !!event.target.checked;
-      this.stateStore.set('backdropTextureEnabled', enabled);
-      this.eventBus.emit('studio:backdrop-texture-enabled', enabled);
-      this.ui.applyBlockStates?.(this.stateStore.getState());
-    });
-    this.ui.inputs.backdropTextureScale?.addEventListener('input', (event) => {
+    this.ui.inputs.backdropMetalness?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('backdropTextureScale', value, 'decimal');
-      this.stateStore.set('backdropTextureScale', value);
-      this.eventBus.emit('studio:backdrop-texture-scale', value);
+      this.helpers.updateValueLabel('backdropMetalness', value, 'decimal');
+      this.stateStore.set('backdropMetalness', value);
+      this.eventBus.emit('studio:backdrop-metalness', value);
     });
+    this.ui.inputs.backdropRoughness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('backdropRoughness', value, 'decimal');
+      this.stateStore.set('backdropRoughness', value);
+      this.eventBus.emit('studio:backdrop-roughness', value);
+    });
+    bindBackdropSurfaceControls(this._backdropSurfaceCtx());
     this.ui.inputs.backdropScale?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('backdropScale', value, 'decimal');
@@ -838,6 +880,7 @@ export class StudioControls {
       this.ui.inputs.baseRoughness.value = v;
       this.helpers.updateValueLabel('baseRoughness', v, 'decimal');
     }
+    syncBaseSurfaceControls(this._baseSurfaceCtx(), state, !!state.groundSolid);
     if (this.ui.inputs.baseGlassSurface) {
       this.ui.inputs.baseGlassSurface.checked = !!(
         state.baseGlassSurface ??
@@ -874,14 +917,17 @@ export class StudioControls {
     if (this.ui.inputs.backdropColor) {
       this.ui.inputs.backdropColor.value = state.backdropColor ?? '#808080';
     }
-    if (this.ui.inputs.backdropTextureEnabled) {
-      this.ui.inputs.backdropTextureEnabled.checked = !!state.backdropTextureEnabled;
+    if (this.ui.inputs.backdropMetalness) {
+      const v = state.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS;
+      this.ui.inputs.backdropMetalness.value = v;
+      this.helpers.updateValueLabel('backdropMetalness', v, 'decimal');
     }
-    if (this.ui.inputs.backdropTextureScale) {
-      const v = state.backdropTextureScale ?? 1.8;
-      this.ui.inputs.backdropTextureScale.value = v;
-      this.helpers.updateValueLabel('backdropTextureScale', v, 'decimal');
+    if (this.ui.inputs.backdropRoughness) {
+      const v = state.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS;
+      this.ui.inputs.backdropRoughness.value = v;
+      this.helpers.updateValueLabel('backdropRoughness', v, 'decimal');
     }
+    syncBackdropSurfaceControls(this._backdropSurfaceCtx(), state, !!state.backdropEnabled);
     if (this.ui.inputs.backdropScale) {
       const v = state.backdropScale ?? 1;
       this.ui.inputs.backdropScale.value = v;

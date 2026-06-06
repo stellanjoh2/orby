@@ -668,13 +668,12 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 
 /* Same dim label tone as Reset Studio (.accent-action-btn at rest) / secondary UI */
 #gridSnap.ghost-btn,
-#baseSnap.ghost-btn,
-#backdropSnap.ghost-btn,
 #isoOrbitStep.ghost-btn,
 #isoAssetRotateStep.ghost-btn,
 #isoPanUnlock.ghost-btn,
 #creativeLookPauseAnimations.ghost-btn,
-#lensFlareKeyLightConnect.ghost-btn {
+#lensFlareKeyLightConnect.ghost-btn,
+.slider-snap-btn {
   color: var(--text-dim);
   /* Match .ghost-btn / .accent-action-btn 0.2s; opacity eases mute ↔ unmute */
   transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s ease;
@@ -682,13 +681,12 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
 
 /* Match bottom settings accent CTAs on hover — full lime fill + dark label */
 #gridSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
-#baseSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
-#backdropSnap.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #isoOrbitStep.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #isoAssetRotateStep.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #isoPanUnlock.ghost-btn:hover:not(:disabled):not(.is-disabled),
 #creativeLookPauseAnimations.ghost-btn:hover:not(:disabled):not(.is-disabled),
-#lensFlareKeyLightConnect.ghost-btn:hover:not(:disabled):not(.is-disabled) {
+#lensFlareKeyLightConnect.ghost-btn:hover:not(:disabled):not(.is-disabled),
+.slider-snap-btn:hover:not(:disabled):not(.is-disabled) {
   background: var(--accent);
   color: var(--brand-text);
   box-shadow: var(--ui-accent-outer-glow);
@@ -4373,6 +4371,8 @@ a.about-highlight:focus-visible {
 
 .subsection.is-muted :where(
     .slider-line > span:first-child,
+    .slider-line > .slider-line-label,
+    .slider-line > .block-title-name,
     .slider-line .value,
     .color-line > span:first-child,
     .color-line input.color-chip:not(.is-disabled-handle),
@@ -4389,6 +4389,8 @@ a.about-highlight:focus-visible {
   ),
 .panel-block.is-muted :where(
     .slider-line > span:first-child,
+    .slider-line > .slider-line-label,
+    .slider-line > .block-title-name,
     .slider-line .value,
     .color-line > span:first-child,
     .color-line input.color-chip:not(.is-disabled-handle),
@@ -4408,13 +4410,11 @@ a.about-highlight:focus-visible {
 
 /* Snap-to-mesh CTAs: dimmer than other muted captions (−25% vs --muted-section-text-scale) */
 .subsection.is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
-.subsection.is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
-.subsection.is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.subsection.is-muted .slider-snap-btn:not(:disabled):not(.is-disabled),
 .subsection.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled),
 .subsection.is-muted #lensFlareKeyLightConnect.ghost-btn:not(:disabled):not(.is-disabled),
 .panel-block.is-muted #gridSnap.ghost-btn:not(:disabled):not(.is-disabled),
-.panel-block.is-muted #baseSnap.ghost-btn:not(:disabled):not(.is-disabled),
-.panel-block.is-muted #backdropSnap.ghost-btn:not(:disabled):not(.is-disabled),
+.panel-block.is-muted .slider-snap-btn:not(:disabled):not(.is-disabled),
 .panel-block.is-muted #creativeLookPauseAnimations.ghost-btn:not(:disabled):not(.is-disabled),
 .panel-block.is-muted #lensFlareKeyLightConnect.ghost-btn:not(:disabled):not(.is-disabled) {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
@@ -4988,6 +4988,19 @@ button.advanced-info-doc-btn {
   margin-bottom: 0;
 }
 
+/*
+ * Dynamically mounted surface rows live inside a wrapper. The last nested
+ * .slider-line loses margin-bottom to foldout :last-child rules — restore
+ * standard shelf rhythm after the block (e.g. before Snap to Mesh).
+ */
+.effect-foldout > .surface-controls-mount {
+  margin-bottom: var(--shelf-row-gap);
+}
+
+.effect-foldout > .surface-controls-mount:has(+ .panel-block-divider) {
+  margin-bottom: 0;
+}
+
 .slider-line,
 .color-line,
 .select-line {
@@ -5097,7 +5110,9 @@ button.advanced-info-doc-btn {
   justify-self: stretch;
 }
 
-.slider-line span:first-child {
+.slider-line > span:first-child,
+.slider-line > .slider-line-label,
+.slider-line > .block-title-name {
   grid-column: 1;
   align-self: center;
   text-align: left;
@@ -5105,8 +5120,27 @@ button.advanced-info-doc-btn {
   color: var(--text-dim);
   white-space: nowrap;
   min-width: 0;
+}
+
+.slider-line--surface-detail input[type='range'] {
+  direction: rtl;
+}
+
+.slider-line > span:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.slider-line > .slider-line-label,
+.slider-line > .block-title-name {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.slider-line-label:not(.block-title-name) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
 }
 
 /* Toggle-only rows: label uses full width; switch aligns with slider value column (.slider-line--toggle-only set in UIHelpers) */
@@ -5148,6 +5182,8 @@ button.advanced-info-doc-btn {
 /* Smooth mute ↔ unmute for controls that dim inside shelf subsections / panel blocks */
 .subsection :where(
     .slider-line > span:first-child,
+    .slider-line > .slider-line-label,
+    .slider-line > .block-title-name,
     .slider-line .value,
     .color-line > span:first-child,
     .select-line > span:first-child,
@@ -5161,6 +5197,8 @@ button.advanced-info-doc-btn {
   ),
 .panel-block :where(
     .slider-line > span:first-child,
+    .slider-line > .slider-line-label,
+    .slider-line > .block-title-name,
     .slider-line .value,
     .color-line > span:first-child,
     .select-line > span:first-child,
@@ -5433,6 +5471,42 @@ input[type='range']:disabled::-moz-range-thumb {
 .slider-line .slider-value-group .value {
   grid-column: auto;
   margin-left: 4px;
+}
+
+.slider-snap-btn {
+  border: none;
+  background: transparent;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.slider-snap-btn i {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.slider-snap-btn:disabled,
+.slider-snap-btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.slider-snap-btn:disabled:hover,
+.slider-snap-btn.is-disabled:hover {
+  background: transparent;
+  color: var(--text-dim);
+  box-shadow: none;
 }
 
 #svgExtrudeColorDepths {

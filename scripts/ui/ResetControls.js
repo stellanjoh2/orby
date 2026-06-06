@@ -7,6 +7,8 @@ import {
   cameraShadowsUiToShader,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
   effectiveVignetteIntensity,
 } from '../constants.js';
 import { deepClone } from '../utils/deepClone.js';
@@ -65,13 +67,15 @@ const RESET_DIRTY_PATHS = {
   base: [
     'groundSolidColor', 'groundY', 'baseScale',
     'baseMetalness', 'baseRoughness', 'baseReflection', 'baseClearcoat',
+    'baseSurfacePreset', 'baseSurfaceScale', 'baseSurfaceStrength',
   ],
   'base-glass': [
     'baseGlassSurface', 'baseGlassBrightness', 'baseGlassBlur', 'baseGlassAmount',
   ],
   backdrop: [
     'backdropEnabled', 'backdropScale', 'backdropWidth', 'backdropColor',
-    'backdropRotation', 'backdropY', 'backdropTextureEnabled', 'backdropTextureScale',
+    'backdropRotation', 'backdropY', 'backdropMetalness', 'backdropRoughness',
+    'backdropSurfacePreset', 'backdropSurfaceScale', 'backdropSurfaceStrength',
   ],
   background: ['background', 'backgroundGradient'],
   grid: ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale'],
@@ -576,8 +580,11 @@ export class ResetControls {
       this.stateStore.set('backdropColor', defaults.backdropColor ?? '#808080');
       this.stateStore.set('backdropRotation', defaults.backdropRotation ?? 0);
       this.stateStore.set('backdropY', defaults.backdropY ?? 0);
-      this.stateStore.set('backdropTextureEnabled', defaults.backdropTextureEnabled ?? false);
-      this.stateStore.set('backdropTextureScale', defaults.backdropTextureScale ?? 1.8);
+      this.stateStore.set('backdropMetalness', defaults.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS);
+      this.stateStore.set('backdropRoughness', defaults.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS);
+      this.stateStore.set('backdropSurfacePreset', defaults.backdropSurfacePreset ?? 'none');
+      this.stateStore.set('backdropSurfaceScale', defaults.backdropSurfaceScale ?? 1);
+      this.stateStore.set('backdropSurfaceStrength', defaults.backdropSurfaceStrength ?? 1);
       this.stateStore.set('groundWireColor', defaults.groundWireColor);
       this.stateStore.set('background', defaults.background);
       this.stateStore.set('backgroundGradient', defaults.backgroundGradient);
@@ -648,14 +655,13 @@ export class ResetControls {
       this.eventBus.emit('studio:backdrop-color', defaults.backdropColor ?? '#808080');
       this.eventBus.emit('studio:backdrop-rotation', defaults.backdropRotation ?? 0);
       this.eventBus.emit('studio:backdrop-y', defaults.backdropY ?? 0);
-      this.eventBus.emit(
-        'studio:backdrop-texture-enabled',
-        defaults.backdropTextureEnabled ?? false,
-      );
-      this.eventBus.emit(
-        'studio:backdrop-texture-scale',
-        defaults.backdropTextureScale ?? 1.8,
-      );
+      this.eventBus.emit('studio:backdrop-metalness', defaults.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS);
+      this.eventBus.emit('studio:backdrop-roughness', defaults.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS);
+      this.eventBus.emit('studio:backdrop-surface', {
+        preset: defaults.backdropSurfacePreset ?? 'none',
+        scale: defaults.backdropSurfaceScale ?? 1,
+        strength: defaults.backdropSurfaceStrength ?? 1,
+      });
       this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
       this.eventBus.emit('scene:background', defaults.background);
       this.eventBus.emit('scene:background-gradient', defaults.backgroundGradient);
@@ -1065,6 +1071,9 @@ export class ResetControls {
               this.stateStore.set('baseRoughness', defaults.baseRoughness);
               this.stateStore.set('baseReflection', defaults.baseReflection);
               this.stateStore.set('baseClearcoat', defaults.baseClearcoat);
+              this.stateStore.set('baseSurfacePreset', defaults.baseSurfacePreset ?? 'none');
+              this.stateStore.set('baseSurfaceScale', defaults.baseSurfaceScale ?? 1);
+              this.stateStore.set('baseSurfaceStrength', defaults.baseSurfaceStrength ?? 1);
             });
             this.eventBus.emit('studio:ground-solid-color', defaults.groundSolidColor);
             this.eventBus.emit('studio:base-scale', defaults.baseScale);
@@ -1072,6 +1081,11 @@ export class ResetControls {
             this.eventBus.emit('studio:base-roughness', defaults.baseRoughness);
             this.eventBus.emit('studio:base-reflection', defaults.baseReflection);
             this.eventBus.emit('studio:base-clearcoat', defaults.baseClearcoat);
+            this.eventBus.emit('studio:base-surface', {
+              preset: defaults.baseSurfacePreset ?? 'none',
+              scale: defaults.baseSurfaceScale ?? 1,
+              strength: defaults.baseSurfaceStrength ?? 1,
+            });
             this.eventBus.emit('studio:ground-y', defaults.groundY);
             this.ui.syncControls(this.stateStore.getState());
             break;
@@ -1098,8 +1112,11 @@ export class ResetControls {
               this.stateStore.set('backdropColor', defaults.backdropColor ?? '#808080');
               this.stateStore.set('backdropRotation', defaults.backdropRotation ?? 0);
               this.stateStore.set('backdropY', defaults.backdropY ?? 0);
-              this.stateStore.set('backdropTextureEnabled', defaults.backdropTextureEnabled ?? false);
-              this.stateStore.set('backdropTextureScale', defaults.backdropTextureScale ?? 1.8);
+              this.stateStore.set('backdropMetalness', defaults.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS);
+              this.stateStore.set('backdropRoughness', defaults.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS);
+              this.stateStore.set('backdropSurfacePreset', defaults.backdropSurfacePreset ?? 'none');
+              this.stateStore.set('backdropSurfaceScale', defaults.backdropSurfaceScale ?? 1);
+              this.stateStore.set('backdropSurfaceStrength', defaults.backdropSurfaceStrength ?? 1);
             });
             this.eventBus.emit('studio:backdrop-enabled', defaults.backdropEnabled ?? false);
             this.eventBus.emit('studio:backdrop-scale', defaults.backdropScale ?? 1);
@@ -1107,14 +1124,13 @@ export class ResetControls {
             this.eventBus.emit('studio:backdrop-color', defaults.backdropColor ?? '#808080');
             this.eventBus.emit('studio:backdrop-rotation', defaults.backdropRotation ?? 0);
             this.eventBus.emit('studio:backdrop-y', defaults.backdropY ?? 0);
-            this.eventBus.emit(
-              'studio:backdrop-texture-enabled',
-              defaults.backdropTextureEnabled ?? false,
-            );
-            this.eventBus.emit(
-              'studio:backdrop-texture-scale',
-              defaults.backdropTextureScale ?? 1.8,
-            );
+            this.eventBus.emit('studio:backdrop-metalness', defaults.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS);
+            this.eventBus.emit('studio:backdrop-roughness', defaults.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS);
+            this.eventBus.emit('studio:backdrop-surface', {
+              preset: defaults.backdropSurfacePreset ?? 'none',
+              scale: defaults.backdropSurfaceScale ?? 1,
+              strength: defaults.backdropSurfaceStrength ?? 1,
+            });
             this.ui.syncControls(this.stateStore.getState());
             break;
             

@@ -5,6 +5,8 @@ import {
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
@@ -71,6 +73,14 @@ function createStateApplySteps() {
         });
         s.setBaseReflection(state.baseReflection ?? 1, { updateState: false });
         s.setBaseClearcoat(state.baseClearcoat ?? 0, { updateState: false });
+        s.setBaseSurface(
+          {
+            preset: state.baseSurfacePreset,
+            scale: state.baseSurfaceScale,
+            strength: state.baseSurfaceStrength,
+          },
+          { updateState: false },
+        );
         s.setBaseGlassSurface(
           !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
           { updateState: false },
@@ -96,12 +106,20 @@ function createStateApplySteps() {
         s.setBackdropColor(state.backdropColor ?? '#808080', { updateState: false });
         s.setBackdropRotation(state.backdropRotation ?? 0, { updateState: false });
         s.setBackdropY(state.backdropY ?? 0, { updateState: false });
-        s.setBackdropTextureEnabled(!!state.backdropTextureEnabled, {
+        s.setBackdropMetalness(state.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS, {
           updateState: false,
         });
-        s.setBackdropTextureScale(state.backdropTextureScale ?? 1.8, {
+        s.setBackdropRoughness(state.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS, {
           updateState: false,
         });
+        s.setBackdropSurface(
+          {
+            preset: state.backdropSurfacePreset,
+            scale: state.backdropSurfaceScale,
+            strength: state.backdropSurfaceStrength,
+          },
+          { updateState: false },
+        );
       },
     },
     {

@@ -245,38 +245,11 @@
   background: var(--orby-black);
 }
 
-.map-preview-panel__zoom {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: inherit;
-  background: transparent;
-  color: var(--accent);
-  font-size: 1.35rem;
-  cursor: zoom-in;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-.map-preview-panel__zoom i {
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.55));
-}
-
-.map-preview-panel__body:hover .map-preview-panel__zoom,
-.map-preview-panel__zoom:focus-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 .map-preview-panel__image {
   display: block;
   width: 100%;
   height: 100%;
+  cursor: zoom-in;
 }
 
 @media (max-width: 720px) {

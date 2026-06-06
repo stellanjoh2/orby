@@ -137,6 +137,9 @@ export class SceneSettingsManager {
       baseRoughness: state.baseRoughness,
       baseReflection: state.baseReflection,
       baseClearcoat: state.baseClearcoat,
+      baseSurfacePreset: state.baseSurfacePreset,
+      baseSurfaceScale: state.baseSurfaceScale,
+      baseSurfaceStrength: state.baseSurfaceStrength,
       baseGlassSurface: state.baseGlassSurface ?? state.podiumReflectMesh,
       baseGlassBlur: state.baseGlassBlur,
       baseGlassAmount: state.baseGlassAmount,
@@ -147,8 +150,11 @@ export class SceneSettingsManager {
       backdropColor: state.backdropColor,
       backdropRotation: state.backdropRotation,
       backdropY: state.backdropY,
-      backdropTextureEnabled: !!state.backdropTextureEnabled,
-      backdropTextureScale: state.backdropTextureScale,
+      backdropMetalness: state.backdropMetalness,
+      backdropRoughness: state.backdropRoughness,
+      backdropSurfacePreset: state.backdropSurfacePreset,
+      backdropSurfaceScale: state.backdropSurfaceScale,
+      backdropSurfaceStrength: state.backdropSurfaceStrength,
       gridScale: state.gridScale,
       gridLineWidth: state.gridLineWidth ?? 1,
       lights: state.lights,
@@ -882,6 +888,27 @@ export class SceneSettingsManager {
         this.stateStore.set('baseClearcoat', payload.baseClearcoat);
         this.eventBus.emit('studio:base-clearcoat', payload.baseClearcoat);
       }
+      if (
+        payload.baseSurfacePreset !== undefined ||
+        payload.baseSurfaceScale !== undefined ||
+        payload.baseSurfaceStrength !== undefined
+      ) {
+        if (payload.baseSurfacePreset !== undefined) {
+          this.stateStore.set('baseSurfacePreset', payload.baseSurfacePreset);
+        }
+        if (payload.baseSurfaceScale !== undefined) {
+          this.stateStore.set('baseSurfaceScale', payload.baseSurfaceScale);
+        }
+        if (payload.baseSurfaceStrength !== undefined) {
+          this.stateStore.set('baseSurfaceStrength', payload.baseSurfaceStrength);
+        }
+        const st = this.stateStore.getState();
+        this.eventBus.emit('studio:base-surface', {
+          preset: st.baseSurfacePreset ?? 'none',
+          scale: st.baseSurfaceScale ?? 1,
+          strength: st.baseSurfaceStrength ?? 1,
+        });
+      }
       if (payload.baseGlassSurface !== undefined) {
         this.stateStore.set('baseGlassSurface', payload.baseGlassSurface);
         this.eventBus.emit('studio:base-glass-surface', payload.baseGlassSurface);
@@ -925,14 +952,34 @@ export class SceneSettingsManager {
         this.stateStore.set('backdropY', payload.backdropY);
         this.eventBus.emit('studio:backdrop-y', payload.backdropY);
       }
-      if (payload.backdropTextureEnabled !== undefined) {
-        const on = !!payload.backdropTextureEnabled;
-        this.stateStore.set('backdropTextureEnabled', on);
-        this.eventBus.emit('studio:backdrop-texture-enabled', on);
+      if (payload.backdropMetalness !== undefined) {
+        this.stateStore.set('backdropMetalness', payload.backdropMetalness);
+        this.eventBus.emit('studio:backdrop-metalness', payload.backdropMetalness);
       }
-      if (payload.backdropTextureScale !== undefined) {
-        this.stateStore.set('backdropTextureScale', payload.backdropTextureScale);
-        this.eventBus.emit('studio:backdrop-texture-scale', payload.backdropTextureScale);
+      if (payload.backdropRoughness !== undefined) {
+        this.stateStore.set('backdropRoughness', payload.backdropRoughness);
+        this.eventBus.emit('studio:backdrop-roughness', payload.backdropRoughness);
+      }
+      if (
+        payload.backdropSurfacePreset !== undefined ||
+        payload.backdropSurfaceScale !== undefined ||
+        payload.backdropSurfaceStrength !== undefined
+      ) {
+        if (payload.backdropSurfacePreset !== undefined) {
+          this.stateStore.set('backdropSurfacePreset', payload.backdropSurfacePreset);
+        }
+        if (payload.backdropSurfaceScale !== undefined) {
+          this.stateStore.set('backdropSurfaceScale', payload.backdropSurfaceScale);
+        }
+        if (payload.backdropSurfaceStrength !== undefined) {
+          this.stateStore.set('backdropSurfaceStrength', payload.backdropSurfaceStrength);
+        }
+        const st = this.stateStore.getState();
+        this.eventBus.emit('studio:backdrop-surface', {
+          preset: st.backdropSurfacePreset ?? 'none',
+          scale: st.backdropSurfaceScale ?? 1,
+          strength: st.backdropSurfaceStrength ?? 1,
+        });
       }
       if (payload.gridScale !== undefined) {
         this.stateStore.set('gridScale', payload.gridScale);

@@ -61,6 +61,22 @@ const clampScale = (v) => {
   return Math.max(0.12, Math.min(10, n));
 };
 
+/** UI slider range for surface detail (stored in state; lower = finer pattern). */
+export const SURFACE_UI_SCALE_MIN = 0.2;
+export const SURFACE_UI_SCALE_MAX = 10;
+
+export function clampSurfaceUiScale(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 1.0;
+  return Math.max(SURFACE_UI_SCALE_MIN, Math.min(SURFACE_UI_SCALE_MAX, n));
+}
+
+/** Stored UI scale → shader frequency (higher = finer detail). */
+export function surfaceUiScaleToShaderScale(uiScale) {
+  const ui = clampSurfaceUiScale(uiScale);
+  return clampScale(1 / ui);
+}
+
 export function clampSurfaceStrength(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return 1.0;
@@ -283,6 +299,56 @@ float orbyFbm3(vec3 p) {
 }
 mat3 orbyNormalMatrix() {
   return mat3( vOrbyNm0, vOrbyNm1, vOrbyNm2 );
+}
+vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
+  vec3 t = cross( ref, n );
+  if ( dot( t, t ) < 1e-8 ) {
+    t = cross( refAlt, n );
+  }
+  if ( dot( t, t ) < 1e-8 ) {
+    return n;
+  }
+  t = normalize( t );
+  vec3 b = normalize( cross( n, t ) );
+  return normalize( tn.x * t + tn.y * b + tn.z * n );
+}
+vec3 orbyTriplanarNormalObject( vec3 localPos, vec3 localNormal, float scale ) {
+  vec3 n = normalize( localNormal );
+  vec3 p = ( localPos - uOrbyNormalOrigin ) * uOrbyNormalInvSize;
+  vec3 blend = abs( n );
+  blend = pow( max( blend, vec3( 0.00001 ) ), vec3( 4.0 ) );
+  blend /= ( blend.x + blend.y + blend.z );
+  vec3 tX = texture2D( uOrbyNormalMap, p.zy * scale ).xyz * 2.0 - 1.0;
+  vec3 tY = texture2D( uOrbyNormalMap, p.xz * scale ).xyz * 2.0 - 1.0;
+  vec3 tZ = texture2D( uOrbyNormalMap, p.xy * scale ).xyz * 2.0 - 1.0;
+  vec3 nx = orbyTriplanarAxisNormal( n, tX, vec3( 0.0, 1.0, 0.0 ), vec3( 0.0, 0.0, 1.0 ) );
+  vec3 ny = orbyTriplanarAxisNormal( n, tY, vec3( 0.0, 0.0, 1.0 ), vec3( 1.0, 0.0, 0.0 ) );
+  vec3 nz = orbyTriplanarAxisNormal( n, tZ, vec3( 1.0, 0.0, 0.0 ), vec3( 0.0, 1.0, 0.0 ) );
+  return normalize( nx * blend.x + ny * blend.y + nz * blend.z );
+}
+`;
+
+/** Glass reflector subset — no vOrbyNm* (vertex shader does not supply them). */
+const GLASS_FRAG_HELPERS = /* glsl */ `
+varying vec3 vOrbyWorldPos;
+varying vec3 vOrbyLocalPos;
+varying vec3 vOrbyLocalNormal;
+uniform float uOrbySurfaceMode;
+uniform float uOrbyScale;
+uniform float uOrbyNormalStrength;
+uniform sampler2D uOrbyNormalMap;
+uniform vec3 uOrbyNormalOrigin;
+uniform vec3 uOrbyNormalInvSize;
+float orbyQ(vec3 p) {
+  return fract(sin(dot(p, vec3(12.9898, 78.233, 37.199))) * 43758.5453);
+}
+float orbyFbm3(vec3 p) {
+  float t = 0.0; float a = 0.5;
+  t += a * orbyQ(p); p = p * 2.1 + 1.0; a *= 0.5;
+  t += a * orbyQ(p); p = p * 2.0 + 0.2; a *= 0.5;
+  t += a * orbyQ(p); p = p * 1.8 + 0.1; a *= 0.5;
+  t += a * orbyQ(p);
+  return t;
 }
 vec3 orbyTriplanarAxisNormal( vec3 n, vec3 tn, vec3 ref, vec3 refAlt ) {
   vec3 t = cross( ref, n );
@@ -544,7 +610,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   }
   const presetId = opts.preset ?? 'none';
   const config = getSvgExtrudeSurfacePresetConfig(presetId);
-  const scale = clampScale(opts.scale);
+  const scale = surfaceUiScaleToShaderScale(opts.scale);
   if (!config || config.kind === 'none') {
     removeSvgExtrudeProceduralFromMaterial(material);
     return true;
@@ -688,7 +754,7 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
   const shading = shadingOverride ?? st.shading;
   const presetId = st.svgExtrude?.surfacePreset ?? 'none';
   const config = getSvgExtrudeSurfacePresetConfig(presetId);
-  const scale = clampScale(st.svgExtrude?.surfaceScale ?? 1);
+  const scale = clampSurfaceUiScale(st.svgExtrude?.surfaceScale ?? 1);
   const strength = clampSurfaceStrength(st.svgExtrude?.surfaceStrength ?? 1);
   const stripSurface =
     shading === 'textures' ||
@@ -721,4 +787,68 @@ export function reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverr
 /** @deprecated Use reapplySvgExtrudeSurfaceFromState */
 export function reapplySvgExtrudeProceduralFromState(model, storeLike, shadingOverride) {
   return reapplySvgExtrudeSurfaceFromState(model, storeLike, shadingOverride);
+}
+
+/** Shared GLSL helpers for procedural + triplanar surface detail. */
+export const ORBY_SURFACE_FRAG_HELPERS = FRAG_HELPERS;
+
+/** Subset for base-glass ReflectorShader (matches its vertex varyings). */
+export const ORBY_SURFACE_GLASS_FRAG_HELPERS = GLASS_FRAG_HELPERS;
+
+/**
+ * Resolve a surface preset into uniform values for custom shaders (e.g. base glass reflector).
+ * @param {string} presetId
+ * @param {number} scale
+ * @param {number} strength
+ * @param {{ origin: THREE.Vector3, invSize?: THREE.Vector3 } | null} [normalBounds]
+ */
+export function resolveOrbySurfaceUniformState(presetId, scale, strength, normalBounds = null) {
+  const config = getSvgExtrudeSurfacePresetConfig(presetId ?? 'none');
+  if (!config || config.kind === 'none') return null;
+  const clampedScale = surfaceUiScaleToShaderScale(scale);
+  const surfaceStrength = clampSurfaceStrength(strength ?? 1);
+  const proceduralIndex =
+    config.kind === 'procedural' ? Math.max(1, Math.min(4, config.proceduralIndex)) : 0;
+  const normalStrength =
+    config.kind === 'normalMap'
+      ? resolveSvgExtrudeNormalStrength(config, surfaceStrength)
+      : surfaceStrength;
+  const normalMap =
+    config.kind === 'normalMap' ? getNormalMapTexture(config.normalMapUrl) : null;
+  return {
+    proceduralIndex,
+    scale: clampedScale,
+    normalStrength,
+    normalMap,
+    normalBounds,
+  };
+}
+
+/** @returns {Record<string, { value: unknown }>} */
+export function createOrbySurfaceUniformRefs(initialState = null) {
+  const refs = {
+    uOrbySurfaceMode: { value: initialState?.proceduralIndex ?? 0 },
+    uOrbyScale: { value: initialState?.scale ?? 1 },
+    uOrbyNormalStrength: { value: initialState?.normalStrength ?? 0 },
+    uOrbyNormalMap: { value: initialState?.normalMap ?? null },
+  };
+  setNormalBoundsUniforms(refs, initialState?.normalBounds ?? null);
+  return refs;
+}
+
+/** @param {Record<string, { value: unknown }> | null} refs */
+export function applyOrbySurfaceUniformState(refs, state) {
+  if (!refs) return;
+  if (!state) {
+    refs.uOrbySurfaceMode.value = 0;
+    refs.uOrbyNormalStrength.value = 0;
+    refs.uOrbyNormalMap.value = null;
+    setNormalBoundsUniforms(refs, null);
+    return;
+  }
+  refs.uOrbySurfaceMode.value = state.proceduralIndex;
+  refs.uOrbyScale.value = state.scale;
+  refs.uOrbyNormalStrength.value = state.normalStrength;
+  refs.uOrbyNormalMap.value = state.normalMap;
+  setNormalBoundsUniforms(refs, state.normalBounds ?? null);
 }

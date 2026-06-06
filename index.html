@@ -421,16 +421,15 @@
                 ></button>
               </div>
               <div class="map-preview-panel__body">
-                <img id="mapPreviewPanelImage" class="map-preview-panel__image" alt="" />
-                <button
-                  type="button"
-                  id="mapPreviewPanelZoom"
-                  class="map-preview-panel__zoom"
+                <img
+                  id="mapPreviewPanelImage"
+                  class="map-preview-panel__image"
+                  alt=""
+                  role="button"
+                  tabindex="0"
                   aria-label="Inspect texture at full size"
                   data-tooltip="Inspect at 100% scale"
-                >
-                  <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
-                </button>
+                />
               </div>
             </div>
           </div>
@@ -1025,7 +1024,7 @@
                     />
                   </label>
                   </div>
-                  <div id="svgExtrudeSurfaceControlsMount" class="svg-extrude-surface-controls"></div>
+                  <div id="svgExtrudeSurfaceControlsMount" class="svg-extrude-surface-controls surface-controls-mount"></div>
                 </div>
               </div>
 
@@ -1721,7 +1720,7 @@
                   </div>
                 </div>
                 <div
-                  class="effect-foldout effect-foldout--collapsed"
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
                   data-effect-foldout="base"
                   aria-hidden="true"
                 >
@@ -1734,8 +1733,19 @@
                       value="#808080"
                     />
                   </label>
-                  <label class="slider-line">
-                    <span data-tooltip="Vertical position of the base">Y Position</span>
+                  <div class="slider-line">
+                    <span class="block-title-name slider-line-label">
+                      <span data-tooltip="Vertical position of the base">Y Position</span>
+                      <button
+                        id="baseSnap"
+                        class="slider-snap-btn"
+                        type="button"
+                        aria-label="Snap base to mesh"
+                        data-tooltip="Align base to mesh bottom"
+                      >
+                        <i class="fa-solid fa-magnet" aria-hidden="true"></i>
+                      </button>
+                    </span>
                     <input
                       id="groundY"
                       type="range"
@@ -1745,7 +1755,7 @@
                       value="0"
                     />
                     <span class="value" data-output="groundY">0.00m</span>
-                  </label>
+                  </div>
                   <label class="slider-line">
                     <span data-tooltip="Size of the base">Scale</span>
                     <input
@@ -1782,11 +1792,10 @@
                     />
                     <span class="value" data-output="baseRoughness">0.50</span>
                   </label>
-                <button id="baseSnap" class="ghost-btn small" type="button" data-tooltip="Align base to mesh bottom">
-                  Snap to Mesh
-                </button>
-                <div id="studioBaseGlassPanel" hidden>
-                  <div class="panel-block-divider"></div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="baseSurfaceControlsMount" class="surface-controls-mount"></div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="studioBaseGlassPanel" hidden>
                   <div class="subsection" data-subsection="base-glass">
                     <div class="block-title has-toggle">
                       <span>Base Glass</span>
@@ -1869,7 +1878,7 @@
                   data-effect-foldout="backdrop"
                   aria-hidden="true"
                 >
-                <label class="color-line">
+                  <label class="color-line">
                     <span>Color</span>
                     <input
                       type="color"
@@ -1878,32 +1887,30 @@
                       value="#808080"
                     />
                   </label>
-                  <div class="color-line">
-                    <span data-tooltip="Blend subtle procedural paper detail while keeping color tint control">Apply Backdrop Texture</span>
-                    <label class="effect-toggle" data-tooltip="Toggle procedural paper texture for subtle surface detail">
-                      <input type="checkbox" id="backdropTextureEnabled" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable backdrop texture</span>
-                    </label>
-                  </div>
-                  <div
-                    class="effect-foldout effect-foldout--collapsed"
-                    data-effect-foldout="backdrop-texture"
-                    aria-hidden="true"
-                  >
                   <label class="slider-line">
-                    <span data-tooltip="Texture tiling scale (higher = finer paper grain)">Texture Scale</span>
+                    <span data-tooltip="PBR metalness — higher reads more like metal">Metalness</span>
                     <input
-                      id="backdropTextureScale"
+                      id="backdropMetalness"
                       type="range"
-                      min="0.25"
-                      max="12"
+                      min="0"
+                      max="1"
                       step="0.01"
-                      value="1.8"
+                      value="0.02"
                     />
-                    <span class="value" data-output="backdropTextureScale">1.80</span>
+                    <span class="value" data-output="backdropMetalness">0.02</span>
                   </label>
-                  </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Lower roughness = glossier surface">Roughness</span>
+                    <input
+                      id="backdropRoughness"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.90"
+                    />
+                    <span class="value" data-output="backdropRoughness">0.90</span>
+                  </label>
                   <label class="slider-line">
                     <span data-tooltip="Uniform size of the backdrop wall">Scale</span>
                     <input
@@ -1940,8 +1947,19 @@
                     />
                     <span class="value" data-output="backdropRotation">0°</span>
                   </label>
-                  <label class="slider-line">
-                    <span data-tooltip="Vertical position of the backdrop">Y Position</span>
+                  <div class="slider-line">
+                    <span class="block-title-name slider-line-label">
+                      <span data-tooltip="Vertical position of the backdrop">Y Position</span>
+                      <button
+                        id="backdropSnap"
+                        class="slider-snap-btn"
+                        type="button"
+                        aria-label="Snap backdrop to mesh"
+                        data-tooltip="Align backdrop floor to mesh base"
+                      >
+                        <i class="fa-solid fa-magnet" aria-hidden="true"></i>
+                      </button>
+                    </span>
                     <input
                       id="backdropY"
                       type="range"
@@ -1951,10 +1969,9 @@
                       value="0"
                     />
                     <span class="value" data-output="backdropY">0.00m</span>
-                  </label>
-                <button id="backdropSnap" class="ghost-btn small" type="button" data-tooltip="Align backdrop floor to mesh base">
-                  Snap to Mesh
-                </button>
+                  </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <div id="backdropSurfaceControlsMount" class="surface-controls-mount"></div>
                 </div>
               </div>
 

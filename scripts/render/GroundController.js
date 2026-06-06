@@ -15,11 +15,29 @@ import {
   DEFAULT_BASE_GLASS_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
   ORBY_LIME,
 } from '../constants.js';
 import { BaseGlassSeparableBlur } from './BaseGlassSeparableBlur.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { STUDIO_BACKDROP_SHADOW_REACH_PADDING } from '../config/shadowQuality.js';
+import {
+  applySvgExtrudeSurfaceToMaterial,
+  applyOrbySurfaceUniformState,
+  clampSurfaceStrength,
+  computeExtrudeSurfaceMappingBounds,
+  createOrbySurfaceUniformRefs,
+  getSvgExtrudeSurfacePresetConfig,
+  ORBY_SURFACE_GLASS_FRAG_HELPERS,
+  removeSvgExtrudeProceduralFromMaterial,
+  resolveOrbySurfaceUniformState,
+} from './SvgExtrudeSurfaceShader.js';
+import {
+  DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+  DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+  DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+} from '../import/extrudeDefaults.js';
 
 const _backdropShadowCorner = new THREE.Vector3();
 const _backdropShadowBox = new THREE.Box3();
@@ -30,16 +48,22 @@ const _backdropRestQuat = new THREE.Quaternion();
 const _backdropRestScale = new THREE.Vector3();
 const _backdropRestMatrix = new THREE.Matrix4();
 
-/** Vertex shader: Reflector UV projection. */
+/** Vertex shader: Reflector UV projection + surface sampling coords. */
 function buildBaseGlassReflectorVertexShader() {
   return /* glsl */ `
 uniform mat4 textureMatrix;
 varying vec4 vUv;
+varying vec3 vOrbyLocalPos;
+varying vec3 vOrbyLocalNormal;
+varying vec3 vOrbyWorldPos;
 
 #include <common>
 #include <logdepthbuf_pars_vertex>
 
 void main() {
+  vOrbyLocalPos = position;
+  vOrbyLocalNormal = vec3( 0.0, 0.0, 1.0 );
+  vOrbyWorldPos = ( modelMatrix * vec4( position, 1.0 ) ).xyz;
   vUv = textureMatrix * vec4( position, 1.0 );
   gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
   #include <logdepthbuf_vertex>
@@ -47,10 +71,11 @@ void main() {
 `;
 }
 
-/** Glass reflection FS: single projected sample — blur is separable H/V on the RT (see BaseGlassSeparableBlur). */
+/** Glass reflection FS — optional surface detail distorts the projected reflection UV. */
 function buildBaseGlassReflectorFragmentShader() {
   return /* glsl */ `
 #include <common>
+${ORBY_SURFACE_GLASS_FRAG_HELPERS}
 uniform sampler2D tDiffuse;
 uniform float reflectionAmount;
 uniform float surfaceBrightness;
@@ -58,10 +83,38 @@ varying vec4 vUv;
 
 #include <logdepthbuf_pars_fragment>
 
+vec2 orbyGlassReflectionUvOffset() {
+  if ( uOrbySurfaceMode < 0.5 && uOrbyNormalStrength < 0.0001 ) return vec2( 0.0 );
+  if ( uOrbyNormalStrength > 0.0001 && uOrbySurfaceMode < 0.5 ) {
+    vec3 tn = orbyTriplanarNormalObject(
+      vOrbyLocalPos,
+      normalize( vOrbyLocalNormal ),
+      uOrbyScale
+    );
+    return tn.xy * uOrbyNormalStrength * 0.018;
+  }
+  vec3 p = vOrbyWorldPos * uOrbyScale;
+  float mode = uOrbySurfaceMode;
+  vec2 off = vec2( 0.0 );
+  if ( mode < 1.5 ) {
+    off = vec2( orbyFbm3( p * 5.0 ), orbyFbm3( p * 5.0 + 2.3 ) ) - 0.5;
+    off *= 0.035 * uOrbyNormalStrength;
+  } else if ( mode < 2.5 ) {
+    off.x = ( orbyFbm3( p * vec3( 0.3, 12.0, 12.0 ) ) - 0.5 ) * 0.04 * uOrbyNormalStrength;
+  } else {
+    off = vec2( orbyFbm3( p * 3.5 ), orbyFbm3( p * 9.0 + 1.1 ) ) - 0.5;
+    off *= 0.028 * uOrbyNormalStrength;
+  }
+  return off;
+}
+
 void main() {
   #include <logdepthbuf_fragment>
 
   vec4 uv = vUv;
+  vec2 uvOff = orbyGlassReflectionUvOffset();
+  uv.xy += uvOff * uv.w;
+
   vec4 baseTex = texture2DProj( tDiffuse, uv );
 
   vec3 reflRgb = baseTex.rgb;
@@ -76,7 +129,7 @@ void main() {
 `;
 }
 
-function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness01) {
+function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness01, surfaceUniformRefs) {
   if (!material?.uniforms) return;
   const ra = clamp01(reflection01);
   const sb = clamp01(surfaceBrightness01);
@@ -90,9 +143,17 @@ function applyBaseGlassReflectorShader(material, reflection01, surfaceBrightness
   } else {
     material.uniforms.surfaceBrightness.value = sb;
   }
+  const surfRefs = surfaceUniformRefs ?? createOrbySurfaceUniformRefs();
+  material.uniforms.uOrbySurfaceMode = surfRefs.uOrbySurfaceMode;
+  material.uniforms.uOrbyScale = surfRefs.uOrbyScale;
+  material.uniforms.uOrbyNormalStrength = surfRefs.uOrbyNormalStrength;
+  material.uniforms.uOrbyNormalMap = surfRefs.uOrbyNormalMap;
+  material.uniforms.uOrbyNormalOrigin = surfRefs.uOrbyNormalOrigin;
+  material.uniforms.uOrbyNormalInvSize = surfRefs.uOrbyNormalInvSize;
   material.vertexShader = buildBaseGlassReflectorVertexShader();
   material.fragmentShader = buildBaseGlassReflectorFragmentShader();
   material.needsUpdate = true;
+  return surfRefs;
 }
 
 const clampScale = (value) => Math.min(3, Math.max(0.5, value));
@@ -117,7 +178,6 @@ function buildGridLinePositions(size, divisions) {
   return vertices;
 }
 const clamp01 = (value) => Math.min(1, Math.max(0, Number(value) || 0));
-const clampBackdropTextureScale = (value) => Math.min(12, Math.max(0.25, Number(value) || 1));
 const clampDegrees = (value) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return 0;
@@ -276,85 +336,6 @@ function createSeamlessBackdropGeometry({
   return geometry;
 }
 
-function createProceduralBackdropTexture(size = 512) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-
-  const imageData = ctx.createImageData(size, size);
-  const data = imageData.data;
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const i = (y * size + x) * 4;
-      const base = 188 + Math.floor((Math.random() - 0.5) * 24);
-      const fiberA = Math.sin((x * 0.1) + (y * 0.017)) * 8;
-      const fiberB = Math.sin((x * 0.021) - (y * 0.13)) * 5;
-      const speck = Math.random() > 0.985 ? -16 : 0;
-      const v = Math.max(120, Math.min(236, Math.round(base + fiberA + fiberB + speck)));
-      data[i] = v;
-      data[i + 1] = v;
-      data[i + 2] = v;
-      data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
-  return new THREE.CanvasTexture(canvas);
-}
-
-function createProceduralBackdropNormalTexture(size = 512) {
-  const noise = new Float32Array(size * size);
-  for (let i = 0; i < noise.length; i += 1) {
-    noise[i] = Math.random();
-  }
-  // Smooth once so normals read like paper fibers instead of harsh pixel noise.
-  for (let y = 1; y < size - 1; y += 1) {
-    for (let x = 1; x < size - 1; x += 1) {
-      const i = y * size + x;
-      noise[i] = (
-        noise[i]
-        + noise[i - 1]
-        + noise[i + 1]
-        + noise[i - size]
-        + noise[i + size]
-      ) / 5;
-    }
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const imageData = ctx.createImageData(size, size);
-  const data = imageData.data;
-  const strength = 3.5;
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const i = y * size + x;
-      const l = noise[y * size + ((x - 1 + size) % size)];
-      const r = noise[y * size + ((x + 1) % size)];
-      const u = noise[((y - 1 + size) % size) * size + x];
-      const d = noise[((y + 1) % size) * size + x];
-      const dx = (r - l) * strength;
-      const dy = (d - u) * strength;
-      const nx = -dx;
-      const ny = -dy;
-      const nz = 1;
-      const invLen = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
-      const ri = i * 4;
-      data[ri] = Math.round((nx * invLen * 0.5 + 0.5) * 255);
-      data[ri + 1] = Math.round((ny * invLen * 0.5 + 0.5) * 255);
-      data[ri + 2] = Math.round((nz * invLen * 0.5 + 0.5) * 255);
-      data[ri + 3] = 255;
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
-  return new THREE.CanvasTexture(canvas);
-}
-
 function disposeObjectGpuResources(root) {
   if (!root) return;
   root.traverse((child) => {
@@ -394,6 +375,12 @@ export class GroundController {
       Math.max(0, Number.isFinite(pr) ? pr : 1),
     );
     this.podiumClearcoat = clamp01(options.baseClearcoat ?? options.podiumClearcoat ?? 0);
+    this.baseSurfacePreset = options.baseSurfacePreset ?? DEFAULT_SVG_EXTRUDE_SURFACE_PRESET;
+    this.baseSurfaceScale = Number(options.baseSurfaceScale ?? DEFAULT_SVG_EXTRUDE_SURFACE_SCALE) || DEFAULT_SVG_EXTRUDE_SURFACE_SCALE;
+    this.baseSurfaceStrength = clampSurfaceStrength(
+      options.baseSurfaceStrength ?? DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+    );
+    this._glassSurfaceUniformRefs = null;
 
     this._lastEnvTexture = null;
     this._lastHdriIntensity = 1;
@@ -435,10 +422,17 @@ export class GroundController {
     this.backdropY = options.backdropY ?? 0;
     this.backdropCurveRadius = 1.4;
     this.backdropSpawnZ = -(this.backdropCurveRadius + 1.6);
-    this.backdropTextureEnabled = !!options.backdropTextureEnabled;
-    this.backdropTextureScale = clampBackdropTextureScale(options.backdropTextureScale ?? 1.8);
-    this.backdropTexture = null;
-    this.backdropNormalTexture = null;
+    this.backdropMetalness = clamp01(
+      options.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS,
+    );
+    this.backdropRoughness = clamp01(
+      options.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+    );
+    this.backdropSurfacePreset = options.backdropSurfacePreset ?? DEFAULT_SVG_EXTRUDE_SURFACE_PRESET;
+    this.backdropSurfaceScale = Number(options.backdropSurfaceScale ?? DEFAULT_SVG_EXTRUDE_SURFACE_SCALE) || DEFAULT_SVG_EXTRUDE_SURFACE_SCALE;
+    this.backdropSurfaceStrength = clampSurfaceStrength(
+      options.backdropSurfaceStrength ?? DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+    );
     this.debugWireframeEnabled = !!options.debugWireframeEnabled;
     this.backdrop = null;
 
@@ -548,6 +542,7 @@ export class GroundController {
       this._lastHdriIntensity,
       this._lastHdriBlurriness,
     );
+    this.applyBaseSurface();
 
     this.setGroundY(this.groundY);
     this.rebuildBaseReflector();
@@ -560,8 +555,8 @@ export class GroundController {
     });
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(this.backdropColor),
-      metalness: 0.02,
-      roughness: 0.9,
+      metalness: this.backdropMetalness,
+      roughness: this.backdropRoughness,
       side: THREE.DoubleSide,
     });
     this.backdrop = new THREE.Mesh(geometry, material);
@@ -572,7 +567,8 @@ export class GroundController {
     this.scene.add(this.backdrop);
     this._applyBackdropTransform();
     this.setDebugWireframeEnabled(this.debugWireframeEnabled);
-    this._applyBackdropTextureSettings();
+    this._applyBackdropMaterial();
+    this.applyBackdropSurface();
   }
 
   /**
@@ -647,10 +643,18 @@ export class GroundController {
       }
     };
 
+    if (!this._glassSurfaceUniformRefs) {
+      this._glassSurfaceUniformRefs = createOrbySurfaceUniformRefs();
+    }
+    applyOrbySurfaceUniformState(
+      this._glassSurfaceUniformRefs,
+      this._resolveBaseGlassSurfaceUniformState(),
+    );
     applyBaseGlassReflectorShader(
       reflector.material,
       this.podiumGlassAmount,
       this.podiumGlassBrightness,
+      this._glassSurfaceUniformRefs,
     );
   }
 
@@ -713,6 +717,7 @@ export class GroundController {
       mat.clearcoatRoughness = 0.22;
     }
     mat.needsUpdate = true;
+    this._applyBackdropMaterial();
   }
 
   setBaseMetalness(value) {
@@ -734,6 +739,74 @@ export class GroundController {
   setBaseClearcoat(value) {
     this.podiumClearcoat = clamp01(value);
     this.applyBaseEnvironment(this._lastEnvTexture, this._lastHdriIntensity, this._lastHdriBlurriness);
+  }
+
+  setBaseSurface({ preset, scale, strength } = {}) {
+    if (preset !== undefined) this.baseSurfacePreset = preset || 'none';
+    if (scale !== undefined) {
+      this.baseSurfaceScale = Number(scale) || DEFAULT_SVG_EXTRUDE_SURFACE_SCALE;
+    }
+    if (strength !== undefined) {
+      this.baseSurfaceStrength = clampSurfaceStrength(strength);
+    }
+    this.applyBaseSurface();
+  }
+
+  applyBaseSurface() {
+    const mat = this.podium?.material;
+    if (!mat) {
+      this.applyBaseGlassSurface();
+      return;
+    }
+    const preset = this.baseSurfacePreset ?? 'none';
+    const config = getSvgExtrudeSurfacePresetConfig(preset);
+    if (!config || config.kind === 'none') {
+      removeSvgExtrudeProceduralFromMaterial(mat);
+      this.applyBaseGlassSurface();
+      return;
+    }
+    const mappingBounds =
+      config.kind === 'normalMap' ? computeExtrudeSurfaceMappingBounds(this.podium) : null;
+    applySvgExtrudeSurfaceToMaterial(mat, {
+      preset,
+      scale: this.baseSurfaceScale,
+      strength: this.baseSurfaceStrength,
+      normalBounds: mappingBounds,
+    });
+    this.applyBaseGlassSurface();
+  }
+
+  _resolveBaseGlassSurfaceUniformState() {
+    const preset = this.baseSurfacePreset ?? 'none';
+    const config = getSvgExtrudeSurfacePresetConfig(preset);
+    if (!config || config.kind === 'none') return null;
+    const normalBounds =
+      config.kind === 'normalMap' && this.podiumReflector
+        ? computeExtrudeSurfaceMappingBounds(this.podiumReflector)
+        : null;
+    return resolveOrbySurfaceUniformState(
+      preset,
+      this.baseSurfaceScale,
+      this.baseSurfaceStrength,
+      normalBounds,
+    );
+  }
+
+  applyBaseGlassSurface() {
+    if (!this.podiumReflector?.material) return;
+    if (!this._glassSurfaceUniformRefs) {
+      this._glassSurfaceUniformRefs = createOrbySurfaceUniformRefs();
+      applyBaseGlassReflectorShader(
+        this.podiumReflector.material,
+        this.podiumGlassAmount,
+        this.podiumGlassBrightness,
+        this._glassSurfaceUniformRefs,
+      );
+    }
+    applyOrbySurfaceUniformState(
+      this._glassSurfaceUniformRefs,
+      this._resolveBaseGlassSurfaceUniformState(),
+    );
   }
 
   _syncGridLineResolution(width, height) {
@@ -952,14 +1025,44 @@ export class GroundController {
     this._applyBackdropTransform();
   }
 
-  setBackdropTextureEnabled(enabled) {
-    this.backdropTextureEnabled = !!enabled;
-    this._applyBackdropTextureSettings();
+  setBackdropMetalness(value) {
+    this.backdropMetalness = clamp01(value);
+    this._applyBackdropMaterial();
   }
 
-  setBackdropTextureScale(value) {
-    this.backdropTextureScale = clampBackdropTextureScale(value);
-    this._applyBackdropTextureSettings();
+  setBackdropRoughness(value) {
+    this.backdropRoughness = clamp01(value);
+    this._applyBackdropMaterial();
+  }
+
+  setBackdropSurface({ preset, scale, strength } = {}) {
+    if (preset !== undefined) this.backdropSurfacePreset = preset || 'none';
+    if (scale !== undefined) {
+      this.backdropSurfaceScale = Number(scale) || DEFAULT_SVG_EXTRUDE_SURFACE_SCALE;
+    }
+    if (strength !== undefined) {
+      this.backdropSurfaceStrength = clampSurfaceStrength(strength);
+    }
+    this.applyBackdropSurface();
+  }
+
+  applyBackdropSurface() {
+    const mat = this.backdrop?.material;
+    if (!mat) return;
+    const preset = this.backdropSurfacePreset ?? 'none';
+    const config = getSvgExtrudeSurfacePresetConfig(preset);
+    if (!config || config.kind === 'none') {
+      removeSvgExtrudeProceduralFromMaterial(mat);
+      return;
+    }
+    const mappingBounds =
+      config.kind === 'normalMap' ? computeExtrudeSurfaceMappingBounds(this.backdrop) : null;
+    applySvgExtrudeSurfaceToMaterial(mat, {
+      preset,
+      scale: this.backdropSurfaceScale,
+      strength: this.backdropSurfaceStrength,
+      normalBounds: mappingBounds,
+    });
   }
 
   _syncBackdropShadowFlags() {
@@ -1055,61 +1158,18 @@ export class GroundController {
     return target.copy(geom.boundingBox).applyMatrix4(_backdropRestMatrix);
   }
 
-  _ensureBackdropTexture(onReady) {
-    if (this.backdropTexture) {
-      onReady(this.backdropTexture);
-      return;
-    }
-    const texture = createProceduralBackdropTexture(512);
-    if (!texture) return;
-    this.backdropTexture = texture;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    const normalTexture = createProceduralBackdropNormalTexture(512);
-    if (normalTexture) {
-      this.backdropNormalTexture = normalTexture;
-      normalTexture.wrapS = THREE.RepeatWrapping;
-      normalTexture.wrapT = THREE.RepeatWrapping;
-      normalTexture.colorSpace = THREE.NoColorSpace;
-    }
-    onReady(texture);
-  }
-
-  _applyBackdropTextureSettings() {
+  _applyBackdropMaterial() {
     const material = this.backdrop?.material;
     if (!material) return;
-    const applyMap = (texture) => {
-      if (!material) return;
-      texture.repeat.set(this.backdropTextureScale, this.backdropTextureScale);
-      if (this.backdropNormalTexture) {
-        this.backdropNormalTexture.repeat.set(
-          this.backdropTextureScale,
-          this.backdropTextureScale,
-        );
-      }
-      // Keep albedo purely from user color; texture only adds physical surface detail.
-      material.map = null;
-      material.roughnessMap = this.backdropTextureEnabled ? texture : null;
-      material.bumpMap = null;
-      material.bumpScale = 0;
-      material.normalMap = this.backdropTextureEnabled ? this.backdropNormalTexture : null;
-      material.normalScale.setScalar(this.backdropTextureEnabled ? 0.9 : 0);
-      material.roughness = 0.9;
-      material.needsUpdate = true;
-    };
-    if (!this.backdropTextureEnabled) {
-      material.map = null;
-      material.bumpMap = null;
-      material.bumpScale = 0;
-      material.normalMap = null;
-      material.normalScale.setScalar(0);
-      material.roughnessMap = null;
-      material.roughness = 0.9;
-      material.needsUpdate = true;
-      return;
-    }
-    this._ensureBackdropTexture(applyMap);
+    material.metalness = this.backdropMetalness;
+    material.roughness = effectiveRoughnessWithHdriBlur(
+      this.backdropRoughness,
+      this._lastHdriBlurriness ?? 0,
+    );
+    const env = this._lastEnvTexture ?? this.scene.environment ?? null;
+    material.envMap = env;
+    material.envMapIntensity = Math.max(0, this._lastHdriIntensity ?? 1);
+    material.needsUpdate = true;
   }
 
   setDebugWireframeEnabled(enabled) {

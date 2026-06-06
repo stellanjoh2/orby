@@ -107,6 +107,9 @@ const NOT_FOUND_PRESET = {
   baseRoughness: 0.5,
   baseReflection: 1,
   baseClearcoat: 0,
+  baseSurfacePreset: 'none',
+  baseSurfaceScale: 1,
+  baseSurfaceStrength: 1,
   baseGlassSurface: false,
   baseGlassBlur: 0.1,
   baseGlassAmount: 0.5,
@@ -117,8 +120,11 @@ const NOT_FOUND_PRESET = {
   backdropColor: '#808080',
   backdropRotation: 0,
   backdropY: 0,
-  backdropTextureEnabled: false,
-  backdropTextureScale: 1.8,
+  backdropMetalness: 0.02,
+  backdropRoughness: 0.9,
+  backdropSurfacePreset: 'none',
+  backdropSurfaceScale: 1,
+  backdropSurfaceStrength: 1,
   gridScale: 1,
   lights: {
     key: {

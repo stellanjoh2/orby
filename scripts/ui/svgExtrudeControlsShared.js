@@ -19,9 +19,16 @@ import {
 } from '../scene/fontTextRevealTypes.js';
 import {
   clampSurfaceStrength,
+  clampSurfaceUiScale,
   getSvgExtrudeSurfacePresetConfig,
+  surfaceUiScaleToShaderScale,
   SVG_EXTRUDE_SURFACE_PRESETS,
 } from '../render/SvgExtrudeSurfaceShader.js';
+
+/** Readout: higher = finer detail (matches shader frequency). */
+function formatSurfaceDetailLabel(storedScale) {
+  return surfaceUiScaleToShaderScale(storedScale);
+}
 
 /**
  * Shared SVG / font extrude controls (same state.svgExtrude + mesh:* events).
@@ -48,8 +55,8 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
                 ${options}
               </select>
             </label>
-            <label class="slider-line">
-              <span data-tooltip="Pattern size in mesh-local units (uniform on caps, sides, and bevels; rotates with the model)">Surface Scale</span>
+            <label class="slider-line slider-line--surface-detail">
+              <span data-tooltip="Surface detail — finer pattern toward the right (mesh-local, rotates with the model)">Surface Detail</span>
               <input id="${scaleId}" type="range" min="0.2" max="10" step="0.05" value="1" />
               <span class="value" data-output="${scaleOutput}">1.00</span>
             </label>
@@ -233,6 +240,202 @@ export function ensureSvgExtrudeCoreControlsMounted() {
   mount.dataset.mounted = '1';
 }
 
+/** Mount shared surface controls into the Studio Base panel. */
+export function ensureBaseSurfaceControlsMounted() {
+  const mount = document.getElementById('baseSurfaceControlsMount');
+  if (!mount) return;
+  if (mount.dataset.mounted === '1' && mount.querySelector('#baseSurfaceStrength')) {
+    return;
+  }
+  mount.innerHTML = buildSvgExtrudeSurfaceControlsHtml({
+    presetId: 'baseSurfacePreset',
+    scaleId: 'baseSurfaceScale',
+    scaleOutput: 'baseSurfaceScale',
+    strengthId: 'baseSurfaceStrength',
+    strengthOutput: 'baseSurfaceStrength',
+    presetAriaLabel: 'Base surface material',
+  });
+  mount.dataset.mounted = '1';
+}
+
+function emitBaseSurface(eventBus, stateStore) {
+  eventBus.emit('studio:base-surface', {
+    preset: stateStore.getState().baseSurfacePreset ?? 'none',
+    scale: Number(stateStore.getState().baseSurfaceScale ?? 1) || 1.0,
+    strength: clampSurfaceStrength(stateStore.getState().baseSurfaceStrength ?? 1),
+  });
+}
+
+function syncBaseSurfaceStrengthControl(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  if (!inputs.surfaceStrength) return;
+  const config = getSvgExtrudeSurfacePresetConfig(state.baseSurfacePreset ?? 'none');
+  const isNormalMap = config.kind === 'normalMap';
+  const strength = clampSurfaceStrength(state.baseSurfaceStrength ?? 1);
+  if (document.activeElement !== inputs.surfaceStrength) {
+    inputs.surfaceStrength.value = strength;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+  }
+  ui.setControlDisabled(inputs.surfaceStrength, !canEdit || !isNormalMap);
+}
+
+/**
+ * @param {Object} ctx
+ * @param {Record<string, HTMLElement | null>} ctx.inputs
+ * @param {import('../StateStore.js').StateStore} ctx.stateStore
+ * @param {import('../EventBus.js').EventBus} ctx.eventBus
+ * @param {import('../UIManager.js').UIManager} ctx.ui
+ * @param {import('./UIHelpers.js').UIHelpers} ctx.helpers
+ */
+export function bindBaseSurfaceControls(ctx) {
+  const { inputs, stateStore, eventBus, ui, helpers } = ctx;
+
+  inputs.surfacePreset?.addEventListener('change', (event) => {
+    const preset = event?.target?.value || 'none';
+    stateStore.set('baseSurfacePreset', preset);
+    syncBaseSurfaceStrengthControl(ctx, stateStore.getState(), true);
+    emitBaseSurface(eventBus, stateStore);
+  });
+
+  inputs.surfaceScale?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const scale = clampSurfaceUiScale(Number.isFinite(value) ? value : 1.0);
+    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    stateStore.set('baseSurfaceScale', scale);
+    emitBaseSurface(eventBus, stateStore);
+  });
+  if (inputs.surfaceScale) helpers.enableSliderKeyboardStepping(inputs.surfaceScale);
+
+  inputs.surfaceStrength?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const strength = Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1.0;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+    stateStore.set('baseSurfaceStrength', strength);
+    emitBaseSurface(eventBus, stateStore);
+  });
+  if (inputs.surfaceStrength) helpers.enableSliderKeyboardStepping(inputs.surfaceStrength);
+}
+
+/**
+ * @param {Object} ctx
+ * @param {Record<string, unknown>} state
+ * @param {boolean} canEdit
+ */
+export function syncBaseSurfaceControls(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  if (inputs.surfacePreset) {
+    inputs.surfacePreset.value = state.baseSurfacePreset ?? 'none';
+    ui.setControlDisabled(inputs.surfacePreset, !canEdit);
+  }
+  if (inputs.surfaceScale) {
+    const scale = clampSurfaceUiScale(Number(state.baseSurfaceScale ?? 1) || 1.0);
+    if (document.activeElement !== inputs.surfaceScale) {
+      inputs.surfaceScale.value = scale;
+      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    }
+    ui.setControlDisabled(inputs.surfaceScale, !canEdit);
+  }
+  syncBaseSurfaceStrengthControl(ctx, state, canEdit);
+}
+
+/** Mount shared surface controls into the Studio backdrop panel. */
+export function ensureBackdropSurfaceControlsMounted() {
+  const mount = document.getElementById('backdropSurfaceControlsMount');
+  if (!mount) return;
+  if (mount.dataset.mounted === '1' && mount.querySelector('#backdropSurfaceStrength')) {
+    return;
+  }
+  mount.innerHTML = buildSvgExtrudeSurfaceControlsHtml({
+    presetId: 'backdropSurfacePreset',
+    scaleId: 'backdropSurfaceScale',
+    scaleOutput: 'backdropSurfaceScale',
+    strengthId: 'backdropSurfaceStrength',
+    strengthOutput: 'backdropSurfaceStrength',
+    presetAriaLabel: 'Studio backdrop surface material',
+  });
+  mount.dataset.mounted = '1';
+}
+
+function emitBackdropSurface(eventBus, stateStore) {
+  eventBus.emit('studio:backdrop-surface', {
+    preset: stateStore.getState().backdropSurfacePreset ?? 'none',
+    scale: Number(stateStore.getState().backdropSurfaceScale ?? 1) || 1.0,
+    strength: clampSurfaceStrength(stateStore.getState().backdropSurfaceStrength ?? 1),
+  });
+}
+
+function syncBackdropSurfaceStrengthControl(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  if (!inputs.surfaceStrength) return;
+  const config = getSvgExtrudeSurfacePresetConfig(state.backdropSurfacePreset ?? 'none');
+  const isNormalMap = config.kind === 'normalMap';
+  const strength = clampSurfaceStrength(state.backdropSurfaceStrength ?? 1);
+  if (document.activeElement !== inputs.surfaceStrength) {
+    inputs.surfaceStrength.value = strength;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+  }
+  ui.setControlDisabled(inputs.surfaceStrength, !canEdit || !isNormalMap);
+}
+
+/**
+ * @param {Object} ctx
+ * @param {Record<string, HTMLElement | null>} ctx.inputs
+ * @param {import('../StateStore.js').StateStore} ctx.stateStore
+ * @param {import('../EventBus.js').EventBus} ctx.eventBus
+ * @param {import('../UIManager.js').UIManager} ctx.ui
+ * @param {import('./UIHelpers.js').UIHelpers} ctx.helpers
+ */
+export function bindBackdropSurfaceControls(ctx) {
+  const { inputs, stateStore, eventBus, ui, helpers } = ctx;
+
+  inputs.surfacePreset?.addEventListener('change', (event) => {
+    const preset = event?.target?.value || 'none';
+    stateStore.set('backdropSurfacePreset', preset);
+    syncBackdropSurfaceStrengthControl(ctx, stateStore.getState(), true);
+    emitBackdropSurface(eventBus, stateStore);
+  });
+
+  inputs.surfaceScale?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const scale = clampSurfaceUiScale(Number.isFinite(value) ? value : 1.0);
+    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    stateStore.set('backdropSurfaceScale', scale);
+    emitBackdropSurface(eventBus, stateStore);
+  });
+  if (inputs.surfaceScale) helpers.enableSliderKeyboardStepping(inputs.surfaceScale);
+
+  inputs.surfaceStrength?.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    const strength = Number.isFinite(value) ? Math.max(0, Math.min(2, value)) : 1.0;
+    helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
+    stateStore.set('backdropSurfaceStrength', strength);
+    emitBackdropSurface(eventBus, stateStore);
+  });
+  if (inputs.surfaceStrength) helpers.enableSliderKeyboardStepping(inputs.surfaceStrength);
+}
+
+/**
+ * @param {Object} ctx
+ * @param {Record<string, unknown>} state
+ * @param {boolean} canEdit
+ */
+export function syncBackdropSurfaceControls(ctx, state, canEdit) {
+  const { inputs, helpers, ui } = ctx;
+  if (inputs.surfacePreset) {
+    inputs.surfacePreset.value = state.backdropSurfacePreset ?? 'none';
+    ui.setControlDisabled(inputs.surfacePreset, !canEdit);
+  }
+  if (inputs.surfaceScale) {
+    const scale = clampSurfaceUiScale(Number(state.backdropSurfaceScale ?? 1) || 1.0);
+    if (document.activeElement !== inputs.surfaceScale) {
+      inputs.surfaceScale.value = scale;
+      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
+    }
+    ui.setControlDisabled(inputs.surfaceScale, !canEdit);
+  }
+  syncBackdropSurfaceStrengthControl(ctx, state, canEdit);
+}
+
 /** Mount shared surface controls into the SVG Extrude panel (replaces static index.html copy). */
 export function ensureSvgExtrudeSurfaceControlsMounted() {
   const mount = document.getElementById('svgExtrudeSurfaceControlsMount');
@@ -333,8 +536,8 @@ export function bindSvgExtrudeControls(ctx) {
 
   inputs.surfaceScale?.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
-    const scale = Number.isFinite(value) ? Math.max(0.2, Math.min(10, value)) : 1.0;
-    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, scale, 'decimal');
+    const scale = clampSurfaceUiScale(Number.isFinite(value) ? value : 1.0);
+    helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
     stateStore.set('svgExtrude.surfaceScale', scale);
     emitSvgExtrudeSurface(eventBus, stateStore);
   });
@@ -543,11 +746,10 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     ui.setControlDisabled(inputs.surfacePreset, !canEdit);
   }
   if (inputs.surfaceScale) {
-    const raw = Number(svg.surfaceScale ?? 1) || 1.0;
-    const scale = Math.max(0.2, Math.min(10, raw));
+    const scale = clampSurfaceUiScale(Number(svg.surfaceScale ?? 1) || 1.0);
     if (document.activeElement !== inputs.surfaceScale) {
       inputs.surfaceScale.value = scale;
-      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, scale, 'decimal');
+      helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
     }
     ui.setControlDisabled(inputs.surfaceScale, !canEdit);
   }

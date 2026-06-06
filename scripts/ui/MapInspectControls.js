@@ -69,7 +69,6 @@ export class MapInspectControls {
     this._panelImage = document.getElementById('mapPreviewPanelImage');
     this._panelClose = document.getElementById('mapPreviewPanelClose');
     this._panelDrag = document.getElementById('mapPreviewPanelDrag');
-    this._panelZoom = document.getElementById('mapPreviewPanelZoom');
     this._fullsizeView = document.getElementById('mapFullsizeView');
     this._fullsizeViewport = document.getElementById('mapFullsizeViewport');
     this._fullsizeCanvas = document.getElementById('mapFullsizeCanvas');
@@ -80,7 +79,13 @@ export class MapInspectControls {
     this._fullsizeClose = document.getElementById('mapFullsizeClose');
 
     this._panelClose?.addEventListener('click', () => this.closePanel());
-    this._panelZoom?.addEventListener('click', () => this.openFullsize());
+    this._panelImage?.addEventListener('click', () => this.openFullsize());
+    this._panelImage?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        this.openFullsize();
+      }
+    });
     this._panelImage?.addEventListener('load', () => this._fitPanelToImage());
     this._fullsizeClose?.addEventListener('click', () => this.closeFullsize());
     this._fullsizeViewport?.addEventListener('pointerdown', (event) => this._startFullsizePan(event));

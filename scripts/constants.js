@@ -76,6 +76,9 @@ export const NORMALS_HELPER_COLOR = '#4db3ff';
 /** Neutral PBR default on load (glTF often ~0.5; 0.8 read overly chalky under HDR). */
 export const DEFAULT_MATERIAL_ROUGHNESS = 0.5;
 export const DEFAULT_MATERIAL_METALNESS = 0.08;
+/** Studio cyclorama defaults — matte paper-like out of the box. */
+export const DEFAULT_BACKDROP_METALNESS = 0.02;
+export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
 /** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
 export const DEFAULT_MATERIAL_BRIGHTNESS = 1.5;
 

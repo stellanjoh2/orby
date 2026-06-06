@@ -47,7 +47,7 @@ import { openInfoSectionTarget } from './ui/infoSections.js';
 import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
-import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
+import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted, ensureBaseSurfaceControlsMounted, ensureBackdropSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { BackgroundGradientControls } from './ui/BackgroundGradientControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
@@ -281,6 +281,8 @@ export class UIManager {
     const q = (sel) => document.querySelector(sel);
     ensureSvgExtrudeCoreControlsMounted();
     ensureSvgExtrudeSurfaceControlsMounted();
+    ensureBaseSurfaceControlsMounted();
+    ensureBackdropSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
     this.dom.offlineExportOverlay = q('#viewportOfflineExportOverlay');
@@ -446,14 +448,20 @@ export class UIManager {
       baseScale: q('#baseScale'),
       baseMetalness: q('#baseMetalness'),
       baseRoughness: q('#baseRoughness'),
+      baseSurfacePreset: q('#baseSurfacePreset'),
+      baseSurfaceScale: q('#baseSurfaceScale'),
+      baseSurfaceStrength: q('#baseSurfaceStrength'),
       baseGlassSurface: q('#baseGlassSurface'),
       baseGlassBrightness: q('#baseGlassBrightness'),
       baseGlassBlur: q('#baseGlassBlur'),
       baseGlassAmount: q('#baseGlassAmount'),
       backdropEnabled: q('#backdropEnabled'),
       backdropColor: q('#backdropColor'),
-      backdropTextureEnabled: q('#backdropTextureEnabled'),
-      backdropTextureScale: q('#backdropTextureScale'),
+      backdropMetalness: q('#backdropMetalness'),
+      backdropRoughness: q('#backdropRoughness'),
+      backdropSurfacePreset: q('#backdropSurfacePreset'),
+      backdropSurfaceScale: q('#backdropSurfaceScale'),
+      backdropSurfaceStrength: q('#backdropSurfaceStrength'),
       backdropScale: q('#backdropScale'),
       backdropWidth: q('#backdropWidth'),
       backdropRotation: q('#backdropRotation'),
@@ -2057,6 +2065,7 @@ export class UIManager {
       );
     }
 
+    this.beginShelfOverlaySuppression();
     this.dom.viewport?.classList.add('is-offline-export-capture');
     const overlay = this.dom.offlineExportOverlay;
     if (overlay) {
@@ -2091,6 +2100,7 @@ export class UIManager {
   }
 
   hideOfflineExportOverlay() {
+    this.endShelfOverlaySuppression();
     this.dom.viewport?.classList.remove('is-offline-export-capture');
     const overlay = this.dom.offlineExportOverlay;
     if (overlay) {
@@ -3211,6 +3221,9 @@ export class UIManager {
         'baseScale',
         'baseMetalness',
         'baseRoughness',
+        'baseSurfacePreset',
+        'baseSurfaceScale',
+        'baseSurfaceStrength',
         'baseSnap',
       ],
       !podiumOn,
@@ -3223,8 +3236,11 @@ export class UIManager {
     this.setControlDisabled(
       [
         'backdropColor',
-        'backdropTextureEnabled',
-        'backdropTextureScale',
+        'backdropMetalness',
+        'backdropRoughness',
+        'backdropSurfacePreset',
+        'backdropSurfaceScale',
+        'backdropSurfaceStrength',
         'backdropScale',
         'backdropWidth',
         'backdropRotation',
@@ -3232,10 +3248,6 @@ export class UIManager {
         'backdropSnap',
       ],
       !backdropOn,
-    );
-    this.setControlDisabled(
-      'backdropTextureScale',
-      !(backdropOn && !!currentState.backdropTextureEnabled),
     );
 
     // Grid foldout — open state handled in applyMeshFoldouts

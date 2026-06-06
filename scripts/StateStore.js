@@ -4,6 +4,8 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
@@ -13,6 +15,12 @@ import { defaultAberration } from './render/chromaticAberration.js';
 import { normalizeToneCurve } from './math/toneCurvePchip.js';
 import { deepClone } from './utils/deepClone.js';
 import { migrateLegacyGroundKeys } from './state/migrateLegacyGroundKeys.js';
+import {
+  DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+  DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+  DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
+  DEFAULT_SVG_EXTRUDE_STATE,
+} from './import/extrudeDefaults.js';
 import { GOBO_UI_DEFAULT } from './render/GoboProjection.js';
 import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
@@ -20,7 +28,6 @@ import {
   DEFAULT_CAMERA_POSITION,
   defaultCameraDistance,
 } from './camera/cameraDefaults.js';
-import { DEFAULT_SVG_EXTRUDE_STATE } from './import/extrudeDefaults.js';
 
 export class StateStore {
   constructor() {
@@ -154,6 +161,9 @@ export class StateStore {
       baseRoughness: DEFAULT_MATERIAL_ROUGHNESS,
       baseReflection: 1,
       baseClearcoat: 0,
+      baseSurfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+      baseSurfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+      baseSurfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
       /** Planar glass reflection on solid base top — off until user enables Glass (requires base). */
       baseGlassSurface: false,
       baseGlassBlur: DEFAULT_BASE_GLASS_BLUR,
@@ -165,8 +175,11 @@ export class StateStore {
       backdropColor: '#808080',
       backdropRotation: 0,
       backdropY: 0,
-      backdropTextureEnabled: false,
-      backdropTextureScale: 1.8,
+      backdropMetalness: DEFAULT_BACKDROP_METALNESS,
+      backdropRoughness: DEFAULT_BACKDROP_ROUGHNESS,
+      backdropSurfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
+      backdropSurfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
+      backdropSurfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
       groundSolidColor: '#808080',
       groundWireColor: ORBY_LIME,
       clay: {

@@ -421,6 +421,7 @@ export class EventManager {
     eventBus.on('studio:base-roughness', (value) => s.setBaseRoughness(value));
     eventBus.on('studio:base-reflection', (value) => s.setBaseReflection(value));
     eventBus.on('studio:base-clearcoat', (value) => s.setBaseClearcoat(value));
+    eventBus.on('studio:base-surface', (payload) => s.setBaseSurface(payload ?? {}));
     eventBus.on('studio:base-glass-surface', (enabled) => s.setBaseGlassSurface(enabled));
     eventBus.on('studio:base-glass-blur', (value) => s.setBaseGlassBlur(value));
     eventBus.on('studio:base-glass-amount', (value) => s.setBaseGlassAmount(value));
@@ -431,8 +432,9 @@ export class EventManager {
     eventBus.on('studio:backdrop-color', (color) => s.setBackdropColor(color));
     eventBus.on('studio:backdrop-rotation', (value) => s.setBackdropRotation(value));
     eventBus.on('studio:backdrop-y', (value) => s.setBackdropY(value));
-    eventBus.on('studio:backdrop-texture-enabled', (enabled) => s.setBackdropTextureEnabled(enabled));
-    eventBus.on('studio:backdrop-texture-scale', (value) => s.setBackdropTextureScale(value));
+    eventBus.on('studio:backdrop-metalness', (value) => s.setBackdropMetalness(value));
+    eventBus.on('studio:backdrop-roughness', (value) => s.setBackdropRoughness(value));
+    eventBus.on('studio:backdrop-surface', (payload) => s.setBackdropSurface(payload ?? {}));
     eventBus.on('studio:backdrop-snap', () => s.snapBackdropToBottom());
     eventBus.on('studio:grid-scale', (value) => s.setGridScale(value));
     eventBus.on('studio:grid-line-width', (value) => s.setGridLineWidth(value));

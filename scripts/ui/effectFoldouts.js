@@ -53,7 +53,6 @@ export function applyStudioFoldouts(state, setOpen) {
   setOpen('base', podiumOn);
   setOpen('base-glass', podiumOn && glassOn);
   setOpen('backdrop', backdropOn);
-  setOpen('backdrop-texture', backdropOn && !!state.backdropTextureEnabled);
   setOpen('background-gradient', !!state.backgroundGradient?.enabled && isBackgroundFallbackActive(state));
   setOpen('lights-rig', lightsOn);
   setOpen('lights-shadows', lightsOn && !!state.lightsCastShadows);

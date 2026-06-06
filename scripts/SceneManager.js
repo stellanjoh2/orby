@@ -21,6 +21,8 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_BACKDROP_METALNESS,
+  DEFAULT_BACKDROP_ROUGHNESS,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
@@ -868,6 +870,9 @@ export class SceneManager {
       baseRoughness: state.baseRoughness,
       baseReflection: state.baseReflection,
       baseClearcoat: state.baseClearcoat,
+      baseSurfacePreset: state.baseSurfacePreset,
+      baseSurfaceScale: state.baseSurfaceScale,
+      baseSurfaceStrength: state.baseSurfaceStrength,
       renderer: this.renderer,
       baseGlassSurface: !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false),
       baseGlassBlur: state.baseGlassBlur ?? DEFAULT_BASE_GLASS_BLUR,
@@ -879,8 +884,11 @@ export class SceneManager {
       backdropColor: state.backdropColor ?? '#808080',
       backdropRotation: state.backdropRotation ?? 0,
       backdropY: state.backdropY ?? 0,
-      backdropTextureEnabled: !!state.backdropTextureEnabled,
-      backdropTextureScale: state.backdropTextureScale ?? 1.8,
+      backdropMetalness: state.backdropMetalness ?? DEFAULT_BACKDROP_METALNESS,
+      backdropRoughness: state.backdropRoughness ?? DEFAULT_BACKDROP_ROUGHNESS,
+      backdropSurfacePreset: state.backdropSurfacePreset,
+      backdropSurfaceScale: state.backdropSurfaceScale,
+      backdropSurfaceStrength: state.backdropSurfaceStrength,
       debugWireframeEnabled: false,
     });
   }
@@ -2336,6 +2344,19 @@ export class SceneManager {
     if (updateState) this.stateStore.set('baseClearcoat', value);
   }
 
+  setBaseSurface(settings = {}, { updateState = true } = {}) {
+    const state = this.stateStore.getState();
+    const preset = settings.preset ?? state.baseSurfacePreset ?? 'none';
+    const scale = settings.scale ?? state.baseSurfaceScale ?? 1;
+    const strength = settings.strength ?? state.baseSurfaceStrength ?? 1;
+    if (updateState) {
+      if (settings.preset !== undefined) this.stateStore.set('baseSurfacePreset', preset);
+      if (settings.scale !== undefined) this.stateStore.set('baseSurfaceScale', scale);
+      if (settings.strength !== undefined) this.stateStore.set('baseSurfaceStrength', strength);
+    }
+    this.groundController?.setBaseSurface({ preset, scale, strength });
+  }
+
   setBaseGlassSurface(enabled, { updateState = true } = {}) {
     const on = !!enabled;
     this.groundController?.setBaseGlassSurface(on);
@@ -2401,15 +2422,27 @@ export class SceneManager {
     this._syncShadowCameraBounds();
   }
 
-  setBackdropTextureEnabled(enabled, { updateState = true } = {}) {
-    const on = !!enabled;
-    this.groundController?.setBackdropTextureEnabled(on);
-    if (updateState) this.stateStore.set('backdropTextureEnabled', on);
+  setBackdropMetalness(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropMetalness(value);
+    if (updateState) this.stateStore.set('backdropMetalness', value);
   }
 
-  setBackdropTextureScale(value, { updateState = true } = {}) {
-    this.groundController?.setBackdropTextureScale(value);
-    if (updateState) this.stateStore.set('backdropTextureScale', value);
+  setBackdropRoughness(value, { updateState = true } = {}) {
+    this.groundController?.setBackdropRoughness(value);
+    if (updateState) this.stateStore.set('backdropRoughness', value);
+  }
+
+  setBackdropSurface(settings = {}, { updateState = true } = {}) {
+    const state = this.stateStore.getState();
+    const preset = settings.preset ?? state.backdropSurfacePreset ?? 'none';
+    const scale = settings.scale ?? state.backdropSurfaceScale ?? 1;
+    const strength = settings.strength ?? state.backdropSurfaceStrength ?? 1;
+    if (updateState) {
+      if (settings.preset !== undefined) this.stateStore.set('backdropSurfacePreset', preset);
+      if (settings.scale !== undefined) this.stateStore.set('backdropSurfaceScale', scale);
+      if (settings.strength !== undefined) this.stateStore.set('backdropSurfaceStrength', strength);
+    }
+    this.groundController?.setBackdropSurface({ preset, scale, strength });
   }
 
   snapBackdropToBottom() {
