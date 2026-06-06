@@ -48,10 +48,14 @@ export class StateStore {
         enabled: false,
         /** Material name group key for Map Slots (FBX often clones one material per mesh). */
         activeMaterial: '',
-        /** DirectX-style normal maps vs OpenGL — toggles tangent Y via normalScale. */
-        invertNormalY: false,
-        /** 0 = first UV (`uv`), 1 = second (`uv2`) — Three.js Texture.channel for detail maps only; base color stays on `uv`. */
-        pbrUvChannel: 0,
+        /** Default tuning for new materials; per-material overrides live in `materials`. */
+        defaults: {
+          normalConvention: 'match-albedo',
+          pbrUvChannel: 0,
+          ormPacking: 'gltf',
+        },
+        /** @type {Record<string, { normalConvention?: string, pbrUvChannel?: number, ormPacking?: string }>} */
+        materials: {},
       },
       fontExtrude: {
         panelOpen: false,

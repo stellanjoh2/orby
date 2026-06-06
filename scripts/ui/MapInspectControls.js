@@ -11,10 +11,13 @@ import {
   mapInspectPanelTabs,
   mapInspectPreviewContext,
   mapInspectSlotLabel,
+  mapInspectTextureFileName,
   textureToDataUrl,
+  textureToFullSizeUrl,
   textureToPreviewUrl,
   watchPendingMapTextures,
 } from '../render/mapInspectTypes.js';
+import { ORBY_BLACK } from '../constants.js';
 
 export class MapInspectControls {
   /**
@@ -35,6 +38,22 @@ export class MapInspectControls {
     this._modalSlot = null;
     /** @type {boolean} */
     this._panelOpen = false;
+    /** @type {boolean} */
+    this._fullsizeOpen = false;
+    /** @type {boolean} */
+    this._panelHiddenForFullsize = false;
+    /** @type {number} */
+    this._fullsizePanX = 0;
+    /** @type {number} */
+    this._fullsizePanY = 0;
+    /** @type {number} */
+    this._fullsizeDpr = 1;
+    /** @type {{ vw: number, vh: number, iw: number, ih: number, minX: number, maxX: number, minY: number, maxY: number } | null} */
+    this._fullsizeBounds = null;
+    /** @type {number | null} */
+    this._fullsizeRedrawRafId = null;
+    /** @type {CanvasRenderingContext2D | null} */
+    this._fullsizeCanvasCtx = null;
     /** @type {(() => void) | null} */
     this._textureWatchDispose = null;
     /** @type {number} */
@@ -49,8 +68,31 @@ export class MapInspectControls {
     this._panelImage = document.getElementById('mapPreviewPanelImage');
     this._panelClose = document.getElementById('mapPreviewPanelClose');
     this._panelDrag = document.getElementById('mapPreviewPanelDrag');
+    this._panelZoom = document.getElementById('mapPreviewPanelZoom');
+    this._fullsizeView = document.getElementById('mapFullsizeView');
+    this._fullsizeViewport = document.getElementById('mapFullsizeViewport');
+    this._fullsizeCanvas = document.getElementById('mapFullsizeCanvas');
+    this._fullsizeImage = document.getElementById('mapFullsizeImage');
+    this._fullsizeCanvasCtx = this._fullsizeCanvas?.getContext('2d', { alpha: false }) ?? null;
+    this._fullsizeName = document.getElementById('mapFullsizeName');
+    this._fullsizeDims = document.getElementById('mapFullsizeDims');
+    this._fullsizeClose = document.getElementById('mapFullsizeClose');
 
     this._panelClose?.addEventListener('click', () => this.closePanel());
+    this._panelZoom?.addEventListener('click', () => this.openFullsize());
+    this._fullsizeClose?.addEventListener('click', () => this.closeFullsize());
+    this._fullsizeViewport?.addEventListener('pointerdown', (event) => this._startFullsizePan(event));
+    this._fullsizeImage?.addEventListener('load', () => {
+      this._updateFullsizeMeta();
+      this._centerFullsizeImage();
+    });
+    this._onFullsizeResize = () => {
+      if (!this._fullsizeOpen) return;
+      if (this._cacheFullsizeLayout()) {
+        this._clampFullsizePan();
+      }
+    };
+    window.addEventListener('resize', this._onFullsizeResize);
     this._panelDrag?.addEventListener('pointerdown', (event) => this._startPanelDrag(event));
 
     this._onDisplayModeClick = (event) => {
@@ -76,7 +118,13 @@ export class MapInspectControls {
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && this._panelOpen) {
+      if (event.key !== 'Escape') return;
+      if (this._fullsizeOpen) {
+        event.preventDefault();
+        this.closeFullsize();
+        return;
+      }
+      if (this._panelOpen) {
         event.preventDefault();
         this.closePanel();
       }
@@ -146,6 +194,9 @@ export class MapInspectControls {
       this._renderPanelTabs();
       this._syncPanelImage();
     }
+    if (this._fullsizeOpen) {
+      this._syncFullsizeImage();
+    }
   }
 
   reset() {
@@ -156,6 +207,7 @@ export class MapInspectControls {
     this._textureMaps = [];
     if (this._block) this._block.hidden = true;
     if (this._grid) this._grid.replaceChildren();
+    this.closeFullsize();
     this.closePanel();
     this._unpinPreview();
   }
@@ -347,6 +399,10 @@ export class MapInspectControls {
       this._syncModalTabActive();
       this._syncPanelImage();
     }
+    if (this._fullsizeOpen) {
+      this._modalSlot = slotId;
+      this._syncFullsizeImage();
+    }
     this.eventBus.emit('mesh:map-inspect-preview', slotId);
 
     if (toast && this._suppressModeToasts === 0 && slotId !== prev) {
@@ -405,9 +461,58 @@ export class MapInspectControls {
 
   closePanel() {
     if (!this._panel) return;
+    this.closeFullsize();
     this._panelOpen = false;
     this._panel.hidden = true;
     this._modalSlot = null;
+  }
+
+  openFullsize() {
+    if (!this._fullsizeView || this._textureMaps.length === 0) return;
+    const slotId = this._modalSlot ?? this._pinnedSlot ?? mapInspectDefaultSlotId(this._textureMaps);
+    if (!slotId) return;
+
+    this._fullsizeOpen = true;
+    this._fullsizeView.hidden = false;
+    this.ui.beginShelfOverlaySuppression?.();
+    if (this._panelOpen && this._panel) {
+      this._panel.hidden = true;
+      this._panelHiddenForFullsize = true;
+    }
+    if (this._modalSlot !== slotId) {
+      this._modalSlot = slotId;
+      this._syncModalTabActive();
+      this._syncPanelImage();
+      this._pinSlot(slotId, { toast: false });
+    }
+    this._syncFullsizeImage();
+    requestAnimationFrame(() => {
+      if (!this._fullsizeOpen) return;
+      if (this._cacheFullsizeLayout()) {
+        this._centerFullsizeImage();
+      }
+    });
+    this.ui.uiSounds?.playShelfShow?.();
+  }
+
+  closeFullsize() {
+    if (!this._fullsizeView || !this._fullsizeOpen) return;
+    this._fullsizeOpen = false;
+    this._fullsizeView.hidden = true;
+    this._cancelFullsizeRedraw();
+    this._fullsizeBounds = null;
+    this.ui.endShelfOverlaySuppression?.();
+    if (this._panelHiddenForFullsize && this._panel && this._panelOpen) {
+      this._panel.hidden = false;
+    }
+    this._panelHiddenForFullsize = false;
+    if (this._fullsizeImage) {
+      this._fullsizeImage.removeAttribute('src');
+      this._fullsizeImage.alt = '';
+    }
+    if (this._fullsizeName) this._fullsizeName.textContent = 'Texture map';
+    if (this._fullsizeDims) this._fullsizeDims.textContent = '';
+    this._fullsizeViewport?.classList.remove('is-dragging');
   }
 
   _renderPanelTabs() {
@@ -436,6 +541,7 @@ export class MapInspectControls {
         this._modalSlot = tab.slotId;
         this._syncModalTabActive();
         this._syncPanelImage();
+        if (this._fullsizeOpen) this._syncFullsizeImage();
         this._pinSlot(tab.slotId);
         this.ui.uiSounds?.playSelect?.();
       });
@@ -467,6 +573,189 @@ export class MapInspectControls {
       this._panelImage.src = url;
     }
     this._panelImage.alt = ctx.label;
+  }
+
+  _syncFullsizeImage() {
+    if (!this._fullsizeImage) return;
+    const entry = mapInspectFindEntryForSlot(this._textureMaps, this._modalSlot) ?? this._textureMaps[0];
+    const slotId = this._modalSlot ?? mapInspectDefaultSlotId(this._textureMaps);
+    const ctx = entry ? mapInspectPreviewContext(entry, slotId) : null;
+    if (!ctx?.texture) {
+      this._fullsizeImage.removeAttribute('src');
+      this._fullsizeImage.alt = '';
+      if (this._fullsizeName) this._fullsizeName.textContent = 'Texture map';
+      if (this._fullsizeDims) this._fullsizeDims.textContent = '';
+      return;
+    }
+
+    const url = textureToFullSizeUrl(entry, slotId);
+    if (url) {
+      this._fullsizeImage.src = url;
+    }
+    this._fullsizeImage.alt = ctx.label;
+    this._syncFullsizeMeta(ctx.texture, slotId, ctx.label);
+    if (this._fullsizeImage.complete && this._fullsizeImage.naturalWidth > 0) {
+      this._updateFullsizeMeta();
+      this._centerFullsizeImage();
+    }
+  }
+
+  /**
+   * @param {import('three').Texture} texture
+   * @param {string | null | undefined} slotId
+   * @param {string} fallbackLabel
+   */
+  _syncFullsizeMeta(texture, slotId, fallbackLabel) {
+    if (!this._fullsizeName) return;
+    const model = this._getModel?.() ?? null;
+    const originalMaterials = this._getOriginalMaterials?.() ?? null;
+    const fileName =
+      mapInspectTextureFileName(texture, slotId, model, originalMaterials ?? undefined) ||
+      fallbackLabel;
+    this._fullsizeName.textContent = fileName;
+  }
+
+  _updateFullsizeMeta() {
+    if (!this._fullsizeDims || !this._fullsizeImage) return;
+    const w = this._fullsizeImage.naturalWidth;
+    const h = this._fullsizeImage.naturalHeight;
+    this._fullsizeDims.textContent =
+      w > 0 && h > 0 ? ` · ${w} × ${h} px · 100% scale` : '';
+  }
+
+  _cancelFullsizeRedraw() {
+    if (this._fullsizeRedrawRafId == null) return;
+    cancelAnimationFrame(this._fullsizeRedrawRafId);
+    this._fullsizeRedrawRafId = null;
+  }
+
+  _scheduleFullsizeRedraw() {
+    if (this._fullsizeRedrawRafId != null) return;
+    this._fullsizeRedrawRafId = requestAnimationFrame(() => {
+      this._fullsizeRedrawRafId = null;
+      this._drawFullsizeCanvas();
+    });
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  _cacheFullsizeLayout() {
+    if (!this._fullsizeViewport || !this._fullsizeCanvas || !this._fullsizeImage) return false;
+
+    const iw = this._fullsizeImage.naturalWidth;
+    const ih = this._fullsizeImage.naturalHeight;
+    const vw = this._fullsizeViewport.clientWidth;
+    const vh = this._fullsizeViewport.clientHeight;
+    if (!vw || !vh || !iw || !ih) return false;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this._fullsizeDpr = dpr;
+    const centerX = (vw - iw) / 2;
+    const centerY = (vh - ih) / 2;
+    this._fullsizeBounds = {
+      vw,
+      vh,
+      iw,
+      ih,
+      minX: iw <= vw ? centerX : vw - iw,
+      maxX: iw <= vw ? centerX : 0,
+      minY: ih <= vh ? centerY : vh - ih,
+      maxY: ih <= vh ? centerY : 0,
+    };
+
+    const canvas = this._fullsizeCanvas;
+    const cw = Math.round(vw * dpr);
+    const ch = Math.round(vh * dpr);
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+      canvas.style.width = `${vw}px`;
+      canvas.style.height = `${vh}px`;
+      this._fullsizeCanvasCtx = canvas.getContext('2d', { alpha: false });
+    }
+
+    return !!this._fullsizeCanvasCtx;
+  }
+
+  _drawFullsizeCanvas() {
+    const ctx = this._fullsizeCanvasCtx;
+    const canvas = this._fullsizeCanvas;
+    const img = this._fullsizeImage;
+    const bounds = this._fullsizeBounds;
+    if (!ctx || !canvas || !img?.complete || !bounds) return;
+
+    const { vw, vh, iw, ih } = bounds;
+    const panX = this._fullsizePanX;
+    const panY = this._fullsizePanY;
+    const dpr = this._fullsizeDpr;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = ORBY_BLACK;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const srcX = Math.max(0, -panX);
+    const srcY = Math.max(0, -panY);
+    const destX = panX > 0 ? panX : 0;
+    const destY = panY > 0 ? panY : 0;
+    const visW = Math.min(iw - srcX, vw - destX);
+    const visH = Math.min(ih - srcY, vh - destY);
+    if (visW <= 0 || visH <= 0) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, srcX, srcY, visW, visH, destX, destY, visW, visH);
+  }
+
+  _centerFullsizeImage() {
+    if (!this._cacheFullsizeLayout()) return;
+    const bounds = this._fullsizeBounds;
+    if (!bounds) return;
+    this._fullsizePanX = (bounds.vw - bounds.iw) / 2;
+    this._fullsizePanY = (bounds.vh - bounds.ih) / 2;
+    this._clampFullsizePan();
+  }
+
+  _clampFullsizePan() {
+    const bounds = this._fullsizeBounds;
+    if (!bounds) return;
+
+    this._fullsizePanX = Math.max(bounds.minX, Math.min(bounds.maxX, this._fullsizePanX));
+    this._fullsizePanY = Math.max(bounds.minY, Math.min(bounds.maxY, this._fullsizePanY));
+    this._scheduleFullsizeRedraw();
+  }
+
+  /**
+   * @param {PointerEvent} event
+   */
+  _startFullsizePan(event) {
+    if (!this._fullsizeViewport || !this._fullsizeOpen || event.button !== 0) return;
+    event.preventDefault();
+
+    const viewport = this._fullsizeViewport;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const originX = this._fullsizePanX;
+    const originY = this._fullsizePanY;
+
+    viewport.setPointerCapture?.(event.pointerId);
+    viewport.classList.add('is-dragging');
+
+    const onMove = (moveEvent) => {
+      this._fullsizePanX = originX + (moveEvent.clientX - startX);
+      this._fullsizePanY = originY + (moveEvent.clientY - startY);
+      this._clampFullsizePan();
+    };
+
+    const onUp = (upEvent) => {
+      viewport.releasePointerCapture?.(upEvent.pointerId);
+      viewport.classList.remove('is-dragging');
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
   }
 
   _positionPanelDefault() {

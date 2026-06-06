@@ -26,6 +26,7 @@ import {
 const FBX_IMPORT_WIP_ALERT_BODY =
   'FBX import is still a work in progress. Phong/Lambert materials are converted to PBR so mesh sliders behave like GLB; ' +
   'UV sets, packed maps, and external textures may still differ from your DCC. ' +
+  'When you drop a folder, Orby auto-assigns images named like MaterialName_BaseColor.png to matching materials. ' +
   'For reliable shading, prefer GLB or glTF when you can. You can still tweak textures under Object → Map Slots.';
 
 function buildFbxImportAlert(object) {
@@ -67,10 +68,9 @@ export class ModelLifecycleManager {
   clearModel() {
     const s = this.scene;
     if (!s.modelRoot) return;
-    s.stateStore.set('fbxMapSlots.enabled', false);
-    s.stateStore.set('fbxMapSlots.activeMaterial', '');
-    s.stateStore.set('fbxMapSlots.invertNormalY', false);
-    s.stateStore.set('fbxMapSlots.pbrUvChannel', 0);
+    const fbxDefaults = s.stateStore.getDefaults().fbxMapSlots;
+    s.stateStore.set('fbxMapSlots', { ...fbxDefaults, enabled: false, activeMaterial: '' });
+    s._fbxImportBundle = null;
     s.diagnosticsController.clearBoneHelpers();
     s.materialController.clear();
     s.modelLoader.disposeObjectUrls();
@@ -425,6 +425,7 @@ export class ModelLifecycleManager {
       });
       this.setModel(asset.object, asset.animations ?? []);
       this.applyAssetMetadata(asset);
+      s._fbxImportBundle = null;
       const isFbx = this._configureFbxAfterLoad(file, asset.object);
       s.updateStatsUI(file, asset.object, asset.gltfMetadata);
       s.ui.updateTopBarDetail(`${file.name} — Idle`);
@@ -483,10 +484,23 @@ export class ModelLifecycleManager {
       }
       this.setModel(asset.object, asset.animations ?? []);
       this.applyAssetMetadata(asset);
+      s._fbxImportBundle = files;
       const isFbx = this._configureFbxAfterLoad(sourceFile, asset.object);
+      let autoAssigned = 0;
+      if (isFbx) {
+        const result = await s.autoAssignFbxTexturesFromBundle(files, asset.object);
+        autoAssigned = result.applied;
+      }
       s.updateStatsUI(sourceFile, asset.object, asset.gltfMetadata);
       if (isFbx) {
         this._presentFbxImportFeedback(asset.object);
+        if (autoAssigned > 0) {
+          const label =
+            autoAssigned === 1 ? '1 texture' : `${autoAssigned} textures`;
+          s.ui.showToast(`Auto-assigned ${label} from folder`, 3600, {
+            notification: false,
+          });
+        }
       } else {
         s.ui.showToast('Folder loaded', 3200, { notification: false });
       }

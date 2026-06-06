@@ -16,6 +16,8 @@ import {
   resolveBloomQualityTier,
   isBloomPipelineActive,
   resolveRenderQualityTier,
+  isKeyLightOnlyShadowCastingRenderQuality,
+  castShadowLightIdsForGlobalToggle,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
@@ -31,6 +33,13 @@ import { EnvironmentController } from './render/EnvironmentController.js';
 import { HdriMoodController } from './render/HdriMoodController.js';
 import { CameraController } from './render/CameraController.js';
 import { ModelLoader } from './render/ModelLoader.js';
+import { analyzeFbxMaterials } from './import/fbxMaterialReport.js';
+import { buildFbxAutoAssignPlan } from './import/fbxAutoAssignTextures.js';
+import {
+  applyFbxTuningToAllMaterials,
+  normalizeFbxMapSlotsState,
+  setFbxMaterialTuning,
+} from './import/fbxMapSlotsSettings.js';
 import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { MaterialController } from './render/MaterialController.js';
@@ -190,6 +199,8 @@ export class SceneManager {
     this.lightsAutoRotateSpeed = lightsAutoRotateDegreesPerSecond();
     this.currentFile = null;
     this.currentModel = null;
+    /** Folder bundle from last `loadFileBundle` — used by Map Slots “Scan folder again”. */
+    this._fbxImportBundle = null;
     this.currentAssetMetadata = null;
     this.svgExtrudeImporter = null;
     this.isSvgExtrudeModel = false;
@@ -1481,6 +1492,13 @@ export class SceneManager {
     this.lightsController?.setShadowMapResolution(shadowSize);
     // PCFSoft ignores shadow.radius; softness slider drives radius on PCFShadowMap only.
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this._syncEffectiveCastShadows();
+    const shadowsOn = !!state.lightsEnabled && !!state.lightsCastShadows;
+    const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(state.renderQuality);
+    this.ui?.setControlDisabled?.(
+      ['fillLightCastShadows', 'rimLightCastShadows'],
+      !shadowsOn || keyOnly,
+    );
   }
 
   _hasHdriPreset(preset) {
@@ -2450,8 +2468,9 @@ export class SceneManager {
         this.stateStore.set(`lights.${id}.enabled`, true);
       });
       if (state.lightsCastShadows) {
+        const castIds = castShadowLightIdsForGlobalToggle(state.renderQuality);
         ['key', 'fill', 'rim'].forEach((id) => {
-          this.stateStore.set(`lights.${id}.castShadows`, true);
+          this.stateStore.set(`lights.${id}.castShadows`, castIds.includes(id));
         });
       }
     });
@@ -2488,10 +2507,15 @@ export class SceneManager {
   }
 
   _syncEffectiveCastShadows() {
+    const state = this.stateStore.getState();
     const globalCast = this._isShadowTintActive();
-    const lightsState = this.stateStore.getState().lights ?? {};
+    const lightsState = state.lights ?? {};
+    const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(state.renderQuality);
     ['key', 'fill', 'rim'].forEach((lightId) => {
-      const perLight = globalCast && lightsState[lightId]?.castShadows === true;
+      let perLight = globalCast && lightsState[lightId]?.castShadows === true;
+      if (keyOnly && lightId !== 'key') {
+        perLight = false;
+      }
       this.lightsController?.updateLightProperty(lightId, 'castShadows', perLight);
     });
     this._applyKeyLightGoboShadowOverride();
@@ -2646,12 +2670,28 @@ export class SceneManager {
   setLightsCastShadows(enabled) {
     const next = !!enabled;
     this.lightsCastShadows = next;
-    if (this.stateStore.getState().lightsCastShadows !== next) {
+    const state = this.stateStore.getState();
+    if (state.lightsCastShadows !== next) {
       this.stateStore.set('lightsCastShadows', next);
+    }
+    if (next) {
+      const castIds = castShadowLightIdsForGlobalToggle(state.renderQuality);
+      this.stateStore.batch(() => {
+        ['key', 'fill', 'rim'].forEach((id) => {
+          this.stateStore.set(`lights.${id}.castShadows`, castIds.includes(id));
+        });
+      });
+    } else {
+      this.stateStore.batch(() => {
+        ['key', 'fill', 'rim'].forEach((id) => {
+          this.stateStore.set(`lights.${id}.castShadows`, false);
+        });
+      });
     }
     this._syncEffectiveCastShadows();
     this._syncShadowAndGobo();
     this._syncHdriShadowReceiverFromState();
+    this.ui?.syncControls?.(this.stateStore.getState());
   }
 
   setLightsShadowQuality(quality) {
@@ -3031,6 +3071,60 @@ export class SceneManager {
     }
   }
 
+  /**
+   * Match dropped-folder images like `sanyo1body_BaseColor.png` to FBX materials and fill empty Map Slots.
+   * @param {Array<{ file: File, path?: string }> | File[]} bundleFiles
+   * @param {import('three').Object3D} [object]
+   * @returns {Promise<{ applied: number, planned: number }>}
+   */
+  async autoAssignFbxTexturesFromBundle(bundleFiles, object = this.currentModel) {
+    if (!object || !bundleFiles?.length) return { applied: 0, planned: 0 };
+    const fbxState = this.stateStore.getState()?.fbxMapSlots;
+    if (!fbxState?.enabled) return { applied: 0, planned: 0 };
+
+    const report = analyzeFbxMaterials(object);
+    const materialKeys = report.materials.map((entry) => entry.key);
+    const plan = buildFbxAutoAssignPlan(
+      bundleFiles,
+      materialKeys,
+      object,
+      this.materialController?.originalMaterials,
+    );
+    if (!plan.length) return { applied: 0, planned: 0 };
+
+    let applied = 0;
+    for (const item of plan) {
+      const url = URL.createObjectURL(item.file);
+      try {
+        const tex = await this.textureLoader.loadAsync(url);
+        tex.userData.orbyFbxUserTexture = true;
+        tex.userData.orbyFbxBlobUrl = url;
+        this.materialController.applyFbxSlotTexture(item.slot, tex, {
+          materialKey: item.materialKey,
+          fileName: item.file.name,
+        });
+        this.eventBus.emit('scene:fbx-map-applied', {
+          slot: item.slot,
+          name: item.file.name,
+          materialKey: item.materialKey,
+        });
+        applied += 1;
+      } catch (err) {
+        console.warn('[Orby] FBX auto-assign texture failed', item.file.name, err);
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    if (applied > 0) {
+      this.clearMapInspectPreview();
+      this.eventBus.emit('scene:fbx-material-report', {
+        report: analyzeFbxMaterials(object),
+      });
+    }
+
+    return { applied, planned: plan.length };
+  }
+
   clearFbxMapSlot(payload = {}) {
     const slot = payload?.slot;
     if (!slot || !this.currentModel) return;
@@ -3049,16 +3143,48 @@ export class SceneManager {
     this.eventBus.emit('scene:fbx-active-material', { materialKey: key });
   }
 
-  setFbxInvertNormalY(enabled) {
-    this.stateStore.set('fbxMapSlots.invertNormalY', !!enabled);
-    this.materialController?.applyFbxNormalYInvertFromState?.();
+  /**
+   * @param {string} materialKey
+   * @param {{ normalConvention?: string, pbrUvChannel?: number, ormPacking?: string }} patch
+   */
+  setFbxMaterialTuning(materialKey, patch = {}) {
+    const raw = this.stateStore.getState()?.fbxMapSlots;
+    const next = setFbxMaterialTuning(raw, materialKey, patch);
+    this.stateStore.set('fbxMapSlots', next);
+    this.materialController?.applyFbxMapSlotsTuningFromState?.();
+    this.eventBus.emit('scene:fbx-tuning-changed', { materialKey, patch });
   }
 
-  setFbxPbrUvChannel(channel) {
-    const n = Number(channel);
-    const idx = n === 1 ? 1 : 0;
-    this.stateStore.set('fbxMapSlots.pbrUvChannel', idx);
-    this.materialController?.applyFbxPbrUvChannelsFromState?.();
+  applyFbxTuningToAllMaterials(sourceMaterialKey) {
+    if (!this.currentModel) return;
+    const report = analyzeFbxMaterials(this.currentModel);
+    const keys = report.materials.map((entry) => entry.key);
+    const raw = this.stateStore.getState()?.fbxMapSlots;
+    const next = applyFbxTuningToAllMaterials(raw, keys, sourceMaterialKey);
+    this.stateStore.set('fbxMapSlots', next);
+    this.materialController?.applyFbxMapSlotsTuningFromState?.();
+    this.eventBus.emit('scene:fbx-tuning-changed', { materialKey: sourceMaterialKey, all: true });
+  }
+
+  hasFbxImportBundle() {
+    return Array.isArray(this._fbxImportBundle) && this._fbxImportBundle.length > 0;
+  }
+
+  async rescanFbxMapSlotTextures() {
+    if (!this.hasFbxImportBundle()) {
+      this.ui?.showToast?.('No folder bundle — drop an FBX with textures in a folder');
+      return { applied: 0, planned: 0 };
+    }
+    const result = await this.autoAssignFbxTexturesFromBundle(this._fbxImportBundle);
+    if (result.applied > 0) {
+      this.ui?.showToast(`Re-assigned ${result.applied} texture(s) from folder`, 3200, {
+        notification: false,
+      });
+    } else {
+      this.ui?.showToast?.('No new textures matched empty slots', 2800, { notification: false });
+    }
+    this.eventBus.emit('scene:fbx-tuning-changed');
+    return result;
   }
 
   /** After shading/material setup, sync Advanced → Alpha UI from import materials (originalMaterials). */
@@ -3678,6 +3804,10 @@ export class SceneManager {
     }
     this.materialController.setShading(mode);
     this.unlitMode = this.materialController.getUnlitMode();
+    if (mode !== 'textures' && this.scene.environment) {
+      const intensity = Math.max(0, this.hdriStrength ?? 0);
+      this.updateMaterialsEnvironment(this.scene.environment, intensity);
+    }
     this._syncShadowAndGobo();
     this.setLightsShadowTwoSided(this.lightsShadowTwoSided);
     // Material instances are recreated when shading changes; reapply reverse mode.

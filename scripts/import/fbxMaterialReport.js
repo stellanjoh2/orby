@@ -219,7 +219,9 @@ export function formatFbxMaterialReportAppendix(report) {
       'In Object → Map Slots, choose a material target first, then assign textures per part (rack vs fish).',
     );
   } else if (report.hasUntexturedMaterials) {
-    lines.push('Some texture paths may be missing from the export or the dropped folder.');
+    lines.push(
+      'Some texture paths may be missing from the export or the dropped folder. Orby auto-assigns images named MaterialName_BaseColor.png (and Normal, Roughness, Metallic, etc.) when names match FBX materials.',
+    );
   } else if (report.hasPartialMaterials) {
     lines.push('Normal and ORM maps may need a folder drop or a GLB re-export from your DCC.');
   }

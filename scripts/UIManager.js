@@ -16,6 +16,7 @@ import {
   DEFAULT_BASE_GLASS_BRIGHTNESS,
   DOF_FOCUS_MIN_M,
   getAntiAliasingUiState,
+  isKeyLightOnlyShadowCastingRenderQuality,
   isBloomPipelineActive,
   sanitizeDof,
   sanitizeAmbientOcclusion,
@@ -33,6 +34,7 @@ import {
 } from './ui/modeChangeToast.js';
 import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
+import { FbxMapSlotsControls } from './ui/FbxMapSlotsControls.js';
 import { MapInspectControls } from './ui/MapInspectControls.js';
 import { StudioControls } from './ui/StudioControls.js';
 import { GoboControls } from './ui/GoboControls.js';
@@ -159,6 +161,7 @@ export class UIManager {
 
     this.helpers = new UIHelpers(this.eventBus, this.stateStore, this);
     this.meshControls = new MeshControls(this.eventBus, this.stateStore, this, this.helpers);
+    this.fbxMapSlotsControls = new FbxMapSlotsControls(this.eventBus, this.stateStore, this);
     this.mapInspectControls = new MapInspectControls(this.eventBus, this.stateStore, this);
     this.mapInspectControls.setModelAccessors(
       () => window.orby?.scene?.currentModel ?? null,
@@ -592,8 +595,11 @@ export class UIManager {
       fbxMapFileInput: q('#fbxMapFileInput'),
       fbxMapMaterial: q('#fbxMapMaterial'),
       fbxMapMaterialLine: q('#fbxMapMaterialLine'),
-      fbxMapInvertNormalY: q('#fbxMapInvertNormalY'),
+      fbxMapNormalConvention: q('#fbxMapNormalConvention'),
       fbxMapPbrUvChannel: q('#fbxMapPbrUvChannel'),
+      fbxMapOrmPacking: q('#fbxMapOrmPacking'),
+      fbxMapRescanFolder: q('#fbxMapRescanFolder'),
+      fbxMapApplyTuningAll: q('#fbxMapApplyTuningAll'),
     };
 
     this.buttons = {
@@ -679,6 +685,7 @@ export class UIManager {
     // Bind all control modules
     this.globalControls.bind();
     this.meshControls.bind();
+    this.fbxMapSlotsControls.bind();
     this.mapInspectControls.bind();
     this.studioControls.bind();
     this.goboControls.bind();
@@ -2740,7 +2747,13 @@ export class UIManager {
     if (this.inputs.rimLightCastShadows && state.lights?.rim) {
       this.inputs.rimLightCastShadows.checked = state.lights.rim.castShadows === true;
     }
-    
+    const shadowsOn = !!state.lightsEnabled && !!state.lightsCastShadows;
+    const keyOnlyShadows = isKeyLightOnlyShadowCastingRenderQuality(state.renderQuality);
+    this.setControlDisabled(
+      ['fillLightCastShadows', 'rimLightCastShadows'],
+      !shadowsOn || keyOnlyShadows,
+    );
+
     // HDRI buttons
     this.inputs.hdriButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.hdri === state.hdri);
@@ -3035,6 +3048,7 @@ export class UIManager {
   syncControls(state) {
     if (!this._studioUiReady) return;
     this.meshControls.sync(state);
+    this.fbxMapSlotsControls.syncFromState(state);
     this.studioControls.sync(state);
     this.goboControls.sync(state);
     this.renderControls.sync(state);

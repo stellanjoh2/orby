@@ -444,6 +444,15 @@ html:not(.orby-studio-active) #webgl {
 
 body.orby-not-found-active {
   background: var(--orby-app-bg);
+  overflow: hidden;
+}
+
+body.orby-not-found-active #orby-marketing,
+body.orby-not-found-active .orby-marketing-scroll-nav,
+body.orby-not-found-active .orby-marketing-scroll-cue {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 body.orby-not-found-active #orby-entry-gate,
@@ -531,10 +540,10 @@ body.orby-not-found-active.orby-not-found-fade-ready #webgl {
 
 body.orby-not-found-active #orbyFullscreenPrompt {
   /* Keep the full-screen prompt, but remove blur for the 404 void look. */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  /* 50% less darkening vs default fullscreen prompt layer. */
-  background: rgba(0, 0, 0, 0.24);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* 50% of prior 404 scrim (0.24 → 0.12). JS also sets inline for reliability. */
+  background: rgba(0, 0, 0, 0.12) !important;
 }
 
 body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-stack {
@@ -3260,6 +3269,7 @@ html.orby-window-resizing body.dropzone-visible .orby-magic-btn::after {
   animation-play-state: paused;
 }
 
+/* Reduced tier — solid frame fill instead of live backdrop-filter over hero deco */
 html.orby-marketing-reduced body.dropzone-visible .dropzone::before {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -3703,7 +3713,8 @@ html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__check {
 
 /* Scene / Object accent buttons — gap + min-height use root rem; scale with studio factor */
 html:not(.mobile-landing) .shelf .scene-controls,
-html:not(.mobile-landing) .shelf .export-controls {
+html:not(.mobile-landing) .shelf .export-controls,
+html:not(.mobile-landing) .shelf .map-slots-action-row {
   gap: var(--shelf-control-gap);
 }
 
@@ -4962,11 +4973,18 @@ button.advanced-info-doc-btn {
   outline: none;
 }
 
-.map-slots-invert-divider {
+.map-slots-tuning-divider {
   margin-top: 0.15rem;
 }
 
-:is(.panel-block, .subsection) > .map-slots-invert-line:last-child {
+.map-slots-tuning-title {
+  margin: 0 0 var(--shelf-row-gap);
+  font-size: var(--shelf-label-font-size);
+  color: var(--text-muted);
+}
+
+/* Map Slots actions — same pill buttons as Object/Studio Scene (.export-controls + .accent-action-btn). */
+.map-slots-action-row {
   margin-bottom: 0;
 }
 

@@ -18,6 +18,12 @@ import {
   removeSvgExtrudeProceduralFromMaterial,
 } from './SvgExtrudeSurfaceShader.js';
 import { materialMatchesFbxGroup } from '../import/fbxMaterialReport.js';
+import {
+  getFbxTuningForImportMaterial,
+  resolveFbxNormalFlipY,
+  resolveFbxNormalScaleY,
+} from '../import/fbxMapSlotsSettings.js';
+import { syncFbxOrmPackingOnMaterial } from './fbxOrmPackingShader.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import { MapInspectPreview } from './MapInspectPreview.js';
 import {
@@ -801,13 +807,6 @@ export class MaterialController {
     const bright = this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
     const modelHasEmissive = this._modelHasAnyEmissiveBaseline();
 
-    const getOrigColor = (orig, idx = 0) => {
-      if (Array.isArray(orig)) {
-        return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
-      }
-      return orig?.color?.clone() ?? new THREE.Color('#ffffff');
-    };
-
     this.currentModel.traverse((child) => {
       if (!child.isMesh || this.isWindowMesh(child)) return;
       const original = this.originalMaterials.get(child);
@@ -825,7 +824,11 @@ export class MaterialController {
         if (origMat.emissiveMap && mat.emissiveMap !== origMat.emissiveMap) {
           mat.emissiveMap = origMat.emissiveMap;
         }
-        const adjustedColor = this._diffuseColorWithBrightness(getOrigColor(original, idx), bright);
+        const adjustedColor = this._diffuseColorWithBrightness(
+          this._importDiffuseTintForShading(origMat),
+          bright,
+        );
+        mat.color.copy(adjustedColor);
         this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
         this._syncTransparentFlagsFromImport(mat, origMat);
         mat.needsUpdate = true;
@@ -1665,12 +1668,9 @@ export class MaterialController {
               return built;
             }
           }
-          // Get base color from original material or default to white
-          const baseColor = mat?.color
-              ? mat.color.clone()
-            : new THREE.Color('#ffffff');
-          
-          const brightColor = this._diffuseColorWithBrightness(baseColor);
+          const brightColor = this._diffuseColorWithBrightness(
+            this._importDiffuseTintForShading(mat),
+          );
 
           // Use MeshBasicMaterial for truly unlit rendering - ignores all lighting
           // Note: MeshBasicMaterial only supports map (diffuse), not normalMap, aoMap, etc.
@@ -1718,6 +1718,9 @@ export class MaterialController {
           }
           let cloned = mat.clone ? mat.clone() : mat;
           this._syncTransparentFlagsFromImport(cloned, mat);
+          if (mat?.userData?.orbyFbxSlotMaps) {
+            cloned = this._finalizeFbxSlotShadedClone(cloned, mat);
+          }
           // Don't apply brightness/metalness/roughness to glass materials
           if (isGlass) {
             if (this._materialHasImportTransmission(cloned)) {
@@ -1740,13 +1743,15 @@ export class MaterialController {
               cloned.isMeshPhongMaterial ||
               cloned.isMeshLambertMaterial)
           ) {
-            const adjustedColor = this._diffuseColorWithBrightness(
-              mat.color ? mat.color : new THREE.Color('#ffffff'),
-            );
-            cloned.color.copy(adjustedColor);
-            // Apply metalness and roughness
-            cloned.metalness = this.materialSettings.metalness;
-            cloned.roughness = this.materialSettings.roughness;
+            const fbxSlotMaps = !!mat?.userData?.orbyFbxSlotMaps;
+            const adjustedColor = fbxSlotMaps
+              ? cloned.color.clone()
+              : this._diffuseColorWithBrightness(this._importDiffuseTintForShading(mat));
+            if (!fbxSlotMaps) {
+              cloned.color.copy(adjustedColor);
+              cloned.metalness = this.materialSettings.metalness;
+              cloned.roughness = this.materialSettings.roughness;
+            }
             this._applyUserEmissiveOrRestoreImport(
               cloned,
               mat,
@@ -1756,7 +1761,7 @@ export class MaterialController {
             );
             // Disable original metalness/roughness maps so sliders behave consistently — unless the user
             // assigned FBX slot textures (manual maps).
-            if (!mat?.userData?.orbyFbxSlotMaps) {
+            if (!fbxSlotMaps) {
               if ('metalnessMap' in cloned) {
                 cloned.metalnessMap = null;
               }
@@ -2147,6 +2152,84 @@ export class MaterialController {
    * @param {number} [brightness]
    * @param {number|null} [metalnessForClamp] — pass `0` for unlit/textures; omit to use slider metalness
    */
+  _isNearBlackDiffuseColor(color) {
+    if (!color?.isColor) return false;
+    const { r, g, b } = color;
+    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return false;
+    return Math.max(r, g, b) < 0.08;
+  }
+
+  /**
+   * FBX / Substance exports often keep diffuse color at black when albedo lives in the map.
+   * Three.js multiplies `material.color` × `material.map`, so black tint → invisible mesh.
+   */
+  _whiteBalanceFbxTexturedDiffuse(material) {
+    if (!material?.color) return;
+    const hasAlbedo = !!material.map?.isTexture || !!material.userData?.orbyFbxSlotMaps;
+    if (hasAlbedo && this._isNearBlackDiffuseColor(material.color)) {
+      material.color.setRGB(1, 1, 1);
+      material.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Shaded clones from FBX Map Slots need explicit map handoff, white diffuse tint, and PBR
+   * multipliers — otherwise black FBX factors or flipped OpenGL normals can zero out lighting.
+   * @param {THREE.Material} cloned
+   * @param {THREE.Material} importMat
+   */
+  _finalizeFbxSlotShadedClone(cloned, importMat) {
+    if (!cloned || !importMat) return cloned;
+    this._whiteBalanceFbxTexturedDiffuse(importMat);
+
+    const mapKeys = [
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'alphaMap',
+      'displacementMap',
+    ];
+    for (const key of mapKeys) {
+      if (importMat[key]) cloned[key] = importMat[key];
+    }
+
+    if (importMat.normalMap) {
+      cloned.normalMapType = THREE.TangentSpaceNormalMap;
+      if (importMat.normalScale) {
+        cloned.normalScale = importMat.normalScale.clone();
+      }
+      this._syncFbxNormalScaleY(cloned);
+      this._syncFbxNormalMapOrientation(cloned);
+    }
+
+    const adjustedColor = this._diffuseColorWithBrightness(
+      this._importDiffuseTintForShading(importMat),
+    );
+    cloned.color.copy(adjustedColor);
+    cloned.metalness = importMat.metalnessMap
+      ? 1
+      : this.materialSettings.metalness;
+    cloned.roughness = importMat.roughnessMap
+      ? 1
+      : this.materialSettings.roughness;
+    cloned.userData.orbyFbxSlotMaps = true;
+    cloned.needsUpdate = true;
+    return cloned;
+  }
+
+  _importDiffuseTintForShading(importMat) {
+    if (!importMat) return new THREE.Color('#ffffff');
+    const hasAlbedo =
+      !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
+    if (hasAlbedo && this._isNearBlackDiffuseColor(importMat.color)) {
+      return new THREE.Color('#ffffff');
+    }
+    return importMat.color?.clone?.() ?? new THREE.Color('#ffffff');
+  }
+
   _diffuseColorWithBrightness(
     sourceColor,
     brightness = this.materialSettings.brightness,
@@ -2242,12 +2325,10 @@ export class MaterialController {
           if (!original) return;
           
           const getOriginalColor = (orig, idx = 0) => {
-            if (Array.isArray(orig)) {
-              return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
-            }
-            return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+            const importMat = Array.isArray(orig) ? orig[idx] : orig;
+            return this._importDiffuseTintForShading(importMat);
           };
-          
+
           if (Array.isArray(material) && Array.isArray(original)) {
             material.forEach((mat, idx) => {
               if (mat?.userData?.orbyCreativeLook) return;
@@ -2280,10 +2361,8 @@ export class MaterialController {
             : 0;
 
           const getOriginalColor = (orig, idx = 0) => {
-            if (Array.isArray(orig)) {
-              return orig[idx]?.color?.clone() ?? new THREE.Color('#ffffff');
-            }
-            return orig?.color?.clone() ?? new THREE.Color('#ffffff');
+            const importMat = Array.isArray(orig) ? orig[idx] : orig;
+            return this._importDiffuseTintForShading(importMat);
           };
 
           if (Array.isArray(material) && Array.isArray(original)) {
@@ -2328,11 +2407,13 @@ export class MaterialController {
                   modelHasEmissive,
                 );
                 this._syncTransparentFlagsFromImport(m, origMat);
-                if ('metalnessMap' in m) {
-                  m.metalnessMap = null;
-                }
-                if ('roughnessMap' in m) {
-                  m.roughnessMap = null;
+                if (!origMat?.userData?.orbyFbxSlotMaps) {
+                  if ('metalnessMap' in m) {
+                    m.metalnessMap = null;
+                  }
+                  if ('roughnessMap' in m) {
+                    m.roughnessMap = null;
+                  }
                 }
                 if (tSub > SUBSURFACE_EPS && m.isMeshPhysicalMaterial) {
                   delete m.userData.orbySubsurface;
@@ -2386,11 +2467,13 @@ export class MaterialController {
               modelHasEmissive,
             );
             this._syncTransparentFlagsFromImport(mat, original);
-            if ('metalnessMap' in mat) {
-              mat.metalnessMap = null;
-            }
-            if ('roughnessMap' in mat) {
-              mat.roughnessMap = null;
+            if (!original?.userData?.orbyFbxSlotMaps) {
+              if ('metalnessMap' in mat) {
+                mat.metalnessMap = null;
+              }
+              if ('roughnessMap' in mat) {
+                mat.roughnessMap = null;
+              }
             }
             if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
               delete mat.userData.orbySubsurface;
@@ -3147,33 +3230,61 @@ export class MaterialController {
    * @param {string} slot - albedo | normal | orm | roughness | metallic | occlusion | displacement | emissive | opacity
    * @param {THREE.Texture} texture
    */
-  /**
-   * Apply Map Slots → Invert normal Y to all materials that use a normal map (original/import materials).
-   */
-  applyFbxNormalYInvertFromState() {
+  /** Reapply per-material Map Slots tuning (normals, UV channels, ORM packing). */
+  applyFbxMapSlotsTuningFromState() {
     if (!this.currentModel) return;
+    const fbxState = this.stateStore?.getState()?.fbxMapSlots;
+
     this.currentModel.traverse((child) => {
-      if (!child.isMesh) return;
+      if (!child.isMesh || this.isWindowMesh(child)) return;
       const orig = this.originalMaterials.get(child);
       if (!orig) return;
       const mats = Array.isArray(orig) ? orig : [orig];
       for (const m of mats) {
-        if (m?.normalMap) this._syncFbxNormalScaleY(m);
+        if (!m) continue;
+        const tuning = getFbxTuningForImportMaterial(m, fbxState);
+        const detailCh = tuning.pbrUvChannel === 1 ? 1 : 0;
+
+        if (m.map?.isTexture) m.map.channel = 0;
+        if (m.normalMap?.isTexture) {
+          m.normalMap.channel = 0;
+          this._syncFbxNormalMapOrientation(m);
+          this._syncFbxNormalScaleY(m);
+        }
+        if (detailCh === 1) this._ensureUv2ForAo(child.geometry);
+
+        const setCh = (tex) => {
+          if (tex?.isTexture) tex.channel = detailCh;
+        };
+        setCh(m.roughnessMap);
+        setCh(m.metalnessMap);
+        setCh(m.aoMap);
+        setCh(m.emissiveMap);
+        setCh(m.alphaMap);
+        setCh(m.displacementMap);
+
+        syncFbxOrmPackingOnMaterial(m, tuning.ormPacking);
+        m.needsUpdate = true;
       }
     });
+
     const mode = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
     this.setShading(mode);
   }
 
   _syncFbxNormalScaleY(material) {
     if (!material?.normalMap) return;
-    const invert = !!this.stateStore?.getState()?.fbxMapSlots?.invertNormalY;
+    const tuning = getFbxTuningForImportMaterial(
+      material,
+      this.stateStore?.getState()?.fbxMapSlots,
+    );
+    const scaleY = resolveFbxNormalScaleY(tuning.normalConvention);
     const ax = Math.abs(Number(material.normalScale?.x) || 1) || 1;
     const ay = Math.abs(Number(material.normalScale?.y) || 1) || 1;
     if (!material.normalScale) {
-      material.normalScale = new THREE.Vector2(ax, invert ? -ay : ay);
+      material.normalScale = new THREE.Vector2(ax, scaleY < 0 ? -ay : ay);
     } else {
-      material.normalScale.set(ax, invert ? -ay : ay);
+      material.normalScale.set(ax, scaleY < 0 ? -ay : ay);
     }
     material.needsUpdate = true;
   }
@@ -3201,15 +3312,6 @@ export class MaterialController {
     ]);
     if (!allowed.has(slot)) return;
 
-    if (this._getPbrUvChannelIndex() === 1) {
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.geometry?.attributes?.uv) return;
-        if (!child.geometry.attributes.uv2) {
-          child.geometry.setAttribute('uv2', child.geometry.attributes.uv.clone());
-        }
-      });
-    }
-
     this.currentModel.traverse((child) => {
       if (!child.isMesh || this.isWindowMesh(child)) return;
       let orig = this.originalMaterials.get(child);
@@ -3228,12 +3330,24 @@ export class MaterialController {
         this._disposePreviousFbxSlotTexture(m, slot);
         const texForMat = texture.clone();
         texForMat.userData.orbyFbxUserTexture = true;
+        if (fileName) {
+          texForMat.userData.orbyFbxFileName = fileName;
+        }
         if (texture.userData?.orbyFbxBlobUrl) {
           texForMat.userData.orbyFbxBlobUrl = texture.userData.orbyFbxBlobUrl;
         }
-        this._configureFbxTexture(texForMat, slot);
+        if (
+          this._getPbrUvChannelIndex(m) === 1 &&
+          slot !== 'normal' &&
+          slot !== 'albedo'
+        ) {
+          this._ensureUv2ForAo(geom);
+        }
+        this._configureFbxTexture(texForMat, slot, m);
         this._assignTextureToMaterialSlot(m, slot, texForMat, geom);
         this._refreshAllFbxSlotTransformsForMaterial(m);
+        const tuning = getFbxTuningForImportMaterial(m, this.stateStore?.getState()?.fbxMapSlots);
+        syncFbxOrmPackingOnMaterial(m, tuning.ormPacking);
         m.needsUpdate = true;
         return m;
       };
@@ -3403,61 +3517,26 @@ export class MaterialController {
   }
 
   /** Three.js `Texture.channel`: 0 = `uv`, 1 = `uv2`. Base color stays on UV1; detail maps can target UV2. */
-  _getPbrUvChannelIndex() {
-    return this.stateStore?.getState()?.fbxMapSlots?.pbrUvChannel === 1 ? 1 : 0;
+  _getPbrUvChannelIndex(material) {
+    const tuning = getFbxTuningForImportMaterial(
+      material,
+      this.stateStore?.getState()?.fbxMapSlots,
+    );
+    return tuning.pbrUvChannel === 1 ? 1 : 0;
   }
 
   /**
    * Normal maps must use `channel` 0: MeshStandardMaterial tangents are built from `attributes.uv` only.
    * Sampling normals on `uv2` without matching tangents yields flat/broken lighting (Three limitation).
    */
-  _getDetailTextureChannelForSlot(slot) {
+  _getDetailTextureChannelForSlot(slot, material) {
     if (slot === 'normal' || slot === 'albedo') return 0;
-    return this._getPbrUvChannelIndex();
+    return this._getPbrUvChannelIndex(material);
   }
 
-  _setTextureUvChannelForSlot(texture, slot) {
+  _setTextureUvChannelForSlot(texture, slot, material) {
     if (!texture || !('channel' in texture)) return;
-    texture.channel = this._getDetailTextureChannelForSlot(slot);
-  }
-
-  /**
-   * Reapply Texture.channel on all original materials (e.g. after user switches UV2 for detail maps).
-   */
-  applyFbxPbrUvChannelsFromState() {
-    if (!this.currentModel) return;
-    const detailCh = this._getPbrUvChannelIndex();
-    if (detailCh === 1) {
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh || !child.geometry?.attributes?.uv) return;
-        if (!child.geometry.attributes.uv2) {
-          child.geometry.setAttribute('uv2', child.geometry.attributes.uv.clone());
-        }
-      });
-    }
-    this.currentModel.traverse((child) => {
-      if (!child.isMesh || this.isWindowMesh(child)) return;
-      const orig = this.originalMaterials.get(child);
-      if (!orig) return;
-      const mats = Array.isArray(orig) ? orig : [orig];
-      for (const m of mats) {
-        if (!m) continue;
-        if (m.map?.isTexture) m.map.channel = 0;
-        if (m.normalMap?.isTexture) m.normalMap.channel = 0;
-        const setCh = (tex) => {
-          if (tex?.isTexture) tex.channel = detailCh;
-        };
-        setCh(m.roughnessMap);
-        setCh(m.metalnessMap);
-        setCh(m.aoMap);
-        setCh(m.emissiveMap);
-        setCh(m.alphaMap);
-        setCh(m.displacementMap);
-        m.needsUpdate = true;
-      }
-    });
-    const mode = this.currentShading ?? this.stateStore?.getState()?.shading ?? 'shaded';
-    this.setShading(mode);
+    texture.channel = this._getDetailTextureChannelForSlot(slot, material);
   }
 
   _fbxSlotUsesSrgbColorSpace(slot) {
@@ -3486,14 +3565,11 @@ export class MaterialController {
     texture.needsUpdate = true;
   }
 
-  _configureFbxTexture(texture, slot) {
+  _configureFbxTexture(texture, slot, material) {
     texture.userData.orbyFbxUserTexture = true;
     this._resetFbxUserTextureUvTransform(texture);
     this._applyFbxSlotTextureColorSpace(texture, slot);
-    if (slot === 'normal') {
-      texture.flipY = false;
-    }
-    this._setTextureUvChannelForSlot(texture, slot);
+    this._setTextureUvChannelForSlot(texture, slot, material);
   }
 
   /** Re-apply color space on every user Map Slot texture (fixes textures loaded before configure). */
@@ -3525,18 +3601,19 @@ export class MaterialController {
         this._applyFbxSlotTextureColorSpace(ormTex, 'orm');
       }
       this._syncFbxNormalMapOrientation(material);
+      const tuning = getFbxTuningForImportMaterial(material, this.stateStore?.getState()?.fbxMapSlots);
+      syncFbxOrmPackingOnMaterial(material, tuning.ormPacking);
     });
   }
 
   _syncFbxNormalMapOrientation(material) {
     const nm = material?.normalMap;
-    const albedo = material?.map;
     if (!nm?.isTexture || !nm.userData?.orbyFbxUserTexture) return;
-    if (albedo?.isTexture) {
-      nm.flipY = albedo.flipY;
-    } else {
-      nm.flipY = false;
-    }
+    const tuning = getFbxTuningForImportMaterial(
+      material,
+      this.stateStore?.getState()?.fbxMapSlots,
+    );
+    nm.flipY = resolveFbxNormalFlipY(material, tuning.normalConvention);
     nm.needsUpdate = true;
   }
 
@@ -3553,6 +3630,7 @@ export class MaterialController {
     const std = new THREE.MeshStandardMaterial();
 
     if (material.color) std.color.copy(material.color);
+    this._whiteBalanceFbxTexturedDiffuse(std);
     if (material.map) std.map = material.map;
     if (material.lightMap) std.lightMap = material.lightMap;
     if (material.lightMapIntensity !== undefined) std.lightMapIntensity = material.lightMapIntensity;
@@ -3739,6 +3817,7 @@ export class MaterialController {
   _assignTextureToMaterialSlot(material, slot, texture, geometry) {
     if (slot === 'albedo') {
       material.map = texture;
+      this._whiteBalanceFbxTexturedDiffuse(material);
       return;
     }
     if (slot === 'normal') {

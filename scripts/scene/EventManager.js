@@ -112,8 +112,22 @@ export class EventManager {
     eventBus.on('mesh:fbx-map-clear', (payload) => {
       s.clearFbxMapSlot(payload);
     });
-    eventBus.on('mesh:fbx-invert-normal-y', (enabled) => s.setFbxInvertNormalY(enabled));
-    eventBus.on('mesh:fbx-pbr-uv-channel', (channel) => s.setFbxPbrUvChannel(channel));
+    eventBus.on('mesh:fbx-material-tuning', (payload) => {
+      const key = payload?.materialKey ?? '';
+      const patch = payload?.patch ?? {};
+      s.setFbxMaterialTuning(key, patch);
+    });
+    eventBus.on('mesh:fbx-apply-tuning-all', (payload) => {
+      const key = payload?.materialKey ?? '';
+      s.applyFbxTuningToAllMaterials(key);
+    });
+    eventBus.on('mesh:fbx-rescan-folder', () => {
+      void s.rescanFbxMapSlotTextures();
+    });
+    eventBus.on('mesh:fbx-restore-tuning', () => {
+      s.materialController?.applyFbxMapSlotsTuningFromState?.();
+      s.eventBus.emit('scene:fbx-tuning-changed');
+    });
     eventBus.on('mesh:fbx-active-material', (payload) => {
       const key = payload?.materialKey ?? payload;
       s.setFbxActiveMaterial(typeof key === 'string' ? key : '');
@@ -435,9 +449,10 @@ export class EventManager {
       ) {
         s.setLensFlareKeyLightConnected(false);
       }
-      s.lightsController?.updateLightProperty(lightId, property, value);
-      if (lightId === 'key' && property === 'castShadows') {
-        s._applyKeyLightGoboShadowOverride();
+      if (property === 'castShadows') {
+        s._syncEffectiveCastShadows();
+      } else {
+        s.lightsController?.updateLightProperty(lightId, property, value);
       }
       if (
         lightId === 'key'

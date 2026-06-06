@@ -454,6 +454,25 @@ export function resolveRenderQualityTier(id) {
 }
 
 /**
+ * Low/Medium viewport quality: only the key light may cast shadow maps (fill/rim stay off).
+ * @param {string | undefined} renderQuality
+ */
+export function isKeyLightOnlyShadowCastingRenderQuality(renderQuality) {
+  return renderQuality === 'low' || renderQuality === 'medium';
+}
+
+/**
+ * Per-light cast-shadow flags when the global shadows toggle is turned on.
+ * @param {string | undefined} renderQuality
+ * @returns {Array<'key' | 'fill' | 'rim'>}
+ */
+export function castShadowLightIdsForGlobalToggle(renderQuality) {
+  return isKeyLightOnlyShadowCastingRenderQuality(renderQuality)
+    ? ['key']
+    : ['key', 'fill', 'rim'];
+}
+
+/**
  * True when selective bloom passes can produce output — matches SceneManager anamorphic gating.
  * @param {{ bloom?: { enabled?: boolean, strength?: number }, renderQuality?: string }} state
  */

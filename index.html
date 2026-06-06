@@ -108,6 +108,8 @@
     </script>
     <!-- Before first paint on mobile — avoid one-frame desktop dropzone flash until main.js runs -->
     <script src="./scripts/orbyMobileLandingBoot.js"></script>
+    <!-- Reduced marketing tier before first paint — disables dropzone frost blur on lower-spec home loads -->
+    <script src="./scripts/orbyMarketingPerformanceBoot.js"></script>
     <!-- Empty in source; CI may set via BUG_REPORT_API_URL (see build.js). -->
     <meta name="orby-version" content="dev" />
     <meta name="orby-bug-report-api" content="" />
@@ -419,7 +421,46 @@
               </div>
               <div class="map-preview-panel__body">
                 <img id="mapPreviewPanelImage" class="map-preview-panel__image" alt="" />
+                <button
+                  type="button"
+                  id="mapPreviewPanelZoom"
+                  class="map-preview-panel__zoom"
+                  aria-label="Inspect texture at full size"
+                  data-tooltip="Inspect at 100% scale"
+                >
+                  <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
+                </button>
               </div>
+            </div>
+          </div>
+          <div
+            id="mapFullsizeView"
+            class="map-fullsize-view"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mapFullsizeName"
+          >
+            <div class="map-fullsize-view__header load-settings-header">
+              <div class="map-fullsize-view__meta">
+                <p id="mapFullsizeMeta" class="map-fullsize-view__meta-line">
+                  <span id="mapFullsizeName" class="map-fullsize-view__name">Texture map</span><span
+                    id="mapFullsizeDims"
+                    class="map-fullsize-view__dims"
+                  ></span>
+                </p>
+              </div>
+              <p class="map-fullsize-view__hint">Drag to pan · Esc to close</p>
+              <button
+                type="button"
+                id="mapFullsizeClose"
+                class="close-btn"
+                aria-label="Close full-size preview"
+              ></button>
+            </div>
+            <div id="mapFullsizeViewport" class="map-fullsize-view__viewport">
+              <canvas id="mapFullsizeCanvas" class="map-fullsize-view__canvas" aria-hidden="true"></canvas>
+              <img id="mapFullsizeImage" class="map-fullsize-view__source" alt="" draggable="false" hidden />
             </div>
           </div>
         </section>
@@ -487,18 +528,16 @@
 
               <div class="panel-block" id="fbxMapSlotsBlock" hidden>
                 <div class="subsection" data-subsection="fbxMapSlots" id="fbxMapSlotsSubsection">
-                  <div class="block-title">Map Slots</div>
-                  <p class="panel-hint map-slots-hint">FBX — pick a material target, then assign maps per part (rack vs fish). Textures apply only to the selected material. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
+                  <div class="block-title">
+                    <span class="block-title-name">
+                      <span>Map Slots</span>
+                      <span class="dev-badge" data-tooltip="This feature is still under development" tabindex="0" role="img" aria-label="This feature is still under development"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
+                    </span>
+                  </div>
+                  <p class="panel-hint map-slots-hint">FBX — drop the whole folder (FBX + PNGs) to auto-assign maps named like MaterialName_BaseColor.png. To override one slot, pick a material target, then assign per part. Packed ORM: red = AO, green = roughness, blue = metallic.</p>
                   <label class="select-line map-slot-material-line" id="fbxMapMaterialLine" hidden>
                     <span data-tooltip="FBX files often duplicate materials per mesh; we group by material name.">Material</span>
                     <select id="fbxMapMaterial" aria-label="Material to assign textures to"></select>
-                  </label>
-                  <label class="select-line map-slot-uv-line">
-                    <span data-tooltip="Roughness, metallic, AO, ORM, etc. can use UV2 if your bake used a second set. Normal maps always use UV1 here — Three.js builds tangents from the first UV only.">Detail maps UV</span>
-                    <select id="fbxMapPbrUvChannel" aria-label="UV channel for detail maps">
-                      <option value="0">UV1 (first)</option>
-                      <option value="1">UV2 (second)</option>
-                    </select>
                   </label>
                   <input type="file" id="fbxMapFileInput" class="sr-only" accept="image/*,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" tabindex="-1" aria-hidden="true" />
                   <div class="map-slot-row">
@@ -591,16 +630,34 @@
                       </button>
                     </div>
                   </div>
-                  <div class="panel-block-divider map-slots-invert-divider" aria-hidden="true"></div>
-                  <label class="slider-line map-slots-invert-line">
-                    <span data-tooltip="If lighting looks inverted (bumps look like dents), turn this on. Fixes many DirectX vs OpenGL normal maps.">Invert normal Y</span>
-                    <label class="effect-toggle" data-tooltip="Flip tangent-space Y (green) for normal maps">
-                      <input type="checkbox" id="fbxMapInvertNormalY" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Invert normal map Y</span>
-                    </label>
-                    <span class="value" aria-hidden="true"></span>
+                  <div class="panel-block-divider map-slots-tuning-divider" aria-hidden="true"></div>
+                  <p class="panel-hint map-slots-tuning-title">Map tuning</p>
+                  <label class="select-line map-slot-tuning-line">
+                    <span data-tooltip="How tangent normals are oriented. Match albedo works for most FBX folder drops; use OpenGL or DirectX when bumps look wrong.">Normal convention</span>
+                    <select id="fbxMapNormalConvention" aria-label="Normal map convention">
+                      <option value="match-albedo">Match albedo</option>
+                      <option value="opengl">OpenGL</option>
+                      <option value="directx">DirectX</option>
+                    </select>
                   </label>
+                  <label class="select-line map-slot-tuning-line">
+                    <span data-tooltip="Roughness, metallic, AO, and ORM can use UV2 when your bake used a second set. Normal maps always use UV1.">Detail maps UV</span>
+                    <select id="fbxMapPbrUvChannel" aria-label="UV channel for detail maps">
+                      <option value="0">UV1 (first)</option>
+                      <option value="1">UV2 (second)</option>
+                    </select>
+                  </label>
+                  <label class="select-line map-slot-tuning-line">
+                    <span data-tooltip="Channel order inside packed ORM textures. glTF/Blender/Unreal: R=AO, G=roughness, B=metallic. Unity HDRP: R=metallic, G=AO, B=roughness.">ORM packing</span>
+                    <select id="fbxMapOrmPacking" aria-label="Packed ORM channel layout">
+                      <option value="gltf">glTF / Blender / Unreal</option>
+                      <option value="unity-hdrp">Unity HDRP</option>
+                    </select>
+                  </label>
+                  <div class="export-controls map-slots-action-row">
+                    <button type="button" class="accent-action-btn" id="fbxMapRescanFolder" data-tooltip="Re-match textures from the dropped folder into empty slots only.">Scan folder again</button>
+                    <button type="button" class="accent-action-btn" id="fbxMapApplyTuningAll" data-tooltip="Copy this material's tuning to every material in the FBX.">Apply tuning to all</button>
+                  </div>
                 </div>
               </div>
 
@@ -2854,7 +2911,7 @@
                 </div>
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="handheld">
-                  <div class="block-title" data-tooltip="Procedural shake on top of orbit; does not affect controls">Handheld</div>
+                  <div class="block-title" data-tooltip="Procedural shake on top of orbit; does not affect controls. Not visible in PNG exports.">Handheld</div>
                   <div class="segmented compact">
                     <label>
                       <input type="radio" name="cameraHandheld" value="off" checked />

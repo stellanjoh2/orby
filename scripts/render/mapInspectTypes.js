@@ -473,6 +473,75 @@ export function mapInspectSlotLabel(slotId) {
   return def?.label ?? null;
 }
 
+/** @type {Record<string, string>} */
+const MAP_INSPECT_TO_FBX_SLOT = {
+  baseColor: 'albedo',
+  normal: 'normal',
+  roughness: 'roughness',
+  metallic: 'metallic',
+  ao: 'occlusion',
+  emissive: 'emissive',
+  opacity: 'opacity',
+  displacement: 'displacement',
+};
+
+/**
+ * @param {string} src
+ * @returns {string | null}
+ */
+function filenameFromTextureSrc(src) {
+  if (!src || src.startsWith('blob:') || src.startsWith('data:')) return null;
+  try {
+    const base = new URL(src, 'http://local').pathname.split('/').pop();
+    return base ? decodeURIComponent(base) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Best-effort texture file name for full-size map inspection.
+ * @param {import('three').Texture | null | undefined} texture
+ * @param {MapInspectSlotId | string | null | undefined} slotId
+ * @param {import('three').Object3D | null | undefined} [model]
+ * @param {WeakMap<import('three').Mesh, import('three').Material | import('three').Material[]>} [originalMaterials]
+ * @returns {string | null}
+ */
+export function mapInspectTextureFileName(texture, slotId, model, originalMaterials) {
+  if (!texture?.isTexture) return null;
+
+  const fbxSlot = slotId ? MAP_INSPECT_TO_FBX_SLOT[slotId] : null;
+  const slotDef = slotId ? MAP_TEXTURE_SLOT_DEFS.find((d) => d.id === slotId) : null;
+  if (model && fbxSlot && slotDef && originalMaterials) {
+    let found = null;
+    model.traverse((child) => {
+      if (found || !child.isMesh) return;
+      const stored = originalMaterials.get(child);
+      const materials = stored ? (Array.isArray(stored) ? stored : [stored]) : [];
+      for (const mat of materials) {
+        const fileName = mat?.userData?.orbyFbxSlotFileNames?.[fbxSlot];
+        if (!fileName || !sameTexture(mat[slotDef.prop], texture)) continue;
+        found = fileName;
+        return;
+      }
+    });
+    if (found) return found;
+  }
+
+  const userName = texture.userData?.orbyFbxFileName;
+  if (typeof userName === 'string' && userName.trim()) return userName.trim();
+
+  const name = String(texture.name || '').trim();
+  if (name && !/^(texture)$/i.test(name)) return name;
+
+  const img = texture.image;
+  if (img instanceof HTMLImageElement && img.src) {
+    return filenameFromTextureSrc(img.src);
+  }
+
+  return null;
+}
+
 export function clearMapInspectThumbCache() {
   thumbCache.clear();
 }
@@ -545,6 +614,51 @@ export function textureToDataUrl(texture, size = 128, channel = null) {
     drawTextureToContext(ctx, img, size, size, channel);
     const url = canvas.toDataURL('image/png');
     thumbCache.set(key, url);
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Full-resolution preview URL for 1:1 texture inspection.
+ * @param {MapInspectEntry} entry
+ * @param {MapInspectSlotId | string} [slotId]
+ * @returns {string | null}
+ */
+export function textureToFullSizeUrl(entry, slotId) {
+  const { texture, channel } = mapInspectPreviewContext(entry, slotId);
+  if (!texture) return null;
+
+  if (!channel) {
+    const img = texture.image;
+    if (img instanceof HTMLImageElement && img.src && textureImageReady(texture)) {
+      return img.src;
+    }
+  }
+
+  const img = texture.image;
+  if (!textureImageReady(texture) || !img) return null;
+
+  const w = img.width ?? img.videoWidth ?? 0;
+  const h = img.height ?? img.videoHeight ?? 0;
+  if (!w || !h) return null;
+
+  const key = cacheKey(texture, Math.max(w, h), channel);
+  const cacheFullKey = `${key}:${w}x${h}:full`;
+  const cached = thumbCache.get(cacheFullKey);
+  if (cached) return cached;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  try {
+    drawTextureToContext(ctx, img, w, h, channel);
+    const url = canvas.toDataURL('image/png');
+    thumbCache.set(cacheFullKey, url);
     return url;
   } catch {
     return null;
