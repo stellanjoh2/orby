@@ -78,6 +78,9 @@ export class AnimationControls {
     this.ui.inputs.animationShowBones?.addEventListener('change', (event) => {
       this.eventBus.emit('animation:show-bones', event.target.checked);
     });
+    this.ui.inputs.animationShowJointNames?.addEventListener('change', (event) => {
+      this.eventBus.emit('animation:show-joint-names', event.target.checked);
+    });
     this.ui.inputs.animationHideMesh?.addEventListener('change', (event) => {
       this.eventBus.emit('animation:hide-mesh', event.target.checked);
     });
@@ -134,6 +137,7 @@ export class AnimationControls {
       this.setAnimationClipModeEnabled(false);
       this.syncAnimationReverse(false, false);
       this.syncAnimationShowBones(false, false);
+      this.syncAnimationShowJointNames({ visible: false, enabled: false, checked: false });
       this.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
       this.syncAnimationBoneStroke({ visible: false, enabled: false });
       this.syncAnimationJointScale({ visible: false, enabled: false });
@@ -250,6 +254,22 @@ export class AnimationControls {
     input.checked = !!checked;
     if (available !== undefined) {
       input.disabled = !available;
+    }
+  }
+
+  syncAnimationShowJointNames({ visible, enabled, checked } = {}) {
+    const row = this.ui.dom.animationShowJointNamesRow;
+    const input = this.ui.inputs.animationShowJointNames;
+    if (row && visible !== undefined) {
+      row.hidden = !visible;
+    }
+    if (input) {
+      if (enabled !== undefined) {
+        input.disabled = !enabled;
+      }
+      if (checked !== undefined) {
+        input.checked = !!checked;
+      }
     }
   }
 

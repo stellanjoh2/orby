@@ -6706,6 +6706,48 @@ html.orby-home-scroll .toast {
   transform: translateY(0);
 }
 
+/* Viewport bone/joint hover — mono white-on-black pill, instant show (no enter delay) */
+.tooltip.tooltip--viewport {
+  font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
+  font-size: 1.125rem; /* 18px at 16px root — 20% above prior 0.9375rem (15px) */
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #fff;
+  background: var(--orby-black);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  white-space: nowrap;
+  max-width: none;
+  transition: none;
+}
+
+.joint-name-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.joint-name-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #fff;
+  background: var(--orby-black);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
 .tooltip[data-position="top"] {
   transform: translateY(4px);
 }

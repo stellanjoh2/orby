@@ -194,6 +194,7 @@ export class StateStore {
       },
       animation: {
         showBones: false,
+        showJointNames: false,
         hideMesh: false,
         jointScale: 0.5,
         boneStrokeWidth: 2,

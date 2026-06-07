@@ -21,6 +21,7 @@ import {
   formatFbxMaterialReportAppendix,
   fbxMaterialReportModalTitle,
 } from '../import/fbxMaterialReport.js';
+import { isBoneOnlyArmature } from '../import/bvhArmatureBounds.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
 const FBX_IMPORT_WIP_ALERT_BODY =
@@ -255,9 +256,11 @@ export class ModelLifecycleManager {
     s.diagnosticsController.setBoneStrokeWidth(state.animation?.boneStrokeWidth ?? 2);
     s.diagnosticsController.setHideMesh(false);
     s.stateStore.set('animation.showBones', false);
+    s.stateStore.set('animation.showJointNames', false);
     s.stateStore.set('animation.hideMesh', false);
     const hasSkinnedSkeleton = s.diagnosticsController.hasSkinnedSkeleton();
     s.ui.syncAnimationShowBones(false, hasSkinnedSkeleton);
+    s.ui.syncAnimationShowJointNames({ visible: false, enabled: false, checked: false });
     s.ui.syncAnimationHideMesh({ visible: false, enabled: false, checked: false });
     s.ui.syncAnimationBoneStroke({
       visible: false,
@@ -281,6 +284,9 @@ export class ModelLifecycleManager {
       state.animation?.clipPlaybackMode ?? 'loop',
       animations.length > 0,
     );
+    if (isBoneOnlyArmature(object)) {
+      s.setAnimationShowBones(true);
+    }
     if (isFontExtrudeRevealModel(s.currentModel)) {
       s.fontTextRevealController?.bindModel?.(s.currentModel);
     }

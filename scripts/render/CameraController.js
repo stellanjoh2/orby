@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { expandBox3FromArmature } from '../import/bvhArmatureBounds.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js';
 import { setCameraOrbitFromAngles } from '../camera/isometricView.js';
@@ -9,6 +10,14 @@ import {
 import { clampFovDeg } from '../camera/lensPresets.js';
 function defaultModelViewDirection() {
   return new THREE.Vector3(1.5, 0.7, 1.5).normalize();
+}
+
+function computeObjectBounds(object) {
+  const box = new THREE.Box3().setFromObject(object);
+  if (box.isEmpty()) {
+    expandBox3FromArmature(object, box);
+  }
+  return box;
 }
 
 /**
@@ -924,7 +933,7 @@ export class CameraController {
    */
   refreshModelBounds(object) {
     if (!object) return null;
-    const box = new THREE.Box3().setFromObject(object);
+    const box = computeObjectBounds(object);
     if (box.isEmpty()) return null;
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
@@ -938,7 +947,7 @@ export class CameraController {
    * @param {THREE.Object3D} object - The object to fit the camera to
    */
   fitCameraToObject(object) {
-    const box = new THREE.Box3().setFromObject(object);
+    const box = computeObjectBounds(object);
     if (!box.isEmpty()) {
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
@@ -991,7 +1000,7 @@ export class CameraController {
    * @param {number} duration - Animation duration in seconds (default: 1.0)
    */
   focusOnObjectAnimated(object, duration = 1.0) {
-    const box = new THREE.Box3().setFromObject(object);
+    const box = computeObjectBounds(object);
     if (box.isEmpty()) return;
 
     this._cancelFocusAnimation();

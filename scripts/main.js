@@ -77,6 +77,7 @@ const ui = new UIManager(eventBus, stateStore);
 ui.initShell();
 const tooltips = new TooltipController();
 const scene = new SceneManager(eventBus, stateStore, ui);
+scene.setTooltipController(tooltips);
 
 /** Gamepad poll loop — deferred until first studio entrance (see UIManager.ensureStudioUiReady). */
 let gamepad = null;

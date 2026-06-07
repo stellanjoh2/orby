@@ -573,6 +573,9 @@ export class EventManager {
     eventBus.on('animation:show-bones', (enabled) =>
       s.setAnimationShowBones(enabled),
     );
+    eventBus.on('animation:show-joint-names', (enabled) =>
+      s.setAnimationShowJointNames(enabled),
+    );
     eventBus.on('animation:joint-scale', (scale) =>
       s.setAnimationJointScale(scale),
     );

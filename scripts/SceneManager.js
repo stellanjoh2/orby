@@ -44,6 +44,7 @@ import {
 } from './import/fbxMapSlotsSettings.js';
 import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
+import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
@@ -96,6 +97,7 @@ import {
   MIN_EXTRUDE_DEPTH,
 } from './import/extrudeDefaults.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
+import { SceneBoneHoverHandler } from './scene/SceneBoneHoverHandler.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { normalizeIsometricState } from './camera/isometricPresets.js';
 import { sanitizeClipPlanes } from './camera/clipPlanes.js';
@@ -519,6 +521,14 @@ export class SceneManager {
       },
     });
 
+    this.jointNameLabelsController?.dispose?.();
+    this.jointNameLabelsController = new JointNameLabelsController({
+      viewport: this.viewport,
+      getCamera: () => this.camera,
+      getDiagnostics: () => this.diagnosticsController,
+      getEnabled: () => !!this.stateStore.getState().animation?.showJointNames,
+    });
+
     this.materialController = new MaterialController({
       stateStore: this.stateStore,
       modelRoot: this.modelRoot,
@@ -536,6 +546,7 @@ export class SceneManager {
         this.currentShading = mode;
         this.diagnosticsController.setModel(this.currentModel, mode);
         this.refreshBoneHelpers();
+        this.jointNameLabelsController?.update?.();
         if (this.diagnosticsController.showBones) {
           this.diagnosticsController.refreshGhostMesh();
         }
@@ -640,6 +651,7 @@ export class SceneManager {
 
     this.stateApplier = new SceneStateApplier(this);
     this.setupMeshClickDetection();
+    this.setupBoneHoverHandler();
     this._attachViewportResizeObserver();
 
     let resizeTimeout;
@@ -732,6 +744,7 @@ export class SceneManager {
     this._syncAnimationControllerFromState();
 
     this.meshClickHandler?.detach?.();
+    this.boneHoverHandler?.detach?.();
 
     this.transformControlsTranslate?.dispose?.();
     this.transformControlsRotate?.dispose?.();
@@ -788,6 +801,8 @@ export class SceneManager {
     this.colorCheckerRoot = null;
     this.clock = null;
     this.diagnosticsController = null;
+    this.jointNameLabelsController?.dispose?.();
+    this.jointNameLabelsController = null;
     this.materialController = null;
     this.lightsController = null;
     this.lights = null;
@@ -816,6 +831,13 @@ export class SceneManager {
     this.viewportFramingOverlays.setCinematicLetterbox219Visible(enabled, options);
   }
 
+  setTooltipController(tooltips) {
+    this.tooltips = tooltips;
+    if (this._studioReady) {
+      this.setupBoneHoverHandler();
+    }
+  }
+
   setupMeshClickDetection() {
     this.meshClickHandler = new SceneMeshClickHandler({
       canvas: this.canvas,
@@ -825,6 +847,22 @@ export class SceneManager {
       eventBus: this.eventBus,
     });
     this.meshClickHandler.attach();
+  }
+
+  setupBoneHoverHandler() {
+    this.boneHoverHandler?.detach?.();
+    if (!this.tooltips) return;
+
+    this.boneHoverHandler = new SceneBoneHoverHandler({
+      canvas: this.canvas,
+      camera: this.camera,
+      getDiagnostics: () => this.diagnosticsController,
+      getControls: () => this.cameraController?.controls,
+      getIsGizmoDragging: () => this._gizmoDragActive,
+      getShowJointNames: () => !!this.stateStore.getState().animation?.showJointNames,
+      tooltips: this.tooltips,
+    });
+    this.boneHoverHandler.attach();
   }
 
   /** @deprecated Studio boots on first model load; kept for callers that await scene.init(). */
@@ -2015,6 +2053,12 @@ export class SceneManager {
   setHdriBlurriness(value) {
     this.hdriBlurriness = Math.min(1, Math.max(0, value));
     this.environmentController?.setBlurriness(this.hdriBlurriness);
+    // Blurriness feeds base roughness via effectiveRoughnessWithHdriBlur; env notify dedupes on
+    // texture/intensity only, so sync materials explicitly when the dome is already loaded.
+    if (this.scene?.environment) {
+      const intensity = Math.max(0, this.hdriStrength ?? 0);
+      this.updateMaterialsEnvironment(this.scene.environment, intensity);
+    }
   }
 
   setHdriRotation(value, { updateState = true, updateUi = false } = {}) {
@@ -3888,6 +3932,7 @@ export class SceneManager {
 
   refreshBoneHelpers() {
     this.diagnosticsController.refreshBoneHelpers(this.currentShading);
+    this.jointNameLabelsController?.update?.();
   }
 
   setAnimationShowBones(enabled, { updateUi = true } = {}) {
@@ -3905,6 +3950,14 @@ export class SceneManager {
     if (updateUi) {
       this.ui.syncAnimationShowBones(next, hasSkinned);
       const animation = this.stateStore.getState().animation ?? {};
+      this.ui.syncAnimationShowJointNames({
+        visible: next,
+        enabled: next,
+        checked: next ? !!animation.showJointNames : false,
+      });
+      if (!next && animation.showJointNames) {
+        this.setAnimationShowJointNames(false, { updateUi: false });
+      }
       this.ui.syncAnimationBoneStroke({
         visible: next,
         enabled: next,
@@ -3920,6 +3973,28 @@ export class SceneManager {
         enabled: next,
         value: animation.jointScale ?? 0.5,
       });
+    }
+
+    this.render();
+    return next;
+  }
+
+  setAnimationShowJointNames(enabled, { updateUi = true } = {}) {
+    const hasSkinned = this.diagnosticsController?.hasSkinnedSkeleton?.() ?? false;
+    const bonesOn = !!this.diagnosticsController?.showBones;
+    const next = !!enabled && hasSkinned && bonesOn;
+    this.stateStore.set('animation.showJointNames', next);
+
+    if (updateUi) {
+      this.ui.syncAnimationShowJointNames({
+        visible: bonesOn,
+        enabled: bonesOn,
+        checked: next,
+      });
+    }
+
+    if (!next) {
+      this.jointNameLabelsController?.setVisible(false);
     }
 
     this.render();

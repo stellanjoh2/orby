@@ -172,6 +172,13 @@ export class RenderLoopController {
         },
       },
       {
+        id: 'joint-name-labels',
+        when: (_ctx, s) => !!s.jointNameLabelsController?.shouldUpdate?.(),
+        run: (_delta, s) => {
+          s.jointNameLabelsController.update();
+        },
+      },
+      {
         id: 'grain-time',
         when: (ctx) => !ctx.panelsShelfScrolling && ctx.grainActive,
         run: (delta, s) => {

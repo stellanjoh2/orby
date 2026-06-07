@@ -335,6 +335,7 @@ export class UIManager {
     this.dom.animationClipModeSegmented = q('#animationClipModeSegmented');
     this.dom.animationJointScaleRow = q('#animationJointScaleRow');
     this.dom.animationBoneStrokeRow = q('#animationBoneStrokeRow');
+    this.dom.animationShowJointNamesRow = q('#animationShowJointNamesRow');
     this.dom.animationHideMeshRow = q('#animationHideMeshRow');
     this.dom.animationTime = q('#animationTime');
     this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
@@ -436,6 +437,7 @@ export class UIManager {
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
       wireframeHideMesh: q('#wireframeHideMesh'),
       animationShowBones: q('#animationShowBones'),
+      animationShowJointNames: q('#animationShowJointNames'),
       animationTimeReference: q('#animationTimeReference'),
       animationDisplayFps: q('#animationDisplayFps'),
       animationHideMesh: q('#animationHideMesh'),
@@ -2213,6 +2215,10 @@ export class UIManager {
 
   syncAnimationShowBones(checked, available) {
     this.animationControls?.syncAnimationShowBones(checked, available);
+  }
+
+  syncAnimationShowJointNames(options) {
+    this.animationControls?.syncAnimationShowJointNames(options);
   }
 
   syncAnimationJointScale(options) {

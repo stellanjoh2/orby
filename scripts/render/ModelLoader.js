@@ -6,6 +6,7 @@ import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/j
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/STLLoader.js';
 import { USDZLoader } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/USDZLoader.js';
 import { SvgExtrudeImporter } from '../import/SvgExtrudeImporter.js';
+import { BvhImporter } from '../import/BvhImporter.js';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import { normalizeImportScale } from '../import/normalizeImportScale.js';
 import { registerKHRMaterialsPbrSpecularGlossiness } from './gltfKHRSpecularGlossinessPlugin.js';
@@ -102,7 +103,7 @@ function unsupportedFormatMessage(ext) {
   const label = raw ? `.${raw}` : 'this file';
   return (
     `Unsupported file type (${label}). ` +
-    `Orby opens 3D geometry in GLB, GLTF (single file or whole folder with textures), OBJ, FBX (drop the FBX plus texture PNGs in one folder — external FBX textures do not load from a single file alone), STL, ` +
+    `Orby opens 3D geometry in GLB, GLTF (single file or whole folder with textures), OBJ, FBX (drop the FBX plus texture PNGs in one folder — external FBX textures do not load from a single file alone), STL, BVH for motion-capture skeleton + animation, ` +
     `USDZ / USD when the package uses a text USDA stage (binary USDC is not supported in the browser here), ` +
     `and SVG for extruded logos. ` +
     `Raster images such as PNG, JPEG, or WebP are not imported as meshes—convert or export from your DCC to a supported 3D format first.`
@@ -146,6 +147,7 @@ export class ModelLoader {
     this.stlLoader = new STLLoader();
     this.usdLoader = new USDZLoader();
     this.svgExtrudeImporter = new SvgExtrudeImporter();
+    this.bvhImporter = new BvhImporter();
   }
 
   disposeObjectUrls() {
@@ -267,9 +269,15 @@ export class ModelLoader {
         return this.loadUsd(file);
       case 'svg':
         return this.loadSvg(file, options);
+      case 'bvh':
+        return this.loadBvh(file);
       default:
         throw new Error(unsupportedFormatMessage(ext));
     }
+  }
+
+  async loadBvh(file) {
+    return this.bvhImporter.loadFromFile(file, (f) => this.fileReaders.text(f));
   }
 
   async loadSvg(file, options = {}) {

@@ -18,6 +18,7 @@ export class TooltipController {
     this.isVisible = false;
     this.position = 'top'; // top, bottom, left, right, auto
     this.offset = 8; // Distance from target element
+    this._cursorMode = false;
     /** @type {Array<{ el: EventTarget, handler: (e: Event) => void }>} */
     this._scrollListeners = [];
 
@@ -54,6 +55,10 @@ export class TooltipController {
    * Handle mouse enter on elements with data-tooltip
    */
   handleMouseEnter(event) {
+    if (this._cursorMode) {
+      this.hide();
+    }
+
     // Handle cases where event.target might not have closest (e.g., SVG elements)
     let target = null;
     if (event.target && typeof event.target.closest === 'function') {
@@ -220,7 +225,12 @@ export class TooltipController {
    * Hide when scroll would desync tooltip from its target.
    */
   handleScroll(event) {
-    if (!this.isVisible || !this.currentTarget) return;
+    if (!this.isVisible) return;
+    if (this._cursorMode) {
+      this.hide();
+      return;
+    }
+    if (!this.currentTarget) return;
     const root = event.currentTarget;
     const inShelf = !!this.currentTarget.closest('#shelf');
     if (root instanceof Element && root.classList.contains('panels')) {
@@ -324,6 +334,8 @@ export class TooltipController {
    */
   show(target, text, position = null) {
     if (!target || !text) return;
+
+    this.tooltip.classList.remove('tooltip--viewport');
     
     // Get position preference from data attribute or use default
     const preferredPosition = position || target.getAttribute('data-tooltip-position') || 'auto';
@@ -360,17 +372,18 @@ export class TooltipController {
     }
     
     // Always hide if called, even if state seems inconsistent
-    if (!this.isVisible && !this.currentTarget) {
+    if (!this.isVisible && !this.currentTarget && !this._cursorMode) {
       // Force cleanup anyway
-      this.tooltip.classList.remove('tooltip--visible');
+      this.tooltip.classList.remove('tooltip--visible', 'tooltip--viewport');
       this.tooltip.setAttribute('aria-hidden', 'true');
       return;
     }
     
-    this.tooltip.classList.remove('tooltip--visible');
+    this.tooltip.classList.remove('tooltip--visible', 'tooltip--viewport');
     this.tooltip.setAttribute('aria-hidden', 'true');
     this.isVisible = false;
     this.currentTarget = null;
+    this._cursorMode = false;
   }
 
   /**
@@ -503,6 +516,70 @@ export class TooltipController {
    */
   hideTooltip() {
     this.hide();
+  }
+
+  /**
+   * Show tooltip anchored above a screen point (e.g. 3D viewport bone hover).
+   * @param {number} clientX
+   * @param {number} clientY
+   * @param {string} text
+   */
+  showAtPoint(clientX, clientY, text) {
+    if (!text) return;
+
+    if (this.showTimeout) {
+      clearTimeout(this.showTimeout);
+      this.showTimeout = null;
+    }
+
+    this.currentTarget = null;
+    this._cursorMode = true;
+    this.tooltip.classList.add('tooltip--viewport');
+    this.tooltip.textContent = text;
+    this.tooltip.setAttribute('aria-hidden', 'false');
+    this.updatePositionAtPoint(clientX, clientY);
+    this.tooltip.classList.add('tooltip--visible');
+    this.isVisible = true;
+  }
+
+  /**
+   * Reposition cursor-anchored tooltip (call on pointermove while visible).
+   * @param {number} clientX
+   * @param {number} clientY
+   */
+  updatePositionAtPoint(clientX, clientY) {
+    const cursorOffset = 12;
+    const padding = 8;
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+
+    const wasVisible = this.tooltip.classList.contains('tooltip--visible');
+    if (!wasVisible) {
+      this.tooltip.style.visibility = 'hidden';
+      this.tooltip.style.display = 'block';
+      this.tooltip.style.opacity = '0';
+    }
+
+    const tooltipRect = this.tooltip.getBoundingClientRect();
+
+    if (!wasVisible) {
+      this.tooltip.style.visibility = '';
+      this.tooltip.style.display = '';
+      this.tooltip.style.opacity = '';
+    }
+
+    let left = clientX + scrollX - tooltipRect.width / 2;
+    let top = clientY + scrollY - tooltipRect.height - cursorOffset;
+
+    const maxLeft = scrollX + window.innerWidth - tooltipRect.width - padding;
+    const maxTop = scrollY + window.innerHeight - tooltipRect.height - padding;
+
+    left = Math.max(scrollX + padding, Math.min(left, maxLeft));
+    top = Math.max(scrollY + padding, Math.min(top, maxTop));
+
+    this.tooltip.style.top = `${top}px`;
+    this.tooltip.style.left = `${left}px`;
+    this.tooltip.setAttribute('data-position', 'top');
   }
 
   /**

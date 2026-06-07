@@ -3,6 +3,7 @@ import {
   STUDIO_IMPORT_SCALE_TOLERANCE,
   STUDIO_IMPORT_TARGET_MAX_DIMENSION,
 } from '../constants.js';
+import { expandBox3FromArmature } from './bvhArmatureBounds.js';
 
 /**
  * Uniformly scale a loaded root so its world AABB max dimension sits near
@@ -20,6 +21,9 @@ export function normalizeImportScale(object, options = {}) {
 
   object.updateMatrixWorld(true);
   const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) {
+    expandBox3FromArmature(object, bounds);
+  }
   if (!bounds || bounds.isEmpty()) return null;
 
   const size = bounds.getSize(new THREE.Vector3());

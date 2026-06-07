@@ -373,7 +373,7 @@
             type="file"
             id="fileInput"
             class="sr-only"
-            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg,.orby"
+            accept=".glb,.gltf,.obj,.fbx,.stl,.usd,.usdz,.svg,.bvh,.orby"
             aria-label="Import 3D model file"
           />
           <button
@@ -1551,6 +1551,14 @@
                       <input type="checkbox" id="animationShowBones" disabled />
                       <span class="effect-indicator" aria-hidden="true"></span>
                       <span class="sr-only">Show animation bones</span>
+                    </label>
+                  </div>
+                  <div class="slider-line slider-line--toggle-only" id="animationShowJointNamesRow" hidden>
+                    <span>Show joint names</span>
+                    <label class="effect-toggle" data-tooltip="Always show joint name labels over the skeleton">
+                      <input type="checkbox" id="animationShowJointNames" disabled />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show joint name labels</span>
                     </label>
                   </div>
                   <div class="slider-line slider-line--toggle-only" id="animationHideMeshRow" hidden>

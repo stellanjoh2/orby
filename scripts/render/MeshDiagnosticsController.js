@@ -3,6 +3,7 @@ import { LineSegments2 } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/exampl
 import { LineSegmentsGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineMaterial.js';
 import { ORBY_LIME } from '../constants.js';
+import { expandBox3FromArmature, isBoneOnlyArmature } from '../import/bvhArmatureBounds.js';
 
 /** Mesh opacity while "Show bones" ghosts the surface. */
 const BONES_GHOST_OPACITY = 0.18;
@@ -17,6 +18,15 @@ const BONE_STROKE_MIN = 1;
 const BONE_STROKE_MAX = 8;
 const BONE_STROKE_DEFAULT = 2;
 
+const BONE_HOVER_WHITE = 0xffffff;
+
+/** Hovered joint highlight scale relative to base joint radius. */
+const JOINT_HOVER_SCALE = 1.22;
+/** Scale lerp speed — higher = snappier (~80ms settle). */
+const JOINT_HOVER_SCALE_SPEED = 32;
+/** Hide base joint once hover highlight is visibly enlarged. */
+const JOINT_HOVER_HIDE_BASE_SCALE = 1.06;
+
 /** SkeletonHelper expects a bone hierarchy root — not a SkinnedMesh (empty lines). */
 function collectArmatureRootBones(model) {
   const roots = new Map();
@@ -30,18 +40,50 @@ function collectArmatureRootBones(model) {
       roots.set(root.uuid, root);
     }
   });
+  if (roots.size > 0) {
+    return [...roots.values()];
+  }
+
+  model?.traverse((child) => {
+    if (!child.isBone) return;
+    let root = child;
+    while (root.parent?.isBone) {
+      root = root.parent;
+    }
+    roots.set(root.uuid, root);
+  });
   return [...roots.values()];
 }
 
 function collectAllBones(model) {
-  const bones = new Map();
+  /** @type {Map<string, THREE.Bone>} name or uuid → bone (one marker per logical joint) */
+  const unique = new Map();
+
+  const register = (bone) => {
+    if (!bone?.isBone) return;
+    const nameKey = typeof bone.name === 'string' ? bone.name.trim() : '';
+    const key = nameKey || bone.uuid;
+    if (!unique.has(key)) {
+      unique.set(key, bone);
+    }
+  };
+
+  // Prefer skeleton bind bones (canonical for skinned GLTF / Mixamo).
   model?.traverse((child) => {
-    if (!child.isSkinnedMesh || !child.skeleton?.bones?.length) return;
-    for (const bone of child.skeleton.bones) {
-      bones.set(bone.uuid, bone);
+    if (child.isSkinnedMesh && child.skeleton?.bones?.length) {
+      for (const bone of child.skeleton.bones) {
+        register(bone);
+      }
     }
   });
-  return [...bones.values()];
+
+  model?.traverse((child) => {
+    if (child.isBone) {
+      register(child);
+    }
+  });
+
+  return [...unique.values()];
 }
 
 function getBoneList(object) {
@@ -92,6 +134,9 @@ function createBoneLineHelper(rootBone, strokeWidth, resolution) {
 function computeJointRadius(model, scale = 1) {
   if (!model) return 0.01;
   const bounds = new THREE.Box3().setFromObject(model);
+  if (bounds.isEmpty()) {
+    expandBox3FromArmature(model, bounds);
+  }
   if (bounds.isEmpty()) return 0.01;
   const size = bounds.getSize(new THREE.Vector3());
   const diameter = size.length();
@@ -101,6 +146,18 @@ function computeJointRadius(model, scale = 1) {
     JOINT_SCALE_MAX,
   );
   return Math.max(0.004, diameter * JOINT_RADIUS_FACTOR * clampedScale);
+}
+
+/** Human-readable label for rig bones (preserves name; strips common DCC prefixes). */
+export function formatBoneName(bone, { fallbackIndex = null } = {}) {
+  const raw = typeof bone?.name === 'string' ? bone.name.trim() : '';
+  if (raw) {
+    return raw.replace(/^mixamorig:/i, '');
+  }
+  if (fallbackIndex != null) {
+    return `Bone ${fallbackIndex + 1}`;
+  }
+  return 'Unnamed bone';
 }
 
 export class MeshDiagnosticsController {
@@ -125,18 +182,23 @@ export class MeshDiagnosticsController {
     this._boneParentPosition = new THREE.Vector3();
     this._jointQuaternion = new THREE.Quaternion();
     this._jointScale = new THREE.Vector3();
+    this._jointHighlight = null;
+    this._hoverJointIndex = -1;
+    this._lastHoverJointIndex = -1;
+    this._jointHighlightVisualScale = 1;
   }
 
   hasSkinnedSkeleton(model = this.currentModel) {
     if (!model) return false;
-    let found = false;
+    let foundSkinned = false;
     model.traverse((child) => {
-      if (found) return;
+      if (foundSkinned) return;
       if (child.isSkinnedMesh && child.skeleton?.bones?.length) {
-        found = true;
+        foundSkinned = true;
       }
     });
-    return found;
+    if (foundSkinned) return true;
+    return isBoneOnlyArmature(model);
   }
 
   setModel(model, shading) {
@@ -226,6 +288,7 @@ export class MeshDiagnosticsController {
       }
 
       this._buildJointMarkers();
+      this._buildJointHighlight();
     }
 
     this.syncGhostMesh();
@@ -253,9 +316,43 @@ export class MeshDiagnosticsController {
     this.jointMarkers.frustumCulled = false;
     this.jointMarkers.renderOrder = 1001;
     this.jointMarkers.userData.orbyJointMarker = true;
+
     this.scene.add(this.jointMarkers);
 
     this._updateJointMarkers();
+  }
+
+  _buildJointHighlight() {
+    this._disposeJointHighlight();
+
+    const geometry = new THREE.IcosahedronGeometry(1, 1);
+    const material = new THREE.MeshBasicMaterial({
+      color: BONE_HOVER_WHITE,
+      depthTest: true,
+      depthWrite: true,
+      toneMapped: false,
+      transparent: false,
+      opacity: 1,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 1003;
+    mesh.visible = false;
+    this.scene.add(mesh);
+    this._jointHighlight = mesh;
+  }
+
+  _disposeJointHighlight() {
+    if (!this._jointHighlight) return;
+    this.scene.remove(this._jointHighlight);
+    this._jointHighlight.geometry?.dispose?.();
+    this._jointHighlight.material?.dispose?.();
+    this._jointHighlight = null;
+    this._jointHighlightVisualScale = 1;
   }
 
   _updateBoneLines(entry) {
@@ -293,13 +390,15 @@ export class MeshDiagnosticsController {
     }
 
     const radius = computeJointRadius(this.currentModel, this.jointScale);
+    const hiddenJointIndex = this._getHiddenJointIndex();
 
     for (let i = 0; i < this._jointBones.length; i++) {
       const bone = this._jointBones[i];
       bone.updateWorldMatrix(true, false);
       bone.getWorldPosition(this._jointPosition);
       this._jointQuaternion.identity();
-      this._jointScale.set(radius, radius, radius);
+      const jointRadius = i === hiddenJointIndex ? 0 : radius;
+      this._jointScale.set(jointRadius, jointRadius, jointRadius);
       this._jointMatrix.compose(
         this._jointPosition,
         this._jointQuaternion,
@@ -420,12 +519,19 @@ export class MeshDiagnosticsController {
   }
 
   clearSkeletonVisuals() {
+    this._hoverJointIndex = -1;
+    this._lastHoverJointIndex = -1;
+    this._jointHighlightVisualScale = 1;
+    if (this._jointHighlight) {
+      this._jointHighlight.visible = false;
+    }
     this.boneHelpers.forEach((entry) => {
       this.scene.remove(entry.lines);
       entry.geometry?.dispose?.();
       entry.material?.dispose?.();
     });
     this.boneHelpers = [];
+    this._disposeJointHighlight();
     this.clearJointMarkers();
   }
 
@@ -446,10 +552,171 @@ export class MeshDiagnosticsController {
     return this.boneHelpers.length > 0 || !!this.jointMarkers;
   }
 
+  /**
+   * Pick a joint under the cursor ray.
+   * @param {THREE.Raycaster} raycaster — must already have ray set from camera + NDC pointer
+   * @returns {{ bone: THREE.Bone, jointIndex: number }|null}
+   */
+  pickJoint(raycaster) {
+    if (!this.jointMarkers || !this._jointBones.length || !raycaster) return null;
+
+    const meshPick = this._pickJointFromMesh(raycaster);
+    if (meshPick) return meshPick;
+
+    return this._pickJointByProximity(raycaster);
+  }
+
+  _pickJointFromMesh(raycaster) {
+    const jointHits = raycaster.intersectObject(this.jointMarkers, false);
+    if (jointHits.length === 0) return null;
+
+    const instanceId = jointHits[0].instanceId;
+    if (instanceId == null || !this._jointBones[instanceId]) return null;
+
+    return {
+      bone: this._jointBones[instanceId],
+      jointIndex: instanceId,
+    };
+  }
+
+  _pickJointByProximity(raycaster) {
+    if (this.currentModel) {
+      this.currentModel.updateMatrixWorld(true);
+    }
+
+    const pickRadius = computeJointRadius(this.currentModel, this.jointScale) * 1.75;
+    const ray = raycaster.ray;
+
+    let bestIndex = -1;
+    let bestDist = pickRadius;
+
+    for (let i = 0; i < this._jointBones.length; i++) {
+      const bone = this._jointBones[i];
+      bone.updateWorldMatrix(true, false);
+      bone.getWorldPosition(this._jointPosition);
+      const dist = ray.distanceToPoint(this._jointPosition);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex < 0) return null;
+
+    return {
+      bone: this._jointBones[bestIndex],
+      jointIndex: bestIndex,
+    };
+  }
+
+  /** @deprecated Use pickJoint */
+  pickBone(raycaster) {
+    return this.pickJoint(raycaster);
+  }
+
+  setJointHover(pick) {
+    if (!pick?.bone || pick.jointIndex == null || pick.jointIndex < 0) {
+      this.clearBoneHover();
+      return;
+    }
+
+    const prevIndex = this._hoverJointIndex;
+    const switchingJoint = prevIndex >= 0 && prevIndex !== pick.jointIndex;
+    const entering = prevIndex < 0;
+
+    this._lastHoverJointIndex = pick.jointIndex;
+    this._hoverJointIndex = pick.jointIndex;
+
+    if (switchingJoint && this._jointHighlightVisualScale > 1.05) {
+      this._jointHighlightVisualScale = JOINT_HOVER_SCALE;
+    } else if (entering && this._jointHighlightVisualScale < 1.02) {
+      this._jointHighlightVisualScale = 1;
+    }
+
+    if (this._jointHighlight) {
+      this._jointHighlight.visible = true;
+    }
+    this._updateJointHighlightPosition(this._hoverJointIndex);
+  }
+
+  clearBoneHover() {
+    this._hoverJointIndex = -1;
+  }
+
+  /** Lime joint hidden once hover highlight has grown in (keeps pick target stable). */
+  _getHiddenJointIndex() {
+    if (!this._jointHighlight?.visible) return -1;
+    if (this._jointHighlightVisualScale < JOINT_HOVER_HIDE_BASE_SCALE) return -1;
+    if (this._hoverJointIndex >= 0) return this._hoverJointIndex;
+    if (this._lastHoverJointIndex >= 0) return this._lastHoverJointIndex;
+    return -1;
+  }
+
+  _tickJointHighlightScale(delta) {
+    if (!this._jointHighlight) return;
+
+    const targetScale = this._hoverJointIndex >= 0 ? JOINT_HOVER_SCALE : 1;
+    const t = 1 - Math.exp(-JOINT_HOVER_SCALE_SPEED * delta);
+    this._jointHighlightVisualScale += (targetScale - this._jointHighlightVisualScale) * t;
+
+    if (Math.abs(this._jointHighlightVisualScale - targetScale) < 0.001) {
+      this._jointHighlightVisualScale = targetScale;
+    }
+
+    const animatingOut = this._hoverJointIndex < 0 && this._jointHighlightVisualScale > 1.001;
+    const active = this._hoverJointIndex >= 0;
+
+    if (active || animatingOut) {
+      const jointIndex = active ? this._hoverJointIndex : this._lastHoverJointIndex;
+      if (jointIndex >= 0) {
+        this._updateJointHighlightPosition(jointIndex);
+        this._jointHighlight.visible = true;
+        return;
+      }
+    }
+
+    this._jointHighlight.visible = false;
+    this._jointHighlightVisualScale = 1;
+  }
+
+  _updateJointHighlightPosition(jointIndex) {
+    if (
+      !this._jointHighlight
+      || jointIndex == null
+      || jointIndex < 0
+      || !this._jointBones[jointIndex]
+    ) {
+      return;
+    }
+
+    if (this.currentModel) {
+      this.currentModel.updateMatrixWorld(true);
+    }
+
+    const bone = this._jointBones[jointIndex];
+    bone.updateWorldMatrix(true, false);
+    bone.getWorldPosition(this._jointPosition);
+
+    const radius = computeJointRadius(this.currentModel, this.jointScale)
+      * this._jointHighlightVisualScale;
+    this._jointHighlight.position.copy(this._jointPosition);
+    this._jointHighlight.scale.setScalar(radius);
+  }
+
+  getJointBoneIndex(bone) {
+    if (!bone) return -1;
+    return this._jointBones.indexOf(bone);
+  }
+
+  getJointBones() {
+    return this._jointBones;
+  }
+
   update(delta) {
     for (const entry of this.boneHelpers) {
       this._updateBoneLines(entry);
     }
+    this._tickJointHighlightScale(delta);
     if (this.jointMarkers) {
       this._updateJointMarkers();
     }
