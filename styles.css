@@ -1722,7 +1722,7 @@ html.orby-gate-unlocked .orby-entry-gate,
 
 /* ColorChecker “Reference colors” — full-width toggle; On = filled accent like hover */
 .effect-foldout .color-checker-raw-toggle {
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .color-checker-raw-toggle.color-checker-raw-toggle--on {
@@ -3489,21 +3489,33 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 
 .shelf {
   /* Inset of panel box from the browser chrome (top / right / bottom) — --shelf-inset on :root / html */
-  --slider-label-col: 90px;
-  --slider-value-col: 2.5rem; /* ~4 digits at 0.8rem; longer values ellipsize for now */
-  /* --shelf-g: tab chrome bleed; --shelf-panel-gutter: equal H/V between shell bg and scroll cards */
-  --shelf-stack-gap: 12px; /* section / block vertical rhythm @ 2560×1440 */
-  --shelf-row-gap: var(--shelf-stack-gap); /* label-to-label gap between control rows */
-  /* Match pill select height so slider / color / select labels share one stride */
-  --shelf-control-row-min-height: calc(0.7rem + var(--shelf-headline-font-size) * 1.25);
-  --shelf-control-gap: 1rem; /* accent button stacks (Scene, Export) */
-  --shelf-rhythm: var(--shelf-stack-gap);
+  /* ── Control row layout (.slider-line, .select-line, .color-line, .map-slot-row) ──
+   * 40% label · 60% control · fixed value column. Placement via --shelf-span-* only. */
+  --shelf-row-value-col: 2.5rem;
+  --slider-value-col: var(--shelf-row-value-col);
+  --shelf-row-label-col: minmax(0, 2fr);
+  --shelf-row-control-col: minmax(0, 3fr);
+  --shelf-row-col-gap: 0.45rem;
+  --shelf-row-grid: var(--shelf-row-label-col) var(--shelf-row-control-col) var(--shelf-row-value-col);
+  --shelf-place-label: 1;
+  --shelf-place-control: 2;
+  --shelf-place-value: 3;
+  --shelf-span-control: 2;
+  --shelf-span-control-full: 2 / -1;
+  --shelf-span-label-toggle: 1 / 3;
+  /* Vertical rhythm — 24px @ 2560: headlines (.block-title), dividers, control rows, foldout tops */
+  --shelf-section-gap: 24px;
+  /* Card inset from shelf chrome — independent of section gap */
+  --shelf-shell-rhythm: 12px;
+  --shelf-control-gap: calc(var(--shelf-section-gap) / 2); /* stacked accent buttons (Scene, Export camera actions) */
+  --shelf-pill-grid-gap: 0.4rem; /* horizontal gap in .segmented + .export-button-group (Turntable, Export pills) */
+  --shelf-rhythm: var(--shelf-shell-rhythm);
   --shelf-g: calc(var(--shelf-rhythm) / 2);
-  --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
+  --shelf-panel-gutter: calc(var(--shelf-shell-rhythm) * 14 / 12);
   /* Inset inside lighter panel cards (.panel-block) */
   --shelf-card-padding: 1.2rem;
   /* Headline inset — match card horizontal padding for symmetric section headers */
-  --shelf-section-inset: var(--shelf-card-padding);
+  --shelf-section-inset: var(--shelf-card-padding); /* horizontal card inset only — not vertical headline rhythm */
   --shelf-scrollbar-edge-offset: 12px;
   --shelf-scroll-end-pad: 1.25rem;
   /* Panel footer: last card → version line, logo → shelf bottom (symmetrical) */
@@ -3559,20 +3571,15 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 
 html:not(.mobile-landing) .shelf {
   font-size: calc(1rem * var(--studio-ui-scale));
-  --slider-label-col: calc(90px * var(--studio-ui-scale));
-  --shelf-g: calc(var(--shelf-rhythm) / 2);
-  /* 12px @ 2560 (scale 1), 10px @ 1920 (scale 0.75); 2560 unchanged */
-  --shelf-stack-gap: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
-  --shelf-row-gap: var(--shelf-stack-gap);
-  --shelf-control-row-min-height: calc(
-    (0.7rem + var(--shelf-headline-font-size) * 1.25) * var(--studio-ui-scale)
-  );
-  /* Scene/Export stacks: 16px @ 2560, 10px @ 1920 */
-  --shelf-control-gap: calc(10px + 6px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
-  --shelf-panel-gutter: calc(var(--shelf-stack-gap) * 14 / 12);
+  /* 24px @ 2560, ~19px @ 1920 */
+  --shelf-section-gap: calc(19.2px + 4.8px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-shell-rhythm: calc(10px + 2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
+  --shelf-g: calc(var(--shelf-shell-rhythm) / 2);
+  --shelf-rhythm: var(--shelf-shell-rhythm);
+  --shelf-panel-gutter: calc(var(--shelf-shell-rhythm) * 14 / 12);
   /* 16px @ 1920, 1.2rem @ 2560 — card inner gutter */
   --shelf-card-padding: calc(16px + 3.2px * max(0, (var(--studio-ui-scale) - 0.75) / 0.25));
-  --shelf-section-inset: var(--shelf-card-padding);
+  --shelf-section-inset: var(--shelf-card-padding); /* horizontal card inset only — not vertical headline rhythm */
   --shelf-scrollbar-edge-offset: calc(12px * var(--studio-ui-scale));
   --shelf-scroll-end-pad: calc(1.25rem * var(--studio-ui-scale));
   --shelf-footer-outer-gap: calc(1.75rem * var(--studio-ui-scale));
@@ -3668,10 +3675,6 @@ html:not(.mobile-landing) .shelf .slider-line .value-inline-input {
   border-radius: calc(4px * var(--studio-ui-scale));
 }
 
-html:not(.mobile-landing) .shelf .rotate-slider {
-  --slider-label-col: calc(80px * var(--studio-ui-scale));
-}
-
 /* Toggles use rem (root-sized) — scale track/thumb with studio factor */
 html:not(.mobile-landing) .shelf .effect-toggle {
   --toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
@@ -3692,12 +3695,12 @@ html:not(.mobile-landing) .shelf .effect-toggle input:focus-visible + .effect-in
 /* Tab headline (Object, Studio, …) — 28px @ 2560; scales with --studio-ui-scale */
 html:not(.mobile-landing) .shelf .panel-header-title {
   font-size: var(--shelf-tab-title-font-size);
-  margin: 0.95rem 0 var(--shelf-stack-gap) 0;
+  margin: 0.95rem 0 var(--shelf-section-gap) 0;
 }
 
 html:not(.mobile-landing) .shelf .hdri-grid {
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
   padding: calc(0.75rem * var(--studio-ui-scale)) 0 0;
 }
 
@@ -3725,11 +3728,15 @@ html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__check {
   font-size: calc(1.35rem * var(--studio-ui-scale));
 }
 
-/* Scene / Object accent buttons — gap + min-height use root rem; scale with studio factor */
+/* Scene / Object accent buttons — half rhythm; export option groups use full section gap */
 html:not(.mobile-landing) .shelf .scene-controls,
-html:not(.mobile-landing) .shelf .export-controls,
+html:not(.mobile-landing) .shelf .export-controls:not(:has(> .export-option-group)),
 html:not(.mobile-landing) .shelf .map-slots-action-row {
   gap: var(--shelf-control-gap);
+}
+
+html:not(.mobile-landing) .shelf .export-controls:has(> .export-option-group) {
+  gap: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .accent-action-btn {
@@ -3739,8 +3746,7 @@ html:not(.mobile-landing) .shelf .accent-action-btn {
 }
 
 html:not(.mobile-landing) .shelf .select-line {
-  gap: calc(0.5rem * var(--studio-ui-scale));
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .select-line select {
@@ -3773,7 +3779,7 @@ html:not(.mobile-landing) .shelf .font-extrude-family-trigger:focus-visible {
 
 /* Segmented pills (Turntable, etc.) — min-height/padding were root rem */
 html:not(.mobile-landing) .shelf .segmented {
-  gap: calc(0.4rem * var(--studio-ui-scale));
+  gap: calc(var(--shelf-pill-grid-gap) * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .segmented label {
@@ -3787,7 +3793,7 @@ html:not(.mobile-landing) .shelf .export-option-btn {
 }
 
 html:not(.mobile-landing) .shelf .export-button-group {
-  gap: var(--shelf-row-gap);
+  gap: calc(var(--shelf-pill-grid-gap) * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .info-version-tag {
@@ -3869,7 +3875,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-keys kbd {
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list {
-  gap: var(--shelf-stack-gap);
+  gap: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dt {
@@ -3877,7 +3883,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dt {
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dd {
-  margin: 0 0 var(--shelf-stack-gap) 0;
+  margin: 0 0 var(--shelf-section-gap) 0;
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype-container {
@@ -3976,7 +3982,7 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
   background-color: transparent;
   border: none;
   color: var(--text-dim);
-  padding: var(--shelf-stack-gap) 0;
+  padding: var(--shelf-section-gap) 0;
   font-size: var(--shelf-label-font-size);
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -4118,7 +4124,7 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
 
 .info-list {
   display: grid;
-  gap: var(--shelf-stack-gap);
+  gap: var(--shelf-section-gap);
   margin: 0;
 }
 
@@ -4130,7 +4136,7 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
 }
 
 .info-list dd {
-  margin: 0 0 var(--shelf-stack-gap) 0;
+  margin: 0 0 var(--shelf-section-gap) 0;
   color: var(--text-dim);
   font-size: var(--shelf-label-font-size);
   line-height: 1.4;
@@ -4287,7 +4293,7 @@ a.about-highlight:focus-visible {
   font-weight: 400;
   line-height: 1;
   color: var(--accent);
-  margin: 0.95rem 0 var(--shelf-stack-gap) 0;
+  margin: 0.95rem 0 var(--shelf-section-gap) 0;
   padding: 0;
 }
 
@@ -4329,18 +4335,53 @@ a.about-highlight:focus-visible {
   margin-bottom: var(--shelf-panel-gutter);
 }
 
-/* Subtle divider line within panel blocks - only spans content width */
-.panel-block-divider {
-  margin: var(--shelf-section-inset) 0;
+/* In-block separator — symmetric gap above & below the rule (--shelf-section-gap) */
+.panel-block-divider,
+.font-extrude-divider,
+.font-extrude-reveal-preview-divider,
+.font-extrude-reveal-emissive-divider {
+  margin: var(--shelf-section-gap) 0;
+  padding: 0;
   border-top: 1px solid var(--stroke);
   border-bottom: none;
   max-width: 100%;
 }
 
+/* Separator that wraps content below the rule (e.g. font Surface block) */
+.font-extrude-surface-group {
+  margin: var(--shelf-section-gap) 0 0;
+  padding: var(--shelf-section-gap) 0 0;
+  border-top: 1px solid var(--stroke);
+}
+
+/* Mount after a standalone divider — gap comes from the divider only */
+.panel-block-divider + .surface-controls-mount {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* Headline immediately after an in-block divider — avoid double vertical gap */
 .panel-block-divider + .block-title,
-.panel-block-divider + .subsection > .block-title:first-child {
+.panel-block-divider + .subsection > .block-title:first-child,
+.panel-block-divider + :not(.surface-controls-mount) > .block-title:first-child,
+.panel-block-divider + :not(.surface-controls-mount) > .subsection > .block-title:first-child {
   margin-top: 0;
+}
+
+/* Flex stacks (.export-controls) — gap owns rhythm; divider is a line only */
+:is(.export-controls, .scene-controls) > .panel-block-divider {
+  margin: 0;
+}
+
+/* Toggle-only subsections — symmetric gap above & below the rule (equal headline padding) */
+.subsection:has(> .block-title.has-toggle) + .panel-block-divider:has(+ .subsection > .block-title.has-toggle) {
+  margin-block: var(--shelf-section-gap);
+}
+
+/* Last toggle headline in a card — card padding owns bottom inset */
+.panel-block > .subsection:last-child > .block-title:last-child {
+  margin-bottom: 0;
 }
 
 /* Subsection within merged panel blocks - can be muted individually */
@@ -4350,13 +4391,17 @@ a.about-highlight:focus-visible {
 
 /* Muted UI logic removed - will be reimplemented later */
 
-/* Shelf section headings (all tabs): body font stack. Never use --brand-font-headline here—that is only for .panel-header-title and dropzone/marketing headlines. */
+/*
+ * Shelf section headings (all tabs): body font stack. Never use --brand-font-headline here—that
+ * is only for .panel-header-title and dropzone/marketing headlines.
+ * Vertical rhythm: --shelf-section-gap (24px) — never --shelf-section-inset.
+ */
 .block-title {
   font-size: var(--shelf-headline-font-size);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent);
-  margin-bottom: var(--shelf-section-inset);
+  margin-bottom: var(--shelf-section-gap);
   font-weight: 400;
 }
 
@@ -4655,14 +4700,10 @@ a.about-highlight:focus-visible {
   outline-offset: 2px;
 }
 
-.select-line:not(:has(> span:first-child)) select {
-  grid-column: 1;
-}
-
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.4rem;
+  gap: var(--shelf-pill-grid-gap);
   min-width: 0;
   max-width: 100%;
 }
@@ -4682,7 +4723,7 @@ a.about-highlight:focus-visible {
 /* Segmented pill row → control rows below (Animation playback speed, Turntable, …) */
 .subsection > .segmented,
 .panel-block > .segmented {
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .segmented label {
@@ -4894,21 +4935,21 @@ button.advanced-info-doc-btn {
 
 .map-slot-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 58%);
-  column-gap: 0.65rem;
+  grid-template-columns: var(--shelf-row-grid);
+  column-gap: var(--shelf-row-col-gap);
   align-items: center;
-  min-height: var(--shelf-control-row-min-height);
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
   font-size: var(--shelf-label-font-size);
 }
 
 .map-slot-label {
+  grid-column: var(--shelf-place-label);
   color: var(--text-dim);
   letter-spacing: -0.01em;
-  min-width: 0;
 }
 
 .map-slot-control {
+  grid-column: var(--shelf-span-control);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -5003,19 +5044,10 @@ button.advanced-info-doc-btn {
   outline: none;
 }
 
-.map-slots-tuning-divider {
-  margin-top: 0.15rem;
-}
-
 .map-slots-tuning-title {
-  margin: 0 0 var(--shelf-row-gap);
+  margin: 0 0 var(--shelf-section-gap);
   font-size: var(--shelf-label-font-size);
   color: var(--text-muted);
-}
-
-.select-line.map-slot-tuning-line {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
-  column-gap: 0.65rem;
 }
 
 /* Map Slots actions — same pill buttons as Object/Studio Scene (.export-controls + .accent-action-btn). */
@@ -5024,55 +5056,45 @@ button.advanced-info-doc-btn {
 }
 
 /*
- * Dynamically mounted surface rows live inside a wrapper. The last nested
- * .slider-line loses margin-bottom to foldout :last-child rules — restore
- * standard shelf rhythm after the block (e.g. before Snap to Mesh).
+ * Surface control mounts — plain wrappers; spacing comes from .panel-block-divider
+ * or .font-extrude-surface-group. Restore row rhythm when nested in a foldout.
  */
 .effect-foldout > .surface-controls-mount {
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .effect-foldout > .surface-controls-mount:has(+ .panel-block-divider) {
   margin-bottom: 0;
 }
 
-.slider-line,
-.color-line,
-.select-line {
-  display: grid;
-  align-items: center;
-  min-height: var(--shelf-control-row-min-height);
-  margin-bottom: var(--shelf-row-gap);
-  font-size: var(--shelf-label-font-size);
-}
-
-.slider-line,
-.color-line {
-  gap: 0.5rem;
-}
-
-.color-line {
-  grid-template-columns: 1fr auto;
-}
-
-/* Small sections (Background, …) — title-to-control gap matches control row rhythm */
+/* Small sections (Background, …) — uses default .block-title rhythm */
 .panel-block--compact-head > .block-title {
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
-/* Wireframe-style — headline, master row, then nested foldout */
 .subsection > .block-title:has(+ :is(.slider-line, .select-line, .color-line) + .effect-foldout) {
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 /*
- * Shelf vertical rhythm — rows use margin-bottom between siblings only.
- * No extra gap before a foldout, after the last row, or at card bottom (padding handles inset).
+ * Shelf vertical rhythm — margin-bottom between siblings only.
+ * Dividers own --shelf-section-gap above/below the rule; rows/grids/segmented before a
+ * divider (or card edge) must not stack an extra row-gap on top.
  */
-:is(.panel-block, .subsection)
+:is(.panel-block, .subsection, .effect-foldout, .export-option-group)
   > :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
+:is(.panel-block, .subsection, .effect-foldout)
+  > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout),
+:is(.panel-block, .subsection, .effect-foldout)
+  > :is(.slider-line, .color-line, .select-line, .map-slot-row):has(+ .panel-block-divider),
+:is(.panel-block, .subsection, .effect-foldout)
+  > :is(.slider-line, .color-line, .select-line):has(+ .clip-planes-foldout--collapsed + .panel-block-divider),
+.effect-foldout > :is(.slider-line, .color-line, .select-line, .map-slot-row):has(+ .creative-look-foldout--collapsed),
+:is(.panel-block, .subsection, .effect-foldout)
+  > :is(.segmented, .view-preset-grid, .lens-preset-grid, .iso-controls-stack):has(+ .panel-block-divider),
 :is(.panel-block, .subsection)
-  > :is(.slider-line, .color-line, .select-line):has(+ .effect-foldout) {
+  > :is(.segmented, .view-preset-grid, .lens-preset-grid, .iso-controls-stack):last-child,
+.subsection:has(+ .panel-block-divider) > :last-child {
   margin-bottom: 0;
 }
 
@@ -5080,49 +5102,105 @@ button.advanced-info-doc-btn {
   :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
 :is(.panel-block, .subsection)
   > .effect-foldout:has(~ :last-child[hidden])
+  :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
+.effect-foldout > .surface-controls-mount:has(+ .panel-block-divider)
   :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child {
   margin-bottom: 0;
 }
 
+/*
+ * Shelf control rows — one grid contract for sliders, selects, colors, map slots.
+ * Widths: --shelf-row-* on .shelf · placement: --shelf-span-* · never hardcode grid-column here.
+ */
+.slider-line,
+.color-line,
 .select-line {
-  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr);
-  column-gap: 0.45rem;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: var(--shelf-row-grid);
+  column-gap: var(--shelf-row-col-gap);
+  row-gap: 0;
+  align-items: center;
+  margin-bottom: var(--shelf-section-gap);
+  font-size: var(--shelf-label-font-size);
 }
 
-.select-line:has(> .value) {
-  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
+/* Labels — single line, ellipsis (toggle-only rows override below) */
+.slider-line > :is(span:first-child, .slider-line-label, .block-title-name),
+.select-line > span:first-child,
+.color-line > span:first-child,
+.map-slot-label {
+  grid-column: var(--shelf-place-label);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.select-line:has(> .value) select {
-  grid-column: 2 / -1;
+.slider-line > :is(span:first-child, .slider-line-label, .block-title-name) {
+  align-self: center;
+  text-align: left;
+  letter-spacing: -0.01em;
+  color: var(--text-dim);
 }
 
-.select-line > .value:empty {
-  display: none;
+.slider-line-label:not(.block-title-name) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  max-width: 100%;
+}
+
+.color-line span:first-child,
+.select-line span:first-child {
+  letter-spacing: -0.01em;
+  color: var(--text-dim);
+}
+
+/* Value readouts — trailing column */
+.slider-line .value,
+.slider-line .slider-value-group,
+.select-line > .value {
+  grid-column: var(--shelf-place-value);
+}
+
+.slider-line .slider-value-group .value {
+  grid-column: auto;
+}
+
+/* Dropdowns & color chips — full width to panel edge */
+.select-line select,
+.font-extrude-family-line .font-extrude-family-picker,
+.color-line .color-chip {
+  grid-column: var(--shelf-span-control-full);
+}
+
+.select-line select,
+.font-extrude-family-line .font-extrude-family-picker {
+  justify-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.color-line .color-chip {
+  justify-self: end;
+  min-width: 0;
+}
+
+/* Select row with its own value readout — dropdown matches slider track width */
+.select-line:has(> .value:not(:empty)) select {
+  grid-column: var(--shelf-span-control);
 }
 
 .select-line:not(:has(> span:first-child)) {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.select-line > span:first-child {
+.select-line:not(:has(> span:first-child)) select {
   grid-column: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.select-line > .value {
-  grid-column: 3;
 }
 
 .select-line select {
-  grid-column: 2;
-  justify-self: stretch;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
   border: none;
   border-radius: 999px;
   padding: 0.35rem 1.6rem 0.35rem 0.7rem;
@@ -5142,73 +5220,13 @@ button.advanced-info-doc-btn {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
-.slider-line {
-  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
-  column-gap: 0.45rem;
+.select-line > .value:empty {
+  display: none;
 }
 
-/**
- * Short slider track — same row layout as `.slider-line`, but the range column stays narrow so
- * column 1 can use `minmax(0, 1fr)` for longer labels. Default rows keep full-width tracks.
- * Tune per block with `--slider-track-short-width` (px).
- */
-.slider-line.slider-line--track-short {
-  --slider-track-short-width: 104px;
-  grid-template-columns: minmax(0, 1fr) var(--slider-track-short-width, 104px) var(--slider-value-col, 2.5rem);
-  column-gap: 0.35rem;
-}
-
-.slider-line.slider-line--track-short span:first-child {
-  white-space: normal;
-  line-height: 1.25;
-  min-width: 0;
-}
-
-.slider-line.slider-line--track-short input[type='range'] {
-  width: 100%;
-  max-width: 100%;
-  justify-self: stretch;
-}
-
-.slider-line > span:first-child,
-.slider-line > .slider-line-label,
-.slider-line > .block-title-name {
-  grid-column: 1;
-  align-self: center;
-  text-align: left;
-  letter-spacing: -0.01em;
-  color: var(--text-dim);
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.slider-line--surface-detail input[type='range'] {
-  direction: rtl;
-}
-
-.slider-line > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.slider-line > .slider-line-label,
-.slider-line > .block-title-name {
-  overflow: visible;
-  text-overflow: clip;
-}
-
-.slider-line-label:not(.block-title-name) {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-}
-
-/* Toggle-only rows: label uses full width; switch aligns with slider value column (.slider-line--toggle-only set in UIHelpers) */
-.slider-line.slider-line--toggle-only {
-  grid-template-columns: minmax(0, 1fr) var(--slider-value-col, 2.5rem);
-}
-
-.slider-line.slider-line--toggle-only span:first-child {
+/* Toggles — full label text; switch in value column on toggle-only rows */
+.slider-line.slider-line--toggle-only > :is(span:first-child, .slider-line-label, .block-title-name) {
+  grid-column: var(--shelf-span-label-toggle);
   overflow: visible;
   text-overflow: clip;
 }
@@ -5218,19 +5236,17 @@ button.advanced-info-doc-btn {
 }
 
 .slider-line > .effect-toggle {
-  grid-column: 2 / -1;
+  grid-column: var(--shelf-span-control-full);
   justify-self: end;
 }
 
 .slider-line.slider-line--toggle-only > .effect-toggle {
-  grid-column: 2;
+  grid-column: var(--shelf-place-value);
+  justify-self: end;
 }
 
-.color-line span:first-child,
-.select-line span:first-child {
-  letter-spacing: -0.01em;
-  color: var(--text-dim);
-  white-space: nowrap;
+.slider-line--surface-detail input[type='range'] {
+  direction: rtl;
 }
 
 /* Shelf control rows — never grow wider than the card (overflow clips on .panels / .effect-foldout). */
@@ -5276,7 +5292,7 @@ button.advanced-info-doc-btn {
 /* Removed - all toggles now use .effect-toggle system */
 
 .slider-line input[type='range'] {
-  grid-column: 2;
+  grid-column: var(--shelf-span-control);
   align-self: center;
   justify-self: stretch;
   width: 100%;
@@ -5466,7 +5482,6 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 .slider-line .value {
-  grid-column: 3;
   justify-self: stretch;
   align-self: center;
   width: 100%;
@@ -5521,7 +5536,6 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 .slider-line .slider-value-group {
-  grid-column: 3;
   justify-self: end;
   display: inline-flex;
   align-items: center;
@@ -5574,19 +5588,14 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 #svgExtrudeColorDepths .slider-line {
-  grid-template-columns: 90px 1fr 58px;
-  margin-bottom: var(--shelf-row-gap);
-  column-gap: 0.3rem;
-}
-
-#svgExtrudeColorDepths .slider-line span:first-child {
-  overflow: visible;
-  padding-left: 1px;
+  margin-bottom: var(--shelf-section-gap);
 }
 
 #svgExtrudeColorDepths .svg-extrude-inline-number {
-  grid-column: 3;
-  width: 58px;
+  grid-column: var(--shelf-place-value);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.18rem 0.3rem;
   border: none;
   border-radius: 6px;
@@ -5858,11 +5867,6 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   stroke: var(--text-dim);
 }
 
-.color-line .color-chip {
-  justify-self: end;
-  min-width: 0;
-}
-
 .color-chip {
   width: var(--color-chip-w, 92px);
   max-width: 100%;
@@ -5955,9 +5959,9 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 
 .animation-controls {
   display: flex;
-  gap: var(--shelf-row-gap);
+  gap: var(--shelf-section-gap);
   align-items: center;
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 #animationScrub {
@@ -5967,9 +5971,9 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
 .animation-timeline {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  column-gap: var(--shelf-row-gap);
+  column-gap: var(--shelf-section-gap);
   align-items: center;
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .animation-transport-btns {
@@ -6096,6 +6100,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 }
 
 .animation-time-reference-line {
+  /* Exception: custom 2-col row (frame numbers + pill select), not --shelf-row-grid */
   --animation-ref-pill-pad-y: 0.35rem;
   --animation-ref-pill-font-size: var(--shelf-headline-font-size);
   --animation-ref-pill-line-height: 1.25;
@@ -6148,15 +6153,11 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   flex-shrink: 0;
 }
 
-#animationBlock {
-  --slider-label-col: calc(5.25rem * var(--studio-ui-scale, 1));
-}
-
 .hdri-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--shelf-hdri-grid-gap-y) var(--shelf-hdri-grid-gap-x);
-  margin-bottom: var(--shelf-row-gap);
+  margin-bottom: var(--shelf-section-gap);
   /* Top inset only — card padding handles bottom inset (same as segmented / accent buttons) */
   padding: 0.75rem 0 0;
 }
@@ -6353,24 +6354,22 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   color: var(--warning);
 }
 
-/* Export Controls */
+/* Export — full section gap between option groups; half gap inside groups (label → pills, pill rows) */
 .export-controls {
   display: flex;
   flex-direction: column;
   gap: var(--shelf-control-gap);
 }
 
-.export-video-preview-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.export-controls:has(> .export-option-group) {
+  gap: var(--shelf-section-gap);
 }
 
 .export-video-preview-actions .accent-action-btn {
   width: 100%;
 }
 
-/* Scene footer controls in Studio tab (same spacing, no export-specific nesting semantics). */
+/* Scene footer controls — stacked accent buttons (Studio tab, Export camera actions, …) */
 .scene-controls {
   display: flex;
   flex-direction: column;
@@ -6380,7 +6379,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 .export-option-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--shelf-control-gap);
 }
 
 .export-label {
@@ -6392,7 +6391,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 .export-button-group {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
+  gap: var(--shelf-pill-grid-gap);
 }
 
 .export-button-group--triple {
@@ -6443,33 +6442,6 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 .export-option-btn:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
-}
-
-/* Key/Fill/Rim/Ambient color rows — same 3-col as sliders; chip spans track+value like Shadow Color width */
-.lights .light-color-row {
-  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
-  column-gap: 0.45rem;
-}
-
-.lights .light-color-row > span:first-child {
-  grid-column: 1;
-  min-width: 0;
-}
-
-.lights .light-color-row .color-chip {
-  /* Span track + value cols (Shadow Color uses 1fr + chip — same right edge, full chip width) */
-  grid-column: 2 / -1;
-  justify-self: end;
-  width: var(--color-chip-w, 92px);
-  max-width: none;
-}
-
-.lights .slider-line:not(.slider-line--toggle-only) {
-  grid-template-columns: var(--slider-label-col, 90px) minmax(0, 1fr) var(--slider-value-col, 2.5rem);
-}
-
-.rotate-slider {
-  --slider-label-col: 80px;
 }
 
 .light-chip {
@@ -6949,7 +6921,7 @@ body.ui-hidden .shelf {
    * fixed 320px used to clip the canvas bottom when width × 9/16 > 320. */
   max-height: min(60vh, 640px);
   opacity: 1;
-  padding-top: var(--shelf-section-inset);
+  padding-top: var(--shelf-section-gap);
   padding-bottom: 0.5rem;
 }
 
@@ -6985,14 +6957,14 @@ body.ui-hidden .shelf {
 .effect-foldout--expanded {
   max-height: 28rem;
   opacity: 1;
-  padding-top: var(--shelf-section-inset);
+  padding-top: var(--shelf-section-gap);
 }
 
 /* Wireframe / UV Checker / … — row then foldout: one row-gap, not title inset + row margin */
 :is(.panel-block, .subsection)
   > :is(.slider-line, .color-line, .select-line)
   + .effect-foldout.effect-foldout--expanded {
-  padding-top: var(--shelf-row-gap);
+  padding-top: var(--shelf-section-gap);
 }
 
 .effect-foldout--expanded.effect-foldout--md {
@@ -7021,7 +6993,13 @@ body.ui-hidden .shelf {
  */
 :is(.panel-block, .subsection)
   > .effect-foldout.effect-foldout--collapsed + * {
-  margin-top: var(--shelf-row-gap);
+  margin-top: var(--shelf-section-gap);
+}
+
+/* Expanded foldout with siblings below (Camera → Exposure, then Auto Exposure) */
+:is(.panel-block, .subsection)
+  > .effect-foldout.effect-foldout--expanded:not(:last-child) {
+  margin-bottom: var(--shelf-section-gap);
 }
 
 /*
@@ -7051,7 +7029,7 @@ body.ui-hidden .shelf {
 .clip-planes-foldout--expanded {
   max-height: 6.5rem;
   opacity: 1;
-  padding-top: var(--shelf-section-inset);
+  padding-top: var(--shelf-section-gap);
 }
 
 .clip-planes-foldout--collapsed {
@@ -7076,7 +7054,7 @@ body.ui-hidden .shelf {
 .tone-curve-foldout--expanded {
   max-height: min(90vh, 640px); /* full-width square canvas; taller than old 400px cap */
   opacity: 1;
-  padding-top: var(--shelf-section-inset);
+  padding-top: var(--shelf-section-gap);
   margin-bottom: 0.25rem;
 }
 
@@ -7100,7 +7078,7 @@ body.ui-hidden .shelf {
 .look-filter-presets-container--expanded {
   max-height: 40rem;
   opacity: 1;
-  padding-top: var(--shelf-section-inset);
+  padding-top: var(--shelf-section-gap);
 }
 
 .look-filter-presets-container--collapsed {
@@ -7123,7 +7101,7 @@ body.ui-hidden .shelf {
 .creative-look-foldout--expanded {
   max-height: 56rem;
   opacity: 1;
-  padding-top: var(--shelf-section-inset);
+  padding-top: var(--shelf-section-gap);
 }
 
 .creative-look-foldout--collapsed {
@@ -7261,7 +7239,7 @@ body.ui-hidden .shelf {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.4rem;
-  margin-bottom: calc(var(--shelf-row-gap) + 0.05rem);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .lens-preset-btn {
@@ -7333,7 +7311,7 @@ body.ui-hidden .shelf {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
-  margin-bottom: calc(var(--shelf-row-gap) + 0.05rem);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .iso-preset-grid,
@@ -7663,7 +7641,7 @@ body.ui-hidden .shelf {
 /* Object panel — Generate from Font (live editor = canvas + transparent textarea) */
 .font-extrude-live-editor {
   position: relative;
-  margin: 0 0 var(--shelf-row-gap);
+  margin: 0 0 var(--shelf-section-gap);
   width: 100%;
   height: 7.5rem;
   min-height: 7.5rem;
@@ -7751,8 +7729,8 @@ body.ui-hidden .shelf {
 
 .font-extrude-typo-row {
   display: grid;
-  gap: var(--shelf-row-gap);
-  margin-bottom: var(--shelf-row-gap);
+  gap: var(--shelf-section-gap);
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .font-extrude-typo-row--pair {
@@ -7780,11 +7758,11 @@ body.ui-hidden .shelf {
 }
 
 .font-extrude-file-fallback {
-  margin: -0.25rem 0 0.5rem;
+  margin: 0;
 }
 
 .font-extrude-system-fonts-prompt {
-  margin: 0 0 var(--shelf-row-gap);
+  margin: 0 0 var(--shelf-section-gap);
 }
 
 .font-extrude-system-fonts-prompt .ghost-btn {
@@ -7793,11 +7771,6 @@ body.ui-hidden .shelf {
 
 /* Generate from Font — family picker with lazy typeface previews */
 .font-extrude-family-line .font-extrude-family-picker {
-  grid-column: 2 / -1;
-  justify-self: stretch;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
   position: relative;
 }
 
@@ -7810,12 +7783,6 @@ body.ui-hidden .shelf {
   .font-extrude-typo-row--pair {
     grid-template-columns: 1fr;
   }
-}
-
-.font-extrude-surface-group {
-  margin: 0.55rem 0 0;
-  padding: 0.55rem 0 0.5rem;
-  border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .font-extrude-family-trigger {
@@ -7935,11 +7902,11 @@ body.ui-hidden .shelf {
 }
 
 .font-extrude-post-gen {
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 
 .font-extrude-animation {
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 
 .font-extrude-animation .font-extrude-reveal-emissive .color-line:last-child {
@@ -7951,23 +7918,8 @@ body.ui-hidden .shelf {
   margin-bottom: 0;
 }
 
-.font-extrude-reveal-preview-divider {
-  margin-top: 0.65rem;
-  margin-bottom: 0.65rem;
-}
-
-.font-extrude-divider {
-  margin: 0.55rem 0 0.65rem;
-  border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-}
-
 .font-extrude-animation > .font-extrude-reveal-slide-direction {
   margin-bottom: 0;
-}
-
-.font-extrude-reveal-emissive-divider {
-  margin-top: 0.65rem;
-  margin-bottom: 0.65rem;
 }
 
 .font-extrude-reveal-loop-control {

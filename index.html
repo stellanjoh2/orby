@@ -1062,7 +1062,7 @@
                         <span class="sr-only">Toggle STL smooth shading</span>
                       </label>
                     </div>
-                    <label class="slider-line slider-line--track-short">
+                    <label class="slider-line">
                       <span data-tooltip="Controls how sharply creases stay faceted (0 = all facets, higher = smoother curved areas). Only applies when Smooth Shading is on.">Smoothing Angle</span>
                       <input
                         id="stlSmoothingAngle"
@@ -1096,7 +1096,7 @@
                       <option value="monochrome">Monochrome</option>
                     </select>
                   </label>
-                  <label class="slider-line slider-line--track-short">
+                  <label class="slider-line">
                     <span data-tooltip="How many times the checker pattern tiles across each UV island. 1 = one full tile per island.">UV Checker Repeat</span>
                     <input
                       id="uvCheckerScale"
@@ -1165,7 +1165,7 @@
                   </p>
                   <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
                     <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
-                    <label class="slider-line slider-line--track-short">
+                    <label class="slider-line">
                       <span
                         data-tooltip="Only when Transparency Mode is Auto. Opacity for meshes detected as glass or windows from names."
                         >Glass opacity</span>
@@ -1179,7 +1179,7 @@
                       />
                       <span class="value" data-output="glassOpacity">0.45</span>
                     </label>
-                    <label class="slider-line slider-line--track-short">
+                    <label class="slider-line">
                       <span
                         data-tooltip="Environment reflection strength on glass/window materials, relative to the scene HDRI intensity slider."
                         >Glass reflections</span>
@@ -1204,7 +1204,7 @@
                         value="#ffffff"
                       />
                     </label>
-                    <label class="slider-line slider-line--track-short">
+                    <label class="slider-line">
                       <span
                         data-tooltip="Only when Transparency Mode is Auto. Makes heuristic glass read more solid (transmission, tint)."
                         >Glass body</span>
@@ -2885,7 +2885,6 @@
                       <option value="m43">Micro Four Thirds (17.3mm)</option>
                       <option value="super-35">Super 35 (24.9mm)</option>
                     </select>
-                    <span class="value" aria-hidden="true"></span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="Vertical field of view — fine-tune after choosing a focal length preset">Manual FOV</span>
@@ -3557,7 +3556,6 @@
                       <option value="high" selected>High</option>
                       <option value="ultra">Ultra</option>
                     </select>
-                    <span class="value" aria-hidden="true"></span>
                   </label>
                   </div>
                 </div>
@@ -4467,11 +4465,11 @@
                       <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Rotate mesh 360° in place">TURNTABLE</button>
                       <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Camera orbits your current target; one full 360° per spin over export length">ORBIT</button>
                     </div>
-                    <div class="export-button-group" style="margin-top: 0.35rem;">
+                    <div class="export-button-group">
                       <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Dolly the camera toward the orbit target over the export length">ZOOM IN</button>
                       <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Dolly the camera away from the orbit target over the export length">ZOOM OUT</button>
                     </div>
-                    <div class="export-button-group" style="margin-top: 0.35rem;">
+                    <div class="export-button-group">
                       <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Roll the camera left (counter-clockwise) over the export length">TILT LEFT</button>
                       <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Roll the camera right (clockwise) over the export length">TILT RIGHT</button>
                     </div>
@@ -4537,7 +4535,7 @@
                       <span class="value" data-output="exportFovOffset">0°</span>
                     </label>
                   </div>
-                  <div class="export-video-preview-actions">
+                  <div class="export-video-preview-actions scene-controls">
                     <button
                       type="button"
                       id="exportVideoPreviewButton"

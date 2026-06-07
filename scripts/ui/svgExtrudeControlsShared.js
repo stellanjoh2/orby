@@ -61,7 +61,7 @@ export function buildSvgExtrudeSurfaceControlsHtml(ids = {}) {
               <span class="value" data-output="${scaleOutput}">1.00</span>
             </label>
             <label class="slider-line svg-extrude-surface-strength-line">
-              <span data-tooltip="Normal-map bump intensity (map presets only)">Surface Strength</span>
+              <span data-tooltip="Normal-map bump intensity (map presets only)">Strength</span>
               <input id="${strengthId}" type="range" min="0" max="2" step="0.01" value="1" />
               <span class="value" data-output="${strengthOutput}">1.00</span>
             </label>`;
@@ -860,17 +860,17 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   ${buildFontRevealTypeOptionsHtml()}
                 </select>
               </label>
-              <label class="slider-line slider-line--track-short font-extrude-reveal-duration">
+              <label class="slider-line font-extrude-reveal-duration">
                 <span data-tooltip="Character-by-character reveal. Last letter finishes at this time. 0 = off.">Reveal Duration</span>
                 <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
                 <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
               </label>
-              <label class="slider-line slider-line--track-short font-extrude-reveal-slide-depth">
+              <label class="slider-line font-extrude-reveal-slide-depth">
                 <span data-tooltip="How far each letter starts in depth before sliding into place">Slide Depth</span>
                 <input id="fontExtrudeRevealSlideDepth" type="range" min="0" max="2.5" step="0.01" value="0.18" />
                 <span class="value" data-output="fontExtrudeRevealSlideDepth">0.18</span>
               </label>
-              <label class="slider-line slider-line--track-short font-extrude-reveal-slide-time">
+              <label class="slider-line font-extrude-reveal-slide-time">
                 <span data-tooltip="Share of each letter's slot for depth travel. 100% uses the full slot and shows the soft ease-out landing best.">Slide Time</span>
                 <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="1" step="0.01" value="0.45" />
                 <span class="value" data-output="fontExtrudeRevealSlideTime">45%</span>
@@ -892,12 +892,12 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                     <span class="sr-only">Emissive slam on reveal</span>
                   </label>
                 </label>
-                <label class="slider-line slider-line--track-short font-extrude-reveal-emissive-strength">
+                <label class="slider-line font-extrude-reveal-emissive-strength">
                   <span data-tooltip="Emissive intensity while each letter is revealing and during fade-out">Emissive Strength</span>
                   <input id="fontExtrudeRevealEmissiveStrength" type="range" min="0" max="2" step="0.05" value="1" />
                   <span class="value" data-output="fontExtrudeRevealEmissiveStrength">1.00</span>
                 </label>
-                <label class="slider-line slider-line--track-short font-extrude-reveal-emissive-decay">
+                <label class="slider-line font-extrude-reveal-emissive-decay">
                   <span data-tooltip="How long emissive fades to rest after each letter lands">Emissive Time</span>
                   <input id="fontExtrudeRevealEmissiveDecay" type="range" min="0.05" max="0.8" step="0.01" value="0.35" />
                   <span class="value" data-output="fontExtrudeRevealEmissiveDecay">0.35s</span>
