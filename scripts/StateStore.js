@@ -198,6 +198,8 @@ export class StateStore {
         jointScale: 0.5,
         boneStrokeWidth: 2,
         clipPlaybackMode: 'loop',
+        displayFps: 60,
+        timeReferenceEnabled: false,
       },
       /** Stylized ShaderMaterial overrides for imported meshes (non-glass); off restores GLB materials. */
       creativeLook: {

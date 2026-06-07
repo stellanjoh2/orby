@@ -3878,6 +3878,12 @@ export class SceneManager {
       this.animationController.clipPlaybackMode,
       false,
     );
+    this.ui?.syncAnimationDisplayFps?.(
+      this.stateStore.getState().animation?.displayFps ?? 60,
+    );
+    this.ui?.syncAnimationTimeReference?.(
+      this.stateStore.getState().animation?.timeReferenceEnabled ?? false,
+    );
   }
 
   refreshBoneHelpers() {

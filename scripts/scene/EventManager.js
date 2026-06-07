@@ -582,6 +582,14 @@ export class EventManager {
     eventBus.on('animation:hide-mesh', (enabled) =>
       s.setAnimationHideMesh(enabled),
     );
+    eventBus.on('animation:display-fps', (fps) => {
+      const next = s.ui.syncAnimationDisplayFps(fps);
+      s.stateStore.set('animation.displayFps', next);
+    });
+    eventBus.on('animation:time-reference', (enabled) => {
+      s.ui.syncAnimationTimeReference(!!enabled);
+      s.stateStore.set('animation.timeReferenceEnabled', !!enabled);
+    });
 
     // Export events
     eventBus.on('export:png', (settings) => s.exportPng(settings));

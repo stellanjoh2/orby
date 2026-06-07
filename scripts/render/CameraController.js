@@ -714,6 +714,13 @@ export class CameraController {
 
   endExportCameraDrive() {
     if (!this._exportCameraDriveActive) return;
+    const snapshot = this._exportCameraSnapshot;
+    const target = this.controls?.target;
+    if (snapshot && target) {
+      this._orbitSpherical.copy(snapshot);
+      this._orbitOffset.setFromSpherical(this._orbitSpherical);
+      this.camera.position.copy(target).add(this._orbitOffset);
+    }
     this._exportCameraDriveActive = false;
     this._exportCameraSnapshot = null;
     if (Number.isFinite(this._exportCameraStartTilt)) {

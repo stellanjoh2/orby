@@ -1444,27 +1444,73 @@
 
               <div class="panel-block" id="animationBlock">
                 <div class="block-title">Animation</div>
-                <div class="animation-controls">
-                  <button id="playPause" class="animation-play-btn" disabled aria-label="Play animation">
-                    <i class="fa-solid fa-play" aria-hidden="true"></i>
-                    <span class="sr-only">Play</span>
-                  </button>
-                  <input
-                    type="range"
-                    id="animationScrub"
-                    min="0"
-                    max="1"
-                    step="0.001"
-                    value="0"
-                    disabled
-                    aria-label="Animation timeline"
-                  />
-                  <span id="animationTime">0:00</span>
+                <div class="animation-timeline">
+                  <div class="animation-controls">
+                    <div class="animation-transport-btns">
+                      <button id="playPause" class="animation-play-btn" disabled aria-label="Play animation">
+                        <i class="fa-solid fa-play" aria-hidden="true"></i>
+                        <span class="sr-only">Play</span>
+                      </button>
+                      <button
+                        id="animationReverseBtn"
+                        type="button"
+                        class="animation-play-btn"
+                        disabled
+                        aria-pressed="false"
+                        aria-label="Reverse animation playback"
+                        data-tooltip="Play the animation clip backwards"
+                      >
+                        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                        <span class="sr-only">Reverse animation playback</span>
+                      </button>
+                    </div>
+                    <input
+                      type="range"
+                      id="animationScrub"
+                      min="0"
+                      max="1"
+                      step="0.001"
+                      value="0"
+                      disabled
+                      aria-label="Animation timeline"
+                    />
+                    <span id="animationTime">0:00</span>
+                  </div>
                 </div>
                 <label class="select-line">
                   <span>Clip</span>
                   <select id="animationSelect" disabled aria-label="Animation clip"></select>
                 </label>
+                <div class="slider-line slider-line--toggle-only animation-time-reference-header">
+                  <span>Frame Reference</span>
+                  <label
+                    class="effect-toggle"
+                    data-tooltip="Show frame counter and FPS grid for timing notes"
+                  >
+                    <input type="checkbox" id="animationTimeReference" disabled />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Frame Reference</span>
+                  </label>
+                </div>
+                <div
+                  id="animationTimeReferenceSection"
+                  class="effect-foldout effect-foldout--collapsed animation-time-reference-foldout"
+                  hidden
+                  aria-hidden="true"
+                >
+                  <label class="select-line animation-time-reference-line">
+                    <span id="animationFrameNumbers" class="animation-frame-numbers" aria-live="polite">001 / 060</span>
+                    <select
+                      id="animationDisplayFps"
+                      aria-label="Frame reference frame rate"
+                      disabled
+                    >
+                      <option value="24">24 fps</option>
+                      <option value="30">30 fps</option>
+                      <option value="60" selected>60 fps</option>
+                    </select>
+                  </label>
+                </div>
                 <div class="segmented compact segmented--2" id="animationClipModeSegmented">
                   <label>
                     <input type="radio" name="animationClipMode" value="loop" checked disabled />
@@ -1496,14 +1542,9 @@
                       1.0×
                     </label>
                   </div>
-                  <div class="slider-line slider-line--toggle-only">
-                    <span>Reverse</span>
-                    <label class="effect-toggle" data-tooltip="Play the animation clip backwards">
-                      <input type="checkbox" id="animationReverse" disabled />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Reverse animation playback</span>
-                    </label>
-                  </div>
+                </div>
+                <div class="panel-block-divider" aria-hidden="true"></div>
+                <div class="subsection">
                   <div class="slider-line slider-line--toggle-only">
                     <span>Show bones</span>
                     <label class="effect-toggle" data-tooltip="Reveal the animated skeleton rig over the mesh">

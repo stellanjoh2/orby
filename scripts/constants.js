@@ -46,6 +46,17 @@ export const COLOR_CHECKER_PHYSICAL_WIDTH = 0.356;
 export const COLOR_CHECKER_DEFAULT_SCALE =
   COLOR_CHECKER_PHYSICAL_WIDTH / COLOR_CHECKER_MESH_WIDTH;
 
+/** Timeline frame counter during GLB playback — default dropdown value. */
+export const ANIMATION_DISPLAY_FPS = 60;
+
+/** Allowed timeline FPS dropdown values. */
+export const ANIMATION_DISPLAY_FPS_OPTIONS = [24, 30, 60];
+
+export function normalizeAnimationDisplayFps(fps) {
+  const n = Number(fps);
+  return ANIMATION_DISPLAY_FPS_OPTIONS.includes(n) ? n : ANIMATION_DISPLAY_FPS;
+}
+
 export const WIREFRAME_OFFSET = 0.002; // Units to push wireframe vertices along normals
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = 2;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = 2;

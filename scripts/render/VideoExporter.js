@@ -200,6 +200,31 @@ export class VideoExporter {
     }
   }
 
+  /** Rewind export-driven scene state to frame 0 before tearing down export drives. */
+  _resetExportSceneToFirstFrame({
+    movements,
+    spinSettings,
+    startRotationY,
+    startLightsRotation,
+    lightsAutoRotate,
+    durationSec,
+    fps,
+    meshAnimation,
+  }) {
+    this._applyVideoExportFrame({
+      movements,
+      t: 0,
+      spinSettings,
+      startRotationY,
+      startLightsRotation,
+      lightsAutoRotate,
+      durationSec,
+      frameIndex: 0,
+      fps,
+      meshAnimation,
+    });
+  }
+
   async _downloadSequenceAsZip({
     files,
     baseName,
@@ -905,6 +930,16 @@ export class VideoExporter {
           console.error('MP4 export failed', error);
           this.ui?.showToast?.('MP4 export failed');
         } finally {
+          this._resetExportSceneToFirstFrame({
+            movements,
+            spinSettings,
+            startRotationY,
+            startLightsRotation,
+            lightsAutoRotate,
+            durationSec,
+            fps,
+            meshAnimation,
+          });
           if (needsExportCameraDrive(movements)) {
             this.endExportCameraDrive?.();
           }
@@ -996,6 +1031,16 @@ export class VideoExporter {
         console.error('Video export failed', error);
         this.ui?.showToast?.('Video export failed');
       } finally {
+        this._resetExportSceneToFirstFrame({
+          movements,
+          spinSettings,
+          startRotationY,
+          startLightsRotation,
+          lightsAutoRotate,
+          durationSec,
+          fps,
+          meshAnimation,
+        });
         if (needsExportCameraDrive(movements)) {
           this.endExportCameraDrive?.();
         }

@@ -748,9 +748,25 @@ body.orby-not-found-active #orbyFullscreenPrompt .orby-fullscreen-prompt-actions
   transition: background 0.2s, color 0.2s, opacity 0.2s;
 }
 
+.animation-play-btn i {
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .animation-play-btn:hover:not(:disabled) {
   color: var(--accent);
   background: rgba(255, 255, 255, 0.12);
+}
+
+.animation-play-btn.is-active:not(:disabled) {
+  background: var(--accent);
+  color: var(--brand-text);
+}
+
+.animation-play-btn.is-active:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--brand-text);
 }
 
 .animation-play-btn:disabled {
@@ -4997,6 +5013,11 @@ button.advanced-info-doc-btn {
   color: var(--text-muted);
 }
 
+.select-line.map-slot-tuning-line {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
+  column-gap: 0.65rem;
+}
+
 /* Map Slots actions — same pill buttons as Object/Studio Scene (.export-controls + .accent-action-btn). */
 .map-slots-action-row {
   margin-bottom: 0;
@@ -5943,12 +5964,188 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   flex: 1;
 }
 
+.animation-timeline {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: var(--shelf-row-gap);
+  align-items: center;
+  margin-bottom: var(--shelf-row-gap);
+}
+
+.animation-transport-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.animation-timeline .animation-transport-btns {
+  grid-column: 1;
+}
+
+.animation-timeline .animation-controls {
+  display: contents;
+  margin-bottom: 0;
+}
+
+.animation-timeline #animationScrub {
+  width: 100%;
+  min-width: 0;
+  flex: unset;
+  align-self: center;
+  justify-self: stretch;
+  position: relative;
+  height: 2px;
+  border-radius: 1px;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  transition: opacity 0.2s ease;
+}
+
+.animation-timeline #animationScrub::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  transition: background 0.2s ease;
+}
+
+.animation-timeline #animationScrub:is(:active, :focus-visible, .is-scrub-playing)::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+}
+
+.animation-timeline #animationScrub::-moz-range-track {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border: none;
+  transition: background 0.2s ease;
+}
+
+.animation-timeline #animationScrub:is(:active, :focus-visible, .is-scrub-playing)::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+}
+
+.animation-timeline #animationScrub::-webkit-slider-thumb {
+  margin-top: -5px;
+}
+
+.animation-timeline #animationScrub::-moz-range-thumb {
+  transform: translateY(-1px);
+}
+
+html:not(.mobile-landing) .shelf .animation-timeline #animationScrub {
+  height: calc(2px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-slider-runnable-track,
+html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-moz-range-track {
+  height: calc(2px * var(--studio-ui-scale));
+  border-radius: calc(1px * var(--studio-ui-scale));
+}
+
+html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-slider-thumb {
+  margin-top: calc(-5px * var(--studio-ui-scale));
+}
+
 #animationTime {
   font-size: var(--shelf-label-font-size);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   min-width: 2.8ch;
   text-align: right;
+}
+
+.animation-time-reference-foldout.effect-foldout--expanded {
+  overflow: visible;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.animation-time-reference-line {
+  --animation-ref-pill-pad-y: 0.35rem;
+  --animation-ref-pill-font-size: var(--shelf-headline-font-size);
+  --animation-ref-pill-line-height: 1.25;
+  --animation-ref-pill-height: calc(
+    var(--animation-ref-pill-pad-y) * 2 +
+    var(--animation-ref-pill-line-height) * var(--animation-ref-pill-font-size)
+  );
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.45rem;
+  align-items: center;
+}
+
+#animationBlock .select-line.animation-time-reference-line {
+  margin-bottom: 0;
+  min-height: 0;
+}
+
+.animation-time-reference-foldout.effect-foldout--expanded + #animationClipModeSegmented {
+  margin-top: calc(18px * var(--studio-ui-scale, 1));
+}
+
+#animationBlock .animation-time-reference-line > .animation-frame-numbers {
+  grid-column: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  font-family: 'Geist Mono', 'SF Mono', ui-monospace, 'Menlo', 'Courier New', monospace;
+  font-size: calc(28px * var(--studio-ui-scale, 1));
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #fff;
+  opacity: 1;
+  white-space: nowrap;
+}
+
+.animation-time-reference-line select {
+  grid-column: 2;
+  justify-self: end;
+  box-sizing: border-box;
+  width: auto;
+  min-width: calc(5.25rem * var(--studio-ui-scale, 1));
+  max-width: 100%;
+  height: var(--animation-ref-pill-height);
+  padding-block: 0;
+  padding-inline: 0.7rem 1.6rem;
+  line-height: var(--animation-ref-pill-line-height);
+  font-size: var(--animation-ref-pill-font-size);
+  flex-shrink: 0;
 }
 
 #animationBlock {

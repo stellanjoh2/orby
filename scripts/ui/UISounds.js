@@ -125,9 +125,14 @@ export class UISounds {
     this._play(this._audioShow());
   }
 
+  /** Caution / warning SFX (`caution.wav`). Off until re-enabled. */
+  get cautionSoundsEnabled() {
+    return false;
+  }
+
   /** Warnings / errors (unsupported file type, load failures, etc.). */
   playCaution() {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.cautionSoundsEnabled) return;
     if (!this._caution) {
       this._caution = new Audio('./assets/sounds/ui/caution.wav');
       this._caution.preload = 'auto';

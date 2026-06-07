@@ -329,6 +329,7 @@ export class UIManager {
     this.dom.animationBlock = q('#animationBlock');
     this.dom.animationSelect = q('#animationSelect');
     this.dom.playPause = q('#playPause');
+    this.dom.animationReverseBtn = q('#animationReverseBtn');
     this.dom.animationScrub = q('#animationScrub');
     this.dom.animationSpeedSegmented = q('#animationSpeedSegmented');
     this.dom.animationClipModeSegmented = q('#animationClipModeSegmented');
@@ -336,6 +337,8 @@ export class UIManager {
     this.dom.animationBoneStrokeRow = q('#animationBoneStrokeRow');
     this.dom.animationHideMeshRow = q('#animationHideMeshRow');
     this.dom.animationTime = q('#animationTime');
+    this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
+    this.dom.animationFrameNumbers = q('#animationFrameNumbers');
     this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
 
     this.inputs = {
@@ -433,7 +436,8 @@ export class UIManager {
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
       wireframeHideMesh: q('#wireframeHideMesh'),
       animationShowBones: q('#animationShowBones'),
-      animationReverse: q('#animationReverse'),
+      animationTimeReference: q('#animationTimeReference'),
+      animationDisplayFps: q('#animationDisplayFps'),
       animationHideMesh: q('#animationHideMesh'),
       animationJointScale: q('#animationJointScale'),
       animationBoneStrokeWidth: q('#animationBoneStrokeWidth'),
@@ -2303,6 +2307,14 @@ export class UIManager {
 
   updateAnimationTime(current, duration) {
     this.animationControls?.updateAnimationTime(current, duration);
+  }
+
+  syncAnimationDisplayFps(fps) {
+    return this.animationControls?.syncAnimationDisplayFps(fps) ?? fps;
+  }
+
+  syncAnimationTimeReference(checked, available) {
+    this.animationControls?.syncAnimationTimeReference(checked, available);
   }
 
   syncMeshControls(state) {

@@ -2,6 +2,7 @@
   "version": "6.5.1",
   "style": "solid",
   "icons": [
+    "arrow-left",
     "bezier-curve",
     "book",
     "camera",
@@ -63,6 +64,7 @@
     "0xf04c",
     "0xf059",
     "0xf05a",
+    "0xf060",
     "0xf065",
     "0xf066",
     "0xf06a",
