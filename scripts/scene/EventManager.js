@@ -165,8 +165,11 @@ export class EventManager {
         pauseShaderAnimations: false,
         shaderAnimationSpeed: 0.4,
         patternScale: 1,
+        masterHue: 0,
+        intensity: 1,
+        liftCrush: 0,
       };
-      s.materialController.setCreativeLookSettings(cl, { skipStateStore: true });
+      void s.applyCreativeLookFromState(cl, { skipStateStore: true });
     });
     eventBus.on('mesh:reset-transform', () => {
       s.transformController?.setRotationY(0);

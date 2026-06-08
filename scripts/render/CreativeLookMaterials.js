@@ -1,15 +1,16 @@
 import * as THREE from 'three';
+import { DEFAULT_MATERIAL_BRIGHTNESS } from '../constants.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm). Ordered dither uses a fixed screen Bayer grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, ps2-crush). Ordered dither uses a fixed screen Bayer grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ordered-dither' | 'holographic' | 'spectral-storm' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ordered-dither' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'ps2-crush' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -18,6 +19,9 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'toon',
   'ordered-dither',
   'holographic',
+  'voronoi',
+  'scanline-hologram',
+  'ps2-crush',
   'chrome',
   'glass',
   'spectral-storm',
@@ -29,6 +33,182 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
  */
 export const CREATIVE_CHROME_BASE_HEX = 0xeef1f5;
 
+/** Full colorwheel range for Shader Lab master hue (degrees). */
+export const CREATIVE_LOOK_MASTER_HUE_MIN = -180;
+export const CREATIVE_LOOK_MASTER_HUE_MAX = 180;
+
+/** Shader Lab effect punch — 0 = subtle, 1 = default, 2 = extreme. */
+export const CREATIVE_LOOK_INTENSITY_MIN = 0;
+export const CREATIVE_LOOK_INTENSITY_MAX = 2;
+export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
+
+/** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
+export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
+
+/** @param {number | undefined} value */
+export function normalizeCreativeLookIntensity(value) {
+  const v = Number(value);
+  if (!Number.isFinite(v)) return CREATIVE_LOOK_INTENSITY_DEFAULT;
+  return THREE.MathUtils.clamp(v, CREATIVE_LOOK_INTENSITY_MIN, CREATIVE_LOOK_INTENSITY_MAX);
+}
+
+/** Shadow lift (+) vs black crush (−) for Shader Lab output grading. */
+export const CREATIVE_LOOK_LIFT_CRUSH_MIN = -1;
+export const CREATIVE_LOOK_LIFT_CRUSH_MAX = 1;
+export const CREATIVE_LOOK_LIFT_CRUSH_DEFAULT = 0;
+
+/** @param {number | undefined} value */
+export function normalizeCreativeLookLiftCrush(value) {
+  const v = Number(value);
+  if (!Number.isFinite(v)) return CREATIVE_LOOK_LIFT_CRUSH_DEFAULT;
+  return THREE.MathUtils.clamp(v, CREATIVE_LOOK_LIFT_CRUSH_MIN, CREATIVE_LOOK_LIFT_CRUSH_MAX);
+}
+
+/** @param {number | undefined} degrees */
+export function normalizeCreativeLookMasterHue(degrees) {
+  const d = Number(degrees);
+  if (!Number.isFinite(d)) return 0;
+  return THREE.MathUtils.clamp(d, CREATIVE_LOOK_MASTER_HUE_MIN, CREATIVE_LOOK_MASTER_HUE_MAX);
+}
+
+/** @param {number | undefined} degrees */
+export function creativeLookMasterHueRadians(degrees) {
+  return THREE.MathUtils.degToRad(normalizeCreativeLookMasterHue(degrees));
+}
+
+/** Rotate a color around the HSL wheel; preserves saturation and lightness. */
+export function rotateCreativeLookHue(color, degrees) {
+  const src = color instanceof THREE.Color ? color : new THREE.Color(color);
+  const out = src.clone();
+  const hue = normalizeCreativeLookMasterHue(degrees);
+  if (Math.abs(hue) < 1e-4) return out;
+  const hsl = { h: 0, s: 0, l: 0 };
+  out.getHSL(hsl);
+  hsl.h = (hsl.h + hue / 360 + 1) % 1;
+  out.setHSL(hsl.h, hsl.s, hsl.l);
+  return out;
+}
+
+const CREATIVE_LOOK_MASTER_HUE_GLSL = /* glsl */ `
+uniform float uMasterHue;
+
+vec3 applyCreativeMasterHue(vec3 color) {
+  if (abs(uMasterHue) < 0.0001) return color;
+  const mat3 RGB_TO_YIQ = mat3(
+    0.299, 0.587, 0.114,
+    0.596, -0.274, -0.322,
+    0.211, -0.523, 0.312
+  );
+  const mat3 YIQ_TO_RGB = mat3(
+    1.0, 0.956, 0.621,
+    1.0, -0.272, -0.647,
+    1.0, -1.106, 1.703
+  );
+  vec3 yiq = RGB_TO_YIQ * color;
+  float cosA = cos(uMasterHue);
+  float sinA = sin(uMasterHue);
+  mat2 rot = mat2(cosA, -sinA, sinA, cosA);
+  yiq.yz = rot * yiq.yz;
+  return clamp(YIQ_TO_RGB * yiq, 0.0, 4.0);
+}
+`;
+
+const CREATIVE_LOOK_LIFT_CRUSH_GLSL = /* glsl */ `
+uniform float uLiftCrush;
+
+const vec3 CREATIVE_LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 applyCreativeLiftCrush(vec3 color) {
+  if (abs(uLiftCrush) < 0.0001) return color;
+  float l = dot(color, CREATIVE_LUMA);
+  float lift = max(uLiftCrush, 0.0);
+  float crush = max(-uLiftCrush, 0.0);
+  float shadowMask = 1.0 - smoothstep(0.0, 0.78, l);
+  float crushMask = 1.0 - smoothstep(0.03, 0.62, l);
+  color += shadowMask * lift * 0.22;
+  color = max(color - crushMask * crush * 0.16, vec3(0.0));
+  color *= 1.0 - crushMask * crush * 0.38;
+  return clamp(color, 0.0, 4.0);
+}
+`;
+
+const CREATIVE_LOOK_BRIGHTNESS_GLSL = /* glsl */ `
+uniform float uBrightness;
+
+vec3 applyCreativeBrightness(vec3 color) {
+  if (abs(uBrightness - 1.0) < 0.0001) return color;
+  return color * uBrightness;
+}
+`;
+
+/** Prepends lift/crush + master-hue helpers and applies both before output. */
+export function withCreativeLookPostProcess(fragmentShader) {
+  let combined = fragmentShader.trim();
+  if (!combined.includes('uniform float uLiftCrush;')) {
+    combined = `${CREATIVE_LOOK_LIFT_CRUSH_GLSL}\n${combined}`;
+  }
+  if (!combined.includes('uniform float uMasterHue;')) {
+    combined = `${CREATIVE_LOOK_MASTER_HUE_GLSL}\n${combined}`;
+  }
+  if (!combined.includes('uniform float uBrightness;')) {
+    combined = `${CREATIVE_LOOK_BRIGHTNESS_GLSL}\n${combined}`;
+  }
+  if (/\w+ = applyCreativeBrightness\(\w+\);/.test(combined)) {
+    return combined;
+  }
+  if (/\w+ = applyCreativeLiftCrush\(\w+\);/.test(combined)) {
+    return combined;
+  }
+  if (/\w+ = applyCreativeMasterHue\(\w+\);/.test(combined)) {
+    return combined.replace(
+      /(\w+) = applyCreativeMasterHue\(\1\);\n  gl_FragColor = vec4\(\1, uOpacity\);/g,
+      '$1 = applyCreativeMasterHue($1);\n  $1 = applyCreativeBrightness($1);\n  gl_FragColor = vec4($1, uOpacity);',
+    );
+  }
+  return combined.replace(
+    /gl_FragColor = vec4\((\w+), uOpacity\);/g,
+    '$1 = applyCreativeLiftCrush($1);\n  $1 = applyCreativeMasterHue($1);\n  $1 = applyCreativeBrightness($1);\n  gl_FragColor = vec4($1, uOpacity);',
+  );
+}
+
+/** Prepends master-hue helper and applies it to the main rgb output. */
+export function withCreativeLookMasterHue(fragmentShader) {
+  return withCreativeLookPostProcess(fragmentShader);
+}
+
+/** @param {THREE.MeshPhysicalMaterial} mat */
+export function captureCreativeLookPhysicalHueSources(mat) {
+  if (!mat?.isMeshPhysicalMaterial) return;
+  mat.userData.orbyCreativeLookHueSources = {
+    color: mat.color.clone(),
+    specularColor: mat.specularColor?.clone?.() ?? null,
+    sheenColor: mat.sheenColor?.clone?.() ?? null,
+    attenuationColor: mat.attenuationColor?.clone?.() ?? null,
+  };
+}
+
+/** @param {THREE.MeshPhysicalMaterial} mat */
+export function applyCreativeLookPhysicalMasterHue(mat, degrees, brightness) {
+  if (!mat?.isMeshPhysicalMaterial) return;
+  const src = mat.userData.orbyCreativeLookHueSources;
+  if (!src) return;
+  const hue = normalizeCreativeLookMasterHue(degrees);
+  const b = Number(brightness);
+  const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
+  mat.color.copy(rotateCreativeLookHue(src.color, hue)).multiplyScalar(scale);
+  if (src.specularColor) {
+    mat.specularColor.copy(rotateCreativeLookHue(src.specularColor, hue)).multiplyScalar(scale);
+  }
+  if (src.sheenColor) {
+    mat.sheenColor.copy(rotateCreativeLookHue(src.sheenColor, hue)).multiplyScalar(scale);
+  }
+  if (src.attenuationColor) {
+    mat.attenuationColor
+      .copy(rotateCreativeLookHue(src.attenuationColor, hue))
+      .multiplyScalar(scale);
+  }
+}
+
 /** @param {string | undefined} preset */
 export function normalizeCreativeLookPreset(preset) {
   let p = typeof preset === 'string' ? preset : '';
@@ -38,6 +218,26 @@ export function normalizeCreativeLookPreset(preset) {
     return /** @type {CreativeLookPreset} */ (p);
   }
   return 'neon-edge';
+}
+
+/** Human-readable Shader Lab preset name for toasts / status copy. */
+export function formatCreativeLookPresetLabel(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  const labels = /** @type {const} */ ({
+    'neon-edge': 'Neon Edge',
+    'flow-field': 'Flow Field',
+    plasma: 'Plasma',
+    toon: 'Toon',
+    'ordered-dither': 'Ordered Dither',
+    holographic: 'Holographic',
+    'spectral-storm': 'Spectral Storm',
+    voronoi: 'Voronoi',
+    'scanline-hologram': 'Scanline Hologram',
+    'ps2-crush': 'PS2 Crush',
+    chrome: 'True Chrome',
+    glass: 'Glass',
+  });
+  return labels[id] ?? id;
 }
 
 /**
@@ -70,6 +270,40 @@ export function creativeOrderedDitherPixelScale(patternScale) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
   const px = 5 * Math.pow(ps, 0.58);
   return THREE.MathUtils.clamp(px, 1.08, 34);
+}
+
+/**
+ * Average-edge-length multiplier for PS2 Crush edge-collapse threshold.
+ * Higher creative Scale → coarser low-poly (surface-following edge collapse only).
+ * @param {number} patternScale — Creative Scale (typically 0.02–5)
+ */
+export function creativePs2CrushMergeFactor(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  const base = THREE.MathUtils.lerp(1.12, 2.85, t);
+  return base * 1.155;
+}
+
+/**
+ * Screen-space snap grid for PS2 vertex wobble (NDC units).
+ * Higher creative Scale → chunkier internal resolution.
+ * @param {number} patternScale
+ */
+export function creativePs2CrushSnapGrid(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  // Subtle screen snap for PS1-style wobble — geometry carries the low-poly read.
+  return THREE.MathUtils.lerp(200, 56, t);
+}
+
+/**
+ * Texture coordinate quantization for PS2 Crush (texels across UV space).
+ * @param {number} patternScale
+ */
+export function creativePs2CrushTexRes(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  return Math.round(THREE.MathUtils.lerp(128, 12, t));
 }
 
 /**
@@ -108,13 +342,19 @@ varying vec3 vPosView;
 uniform vec3 uCoreColor;
 uniform vec3 uEdgeColor;
 uniform float uRimPower;
+uniform float uIntensity;
 uniform float uOpacity;
 
 void main() {
   vec3 viewDir = normalize(-vPosView);
   float ndotv = max(dot(normalize(vNormalView), viewDir), 0.0);
-  float rim = pow(1.0 - ndotv, uRimPower);
-  vec3 color = mix(uCoreColor, uEdgeColor, rim);
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float rimPower = uRimPower * (1.0 - d * 0.65);
+  vec3 core = uCoreColor * (1.0 - d * 0.62);
+  vec3 edge = uEdgeColor * (1.0 + d * 0.42);
+  float rim = pow(1.0 - ndotv, rimPower);
+  vec3 color = mix(core, edge, rim);
   gl_FragColor = vec4(color, uOpacity);
 }
 `;
@@ -283,6 +523,7 @@ varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 uniform float uTime;
 uniform float uPatternScale;
+uniform float uIntensity;
 uniform float uOpacity;
 
 void main() {
@@ -290,6 +531,10 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float ndv = max(dot(N, V), 1e-4);
   float F = 1.0 - ndv;
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float up = max(d, 0.0);
+  float down = max(-d, 0.0);
 
   float fresnelWide = pow(F, 1.28);
   float fresnel = pow(F, 2.05);
@@ -309,25 +554,25 @@ void main() {
     sin(pw.x * 0.72 + t * 0.72) * cos(pw.y * 0.78 - t * 0.62) +
     sin(pw.z * 0.68 + t * 0.42) * 0.45 +
     sin(dot(pw, vec3(0.72, 1.02, 0.58)) * 1.05 + t * 0.85) * 0.35;
-  oil *= 0.22;
+  oil *= 1.0 - down * 0.45 + up * 0.72;
 
   float film =
-    fresnel * 6.2 +
-    oil * 1.45 +
-    dot(N, vec3(0.15, 0.97, 0.18)) * 0.38 +
-    t * 0.48;
+    fresnel * (6.2 + up * 2.2 - down * 2.0) +
+    oil * (1.45 + up * 0.6 - down * 0.5) +
+    dot(N, vec3(0.15, 0.97, 0.18)) * (0.38 + up * 0.14 - down * 0.16) +
+    t * (0.48 + up * 0.2 - down * 0.2);
 
-  float chrom = fresnel * fresnel * 1.55;
+  float chrom = fresnel * fresnel * (1.55 + up * 0.2 - down * 0.7);
   vec3 phase = film * vec3(3.45, 4.15, 4.95) + vec3(0.0, 2.2, 5.0);
   phase += vec3(chrom * 1.05, -chrom * 0.78, chrom * 0.92);
 
   vec3 holo = 0.5 + 0.53 * cos(phase);
   holo *= 0.96 + 0.04 * sin(film * 4.2 + t * 1.15);
-  holo = pow(max(holo, vec3(0.0)), vec3(0.93));
+  holo = pow(max(holo, vec3(0.0)), vec3(0.93 - down * 0.07 + up * 0.07));
 
   vec3 base = vec3(0.0035, 0.0065, 0.0165);
   float rimMix = fresnelWide * 0.82 + fresnel * 0.58 + fresnelTight * 0.38;
-  rimMix = clamp(rimMix, 0.0, 1.0);
+  rimMix = clamp(rimMix * (1.0 + up * 0.28 - down * 0.58), 0.0, 1.0);
   vec3 col = mix(base, holo, rimMix);
 
   vec3 L = normalize(vec3(0.42, 0.9, 0.36));
@@ -336,12 +581,12 @@ void main() {
   float spHi = pow(nh, 228.0);
   float spLo = pow(nh, 68.0);
   vec3 specTint = mix(vec3(0.72, 0.94, 1.05), vec3(1.05, 0.58, 0.92), fresnel);
-  col += specTint * (spHi * 1.25 + spLo * 0.38) * (0.18 + fresnel * 0.92);
+  col += specTint * (spHi * 1.25 + spLo * 0.38) * (0.18 + fresnel * 0.92) * (1.0 + up * 0.2 - down * 0.33);
 
   vec3 rimPink = vec3(1.0, 0.28, 0.82);
-  col += fresnelTight * rimPink * 0.62;
-  col += fresnel * vec3(0.1, 0.48, 1.05) * 0.48;
-  col += oil * (fresnel + 0.15) * vec3(0.2, 0.88, 1.0) * 0.14;
+  col += fresnelTight * rimPink * (0.62 + up * 0.43 - down * 0.44);
+  col += fresnel * vec3(0.1, 0.48, 1.05) * (0.48 + up * 0.24 - down * 0.26);
+  col += oil * (fresnel + 0.15) * vec3(0.2, 0.88, 1.0) * (0.14 + up * 0.1 - down * 0.08);
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -353,12 +598,17 @@ varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 uniform float uTime;
 uniform float uPatternScale;
+uniform float uIntensity;
 uniform float uOpacity;
 
 void main() {
   vec3 N = normalize(vWorldNormal);
   vec3 p = vWorldPosition * (2.6 / max(uPatternScale, 0.001));
   float t = uTime;
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float up = max(d, 0.0);
+  float down = max(-d, 0.0);
 
   float wave =
     sin(p.x * 3.5 + t * 2.05) * cos(p.y * 3.0 - t * 1.6) +
@@ -371,21 +621,454 @@ void main() {
   float slices = sin(wave * 8.5 + t * 2.35);
   float poster = smoothstep(0.12, 0.88, slices * 0.5 + 0.5);
 
-  float plasma = wave * 0.15 + radial * 0.11 + (poster - 0.5) * 0.26;
+  float plasma = wave * 0.15 + radial * 0.11 + (poster - 0.5) * (0.26 + up * 0.12 - down * 0.12);
   plasma = plasma * 0.62 + 0.5;
   plasma = clamp(plasma, 0.0, 1.0);
-  plasma = clamp((plasma - 0.5) * 8.5 + 0.5, 0.0, 1.0);
+  plasma = clamp((plasma - 0.5) * (8.5 + up * 3.0 - down * 4.5) + 0.5, 0.0, 1.0);
 
-  float sweep = sin(t * 0.5 + dot(p, vec3(2.05, 1.62, 2.35)) * 3.4) * 0.035;
-  float bw = smoothstep(0.458 + sweep, 0.542 + sweep, plasma);
+  float sweep = sin(t * 0.5 + dot(p, vec3(2.05, 1.62, 2.35)) * 3.4) * (0.035 + up * 0.02 - down * 0.015);
+  float bw = smoothstep(0.458 - up * 0.01 + down * 0.01 + sweep, 0.542 + up * 0.01 - down * 0.01 + sweep, plasma);
 
   vec3 col = vec3(bw);
 
   vec3 V = normalize(cameraPosition - vWorldPosition);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
-  float strobe = sin(t * 15.0 + dot(p, vec3(8.5, 5.3, 7.1))) * 0.5 + 0.5;
-  float rimGate = rim * (0.42 + 0.58 * strobe);
-  col = mix(col, vec3(1.0), rimGate * 0.82);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2 - up * 0.6 + down * 1.0);
+  float strobe = sin(t * (15.0 + up * 3.0 - down * 5.0) + dot(p, vec3(8.5, 5.3, 7.1))) * 0.5 + 0.5;
+  float rimGate = rim * (0.42 + 0.58 * strobe + up * 0.16 - down * 0.2);
+  col = mix(col, vec3(1.0), rimGate * (0.82 + up * 0.23 - down * 0.47));
+
+  gl_FragColor = vec4(col, uOpacity);
+}
+`;
+
+/** World-space 3D Voronoi: stained-glass cells, dark grout, slow seed drift. Scale = cell size. */
+const VORONOI_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+uniform vec3 uTint;
+uniform float uOpacity;
+
+vec3 hash33(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.xxy + p.yxx) * p.zyx);
+}
+
+void main() {
+  float sc = clamp(uPatternScale, 0.1, 5.0);
+  float cellFreq = 1.65 / max(sc, 0.001);
+  vec3 p = vWorldPosition * cellFreq;
+  float t = uTime * 0.38;
+
+  vec3 ip = floor(p);
+  vec3 fp = fract(p);
+
+  float md = 8.0;
+  float md2 = 8.0;
+  vec3 nearestSeed = vec3(0.0);
+
+  for (int k = -1; k <= 1; k++) {
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        vec3 g = vec3(float(i), float(j), float(k));
+        vec3 rnd = hash33(ip + g);
+        vec3 o = 0.5 + 0.38 * sin(t * vec3(1.05, 0.88, 1.22) + rnd * 6.28318);
+        vec3 r = g + o - fp;
+        float d = dot(r, r);
+        if (d < md) {
+          md2 = md;
+          md = d;
+          nearestSeed = ip + g;
+        } else if (d < md2) {
+          md2 = d;
+        }
+      }
+    }
+  }
+
+  float edge = sqrt(md2) - sqrt(md);
+  float grout = 1.0 - smoothstep(0.012, 0.065, edge);
+
+  vec3 hue = hash33(nearestSeed * 0.417 + 0.17);
+  vec3 accent = clamp(uTint * vec3(1.06, 0.98, 1.02), vec3(0.0), vec3(1.0));
+  vec3 cellA = mix(vec3(0.14, 0.2, 0.38), accent, 0.42);
+  vec3 cellB = 0.52 + 0.48 * cos(hue * 6.28318 + vec3(0.0, 2.05, 4.2) + t * 0.32);
+  cellB = mix(cellA, cellB, 0.58);
+  float cellShade = 0.58 + 0.42 * (1.0 - sqrt(md));
+  vec3 col = cellB * cellShade;
+
+  vec3 groutCol = vec3(0.018, 0.022, 0.038);
+  col = mix(col, groutCol, grout * 0.92);
+
+  vec3 N = normalize(vWorldNormal);
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.4);
+  col += rim * vec3(0.1, 0.34, 0.62) * (0.22 + grout * 0.18);
+
+  gl_FragColor = vec4(col, uOpacity);
+}
+`;
+
+/** PS2-era crush: screen-space vertex snap + drift, affine UVs, flat bands, Bayer dither. */
+const PS2_CRUSH_VERTEX = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform float uTime;
+uniform float uSnapGrid;
+uniform float uIntensity;
+
+void main() {
+  #include <uv_vertex>
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+
+  vec4 wp = modelMatrix * vec4(transformed, 1.0);
+  vWorldPosition = wp.xyz;
+
+  vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+  vec4 clip = projectionMatrix * mvPosition;
+  vTexAffine = vec3(uv * clip.w, clip.w);
+
+  float snap = max(uSnapGrid, 16.0);
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float jitter = mix(0.08, 0.38, max(d, 0.0)) * (1.0 - max(-d, 0.0) * 0.4);
+  float t = uTime;
+  vec2 drift = vec2(
+    sin(t * 1.65 + transformed.x * 2.85 + transformed.z * 1.4),
+    cos(t * 1.35 + transformed.y * 2.35 + transformed.x * 0.9)
+  ) * jitter;
+
+  vec2 ndc = clip.xy / max(abs(clip.w), 1e-5);
+  ndc = (floor(ndc * snap + drift) + 0.5) / snap;
+  clip.xy = ndc * clip.w;
+
+  gl_Position = clip;
+}
+`;
+
+const PS2_CRUSH_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform vec3 uLightDir;
+uniform vec3 uTint;
+uniform sampler2D uMap;
+uniform float uHasMap;
+uniform float uTexRes;
+uniform float uColorLevels;
+uniform float uOpacity;
+
+float bayerAt(int i) {
+  if (i == 0) return 0.0;
+  if (i == 1) return 8.0;
+  if (i == 2) return 2.0;
+  if (i == 3) return 10.0;
+  if (i == 4) return 12.0;
+  if (i == 5) return 4.0;
+  if (i == 6) return 14.0;
+  if (i == 7) return 6.0;
+  if (i == 8) return 3.0;
+  if (i == 9) return 11.0;
+  if (i == 10) return 1.0;
+  if (i == 11) return 9.0;
+  if (i == 12) return 15.0;
+  if (i == 13) return 7.0;
+  if (i == 14) return 13.0;
+  return 5.0;
+}
+
+float bayerTile(ivec2 cell) {
+  int xi = int(mod(float(cell.x), 4.0));
+  int yi = int(mod(float(cell.y), 4.0));
+  return bayerAt(xi + yi * 4);
+}
+
+void main() {
+  vec3 N = normalize(cross(dFdx(vWorldPosition), dFdy(vWorldPosition)));
+  vec3 L = normalize(uLightDir);
+  float ndl = max(dot(N, L), 0.0);
+  float bands = 4.0;
+  float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
+  stepped = clamp(stepped, 0.0, 1.0);
+
+  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  if (uHasMap > 0.5) {
+    vec2 uvAff = vTexAffine.xy / max(vTexAffine.z, 1e-5);
+    float tr = max(uTexRes, 4.0);
+    uvAff = (floor(uvAff * tr) + 0.5) / tr;
+    baseCol = texture2D(uMap, uvAff).rgb;
+  }
+
+  vec3 col = baseCol * (0.32 + 0.68 * stepped);
+
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 2.8);
+  col += rim * vec3(0.08, 0.1, 0.14) * 0.55;
+
+  // Screen-space Bayer halftone — 1.5× cell size (50% larger dots) + punchy contrast.
+  const float DITHER_CELL = 1.875;
+  const float DITHER_PUSH = 1.94;
+  const float DOT_DARK = 0.40;
+  const float DOT_BRIGHT = 1.18;
+
+  vec2 pix = floor(gl_FragCoord.xy / DITHER_CELL + 1e-3);
+  ivec2 cell = ivec2(int(mod(pix.x, 4.0)), int(mod(pix.y, 4.0)));
+  float br = bayerTile(cell) / 16.0;
+
+  float levels = max(uColorLevels, 8.0);
+  col = floor(col * levels + (br - 0.5) * DITHER_PUSH) / levels;
+  col = clamp(col, vec3(0.0), vec3(1.0));
+  col *= mix(DOT_DARK, DOT_BRIGHT, br);
+
+  gl_FragColor = vec4(col, uOpacity);
+}
+`;
+
+/** Vertex slip: horizontal band displacement in clip space (whole mesh slices shift sideways). */
+const SCANLINE_HOLOGRAM_VERTEX = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying float vGlitchBoost;
+uniform float uTime;
+uniform float uIntensity;
+
+float hash11(float p) {
+  return fract(sin(p * 127.1) * 43758.5453);
+}
+
+void main() {
+  vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWorldPosition = wp.xyz;
+
+  vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  float screenY = clip.y / max(abs(clip.w), 1e-4);
+  float t = uTime;
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float up = max(d, 0.0);
+  float down = max(-d, 0.0);
+
+  // Pixel slip is ~constant in screen space, so zoomed-out meshes look more destroyed.
+  // Boost when the camera is close so close-ups get the same wide, intense slice shear.
+  float modelScale = max(
+    max(length(vec3(modelMatrix[0].xyz)), length(vec3(modelMatrix[1].xyz))),
+    length(vec3(modelMatrix[2].xyz))
+  );
+  modelScale = max(modelScale, 1e-3);
+  float dist = max(length(cameraPosition - wp.xyz), modelScale * 0.08);
+  float normDist = dist / modelScale;
+  const float REF_NORM_DIST = 4.0;
+  float closeBoost = clamp(REF_NORM_DIST / max(normDist, 0.32), 1.0, 9.0);
+  vGlitchBoost = closeBoost;
+
+  float boostT = smoothstep(1.0, 6.5, closeBoost);
+  float effectT = max(boostT, up);
+  float coarseBands = mix(38.0, 10.0, effectT);
+  float fineBands = mix(96.0, 28.0, effectT);
+
+  // Coarse horizontal slices — main tracking slip.
+  float band = floor(screenY * coarseBands + 1000.0);
+  float glitchRoll = hash11(band + floor(t * 4.8));
+  float glitchThreshold = mix(0.48, 0.22, effectT);
+  float heavyThreshold = mix(0.8, 0.48, effectT);
+  float glitchActive = step(glitchThreshold, glitchRoll);
+  float heavyGlitch = step(heavyThreshold, glitchRoll);
+
+  float slipPx =
+    (hash11(band * 2.41 + floor(t * 8.5)) - 0.5) *
+    mix(8.0, 38.0, glitchActive) *
+    (0.45 + 0.55 * sin(t * 16.0 + band * 1.4));
+
+  slipPx += (hash11(band * 1.07 + floor(t * 3.2)) - 0.5) * heavyGlitch * mix(34.0, 88.0, effectT);
+
+  // Finer slices — horizontal jitter (stronger when close / high intensity).
+  float fineBand = floor(screenY * fineBands + 1000.0);
+  slipPx +=
+    (hash11(fineBand + floor(t * 11.0)) - 0.5) *
+    mix(1.2, 8.0, glitchActive) *
+    mix(1.0, 2.8, effectT);
+  slipPx += sin(t * 38.0 + screenY * 64.0) * mix(0.4, 3.2, glitchActive) * mix(1.0, 2.6, effectT);
+
+  slipPx *= closeBoost * (1.0 - down * 0.75 + up * 0.85);
+
+  // ~NDC px scale ( tuned ~1080p ).
+  clip.x += slipPx * clip.w * 0.0016;
+
+  gl_Position = clip;
+}
+`;
+
+/** Glitch hologram: horizontal RGB scan bands, slice displacement (vertex), no black voids. */
+const SCANLINE_HOLOGRAM_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying float vGlitchBoost;
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+uniform float uOpacity;
+
+float hash11(float p) {
+  return fract(sin(p * 127.1) * 43758.5453);
+}
+
+float hash21(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float lineMask(float v, float sharp) {
+  float s = sin(v * 6.28318);
+  return pow(abs(s), sharp);
+}
+
+vec3 boostContrast(vec3 c, float amount) {
+  return clamp((c - 0.5) * amount + 0.5, vec3(0.0), vec3(3.2));
+}
+
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+// Matches a pushed-down shelf tone curve (lowered ⅓ & ⅔ knots, highlights anchored).
+float toneCurvePushed(float x) {
+  x = clamp(x, 0.0, 1.0);
+  if (x < 0.333333) {
+    float t = x / 0.333333;
+    t = t * t * (3.0 - 2.0 * t);
+    return mix(0.0, 0.21, t);
+  }
+  if (x < 0.666667) {
+    float t = (x - 0.333333) / 0.333333;
+    t = t * t * (3.0 - 2.0 * t);
+    return mix(0.21, 0.43, t);
+  }
+  float t = (x - 0.666667) / 0.333333;
+  t = t * t * (3.0 - 2.0 * t);
+  return mix(0.43, 1.0, t);
+}
+
+vec3 applyPushedToneCurve(vec3 c) {
+  float l = dot(c, LUMA);
+  if (l < 1e-5) {
+    return c;
+  }
+  float l2;
+  if (l <= 1.0) {
+    l2 = toneCurvePushed(l);
+  } else {
+    float y1 = toneCurvePushed(1.0);
+    l2 = y1 + (l - 1.0) * 0.82;
+  }
+  return clamp(c * (l2 / l), vec3(0.0), vec3(3.2));
+}
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float ndv = max(dot(N, V), 0.0);
+  float F = 1.0 - ndv;
+  float fresnel = pow(F, 1.65);
+  float fresnelTight = pow(F, 5.0);
+
+  float sc = clamp(uPatternScale, 0.1, 5.0);
+  float hLineBase = mix(3.8, 12.0, (sc - 0.1) / 4.9);
+  float t = uTime;
+  vec2 pix = gl_FragCoord.xy;
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float up = max(d, 0.0);
+  float down = max(-d, 0.0);
+  float boostT = smoothstep(1.0, 6.5, vGlitchBoost);
+  float effectT = max(boostT, up);
+
+  float bandH = hLineBase * mix(6.0, 14.0, effectT * 0.55);
+  float band = floor(pix.y / bandH);
+  float bandFrac = fract(pix.y / bandH);
+
+  float glitchRoll = hash11(band + floor(t * 4.8));
+  float glitchThreshold = mix(0.48, 0.22, effectT);
+  float heavyThreshold = mix(0.8, 0.48, effectT);
+  float glitchActive = step(glitchThreshold, glitchRoll);
+  float heavyGlitch = step(heavyThreshold, glitchRoll);
+
+  vec2 p = pix;
+
+  float ca = mix(0.012, 0.055, fresnel) * (1.0 + glitchActive * 1.8 + heavyGlitch * 0.6);
+  ca *= mix(1.0, 2.6, boostT) * (1.0 + up * 0.65 - down * 0.45);
+
+  // Horizontal scan bands — constant downward scroll; valleys dim, never black.
+  float hRow = floor(p.y / 2.6);
+  float hDarkScale = mix(0.55, 2.05, hash11(hRow * 0.69 + floor(t * 0.75)));
+  float hPitch = hLineBase * hDarkScale;
+  float hPhaseOff = hash11(hRow * 1.19) * 6.28318;
+  float scroll = t * 4.2;
+
+  float hR = lineMask((p.y + ca * 120.0) / hPitch - scroll + hPhaseOff, 0.72);
+  float hG = lineMask(p.y / hPitch - scroll + hPhaseOff, 0.64);
+  float hB = lineMask((p.y - ca * 120.0) / hPitch - scroll + hPhaseOff, 0.72);
+
+  float scanBright = hG * 0.5 + hR * 0.28 + hB * 0.22;
+  scanBright = clamp((scanBright - 0.5) * 1.5 + 0.5, 0.0, 1.0);
+  float scanMod = mix(0.62, 1.08, scanBright);
+
+  float phosphor = 0.91 + 0.09 * sin(p.x * 3.14159 / max(hLineBase * 0.55, 1.0));
+  scanMod *= phosphor;
+
+  float bandWave = sin(bandFrac * 6.28318 * mix(1.0, 2.4, hash11(band)) - t * 1.6 + band * 0.35);
+  bandWave = bandWave * 0.5 + 0.5;
+  bandWave = clamp((bandWave - 0.5) * 1.5 + 0.5, 0.0, 1.0);
+  scanMod *= mix(0.78, 1.06, bandWave);
+
+  vec2 vignUv = (pix / vec2(800.0, 600.0) - 0.5) * 2.0;
+  float vign = 1.0 - dot(vignUv, vignUv) * 0.18;
+  vign = clamp(vign, 0.65, 1.0);
+
+  vec3 holoBody = vec3(0.025, 0.05, 0.09) + fresnel * vec3(0.1, 0.34, 0.5) * 0.62;
+
+  vec3 cyan = vec3(0.0, 0.92, 1.05);
+  vec3 magenta = vec3(1.0, 0.0, 0.77);
+  vec3 lime = vec3(0.77, 1.0, 0.0);
+
+  vec3 scanCol =
+    cyan * hG * (0.9 + bandWave * 0.22) +
+    magenta * hR * 0.65 +
+    lime * hB * 0.42;
+
+  scanCol *= (0.62 + fresnel * 1.12) * vign * scanMod;
+
+  float brightBand = smoothstep(0.36, 0.54, sin(bandFrac * 6.28318 - t * 2.2)) * glitchActive;
+  scanCol += brightBand * cyan * 0.4;
+
+  float staticRow = hash21(vec2(hRow, floor(t * 42.0)));
+  float snow = step(0.988, staticRow);
+  scanCol += snow * (cyan * 0.42 + magenta * 0.18) * scanBright;
+
+  vec3 col = holoBody + scanCol;
+
+  col += fresnel * cyan * 0.72;
+  col += fresnelTight * mix(magenta, lime, 0.5) * 0.6;
+  col += heavyGlitch * bandFrac * mix(cyan, magenta, hash11(band)) * mix(0.15, 0.34, boostT) * (1.0 + up * 0.55 - down * 0.47);
+
+  col = applyPushedToneCurve(col);
+  col = boostContrast(col, 1.22 * (1.0 + up * 0.38 - down * 0.22));
+  col = min(col, vec3(3.2));
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -401,6 +1084,13 @@ void main() {
  * @param {number} [opts.patternScale] — 1 = preset default; higher values make the pattern larger
  * @param {number} [opts.hdriBlurriness] — for chrome / glass presets; roughness vs HDRI blur
  * @param {THREE.Color} [opts.diffuseTint] — for ordered-dither mid-tone (defaults to retro red if unset)
+ * @param {THREE.Texture} [opts.diffuseMap] — albedo map for ps2-crush (nearest-neighbor, crushed UVs)
+ * @param {number} [opts.masterHue] — global hue shift in degrees (-180…180)
+ * @param {number} [opts.intensity] — effect punch (0–2, 1 = default)
+ * @param {number} [opts.liftCrush] — shadow lift (+) vs crush (−), -1…1
+ * @param {number} [opts.materialBrightness] — matches Object → Material brightness (live)
+ * @param {boolean} [opts.skinning] — enable skeletal animation (SkinnedMesh / GLB rigs)
+ * @param {boolean} [opts.morphTargets] — enable morph-target animation
  * @returns {THREE.ShaderMaterial | THREE.MeshPhysicalMaterial}
  */
 export function createCreativeLookMaterial(preset, opts = {}) {
@@ -424,6 +1114,20 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       ? opts.diffuseTint.clone()
       : null;
   const id = normalizeCreativeLookPreset(preset);
+  const masterHueRad = creativeLookMasterHueRadians(opts.masterHue ?? 0);
+  const hueUniform = { uMasterHue: { value: masterHueRad } };
+  const liftCrush = normalizeCreativeLookLiftCrush(opts.liftCrush ?? CREATIVE_LOOK_LIFT_CRUSH_DEFAULT);
+  const liftCrushUniform = { uLiftCrush: { value: liftCrush } };
+  const materialBrightness = Number.isFinite(Number(opts.materialBrightness))
+    ? Number(opts.materialBrightness)
+    : DEFAULT_MATERIAL_BRIGHTNESS;
+  const brightnessUniform = { uBrightness: { value: materialBrightness } };
+  const gradeUniforms = { ...hueUniform, ...liftCrushUniform, ...brightnessUniform };
+  const intensity = normalizeCreativeLookIntensity(opts.intensity ?? CREATIVE_LOOK_INTENSITY_DEFAULT);
+  const intensityUniform = { uIntensity: { value: intensity } };
+  const lookFrag = (fragmentShader) => withCreativeLookPostProcess(fragmentShader);
+  const skinning = !!opts.skinning;
+  const morphTargets = !!opts.morphTargets;
 
   /** Align with post half-float + linear workflow; `toneMapped: false` mismatched encoding on some GPUs (random black frames). Bloom still reads scene RT before exposure/tone passes. */
   const commonMatOpts = {
@@ -442,6 +1146,20 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return mat;
   };
 
+  const finishPhysical = (mat, tag) => {
+    if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
+      mat.outputColorSpace = THREE.LinearSRGBColorSpace;
+    }
+    mat.userData.orbyCreativeLook = tag;
+    captureCreativeLookPhysicalHueSources(mat);
+    applyCreativeLookPhysicalMasterHue(
+      mat,
+      normalizeCreativeLookMasterHue(opts.masterHue ?? 0),
+      materialBrightness,
+    );
+    return mat;
+  };
+
   if (id === 'flow-field') {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
@@ -450,9 +1168,10 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uColorA: { value: new THREE.Color(0x1a0a2e) },
         uColorB: { value: new THREE.Color(0x00e5ff) },
         uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
       },
       vertexShader: FLOW_VERTEX,
-      fragmentShader: FLOW_FRAGMENT,
+      fragmentShader: lookFrag(FLOW_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'flow-field';
@@ -465,9 +1184,10 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
       },
       vertexShader: FLOW_VERTEX,
-      fragmentShader: PLASMA_FRAGMENT,
+      fragmentShader: lookFrag(PLASMA_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'plasma';
@@ -483,9 +1203,10 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uLight: { value: new THREE.Color(0xe8f0ff) },
         uBands: { value: 4.0 },
         uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: TOON_FRAGMENT,
+      fragmentShader: lookFrag(TOON_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'toon';
@@ -501,12 +1222,47 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uPixelScale: { value: px },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: ORDERED_DITHER_FRAGMENT,
+      fragmentShader: lookFrag(ORDERED_DITHER_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'ordered-dither';
+    return finish(mat);
+  }
+
+  if (id === 'ps2-crush') {
+    const tint = diffuseTint ?? new THREE.Color(0xb8b0a8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap : null;
+    if (map) {
+      map.minFilter = THREE.NearestFilter;
+      map.magFilter = THREE.NearestFilter;
+      map.generateMipmaps = false;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uSnapGrid: { value: creativePs2CrushSnapGrid(patternScale) },
+        uTexRes: { value: creativePs2CrushTexRes(patternScale) },
+        uColorLevels: { value: 24 },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: PS2_CRUSH_VERTEX,
+      fragmentShader: lookFrag(PS2_CRUSH_FRAGMENT),
+      flatShading: true,
+      skinning,
+      morphTargets,
+      morphNormals: morphTargets,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'ps2-crush';
     return finish(mat);
   }
 
@@ -516,9 +1272,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: HOLOGRAPHIC_FRAGMENT,
+      fragmentShader: lookFrag(HOLOGRAPHIC_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'holographic';
@@ -531,12 +1289,49 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
       },
       vertexShader: WORLD_VERTEX,
-      fragmentShader: SPECTRAL_STORM_FRAGMENT,
+      fragmentShader: lookFrag(SPECTRAL_STORM_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'spectral-storm';
+    return finish(mat);
+  }
+
+  if (id === 'voronoi') {
+    const tint = diffuseTint ?? new THREE.Color(0x5cc8ff);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+      },
+      vertexShader: WORLD_VERTEX,
+      fragmentShader: lookFrag(VORONOI_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'voronoi';
+    return finish(mat);
+  }
+
+  if (id === 'scanline-hologram') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: SCANLINE_HOLOGRAM_VERTEX,
+      fragmentShader: lookFrag(SCANLINE_HOLOGRAM_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'scanline-hologram';
     return finish(mat);
   }
 
@@ -564,11 +1359,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       toneMapped: true,
       depthWrite: false,
     });
-    if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
-      mat.outputColorSpace = THREE.LinearSRGBColorSpace;
-    }
-    mat.userData.orbyCreativeLook = 'glass';
-    return finish(mat);
+    return finishPhysical(mat, 'glass');
   }
 
   if (id === 'chrome') {
@@ -584,11 +1375,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       side,
       toneMapped: true,
     });
-    if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
-      mat.outputColorSpace = THREE.LinearSRGBColorSpace;
-    }
-    mat.userData.orbyCreativeLook = 'chrome';
-    return mat;
+    return finishPhysical(mat, 'chrome');
   }
 
   const mat = new THREE.ShaderMaterial({
@@ -597,9 +1384,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       uEdgeColor: { value: new THREE.Color(0x00ffd5) },
       uRimPower: { value: 2.2 },
       uOpacity: { value: shaderAlpha },
+      ...gradeUniforms,
+      ...intensityUniform,
     },
     vertexShader: NEON_VERTEX,
-    fragmentShader: NEON_FRAGMENT,
+    fragmentShader: lookFrag(NEON_FRAGMENT),
     ...commonMatOpts,
   });
   mat.userData.orbyCreativeLook = 'neon-edge';

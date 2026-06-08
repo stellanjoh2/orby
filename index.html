@@ -935,6 +935,15 @@
                     <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
                       <img src="./assets/images/creative-look-holographic.png" alt="Holographic" width="192" height="192" />
                     </button>
+                    <button type="button" data-creative-look="voronoi" class="hdri-icon" data-tooltip="Voronoi — stained-glass cells with dark grout; slow seed drift. Scale = cell size; mid-tone from mesh color">
+                      <img src="./assets/images/creative-look-voronoi.png" alt="Voronoi" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="scanline-hologram" class="hdri-icon" data-tooltip="Scanline Hologram — RGB horizontal glitch bands, slice displacement, scrolling scanlines. Scale = line density">
+                      <img src="./assets/images/creative-look-scanline-hologram.png" alt="Scanline Hologram" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="ps2-crush" class="hdri-icon" data-tooltip="PS2 Crush — one-time triangulated mesh decimation at 2× scale, subtle vertex drift, crushed textures, flat bands + Bayer dither">
+                      <img src="./assets/images/creative-look-ps2-crush.svg" alt="PS2 Crush" width="192" height="192" />
+                    </button>
                     <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True Chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
                       <img src="./assets/images/creative-look-chrome.png" alt="True Chrome" width="192" height="192" />
                     </button>
@@ -946,7 +955,43 @@
                     </button>
                   </div>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <span data-tooltip="Global hue shift for all Shader Lab presets (-180°…180°). Independent of Cam/FX color grading.">Master Hue</span>
+                    <input
+                      type="range"
+                      id="creativeLookMasterHue"
+                      min="-180"
+                      max="180"
+                      step="1"
+                      value="0"
+                    />
+                    <span class="value" data-output="creativeLookMasterHue">0°</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Pushes each preset's signature effect (glitch strength, rim, iridescence, contrast). 1 = default. Neon Edge, Holographic, Scanline Hologram, and Spectral Storm respond today.">Intensity</span>
+                    <input
+                      type="range"
+                      id="creativeLookIntensity"
+                      min="0"
+                      max="2"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="creativeLookIntensity">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Shadow lift (+) vs black crush (−) on shader preset output. All shader looks respond; True Chrome / Glass ignore.">Lift/Crush</span>
+                    <input
+                      type="range"
+                      id="creativeLookLiftCrush"
+                      min="-1"
+                      max="1"
+                      step="0.05"
+                      value="0"
+                    />
+                    <span class="value" data-output="creativeLookLiftCrush">0.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
@@ -958,7 +1003,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Spectral Storm). Ordered Dither: finer detail toward the left (min 0.02×). True Chrome: reflection sharpness. Glass: thickness &amp; frost.">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Spectral Storm). Ordered Dither: finer detail toward the left (min 0.02×). True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2× (decimation runs once at apply).">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -973,7 +1018,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>

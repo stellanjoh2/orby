@@ -10,6 +10,7 @@ import {
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 import {
   CREATIVE_LOOK_PRESETS,
+  CREATIVE_PS2_CRUSH_PATTERN_SCALE,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 import {
@@ -464,6 +465,10 @@ export class MeshControls {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookShaderAnimationSpeed);
     }
     this.ui.inputs.creativeLookPatternScale?.addEventListener('input', (event) => {
+      const preset = normalizeCreativeLookPreset(
+        this.stateStore.getState().creativeLook?.preset,
+      );
+      if (preset === 'ps2-crush') return;
       const value = parseFloat(event.target.value);
       if (!Number.isFinite(value)) return;
       const scale = Math.max(0.02, Math.min(5, value));
@@ -472,6 +477,36 @@ export class MeshControls {
     });
     if (this.ui.inputs.creativeLookPatternScale) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookPatternScale);
+    }
+    this.ui.inputs.creativeLookMasterHue?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      const hue = Math.min(180, Math.max(-180, Math.round(value)));
+      this.helpers.updateValueLabel('creativeLookMasterHue', hue, 'angle');
+      this.stateStore.set('creativeLook.masterHue', hue);
+    });
+    if (this.ui.inputs.creativeLookMasterHue) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookMasterHue);
+    }
+    this.ui.inputs.creativeLookIntensity?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      const intensity = Math.min(2, Math.max(0, Math.round(value * 100) / 100));
+      this.helpers.updateValueLabel('creativeLookIntensity', intensity);
+      this.stateStore.set('creativeLook.intensity', intensity);
+    });
+    if (this.ui.inputs.creativeLookIntensity) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookIntensity);
+    }
+    this.ui.inputs.creativeLookLiftCrush?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      const liftCrush = Math.min(1, Math.max(-1, Math.round(value * 100) / 100));
+      this.helpers.updateValueLabel('creativeLookLiftCrush', liftCrush, 'signedDecimal');
+      this.stateStore.set('creativeLook.liftCrush', liftCrush);
+    });
+    if (this.ui.inputs.creativeLookLiftCrush) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookLiftCrush);
     }
     this.ui.inputs.creativeLookPauseAnimations?.addEventListener('click', () => {
       const cl = this.stateStore.getState().creativeLook || {};
@@ -493,6 +528,12 @@ export class MeshControls {
           this.stateStore.set('creativeLook.preset', preset);
           this.stateStore.set('creativeLook.enabled', true);
           this.stateStore.set('creativeLookSectionOpen', true);
+          if (preset === 'ps2-crush') {
+            this.stateStore.set(
+              'creativeLook.patternScale',
+              CREATIVE_PS2_CRUSH_PATTERN_SCALE,
+            );
+          }
           if (uvCheckerWasOn) {
             this.stateStore.set('advanced.uvChecker', false);
           }
@@ -1204,10 +1245,14 @@ export class MeshControls {
       );
     }
     if (this.ui.inputs.creativeLookPatternScale) {
+      const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
+      const ps2ScaleLocked = clPreset === 'ps2-crush';
       const rawScale = Number(state.creativeLook?.patternScale);
-      const patternScale = Number.isFinite(rawScale)
-        ? Math.min(5, Math.max(0.02, rawScale))
-        : 1;
+      const patternScale = ps2ScaleLocked
+        ? CREATIVE_PS2_CRUSH_PATTERN_SCALE
+        : Number.isFinite(rawScale)
+          ? Math.min(5, Math.max(0.02, rawScale))
+          : 1;
       const active =
         document.activeElement === this.ui.inputs.creativeLookPatternScale;
       if (!active) {
@@ -1220,8 +1265,44 @@ export class MeshControls {
       }
       this.ui.setControlDisabled(
         'creativeLookPatternScale',
-        !state.creativeLook?.enabled,
+        !state.creativeLook?.enabled || ps2ScaleLocked,
       );
+    }
+    if (this.ui.inputs.creativeLookMasterHue) {
+      const rawHue = Number(state.creativeLook?.masterHue);
+      const masterHue = Number.isFinite(rawHue)
+        ? Math.min(180, Math.max(-180, Math.round(rawHue)))
+        : 0;
+      const active = document.activeElement === this.ui.inputs.creativeLookMasterHue;
+      if (!active) {
+        this.ui.inputs.creativeLookMasterHue.value = masterHue;
+        this.helpers.updateValueLabel('creativeLookMasterHue', masterHue, 'angle');
+      }
+      this.ui.setControlDisabled('creativeLookMasterHue', !state.creativeLook?.enabled);
+    }
+    if (this.ui.inputs.creativeLookIntensity) {
+      const rawIntensity = Number(state.creativeLook?.intensity);
+      const intensity = Number.isFinite(rawIntensity)
+        ? Math.min(2, Math.max(0, Math.round(rawIntensity * 100) / 100))
+        : 1;
+      const active = document.activeElement === this.ui.inputs.creativeLookIntensity;
+      if (!active) {
+        this.ui.inputs.creativeLookIntensity.value = intensity;
+        this.helpers.updateValueLabel('creativeLookIntensity', intensity);
+      }
+      this.ui.setControlDisabled('creativeLookIntensity', !state.creativeLook?.enabled);
+    }
+    if (this.ui.inputs.creativeLookLiftCrush) {
+      const rawLiftCrush = Number(state.creativeLook?.liftCrush);
+      const liftCrush = Number.isFinite(rawLiftCrush)
+        ? Math.min(1, Math.max(-1, Math.round(rawLiftCrush * 100) / 100))
+        : 0;
+      const active = document.activeElement === this.ui.inputs.creativeLookLiftCrush;
+      if (!active) {
+        this.ui.inputs.creativeLookLiftCrush.value = liftCrush;
+        this.helpers.updateValueLabel('creativeLookLiftCrush', liftCrush, 'signedDecimal');
+      }
+      this.ui.setControlDisabled('creativeLookLiftCrush', !state.creativeLook?.enabled);
     }
     const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
     this.ui.setCreativeLookActive?.(clPreset);

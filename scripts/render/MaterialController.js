@@ -1,12 +1,23 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import {
+  decimatePs2CrushGeometry,
+  estimatePs2CrushMeanEdgeLength,
+} from './Ps2CrushDecimator.js';
+import {
   CREATIVE_CHROME_BASE_HEX,
   createCreativeLookMaterial,
   creativeChromeRoughness,
   creativeGlassParams,
+  creativeLookMasterHueRadians,
   creativeOrderedDitherPixelScale,
+  creativePs2CrushMergeFactor,
+  CREATIVE_PS2_CRUSH_PATTERN_SCALE,
+  normalizeCreativeLookIntensity,
+  normalizeCreativeLookLiftCrush,
+  normalizeCreativeLookMasterHue,
   normalizeCreativeLookPreset,
+  applyCreativeLookPhysicalMasterHue,
 } from './CreativeLookMaterials.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
@@ -229,6 +240,9 @@ export class MaterialController {
       pauseShaderAnimations: false,
       shaderAnimationSpeed: 0.4,
       patternScale: 1,
+      masterHue: 0,
+      intensity: 1,
+      liftCrush: 0,
     };
     /** Clock time (seconds) for animated presets (flow-field, plasma). */
     this._creativeLookTime = 0;
@@ -284,6 +298,9 @@ export class MaterialController {
         const ps = Number(icl.patternScale);
         return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
       })(),
+      masterHue: normalizeCreativeLookMasterHue(icl.masterHue),
+      intensity: normalizeCreativeLookIntensity(icl.intensity),
+      liftCrush: normalizeCreativeLookLiftCrush(icl.liftCrush),
     };
     this.materialSettings = {
       brightness:
@@ -1866,6 +1883,16 @@ export class MaterialController {
     if (this.currentShading === 'textures' || this.currentShading === 'wireframe') return;
 
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+    const patternScale = this._resolveCreativeLookPatternScale(
+      preset,
+      this.creativeLookSettings.patternScale,
+    );
+
+    if (preset === 'ps2-crush') {
+      this._applyPs2CrushGeometry(patternScale);
+    } else {
+      this._restorePs2CrushGeometry();
+    }
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
@@ -1888,16 +1915,30 @@ export class MaterialController {
           !!origMat?.transparent && opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD;
         const state = this.stateStore?.getState();
         const hdriBlur = Number(state?.hdriBlurriness ?? 0);
+        const geom = child.geometry;
+        const skinning =
+          child.isSkinnedMesh ||
+          !!geom?.attributes?.skinIndex ||
+          !!geom?.attributes?.skinWeight;
+        const morphTargets = !!child.morphTargetInfluences?.length;
         return createCreativeLookMaterial(preset, {
           transparent: useTransparentSort,
           opacity,
           side: origMat?.side ?? THREE.FrontSide,
           time: this._creativeLookTime,
-          patternScale: this.creativeLookSettings.patternScale,
+          patternScale,
           hdriBlurriness: Number.isFinite(hdriBlur)
             ? THREE.MathUtils.clamp(hdriBlur, 0, 1)
             : 0,
           diffuseTint: origMat?.color?.clone?.() ?? undefined,
+          diffuseMap: origMat?.map?.isTexture ? origMat.map : undefined,
+          masterHue: this.creativeLookSettings.masterHue,
+          intensity: this.creativeLookSettings.intensity,
+          liftCrush: this.creativeLookSettings.liftCrush,
+          materialBrightness:
+            this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+          skinning,
+          morphTargets,
         });
       };
 
@@ -1931,6 +1972,139 @@ export class MaterialController {
   }
 
   /**
+   * Hole-safe edge-collapse decimation for PS2 Crush — only merges verts connected by an edge.
+   * Skips skinned meshes. Restored on preset off / switch.
+   * @param {number} patternScale
+   */
+  _applyPs2CrushGeometry(patternScale) {
+    if (!this.currentModel) return;
+    const mergeFactor = creativePs2CrushMergeFactor(patternScale);
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || this.isWindowMesh(child)) return;
+      const geom = child.geometry;
+      if (!geom?.attributes?.position) return;
+
+      if (!child.userData.orbyPs2OriginalGeometry) {
+        child.userData.orbyPs2OriginalGeometry = geom;
+      }
+
+      const source = child.userData.orbyPs2OriginalGeometry;
+      const current = child.geometry;
+      if (current !== source && child.userData.orbyPs2CrushedGeometry) {
+        current.dispose?.();
+      }
+
+      if (
+        child.isSkinnedMesh ||
+        source.attributes.skinIndex ||
+        source.attributes.skinWeight
+      ) {
+        child.geometry = source;
+        child.userData.orbyPs2CrushedGeometry = true;
+        return;
+      }
+
+      let working = source.clone();
+      try {
+        if (!working.index) {
+          const merged = mergeVertices(working);
+          if (merged !== working) {
+            working.dispose?.();
+            working = merged;
+          }
+        }
+
+        if (!working.index || working.attributes.position.count < 9) {
+          child.geometry = working;
+          child.userData.orbyPs2CrushedGeometry = true;
+          return;
+        }
+
+        let meanEdge = estimatePs2CrushMeanEdgeLength(working);
+        if (!Number.isFinite(meanEdge) || meanEdge <= 1e-8) {
+          working.computeBoundingBox();
+          const size = new THREE.Vector3();
+          working.boundingBox.getSize(size);
+          meanEdge = Math.max(size.x, size.y, size.z, 1e-6) / 48;
+        }
+
+        const maxEdge = meanEdge * mergeFactor;
+        let decimated = decimatePs2CrushGeometry(working, maxEdge);
+        if (decimated !== working) {
+          working.dispose?.();
+          working = decimated;
+        }
+
+        working.deleteAttribute('normal');
+        working.deleteAttribute('tangent');
+
+        let flat = working.index ? working.toNonIndexed() : working;
+        if (flat !== working) {
+          working.dispose?.();
+        }
+        flat.computeBoundingSphere();
+
+        child.geometry = flat;
+        child.userData.orbyPs2CrushedGeometry = true;
+      } catch (_) {
+        working.dispose?.();
+        child.geometry = source;
+        child.userData.orbyPs2CrushedGeometry = true;
+      }
+    });
+  }
+
+  /** Restore mesh geometry after PS2 Crush decimation. */
+  _restorePs2CrushGeometry() {
+    if (!this.currentModel) return;
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const orig = child.userData.orbyPs2OriginalGeometry;
+      if (!orig) return;
+      const current = child.geometry;
+      if (current !== orig) {
+        current?.dispose?.();
+      }
+      child.geometry = orig;
+      delete child.userData.orbyPs2OriginalGeometry;
+      delete child.userData.orbyPs2CrushedGeometry;
+    });
+  }
+
+  /**
+   * PS2 Crush uses a fixed scale (decimation is apply-time only, not live).
+   * @param {string} preset
+   * @param {number | undefined} patternScale
+   */
+  _resolveCreativeLookPatternScale(preset, patternScale) {
+    if (normalizeCreativeLookPreset(preset) === 'ps2-crush') {
+      return CREATIVE_PS2_CRUSH_PATTERN_SCALE;
+    }
+    const ps = Number(patternScale);
+    return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
+  }
+
+  /**
+   * Whether applying `patch` will rebuild Shader Lab materials (not live-uniform tweaks).
+   * @param {object} [patch]
+   */
+  willRebuildCreativeLookMaterials(patch = {}) {
+    const prevEnabled = !!this.creativeLookSettings.enabled;
+    const prevPreset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+    if (!this.currentModel) return false;
+
+    const merged = { ...this.creativeLookSettings, ...patch };
+    const nextEnabled = !!merged.enabled;
+    const nextPreset = normalizeCreativeLookPreset(merged.preset);
+
+    if (!nextEnabled) return prevEnabled;
+    if (!prevEnabled && nextEnabled) return true;
+    return prevEnabled && nextEnabled && prevPreset !== nextPreset;
+  }
+
+  /**
    * @param {object} patch
    * @param {{ skipStateStore?: boolean }} [options]
    */
@@ -1953,9 +2127,21 @@ export class MaterialController {
     this.creativeLookSettings.patternScale = Number.isFinite(ps)
       ? THREE.MathUtils.clamp(ps, 0.02, 5)
       : 1;
+    this.creativeLookSettings.masterHue = normalizeCreativeLookMasterHue(
+      this.creativeLookSettings.masterHue,
+    );
+    this.creativeLookSettings.intensity = normalizeCreativeLookIntensity(
+      this.creativeLookSettings.intensity,
+    );
+    this.creativeLookSettings.liftCrush = normalizeCreativeLookLiftCrush(
+      this.creativeLookSettings.liftCrush,
+    );
     this.creativeLookSettings.preset = normalizeCreativeLookPreset(
       this.creativeLookSettings.preset,
     );
+    if (this.creativeLookSettings.preset === 'ps2-crush') {
+      this.creativeLookSettings.patternScale = CREATIVE_PS2_CRUSH_PATTERN_SCALE;
+    }
 
     if (!options.skipStateStore && this.stateStore) {
       this.stateStore.set('creativeLook', this.creativeLookSettings);
@@ -1967,6 +2153,7 @@ export class MaterialController {
     }
 
     if (!this.creativeLookSettings.enabled) {
+      this._restorePs2CrushGeometry();
       this.setShading(this.currentShading);
       this._restoreMeshShadowDefaults();
       return;
@@ -1979,6 +2166,7 @@ export class MaterialController {
       this.creativeLookSettings.enabled &&
       prevPreset === this.creativeLookSettings.preset;
     if (redundant) {
+      this._syncCreativeLookLiveUniforms(this.creativeLookSettings);
       return;
     }
 
@@ -2014,7 +2202,7 @@ export class MaterialController {
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
 
     if (
-      (preset === 'toon' || preset === 'ordered-dither') &&
+      (preset === 'toon' || preset === 'ordered-dither' || preset === 'ps2-crush') &&
       typeof this.getCreativeLookKeyLightDir === 'function'
     ) {
       const dir = this.getCreativeLookKeyLightDir(this._creativeToonKeyDirScratch);
@@ -2024,7 +2212,8 @@ export class MaterialController {
         for (const m of mats) {
           if (
             (m?.userData?.orbyCreativeLook === 'toon' ||
-              m?.userData?.orbyCreativeLook === 'ordered-dither') &&
+              m?.userData?.orbyCreativeLook === 'ordered-dither' ||
+              m?.userData?.orbyCreativeLook === 'ps2-crush') &&
             m.uniforms?.uLightDir
           ) {
             m.uniforms.uLightDir.value.copy(dir);
@@ -2037,7 +2226,10 @@ export class MaterialController {
       preset === 'flow-field' ||
       preset === 'plasma' ||
       preset === 'holographic' ||
-      preset === 'spectral-storm';
+      preset === 'spectral-storm' ||
+      preset === 'voronoi' ||
+      preset === 'scanline-hologram' ||
+      preset === 'ps2-crush';
     if (animPreset) {
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
@@ -2048,7 +2240,10 @@ export class MaterialController {
             (tag === 'flow-field' ||
               tag === 'plasma' ||
               tag === 'holographic' ||
-              tag === 'spectral-storm') &&
+              tag === 'spectral-storm' ||
+              tag === 'voronoi' ||
+              tag === 'scanline-hologram' ||
+              tag === 'ps2-crush') &&
             m.uniforms?.uTime
           ) {
             m.uniforms.uTime.value = effectiveTime;
@@ -2111,6 +2306,39 @@ export class MaterialController {
       });
     }
 
+    this._syncCreativeLookLiveUniforms(cl);
+  }
+
+  _syncCreativeLookLiveUniforms(source = this.creativeLookSettings) {
+    if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    const masterHue = normalizeCreativeLookMasterHue(source?.masterHue);
+    const hueRad = creativeLookMasterHueRadians(masterHue);
+    const intensity = normalizeCreativeLookIntensity(source?.intensity);
+    const liftCrush = normalizeCreativeLookLiftCrush(source?.liftCrush);
+    const brightness =
+      this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        if (!m?.userData?.orbyCreativeLook) continue;
+        if (m.uniforms?.uMasterHue) {
+          m.uniforms.uMasterHue.value = hueRad;
+        }
+        if (m.uniforms?.uLiftCrush) {
+          m.uniforms.uLiftCrush.value = liftCrush;
+        }
+        if (m.uniforms?.uBrightness) {
+          m.uniforms.uBrightness.value = brightness;
+        }
+        if (m.uniforms?.uIntensity) {
+          m.uniforms.uIntensity.value = intensity;
+        }
+        if (m.isMeshPhysicalMaterial) {
+          applyCreativeLookPhysicalMasterHue(m, masterHue, brightness);
+        }
+      }
+    });
   }
 
   getCreativeLookSettings() {
@@ -2499,6 +2727,9 @@ export class MaterialController {
         this.applyFresnelToModel(this.currentModel);
       }
       this.reapplySvgExtrudeSurfaceShaders();
+    }
+    if (this.creativeLookSettings?.enabled) {
+      this._syncCreativeLookLiveUniforms();
     }
     if (this.onMaterialUpdate) {
       this.onMaterialUpdate();
@@ -3884,6 +4115,7 @@ export class MaterialController {
   }
 
   clear() {
+    this._restorePs2CrushGeometry();
     this.mapInspectPreview?.clear();
     this.disposeFbxUserTextures(this.currentModel);
     this.clearWireframeOverlay();

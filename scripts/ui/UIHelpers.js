@@ -27,6 +27,7 @@ export class UIHelpers {
     const formatMap = {
       angle: { decimals: 0, unit: '°' },
       signedAngle: { decimals: 0, unit: '°', signed: true },
+      signedDecimal: { decimals: 2, unit: '', signed: true },
       distance: { decimals: 2, unit: 'm' },
       multiplier: { decimals: 2, unit: '×' },
       decimal: { decimals: 2, unit: '' },

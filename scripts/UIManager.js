@@ -92,6 +92,8 @@ export class UIManager {
     this._loadSpinnerDepth = 0;
     this._loadSpinnerElapsedActive = false;
     this._loadSpinnerElapsedStart = 0;
+    /** Status prefix beside elapsed seconds on #viewportLoadSpinnerElapsed (default `Rendering`). */
+    this._loadSpinnerStatusPrefix = 'Rendering';
     /** @type {Array<{ text: string, durationMs: number, toastOptions: object }>} */
     this._toastQueue = [];
     this._toastQueueActive = false;
@@ -447,6 +449,9 @@ export class UIManager {
       creativeLookPauseAnimations: q('#creativeLookPauseAnimations'),
       creativeLookShaderAnimationSpeed: q('#creativeLookShaderAnimationSpeed'),
       creativeLookPatternScale: q('#creativeLookPatternScale'),
+      creativeLookMasterHue: q('#creativeLookMasterHue'),
+      creativeLookIntensity: q('#creativeLookIntensity'),
+      creativeLookLiftCrush: q('#creativeLookLiftCrush'),
       creativeLookButtons: document.querySelectorAll('[data-creative-look]'),
       groundSolid: q('#groundSolid'),
       groundWire: q('#groundWire'),
@@ -1990,8 +1995,18 @@ export class UIManager {
     this._loadSpinnerDepth = Math.max(0, this._loadSpinnerDepth - 1);
     if (this._loadSpinnerDepth === 0) {
       this.endLoadSpinnerElapsed();
+      this._loadSpinnerStatusPrefix = 'Rendering';
     }
     this._syncLoadSpinner();
+  }
+
+  /** @param {string} prefix — e.g. `Loading shader` → `Loading shader 2s` */
+  setLoadSpinnerStatusPrefix(prefix) {
+    this._loadSpinnerStatusPrefix =
+      typeof prefix === 'string' && prefix.trim() ? prefix.trim() : 'Rendering';
+    if (this._loadSpinnerElapsedActive) {
+      this.setLoadSpinnerElapsedFromStart();
+    }
   }
 
   beginLoadSpinnerElapsed() {
@@ -2020,7 +2035,7 @@ export class UIManager {
     if (!el || !this._loadSpinnerElapsedActive) return;
     el.hidden = false;
     const wholeSec = Math.max(0, Math.floor(seconds));
-    el.textContent = `Rendering ${wholeSec}s`;
+    el.textContent = `${this._loadSpinnerStatusPrefix} ${wholeSec}s`;
   }
 
   _syncLoadSpinner() {
@@ -3174,16 +3189,10 @@ export class UIManager {
       isoOn || currentState.camera?.handheld === 'off',
     );
 
-    const creativeLookLocksMaterial = !!currentState.creativeLook?.enabled;
-    this.setBlockMuted('material', creativeLookLocksMaterial);
+    const creativeLookOn = !!currentState.creativeLook?.enabled;
     this.setControlDisabled(
-      [
-        'materialBrightness',
-        'materialMetalness',
-        'materialRoughness',
-        'materialEmissive',
-      ],
-      creativeLookLocksMaterial,
+      ['materialMetalness', 'materialRoughness', 'materialEmissive'],
+      creativeLookOn,
     );
 
     const fisheyeOn = !!currentState.fisheye?.enabled;

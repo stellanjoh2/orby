@@ -206,12 +206,18 @@ export class StateStore {
       creativeLook: {
         enabled: false,
         preset: 'neon-edge',
-        /** When true, flow-field / plasma / holographic `uTime` stops advancing. */
+        /** When true, animated Shader Lab presets stop advancing `uTime`. */
         pauseShaderAnimations: false,
-        /** Multiplier on shader `uTime` for animated presets (0–2); same scale for flow, plasma, holographic, spectral storm. Default tuned for spectral storm pacing. */
+        /** Multiplier on shader `uTime` for animated presets (0–2). Default tuned for spectral storm pacing. */
         shaderAnimationSpeed: 0.4,
         /** World-space pattern size multiplier for Shader Lab presets. 1 = preset default. */
         patternScale: 1,
+        /** Global hue shift for all Shader Lab presets (-180…180°). Independent of Cam/FX grading. */
+        masterHue: 0,
+        /** Effect punch for Shader Lab presets (0–2). 1 = default; meaning varies by preset. */
+        intensity: 1,
+        /** Shadow lift (+) vs black crush (−) on shader preset output. True Chrome / Glass ignore. */
+        liftCrush: 0,
       },
       fresnel: {
         enabled: false,

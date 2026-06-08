@@ -335,6 +335,7 @@ body.legal-doc--support {
   width: 100%;
   padding: 0.55rem 2rem 0.55rem 0.75rem;
   appearance: none;
+  color-scheme: dark;
   background-color: rgba(255, 255, 255, 0.06);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -342,6 +343,11 @@ body.legal-doc--support {
   background-size: 12px 12px;
   cursor: pointer;
   text-align: left;
+}
+
+.legal-support-bug-report .bug-report-field select option {
+  background-color: rgb(22, 22, 24);
+  color: var(--legal-text);
 }
 
 .legal-support-bug-report .bug-report-field select:focus,

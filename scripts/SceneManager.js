@@ -46,6 +46,7 @@ import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
+import { formatCreativeLookPresetLabel } from './render/CreativeLookMaterials.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -4114,6 +4115,52 @@ export class SceneManager {
    */
   _updateBackgroundSphere() {
     this.backgroundController?.updateSpherePosition();
+  }
+
+  /**
+   * Apply Shader Lab state with viewport spinner + toast when materials rebuild.
+   * @param {object} creativeLookState
+   * @param {{ skipStateStore?: boolean }} [options]
+   */
+  applyCreativeLookFromState(creativeLookState, options = {}) {
+    this._creativeLookApplyChain = (this._creativeLookApplyChain ?? Promise.resolve()).then(() =>
+      this._applyCreativeLookFromStateOnce(creativeLookState, options),
+    );
+    return this._creativeLookApplyChain;
+  }
+
+  /**
+   * @param {object} creativeLookState
+   * @param {{ skipStateStore?: boolean }} [options]
+   */
+  async _applyCreativeLookFromStateOnce(creativeLookState, options = {}) {
+    const mc = this.materialController;
+    if (!mc) return;
+
+    const heavy = mc.willRebuildCreativeLookMaterials(creativeLookState);
+    if (heavy) {
+      this.ui?.setLoadSpinnerStatusPrefix?.('Loading shader');
+      this.ui?.beginLoadSpinner?.();
+      this.ui?.beginLoadSpinnerElapsed?.();
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+    }
+
+    try {
+      mc.setCreativeLookSettings(creativeLookState, options);
+      if (heavy && creativeLookState?.enabled) {
+        const label = formatCreativeLookPresetLabel(creativeLookState.preset);
+        this.ui?.showToast?.(`${label} loaded`, 2800, {
+          notification: false,
+          icon: 'success',
+        });
+      }
+    } finally {
+      if (heavy) {
+        this.ui?.endLoadSpinner?.();
+      }
+    }
   }
 
   /**

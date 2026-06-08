@@ -212,7 +212,7 @@ function createStateApplySteps() {
     },
     {
       id: 'material',
-      apply: (s, state) => {
+      apply: async (s, state) => {
         if (state.material?.brightness !== undefined) {
           s.materialController.setMaterialBrightness(state.material.brightness);
         }
@@ -241,7 +241,7 @@ function createStateApplySteps() {
           s.materialController.setWireframeSettings(state.wireframe);
         }
         if (state.creativeLook) {
-          s.materialController.setCreativeLookSettings(state.creativeLook, {
+          await s.applyCreativeLookFromState(state.creativeLook, {
             skipStateStore: true,
           });
         }
