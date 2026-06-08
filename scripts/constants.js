@@ -501,6 +501,16 @@ export function isBloomPipelineActive(state) {
 }
 
 /**
+ * Shader Lab viewport bloom — separate from Camera & FX `bloom.enabled` (off by default here).
+ * @param {{ creativeLook?: { enabled?: boolean, viewportBloom?: boolean }, renderQuality?: string }} state
+ */
+export function isCreativeLookViewportPostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  const tier = resolveRenderQualityTier(state.renderQuality);
+  return !!cl.enabled && !!cl.viewportBloom && !tier.forceBloomOff;
+}
+
+/**
  * Anti-aliasing select: low tier forces FXAA off in the GPU while keeping
  * `state.antiAliasing` for when the user returns to Medium/Ultra — use this for display + disabled.
  * @param {string | undefined} renderQuality

@@ -15,6 +15,7 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
   resolveBloomQualityTier,
   isBloomPipelineActive,
+  isCreativeLookViewportPostActive,
   resolveRenderQualityTier,
   isKeyLightOnlyShadowCastingRenderQuality,
   castShadowLightIdsForGlobalToggle,
@@ -981,6 +982,13 @@ export class SceneManager {
       backgroundController: this.backgroundController,
       getCreativeLookEnabled: () =>
         this.materialController?.getCreativeLookSettings?.()?.enabled === true,
+      getCreativeLookViewportBloomActive: () => {
+        const state = this.stateStore.getState();
+        return (
+          this.materialController?.getCreativeLookSettings?.()?.enabled === true &&
+          isCreativeLookViewportPostActive(state)
+        );
+      },
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
       beforeComposerRender: () => {
@@ -1174,6 +1182,7 @@ export class SceneManager {
     } else if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution?.value) {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
+    this.postPipeline?.creativeLookViewportBloom?.setSize(width, height);
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
     this.diagnosticsController?.syncBoneLineResolution?.(width, height);
@@ -1498,6 +1507,9 @@ export class SceneManager {
       }
       if (this.postPipeline?.bloomTintPass) {
         this.postPipeline.bloomTintPass.enabled = false;
+      }
+      if (this.postPipeline?.creativeLookViewportBloomPass) {
+        this.postPipeline.creativeLookViewportBloomPass.enabled = false;
       }
     }
     this.syncAnamorphicBloomFromState();

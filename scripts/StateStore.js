@@ -218,6 +218,8 @@ export class StateStore {
         intensity: 1,
         /** Shadow lift (+) vs black crush (−) on shader preset output. True Chrome / Glass ignore. */
         liftCrush: 0,
+        /** Viewport bloom shortcut (independent of Camera & FX bloom.enabled). */
+        viewportBloom: false,
       },
       fresnel: {
         enabled: false,

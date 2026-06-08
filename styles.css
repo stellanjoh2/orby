@@ -7176,12 +7176,25 @@ body.ui-hidden .shelf {
 .creative-look-foldout-body {
   display: flex;
   flex-direction: column;
+  gap: var(--shelf-control-gap);
 }
 
 /* Same intrinsic width as Snap to Mesh ghost CTAs — avoid column stretch from .ghost-btn */
 .creative-look-foldout-body > .creative-look-pause-btn {
   align-self: flex-start;
-  margin-top: 0.65rem;
+}
+
+.creative-look-bloom-note {
+  margin: 0;
+  font-size: var(--shelf-label-font-size);
+  line-height: 1.45;
+  color: var(--warning);
+  letter-spacing: -0.01em;
+}
+
+.creative-look-bloom-note .fa-circle-exclamation {
+  margin-right: 0.35rem;
+  vertical-align: -0.1em;
 }
 
 .look-filter-grid {

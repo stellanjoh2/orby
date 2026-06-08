@@ -446,6 +446,7 @@ export class UIManager {
       animationJointScale: q('#animationJointScale'),
       animationBoneStrokeWidth: q('#animationBoneStrokeWidth'),
       creativeLookEnabled: q('#creativeLookEnabled'),
+      creativeLookBloomEnabled: q('#creativeLookBloomEnabled'),
       creativeLookPauseAnimations: q('#creativeLookPauseAnimations'),
       creativeLookShaderAnimationSpeed: q('#creativeLookShaderAnimationSpeed'),
       creativeLookPatternScale: q('#creativeLookPatternScale'),

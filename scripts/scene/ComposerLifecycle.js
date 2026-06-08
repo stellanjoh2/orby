@@ -13,6 +13,7 @@ export class ComposerLifecycle {
     postPipeline,
     backgroundController,
     getCreativeLookEnabled,
+    getCreativeLookViewportBloomActive,
     syncPostProcessingForLogicalSize,
     beforeComposerRender,
     onRestoreBloomAfterCreativeLook,
@@ -23,6 +24,8 @@ export class ComposerLifecycle {
     this.postPipeline = postPipeline;
     this.backgroundController = backgroundController;
     this.getCreativeLookEnabled = getCreativeLookEnabled ?? (() => false);
+    this.getCreativeLookViewportBloomActive =
+      getCreativeLookViewportBloomActive ?? (() => false);
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.beforeComposerRender = beforeComposerRender;
     this.onRestoreBloomAfterCreativeLook = onRestoreBloomAfterCreativeLook;
@@ -90,9 +93,8 @@ export class ComposerLifecycle {
   }
 
   /**
-   * UnrealBloomPass / tint / anamorphic aggressively rewrite clear alpha and RT state; combined with
-   * Shader Lab materials that causes intermittent black regions. Same logic must run before any
-   * EffectComposer capture path (interactive render, PNG export, video frames).
+   * UnrealBloomPass on Shader Lab caused black bands — disable it while Shader Lab is on.
+   * Viewport bloom uses {@link CreativeLookViewportBloom} via pushCreativeLookViewportPresentation.
    */
   applyCreativeLookBloomSuppression() {
     const creativeLookOn = this.getCreativeLookEnabled() === true;
@@ -111,25 +113,33 @@ export class ComposerLifecycle {
   }
 
   /**
-   * Creative look + clear only (video capture prep; buffers/viewport handled separately).
-   */
-  prepareComposerCapture() {
-    this.applyCreativeLookBloomSuppression();
-    this.syncRendererClearForSceneBackground();
-  }
-
-  /**
    * Interactive viewport + PNG export — identical EffectComposer sequence.
    */
   renderComposerPass() {
     if (!this.composer) return;
     this.beforeComposerRender?.();
-    this.applyCreativeLookBloomSuppression();
+    const viewportBloom = this.getCreativeLookViewportBloomActive() === true;
+    if (viewportBloom) {
+      this.postPipeline?.pushCreativeLookViewportPresentation?.();
+    } else {
+      this.applyCreativeLookBloomSuppression();
+    }
     this.ensureComposerBuffersMatchRenderer();
     this.resetRendererViewportToCanvas();
     this.syncRendererClearForSceneBackground();
     this.composer.render();
+    if (viewportBloom) {
+      this.postPipeline?.popCreativeLookViewportPresentation?.();
+    }
     this.resetRendererViewportToCanvas();
+  }
+
+  /**
+   * Creative look + clear only (video capture prep; buffers/viewport handled separately).
+   */
+  prepareComposerCapture() {
+    this.applyCreativeLookBloomSuppression();
+    this.syncRendererClearForSceneBackground();
   }
 
   /**

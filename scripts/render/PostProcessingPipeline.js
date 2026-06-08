@@ -24,6 +24,7 @@ import {
 import { ColorAdjustController } from './ColorAdjustController.js';
 import { GradingController } from './GradingController.js';
 import { BloomCompositeController } from './BloomCompositeController.js';
+import { CreativeLookViewportBloom } from './CreativeLookViewportBloom.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
   AMBIENT_OCCLUSION_INTENSITY_MIN,
@@ -170,7 +171,11 @@ export class PostProcessingPipeline {
     this.lensDistortionPass.enabled = false;
     this.lensDistortionPass.renderToScreen = true;
 
+    this.creativeLookViewportBloom = new CreativeLookViewportBloom(renderer);
+    this.creativeLookViewportBloomPass = this.creativeLookViewportBloom.getPass();
+
     this.composer.addPass(this.renderPass);
+    this.composer.addPass(this.creativeLookViewportBloomPass);
     this.composer.addPass(this.n8aoPass);
     this.composer.addPass(this.bokehPass);
     this.composer.addPass(this.godRaysPass);
@@ -199,6 +204,7 @@ export class PostProcessingPipeline {
     /** @type {Array<{ pass: import('three/examples/jsm/postprocessing/Pass.js').Pass, key: string }>} */
     this._managedPasses = [
       { pass: this.renderPass, key: 'renderPass' },
+      { pass: this.creativeLookViewportBloomPass, key: 'creativeLookViewportBloomPass' },
       { pass: this.n8aoPass, key: 'n8aoPass' },
       { pass: this.bokehPass, key: 'bokehPass' },
       { pass: this.godRaysPass, key: 'godRaysPass' },
@@ -225,6 +231,45 @@ export class PostProcessingPipeline {
     ];
     /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
     this._unlitPresentationSnapshot = null;
+    /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
+    this._creativeLookViewportSnapshot = null;
+  }
+
+  /**
+   * Shader Lab + bloom: viewport-only stack — scene → custom bloom → screen (no other post).
+   */
+  pushCreativeLookViewportPresentation() {
+    if (this._creativeLookViewportSnapshot) return;
+
+    this._creativeLookViewportSnapshot = this._managedPasses.map(({ pass }) => ({
+      enabled: pass.enabled,
+      renderToScreen: pass.renderToScreen,
+    }));
+
+    for (const { pass, key } of this._managedPasses) {
+      if (key === 'renderPass') {
+        pass.enabled = true;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookViewportBloomPass') {
+        pass.enabled = true;
+        pass.renderToScreen = true;
+        continue;
+      }
+      pass.enabled = false;
+      pass.renderToScreen = false;
+    }
+  }
+
+  popCreativeLookViewportPresentation() {
+    const snap = this._creativeLookViewportSnapshot;
+    if (!snap) return;
+    this._managedPasses.forEach(({ pass }, i) => {
+      pass.enabled = snap[i].enabled;
+      pass.renderToScreen = snap[i].renderToScreen;
+    });
+    this._creativeLookViewportSnapshot = null;
   }
 
   /**
@@ -304,6 +349,7 @@ export class PostProcessingPipeline {
    */
   updateBloom(settings) {
     if (!settings) return;
+    this.creativeLookViewportBloom?.updateSettings(settings);
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
     const active = wants && settings.strength > 0.0001;

@@ -514,6 +514,9 @@ export class MeshControls {
       const next = !cl.pauseShaderAnimations;
       this.stateStore.set('creativeLook.pauseShaderAnimations', next);
     });
+    this.ui.inputs.creativeLookBloomEnabled?.addEventListener('change', (event) => {
+      this.stateStore.set('creativeLook.viewportBloom', event.target.checked);
+    });
     this.ui.inputs.creativeLookButtons?.forEach?.((button) => {
       button.addEventListener('click', () => {
         const preset = button.dataset.creativeLook;
@@ -1226,6 +1229,16 @@ export class MeshControls {
         : 'Pause shader animations';
       this.ui.setControlDisabled(
         'creativeLookPauseAnimations',
+        !state.creativeLook?.enabled,
+      );
+    }
+    if (this.ui.inputs.creativeLookBloomEnabled) {
+      const activeEl = document.activeElement;
+      if (activeEl !== this.ui.inputs.creativeLookBloomEnabled) {
+        this.ui.inputs.creativeLookBloomEnabled.checked = !!state.creativeLook?.viewportBloom;
+      }
+      this.ui.setControlDisabled(
+        'creativeLookBloomEnabled',
         !state.creativeLook?.enabled,
       );
     }

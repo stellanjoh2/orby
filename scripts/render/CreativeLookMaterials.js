@@ -1806,13 +1806,14 @@ void main() {
   float boostT = smoothstep(1.0, 6.5, closeBoost);
   float effectT = max(boostT * dispGate, up);
   float coarseBands = mix(38.0, 10.0, effectT);
-  float fineBands = mix(96.0, 28.0, effectT);
-
-  // Coarse horizontal slices — main tracking slip.
-  float band = floor(screenY * coarseBands + 1000.0);
-  float glitchRoll = hash11(band + floor(t * 4.8));
   float glitchThreshold = mix(0.48, 0.22, effectT);
   float heavyThreshold = mix(0.8, 0.48, effectT);
+
+  // Snap to coarse band center — every vertex in the same horizontal slice gets
+  // identical slip so triangles don't shear into glue threads.
+  float slipY = (floor(screenY * coarseBands + 1000.0) + 0.5 - 1000.0) / coarseBands;
+  float band = floor(slipY * coarseBands + 1000.0);
+  float glitchRoll = hash11(band + floor(t * 4.8));
   float glitchActive = step(glitchThreshold, glitchRoll);
   float heavyGlitch = step(heavyThreshold, glitchRoll);
 
@@ -1823,12 +1824,7 @@ void main() {
 
   slipPx += (hash11(band * 1.07 + floor(t * 3.2)) - 0.5) * heavyGlitch * mix(34.0, 88.0, effectT);
 
-  // Finer slices — horizontal jitter (stronger when close / high intensity).
-  float fineBand = floor(screenY * fineBands + 1000.0);
-  slipPx +=
-    (hash11(fineBand + floor(t * 11.0)) - 0.5) *
-    mix(1.2, 8.0, glitchActive) *
-    mix(1.0, 2.8, effectT);
+  // Continuous sin jitter only — fine-band displacement removed (it caused thread shear).
   slipPx += sin(t * 38.0 + screenY * 64.0) * mix(0.4, 3.2, glitchActive) * mix(1.0, 2.6, effectT);
 
   float dispMul = inten <= 1.0 ? dispGate : (1.0 + up * 0.85);

@@ -256,6 +256,7 @@ export class MaterialController {
       masterHue: 0,
       intensity: 1,
       liftCrush: 0,
+      viewportBloom: false,
     };
     /** Clock time (seconds) for animated presets (flow-field, plasma). */
     this._creativeLookTime = 0;
@@ -314,6 +315,7 @@ export class MaterialController {
       masterHue: normalizeCreativeLookMasterHue(icl.masterHue),
       intensity: normalizeCreativeLookIntensity(icl.intensity),
       liftCrush: normalizeCreativeLookLiftCrush(icl.liftCrush),
+      viewportBloom: icl.viewportBloom === true,
     };
     this.materialSettings = {
       brightness:
@@ -1937,12 +1939,15 @@ export class MaterialController {
     if (creativeLookUsesRetroDecimation(preset)) {
       this._applyRetroConsoleGeometry(preset, patternScale);
       this._restoreWirePulseGeometry();
+      this._restoreScanlineGeometry();
     } else if (creativeLookUsesWirePulseGeometry(preset)) {
       this._restorePs2CrushGeometry();
+      this._restoreScanlineGeometry();
       this._applyWirePulseGeometry();
     } else {
       this._restorePs2CrushGeometry();
       this._restoreWirePulseGeometry();
+      this._restoreScanlineGeometry();
     }
   }
 
@@ -2220,6 +2225,24 @@ export class MaterialController {
     });
   }
 
+  /** Restore mesh geometry if a previous Scanline Hologram prep pass left triangle soup behind. */
+  _restoreScanlineGeometry() {
+    if (!this.currentModel) return;
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const orig = child.userData.orbyScanlineOriginalGeometry;
+      if (!orig) return;
+      const current = child.geometry;
+      if (current !== orig) {
+        current?.dispose?.();
+      }
+      child.geometry = orig;
+      delete child.userData.orbyScanlineOriginalGeometry;
+      delete child.userData.orbyScanlinePreparedGeometry;
+    });
+  }
+
   /** Non-indexed triangle soup + barycentrics for Wire Pulse wireframe shader. */
   _applyWirePulseGeometry() {
     if (!this.currentModel) return;
@@ -2297,6 +2320,8 @@ export class MaterialController {
     this.creativeLookSettings.enabled = !!this.creativeLookSettings.enabled;
     this.creativeLookSettings.pauseShaderAnimations =
       !!this.creativeLookSettings.pauseShaderAnimations;
+    this.creativeLookSettings.viewportBloom =
+      !!this.creativeLookSettings.viewportBloom;
     const sp = Number(this.creativeLookSettings.shaderAnimationSpeed);
     this.creativeLookSettings.shaderAnimationSpeed = Number.isFinite(sp)
       ? THREE.MathUtils.clamp(sp, 0, 2)
