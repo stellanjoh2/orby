@@ -9,8 +9,10 @@ import {
   normalizeExportVideoMovements,
   normalizeExportMeshAnimationSettings,
   normalizeExportSpinSettings,
+  normalizeExportHdriRotationSettings,
   exportSpinSequenceLabel,
   exportSpinToastLabel,
+  exportHdriRotationToastLabel,
 } from './exportVideoMovements.js';
 import { lightsRotationForExportFrame } from '../config/lightsAutoRotate.js';
 import { buildOfflineExportOverlaySummary } from './offlineExportOverlaySummary.js';
@@ -37,6 +39,7 @@ export class VideoExporter {
     renderComposerPassForExport,
     setRotationY,
     setLightsRotation,
+    setHdriRotation,
     beginExportOrbitDrive = () => {},
     applyExportOrbitDriveFrame = () => {},
     endExportOrbitDrive = () => {},
@@ -81,6 +84,7 @@ export class VideoExporter {
     this.renderComposerPassForExport = renderComposerPassForExport;
     this.setRotationY = setRotationY;
     this.setLightsRotation = setLightsRotation;
+    this.setHdriRotation = setHdriRotation;
     this.beginExportOrbitDrive = beginExportOrbitDrive;
     this.applyExportOrbitDriveFrame = applyExportOrbitDriveFrame;
     this.endExportOrbitDrive = endExportOrbitDrive;
@@ -150,8 +154,10 @@ export class VideoExporter {
     movements,
     t,
     spinSettings,
+    hdriRotationSettings,
     startRotationY,
     startLightsRotation,
+    startHdriRotation,
     lightsAutoRotate,
     durationSec,
     frameIndex,
@@ -171,6 +177,13 @@ export class VideoExporter {
         t,
       );
       this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });
+    }
+    if (
+      hdriRotationSettings?.degrees > 0
+      && typeof this.setHdriRotation === 'function'
+    ) {
+      const hdriRotation = startHdriRotation + hdriRotationSettings.signedDegrees * t;
+      this.setHdriRotation(hdriRotation, { updateState: false, updateUi: false });
     }
     if (needsExportCameraDrive(movements)) {
       this.applyExportCameraDriveFrame?.(t, {
@@ -204,8 +217,10 @@ export class VideoExporter {
   _resetExportSceneToFirstFrame({
     movements,
     spinSettings,
+    hdriRotationSettings,
     startRotationY,
     startLightsRotation,
+    startHdriRotation,
     lightsAutoRotate,
     durationSec,
     fps,
@@ -215,8 +230,10 @@ export class VideoExporter {
       movements,
       t: 0,
       spinSettings,
+      hdriRotationSettings,
       startRotationY,
       startLightsRotation,
+      startHdriRotation,
       lightsAutoRotate,
       durationSec,
       frameIndex: 0,
@@ -603,9 +620,11 @@ export class VideoExporter {
     fps,
     startRotationY,
     startLightsRotation,
+    startHdriRotation,
     lightsAutoRotate,
     quality = 'medium',
     spinSettings,
+    hdriRotationSettings,
     movements,
     meshAnimation,
   }) {
@@ -624,9 +643,11 @@ export class VideoExporter {
         fps,
         startRotationY,
         startLightsRotation,
+        startHdriRotation,
         lightsAutoRotate,
         quality,
         spinSettings,
+        hdriRotationSettings,
         movements,
         meshAnimation,
       });
@@ -651,8 +672,10 @@ export class VideoExporter {
       movements,
       t: 0,
       spinSettings,
+      hdriRotationSettings,
       startRotationY,
       startLightsRotation,
+      startHdriRotation,
       lightsAutoRotate,
       durationSec,
       frameIndex: 0,
@@ -682,8 +705,10 @@ export class VideoExporter {
         movements,
         t,
         spinSettings,
+        hdriRotationSettings,
         startRotationY,
         startLightsRotation,
+        startHdriRotation,
         lightsAutoRotate,
         durationSec,
         frameIndex: i,
@@ -710,9 +735,11 @@ export class VideoExporter {
     fps,
     startRotationY,
     startLightsRotation,
+    startHdriRotation,
     lightsAutoRotate,
     quality = 'medium',
     spinSettings,
+    hdriRotationSettings,
     movements,
     meshAnimation,
   }) {
@@ -738,8 +765,10 @@ export class VideoExporter {
       movements,
       t: 0,
       spinSettings,
+      hdriRotationSettings,
       startRotationY,
       startLightsRotation,
+      startHdriRotation,
       lightsAutoRotate,
       durationSec,
       frameIndex: 0,
@@ -769,8 +798,10 @@ export class VideoExporter {
         movements,
         t,
         spinSettings,
+        hdriRotationSettings,
         startRotationY,
         startLightsRotation,
+        startHdriRotation,
         lightsAutoRotate,
         durationSec,
         frameIndex: i,
@@ -811,8 +842,9 @@ export class VideoExporter {
     }
 
     const movements = normalizeExportVideoMovements(settings);
-    if (!hasExportVideoMovement(movements)) {
-      this.ui?.showToast?.('Enable at least one camera movement to export');
+    const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
+    if (!hasExportVideoMovement(movements) && !hdriRotationSettings.degrees) {
+      this.ui?.showToast?.('Enable at least one movement or HDRI rotation to export');
       return;
     }
     const modeLabel = exportVideoMovementLabel(movements);
@@ -845,6 +877,9 @@ export class VideoExporter {
       : THREE.MathUtils.radToDeg(this.getCurrentModel()?.rotation?.y || 0);
     const startLightsRotation = Number.isFinite(state.lightsRotation)
       ? state.lightsRotation
+      : 0;
+    const startHdriRotation = Number.isFinite(state.hdriRotation)
+      ? state.hdriRotation
       : 0;
     const lightsAutoRotate = !!state.lightsAutoRotate;
     const baseName =
@@ -905,8 +940,13 @@ export class VideoExporter {
       this.beginFontTextRevealExportDrive?.();
 
       if (format === 'mp4') {
+        const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
+        const spinSummary = exportSpinToastLabel(spinSettings);
+        const motionSummary = hdriLabel
+          ? `${spinSummary}; ${hdriLabel}`
+          : spinSummary;
         this.ui?.showToast?.(
-          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolution}, ${mp4Quality}, ${modeLabel}, ${exportSpinToastLabel(spinSettings)})…`,
+          `Recording MP4 (${durationSec}s, ${fps}fps, ${resolution}, ${mp4Quality}, ${modeLabel}, ${motionSummary})…`,
         );
         try {
           const success = await this._exportTurntableRealtimeRecorder({
@@ -914,10 +954,12 @@ export class VideoExporter {
             fps,
             startRotationY,
             startLightsRotation,
+            startHdriRotation,
             lightsAutoRotate,
             baseName,
             quality: mp4Quality,
             spinSettings,
+            hdriRotationSettings,
             movements,
             meshAnimation,
           });
@@ -933,8 +975,10 @@ export class VideoExporter {
           this._resetExportSceneToFirstFrame({
             movements,
             spinSettings,
+            hdriRotationSettings,
             startRotationY,
             startLightsRotation,
+            startHdriRotation,
             lightsAutoRotate,
             durationSec,
             fps,
@@ -953,6 +997,10 @@ export class VideoExporter {
           if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
             this.setLightsRotation(startLightsRotation);
             this.stateStore.set('lightsRotation', startLightsRotation);
+          }
+          if (typeof this.setHdriRotation === 'function') {
+            this.setHdriRotation(startHdriRotation);
+            this.stateStore.set('hdriRotation', startHdriRotation);
           }
           this._restoreVideoExportSize(sizeSnapshot);
           this._repairViewportAfterExport();
@@ -980,8 +1028,10 @@ export class VideoExporter {
             movements,
             t,
             spinSettings,
+            hdriRotationSettings,
             startRotationY,
             startLightsRotation,
+            startHdriRotation,
             lightsAutoRotate,
             durationSec,
             frameIndex: i,
@@ -1034,8 +1084,10 @@ export class VideoExporter {
         this._resetExportSceneToFirstFrame({
           movements,
           spinSettings,
+          hdriRotationSettings,
           startRotationY,
           startLightsRotation,
+          startHdriRotation,
           lightsAutoRotate,
           durationSec,
           fps,
@@ -1054,6 +1106,10 @@ export class VideoExporter {
         if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
           this.setLightsRotation(startLightsRotation);
           this.stateStore.set('lightsRotation', startLightsRotation);
+        }
+        if (typeof this.setHdriRotation === 'function') {
+          this.setHdriRotation(startHdriRotation);
+          this.stateStore.set('hdriRotation', startHdriRotation);
         }
         this.scene.background = originalBackground;
         this.renderer.setClearColor(originalClearColor, originalClearAlpha);

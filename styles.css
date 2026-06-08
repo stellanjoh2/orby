@@ -6382,6 +6382,16 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   gap: var(--shelf-control-gap);
 }
 
+/* Flex gap owns row rhythm here — .slider-line margin-bottom would stack on top of gap */
+.export-option-group > :is(.slider-line, .color-line, .select-line, .map-slot-row) {
+  margin-bottom: 0;
+}
+
+/* Label-less groups (movement sliders, mesh animations) — match standard shelf row spacing */
+.export-option-group:not(:has(> .export-label)) {
+  gap: var(--shelf-section-gap);
+}
+
 .export-label {
   font-size: var(--shelf-label-font-size);
   color: var(--text-dim);

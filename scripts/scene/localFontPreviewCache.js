@@ -7,48 +7,151 @@ function previewFamilyId(postscriptName) {
 /** Browser OTS rejects web fonts above ~128MB; skip CSS preview well below that. */
 const MAX_CSS_PREVIEW_FONT_BYTES = 32 * 1024 * 1024;
 
+/** OTS-accepted cmap subtable formats for Unicode faces. */
+const OTS_CMAP_FORMATS = new Set([4, 6, 12, 14]);
+
+/** @param {DataView} view @param {number} off @returns {string} */
+function readSfntTag(view, off) {
+  return String.fromCharCode(
+    view.getUint8(off),
+    view.getUint8(off + 1),
+    view.getUint8(off + 2),
+    view.getUint8(off + 3),
+  );
+}
+
+/** @param {number} numTables */
+function sfntDirectoryLooksValid(numTables, searchRange, entrySelector, rangeShift) {
+  if (!numTables || numTables > 64) return false;
+  const expSearchRange = (1 << Math.floor(Math.log2(numTables))) * 16;
+  const expEntrySelector = Math.floor(Math.log2(numTables));
+  const expRangeShift = numTables * 16 - expSearchRange;
+  return (
+    searchRange === expSearchRange &&
+    entrySelector === expEntrySelector &&
+    rangeShift === expRangeShift
+  );
+}
+
+/**
+ * @param {Blob} blob
+ * @param {number} offset
+ * @param {number} length
+ * @returns {Promise<ArrayBuffer | null>}
+ */
+async function readBlobSlice(blob, offset, length) {
+  if (!Number.isFinite(offset) || offset < 0 || length <= 0 || offset >= blob.size) return null;
+  const end = Math.min(blob.size, offset + length);
+  try {
+    return await blob.slice(offset, end).arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {Blob} blob
+ * @param {number} cmapOffset
+ * @param {number} cmapLength
+ * @returns {Promise<boolean>}
+ */
+async function cmapHasOtsSupportedSubtable(blob, cmapOffset, cmapLength) {
+  const readLen = Math.min(cmapLength, 4 + 32 * 8 + 64);
+  const buf = await readBlobSlice(blob, cmapOffset, readLen);
+  if (!buf || buf.byteLength < 4) return false;
+  const view = new DataView(buf);
+  if (view.getUint16(0, false) !== 0) return false;
+  const numEncodings = view.getUint16(2, false);
+  if (!numEncodings || numEncodings > 32) return false;
+  const dirBytes = 4 + numEncodings * 8;
+  if (buf.byteLength < dirBytes) return false;
+
+  for (let i = 0; i < numEncodings; i += 1) {
+    const rec = 4 + i * 8;
+    const platformId = view.getUint16(rec, false);
+    const encodingId = view.getUint16(rec + 2, false);
+    const subOff = view.getUint32(rec + 4, false);
+    const supported =
+      platformId === 0 ||
+      (platformId === 3 && (encodingId === 1 || encodingId === 10));
+    if (!supported || subOff + 2 > cmapLength) continue;
+
+    const subBuf = await readBlobSlice(blob, cmapOffset + subOff, Math.min(8, cmapLength - subOff));
+    if (!subBuf || subBuf.byteLength < 2) continue;
+    const format = new DataView(subBuf).getUint16(0, false);
+    if (OTS_CMAP_FORMATS.has(format)) return true;
+  }
+  return false;
+}
+
 /**
  * FontFace runs through OpenType Sanitizer (OTS). Many installed faces fail OTS
- * (missing OS/2, legacy cmap) while opentype.js still parses them for 3D extrude.
+ * while opentype.js still parses them for 3D extrude — reject before blob URLs.
  * @param {Blob} blob
  * @returns {Promise<boolean>}
  */
 async function blobPassesCssFontFaceChecks(blob) {
-  if (blob.size > MAX_CSS_PREVIEW_FONT_BYTES) return false;
+  if (blob.size > MAX_CSS_PREVIEW_FONT_BYTES || blob.size < 12) return false;
 
   const headLen = Math.min(blob.size, 12 + 64 * 16);
-  let buf;
-  try {
-    buf = await blob.slice(0, headLen).arrayBuffer();
-  } catch {
-    return false;
-  }
+  const buf = await readBlobSlice(blob, 0, headLen);
+  if (!buf || buf.byteLength < 12) return false;
   const view = new DataView(buf);
-  if (buf.byteLength < 12) return false;
 
-  // TrueType collections — often fail or are huge; skip CSS preview attempts.
-  if (view.getUint32(0, false) === 0x74746366) return false;
+  const sfntVersion = view.getUint32(0, false);
+  // TrueType collections — often fail or are huge.
+  if (sfntVersion === 0x74746366) return false;
+  const isOpenType = sfntVersion === 0x4f54544f;
+  const isTrueType = sfntVersion === 0x00010000 || sfntVersion === 0x74727565;
+  if (!isOpenType && !isTrueType) return false;
 
   const numTables = view.getUint16(4, false);
-  if (!numTables || numTables > 64) return false;
+  if (
+    !sfntDirectoryLooksValid(
+      numTables,
+      view.getUint16(6, false),
+      view.getUint16(8, false),
+      view.getUint16(10, false),
+    )
+  ) {
+    return false;
+  }
 
   const tableEnd = 12 + numTables * 16;
-  if (buf.byteLength < tableEnd) return true;
+  if (buf.byteLength < tableEnd) return false;
 
-  let hasOs2 = false;
-  let hasCmap = false;
+  /** @type {Map<string, { offset: number, length: number }>} */
+  const tables = new Map();
   for (let i = 0; i < numTables; i += 1) {
     const off = 12 + i * 16;
-    const tag = String.fromCharCode(
-      view.getUint8(off),
-      view.getUint8(off + 1),
-      view.getUint8(off + 2),
-      view.getUint8(off + 3),
-    );
-    if (tag === 'OS/2') hasOs2 = true;
-    if (tag === 'cmap') hasCmap = true;
+    const tag = readSfntTag(view, off);
+    const tableOffset = view.getUint32(off + 8, false);
+    const tableLength = view.getUint32(off + 12, false);
+    if (!tableLength || tableOffset + tableLength > blob.size) return false;
+    tables.set(tag, { offset: tableOffset, length: tableLength });
   }
-  return hasOs2 && hasCmap;
+
+  const required = ['head', 'hhea', 'maxp', 'cmap', 'OS/2'];
+  for (const tag of required) {
+    if (!tables.has(tag)) return false;
+  }
+  if (!tables.has('glyf') && !tables.has('CFF ')) return false;
+
+  const head = tables.get('head');
+  const headBuf = await readBlobSlice(blob, head.offset, Math.min(head.length, 18));
+  if (!headBuf || headBuf.byteLength < 16) return false;
+  if (new DataView(headBuf).getUint32(12, false) !== 0x5f0f3cf5) return false;
+
+  const maxp = tables.get('maxp');
+  const maxpBuf = await readBlobSlice(blob, maxp.offset, Math.min(maxp.length, 32));
+  if (!maxpBuf || maxpBuf.byteLength < 6) return false;
+  const maxpView = new DataView(maxpBuf);
+  if (maxpView.getUint32(0, false) === 0x00010000 && maxpBuf.byteLength >= 18) {
+    if (maxpView.getUint16(16, false) === 0) return false;
+  }
+
+  const cmap = tables.get('cmap');
+  return cmapHasOtsSupportedSubtable(blob, cmap.offset, cmap.length);
 }
 
 /**

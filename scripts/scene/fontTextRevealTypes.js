@@ -32,7 +32,8 @@ export const DEFAULT_FONT_REVEAL_SLIDE_DIRECTION = 'back';
 export const MIN_FONT_REVEAL_SLIDE_DEPTH = 0;
 export const MAX_FONT_REVEAL_SLIDE_DEPTH = 2.5;
 export const MIN_FONT_REVEAL_SLIDE_TIME = 0.1;
-export const MAX_FONT_REVEAL_SLIDE_TIME = 1;
+/** Values above 1 let depth travel extend past the glyph slot so soft landings overlap later letters. */
+export const MAX_FONT_REVEAL_SLIDE_TIME = 3;
 
 /** @type {ReadonlyArray<{ id: FontRevealTypeId, label: string, ease: string, tooltip: string }>} */
 export const FONT_REVEAL_TYPE_OPTIONS = [
@@ -51,14 +52,14 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
   {
     id: 'slideUp',
     label: 'Slide Up',
-    ease: 'expo.out (soft)',
-    tooltip: 'Rise into place from below — steep start, gentle settle',
+    ease: 'quart.out',
+    tooltip: 'Rise into place from below — ease out quart',
   },
   {
     id: 'slideDown',
     label: 'Slide Down',
-    ease: 'expo.out (soft)',
-    tooltip: 'Drop into place from above — steep start, gentle settle',
+    ease: 'quart.out',
+    tooltip: 'Drop into place from above — ease out quart',
   },
   {
     id: 'pop',
@@ -69,8 +70,8 @@ export const FONT_REVEAL_TYPE_OPTIONS = [
   {
     id: 'rotate',
     label: 'Rotate',
-    ease: 'power2.out',
-    tooltip: 'Turn in on Y — uses true 3D depth as letters face the camera',
+    ease: 'quart.out',
+    tooltip: 'Turn in on Y until the letter lands — syncs with depth slide when enabled',
   },
   {
     id: 'elastic',
@@ -112,18 +113,19 @@ export function easePower3Out(t) {
   return 1 - (1 - t) ** 3;
 }
 
+/** @param {number} t @returns {number} GSAP / AE-style power4.out (ease out quart) */
+export function easePower4Out(t) {
+  const u = Math.max(0, Math.min(1, t));
+  return 1 - (1 - u) ** 4;
+}
+
 /**
- * Depth slide / Slide Up outro — fast early travel, long soft landing (AE-style, gentler than full expo.out).
+ * Depth slide / Slide Up outro — single-segment ease out quart (AE / GSAP power4.out).
  * @param {number} t linear 0–1 through the slide window
  * @returns {number}
  */
 export function easeSlideSoftOut(t) {
-  const u = Math.max(0, Math.min(1, t));
-  if (u <= 0) return 0;
-  if (u >= 1) return 1;
-  const expo = 1 - 2 ** (-7 * u);
-  const power5 = 1 - (1 - u) ** 5;
-  return expo * 0.55 + power5 * 0.45;
+  return easePower4Out(t);
 }
 
 /**
@@ -162,10 +164,52 @@ export function easeForRevealType(type, t) {
     case 'slideDown':
       return easeSlideSoftOut(clamped);
     case 'rotate':
+      return easeSlideSoftOut(clamped);
     case 'scale':
     default:
       return easePower2Out(clamped);
   }
+}
+
+/**
+ * @typedef {{ slideDepth?: number, slideTime?: number }} FontRevealTimingOptions
+ */
+
+/**
+ * Per-glyph stagger slot. When depth travel is active, slots shrink so the last glyph's
+ * slide still finishes at totalDurationSec even when slideTime exceeds 100%.
+ * @param {number} totalDurationSec
+ * @param {number} glyphCount
+ * @param {FontRevealTimingOptions} [timing]
+ * @returns {number}
+ */
+export function computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing = {}) {
+  if (totalDurationSec <= 0 || glyphCount <= 0) return totalDurationSec;
+  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
+  if (slideDepth <= 0) return totalDurationSec / glyphCount;
+  const slideTime = clampFontRevealSlideTime(timing.slideTime);
+  return totalDurationSec / ((glyphCount - 1) + slideTime);
+}
+
+/**
+ * Wall-clock time when one glyph's depth slide completes.
+ * @param {number} glyphIndex
+ * @param {number} glyphCount
+ * @param {number} totalDurationSec
+ * @param {FontRevealTimingOptions} [timing]
+ * @returns {number}
+ */
+export function computeGlyphRevealLandSec(
+  glyphIndex,
+  glyphCount,
+  totalDurationSec,
+  timing = {},
+) {
+  const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
+  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
+  if (slideDepth <= 0) return (glyphIndex + 1) * slot;
+  const slideTime = clampFontRevealSlideTime(timing.slideTime);
+  return glyphIndex * slot + slot * slideTime;
 }
 
 /**
@@ -174,6 +218,7 @@ export function easeForRevealType(type, t) {
  * @param {number} glyphCount
  * @param {number} elapsedSec
  * @param {number} totalDurationSec
+ * @param {FontRevealTimingOptions} [timing]
  * @returns {number}
  */
 export function computeGlyphSlotProgress(
@@ -181,9 +226,10 @@ export function computeGlyphSlotProgress(
   glyphCount,
   elapsedSec,
   totalDurationSec,
+  timing = {},
 ) {
   if (totalDurationSec <= 0 || glyphCount <= 0) return 1;
-  const slot = totalDurationSec / glyphCount;
+  const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
   const t = (elapsedSec - glyphIndex * slot) / slot;
   if (t <= 0) return 0;
   if (t >= 1) return 1;
@@ -196,6 +242,7 @@ export function computeGlyphSlotProgress(
  * @param {number} glyphCount
  * @param {number} elapsedSec
  * @param {number} totalDurationSec
+ * @param {FontRevealTimingOptions} [timing]
  * @returns {number} eased 0–1 (may overshoot for pop/elastic)
  */
 export function computeGlyphRevealEase(
@@ -204,9 +251,43 @@ export function computeGlyphRevealEase(
   glyphCount,
   elapsedSec,
   totalDurationSec,
+  timing = {},
 ) {
-  const raw = computeGlyphSlotProgress(glyphIndex, glyphCount, elapsedSec, totalDurationSec);
+  const raw = computeGlyphSlotProgress(
+    glyphIndex,
+    glyphCount,
+    elapsedSec,
+    totalDurationSec,
+    timing,
+  );
   return easeForRevealType(type, raw);
+}
+
+/**
+ * Linear 0–1 depth-travel progress from wall-clock time since this glyph's slot started.
+ * Slide times above 100% overlap later letters; slot sizing keeps the last glyph landing
+ * at totalDurationSec.
+ * @param {number} glyphIndex
+ * @param {number} glyphCount
+ * @param {number} elapsedSec
+ * @param {number} totalDurationSec
+ * @param {FontRevealTimingOptions} [timing]
+ * @returns {number}
+ */
+export function computeGlyphSlideProgress(
+  glyphIndex,
+  glyphCount,
+  elapsedSec,
+  totalDurationSec,
+  timing = {},
+) {
+  if (totalDurationSec <= 0 || glyphCount <= 0) return 1;
+  const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
+  const elapsedInGlyph = elapsedSec - glyphIndex * slot;
+  if (elapsedInGlyph <= 0) return 0;
+  const slideTime = clampFontRevealSlideTime(timing.slideTime);
+  const slideDurationSec = slot * slideTime;
+  return Math.min(1, elapsedInGlyph / Math.max(0.001, slideDurationSec));
 }
 
 /** @param {unknown} value */
@@ -242,14 +323,19 @@ const _ROTATE_Y_START = -Math.PI / 2;
  *     restEmissiveIntensity: number,
  *   }>,
  * }} state
- * @param {{ rawProgress?: number, slideDepth?: number, slideTime?: number, slideDirection?: FontRevealSlideDirection }} [options]
+ * @param {{
+ *   slideProgress?: number,
+ *   landLinear?: number,
+ *   slideDepth?: number,
+ *   slideDirection?: FontRevealSlideDirection,
+ * }} [options]
  */
 export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   const { group, restPosition, restRotationY, restRotationZ, slideDistance, meshMaterials } = state;
   const e = eased;
-  const raw = Math.max(0, Math.min(1, Number(options.rawProgress) || 0));
+  const slideProgress = Math.max(0, Math.min(1, Number(options.slideProgress) || 0));
+  const landLinear = Math.max(0, Math.min(1, Number(options.landLinear) || 0));
   const slideDepth = clampFontRevealSlideDepth(options.slideDepth);
-  const slideTime = clampFontRevealSlideTime(options.slideTime);
   const slideDirection = normalizeFontRevealSlideDirection(options.slideDirection);
 
   group.position.copy(restPosition);
@@ -288,10 +374,13 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
       break;
     }
 
-    case 'rotate':
-      group.rotation.y = restRotationY + _ROTATE_Y_START * (1 - Math.max(0, Math.min(1, e)));
-      group.visible = e > 0.001;
+    case 'rotate': {
+      const rotateLinear = slideDepth > 0 ? slideProgress : landLinear;
+      const rotateEased = easeSlideSoftOut(rotateLinear);
+      group.rotation.y = restRotationY + _ROTATE_Y_START * (1 - rotateEased);
+      group.visible = rotateEased > 0.001;
       break;
+    }
 
     case 'scale':
     default: {
@@ -303,8 +392,7 @@ export function applyRevealPoseToGlyph(type, eased, state, options = {}) {
   }
 
   if (slideDepth > 0) {
-    const travelLinear = Math.max(0, Math.min(1, raw / Math.max(0.001, slideTime)));
-    const travelEased = easeSlideSoftOut(travelLinear);
+    const travelEased = easeSlideSoftOut(slideProgress);
     const directionSign = slideDirection === 'front' ? 1 : -1;
     group.position.z = restPosition.z + directionSign * slideDepth * (1 - travelEased);
   }

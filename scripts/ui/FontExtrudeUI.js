@@ -389,7 +389,7 @@ export class FontExtrudeUI {
       this.stateStore.set('fontExtrude.revealSlideDepth', value);
       this.ui.updateValueLabel('fontExtrudeRevealSlideDepth', value, 'decimal');
       this._withRevealController((controller, model) => {
-        controller.onDurationChange?.(model);
+        controller.onRevealTimingChange?.(model);
       });
     });
 
@@ -398,7 +398,7 @@ export class FontExtrudeUI {
       this.stateStore.set('fontExtrude.revealSlideTime', value);
       this.ui.updateValueLabel('fontExtrudeRevealSlideTime', `${Math.round(value * 100)}%`);
       this._withRevealController((controller, model) => {
-        controller.onDurationChange?.(model);
+        controller.onRevealTimingChange?.(model);
       });
     });
 
@@ -407,7 +407,7 @@ export class FontExtrudeUI {
       const value = normalizeFontRevealSlideDirection(els.revealSlideDirection.value);
       this.stateStore.set('fontExtrude.revealSlideDirection', value);
       this._withRevealController((controller, model) => {
-        controller.onDurationChange?.(model);
+        controller.onRevealTimingChange?.(model);
       });
     });
 

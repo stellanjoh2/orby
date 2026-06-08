@@ -268,6 +268,11 @@ export class SceneManager {
     this.fontTextRevealController = new FontTextRevealController({
       stateStore: this.stateStore,
       onNeedRender: () => this.render(),
+      reapplyMaterialEmissive: () => {
+        const emissive = this.stateStore.getState().material?.emissive ?? 0;
+        this.materialController.materialSettings.emissive = emissive;
+        this.materialController.updateMaterials();
+      },
     });
 
     this._ccToggleCtx = createToggleScaleContext();
@@ -557,7 +562,7 @@ export class SceneManager {
         }
       },
       onMaterialUpdate: () => {
-        // Trigger any additional updates needed after material changes
+        this.fontTextRevealController?.onMaterialBaselineChanged?.();
       },
     });
 
@@ -1032,6 +1037,7 @@ export class SceneManager {
         this.composerLifecycle.renderComposerPassForExport(opts),
       setRotationY: (value) => this.setRotationY(value),
       setLightsRotation: (value, opts) => this.setLightsRotation(value, opts),
+      setHdriRotation: (value, opts) => this.setHdriRotation(value, opts),
       beginExportOrbitDrive: () => this.cameraController?.beginExportOrbitDrive?.(),
       applyExportOrbitDriveFrame: (t, spins) =>
         this.cameraController?.applyExportOrbitDriveFrame?.(t, spins),
@@ -1067,9 +1073,9 @@ export class SceneManager {
         this.postPipeline?.setGrainTimeForExport?.(elapsed);
       },
       beginFontTextRevealExportDrive: () =>
-        this.fontTextRevealController?.beginExportDrive?.(),
+        this.fontTextRevealController?.beginExportDrive?.(this.currentModel),
       applyFontTextRevealExportFrame: (frameIndex, fps) =>
-        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps),
+        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps, this.currentModel),
       endFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.endExportDrive?.(),
       getCurrentModel: () => this.currentModel,
@@ -1089,6 +1095,8 @@ export class SceneManager {
       ui: this.ui,
       setRotationY: (value) => this.setRotationY(value),
       setLightsRotation: (value, opts) => this.setLightsRotation(value, opts),
+      setHdriRotation: (value, opts) => this.setHdriRotation(value, opts),
+      getHdriRotation: () => this.hdriRotation ?? 0,
       getCurrentModel: () => this.currentModel,
       getAnimationClipCount: () => this.animationController?.animations?.length ?? 0,
       beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
@@ -1109,9 +1117,9 @@ export class SceneManager {
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
       endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
       beginFontTextRevealExportDrive: () =>
-        this.fontTextRevealController?.beginExportDrive?.(),
+        this.fontTextRevealController?.beginExportDrive?.(this.currentModel),
       applyFontTextRevealExportFrame: (frameIndex, fps) =>
-        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps),
+        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps, this.currentModel),
       endFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.endExportDrive?.(),
       onActiveChange: (active) => {

@@ -317,11 +317,19 @@ export class UIHelpers {
         slider.style.setProperty('--slider-fill-end', `${centerPercent}%`);
       }
     } else {
-      // Left-to-right fill: fill from 0% to value percentage
       const range = max - min;
       const fillPercent = range > 0 ? ((value - min) / range) * 100 : 0;
-      slider.style.setProperty('--slider-fill-start', '0%');
-      slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
+      const isRtl =
+        sliderLine?.classList.contains('slider-line--surface-detail') ||
+        getComputedStyle(slider).direction === 'rtl';
+      if (isRtl) {
+        // Mirror fill when the track uses direction: rtl (e.g. Surface Detail).
+        slider.style.setProperty('--slider-fill-start', `${100 - fillPercent}%`);
+        slider.style.setProperty('--slider-fill-end', '100%');
+      } else {
+        slider.style.setProperty('--slider-fill-start', '0%');
+        slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
+      }
     }
   }
 

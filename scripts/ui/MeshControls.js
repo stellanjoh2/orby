@@ -18,7 +18,7 @@ import {
   syncSvgExtrudeControls,
   renderSvgColorDepthControls,
 } from './svgExtrudeControlsShared.js';
-import { normalizeExportSubtleSpinDegrees } from '../render/exportVideoMovements.js';
+import { normalizeExportSubtleSpinDegrees, normalizeExportHdriRotationDegrees } from '../render/exportVideoMovements.js';
 export class MeshControls {
   constructor(eventBus, stateStore, uiManager, helpers) {
     this.eventBus = eventBus;
@@ -801,6 +801,7 @@ export class MeshControls {
       const subtleEnabled = fullSpins === 0;
       const subtleDegrees = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
       const spinDirection = video.spinDirection === 'reverse' ? 'reverse' : 'forward';
+      const hdriDegrees = normalizeExportHdriRotationDegrees(video.hdriRotationDegrees);
 
       document.querySelectorAll('[data-video-spins]').forEach((btn) => {
         const spins = parseInt(btn.dataset.videoSpins, 10);
@@ -820,6 +821,11 @@ export class MeshControls {
 
       document.querySelectorAll('[data-video-spin-direction]').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.videoSpinDirection === spinDirection);
+      });
+
+      document.querySelectorAll('[data-video-hdri-rotation]').forEach((btn) => {
+        const degrees = normalizeExportHdriRotationDegrees(parseFloat(btn.dataset.videoHdriRotation));
+        btn.classList.toggle('active', degrees > 0 && degrees === hdriDegrees);
       });
     };
 
@@ -850,6 +856,18 @@ export class MeshControls {
         const direction = button.dataset.videoSpinDirection;
         if (direction !== 'forward' && direction !== 'reverse') return;
         this.ui.exportSettings.video.spinDirection = direction;
+        syncExportSpinUi();
+      });
+    });
+
+    document.querySelectorAll('[data-video-hdri-rotation]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const degrees = parseFloat(button.dataset.videoHdriRotation);
+        const normalized = normalizeExportHdriRotationDegrees(degrees);
+        if (!normalized) return;
+        const video = this.ui.exportSettings.video;
+        const current = normalizeExportHdriRotationDegrees(video.hdriRotationDegrees);
+        video.hdriRotationDegrees = current === normalized ? 0 : normalized;
         syncExportSpinUi();
       });
     });

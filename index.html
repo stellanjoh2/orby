@@ -4453,7 +4453,7 @@
               <div class="panel-block">
                 <div class="block-title">Video</div>
                 <p class="export-format-sub">
-                  Combine turntable (mesh rotation), orbit (camera rotation), and dolly zoom for cinematic exports. Toggle any combination — use full or subtle spins for partial cinematics.
+                  Combine object turntable, camera orbit/dolly/tilt, and optional HDRI rotation. Full and subtle spins apply only when Turntable or Orbit is enabled — they rotate the mesh or camera, not the environment.
                 </p>
                 <p class="export-format-sub export-format-warning">
                   MP4 is a real-time viewport capture, not an offline render. Heavier scenes may drop frames or fail—best for previews and lighter setups. For dependable output, export a PNG sequence.
@@ -4462,44 +4462,52 @@
                   <div class="export-option-group">
                     <label class="export-label">Movement</label>
                     <div class="export-button-group">
-                      <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Rotate mesh 360° in place">TURNTABLE</button>
-                      <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Camera orbits your current target; one full 360° per spin over export length">ORBIT</button>
+                      <button type="button" data-video-movement="turntable" class="export-option-btn active" data-tooltip="Object: rotate the mesh in place over the export length">TURNTABLE</button>
+                      <button type="button" data-video-movement="orbit" class="export-option-btn" data-tooltip="Camera: orbit around your current target; one full 360° per spin over export length">ORBIT</button>
                     </div>
                     <div class="export-button-group">
-                      <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Dolly the camera toward the orbit target over the export length">ZOOM IN</button>
-                      <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Dolly the camera away from the orbit target over the export length">ZOOM OUT</button>
+                      <button type="button" data-video-movement="zoom-in" class="export-option-btn" data-tooltip="Camera: dolly toward the orbit target over the export length">ZOOM IN</button>
+                      <button type="button" data-video-movement="zoom-out" class="export-option-btn" data-tooltip="Camera: dolly away from the orbit target over the export length">ZOOM OUT</button>
                     </div>
                     <div class="export-button-group">
-                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Roll the camera left (counter-clockwise) over the export length">TILT LEFT</button>
-                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Roll the camera right (clockwise) over the export length">TILT RIGHT</button>
+                      <button type="button" data-video-movement="tilt-left" class="export-option-btn" data-tooltip="Camera: roll left (counter-clockwise) over the export length">TILT LEFT</button>
+                      <button type="button" data-video-movement="tilt-right" class="export-option-btn" data-tooltip="Camera: roll right (clockwise) over the export length">TILT RIGHT</button>
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Full Spins (360)</label>
+                    <label class="export-label">Full Spins (360°) · Object &amp; camera</label>
                     <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below or zoom/tilt only">0</button>
-                      <button type="button" data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh rotation (turntable) or camera orbit">1</button>
-                      <button type="button" data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration">2</button>
+                      <button type="button" data-video-spins="0" class="export-option-btn" data-tooltip="No full 360° laps — use subtle spins below, HDRI rotation, or zoom/tilt only">0</button>
+                      <button type="button" data-video-spins="1" class="export-option-btn active" data-tooltip="One full 360° — mesh (Turntable) or camera (Orbit), depending on which movement is enabled">1</button>
+                      <button type="button" data-video-spins="2" class="export-option-btn" data-tooltip="Two full 360° laps over the same duration — mesh or camera">2</button>
                     </div>
                   </div>
                   <div id="exportSubtleSpinsGroup" class="export-option-group">
-                    <label class="export-label">Subtle Spins</label>
+                    <label class="export-label">Subtle Spins · Object &amp; camera</label>
                     <div class="export-button-group export-button-group--triple">
-                      <button type="button" data-video-subtle-spins="22.5" class="export-option-btn" data-tooltip="Partial 22.5° rotation over the export length (when full spins is 0)">22.5°</button>
-                      <button type="button" data-video-subtle-spins="45" class="export-option-btn" data-tooltip="Partial 45° rotation over the export length (when full spins is 0)">45°</button>
-                      <button type="button" data-video-subtle-spins="90" class="export-option-btn" data-tooltip="Partial 90° rotation over the export length (when full spins is 0)">90°</button>
+                      <button type="button" data-video-subtle-spins="22.5" class="export-option-btn" data-tooltip="Partial 22.5° mesh or camera rotation over the export length (when full spins is 0)">22.5°</button>
+                      <button type="button" data-video-subtle-spins="45" class="export-option-btn" data-tooltip="Partial 45° mesh or camera rotation over the export length (when full spins is 0)">45°</button>
+                      <button type="button" data-video-subtle-spins="90" class="export-option-btn" data-tooltip="Partial 90° mesh or camera rotation over the export length (when full spins is 0)">90°</button>
                     </div>
                   </div>
                   <div class="export-option-group">
-                    <label class="export-label">Spin Direction</label>
+                    <label class="export-label">Spin Direction · Object, camera &amp; HDRI</label>
                     <div class="export-button-group">
-                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Rotate in the default direction">FORWARD</button>
-                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Rotate in the opposite direction">REVERSE</button>
+                      <button type="button" data-video-spin-direction="forward" class="export-option-btn active" data-tooltip="Default direction for mesh/camera spins and HDRI rotation">FORWARD</button>
+                      <button type="button" data-video-spin-direction="reverse" class="export-option-btn" data-tooltip="Opposite direction for mesh/camera spins and HDRI rotation">REVERSE</button>
+                    </div>
+                  </div>
+                  <div class="export-option-group">
+                    <label class="export-label">HDRI Rotation · Environment</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-video-hdri-rotation="22.5" class="export-option-btn" data-tooltip="Rotate the HDRI dome 22.5° over the export length — lighting and reflections only, not the mesh or camera">22.5°</button>
+                      <button type="button" data-video-hdri-rotation="45" class="export-option-btn" data-tooltip="Rotate the HDRI dome 45° over the export length — lighting and reflections only">45°</button>
+                      <button type="button" data-video-hdri-rotation="90" class="export-option-btn" data-tooltip="Rotate the HDRI dome 90° over the export length — lighting and reflections only">90°</button>
                     </div>
                   </div>
                   <div id="exportMovementSliders" class="export-option-group">
                     <label id="exportZoomDistanceSettings" class="slider-line">
-                      <span data-tooltip="How far the camera dollies in or out over the export length (scene units).">Zoom distance</span>
+                      <span data-tooltip="Camera: how far the camera dollies in or out over the export length (scene units).">Zoom distance</span>
                       <input
                         id="exportZoomDistance"
                         type="range"
@@ -4511,7 +4519,7 @@
                       <span class="value" data-output="exportZoomDistance">1.50m</span>
                     </label>
                     <label id="exportTiltAngleSettings" class="slider-line">
-                      <span data-tooltip="Roll angle applied over the export length (degrees).">Tilt angle</span>
+                      <span data-tooltip="Camera: roll angle applied over the export length (degrees).">Tilt angle</span>
                       <input
                         id="exportTiltAngle"
                         type="range"
@@ -4523,7 +4531,7 @@
                       <span class="value" data-output="exportTiltAngle">15°</span>
                     </label>
                     <label id="exportFovOffsetSettings" class="slider-line">
-                      <span data-tooltip="Animate field of view linearly over the export length. Center = no change; left narrows (telephoto), right widens (wide-angle).">FOV animation</span>
+                      <span data-tooltip="Camera: animate field of view linearly over the export length. Center = no change; left narrows (telephoto), right widens (wide-angle).">FOV animation</span>
                       <input
                         id="exportFovOffset"
                         type="range"

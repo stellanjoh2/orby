@@ -48,6 +48,7 @@ export class EnvironmentController {
     this.environmentRenderTarget = null;
     this.lowResEnvironmentRenderTarget = null;
     this.rotationRenderTarget = null;
+    this._rotatedSourceCache = null;
     this._lastNotifiedEnvTexture = null;
     this._lastNotifiedEnvIntensity = null;
     this._presetLoadId = 0;
@@ -144,8 +145,15 @@ export class EnvironmentController {
         this.currentPreset = preset;
         if (this.pmremGenerator) {
           this.lowResEnvironmentRenderTarget?.dispose?.();
+          let sourceTexture = this.currentLowResTexture;
+          if (this.rotation !== 0) {
+            sourceTexture = this._getRotatedSourceTexture(
+              this.currentLowResTexture,
+              this.rotation,
+            );
+          }
           this.lowResEnvironmentRenderTarget = this.pmremGenerator.fromEquirectangular(
-            this.currentLowResTexture,
+            sourceTexture,
           );
         }
         this._applyEnvironment(true);
@@ -203,10 +211,48 @@ export class EnvironmentController {
   }
 
   setRotation(value) {
-    const normalized = ((value ?? 0) % 360 + 360) % 360;
+    const normalized = this._normalizeRotationDegrees(value);
     if (this.rotation === normalized) return;
     this.rotation = normalized;
+    this._rotatedSourceCache = null;
     this._applyEnvironment();
+  }
+
+  /** @param {number} degrees @returns {number} 0–360, snapped near 0/360 to avoid cache flicker */
+  _normalizeRotationDegrees(value) {
+    const n = ((Number(value) || 0) % 360 + 360) % 360;
+    return n < 1e-4 || n > 360 - 1e-4 ? 0 : n;
+  }
+
+  _ensureEquirectangularWrap(texture) {
+    if (!texture) return;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.needsUpdate = true;
+  }
+
+  /**
+   * Build or reuse one rotated equirect source for the current apply pass.
+   * @param {THREE.Texture} sourceTexture
+   * @param {number} rotationDegrees
+   */
+  _getRotatedSourceTexture(sourceTexture, rotationDegrees) {
+    const degrees = this._normalizeRotationDegrees(rotationDegrees);
+    if (!sourceTexture || degrees === 0) return sourceTexture;
+
+    const cache = this._rotatedSourceCache;
+    if (
+      cache
+      && cache.source === sourceTexture
+      && cache.degrees === degrees
+      && cache.texture
+    ) {
+      return cache.texture;
+    }
+
+    const texture = this._createRotatedTexture(sourceTexture, degrees);
+    this._rotatedSourceCache = { source: sourceTexture, degrees, texture };
+    return texture;
   }
 
   getMood(preset) {
@@ -369,17 +415,20 @@ export class EnvironmentController {
       return;
     }
 
+    this._rotatedSourceCache = null;
+    const rotatedSource =
+      this.rotation !== 0
+        ? this._getRotatedSourceTexture(activeTexture, this.rotation)
+        : null;
+
     let envTexture = null;
     if (this.pmremGenerator) {
-      if (usingLowResPreview && this.lowResEnvironmentRenderTarget) {
+      if (usingLowResPreview && this.lowResEnvironmentRenderTarget && this.rotation === 0) {
         envTexture = this.lowResEnvironmentRenderTarget.texture;
       } else if (this.rotation === 0 && this.environmentRenderTarget) {
         envTexture = this.environmentRenderTarget.texture;
       } else {
-        let sourceTexture = activeTexture;
-        if (this.rotation !== 0) {
-          sourceTexture = this._createRotatedTexture(activeTexture, this.rotation);
-        }
+        const sourceTexture = rotatedSource || activeTexture;
         const renderTarget = this.pmremGenerator.fromEquirectangular(sourceTexture);
         if (this.rotation === 0 && this.currentPreset) {
           const cached = this.pmremCache.get(this.currentPreset);
@@ -396,11 +445,7 @@ export class EnvironmentController {
         envTexture.magFilter = THREE.LinearFilter;
       }
     } else {
-      let sourceTexture = activeTexture;
-      if (this.rotation !== 0) {
-        sourceTexture = this._createRotatedTexture(activeTexture, this.rotation);
-      }
-      envTexture = sourceTexture;
+      envTexture = rotatedSource || activeTexture;
     }
 
     const envIntensity = this.strength;
@@ -413,10 +458,7 @@ export class EnvironmentController {
     this._notifyEnvironmentMapUpdated(envTexture, envIntensity);
 
     if (this.backgroundEnabled && activeTexture) {
-      let bgTexture = activeTexture;
-      if (this.rotation !== 0) {
-        bgTexture = this._createRotatedTexture(activeTexture, this.rotation);
-      }
+      let bgTexture = rotatedSource || activeTexture;
       if (this.blurriness > 0 && envTexture) {
         bgTexture = envTexture;
       }
@@ -438,7 +480,9 @@ export class EnvironmentController {
   _createRotatedTexture(sourceTexture, rotationDegrees) {
     if (!sourceTexture) return sourceTexture;
 
-    const rotation = (rotationDegrees / 360) % 1.0;
+    this._ensureEquirectangularWrap(sourceTexture);
+
+    const rotation = this._normalizeRotationDegrees(rotationDegrees) / 360;
 
     if (this.rotationRenderTarget) {
       this.rotationRenderTarget.dispose();
@@ -492,6 +536,7 @@ export class EnvironmentController {
       uniforms: {
         tEquirect: { value: sourceTexture },
         rotation: { value: rotation },
+        texelSize: { value: new THREE.Vector2(1 / width, 1 / height) },
       },
       vertexShader: RotateEquirectShader.vertexShader,
       fragmentShader: RotateEquirectShader.fragmentShader,
@@ -517,9 +562,7 @@ export class EnvironmentController {
     rotatedTexture.format = format;
     rotatedTexture.type = type;
     rotatedTexture.image = rotatedTexture.image || { width, height };
-    // Set wrapping to prevent seams in equirectangular maps
-    rotatedTexture.wrapS = THREE.RepeatWrapping; // Horizontal wrap (seamless left/right)
-    rotatedTexture.wrapT = THREE.ClampToEdgeWrapping; // Vertical clamp (prevent pole seams)
+    this._ensureEquirectangularWrap(rotatedTexture);
 
     return rotatedTexture;
   }

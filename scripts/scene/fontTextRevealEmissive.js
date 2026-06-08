@@ -1,11 +1,37 @@
 import * as THREE from 'three';
 import { ORBY_LIME } from '../constants.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
+import {
+  clampFontRevealSlideDepth,
+  clampFontRevealSlideTime,
+  easeSlideSoftOut,
+} from './fontTextRevealTypes.js';
 
-/** @param {number} t */
-function easePower2Out(t) {
-  const u = Math.max(0, Math.min(1, t));
-  return 1 - (1 - u) ** 2;
+/**
+ * @param {number} totalDurationSec
+ * @param {number} glyphCount
+ * @param {{ slideDepth?: number, slideTime?: number }} timing
+ */
+function glyphRevealSlotSec(totalDurationSec, glyphCount, timing) {
+  if (totalDurationSec <= 0 || glyphCount <= 0) return totalDurationSec;
+  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
+  if (slideDepth <= 0) return totalDurationSec / glyphCount;
+  const slideTime = clampFontRevealSlideTime(timing.slideTime);
+  return totalDurationSec / ((glyphCount - 1) + slideTime);
+}
+
+/**
+ * @param {number} glyphIndex
+ * @param {number} glyphCount
+ * @param {number} totalDurationSec
+ * @param {{ slideDepth?: number, slideTime?: number }} timing
+ */
+function glyphRevealLandSec(glyphIndex, glyphCount, totalDurationSec, timing) {
+  const slot = glyphRevealSlotSec(totalDurationSec, glyphCount, timing);
+  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
+  if (slideDepth <= 0) return (glyphIndex + 1) * slot;
+  const slideTime = clampFontRevealSlideTime(timing.slideTime);
+  return glyphIndex * slot + slot * slideTime;
 }
 
 export const DEFAULT_FONT_REVEAL_EMISSIVE_SLAM = false;
@@ -57,6 +83,7 @@ export function normalizeFontRevealEmissiveColor(value) {
  * @param {number} elapsedSec
  * @param {number} totalDurationSec
  * @param {number} decaySec
+ * @param {{ slideDepth?: number, slideTime?: number }} [timing]
  */
 export function computeGlyphEmissiveSlamFactor(
   glyphIndex,
@@ -64,11 +91,12 @@ export function computeGlyphEmissiveSlamFactor(
   elapsedSec,
   totalDurationSec,
   decaySec,
+  timing = {},
 ) {
   if (decaySec <= 0 || glyphCount <= 0 || totalDurationSec <= 0) return 0;
-  const slot = totalDurationSec / glyphCount;
+  const slot = glyphRevealSlotSec(totalDurationSec, glyphCount, timing);
   const slotStart = glyphIndex * slot;
-  const landElapsed = (glyphIndex + 1) * slot;
+  const landElapsed = glyphRevealLandSec(glyphIndex, glyphCount, totalDurationSec, timing);
 
   if (elapsedSec < slotStart) return 0;
 
@@ -76,7 +104,8 @@ export function computeGlyphEmissiveSlamFactor(
 
   const sinceLand = elapsedSec - landElapsed;
   if (sinceLand >= decaySec) return 0;
-  return easePower2Out(1 - sinceLand / decaySec);
+  const decayLinear = sinceLand / decaySec;
+  return easeSlideSoftOut(1 - decayLinear);
 }
 
 /**
@@ -113,7 +142,13 @@ export function captureMaterialEmissiveRest(mat) {
  *   glyphCount?: number,
  *   elapsedSec?: number,
  *   totalDurationSec?: number,
+ *   slideDepth?: number,
+ *   slideTime?: number,
  * }} options
+ */
+/**
+ * Reveal emissive slam overlays {@link captureMaterialEmissiveRest} baseline (Mesh → Emissive slider).
+ * It never permanently replaces that baseline — restore always returns to restEmissive / restEmissiveIntensity.
  */
 export function applyRevealEmissiveSlam(state, options = {}) {
   const {
@@ -125,6 +160,8 @@ export function applyRevealEmissiveSlam(state, options = {}) {
     glyphCount = 1,
     elapsedSec = 0,
     totalDurationSec = 0,
+    slideDepth,
+    slideTime,
   } = options;
 
   const { meshMaterials } = state;
@@ -141,6 +178,7 @@ export function applyRevealEmissiveSlam(state, options = {}) {
     elapsedSec,
     totalDurationSec,
     decaySec,
+    { slideDepth, slideTime },
   );
 
   if (factor <= 0) {
@@ -174,4 +212,34 @@ export function restoreRevealGlyphEmissive(state) {
     mat.emissiveIntensity = restEmissiveIntensity;
     mat.needsUpdate = true;
   }
+}
+
+/**
+ * True when no glyph still carries reveal slam emissive (including post-land decay).
+ * @param {number} glyphCount
+ * @param {number} elapsedSec
+ * @param {number} totalDurationSec
+ * @param {number} decaySec
+ * @param {{ slideDepth?: number, slideTime?: number }} [timing]
+ */
+export function areAllGlyphEmissiveSlamSettled(
+  glyphCount,
+  elapsedSec,
+  totalDurationSec,
+  decaySec,
+  timing = {},
+) {
+  if (decaySec <= 0 || glyphCount <= 0 || totalDurationSec <= 0) return true;
+  for (let i = 0; i < glyphCount; i += 1) {
+    const factor = computeGlyphEmissiveSlamFactor(
+      i,
+      glyphCount,
+      elapsedSec,
+      totalDurationSec,
+      decaySec,
+      timing,
+    );
+    if (factor > 1e-6) return false;
+  }
+  return true;
 }

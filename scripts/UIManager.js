@@ -669,6 +669,7 @@ export class UIManager {
         spins: 1,
         subtleSpinDegrees: 0,
         spinDirection: 'forward',
+        hdriRotationDegrees: 0,
         fps: 24,
         resolution: '1080p',
         mp4Quality: 'medium',
@@ -1026,11 +1027,18 @@ export class UIManager {
         slider.style.setProperty('--slider-fill-end', `${centerPercent}%`);
       }
     } else {
-      // Left-to-right fill: fill from 0% to value percentage
       const range = max - min;
       const fillPercent = range > 0 ? ((value - min) / range) * 100 : 0;
-      slider.style.setProperty('--slider-fill-start', '0%');
-      slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
+      const isRtl =
+        sliderLine?.classList.contains('slider-line--surface-detail') ||
+        getComputedStyle(slider).direction === 'rtl';
+      if (isRtl) {
+        slider.style.setProperty('--slider-fill-start', `${100 - fillPercent}%`);
+        slider.style.setProperty('--slider-fill-end', '100%');
+      } else {
+        slider.style.setProperty('--slider-fill-start', '0%');
+        slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
+      }
     }
   }
 
@@ -1122,6 +1130,7 @@ export class UIManager {
       '[data-video-spins]',
       '[data-video-subtle-spins]',
       '[data-video-spin-direction]',
+      '[data-video-hdri-rotation]',
     ];
     document.querySelectorAll(movementSelectors.join(',')).forEach((el) => {
       if ('disabled' in el) el.disabled = !!active;

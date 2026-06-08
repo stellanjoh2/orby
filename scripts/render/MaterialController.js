@@ -2500,6 +2500,9 @@ export class MaterialController {
       }
       this.reapplySvgExtrudeSurfaceShaders();
     }
+    if (this.onMaterialUpdate) {
+      this.onMaterialUpdate();
+    }
   }
 
   setWireframeSettings(patch) {

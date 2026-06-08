@@ -7,6 +7,7 @@ import {
   normalizeExportVideoMovements,
   normalizeExportMeshAnimationSettings,
   normalizeExportSpinSettings,
+  normalizeExportHdriRotationSettings,
 } from './exportVideoMovements.js';
 
 /**
@@ -18,6 +19,8 @@ export class ExportMovementPreview {
     ui,
     setRotationY,
     setLightsRotation,
+    setHdriRotation,
+    getHdriRotation = () => 0,
     getCurrentModel,
     getAnimationClipCount = () => 0,
     beginExportCameraDrive = () => {},
@@ -38,6 +41,8 @@ export class ExportMovementPreview {
     this.ui = ui;
     this.setRotationY = setRotationY;
     this.setLightsRotation = setLightsRotation;
+    this.setHdriRotation = setHdriRotation;
+    this.getHdriRotation = getHdriRotation;
     this.getCurrentModel = getCurrentModel;
     this.getAnimationClipCount = getAnimationClipCount;
     this.beginExportCameraDrive = beginExportCameraDrive;
@@ -59,8 +64,11 @@ export class ExportMovementPreview {
     this._durationSec = 5;
     this._fps = 24;
     this._spinSettings = normalizeExportSpinSettings();
+    this._hdriRotationSettings = normalizeExportHdriRotationSettings();
     this._startRotationY = 0;
     this._startLightsRotation = 0;
+    this._startHdriRotation = 0;
+    this._hdriPreviewDriven = false;
     this._lightsAutoRotate = false;
     this._movements = normalizeExportVideoMovements();
     this._meshAnimation = normalizeExportMeshAnimationSettings();
@@ -78,8 +86,9 @@ export class ExportMovementPreview {
     }
 
     const movements = normalizeExportVideoMovements(settings);
-    if (!hasExportVideoMovement(movements)) {
-      this.ui?.showToast?.('Enable at least one camera movement to preview');
+    const hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
+    if (!hasExportVideoMovement(movements) && !hdriRotationSettings.degrees) {
+      this.ui?.showToast?.('Enable at least one movement or HDRI rotation to preview');
       return false;
     }
 
@@ -91,6 +100,7 @@ export class ExportMovementPreview {
       : 5;
     this._fps = settings?.fps === 30 || settings?.fps === 60 ? settings.fps : 24;
     this._spinSettings = normalizeExportSpinSettings(settings);
+    this._hdriRotationSettings = normalizeExportHdriRotationSettings(settings);
     this._movements = movements;
     this._meshAnimation = normalizeExportMeshAnimationSettings(
       settings,
@@ -105,6 +115,12 @@ export class ExportMovementPreview {
     this._startLightsRotation = Number.isFinite(state.lightsRotation)
       ? state.lightsRotation
       : 0;
+    this._startHdriRotation = Number.isFinite(this.getHdriRotation?.())
+      ? this.getHdriRotation()
+      : Number.isFinite(state.hdriRotation)
+        ? state.hdriRotation
+        : 0;
+    this._hdriPreviewDriven = this._hdriRotationSettings.degrees > 0;
     this._lightsAutoRotate = !!state.lightsAutoRotate;
 
     this._cameraDriveStarted = needsExportCameraDrive(movements);
@@ -151,6 +167,7 @@ export class ExportMovementPreview {
       this.setLightsRotation(this._startLightsRotation);
       this.stateStore.set('lightsRotation', this._startLightsRotation);
     }
+    this._restorePreviewHdri();
 
     this._active = false;
     this._cameraDriveStarted = false;
@@ -160,6 +177,19 @@ export class ExportMovementPreview {
     if (!silent) {
       this.ui?.showToast?.('Movement preview stopped');
     }
+  }
+
+  _restorePreviewHdri() {
+    if (
+      !this._hdriPreviewDriven
+      || typeof this.setHdriRotation !== 'function'
+    ) {
+      return;
+    }
+    this.setHdriRotation(this._startHdriRotation, {
+      updateState: true,
+      updateUi: true,
+    });
   }
 
   _applyFrame(t, frameIndex) {
@@ -197,6 +227,14 @@ export class ExportMovementPreview {
         t,
       );
       this.setLightsRotation(lightsRotation, { updateUi: false, updateState: false });
+    }
+    if (
+      this._hdriRotationSettings?.degrees > 0
+      && typeof this.setHdriRotation === 'function'
+    ) {
+      const hdriRotation =
+        this._startHdriRotation + this._hdriRotationSettings.signedDegrees * t;
+      this.setHdriRotation(hdriRotation, { updateState: false, updateUi: false });
     }
   }
 }

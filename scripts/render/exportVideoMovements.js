@@ -146,6 +146,39 @@ export function exportSpinToastLabel(spin) {
   return `${spin.subtleSpinDegrees}° subtle spin, ${dir}`;
 }
 
+/** @param {unknown} value @returns {0 | 22.5 | 45 | 90} */
+export function normalizeExportHdriRotationDegrees(value) {
+  return normalizeExportSubtleSpinDegrees(value);
+}
+
+/**
+ * @param {Record<string, unknown>} [settings]
+ * @returns {{
+ *   degrees: 0 | 22.5 | 45 | 90,
+ *   spinDirection: 'forward' | 'reverse',
+ *   sign: 1 | -1,
+ *   signedDegrees: number,
+ * }}
+ */
+export function normalizeExportHdriRotationSettings(settings = {}) {
+  const degrees = normalizeExportHdriRotationDegrees(settings.hdriRotationDegrees);
+  const spinDirection = settings.spinDirection === 'reverse' ? 'reverse' : 'forward';
+  const sign = spinDirection === 'reverse' ? -1 : 1;
+  return {
+    degrees,
+    spinDirection,
+    sign,
+    signedDegrees: sign * degrees,
+  };
+}
+
+/** @param {ReturnType<typeof normalizeExportHdriRotationSettings>} hdri */
+export function exportHdriRotationToastLabel(hdri) {
+  if (!hdri?.degrees) return '';
+  const dir = hdri.spinDirection === 'reverse' ? 'reverse' : 'forward';
+  return `${hdri.degrees}° HDRI, ${dir}`;
+}
+
 /** Camera orbit, dolly zoom, and/or roll tilt — turntable only affects mesh rotation. */
 export function needsExportCameraDrive(movements) {
   return !!(

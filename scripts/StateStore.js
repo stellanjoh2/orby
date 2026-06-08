@@ -86,7 +86,7 @@ export class StateStore {
         revealLoop: true,
         /** Per-glyph Z travel distance before landing in place. */
         revealSlideDepth: 0.18,
-        /** Fraction of each glyph slot used to complete Z travel (0.1–1). */
+        /** Fraction of each glyph slot for Z travel (0.1–3; above 1 overlaps later letters). */
         revealSlideTime: 0.45,
         /** Z-travel start direction for reveal slide depth. */
         revealSlideDirection: 'back',

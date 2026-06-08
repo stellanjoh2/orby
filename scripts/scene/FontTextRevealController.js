@@ -7,8 +7,9 @@ import {
   applyRevealPoseToGlyph,
   clampFontRevealSlideDepth,
   clampFontRevealSlideTime,
-  computeGlyphSlotProgress,
   computeGlyphRevealEase,
+  computeGlyphSlotProgress,
+  computeGlyphSlideProgress,
   DEFAULT_FONT_REVEAL_TYPE,
   DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
   DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
@@ -29,6 +30,7 @@ import {
   normalizeFontRevealEmissiveColor,
   normalizeFontRevealEmissiveSlamEnabled,
   restoreRevealGlyphEmissive,
+  areAllGlyphEmissiveSlamSettled,
 } from './fontTextRevealEmissive.js';
 
 export {
@@ -83,12 +85,20 @@ export class FontTextRevealController {
    *     playing: boolean,
    *   }) => void,
    *   onNeedRender?: () => void,
+   *   reapplyMaterialEmissive?: () => void,
    * }} [options]
+   * @param {() => void} [options.reapplyMaterialEmissive] Re-apply Mesh → Emissive slider to live materials (no event loop).
    */
-  constructor({ stateStore, onPreviewTimeUpdate = null, onNeedRender = null } = {}) {
+  constructor({
+    stateStore,
+    onPreviewTimeUpdate = null,
+    onNeedRender = null,
+    reapplyMaterialEmissive = null,
+  } = {}) {
     this.stateStore = stateStore;
     this.onPreviewTimeUpdate = onPreviewTimeUpdate;
     this.onNeedRender = onNeedRender;
+    this._reapplyMaterialEmissive = reapplyMaterialEmissive;
     /** @type {THREE.Object3D[]} */
     this._glyphGroups = [];
     /** @type {Array<import('./fontTextRevealTypes.js').RevealGlyphState>} */
@@ -170,10 +180,55 @@ export class FontTextRevealController {
     return this._glyphStates.length;
   }
 
+  _revealTimingOptions() {
+    return { slideDepth: this.getSlideDepth(), slideTime: this.getSlideTime() };
+  }
+
+  _revealEmissiveDecaySec() {
+    return this.isEmissiveSlamEnabled() && this.getEmissiveSlamStrength() > 0
+      ? this.getEmissiveSlamDecaySec()
+      : 0;
+  }
+
+  _revealFullySettledElapsedSec() {
+    const duration = this.getDurationSec();
+    const decaySec = this._revealEmissiveDecaySec();
+    return duration + decaySec;
+  }
+
+  _areRevealEmissiveSlamMaterialsSettled(elapsedSec = this._elapsed) {
+    if (!this.isEmissiveSlamEnabled() || this.getEmissiveSlamStrength() <= 0) return true;
+    const duration = this.getDurationSec();
+    const count = this._glyphStates.length;
+    if (count <= 0 || duration <= 0) return true;
+    return areAllGlyphEmissiveSlamSettled(
+      count,
+      elapsedSec,
+      duration,
+      this.getEmissiveSlamDecaySec(),
+      this._revealTimingOptions(),
+    );
+  }
+
+  _shouldRefreshMaterialEmissiveRest() {
+    if (!this.isEmissiveSlamEnabled()) return true;
+    return this._areRevealEmissiveSlamMaterialsSettled(this._elapsed);
+  }
+
   /**
-   * Re-capture per-glyph rest emissive after Material emissive/brightness slider changes.
+   * Sync Mesh → Emissive (and related material output) into per-glyph rest cache.
+   * Reveal slam overlays this baseline — it never replaces the material slider long-term.
+   * @param {{ skipReapply?: boolean }} [options]
    */
-  refreshMaterialEmissiveRest() {
+  syncMaterialEmissiveBaseline({ skipReapply = false } = {}) {
+    if (!this._glyphStates.length) return;
+    if (!skipReapply) {
+      if (typeof this._reapplyMaterialEmissive === 'function') {
+        this._reapplyMaterialEmissive();
+      } else {
+        this._restoreAllGlyphEmissive();
+      }
+    }
     for (const state of this._glyphStates) {
       for (const entry of state.meshMaterials) {
         const captured = captureMaterialEmissiveRest(entry.mat);
@@ -183,17 +238,37 @@ export class FontTextRevealController {
     }
   }
 
+  /**
+   * After MaterialController updates brightness/metalness/emissive, re-sync baseline
+   * and re-apply the current reveal pose (slam overlay or rest restore).
+   */
+  onMaterialBaselineChanged() {
+    if (!this._glyphStates.length) return;
+    this.syncMaterialEmissiveBaseline({ skipReapply: true });
+    if (
+      this._exportDriveActive
+      || this._previewMode === 'playing'
+      || this._previewMode === 'paused'
+    ) {
+      this.applyAtTime(this._elapsed);
+      return;
+    }
+    if (this.isEnabled()) {
+      this.applyAtTime(this._revealFullySettledElapsedSec());
+    }
+  }
+
+  /**
+   * Re-capture per-glyph rest emissive after Material emissive/brightness slider changes.
+   */
+  refreshMaterialEmissiveRest() {
+    this.syncMaterialEmissiveBaseline();
+  }
+
   _restoreAllGlyphEmissive() {
     for (const state of this._glyphStates) {
       restoreRevealGlyphEmissive(state);
     }
-  }
-
-  _shouldHoldRevealEmissiveOverlay(elapsedSec, duration) {
-    if (!this.isEmissiveSlamEnabled() || this.getEmissiveSlamStrength() <= 0) return false;
-    if (this._previewMode === 'playing') return true;
-    if (this._previewMode === 'paused' && elapsedSec < duration - 1e-4) return true;
-    return false;
   }
 
   shouldRunLiveUpdate(scene) {
@@ -245,6 +320,7 @@ export class FontTextRevealController {
       }
     }
     this._buildGlyphStates();
+    this.syncMaterialEmissiveBaseline();
 
     this._showIdlePose();
     this._notifyPreviewTime();
@@ -496,14 +572,22 @@ export class FontTextRevealController {
     const emissiveStrength = this.getEmissiveSlamStrength();
     const emissiveDecaySec = this.getEmissiveSlamDecaySec();
     const emissiveColor = this.getEmissiveSlamColor();
+    const timing = { slideDepth, slideTime };
     for (let i = 0; i < count; i += 1) {
       const state = this._glyphStates[i];
-      const rawProgress = computeGlyphSlotProgress(i, count, elapsedSec, duration);
-      const eased = computeGlyphRevealEase(type, i, count, elapsedSec, duration);
+      const landLinear = computeGlyphSlotProgress(i, count, elapsedSec, duration, timing);
+      const eased = computeGlyphRevealEase(type, i, count, elapsedSec, duration, timing);
+      const slideProgress = computeGlyphSlideProgress(
+        i,
+        count,
+        elapsedSec,
+        duration,
+        timing,
+      );
       applyRevealPoseToGlyph(type, eased, state, {
-        rawProgress,
+        slideProgress,
+        landLinear,
         slideDepth,
-        slideTime,
         slideDirection,
       });
       applyRevealEmissiveSlam(state, {
@@ -515,11 +599,9 @@ export class FontTextRevealController {
         glyphCount: count,
         elapsedSec,
         totalDurationSec: duration,
+        slideDepth,
+        slideTime,
       });
-    }
-
-    if (!this._shouldHoldRevealEmissiveOverlay(elapsedSec, duration)) {
-      this._restoreAllGlyphEmissive();
     }
 
     this._boundModel?.updateMatrixWorld?.(true);
@@ -534,7 +616,7 @@ export class FontTextRevealController {
 
   _showIdlePose() {
     if (this.isEnabled()) {
-      this._elapsed = this.getDurationSec();
+      this._elapsed = this._revealFullySettledElapsedSec();
       this.applyAtTime(this._elapsed);
       return;
     }
@@ -626,6 +708,13 @@ export class FontTextRevealController {
   /**
    * @param {THREE.Object3D | null | undefined} [model]
    */
+  onRevealTimingChange(model) {
+    this._applySettingsChange(model);
+  }
+
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
   onRevealTypeChange(model) {
     this._applySettingsChange(model);
   }
@@ -646,10 +735,7 @@ export class FontTextRevealController {
     if (this._glyphStates.length && !this.isEmissiveSlamEnabled()) {
       this._restoreAllGlyphEmissive();
     }
-    if (
-      this._glyphStates.length &&
-      (!this.isEmissiveSlamEnabled() || this._elapsed >= duration - 1e-4)
-    ) {
+    if (this._glyphStates.length && this._shouldRefreshMaterialEmissiveRest()) {
       this.refreshMaterialEmissiveRest();
     }
     if (!this._glyphStates.length) {
@@ -669,17 +755,23 @@ export class FontTextRevealController {
       this._elapsed = Math.min(this._elapsed, duration);
       this.applyAtTime(this._elapsed);
     } else {
-      this._elapsed = duration;
-      this.applyAtTime(duration);
+      this._elapsed = this._revealFullySettledElapsedSec();
+      this.applyAtTime(this._elapsed);
     }
     this._notifyPreviewTime();
     this._requestRender();
   }
 
-  beginExportDrive() {
+  /**
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  beginExportDrive(model) {
     this._stopPreviewLoop();
-    this.ensureBoundToModel(this._boundModel);
-    if (!this.isEnabled()) return;
+    this.ensureBoundToModel(model ?? this._boundModel);
+    if (!this.isEnabled()) {
+      this._exportDriveActive = false;
+      return;
+    }
     this._exportDriveActive = true;
     this._previewMode = 'idle';
     this._elapsed = 0;
@@ -690,13 +782,16 @@ export class FontTextRevealController {
   /**
    * @param {number} frameIndex
    * @param {number} fps
+   * @param {THREE.Object3D | null | undefined} [model]
    */
-  applyExportFrame(frameIndex, fps) {
-    this.ensureBoundToModel(this._boundModel);
+  applyExportFrame(frameIndex, fps, model) {
+    this.ensureBoundToModel(model ?? this._boundModel);
     if (!this.isEnabled()) return;
+    this._exportDriveActive = true;
     const elapsed = Math.max(0, frameIndex) / Math.max(1, fps);
     this._elapsed = elapsed;
     this.applyAtTime(elapsed);
+    this._requestRender();
   }
 
   endExportDrive() {

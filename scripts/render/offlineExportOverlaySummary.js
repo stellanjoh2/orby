@@ -1,7 +1,9 @@
 import {
   exportSpinToastLabel,
+  exportHdriRotationToastLabel,
   normalizeExportVideoMovements,
   normalizeExportSpinSettings,
+  normalizeExportHdriRotationSettings,
   normalizeExportMeshAnimationSettings,
 } from './exportVideoMovements.js';
 
@@ -29,6 +31,7 @@ export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
   spins: 1,
   subtleSpinDegrees: 0,
   spinDirection: 'forward',
+  hdriRotationDegrees: 0,
   movTransparent: false,
   meshAnimationsInclude: false,
   meshAnimationClipIndex: 0,
@@ -53,7 +56,7 @@ function addRow(rows, label, value) {
 }
 
 /** @param {ReturnType<typeof normalizeExportVideoMovements>} movements */
-function describeMovements(movements, spinSettings) {
+function describeMovements(movements, spinSettings, hdriRotationSettings) {
   const parts = [];
   if (movements.turntable) parts.push('Mesh turntable');
   if (movements.orbit) parts.push('Camera orbit');
@@ -68,6 +71,8 @@ function describeMovements(movements, spinSettings) {
   if (spinSettings?.rotationDegrees) {
     parts.push(exportSpinToastLabel(spinSettings));
   }
+  const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
+  if (hdriLabel) parts.push(hdriLabel);
   return parts.length ? parts.join(' · ') : 'Static';
 }
 
@@ -86,6 +91,7 @@ function displayAssetName(assetName) {
 function buildExportRows(exportJob, assetName, animationClipLabel) {
   const movements = normalizeExportVideoMovements(exportJob);
   const spinSettings = normalizeExportSpinSettings(exportJob);
+  const hdriRotationSettings = normalizeExportHdriRotationSettings(exportJob);
   const meshAnimation = normalizeExportMeshAnimationSettings(
     exportJob,
     exportJob.clipCount ?? 0,
@@ -111,7 +117,7 @@ function buildExportRows(exportJob, assetName, animationClipLabel) {
   addRow(rows, 'Frame rate', `${fps} fps`);
   addRow(rows, 'Frame count', totalFrames);
   addRow(rows, 'Transparent', exportJob.movTransparent);
-  addRow(rows, 'Movement', describeMovements(movements, spinSettings));
+  addRow(rows, 'Movement', describeMovements(movements, spinSettings, hdriRotationSettings));
   if (meshAnimation.include && animationClipLabel) {
     addRow(rows, 'GLB animation', animationClipLabel);
   }

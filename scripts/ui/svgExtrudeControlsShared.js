@@ -861,7 +861,7 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 </select>
               </label>
               <label class="slider-line font-extrude-reveal-duration">
-                <span data-tooltip="Character-by-character reveal. Last letter finishes at this time. 0 = off.">Reveal Duration</span>
+                <span data-tooltip="Character-by-character reveal. Last letter fully lands (including depth slide) at this time. 0 = off.">Reveal Duration</span>
                 <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
                 <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
               </label>
@@ -871,8 +871,8 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 <span class="value" data-output="fontExtrudeRevealSlideDepth">0.18</span>
               </label>
               <label class="slider-line font-extrude-reveal-slide-time">
-                <span data-tooltip="Share of each letter's slot for depth travel. 100% uses the full slot and shows the soft ease-out landing best.">Slide Time</span>
-                <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="1" step="0.01" value="0.45" />
+                <span data-tooltip="Depth travel length vs each letter's slot. Under 100% lands early; over 100% keeps the soft ease-out going while later letters are already slamming in.">Slide Time</span>
+                <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="3" step="0.01" value="0.45" />
                 <span class="value" data-output="fontExtrudeRevealSlideTime">45%</span>
               </label>
               <label class="select-line font-extrude-reveal-slide-direction">
