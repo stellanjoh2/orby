@@ -1,3 +1,9 @@
+import {
+  isPointerOnSliderThumb,
+  resolveSliderDefaultValue,
+  resolveSliderInputKey,
+} from './sliderDefaultPaths.js';
+
 /**
  * UIHelpers - Utility methods for UI management
  * Provides helper functions for sliders, labels, controls, and UI state
@@ -256,6 +262,7 @@ export class UIHelpers {
     }, true); // Use capture phase to catch all events
 
     this.setupDeferredControlNotify();
+    this.setupSliderThumbReset();
 
     this.markToggleOnlySliderLines();
 
@@ -263,6 +270,67 @@ export class UIHelpers {
     document.querySelectorAll('input[type="range"]').forEach((slider) => {
       this.updateSliderFill(slider);
     });
+  }
+
+  /**
+   * Click the slider thumb (dot) without dragging to restore the StateStore default.
+   * Skips track clicks so jumping the value still works normally.
+   */
+  setupSliderThumbReset() {
+    if (this._sliderThumbResetBound) return;
+    this._sliderThumbResetBound = true;
+
+    const root = this.ui?.dom?.panelsContainer ?? document;
+    let pending = null;
+
+    const clearPending = () => {
+      if (!pending) return;
+      window.removeEventListener('pointerup', pending.onEnd, true);
+      window.removeEventListener('pointercancel', pending.onEnd, true);
+      pending = null;
+    };
+
+    const onEnd = (event) => {
+      if (!pending || event.pointerId !== pending.pointerId) return;
+      const { slider, startX, startY } = pending;
+      clearPending();
+
+      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 4) return;
+
+      const inputKey = resolveSliderInputKey(slider, this.ui?.inputs ?? {});
+      const defaults = this.stateStore?.getDefaults?.();
+      const defaultValue = resolveSliderDefaultValue(slider, inputKey, defaults);
+      if (!Number.isFinite(defaultValue)) return;
+
+      const current = parseFloat(slider.value);
+      if (Number.isFinite(current) && Math.abs(current - defaultValue) < 1e-6) return;
+
+      slider.value = String(defaultValue);
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    root.addEventListener(
+      'pointerdown',
+      (event) => {
+        if (event.button !== 0) return;
+        const slider = event.target.closest?.('input[type="range"]');
+        if (!(slider instanceof HTMLInputElement) || slider.disabled) return;
+        if (!root.contains(slider)) return;
+        if (!isPointerOnSliderThumb(slider, event.clientX)) return;
+
+        clearPending();
+        pending = {
+          slider,
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          onEnd,
+        };
+        window.addEventListener('pointerup', onEnd, true);
+        window.addEventListener('pointercancel', onEnd, true);
+      },
+      true,
+    );
   }
 
   /** Class hook for toggle-only rows — avoids :has() in shelf slider-line layout CSS. */

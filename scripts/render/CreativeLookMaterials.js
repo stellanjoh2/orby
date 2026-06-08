@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_BRIGHTNESS } from '../constants.js';
+import { createShadowTintUniformValues } from './ShadowTint.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
@@ -44,6 +45,113 @@ export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
 
 /** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
 export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
+
+/** Shader Lab presets that preserve import alpha (vehicle glass, hologram shells, etc.). */
+export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
+  'glass',
+  'chrome',
+  'ps2-crush',
+  'scanline-hologram',
+]);
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function creativeLookAllowsTransparency(preset) {
+  return CREATIVE_LOOK_TRANSPARENT_PRESETS.includes(normalizeCreativeLookPreset(preset));
+}
+
+/** Reference effective studio intensities at lights master 1.0 (LightsController multipliers). */
+const CREATIVE_LOOK_REF_LIGHT = {
+  key: 1.28 * 2,
+  fill: 0.8 * 2,
+  rim: 0.96 * 2,
+  ambient: 0.48 * 4,
+};
+
+const CREATIVE_LOOK_REF_KEY_BLEND =
+  CREATIVE_LOOK_REF_LIGHT.key +
+  CREATIVE_LOOK_REF_LIGHT.fill * 0.45 +
+  CREATIVE_LOOK_REF_LIGHT.rim * 0.35;
+
+/**
+ * HDRI-only fill when the studio rig is off — keeps PS2 Crush near shaded luminance.
+ * @param {number | undefined} hdriStrength
+ * @param {boolean} [hdriEnabled]
+ */
+export function creativeLookHdriFillScalars(hdriStrength, hdriEnabled = true) {
+  if (!hdriEnabled) {
+    return { lightScale: 0.95, ambientFloor: 0.52 };
+  }
+  const s = Number(hdriStrength);
+  const strength = Number.isFinite(s) ? Math.max(0, s) : 1;
+  return {
+    lightScale: THREE.MathUtils.clamp(0.98 + 0.2 * strength, 0.88, 2.6),
+    ambientFloor: THREE.MathUtils.clamp(0.54 + 0.07 * strength, 0.5, 0.7),
+  };
+}
+
+/**
+ * Maps the 3-point rig + ambient (and HDRI when rig is off) to toon / PS2 Crush lighting uniforms.
+ * @param {import('./LightsController.js').LightsController | null | undefined} lightsController
+ * @param {{ hdriStrength?: number, hdriEnabled?: boolean }} [options]
+ * @returns {{ lightScale: number, ambientFloor: number }}
+ */
+export function computeCreativeLookToonLightScalars(lightsController, options = {}) {
+  const hdriFill = creativeLookHdriFillScalars(
+    options.hdriStrength,
+    options.hdriEnabled !== false,
+  );
+  if (!lightsController?.lightsEnabled) return hdriFill;
+
+  const rawMaster = Number(lightsController.lightsMaster);
+  const master = Number.isFinite(rawMaster) ? Math.max(0, rawMaster) : 1;
+
+  // Match dark studio rig at Strength 0 — do not use `|| 1` (0 is valid).
+  if (master <= 1e-6) {
+    return { lightScale: 0.12, ambientFloor: 0.16 };
+  }
+
+  /** Per-light base intensity when enabled (no engine overexposure clamp — keeps slider linear). */
+  const lightContrib = (id, weight = 1) => {
+    const props = lightsController.individualProperties?.[id];
+    const enabled = props?.enabled === true && lightsController.lightsEnabled;
+    if (!enabled) return 0;
+    const base = Number(props?.intensity);
+    if (!Number.isFinite(base) || base <= 0) return 0;
+    return base * weight;
+  };
+
+  const keyBlend =
+    lightContrib('key') * 2 +
+    lightContrib('fill') * 2 * 0.45 +
+    lightContrib('rim') * 2 * 0.35;
+  const ambBase = lightContrib('ambient') * 4;
+
+  const studio = {
+    lightScale: THREE.MathUtils.clamp(
+      (master * keyBlend) / CREATIVE_LOOK_REF_KEY_BLEND,
+      0.12,
+      8,
+    ),
+    ambientFloor: THREE.MathUtils.clamp(
+      0.16 + 0.26 * ((master * ambBase) / CREATIVE_LOOK_REF_LIGHT.ambient),
+      0.14,
+      0.9,
+    ),
+  };
+  // Blend HDRI fill so Shader Lab does not plunge vs shaded when rig is dim.
+  return {
+    lightScale: THREE.MathUtils.clamp(
+      studio.lightScale * 0.82 + hdriFill.lightScale * 0.18,
+      0.12,
+      8,
+    ),
+    ambientFloor: THREE.MathUtils.clamp(
+      Math.max(studio.ambientFloor, hdriFill.ambientFloor * 0.55),
+      0.14,
+      0.9,
+    ),
+  };
+}
 
 /** @param {number | undefined} value */
 export function normalizeCreativeLookIntensity(value) {
@@ -141,6 +249,106 @@ vec3 applyCreativeBrightness(vec3 color) {
 }
 `;
 
+const CREATIVE_LOOK_SHADOW_FRAGMENT_HEADER = /* glsl */ `
+#include <common>
+#include <packing>
+uniform bool receiveShadow;
+#include <shadowmap_pars_fragment>
+#include <shadowmask_pars_fragment>
+uniform vec3 uOrbyShadowColor;
+uniform float uOrbyShadowStrength;
+uniform float uOrbyShadowOpacity;
+`;
+
+function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity') {
+  return `${colorVar} = applyCreativeLiftCrush(${colorVar});
+  #ifdef USE_SHADOWMAP
+  float orbyShadowAmt = getShadowMask() * uOrbyShadowStrength * uOrbyShadowOpacity;
+  ${colorVar} = mix(${colorVar}, uOrbyShadowColor, clamp(orbyShadowAmt, 0.0, 1.0));
+  #endif
+  ${colorVar} = applyCreativeMasterHue(${colorVar});
+  ${colorVar} = applyCreativeBrightness(${colorVar});
+  gl_FragColor = vec4(${colorVar}, ${alphaExpr});`;
+}
+
+function injectCreativeLookFinalColorChain(combined) {
+  return combined.replace(
+    /gl_FragColor = vec4\((\w+), ([^)]+)\);/g,
+    (_, colorVar, alphaExpr) =>
+      creativeLookFinalColorChain(colorVar, alphaExpr.trim()),
+  );
+}
+
+/** Prepends shadow-map varyings/uniforms for receiveShadow on Shader Lab materials. */
+export function withCreativeLookShadowReceive(fragmentShader) {
+  let combined = fragmentShader.trim();
+  if (!combined.includes('shadowmap_pars_fragment')) {
+    combined = `${CREATIVE_LOOK_SHADOW_FRAGMENT_HEADER}\n${combined}`;
+  }
+  return combined;
+}
+
+/** @param {object} [options] */
+export function createCreativeLookShadowUniforms(options = {}) {
+  const vals = createShadowTintUniformValues(options);
+  return {
+    uOrbyShadowColor: { value: vals.color },
+    uOrbyShadowStrength: { value: vals.strength },
+    uOrbyShadowOpacity: { value: vals.opacity },
+  };
+}
+
+/** @param {THREE.ShaderMaterial} material */
+export function syncCreativeLookShadowTint(material, options = {}) {
+  if (!material?.isShaderMaterial || !material.userData?.orbyCreativeLook) return;
+  ensureCreativeLookLightingUniforms(material);
+  const vals = createShadowTintUniformValues(options);
+  if (material.uniforms?.uOrbyShadowColor) {
+    material.uniforms.uOrbyShadowColor.value.copy(vals.color);
+  }
+  if (material.uniforms?.uOrbyShadowStrength) {
+    material.uniforms.uOrbyShadowStrength.value = vals.strength;
+  }
+  if (material.uniforms?.uOrbyShadowOpacity) {
+    material.uniforms.uOrbyShadowOpacity.value = vals.opacity;
+  }
+}
+
+/**
+ * Dedicated depth pass for custom Shader Lab materials — avoids incomplete default depth
+ * programs that can stall the GL pipeline on some GPUs.
+ * @param {THREE.ShaderMaterial} material
+ */
+export function attachCreativeLookDepthMaterial(material) {
+  if (!material?.isShaderMaterial) return;
+  ensureCreativeLookLightingUniforms(material);
+  if (!material.customDepthMaterial) {
+    material.customDepthMaterial = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+    });
+  }
+}
+
+/**
+ * Shader Lab sets `material.lights = true` for shadow receive. Three.js then writes
+ * `UniformsLib.lights` each frame — merge them once so `ambientLightColor.value = …`
+ * does not throw on custom ShaderMaterials (e.g. PS2 Crush + cast shadows).
+ * @param {THREE.ShaderMaterial} material
+ */
+export function ensureCreativeLookLightingUniforms(material) {
+  if (!material?.isShaderMaterial) return;
+  if (material.uniforms?.ambientLightColor) {
+    material.lights = true;
+    return;
+  }
+  material.uniforms = THREE.UniformsUtils.merge([
+    THREE.UniformsLib.lights,
+    { receiveShadow: { value: true } },
+    material.uniforms,
+  ]);
+  material.lights = true;
+}
+
 /** Prepends lift/crush + master-hue helpers and applies both before output. */
 export function withCreativeLookPostProcess(fragmentShader) {
   let combined = fragmentShader.trim();
@@ -160,15 +368,9 @@ export function withCreativeLookPostProcess(fragmentShader) {
     return combined;
   }
   if (/\w+ = applyCreativeMasterHue\(\w+\);/.test(combined)) {
-    return combined.replace(
-      /(\w+) = applyCreativeMasterHue\(\1\);\n  gl_FragColor = vec4\(\1, uOpacity\);/g,
-      '$1 = applyCreativeMasterHue($1);\n  $1 = applyCreativeBrightness($1);\n  gl_FragColor = vec4($1, uOpacity);',
-    );
+    return injectCreativeLookFinalColorChain(combined);
   }
-  return combined.replace(
-    /gl_FragColor = vec4\((\w+), uOpacity\);/g,
-    '$1 = applyCreativeLiftCrush($1);\n  $1 = applyCreativeMasterHue($1);\n  $1 = applyCreativeBrightness($1);\n  gl_FragColor = vec4($1, uOpacity);',
-  );
+  return injectCreativeLookFinalColorChain(combined);
 }
 
 /** Prepends master-hue helper and applies it to the main rgb output. */
@@ -325,12 +527,33 @@ export function creativeGlassParams(patternScale, hdriBlurriness = 0) {
   return { thickness, roughness };
 }
 
+/**
+ * Always compute world position — Three r167+ `worldpos_vertex` only declares
+ * `worldPosition` when USE_SHADOWMAP / USE_ENVMAP / USE_TRANSMISSION etc. are defined.
+ */
+const CREATIVE_LOOK_WORLD_POSITION_VS = /* glsl */ `
+  vec4 worldPosition = vec4(transformed, 1.0);
+  #ifdef USE_BATCHING
+    worldPosition = batchingMatrix * worldPosition;
+  #endif
+  #ifdef USE_INSTANCING
+    worldPosition = instanceMatrix * worldPosition;
+  #endif
+  worldPosition = modelMatrix * worldPosition;
+`;
+
 const NEON_VERTEX = /* glsl */ `
+#include <shadowmap_pars_vertex>
 varying vec3 vNormalView;
 varying vec3 vPosView;
 void main() {
-  vNormalView = normalize(normalMatrix * normal);
-  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+  #include <beginnormal_vertex>
+  #include <defaultnormal_vertex>
+  #include <begin_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vNormalView = normalize(transformedNormal);
+  vec4 mvPos = modelViewMatrix * vec4(transformed, 1.0);
   vPosView = mvPos.xyz;
   gl_Position = projectionMatrix * mvPos;
 }
@@ -360,11 +583,14 @@ void main() {
 `;
 
 const FLOW_VERTEX = /* glsl */ `
+#include <shadowmap_pars_vertex>
 varying vec3 vWorldPosition;
 void main() {
-  vec4 wp = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = wp.xyz;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  #include <begin_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
 }
 `;
 
@@ -409,13 +635,18 @@ void main() {
 `;
 
 const WORLD_VERTEX = /* glsl */ `
+#include <shadowmap_pars_vertex>
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 void main() {
-  vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
-  vec4 wp = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = wp.xyz;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  #include <beginnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
 }
 `;
 
@@ -426,6 +657,8 @@ uniform vec3 uLightDir;
 uniform vec3 uShadow;
 uniform vec3 uLight;
 uniform float uBands;
+uniform float uLightScale;
+uniform float uAmbientFloor;
 uniform float uOpacity;
 
 void main() {
@@ -436,7 +669,9 @@ void main() {
   float idx = floor(ndl * b);
   float stepped = idx / max(b - 1.0, 1.0);
   stepped = clamp(stepped, 0.0, 1.0);
-  vec3 col = mix(uShadow, uLight, stepped);
+  vec3 shadowCol = uShadow * max(uAmbientFloor, 0.15);
+  vec3 lightCol = uLight * uLightScale;
+  vec3 col = mix(shadowCol, lightCol, stepped);
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
   col += rim * vec3(0.12, 0.18, 0.48);
@@ -451,6 +686,8 @@ varying vec3 vWorldPosition;
 uniform vec3 uLightDir;
 uniform float uPixelScale;
 uniform vec3 uTint;
+uniform float uLightScale;
+uniform float uAmbientFloor;
 uniform float uOpacity;
 
 float bayerAt(int i) {
@@ -489,7 +726,11 @@ void main() {
   spec = min(spec * 0.38, 0.22);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
 
-  float lumLin = clamp(ndl * 0.72 + 0.065 + spec + rim * 0.085, 0.0, 1.0);
+  float lumLin = clamp(
+    uAmbientFloor + ndl * 0.72 * uLightScale + 0.065 + spec + rim * 0.085,
+    0.0,
+    1.0,
+  );
   float lum = pow(lumLin, 1.0 / 2.05);
 
   vec2 pix = floor(gl_FragCoord.xy + 1e-3);
@@ -717,6 +958,7 @@ const PS2_CRUSH_VERTEX = /* glsl */ `
 #include <uv_pars_vertex>
 #include <morphtarget_pars_vertex>
 #include <skinning_pars_vertex>
+#include <shadowmap_pars_vertex>
 
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
@@ -738,9 +980,10 @@ void main() {
   #include <begin_vertex>
   #include <morphtarget_vertex>
   #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
 
-  vec4 wp = modelMatrix * vec4(transformed, 1.0);
-  vWorldPosition = wp.xyz;
+  vWorldPosition = worldPosition.xyz;
 
   vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
   vec4 clip = projectionMatrix * mvPosition;
@@ -774,7 +1017,24 @@ uniform sampler2D uMap;
 uniform float uHasMap;
 uniform float uTexRes;
 uniform float uColorLevels;
+uniform float uLightScale;
+uniform float uAmbientFloor;
+uniform float uIntensity;
 uniform float uOpacity;
+
+const vec3 PS2_LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 ps2RestoreSaturation(vec3 col, vec3 ref) {
+  float refLum = dot(ref, PS2_LUMA);
+  float colLum = dot(col, PS2_LUMA);
+  vec3 refGrey = vec3(refLum);
+  vec3 colGrey = vec3(colLum);
+  float refSat = length(ref - refGrey);
+  float colSat = length(col - colGrey);
+  if (colSat >= refSat * 0.9) return col;
+  float boost = clamp(refSat / max(colSat, 1e-4), 1.0, 1.18);
+  return mix(colGrey, col, boost);
+}
 
 float bayerAt(int i) {
   if (i == 0) return 0.0;
@@ -802,48 +1062,69 @@ float bayerTile(ivec2 cell) {
 }
 
 void main() {
-  vec3 N = normalize(cross(dFdx(vWorldPosition), dFdy(vWorldPosition)));
+  vec3 N = normalize(vWorldNormal);
   vec3 L = normalize(uLightDir);
   float ndl = max(dot(N, L), 0.0);
-  float bands = 4.0;
+  float crush = clamp(uIntensity, 0.0, 2.0);
+  float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
+  float bands = mix(6.0, 4.0, crushT);
   float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
   stepped = clamp(stepped, 0.0, 1.0);
 
   vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  float mapAlpha = 1.0;
   if (uHasMap > 0.5) {
     vec2 uvAff = vTexAffine.xy / max(vTexAffine.z, 1e-5);
     float tr = max(uTexRes, 4.0);
     uvAff = (floor(uvAff * tr) + 0.5) / tr;
-    baseCol = texture2D(uMap, uvAff).rgb;
+    vec4 mapSample = texture2D(uMap, uvAff);
+    baseCol = mapSample.rgb;
+    mapAlpha = mapSample.a;
   }
 
-  vec3 col = baseCol * (0.32 + 0.68 * stepped);
+  vec3 sourceCol = baseCol;
+  float shade = uAmbientFloor + (1.0 - uAmbientFloor) * stepped * uLightScale;
+
+  // Shade luminance, not RGB — keeps albedo hue/saturation from the source maps.
+  float srcLum = max(dot(sourceCol, PS2_LUMA), 1e-4);
+  float litLum = srcLum * shade;
+  vec3 col = sourceCol * (litLum / srcLum);
+  col = ps2RestoreSaturation(col, sourceCol);
 
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float rim = pow(1.0 - max(dot(N, V), 0.0), 2.8);
-  col += rim * vec3(0.08, 0.1, 0.14) * 0.55;
+  col += rim * mix(vec3(0.05, 0.07, 0.1), sourceCol * 0.42, 0.62) * 0.42;
 
-  // Screen-space Bayer halftone — 1.5× cell size (50% larger dots) + punchy contrast.
-  const float DITHER_CELL = 1.875;
-  const float DITHER_PUSH = 1.94;
-  const float DOT_DARK = 0.40;
-  const float DOT_BRIGHT = 1.18;
+  // Intensity 1 = balanced PS2; 2 = heavier crush; below 1 = closer to source albedo.
+  float mildT = clamp(1.0 - crush, 0.0, 1.0);
+  vec3 faithfulCol = sourceCol * shade;
+  float fidelityBlend = mix(mildT * 0.5 + 0.18 * (1.0 - crushT), 0.24, crushT);
+  col = mix(col, faithfulCol, fidelityBlend);
 
-  vec2 pix = floor(gl_FragCoord.xy / DITHER_CELL + 1e-3);
+  float ditherCell = mix(2.5, 1.875, crushT);
+  float ditherPush = mix(0.82, 1.94, crushT);
+  float dotDark = mix(0.9, 0.52, crushT);
+  float dotBright = mix(1.03, 1.14, crushT);
+  float levels = mix(max(uColorLevels, 8.0), max(uColorLevels, 8.0) * 0.42, crushT);
+
+  vec2 pix = floor(gl_FragCoord.xy / ditherCell + 1e-3);
   ivec2 cell = ivec2(int(mod(pix.x, 4.0)), int(mod(pix.y, 4.0)));
   float br = bayerTile(cell) / 16.0;
 
-  float levels = max(uColorLevels, 8.0);
-  col = floor(col * levels + (br - 0.5) * DITHER_PUSH) / levels;
+  col = floor(col * levels + (br - 0.5) * ditherPush) / levels;
   col = clamp(col, vec3(0.0), vec3(1.0));
-  col *= mix(DOT_DARK, DOT_BRIGHT, br);
+  col *= mix(dotDark, dotBright, br);
 
-  gl_FragColor = vec4(col, uOpacity);
+  // Recover scene luminance lost to banding + Bayer (Intensity 1 stays close to shaded).
+  col *= mix(1.14, 1.0, crushT);
+
+  gl_FragColor = vec4(col, uOpacity * mapAlpha);
 }
 `;
 
 /** Vertex slip: horizontal band displacement in clip space (whole mesh slices shift sideways). */
 const SCANLINE_HOLOGRAM_VERTEX = /* glsl */ `
+#include <shadowmap_pars_vertex>
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 varying float vGlitchBoost;
@@ -855,11 +1136,15 @@ float hash11(float p) {
 }
 
 void main() {
-  vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
-  vec4 wp = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = wp.xyz;
+  #include <beginnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
 
-  vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec4 clip = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
   float screenY = clip.y / max(abs(clip.w), 1e-4);
   float t = uTime;
   float inten = clamp(uIntensity, 0.0, 2.0);
@@ -874,7 +1159,7 @@ void main() {
     length(vec3(modelMatrix[2].xyz))
   );
   modelScale = max(modelScale, 1e-3);
-  float dist = max(length(cameraPosition - wp.xyz), modelScale * 0.08);
+  float dist = max(length(cameraPosition - vWorldPosition), modelScale * 0.08);
   float normDist = dist / modelScale;
   const float REF_NORM_DIST = 4.0;
   float closeBoost = clamp(REF_NORM_DIST / max(normDist, 0.32), 1.0, 9.0);
@@ -1099,7 +1384,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     1,
     Math.max(0, Number.isFinite(opts.opacity) ? opts.opacity : 1),
   );
-  /** When not in the transparent pipeline, force alpha 1 so Three never blends/sorts like a ~opaque fade (causes black flashes with orbit/zoom). */
+  /** When not in the transparent pipeline, force alpha 1 so Three never blends/sorts like a ~opaque fade (causes black flashes with orbit/zoom). Shader Lab callers default to opaque except Glass/Chrome showcase presets. */
   const shaderAlpha = transparent ? opacity : 1;
   const side = opts.side ?? THREE.FrontSide;
   const time = Number.isFinite(opts.time) ? opts.time : 0;
@@ -1122,12 +1407,21 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     ? Number(opts.materialBrightness)
     : DEFAULT_MATERIAL_BRIGHTNESS;
   const brightnessUniform = { uBrightness: { value: materialBrightness } };
-  const gradeUniforms = { ...hueUniform, ...liftCrushUniform, ...brightnessUniform };
+  const shadowUniforms = createCreativeLookShadowUniforms();
+  const gradeUniforms = {
+    ...hueUniform,
+    ...liftCrushUniform,
+    ...brightnessUniform,
+    ...shadowUniforms,
+  };
   const intensity = normalizeCreativeLookIntensity(opts.intensity ?? CREATIVE_LOOK_INTENSITY_DEFAULT);
   const intensityUniform = { uIntensity: { value: intensity } };
-  const lookFrag = (fragmentShader) => withCreativeLookPostProcess(fragmentShader);
-  const skinning = !!opts.skinning;
-  const morphTargets = !!opts.morphTargets;
+  const toonLightUniforms = {
+    uLightScale: { value: 1 },
+    uAmbientFloor: { value: 0.42 },
+  };
+  const lookFrag = (fragmentShader) =>
+    withCreativeLookPostProcess(withCreativeLookShadowReceive(fragmentShader));
 
   /** Align with post half-float + linear workflow; `toneMapped: false` mismatched encoding on some GPUs (random black frames). Bloom still reads scene RT before exposure/tone passes. */
   const commonMatOpts = {
@@ -1142,6 +1436,9 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   const finish = (mat) => {
     if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
       mat.outputColorSpace = THREE.LinearSRGBColorSpace;
+    }
+    if (mat.isShaderMaterial) {
+      attachCreativeLookDepthMaterial(mat);
     }
     return mat;
   };
@@ -1203,6 +1500,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uLight: { value: new THREE.Color(0xe8f0ff) },
         uBands: { value: 4.0 },
         uOpacity: { value: shaderAlpha },
+        ...toonLightUniforms,
         ...gradeUniforms,
       },
       vertexShader: WORLD_VERTEX,
@@ -1222,6 +1520,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uPixelScale: { value: px },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...toonLightUniforms,
         ...gradeUniforms,
       },
       vertexShader: WORLD_VERTEX,
@@ -1245,21 +1544,18 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uSnapGrid: { value: creativePs2CrushSnapGrid(patternScale) },
         uTexRes: { value: creativePs2CrushTexRes(patternScale) },
-        uColorLevels: { value: 24 },
+        uColorLevels: { value: 48 },
         uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
         uTint: { value: tint },
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
         uOpacity: { value: shaderAlpha },
+        ...toonLightUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: PS2_CRUSH_VERTEX,
       fragmentShader: lookFrag(PS2_CRUSH_FRAGMENT),
-      flatShading: true,
-      skinning,
-      morphTargets,
-      morphNormals: morphTargets,
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'ps2-crush';

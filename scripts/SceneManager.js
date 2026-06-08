@@ -46,7 +46,10 @@ import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
 import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
-import { formatCreativeLookPresetLabel } from './render/CreativeLookMaterials.js';
+import {
+  computeCreativeLookToonLightScalars,
+  formatCreativeLookPresetLabel,
+} from './render/CreativeLookMaterials.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -539,6 +542,8 @@ export class SceneManager {
       stateStore: this.stateStore,
       modelRoot: this.modelRoot,
       getCreativeLookKeyLightDir: (out) => this._getCreativeLookKeyLightDir(out),
+      getCreativeLookToonLightScalars: () =>
+        this._getCreativeLookToonLightScalars(),
       afterCreativeLookMaterialRebuild: () => {
         if (
           typeof this.renderer?.compile === 'function' &&
@@ -4184,6 +4189,15 @@ export class SceneManager {
     }
     key.getWorldDirection(v);
     return v.negate().normalize();
+  }
+
+  /** Studio rig strength for Shader Lab toon / PS2 Crush (tracks lights master + per-light intensity). */
+  _getCreativeLookToonLightScalars() {
+    const state = this.stateStore?.getState();
+    return computeCreativeLookToonLightScalars(this.lightsController, {
+      hdriStrength: state?.hdriStrength ?? this.hdriStrength,
+      hdriEnabled: state?.hdriEnabled !== false,
+    });
   }
 
   render() {

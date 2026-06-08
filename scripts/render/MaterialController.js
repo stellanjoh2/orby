@@ -7,6 +7,7 @@ import {
 import {
   CREATIVE_CHROME_BASE_HEX,
   createCreativeLookMaterial,
+  creativeLookAllowsTransparency,
   creativeChromeRoughness,
   creativeGlassParams,
   creativeLookMasterHueRadians,
@@ -18,6 +19,8 @@ import {
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPreset,
   applyCreativeLookPhysicalMasterHue,
+  ensureCreativeLookLightingUniforms,
+  syncCreativeLookShadowTint,
 } from './CreativeLookMaterials.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
@@ -199,6 +202,8 @@ export class MaterialController {
     onMaterialUpdate = null,
     /** Optional `(out?: THREE.Vector3) => THREE.Vector3` — world-space direction **toward** key light for creative **toon**. */
     getCreativeLookKeyLightDir = null,
+    /** Optional `() => { lightScale, ambientFloor }` — studio rig strength for toon / PS2 Crush. */
+    getCreativeLookToonLightScalars = null,
     /** Called after creative ShaderMaterials are (re)built — e.g. `renderer.compile(scene, camera)` to avoid first-draw hitches. */
     afterCreativeLookMaterialRebuild = null,
   }) {
@@ -207,6 +212,7 @@ export class MaterialController {
     this.onShadingChanged = onShadingChanged;
     this.onMaterialUpdate = onMaterialUpdate;
     this.getCreativeLookKeyLightDir = getCreativeLookKeyLightDir;
+    this.getCreativeLookToonLightScalars = getCreativeLookToonLightScalars;
     this.afterCreativeLookMaterialRebuild = afterCreativeLookMaterialRebuild;
 
     this.currentModel = null;
@@ -968,7 +974,7 @@ export class MaterialController {
 
   /** Live mesh materials — re-apply transmission fallback on what is actually drawn. */
   _applyRenderedImportGltfGlassPresentation(object) {
-    if (!object) return;
+    if (!object || this._shaderLabBypassesGlassPresentation()) return;
     const glass = this._glassPresentationFromState();
     object.traverse((child) => {
       if (!child.isMesh || !child.material) return;
@@ -996,7 +1002,8 @@ export class MaterialController {
 
   /** Keep KHR transmission imports on BLEND fallback (rendered meshes + post-load / per-frame guard). */
   syncImportGltfGlassMaterials(object = this.currentModel, { forcePresentation = false } = {}) {
-    if (!object || !this.modelHasGltfTransmissionMaterials(object)) return;
+    if (!object || this._shaderLabBypassesGlassPresentation()) return;
+    if (!this.modelHasGltfTransmissionMaterials(object)) return;
     const glass = this._glassPresentationFromState();
     object.traverse((child) => {
       if (!child.isMesh || !child.material) return;
@@ -1300,6 +1307,7 @@ export class MaterialController {
    */
   applyGlassAppearanceFromState(object) {
     if (!object || !this.stateStore) return;
+    if (this._shaderLabBypassesGlassPresentation()) return;
     const adv = this.stateStore.getState()?.advanced;
     const mode = adv?.transparencyFix ?? 'default';
     const rawOp = adv?.glassOpacity;
@@ -1518,6 +1526,44 @@ export class MaterialController {
   }
 
   /**
+   * Shader Lab stylized presets (everything except Glass / Chrome / PS2 Crush / Scanline Hologram)
+   * force opaque draws and must not run the glTF transmission / window glass restore pipeline on live meshes.
+   */
+  _shaderLabBypassesGlassPresentation() {
+    if (!this.creativeLookSettings?.enabled) return false;
+    const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+    return preset !== 'glass' && preset !== 'chrome';
+  }
+
+  /**
+   * Resolve albedo for Shader Lab when import snapshots lost maps (transmission BLEND fallback)
+   * or kept a black diffuse factor over a textured surface.
+   * @param {THREE.Mesh} mesh
+   * @param {THREE.Material} origMat
+   * @param {THREE.Material[]} liveMats
+   * @param {number} [matIndex]
+   */
+  _resolveCreativeLookDiffuseSources(mesh, origMat, liveMats, matIndex = 0) {
+    const liveMat = liveMats[matIndex] ?? liveMats[0];
+    let diffuseMap = origMat?.map?.isTexture ? origMat.map : null;
+    if (!diffuseMap && liveMat?.map?.isTexture) {
+      diffuseMap = liveMat.map;
+    }
+
+    let diffuseTint =
+      origMat?.color?.clone?.() ??
+      origMat?.userData?.orbyGltfImportBaseline?.color?.clone?.() ??
+      null;
+    if (!diffuseTint?.isColor && liveMat?.color?.isColor) {
+      diffuseTint = liveMat.color.clone();
+    }
+    if (diffuseMap && diffuseTint && this._isNearBlackDiffuseColor(diffuseTint)) {
+      diffuseTint.setRGB(1, 1, 1);
+    }
+    return { diffuseMap, diffuseTint };
+  }
+
+  /**
    * Build a fresh `MeshStandardMaterial` from a `MeshBasicMaterial` (typically an import
    * tagged `KHR_materials_unlit` — Sketchfab `materialmerger.gles` bakes are the common
    * source) so Shaded-mode sliders (Brightness, Metalness, Roughness, Emissive) have a
@@ -1588,9 +1634,9 @@ export class MaterialController {
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
       
-      // Skip glass materials - they should maintain their properties
       const isGlass = this.isWindowMesh(child);
-      if (isGlass) return;
+      // Window meshes keep import glass until Shader Lab replaces them (opaque stylized presets).
+      if (isGlass && !this._shaderLabBypassesGlassPresentation()) return;
       
       const original = this.originalMaterials.get(child);
       if (!original) return;
@@ -1837,8 +1883,10 @@ export class MaterialController {
     this.uvCheckerOverlay.rebuild();
     this.applyFresnelToModel(this.currentModel);
     this.reapplySvgExtrudeSurfaceShaders();
+    if (!this._shaderLabBypassesGlassPresentation()) {
+      this._applyRenderedImportGltfGlassPresentation(this.currentModel);
+    }
     this._applyCreativeLookOverride();
-    this._applyRenderedImportGltfGlassPresentation(this.currentModel);
 
     // After recreating shaded materials, either apply user emissive glow or re-sync file emissive
     // (microtask so hooks like Fresnel/SVG run first; import textures may also finish binding).
@@ -1896,23 +1944,39 @@ export class MaterialController {
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
-      if (this.isWindowMesh(child)) return;
 
       const importOriginal = this.originalMaterials.get(child);
       if (!importOriginal) return;
 
+      const liveMats = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+
       this._disposeTransientMeshMaterials(child);
 
-      const mk = (origMat) => {
+      const mk = (origMat, matIndex = 0) => {
         const rawOp = origMat?.opacity;
         const opacity = Number.isFinite(Number(rawOp))
           ? Math.min(1, Math.max(0, Number(rawOp)))
           : 1;
-        // GLTF often sets transparent:true with opacity 0.999… — that path uses per-frame
-        // transparent sorting and flickers badly when orbiting/zooming. Align with
-        // GLTF_FULL_OPACITY_BLEND_THRESHOLD (near-opaque = opaque draw order).
+        // Most stylized presets force opaque draws so GLTF “almost opaque” blend shells do not
+        // vanish in the transparent pass. PS2 Crush / Scanline Hologram / Glass / Chrome keep
+        // real alpha for vehicle glass and showcase materials.
+        const allowTransparency = creativeLookAllowsTransparency(preset);
+        const alphaRelevant =
+          opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD ||
+          !!origMat?.transparent ||
+          !!origMat?.alphaMap ||
+          (origMat?.alphaTest > 0) ||
+          origMat?.userData?.alphaMode === 'BLEND' ||
+          origMat?.userData?.alphaMode === 'MASK' ||
+          !!origMat?.userData?.orbyGltfImportBaseline?.transparent;
+        const falseBlendShell =
+          (origMat?.isMeshStandardMaterial || origMat?.isMeshPhysicalMaterial) &&
+          this._materialIsFalseBlendShell(origMat);
         const useTransparentSort =
-          !!origMat?.transparent && opacity < GLTF_FULL_OPACITY_BLEND_THRESHOLD;
+          allowTransparency && alphaRelevant && !falseBlendShell;
+        const drawOpacity = useTransparentSort ? opacity : 1;
         const state = this.stateStore?.getState();
         const hdriBlur = Number(state?.hdriBlurriness ?? 0);
         const geom = child.geometry;
@@ -1921,17 +1985,23 @@ export class MaterialController {
           !!geom?.attributes?.skinIndex ||
           !!geom?.attributes?.skinWeight;
         const morphTargets = !!child.morphTargetInfluences?.length;
+        const { diffuseMap, diffuseTint } = this._resolveCreativeLookDiffuseSources(
+          child,
+          origMat,
+          liveMats,
+          matIndex,
+        );
         return createCreativeLookMaterial(preset, {
           transparent: useTransparentSort,
-          opacity,
+          opacity: drawOpacity,
           side: origMat?.side ?? THREE.FrontSide,
           time: this._creativeLookTime,
           patternScale,
           hdriBlurriness: Number.isFinite(hdriBlur)
             ? THREE.MathUtils.clamp(hdriBlur, 0, 1)
             : 0,
-          diffuseTint: origMat?.color?.clone?.() ?? undefined,
-          diffuseMap: origMat?.map?.isTexture ? origMat.map : undefined,
+          diffuseTint: diffuseTint ?? undefined,
+          diffuseMap,
           masterHue: this.creativeLookSettings.masterHue,
           intensity: this.creativeLookSettings.intensity,
           liftCrush: this.creativeLookSettings.liftCrush,
@@ -1943,15 +2013,17 @@ export class MaterialController {
       };
 
       if (Array.isArray(importOriginal)) {
-        child.material = importOriginal.map((om) => mk(om));
+        child.material = importOriginal.map((om, idx) => mk(om, idx));
       } else {
-        child.material = mk(importOriginal);
+        child.material = mk(importOriginal, 0);
       }
-      // Custom ShaderMaterials rarely participate cleanly in shadow-map passes; casting/receiving
-      // with incomplete depth programs correlates with intermittent black-frame GL stalls on some GPUs.
-      child.castShadow = false;
-      child.receiveShadow = false;
+      // Shader Lab uses dedicated depth materials for shadow-map casting; receiveShadow uses
+      // custom shadow-map chunks in the creative look shaders (see CreativeLookMaterials).
+      child.castShadow = true;
+      child.receiveShadow = true;
     });
+
+    this._syncCreativeLookShadowTint();
 
     if (this.onMaterialUpdate) {
       this.onMaterialUpdate();
@@ -1959,6 +2031,24 @@ export class MaterialController {
     if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
       this.afterCreativeLookMaterialRebuild();
     }
+  }
+
+  /** Push current shadow-tint settings onto Shader Lab materials. */
+  _syncCreativeLookShadowTint() {
+    if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    const opts = {
+      color: this.shadowTintColor,
+      strength: this.shadowTintStrength,
+      opacity: this.shadowTintOpacity,
+    };
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        if (!m?.userData?.orbyCreativeLook) continue;
+        syncCreativeLookShadowTint(m, opts);
+      }
+    });
   }
 
   /** Restore default shadow flags after creative look (matches prepareMesh). */
@@ -1981,7 +2071,9 @@ export class MaterialController {
     const mergeFactor = creativePs2CrushMergeFactor(patternScale);
 
     this.currentModel.traverse((child) => {
-      if (!child.isMesh || this.isWindowMesh(child)) return;
+      if (!child.isMesh) return;
+      if (this.isWindowMesh(child)) return;
+      if (!this.originalMaterials.get(child)) return;
       const geom = child.geometry;
       if (!geom?.attributes?.position) return;
 
@@ -2201,26 +2293,7 @@ export class MaterialController {
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
 
-    if (
-      (preset === 'toon' || preset === 'ordered-dither' || preset === 'ps2-crush') &&
-      typeof this.getCreativeLookKeyLightDir === 'function'
-    ) {
-      const dir = this.getCreativeLookKeyLightDir(this._creativeToonKeyDirScratch);
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh) return;
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        for (const m of mats) {
-          if (
-            (m?.userData?.orbyCreativeLook === 'toon' ||
-              m?.userData?.orbyCreativeLook === 'ordered-dither' ||
-              m?.userData?.orbyCreativeLook === 'ps2-crush') &&
-            m.uniforms?.uLightDir
-          ) {
-            m.uniforms.uLightDir.value.copy(dir);
-          }
-        }
-      });
-    }
+    this._syncCreativeLookToonLightUniforms();
 
     const animPreset =
       preset === 'flow-field' ||
@@ -2309,8 +2382,42 @@ export class MaterialController {
     this._syncCreativeLookLiveUniforms(cl);
   }
 
+  _syncCreativeLookToonLightUniforms() {
+    if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    if (typeof this.getCreativeLookKeyLightDir === 'function') {
+      const dir = this.getCreativeLookKeyLightDir(this._creativeToonKeyDirScratch);
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          const tag = m?.userData?.orbyCreativeLook;
+          if (
+            (tag === 'toon' || tag === 'ordered-dither' || tag === 'ps2-crush') &&
+            m.uniforms?.uLightDir
+          ) {
+            m.uniforms.uLightDir.value.copy(dir);
+          }
+        }
+      });
+    }
+    if (typeof this.getCreativeLookToonLightScalars === 'function') {
+      const { lightScale, ambientFloor } = this.getCreativeLookToonLightScalars();
+      this.currentModel.traverse((child) => {
+        if (!child.isMesh) return;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          const tag = m?.userData?.orbyCreativeLook;
+          if (tag !== 'toon' && tag !== 'ordered-dither' && tag !== 'ps2-crush') continue;
+          if (m.uniforms?.uLightScale) m.uniforms.uLightScale.value = lightScale;
+          if (m.uniforms?.uAmbientFloor) m.uniforms.uAmbientFloor.value = ambientFloor;
+        }
+      });
+    }
+  }
+
   _syncCreativeLookLiveUniforms(source = this.creativeLookSettings) {
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    this._syncCreativeLookToonLightUniforms();
     const masterHue = normalizeCreativeLookMasterHue(source?.masterHue);
     const hueRad = creativeLookMasterHueRadians(masterHue);
     const intensity = normalizeCreativeLookIntensity(source?.intensity);
@@ -2322,6 +2429,7 @@ export class MaterialController {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       for (const m of mats) {
         if (!m?.userData?.orbyCreativeLook) continue;
+        ensureCreativeLookLightingUniforms(m);
         if (m.uniforms?.uMasterHue) {
           m.uniforms.uMasterHue.value = hueRad;
         }
@@ -2996,6 +3104,7 @@ export class MaterialController {
       opacity,
       includeStudioBackdrop: options.includeStudioBackdrop,
     });
+    this._syncCreativeLookShadowTint();
   }
 
   clearShadowTintFromObject(object) {
@@ -3356,7 +3465,11 @@ export class MaterialController {
             material.isMeshPhysicalMaterial &&
             (Number(material.transmission) > 1e-4 || !!material.transmissionMap);
 
-          if (importGltfGlass && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)) {
+          if (
+            importGltfGlass &&
+            !this._shaderLabBypassesGlassPresentation() &&
+            (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial)
+          ) {
             const active =
               this._assignImportGltfGlassPresentation(
                 this.currentModel,

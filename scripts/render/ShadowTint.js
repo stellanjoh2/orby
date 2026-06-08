@@ -134,7 +134,7 @@ export function createShadowTintUniformValues(options = {}) {
  */
 export function applyShadowTintToMaterial(material, options = {}) {
   if (!isShadowTintPatchableMaterial(material)) return;
-  if (material.userData?.orbyCreativeLook) return;
+  if (material.userData?.orbyCreativeLook && !material.isMeshPhysicalMaterial) return;
 
   const colorHex = options.color ?? '#080808';
   const strength = normalizeStrength(options.strength ?? 0);
