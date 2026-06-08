@@ -929,8 +929,8 @@
                     <button type="button" data-creative-look="toon" class="hdri-icon" data-tooltip="Toon — stepped cel shading with rim">
                       <img src="./assets/images/creative-look-toon.png" alt="Toon" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="ordered-dither" class="hdri-icon" data-tooltip="Ordered Dither — fixed Bayer 4×4 grid in screen space; mid-tone from mesh color. Scale = pixel block size">
-                      <img src="./assets/images/creative-look-ordered-dither.png" alt="Ordered Dither" width="192" height="192" />
+                    <button type="button" data-creative-look="pixel-art" class="hdri-icon" data-tooltip="Pixel Art — camera-locked screen pixels, flat cel shading, Bayer dither on mesh colors (no geometry decimation)">
+                      <img src="./assets/images/creative-look-pixel-art.svg" alt="Pixel Art" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
                       <img src="./assets/images/creative-look-holographic.png" alt="Holographic" width="192" height="192" />
@@ -941,8 +941,20 @@
                     <button type="button" data-creative-look="scanline-hologram" class="hdri-icon" data-tooltip="Scanline Hologram — RGB horizontal glitch bands, slice displacement, scrolling scanlines. Scale = line density">
                       <img src="./assets/images/creative-look-scanline-hologram.png" alt="Scanline Hologram" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="ps2-crush" class="hdri-icon" data-tooltip="PS2 Crush — one-time triangulated mesh decimation at 2× scale, subtle vertex drift, crushed textures, flat bands + Bayer dither">
+                    <button type="button" data-creative-look="wire-pulse" class="hdri-icon" data-tooltip="Wire Pulse — holographic wireframe with emissive light pulses. Intensity = line thickness. Scale = pulse spacing">
+                      <img src="./assets/images/creative-look-wire-pulse.svg" alt="Wire Pulse" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="vertex-points" class="hdri-icon" data-tooltip="Vertex Points — holographic mesh vertices only; emissive pulses travel through the point cloud. Intensity = point size. Scale = pulse spacing">
+                      <img src="./assets/images/creative-look-vertex-points.svg" alt="Vertex Points" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="ps2-crush" class="hdri-icon" data-tooltip="PS2 Crush — mesh decimation, affine UVs, bilinear low-res textures, flat light bands (24-bit, no dither)">
                       <img src="./assets/images/creative-look-ps2-crush.svg" alt="PS2 Crush" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="psx" class="hdri-icon" data-tooltip="PSX — coarser mesh decimation, affine UVs, nearest-neighbor crushed textures, 15-bit bands + 2×2 ordered dither">
+                      <img src="./assets/images/creative-look-psx.svg" alt="PSX" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="snes" class="hdri-icon" data-tooltip="SNES — stable pixel snap, 4-color cel bands, CGRAM 15-bit quant (5-bit/channel), 4×4 ordered dither">
+                      <img src="./assets/images/creative-look-snes.svg" alt="SNES" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="chrome" class="hdri-icon" data-tooltip="True Chrome — PBR metal; reflections follow the current HDRI (strength, rotation, blur)">
                       <img src="./assets/images/creative-look-chrome.png" alt="True Chrome" width="192" height="192" />
@@ -967,7 +979,7 @@
                     <span class="value" data-output="creativeLookMasterHue">0°</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pushes each preset's signature effect (glitch strength, rim, iridescence, contrast). 1 = default. Neon Edge, Holographic, Scanline Hologram, and Spectral Storm respond today.">Intensity</span>
+                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Vertex Points: point size. Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
                     <input
                       type="range"
                       id="creativeLookIntensity"
@@ -991,7 +1003,7 @@
                     <span class="value" data-output="creativeLookLiftCrush">0.00</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
@@ -1003,7 +1015,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Spectral Storm). Ordered Dither: finer detail toward the left (min 0.02×). True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2× (decimation runs once at apply).">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). Pixel Art: finer detail toward the left (min 0.02×). True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. SNES: fixed at 2.2× (decimation runs once at apply).">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -1018,7 +1030,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>

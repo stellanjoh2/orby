@@ -5,24 +5,28 @@ import { createShadowTintUniformValues } from './ShadowTint.js';
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, ps2-crush). Ordered dither uses a fixed screen Bayer grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, ps2-crush, psx). Pixel Art uses a fixed screen Bayer grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ordered-dither' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'ps2-crush' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'pixel-art' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'snes' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
   'flow-field',
   'plasma',
   'toon',
-  'ordered-dither',
+  'pixel-art',
   'holographic',
   'voronoi',
   'scanline-hologram',
+  'wire-pulse',
+  'vertex-points',
   'ps2-crush',
+  'psx',
+  'snes',
   'chrome',
   'glass',
   'spectral-storm',
@@ -46,17 +50,92 @@ export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
 /** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
 export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
 
+/** Fixed creative Scale for PSX — coarser decimation than PS2. */
+export const CREATIVE_PSX_PATTERN_SCALE = 2.5;
+
+/** Fixed creative Scale for SNES — moderate decimation between PS2 and PSX. */
+export const CREATIVE_SNES_PATTERN_SCALE = 2.2;
+
+/** Wire Pulse / Vertex Points need per-triangle barycentrics (non-indexed triangle soup). */
+export function creativeLookUsesWirePulseGeometry(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return id === 'wire-pulse' || id === 'vertex-points';
+}
+
+/** Wire Pulse and Vertex Points draw in the transparent pass (see-through holographic shell). */
+export function creativeLookForceTransparentDraw(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return id === 'wire-pulse' || id === 'vertex-points';
+}
+
+/** @param {number} side @param {number} shaderAlpha */
+export function creativeLookHolographicShellMaterialOpts(side, shaderAlpha) {
+  return {
+    transparent: true,
+    opacity: shaderAlpha,
+    side,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: true,
+  };
+}
+
+/**
+ * Non-indexed triangle soup + barycentric attribute for wire / vertex shaders.
+ * @param {THREE.BufferGeometry} geometry
+ * @returns {THREE.BufferGeometry}
+ */
+export function prepareCreativeLookWirePulseGeometry(geometry) {
+  let working = geometry.clone();
+  if (working.index) {
+    const flat = working.toNonIndexed();
+    working.dispose?.();
+    working = flat;
+  }
+  if (!working.getAttribute('barycentric')) {
+    const count = working.attributes.position.count;
+    const bary = new Float32Array(count * 3);
+    for (let i = 0; i < count; i += 3) {
+      bary[i * 3] = 1;
+      bary[i * 3 + 1] = 0;
+      bary[i * 3 + 2] = 0;
+      bary[(i + 1) * 3] = 0;
+      bary[(i + 1) * 3 + 1] = 1;
+      bary[(i + 1) * 3 + 2] = 0;
+      bary[(i + 2) * 3] = 0;
+      bary[(i + 2) * 3 + 1] = 0;
+      bary[(i + 2) * 3 + 2] = 1;
+    }
+    working.setAttribute('barycentric', new THREE.BufferAttribute(bary, 3));
+  }
+  if (!working.attributes.normal) {
+    working.computeVertexNormals();
+  }
+  working.computeBoundingSphere();
+  return working;
+}
+
 /** Shader Lab presets that preserve import alpha (vehicle glass, hologram shells, etc.). */
 export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'glass',
   'chrome',
   'ps2-crush',
+  'psx',
+  'snes',
+  'pixel-art',
   'scanline-hologram',
+  'wire-pulse',
+  'vertex-points',
 ]);
 
 /** @param {CreativeLookPreset | string | undefined} preset */
 export function creativeLookAllowsTransparency(preset) {
   return CREATIVE_LOOK_TRANSPARENT_PRESETS.includes(normalizeCreativeLookPreset(preset));
+}
+
+/** Screen-space Bayer dither — no shadow-map vertex chunks (avoids compile issues on thin alpha shells). */
+export function creativeLookPresetUsesShadowReceive(preset) {
+  return normalizeCreativeLookPreset(preset) !== 'pixel-art';
 }
 
 /** Reference effective studio intensities at lights master 1.0 (LightsController multipliers). */
@@ -234,8 +313,8 @@ vec3 applyCreativeLiftCrush(vec3 color) {
   float shadowMask = 1.0 - smoothstep(0.0, 0.78, l);
   float crushMask = 1.0 - smoothstep(0.03, 0.62, l);
   color += shadowMask * lift * 0.22;
-  color = max(color - crushMask * crush * 0.16, vec3(0.0));
-  color *= 1.0 - crushMask * crush * 0.38;
+  color = max(color - crushMask * crush * 0.24, vec3(0.0));
+  color *= 1.0 - crushMask * crush * 0.57;
   return clamp(color, 0.0, 4.0);
 }
 `;
@@ -260,22 +339,25 @@ uniform float uOrbyShadowStrength;
 uniform float uOrbyShadowOpacity;
 `;
 
-function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity') {
-  return `${colorVar} = applyCreativeLiftCrush(${colorVar});
-  #ifdef USE_SHADOWMAP
+function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity', shadowTint = true) {
+  const shadowBlock = shadowTint
+    ? `#ifdef USE_SHADOWMAP
   float orbyShadowAmt = getShadowMask() * uOrbyShadowStrength * uOrbyShadowOpacity;
   ${colorVar} = mix(${colorVar}, uOrbyShadowColor, clamp(orbyShadowAmt, 0.0, 1.0));
   #endif
-  ${colorVar} = applyCreativeMasterHue(${colorVar});
+  `
+    : '';
+  return `${colorVar} = applyCreativeLiftCrush(${colorVar});
+  ${shadowBlock}${colorVar} = applyCreativeMasterHue(${colorVar});
   ${colorVar} = applyCreativeBrightness(${colorVar});
   gl_FragColor = vec4(${colorVar}, ${alphaExpr});`;
 }
 
-function injectCreativeLookFinalColorChain(combined) {
+function injectCreativeLookFinalColorChain(combined, shadowTint = true) {
   return combined.replace(
     /gl_FragColor = vec4\((\w+), ([^)]+)\);/g,
     (_, colorVar, alphaExpr) =>
-      creativeLookFinalColorChain(colorVar, alphaExpr.trim()),
+      creativeLookFinalColorChain(colorVar, alphaExpr.trim(), shadowTint),
   );
 }
 
@@ -301,6 +383,13 @@ export function createCreativeLookShadowUniforms(options = {}) {
 /** @param {THREE.ShaderMaterial} material */
 export function syncCreativeLookShadowTint(material, options = {}) {
   if (!material?.isShaderMaterial || !material.userData?.orbyCreativeLook) return;
+  if (!creativeLookPresetUsesShadowReceive(material.userData.orbyCreativeLook)) {
+    if (material.lights) {
+      material.lights = false;
+      material.needsUpdate = true;
+    }
+    return;
+  }
   ensureCreativeLookLightingUniforms(material);
   const vals = createShadowTintUniformValues(options);
   if (material.uniforms?.uOrbyShadowColor) {
@@ -350,7 +439,8 @@ export function ensureCreativeLookLightingUniforms(material) {
 }
 
 /** Prepends lift/crush + master-hue helpers and applies both before output. */
-export function withCreativeLookPostProcess(fragmentShader) {
+export function withCreativeLookPostProcess(fragmentShader, options = {}) {
+  const shadowTint = options.shadowTint !== false;
   let combined = fragmentShader.trim();
   if (!combined.includes('uniform float uLiftCrush;')) {
     combined = `${CREATIVE_LOOK_LIFT_CRUSH_GLSL}\n${combined}`;
@@ -368,9 +458,9 @@ export function withCreativeLookPostProcess(fragmentShader) {
     return combined;
   }
   if (/\w+ = applyCreativeMasterHue\(\w+\);/.test(combined)) {
-    return injectCreativeLookFinalColorChain(combined);
+    return injectCreativeLookFinalColorChain(combined, shadowTint);
   }
-  return injectCreativeLookFinalColorChain(combined);
+  return injectCreativeLookFinalColorChain(combined, shadowTint);
 }
 
 /** Prepends master-hue helper and applies it to the main rgb output. */
@@ -416,10 +506,26 @@ export function normalizeCreativeLookPreset(preset) {
   let p = typeof preset === 'string' ? preset : '';
   if (p === 'matcap' || p === 'halftone') p = 'spectral-storm';
   if (p === 'glass-holo') p = 'holographic';
+  if (p === 'ordered-dither') p = 'pixel-art';
   if (typeof p === 'string' && CREATIVE_LOOK_PRESETS.includes(p)) {
     return /** @type {CreativeLookPreset} */ (p);
   }
   return 'neon-edge';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function creativeLookUsesRetroDecimation(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return id === 'ps2-crush' || id === 'psx' || id === 'snes';
+}
+
+/** Fixed pattern scale for retro console presets, or `null` if live scale applies. */
+export function creativeLookRetroConsoleFixedScale(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'ps2-crush') return CREATIVE_PS2_CRUSH_PATTERN_SCALE;
+  if (id === 'psx') return CREATIVE_PSX_PATTERN_SCALE;
+  if (id === 'snes') return CREATIVE_SNES_PATTERN_SCALE;
+  return null;
 }
 
 /** Human-readable Shader Lab preset name for toasts / status copy. */
@@ -430,12 +536,16 @@ export function formatCreativeLookPresetLabel(preset) {
     'flow-field': 'Flow Field',
     plasma: 'Plasma',
     toon: 'Toon',
-    'ordered-dither': 'Ordered Dither',
+    'pixel-art': 'Pixel Art',
     holographic: 'Holographic',
     'spectral-storm': 'Spectral Storm',
     voronoi: 'Voronoi',
     'scanline-hologram': 'Scanline Hologram',
+    'wire-pulse': 'Wire Pulse',
+    'vertex-points': 'Vertex Points',
     'ps2-crush': 'PS2 Crush',
+    psx: 'PSX',
+    snes: 'SNES',
     chrome: 'True Chrome',
     glass: 'Glass',
   });
@@ -463,15 +573,14 @@ export function creativeChromeRoughness(patternScale, hdriBlurriness = 0) {
 }
 
 /**
- * Screen pixels per dither tile for ordered-dither.
- * Tuned so scale **1** matches the old ~5px-tile look that previously needed scale ~0.1.
- * Lower scale → finer detail; higher → chunkier (EGA “macro-pixel”).
+ * Screen pixels per macro block for pixel-art — camera-locked grid (gl_FragCoord).
+ * Scale 1 ≈ 8 px tiles; higher scale → chunkier sprite pixels.
  * @param {number} patternScale — Creative Scale (typically 0.02–5)
  */
-export function creativeOrderedDitherPixelScale(patternScale) {
+export function creativePixelArtPixelScale(patternScale) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
-  const px = 5 * Math.pow(ps, 0.58);
-  return THREE.MathUtils.clamp(px, 1.08, 34);
+  const px = 8 * Math.pow(ps, 0.72);
+  return THREE.MathUtils.clamp(px, 3, 36);
 }
 
 /**
@@ -499,13 +608,185 @@ export function creativePs2CrushSnapGrid(patternScale) {
 }
 
 /**
- * Texture coordinate quantization for PS2 Crush (texels across UV space).
+ * Target max edge for PS2 Crush diffuse bake (world-space tex density at creative Scale).
  * @param {number} patternScale
  */
 export function creativePs2CrushTexRes(patternScale) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
   const t = (ps - 0.02) / (5 - 0.02);
-  return Math.round(THREE.MathUtils.lerp(128, 12, t));
+  // ~109 px max edge at locked scale 2 — bilinear filtered at sample (authentic PS2).
+  return Math.round(THREE.MathUtils.lerp(160, 32, t));
+}
+
+/**
+ * Downscale a diffuse map for PS2 Crush — low-res bake + LinearFilter at sample time.
+ * Does not mutate the source texture.
+ * @param {THREE.Texture} source
+ * @param {number} texRes — max edge length from {@link creativePs2CrushTexRes}
+ * @returns {THREE.Texture}
+ */
+export function bakePs2CrushDiffuseMap(source, texRes) {
+  if (!source?.isTexture) return source;
+
+  const targetMax = Math.max(8, Math.round(texRes));
+  const img = source.image;
+  const srcW = img?.width ?? img?.videoWidth ?? 0;
+  const srcH = img?.height ?? img?.videoHeight ?? 0;
+
+  const applyLinearSampling = (tex) => {
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    return tex;
+  };
+
+  if (!srcW || !srcH) {
+    return applyLinearSampling(source.clone());
+  }
+
+  const scale = targetMax / Math.max(srcW, srcH);
+  const dstW = Math.max(1, Math.round(srcW * scale));
+  const dstH = Math.max(1, Math.round(srcH * scale));
+
+  if (srcW <= dstW && srcH <= dstH) {
+    const copy = source.clone();
+    copy.minFilter = source.minFilter;
+    copy.magFilter = source.magFilter;
+    return applyLinearSampling(copy);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = dstW;
+  canvas.height = dstH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return applyLinearSampling(source.clone());
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'medium';
+  ctx.drawImage(img, 0, 0, dstW, dstH);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.flipY = source.flipY;
+  tex.wrapS = source.wrapS;
+  tex.wrapT = source.wrapT;
+  if ('colorSpace' in tex) {
+    tex.colorSpace = source.colorSpace ?? THREE.SRGBColorSpace;
+  }
+  return applyLinearSampling(tex);
+}
+
+/**
+ * Average-edge-length multiplier for PSX edge-collapse — coarser than PS2.
+ * @param {number} patternScale
+ */
+export function creativePsxMergeFactor(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  const base = THREE.MathUtils.lerp(1.35, 3.35, t);
+  return base * 1.2;
+}
+
+/** Screen-space snap grid for PSX vertex wobble — chunkier than PS2. */
+export function creativePsxSnapGrid(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  return THREE.MathUtils.lerp(128, 40, t);
+}
+
+/**
+ * PSX diffuse resolution — lower than PS2; used for nearest bake + UV quant.
+ * @param {number} patternScale
+ */
+export function creativePsxTexRes(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  // ~52 px max edge at locked scale 2.5.
+  return Math.round(THREE.MathUtils.lerp(96, 8, t));
+}
+
+/**
+ * Downscale a diffuse map for PSX — nearest-neighbor bake + NearestFilter at sample.
+ * @param {THREE.Texture} source
+ * @param {number} texRes
+ * @returns {THREE.Texture}
+ */
+export function bakePsxDiffuseMap(source, texRes) {
+  if (!source?.isTexture) return source;
+
+  const targetMax = Math.max(4, Math.round(texRes));
+  const img = source.image;
+  const srcW = img?.width ?? img?.videoWidth ?? 0;
+  const srcH = img?.height ?? img?.videoHeight ?? 0;
+
+  const applyNearestSampling = (tex) => {
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    return tex;
+  };
+
+  if (!srcW || !srcH) {
+    return applyNearestSampling(source.clone());
+  }
+
+  const scale = targetMax / Math.max(srcW, srcH);
+  const dstW = Math.max(1, Math.round(srcW * scale));
+  const dstH = Math.max(1, Math.round(srcH * scale));
+
+  if (srcW <= dstW && srcH <= dstH) {
+    return applyNearestSampling(source.clone());
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = dstW;
+  canvas.height = dstH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return applyNearestSampling(source.clone());
+  }
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, dstW, dstH);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.flipY = source.flipY;
+  tex.wrapS = source.wrapS;
+  tex.wrapT = source.wrapT;
+  if ('colorSpace' in tex) {
+    tex.colorSpace = source.colorSpace ?? THREE.SRGBColorSpace;
+  }
+  return applyNearestSampling(tex);
+}
+
+/**
+ * Average-edge-length multiplier for SNES edge-collapse — between PS2 and PSX.
+ * @param {number} patternScale
+ */
+export function creativeSnesMergeFactor(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  const base = THREE.MathUtils.lerp(1.22, 2.95, t);
+  return base * 1.12;
+}
+
+/** Screen-space snap grid for SNES stable pixelation (no vertex drift). */
+export function creativeSnesSnapGrid(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  // ~240p internal resolution feel at locked scale 2.2.
+  return THREE.MathUtils.lerp(220, 72, t);
+}
+
+/**
+ * SNES diffuse resolution — nearest bake + UV quant (Mode 7–style chunky texels).
+ * @param {number} patternScale
+ */
+export function creativeSnesTexRes(patternScale) {
+  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+  const t = (ps - 0.02) / (5 - 0.02);
+  return Math.round(THREE.MathUtils.lerp(80, 10, t));
 }
 
 /**
@@ -586,6 +867,8 @@ const FLOW_VERTEX = /* glsl */ `
 #include <shadowmap_pars_vertex>
 varying vec3 vWorldPosition;
 void main() {
+  #include <beginnormal_vertex>
+  #include <defaultnormal_vertex>
   #include <begin_vertex>
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
@@ -679,18 +962,55 @@ void main() {
 }
 `;
 
-/** Fixed screen-space Bayer 4×4 (no grid scroll) + Heckbert-style level selection; softer spec to avoid “sparkle” pixels. */
-const ORDERED_DITHER_FRAGMENT = /* glsl */ `
+/** Camera-locked screen pixels — flat cel + Bayer dither on mesh albedo (true 2D, no geometry decimation). */
+const PIXEL_ART_VERTEX = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
+varying vec2 vUv;
+
+void main() {
+  #include <uv_vertex>
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  vWorldPosition = worldPosition.xyz;
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+}
+`;
+
+const PIXEL_ART_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec2 vUv;
 uniform vec3 uLightDir;
-uniform float uPixelScale;
 uniform vec3 uTint;
+uniform sampler2D uMap;
+uniform float uHasMap;
+uniform float uPixelSize;
 uniform float uLightScale;
 uniform float uAmbientFloor;
+uniform float uIntensity;
 uniform float uOpacity;
 
-float bayerAt(int i) {
+const vec3 PIXEL_LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+float pixelArtBayer4(ivec2 cell) {
+  int x = int(mod(float(cell.x), 4.0));
+  int y = int(mod(float(cell.y), 4.0));
+  int i = x + y * 4;
   if (i == 0) return 0.0;
   if (i == 1) return 8.0;
   if (i == 2) return 2.0;
@@ -709,49 +1029,43 @@ float bayerAt(int i) {
   return 5.0;
 }
 
-float bayerTile(ivec2 cell) {
-  int xi = int(mod(float(cell.x), 4.0));
-  int yi = int(mod(float(cell.y), 4.0));
-  return bayerAt(xi + yi * 4);
-}
-
 void main() {
+  float ps = max(uPixelSize, 2.0);
+  ivec2 block = ivec2(floor(gl_FragCoord.xy / ps));
+  float blockBayer = pixelArtBayer4(block) / 16.0;
+
   vec3 N = normalize(vWorldNormal);
+  vec3 qN = normalize(sign(N) * floor(abs(N) * 5.0 + 0.499) / 5.0 + vec3(1e-4));
   vec3 L = normalize(uLightDir);
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float ndl = max(dot(N, L), 0.0);
-  vec3 H = normalize(L + V);
-  float nh = max(dot(N, H), 0.0);
-  float spec = pow(nh, 22.0);
-  spec = min(spec * 0.38, 0.22);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
+  float crush = clamp(uIntensity, 0.0, 2.0);
+  float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
+  float bands = mix(4.0, 2.0, crushT);
 
-  float lumLin = clamp(
-    uAmbientFloor + ndl * 0.72 * uLightScale + 0.065 + spec + rim * 0.085,
-    0.0,
-    1.0,
-  );
-  float lum = pow(lumLin, 1.0 / 2.05);
+  float ndl = max(dot(qN, L), 0.0);
+  float shadeIdx = floor(ndl * bands + blockBayer * mix(0.0, 0.45, crushT));
+  shadeIdx = clamp(shadeIdx / max(bands - 1.0, 1.0), 0.0, 1.0);
 
-  vec2 pix = floor(gl_FragCoord.xy + 1e-3);
-  float ps = max(uPixelScale, 1.0);
-  ivec2 cell = ivec2(floor(pix / ps));
+  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  float mapAlpha = 1.0;
+  if (uHasMap > 0.5) {
+    vec4 mapSample = texture2D(uMap, vUv);
+    baseCol = mapSample.rgb;
+    mapAlpha = mapSample.a;
+  }
 
-  float br = bayerTile(cell);
-  float val = lum * 3.0 + (br + 0.5) / 16.0 - 0.5;
-  float fi = clamp(floor(val + 0.5), 0.0, 3.0);
+  float shade = uAmbientFloor + (1.0 - uAmbientFloor) * shadeIdx * uLightScale;
+  vec3 col = baseCol * shade;
 
-  vec3 c0 = vec3(0.035, 0.055, 0.11);
-  vec3 c1 = vec3(0.05, 0.04, 0.06);
-  vec3 c2 = clamp(uTint * vec3(1.08, 1.02, 1.02), vec3(0.0), vec3(1.0));
-  vec3 c3 = vec3(1.0);
+  float srcLum = max(dot(baseCol, PIXEL_LUMA), 1e-4);
+  float colLum = max(dot(col, PIXEL_LUMA), 1e-4);
+  col *= colLum / srcLum;
 
-  vec3 col =
-    fi < 0.5 ? c0 :
-    fi < 1.5 ? c1 :
-    fi < 2.5 ? c2 : c3;
+  float levels = mix(14.0, 6.0, crushT);
+  float ditherPush = mix(0.65, 1.45, crushT);
+  col = floor(col * levels + (blockBayer - 0.5) * ditherPush) / levels;
 
-  gl_FragColor = vec4(col, uOpacity);
+  col = clamp(col, vec3(0.0), vec3(1.0));
+  gl_FragColor = vec4(col, uOpacity * mapAlpha);
 }
 `;
 
@@ -952,8 +1266,8 @@ void main() {
 }
 `;
 
-/** PS2-era crush: screen-space vertex snap + drift, affine UVs, flat bands, Bayer dither. */
-const PS2_CRUSH_VERTEX = /* glsl */ `
+/** Retro console crush: screen-space vertex snap + drift, affine UVs. Shared by PS2 / PSX. */
+const RETRO_CONSOLE_VERTEX = /* glsl */ `
 #include <common>
 #include <uv_pars_vertex>
 #include <morphtarget_pars_vertex>
@@ -1007,6 +1321,50 @@ void main() {
 }
 `;
 
+/** SNES pixel art: stable screen-space snap (no PSX-style vertex drift). */
+const SNES_PIXEL_VERTEX = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+#include <shadowmap_pars_vertex>
+
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform float uSnapGrid;
+
+void main() {
+  #include <uv_vertex>
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+
+  vWorldPosition = worldPosition.xyz;
+
+  vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+  vec4 clip = projectionMatrix * mvPosition;
+  vTexAffine = vec3(uv * clip.w, clip.w);
+
+  float snap = max(uSnapGrid, 16.0);
+  vec2 ndc = clip.xy / max(abs(clip.w), 1e-5);
+  ndc = (floor(ndc * snap) + 0.5) / snap;
+  clip.xy = ndc * clip.w;
+
+  gl_Position = clip;
+}
+`;
+
 const PS2_CRUSH_FRAGMENT = /* glsl */ `
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
@@ -1015,8 +1373,6 @@ uniform vec3 uLightDir;
 uniform vec3 uTint;
 uniform sampler2D uMap;
 uniform float uHasMap;
-uniform float uTexRes;
-uniform float uColorLevels;
 uniform float uLightScale;
 uniform float uAmbientFloor;
 uniform float uIntensity;
@@ -1036,7 +1392,162 @@ vec3 ps2RestoreSaturation(vec3 col, vec3 ref) {
   return mix(colGrey, col, boost);
 }
 
-float bayerAt(int i) {
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 L = normalize(uLightDir);
+  float ndl = max(dot(N, L), 0.0);
+  float crush = clamp(uIntensity, 0.0, 2.0);
+  float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
+  float bands = mix(6.0, 4.0, crushT);
+  float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
+  stepped = clamp(stepped, 0.0, 1.0);
+
+  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  float mapAlpha = 1.0;
+  if (uHasMap > 0.5) {
+    vec2 uvAff = vTexAffine.xy / max(vTexAffine.z, 1e-5);
+    vec4 mapSample = texture2D(uMap, uvAff);
+    baseCol = mapSample.rgb;
+    mapAlpha = mapSample.a;
+  }
+
+  vec3 sourceCol = baseCol;
+  float shade = uAmbientFloor + (1.0 - uAmbientFloor) * stepped * uLightScale;
+
+  float srcLum = max(dot(sourceCol, PS2_LUMA), 1e-4);
+  float litLum = srcLum * shade;
+  vec3 col = sourceCol * (litLum / srcLum);
+  col = ps2RestoreSaturation(col, sourceCol);
+
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 2.8);
+  col += rim * mix(vec3(0.05, 0.07, 0.1), sourceCol * 0.42, 0.62) * 0.42;
+
+  col = clamp(col, vec3(0.0), vec3(1.0));
+  gl_FragColor = vec4(col, uOpacity * mapAlpha);
+}
+`;
+
+/** PSX: affine UVs, nearest + UV quant, 15-bit-style bands, hardware 2×2 ordered dither. */
+const PSX_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform vec3 uLightDir;
+uniform vec3 uTint;
+uniform sampler2D uMap;
+uniform float uHasMap;
+uniform float uTexRes;
+uniform float uColorLevels;
+uniform float uLightScale;
+uniform float uAmbientFloor;
+uniform float uIntensity;
+uniform float uOpacity;
+
+const vec3 PSX_LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 psxRestoreSaturation(vec3 col, vec3 ref) {
+  float refLum = dot(ref, PSX_LUMA);
+  float colLum = dot(col, PSX_LUMA);
+  vec3 refGrey = vec3(refLum);
+  vec3 colGrey = vec3(colLum);
+  float refSat = length(ref - refGrey);
+  float colSat = length(col - colGrey);
+  if (colSat >= refSat * 0.85) return col;
+  float boost = clamp(refSat / max(colSat, 1e-4), 1.0, 1.12);
+  return mix(colGrey, col, boost);
+}
+
+float psxBayer2(vec2 pix) {
+  int x = int(mod(pix.x, 2.0));
+  int y = int(mod(pix.y, 2.0));
+  int i = x + y * 2;
+  if (i == 0) return 0.0;
+  if (i == 1) return 2.0;
+  if (i == 2) return 3.0;
+  return 1.0;
+}
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 L = normalize(uLightDir);
+  float ndl = max(dot(N, L), 0.0);
+  float crush = clamp(uIntensity, 0.0, 2.0);
+  float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
+  float bands = mix(5.0, 3.0, crushT);
+  float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
+  stepped = clamp(stepped, 0.0, 1.0);
+
+  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  float mapAlpha = 1.0;
+  if (uHasMap > 0.5) {
+    vec2 uvAff = vTexAffine.xy / max(vTexAffine.z, 1e-5);
+    float tr = max(uTexRes, 4.0);
+    uvAff = (floor(uvAff * tr) + 0.5) / tr;
+    vec4 mapSample = texture2D(uMap, uvAff);
+    baseCol = mapSample.rgb;
+    mapAlpha = mapSample.a;
+  }
+
+  vec3 sourceCol = baseCol;
+  float shade = uAmbientFloor + (1.0 - uAmbientFloor) * stepped * uLightScale;
+
+  float srcLum = max(dot(sourceCol, PSX_LUMA), 1e-4);
+  float litLum = srcLum * shade;
+  vec3 col = sourceCol * (litLum / srcLum);
+  col = psxRestoreSaturation(col, sourceCol);
+
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.2);
+  col += rim * mix(vec3(0.04, 0.05, 0.08), sourceCol * 0.35, 0.55) * 0.32;
+
+  float ditherCell = mix(2.0, 1.5, crushT);
+  float ditherPush = mix(1.05, 2.1, crushT);
+  float dotDark = mix(0.88, 0.48, crushT);
+  float dotBright = mix(1.04, 1.16, crushT);
+  float levels = mix(max(uColorLevels, 6.0), max(uColorLevels, 6.0) * 0.38, crushT);
+
+  vec2 pix = floor(gl_FragCoord.xy / ditherCell + 1e-3);
+  float br = psxBayer2(pix) / 4.0;
+
+  col = floor(col * levels + (br - 0.5) * ditherPush) / levels;
+  col = clamp(col, vec3(0.0), vec3(1.0));
+  col *= mix(dotDark, dotBright, br);
+
+  gl_FragColor = vec4(col, uOpacity * mapAlpha);
+}
+`;
+
+/** SNES: 4-color cel bands, CGRAM 15-bit (5-bit/channel) quant, 4×4 ordered dither. */
+const SNES_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform vec3 uLightDir;
+uniform vec3 uTint;
+uniform sampler2D uMap;
+uniform float uHasMap;
+uniform float uTexRes;
+uniform float uLightScale;
+uniform float uAmbientFloor;
+uniform float uIntensity;
+uniform float uOpacity;
+
+const vec3 SNES_LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 snesQuantize15Bit(vec3 col) {
+  return floor(col * 31.0 + 0.5) / 31.0;
+}
+
+vec3 snesVividSaturation(vec3 col, float amount) {
+  float lum = dot(col, SNES_LUMA);
+  return mix(vec3(lum), col, amount);
+}
+
+float snesBayer4(vec2 p) {
+  int x = int(mod(p.x, 4.0));
+  int y = int(mod(p.y, 4.0));
+  int i = x + y * 4;
   if (i == 0) return 0.0;
   if (i == 1) return 8.0;
   if (i == 2) return 2.0;
@@ -1055,19 +1566,13 @@ float bayerAt(int i) {
   return 5.0;
 }
 
-float bayerTile(ivec2 cell) {
-  int xi = int(mod(float(cell.x), 4.0));
-  int yi = int(mod(float(cell.y), 4.0));
-  return bayerAt(xi + yi * 4);
-}
-
 void main() {
   vec3 N = normalize(vWorldNormal);
   vec3 L = normalize(uLightDir);
   float ndl = max(dot(N, L), 0.0);
   float crush = clamp(uIntensity, 0.0, 2.0);
   float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
-  float bands = mix(6.0, 4.0, crushT);
+  float bands = mix(4.0, 2.0, crushT);
   float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
   stepped = clamp(stepped, 0.0, 1.0);
 
@@ -1085,40 +1590,172 @@ void main() {
   vec3 sourceCol = baseCol;
   float shade = uAmbientFloor + (1.0 - uAmbientFloor) * stepped * uLightScale;
 
-  // Shade luminance, not RGB — keeps albedo hue/saturation from the source maps.
-  float srcLum = max(dot(sourceCol, PS2_LUMA), 1e-4);
+  float srcLum = max(dot(sourceCol, SNES_LUMA), 1e-4);
   float litLum = srcLum * shade;
   vec3 col = sourceCol * (litLum / srcLum);
-  col = ps2RestoreSaturation(col, sourceCol);
+
+  float sat = mix(1.1, 1.24, 1.0 - crushT * 0.4);
+  col = snesVividSaturation(col, sat);
 
   vec3 V = normalize(cameraPosition - vWorldPosition);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 2.8);
-  col += rim * mix(vec3(0.05, 0.07, 0.1), sourceCol * 0.42, 0.62) * 0.42;
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.5);
+  col += rim * sourceCol * mix(0.1, 0.24, 1.0 - crushT) * 0.3;
 
-  // Intensity 1 = balanced PS2; 2 = heavier crush; below 1 = closer to source albedo.
-  float mildT = clamp(1.0 - crush, 0.0, 1.0);
-  vec3 faithfulCol = sourceCol * shade;
-  float fidelityBlend = mix(mildT * 0.5 + 0.18 * (1.0 - crushT), 0.24, crushT);
-  col = mix(col, faithfulCol, fidelityBlend);
+  float ditherAmp = mix(0.0, 1.0 / 31.0, crushT);
+  vec2 pix = floor(gl_FragCoord.xy + 1e-3);
+  float br = snesBayer4(pix) / 16.0;
+  col = col + (br - 0.5) * ditherAmp * mix(1.0, 2.2, crushT);
 
-  float ditherCell = mix(2.5, 1.875, crushT);
-  float ditherPush = mix(0.82, 1.94, crushT);
-  float dotDark = mix(0.9, 0.52, crushT);
-  float dotBright = mix(1.03, 1.14, crushT);
-  float levels = mix(max(uColorLevels, 8.0), max(uColorLevels, 8.0) * 0.42, crushT);
-
-  vec2 pix = floor(gl_FragCoord.xy / ditherCell + 1e-3);
-  ivec2 cell = ivec2(int(mod(pix.x, 4.0)), int(mod(pix.y, 4.0)));
-  float br = bayerTile(cell) / 16.0;
-
-  col = floor(col * levels + (br - 0.5) * ditherPush) / levels;
+  col = snesQuantize15Bit(col);
   col = clamp(col, vec3(0.0), vec3(1.0));
-  col *= mix(dotDark, dotBright, br);
-
-  // Recover scene luminance lost to banding + Bayer (Intensity 1 stays close to shaded).
-  col *= mix(1.14, 1.0, crushT);
 
   gl_FragColor = vec4(col, uOpacity * mapAlpha);
+}
+`;
+
+/** Barycentric wireframe + traveling emissive pulse (holographic wire look). */
+const WIRE_PULSE_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+#include <shadowmap_pars_vertex>
+
+attribute vec3 barycentric;
+varying vec3 vBarycentric;
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+
+void main() {
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
+  vBarycentric = barycentric;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+}
+`;
+
+const WIRE_PULSE_FRAGMENT = /* glsl */ `
+varying vec3 vBarycentric;
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+uniform float uOpacity;
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float ndv = max(dot(N, V), 0.0);
+  float fresnel = pow(1.0 - ndv, 2.35);
+  float fresnelTight = pow(1.0 - ndv, 5.5);
+
+  float inten = clamp(uIntensity, 0.0, 2.0);
+
+  vec3 bary = vBarycentric;
+  vec3 dBary = fwidth(bary);
+  float edgeWidth = mix(0.4, 3.4, inten * 0.5);
+  vec3 edgeAA = smoothstep(vec3(0.0), dBary * edgeWidth, bary);
+  float wireMask = 1.0 - min(min(edgeAA.x, edgeAA.y), edgeAA.z);
+
+  float sc = max(uPatternScale, 0.02);
+  float waveFreq = 2.15 / sc;
+  float t = uTime;
+  vec3 marchDir = normalize(vec3(0.58, 0.28, 0.76));
+  float phase = dot(vWorldPosition, marchDir) * waveFreq - t * 2.75;
+
+  float bandPos = fract(phase * 0.19);
+  float band = smoothstep(0.0, 0.045, bandPos) * smoothstep(0.15, 0.045, bandPos);
+
+  float trail = pow(clamp(sin(phase * 6.28318) * 0.5 + 0.5, 0.0, 1.0), 3.2);
+  float pulse = max(band, trail * 0.42);
+
+  float phase2 = dot(vWorldPosition, vec3(-0.32, 0.88, 0.34)) * waveFreq * 0.82 - t * 1.85;
+  pulse = clamp(pulse + smoothstep(0.7, 0.98, sin(phase2 * 5.2) * 0.5 + 0.5) * 0.5, 0.0, 1.55);
+
+  vec3 wireIdle = mix(vec3(0.0, 0.36, 0.46), vec3(0.46, 0.08, 0.4), fresnel * 0.55) * 0.3;
+  vec3 wireHot = mix(vec3(0.32, 1.0, 0.92), vec3(1.0, 0.4, 0.86), fresnel) * 1.35;
+
+  vec3 col = vec3(0.008, 0.012, 0.018);
+  col += wireIdle * wireMask;
+  col += wireHot * pulse * wireMask;
+
+  col += vec3(0.04, 0.15, 0.21) * fresnel * 0.12;
+  col += vec3(0.52, 0.1, 0.42) * fresnelTight * 0.07;
+
+  float alpha = wireMask * (0.52 + pulse * 0.48) + fresnel * 0.07;
+  alpha = clamp(alpha, 0.0, 1.0) * uOpacity;
+
+  gl_FragColor = vec4(col, alpha);
+}
+`;
+
+/** Holographic vertex points + traveling emissive pulse (`uIntensity` scales point size). */
+const VERTEX_POINTS_FRAGMENT = /* glsl */ `
+varying vec3 vBarycentric;
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+uniform float uOpacity;
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float ndv = max(dot(N, V), 0.0);
+  float fresnel = pow(1.0 - ndv, 2.35);
+  float fresnelTight = pow(1.0 - ndv, 5.5);
+
+  float inten = clamp(uIntensity, 0.0, 2.0);
+
+  vec3 bary = vBarycentric;
+  vec3 dBary = fwidth(bary);
+  float db = max(max(dBary.x, dBary.y), dBary.z);
+  float cornerReach = mix(0.05, 0.55, inten * 0.5) * max(db * 6.0, 1e-5);
+  float va = smoothstep(1.0 - cornerReach, 1.0, bary.x);
+  float vb = smoothstep(1.0 - cornerReach, 1.0, bary.y);
+  float vc = smoothstep(1.0 - cornerReach, 1.0, bary.z);
+  float pointMask = max(va, max(vb, vc));
+  pointMask = pow(clamp(pointMask, 0.0, 1.0), mix(1.85, 1.05, inten * 0.5));
+
+  float sc = max(uPatternScale, 0.02);
+  float waveFreq = 2.15 / sc;
+  float t = uTime;
+  vec3 marchDir = normalize(vec3(0.58, 0.28, 0.76));
+  float phase = dot(vWorldPosition, marchDir) * waveFreq - t * 2.75;
+
+  float bandPos = fract(phase * 0.19);
+  float band = smoothstep(0.0, 0.045, bandPos) * smoothstep(0.15, 0.045, bandPos);
+  float trail = pow(clamp(sin(phase * 6.28318) * 0.5 + 0.5, 0.0, 1.0), 2.8);
+  float pulse = max(band, trail * 0.42);
+
+  float phase2 = dot(vWorldPosition, vec3(-0.32, 0.88, 0.34)) * waveFreq * 0.82 - t * 1.85;
+  pulse = clamp(pulse + smoothstep(0.7, 0.98, sin(phase2 * 5.2) * 0.5 + 0.5) * 0.5, 0.0, 1.55);
+
+  vec3 pointIdle = mix(vec3(0.0, 0.36, 0.46), vec3(0.46, 0.08, 0.4), fresnel * 0.55) * 0.32;
+  vec3 pointHot = mix(vec3(0.32, 1.0, 0.92), vec3(1.0, 0.4, 0.86), fresnel) * 1.35;
+
+  vec3 col = vec3(0.008, 0.012, 0.018);
+  col += pointIdle * pointMask;
+  col += pointHot * pulse * pointMask;
+
+  col += vec3(0.04, 0.15, 0.21) * fresnel * 0.1;
+  col += vec3(0.52, 0.1, 0.42) * fresnelTight * 0.06;
+
+  float alpha = pointMask * (0.58 + pulse * 0.42) + fresnel * 0.05;
+  alpha = clamp(alpha, 0.0, 1.0) * uOpacity;
+
+  gl_FragColor = vec4(col, alpha);
 }
 `;
 
@@ -1150,7 +1787,8 @@ void main() {
   float inten = clamp(uIntensity, 0.0, 2.0);
   float d = inten - 1.0;
   float up = max(d, 0.0);
-  float down = max(-d, 0.0);
+  // Quadratic gate: ~0 slip at intensity 0, eases in through the low range, full at 1+.
+  float dispGate = inten <= 1.0 ? inten * inten : 1.0;
 
   // Pixel slip is ~constant in screen space, so zoomed-out meshes look more destroyed.
   // Boost when the camera is close so close-ups get the same wide, intense slice shear.
@@ -1166,7 +1804,7 @@ void main() {
   vGlitchBoost = closeBoost;
 
   float boostT = smoothstep(1.0, 6.5, closeBoost);
-  float effectT = max(boostT, up);
+  float effectT = max(boostT * dispGate, up);
   float coarseBands = mix(38.0, 10.0, effectT);
   float fineBands = mix(96.0, 28.0, effectT);
 
@@ -1193,7 +1831,8 @@ void main() {
     mix(1.0, 2.8, effectT);
   slipPx += sin(t * 38.0 + screenY * 64.0) * mix(0.4, 3.2, glitchActive) * mix(1.0, 2.6, effectT);
 
-  slipPx *= closeBoost * (1.0 - down * 0.75 + up * 0.85);
+  float dispMul = inten <= 1.0 ? dispGate : (1.0 + up * 0.85);
+  slipPx *= closeBoost * dispMul;
 
   // ~NDC px scale ( tuned ~1080p ).
   clip.x += slipPx * clip.w * 0.0016;
@@ -1226,7 +1865,7 @@ float lineMask(float v, float sharp) {
 }
 
 vec3 boostContrast(vec3 c, float amount) {
-  return clamp((c - 0.5) * amount + 0.5, vec3(0.0), vec3(3.2));
+  return clamp((c - 0.5) * amount + 0.5, vec3(0.0), vec3(1.55));
 }
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
@@ -1259,9 +1898,9 @@ vec3 applyPushedToneCurve(vec3 c) {
     l2 = toneCurvePushed(l);
   } else {
     float y1 = toneCurvePushed(1.0);
-    l2 = y1 + (l - 1.0) * 0.82;
+    l2 = y1 + (l - 1.0) * 0.55;
   }
-  return clamp(c * (l2 / l), vec3(0.0), vec3(3.2));
+  return clamp(c * (l2 / l), vec3(0.0), vec3(1.55));
 }
 
 void main() {
@@ -1305,55 +1944,55 @@ void main() {
   float hPhaseOff = hash11(hRow * 1.19) * 6.28318;
   float scroll = t * 4.2;
 
-  float hR = lineMask((p.y + ca * 120.0) / hPitch - scroll + hPhaseOff, 0.72);
-  float hG = lineMask(p.y / hPitch - scroll + hPhaseOff, 0.64);
-  float hB = lineMask((p.y - ca * 120.0) / hPitch - scroll + hPhaseOff, 0.72);
+  float hR = lineMask((p.y + ca * 120.0) / hPitch - scroll + hPhaseOff, 0.92);
+  float hG = lineMask(p.y / hPitch - scroll + hPhaseOff, 0.85);
+  float hB = lineMask((p.y - ca * 120.0) / hPitch - scroll + hPhaseOff, 0.92);
 
   float scanBright = hG * 0.5 + hR * 0.28 + hB * 0.22;
-  scanBright = clamp((scanBright - 0.5) * 1.5 + 0.5, 0.0, 1.0);
-  float scanMod = mix(0.62, 1.08, scanBright);
+  scanBright = clamp((scanBright - 0.5) * 1.95 + 0.42, 0.0, 1.0);
+  float scanMod = mix(0.54, 0.92, scanBright);
 
-  float phosphor = 0.91 + 0.09 * sin(p.x * 3.14159 / max(hLineBase * 0.55, 1.0));
+  float phosphor = 0.935 + 0.065 * sin(p.x * 3.14159 / max(hLineBase * 0.55, 1.0));
   scanMod *= phosphor;
 
   float bandWave = sin(bandFrac * 6.28318 * mix(1.0, 2.4, hash11(band)) - t * 1.6 + band * 0.35);
   bandWave = bandWave * 0.5 + 0.5;
-  bandWave = clamp((bandWave - 0.5) * 1.5 + 0.5, 0.0, 1.0);
-  scanMod *= mix(0.78, 1.06, bandWave);
+  bandWave = clamp((bandWave - 0.5) * 1.85 + 0.44, 0.0, 1.0);
+  scanMod *= mix(0.72, 0.92, bandWave);
 
   vec2 vignUv = (pix / vec2(800.0, 600.0) - 0.5) * 2.0;
   float vign = 1.0 - dot(vignUv, vignUv) * 0.18;
   vign = clamp(vign, 0.65, 1.0);
 
-  vec3 holoBody = vec3(0.025, 0.05, 0.09) + fresnel * vec3(0.1, 0.34, 0.5) * 0.62;
+  vec3 holoBody = vec3(0.025, 0.05, 0.09) + fresnel * vec3(0.08, 0.26, 0.38) * 0.48;
 
-  vec3 cyan = vec3(0.0, 0.92, 1.05);
-  vec3 magenta = vec3(1.0, 0.0, 0.77);
-  vec3 lime = vec3(0.77, 1.0, 0.0);
+  vec3 cyan = vec3(0.0, 0.74, 0.84);
+  vec3 magenta = vec3(0.82, 0.0, 0.62);
+  vec3 lime = vec3(0.62, 0.82, 0.0);
 
   vec3 scanCol =
     cyan * hG * (0.9 + bandWave * 0.22) +
     magenta * hR * 0.65 +
     lime * hB * 0.42;
 
-  scanCol *= (0.62 + fresnel * 1.12) * vign * scanMod;
+  scanCol *= (0.48 + fresnel * 0.88) * vign * scanMod;
 
   float brightBand = smoothstep(0.36, 0.54, sin(bandFrac * 6.28318 - t * 2.2)) * glitchActive;
-  scanCol += brightBand * cyan * 0.4;
+  scanCol += brightBand * cyan * 0.26;
 
   float staticRow = hash21(vec2(hRow, floor(t * 42.0)));
   float snow = step(0.988, staticRow);
-  scanCol += snow * (cyan * 0.42 + magenta * 0.18) * scanBright;
+  scanCol += snow * (cyan * 0.3 + magenta * 0.12) * scanBright;
 
   vec3 col = holoBody + scanCol;
 
-  col += fresnel * cyan * 0.72;
-  col += fresnelTight * mix(magenta, lime, 0.5) * 0.6;
-  col += heavyGlitch * bandFrac * mix(cyan, magenta, hash11(band)) * mix(0.15, 0.34, boostT) * (1.0 + up * 0.55 - down * 0.47);
+  col += fresnel * cyan * 0.52;
+  col += fresnelTight * mix(magenta, lime, 0.5) * 0.42;
+  col += heavyGlitch * bandFrac * mix(cyan, magenta, hash11(band)) * mix(0.12, 0.28, boostT) * (1.0 + up * 0.55 - down * 0.47);
 
   col = applyPushedToneCurve(col);
-  col = boostContrast(col, 1.22 * (1.0 + up * 0.38 - down * 0.22));
-  col = min(col, vec3(3.2));
+  col = boostContrast(col, 1.34 * (1.0 + up * 0.38 - down * 0.22));
+  col = min(col, vec3(1.55));
 
   gl_FragColor = vec4(col, uOpacity);
 }
@@ -1368,8 +2007,8 @@ void main() {
  * @param {number} [opts.time] — initial uTime for animated presets
  * @param {number} [opts.patternScale] — 1 = preset default; higher values make the pattern larger
  * @param {number} [opts.hdriBlurriness] — for chrome / glass presets; roughness vs HDRI blur
- * @param {THREE.Color} [opts.diffuseTint] — for ordered-dither mid-tone (defaults to retro red if unset)
- * @param {THREE.Texture} [opts.diffuseMap] — albedo map for ps2-crush (nearest-neighbor, crushed UVs)
+ * @param {THREE.Color} [opts.diffuseTint] — mesh albedo fallback when no diffuse map
+ * @param {THREE.Texture} [opts.diffuseMap] — albedo for ps2-crush (bilinear bake) / psx|snes (nearest bake)
  * @param {number} [opts.masterHue] — global hue shift in degrees (-180…180)
  * @param {number} [opts.intensity] — effect punch (0–2, 1 = default)
  * @param {number} [opts.liftCrush] — shadow lift (+) vs crush (−), -1…1
@@ -1422,6 +2061,8 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   };
   const lookFrag = (fragmentShader) =>
     withCreativeLookPostProcess(withCreativeLookShadowReceive(fragmentShader));
+  const lookFragNoShadow = (fragmentShader) =>
+    withCreativeLookPostProcess(fragmentShader, { shadowTint: false });
 
   /** Align with post half-float + linear workflow; `toneMapped: false` mismatched encoding on some GPUs (random black frames). Bloom still reads scene RT before exposure/tone passes. */
   const commonMatOpts = {
@@ -1433,11 +2074,15 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     toneMapped: true,
   };
 
-  const finish = (mat) => {
+  const finish = (mat, { shadows = true } = {}) => {
+    if (mat.isShaderMaterial) {
+      if (opts.skinning) mat.skinning = true;
+      if (opts.morphTargets) mat.morphTargets = true;
+    }
     if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
       mat.outputColorSpace = THREE.LinearSRGBColorSpace;
     }
-    if (mat.isShaderMaterial) {
+    if (mat.isShaderMaterial && shadows) {
       attachCreativeLookDepthMaterial(mat);
     }
     return mat;
@@ -1511,40 +2156,49 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat);
   }
 
-  if (id === 'ordered-dither') {
-    const px = creativeOrderedDitherPixelScale(patternScale);
-    const tint = diffuseTint ?? new THREE.Color(0xdc2838);
-    const mat = new THREE.ShaderMaterial({
-      uniforms: {
-        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
-        uPixelScale: { value: px },
-        uTint: { value: tint },
-        uOpacity: { value: shaderAlpha },
-        ...toonLightUniforms,
-        ...gradeUniforms,
-      },
-      vertexShader: WORLD_VERTEX,
-      fragmentShader: lookFrag(ORDERED_DITHER_FRAGMENT),
-      ...commonMatOpts,
-    });
-    mat.userData.orbyCreativeLook = 'ordered-dither';
-    return finish(mat);
-  }
-
-  if (id === 'ps2-crush') {
-    const tint = diffuseTint ?? new THREE.Color(0xb8b0a8);
-    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap : null;
+  if (id === 'pixel-art') {
+    const px = creativePixelArtPixelScale(patternScale);
+    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
     if (map) {
       map.minFilter = THREE.NearestFilter;
       map.magFilter = THREE.NearestFilter;
       map.generateMipmaps = false;
     }
+    const gradeNoShadow = {
+      ...hueUniform,
+      ...liftCrushUniform,
+      ...brightnessUniform,
+    };
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uPixelSize: { value: px },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...toonLightUniforms,
+        ...gradeNoShadow,
+        ...intensityUniform,
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: lookFragNoShadow(PIXEL_ART_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'pixel-art';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'ps2-crush') {
+    const tint = diffuseTint ?? new THREE.Color(0xb8b0a8);
+    const map = opts.diffuseMap?.isTexture
+      ? bakePs2CrushDiffuseMap(opts.diffuseMap, creativePs2CrushTexRes(patternScale))
+      : null;
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: time },
         uSnapGrid: { value: creativePs2CrushSnapGrid(patternScale) },
-        uTexRes: { value: creativePs2CrushTexRes(patternScale) },
-        uColorLevels: { value: 48 },
         uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
         uTint: { value: tint },
         uMap: { value: map },
@@ -1554,11 +2208,67 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ...gradeUniforms,
         ...intensityUniform,
       },
-      vertexShader: PS2_CRUSH_VERTEX,
+      vertexShader: RETRO_CONSOLE_VERTEX,
       fragmentShader: lookFrag(PS2_CRUSH_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'ps2-crush';
+    return finish(mat);
+  }
+
+  if (id === 'psx') {
+    const tint = diffuseTint ?? new THREE.Color(0xa8a098);
+    const texRes = creativePsxTexRes(patternScale);
+    const map = opts.diffuseMap?.isTexture
+      ? bakePsxDiffuseMap(opts.diffuseMap, texRes)
+      : null;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uSnapGrid: { value: creativePsxSnapGrid(patternScale) },
+        uTexRes: { value: texRes },
+        uColorLevels: { value: 32 },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...toonLightUniforms,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: RETRO_CONSOLE_VERTEX,
+      fragmentShader: lookFrag(PSX_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'psx';
+    return finish(mat);
+  }
+
+  if (id === 'snes') {
+    const tint = diffuseTint ?? new THREE.Color(0xc8c0b8);
+    const texRes = creativeSnesTexRes(patternScale);
+    const map = opts.diffuseMap?.isTexture
+      ? bakePsxDiffuseMap(opts.diffuseMap, texRes)
+      : null;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uSnapGrid: { value: creativeSnesSnapGrid(patternScale) },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTexRes: { value: texRes },
+        uOpacity: { value: shaderAlpha },
+        ...toonLightUniforms,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: SNES_PIXEL_VERTEX,
+      fragmentShader: lookFrag(SNES_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'snes';
     return finish(mat);
   }
 
@@ -1628,6 +2338,40 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'scanline-hologram';
+    return finish(mat);
+  }
+
+  if (id === 'wire-pulse') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WIRE_PULSE_VERTEX,
+      fragmentShader: lookFrag(WIRE_PULSE_FRAGMENT),
+      ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
+    });
+    mat.userData.orbyCreativeLook = 'wire-pulse';
+    return finish(mat);
+  }
+
+  if (id === 'vertex-points') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WIRE_PULSE_VERTEX,
+      fragmentShader: lookFrag(VERTEX_POINTS_FRAGMENT),
+      ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
+    });
+    mat.userData.orbyCreativeLook = 'vertex-points';
     return finish(mat);
   }
 

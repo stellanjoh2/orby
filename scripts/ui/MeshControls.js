@@ -10,7 +10,7 @@ import {
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 import {
   CREATIVE_LOOK_PRESETS,
-  CREATIVE_PS2_CRUSH_PATTERN_SCALE,
+  creativeLookRetroConsoleFixedScale,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 import {
@@ -468,7 +468,8 @@ export class MeshControls {
       const preset = normalizeCreativeLookPreset(
         this.stateStore.getState().creativeLook?.preset,
       );
-      if (preset === 'ps2-crush') return;
+      const fixedScale = creativeLookRetroConsoleFixedScale(preset);
+      if (fixedScale != null) return;
       const value = parseFloat(event.target.value);
       if (!Number.isFinite(value)) return;
       const scale = Math.max(0.02, Math.min(5, value));
@@ -528,11 +529,9 @@ export class MeshControls {
           this.stateStore.set('creativeLook.preset', preset);
           this.stateStore.set('creativeLook.enabled', true);
           this.stateStore.set('creativeLookSectionOpen', true);
-          if (preset === 'ps2-crush') {
-            this.stateStore.set(
-              'creativeLook.patternScale',
-              CREATIVE_PS2_CRUSH_PATTERN_SCALE,
-            );
+          const fixedScale = creativeLookRetroConsoleFixedScale(preset);
+          if (fixedScale != null) {
+            this.stateStore.set('creativeLook.patternScale', fixedScale);
           }
           if (uvCheckerWasOn) {
             this.stateStore.set('advanced.uvChecker', false);
@@ -1246,10 +1245,10 @@ export class MeshControls {
     }
     if (this.ui.inputs.creativeLookPatternScale) {
       const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
-      const ps2ScaleLocked = clPreset === 'ps2-crush';
+      const retroScaleLocked = creativeLookRetroConsoleFixedScale(clPreset) != null;
       const rawScale = Number(state.creativeLook?.patternScale);
-      const patternScale = ps2ScaleLocked
-        ? CREATIVE_PS2_CRUSH_PATTERN_SCALE
+      const patternScale = retroScaleLocked
+        ? (creativeLookRetroConsoleFixedScale(clPreset) ?? 1)
         : Number.isFinite(rawScale)
           ? Math.min(5, Math.max(0.02, rawScale))
           : 1;
@@ -1265,7 +1264,7 @@ export class MeshControls {
       }
       this.ui.setControlDisabled(
         'creativeLookPatternScale',
-        !state.creativeLook?.enabled || ps2ScaleLocked,
+        !state.creativeLook?.enabled || retroScaleLocked,
       );
     }
     if (this.ui.inputs.creativeLookMasterHue) {

@@ -8,12 +8,19 @@ import {
   CREATIVE_CHROME_BASE_HEX,
   createCreativeLookMaterial,
   creativeLookAllowsTransparency,
+  creativeLookForceTransparentDraw,
+  creativeLookPresetUsesShadowReceive,
+  creativeLookUsesWirePulseGeometry,
+  prepareCreativeLookWirePulseGeometry,
   creativeChromeRoughness,
   creativeGlassParams,
   creativeLookMasterHueRadians,
-  creativeOrderedDitherPixelScale,
+  creativePixelArtPixelScale,
   creativePs2CrushMergeFactor,
-  CREATIVE_PS2_CRUSH_PATTERN_SCALE,
+  creativePsxMergeFactor,
+  creativeSnesMergeFactor,
+  creativeLookUsesRetroDecimation,
+  creativeLookRetroConsoleFixedScale,
   normalizeCreativeLookIntensity,
   normalizeCreativeLookLiftCrush,
   normalizeCreativeLookMasterHue,
@@ -1926,9 +1933,21 @@ export class MaterialController {
     }
   }
 
+  _syncRetroConsoleGeometryForPreset(preset, patternScale) {
+    if (creativeLookUsesRetroDecimation(preset)) {
+      this._applyRetroConsoleGeometry(preset, patternScale);
+      this._restoreWirePulseGeometry();
+    } else if (creativeLookUsesWirePulseGeometry(preset)) {
+      this._restorePs2CrushGeometry();
+      this._applyWirePulseGeometry();
+    } else {
+      this._restorePs2CrushGeometry();
+      this._restoreWirePulseGeometry();
+    }
+  }
+
   _applyCreativeLookOverride() {
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
-    if (this.currentShading === 'textures' || this.currentShading === 'wireframe') return;
 
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
     const patternScale = this._resolveCreativeLookPatternScale(
@@ -1936,11 +1955,11 @@ export class MaterialController {
       this.creativeLookSettings.patternScale,
     );
 
-    if (preset === 'ps2-crush') {
-      this._applyPs2CrushGeometry(patternScale);
-    } else {
-      this._restorePs2CrushGeometry();
-    }
+    // Always sync geometry when Shader Lab is on — PS2/PSX/SNES decimation strips normals and
+    // breaks other presets if we bail out early for textures/wireframe shading.
+    this._syncRetroConsoleGeometryForPreset(preset, patternScale);
+
+    if (this.currentShading === 'textures' || this.currentShading === 'wireframe') return;
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
@@ -1960,7 +1979,7 @@ export class MaterialController {
           ? Math.min(1, Math.max(0, Number(rawOp)))
           : 1;
         // Most stylized presets force opaque draws so GLTF “almost opaque” blend shells do not
-        // vanish in the transparent pass. PS2 Crush / Scanline Hologram / Glass / Chrome keep
+        // vanish in the transparent pass. PS2 Crush / PSX / Scanline Hologram / Glass / Chrome keep
         // real alpha for vehicle glass and showcase materials.
         const allowTransparency = creativeLookAllowsTransparency(preset);
         const alphaRelevant =
@@ -1975,7 +1994,8 @@ export class MaterialController {
           (origMat?.isMeshStandardMaterial || origMat?.isMeshPhysicalMaterial) &&
           this._materialIsFalseBlendShell(origMat);
         const useTransparentSort =
-          allowTransparency && alphaRelevant && !falseBlendShell;
+          creativeLookForceTransparentDraw(preset) ||
+          (allowTransparency && alphaRelevant && !falseBlendShell);
         const drawOpacity = useTransparentSort ? opacity : 1;
         const state = this.stateStore?.getState();
         const hdriBlur = Number(state?.hdriBlurriness ?? 0);
@@ -2062,13 +2082,20 @@ export class MaterialController {
   }
 
   /**
-   * Hole-safe edge-collapse decimation for PS2 Crush — only merges verts connected by an edge.
+   * Hole-safe edge-collapse decimation for PS2 / PSX / SNES — only merges verts connected by an edge.
    * Skips skinned meshes. Restored on preset off / switch.
+   * @param {string} preset
    * @param {number} patternScale
    */
-  _applyPs2CrushGeometry(patternScale) {
+  _applyRetroConsoleGeometry(preset, patternScale) {
     if (!this.currentModel) return;
-    const mergeFactor = creativePs2CrushMergeFactor(patternScale);
+    const id = normalizeCreativeLookPreset(preset);
+    const mergeFactor =
+      id === 'psx'
+        ? creativePsxMergeFactor(patternScale)
+        : id === 'snes'
+          ? creativeSnesMergeFactor(patternScale)
+          : creativePs2CrushMergeFactor(patternScale);
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
@@ -2147,15 +2174,20 @@ export class MaterialController {
     });
   }
 
-  /** Restore mesh geometry after PS2 Crush decimation. */
+  /** Restore mesh geometry after PS2 / PSX / SNES decimation. */
   _restorePs2CrushGeometry() {
     if (!this.currentModel) return;
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
       const orig = child.userData.orbyPs2OriginalGeometry;
-      if (!orig) return;
       const current = child.geometry;
+      if (!orig) {
+        if (current && !current.attributes?.normal) {
+          current.computeVertexNormals();
+        }
+        return;
+      }
       if (current !== orig) {
         current?.dispose?.();
       }
@@ -2165,15 +2197,69 @@ export class MaterialController {
     });
   }
 
+  /** Restore mesh geometry after Wire Pulse barycentric prep. */
+  _restoreWirePulseGeometry() {
+    if (!this.currentModel) return;
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      const orig = child.userData.orbyWirePulseOriginalGeometry;
+      const current = child.geometry;
+      if (!orig) {
+        if (current && !current.attributes?.normal) {
+          current.computeVertexNormals();
+        }
+        return;
+      }
+      if (current !== orig) {
+        current?.dispose?.();
+      }
+      child.geometry = orig;
+      delete child.userData.orbyWirePulseOriginalGeometry;
+      delete child.userData.orbyWirePulsePreparedGeometry;
+    });
+  }
+
+  /** Non-indexed triangle soup + barycentrics for Wire Pulse wireframe shader. */
+  _applyWirePulseGeometry() {
+    if (!this.currentModel) return;
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      if (this.isWindowMesh(child)) return;
+      if (!this.originalMaterials.get(child)) return;
+      const geom = child.geometry;
+      if (!geom?.attributes?.position) return;
+
+      if (!child.userData.orbyWirePulseOriginalGeometry) {
+        child.userData.orbyWirePulseOriginalGeometry = geom;
+      }
+
+      const source = child.userData.orbyWirePulseOriginalGeometry;
+      const current = child.geometry;
+      if (current !== source && child.userData.orbyWirePulsePreparedGeometry) {
+        current.dispose?.();
+      }
+
+      try {
+        const prepared = prepareCreativeLookWirePulseGeometry(source);
+        child.geometry = prepared;
+        child.userData.orbyWirePulsePreparedGeometry = true;
+      } catch (_) {
+        child.geometry = source;
+        child.userData.orbyWirePulsePreparedGeometry = true;
+      }
+    });
+  }
+
   /**
-   * PS2 Crush uses a fixed scale (decimation is apply-time only, not live).
+   * PS2 / PSX / SNES use a fixed scale (decimation is apply-time only, not live).
    * @param {string} preset
    * @param {number | undefined} patternScale
    */
   _resolveCreativeLookPatternScale(preset, patternScale) {
-    if (normalizeCreativeLookPreset(preset) === 'ps2-crush') {
-      return CREATIVE_PS2_CRUSH_PATTERN_SCALE;
-    }
+    const fixed = creativeLookRetroConsoleFixedScale(preset);
+    if (fixed != null) return fixed;
     const ps = Number(patternScale);
     return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
   }
@@ -2231,8 +2317,11 @@ export class MaterialController {
     this.creativeLookSettings.preset = normalizeCreativeLookPreset(
       this.creativeLookSettings.preset,
     );
-    if (this.creativeLookSettings.preset === 'ps2-crush') {
-      this.creativeLookSettings.patternScale = CREATIVE_PS2_CRUSH_PATTERN_SCALE;
+    const fixedScale = creativeLookRetroConsoleFixedScale(
+      this.creativeLookSettings.preset,
+    );
+    if (fixedScale != null) {
+      this.creativeLookSettings.patternScale = fixedScale;
     }
 
     if (!options.skipStateStore && this.stateStore) {
@@ -2246,6 +2335,7 @@ export class MaterialController {
 
     if (!this.creativeLookSettings.enabled) {
       this._restorePs2CrushGeometry();
+      this._restoreWirePulseGeometry();
       this.setShading(this.currentShading);
       this._restoreMeshShadowDefaults();
       return;
@@ -2302,7 +2392,10 @@ export class MaterialController {
       preset === 'spectral-storm' ||
       preset === 'voronoi' ||
       preset === 'scanline-hologram' ||
-      preset === 'ps2-crush';
+      preset === 'wire-pulse' ||
+      preset === 'vertex-points' ||
+      preset === 'ps2-crush' ||
+      preset === 'psx';
     if (animPreset) {
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
@@ -2316,7 +2409,10 @@ export class MaterialController {
               tag === 'spectral-storm' ||
               tag === 'voronoi' ||
               tag === 'scanline-hologram' ||
-              tag === 'ps2-crush') &&
+              tag === 'wire-pulse' ||
+              tag === 'vertex-points' ||
+              tag === 'ps2-crush' ||
+              tag === 'psx') &&
             m.uniforms?.uTime
           ) {
             m.uniforms.uTime.value = effectiveTime;
@@ -2328,17 +2424,16 @@ export class MaterialController {
       });
     }
 
-    if (preset === 'ordered-dither') {
+    if (preset === 'pixel-art') {
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           if (
-            m?.userData?.orbyCreativeLook === 'ordered-dither' &&
-            m.uniforms?.uPixelScale
+            m?.userData?.orbyCreativeLook === 'pixel-art' &&
+            m.uniforms?.uPixelSize
           ) {
-            m.uniforms.uPixelScale.value =
-              creativeOrderedDitherPixelScale(patternScale);
+            m.uniforms.uPixelSize.value = creativePixelArtPixelScale(patternScale);
           }
         }
       });
@@ -2392,7 +2487,7 @@ export class MaterialController {
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
           if (
-            (tag === 'toon' || tag === 'ordered-dither' || tag === 'ps2-crush') &&
+            (tag === 'toon' || tag === 'pixel-art' || tag === 'ps2-crush' || tag === 'psx' || tag === 'snes') &&
             m.uniforms?.uLightDir
           ) {
             m.uniforms.uLightDir.value.copy(dir);
@@ -2407,7 +2502,7 @@ export class MaterialController {
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
-          if (tag !== 'toon' && tag !== 'ordered-dither' && tag !== 'ps2-crush') continue;
+          if (tag !== 'toon' && tag !== 'pixel-art' && tag !== 'ps2-crush' && tag !== 'psx' && tag !== 'snes') continue;
           if (m.uniforms?.uLightScale) m.uniforms.uLightScale.value = lightScale;
           if (m.uniforms?.uAmbientFloor) m.uniforms.uAmbientFloor.value = ambientFloor;
         }
@@ -2429,7 +2524,9 @@ export class MaterialController {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       for (const m of mats) {
         if (!m?.userData?.orbyCreativeLook) continue;
-        ensureCreativeLookLightingUniforms(m);
+        if (creativeLookPresetUsesShadowReceive(m.userData.orbyCreativeLook)) {
+          ensureCreativeLookLightingUniforms(m);
+        }
         if (m.uniforms?.uMasterHue) {
           m.uniforms.uMasterHue.value = hueRad;
         }
@@ -4229,6 +4326,7 @@ export class MaterialController {
 
   clear() {
     this._restorePs2CrushGeometry();
+    this._restoreWirePulseGeometry();
     this.mapInspectPreview?.clear();
     this.disposeFbxUserTextures(this.currentModel);
     this.clearWireframeOverlay();
