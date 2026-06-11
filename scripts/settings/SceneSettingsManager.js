@@ -6,6 +6,7 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   effectiveVignetteIntensity,
+  isBloomTuningActive,
   isVignetteUiEnabled,
   cameraShadowsUiToShader,
 } from '../constants.js';
@@ -1320,7 +1321,7 @@ export class SceneSettingsManager {
         if (this.uiHelper?.setEffectControlsDisabled) {
           this.uiHelper.setEffectControlsDisabled(
             ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
-            !payload.bloom.enabled,
+            !isBloomTuningActive(this.stateStore.getState()),
           );
         }
       }

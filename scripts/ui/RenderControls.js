@@ -12,6 +12,7 @@ import {
   clampCameraShadowsUi,
   effectiveVignetteIntensity,
   getAntiAliasingUiState,
+  isBloomTuningActive,
   isVignetteUiEnabled,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
   foldAnamorphicStreakAngleDeg,
@@ -149,7 +150,7 @@ export class RenderControls {
           'bloomColor',
           'bloomQuality',
         ],
-        !enabled,
+        !isBloomTuningActive(this.stateStore.getState()),
       );
       emitBloom();
     });
@@ -1068,7 +1069,7 @@ export class RenderControls {
         'bloomColor',
         'bloomQuality',
       ],
-      !state.bloom.enabled,
+      !isBloomTuningActive(state),
     );
 
     const abDef = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};

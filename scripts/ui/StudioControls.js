@@ -12,6 +12,7 @@ import {
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
+  isKeyLightOnlyShadowCastingRenderQuality,
 } from '../constants.js';
 import {
   bindBaseSurfaceControls,
@@ -526,12 +527,6 @@ export class StudioControls {
         });
         this.stateStore.set('lightsCastShadows', true);
         this.eventBus.emit('lights:cast-shadows', true);
-        ['key', 'fill', 'rim'].forEach((lightId) => {
-          this.stateStore.set(`lights.${lightId}.castShadows`, true);
-          this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: true });
-          const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
-          if (castShadowsInput) castShadowsInput.checked = true;
-        });
         if (this.ui.inputs.lightsCastShadows) {
           this.ui.inputs.lightsCastShadows.checked = true;
         }
@@ -611,14 +606,7 @@ export class StudioControls {
     const handleIndividualLightToggle = (lightId, enabled) => {
       this.stateStore.set(`lights.${lightId}.enabled`, enabled);
       this.eventBus.emit('lights:update', { lightId, property: 'enabled', value: enabled });
-      
-      if (lightId !== 'ambient') {
-        this.stateStore.set(`lights.${lightId}.castShadows`, enabled);
-        this.eventBus.emit('lights:update', { lightId, property: 'castShadows', value: enabled });
-        const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
-        if (castShadowsInput) castShadowsInput.checked = enabled;
-      }
-      
+
       if (enabled) {
         const masterEnabled = this.stateStore.getState().lightsEnabled;
         if (!masterEnabled) {
@@ -1067,7 +1055,11 @@ export class StudioControls {
       
       const castShadowsInput = this.ui.inputs[`${lightId}LightCastShadows`];
       if (castShadowsInput) {
-        castShadowsInput.checked = lightState.castShadows === true;
+        const goboOn =
+          lightId === 'key' && !!this.stateStore.getState().gobo?.enabled;
+        castShadowsInput.checked = goboOn
+          ? false
+          : lightState.castShadows === true;
       }
     }
     
@@ -1078,13 +1070,21 @@ export class StudioControls {
   }
 
   _syncLightShadowControlDisabledState(shadowsEnabled, lightsEnabled = true) {
-    const mute = !(!!shadowsEnabled && !!lightsEnabled);
+    const shadowsOn = !!(shadowsEnabled && lightsEnabled);
+    const mute = !shadowsOn;
     this.ui.setControlDisabled('lightsShadowQuality', mute);
     this.ui.setControlDisabled('lightsShadowSoftness', mute);
     this.ui.setControlDisabled('lightsShadowColor', mute);
     this.ui.setControlDisabled('lightsShadowOpacity', mute);
     this.ui.setControlDisabled('lightsShadowContactOffset', mute);
     this.ui.setControlDisabled('lightsShadowTwoSided', mute);
+    const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(
+      this.stateStore.getState().renderQuality,
+    );
+    this.ui.setControlDisabled(
+      ['fillLightCastShadows', 'rimLightCastShadows'],
+      mute || keyOnly,
+    );
   }
 }
 

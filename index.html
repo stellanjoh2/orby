@@ -1026,21 +1026,23 @@
                     />
                     <span class="value" data-output="creativeLookPatternScale">1.00×</span>
                   </label>
-                  <div class="slider-line">
-                    <span data-tooltip="Viewport bloom on Shader Lab — uses Camera &amp; FX bloom sliders. Omitted from PNG export, including transparent PNGs.">Bloom</span>
-                    <label class="effect-toggle">
-                      <input type="checkbox" id="creativeLookBloomEnabled" />
-                      <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Enable bloom with Shader Lab</span>
-                    </label>
+                  <div class="creative-look-bloom-block">
+                    <div class="slider-line slider-line--toggle-only">
+                      <span data-tooltip="Viewport bloom for Shader Lab — uses Camera &amp; FX bloom sliders (threshold, strength, radius, quality). Separate from the Cam/FX bloom toggle. Omitted from PNG export, including transparent PNGs.">Bloom</span>
+                      <label class="effect-toggle">
+                        <input type="checkbox" id="creativeLookBloomEnabled" />
+                        <span class="effect-indicator" aria-hidden="true"></span>
+                        <span class="sr-only">Enable bloom with Shader Lab</span>
+                      </label>
+                    </div>
+                    <p
+                      class="creative-look-bloom-note"
+                      data-tooltip="Skips Cam/FX grading while on — background reads blacker and contrast jumps. Extra fullscreen pass each frame. Not in PNG exports, including transparent."
+                    >
+                      <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                      Skips Cam/FX grading — darker BG, higher contrast. Performance-heavy; viewport only, not in PNG exports (including transparent).
+                    </p>
                   </div>
-                  <p
-                    class="creative-look-bloom-note"
-                    data-tooltip="Skips Cam/FX grading while on — background reads blacker and contrast jumps. Extra fullscreen pass each frame. Not in PNG exports, including transparent."
-                  >
-                    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-                    Skips Cam/FX grading — darker BG, higher contrast. Performance-heavy; viewport only, not in PNG exports (including transparent).
-                  </p>
                   <button
                     type="button"
                     id="creativeLookPauseAnimations"

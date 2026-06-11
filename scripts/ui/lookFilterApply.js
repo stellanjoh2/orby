@@ -1,6 +1,7 @@
 import {
   cameraShadowsUiToShader,
   effectiveVignetteIntensity,
+  isBloomTuningActive,
   isVignetteUiEnabled,
   sanitizeDof,
 } from '../constants.js';
@@ -75,7 +76,7 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
         'bloomColor',
         'bloomQuality',
       ],
-      !b.bloom.enabled,
+      !isBloomTuningActive(b),
     );
     ui.setEffectControlsDisabled(['grainIntensity'], !b.grain.enabled);
     ui.setEffectControlsDisabled(

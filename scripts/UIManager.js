@@ -18,6 +18,7 @@ import {
   getAntiAliasingUiState,
   isKeyLightOnlyShadowCastingRenderQuality,
   isBloomPipelineActive,
+  isBloomTuningActive,
   sanitizeDof,
   sanitizeAmbientOcclusion,
   effectiveVignetteIntensity,
@@ -1689,7 +1690,7 @@ export class UIManager {
         this.eventBus.emit('render:bloom', payload.bloom);
         this.setEffectControlsDisabled(
           ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
-          !payload.bloom.enabled,
+          !isBloomTuningActive(this.stateStore.getState()),
         );
       }
 
@@ -2834,7 +2835,7 @@ export class UIManager {
     this.inputs.toggleBloom.checked = !!state.bloom.enabled;
     this.setEffectControlsDisabled(
       ['bloomThreshold', 'bloomStrength', 'bloomRadius', 'bloomColor', 'bloomQuality'],
-      !state.bloom.enabled,
+      !isBloomTuningActive(state),
     );
 
     if (this.inputs.lensDirtStrength && state.lensDirt) {

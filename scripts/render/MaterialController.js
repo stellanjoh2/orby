@@ -3059,15 +3059,19 @@ export class MaterialController {
         let geometry = child.geometry;
         let isCloned = false;
 
-        // If onlyVisibleFaces is enabled, push vertices along normals
+        // If onlyVisibleFaces is enabled, push vertices along normals (smooth after merge).
         if (onlyVisibleFaces) {
           geometry = child.geometry.clone();
           isCloned = true;
-          const positions = geometry.attributes.position;
-
-          if (!geometry.attributes.normal) {
-            geometry.computeVertexNormals();
+          const merged = mergeVertices(geometry, 1e-4);
+          if (merged !== geometry) {
+            geometry.dispose();
+            geometry = merged;
           }
+          geometry.deleteAttribute('normal');
+          geometry.computeVertexNormals();
+
+          const positions = geometry.attributes.position;
 
           const offset = WIREFRAME_OFFSET;
           for (let i = 0; i < positions.count; i++) {

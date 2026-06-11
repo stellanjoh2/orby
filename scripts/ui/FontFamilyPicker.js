@@ -1,3 +1,5 @@
+import { cssFontFamilyFromName } from '../scene/localFontPreviewCache.js';
+
 const PREVIEW_FONT_SIZE = '1.05rem';
 
 /**
@@ -90,9 +92,18 @@ export class FontFamilyPicker {
     if (this.hidden) this.hidden.value = this._value;
     if (this.triggerLabel) {
       this.triggerLabel.textContent = this._label;
-      this.triggerLabel.style.fontFamily = 'inherit';
+      const family =
+        this._fonts.find((f) => f.postscriptName === this._value)?.family || label;
+      if (this._value && family && family !== '— Select font —') {
+        this._applyPreviewStyles(this.triggerLabel, family);
+      } else {
+        this.triggerLabel.style.fontFamily = 'inherit';
+        this.triggerLabel.style.fontSize = '';
+      }
     }
-    if (this._value) void this._applyPreviewToElement(this.triggerLabel, this._value);
+    if (this._value && this.triggerLabel?.style.fontFamily === 'inherit') {
+      void this._applyPreviewToElement(this.triggerLabel, this._value);
+    }
     this._syncSelectedOption();
   }
 
@@ -237,6 +248,7 @@ export class FontFamilyPicker {
       const label = document.createElement('span');
       label.className = 'font-extrude-family-option-label';
       label.textContent = font.family;
+      this._applyPreviewStyles(label, font.family);
       li.appendChild(label);
       this.listbox.appendChild(li);
     }
@@ -288,10 +300,29 @@ export class FontFamilyPicker {
 
   /**
    * @param {HTMLElement | null} el
+   * @param {string} familyName
+   */
+  _applyPreviewStyles(el, familyName) {
+    if (!el || !familyName) return;
+    el.style.fontFamily = cssFontFamilyFromName(familyName);
+    el.style.fontSize = PREVIEW_FONT_SIZE;
+  }
+
+  /**
+   * @param {HTMLElement | null} el
    * @param {string} postscriptName
    */
   async _applyPreviewToElement(el, postscriptName) {
     if (!el || !postscriptName || !this.getPreviewFontFamily) return;
+
+    const optionFamily = el.closest('.font-extrude-family-option')?.dataset?.family;
+    if (optionFamily) {
+      this._applyPreviewStyles(el, optionFamily);
+      el.dataset.previewPs = postscriptName;
+      el.dataset.previewReady = '1';
+      return;
+    }
+
     if (el.dataset.previewPs === postscriptName && el.dataset.previewReady === '1') return;
     el.dataset.previewPs = postscriptName;
     el.dataset.previewReady = '0';

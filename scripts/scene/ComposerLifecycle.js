@@ -93,8 +93,8 @@ export class ComposerLifecycle {
   }
 
   /**
-   * UnrealBloomPass on Shader Lab caused black bands — disable it while Shader Lab is on.
-   * Viewport bloom uses {@link CreativeLookViewportBloom} via pushCreativeLookViewportPresentation.
+   * UnrealBloomPass on the full grading stack caused black bands — disable it while Shader Lab is on.
+   * Viewport bloom uses the same UnrealBloomPass in a slim stack via pushCreativeLookViewportPresentation.
    */
   applyCreativeLookBloomSuppression() {
     const creativeLookOn = this.getCreativeLookEnabled() === true;
@@ -113,25 +113,40 @@ export class ComposerLifecycle {
   }
 
   /**
-   * Interactive viewport + PNG export — identical EffectComposer sequence.
+   * Shared composer render — live viewport, PNG export, and video capture use the same pass
+   * sequence so Shader Lab viewport bloom cannot drift from export.
+   * @param {{ transparent?: boolean, beforeRender?: () => void }} [opts]
    */
-  renderComposerPass() {
+  _runComposerWithCreativeLookPrep({ transparent = false, beforeRender } = {}) {
     if (!this.composer) return;
-    this.beforeComposerRender?.();
+    beforeRender?.();
     const viewportBloom = this.getCreativeLookViewportBloomActive() === true;
     if (viewportBloom) {
+      this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       this.postPipeline?.pushCreativeLookViewportPresentation?.();
     } else {
       this.applyCreativeLookBloomSuppression();
     }
-    this.ensureComposerBuffersMatchRenderer();
-    this.resetRendererViewportToCanvas();
-    this.syncRendererClearForSceneBackground();
-    this.composer.render();
-    if (viewportBloom) {
-      this.postPipeline?.popCreativeLookViewportPresentation?.();
+    try {
+      this.ensureComposerBuffersMatchRenderer();
+      this.resetRendererViewportToCanvas();
+      if (!transparent) {
+        this.syncRendererClearForSceneBackground();
+      }
+      this.composer.render();
+    } finally {
+      if (viewportBloom) {
+        this.postPipeline?.popCreativeLookViewportPresentation?.();
+      }
+      this.resetRendererViewportToCanvas();
     }
-    this.resetRendererViewportToCanvas();
+  }
+
+  /** Interactive viewport — same EffectComposer sequence as PNG/video export. */
+  renderComposerPass() {
+    this._runComposerWithCreativeLookPrep({
+      beforeRender: () => this.beforeComposerRender?.(),
+    });
   }
 
   /**
@@ -148,15 +163,7 @@ export class ComposerLifecycle {
    * @param {{ transparent?: boolean }} [opts] — skip opaque background clear when exporting alpha.
    */
   renderComposerPassForExport({ transparent = false } = {}) {
-    if (!this.composer) return;
-    this.applyCreativeLookBloomSuppression();
-    this.ensureComposerBuffersMatchRenderer();
-    this.resetRendererViewportToCanvas();
-    if (!transparent) {
-      this.syncRendererClearForSceneBackground();
-    }
-    this.composer.render();
-    this.resetRendererViewportToCanvas();
+    this._runComposerWithCreativeLookPrep({ transparent });
   }
 
   /**

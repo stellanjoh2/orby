@@ -1182,7 +1182,7 @@ export class SceneManager {
     } else if (this.postPipeline?.anamorphicBloomPass?.uniforms?.resolution?.value) {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
-    this.postPipeline?.creativeLookViewportBloom?.setSize(width, height);
+    this.postPipeline?.creativeLookViewportBloom?.setSize(width, height, bloomScale);
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
     this.diagnosticsController?.syncBoneLineResolution?.(width, height);
@@ -1558,12 +1558,6 @@ export class SceneManager {
     // PCFSoft ignores shadow.radius; softness slider drives radius on PCFShadowMap only.
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this._syncEffectiveCastShadows();
-    const shadowsOn = !!state.lightsEnabled && !!state.lightsCastShadows;
-    const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(state.renderQuality);
-    this.ui?.setControlDisabled?.(
-      ['fillLightCastShadows', 'rimLightCastShadows'],
-      !shadowsOn || keyOnly,
-    );
   }
 
   _hasHdriPreset(preset) {
@@ -2564,10 +2558,7 @@ export class SceneManager {
         this.stateStore.set(`lights.${id}.enabled`, true);
       });
       if (state.lightsCastShadows) {
-        const castIds = castShadowLightIdsForGlobalToggle(state.renderQuality);
-        ['key', 'fill', 'rim'].forEach((id) => {
-          this.stateStore.set(`lights.${id}.castShadows`, castIds.includes(id));
-        });
+        this._ensureDefaultPerLightCastShadowsInState();
       }
     });
   }
@@ -2608,7 +2599,10 @@ export class SceneManager {
     const lightsState = state.lights ?? {};
     const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(state.renderQuality);
     ['key', 'fill', 'rim'].forEach((lightId) => {
-      let perLight = globalCast && lightsState[lightId]?.castShadows === true;
+      let perLight =
+        globalCast
+        && lightsState[lightId]?.enabled === true
+        && lightsState[lightId]?.castShadows === true;
       if (keyOnly && lightId !== 'key') {
         perLight = false;
       }
@@ -2763,6 +2757,25 @@ export class SceneManager {
     this.goboProjection?.syncUniformsOnScene(this._getGoboSceneTargets());
   }
 
+  /**
+   * When global shadows turn on and no per-light cast flag is set, apply quality-tier defaults.
+   * Preserves existing per-light preferences across global shadow toggles.
+   */
+  _ensureDefaultPerLightCastShadowsInState() {
+    const state = this.stateStore.getState();
+    const lights = state.lights ?? {};
+    const anyCast = ['key', 'fill', 'rim'].some(
+      (id) => lights[id]?.castShadows === true,
+    );
+    if (anyCast) return;
+    const castIds = castShadowLightIdsForGlobalToggle(state.renderQuality);
+    this.stateStore.batch(() => {
+      ['key', 'fill', 'rim'].forEach((id) => {
+        this.stateStore.set(`lights.${id}.castShadows`, castIds.includes(id));
+      });
+    });
+  }
+
   setLightsCastShadows(enabled) {
     const next = !!enabled;
     this.lightsCastShadows = next;
@@ -2771,18 +2784,7 @@ export class SceneManager {
       this.stateStore.set('lightsCastShadows', next);
     }
     if (next) {
-      const castIds = castShadowLightIdsForGlobalToggle(state.renderQuality);
-      this.stateStore.batch(() => {
-        ['key', 'fill', 'rim'].forEach((id) => {
-          this.stateStore.set(`lights.${id}.castShadows`, castIds.includes(id));
-        });
-      });
-    } else {
-      this.stateStore.batch(() => {
-        ['key', 'fill', 'rim'].forEach((id) => {
-          this.stateStore.set(`lights.${id}.castShadows`, false);
-        });
-      });
+      this._ensureDefaultPerLightCastShadowsInState();
     }
     this._syncEffectiveCastShadows();
     this._syncShadowAndGobo();

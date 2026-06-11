@@ -57,7 +57,8 @@ export function normalizeAnimationDisplayFps(fps) {
   return ANIMATION_DISPLAY_FPS_OPTIONS.includes(n) ? n : ANIMATION_DISPLAY_FPS;
 }
 
-export const WIREFRAME_OFFSET = 0.002; // Units to push wireframe vertices along normals
+/** Push wireframe overlay along normals — 1 mm (studio units: 1 unit = 1 m). */
+export const WIREFRAME_OFFSET = 0.001;
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = 2;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = 2;
 export const WIREFRAME_OPACITY_VISIBLE = 1.0;
@@ -508,6 +509,11 @@ export function isCreativeLookViewportPostActive(state) {
   const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
   const tier = resolveRenderQualityTier(state.renderQuality);
   return !!cl.enabled && !!cl.viewportBloom && !tier.forceBloomOff;
+}
+
+/** Cam/FX bloom sliders stay usable while Shader Lab viewport bloom is on. */
+export function isBloomTuningActive(state) {
+  return !!state?.bloom?.enabled || isCreativeLookViewportPostActive(state);
 }
 
 /**

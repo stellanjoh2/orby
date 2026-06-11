@@ -7179,6 +7179,21 @@ body.ui-hidden .shelf {
   gap: var(--shelf-control-gap);
 }
 
+/* Foldout uses flex gap — drop per-row margin so spacing matches shelf rhythm once. */
+.creative-look-foldout-body > :is(.slider-line, .select-line, .color-line) {
+  margin-bottom: 0;
+}
+
+.creative-look-bloom-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.creative-look-bloom-block > :is(.slider-line, .select-line) {
+  margin-bottom: 0;
+}
+
 /* Same intrinsic width as Snap to Mesh ghost CTAs — avoid column stretch from .ghost-btn */
 .creative-look-foldout-body > .creative-look-pause-btn {
   align-self: flex-start;

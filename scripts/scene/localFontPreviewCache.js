@@ -4,6 +4,13 @@ function previewFamilyId(postscriptName) {
   return `OrbyPreview_${safe}`;
 }
 
+/** CSS font-family stack for an installed or registered family name. */
+export function cssFontFamilyFromName(familyName) {
+  if (!familyName) return 'inherit';
+  const escaped = String(familyName).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `"${escaped}", sans-serif`;
+}
+
 /** Browser OTS rejects web fonts above ~128MB; skip CSS preview well below that. */
 const MAX_CSS_PREVIEW_FONT_BYTES = 32 * 1024 * 1024;
 
@@ -173,8 +180,21 @@ export class LocalFontPreviewCache {
     /** Faces that cannot be used for CSS preview (OTS / size / load failure). */
     /** @type {Set<string>} */
     this._cssPreviewBlocked = new Set();
+    /** Installed faces — preview via CSS family name (no FontFace blob / OTS). */
+    /** @type {Map<string, string>} */
+    this._systemFamilies = new Map();
     this._localFontsSupported =
       typeof window !== 'undefined' && typeof window.queryLocalFonts === 'function';
+  }
+
+  /**
+   * Map a Local Font Access postscript name to its CSS family for list/live previews.
+   * @param {string} postscriptName
+   * @param {string} familyName
+   */
+  registerSystemFamily(postscriptName, familyName) {
+    if (!postscriptName || !familyName) return;
+    this._systemFamilies.set(postscriptName, familyName);
   }
 
   /**
@@ -182,7 +202,14 @@ export class LocalFontPreviewCache {
    * @returns {Promise<string>} CSS font-family for preview (quoted)
    */
   async getFontFamily(postscriptName) {
-    if (!postscriptName || !this._localFontsSupported) {
+    if (!postscriptName) return 'inherit';
+
+    const systemFamily = this._systemFamilies.get(postscriptName);
+    if (systemFamily) {
+      return cssFontFamilyFromName(systemFamily);
+    }
+
+    if (!this._localFontsSupported) {
       return 'inherit';
     }
     if (this._cssPreviewBlocked.has(postscriptName)) {
@@ -222,6 +249,7 @@ export class LocalFontPreviewCache {
     }
     this._loading.clear();
     this._cssPreviewBlocked.clear();
+    this._systemFamilies.clear();
   }
 
   /** @param {string} postscriptName */

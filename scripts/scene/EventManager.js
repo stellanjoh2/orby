@@ -446,6 +446,9 @@ export class EventManager {
         s._syncEffectiveCastShadows();
       } else {
         s.lightsController?.updateLightProperty(lightId, property, value);
+        if (property === 'enabled' && lightId !== 'ambient') {
+          s._syncEffectiveCastShadows();
+        }
       }
       if (
         lightId === 'key'

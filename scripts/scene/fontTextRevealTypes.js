@@ -213,7 +213,22 @@ export function computeGlyphRevealLandSec(
 }
 
 /**
- * Raw 0–1 progress for one glyph's slot (before easing).
+ * Seconds for scale/fade/slide reveal within one glyph's stagger window.
+ * When depth travel is active, reveal completes when the glyph lands (slideTime × slot),
+ * not at the end of the full slot — otherwise the last letter stalls mid-grow at duration.
+ * @param {number} slot
+ * @param {FontRevealTimingOptions} [timing]
+ * @returns {number}
+ */
+export function computeGlyphRevealWindowSec(slot, timing = {}) {
+  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
+  if (slideDepth <= 0) return slot;
+  const slideTime = clampFontRevealSlideTime(timing.slideTime);
+  return slot * slideTime;
+}
+
+/**
+ * Raw 0–1 progress for one glyph's reveal window (before easing).
  * @param {number} glyphIndex
  * @param {number} glyphCount
  * @param {number} elapsedSec
@@ -230,8 +245,10 @@ export function computeGlyphSlotProgress(
 ) {
   if (totalDurationSec <= 0 || glyphCount <= 0) return 1;
   const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
-  const t = (elapsedSec - glyphIndex * slot) / slot;
-  if (t <= 0) return 0;
+  const elapsedInGlyph = elapsedSec - glyphIndex * slot;
+  if (elapsedInGlyph <= 0) return 0;
+  const revealWindowSec = computeGlyphRevealWindowSec(slot, timing);
+  const t = elapsedInGlyph / Math.max(0.001, revealWindowSec);
   if (t >= 1) return 1;
   return t;
 }
@@ -285,8 +302,7 @@ export function computeGlyphSlideProgress(
   const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
   const elapsedInGlyph = elapsedSec - glyphIndex * slot;
   if (elapsedInGlyph <= 0) return 0;
-  const slideTime = clampFontRevealSlideTime(timing.slideTime);
-  const slideDurationSec = slot * slideTime;
+  const slideDurationSec = computeGlyphRevealWindowSec(slot, timing);
   return Math.min(1, elapsedInGlyph / Math.max(0.001, slideDurationSec));
 }
 

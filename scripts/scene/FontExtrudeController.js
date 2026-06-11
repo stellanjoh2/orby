@@ -246,6 +246,14 @@ export class FontExtrudeController {
   }
 
   /**
+   * @param {string} postscriptName
+   * @param {string} familyName
+   */
+  registerSystemFontFamily(postscriptName, familyName) {
+    this.previewCache.registerSystemFamily(postscriptName, familyName);
+  }
+
+  /**
    * @param {string} key
    * @param {File} file
    */

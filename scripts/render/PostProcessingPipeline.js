@@ -233,10 +233,46 @@ export class PostProcessingPipeline {
     this._unlitPresentationSnapshot = null;
     /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
     this._creativeLookViewportSnapshot = null;
+    /** @type {object | null} — last `state.bloom` for Shader Lab viewport bloom prep */
+    this._lastBloomSettings = null;
   }
 
   /**
-   * Shader Lab + bloom: viewport-only stack — scene → custom bloom → screen (no other post).
+   * Sync UnrealBloom + tint from Camera & FX bloom sliders before the slim viewport stack runs.
+   * Uses the same pass as normal bloom (soft pyramid blur) — avoids custom-pass canvas bugs.
+   */
+  prepareCreativeLookViewportPresentation() {
+    const settings = this._lastBloomSettings;
+    if (!settings || !this.bloomPass) return;
+
+    const thresh = Number(settings.threshold);
+    this.bloomPass.threshold = Number.isFinite(thresh)
+      ? THREE.MathUtils.clamp(thresh * 0.78 + 0.08, 0.05, 0.92)
+      : 0.65;
+    const strength = Number(settings.strength);
+    this.bloomPass.strength = Number.isFinite(strength) ? Math.max(0, strength) : 0.2;
+    const rad = Number(settings.radius);
+    this.bloomPass.radius = Number.isFinite(rad)
+      ? THREE.MathUtils.clamp(rad, 0, 1)
+      : 0.2;
+
+    if (this.bloomCompositeController) {
+      this.bloomCompositeController.setAnamorphic({}, { forceOff: true });
+      this.bloomCompositeController.setBloomTint(true, settings);
+    } else if (this.bloomTintPass) {
+      this.bloomTintPass.enabled = true;
+      this.bloomTintPass.uniforms.tint.value = new THREE.Color(settings.color ?? '#ffe9cc');
+      const tintStrength = THREE.MathUtils.clamp(
+        (Number.isFinite(strength) ? strength : 0.2) * 7.5,
+        0,
+        15.0,
+      );
+      this.bloomTintPass.uniforms.strength.value = tintStrength;
+    }
+  }
+
+  /**
+   * Shader Lab + bloom: viewport-only stack — scene → UnrealBloom → tint → screen (no grading).
    */
   pushCreativeLookViewportPresentation() {
     if (this._creativeLookViewportSnapshot) return;
@@ -253,8 +289,18 @@ export class PostProcessingPipeline {
         continue;
       }
       if (key === 'creativeLookViewportBloomPass') {
+        pass.enabled = false;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'bloomPass') {
         pass.enabled = true;
-        pass.renderToScreen = true;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'bloomCompositePass' || key === 'bloomTintPass') {
+        pass.enabled = true;
+        pass.renderToScreen = false;
         continue;
       }
       pass.enabled = false;
@@ -349,10 +395,27 @@ export class PostProcessingPipeline {
    */
   updateBloom(settings) {
     if (!settings) return;
+    this._lastBloomSettings = settings;
     this.creativeLookViewportBloom?.updateSettings(settings);
+
+    const thresh = Number(settings.threshold);
+    const strength = Number(settings.strength);
+    const rad = Number(settings.radius);
+    if (this.bloomPass) {
+      if (Number.isFinite(thresh)) {
+        this.bloomPass.threshold = THREE.MathUtils.clamp(thresh, 0, 1);
+      }
+      if (Number.isFinite(strength)) {
+        this.bloomPass.strength = Math.max(0, strength);
+      }
+      if (Number.isFinite(rad)) {
+        this.bloomPass.radius = THREE.MathUtils.clamp(rad, 0, 1);
+      }
+    }
+
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
-    const active = wants && settings.strength > 0.0001;
+    const active = wants && (Number(settings.strength ?? 0) > 0.0001);
     if (this.bloomPass) {
       this.bloomPass.enabled = active;
     }
@@ -360,9 +423,6 @@ export class PostProcessingPipeline {
       if (!active) {
         this.bloomCompositeController.setBloomTint(false);
       } else {
-        this.bloomPass.threshold = settings.threshold;
-        this.bloomPass.strength = settings.strength;
-        this.bloomPass.radius = settings.radius;
         this.bloomCompositeController.setBloomTint(true, settings);
       }
       return;
@@ -371,11 +431,12 @@ export class PostProcessingPipeline {
       this.bloomTintPass.enabled = active;
     }
     if (!active) return;
-    this.bloomPass.threshold = settings.threshold;
-    this.bloomPass.strength = settings.strength;
-    this.bloomPass.radius = settings.radius;
     this.bloomTintPass.uniforms.tint.value = new THREE.Color(settings.color);
-    const tintStrength = THREE.MathUtils.clamp(settings.strength * 7.5, 0, 15.0);
+    const tintStrength = THREE.MathUtils.clamp(
+      (Number.isFinite(strength) ? strength : 0.2) * 7.5,
+      0,
+      15.0,
+    );
     this.bloomTintPass.uniforms.strength.value = tintStrength;
   }
 
