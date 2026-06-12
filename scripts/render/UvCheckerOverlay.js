@@ -93,10 +93,10 @@ export class UvCheckerOverlay {
     if (this.enabled && this._model) this.rebuild();
   }
 
-  setEnabled(enabled) {
+  setEnabled(enabled, rebuild = true) {
     this.enabled = !!enabled;
     if (this.enabled) {
-      this.rebuild();
+      if (rebuild) this.rebuild();
     } else {
       this.clear();
     }
@@ -118,19 +118,21 @@ export class UvCheckerOverlay {
     }
   }
 
-  setStyle(style) {
+  setStyle(style, rebuild = true) {
     const next = normalizeStyle(style);
     if (this.style === next) return;
     this.style = next;
-    if (this.enabled) this.rebuild();
+    if (this.enabled && rebuild) this.rebuild();
   }
 
   /**
    * Bulk update used on scene load and reset paths.
    * @param {{ enabled?: boolean, scale?: number, style?: string }} [partial]
+   * @param {{ rebuild?: boolean }} [options]
    */
-  applySettings(partial = {}) {
+  applySettings(partial = {}, options = {}) {
     const { enabled, scale, style } = partial;
+    const shouldRebuild = options.rebuild !== false;
     if (Number.isFinite(scale)) {
       this.scale = clampScale(scale);
     }
@@ -138,89 +140,120 @@ export class UvCheckerOverlay {
       this.style = normalizeStyle(style);
     }
     if (typeof enabled === 'boolean') {
-      this.setEnabled(enabled);
-    } else if (this.enabled) {
+      this.setEnabled(enabled, shouldRebuild);
+    } else if (this.enabled && shouldRebuild) {
       this.rebuild();
     }
   }
 
   rebuild() {
+    void this.rebuildAsync();
+  }
+
+  /** @returns {Promise<void>} Resolves when overlay meshes are ready (or the rebuild was superseded). */
+  rebuildAsync() {
     if (!this._model || !this.enabled) {
       this.clear();
-      return;
+      return Promise.resolve();
     }
+
     // Warm the cache for sibling styles so the next style toggle has no network wait.
     this._preloadAllStyles();
 
     const myToken = ++this._rebuildToken;
     const styleAtRequest = this.style;
 
-    this._ensureTexture(styleAtRequest, (sourceTexture) => {
-      // A newer rebuild (or clear) has superseded us — bail without touching state.
-      if (myToken !== this._rebuildToken) return;
-      // Defensive: state may have flipped between the bump above and the callback firing.
-      if (!this.enabled || !this._model || this.style !== styleAtRequest) return;
-
-      const previousMeshes = this.overlayMeshes;
-      const repeat = clampScale(this.scale);
-      const newMeshes = [];
-
-      this._model.traverse((child) => {
-        if (
-          !child.isMesh
-          || !child.geometry
-          || child.userData.isWireframeOverlay
-          || child.userData.isUvCheckerOverlay
-        ) return;
-        if (child.isInstancedMesh) return;
-
-        const tex = sourceTexture.clone();
-        tex.needsUpdate = true;
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.repeat.set(repeat, repeat);
-
-        const material = new THREE.MeshBasicMaterial({
-          map: tex,
-          side: THREE.DoubleSide,
-          toneMapped: false,
-          polygonOffset: true,
-          polygonOffsetFactor: -2,
-          polygonOffsetUnits: -2,
-          depthWrite: false,
-        });
-        material.userData.uvCheckerOwnedTexture = true;
-
-        const overlay = child.isSkinnedMesh
-          ? new THREE.SkinnedMesh(child.geometry, material)
-          : new THREE.Mesh(child.geometry, material);
-        overlay.userData.originalMesh = child;
-        overlay.userData.isUvCheckerOverlay = true;
-        overlay.name = child.name ? `${child.name}_uvchecker` : 'uvchecker';
-        overlay.renderOrder = 998;
-
-        if (child.isSkinnedMesh) {
-          overlay.bind(child.skeleton, child.bindMatrix);
-          if (child.bindMatrixInverse) {
-            overlay.bindMatrixInverse = child.bindMatrixInverse.clone();
-          }
+    return new Promise((resolve) => {
+      this._ensureTexture(styleAtRequest, (sourceTexture) => {
+        if (myToken !== this._rebuildToken) {
+          resolve();
+          return;
+        }
+        if (!this.enabled || !this._model || this.style !== styleAtRequest) {
+          resolve();
+          return;
+        }
+        if (!sourceTexture) {
+          resolve();
+          return;
         }
 
-        const hostParent = child.parent;
-        if (hostParent) {
-          hostParent.add(overlay);
-        } else {
-          this._model.add(overlay);
-        }
-        newMeshes.push(overlay);
+        this._commitRebuild(sourceTexture, myToken, styleAtRequest);
+        resolve();
       });
-
-      // Atomic swap: the new clones are parented and ready to render before we tear down
-      // the previous set, so style changes never expose a blank frame.
-      this.overlayMeshes = newMeshes;
-      this._disposeMeshes(previousMeshes);
     });
+  }
+
+  /**
+   * @param {THREE.Texture} sourceTexture
+   * @param {number} myToken
+   * @param {string} styleAtRequest
+   */
+  _commitRebuild(sourceTexture, myToken, styleAtRequest) {
+    if (myToken !== this._rebuildToken) return;
+    if (!this.enabled || !this._model || this.style !== styleAtRequest) return;
+
+    const previousMeshes = this.overlayMeshes;
+    const repeat = clampScale(this.scale);
+    const newMeshes = [];
+
+    this._model.traverse((child) => {
+      if (
+        !child.isMesh
+        || !child.geometry
+        || child.userData.isWireframeOverlay
+        || child.userData.isUvCheckerOverlay
+        || child.userData.isNormalViewOverlay
+        || child.userData.isTopologyWarningsOverlay
+      ) return;
+      if (child.isInstancedMesh) return;
+
+      const tex = sourceTexture.clone();
+      tex.needsUpdate = true;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(repeat, repeat);
+
+      const material = new THREE.MeshBasicMaterial({
+        map: tex,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+        depthWrite: false,
+      });
+      material.userData.uvCheckerOwnedTexture = true;
+
+      const overlay = child.isSkinnedMesh
+        ? new THREE.SkinnedMesh(child.geometry, material)
+        : new THREE.Mesh(child.geometry, material);
+      overlay.userData.originalMesh = child;
+      overlay.userData.isUvCheckerOverlay = true;
+      overlay.name = child.name ? `${child.name}_uvchecker` : 'uvchecker';
+      overlay.renderOrder = 998;
+
+      if (child.isSkinnedMesh) {
+        overlay.bind(child.skeleton, child.bindMatrix);
+        if (child.bindMatrixInverse) {
+          overlay.bindMatrixInverse = child.bindMatrixInverse.clone();
+        }
+      }
+
+      const hostParent = child.parent;
+      if (hostParent) {
+        hostParent.add(overlay);
+      } else {
+        this._model.add(overlay);
+      }
+      newMeshes.push(overlay);
+    });
+
+    // Atomic swap: the new clones are parented and ready to render before we tear down
+    // the previous set, so style changes never expose a blank frame.
+    this.overlayMeshes = newMeshes;
+    this._disposeMeshes(previousMeshes);
   }
 
   clear() {
@@ -339,8 +372,12 @@ export class UvCheckerOverlay {
       undefined,
       (err) => {
         entry.loading = false;
+        const callbacks = entry.pending;
         entry.pending = [];
         console.error(`[UVChecker] Failed to load "${style}" texture (${url})`, err);
+        for (const cb of callbacks) {
+          cb(null);
+        }
       },
     );
   }

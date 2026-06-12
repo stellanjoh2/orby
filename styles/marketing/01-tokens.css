@@ -210,11 +210,8 @@
     min(50rem, calc(800px * var(--orby-marketing-scale)))
   );
   --orby-marketing-png-marquee-gap: calc(300px * var(--orby-marketing-gutter-scale));
-  --orby-marketing-support-size: clamp(
-    14px,
-    calc(14px + 0.4px * (1 - var(--orby-marketing-wide-type-ramp))),
-    14px
-  );
+  /* Pill labels + copy toast — 16px @ 1920–2560 */
+  --orby-marketing-support-size: 16px;
   /* Footer meta line — 14px @ 1920, 16px @ 2560 */
   --orby-marketing-meta-size: clamp(
     14px,
@@ -390,11 +387,7 @@
       calc((var(--orby-marketing-split-media-ref-width, 160rem) - 100vw) / 40rem),
       1
     );
-    --orby-marketing-support-size: clamp(
-      14px,
-      calc(14px + 0.4px * (1 - var(--orby-marketing-wide-type-ramp))),
-      14px
-    );
+    --orby-marketing-support-size: 16px;
     --orby-dropzone-secondary-size: clamp(
       14px,
       calc(14px + 2px * (1 - var(--orby-marketing-wide-type-ramp))),

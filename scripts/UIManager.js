@@ -11,6 +11,10 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   DEFAULT_MATERIAL_METALNESS,
+  MATERIAL_METALNESS_TOOLTIP,
+  MATERIAL_METALNESS_MR_MAP_TOOLTIP,
+  MATERIAL_ROUGHNESS_TOOLTIP,
+  MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
@@ -37,6 +41,7 @@ import { UIHelpers } from './ui/UIHelpers.js';
 import { MeshControls } from './ui/MeshControls.js';
 import { FbxMapSlotsControls } from './ui/FbxMapSlotsControls.js';
 import { MapInspectControls } from './ui/MapInspectControls.js';
+import { TopologyWarningsControls } from './ui/TopologyWarningsControls.js';
 import { StudioControls } from './ui/StudioControls.js';
 import { GoboControls } from './ui/GoboControls.js';
 import { RenderControls } from './ui/RenderControls.js';
@@ -170,6 +175,14 @@ export class UIManager {
       (mesh) => window.orby?.scene?.materialController?.isWindowMesh(mesh) ?? false,
       () => window.orby?.scene?.materialController?.originalMaterials ?? null,
     );
+    this.topologyWarningsControls = new TopologyWarningsControls(
+      this.eventBus,
+      this.stateStore,
+      this,
+    );
+    this.topologyWarningsControls.setModelAccessor(
+      () => window.orby?.scene?.currentModel ?? null,
+    );
     this.studioControls = new StudioControls(this.eventBus, this.stateStore, this, this.helpers);
     this.goboControls = new GoboControls(this.eventBus, this.stateStore, this, this.helpers);
     this.renderControls = new RenderControls(this.eventBus, this.stateStore, this, this.helpers);
@@ -204,12 +217,20 @@ export class UIManager {
       this.stateStore,
       {
         setHdriActive: (hdri) => this.setHdriActive(hdri),
+        setHdriUploadLoaded: (name) => this.setHdriUploadLoaded(name),
         setCreativeLookActive: (preset) => this.setCreativeLookActive(preset),
         toggleCreativeLookGrid: (enabled) => this.toggleCreativeLookGrid(enabled),
         toggleHdriControls: (enabled) => this.toggleHdriControls(enabled),
         setLightColorControlsDisabled: (disabled) => this.setLightColorControlsDisabled(disabled),
         setLightsRotationDisabled: (disabled) => this.setLightsRotationDisabled(disabled),
-        setEffectControlsDisabled: (controls, disabled) => this.setEffectControlsDisabled(controls, disabled),
+        setEffectControlsDisabled: (controls, disabled) =>
+          this.setEffectControlsDisabled(controls, disabled),
+        showToast: (message, duration, options) => this.showToast(message, duration, options),
+        updateHdriReceiveShadowsAoDisabled: () => this.updateHdriReceiveShadowsAoDisabled?.(),
+        syncLensFlareKeyLightConnectButton: () => this.syncLensFlareKeyLightConnectButton?.(),
+        loadCustomHdriFile: (file) => window.orby?.scene?.loadCustomHdri?.(file),
+        restoreFontExtrudeSettings: (fontExtrude) =>
+          this.fontExtrudeUI?.restoreFromSettings?.(fontExtrude),
       },
     );
 
@@ -413,6 +434,8 @@ export class UIManager {
       svgExtrudeSurfaceScale: q('#svgExtrudeSurfaceScale'),
       svgExtrudeSurfaceStrength: q('#svgExtrudeSurfaceStrength'),
       reverseNormals: q('#reverseNormals'),
+      normalView: q('#normalView'),
+      normalViewMode: q('#normalViewMode'),
       centerPivot: q('#centerPivot'),
       stlSmoothingControls: q('#stlSmoothingControls'),
       stlSmoothShading: q('#stlSmoothShading'),
@@ -717,6 +740,7 @@ export class UIManager {
     this.meshControls.bind();
     this.fbxMapSlotsControls.bind();
     this.mapInspectControls.bind();
+    this.topologyWarningsControls.bind();
     this.studioControls.bind();
     this.goboControls.bind();
     this.renderControls.bind();
@@ -2349,6 +2373,28 @@ export class UIManager {
     this.animationControls?.syncAnimationTimeReference(checked, available);
   }
 
+  /** Swap Metalness/Roughness tooltips when import MR maps are present (1.0 = pass-through multiplier). */
+  syncMaterialMrMapTooltips(importHasMrMaps = false) {
+    const metalLabel = this.inputs.materialMetalness
+      ?.closest('.slider-line')
+      ?.querySelector('span[data-tooltip]');
+    const roughLabel = this.inputs.materialRoughness
+      ?.closest('.slider-line')
+      ?.querySelector('span[data-tooltip]');
+    if (metalLabel) {
+      metalLabel.setAttribute(
+        'data-tooltip',
+        importHasMrMaps ? MATERIAL_METALNESS_MR_MAP_TOOLTIP : MATERIAL_METALNESS_TOOLTIP,
+      );
+    }
+    if (roughLabel) {
+      roughLabel.setAttribute(
+        'data-tooltip',
+        importHasMrMaps ? MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP : MATERIAL_ROUGHNESS_TOOLTIP,
+      );
+    }
+  }
+
   syncMeshControls(state) {
     this.inputs.scale.value = state.scale;
     this.updateValueLabel('scale', state.scale, 'multiplier');
@@ -2387,6 +2433,7 @@ export class UIManager {
       this.inputs.materialEmissive.value = emissive;
       this.updateValueLabel('materialEmissive', emissive, 'decimal');
     }
+    this.syncMaterialMrMapTooltips(!!state.material?.importHasMrMaps);
     this.inputs.clayColor.value = state.clay.color;
     if (this.inputs.clayNormalMap) {
       this.inputs.clayNormalMap.checked = state.clay.normalMap !== false;

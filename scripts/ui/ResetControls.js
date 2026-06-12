@@ -128,6 +128,7 @@ const RESET_DIRTY_PATHS = {
     'advanced.blendSortingMitigation',
     'advanced.flipGlassNormalMapY', 'advanced.glassFrontFacesOnly',
     'advanced.uvChecker', 'advanced.uvCheckerScale', 'advanced.uvCheckerStyle',
+    'advanced.normalView', 'advanced.normalViewMode',
     'advanced.stlSmoothShading', 'advanced.stlSmoothingAngle',
     'advanced.centerPivot',
   ],
@@ -443,14 +444,15 @@ export class ResetControls {
     this.ui.buttons.applySceneSettings?.addEventListener('click', () => {
       const text = this.ui.buttons.loadSceneText?.value?.trim();
       if (text) {
-        const result = this.ui.sceneSettingsManager.loadFromText(text);
-        if (result.success) {
-          this.ui.syncControls(this.stateStore.getState());
-        }
-        this.helpers.showToast(result.message, 3200, { notification: false });
-        if (result.success) {
-          closeSceneModal();
-        }
+        void this.ui.sceneSettingsManager.loadFromText(text).then((result) => {
+          if (result.success) {
+            this.ui.syncControls(this.stateStore.getState());
+          }
+          this.helpers.showToast(result.message, 3200, { notification: false });
+          if (result.success) {
+            closeSceneModal();
+          }
+        });
       }
     });
 
@@ -501,6 +503,11 @@ export class ResetControls {
         'advanced.uvCheckerStyle',
         defaults.advanced?.uvCheckerStyle ?? 'orby',
       );
+      this.stateStore.set('advanced.normalView', defaults.advanced?.normalView ?? false);
+      this.stateStore.set(
+        'advanced.normalViewMode',
+        defaults.advanced?.normalViewMode ?? 'geometry',
+      );
       this.stateStore.set(
         'advanced.stlSmoothShading',
         defaults.advanced?.stlSmoothShading !== false,
@@ -548,6 +555,11 @@ export class ResetControls {
       this.eventBus.emit(
         'mesh:uv-checker-style',
         defaults.advanced?.uvCheckerStyle ?? 'orby',
+      );
+      this.eventBus.emit('mesh:normal-view', defaults.advanced?.normalView ?? false);
+      this.eventBus.emit(
+        'mesh:normal-view-mode',
+        defaults.advanced?.normalViewMode ?? 'geometry',
       );
       this.eventBus.emit('mesh:stl-smoothing');
       this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);
@@ -881,6 +893,7 @@ export class ResetControls {
             this.stateStore.batch(() => {
               this.stateStore.set('hdri', defaults.hdri);
               this.stateStore.set('hdriCustomName', defaults.hdriCustomName ?? null);
+              this.stateStore.set('hdriCustomAsset', defaults.hdriCustomAsset ?? null);
               this.stateStore.set('hdriStrength', defaults.hdriStrength);
               this.stateStore.set('hdriBlurriness', defaults.hdriBlurriness);
               this.stateStore.set('hdriRotation', defaults.hdriRotation);
@@ -1486,6 +1499,11 @@ export class ResetControls {
               'advanced.uvCheckerStyle',
               defaults.advanced?.uvCheckerStyle ?? 'orby',
             );
+            this.stateStore.set('advanced.normalView', defaults.advanced?.normalView ?? false);
+            this.stateStore.set(
+              'advanced.normalViewMode',
+              defaults.advanced?.normalViewMode ?? 'geometry',
+            );
             this.stateStore.set(
               'advanced.stlSmoothShading',
               defaults.advanced?.stlSmoothShading !== false,
@@ -1509,6 +1527,11 @@ export class ResetControls {
             this.eventBus.emit(
               'mesh:uv-checker-style',
               defaults.advanced?.uvCheckerStyle ?? 'orby',
+            );
+            this.eventBus.emit('mesh:normal-view', defaults.advanced?.normalView ?? false);
+            this.eventBus.emit(
+              'mesh:normal-view-mode',
+              defaults.advanced?.normalViewMode ?? 'geometry',
             );
             this.eventBus.emit('mesh:stl-smoothing');
             this.eventBus.emit('mesh:center-pivot', defaults.advanced?.centerPivot ?? false);

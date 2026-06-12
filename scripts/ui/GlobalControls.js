@@ -665,6 +665,7 @@ export class GlobalControls {
         this.stateStore.set('hdri', nextPreset);
         if (nextPreset !== HDRI_CUSTOM_ID) {
           this.stateStore.set('hdriCustomName', null);
+          this.stateStore.set('hdriCustomAsset', null);
         }
         this.eventBus.emit('studio:hdri', nextPreset);
         this.ui.setHdriActive(nextPreset);

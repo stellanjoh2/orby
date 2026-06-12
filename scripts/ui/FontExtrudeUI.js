@@ -35,6 +35,7 @@ import {
   DEFAULT_FONT_KERNING_MODE,
   normalizeFontKerningMode,
 } from '../scene/fontKerning.js';
+import { arrayBufferToBase64, fileFromEmbeddedAsset } from '../utils/binaryAsset.js';
 
 /**
  * Object panel — Generate from Font (2D preview + extrude).
@@ -293,6 +294,7 @@ export class FontExtrudeUI {
     });
 
     els.text?.addEventListener('input', () => {
+      this.stateStore.set('fontExtrude.sourceText', els.text?.value ?? '');
       this.schedulePreview();
       this.updateGenerateState();
     });
@@ -769,6 +771,14 @@ export class FontExtrudeUI {
     }
     this.ui.setEffectFoldoutOpen('font-extrude', !!fontState.panelOpen);
 
+    if (
+      this.els.text &&
+      typeof fontState.sourceText === 'string' &&
+      document.activeElement !== this.els.text
+    ) {
+      this.els.text.value = fontState.sourceText;
+    }
+
     const align =
       fontState.align === 'left' || fontState.align === 'right' ? fontState.align : 'center';
     if (this.els.align) this.els.align.value = align;
@@ -796,6 +806,51 @@ export class FontExtrudeUI {
     this.syncExtrudeControls(state);
     this.syncPostGenControlsVisibility();
     this._syncSystemFontsPromptVisibility();
+  }
+
+  /**
+   * Restore font picker / preview after copy-paste or .orby load.
+   * @param {import('../StateStore.js').StateStore['defaults']['fontExtrude']} [fontExtrude]
+   */
+  async restoreFromSettings(fontExtrude = {}) {
+    if (!fontExtrude || typeof fontExtrude !== 'object') return;
+
+    if (this.els.text && typeof fontExtrude.sourceText === 'string') {
+      this.els.text.value = fontExtrude.sourceText;
+    }
+
+    const customFile = fileFromEmbeddedAsset(fontExtrude.customFontAsset, 'font.ttf');
+    if (customFile) {
+      try {
+        await this.controller.loadFont(customFile);
+        this._fontsInitialized = true;
+        if (this.els.systemFontsPrompt) this.els.systemFontsPrompt.hidden = true;
+        const previewCss = await this.controller.registerFilePreview('__file__', customFile);
+        this.familyPicker?.setCustomEntry('__file__', customFile.name, previewCss);
+        this._setVariantOptions(
+          [{ postscriptName: '__file__', styleLabel: 'Regular', fullName: customFile.name }],
+          '__file__',
+        );
+      } catch (err) {
+        console.warn('[Orby] Could not restore custom font from scene settings', err);
+      }
+    } else if (fontExtrude.postscriptName) {
+      await this.ensureFontsReady({ fromUserGesture: false });
+      const psName = fontExtrude.postscriptName;
+      const familyGroup = this._fontFamilyByPostscript.get(psName) ?? null;
+      const label = this._familyLabelForPostscript(psName);
+      this.familyPicker?.setValue(psName, label);
+      this._setVariantOptions(familyGroup?.variants || [], psName);
+      try {
+        await this.controller.loadFont(psName);
+      } catch (err) {
+        console.warn('[Orby] Could not restore system font from scene settings', psName, err);
+      }
+    }
+
+    this.updateGenerateState();
+    this.schedulePreview();
+    this._syncLiveEditorPreviewMode();
   }
 
   /**
@@ -974,6 +1029,8 @@ export class FontExtrudeUI {
     }
     try {
       await this.controller.loadFont(psName);
+      this.stateStore.set('fontExtrude.postscriptName', psName);
+      this.stateStore.set('fontExtrude.customFontAsset', null);
       this.ui.showToast(`Font: ${this.controller.fontLabel}`, 2400, { notification: false });
     } catch (err) {
       console.warn(err);
@@ -992,6 +1049,8 @@ export class FontExtrudeUI {
     this.clearPreviewCanvas();
     try {
       await this.controller.loadFont(psName);
+      this.stateStore.set('fontExtrude.postscriptName', psName);
+      this.stateStore.set('fontExtrude.customFontAsset', null);
       this.ui.showToast(`Font: ${this.controller.fontLabel}`, 2400, { notification: false });
     } catch (err) {
       console.warn(err);
@@ -1009,6 +1068,13 @@ export class FontExtrudeUI {
     this.clearPreviewCanvas();
     try {
       await this.controller.loadFont(file);
+      const fileBuffer = await file.arrayBuffer();
+      this.stateStore.set('fontExtrude.customFontAsset', {
+        name: file.name,
+        type: file.type || '',
+        dataBase64: arrayBufferToBase64(fileBuffer),
+      });
+      this.stateStore.set('fontExtrude.postscriptName', '__file__');
       this._fontsInitialized = true;
       if (this.els.systemFontsPrompt) this.els.systemFontsPrompt.hidden = true;
       const previewCss = await this.controller.registerFilePreview('__file__', file);

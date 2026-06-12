@@ -7,6 +7,8 @@ import {
   HDRI_CUSTOM_ID,
   getCustomHdriUploadType,
 } from './config/hdri.js';
+import { arrayBufferToBase64 } from './utils/binaryAsset.js';
+import { withViewportLoadSpinner } from './utils/viewportLoadSpinner.js';
 import {
   WIREFRAME_OFFSET,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
@@ -14,7 +16,7 @@ import {
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
   resolveBloomQualityTier,
-  isBloomPipelineActive,
+  isAnamorphicBloomPipelineActive,
   isCreativeLookViewportPostActive,
   resolveRenderQualityTier,
   isKeyLightOnlyShadowCastingRenderQuality,
@@ -45,12 +47,17 @@ import {
 } from './import/fbxMapSlotsSettings.js';
 import { AnimationController } from './render/AnimationController.js';
 import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js';
+import { TopologyWarningsOverlay } from './render/TopologyWarningsOverlay.js';
 import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
 import {
   computeCreativeLookToonLightScalars,
+  creativeLookMasterHueRadians,
   formatCreativeLookPresetLabel,
+  normalizeCreativeLookMasterHue,
+  normalizeCreativeLookPreset,
 } from './render/CreativeLookMaterials.js';
+import { ensureAsciiFontAtlasLoaded } from './render/creativeLookAsciiArt.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -430,6 +437,9 @@ export class SceneManager {
     this.scene.add(this.colorCheckerRoot);
     /** When Reference colors is on, shading we restore when turning it off (Display mode before Unlit). */
     this._colorCheckerRestoreShading = null;
+    /** Saved HDRI background while ASCII Art forces it off. */
+    this._asciiStudioOverrideActive = false;
+    this._asciiRestoreHdriBackground = null;
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     this._colorCheckerHorizRef = new THREE.Vector3();
     this._colorCheckerTowardCam = new THREE.Vector3();
@@ -531,6 +541,16 @@ export class SceneManager {
       },
     });
 
+    this.topologyWarningsOverlay = new TopologyWarningsOverlay({
+      getLineResolution: () => {
+        const canvas = this.renderer?.domElement;
+        return {
+          width: canvas?.clientWidth || window.innerWidth || 1,
+          height: canvas?.clientHeight || window.innerHeight || 1,
+        };
+      },
+    });
+
     this.jointNameLabelsController?.dispose?.();
     this.jointNameLabelsController = new JointNameLabelsController({
       viewport: this.viewport,
@@ -546,14 +566,25 @@ export class SceneManager {
       getCreativeLookToonLightScalars: () =>
         this._getCreativeLookToonLightScalars(),
       afterCreativeLookMaterialRebuild: () => {
+        this._syncCreativeLookAsciiPass();
+        this.animationController?.resyncPose?.();
         if (
           typeof this.renderer?.compile === 'function' &&
           this.scene &&
           this.camera
         ) {
-          this.renderer.compile(this.scene, this.camera);
+          // Defer compile so rapid Shader Lab cycling does not block rAF / input.
+          requestAnimationFrame(() => {
+            if (!this.renderer || !this.scene || !this.camera) return;
+            try {
+              this.renderer.compile(this.scene, this.camera);
+            } catch (_) {
+              /* ignore compile failures on partial rebuild */
+            }
+          });
         }
       },
+      onCreativeLookAsciiSync: () => this._syncCreativeLookAsciiPass(),
       onShadingChanged: (mode) => {
         this.currentShading = mode;
         this.diagnosticsController.setModel(this.currentModel, mode);
@@ -977,11 +1008,17 @@ export class SceneManager {
     this.composerLifecycle = new ComposerLifecycle({
       renderer: this.renderer,
       scene: this.scene,
+      camera: this.camera,
       composer: this.composer,
       postPipeline: this.postPipeline,
       backgroundController: this.backgroundController,
       getCreativeLookEnabled: () =>
         this.materialController?.getCreativeLookSettings?.()?.enabled === true,
+      getTransformControls: () => [
+        this.transformControlsTranslate,
+        this.transformControlsRotate,
+        this.transformControlsScale,
+      ].filter(Boolean),
       getCreativeLookViewportBloomActive: () => {
         const state = this.stateStore.getState();
         return (
@@ -989,9 +1026,27 @@ export class SceneManager {
           isCreativeLookViewportPostActive(state)
         );
       },
+      getCreativeLookAsciiActive: () => {
+        const state = this.stateStore.getState();
+        const cl = state.creativeLook ?? {};
+        if (
+          cl.enabled !== true ||
+          normalizeCreativeLookPreset(cl.preset) !== 'ascii-art'
+        ) {
+          return false;
+        }
+        // Defer the terminal pass until studio sync hides the HDRI backdrop — otherwise
+        // a heavy Shader Lab rebuild can render ASCII over the sky for ~1s.
+        if (state.hdriBackground && !this._asciiStudioOverrideActive) {
+          return false;
+        }
+        return true;
+      },
+      getRenderState: () => this.stateStore.getState(),
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
       beforeComposerRender: () => {
+        this.backgroundGradientController?.syncToDrawingBuffer?.();
         this.materialController?.syncImportGltfGlassMaterials?.();
         this.lensFlareController?.prepareFrame(this.renderer);
         this.godRaysController?.prepareFrame(this.renderer);
@@ -1043,6 +1098,7 @@ export class SceneManager {
         this.composerLifecycle.resetRendererViewportToCanvas(),
       prepareComposerCapture: () => this.composerLifecycle.prepareComposerCapture(),
       beforeComposerRender: () => {
+        this.backgroundGradientController?.syncToDrawingBuffer?.();
         this.materialController?.syncImportGltfGlassMaterials?.();
         this.lensFlareController?.prepareFrame(this.renderer);
         this.godRaysController?.prepareFrame(this.renderer);
@@ -1183,6 +1239,7 @@ export class SceneManager {
       this.postPipeline.anamorphicBloomPass.uniforms.resolution.value.set(width, height);
     }
     this.postPipeline?.creativeLookViewportBloom?.setSize(width, height, bloomScale);
+    this.postPipeline?.creativeLookAscii?.setSize(width, height);
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
     this.diagnosticsController?.syncBoneLineResolution?.(width, height);
@@ -1517,7 +1574,7 @@ export class SceneManager {
 
   syncAnamorphicBloomFromState() {
     const state = this.stateStore.getState();
-    const bloomOk = isBloomPipelineActive(state);
+    const bloomOk = isAnamorphicBloomPipelineActive(state);
     const defaults = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
     const raw = state.lensFlare?.anamorphicBloom ?? {};
     const merged = {
@@ -1542,6 +1599,7 @@ export class SceneManager {
     if (this.composer && szNow.x > 0 && szNow.y > 0) {
       this.syncPostProcessingForLogicalSize(szNow.x, szNow.y);
     }
+    this.backgroundGradientController?.syncToDrawingBuffer?.();
     this.handleResize();
     this.updateDof(state.dof);
     this.updateBloom(state.bloom);
@@ -1576,6 +1634,7 @@ export class SceneManager {
   clearCustomHdri() {
     this.environmentController?.disposePreset(HDRI_CUSTOM_ID);
     this.stateStore.set('hdriCustomName', null);
+    this.stateStore.set('hdriCustomAsset', null);
     this.ui?.clearHdriUploadLoaded?.();
   }
 
@@ -1583,6 +1642,12 @@ export class SceneManager {
     if (!file) return;
     const type = getCustomHdriUploadType(file.name);
     this.clearCustomHdri();
+    const fileBuffer = await file.arrayBuffer();
+    this.stateStore.set('hdriCustomAsset', {
+      name: file.name,
+      type: file.type || '',
+      dataBase64: arrayBufferToBase64(fileBuffer),
+    });
     const url = URL.createObjectURL(file);
     this.environmentController?.registerPreset(HDRI_CUSTOM_ID, {
       url,
@@ -1694,9 +1759,10 @@ export class SceneManager {
     const bgColor = this.backgroundController?.getColor() ?? '#080808';
     this.environmentController?.setFallbackColor(bgColor);
 
-    this.environmentController?.setBackgroundEnabled(enabled);
-
+    // BackgroundController must know backdrop is off before EnvironmentController releases
+    // scene.background (onReleaseSceneBackground → refreshAppearance).
     this.backgroundController?.setHdriBackgroundEnabled(enabled);
+    this.environmentController?.setBackgroundEnabled(enabled);
 
     this.applyHdriMood(this.currentHdri);
     this.ui?.updateHdriReceiveShadowsAoDisabled?.();
@@ -2117,7 +2183,16 @@ export class SceneManager {
   setUvCheckerEnabled(enabled) {
     const on = !!enabled;
     this.stateStore.set('advanced.uvChecker', on);
-    this.materialController?.setUvCheckerSettings({ enabled: on });
+    const overlay = this.materialController?.uvCheckerOverlay;
+    if (!overlay) return;
+    if (!on) {
+      overlay.setEnabled(false);
+      return;
+    }
+    void withViewportLoadSpinner(this.ui, 'Loading UV checker', async () => {
+      overlay.setEnabled(true, false);
+      await overlay.rebuildAsync();
+    });
   }
 
   setUvCheckerScale(scale) {
@@ -2131,11 +2206,109 @@ export class SceneManager {
     const allowed = ['orby', 'classic', 'monochrome'];
     const safe = allowed.includes(mapped) ? mapped : 'orby';
     this.stateStore.set('advanced.uvCheckerStyle', safe);
-    this.materialController?.setUvCheckerStyle(safe);
+    const overlay = this.materialController?.uvCheckerOverlay;
+    if (!overlay) return;
+    if (!overlay.enabled) {
+      overlay.setStyle(safe, false);
+      return;
+    }
+    void withViewportLoadSpinner(this.ui, 'Loading UV checker', async () => {
+      overlay.setStyle(safe, false);
+      await overlay.rebuildAsync();
+    });
+  }
+
+  setNormalViewEnabled(enabled) {
+    const on = !!enabled;
+    this.stateStore.set('advanced.normalView', on);
+    const overlay = this.materialController?.normalViewOverlay;
+    if (!overlay) return;
+    if (!on) {
+      overlay.setEnabled(false);
+      return;
+    }
+    void withViewportLoadSpinner(this.ui, 'Loading normal view', async () => {
+      overlay.setEnabled(true, false);
+      await overlay.rebuildAsync();
+    });
+  }
+
+  setNormalViewMode(mode) {
+    const allowed = ['geometry', 'tangent'];
+    const safe = allowed.includes(mode) ? mode : 'geometry';
+    this.stateStore.set('advanced.normalViewMode', safe);
+    const overlay = this.materialController?.normalViewOverlay;
+    if (!overlay) return;
+    if (!overlay.enabled) {
+      overlay.setMode(safe, false);
+      return;
+    }
+    void withViewportLoadSpinner(this.ui, 'Loading normal view', async () => {
+      overlay.setMode(safe, false);
+      await overlay.rebuildAsync();
+    });
   }
 
   updateUvCheckerOverlayTransforms() {
     this.materialController?.updateUvCheckerOverlayTransforms();
+  }
+
+  updateNormalViewOverlayTransforms() {
+    this.materialController?.updateNormalViewOverlayTransforms();
+  }
+
+  /**
+   * @param {boolean} enabled
+   * @param {import('./mesh/topologyAnalysis.js').TopologyWarningCategory | null} [category]
+   * @param {{ skipSpinner?: boolean }} [options]
+   * @returns {Promise<void>}
+   */
+  setTopologyWarningsEnabled(enabled, category = null, options = {}) {
+    const overlay = this.topologyWarningsOverlay;
+    if (!overlay) return Promise.resolve();
+    if (!enabled) {
+      overlay.setEnabled(false);
+      return Promise.resolve();
+    }
+
+    const apply = async () => {
+      overlay.setModel(this.currentModel ?? null);
+      overlay.setCategory(category ?? null, false);
+      overlay.setEnabled(true, false);
+      await overlay.rebuildAsync();
+    };
+
+    if (options.skipSpinner) {
+      return apply();
+    }
+    return withViewportLoadSpinner(this.ui, 'Loading mesh health', apply);
+  }
+
+  /**
+   * @param {import('./mesh/topologyAnalysis.js').TopologyWarningCategory} category
+   * @param {{ skipSpinner?: boolean }} [options]
+   * @returns {Promise<void>}
+   */
+  setTopologyWarningsCategory(category, options = {}) {
+    const overlay = this.topologyWarningsOverlay;
+    if (!overlay?.enabled) {
+      overlay?.setCategory(category, false);
+      return Promise.resolve();
+    }
+
+    const apply = async () => {
+      overlay.setCategory(category, false);
+      await overlay.rebuildAsync();
+    };
+
+    if (options.skipSpinner) {
+      return apply();
+    }
+    return withViewportLoadSpinner(this.ui, 'Loading mesh health', apply);
+  }
+
+  updateTopologyWarningsOverlayTransforms() {
+    this.topologyWarningsOverlay?.updateTransforms();
   }
 
   setMapInspectPreview(slot) {
@@ -3547,6 +3720,7 @@ export class SceneManager {
     this.cameraController?.refreshModelBounds(this.currentModel);
     this.updateWireframeOverlayTransforms();
     this.updateUvCheckerOverlayTransforms();
+    this.updateNormalViewOverlayTransforms();
     this._syncTransformFromGizmo();
     this.transformControlsTranslate?.updateMatrixWorld?.();
     this.transformControlsRotate?.updateMatrixWorld?.();
@@ -4136,15 +4310,86 @@ export class SceneManager {
     this.backgroundController?.updateSpherePosition();
   }
 
+  /** Enable / tune the screen-space ASCII pass when Shader Lab preset is ASCII Art. */
+  _syncCreativeLookAsciiPass() {
+    const storeCl = this.stateStore?.getState()?.creativeLook ?? {};
+    const mcCl = this.materialController?.getCreativeLookSettings?.() ?? {};
+    const preset = normalizeCreativeLookPreset(storeCl.preset ?? mcCl.preset);
+    const enabled = (storeCl.enabled ?? mcCl.enabled) === true && preset === 'ascii-art';
+
+    this._syncCreativeLookAsciiStudio(enabled);
+
+    let patternScale = Number(storeCl.patternScale ?? mcCl.patternScale);
+    if (!Number.isFinite(patternScale)) patternScale = 1;
+
+    const masterHue = normalizeCreativeLookMasterHue(storeCl.masterHue ?? mcCl.masterHue);
+    const settings = {
+      enabled,
+      masterHue: creativeLookMasterHueRadians(masterHue),
+    };
+    this.postPipeline?.updateCreativeLookAscii(settings);
+
+    if (enabled) {
+      const sz = new THREE.Vector2();
+      this.renderer.getSize(sz);
+      if (sz.x > 0 && sz.y > 0) {
+        this.postPipeline?.creativeLookAscii?.setSize(sz.x, sz.y);
+      }
+      void ensureAsciiFontAtlasLoaded().then(() => {
+        this.postPipeline?.creativeLookAscii?.refreshAtlas?.();
+        this.postPipeline?.updateCreativeLookAscii(settings);
+      });
+    }
+  }
+
+  /**
+   * ASCII Art — flat Orby black clear color; no HDRI sky in scene.background.
+   * Restores HDRI background when leaving the preset.
+   * @param {boolean} asciiActive
+   */
+  _syncCreativeLookAsciiStudio(asciiActive) {
+    if (asciiActive) {
+      if (this._asciiStudioOverrideActive) return;
+      const state = this.stateStore.getState();
+      this._asciiRestoreHdriBackground = !!state.hdriBackground;
+      this._asciiStudioOverrideActive = true;
+
+      if (state.hdriBackground) {
+        this.stateStore.set('hdriBackground', false);
+        this.setHdriBackground(false);
+        if (this.ui?.inputs?.hdriBackground) {
+          this.ui.inputs.hdriBackground.checked = false;
+        }
+        this.ui?.applyBlockStates?.(this.stateStore.getState());
+      }
+      return;
+    }
+
+    if (!this._asciiStudioOverrideActive) return;
+
+    const restoreHdriBackground = this._asciiRestoreHdriBackground;
+    this._asciiStudioOverrideActive = false;
+    this._asciiRestoreHdriBackground = null;
+
+    if (restoreHdriBackground) {
+      this.stateStore.set('hdriBackground', true);
+      this.setHdriBackground(true);
+      if (this.ui?.inputs?.hdriBackground) {
+        this.ui.inputs.hdriBackground.checked = true;
+      }
+      this.ui?.applyBlockStates?.(this.stateStore.getState());
+    }
+  }
+
   /**
    * Apply Shader Lab state with viewport spinner + toast when materials rebuild.
    * @param {object} creativeLookState
    * @param {{ skipStateStore?: boolean }} [options]
    */
   applyCreativeLookFromState(creativeLookState, options = {}) {
-    this._creativeLookApplyChain = (this._creativeLookApplyChain ?? Promise.resolve()).then(() =>
-      this._applyCreativeLookFromStateOnce(creativeLookState, options),
-    );
+    this._creativeLookApplyChain = (this._creativeLookApplyChain ?? Promise.resolve())
+      .catch(() => {})
+      .then(() => this._applyCreativeLookFromStateOnce(creativeLookState, options));
     return this._creativeLookApplyChain;
   }
 
@@ -4167,7 +4412,15 @@ export class SceneManager {
     }
 
     try {
+      const nextPreset = normalizeCreativeLookPreset(creativeLookState?.preset);
+      const nextAsciiActive =
+        creativeLookState?.enabled === true && nextPreset === 'ascii-art';
+      if (nextAsciiActive) {
+        this._syncCreativeLookAsciiStudio(true);
+      }
+
       mc.setCreativeLookSettings(creativeLookState, options);
+      this._syncCreativeLookAsciiPass();
       if (heavy && creativeLookState?.enabled) {
         const label = formatCreativeLookPresetLabel(creativeLookState.preset);
         this.ui?.showToast?.(`${label} loaded`, 2800, {
@@ -4290,9 +4543,17 @@ export class SceneManager {
     this.camera.aspect = finalWidth / Math.max(1, finalHeight);
     this.syncPerspectiveCameraFovAndLens();
     this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
-    const dbSize = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(dbSize);
-    this.backgroundGradientController?.handleResize?.(dbSize.x, dbSize.y);
+    const gl = this.renderer.getContext();
+    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+      this.backgroundGradientController?.handleResize?.(
+        gl.drawingBufferWidth,
+        gl.drawingBufferHeight,
+      );
+    } else {
+      const dbSize = new THREE.Vector2();
+      this.renderer.getDrawingBufferSize(dbSize);
+      this.backgroundGradientController?.handleResize?.(dbSize.x, dbSize.y);
+    }
   }
 
   async exportPng(settings = {}) {

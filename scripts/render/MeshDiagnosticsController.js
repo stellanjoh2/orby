@@ -433,6 +433,8 @@ export class MeshDiagnosticsController {
       child.isMesh
       && !child.userData.isWireframeOverlay
       && !child.userData.isUvCheckerOverlay
+      && !child.userData.isNormalViewOverlay
+      && !child.userData.isTopologyWarningsOverlay
     );
   }
 

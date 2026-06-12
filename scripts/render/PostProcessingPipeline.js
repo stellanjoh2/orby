@@ -25,6 +25,7 @@ import { ColorAdjustController } from './ColorAdjustController.js';
 import { GradingController } from './GradingController.js';
 import { BloomCompositeController } from './BloomCompositeController.js';
 import { CreativeLookViewportBloom } from './CreativeLookViewportBloom.js';
+import { CreativeLookAsciiPass } from './CreativeLookAsciiPass.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
   AMBIENT_OCCLUSION_INTENSITY_MIN,
@@ -41,6 +42,8 @@ import {
   resolveAnamorphicBloomQualityTier,
   USE_MERGED_GRADING_PASS,
   USE_MERGED_BLOOM_COMPOSITE_PASS,
+  isAnamorphicBloomPipelineActive,
+  isBloomPipelineActive,
 } from '../constants.js';
 
 export class PostProcessingPipeline {
@@ -174,7 +177,11 @@ export class PostProcessingPipeline {
     this.creativeLookViewportBloom = new CreativeLookViewportBloom(renderer);
     this.creativeLookViewportBloomPass = this.creativeLookViewportBloom.getPass();
 
+    this.creativeLookAscii = new CreativeLookAsciiPass(renderer);
+    this.creativeLookAsciiPass = this.creativeLookAscii.getPass();
+
     this.composer.addPass(this.renderPass);
+    this.composer.addPass(this.creativeLookAsciiPass);
     this.composer.addPass(this.creativeLookViewportBloomPass);
     this.composer.addPass(this.n8aoPass);
     this.composer.addPass(this.bokehPass);
@@ -204,6 +211,7 @@ export class PostProcessingPipeline {
     /** @type {Array<{ pass: import('three/examples/jsm/postprocessing/Pass.js').Pass, key: string }>} */
     this._managedPasses = [
       { pass: this.renderPass, key: 'renderPass' },
+      { pass: this.creativeLookAsciiPass, key: 'creativeLookAsciiPass' },
       { pass: this.creativeLookViewportBloomPass, key: 'creativeLookViewportBloomPass' },
       { pass: this.n8aoPass, key: 'n8aoPass' },
       { pass: this.bokehPass, key: 'bokehPass' },
@@ -233,8 +241,31 @@ export class PostProcessingPipeline {
     this._unlitPresentationSnapshot = null;
     /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
     this._creativeLookViewportSnapshot = null;
+    /** @type {Array<{ enabled: boolean, renderToScreen: boolean }> | null} */
+    this._creativeLookAsciiSnapshot = null;
+    /** @type {{ min: number, mag: number } | null} */
+    this._composerFilterRestore = null;
     /** @type {object | null} — last `state.bloom` for Shader Lab viewport bloom prep */
     this._lastBloomSettings = null;
+    /** @type {object | null} — last anamorphic settings for Shader Lab viewport bloom prep */
+    this._lastAnamorphicBloomSettings = null;
+    this._lastAnamorphicBloomForceOff = false;
+    /** @type {boolean} */
+    this._asciiBloomActive = false;
+    /** @type {boolean} */
+    this._asciiAnamorphicActive = false;
+  }
+
+  /**
+   * Sync Camera & FX bloom for ASCII Art terminal stack (scene → glyphs → bloom → screen).
+   * @param {object} [state]
+   */
+  prepareCreativeLookAsciiPresentation(state) {
+    this._asciiBloomActive = isBloomPipelineActive(state ?? {});
+    this._asciiAnamorphicActive = isAnamorphicBloomPipelineActive(state ?? {});
+    if (this._lastBloomSettings) {
+      this.updateBloom(this._lastBloomSettings);
+    }
   }
 
   /**
@@ -257,8 +288,14 @@ export class PostProcessingPipeline {
       : 0.2;
 
     if (this.bloomCompositeController) {
-      this.bloomCompositeController.setAnamorphic({}, { forceOff: true });
       this.bloomCompositeController.setBloomTint(true, settings);
+      this.bloomCompositeController.setAnamorphic(
+        this._lastAnamorphicBloomSettings ?? {},
+        {
+          forceOff:
+            this._lastAnamorphicBloomForceOff || !this._lastAnamorphicBloomSettings,
+        },
+      );
     } else if (this.bloomTintPass) {
       this.bloomTintPass.enabled = true;
       this.bloomTintPass.uniforms.tint.value = new THREE.Color(settings.color ?? '#ffe9cc');
@@ -269,10 +306,20 @@ export class PostProcessingPipeline {
       );
       this.bloomTintPass.uniforms.strength.value = tintStrength;
     }
+    if (
+      this._lastAnamorphicBloomSettings &&
+      this.anamorphicBloomPass &&
+      this.anamorphicBloomPass !== this.bloomCompositePass
+    ) {
+      this.updateAnamorphicBloom(this._lastAnamorphicBloomSettings, {
+        forceOff: this._lastAnamorphicBloomForceOff,
+      });
+    }
   }
 
   /**
-   * Shader Lab + bloom: viewport-only stack — scene → UnrealBloom → tint → screen (no grading).
+   * Shader Lab + viewport bloom: slim stack — scene → bloom → tint/anamorphic → grain → CA → screen.
+   * Skips Cam/FX grading; keeps film grain, chromatic aberration, and anamorphic bloom when enabled.
    */
   pushCreativeLookViewportPresentation() {
     if (this._creativeLookViewportSnapshot) return;
@@ -282,9 +329,25 @@ export class PostProcessingPipeline {
       renderToScreen: pass.renderToScreen,
     }));
 
-    for (const { pass, key } of this._managedPasses) {
+    const slimPostKeys = new Set([
+      'filmPass',
+      'grainTintPass',
+      'anamorphicBloomPass',
+      'aberrationPass',
+      'lensDistortionPass',
+    ]);
+
+    for (let i = 0; i < this._managedPasses.length; i += 1) {
+      const { pass, key } = this._managedPasses[i];
+      const snap = this._creativeLookViewportSnapshot[i];
+
       if (key === 'renderPass') {
         pass.enabled = true;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookAsciiPass') {
+        pass.enabled = snap.enabled;
         pass.renderToScreen = false;
         continue;
       }
@@ -303,6 +366,11 @@ export class PostProcessingPipeline {
         pass.renderToScreen = false;
         continue;
       }
+      if (slimPostKeys.has(key)) {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
       pass.enabled = false;
       pass.renderToScreen = false;
     }
@@ -316,6 +384,95 @@ export class PostProcessingPipeline {
       pass.renderToScreen = snap[i].renderToScreen;
     });
     this._creativeLookViewportSnapshot = null;
+  }
+
+  /** @param {number} filter — THREE.NearestFilter or THREE.LinearFilter */
+  _setComposerBufferFilter(filter) {
+    const composer = this.composer;
+    if (!composer?.renderTarget1) return;
+    for (const rt of [composer.renderTarget1, composer.renderTarget2]) {
+      if (rt?.texture) {
+        rt.texture.minFilter = filter;
+        rt.texture.magFilter = filter;
+      }
+    }
+  }
+
+  /**
+   * ASCII Art terminal mode — scene → luminance → hard glyphs → (optional bloom) → screen.
+   * Skips FXAA, grain, chromatic aberration, grading, etc. Glyphs stay nearest-sampled;
+   * when bloom is on, composer buffers stay NearestFilter so glyphs stay 1:1 crisp.
+   */
+  pushCreativeLookAsciiPresentation() {
+    if (this._creativeLookAsciiSnapshot) return;
+
+    this._creativeLookAsciiSnapshot = this._managedPasses.map(({ pass }) => ({
+      enabled: pass.enabled,
+      renderToScreen: pass.renderToScreen,
+    }));
+
+    const bloomActive = this._asciiBloomActive === true;
+    const bloomKeys = new Set([
+      'bloomPass',
+      'bloomCompositePass',
+      'bloomTintPass',
+      'anamorphicBloomPass',
+    ]);
+
+    const rt = this.composer?.renderTarget1?.texture;
+    if (rt) {
+      this._composerFilterRestore = { min: rt.minFilter, mag: rt.magFilter };
+      this._setComposerBufferFilter(THREE.NearestFilter);
+    }
+
+    for (let i = 0; i < this._managedPasses.length; i += 1) {
+      const { pass, key } = this._managedPasses[i];
+      const snap = this._creativeLookAsciiSnapshot[i];
+
+      if (key === 'renderPass' || key === 'creativeLookAsciiPass') {
+        pass.enabled = true;
+        pass.renderToScreen = false;
+        continue;
+      }
+
+      if (bloomActive && bloomKeys.has(key)) {
+        if (key === 'bloomPass') {
+          pass.enabled = true;
+          pass.renderToScreen = false;
+          continue;
+        }
+        if (key === 'bloomCompositePass' || key === 'bloomTintPass') {
+          pass.enabled = true;
+          pass.renderToScreen = false;
+          continue;
+        }
+        if (key === 'anamorphicBloomPass') {
+          pass.enabled = this._asciiAnamorphicActive ? snap.enabled : false;
+          pass.renderToScreen = false;
+          continue;
+        }
+      }
+
+      pass.enabled = false;
+      pass.renderToScreen = false;
+    }
+    if (this.creativeLookAsciiPass) {
+      this.creativeLookAsciiPass.enabled = true;
+    }
+  }
+
+  popCreativeLookAsciiPresentation() {
+    const snap = this._creativeLookAsciiSnapshot;
+    if (!snap) return;
+    this._managedPasses.forEach(({ pass }, i) => {
+      pass.enabled = snap[i].enabled;
+      pass.renderToScreen = snap[i].renderToScreen;
+    });
+    if (this._composerFilterRestore) {
+      this._setComposerBufferFilter(this._composerFilterRestore.min);
+      this._composerFilterRestore = null;
+    }
+    this._creativeLookAsciiSnapshot = null;
   }
 
   /**
@@ -387,6 +544,14 @@ export class PostProcessingPipeline {
   updateGodRays(settings, { forceOff = false } = {}) {
     if (!this.godRaysPass) return;
     this.godRaysPass.enabled = !forceOff && !!settings?.enabled;
+  }
+
+  /**
+   * Shader Lab ASCII Art — screen-space glyph pass after the luminance prepass.
+   * @param {{ enabled?: boolean, intensity?: number }} settings
+   */
+  updateCreativeLookAscii(settings) {
+    this.creativeLookAscii?.updateSettings(settings ?? {});
   }
 
   /**
@@ -467,6 +632,10 @@ export class PostProcessingPipeline {
    * @param {{ forceOff?: boolean }} [opts]
    */
   updateAnamorphicBloom(settings, { forceOff = false } = {}) {
+    if (settings != null) {
+      this._lastAnamorphicBloomSettings = settings;
+      this._lastAnamorphicBloomForceOff = forceOff;
+    }
     if (this.bloomCompositeController) {
       this.bloomCompositeController.setAnamorphic(settings, { forceOff });
       return;

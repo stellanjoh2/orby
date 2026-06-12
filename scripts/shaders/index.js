@@ -546,6 +546,16 @@ vec3 applyLumaToneCurve(vec3 c) {
   return clamp(c * (l2 / l), 0.0, 4.0);
 }
 
+// Unsharp mask with HDR highlight guard — prevents black "burn" speckles in hot speculars.
+vec3 finishUnsharpMask(vec3 center, vec3 blur, float sharpAmount) {
+  vec3 sharp = center + (center - blur) * sharpAmount;
+  float luma = dot(center, LUMA);
+  // When neighbors are hotter than center, unsharp can go negative → max(...,0) burns black.
+  float hot = smoothstep(0.65, 1.35, luma);
+  vec3 floorRgb = mix(vec3(0.0), center, hot);
+  return max(sharp, floorRgb);
+}
+
 // Sharpness: Simple unsharp mask
 vec3 applySharpness(sampler2D tex, vec2 uv, vec2 res, float amount) {
   if (abs(amount) < 0.0001) {
@@ -567,11 +577,8 @@ vec3 applySharpness(sampler2D tex, vec2 uv, vec2 res, float amount) {
   // Calculate blur (average of neighbors)
   vec3 blur = (left + right + top + bottom) * 0.25;
   
-  // Unsharp mask: center - blur, then add back with strength
-  // Don't clamp here - preserve HDR values, clamping happens at the end
   float sharpAmount = amount * 0.01; // Scale to reasonable range
-  vec3 sharp = center + (center - blur) * sharpAmount;
-  return max(sharp, vec3(0.0)); // Only clamp negative values, preserve highlights
+  return finishUnsharpMask(center, blur, sharpAmount);
 }
 
 void main() {
@@ -783,6 +790,14 @@ vec3 applyLumaToneCurve(vec3 c) {
   return clamp(c * (l2 / l), 0.0, 4.0);
 }
 
+vec3 finishUnsharpMask(vec3 center, vec3 blur, float sharpAmount) {
+  vec3 sharp = center + (center - blur) * sharpAmount;
+  float luma = dot(center, LUMA);
+  float hot = smoothstep(0.65, 1.35, luma);
+  vec3 floorRgb = mix(vec3(0.0), center, hot);
+  return max(sharp, floorRgb);
+}
+
 vec3 applySharpnessExposed(
   sampler2D tex,
   vec2 uv,
@@ -804,8 +819,7 @@ vec3 applySharpnessExposed(
   vec3 bottom = texture2D(tex, uv + vec2(0.0, pixelSize.y)).rgb * exposureScale;
   vec3 blur = (left + right + top + bottom) * 0.25;
   float sharpAmount = amount * 0.01;
-  vec3 sharp = center + (center - blur) * sharpAmount;
-  return max(sharp, vec3(0.0));
+  return finishUnsharpMask(center, blur, sharpAmount);
 }
 
 vec3 ACESFilmicToneMapping(vec3 color) {

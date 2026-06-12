@@ -74,15 +74,14 @@ const server = http.createServer(async (req, res) => {
     const marketingRel = filePath.includes(`${path.sep}assets${path.sep}marketing${path.sep}`)
       ? filePath.split(`${path.sep}assets${path.sep}marketing${path.sep}`)[1]
       : '';
-    const isImmutableMarketingAsset =
+    const isLongCacheMarketingAsset =
       Boolean(marketingRel) &&
       /\.(webp|jpe?g|png)$/i.test(ext) &&
       (marketingRel.startsWith('toyotagr_') ||
-        marketingRel.startsWith('png-loop/') ||
         /^intro-turntable-poster\.(webp|jpe?g)$/i.test(marketingRel));
     res.setHeader(
       'Cache-Control',
-      isImmutableMarketingAsset ? 'public, max-age=31536000, immutable' : 'no-store',
+      isLongCacheMarketingAsset ? 'public, max-age=31536000, immutable' : 'no-store',
     );
 
     if (req.method === 'HEAD') {

@@ -20,7 +20,7 @@ import {
   creativePsxMergeFactor,
   creativeSnesMergeFactor,
   creativeLookUsesRetroDecimation,
-  creativeLookRetroConsoleFixedScale,
+  creativeLookFixedPatternScale,
   normalizeCreativeLookIntensity,
   normalizeCreativeLookLiftCrush,
   normalizeCreativeLookMasterHue,
@@ -45,6 +45,8 @@ import {
   resolveFbxNormalScaleY,
 } from '../import/fbxMapSlotsSettings.js';
 import { syncFbxOrmPackingOnMaterial } from './fbxOrmPackingShader.js';
+import { isTextureImageReady } from '../utils/textureReady.js';
+import { NormalViewOverlay } from './NormalViewOverlay.js';
 import { UvCheckerOverlay } from './UvCheckerOverlay.js';
 import { MapInspectPreview } from './MapInspectPreview.js';
 import {
@@ -213,6 +215,8 @@ export class MaterialController {
     getCreativeLookToonLightScalars = null,
     /** Called after creative ShaderMaterials are (re)built — e.g. `renderer.compile(scene, camera)` to avoid first-draw hitches. */
     afterCreativeLookMaterialRebuild = null,
+    /** Called when ASCII Art live uniforms change — sync screen-space glyph pass. */
+    onCreativeLookAsciiSync = null,
   }) {
     this.stateStore = stateStore;
     this.modelRoot = modelRoot;
@@ -221,6 +225,7 @@ export class MaterialController {
     this.getCreativeLookKeyLightDir = getCreativeLookKeyLightDir;
     this.getCreativeLookToonLightScalars = getCreativeLookToonLightScalars;
     this.afterCreativeLookMaterialRebuild = afterCreativeLookMaterialRebuild;
+    this.onCreativeLookAsciiSync = onCreativeLookAsciiSync;
 
     this.currentModel = null;
     this.currentShading = null;
@@ -229,6 +234,8 @@ export class MaterialController {
     this.wireframeOverlayMeshes = null;
     /** UV Checker overlay (Atlux map) — extracted to keep this controller focused on materials/shading. */
     this.uvCheckerOverlay = new UvCheckerOverlay();
+    /** Normal / tangent diagnostic overlay (Object → Advanced). */
+    this.normalViewOverlay = new NormalViewOverlay();
     /** Hover preview for Object → Maps channel inspection. */
     this.mapInspectPreview = new MapInspectPreview(this);
     this.unlitMode = false;
@@ -298,6 +305,11 @@ export class MaterialController {
         style: adv.uvCheckerStyle,
       });
       this.uvCheckerOverlay.setModel(model);
+      this.normalViewOverlay.applySettings({
+        enabled: adv.normalView === true,
+        mode: adv.normalViewMode,
+      });
+      this.normalViewOverlay.setModel(model);
     }
     const icl = initialState.creativeLook ?? {};
     this.creativeLookSettings = {
@@ -322,30 +334,17 @@ export class MaterialController {
         initialState.material?.brightness ??
         initialState.diffuseBrightness ??
         DEFAULT_MATERIAL_BRIGHTNESS,
-      metalness: initialState.material?.metalness ?? 0.0,
-      roughness: initialState.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
+      metalness: 0.0,
+      roughness: DEFAULT_MATERIAL_ROUGHNESS,
       emissive: initialState.material?.emissive ?? 0.0,
     };
     this.originalMaterials = new WeakMap();
     this.prepareMesh(model);
-    
-    // Try to read roughness from the first material we find to preserve artist's intention
-    if (initialState.material?.roughness === undefined) {
-      let foundRoughness = null;
-      model.traverse((child) => {
-        if (child.isMesh && child.material && !foundRoughness) {
-          const mat = Array.isArray(child.material) ? child.material[0] : child.material;
-          if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) && mat.roughness !== undefined) {
-            foundRoughness = mat.roughness;
-          }
-        }
-      });
-      if (foundRoughness !== null) {
-        this.materialSettings.roughness = foundRoughness;
-        // Update state store with the found value
-        this.stateStore?.set('material.roughness', foundRoughness);
-      }
-    }
+    this._syncImportPbrFromModel(model);
+    this.stateStore?.set(
+      'material.importHasMrMaps',
+      this._modelHasImportMrMaps(model),
+    );
     // Note: Fresnel will be applied by setShading, which is called after setModel
   }
 
@@ -859,6 +858,8 @@ export class MaterialController {
         const adjustedColor = this._diffuseColorWithBrightness(
           this._importDiffuseTintForShading(origMat),
           bright,
+          undefined,
+          origMat,
         );
         mat.color.copy(adjustedColor);
         this._applyUserEmissiveOrRestoreImport(mat, origMat, adjustedColor, userEm, modelHasEmissive);
@@ -877,6 +878,86 @@ export class MaterialController {
       this.applyFresnelToModel(this.currentModel);
     }
     this.reapplySvgExtrudeSurfaceShaders();
+  }
+
+  _importMaterialHasMrMaps(mat) {
+    return !!(mat?.metalnessMap?.isTexture || mat?.roughnessMap?.isTexture);
+  }
+
+  /** Whether any import material on the model carries metalness/roughness maps. */
+  _modelHasImportMrMaps(object) {
+    if (!object) return false;
+    let hasMaps = false;
+    object.traverse((child) => {
+      if (hasMaps || !child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const mats = Array.isArray(stored) ? stored : [stored];
+      for (const mat of mats) {
+        if (mat && this._importMaterialHasMrMaps(mat)) {
+          hasMaps = true;
+          return;
+        }
+      }
+    });
+    return hasMaps;
+  }
+
+  /**
+   * First PBR material on the import — used to seed global metalness/roughness sliders.
+   * @returns {{ metalness: number, roughness: number } | null}
+   */
+  _readImportPbrFactors(object) {
+    if (!object) return null;
+    let found = null;
+    object.traverse((child) => {
+      if (found || !child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of mats) {
+        if (!mat) continue;
+        if (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) continue;
+        const metalness = Number.isFinite(mat.metalness)
+          ? THREE.MathUtils.clamp(mat.metalness, 0, 1)
+          : 0;
+        const roughness = Number.isFinite(mat.roughness)
+          ? THREE.MathUtils.clamp(mat.roughness, 0, 1)
+          : DEFAULT_MATERIAL_ROUGHNESS;
+        found = { metalness, roughness };
+        return;
+      }
+    });
+    return found;
+  }
+
+  /** On mesh load, align global PBR sliders with authored glTF/GLB factors. */
+  _syncImportPbrFromModel(model) {
+    const importPbr = this._readImportPbrFactors(model);
+    if (!importPbr) return;
+    this.materialSettings.metalness = importPbr.metalness;
+    this.materialSettings.roughness = importPbr.roughness;
+    this.stateStore?.set('material.metalness', importPbr.metalness);
+    this.stateStore?.set('material.roughness', importPbr.roughness);
+  }
+
+  /**
+   * Shaded mode: keep import MR maps when present; sliders multiply map samples.
+   * Scalar-only imports strip maps so sliders are the sole control.
+   */
+  _applyShadedMetalRoughness(target, importMat) {
+    if (!target) return;
+    const hasMrMaps = this._importMaterialHasMrMaps(importMat);
+    target.metalness = this.materialSettings.metalness;
+    target.roughness = this.materialSettings.roughness;
+    if (hasMrMaps) {
+      if (importMat.metalnessMap && !target.metalnessMap) {
+        target.metalnessMap = importMat.metalnessMap;
+      }
+      if (importMat.roughnessMap && !target.roughnessMap) {
+        target.roughnessMap = importMat.roughnessMap;
+      }
+      return;
+    }
+    if ('metalnessMap' in target) target.metalnessMap = null;
+    if ('roughnessMap' in target) target.roughnessMap = null;
   }
 
   /**
@@ -1554,8 +1635,9 @@ export class MaterialController {
    */
   _resolveCreativeLookDiffuseSources(mesh, origMat, liveMats, matIndex = 0) {
     const liveMat = liveMats[matIndex] ?? liveMats[0];
-    let diffuseMap = origMat?.map?.isTexture ? origMat.map : null;
-    if (!diffuseMap && liveMat?.map?.isTexture) {
+    let diffuseMap =
+      origMat?.map?.isTexture && isTextureImageReady(origMat.map) ? origMat.map : null;
+    if (!diffuseMap && liveMat?.map?.isTexture && isTextureImageReady(liveMat.map)) {
       diffuseMap = liveMat.map;
     }
 
@@ -1590,7 +1672,12 @@ export class MaterialController {
     const baseColor = basicMat.color
       ? basicMat.color.clone()
       : new THREE.Color('#ffffff');
-    const adjustedColor = this._diffuseColorWithBrightness(baseColor);
+    const adjustedColor = this._diffuseColorWithBrightness(
+      baseColor,
+      undefined,
+      undefined,
+      basicMat,
+    );
     const standard = new THREE.MeshStandardMaterial({
       color: adjustedColor,
       map: basicMat.map ?? null,
@@ -1742,6 +1829,9 @@ export class MaterialController {
           }
           const brightColor = this._diffuseColorWithBrightness(
             this._importDiffuseTintForShading(mat),
+            undefined,
+            undefined,
+            mat,
           );
 
           // Use MeshBasicMaterial for truly unlit rendering - ignores all lighting
@@ -1818,11 +1908,15 @@ export class MaterialController {
             const fbxSlotMaps = !!mat?.userData?.orbyFbxSlotMaps;
             const adjustedColor = fbxSlotMaps
               ? cloned.color.clone()
-              : this._diffuseColorWithBrightness(this._importDiffuseTintForShading(mat));
+              : this._diffuseColorWithBrightness(
+                  this._importDiffuseTintForShading(mat),
+                  undefined,
+                  undefined,
+                  mat,
+                );
             if (!fbxSlotMaps) {
               cloned.color.copy(adjustedColor);
-              cloned.metalness = this.materialSettings.metalness;
-              cloned.roughness = this.materialSettings.roughness;
+              this._applyShadedMetalRoughness(cloned, mat);
             }
             this._applyUserEmissiveOrRestoreImport(
               cloned,
@@ -1831,16 +1925,6 @@ export class MaterialController {
               this.materialSettings.emissive || 0.0,
               modelHasEmissive,
             );
-            // Disable original metalness/roughness maps so sliders behave consistently — unless the user
-            // assigned FBX slot textures (manual maps).
-            if (!fbxSlotMaps) {
-              if ('metalnessMap' in cloned) {
-                cloned.metalnessMap = null;
-              }
-              if ('roughnessMap' in cloned) {
-                cloned.roughnessMap = null;
-              }
-            }
             const normalMapEnabled =
               this.stateStore.getState().clay?.normalMap !== false;
             if (!normalMapEnabled) {
@@ -1890,6 +1974,7 @@ export class MaterialController {
     this.unlitMode = mode === 'textures';
     this.updateWireframeOverlay();
     this.uvCheckerOverlay.rebuild();
+    this.normalViewOverlay.rebuild();
     this.applyFresnelToModel(this.currentModel);
     this.reapplySvgExtrudeSurfaceShaders();
     if (!this._shaderLabBypassesGlassPresentation()) {
@@ -1964,7 +2049,8 @@ export class MaterialController {
     // breaks other presets if we bail out early for textures/wireframe shading.
     this._syncRetroConsoleGeometryForPreset(preset, patternScale);
 
-    if (this.currentShading === 'textures' || this.currentShading === 'wireframe') return;
+    // Shader Lab replaces mesh materials even in textures/wireframe display modes so imports
+    // with missing maps (common FBX drops) still render as stylized geometry.
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
@@ -2281,7 +2367,7 @@ export class MaterialController {
    * @param {number | undefined} patternScale
    */
   _resolveCreativeLookPatternScale(preset, patternScale) {
-    const fixed = creativeLookRetroConsoleFixedScale(preset);
+    const fixed = creativeLookFixedPatternScale(preset);
     if (fixed != null) return fixed;
     const ps = Number(patternScale);
     return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
@@ -2342,9 +2428,7 @@ export class MaterialController {
     this.creativeLookSettings.preset = normalizeCreativeLookPreset(
       this.creativeLookSettings.preset,
     );
-    const fixedScale = creativeLookRetroConsoleFixedScale(
-      this.creativeLookSettings.preset,
-    );
+    const fixedScale = creativeLookFixedPatternScale(this.creativeLookSettings.preset);
     if (fixedScale != null) {
       this.creativeLookSettings.patternScale = fixedScale;
     }
@@ -2388,6 +2472,7 @@ export class MaterialController {
     let patternScale = Number(cl.patternScale);
     if (!Number.isFinite(patternScale)) patternScale = 1;
     patternScale = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+    this.creativeLookSettings.patternScale = patternScale;
 
     const scaledClock = elapsedSeconds * animSpeed;
 
@@ -2462,6 +2547,12 @@ export class MaterialController {
           }
         }
       });
+    }
+
+    if (preset === 'ascii-art') {
+      if (typeof this.onCreativeLookAsciiSync === 'function') {
+        this.onCreativeLookAsciiSync();
+      }
     }
 
     if (preset === 'chrome') {
@@ -2605,11 +2696,19 @@ export class MaterialController {
 
   /**
    * Brightness-adjusted albedo. Dielectrics may exceed 1.0 (HDR-style diffuse boost).
-   * When metalness is active, clamp to [0, 1] so conductor F0 does not blow out specular.
+   * When metalness is active (scalar-only PBR), clamp to [0, 1] so conductor F0 does not blow out specular.
+   * Skipped when {@link importMat} has MR maps — the slider is a map multiplier, not surface metalness.
    * @param {THREE.Color|string} sourceColor
    * @param {number} [brightness]
    * @param {number|null} [metalnessForClamp] — pass `0` for unlit/textures; omit to use slider metalness
+   * @param {THREE.Material} [importMat]
    */
+  _metalnessForBrightnessClamp(metalnessForClamp, importMat) {
+    if (metalnessForClamp !== undefined) return metalnessForClamp;
+    if (importMat && this._importMaterialHasMrMaps(importMat)) return 0;
+    return this.materialSettings.metalness ?? 0;
+  }
+
   _isNearBlackDiffuseColor(color) {
     if (!color?.isColor) return false;
     const { r, g, b } = color;
@@ -2665,6 +2764,9 @@ export class MaterialController {
 
     const adjustedColor = this._diffuseColorWithBrightness(
       this._importDiffuseTintForShading(importMat),
+      undefined,
+      undefined,
+      importMat,
     );
     cloned.color.copy(adjustedColor);
     cloned.metalness = importMat.metalnessMap
@@ -2692,6 +2794,7 @@ export class MaterialController {
     sourceColor,
     brightness = this.materialSettings.brightness,
     metalnessForClamp = undefined,
+    importMat = undefined,
   ) {
     const color =
       sourceColor?.isColor
@@ -2701,10 +2804,7 @@ export class MaterialController {
     const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
     color.multiplyScalar(scale);
 
-    const metalRaw =
-      metalnessForClamp !== undefined
-        ? metalnessForClamp
-        : this.materialSettings.metalness ?? 0;
+    const metalRaw = this._metalnessForBrightnessClamp(metalnessForClamp, importMat);
     const metal = Number.isFinite(Number(metalRaw)) ? Math.min(1, Math.max(0, Number(metalRaw))) : 0;
     if (metal > 1e-4) {
       const clamp = (v) => Math.min(1, Math.max(0, v));
@@ -2826,9 +2926,9 @@ export class MaterialController {
           if (Array.isArray(material) && Array.isArray(original)) {
             material.forEach((mat, idx) => {
               if (mat?.userData?.orbyCreativeLook) return;
+              const origMat = Array.isArray(original) ? original[idx] : original;
               if (mat && (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial)) {
                 let m = mat;
-                const origMat = Array.isArray(original) ? original[idx] : original;
                 if (this._isEmissiveBlendDisplayImport(origMat)) {
                   if (m.userData?.orbyEmissiveDisplay && m.isMeshBasicMaterial) {
                     this._applyEmissiveDisplayMaterialGain(
@@ -2853,10 +2953,19 @@ export class MaterialController {
                   m = this._upgradeStandardMaterialToPhysical(m);
                   material[idx] = m;
                 }
-                const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original, idx));
+                const adjustedColor = this._diffuseColorWithBrightness(
+                  getOriginalColor(original, idx),
+                  undefined,
+                  undefined,
+                  origMat,
+                );
                 m.color.copy(adjustedColor);
-                m.metalness = this.materialSettings.metalness;
-                m.roughness = this.materialSettings.roughness;
+                if (origMat?.userData?.orbyFbxSlotMaps) {
+                  m.metalness = this.materialSettings.metalness;
+                  m.roughness = this.materialSettings.roughness;
+                } else {
+                  this._applyShadedMetalRoughness(m, origMat);
+                }
                 this._applyUserEmissiveOrRestoreImport(
                   m,
                   origMat,
@@ -2865,14 +2974,6 @@ export class MaterialController {
                   modelHasEmissive,
                 );
                 this._syncTransparentFlagsFromImport(m, origMat);
-                if (!origMat?.userData?.orbyFbxSlotMaps) {
-                  if ('metalnessMap' in m) {
-                    m.metalnessMap = null;
-                  }
-                  if ('roughnessMap' in m) {
-                    m.roughnessMap = null;
-                  }
-                }
                 if (tSub > SUBSURFACE_EPS && m.isMeshPhysicalMaterial) {
                   delete m.userData.orbySubsurface;
                   this._applySubsurfacePhysicalParams(m, tSub);
@@ -2881,7 +2982,12 @@ export class MaterialController {
               } else if (mat && (mat.isMeshPhongMaterial || mat.isMeshLambertMaterial)) {
                 if (mat?.userData?.orbyCreativeLook) return;
                 // FBX (e.g. Mixamo) often loads as Phong/Lambert — brightness must still apply live.
-                const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original, idx));
+                const adjustedColor = this._diffuseColorWithBrightness(
+                  getOriginalColor(original, idx),
+                  undefined,
+                  undefined,
+                  origMat,
+                );
                 mat.color.copy(adjustedColor);
                 mat.needsUpdate = true;
               }
@@ -2913,10 +3019,19 @@ export class MaterialController {
               mat = this._upgradeStandardMaterialToPhysical(mat);
               child.material = mat;
             }
-            const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original));
+            const adjustedColor = this._diffuseColorWithBrightness(
+              getOriginalColor(original),
+              undefined,
+              undefined,
+              original,
+            );
             mat.color.copy(adjustedColor);
-            mat.metalness = this.materialSettings.metalness;
-            mat.roughness = this.materialSettings.roughness;
+            if (original?.userData?.orbyFbxSlotMaps) {
+              mat.metalness = this.materialSettings.metalness;
+              mat.roughness = this.materialSettings.roughness;
+            } else {
+              this._applyShadedMetalRoughness(mat, original);
+            }
             this._applyUserEmissiveOrRestoreImport(
               mat,
               original,
@@ -2925,14 +3040,6 @@ export class MaterialController {
               modelHasEmissive,
             );
             this._syncTransparentFlagsFromImport(mat, original);
-            if (!original?.userData?.orbyFbxSlotMaps) {
-              if ('metalnessMap' in mat) {
-                mat.metalnessMap = null;
-              }
-              if ('roughnessMap' in mat) {
-                mat.roughnessMap = null;
-              }
-            }
             if (tSub > SUBSURFACE_EPS && mat.isMeshPhysicalMaterial) {
               delete mat.userData.orbySubsurface;
               this._applySubsurfacePhysicalParams(mat, tSub);
@@ -2943,7 +3050,12 @@ export class MaterialController {
             (material.isMeshPhongMaterial || material.isMeshLambertMaterial)
           ) {
             if (material.userData?.orbyCreativeLook) return;
-            const adjustedColor = this._diffuseColorWithBrightness(getOriginalColor(original));
+            const adjustedColor = this._diffuseColorWithBrightness(
+              getOriginalColor(original),
+              undefined,
+              undefined,
+              original,
+            );
             material.color.copy(adjustedColor);
             material.needsUpdate = true;
           }
@@ -3009,8 +3121,10 @@ export class MaterialController {
         child.isMesh
         && !child.userData.isWireframeOverlay
         && !child.userData.isUvCheckerOverlay
+        && !child.userData.isNormalViewOverlay
+        && !child.userData.isTopologyWarningsOverlay
       ) {
-        // Hide mesh if hideMesh is enabled (but keep wireframe + uv checker overlays visible)
+        // Hide mesh if hideMesh is enabled (but keep diagnostic overlays visible)
         child.visible = !hideMesh;
       }
     });
@@ -3052,6 +3166,8 @@ export class MaterialController {
           || !child.geometry
           || child.userData.isWireframeOverlay
           || child.userData.isUvCheckerOverlay
+          || child.userData.isNormalViewOverlay
+          || child.userData.isTopologyWarningsOverlay
         ) return;
         // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
         if (child.isInstancedMesh) return;
@@ -3151,6 +3267,24 @@ export class MaterialController {
   updateUvCheckerOverlayTransforms() {
     if (!this.uvCheckerOverlay.enabled) return;
     this.uvCheckerOverlay.updateTransforms();
+  }
+
+  /** Delegating wrappers — normal view logic lives in {@link NormalViewOverlay}. */
+  setNormalViewSettings(partial) {
+    this.normalViewOverlay.applySettings(partial);
+  }
+
+  setNormalViewMode(mode) {
+    this.normalViewOverlay.setMode(mode);
+  }
+
+  clearNormalViewOverlay() {
+    this.normalViewOverlay.clear();
+  }
+
+  updateNormalViewOverlayTransforms() {
+    if (!this.normalViewOverlay.enabled) return;
+    this.normalViewOverlay.updateTransforms();
   }
 
   setFresnelSettings(settings) {
@@ -4360,9 +4494,11 @@ export class MaterialController {
     this.disposeFbxUserTextures(this.currentModel);
     this.clearWireframeOverlay();
     this.uvCheckerOverlay.setModel(null);
+    this.normalViewOverlay.setModel(null);
     this.currentModel = null;
     this.currentShading = null;
     this.originalMaterials = new WeakMap();
+    this.stateStore?.set('material.importHasMrMaps', false);
   }
 
   getClaySettings() {

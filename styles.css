@@ -1834,18 +1834,12 @@ html.orby-gate-unlocked .orby-entry-gate,
 }
 
 .dropzone .orby-magic-btn.dropzone-btn {
-  width: var(--drop-hero-magic-btn-width, 192px);
-  min-width: var(--drop-hero-magic-btn-width, 192px);
-  min-height: calc(3.65rem * var(--drop-hero-wide-factor));
-  /* --orby-marketing-support-size (14px @ 2560; drop-secondary uses --orby-dropzone-secondary-size) */
+  /* Width grows with label — same min footprint as section CTAs (.orby-magic-btn) */
   font-size: var(--orby-marketing-support-size, clamp(0.75rem, 1.2vw, 0.9rem));
 }
 
 .dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__inner {
   font-size: inherit;
-  padding: calc(var(--ui-orby-pill-pad-block-normal) * var(--drop-hero-wide-factor))
-    calc(var(--ui-orby-pill-pad-inline-normal) * var(--drop-hero-wide-factor));
-  gap: calc(0.5rem * var(--drop-hero-wide-factor));
 }
 
 .dropzone-actions .orby-magic-btn.dropzone-btn .orby-magic-btn__arrow {
@@ -1887,6 +1881,11 @@ html.orby-gate-unlocked .orby-entry-gate,
   --orby-magic-btn-rim-c: 16px;
   --orby-magic-btn-stroke: 1.5px;
   --orby-magic-btn-fill-speed: 0.16s;
+  /* Content-sized pill — width from label + padding (no min-width) */
+  --orby-magic-btn-pad-block: 1.5rem;
+  --orby-magic-btn-pad-inline: 1.75rem;
+  --orby-magic-btn-inner-gap: 0.5rem;
+  --orby-magic-btn-min-height: 4rem;
 
   position: relative;
   overflow: visible;
@@ -1896,8 +1895,9 @@ html.orby-gate-unlocked .orby-entry-gate,
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  min-width: 15.25rem;
-  min-height: 3.65rem;
+  width: auto;
+  max-width: 100%;
+  min-height: var(--orby-magic-btn-min-height);
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -1937,9 +1937,9 @@ html.orby-gate-unlocked .orby-entry-gate,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--orby-magic-btn-inner-gap);
   box-sizing: border-box;
-  padding: 1.08rem 2.65rem;
+  padding: var(--orby-magic-btn-pad-block) var(--orby-magic-btn-pad-inline);
   pointer-events: none;
   transform: translateX(0);
   transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1949,6 +1949,7 @@ html.orby-gate-unlocked .orby-entry-gate,
   display: inline-flex;
   align-items: center;
   line-height: 1;
+  white-space: nowrap;
   pointer-events: none;
 }
 
@@ -2313,7 +2314,6 @@ html.safari-browser .orby-magic-btn:focus-visible::before {
 
 .dropzone-actions .orby-magic-btn {
   flex: 0 0 auto;
-  min-width: var(--drop-hero-magic-btn-width, 192px);
   opacity: 0;
   transform: translateY(-15px);
   animation: none;
@@ -2945,10 +2945,8 @@ body.export-overlay-debug #dropzone {
     calc(0.936 + 0.064 * ((100vw - 120rem) / 40rem)),
     1
   );
-  /* Browse magic pill width — 192px @ 2560, ~168px @ 1920 (single-line “Browse Files”) */
-  --drop-hero-magic-btn-width: calc(
-    168px + 24px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
-  );
+  /* Scroll-nav link inset — conservative estimate for content-sized Browse pill */
+  --drop-hero-magic-btn-width: calc(12ch + 3.75rem);
   --dropzone-frost-blur: calc(20px * var(--drop-hero-wide-factor));
   --dropzone-frost-fill: color-mix(in srgb, var(--orby-app-bg) 50%, transparent);
   isolation: isolate;
@@ -3496,11 +3494,11 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
 .shelf {
   /* Inset of panel box from the browser chrome (top / right / bottom) — --shelf-inset on :root / html */
   /* ── Control row layout (.slider-line, .select-line, .color-line, .map-slot-row) ──
-   * 40% label · 60% control · fixed value column. Placement via --shelf-span-* only. */
+   * 50% label · 50% control+value · dropdowns auto-width in control column. */
   --shelf-row-value-col: 2.5rem;
   --slider-value-col: var(--shelf-row-value-col);
-  --shelf-row-label-col: minmax(0, 2fr);
-  --shelf-row-control-col: minmax(0, 3fr);
+  --shelf-row-label-col: minmax(0, 1fr);
+  --shelf-row-control-col: minmax(0, 1fr);
   --shelf-row-col-gap: 0.45rem;
   --shelf-row-grid: var(--shelf-row-label-col) var(--shelf-row-control-col) var(--shelf-row-value-col);
   --shelf-place-label: 1;
@@ -3509,6 +3507,10 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-span-control: 2;
   --shelf-span-control-full: 2 / -1;
   --shelf-span-label-toggle: 1 / 3;
+  /* Shared pill height — toggles and dropdowns align on the same track */
+  --shelf-toggle-track-height: calc(0.65rem + 0.5rem);
+  --shelf-dropdown-pill-height: var(--shelf-toggle-track-height);
+  --shelf-select-inner-stroke: 2px;
   /* Vertical rhythm — 24px @ 2560: headlines (.block-title), dividers, control rows, foldout tops */
   --shelf-section-gap: 24px;
   /* Card inset from shelf chrome — independent of section gap */
@@ -3597,6 +3599,9 @@ html:not(.mobile-landing) .shelf {
   --shelf-picker-sphere-ring: round(70px * var(--studio-ui-scale), 1px);
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
   --shelf-picker-grid-gap: calc(8px * var(--studio-ui-scale));
+  --shelf-toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
+  --shelf-dropdown-pill-height: var(--shelf-toggle-track-height);
+  --shelf-select-inner-stroke: calc(2px * var(--studio-ui-scale));
   width: calc(380px * var(--studio-ui-scale));
 }
 
@@ -3683,7 +3688,6 @@ html:not(.mobile-landing) .shelf .slider-line .value-inline-input {
 
 /* Toggles use rem (root-sized) — scale track/thumb with studio factor */
 html:not(.mobile-landing) .shelf .effect-toggle {
-  --toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
   --toggle-thumb-size: calc(var(--toggle-track-height) - 0.3rem * var(--studio-ui-scale));
   --toggle-thumb-offset: calc(0.15rem * var(--studio-ui-scale));
 }
@@ -3757,29 +3761,30 @@ html:not(.mobile-landing) .shelf .select-line {
 
 html:not(.mobile-landing) .shelf .select-line select {
   font-size: var(--shelf-headline-font-size);
-  line-height: 1.25;
-  padding: calc(0.35rem * var(--studio-ui-scale)) calc(1.6rem * var(--studio-ui-scale))
-    calc(0.35rem * var(--studio-ui-scale)) calc(0.7rem * var(--studio-ui-scale));
-  background-position: right calc(0.6rem * var(--studio-ui-scale)) center;
-  background-size: calc(12px * var(--studio-ui-scale)) calc(12px * var(--studio-ui-scale));
+  min-height: var(--shelf-dropdown-pill-height);
+  padding-block: calc((var(--shelf-dropdown-pill-height) - 1em) / 2);
+  padding-inline: calc(0.65rem * var(--studio-ui-scale)) calc(1.35rem * var(--studio-ui-scale));
+  background-position: right calc(0.45rem * var(--studio-ui-scale)) center;
+  background-size: calc(10px * var(--studio-ui-scale)) calc(10px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .select-line select:focus-visible {
-  box-shadow: 0 0 0 calc(2px * var(--studio-ui-scale))
+  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
     color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
 html:not(.mobile-landing) .shelf .font-extrude-family-trigger {
   font-size: var(--shelf-headline-font-size);
-  line-height: 1.25;
-  padding: calc(0.35rem * var(--studio-ui-scale)) calc(1.6rem * var(--studio-ui-scale))
-    calc(0.35rem * var(--studio-ui-scale)) calc(0.7rem * var(--studio-ui-scale));
-  background-position: right calc(0.6rem * var(--studio-ui-scale)) center;
-  background-size: calc(12px * var(--studio-ui-scale)) calc(12px * var(--studio-ui-scale));
+  min-height: var(--shelf-dropdown-pill-height);
+  height: var(--shelf-dropdown-pill-height);
+  padding-block: 0;
+  padding-inline: calc(0.65rem * var(--studio-ui-scale)) calc(1.35rem * var(--studio-ui-scale));
+  background-position: right calc(0.45rem * var(--studio-ui-scale)) center;
+  background-size: calc(10px * var(--studio-ui-scale)) calc(10px * var(--studio-ui-scale));
 }
 
 html:not(.mobile-landing) .shelf .font-extrude-family-trigger:focus-visible {
-  box-shadow: 0 0 0 calc(2px * var(--studio-ui-scale))
+  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
     color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
@@ -4613,7 +4618,7 @@ a.about-highlight:focus-visible {
 
 /* Toggle base — stay full strength inside muted sections; avoid extra compositor layers (scroll perf) */
 .effect-toggle {
-  --toggle-track-height: calc(0.65rem + 0.5rem);
+  --toggle-track-height: var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem));
   --toggle-thumb-size: calc(var(--toggle-track-height) - 0.3rem);
   --toggle-thumb-offset: 0.15rem;
   position: relative;
@@ -4905,14 +4910,141 @@ a.about-highlight:focus-visible {
 
 .panel-hint.advanced-import-hint,
 .panel-hint.advanced-glass-hint {
-  margin: 0 0 0.65rem;
+  margin: 0 0 var(--shelf-section-gap);
   font-size: 0.78rem;
   line-height: 1.35;
   color: var(--text-dim);
 }
 
+.panel-hint.advanced-section-title,
+.panel-hint.map-slots-tuning-title {
+  margin: 0 0 var(--shelf-section-gap);
+  font-size: var(--shelf-label-font-size);
+  color: var(--text-muted);
+}
+
+.topology-warnings-block {
+  margin: 0;
+}
+
+.topology-warnings-actions {
+  margin-bottom: 0;
+}
+
+.topology-warnings-scan {
+  width: 100%;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.topology-warnings-scan.is-active {
+  opacity: 1;
+  background: color-mix(in srgb, var(--warning) 18%, var(--panel-alt));
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+}
+
+.topology-warnings-scan.is-active:hover:not(:disabled) {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #fff;
+  box-shadow: none;
+}
+
+.topology-warnings-results {
+  margin-top: 0.75rem;
+}
+
+.topology-warnings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.topology-warnings-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-left: 2px solid var(--warning);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--panel-alt) 72%, transparent);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.topology-warnings-tab:hover {
+  background: color-mix(in srgb, var(--panel-alt) 92%, transparent);
+}
+
+.topology-warnings-tab.is-selected {
+  border-color: color-mix(in srgb, var(--text) 50%, transparent);
+  border-left-color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, var(--panel-alt));
+}
+
+.topology-warnings-tab.is-selected .topology-warnings-list__label {
+  color: var(--text);
+}
+
+.topology-warnings-tab:not(.is-selected) .topology-warnings-list__label {
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+}
+
+.topology-warnings-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--panel-alt) 72%, transparent);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.topology-warnings-list__item.is-issue {
+  border-left: 2px solid var(--warning);
+}
+
+.topology-warnings-list__item.is-ok {
+  border-left: 2px solid var(--brand-primary, var(--orby-lime));
+}
+
+.topology-warnings-list__item.is-info {
+  border-left: 2px solid color-mix(in srgb, var(--text-dim) 55%, transparent);
+}
+
+.topology-warnings-list__label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.topology-warnings-list__item.is-issue .topology-warnings-list__label {
+  color: var(--warning);
+}
+
+.topology-warnings-list__detail {
+  color: var(--text-dim);
+}
+
+.topology-warnings-list__mesh {
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--text-dim) 88%, transparent);
+}
+
 .advanced-import-details {
-  margin: 0.15rem 0 0.55rem;
+  margin: 0 0 var(--shelf-section-gap);
   font-size: var(--shelf-label-font-size);
 }
 
@@ -4926,7 +5058,17 @@ a.about-highlight:focus-visible {
 }
 
 .advanced-import-details .slider-line {
+  margin-top: 0;
+}
+
+.advanced-import-details .slider-line:first-of-type {
   margin-top: 0.35rem;
+}
+
+.advanced-glass-controls:not([hidden]) {
+  margin-top: var(--shelf-section-gap);
+  padding-top: var(--shelf-section-gap);
+  border-top: 1px solid var(--stroke);
 }
 
 /* Mesh → Advanced — open Information tab at Transparency section */
@@ -5050,12 +5192,6 @@ button.advanced-info-doc-btn {
   outline: none;
 }
 
-.map-slots-tuning-title {
-  margin: 0 0 var(--shelf-section-gap);
-  font-size: var(--shelf-label-font-size);
-  color: var(--text-muted);
-}
-
 /* Map Slots actions — same pill buttons as Object/Studio Scene (.export-controls + .accent-action-btn). */
 .map-slots-action-row {
   margin-bottom: 0;
@@ -5173,29 +5309,29 @@ button.advanced-info-doc-btn {
   grid-column: auto;
 }
 
-/* Dropdowns & color chips — full width to panel edge */
-.select-line select,
-.font-extrude-family-line .font-extrude-family-picker,
-.color-line .color-chip {
-  grid-column: var(--shelf-span-control-full);
-}
-
+/* Dropdowns — same row as label; right edge aligned with toggles (value column) */
 .select-line select,
 .font-extrude-family-line .font-extrude-family-picker {
-  justify-self: stretch;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  grid-column: var(--shelf-place-value);
+  justify-self: end;
+  width: fit-content;
+  max-width: 14rem;
+  min-width: min(100%, 5.25rem);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
 .color-line .color-chip {
+  grid-column: var(--shelf-span-control-full);
   justify-self: end;
   min-width: 0;
 }
 
-/* Select row with its own value readout — dropdown matches slider track width */
+/* Select row with its own value readout — dropdown stays in the control column only */
 .select-line:has(> .value:not(:empty)) select {
   grid-column: var(--shelf-span-control);
+  max-width: 100%;
 }
 
 .select-line:not(:has(> span:first-child)) {
@@ -5203,24 +5339,42 @@ button.advanced-info-doc-btn {
 }
 
 .select-line:not(:has(> span:first-child)) select {
-  grid-column: 1;
+  grid-column: var(--shelf-place-value);
+  justify-self: end;
+}
+
+.select-line,
+.font-extrude-family-line {
+  overflow: visible;
 }
 
 .select-line select {
   border: none;
   border-radius: 999px;
-  padding: 0.35rem 1.6rem 0.35rem 0.7rem;
+  box-sizing: border-box;
+  display: inline-block;
+  height: auto;
+  min-height: var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem)));
+  padding-block: calc(
+    (var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem))) - 1em) / 2
+  );
+  padding-inline: 0.65rem 1.35rem;
   color: var(--text);
   font-family: inherit;
   font-size: var(--shelf-headline-font-size);
-  line-height: 1.25;
+  line-height: 1;
   appearance: none;
+  -webkit-appearance: none;
   /* Native popup list on Windows/Chromium reads color-scheme from the select, not :root */
   color-scheme: dark;
-  background-color: rgba(255, 255, 255, 0.15);
+  /* Match unchecked toggle track fill — lighter grays read thinner than the switch */
+  background-color: rgba(255, 255, 255, 0.25);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.6rem center;
+  background-position: right 0.45rem center;
+  background-size: 10px 10px;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 0 transparent;
 }
 
 .select-line select option {
@@ -5230,7 +5384,8 @@ button.advanced-info-doc-btn {
 
 .select-line select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
+    color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
 .select-line > .value:empty {
@@ -6981,6 +7136,7 @@ body.ui-hidden .shelf {
   max-height: 28rem;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
+  overflow: visible;
 }
 
 /* Wireframe / UV Checker / … — row then foldout: one row-gap, not title inset + row margin */
@@ -7839,25 +7995,30 @@ body.ui-hidden .shelf {
 .font-extrude-family-trigger {
   display: inline-flex;
   align-items: center;
-  width: 100%;
+  width: fit-content;
   max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+  min-height: var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem)));
+  height: var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem)));
   border: none;
   border-radius: 999px;
-  padding: 0.35rem 1.6rem 0.35rem 0.7rem;
+  padding-block: 0;
+  padding-inline: 0.65rem 1.35rem;
   color: var(--text);
   font-family: inherit;
   font-size: var(--shelf-headline-font-size);
-  line-height: 1.25;
+  line-height: 1;
   appearance: none;
-  background-color: rgba(255, 255, 255, 0.15);
+  -webkit-appearance: none;
+  background-color: rgba(255, 255, 255, 0.25);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.6rem center;
-  background-size: 12px 12px;
+  background-position: right 0.45rem center;
+  background-size: 10px 10px;
   cursor: pointer;
   text-align: left;
-  box-sizing: border-box;
+  box-shadow: inset 0 0 0 0 transparent;
 }
 
 .font-extrude-family-trigger:disabled {
@@ -7867,7 +8028,8 @@ body.ui-hidden .shelf {
 
 .font-extrude-family-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  box-shadow: inset 0 0 0 var(--shelf-select-inner-stroke, 2px)
+    color-mix(in srgb, var(--brand-primary) 55%, transparent);
 }
 
 .font-extrude-family-trigger-label {

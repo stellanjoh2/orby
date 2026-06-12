@@ -138,6 +138,8 @@ export class EventManager {
     eventBus.on('mesh:uv-checker', (enabled) => s.setUvCheckerEnabled(enabled));
     eventBus.on('mesh:uv-checker-scale', (scale) => s.setUvCheckerScale(scale));
     eventBus.on('mesh:uv-checker-style', (style) => s.setUvCheckerStyle(style));
+    eventBus.on('mesh:normal-view', (enabled) => s.setNormalViewEnabled(enabled));
+    eventBus.on('mesh:normal-view-mode', (mode) => s.setNormalViewMode(mode));
     eventBus.on('mesh:transparency-fix', () => s.applyTransparencyFixFromState());
     eventBus.on('mesh:glass-appearance', () => s.applyGlassAppearanceFromState());
     eventBus.on('mesh:svg-extrude-color-override', (settings) => s.setSvgExtrudeColorOverride(settings));

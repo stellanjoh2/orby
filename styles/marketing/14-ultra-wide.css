@@ -30,7 +30,7 @@
       92px * var(--orby-ultra-wide-factor)
     );
 
-    --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
+    --orby-marketing-support-size: calc(16px * var(--orby-ultra-wide-factor));
     --orby-marketing-meta-size: calc(14px * var(--orby-ultra-wide-factor));
     --orby-marketing-pro-card-title-size: calc(22px * var(--orby-ultra-wide-factor));
     --orby-marketing-pro-card-body-size: calc(18px * var(--orby-ultra-wide-factor));
@@ -74,8 +74,6 @@
   }
 
   #orby-marketing .orby-marketing__section--cta {
-    --orby-cta-button-scale: calc(1.2 * var(--orby-ultra-wide-factor));
-    --orby-cta-button-font-size: calc(16px * var(--orby-ultra-wide-factor));
     --orby-cta-asset-max-h: calc(1150px * var(--orby-ultra-wide-factor));
   }
 
@@ -148,7 +146,7 @@
     --drop-hero-wide-factor: var(--orby-ultra-wide-factor);
     --drop-hero-magic-btn-width: calc(192px * var(--orby-ultra-wide-factor));
     --orby-scroll-nav-height: calc(84px * var(--orby-ultra-wide-factor));
-    --orby-marketing-support-size: calc(14px * var(--orby-ultra-wide-factor));
+    --orby-marketing-support-size: calc(16px * var(--orby-ultra-wide-factor));
   }
 
   .orby-marketing-scroll-nav__links {
@@ -165,17 +163,17 @@
    * same vertical scale as the 3840 nav "Browse Files" magic pill.
    */
   #orby-marketing .orby-marketing__split-cta .orby-magic-btn {
-    min-height: calc(3.65rem * var(--orby-ultra-wide-factor) * 0.88);
+    min-height: calc(var(--orby-magic-btn-min-height, 4rem) * var(--orby-ultra-wide-factor) * 0.88);
     font-size: var(--orby-marketing-support-size);
     --orby-magic-btn-stroke: calc(1.5px * var(--orby-marketing-magic-btn-stroke-scale));
   }
 
   #orby-marketing .orby-marketing__split-cta .orby-magic-btn .orby-magic-btn__inner {
     padding: calc(
-        var(--ui-orby-pill-pad-block-normal) * var(--orby-ultra-wide-factor) * 0.88
+        var(--orby-magic-btn-pad-block, 1.5rem) * var(--orby-ultra-wide-factor) * 0.88
       )
-      calc(var(--ui-orby-pill-pad-inline-normal) * var(--orby-ultra-wide-factor));
-    gap: calc(0.5rem * var(--orby-ultra-wide-factor));
+      calc(var(--orby-magic-btn-pad-inline, 1.75rem) * var(--orby-ultra-wide-factor));
+    gap: calc(var(--orby-magic-btn-inner-gap, 0.5rem) * var(--orby-ultra-wide-factor));
   }
 
   #orby-marketing .orby-marketing__cta-actions .orby-magic-btn.orby-magic-btn--on-lime {

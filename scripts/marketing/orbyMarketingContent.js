@@ -87,8 +87,8 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      "Your 3D models deserve better. Whether it's a photogrammetry scan, a game asset, or your logotype extruded into a mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
-    gradientPhrases: ['deserve better'],
+      "Orby is more than a 3D viewer. It's a focused studio for turning files into presentations — whether that's a photogrammetry scan, a game asset, or your logotype extruded into a mesh. Inspect it, stage it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio, or next presentation.",
+    gradientPhrases: ['more than a 3D viewer'],
   },
   {
     type: 'split',
@@ -119,7 +119,7 @@ export const MARKETING_SECTIONS = [
       'Drag-and-drop or browse — plus full .orby scene recall',
       'Client-side only: close the tab and your files are gone',
     ],
-    ctaLabel: 'Load Sample Object',
+    ctaLabel: 'Load sample',
     ctaAction: 'load-sample',
     layout: 'media-right',
     imageSrc: './assets/marketing/orby-section02-dropitin.jpg',
@@ -293,7 +293,7 @@ export const MARKETING_SECTIONS = [
         alt: 'New Balance Classic 574 sneaker product cutout',
       },
       {
-        src: './assets/marketing/png-loop/skull-salazar.png',
+        src: './assets/marketing/png-loop/skull-salazar.png?v=3',
         alt: 'Decorative painted skull cutout',
       },
       {
@@ -311,32 +311,32 @@ export const MARKETING_SECTIONS = [
       "It's not just a viewer. It's a studio. UV checker, wireframe, clay mode, isometric camera, ColorChecker, onset reference kit, a dynamic curved studio backdrop — and the list goes on. The kind of tooling you'd expect from a desktop app, running quietly in your browser tab.",
     cards: [
       {
-        title: 'Light Control',
+        title: 'Custom HDRI',
         body:
-          'Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in.',
-        videoSrc: './assets/marketing/orby-feature-lights.mp4',
-        imageAlt: 'Three-point lighting rig orbiting a product render in Orby',
+          'Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine.',
+        videoSrc: './assets/marketing/orby-feature-custom-hdri.mp4',
+        imageAlt: 'Custom HDRI upload lighting a product render in Orby',
       },
       {
         title: 'Mesh Diagnostics',
         body:
-          'UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC.',
+          'UV checker, wireframe, clay mode, normal view, and mesh health checks with viewport highlights. Sanity-check your mesh without opening a DCC.',
         flipGallery: [
           {
-            src: './assets/marketing/pro-feature1-shoes01.jpg',
-            alt: 'Sneaker product render in Orby',
+            src: './assets/marketing/orby-feature-diagnostics01.jpg',
+            alt: 'Decorative skull product render in Orby',
           },
           {
-            src: './assets/marketing/pro-feature1-shoes02.jpg',
-            alt: 'Same sneaker with wireframe overlay in Orby',
+            src: './assets/marketing/orby-feature-diagnostics02.jpg',
+            alt: 'Same skull with wireframe overlay in Orby',
           },
           {
-            src: './assets/marketing/pro-feature1-shoes03.jpg',
-            alt: 'Same sneaker with UV checker in Orby',
+            src: './assets/marketing/orby-feature-diagnostics03.jpg',
+            alt: 'Same skull with UV checker in Orby',
           },
           {
-            src: './assets/marketing/pro-feature1-shoes04.jpg',
-            alt: 'Same sneaker in clay mode in Orby',
+            src: './assets/marketing/orby-feature-diagnostics04.jpg',
+            alt: 'Same skull in clay mode in Orby',
           },
         ],
         flipGalleryIntervalMs: 2000,
@@ -345,16 +345,16 @@ export const MARKETING_SECTIONS = [
       {
         title: 'Animation Preview',
         body:
-          'Rigged clips, baked cycles, and timeline scrub. Everything you need to preview motion before you export — no DCC required.',
+          'Rigged clips, loop/cycle modes, reverse and speed control, timeline scrub, and bone overlay. Review motion in a clean, uncluttered space built for quick animation checks.',
         videoSrc: './assets/marketing/orby-dancing-compressed.mp4',
         imageAlt: 'Orby mascot previewing animation playback in the viewport',
       },
       {
-        title: 'Custom HDRI',
+        title: 'Light Control',
         body:
-          'Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine.',
-        videoSrc: './assets/marketing/orby-feature-custom-hdri.mp4',
-        imageAlt: 'Custom HDRI upload lighting a product render in Orby',
+          'Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in.',
+        videoSrc: './assets/marketing/orby-feature-lights.mp4',
+        imageAlt: 'Three-point lighting rig orbiting a product render in Orby',
       },
       {
         title: 'Spotlight Gobos',
@@ -510,8 +510,8 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-cta',
     title: 'Try it out\nfor free now',
     lede: '',
-    ctaLabel: 'Browse Files',
-    secondaryCtaLabel: 'Load Sample',
+    ctaLabel: 'Browse files',
+    secondaryCtaLabel: 'Load sample',
     footerContactEmail: 'orby-admin@proton.me',
     footerPrivacyHref: './legal/privacy-policy.html',
     footerAboutHref: './about/',
@@ -536,7 +536,7 @@ export const MARKETING_SECTIONS = [
     videoSrc: './assets/marketing/rfrct.mp4',
     videoPoster: true,
     imageAlt: 'Refrct design tool — distorted type in the browser',
-    ctaLabel: 'Request Preview',
+    ctaLabel: 'Request preview',
     ctaHref: 'mailto:hello@rfrct.app?subject=rfrct%20early%20access',
   },
 ];

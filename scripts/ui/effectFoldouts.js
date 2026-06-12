@@ -1,5 +1,5 @@
 import {
-  isBloomPipelineActive,
+  isAnamorphicBloomPipelineActive,
   isVignetteUiEnabled,
 } from '../constants.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
@@ -24,7 +24,7 @@ export function applyEffectFoldouts(state, setOpen) {
   setOpen('bloom', !!state.bloom?.enabled);
   setOpen(
     'anamorphic-lens-flare',
-    isBloomPipelineActive(state) && abOn,
+    isAnamorphicBloomPipelineActive(state) && abOn,
   );
   setOpen('lens-flare', lensFlareOn && !isoOn);
   setOpen('volumetric-scattering', godRaysOn && !isoOn);
@@ -72,6 +72,7 @@ export function applyMeshFoldouts(state, setOpen) {
   setOpen('grid', !!state.groundWire);
   setOpen('wireframe-settings', wireframeActive);
   setOpen('uv-checker', !!state.advanced?.uvChecker);
+  setOpen('normal-view', !!state.advanced?.normalView);
   setOpen(
     'svg-color-override',
     !!state.svgExtrude?.enabled && !!state.svgExtrude?.colorOverride,
@@ -135,7 +136,7 @@ export function applyToggleSectionMute(state, setMuted) {
   setMuted('dof', !state.dof?.enabled);
   setMuted('volumetric-scattering', !godRaysOn || isoOn);
   setMuted('bloom', !state.bloom?.enabled);
-  setMuted('anamorphic-lens-flare', !isBloomPipelineActive(state) || !abOn);
+  setMuted('anamorphic-lens-flare', !isAnamorphicBloomPipelineActive(state) || !abOn);
   setMuted('lens-flare', !lensFlareOn || isoOn);
   setMuted('lens-dirt', !state.lensDirt?.enabled);
   setMuted('grain', !state.grain?.enabled);

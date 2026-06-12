@@ -41,7 +41,7 @@
           <div class="orby-marketing-scroll-nav__cta"><span class="orby-magic-btn-host"><button type="button" class="orby-magic-btn orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse" data-orby-marketing-browse>
             <span class="orby-magic-btn__fill" aria-hidden="true"></span>
             <span class="orby-magic-btn__inner">
-              <span class="orby-magic-btn__label">Browse Files</span>
+              <span class="orby-magic-btn__label">Browse files</span>
               <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             </span>
           </button></span></div>
@@ -55,7 +55,7 @@
 
     <main id="main" class="legal-wrap">
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last updated: 26 May 2026</p>
+      <p class="legal-meta">Last updated: 12 June 2026</p>
 
       <p class="legal-lead">
         Your privacy matters to us. Thank you for using <strong>Orby</strong>. This policy explains
@@ -154,25 +154,28 @@
         <strong>top file formats</strong> scoreboard (for example GLB, OBJ, or SVG). When enabled,
         your browser sends a minimal signal (for example when a page loads or when you open a model
         in the studio). We increment anonymous totals only — we do <strong>not</strong> store your
-        IP address for this purpose, do <strong>not</strong> use cookies or visitor IDs, and do
-        <strong>not</strong> receive filenames or file content. Your IP may be used briefly for
-        abuse-prevention rate limiting on the stats API (same pattern as issue reports); we do not
-        keep it in the published totals.
+        IP address for this purpose, do <strong>not</strong> assign visitor IDs, and do
+        <strong>not</strong> receive filenames or file content. To avoid double-counting as you move
+        between pages in the same tab, your browser may set a short-lived flag in
+        <code>sessionStorage</code> (cleared when the tab closes); that flag stays on your device and
+        is <strong>not</strong> sent to our servers. Your IP may be used briefly for abuse-prevention
+        rate limiting on the stats API (same pattern as issue reports); we do not keep it in the
+        published totals.
       </p>
 
       <h2 id="cookies">4. Cookies and similar technologies</h2>
       <p>
         We do <strong>not</strong> use cookies or browser storage to <strong>track you across other
         sites</strong> or to <strong>profile you for advertising</strong>. We do not use third-party
-        analytics or ad pixels on Orby. Anonymous usage totals (see
-        <a href="#anonymous-stats">section 3.5</a>) do not use cookies.
+        analytics or ad pixels on Orby.
       </p>
       <p>
         Orby may use <strong>local storage</strong> and <strong>session storage</strong> in your
-        browser for essential or convenience features only—for example UI sound preferences
-        (<code>localStorage</code>), remembering mobile layout or optional access-control state for
-        the current tab (<code>sessionStorage</code>). These values stay on your device and are not
-        sent to us as part of normal studio use.
+        browser for essential or convenience features only—for example UI sound on/off and volume
+        (<code>localStorage</code>), remembering mobile layout, optional access-control state, or a
+        per-tab page-visit deduplication flag for anonymous stats (see
+        <a href="#anonymous-stats">section 3.5</a>) in <code>sessionStorage</code>. These values stay
+        on your device and are not sent to us as part of normal studio use.
       </p>
       <p>
         When the issue-report flow uses <strong>Cloudflare Turnstile</strong>, Cloudflare may set
@@ -196,7 +199,7 @@
           modules)
         </li>
         <li>
-          <strong>Cloudflare CDN (cdnjs)</strong> — stylesheets such as icon fonts
+          <strong>Cloudflare CDN (cdnjs)</strong> — scripts such as Lottie animation libraries
         </li>
         <li>
           <strong>Iconify</strong> (<code>api.iconify.design</code>) — SVG icons fetched on demand
@@ -221,7 +224,8 @@
           stats counters
         </li>
         <li>
-          <strong>Vercel</strong> — hosts the report API and may process request metadata and logs
+          <strong>Vercel</strong> — hosts the report and stats APIs and may process request metadata
+          and logs
         </li>
       </ul>
       <p>
@@ -239,6 +243,10 @@
       <ul>
         <li>To respond to support requests, issue reports, and communications you initiate.</li>
         <li>To keep the site and application available, detect abuse, and protect our systems.</li>
+        <li>
+          To publish anonymous aggregate usage totals on our
+          <a href="../stats/">Statistics</a> page; see <a href="#anonymous-stats">section 3.5</a>.
+        </li>
         <li>
           To honor our commitment that your creative content is not used for AI model training; see
           <a href="#your-content-and-ai">section 2</a>.
@@ -260,6 +268,13 @@
           <strong>Issue reports:</strong> kept in our email inbox and provider logs only as long as
           needed to investigate, respond, and for ordinary business, legal, or security
           record-keeping.
+        </li>
+        <li>
+          <strong>Anonymous usage totals:</strong> aggregate counters (page visits, assets loaded, file
+          format scoreboard) are stored in our infrastructure provider (Upstash Redis) until we reset
+          or delete them. They contain no personal identifiers. IP addresses used for stats API rate
+          limiting are held only for the provider’s short sliding-window period and are not written
+          into the published totals.
         </li>
         <li>
           <strong>Your model files:</strong> not stored by us as part of normal Orby operation; they

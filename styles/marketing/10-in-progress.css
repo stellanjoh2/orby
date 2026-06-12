@@ -146,18 +146,17 @@
 .orby-marketing__section--in-progress .orby-magic-btn--mono {
   --orby-magic-btn-stroke: calc(1.5px * var(--drop-hero-wide-factor, 1));
   width: auto;
-  min-width: calc(19.75rem * var(--drop-hero-wide-factor, 1));
   max-width: 100%;
-  min-height: calc(3.65rem * var(--drop-hero-wide-factor, 1));
+  min-height: calc(var(--orby-magic-btn-min-height, 4rem) * var(--drop-hero-wide-factor, 1));
   color: var(--orby-marketing-on-white-ink);
   font-weight: 700;
   text-decoration: none;
 }
 
 .orby-marketing__section--in-progress .orby-magic-btn--mono .orby-magic-btn__inner {
-  padding: calc(1.08rem * var(--drop-hero-wide-factor, 1))
-    calc(2.65rem * var(--drop-hero-wide-factor, 1));
-  gap: calc(0.5rem * var(--drop-hero-wide-factor, 1));
+  padding: calc(var(--orby-magic-btn-pad-block, 1.5rem) * var(--drop-hero-wide-factor, 1))
+    calc(var(--orby-magic-btn-pad-inline, 1.75rem) * var(--drop-hero-wide-factor, 1));
+  gap: calc(var(--orby-magic-btn-inner-gap, 0.5rem) * var(--drop-hero-wide-factor, 1));
 }
 
 .orby-marketing__section--in-progress .orby-magic-btn--mono .orby-magic-btn__label {
@@ -192,7 +191,7 @@
 }
 
 /*
- * Match the shared Browse/nav button width system through 2560px.
+ * Match drop-hero-wide-factor ramp through 2560px (padding on mono pill).
  * 3840+ keeps the existing in-progress mono width behavior.
  */
 @media (max-width: 160rem) {
@@ -202,10 +201,6 @@
       calc(0.78 + 0.22 * (100vw - 120rem) / 40rem),
       1
     );
-    --drop-hero-magic-btn-width: calc(
-      168px + 24px * ((var(--drop-hero-wide-factor) - 0.78) / 0.22)
-    );
-    min-width: var(--drop-hero-magic-btn-width);
   }
 }
 

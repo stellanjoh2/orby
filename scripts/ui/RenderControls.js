@@ -12,6 +12,7 @@ import {
   clampCameraShadowsUi,
   effectiveVignetteIntensity,
   getAntiAliasingUiState,
+  isAnamorphicBloomPipelineActive,
   isBloomTuningActive,
   isVignetteUiEnabled,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
@@ -52,9 +53,9 @@ export class RenderControls {
     this._lookFilterThumbsHydrated = false;
   }
 
-  /** Anamorphic Bloom: toggle follows master Bloom; sliders follow this toggle (like Lens Dirt). */
+  /** Anamorphic Bloom: toggle follows bloom pipeline; sliders follow this toggle (like Lens Dirt). */
   _syncAnamorphicBloomControlsDisabled(state) {
-    const bloomOn = !!state.bloom?.enabled;
+    const bloomOn = isAnamorphicBloomPipelineActive(state);
     const abDef = this.stateStore.getDefaults().lensFlare?.anamorphicBloom ?? {};
     const ab = { ...abDef, ...(state.lensFlare?.anamorphicBloom ?? {}) };
     const abOn = !!ab.enabled;

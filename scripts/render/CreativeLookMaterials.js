@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import { DEFAULT_MATERIAL_BRIGHTNESS } from '../constants.js';
+import { isTextureImageReady } from '../utils/textureReady.js';
 import { createShadowTintUniformValues } from './ShadowTint.js';
+import {
+  ASCII_LUMINANCE_PREP_FRAGMENT,
+  creativeAsciiCellSize,
+  creativeLookAsciiFixedScale,
+  creativeLookAsciiFixedIntensity,
+} from './creativeLookAsciiArt.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
@@ -11,7 +18,7 @@ import { createShadowTintUniformValues } from './ShadowTint.js';
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'pixel-art' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'snes' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'pixel-art' | 'ascii-art' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'snes' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -19,6 +26,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'plasma',
   'toon',
   'pixel-art',
+  'ascii-art',
   'holographic',
   'voronoi',
   'scanline-hologram',
@@ -123,6 +131,7 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'psx',
   'snes',
   'pixel-art',
+  'ascii-art',
   'scanline-hologram',
   'wire-pulse',
   'vertex-points',
@@ -135,7 +144,8 @@ export function creativeLookAllowsTransparency(preset) {
 
 /** Screen-space Bayer dither — no shadow-map vertex chunks (avoids compile issues on thin alpha shells). */
 export function creativeLookPresetUsesShadowReceive(preset) {
-  return normalizeCreativeLookPreset(preset) !== 'pixel-art';
+  const id = normalizeCreativeLookPreset(preset);
+  return id !== 'pixel-art' && id !== 'ascii-art';
 }
 
 /** Reference effective studio intensities at lights master 1.0 (LightsController multipliers). */
@@ -519,6 +529,30 @@ export function creativeLookUsesRetroDecimation(preset) {
   return id === 'ps2-crush' || id === 'psx' || id === 'snes';
 }
 
+/** Fixed pattern scale for retro console presets and ASCII Art, or `null` if live scale applies. */
+export function creativeLookFixedPatternScale(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'ascii-art') return creativeLookAsciiFixedScale();
+  return creativeLookRetroConsoleFixedScale(preset);
+}
+
+/** Whether Shader Lab Scale slider is locked (fixed grid). */
+export function creativeLookPresetLocksPatternScale(preset) {
+  return creativeLookFixedPatternScale(preset) != null;
+}
+
+/** Whether Shader Lab Intensity slider is locked (fixed baked look). */
+export function creativeLookPresetLocksIntensity(preset) {
+  return normalizeCreativeLookPreset(preset) === 'ascii-art';
+}
+
+/** Fixed intensity for presets that lock the slider, or `null`. */
+export function creativeLookFixedIntensity(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'ascii-art') return creativeLookAsciiFixedIntensity();
+  return null;
+}
+
 /** Fixed pattern scale for retro console presets, or `null` if live scale applies. */
 export function creativeLookRetroConsoleFixedScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
@@ -537,6 +571,7 @@ export function formatCreativeLookPresetLabel(preset) {
     plasma: 'Plasma',
     toon: 'Toon',
     'pixel-art': 'Pixel Art',
+    'ascii-art': 'ASCII Art',
     holographic: 'Holographic',
     'spectral-storm': 'Spectral Storm',
     voronoi: 'Voronoi',
@@ -582,6 +617,8 @@ export function creativePixelArtPixelScale(patternScale) {
   const px = 8 * Math.pow(ps, 0.72);
   return THREE.MathUtils.clamp(px, 3, 36);
 }
+
+export { creativeAsciiCellSize, creativeLookAsciiFixedScale, creativeLookAsciiFixedIntensity } from './creativeLookAsciiArt.js';
 
 /**
  * Average-edge-length multiplier for PS2 Crush edge-collapse threshold.
@@ -824,13 +861,21 @@ const CREATIVE_LOOK_WORLD_POSITION_VS = /* glsl */ `
 `;
 
 const NEON_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
 #include <shadowmap_pars_vertex>
 varying vec3 vNormalView;
 varying vec3 vPosView;
 void main() {
   #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
   #include <defaultnormal_vertex>
   #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
   vNormalView = normalize(transformedNormal);
@@ -864,12 +909,20 @@ void main() {
 `;
 
 const FLOW_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
 #include <shadowmap_pars_vertex>
 varying vec3 vWorldPosition;
 void main() {
   #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
   #include <defaultnormal_vertex>
   #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
   vWorldPosition = worldPosition.xyz;
@@ -918,14 +971,22 @@ void main() {
 `;
 
 const WORLD_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
 #include <shadowmap_pars_vertex>
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 void main() {
   #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
   #include <defaultnormal_vertex>
   vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
   #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
   vWorldPosition = worldPosition.xyz;
@@ -1761,6 +1822,9 @@ void main() {
 
 /** Vertex slip: horizontal band displacement in clip space (whole mesh slices shift sideways). */
 const SCANLINE_HOLOGRAM_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
 #include <shadowmap_pars_vertex>
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
@@ -1774,9 +1838,14 @@ float hash11(float p) {
 
 void main() {
   #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
   #include <defaultnormal_vertex>
   vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
   #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
   vWorldPosition = worldPosition.xyz;
@@ -2014,6 +2083,9 @@ void main() {
  * @returns {THREE.ShaderMaterial | THREE.MeshPhysicalMaterial}
  */
 export function createCreativeLookMaterial(preset, opts = {}) {
+  if (opts.diffuseMap?.isTexture && !isTextureImageReady(opts.diffuseMap)) {
+    opts = { ...opts, diffuseMap: null };
+  }
   const transparent = !!opts.transparent;
   const opacity = Math.min(
     1,
@@ -2085,6 +2157,8 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   };
 
   const finishPhysical = (mat, tag) => {
+    if (opts.skinning) mat.skinning = true;
+    if (opts.morphTargets) mat.morphTargets = true;
     if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
       mat.outputColorSpace = THREE.LinearSRGBColorSpace;
     }
@@ -2183,6 +2257,26 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'pixel-art';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'ascii-art') {
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: ASCII_LUMINANCE_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'ascii-art';
     return finish(mat, { shadows: false });
   }
 

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { normalizeAnimationClips } from '../utils/normalizeAnimationClip.js';
 import { formatTime } from '../utils/timeFormatter.js';
 
 export class AnimationController {
@@ -199,7 +200,7 @@ export class AnimationController {
     }
     this.mixer = new THREE.AnimationMixer(model);
     this.mixer.addEventListener('finished', this._handleClipFinished);
-    this.animations = animations;
+    this.animations = normalizeAnimationClips(animations);
     this.currentClipIndex = 0;
     const formattedClips = animations.map((clip, index) => ({
       name: clip.name || `Clip ${index + 1}`,
@@ -247,6 +248,16 @@ export class AnimationController {
     this.currentAction.time = clip.duration * value;
     this.mixer.update(0);
     this.onTimeUpdate(this.currentAction.time, clip.duration);
+  }
+
+  /** Re-apply the current clip pose after mesh materials/geometries change (e.g. Shader Lab rebuild). */
+  resyncPose() {
+    if (!this.mixer || !this.currentAction || this.isExportSessionActive()) return;
+    this.mixer.update(0);
+    const clip = this.animations[this.currentClipIndex];
+    if (clip) {
+      this.onTimeUpdate(this.currentAction.time, clip.duration);
+    }
   }
 
   selectAnimation(index) {

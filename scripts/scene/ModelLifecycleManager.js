@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import { recordAssetLoaded } from '../orbyStatsBeacon.js';
-import {
-  DEFAULT_MATERIAL_BRIGHTNESS,
-  DEFAULT_MATERIAL_ROUGHNESS,
-} from '../constants.js';
+import { DEFAULT_MATERIAL_BRIGHTNESS } from '../constants.js';
 import { LONG_TOAST_CHAR_THRESHOLD } from '../UIManager.js';
 import { clampExtrudeBevelAmount } from '../import/extrudeBevel.js';
 import {
@@ -74,6 +71,8 @@ export class ModelLifecycleManager {
     s._fbxImportBundle = null;
     s.setAnimationShowBones(false);
     s.diagnosticsController.clearBoneHelpers();
+    s.topologyWarningsOverlay?.setEnabled(false);
+    s.topologyWarningsOverlay?.setModel(null);
     s.materialController.clear();
     s.modelLoader.disposeObjectUrls();
     while (s.modelRoot.children.length) {
@@ -237,13 +236,16 @@ export class ModelLifecycleManager {
       wireframe: state.wireframe,
       creativeLook: state.creativeLook,
       advanced: state.advanced,
-      material: state.material ?? {
-        brightness: state.diffuseBrightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
-        metalness: 0.0,
-        roughness: DEFAULT_MATERIAL_ROUGHNESS,
+      material: {
+        brightness:
+          state.material?.brightness ??
+          state.diffuseBrightness ??
+          DEFAULT_MATERIAL_BRIGHTNESS,
+        emissive: state.material?.emissive ?? 0.0,
       },
     });
     s.setShading(state.shading);
+    s.ui.syncMeshControls(s.stateStore.getState());
     s.repairRenderSurfacesAfterModelLoad?.();
     if (state.gobo?.texture) {
       void s.setGoboTexture(state.gobo.texture, { updateState: false });
@@ -252,6 +254,7 @@ export class ModelLifecycleManager {
     s._emitAdvancedAlphaPanelVisibility();
     s.setReverseNormals(state.advanced?.reverseNormals ?? false);
     s.diagnosticsController.setModel(object, state.shading);
+    s.topologyWarningsOverlay?.setModel(object);
     s.diagnosticsController.setJointScale(state.animation?.jointScale ?? 0.5);
     s.diagnosticsController.setBoneStrokeWidth(state.animation?.boneStrokeWidth ?? 2);
     s.diagnosticsController.setHideMesh(false);

@@ -38,8 +38,8 @@ function titleLines(title) {
 function sectionCta(section) {
   if (section.type === 'cta') {
     return {
-      primary: { label: section.ctaLabel || 'Browse Files', action: 'browse' },
-      secondary: { label: section.secondaryCtaLabel || 'Load Sample', action: 'load-sample' },
+      primary: { label: section.ctaLabel || 'Browse files', action: 'browse' },
+      secondary: { label: section.secondaryCtaLabel || 'Load sample', action: 'load-sample' },
     };
   }
   if (section.type === 'in-progress' && section.ctaLabel) {
@@ -112,7 +112,7 @@ async function readHeroDropzone(indexHtml) {
   const browseTooltip = indexHtml.match(/id="browseButton"[^>]*data-tooltip="([^"]*)"/)?.[1] ?? '';
   const browseLabel =
     indexHtml.match(/id="browseButton"[\s\S]*?orby-magic-btn__label">([^<]+)</)?.[1]?.trim() ??
-    'Browse';
+    'Browse files';
 
   const secondaryBlock = indexHtml.match(/<p class="drop-secondary">([\s\S]*?)<\/p>/);
   const secondaryHtml = secondaryBlock?.[1] ?? '';

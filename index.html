@@ -133,7 +133,7 @@
         <div class="orby-marketing-scroll-nav__cta"><span class="orby-magic-btn-host"><button type="button" class="orby-magic-btn orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse" data-orby-marketing-browse>
           <span class="orby-magic-btn__fill" aria-hidden="true"></span>
           <span class="orby-magic-btn__inner">
-            <span class="orby-magic-btn__label">Browse Files</span>
+            <span class="orby-magic-btn__label">Browse files</span>
             <span class="orby-magic-btn__arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </span>
         </button></span></div>
@@ -345,7 +345,7 @@
               >
                 <span class="orby-magic-btn__fill" aria-hidden="true"></span>
                 <span class="orby-magic-btn__inner">
-                  <span class="orby-magic-btn__label">Browse Files</span>
+                  <span class="orby-magic-btn__label">Browse files</span>
                   <span class="orby-magic-btn__arrow" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
@@ -932,6 +932,9 @@
                     <button type="button" data-creative-look="pixel-art" class="hdri-icon" data-tooltip="Pixel Art — camera-locked screen pixels, flat cel shading, Bayer dither on mesh colors (no geometry decimation)">
                       <img src="./assets/images/creative-look-pixel-art.svg" alt="Pixel Art" width="192" height="192" />
                     </button>
+                    <button type="button" data-creative-look="ascii-art" class="hdri-icon" data-tooltip="ASCII Art — ORBY letters + abstract charset; VGA 4× atlas / 2× screen; lime duotone, Master Hue (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-ascii-art.svg" alt="ASCII Art" width="192" height="192" />
+                    </button>
                     <button type="button" data-creative-look="holographic" class="hdri-icon" data-tooltip="Holographic — thin-film rainbow shifts with view angle">
                       <img src="./assets/images/creative-look-holographic.png" alt="Holographic" width="192" height="192" />
                     </button>
@@ -1120,6 +1123,27 @@
                     </label>
                   </div>
                   <div class="slider-line">
+                    <span data-tooltip="Color surface normals as RGB to spot flipped shading or inspect tangent-space normal maps">Normal View</span>
+                    <label class="effect-toggle">
+                      <input type="checkbox" id="normalView" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Toggle normal view overlay</span>
+                    </label>
+                  </div>
+                  <div
+                    class="effect-foldout effect-foldout--collapsed"
+                    data-effect-foldout="normal-view"
+                    aria-hidden="true"
+                  >
+                  <label class="select-line">
+                    <span data-tooltip="Geometry shows smoothed vertex normals. Tangent samples assigned normal maps in tangent space (flat blue when none).">Normal View Mode</span>
+                    <select id="normalViewMode" aria-label="Normal View Mode">
+                      <option value="geometry">Geometry</option>
+                      <option value="tangent">Tangent (normal map)</option>
+                    </select>
+                  </label>
+                  </div>
+                  <div class="slider-line">
                     <span data-tooltip="Move the mesh so its bounding-box center sits on the transform origin. Keeps the model in place on screen; fixes off-axis turntable spin. Turn off to restore the file's original pivot.">Center Pivot</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="centerPivot" disabled />
@@ -1183,7 +1207,31 @@
                     <span class="value" data-output="uvCheckerScale">5.00</span>
                   </label>
                   </div>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <p class="panel-hint advanced-section-title">Mesh health</p>
+                  <div id="topologyWarningsBlock" class="topology-warnings-block">
+                    <div class="export-controls topology-warnings-actions">
+                      <button
+                        type="button"
+                        id="topologyWarningsScan"
+                        class="accent-action-btn topology-warnings-scan"
+                        data-tooltip="Analyze the loaded model for common topology problems"
+                      >
+                        <i class="fa-solid fa-stethoscope" aria-hidden="true"></i>
+                        Run Mesh Health Check
+                      </button>
+                    </div>
+                    <div id="topologyWarningsResults" class="topology-warnings-results" hidden>
+                      <ul id="topologyWarningsList" class="topology-warnings-list" aria-live="polite"></ul>
+                    </div>
+                  </div>
                   <div id="advancedAlphaControls" class="advanced-alpha-controls" hidden>
+                  <div class="panel-block-divider" aria-hidden="true"></div>
+                  <p class="panel-hint advanced-section-title">Transparency</p>
+                  <p class="panel-hint advanced-import-hint">
+                    Blended transparent surfaces are sorted per mesh in WebGL. Fine glass often needs glTF transmission or separate materials from the author.
+                    <button type="button" class="drop-link advanced-info-doc-btn" data-open-info-section="#info-transparency">Read more under Information — Transparency</button>.
+                  </p>
                   <label class="select-line">
                     <span
                       data-tooltip="Auto applies viewer defaults. Other modes trade sorting vs solid surfaces—try if layers look wrong."
@@ -1195,7 +1243,7 @@
                       <option value="opaqueAndFrontFace">Solid + front faces</option>
                     </select>
                   </label>
-                  <div class="slider-line">
+                  <div class="slider-line slider-line--toggle-only">
                     <span
                       data-tooltip="Uses light dither so stacked blended surfaces sort more predictably (common on Sketchfab). Turn off if hair or cloth looks too grainy."
                       >Stabilize Layered Transparency</span>
@@ -1212,7 +1260,7 @@
                         <span class="dev-badge" data-tooltip="This feature is still under development" aria-hidden="true"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>
                       </span>
                     </summary>
-                    <div class="slider-line">
+                    <div class="slider-line slider-line--toggle-only">
                       <span
                         data-tooltip="Only affects transmission or meshes/materials named like glass, window, visor… Flip if glazing looks inside-out."
                         >Flip Glass Normal Y</span>
@@ -1222,7 +1270,7 @@
                         <span class="sr-only">Flip glass normal map Y</span>
                       </label>
                     </div>
-                    <div class="slider-line">
+                    <div class="slider-line slider-line--toggle-only">
                       <span
                         data-tooltip="Front-side only for those same materials—not for whole-body BLEND characters (use Transparency Mode)."
                         >Glass: Front Faces Only</span>
@@ -1233,10 +1281,6 @@
                       </label>
                     </div>
                   </details>
-                  <p class="panel-hint advanced-import-hint">
-                    Blended transparent surfaces are sorted per mesh in WebGL. Fine glass often needs glTF transmission or separate materials from the author.
-                    <button type="button" class="drop-link advanced-info-doc-btn" data-open-info-section="#info-transparency">Read more under Information — Transparency</button>.
-                  </p>
                   <div id="advancedGlassControls" class="advanced-glass-controls" hidden>
                     <p class="panel-hint advanced-glass-hint">When windows / glass are detected from mesh or material names:</p>
                     <label class="slider-line">

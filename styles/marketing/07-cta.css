@@ -24,15 +24,7 @@
     12vh,
     calc(6.25rem * var(--orby-marketing-scale))
   );
-  /* Mega CTAs — ~20% larger @ 2560; 16px label (support-size is 14px elsewhere) */
-  --orby-cta-button-scale: 1.2;
-  --orby-cta-button-font-size: 16px;
-  --orby-cta-button-min-width: calc(15.25rem * var(--orby-cta-button-scale));
-  --orby-cta-button-min-height: calc(3.65rem * var(--orby-cta-button-scale));
-  --orby-cta-button-pad-block: calc(1.08rem * var(--orby-cta-button-scale));
-  --orby-cta-button-pad-inline: calc(2.65rem * var(--orby-cta-button-scale));
-  --orby-cta-button-inner-gap: calc(0.5rem * var(--orby-cta-button-scale));
-  --orby-cta-button-stroke: calc(1.5px * var(--orby-cta-button-scale));
+  /* Lime CTAs — same footprint as global magic pills (size tokens on .orby-magic-btn) */
   --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
   --orby-intro-left-nudge: clamp(100px, 26vw, 350px);
   /* Hummingbird — top-left of lime @ 2560 (below rounded corner + safe area) */
@@ -42,13 +34,6 @@
   --orby-cta-hummingbird-shift-y: 0px;
   --orby-intro-scale-left: min(1, calc(88dvh / 1041));
   --orby-cta-asset-max-h: min(88dvh, 1150px);
-}
-
-@media (max-width: 159.99rem) {
-  .orby-marketing__section--cta {
-    --orby-cta-button-scale: 1;
-    --orby-cta-button-font-size: var(--orby-marketing-support-size);
-  }
 }
 
 /* Stage bleeds above the lime edge (taller box); clip bottom so PNG never extends the page */
@@ -191,22 +176,6 @@
   transform: none;
   animation: none;
   white-space: nowrap;
-}
-
-/* Lime CTA only — dropzone / dialog pills keep global magic-btn sizing */
-#orby-marketing .orby-marketing__cta-actions .orby-magic-btn.orby-magic-btn--on-lime {
-  min-width: var(--orby-cta-button-min-width);
-  min-height: var(--orby-cta-button-min-height);
-  font-size: var(--orby-cta-button-font-size);
-  --orby-magic-btn-stroke: var(--orby-cta-button-stroke);
-}
-
-#orby-marketing
-  .orby-marketing__cta-actions
-  .orby-magic-btn.orby-magic-btn--on-lime
-  .orby-magic-btn__inner {
-  padding: var(--orby-cta-button-pad-block) var(--orby-cta-button-pad-inline);
-  gap: var(--orby-cta-button-inner-gap);
 }
 
 /*

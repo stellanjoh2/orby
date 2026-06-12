@@ -5,6 +5,16 @@
 export const ORBY_MAGIC_BTN_ARROW_SVG = `<svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /**
+ * Marketing magic-pill labels — sentence case (first word capitalized, rest lower).
+ * @param {string} label
+ */
+export function formatMarketingButtonLabel(label) {
+  const t = String(label ?? '').trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
+/**
  * @param {string} label — already escaped when emitted from marketing templates
  * @param {{ extraClass?: string, attrs?: string }} [options]
  */
@@ -51,9 +61,10 @@ export function orbyMagicButtonMonoLinkHtml(label, href, options = {}) {
  */
 export function setOrbyMagicButtonLabel(button, label) {
   if (!button) return;
+  const text = formatMarketingButtonLabel(label);
   const el = button.querySelector('.orby-magic-btn__label');
-  if (el) el.textContent = label;
-  else button.textContent = label;
+  if (el) el.textContent = text;
+  else button.textContent = text;
 }
 
 const ORBY_MAGIC_BTN_FILL_HTML = '<span class="orby-magic-btn__fill" aria-hidden="true"></span>';

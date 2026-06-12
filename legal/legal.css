@@ -82,7 +82,7 @@
     'Segoe UI', sans-serif;
   --legal-brand-headline: 'Mattone Regular', 'Cal Sans', var(--legal-font);
   --legal-brand-headline-bold: 'Mattone Bold', 'Cal Sans', var(--legal-font);
-  --legal-body-size: 1.0625rem;
+  --legal-body-size: 1.125rem; /* 18px @ 16px root */
   --legal-body-line: 1.68;
   --legal-lead-size: 1.125rem;
   --legal-lead-line: 1.62;
@@ -973,6 +973,8 @@ body.legal-doc--brand {
 
 .legal-brand-section .legal-callout {
   margin-bottom: 1.25rem;
+  font-size: var(--legal-secondary-size);
+  line-height: 1.55;
 }
 
 /* Override .legal-doc ul padding — grid galleries flush left */
@@ -1321,6 +1323,8 @@ body.legal-doc--brand ul.legal-brand-swatches > li {
   margin: 0;
   padding-left: 1.15rem;
   color: var(--legal-text);
+  font-size: var(--legal-secondary-size);
+  line-height: 1.55;
 }
 
 .legal-brand-usage-list li + li {

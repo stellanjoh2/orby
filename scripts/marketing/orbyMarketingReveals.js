@@ -15,7 +15,10 @@ import {
   setMediaPlaceholderOpacity,
 } from './orbyMarketingMediaPlaceholder.js';
 import { playMarketingVideo } from './orbyMarketingVideo.js';
-import { prepareShowcaseGalleryCredit } from './orbyMarketingShowcaseGallery.js';
+import {
+  prepareShowcaseGalleryCredit,
+  restartShowcaseGalleryAutoplay,
+} from './orbyMarketingShowcaseGallery.js';
 import { killIntroTurntableScrollTriggers } from './orbyMarketingIntroTurntable.js';
 import { isMobileLanding } from '../orbyMobileLanding.js';
 import {
@@ -618,6 +621,15 @@ function preloadProCardMedia(cardEl) {
 /**
  * @param {HTMLElement} mask
  */
+function finishProFlipGalleryReveal(mask, active) {
+  if (active) {
+    clearMarketingMediaFilter(active);
+    active.classList.add('is-loaded');
+  }
+  setMediaPlaceholderOpacity(mask, 0);
+  restartShowcaseGalleryAutoplay(mask);
+}
+
 function revealProFlipGallery(mask) {
   const imgs = [...mask.querySelectorAll('.orby-marketing__showcase-img')];
   if (!imgs.length) {
@@ -637,22 +649,31 @@ function revealProFlipGallery(mask) {
     setMediaPlaceholderOpacity(mask, 0);
     return;
   }
-  const useBlur = shouldUseMediaBlurReveal();
-  gsap.fromTo(
-    active,
-    { opacity: 0, ...(useBlur ? { filter: `blur(${mediaBlurPx}px)` } : {}) },
-    {
-      opacity: 1,
-      ...(useBlur ? { filter: 'blur(0px)' } : {}),
-      duration: mediaRevealDur,
-      ease: mediaEase,
-      onComplete: () => {
-        clearMarketingMediaFilter(active);
-        setMediaPlaceholderOpacity(mask, 0);
-        active.classList.add('is-loaded');
+  // Simple flip galleries use opacity-only reveals (same as split feature galleries).
+  // Blur-in tweens were getting killed by gallery autoplay, leaving filter: blur() stuck.
+  const useBlur =
+    shouldUseMediaBlurReveal() && !mask.hasAttribute('data-orby-marketing-gallery-simple');
+  const revealActive = () => {
+    gsap.killTweensOf(active);
+    if (useInstantMarketingReveal()) {
+      gsap.set(active, { opacity: 1, clearProps: 'filter' });
+      finishProFlipGalleryReveal(mask, active);
+      return;
+    }
+    gsap.fromTo(
+      active,
+      { opacity: 0, ...(useBlur ? { filter: `blur(${mediaBlurPx}px)` } : {}) },
+      {
+        opacity: 1,
+        ...(useBlur ? { filter: 'blur(0px)' } : {}),
+        duration: mediaRevealDur,
+        ease: mediaEase,
+        onComplete: () => finishProFlipGalleryReveal(mask, active),
+        onInterrupt: () => finishProFlipGalleryReveal(mask, active),
       },
-    },
-  );
+    );
+  };
+  void whenMediaReady(active, { decode: false }).then(revealActive);
 }
 
 /**

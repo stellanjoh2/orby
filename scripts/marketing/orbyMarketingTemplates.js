@@ -2,6 +2,7 @@
  * Homepage marketing section HTML — string templates only (no DOM / lifecycle).
  */
 import {
+  formatMarketingButtonLabel,
   orbyMagicButtonHtml,
   orbyMagicButtonMonoLinkHtml,
   orbyMagicButtonOnLimeHtml,
@@ -13,6 +14,11 @@ import {
 } from './orbyMarketingImageCredit.js';
 import { MARKETING_VIDEO_HTML_ATTRS } from './orbyMarketingVideo.js';
 import { renderRoadmapSection } from './orbyMarketingRoadmapTemplates.js';
+
+/** @param {string} label */
+function escapeMarketingButtonLabel(label) {
+  return escapeMarketingHtml(formatMarketingButtonLabel(label));
+}
 
 function renderBulletList(items) {
   if (!items?.length) return '';
@@ -30,7 +36,7 @@ function renderMagicCta(section) {
         ? 'data-orby-marketing-load-sample'
         : 'data-orby-marketing-scroll-top';
   return `<div class="orby-marketing__split-cta">
-      ${orbyMagicButtonHtml(escapeMarketingHtml(section.ctaLabel), {
+      ${orbyMagicButtonHtml(escapeMarketingButtonLabel(section.ctaLabel), {
         extraClass: 'orby-marketing__cta',
         attrs: actionAttr,
       })}
@@ -185,7 +191,7 @@ function renderFigure(section, revealDir) {
 function renderInProgressCta(section) {
   if (!section.ctaLabel || !section.ctaHref) return '';
   return `<div class="orby-marketing__split-cta">
-      ${orbyMagicButtonMonoLinkHtml(escapeMarketingHtml(section.ctaLabel), escapeMarketingHtml(section.ctaHref), {
+      ${orbyMagicButtonMonoLinkHtml(escapeMarketingButtonLabel(section.ctaLabel), escapeMarketingHtml(section.ctaHref), {
         extraClass: 'orby-marketing__cta',
       })}
     </div>`;
@@ -282,7 +288,7 @@ function renderIntroSection(section) {
       <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       <p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${renderMarketingBodyHtml(section.lede, section.gradientPhrases)}</p>
       <div class="orby-marketing__intro-actions">
-        ${orbyMagicButtonHtml('Browse Files', {
+        ${orbyMagicButtonHtml(escapeMarketingButtonLabel('Browse files'), {
           extraClass: 'orby-marketing__intro-browse',
           attrs: 'data-orby-marketing-browse',
         })}
@@ -315,8 +321,11 @@ function renderShowcaseSlides(section) {
 }
 
 function pngMarqueeDeliverySrc(pngSrc) {
-  if (!pngSrc || !/\.png$/i.test(pngSrc)) return { primary: pngSrc, fallback: '' };
-  const webpSrc = pngSrc.replace(/\.png$/i, '.webp');
+  if (!pngSrc) return { primary: pngSrc, fallback: '' };
+  const match = pngSrc.match(/^(.+\.png)(\?.*)?$/i);
+  if (!match) return { primary: pngSrc, fallback: '' };
+  const [, pngPath, query = ''] = match;
+  const webpSrc = `${pngPath.replace(/\.png$/i, '.webp')}${query}`;
   return { primary: webpSrc, fallback: pngSrc };
 }
 
@@ -526,12 +535,12 @@ function renderCtaSection(section) {
           : ''
       }
       <div class="orby-marketing__cta-actions">
-        ${orbyMagicButtonOnLimeHtml(escapeMarketingHtml(section.ctaLabel || 'Browse Files'), {
+        ${orbyMagicButtonOnLimeHtml(escapeMarketingButtonLabel(section.ctaLabel || 'Browse files'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-browse',
           variant: 'outline',
         })}
-        ${orbyMagicButtonOnLimeHtml(escapeMarketingHtml(section.secondaryCtaLabel || 'Load Sample'), {
+        ${orbyMagicButtonOnLimeHtml(escapeMarketingButtonLabel(section.secondaryCtaLabel || 'Load sample'), {
           extraClass: 'orby-marketing__cta',
           attrs: 'data-orby-marketing-load-sample',
           variant: 'outline',
@@ -674,7 +683,7 @@ function renderMarketingSiteNavHtml(fields, options) {
         <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
       </a>`;
 
-  const browseCta = orbyMagicButtonHtml('Browse Files', {
+  const browseCta = orbyMagicButtonHtml(escapeMarketingButtonLabel('Browse files'), {
     extraClass: 'orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse',
     attrs: 'data-orby-marketing-browse',
   });

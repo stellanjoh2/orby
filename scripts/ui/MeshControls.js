@@ -10,7 +10,10 @@ import {
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 import {
   CREATIVE_LOOK_PRESETS,
-  creativeLookRetroConsoleFixedScale,
+  creativeLookFixedIntensity,
+  creativeLookFixedPatternScale,
+  creativeLookPresetLocksIntensity,
+  creativeLookPresetLocksPatternScale,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 import {
@@ -217,7 +220,16 @@ export class MeshControls {
     }
     this.ui.inputs.uvChecker?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
-      this.stateStore.set('advanced.uvChecker', enabled);
+      const normalViewWasOn = enabled && !!this.stateStore.getState().advanced?.normalView;
+      this.stateStore.batch(() => {
+        this.stateStore.set('advanced.uvChecker', enabled);
+        if (normalViewWasOn) {
+          this.stateStore.set('advanced.normalView', false);
+        }
+      });
+      if (normalViewWasOn) {
+        this.eventBus.emit('mesh:normal-view', false);
+      }
       this.eventBus.emit('mesh:uv-checker', enabled);
     });
     this.ui.inputs.uvCheckerStyle?.addEventListener('change', (event) => {
@@ -237,6 +249,26 @@ export class MeshControls {
     if (this.ui.inputs.uvCheckerScale) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.uvCheckerScale);
     }
+    this.ui.inputs.normalView?.addEventListener('change', (event) => {
+      const enabled = !!event.target.checked;
+      const uvCheckerWasOn = enabled && !!this.stateStore.getState().advanced?.uvChecker;
+      this.stateStore.batch(() => {
+        this.stateStore.set('advanced.normalView', enabled);
+        if (uvCheckerWasOn) {
+          this.stateStore.set('advanced.uvChecker', false);
+        }
+      });
+      if (uvCheckerWasOn) {
+        this.eventBus.emit('mesh:uv-checker', false);
+      }
+      this.eventBus.emit('mesh:normal-view', enabled);
+    });
+    this.ui.inputs.normalViewMode?.addEventListener('change', (event) => {
+      const allowed = ['geometry', 'tangent'];
+      const mode = allowed.includes(event.target.value) ? event.target.value : 'geometry';
+      this.stateStore.set('advanced.normalViewMode', mode);
+      this.eventBus.emit('mesh:normal-view-mode', mode);
+    });
     this.ui.inputs.transparencyFix?.addEventListener('change', (event) => {
       const value = event.target.value || 'default';
       const allowed = ['default', 'opaqueBlend', 'frontFace', 'opaqueAndFrontFace'];
@@ -442,16 +474,23 @@ export class MeshControls {
       // UV checker overlay (which assumes the originals are intact). Force the overlay off so the
       // shader preview stays clean.
       const uvCheckerWasOn = enabled && !!this.stateStore.getState().advanced?.uvChecker;
+      const normalViewWasOn = enabled && !!this.stateStore.getState().advanced?.normalView;
       this.stateStore.batch(() => {
         this.stateStore.set('creativeLook.enabled', enabled);
         this.stateStore.set('creativeLookSectionOpen', enabled);
         if (uvCheckerWasOn) {
           this.stateStore.set('advanced.uvChecker', false);
         }
+        if (normalViewWasOn) {
+          this.stateStore.set('advanced.normalView', false);
+        }
       });
       updateCreativeLookFoldout(enabled);
       if (uvCheckerWasOn) {
         this.eventBus.emit('mesh:uv-checker', false);
+      }
+      if (normalViewWasOn) {
+        this.eventBus.emit('mesh:normal-view', false);
       }
       this.eventBus.emit('mesh:creative-look');
     });
@@ -468,7 +507,7 @@ export class MeshControls {
       const preset = normalizeCreativeLookPreset(
         this.stateStore.getState().creativeLook?.preset,
       );
-      const fixedScale = creativeLookRetroConsoleFixedScale(preset);
+      const fixedScale = creativeLookFixedPatternScale(preset);
       if (fixedScale != null) return;
       const value = parseFloat(event.target.value);
       if (!Number.isFinite(value)) return;
@@ -528,16 +567,24 @@ export class MeshControls {
         // See `creativeLookEnabled` handler — Shader Lab and UV Checker overlay are mutually
         // exclusive. Disable the overlay before the shader takes over.
         const uvCheckerWasOn = !!this.stateStore.getState().advanced?.uvChecker;
+        const normalViewWasOn = !!this.stateStore.getState().advanced?.normalView;
         this.stateStore.batch(() => {
           this.stateStore.set('creativeLook.preset', preset);
           this.stateStore.set('creativeLook.enabled', true);
           this.stateStore.set('creativeLookSectionOpen', true);
-          const fixedScale = creativeLookRetroConsoleFixedScale(preset);
+          const fixedScale = creativeLookFixedPatternScale(preset);
           if (fixedScale != null) {
             this.stateStore.set('creativeLook.patternScale', fixedScale);
           }
+          const fixedIntensity = creativeLookFixedIntensity(preset);
+          if (fixedIntensity != null) {
+            this.stateStore.set('creativeLook.intensity', fixedIntensity);
+          }
           if (uvCheckerWasOn) {
             this.stateStore.set('advanced.uvChecker', false);
+          }
+          if (normalViewWasOn) {
+            this.stateStore.set('advanced.normalView', false);
           }
         });
         updateCreativeLookFoldout(true);
@@ -548,6 +595,9 @@ export class MeshControls {
         this.ui.toggleCreativeLookGrid(true);
         if (uvCheckerWasOn) {
           this.eventBus.emit('mesh:uv-checker', false);
+        }
+        if (normalViewWasOn) {
+          this.eventBus.emit('mesh:normal-view', false);
         }
         this.eventBus.emit('mesh:creative-look');
       });
@@ -1066,6 +1116,7 @@ export class MeshControls {
         this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
       }
     }
+    this.ui.syncMaterialMrMapTooltips?.(!!state.material?.importHasMrMaps);
     syncSvgExtrudeControls(this._svgExtrudeCtx(), state, { requireEnabled: true });
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;
@@ -1094,6 +1145,15 @@ export class MeshControls {
     }
     if (this.ui.inputs.uvChecker) {
       this.ui.inputs.uvChecker.checked = !!state.advanced?.uvChecker;
+    }
+    if (this.ui.inputs.normalView) {
+      this.ui.inputs.normalView.checked = !!state.advanced?.normalView;
+    }
+    if (this.ui.inputs.normalViewMode) {
+      const allowed = ['geometry', 'tangent'];
+      const mode = state.advanced?.normalViewMode;
+      this.ui.inputs.normalViewMode.value = allowed.includes(mode) ? mode : 'geometry';
+      this.ui.setControlDisabled('normalViewMode', !state.advanced?.normalView);
     }
     if (this.ui.inputs.uvCheckerStyle) {
       const allowed = ['orby', 'classic', 'monochrome'];
@@ -1258,10 +1318,10 @@ export class MeshControls {
     }
     if (this.ui.inputs.creativeLookPatternScale) {
       const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
-      const retroScaleLocked = creativeLookRetroConsoleFixedScale(clPreset) != null;
+      const scaleLocked = creativeLookPresetLocksPatternScale(clPreset);
       const rawScale = Number(state.creativeLook?.patternScale);
-      const patternScale = retroScaleLocked
-        ? (creativeLookRetroConsoleFixedScale(clPreset) ?? 1)
+      const patternScale = scaleLocked
+        ? (creativeLookFixedPatternScale(clPreset) ?? 1)
         : Number.isFinite(rawScale)
           ? Math.min(5, Math.max(0.02, rawScale))
           : 1;
@@ -1277,7 +1337,7 @@ export class MeshControls {
       }
       this.ui.setControlDisabled(
         'creativeLookPatternScale',
-        !state.creativeLook?.enabled || retroScaleLocked,
+        !state.creativeLook?.enabled || scaleLocked,
       );
     }
     if (this.ui.inputs.creativeLookMasterHue) {
@@ -1293,16 +1353,23 @@ export class MeshControls {
       this.ui.setControlDisabled('creativeLookMasterHue', !state.creativeLook?.enabled);
     }
     if (this.ui.inputs.creativeLookIntensity) {
+      const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
+      const intensityLocked = creativeLookPresetLocksIntensity(clPreset);
       const rawIntensity = Number(state.creativeLook?.intensity);
-      const intensity = Number.isFinite(rawIntensity)
-        ? Math.min(2, Math.max(0, Math.round(rawIntensity * 100) / 100))
-        : 1;
+      const intensity = intensityLocked
+        ? (creativeLookFixedIntensity(clPreset) ?? 1)
+        : Number.isFinite(rawIntensity)
+          ? Math.min(2, Math.max(0, Math.round(rawIntensity * 100) / 100))
+          : 1;
       const active = document.activeElement === this.ui.inputs.creativeLookIntensity;
       if (!active) {
         this.ui.inputs.creativeLookIntensity.value = intensity;
         this.helpers.updateValueLabel('creativeLookIntensity', intensity);
       }
-      this.ui.setControlDisabled('creativeLookIntensity', !state.creativeLook?.enabled);
+      this.ui.setControlDisabled(
+        'creativeLookIntensity',
+        !state.creativeLook?.enabled || intensityLocked,
+      );
     }
     if (this.ui.inputs.creativeLookLiftCrush) {
       const rawLiftCrush = Number(state.creativeLook?.liftCrush);

@@ -57,8 +57,8 @@ export function normalizeAnimationDisplayFps(fps) {
   return ANIMATION_DISPLAY_FPS_OPTIONS.includes(n) ? n : ANIMATION_DISPLAY_FPS;
 }
 
-/** Push wireframe overlay along normals — 1 mm (studio units: 1 unit = 1 m). */
-export const WIREFRAME_OFFSET = 0.001;
+/** Push wireframe overlay along normals (studio units: 1 unit = 1 m). */
+export const WIREFRAME_OFFSET = 0.002;
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = 2;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = 2;
 export const WIREFRAME_OPACITY_VISIBLE = 1.0;
@@ -93,6 +93,16 @@ export const DEFAULT_BACKDROP_METALNESS = 0.02;
 export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
 /** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
 export const DEFAULT_MATERIAL_BRIGHTNESS = 1.5;
+
+/** Object → Material slider tooltips (`index.html` defaults match the non-map variants). */
+export const MATERIAL_METALNESS_TOOLTIP =
+  'Control metallic appearance (0 = dielectric, 1 = metal)';
+export const MATERIAL_METALNESS_MR_MAP_TOOLTIP =
+  'Multiplies the metalness map — 1.0 matches the file; lower or higher scales the texture';
+export const MATERIAL_ROUGHNESS_TOOLTIP =
+  'Control surface smoothness (0 = mirror, 1 = rough)';
+export const MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP =
+  'Multiplies the roughness map — 1.0 matches the file; lower or higher scales the texture';
 
 /** Camera → Shadows UI — symmetric around 0 so the thumb sits centered at default; maps via {@link cameraShadowsUiToShader}. */
 export const CAMERA_SHADOWS_UI_MIN = -50;
@@ -514,6 +524,11 @@ export function isCreativeLookViewportPostActive(state) {
 /** Cam/FX bloom sliders stay usable while Shader Lab viewport bloom is on. */
 export function isBloomTuningActive(state) {
   return !!state?.bloom?.enabled || isCreativeLookViewportPostActive(state);
+}
+
+/** Anamorphic streak runs when bloom output exists (Cam/FX bloom or Shader Lab viewport bloom). */
+export function isAnamorphicBloomPipelineActive(state) {
+  return isBloomPipelineActive(state) || isCreativeLookViewportPostActive(state);
 }
 
 /**

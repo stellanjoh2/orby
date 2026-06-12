@@ -351,6 +351,7 @@ export class GamepadController {
     this.stateStore.set('hdri', nextPreset);
     if (nextPreset !== HDRI_CUSTOM_ID) {
       this.stateStore.set('hdriCustomName', null);
+      this.stateStore.set('hdriCustomAsset', null);
     }
     this.ui?.setHdriActive?.(nextPreset);
     this.eventBus.emit('studio:hdri', nextPreset);

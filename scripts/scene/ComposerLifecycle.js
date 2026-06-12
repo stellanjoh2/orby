@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import { fullViewportLogicalSize } from '../render/fullViewportLogicalSize.js';
+import {
+  hideTransformGizmosForPass,
+  renderTransformGizmoOverlay,
+  restoreTransformGizmosFromPass,
+} from '../render/transformGizmoLayers.js';
 
 /**
  * EffectComposer prep, render, and viewport/clear repair — shared by the live loop,
@@ -9,27 +14,37 @@ export class ComposerLifecycle {
   constructor({
     renderer,
     scene,
+    camera,
     composer,
     postPipeline,
     backgroundController,
     getCreativeLookEnabled,
     getCreativeLookViewportBloomActive,
+    getCreativeLookAsciiActive,
+    getTransformControls,
+    getRenderState,
     syncPostProcessingForLogicalSize,
     beforeComposerRender,
     onRestoreBloomAfterCreativeLook,
   }) {
     this.renderer = renderer;
     this.scene = scene;
+    this.camera = camera;
     this.composer = composer;
     this.postPipeline = postPipeline;
     this.backgroundController = backgroundController;
     this.getCreativeLookEnabled = getCreativeLookEnabled ?? (() => false);
+    this.getTransformControls = getTransformControls ?? (() => []);
     this.getCreativeLookViewportBloomActive =
       getCreativeLookViewportBloomActive ?? (() => false);
+    this.getCreativeLookAsciiActive = getCreativeLookAsciiActive ?? (() => false);
+    this.getRenderState = getRenderState ?? (() => ({}));
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.beforeComposerRender = beforeComposerRender;
     this.onRestoreBloomAfterCreativeLook = onRestoreBloomAfterCreativeLook;
     this._creativeBloomWasSuppressed = false;
+    /** @type {Array<{ gizmo: import('three').Object3D, visible: boolean }> | null} */
+    this._gizmoPassVisibility = null;
   }
 
   /**
@@ -115,15 +130,30 @@ export class ComposerLifecycle {
   /**
    * Shared composer render — live viewport, PNG export, and video capture use the same pass
    * sequence so Shader Lab viewport bloom cannot drift from export.
-   * @param {{ transparent?: boolean, beforeRender?: () => void }} [opts]
+   * @param {{ transparent?: boolean, beforeRender?: () => void, overlayTransformGizmos?: boolean }} [opts]
    */
-  _runComposerWithCreativeLookPrep({ transparent = false, beforeRender } = {}) {
+  _runComposerWithCreativeLookPrep({
+    transparent = false,
+    beforeRender,
+    overlayTransformGizmos = false,
+  } = {}) {
     if (!this.composer) return;
     beforeRender?.();
     const viewportBloom = this.getCreativeLookViewportBloomActive() === true;
+    const asciiTerminal = this.getCreativeLookAsciiActive() === true;
+    const shaderLabOn = this.getCreativeLookEnabled() === true;
+    const overlayGizmos = overlayTransformGizmos && shaderLabOn;
+    if (overlayGizmos) {
+      this._gizmoPassVisibility = hideTransformGizmosForPass(
+        this.getTransformControls?.() ?? [],
+      );
+    }
     if (viewportBloom) {
       this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       this.postPipeline?.pushCreativeLookViewportPresentation?.();
+    } else if (asciiTerminal) {
+      this.postPipeline?.prepareCreativeLookAsciiPresentation?.(this.getRenderState());
+      this.postPipeline?.pushCreativeLookAsciiPresentation?.();
     } else {
       this.applyCreativeLookBloomSuppression();
     }
@@ -134,18 +164,39 @@ export class ComposerLifecycle {
         this.syncRendererClearForSceneBackground();
       }
       this.composer.render();
+      if (overlayGizmos) {
+        restoreTransformGizmosFromPass(this._gizmoPassVisibility);
+        this._gizmoPassVisibility = null;
+        this._renderTransformGizmoOverlay();
+      }
     } finally {
+      if (this._gizmoPassVisibility) {
+        restoreTransformGizmosFromPass(this._gizmoPassVisibility);
+        this._gizmoPassVisibility = null;
+      }
       if (viewportBloom) {
         this.postPipeline?.popCreativeLookViewportPresentation?.();
+      } else if (asciiTerminal) {
+        this.postPipeline?.popCreativeLookAsciiPresentation?.();
       }
       this.resetRendererViewportToCanvas();
     }
+  }
+
+  /** Crisp transform widgets on top of Shader Lab post (ASCII, bloom, grading, etc.). */
+  _renderTransformGizmoOverlay() {
+    renderTransformGizmoOverlay({
+      renderer: this.renderer,
+      camera: this.camera,
+      gizmos: this.getTransformControls?.() ?? [],
+    });
   }
 
   /** Interactive viewport — same EffectComposer sequence as PNG/video export. */
   renderComposerPass() {
     this._runComposerWithCreativeLookPrep({
       beforeRender: () => this.beforeComposerRender?.(),
+      overlayTransformGizmos: true,
     });
   }
 

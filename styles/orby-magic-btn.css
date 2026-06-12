@@ -43,6 +43,11 @@
   --orby-magic-btn-rim-c: 16px;
   --orby-magic-btn-stroke: 1.5px;
   --orby-magic-btn-fill-speed: 0.16s;
+  /* Content-sized pill — width from label + padding (no min-width) */
+  --orby-magic-btn-pad-block: 1.5rem;
+  --orby-magic-btn-pad-inline: 1.75rem;
+  --orby-magic-btn-inner-gap: 0.5rem;
+  --orby-magic-btn-min-height: 4rem;
 
   position: relative;
   overflow: visible;
@@ -52,8 +57,9 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  min-width: 15.25rem;
-  min-height: 3.65rem;
+  width: auto;
+  max-width: 100%;
+  min-height: var(--orby-magic-btn-min-height);
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -94,9 +100,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--orby-magic-btn-inner-gap);
   box-sizing: border-box;
-  padding: 1.08rem 2.65rem;
+  padding: var(--orby-magic-btn-pad-block) var(--orby-magic-btn-pad-inline);
   pointer-events: none;
   transform: translateX(0);
   transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
@@ -106,6 +112,7 @@
   display: inline-flex;
   align-items: center;
   line-height: 1;
+  white-space: nowrap;
   pointer-events: none;
 }
 

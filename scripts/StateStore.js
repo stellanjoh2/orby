@@ -49,6 +49,8 @@ export class StateStore {
         metalness: 0.0,
         roughness: DEFAULT_MATERIAL_ROUGHNESS,
         emissive: 0.0,
+        /** True when the loaded mesh has import metalness/roughness maps (sliders multiply textures). */
+        importHasMrMaps: false,
       },
       /** Shown when the loaded source file is `.fbx` — manual texture slot assignment. */
       fbxMapSlots: {
@@ -96,6 +98,12 @@ export class StateStore {
         /** Seconds for emissive to decay after each letter lands. */
         revealEmissiveDecaySec: 0.35,
         revealEmissiveColor: ORBY_LIME,
+        /** Live editor text (Generate from Font). */
+        sourceText: '',
+        /** Local Font Access postscript name, or `__file__` for embedded custom font. */
+        postscriptName: '',
+        /** Embedded .ttf/.otf when user loads a font file (not a system face). */
+        customFontAsset: null,
       },
       svgExtrude: { ...DEFAULT_SVG_EXTRUDE_STATE },
       advanced: {
@@ -133,6 +141,13 @@ export class StateStore {
          * @type {'orby' | 'classic' | 'monochrome'}
          */
         uvCheckerStyle: 'orby',
+        /**
+         * Normal / tangent diagnostic overlay — colors surface normals as RGB so artists can
+         * spot flipped shading or inspect tangent-space normal maps.
+         */
+        normalView: false,
+        /** @type {'geometry' | 'tangent'} */
+        normalViewMode: 'geometry',
         /** STL imports: smooth vertex normals with a crease angle (see Object → Advanced). */
         stlSmoothShading: true,
         stlSmoothingAngle: 40,
@@ -142,6 +157,8 @@ export class StateStore {
       hdri: 'beach',
       /** Filename when {@link hdri} is `custom` (blob URL is session-only). */
       hdriCustomName: null,
+      /** Embedded custom HDRI bytes for copy / .orby round-trip. */
+      hdriCustomAsset: null,
       hdriEnabled: true,
       hdriStrength: 2,
       hdriBlurriness: 0,

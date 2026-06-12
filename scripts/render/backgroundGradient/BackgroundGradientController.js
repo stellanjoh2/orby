@@ -30,6 +30,9 @@ export class BackgroundGradientController {
     this._texture.colorSpace = THREE.SRGBColorSpace;
     this._texture.minFilter = THREE.LinearFilter;
     this._texture.magFilter = THREE.LinearFilter;
+    this._texture.generateMipmaps = false;
+    this._texture.wrapS = THREE.ClampToEdgeWrapping;
+    this._texture.wrapT = THREE.ClampToEdgeWrapping;
     this._lastWidth = 0;
     this._lastHeight = 0;
   }
@@ -62,9 +65,7 @@ export class BackgroundGradientController {
    */
   applyIfActive() {
     if (!this.isActive()) return false;
-    this._ensureTextureSize();
-    drawBackgroundGradient(this._ctx, this._canvas.width, this._canvas.height, this.config);
-    this._texture.needsUpdate = true;
+    this.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
     this.scene.background = this._texture;
     this.renderer.setClearAlpha(1);
     this.renderer.autoClear = true;
@@ -75,29 +76,61 @@ export class BackgroundGradientController {
     return true;
   }
 
-  handleResize(width, height) {
+  /**
+   * Resize and redraw the gradient canvas to match the real WebGL backing store.
+   * Prefer `gl.drawingBufferWidth/Height` — Three's cached `getDrawingBufferSize()` can lag
+   * after `setPixelRatio` (render quality toggle), leaving a mismatched texture that tiles.
+   * @param {number} [width]
+   * @param {number} [height]
+   * @param {{ forceRedraw?: boolean }} [options]
+   */
+  syncToDrawingBuffer(width, height, { forceRedraw = false } = {}) {
     if (!this.isActive()) return;
-    const w = Math.max(1, Math.floor(width));
-    const h = Math.max(1, Math.floor(height));
-    if (w === this._lastWidth && h === this._lastHeight) return;
-    this._lastWidth = w;
-    this._lastHeight = h;
-    this._canvas.width = w;
-    this._canvas.height = h;
-    this.backgroundController?.refreshAppearance?.();
-  }
-
-  _ensureTextureSize() {
-    const size = new THREE.Vector2();
-    this.renderer.getDrawingBufferSize(size);
-    const w = Math.max(1, Math.floor(size.x));
-    const h = Math.max(1, Math.floor(size.y));
-    if (w !== this._canvas.width || h !== this._canvas.height) {
+    let w;
+    let h;
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      w = Math.max(1, Math.floor(width));
+      h = Math.max(1, Math.floor(height));
+    } else {
+      ({ width: w, height: h } = this._getDrawingBufferPixelSize());
+    }
+    const resized = w !== this._canvas.width || h !== this._canvas.height;
+    if (resized) {
       this._canvas.width = w;
       this._canvas.height = h;
       this._lastWidth = w;
       this._lastHeight = h;
     }
+    if (!resized && !forceRedraw) return;
+    drawBackgroundGradient(this._ctx, w, h, this.config);
+    this._texture.repeat.set(1, 1);
+    this._texture.offset.set(0, 0);
+    this._texture.updateMatrix();
+    this._texture.needsUpdate = true;
+  }
+
+  handleResize(width, height) {
+    if (!this.isActive()) return;
+    const w = Math.max(1, Math.floor(width));
+    const h = Math.max(1, Math.floor(height));
+    if (w === this._lastWidth && h === this._lastHeight) return;
+    this.syncToDrawingBuffer(w, h);
+  }
+
+  _getDrawingBufferPixelSize() {
+    const gl = this.renderer?.getContext?.();
+    if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+      return {
+        width: gl.drawingBufferWidth,
+        height: gl.drawingBufferHeight,
+      };
+    }
+    const size = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(size);
+    return {
+      width: Math.max(1, Math.floor(size.x)),
+      height: Math.max(1, Math.floor(size.y)),
+    };
   }
 
   dispose() {

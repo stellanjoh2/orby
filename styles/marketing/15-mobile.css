@@ -1065,15 +1065,6 @@ html.mobile-landing
   pointer-events: auto;
 }
 
-html.mobile-landing
-  .orby-marketing__section--in-progress
-  .orby-magic-btn--mono
-  .orby-magic-btn__inner {
-  padding: calc(1.19rem * var(--drop-hero-wide-factor, 1))
-    calc(2.65rem * var(--drop-hero-wide-factor, 1));
-  gap: calc(0.55rem * var(--drop-hero-wide-factor, 1));
-}
-
 html.mobile-landing .orby-marketing__in-progress-panel .orby-marketing__footer-bar--on-white {
   position: relative;
   left: auto;

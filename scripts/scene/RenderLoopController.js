@@ -39,6 +39,8 @@ function buildFrameContext(scene) {
     wireframeOverlayActive:
       (scene.materialController?.wireframeOverlayMeshes?.length ?? 0) > 0,
     uvCheckerActive: !!scene.materialController?.uvCheckerOverlay?.enabled,
+    normalViewActive: !!scene.materialController?.normalViewOverlay?.enabled,
+    topologyWarningsActive: !!scene.topologyWarningsOverlay?.enabled,
     backgroundSphereActive:
       !!scene.backgroundController?.backgroundSphere &&
       !!scene.postPipeline?.bokehPass?.enabled,
@@ -197,6 +199,20 @@ export class RenderLoopController {
         when: (ctx) => ctx.uvCheckerActive,
         run: (_delta, s) => {
           s.updateUvCheckerOverlayTransforms();
+        },
+      },
+      {
+        id: 'normal-view-overlay',
+        when: (ctx) => ctx.normalViewActive,
+        run: (_delta, s) => {
+          s.updateNormalViewOverlayTransforms();
+        },
+      },
+      {
+        id: 'topology-warnings-overlay',
+        when: (ctx) => ctx.topologyWarningsActive,
+        run: (_delta, s) => {
+          s.updateTopologyWarningsOverlayTransforms();
         },
       },
       {

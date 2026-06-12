@@ -8,6 +8,7 @@ import {
 } from './orbyMarketingImageCredit.js';
 import { getShowcaseCycleMs } from './marketingPerformanceTier.js';
 import {
+  clearMarketingMediaFilter,
   getMediaPlaceholderTargets,
   setMediaPlaceholderOpacity,
   tweenPlaceholderFadeOut,
@@ -105,6 +106,23 @@ function getGalleryTiming(mask) {
     cycleMs: isSimpleGallery ? SPLIT_GALLERY_CYCLE_MS : getShowcaseCycleMs(),
     fadeS: FADE_S,
   };
+}
+
+function isProFlipGalleryMask(mask) {
+  return (
+    mask.hasAttribute('data-orby-marketing-gallery-flip') &&
+    Boolean(mask.closest('.orby-marketing__pro-card-media--flip'))
+  );
+}
+
+function isProFlipCardRevealed(mask) {
+  if (!isProFlipGalleryMask(mask)) return true;
+  const card = mask.closest('[data-orby-marketing-reveal="pro-card"]');
+  return card?.dataset.orbyMarketingProCardRevealed === '1';
+}
+
+function clearFlipGalleryFilters(imgs) {
+  imgs.forEach((img) => clearMarketingMediaFilter(img));
 }
 
 function createGalleryController(mask) {
@@ -254,7 +272,9 @@ function createGalleryController(mask) {
 
     const instant = fadeS <= 0;
     if (!animate || prefersReducedMotion() || instant) {
+      gsap.killTweensOf(imgs);
       gsap.set(imgs, { opacity: (i) => (i === nextIndex ? 1 : 0), zIndex: 1 });
+      clearFlipGalleryFilters(imgs);
       applyClasses();
       setMediaPlaceholderOpacity(mask, 0);
       index = nextIndex;
@@ -266,6 +286,7 @@ function createGalleryController(mask) {
     tweening = true;
     gsap.killTweensOf(imgs);
     gsap.killTweensOf(getMediaPlaceholderTargets(mask));
+    clearFlipGalleryFilters(imgs);
     if (!isSimpleGallery) void hideCredit();
 
     if (isFlipGallery) {
@@ -339,7 +360,7 @@ function createGalleryController(mask) {
 
   const start = () => {
     stop();
-    if (imgs.length < 2 || prefersReducedMotion() || !visible) return;
+    if (imgs.length < 2 || prefersReducedMotion() || !visible || !isProFlipCardRevealed(mask)) return;
     timer = window.setInterval(tick, cycleMs);
   };
 
@@ -486,6 +507,11 @@ function ensureGalleryController(mask) {
 
 export function prepareShowcaseGalleryCredit(mask) {
   ensureGalleryController(mask).prepareCredit();
+}
+
+/** Resume autoplay after pro-card flip reveal (blur-in must finish first). */
+export function restartShowcaseGalleryAutoplay(mask) {
+  ensureGalleryController(mask).restartAutoplay();
 }
 
 /**

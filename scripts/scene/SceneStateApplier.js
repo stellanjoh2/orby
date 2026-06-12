@@ -366,6 +366,43 @@ function createStateApplySteps() {
       },
     },
     {
+      id: 'animation',
+      apply: (s, state) => {
+        const animation = state.animation;
+        if (!animation) return;
+        s.setAnimationShowBones(!!animation.showBones);
+        s.setAnimationShowJointNames(!!animation.showJointNames);
+        s.setAnimationJointScale(animation.jointScale ?? 0.5);
+        s.setAnimationBoneStrokeWidth(animation.boneStrokeWidth ?? 2);
+        s.setAnimationHideMesh(!!animation.hideMesh);
+        s._syncAnimationControllerFromState?.();
+      },
+    },
+    {
+      id: 'transform-widgets',
+      apply: (s, state) => {
+        s.eventBus?.emit('mesh:move-widget-enabled', !!state.moveWidgetEnabled);
+        s.eventBus?.emit('mesh:rotate-widget-enabled', !!state.rotateWidgetEnabled);
+        s.eventBus?.emit('mesh:scale-widget-enabled', !!state.scaleWidgetEnabled);
+      },
+    },
+    {
+      id: 'camera-orbit-pose',
+      apply: (s, state) => {
+        const position = state.camera?.position;
+        const target = state.camera?.target;
+        if (!position && !target) return;
+        s.eventBus?.emit('camera:set-state', { position, target });
+      },
+    },
+    {
+      id: 'fisheye',
+      apply: (s, state) => {
+        if (!state.fisheye) return;
+        s.syncPerspectiveCameraFovAndLens?.();
+      },
+    },
+    {
       id: 'viewport-framing',
       apply: (s, state) => {
         s.viewportFramingOverlays.syncFromCamera(state.camera ?? {}, {

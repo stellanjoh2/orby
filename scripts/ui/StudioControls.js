@@ -73,6 +73,7 @@ export class StudioControls {
         this.stateStore.set('hdri', preset);
         if (preset !== HDRI_CUSTOM_ID) {
           this.stateStore.set('hdriCustomName', null);
+          this.stateStore.set('hdriCustomAsset', null);
         }
         this.eventBus.emit('studio:hdri', preset);
       });

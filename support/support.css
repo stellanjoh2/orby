@@ -456,11 +456,7 @@ body.legal-doc--support {
 }
 
 .legal-support-thank-you:not([hidden]) {
-  margin-bottom: 0;
-}
-
-.legal-support-thank-you:not([hidden]) + .legal-support-lead {
-  margin-top: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .legal-support-section {
@@ -476,6 +472,15 @@ body.legal-doc--support {
   color: var(--legal-muted);
   font-size: var(--legal-secondary-size);
   line-height: 1.55;
+}
+
+/* Override .legal-doc ul { padding-left: 1.5rem } — align FAQ with section h2 */
+body.legal-doc--support ul.legal-support-faq,
+body.legal-doc--support ul.legal-support-quicknav__list,
+body.legal-doc--support nav.legal-support-glossary-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .legal-support-faq {
@@ -498,7 +503,7 @@ body.legal-doc--support {
 
 .legal-support-faq h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.05rem;
+  font-size: var(--legal-body-size);
   font-weight: 600;
   color: #fff;
 }
@@ -515,6 +520,11 @@ body.legal-doc--support {
 .legal-support-faq ul {
   margin: 0 0 0.75rem;
   padding-left: 1.35rem;
+}
+
+/* Match FAQ item rhythm (1.75rem) when a callout follows section content */
+body.legal-doc--support .legal-support-section > .legal-callout {
+  margin-top: 1.75rem;
 }
 
 .legal-support-glossary-nav {
@@ -563,8 +573,7 @@ body.legal-doc--support {
 
 .legal-support-glossary dl {
   margin: 0;
-  padding: 0 0 0 1.25rem;
-  border-left: 2px solid color-mix(in srgb, var(--legal-border) 75%, transparent);
+  padding: 0;
 }
 
 .legal-support-glossary dl > div {
@@ -656,9 +665,4 @@ body.legal-doc--support p.legal-meta {
   border-top: 1px solid color-mix(in srgb, var(--warning) 18%, transparent);
   font-size: 0.94em;
   color: color-mix(in srgb, #fecaca 16%, var(--legal-text));
-}
-
-body.legal-doc--support .legal-support-lead {
-  margin-top: 2.25rem;
-  margin-bottom: 2rem;
 }

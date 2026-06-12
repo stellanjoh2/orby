@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-06-04T18:12:06.292Z",
+    "generatedAt": "2026-06-12T11:31:48.088Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -28,10 +28,10 @@
       ]
     },
     "primaryCta": {
-      "label": "Browse Files",
+      "label": "Browse files",
       "tooltip": "Open a 3D file (GLB, SVG, …) or a saved .orby scene"
     },
-    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This site is still under construction and bugs may occur. · Blank canvas · Load test object · Preview export overlay · Debug 404 (temp)",
+    "secondaryBody": "Orby is optimized for glTF/GLB and SVG extrusion. Your files stay local and private and will never be trained on AI. Read more on our privacy policy page. For the best experience, go full screen. This website &amp; application is still under construction and bugs may occur. · Blank canvas · Load test object · Preview export overlay · Debug 404 (temp)",
     "secondaryLinks": [
       {
         "label": "privacy policy",
@@ -82,7 +82,7 @@
         "Set the stage.",
         "Send it."
       ],
-      "lede": "Your 3D models deserve better. Whether it's a photogrammetry scan, a game asset, or your logotype extruded into a mesh — inspect it, present it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio or next presentation.",
+      "lede": "Orby is more than a 3D viewer. It's a focused studio for turning files into presentations — whether that's a photogrammetry scan, a game asset, or your logotype extruded into a mesh. Inspect it, stage it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio, or next presentation.",
       "bullets": null,
       "cta": null
     },
@@ -119,7 +119,7 @@
         "Client-side only: close the tab and your files are gone"
       ],
       "cta": {
-        "label": "Load Sample Object",
+        "label": "Load sample",
         "action": "load-sample"
       },
       "imageCredit": {
@@ -252,20 +252,20 @@
       "cta": null,
       "cards": [
         {
-          "title": "Light Control",
-          "body": "Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in."
+          "title": "Custom HDRI",
+          "body": "Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine."
         },
         {
           "title": "Mesh Diagnostics",
-          "body": "UV checker, wireframe overlay, and clay mode. Everything you need to sanity-check your mesh without opening a DCC."
+          "body": "UV checker, wireframe, clay mode, normal view, and mesh health checks with viewport highlights. Sanity-check your mesh without opening a DCC."
         },
         {
           "title": "Animation Preview",
-          "body": "Rigged clips, baked cycles, and timeline scrub. Everything you need to preview motion before you export — no DCC required."
+          "body": "Rigged clips, loop/cycle modes, reverse and speed control, timeline scrub, and bone overlay. Review motion in a clean, uncluttered space built for quick animation checks."
         },
         {
-          "title": "Custom HDRI",
-          "body": "Drop your own 2:1 environment — HDR, EXR, JPG, or PNG — and light your model with your studio, location, or client asset. Same controls as the built-in library. Nothing leaves your machine."
+          "title": "Light Control",
+          "body": "Key, fill, and rim — a full studio rig ready in seconds. Per-light intensity, height, and rotation, with orbit and shadow control built in."
         },
         {
           "title": "Spotlight Gobos",
@@ -363,11 +363,11 @@
       "bullets": null,
       "cta": {
         "primary": {
-          "label": "Browse Files",
+          "label": "Browse files",
           "action": "browse"
         },
         "secondary": {
-          "label": "Load Sample",
+          "label": "Load sample",
           "action": "load-sample"
         }
       }
@@ -384,7 +384,7 @@
       "lede": "rfrct is a design tool for distorting type and building audio-reactive visuals, right in the browser. Bend your letters through glass, push them through waves, blur the edges until they frost over. Dial in chromatic aberration, layer on refraction, and let the whole thing react to sound. When you're done, export it as a PNG, a GIF, or straight to MP4 — no plugins, no timelines, no fuss. Early access is limited.",
       "bullets": null,
       "cta": {
-        "label": "Request Preview",
+        "label": "Request preview",
         "href": "mailto:hello@rfrct.app?subject=rfrct%20early%20access"
       }
     }

@@ -3,8 +3,6 @@ import { DEFAULT_EXTRUDE_DEPTH, resolveSvgExtrudeDefaults } from '../import/extr
 import {
   sanitizeDof,
   sanitizeAmbientOcclusion,
-  DEFAULT_MATERIAL_BRIGHTNESS,
-  DEFAULT_MATERIAL_ROUGHNESS,
   effectiveVignetteIntensity,
   isBloomTuningActive,
   isVignetteUiEnabled,
@@ -17,6 +15,12 @@ import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js'
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
 import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
+import { deepClone } from '../utils/deepClone.js';
+import {
+  arrayBufferToBase64,
+  base64ToUint8Array,
+  fileFromEmbeddedAsset,
+} from '../utils/binaryAsset.js';
 
 /**
  * SceneSettingsManager
@@ -44,189 +48,43 @@ export class SceneSettingsManager {
   }
 
   /**
-   * Builds and returns the scene settings payload (excluding object transforms)
+   * Builds and returns the full scene settings payload (all StateStore keys + live camera pose).
    */
   async buildSceneSettingsPayload() {
     const state = this.stateStore.getState();
-    const activeMoodBaseColor = HDRI_MOODS[state.hdri]?.baseColor;
-    const effectiveBaseColor = activeMoodBaseColor ?? state.groundSolidColor;
-    
-    // Get camera position and target
     const cameraState = await this.getCameraState();
-    
+    const activeMoodBaseColor = HDRI_MOODS[state.hdri]?.baseColor;
+
+    const payload = deepClone(state);
+    payload.baseColor = activeMoodBaseColor ?? state.groundSolidColor;
+    payload.camera = {
+      ...payload.camera,
+      position: cameraState?.position,
+      target: cameraState?.target,
+    };
+    payload.svgExtrude = this._serializeSvgExtrude(state.svgExtrude);
+    return payload;
+  }
+
+  _serializeSvgExtrude(svgExtrude) {
+    const svg = resolveSvgExtrudeDefaults(svgExtrude);
     return {
-      // Mesh settings (including transforms)
-      shading: state.shading,
-      material: state.material ?? {
-        brightness: DEFAULT_MATERIAL_BRIGHTNESS,
-        metalness: 0.0,
-        roughness: DEFAULT_MATERIAL_ROUGHNESS,
-        emissive: 0.0,
-      },
-      scale: state.scale,
-      xOffset: state.xOffset,
-      yOffset: state.yOffset,
-      zOffset: state.zOffset,
-      rotationX: state.rotationX,
-      rotationY: state.rotationY,
-      rotationZ: state.rotationZ,
-      autoRotate: state.autoRotate,
-      clay: state.clay,
-      wireframe: state.wireframe,
-      creativeLook: state.creativeLook,
-      fresnel: state.fresnel,
-      subsurface: state.subsurface,
-      svgExtrude: (() => {
-        const svg = resolveSvgExtrudeDefaults(state.svgExtrude);
-        return {
-          enabled: !!state.svgExtrude?.enabled,
-          availableColors: Array.isArray(state.svgExtrude?.availableColors)
-            ? [...state.svgExtrude.availableColors]
-            : [],
-          depth: svg.depth,
-          normalAngle: svg.normalAngle,
-          colorDepths: svg.colorDepths,
-          colorOffsets: svg.colorOffsets,
-          flipDirection: svg.flipDirection,
-          colorOverride: svg.colorOverride,
-          overrideColor: svg.overrideColor,
-          surfacePreset: svg.surfacePreset,
-          surfaceScale: svg.surfaceScale,
-          surfaceStrength: svg.surfaceStrength,
-          bevelAmount: svg.bevelAmount,
-          detail: svg.detail,
-        };
-      })(),
-      advanced: {
-        reverseNormals: !!state.advanced?.reverseNormals,
-        transparencyFix: state.advanced?.transparencyFix ?? 'default',
-        glassOpacity: state.advanced?.glassOpacity ?? 0.45,
-        glassReflection: state.advanced?.glassReflection ?? 2,
-        glassTint: state.advanced?.glassTint ?? '#ffffff',
-        glassBody: state.advanced?.glassBody ?? 0,
-        blendSortingMitigation: state.advanced?.blendSortingMitigation !== false,
-        flipGlassNormalMapY: !!state.advanced?.flipGlassNormalMapY,
-        glassFrontFacesOnly: !!state.advanced?.glassFrontFacesOnly,
-        uvChecker: !!state.advanced?.uvChecker,
-        uvCheckerScale: state.advanced?.uvCheckerScale ?? 5,
-        uvCheckerStyle: state.advanced?.uvCheckerStyle ?? 'orby',
-        stlSmoothShading: state.advanced?.stlSmoothShading !== false,
-        stlSmoothingAngle: state.advanced?.stlSmoothingAngle ?? 40,
-        centerPivot: !!state.advanced?.centerPivot,
-      },
-      // Studio settings
-      hdri: state.hdri,
-      hdriCustomName: state.hdriCustomName ?? null,
-      hdriEnabled: state.hdriEnabled,
-      hdriStrength: state.hdriStrength,
-      hdriBlurriness: state.hdriBlurriness,
-      hdriRotation: state.hdriRotation,
-      hdriBackground: state.hdriBackground,
-      hdriReceiveShadowsAo: state.hdriReceiveShadowsAo,
-      lensFlare: state.lensFlare,
-      godRays: state.godRays,
-      groundSolid: state.groundSolid,
-      groundWire: state.groundWire,
-      groundSolidColor: state.groundSolidColor,
-      baseColor: effectiveBaseColor,
-      groundWireColor: state.groundWireColor,
-      groundWireOpacity: state.groundWireOpacity,
-      groundY: state.groundY,
-      gridY: state.gridY,
-      baseScale: state.baseScale,
-      baseMetalness: state.baseMetalness,
-      baseRoughness: state.baseRoughness,
-      baseReflection: state.baseReflection,
-      baseClearcoat: state.baseClearcoat,
-      baseSurfacePreset: state.baseSurfacePreset,
-      baseSurfaceScale: state.baseSurfaceScale,
-      baseSurfaceStrength: state.baseSurfaceStrength,
-      baseGlassSurface: state.baseGlassSurface ?? state.podiumReflectMesh,
-      baseGlassBlur: state.baseGlassBlur,
-      baseGlassAmount: state.baseGlassAmount,
-      baseGlassBrightness: state.baseGlassBrightness,
-      backdropEnabled: !!state.backdropEnabled,
-      backdropScale: state.backdropScale,
-      backdropWidth: state.backdropWidth,
-      backdropColor: state.backdropColor,
-      backdropRotation: state.backdropRotation,
-      backdropY: state.backdropY,
-      backdropMetalness: state.backdropMetalness,
-      backdropRoughness: state.backdropRoughness,
-      backdropSurfacePreset: state.backdropSurfacePreset,
-      backdropSurfaceScale: state.backdropSurfaceScale,
-      backdropSurfaceStrength: state.backdropSurfaceStrength,
-      gridScale: state.gridScale,
-      gridLineWidth: state.gridLineWidth ?? 1,
-      lights: state.lights,
-      lightsEnabled: state.lightsEnabled,
-      lightsMaster: state.lightsMaster,
-      lightsRotation: state.lightsRotation,
-      lightsHeight: state.lightsHeight,
-      lightsAutoRotate: state.lightsAutoRotate,
-      showLightIndicators: state.showLightIndicators,
-      lightsCastShadows: state.lightsCastShadows,
-      lightsShadowQuality: state.lightsShadowQuality,
-      lightsShadowSoftness: state.lightsShadowSoftness,
-      lightsShadowColor: state.lightsShadowColor,
-      lightsShadowOpacity: state.lightsShadowOpacity,
-      lightsShadowContactOffset: state.lightsShadowContactOffset,
-      lightsShadowTwoSided: state.lightsShadowTwoSided,
-      gobo: state.gobo,
-      background: state.background,
-      backgroundGradient: state.backgroundGradient,
-      // Camera/Render settings
-      camera: {
-        fov: state.camera?.fov,
-        lensFocalMm: state.camera?.lensFocalMm,
-        lensSensorId: state.camera?.lensSensorId,
-        tilt: state.camera?.tilt,
-        position: cameraState?.position,
-        target: cameraState?.target,
-        contrast: state.camera?.contrast,
-        temperature: state.camera?.temperature,
-        tint: state.camera?.tint,
-        highlights: state.camera?.highlights,
-        shadows: state.camera?.shadows,
-        saturation: state.camera?.saturation,
-        clarity: state.camera?.clarity,
-        fade: state.camera?.fade,
-        sharpness: state.camera?.sharpness,
-        vignetteEnabled: state.camera?.vignetteEnabled,
-        vignette: state.camera?.vignette,
-        vignetteColor: state.camera?.vignetteColor,
-        autoOrbit: state.camera?.autoOrbit,
-        handheld: state.camera?.handheld,
-        compositionGridEnabled: state.camera?.compositionGridEnabled,
-        compositionGuidesInverted: state.camera?.compositionGuidesInverted,
-        cinematicLetterbox219: state.camera?.cinematicLetterbox219,
-        isometric: state.camera?.isometric,
-        clipPlanes: state.camera?.clipPlanes,
-      },
-      exposure: state.exposure,
-      autoExposure: state.autoExposure,
-      histogramEnabled: state.histogramEnabled,
-      toneCurveOpen: state.toneCurveOpen,
-      toneCurve: state.toneCurve,
-      dof: state.dof,
-      bloom: state.bloom,
-      grain: state.grain,
-      aberration: state.aberration,
-      ambientOcclusion: state.ambientOcclusion,
-      lensDirt: state.lensDirt,
-      fisheye: state.fisheye,
-      colorChecker: state.colorChecker,
-      antiAliasing: state.antiAliasing,
-      renderQuality: state.renderQuality,
-      toneMapping: state.toneMapping,
-      lookFilterPreset: state.lookFilterPreset,
-      lookFilterPresetsOpen: state.lookFilterPresetsOpen,
-      creativeLookSectionOpen: state.creativeLookSectionOpen,
-      moveWidgetEnabled: !!state.moveWidgetEnabled,
-      rotateWidgetEnabled: !!state.rotateWidgetEnabled,
-      scaleWidgetEnabled: !!state.scaleWidgetEnabled,
-      fbxMapSlots: state.fbxMapSlots,
-      svgColorDetail: state.svgColorDetail,
+      enabled: !!svgExtrude?.enabled,
+      availableColors: Array.isArray(svgExtrude?.availableColors)
+        ? [...svgExtrude.availableColors]
+        : [],
+      depth: svg.depth,
+      normalAngle: svg.normalAngle,
+      colorDepths: svg.colorDepths,
+      colorOffsets: svg.colorOffsets,
+      flipDirection: svg.flipDirection,
+      colorOverride: svg.colorOverride,
+      overrideColor: svg.overrideColor,
+      surfacePreset: svg.surfacePreset,
+      surfaceScale: svg.surfaceScale,
+      surfaceStrength: svg.surfaceStrength,
+      bevelAmount: svg.bevelAmount,
+      detail: svg.detail,
     };
   }
 
@@ -279,24 +137,13 @@ export class SceneSettingsManager {
     });
   }
 
-  arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer);
-    const chunkSize = 0x8000;
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, i + chunkSize);
-      binary += String.fromCharCode(...chunk);
+  async restoreEmbeddedAssets(payload) {
+    if (payload.hdri === HDRI_CUSTOM_ID && payload.hdriCustomAsset?.dataBase64) {
+      const file = fileFromEmbeddedAsset(payload.hdriCustomAsset, 'custom.hdr');
+      if (file && this.uiHelper?.loadCustomHdriFile) {
+        await this.uiHelper.loadCustomHdriFile(file);
+      }
     }
-    return btoa(binary);
-  }
-
-  base64ToUint8Array(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
   }
 
   async saveOrbyToFile() {
@@ -310,14 +157,14 @@ export class SceneSettingsManager {
       const fileBuffer = await sourceFile.arrayBuffer();
       const orbyPayload = {
         type: 'orby-scene',
-        schemaVersion: 1,
+        schemaVersion: 2,
         createdAt: new Date().toISOString(),
         sceneSettings,
         asset: {
           name: sourceFile.name || 'model',
           type: sourceFile.type || '',
           lastModified: sourceFile.lastModified || Date.now(),
-          dataBase64: this.arrayBufferToBase64(fileBuffer),
+          dataBase64: arrayBufferToBase64(fileBuffer),
         },
       };
 
@@ -350,7 +197,7 @@ export class SceneSettingsManager {
       if (payload?.type !== 'orby-scene' || !payload?.asset?.dataBase64 || !payload?.sceneSettings) {
         return { success: false, message: 'Invalid .orby file' };
       }
-      const bytes = this.base64ToUint8Array(payload.asset.dataBase64);
+      const bytes = base64ToUint8Array(payload.asset.dataBase64);
       const embeddedFile = new File(
         [bytes],
         payload.asset.name || 'model.glb',
@@ -389,7 +236,7 @@ export class SceneSettingsManager {
 
       // Apply saved scene settings after mesh load to ensure all controls (including
       // podium/ground colors and model-dependent settings) overwrite defaults cleanly.
-      const sceneLoadResult = this.loadFromText(JSON.stringify(payload.sceneSettings));
+      const sceneLoadResult = await this.loadFromText(JSON.stringify(payload.sceneSettings));
       if (!sceneLoadResult.success) {
         return sceneLoadResult;
       }
@@ -403,18 +250,31 @@ export class SceneSettingsManager {
   /**
    * Applies scene settings from pasted JSON text (e.g. from clipboard).
    */
-  loadFromText(text) {
+  async loadFromText(text) {
     try {
       const payload = JSON.parse(text);
       migrateLegacyGroundKeys(payload);
 
       // Validate that it looks like scene settings
-      const expectedKeys = ['shading', 'hdri', 'camera', 'dof', 'bloom', 'lights'];
-      const hasExpectedKeys = expectedKeys.some(key => key in payload);
-      
+      const expectedKeys = [
+        'shading',
+        'hdri',
+        'camera',
+        'dof',
+        'bloom',
+        'lights',
+        'animation',
+        'fontExtrude',
+      ];
+      const hasExpectedKeys = expectedKeys.some((key) => key in payload);
+
       if (!hasExpectedKeys) {
         return { success: false, message: 'Invalid scene settings - missing required fields' };
       }
+
+      // Replace current settings so nothing leaks from the previous scene.
+      this.stateStore.reset();
+      await this.restoreEmbeddedAssets(payload);
 
       this.eventBus.emit('scene:batch-apply-start');
       try {
@@ -691,6 +551,19 @@ export class SceneSettingsManager {
         this.stateStore.set('advanced.uvCheckerStyle', style);
         this.eventBus.emit('mesh:uv-checker-style', style);
       }
+      if (payload.advanced?.normalView !== undefined) {
+        const enabled = !!payload.advanced.normalView;
+        this.stateStore.set('advanced.normalView', enabled);
+        this.eventBus.emit('mesh:normal-view', enabled);
+      }
+      if (payload.advanced?.normalViewMode !== undefined) {
+        const allowed = ['geometry', 'tangent'];
+        const mode = allowed.includes(payload.advanced.normalViewMode)
+          ? payload.advanced.normalViewMode
+          : 'geometry';
+        this.stateStore.set('advanced.normalViewMode', mode);
+        this.eventBus.emit('mesh:normal-view-mode', mode);
+      }
       if (
         payload.advanced?.stlSmoothShading !== undefined ||
         payload.advanced?.stlSmoothingAngle !== undefined
@@ -732,6 +605,26 @@ export class SceneSettingsManager {
           this.stateStore.set('svgColorDetail', level);
         }
       }
+      if (payload.fontExtrude) {
+        const d = this.stateStore.getDefaults().fontExtrude;
+        this.stateStore.set('fontExtrude', { ...d, ...payload.fontExtrude });
+      }
+      if (payload.animation) {
+        const d = this.stateStore.getDefaults().animation;
+        const merged = { ...d, ...payload.animation };
+        this.stateStore.set('animation', merged);
+        this.eventBus.emit('animation:show-bones', !!merged.showBones);
+        this.eventBus.emit('animation:show-joint-names', !!merged.showJointNames);
+        this.eventBus.emit('animation:joint-scale', merged.jointScale ?? 0.5);
+        this.eventBus.emit('animation:bone-stroke-width', merged.boneStrokeWidth ?? 2);
+        this.eventBus.emit('animation:hide-mesh', !!merged.hideMesh);
+        this.eventBus.emit('animation:clip-mode', merged.clipPlaybackMode ?? 'loop');
+        this.eventBus.emit('animation:display-fps', merged.displayFps ?? 60);
+        this.eventBus.emit('animation:time-reference', !!merged.timeReferenceEnabled);
+      }
+      if (payload.hdriCustomAsset !== undefined && payload.hdri !== HDRI_CUSTOM_ID) {
+        this.stateStore.set('hdriCustomAsset', payload.hdriCustomAsset);
+      }
 
       // Apply Studio settings
       if (payload.hdriCustomName !== undefined) {
@@ -739,18 +632,37 @@ export class SceneSettingsManager {
       }
       if (payload.hdri !== undefined) {
         if (payload.hdri === HDRI_CUSTOM_ID) {
-          const fallback = this.stateStore.getDefaults().hdri ?? 'beach';
-          this.stateStore.set('hdri', fallback);
-          this.stateStore.set('hdriCustomName', null);
-          this.eventBus.emit('studio:hdri-clear-custom');
-          if (this.uiHelper?.setHdriActive) {
-            this.uiHelper.setHdriActive(fallback);
+          if (payload.hdriCustomAsset?.dataBase64) {
+            this.stateStore.set('hdri', HDRI_CUSTOM_ID);
+            this.stateStore.set(
+              'hdriCustomName',
+              payload.hdriCustomName ?? payload.hdriCustomAsset.name ?? null,
+            );
+            this.stateStore.set('hdriCustomAsset', payload.hdriCustomAsset);
+            if (this.uiHelper?.setHdriActive) {
+              this.uiHelper.setHdriActive(HDRI_CUSTOM_ID);
+            }
+            this.eventBus.emit('studio:hdri', HDRI_CUSTOM_ID);
+            if (payload.hdriCustomName ?? payload.hdriCustomAsset.name) {
+              this.uiHelper?.setHdriUploadLoaded?.(
+                payload.hdriCustomName ?? payload.hdriCustomAsset.name,
+              );
+            }
+          } else {
+            const fallback = this.stateStore.getDefaults().hdri ?? 'beach';
+            this.stateStore.set('hdri', fallback);
+            this.stateStore.set('hdriCustomName', null);
+            this.stateStore.set('hdriCustomAsset', null);
+            this.eventBus.emit('studio:hdri-clear-custom');
+            if (this.uiHelper?.setHdriActive) {
+              this.uiHelper.setHdriActive(fallback);
+            }
+            this.eventBus.emit('studio:hdri', fallback);
+            this.uiHelper?.showToast?.(
+              'Custom HDRI is not included in scene JSON — re-upload your file.',
+              4200,
+            );
           }
-          this.eventBus.emit('studio:hdri', fallback);
-          this.uiHelper?.showToast?.(
-            'Custom HDRI is not included in scene JSON — re-upload your file.',
-            4200,
-          );
         } else {
           this.stateStore.set('hdri', payload.hdri);
           if (this.uiHelper?.setHdriActive) {
@@ -781,7 +693,7 @@ export class SceneSettingsManager {
       if (payload.hdriBackground !== undefined) {
         this.stateStore.set('hdriBackground', payload.hdriBackground);
         this.eventBus.emit('studio:hdri-background', payload.hdriBackground);
-        this.ui?.updateHdriReceiveShadowsAoDisabled?.();
+        this.uiHelper?.updateHdriReceiveShadowsAoDisabled?.();
       }
       if (payload.hdriReceiveShadowsAo !== undefined) {
         this.stateStore.set('hdriReceiveShadowsAo', !!payload.hdriReceiveShadowsAo);
@@ -826,7 +738,7 @@ export class SceneSettingsManager {
         this.eventBus.emit('studio:lens-flare-disc-glow-size', merged.discGlowSize);
         this.eventBus.emit('studio:lens-flare-disc-glow-color', merged.discGlowColor);
         this.eventBus.emit('studio:lens-flare-anamorphic-bloom');
-        this.ui?.syncLensFlareKeyLightConnectButton?.();
+        this.uiHelper?.syncLensFlareKeyLightConnectButton?.();
         if (merged.keyLightConnected) {
           this.eventBus.emit('studio:lens-flare-key-light-sync');
         }
@@ -1468,6 +1380,10 @@ export class SceneSettingsManager {
       });
 
       this.eventBus.emit('scene:settings-restored');
+
+      if (this.uiHelper?.restoreFontExtrudeSettings) {
+        await this.uiHelper.restoreFontExtrudeSettings(this.stateStore.getState().fontExtrude);
+      }
 
       return { success: true, message: 'Scene settings applied' };
       } finally {
