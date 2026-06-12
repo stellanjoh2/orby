@@ -53,6 +53,10 @@ export class CreativeLookAsciiPass {
     this.pass = new ShaderPass(this.material);
     this.pass.enabled = false;
     this._atlasBound = false;
+    /** CSS/logical viewport size — ASCII grid density is fixed in these units. */
+    this._referenceLogicalSize = new THREE.Vector2(1, 1);
+    /** When true, setSize does not overwrite reference (PNG export resize). */
+    this._referencePinned = false;
     this._applyCellSize();
   }
 
@@ -70,8 +74,30 @@ export class CreativeLookAsciiPass {
 
   _applyCellSize() {
     const cell = creativeAsciiCellSize();
-    const pr = this._pixelRatio;
-    this.material.uniforms.uCellSize.value.set(cell.width * pr, cell.height * pr);
+    const res = this.material.uniforms.uResolution.value;
+    const ref = this._referenceLogicalSize;
+    const refW = Math.max(1, ref.x);
+    const refH = Math.max(1, ref.y);
+    this.material.uniforms.uCellSize.value.set(
+      cell.width * (res.x / refW),
+      cell.height * (res.y / refH),
+    );
+  }
+
+  /**
+   * Pin the interactive viewport logical size so 2× PNG export keeps the same
+   * on-screen cell density (export sets pixelRatio=1 but doubles backing-store px).
+   * @param {number} logicalW
+   * @param {number} logicalH
+   */
+  pinReferenceLogicalSize(logicalW, logicalH) {
+    this._referenceLogicalSize.set(Math.max(1, logicalW), Math.max(1, logicalH));
+    this._referencePinned = true;
+    this._applyCellSize();
+  }
+
+  unpinReferenceLogicalSize() {
+    this._referencePinned = false;
   }
 
   getPass() {
@@ -84,6 +110,9 @@ export class CreativeLookAsciiPass {
    */
   setSize(logicalW, logicalH) {
     this._pixelRatio = Math.max(1, this.renderer?.getPixelRatio?.() ?? 1);
+    if (!this._referencePinned) {
+      this._referenceLogicalSize.set(Math.max(1, logicalW), Math.max(1, logicalH));
+    }
     this.material.uniforms.uResolution.value.set(
       Math.max(1, Math.floor(logicalW * this._pixelRatio)),
       Math.max(1, Math.floor(logicalH * this._pixelRatio)),

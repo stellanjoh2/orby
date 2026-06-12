@@ -247,6 +247,21 @@ export class ImageExporter {
   }
 
   /**
+   * Keep ASCII grid density tied to the interactive viewport during export resize.
+   * @param {{ x: number, y: number }} logicalSize
+   */
+  _pinAsciiExportReference(logicalSize) {
+    this.postPipeline?.creativeLookAscii?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+  }
+
+  _unpinAsciiExportReference() {
+    this.postPipeline?.creativeLookAscii?.unpinReferenceLogicalSize?.();
+  }
+
+  /**
    * Resize renderer + post stack for export; returns true backing-store pixels after clamp.
    * @returns {{ width: number, height: number }}
    */
@@ -378,6 +393,8 @@ export class ImageExporter {
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportPixelSize(scale);
 
+    this._pinAsciiExportReference(originalSize);
+    try {
     const { width: exportW, height: exportH } = this._setExportFramebufferSize(
       targetWidth,
       targetHeight,
@@ -439,6 +456,9 @@ export class ImageExporter {
     }
 
     this._ensureFullDrawingBufferViewport();
+    } finally {
+      this._unpinAsciiExportReference();
+    }
   }
 
   /**
@@ -1019,7 +1039,9 @@ export class ImageExporter {
     if (this.postPipeline?.renderPass) {
       this.postPipeline.renderPass.clearAlpha = 0;
     }
-    
+
+    this._pinAsciiExportReference(originalSize);
+    try {
     const { width: exportW, height: exportH } = this._setExportFramebufferSize(
       cropInfo.fullRenderWidth,
       cropInfo.fullRenderHeight,
@@ -1265,6 +1287,9 @@ export class ImageExporter {
     this._ensureFullDrawingBufferViewport();
 
     return renderTarget;
+    } finally {
+      this._unpinAsciiExportReference();
+    }
   }
 
   /**

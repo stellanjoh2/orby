@@ -527,6 +527,8 @@ export class VideoExporter {
     const previousPixelRatio = this.renderer.getPixelRatio();
     const previousAspect = this.camera.aspect;
 
+    this.imageExporter?._pinAsciiExportReference?.(previousSize);
+
     const synced = this.imageExporter?._setExportFramebufferSize
       ? this.imageExporter._setExportFramebufferSize(width, height)
       : (() => {
@@ -580,6 +582,7 @@ export class VideoExporter {
       snapshot.previousSize.y,
     );
     this.syncPerspectiveProjection?.();
+    this.imageExporter?._unpinAsciiExportReference?.();
   }
 
   /** Repair GL viewport / composer RT size after offline capture (passes may leave partial viewport). */
