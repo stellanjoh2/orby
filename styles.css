@@ -4560,6 +4560,11 @@ a.about-highlight:focus-visible {
   opacity: calc(var(--muted-section-text-scale) * 0.75);
 }
 
+/* Shader Lab — blocked Cam/FX rows show not-allowed + click tooltip */
+[data-shader-lab-blocked] {
+  cursor: not-allowed;
+}
+
 /* Pink exclamation — feature still under development (tooltip on .dev-badge) */
 .block-title-name {
   display: inline-flex;

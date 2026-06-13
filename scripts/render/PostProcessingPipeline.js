@@ -26,6 +26,7 @@ import { GradingController } from './GradingController.js';
 import { BloomCompositeController } from './BloomCompositeController.js';
 import { CreativeLookViewportBloom } from './CreativeLookViewportBloom.js';
 import { CreativeLookAsciiPass } from './CreativeLookAsciiPass.js';
+import { CreativeLookEgaPass } from './CreativeLookEgaPass.js';
 import { CreativeLookC64Pass } from './CreativeLookC64Pass.js';
 import { CreativeLookGameBoyPass } from './CreativeLookGameBoyPass.js';
 import { CreativeLookNesPass } from './CreativeLookNesPass.js';
@@ -187,6 +188,9 @@ export class PostProcessingPipeline {
     this.creativeLookAscii = new CreativeLookAsciiPass(renderer);
     this.creativeLookAsciiPass = this.creativeLookAscii.getPass();
 
+    this.creativeLookEga = new CreativeLookEgaPass(renderer);
+    this.creativeLookEgaPass = this.creativeLookEga.getPass();
+
     this.creativeLookC64 = new CreativeLookC64Pass(renderer);
     this.creativeLookC64Pass = this.creativeLookC64.getPass();
 
@@ -210,6 +214,7 @@ export class PostProcessingPipeline {
 
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.creativeLookAsciiPass);
+    this.composer.addPass(this.creativeLookEgaPass);
     this.composer.addPass(this.creativeLookC64Pass);
     this.composer.addPass(this.creativeLookGameBoyPass);
     this.composer.addPass(this.creativeLookNesPass);
@@ -247,6 +252,7 @@ export class PostProcessingPipeline {
     this._managedPasses = [
       { pass: this.renderPass, key: 'renderPass' },
       { pass: this.creativeLookAsciiPass, key: 'creativeLookAsciiPass' },
+      { pass: this.creativeLookEgaPass, key: 'creativeLookEgaPass' },
       { pass: this.creativeLookC64Pass, key: 'creativeLookC64Pass' },
       { pass: this.creativeLookGameBoyPass, key: 'creativeLookGameBoyPass' },
       { pass: this.creativeLookNesPass, key: 'creativeLookNesPass' },
@@ -296,7 +302,7 @@ export class PostProcessingPipeline {
     this._asciiBloomActive = false;
     /** @type {boolean} */
     this._asciiAnamorphicActive = false;
-    /** @type {'ascii' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null} */
+    /** @type {'ascii' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null} */
     this._flatPostVariant = null;
   }
 
@@ -391,6 +397,11 @@ export class PostProcessingPipeline {
         continue;
       }
       if (key === 'creativeLookAsciiPass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookEgaPass') {
         pass.enabled = snap.enabled;
         pass.renderToScreen = false;
         continue;
@@ -511,6 +522,7 @@ export class PostProcessingPipeline {
       if (
         key === 'renderPass' ||
         key === 'creativeLookAsciiPass' ||
+        key === 'creativeLookEgaPass' ||
         key === 'creativeLookC64Pass' ||
         key === 'creativeLookGameBoyPass' ||
         key === 'creativeLookNesPass' ||
@@ -552,6 +564,9 @@ export class PostProcessingPipeline {
     const variant = this._flatPostVariant;
     if (this.creativeLookAsciiPass) {
       this.creativeLookAsciiPass.enabled = variant === 'ascii';
+    }
+    if (this.creativeLookEgaPass) {
+      this.creativeLookEgaPass.enabled = variant === 'ega-pixel';
     }
     if (this.creativeLookC64Pass) {
       this.creativeLookC64Pass.enabled = variant === 'c64-pixel';
@@ -669,6 +684,11 @@ export class PostProcessingPipeline {
     this.creativeLookAscii?.updateSettings(settings ?? {});
   }
 
+  /** Shader Lab EGA Pixel — screen-space 640×350 palette crush after the colormap prepass. */
+  updateCreativeLookEga(settings) {
+    this.creativeLookEga?.updateSettings(settings ?? {});
+  }
+
   /** Shader Lab C64 Pixel — screen-space palette crush after the colormap prepass. */
   updateCreativeLookC64(settings) {
     this.creativeLookC64?.updateSettings(settings ?? {});
@@ -705,7 +725,7 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * @param {{ enabled?: boolean, variant?: 'ascii' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null }} mode
+   * @param {{ enabled?: boolean, variant?: 'ascii' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null }} mode
    */
   setCreativeLookFlatPostMode(mode = {}) {
     const enabled = mode.enabled === true;

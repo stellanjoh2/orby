@@ -4,6 +4,7 @@ import {
   applyStudioFoldouts,
   applyToggleSectionMute,
 } from './ui/effectFoldouts.js';
+import { applyCreativeLookPostFxUiBlocks, bindShaderLabBlockedClickHints } from './ui/creativeLookPostFxBlocked.js';
 import { isBackgroundFallbackActive } from './render/backgroundFallback.js';
 import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
@@ -211,6 +212,11 @@ export class UIManager {
     this.fontExtrudeUI.mount();
     this.fontExtrudeUI.bind();
     this.resetControls = new ResetControls(this.eventBus, this.stateStore, this, this.helpers);
+    bindShaderLabBlockedClickHints({
+      root: document.querySelector('.panels'),
+      isShaderLabActive: () => this.stateStore.getState().creativeLook?.enabled === true,
+      getTooltips: () => window.orby?.tooltips,
+    });
 
     this.sceneSettingsManager = new SceneSettingsManager(
       this.eventBus,
@@ -3230,6 +3236,13 @@ export class UIManager {
     // HDRI foldout — open state handled in applyStudioFoldouts
 
     applyToggleSectionMute(currentState, (key, muted) => this.setBlockMuted(key, muted));
+
+    applyCreativeLookPostFxUiBlocks(currentState, {
+      setMuted: (key, muted) => this.setBlockMuted(key, muted),
+      setControlsDisabled: (ids, disabled) => this.setControlDisabled(ids, disabled),
+      getSubsection: (key) => this.dom.subsections?.[key] ?? null,
+      getInput: (id) => this.inputs?.[id] ?? null,
+    });
 
     const isoOn = !!currentState.camera?.isometric?.enabled;
     this.setBlockMuted(

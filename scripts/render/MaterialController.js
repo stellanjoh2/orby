@@ -15,10 +15,9 @@ import {
   creativeChromeRoughness,
   creativeGlassParams,
   creativeLookMasterHueRadians,
-  creativePixelArtPixelScale,
   creativePs2CrushMergeFactor,
   creativePsxMergeFactor,
-  creativeSnesMergeFactor,
+  creativeVgaDos3dMergeFactor,
   creativeLookUsesRetroDecimation,
   creativeLookFixedPatternScale,
   creativeLookDefaultIntensity,
@@ -2049,7 +2048,7 @@ export class MaterialController {
       this.creativeLookSettings.patternScale,
     );
 
-    // Always sync geometry when Shader Lab is on — PS2/PSX/SNES decimation strips normals and
+    // Always sync geometry when Shader Lab is on — PS2/PSX/VGA decimation strips normals and
     // breaks other presets if we bail out early for textures/wireframe shading.
     this._syncRetroConsoleGeometryForPreset(preset, patternScale);
 
@@ -2177,7 +2176,7 @@ export class MaterialController {
   }
 
   /**
-   * Hole-safe edge-collapse decimation for PS2 / PSX / SNES — only merges verts connected by an edge.
+   * Hole-safe edge-collapse decimation for PS2 / PSX / VGA/DOS 3D — only merges verts connected by an edge.
    * Skips skinned meshes. Restored on preset off / switch.
    * @param {string} preset
    * @param {number} patternScale
@@ -2188,8 +2187,8 @@ export class MaterialController {
     const mergeFactor =
       id === 'psx'
         ? creativePsxMergeFactor(patternScale)
-        : id === 'snes'
-          ? creativeSnesMergeFactor(patternScale)
+        : id === 'vga-dos-3d'
+          ? creativeVgaDos3dMergeFactor(patternScale)
           : creativePs2CrushMergeFactor(patternScale);
 
     this.currentModel.traverse((child) => {
@@ -2269,7 +2268,7 @@ export class MaterialController {
     });
   }
 
-  /** Restore mesh geometry after PS2 / PSX / SNES decimation. */
+  /** Restore mesh geometry after PS2 / PSX / VGA/DOS 3D decimation. */
   _restorePs2CrushGeometry() {
     if (!this.currentModel) return;
 
@@ -2366,7 +2365,7 @@ export class MaterialController {
   }
 
   /**
-   * PS2 / PSX / SNES use a fixed scale (decimation is apply-time only, not live).
+   * PS2 / PSX / VGA/DOS 3D use a fixed scale (decimation is apply-time only, not live).
    * @param {string} preset
    * @param {number | undefined} patternScale
    */
@@ -2526,21 +2525,6 @@ export class MaterialController {
       });
     }
 
-    if (preset === 'pixel-art') {
-      this.currentModel.traverse((child) => {
-        if (!child.isMesh) return;
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        for (const m of mats) {
-          if (
-            m?.userData?.orbyCreativeLook === 'pixel-art' &&
-            m.uniforms?.uPixelSize
-          ) {
-            m.uniforms.uPixelSize.value = creativePixelArtPixelScale(patternScale);
-          }
-        }
-      });
-    }
-
     if (isFlatPostCreativeLookPreset(preset)) {
       if (typeof this.onCreativeLookAsciiSync === 'function') {
         this.onCreativeLookAsciiSync();
@@ -2595,7 +2579,7 @@ export class MaterialController {
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
           if (
-            (tag === 'toon' || tag === 'pixel-art' || tag === 'ps2-crush' || tag === 'psx' || tag === 'snes') &&
+            (tag === 'toon' || tag === 'ps2-crush' || tag === 'psx' || tag === 'vga-dos-3d') &&
             m.uniforms?.uLightDir
           ) {
             m.uniforms.uLightDir.value.copy(dir);
@@ -2610,7 +2594,7 @@ export class MaterialController {
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
-          if (tag !== 'toon' && tag !== 'pixel-art' && tag !== 'ps2-crush' && tag !== 'psx' && tag !== 'snes') continue;
+          if (tag !== 'toon' && tag !== 'ps2-crush' && tag !== 'psx' && tag !== 'vga-dos-3d') continue;
           if (m.uniforms?.uLightScale) m.uniforms.uLightScale.value = lightScale;
           if (m.uniforms?.uAmbientFloor) m.uniforms.uAmbientFloor.value = ambientFloor;
         }

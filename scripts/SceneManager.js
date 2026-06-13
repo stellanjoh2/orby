@@ -442,13 +442,8 @@ export class SceneManager {
     this.scene.add(this.colorCheckerRoot);
     /** When Reference colors is on, shading we restore when turning it off (Display mode before Unlit). */
     this._colorCheckerRestoreShading = null;
-    /** Saved HDRI background while ASCII Art forces it off. */
-    this._asciiStudioOverrideActive = false;
-    this._asciiRestoreHdriBackground = null;
-    /** Saved backdrop while Shader Lab forces pure black. */
-    this._creativeStudioBgActive = false;
-    this._creativeRestoreBackground = null;
-    this._creativeRestoreGradientEnabled = false;
+    /** Re-apply studio backdrop from state when Shader Lab turns on (no longer forces black). */
+    this._creativeLookStudioBgSynced = false;
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     this._colorCheckerHorizRef = new THREE.Vector3();
     this._colorCheckerTowardCam = new THREE.Vector3();
@@ -1039,18 +1034,7 @@ export class SceneManager {
       getCreativeLookAsciiActive: () => {
         const state = this.stateStore.getState();
         const cl = state.creativeLook ?? {};
-        if (
-          cl.enabled !== true ||
-          !isFlatPostCreativeLookPreset(cl.preset)
-        ) {
-          return false;
-        }
-        // Defer the terminal pass until studio sync hides the HDRI backdrop — otherwise
-        // a heavy Shader Lab rebuild can render ASCII over the sky for ~1s.
-        if (state.hdriBackground && !this._asciiStudioOverrideActive) {
-          return false;
-        }
-        return true;
+        return cl.enabled === true && isFlatPostCreativeLookPreset(cl.preset);
       },
       getRenderState: () => this.stateStore.getState(),
       syncPostProcessingForLogicalSize: (w, h) =>
@@ -1250,6 +1234,7 @@ export class SceneManager {
     }
     this.postPipeline?.creativeLookViewportBloom?.setSize(width, height, bloomScale);
     this.postPipeline?.creativeLookAscii?.setSize(width, height);
+    this.postPipeline?.creativeLookEga?.setSize(width, height);
     this.postPipeline?.creativeLookC64?.setSize(width, height);
     this.postPipeline?.creativeLookGameBoy?.setSize(width, height);
     this.postPipeline?.creativeLookNes?.setSize(width, height);
@@ -4371,13 +4356,16 @@ export class SceneManager {
     const isAscii = flatVariant === 'ascii';
 
     this._syncCreativeLookStudioBackground(creativeLookOn);
-    this._syncCreativeLookAsciiStudio(enabled);
 
     const masterHue = normalizeCreativeLookMasterHue(storeCl.masterHue ?? mcCl.masterHue);
     const masterHueRad = creativeLookMasterHueRadians(masterHue);
     const asciiSettings = {
       enabled: enabled && isAscii,
       variant: presetId,
+      masterHue: masterHueRad,
+    };
+    const egaSettings = {
+      enabled: enabled && flatVariant === 'ega-pixel',
       masterHue: masterHueRad,
     };
     const c64Settings = {
@@ -4412,6 +4400,7 @@ export class SceneManager {
 
     this.postPipeline?.setCreativeLookFlatPostMode?.({ enabled, variant: flatVariant });
     this.postPipeline?.updateCreativeLookAscii(asciiSettings);
+    this.postPipeline?.updateCreativeLookEga?.(egaSettings);
     this.postPipeline?.updateCreativeLookC64?.(c64Settings);
     this.postPipeline?.updateCreativeLookGameBoy?.(gameBoySettings);
     this.postPipeline?.updateCreativeLookNes?.(nesSettings);
@@ -4425,6 +4414,7 @@ export class SceneManager {
       this.renderer.getSize(sz);
       if (sz.x > 0 && sz.y > 0) {
         this.postPipeline?.creativeLookAscii?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookEga?.setSize(sz.x, sz.y);
         this.postPipeline?.creativeLookC64?.setSize(sz.x, sz.y);
         this.postPipeline?.creativeLookGameBoy?.setSize(sz.x, sz.y);
         this.postPipeline?.creativeLookNes?.setSize(sz.x, sz.y);
@@ -4449,77 +4439,23 @@ export class SceneManager {
   }
 
   /**
-   * Shader Lab — force pure-black backdrop (and pause gradient) while active.
+   * Shader Lab — keep studio backdrop (color / gradient) driven by state, not forced black.
    * @param {boolean} creativeLookOn
    */
   _syncCreativeLookStudioBackground(creativeLookOn) {
     if (creativeLookOn) {
-      if (this._creativeStudioBgActive) return;
+      if (this._creativeLookStudioBgSynced) return;
       const state = this.stateStore.getState();
-      this._creativeRestoreBackground = state.background ?? APP_BACKGROUND;
-      this._creativeRestoreGradientEnabled = !!state.backgroundGradient?.enabled;
-      this._creativeStudioBgActive = true;
-
-      if (this._creativeRestoreGradientEnabled) {
-        this.backgroundGradientController?.setConfig({ enabled: false });
+      if (state.background) {
+        this.backgroundController?.setColor(state.background);
       }
-      this.backgroundController?.setColor(APP_BACKGROUND);
+      if (state.backgroundGradient) {
+        this.backgroundGradientController?.setConfig(state.backgroundGradient);
+      }
+      this._creativeLookStudioBgSynced = true;
       return;
     }
-
-    if (!this._creativeStudioBgActive) return;
-
-    const restoreBg = this._creativeRestoreBackground;
-    const restoreGradient = this._creativeRestoreGradientEnabled;
-    this._creativeStudioBgActive = false;
-    this._creativeRestoreBackground = null;
-    this._creativeRestoreGradientEnabled = false;
-
-    if (restoreBg) {
-      this.backgroundController?.setColor(restoreBg);
-    }
-    if (restoreGradient) {
-      this.backgroundGradientController?.setConfig({ enabled: true });
-    }
-  }
-
-  /**
-   * Flat-post presets — hide HDRI sky in scene.background.
-   * Restores HDRI background when leaving the preset.
-   * @param {boolean} asciiActive
-   */
-  _syncCreativeLookAsciiStudio(asciiActive) {
-    if (asciiActive) {
-      if (this._asciiStudioOverrideActive) return;
-      const state = this.stateStore.getState();
-      this._asciiRestoreHdriBackground = !!state.hdriBackground;
-      this._asciiStudioOverrideActive = true;
-
-      if (state.hdriBackground) {
-        this.stateStore.set('hdriBackground', false);
-        this.setHdriBackground(false);
-        if (this.ui?.inputs?.hdriBackground) {
-          this.ui.inputs.hdriBackground.checked = false;
-        }
-        this.ui?.applyBlockStates?.(this.stateStore.getState());
-      }
-      return;
-    }
-
-    if (!this._asciiStudioOverrideActive) return;
-
-    const restoreHdriBackground = this._asciiRestoreHdriBackground;
-    this._asciiStudioOverrideActive = false;
-    this._asciiRestoreHdriBackground = null;
-
-    if (restoreHdriBackground) {
-      this.stateStore.set('hdriBackground', true);
-      this.setHdriBackground(true);
-      if (this.ui?.inputs?.hdriBackground) {
-        this.ui.inputs.hdriBackground.checked = true;
-      }
-      this.ui?.applyBlockStates?.(this.stateStore.getState());
-    }
+    this._creativeLookStudioBgSynced = false;
   }
 
   /**
@@ -4553,13 +4489,6 @@ export class SceneManager {
     }
 
     try {
-      const nextPreset = normalizeCreativeLookPreset(creativeLookState?.preset);
-      const nextFlatPostActive =
-        creativeLookState?.enabled === true && isFlatPostCreativeLookPreset(nextPreset);
-      if (nextFlatPostActive) {
-        this._syncCreativeLookAsciiStudio(true);
-      }
-
       mc.setCreativeLookSettings(creativeLookState, options);
       this._syncCreativeLookAsciiPass();
       if (heavy && creativeLookState?.enabled) {

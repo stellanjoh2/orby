@@ -955,8 +955,8 @@
                     <div class="creative-look-grid-section">
                       <p class="creative-look-grid-section-label">Screen pixels</p>
                       <div class="hdri-grid">
-                    <button type="button" data-creative-look="pixel-art" class="hdri-icon" data-tooltip="Pixel Art — camera-locked screen pixels, flat cel shading, Bayer dither on mesh colors (no geometry decimation)">
-                      <img src="./assets/images/creative-look-pixel-art.svg" alt="Pixel Art" width="192" height="192" />
+                    <button type="button" data-creative-look="ega-pixel" class="hdri-icon" data-tooltip="EGA Pixel — 640×350 macro pixels; SCUMM / Monkey Island–inspired 16-color palette with purple/blue dither; colormap cel prepass + 2×2 Bayer; Master Hue shifts palette (Scale &amp; Intensity locked)">
+                      <img src="./assets/images/creative-look-ega-pixel.svg" alt="EGA Pixel" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="c64-pixel" class="hdri-icon" data-tooltip="C64 Pixel — 320×200 macro pixels; colormap cel prepass + 16-color palette + 2×2 dither; Master Hue shifts palette (Scale &amp; Intensity locked)">
                       <img src="./assets/images/creative-look-c64-pixel.svg" alt="C64 Pixel" width="192" height="192" />
@@ -990,8 +990,8 @@
                     <button type="button" data-creative-look="psx" class="hdri-icon" data-tooltip="PSX — coarser mesh decimation, affine UVs, nearest-neighbor crushed textures, 15-bit bands + 2×2 ordered dither">
                       <img src="./assets/images/creative-look-psx.svg" alt="PSX" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="snes" class="hdri-icon" data-tooltip="SNES — stable pixel snap, 4-color cel bands, CGRAM 15-bit quant (5-bit/channel), 4×4 ordered dither">
-                      <img src="./assets/images/creative-look-snes.svg" alt="SNES" width="192" height="192" />
+                    <button type="button" data-creative-look="vga-dos-3d" class="hdri-icon" data-tooltip="VGA/DOS 3D — stable snap, affine UVs, nearest crushed textures, flat DOS lighting, 256-color palette (no dither)">
+                      <img src="./assets/images/creative-look-vga-dos-3d.svg" alt="VGA/DOS 3D" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1070,7 +1070,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). Pixel Art: finer detail toward the left (min 0.02×). True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. SNES: fixed at 2.2× (decimation runs once at apply).">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply).">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -3257,7 +3257,7 @@
               </div>
 
               <div class="panel-block">
-                <div class="subsection">
+                <div class="subsection" data-subsection="color-tone">
                   <div class="block-title has-reset">
                     <span>Color & Tone</span>
                     <button class="block-reset-btn" data-reset="color-correction" aria-label="Reset Color & Tone" data-tooltip="Reset Color & Tone settings">

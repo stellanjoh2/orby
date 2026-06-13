@@ -255,6 +255,10 @@ export class ImageExporter {
       logicalSize.x,
       logicalSize.y,
     );
+    this.postPipeline?.creativeLookEga?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
     this.postPipeline?.creativeLookC64?.pinReferenceLogicalSize?.(
       logicalSize.x,
       logicalSize.y,
@@ -287,6 +291,7 @@ export class ImageExporter {
 
   _unpinAsciiExportReference() {
     this.postPipeline?.creativeLookAscii?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookEga?.unpinReferenceLogicalSize?.();
     this.postPipeline?.creativeLookC64?.unpinReferenceLogicalSize?.();
     this.postPipeline?.creativeLookGameBoy?.unpinReferenceLogicalSize?.();
     this.postPipeline?.creativeLookNes?.unpinReferenceLogicalSize?.();

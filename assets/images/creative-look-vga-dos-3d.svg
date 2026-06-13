@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="vgag" x1="12%" y1="8%" x2="88%" y2="92%">
+      <stop offset="0%" stop-color="#a89078"/>
+      <stop offset="45%" stop-color="#6a5848"/>
+      <stop offset="100%" stop-color="#2a2218"/>
+    </linearGradient>
+    <linearGradient id="vgacyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#48b8c8"/>
+      <stop offset="100%" stop-color="#186878"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="#080808"/>
+  <!-- Chunky affine-warped DOS poly -->
+  <polygon points="32,8 52,48 14,44" fill="url(#vgag)" stroke="#4a4038" stroke-width="1"/>
+  <polygon points="32,8 52,48 38,50" fill="#786858" opacity="0.85"/>
+  <rect x="18" y="38" width="8" height="8" fill="#584838"/>
+  <rect x="28" y="32" width="8" height="8" fill="#887868"/>
+  <rect x="38" y="36" width="8" height="8" fill="#685848"/>
+  <rect x="24" y="44" width="6" height="6" fill="#3a3028"/>
+  <rect x="40" y="44" width="6" height="6" fill="#3a3028"/>
+  <!-- Energy accent -->
+  <rect x="30" y="18" width="4" height="4" fill="url(#vgacyan)"/>
+  <rect x="36" y="22" width="3" height="3" fill="#38a0b0" opacity="0.9"/>
+</svg>

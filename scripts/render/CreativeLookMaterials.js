@@ -19,6 +19,11 @@ import {
   creativeLookAscii3FixedIntensity,
 } from './creativeLookAscii3Art.js';
 import {
+  EGA_PREP_FRAGMENT,
+  creativeLookEgaFixedScale,
+  creativeLookEgaFixedIntensity,
+} from './creativeLookEgaArt.js';
+import {
   C64_PREP_FRAGMENT,
   creativeLookC64FixedScale,
   creativeLookC64FixedIntensity,
@@ -53,24 +58,29 @@ import {
   creativeLookApple2FixedScale,
   creativeLookApple2FixedIntensity,
 } from './creativeLookApple2Art.js';
+import {
+  VGA_DOS_3D_FRAGMENT,
+  VGA_DOS_PALETTE_COUNT,
+  getVgaDosPaletteTexture,
+} from './creativeLookVgaDos3dArt.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, ps2-crush, psx). Pixel Art uses a fixed screen Bayer grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'pixel-art' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'snes' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
   'flow-field',
   'plasma',
   'toon',
-  'pixel-art',
+  'ega-pixel',
   'c64-pixel',
   'gameboy-pixel',
   'gba-pixel',
@@ -88,7 +98,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'vertex-points',
   'ps2-crush',
   'psx',
-  'snes',
+  'vga-dos-3d',
   'chrome',
   'glass',
   'spectral-storm',
@@ -118,8 +128,8 @@ export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
 /** Fixed creative Scale for PSX — coarser decimation than PS2. */
 export const CREATIVE_PSX_PATTERN_SCALE = 2.5;
 
-/** Fixed creative Scale for SNES — moderate decimation between PS2 and PSX. */
-export const CREATIVE_SNES_PATTERN_SCALE = 2.2;
+/** Fixed creative Scale for VGA/DOS 3D — moderate decimation between PS2 and PSX. */
+export const CREATIVE_VGA_DOS_3D_PATTERN_SCALE = 2.2;
 
 /** Wire Pulse / Vertex Points need per-triangle barycentrics (non-indexed triangle soup). */
 export function creativeLookUsesWirePulseGeometry(preset) {
@@ -186,8 +196,8 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'chrome',
   'ps2-crush',
   'psx',
-  'snes',
-  'pixel-art',
+  'vga-dos-3d',
+  'ega-pixel',
   'c64-pixel',
   'gameboy-pixel',
   'gba-pixel',
@@ -211,7 +221,12 @@ export function creativeLookAllowsTransparency(preset) {
 /** Screen-space Bayer dither — no shadow-map vertex chunks (avoids compile issues on thin alpha shells). */
 export function creativeLookPresetUsesShadowReceive(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id !== 'pixel-art' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3';
+  return id !== 'ega-pixel' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isEgaPixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'ega-pixel';
 }
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -249,10 +264,11 @@ export function isApple2PixelCreativeLookPreset(preset) {
   return normalizeCreativeLookPreset(preset) === 'apple2-pixel';
 }
 
-/** Two-pass screen grid: ASCII terminal or C64 flat pixels (not mesh-shader pixel-art). */
+/** Two-pass screen grid: ASCII terminal, EGA, or retro flat pixels. */
 export function isFlatPostCreativeLookPreset(preset) {
   return (
     isAsciiCreativeLookPreset(preset) ||
+    isEgaPixelCreativeLookPreset(preset) ||
     isC64PixelCreativeLookPreset(preset) ||
     isGameBoyPixelCreativeLookPreset(preset) ||
     isGbaPixelCreativeLookPreset(preset) ||
@@ -267,6 +283,7 @@ export function isFlatPostCreativeLookPreset(preset) {
 export function creativeLookFlatPostVariant(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (isAsciiCreativeLookPreset(id)) return 'ascii';
+  if (id === 'ega-pixel') return 'ega-pixel';
   if (id === 'c64-pixel') return 'c64-pixel';
   if (id === 'gameboy-pixel') return 'gameboy-pixel';
   if (id === 'nes-pixel') return 'nes-pixel';
@@ -658,7 +675,8 @@ export function normalizeCreativeLookPreset(preset) {
   let p = typeof preset === 'string' ? preset : '';
   if (p === 'matcap' || p === 'halftone') p = 'spectral-storm';
   if (p === 'glass-holo') p = 'holographic';
-  if (p === 'ordered-dither') p = 'pixel-art';
+  if (p === 'ordered-dither' || p === 'pixel-art') p = 'ega-pixel';
+  if (p === 'snes') p = 'vga-dos-3d';
   if (typeof p === 'string' && CREATIVE_LOOK_PRESETS.includes(p)) {
     return /** @type {CreativeLookPreset} */ (p);
   }
@@ -668,7 +686,7 @@ export function normalizeCreativeLookPreset(preset) {
 /** @param {CreativeLookPreset | string | undefined} preset */
 export function creativeLookUsesRetroDecimation(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'ps2-crush' || id === 'psx' || id === 'snes';
+  return id === 'ps2-crush' || id === 'psx' || id === 'vga-dos-3d';
 }
 
 /** Fixed pattern scale for retro console presets and ASCII Art, or `null` if live scale applies. */
@@ -677,6 +695,7 @@ export function creativeLookFixedPatternScale(preset) {
   if (id === 'ascii-art') return creativeLookAsciiFixedScale();
   if (id === 'ascii-art-2') return creativeLookAscii3FixedScale();
   if (id === 'ascii-art-3') return creativeLookAscii2FixedScale();
+  if (id === 'ega-pixel') return creativeLookEgaFixedScale();
   if (id === 'c64-pixel') return creativeLookC64FixedScale();
   if (id === 'gameboy-pixel') return creativeLookGameBoyFixedScale();
   if (id === 'nes-pixel') return creativeLookNesFixedScale();
@@ -701,6 +720,7 @@ export function creativeLookPresetLocksPatternScale(preset) {
 export function creativeLookPresetLocksIntensity(preset) {
   return (
     isAsciiCreativeLookPreset(preset) ||
+    isEgaPixelCreativeLookPreset(preset) ||
     isC64PixelCreativeLookPreset(preset) ||
     isGameBoyPixelCreativeLookPreset(preset) ||
     isNesPixelCreativeLookPreset(preset) ||
@@ -734,6 +754,7 @@ export function creativeLookFixedIntensity(preset) {
   if (id === 'ascii-art') return creativeLookAsciiFixedIntensity();
   if (id === 'ascii-art-2') return creativeLookAscii3FixedIntensity();
   if (id === 'ascii-art-3') return creativeLookAscii2FixedIntensity();
+  if (id === 'ega-pixel') return creativeLookEgaFixedIntensity();
   if (id === 'c64-pixel') return creativeLookC64FixedIntensity();
   if (id === 'gameboy-pixel') return creativeLookGameBoyFixedIntensity();
   if (id === 'nes-pixel') return creativeLookNesFixedIntensity();
@@ -749,7 +770,7 @@ export function creativeLookRetroConsoleFixedScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'ps2-crush') return CREATIVE_PS2_CRUSH_PATTERN_SCALE;
   if (id === 'psx') return CREATIVE_PSX_PATTERN_SCALE;
-  if (id === 'snes') return CREATIVE_SNES_PATTERN_SCALE;
+  if (id === 'vga-dos-3d') return CREATIVE_VGA_DOS_3D_PATTERN_SCALE;
   return null;
 }
 
@@ -761,7 +782,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'flow-field': 'Flow Field',
     plasma: 'Plasma',
     toon: 'Toon',
-    'pixel-art': 'Pixel Art',
+    'ega-pixel': 'EGA Pixel',
     'c64-pixel': 'C64 Pixel',
     'gameboy-pixel': 'Game Boy',
     'nes-pixel': 'NES',
@@ -780,7 +801,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'vertex-points': 'Vertex Points',
     'ps2-crush': 'PS2 Crush',
     psx: 'PSX',
-    snes: 'SNES',
+    'vga-dos-3d': 'VGA/DOS 3D',
     chrome: 'True Chrome',
     glass: 'Glass',
   });
@@ -805,17 +826,6 @@ export function creativeChromeRoughness(patternScale, hdriBlurriness = 0) {
     return Math.min(1, base + (1 - base) * blur);
   }
   return base;
-}
-
-/**
- * Screen pixels per macro block for pixel-art — camera-locked grid (gl_FragCoord).
- * Scale 1 ≈ 8 px tiles; higher scale → chunkier sprite pixels.
- * @param {number} patternScale — Creative Scale (typically 0.02–5)
- */
-export function creativePixelArtPixelScale(patternScale) {
-  const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
-  const px = 8 * Math.pow(ps, 0.72);
-  return THREE.MathUtils.clamp(px, 3, 36);
 }
 
 export { creativeAsciiCellSize, creativeLookAsciiFixedScale, creativeLookAsciiFixedIntensity } from './creativeLookAsciiArt.js';
@@ -998,32 +1008,33 @@ export function bakePsxDiffuseMap(source, texRes) {
 }
 
 /**
- * Average-edge-length multiplier for SNES edge-collapse — between PS2 and PSX.
+ * Average-edge-length multiplier for VGA/DOS 3D edge-collapse — lighter than PSX
+ * (DOS shooters kept small portal faces; avoid huge facet blocks).
  * @param {number} patternScale
  */
-export function creativeSnesMergeFactor(patternScale) {
+export function creativeVgaDos3dMergeFactor(patternScale) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
   const t = (ps - 0.02) / (5 - 0.02);
-  const base = THREE.MathUtils.lerp(1.22, 2.95, t);
-  return base * 1.12;
+  const base = THREE.MathUtils.lerp(1.08, 2.45, t);
+  return base * 1.02;
 }
 
-/** Screen-space snap grid for SNES stable pixelation (no vertex drift). */
-export function creativeSnesSnapGrid(patternScale) {
+/** Screen-space snap grid for VGA/DOS 3D stable pixelation (no vertex drift). */
+export function creativeVgaDos3dSnapGrid(patternScale) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
   const t = (ps - 0.02) / (5 - 0.02);
-  // ~240p internal resolution feel at locked scale 2.2.
-  return THREE.MathUtils.lerp(220, 72, t);
+  // ~640×400 feel at locked scale 2.2 — finer than raw 320×200 but still chunky.
+  return THREE.MathUtils.lerp(360, 150, t);
 }
 
 /**
- * SNES diffuse resolution — nearest bake + UV quant (Mode 7–style chunky texels).
+ * VGA/DOS 3D diffuse resolution — nearest bake + UV quant (chunky affine texels).
  * @param {number} patternScale
  */
-export function creativeSnesTexRes(patternScale) {
+export function creativeVgaDos3dTexRes(patternScale) {
   const ps = THREE.MathUtils.clamp(patternScale, 0.02, 5);
   const t = (ps - 0.02) / (5 - 0.02);
-  return Math.round(THREE.MathUtils.lerp(80, 10, t));
+  return Math.round(THREE.MathUtils.lerp(112, 28, t));
 }
 
 /**
@@ -1223,7 +1234,7 @@ void main() {
 }
 `;
 
-/** Camera-locked screen pixels — flat cel + Bayer dither on mesh albedo (true 2D, no geometry decimation). */
+/** Shared flat-post mesh vertex (EGA, C64, Game Boy, etc.). */
 const PIXEL_ART_VERTEX = /* glsl */ `
 #include <common>
 #include <uv_pars_vertex>
@@ -1249,84 +1260,6 @@ void main() {
   vWorldPosition = worldPosition.xyz;
   vUv = uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
-}
-`;
-
-const PIXEL_ART_FRAGMENT = /* glsl */ `
-varying vec3 vWorldNormal;
-varying vec3 vWorldPosition;
-varying vec2 vUv;
-uniform vec3 uLightDir;
-uniform vec3 uTint;
-uniform sampler2D uMap;
-uniform float uHasMap;
-uniform float uPixelSize;
-uniform float uLightScale;
-uniform float uAmbientFloor;
-uniform float uIntensity;
-uniform float uOpacity;
-
-const vec3 PIXEL_LUMA = vec3(0.2126, 0.7152, 0.0722);
-
-float pixelArtBayer4(ivec2 cell) {
-  int x = int(mod(float(cell.x), 4.0));
-  int y = int(mod(float(cell.y), 4.0));
-  int i = x + y * 4;
-  if (i == 0) return 0.0;
-  if (i == 1) return 8.0;
-  if (i == 2) return 2.0;
-  if (i == 3) return 10.0;
-  if (i == 4) return 12.0;
-  if (i == 5) return 4.0;
-  if (i == 6) return 14.0;
-  if (i == 7) return 6.0;
-  if (i == 8) return 3.0;
-  if (i == 9) return 11.0;
-  if (i == 10) return 1.0;
-  if (i == 11) return 9.0;
-  if (i == 12) return 15.0;
-  if (i == 13) return 7.0;
-  if (i == 14) return 13.0;
-  return 5.0;
-}
-
-void main() {
-  float ps = max(uPixelSize, 2.0);
-  ivec2 block = ivec2(floor(gl_FragCoord.xy / ps));
-  float blockBayer = pixelArtBayer4(block) / 16.0;
-
-  vec3 N = normalize(vWorldNormal);
-  vec3 qN = normalize(sign(N) * floor(abs(N) * 5.0 + 0.499) / 5.0 + vec3(1e-4));
-  vec3 L = normalize(uLightDir);
-  float crush = clamp(uIntensity, 0.0, 2.0);
-  float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
-  float bands = mix(4.0, 2.0, crushT);
-
-  float ndl = max(dot(qN, L), 0.0);
-  float shadeIdx = floor(ndl * bands + blockBayer * mix(0.0, 0.45, crushT));
-  shadeIdx = clamp(shadeIdx / max(bands - 1.0, 1.0), 0.0, 1.0);
-
-  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
-  float mapAlpha = 1.0;
-  if (uHasMap > 0.5) {
-    vec4 mapSample = texture2D(uMap, vUv);
-    baseCol = mapSample.rgb;
-    mapAlpha = mapSample.a;
-  }
-
-  float shade = uAmbientFloor + (1.0 - uAmbientFloor) * shadeIdx * uLightScale;
-  vec3 col = baseCol * shade;
-
-  float srcLum = max(dot(baseCol, PIXEL_LUMA), 1e-4);
-  float colLum = max(dot(col, PIXEL_LUMA), 1e-4);
-  col *= colLum / srcLum;
-
-  float levels = mix(14.0, 6.0, crushT);
-  float ditherPush = mix(0.65, 1.45, crushT);
-  col = floor(col * levels + (blockBayer - 0.5) * ditherPush) / levels;
-
-  col = clamp(col, vec3(0.0), vec3(1.0));
-  gl_FragColor = vec4(col, uOpacity * mapAlpha);
 }
 `;
 
@@ -1582,8 +1515,8 @@ void main() {
 }
 `;
 
-/** SNES pixel art: stable screen-space snap (no PSX-style vertex drift). */
-const SNES_PIXEL_VERTEX = /* glsl */ `
+/** VGA/DOS 3D: stable screen-space snap (no PSX-style vertex drift). */
+const VGA_DOS_3D_VERTEX = /* glsl */ `
 #include <common>
 #include <uv_pars_vertex>
 #include <morphtarget_pars_vertex>
@@ -1774,101 +1707,6 @@ void main() {
   col = floor(col * levels + (br - 0.5) * ditherPush) / levels;
   col = clamp(col, vec3(0.0), vec3(1.0));
   col *= mix(dotDark, dotBright, br);
-
-  gl_FragColor = vec4(col, uOpacity * mapAlpha);
-}
-`;
-
-/** SNES: 4-color cel bands, CGRAM 15-bit (5-bit/channel) quant, 4×4 ordered dither. */
-const SNES_FRAGMENT = /* glsl */ `
-varying vec3 vWorldNormal;
-varying vec3 vWorldPosition;
-varying vec3 vTexAffine;
-uniform vec3 uLightDir;
-uniform vec3 uTint;
-uniform sampler2D uMap;
-uniform float uHasMap;
-uniform float uTexRes;
-uniform float uLightScale;
-uniform float uAmbientFloor;
-uniform float uIntensity;
-uniform float uOpacity;
-
-const vec3 SNES_LUMA = vec3(0.2126, 0.7152, 0.0722);
-
-vec3 snesQuantize15Bit(vec3 col) {
-  return floor(col * 31.0 + 0.5) / 31.0;
-}
-
-vec3 snesVividSaturation(vec3 col, float amount) {
-  float lum = dot(col, SNES_LUMA);
-  return mix(vec3(lum), col, amount);
-}
-
-float snesBayer4(vec2 p) {
-  int x = int(mod(p.x, 4.0));
-  int y = int(mod(p.y, 4.0));
-  int i = x + y * 4;
-  if (i == 0) return 0.0;
-  if (i == 1) return 8.0;
-  if (i == 2) return 2.0;
-  if (i == 3) return 10.0;
-  if (i == 4) return 12.0;
-  if (i == 5) return 4.0;
-  if (i == 6) return 14.0;
-  if (i == 7) return 6.0;
-  if (i == 8) return 3.0;
-  if (i == 9) return 11.0;
-  if (i == 10) return 1.0;
-  if (i == 11) return 9.0;
-  if (i == 12) return 15.0;
-  if (i == 13) return 7.0;
-  if (i == 14) return 13.0;
-  return 5.0;
-}
-
-void main() {
-  vec3 N = normalize(vWorldNormal);
-  vec3 L = normalize(uLightDir);
-  float ndl = max(dot(N, L), 0.0);
-  float crush = clamp(uIntensity, 0.0, 2.0);
-  float crushT = clamp((crush - 1.0) / 1.0, 0.0, 1.0);
-  float bands = mix(4.0, 2.0, crushT);
-  float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
-  stepped = clamp(stepped, 0.0, 1.0);
-
-  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
-  float mapAlpha = 1.0;
-  if (uHasMap > 0.5) {
-    vec2 uvAff = vTexAffine.xy / max(vTexAffine.z, 1e-5);
-    float tr = max(uTexRes, 4.0);
-    uvAff = (floor(uvAff * tr) + 0.5) / tr;
-    vec4 mapSample = texture2D(uMap, uvAff);
-    baseCol = mapSample.rgb;
-    mapAlpha = mapSample.a;
-  }
-
-  vec3 sourceCol = baseCol;
-  float shade = uAmbientFloor + (1.0 - uAmbientFloor) * stepped * uLightScale;
-
-  float srcLum = max(dot(sourceCol, SNES_LUMA), 1e-4);
-  float litLum = srcLum * shade;
-  vec3 col = sourceCol * (litLum / srcLum);
-
-  float sat = mix(1.1, 1.24, 1.0 - crushT * 0.4);
-  col = snesVividSaturation(col, sat);
-
-  vec3 V = normalize(cameraPosition - vWorldPosition);
-  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.5);
-  col += rim * sourceCol * mix(0.1, 0.24, 1.0 - crushT) * 0.3;
-
-  float ditherAmp = mix(0.0, 1.0 / 31.0, crushT);
-  vec2 pix = floor(gl_FragCoord.xy + 1e-3);
-  float br = snesBayer4(pix) / 16.0;
-  col = col + (br - 0.5) * ditherAmp * mix(1.0, 2.2, crushT);
-
-  col = snesQuantize15Bit(col);
-  col = clamp(col, vec3(0.0), vec3(1.0));
 
   gl_FragColor = vec4(col, uOpacity * mapAlpha);
 }
@@ -2273,7 +2111,7 @@ void main() {
  * @param {number} [opts.patternScale] — 1 = preset default; higher values make the pattern larger
  * @param {number} [opts.hdriBlurriness] — for chrome / glass presets; roughness vs HDRI blur
  * @param {THREE.Color} [opts.diffuseTint] — mesh albedo fallback when no diffuse map
- * @param {THREE.Texture} [opts.diffuseMap] — albedo for ps2-crush (bilinear bake) / psx|snes (nearest bake)
+ * @param {THREE.Texture} [opts.diffuseMap] — albedo for ps2-crush (bilinear bake) / psx|vga-dos-3d (nearest bake)
  * @param {number} [opts.masterHue] — global hue shift in degrees (-180…180)
  * @param {number} [opts.intensity] — effect punch (0–2, 1 = default)
  * @param {number} [opts.liftCrush] — shadow lift (+) vs crush (−), -1…1
@@ -2426,37 +2264,25 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat);
   }
 
-  if (id === 'pixel-art') {
-    const px = creativePixelArtPixelScale(patternScale);
-    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
+  if (id === 'ega-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xc8b8e8);
     const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
     if (map) {
-      map.minFilter = THREE.NearestFilter;
-      map.magFilter = THREE.NearestFilter;
-      map.generateMipmaps = false;
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
     }
-    const gradeNoShadow = {
-      ...hueUniform,
-      ...liftCrushUniform,
-      ...brightnessUniform,
-    };
     const mat = new THREE.ShaderMaterial({
       uniforms: {
-        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
-        uPixelSize: { value: px },
-        uTint: { value: tint },
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
-        ...toonLightUniforms,
-        ...gradeNoShadow,
-        ...intensityUniform,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: lookFragNoShadow(PIXEL_ART_FRAGMENT),
+      fragmentShader: EGA_PREP_FRAGMENT,
       ...commonMatOpts,
     });
-    mat.userData.orbyCreativeLook = 'pixel-art';
+    mat.userData.orbyCreativeLook = 'ega-pixel';
     return finish(mat, { shadows: false });
   }
 
@@ -2695,30 +2521,32 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat);
   }
 
-  if (id === 'snes') {
-    const tint = diffuseTint ?? new THREE.Color(0xc8c0b8);
-    const texRes = creativeSnesTexRes(patternScale);
+  if (id === 'vga-dos-3d') {
+    const tint = diffuseTint ?? new THREE.Color(0x908878);
+    const texRes = creativeVgaDos3dTexRes(patternScale);
     const map = opts.diffuseMap?.isTexture
       ? bakePsxDiffuseMap(opts.diffuseMap, texRes)
       : null;
     const mat = new THREE.ShaderMaterial({
       uniforms: {
-        uSnapGrid: { value: creativeSnesSnapGrid(patternScale) },
+        uSnapGrid: { value: creativeVgaDos3dSnapGrid(patternScale) },
         uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
         uTint: { value: tint },
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
         uTexRes: { value: texRes },
+        uPalette: { value: getVgaDosPaletteTexture() },
+        uPaletteCount: { value: VGA_DOS_PALETTE_COUNT },
         uOpacity: { value: shaderAlpha },
         ...toonLightUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
-      vertexShader: SNES_PIXEL_VERTEX,
-      fragmentShader: lookFrag(SNES_FRAGMENT),
+      vertexShader: VGA_DOS_3D_VERTEX,
+      fragmentShader: lookFrag(VGA_DOS_3D_FRAGMENT),
       ...commonMatOpts,
     });
-    mat.userData.orbyCreativeLook = 'snes';
+    mat.userData.orbyCreativeLook = 'vga-dos-3d';
     return finish(mat);
   }
 
