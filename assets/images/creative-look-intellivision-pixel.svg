@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#080808"/>
+  <rect x="8" y="10" width="48" height="5" fill="#c9d464"/>
+  <rect x="8" y="15" width="48" height="5" fill="#ff3e00"/>
+  <rect x="8" y="20" width="48" height="5" fill="#080808"/>
+  <rect x="8" y="25" width="48" height="5" fill="#002dff"/>
+  <rect x="8" y="30" width="48" height="5" fill="#3c5800"/>
+  <rect x="8" y="35" width="48" height="5" fill="#ffa600"/>
+  <rect x="8" y="40" width="48" height="5" fill="#080808"/>
+  <rect x="8" y="45" width="48" height="5" fill="#00780f"/>
+  <rect x="8" y="50" width="48" height="5" fill="#faea27"/>
+  <text x="8" y="62" fill="#a7a8a8" font-family="Courier New, monospace" font-size="6">INTV</text>
+</svg>

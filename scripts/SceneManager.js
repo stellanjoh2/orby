@@ -30,6 +30,7 @@ import {
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
   sanitizeAmbientOcclusion,
+  APP_BACKGROUND,
 } from './constants.js';
 import { PostProcessingPipeline } from './render/PostProcessingPipeline.js';
 import { LightsController } from './render/LightsController.js';
@@ -52,12 +53,16 @@ import { JointNameLabelsController } from './render/JointNameLabelsController.js
 import { MaterialController } from './render/MaterialController.js';
 import {
   computeCreativeLookToonLightScalars,
+  creativeLookFlatPostVariant,
   creativeLookMasterHueRadians,
   formatCreativeLookPresetLabel,
+  isFlatPostCreativeLookPreset,
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPreset,
 } from './render/CreativeLookMaterials.js';
 import { ensureAsciiFontAtlasLoaded } from './render/creativeLookAsciiArt.js';
+import { ensureAscii2FontAtlasLoaded } from './render/creativeLookAscii2Art.js';
+import { ensureAscii3FontAtlasLoaded } from './render/creativeLookAscii3Art.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -295,7 +300,7 @@ export class SceneManager {
     this._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
     this._baseToggleCtx.prevEnabled = !!bootGround.groundSolid;
     this._baseGlassToggleCtx.prevEnabled = !!(
-      bootGround.groundSolid && (bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false)
+      bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false
     );
     this._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
 
@@ -440,6 +445,10 @@ export class SceneManager {
     /** Saved HDRI background while ASCII Art forces it off. */
     this._asciiStudioOverrideActive = false;
     this._asciiRestoreHdriBackground = null;
+    /** Saved backdrop while Shader Lab forces pure black. */
+    this._creativeStudioBgActive = false;
+    this._creativeRestoreBackground = null;
+    this._creativeRestoreGradientEnabled = false;
     /** Horizontal orbit reference (XZ), reused each frame like LightsController. */
     this._colorCheckerHorizRef = new THREE.Vector3();
     this._colorCheckerTowardCam = new THREE.Vector3();
@@ -451,7 +460,7 @@ export class SceneManager {
       renderer: this.renderer,
       scene: this.scene,
       camera: this.camera,
-      initialColor: initialState.background ?? '#080808',
+      initialColor: initialState.background ?? APP_BACKGROUND,
     });
     this.backgroundGradientController = new BackgroundGradientController({
       renderer: this.renderer,
@@ -644,7 +653,7 @@ export class SceneManager {
     this._ccToggleCtx.prevEnabled = !!bootGround.colorChecker?.enabled;
     this._baseToggleCtx.prevEnabled = !!bootGround.groundSolid;
     this._baseGlassToggleCtx.prevEnabled = !!(
-      bootGround.groundSolid && (bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false)
+      bootGround.baseGlassSurface ?? bootGround.podiumReflectMesh ?? false
     );
     this._backdropToggleCtx.prevEnabled = !!bootGround.backdropEnabled;
     this.setupMoodController();
@@ -974,7 +983,7 @@ export class SceneManager {
       updateBloom: (settings) => this.updateBloom(settings),
       updateGrain: (settings) => this.updateGrain(settings),
       setBloomState: (value) => this.stateStore.set('bloom', value),
-      fallbackBackgroundColor: this.backgroundController?.getColor() ?? '#080808',
+      fallbackBackgroundColor: this.backgroundController?.getColor() ?? APP_BACKGROUND,
     });
   }
 
@@ -988,7 +997,7 @@ export class SceneManager {
       strength: this.hdriStrength,
       blurriness: this.hdriBlurriness,
       rotation: this.hdriRotation,
-      fallbackColor: this.backgroundController?.getColor() ?? '#080808',
+      fallbackColor: this.backgroundController?.getColor() ?? APP_BACKGROUND,
       onReleaseSceneBackground: () => this.backgroundController?.refreshAppearance?.(),
       onEnvironmentMapUpdated: (texture, intensity) => {
         this.updateMaterialsEnvironment(texture, intensity);
@@ -1019,6 +1028,7 @@ export class SceneManager {
         this.transformControlsRotate,
         this.transformControlsScale,
       ].filter(Boolean),
+      getGroundGrid: () => this.groundController?.grid ?? null,
       getCreativeLookViewportBloomActive: () => {
         const state = this.stateStore.getState();
         return (
@@ -1031,7 +1041,7 @@ export class SceneManager {
         const cl = state.creativeLook ?? {};
         if (
           cl.enabled !== true ||
-          normalizeCreativeLookPreset(cl.preset) !== 'ascii-art'
+          !isFlatPostCreativeLookPreset(cl.preset)
         ) {
           return false;
         }
@@ -1240,6 +1250,13 @@ export class SceneManager {
     }
     this.postPipeline?.creativeLookViewportBloom?.setSize(width, height, bloomScale);
     this.postPipeline?.creativeLookAscii?.setSize(width, height);
+    this.postPipeline?.creativeLookC64?.setSize(width, height);
+    this.postPipeline?.creativeLookGameBoy?.setSize(width, height);
+    this.postPipeline?.creativeLookNes?.setSize(width, height);
+    this.postPipeline?.creativeLookMegaDrive?.setSize(width, height);
+    this.postPipeline?.creativeLookIntellivision?.setSize(width, height);
+    this.postPipeline?.creativeLookGba?.setSize(width, height);
+    this.postPipeline?.creativeLookApple2?.setSize(width, height);
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
     this.diagnosticsController?.syncBoneLineResolution?.(width, height);
@@ -1447,17 +1464,43 @@ export class SceneManager {
 
   /** Ground solid / podium — same scale curves as Reference colors (see toggleScaleAnimation.js). */
   _updateBaseAppearAnimation() {
-    const podium = this.groundController?.podium;
-    if (!podium) return;
+    const gc = this.groundController;
+    const root = gc?.podiumRoot;
+    const solid = gc?.podium;
+    if (!root || !solid) return;
 
-    const groundSolid = !!this.stateStore.getState().groundSolid;
+    const st = this.stateStore.getState();
+    const groundSolid = !!st.groundSolid;
+    const glassOn = !!(
+      st.baseGlassSurface ?? st.podiumReflectMesh ?? false
+    );
     const r = stepToggleScaleAnimation(
       this._baseToggleCtx,
       performance.now(),
       groundSolid,
     );
-    podium.visible = r.visible;
-    podium.scale.setScalar(r.animMul);
+
+    const baseAnimating =
+      this._baseToggleCtx.phase === 'in' || this._baseToggleCtx.phase === 'out';
+    const glassAnimating =
+      this._baseGlassToggleCtx.phase === 'in' || this._baseGlassToggleCtx.phase === 'out';
+    root.visible = groundSolid || glassOn || baseAnimating || glassAnimating;
+
+    solid.scale.setScalar(r.animMul);
+
+    if (groundSolid || baseAnimating) {
+      solid.visible = r.visible;
+      if (solid.material) {
+        solid.material.visible =
+          r.visible && (groundSolid || this._baseToggleCtx.phase === 'out');
+      }
+    } else if (glassOn) {
+      solid.visible = false;
+      if (solid.material) solid.material.visible = false;
+    } else {
+      solid.visible = r.visible;
+      if (solid.material) solid.material.visible = true;
+    }
   }
 
   /** Base glass on the base top — same shared scale curves as base toggles. */
@@ -1465,8 +1508,7 @@ export class SceneManager {
     const reflector = this.groundController?.podiumReflector;
     const st = this.stateStore.getState();
     const glassOn = !!(
-      st.groundSolid &&
-      (st.baseGlassSurface ?? st.podiumReflectMesh ?? false)
+      st.baseGlassSurface ?? st.podiumReflectMesh ?? false
     );
 
     if (!reflector) {
@@ -1756,7 +1798,7 @@ export class SceneManager {
   setHdriBackground(enabled) {
     this.hdriBackgroundEnabled = enabled;
 
-    const bgColor = this.backgroundController?.getColor() ?? '#080808';
+    const bgColor = this.backgroundController?.getColor() ?? APP_BACKGROUND;
     this.environmentController?.setFallbackColor(bgColor);
 
     // BackgroundController must know backdrop is off before EnvironmentController releases
@@ -2103,7 +2145,7 @@ export class SceneManager {
     this.environmentController?.setEnabled(enabled);
     
     // Update environment controller's fallback color (for when HDRI is completely off)
-    const bgColor = this.backgroundController?.getColor() ?? '#080808';
+    const bgColor = this.backgroundController?.getColor() ?? APP_BACKGROUND;
     this.environmentController?.setFallbackColor(bgColor);
     
     // Notify background controller of HDRI enabled state
@@ -2501,7 +2543,10 @@ export class SceneManager {
     this.stateStore.set('groundY', bottomY);
 
     const currentState = this.stateStore.getState();
-    if (!currentState.groundSolid) {
+    const glassOn = !!(
+      currentState.baseGlassSurface ?? currentState.podiumReflectMesh ?? false
+    );
+    if (!currentState.groundSolid && !glassOn) {
       this.setGroundSolid(true);
       this.stateStore.set('groundSolid', true);
     }
@@ -2591,6 +2636,7 @@ export class SceneManager {
     const on = !!enabled;
     this.groundController?.setBaseGlassSurface(on);
     if (updateState) this.stateStore.set('baseGlassSurface', on);
+    this._updateBaseAppearAnimation();
     this._updateBaseGlassAppearAnimation();
     this.ui?.applyBlockStates?.(this.stateStore.getState());
   }
@@ -2803,12 +2849,15 @@ export class SceneManager {
     );
     let radius = 0;
 
-    if (state.groundSolid && this.groundController?.solidEnabled) {
+    if (
+      (state.groundSolid && this.groundController?.solidEnabled)
+      || (state.baseGlassSurface ?? state.podiumReflectMesh ?? false)
+    ) {
       const gc = this.groundController;
       const visualPodiumR = (gc.podiumBaseRadius ?? 2) * (gc.podiumScale ?? 1);
-      const px = gc.podium?.position?.x ?? 0;
-      const py = gc.podium?.position?.y ?? 0;
-      const pz = gc.podium?.position?.z ?? 0;
+      const px = gc.podiumRoot?.position?.x ?? 0;
+      const py = gc.podiumRoot?.position?.y ?? 0;
+      const pz = gc.podiumRoot?.position?.z ?? 0;
       const podiumHeight = Math.max(0, gc.groundHeight ?? 0);
       const centerToTopY = Math.abs((center.y ?? 0) - py);
       const centerToBottomY = Math.abs((center.y ?? 0) - (py - podiumHeight));
@@ -4310,40 +4359,132 @@ export class SceneManager {
     this.backgroundController?.updateSpherePosition();
   }
 
-  /** Enable / tune the screen-space ASCII pass when Shader Lab preset is ASCII Art. */
+  /** Enable / tune flat-post passes (ASCII, C64, Game Boy). */
   _syncCreativeLookAsciiPass() {
     const storeCl = this.stateStore?.getState()?.creativeLook ?? {};
     const mcCl = this.materialController?.getCreativeLookSettings?.() ?? {};
-    const preset = normalizeCreativeLookPreset(storeCl.preset ?? mcCl.preset);
-    const enabled = (storeCl.enabled ?? mcCl.enabled) === true && preset === 'ascii-art';
+    const presetId = normalizeCreativeLookPreset(storeCl.preset ?? mcCl.preset);
+    const creativeLookOn =
+      (storeCl.enabled ?? mcCl.enabled) === true;
+    const enabled = creativeLookOn && isFlatPostCreativeLookPreset(presetId);
+    const flatVariant = enabled ? creativeLookFlatPostVariant(presetId) : null;
+    const isAscii = flatVariant === 'ascii';
 
+    this._syncCreativeLookStudioBackground(creativeLookOn);
     this._syncCreativeLookAsciiStudio(enabled);
 
-    let patternScale = Number(storeCl.patternScale ?? mcCl.patternScale);
-    if (!Number.isFinite(patternScale)) patternScale = 1;
-
     const masterHue = normalizeCreativeLookMasterHue(storeCl.masterHue ?? mcCl.masterHue);
-    const settings = {
-      enabled,
-      masterHue: creativeLookMasterHueRadians(masterHue),
+    const masterHueRad = creativeLookMasterHueRadians(masterHue);
+    const asciiSettings = {
+      enabled: enabled && isAscii,
+      variant: presetId,
+      masterHue: masterHueRad,
     };
-    this.postPipeline?.updateCreativeLookAscii(settings);
+    const c64Settings = {
+      enabled: enabled && flatVariant === 'c64-pixel',
+      masterHue: masterHueRad,
+    };
+    const gameBoySettings = {
+      enabled: enabled && flatVariant === 'gameboy-pixel',
+      masterHue: masterHueRad,
+    };
+    const nesSettings = {
+      enabled: enabled && flatVariant === 'nes-pixel',
+      masterHue: masterHueRad,
+    };
+    const megaDriveSettings = {
+      enabled: enabled && flatVariant === 'megadrive-pixel',
+      masterHue: masterHueRad,
+    };
+    const gbaSettings = {
+      enabled: enabled && flatVariant === 'gba-pixel',
+      masterHue: masterHueRad,
+    };
+    const intellivisionSettings = {
+      enabled: enabled && flatVariant === 'intellivision-pixel',
+      masterHue: masterHueRad,
+    };
+
+    const apple2Settings = {
+      enabled: enabled && flatVariant === 'apple2-pixel',
+      masterHue: masterHueRad,
+    };
+
+    this.postPipeline?.setCreativeLookFlatPostMode?.({ enabled, variant: flatVariant });
+    this.postPipeline?.updateCreativeLookAscii(asciiSettings);
+    this.postPipeline?.updateCreativeLookC64?.(c64Settings);
+    this.postPipeline?.updateCreativeLookGameBoy?.(gameBoySettings);
+    this.postPipeline?.updateCreativeLookNes?.(nesSettings);
+    this.postPipeline?.updateCreativeLookMegaDrive?.(megaDriveSettings);
+    this.postPipeline?.updateCreativeLookIntellivision?.(intellivisionSettings);
+    this.postPipeline?.updateCreativeLookGba?.(gbaSettings);
+    this.postPipeline?.updateCreativeLookApple2?.(apple2Settings);
 
     if (enabled) {
       const sz = new THREE.Vector2();
       this.renderer.getSize(sz);
       if (sz.x > 0 && sz.y > 0) {
         this.postPipeline?.creativeLookAscii?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookC64?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookGameBoy?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookNes?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookMegaDrive?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookIntellivision?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookGba?.setSize(sz.x, sz.y);
+        this.postPipeline?.creativeLookApple2?.setSize(sz.x, sz.y);
       }
-      void ensureAsciiFontAtlasLoaded().then(() => {
-        this.postPipeline?.creativeLookAscii?.refreshAtlas?.();
-        this.postPipeline?.updateCreativeLookAscii(settings);
-      });
+      if (isAscii) {
+        const loadAtlas =
+          presetId === 'ascii-art-2'
+            ? ensureAscii3FontAtlasLoaded
+            : presetId === 'ascii-art-3'
+              ? ensureAscii2FontAtlasLoaded
+              : ensureAsciiFontAtlasLoaded;
+        void loadAtlas().then(() => {
+          this.postPipeline?.creativeLookAscii?.refreshAtlas?.();
+          this.postPipeline?.updateCreativeLookAscii(asciiSettings);
+        });
+      }
     }
   }
 
   /**
-   * ASCII Art — flat Orby black clear color; no HDRI sky in scene.background.
+   * Shader Lab — force pure-black backdrop (and pause gradient) while active.
+   * @param {boolean} creativeLookOn
+   */
+  _syncCreativeLookStudioBackground(creativeLookOn) {
+    if (creativeLookOn) {
+      if (this._creativeStudioBgActive) return;
+      const state = this.stateStore.getState();
+      this._creativeRestoreBackground = state.background ?? APP_BACKGROUND;
+      this._creativeRestoreGradientEnabled = !!state.backgroundGradient?.enabled;
+      this._creativeStudioBgActive = true;
+
+      if (this._creativeRestoreGradientEnabled) {
+        this.backgroundGradientController?.setConfig({ enabled: false });
+      }
+      this.backgroundController?.setColor(APP_BACKGROUND);
+      return;
+    }
+
+    if (!this._creativeStudioBgActive) return;
+
+    const restoreBg = this._creativeRestoreBackground;
+    const restoreGradient = this._creativeRestoreGradientEnabled;
+    this._creativeStudioBgActive = false;
+    this._creativeRestoreBackground = null;
+    this._creativeRestoreGradientEnabled = false;
+
+    if (restoreBg) {
+      this.backgroundController?.setColor(restoreBg);
+    }
+    if (restoreGradient) {
+      this.backgroundGradientController?.setConfig({ enabled: true });
+    }
+  }
+
+  /**
+   * Flat-post presets — hide HDRI sky in scene.background.
    * Restores HDRI background when leaving the preset.
    * @param {boolean} asciiActive
    */
@@ -4413,9 +4554,9 @@ export class SceneManager {
 
     try {
       const nextPreset = normalizeCreativeLookPreset(creativeLookState?.preset);
-      const nextAsciiActive =
-        creativeLookState?.enabled === true && nextPreset === 'ascii-art';
-      if (nextAsciiActive) {
+      const nextFlatPostActive =
+        creativeLookState?.enabled === true && isFlatPostCreativeLookPreset(nextPreset);
+      if (nextFlatPostActive) {
         this._syncCreativeLookAsciiStudio(true);
       }
 

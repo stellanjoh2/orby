@@ -1,6 +1,6 @@
 import './main.js';
 import * as THREE from 'three';
-import { DEFAULT_MATERIAL_BRIGHTNESS, ORBY_LIME } from './constants.js';
+import { DEFAULT_MATERIAL_BRIGHTNESS, ORBY_BLACK, ORBY_LIME } from './constants.js';
 import { DEFAULT_GOBO_SOFTNESS } from './config/gobos.js';
 import { DEFAULT_LIGHTS_SHADOW_SOFTNESS } from './config/shadowQuality.js';
 
@@ -65,7 +65,7 @@ const NOT_FOUND_PRESET = {
     transparencyFix: 'default',
     glassOpacity: 0.45,
     glassReflection: 2,
-    glassTint: '#ffffff',
+    glassTint: ORBY_BLACK,
     glassBody: 0,
     blendSortingMitigation: true,
     flipGlassNormalMapY: false,

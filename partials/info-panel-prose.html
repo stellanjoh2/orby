@@ -297,82 +297,28 @@
                 <div class="panel-block info-panel-block info-panel-block--faq-part" id="info-faq">
                   <div class="block-title"><i class="fa-solid fa-circle-question" style="display: inline-block; vertical-align: -0.125em; margin-right: 0.5rem; color: var(--accent);"></i>Feature FAQ</div>
                   <div class="about-content">
-                    <div>
-                      <h4>Transform Widgets</h4>
-                      <p>Move, rotate, and scale your 3D model with visual gizmos. Click the mesh to show the rotate gizmo, or use shortcuts: <kbd>W</kbd> translate, <kbd>E</kbd> rotate, <kbd>R</kbd> scale (same as Blender), and <kbd>Q</kbd> to exit tools (select). Only one transform tool is active at a time.</p>
-                    </div>
-
-                    <div>
-                      <h4>Display Modes</h4>
-                      <p><strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model. Press <kbd>1</kbd>–<kbd>4</kbd> to switch (Shaded, Unlit, Clay, Wireframe). You can also enable a wireframe overlay on any display mode, or hide the mesh entirely—press <kbd>X</kbd> to cycle overlay modes.</p>
-                    </div>
-
-                    <div>
-                      <h4>Material Controls</h4>
-                      <p><strong>Brightness:</strong> Makes your model lighter or darker. <strong>Metalness:</strong> Controls how metallic the surface looks (0 = plastic, 1 = chrome). <strong>Roughness:</strong> Adjusts surface smoothness (0 = mirror-like, 1 = matte). <strong>Emissive:</strong> Adds glowing light to materials, perfect for sci-fi effects, neon signs, or any glowing elements.</p>
-                    </div>
-
-                    <div>
-                      <h4>Fresnel</h4>
-                      <p>Adds a colored glow around the edges of your model when viewed at an angle. Think of it like rim lighting that follows the silhouette. Great for making objects pop or creating a stylized look.</p>
-                    </div>
+                    <ul>
+                      <li>• <span class="about-highlight">Transform Widgets</span> — Move, rotate, and scale your 3D model with visual gizmos. Click the mesh to show the rotate gizmo, or use shortcuts: <kbd>W</kbd> translate, <kbd>E</kbd> rotate, <kbd>R</kbd> scale (same as Blender), and <kbd>Q</kbd> to exit tools (select). Only one transform tool is active at a time.</li>
+                      <li>• <span class="about-highlight">Display Modes</span> — <strong>Shaded:</strong> Shows your model with realistic lighting and materials. <strong>Unlit:</strong> Displays your model's textures and colors without any lighting effects—everything appears evenly lit, like a flat illustration. <strong>Clay:</strong> Renders your model in a single color, great for focusing on shape and form. <strong>Wireframe:</strong> Shows only the edges and structure of your model. Press <kbd>1</kbd>–<kbd>4</kbd> to switch (Shaded, Unlit, Clay, Wireframe). You can also enable a wireframe overlay on any display mode, or hide the mesh entirely—press <kbd>X</kbd> to cycle overlay modes.</li>
+                      <li>• <span class="about-highlight">Material Controls</span> — <strong>Brightness:</strong> Makes your model lighter or darker. <strong>Metalness:</strong> Controls how metallic the surface looks (0 = plastic, 1 = chrome). <strong>Roughness:</strong> Adjusts surface smoothness (0 = mirror-like, 1 = matte). <strong>Emissive:</strong> Adds glowing light to materials, perfect for sci-fi effects, neon signs, or any glowing elements.</li>
+                      <li>• <span class="about-highlight">Fresnel</span> — Adds a colored glow around the edges of your model when viewed at an angle. Think of it like rim lighting that follows the silhouette. Great for making objects pop or creating a stylized look.</li>
+                      <li>• <span class="about-highlight">HDRI (Environment)</span> — A 360° image that lights your model and drives reflections. <strong>Built-in presets ship as JPEG environments</strong> — already graded and tuned — so the app stays fast to load and the download stays small. We still wanted you to own the scene, so you can <strong>upload</strong> your own <strong>.jpg</strong>, <strong>.png</strong>, <strong>.hdr</strong>, or <strong>.exr</strong> files: JPEGs behave like a finished photo sky; <strong>.hdr</strong> and <strong>.exr</strong> maps keep a wider brightness range, so sun and windows can punch harder on metal and glass (ease off <strong>Intensity</strong> and <strong>Exposure</strong> if it gets hot). Use a <strong>2:1 equirectangular</strong> map. Custom uploads reset mood tints to neutral; re-upload the file after a refresh — it isn’t stored in scene JSON.</li>
+                      <li>• <span class="about-highlight">3-Point Lighting</span> — Professional lighting setup with four lights: <strong>Key</strong> (main light), <strong>Fill</strong> (softens shadows), <strong>Rim</strong> (separates object from background), and <strong>Ambient</strong> (overall scene brightness). Adjust each light's color, intensity, and position. The key light supports <strong>Gobo</strong> projection—patterned shadows from palm, leaf, tree, and other presets. Drag with <kbd>Alt</kbd> + right-click to rotate the rig; <kbd>Shift</kbd> + right-click rotates the HDRI dome.</li>
+                      <li>• <span class="about-highlight">Post-Processing Effects</span> — <strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Chromatic Aberration:</strong> Splits color channels slightly at the edges. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Light Rays:</strong> Volumetric god rays that follow the lens-flare sun direction. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere. <strong>Ambient Occlusion (N8AO):</strong> Screen-space contact shadows—GPU-heavy; off by default. <strong>Fisheye Lens:</strong> Barrel distortion post effect. <strong>Color &amp; Tone</strong> (contrast, temperature, H/S/L, highlights/shadows, clarity, fade, sharpness, vignette) and <strong>tone mapping</strong> (e.g. ACES) sit in the Camera &amp; FX tab alongside exposure.</li>
+                    </ul>
                   </div>
                 </div>
 
                 <div class="panel-block info-panel-block info-panel-block--faq-part">
                   <div class="about-content">
-                    <div>
-                      <h4>HDRI (Environment)</h4>
-                      <p>A 360° image that lights your model and drives reflections. <strong>Built-in presets ship as JPEG environments</strong> — already graded and tuned — so the app stays fast to load and the download stays small. We still wanted you to own the scene, so you can <strong>upload</strong> your own <strong>.jpg</strong>, <strong>.png</strong>, <strong>.hdr</strong>, or <strong>.exr</strong> files: JPEGs behave like a finished photo sky; <strong>.hdr</strong> and <strong>.exr</strong> maps keep a wider brightness range, so sun and windows can punch harder on metal and glass (ease off <strong>Intensity</strong> and <strong>Exposure</strong> if it gets hot). Use a <strong>2:1 equirectangular</strong> map. Custom uploads reset mood tints to neutral; re-upload the file after a refresh — it isn’t stored in scene JSON.</p>
-                    </div>
-
-                    <div>
-                      <h4>3-Point Lighting</h4>
-                      <p>Professional lighting setup with four lights: <strong>Key</strong> (main light), <strong>Fill</strong> (softens shadows), <strong>Rim</strong> (separates object from background), and <strong>Ambient</strong> (overall scene brightness). Adjust each light's color, intensity, and position. The key light supports <strong>Gobo</strong> projection—patterned shadows from palm, leaf, tree, and other presets. Drag with <kbd>Alt</kbd> + right-click to rotate the rig; <kbd>Shift</kbd> + right-click rotates the HDRI dome.</p>
-                    </div>
-
-                    <div>
-                      <h4>Post-Processing Effects</h4>
-                      <p><strong>Bloom:</strong> Adds a glowing, dreamy effect to bright areas. <strong>Depth of Field:</strong> Blurs the background while keeping your model sharp (like a camera lens). <strong>Film Grain:</strong> Adds texture for a cinematic feel. <strong>Chromatic Aberration:</strong> Splits color channels slightly at the edges. <strong>Lens Flare:</strong> Realistic light flares from bright sources. <strong>Light Rays:</strong> Volumetric god rays that follow the lens-flare sun direction. <strong>Lens Dirt:</strong> Simulates smudges on a camera lens for atmosphere. <strong>Ambient Occlusion (N8AO):</strong> Screen-space contact shadows—GPU-heavy; off by default. <strong>Fisheye Lens:</strong> Barrel distortion post effect. <strong>Color &amp; Tone</strong> (contrast, temperature, H/S/L, highlights/shadows, clarity, fade, sharpness, vignette) and <strong>tone mapping</strong> (e.g. ACES) sit in the Camera &amp; FX tab alongside exposure.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="panel-block info-panel-block info-panel-block--faq-part">
-                  <div class="about-content">
-                    <div>
-                      <h4>Camera Controls</h4>
-                      <p><strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll or middle-click and drag. <strong>Focus:</strong> Press <kbd>F</kbd> to automatically frame your model. <strong>Auto Orbit:</strong> Automatically orbits the camera around your model—cycle Off / Slow / Fast with <kbd>Space</kbd> or use the Camera &amp; FX tab (disabled while Isometric Camera is on). <strong>Handheld:</strong> Procedural camera shake (Off / Subtle / Strong). <strong>Isometric Camera:</strong> RTS-style locked view with presets; pan optional via Unlock. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look Filters</strong>, and the rest of Color &amp; Tone for a full grade.</p>
-                    </div>
-
-                    <div>
-                      <h4>Histogram</h4>
-                      <p>A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure. Toggle it on from the Camera &amp; FX tab; it sits in a fold-out under the heading, same idea as the curve (see below).</p>
-                    </div>
-
-                    <div>
-                      <h4 id="info-tone-curve">Tone Curve</h4>
-                      <p>A <strong>luminance</strong> response curve with four draggable handles—output at black, two mid-tones, and output at white (Catmull–Rom-style tangents, baked lookup table in the grade). It shapes how tones map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera &amp; FX (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</p>
-                    </div>
-
-                    <div>
-                      <h4 id="info-look-filters">Look Filter Presets</h4>
-                      <p>Under <strong>Camera &amp; FX → Look Filters</strong>, pick a thumbnail preset for a one-tap look: <strong>None, Studio, Noir, Mood, Vintage, Cinema, Frost, Golden, Dream,</strong> and <strong>Neon</strong> combine color grade, tone curve, bloom, grain, chromatic aberration, and more. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="panel-block info-panel-block info-panel-block--faq-part">
-                  <div class="about-content">
-                    <div>
-                      <h4>Base &amp; Grid</h4>
-                      <p>Add a solid base platform or grid floor to your scene. Great for product presentations or architectural renders. The base can be scaled and colored, and the grid helps with alignment and perspective.</p>
-                    </div>
-
-                    <div>
-                      <h4>Scene Settings</h4>
-                      <p>Copy and paste all your settings (lighting, camera, effects, materials, tone curve, Look Filter selection, histogram/curve panel toggles, SVG &amp; font extrude, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</p>
-                    </div>
+                    <ul>
+                      <li>• <span class="about-highlight">Camera Controls</span> — <strong>Orbit:</strong> Click and drag to rotate around your model. <strong>Pan:</strong> Right-click and drag to move the view. <strong>Zoom:</strong> Scroll or middle-click and drag. <strong>Focus:</strong> Press <kbd>F</kbd> to automatically frame your model. <strong>Auto Orbit:</strong> Automatically orbits the camera around your model—cycle Off / Slow / Fast with <kbd>Space</kbd> or use the Camera &amp; FX tab (disabled while Isometric Camera is on). <strong>Handheld:</strong> Procedural camera shake (Off / Subtle / Strong). <strong>Isometric Camera:</strong> RTS-style locked view with presets; pan optional via Unlock. <strong>Exposure &amp; Auto Exposure:</strong> Manual exposure sets overall brightness; optional auto exposure adapts to the scene. Use the <strong>Histogram</strong> and <strong>Curve</strong> fold-outs, <strong>Look Filters</strong>, and the rest of Color &amp; Tone for a full grade.</li>
+                      <li>• <span class="about-highlight">Histogram</span> — A graph showing the brightness distribution in your image. Helps you see if your render is too dark, too bright, or overexposed. The histogram turns orange or red when parts of your image are too bright (overexposed), warning you to lower the exposure. Toggle it on from the Camera &amp; FX tab; it sits in a fold-out under the heading, same idea as the curve (see below).</li>
+                      <li id="info-tone-curve">• <span class="about-highlight">Tone Curve</span> — A <strong>luminance</strong> response curve with four draggable handles—output at black, two mid-tones, and output at white (Catmull–Rom-style tangents, baked lookup table in the grade). It shapes how tones map before the rest of color grading—use it for contrast roll-off, lifted blacks, or punchy mids. Open the <strong>Curve</strong> fold-out under Camera &amp; FX (next to the histogram); your curve is saved in Copy scene / .orby like other settings.</li>
+                      <li id="info-look-filters">• <span class="about-highlight">Look Filter Presets</span> — Under <strong>Camera &amp; FX → Look Filters</strong>, pick a thumbnail preset for a one-tap look: <strong>None, Studio, Noir, Mood, Vintage, Cinema, Frost, Golden, Dream,</strong> and <strong>Neon</strong> combine color grade, tone curve, bloom, grain, chromatic aberration, and more. <strong>None</strong> resets those camera/FX defaults while keeping framing (FOV, tilt, orbit). If you tweak sliders afterward, the selection shows as custom. Preset state is included when you copy or paste scene JSON.</li>
+                      <li>• <span class="about-highlight">Base &amp; Grid</span> — Add a solid base platform or grid floor to your scene. Great for product presentations or architectural renders. The base can be scaled and colored, and the grid helps with alignment and perspective.</li>
+                      <li>• <span class="about-highlight">Scene Settings</span> — Copy and paste all your settings (lighting, camera, effects, materials, tone curve, Look Filter selection, histogram/curve panel toggles, SVG &amp; font extrude, and more) as JSON. Perfect for saving your favorite setups or sharing them with others. Load a scene to instantly apply all settings at once.</li>
+                    </ul>
                   </div>
                 </div>
               </div>

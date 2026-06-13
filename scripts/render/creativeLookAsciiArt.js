@@ -1,12 +1,15 @@
 import * as THREE from 'three';
-import { ORBY_BLACK, ORBY_LIME } from '../constants.js';
+import { APP_BACKGROUND, ORBY_LIME } from '../constants.js';
 import { blitVga8x16Glyph } from './asciiVga8x16Font.js';
 
 /** Solid Orby lime — Master Hue rotates from this base. */
 export const ASCII_ART_INK_HEX = parseInt(ORBY_LIME.slice(1), 16);
 
-/** Secondary duotone tier: same hue, 50% strength on black. */
-export const ASCII_ART_SHADOW_INK_OPACITY = 0.5;
+/** Shadow ink floor for all ASCII presets — highlights stay at 1.0. */
+export const ASCII_SHADOW_INK_FLOOR = 0.25;
+
+/** @deprecated use {@link ASCII_SHADOW_INK_FLOOR} */
+export const ASCII_ART_SHADOW_INK_OPACITY = ASCII_SHADOW_INK_FLOOR;
 
 /** @deprecated use {@link ASCII_ART_INK_HEX} */
 export const ASCII_ART_FG_HEX = ASCII_ART_INK_HEX;
@@ -252,7 +255,7 @@ uniform float uMasterHue;
 // Recess → sparse charset head + faint ink; solid form → dense tail + full ink.
 const float ASCII_FORM_EMPTY = 0.06;
 const float ASCII_FORM_FULL = 0.72;
-const float ASCII_INK_FLOOR = 0.26;
+const float ASCII_INK_FLOOR = 0.25;
 const float ASCII_INK_CEIL = 1.0;
 
 vec3 applyAsciiMasterHue(vec3 color) {
@@ -355,4 +358,4 @@ void main() {
 export const ASCII_ART_FRAGMENT = ASCII_LUMINANCE_PREP_FRAGMENT;
 
 /** Background token for ASCII pass (re-export for callers). */
-export const ASCII_ART_BG_HEX = ORBY_BLACK;
+export const ASCII_ART_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);

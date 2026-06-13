@@ -240,6 +240,24 @@ export function ensureSvgExtrudeCoreControlsMounted() {
   mount.dataset.mounted = '1';
 }
 
+/** Mount shared surface controls into the Studio Base Glass panel (same state as base). */
+export function ensureBaseGlassSurfaceControlsMounted() {
+  const mount = document.getElementById('baseGlassSurfaceControlsMount');
+  if (!mount) return;
+  if (mount.dataset.mounted === '1' && mount.querySelector('#baseGlassSurfStrength')) {
+    return;
+  }
+  mount.innerHTML = buildSvgExtrudeSurfaceControlsHtml({
+    presetId: 'baseGlassSurfPreset',
+    scaleId: 'baseGlassSurfScale',
+    scaleOutput: 'baseGlassSurfScale',
+    strengthId: 'baseGlassSurfStrength',
+    strengthOutput: 'baseGlassSurfStrength',
+    presetAriaLabel: 'Base glass surface material',
+  });
+  mount.dataset.mounted = '1';
+}
+
 /** Mount shared surface controls into the Studio Base panel. */
 export function ensureBaseSurfaceControlsMounted() {
   const mount = document.getElementById('baseSurfaceControlsMount');
@@ -287,14 +305,20 @@ function syncBaseSurfaceStrengthControl(ctx, state, canEdit) {
  * @param {import('../UIManager.js').UIManager} ctx.ui
  * @param {import('./UIHelpers.js').UIHelpers} ctx.helpers
  */
-export function bindBaseSurfaceControls(ctx) {
-  const { inputs, stateStore, eventBus, ui, helpers } = ctx;
+export function bindBaseSurfaceControls(ctx, { mirrorCtx = null, mirrorCanEdit = () => true } = {}) {
+  const { inputs, stateStore, eventBus, helpers } = ctx;
+
+  const syncMirror = () => {
+    if (!mirrorCtx) return;
+    syncBaseSurfaceControls(mirrorCtx, stateStore.getState(), mirrorCanEdit(stateStore.getState()));
+  };
 
   inputs.surfacePreset?.addEventListener('change', (event) => {
     const preset = event?.target?.value || 'none';
     stateStore.set('baseSurfacePreset', preset);
     syncBaseSurfaceStrengthControl(ctx, stateStore.getState(), true);
     emitBaseSurface(eventBus, stateStore);
+    syncMirror();
   });
 
   inputs.surfaceScale?.addEventListener('input', (event) => {
@@ -303,6 +327,7 @@ export function bindBaseSurfaceControls(ctx) {
     helpers.updateValueLabel(inputs.surfaceScaleOutputKey, formatSurfaceDetailLabel(scale), 'decimal');
     stateStore.set('baseSurfaceScale', scale);
     emitBaseSurface(eventBus, stateStore);
+    syncMirror();
   });
   if (inputs.surfaceScale) helpers.enableSliderKeyboardStepping(inputs.surfaceScale);
 
@@ -312,6 +337,7 @@ export function bindBaseSurfaceControls(ctx) {
     helpers.updateValueLabel(inputs.surfaceStrengthOutputKey, strength, 'decimal');
     stateStore.set('baseSurfaceStrength', strength);
     emitBaseSurface(eventBus, stateStore);
+    syncMirror();
   });
   if (inputs.surfaceStrength) helpers.enableSliderKeyboardStepping(inputs.surfaceStrength);
 }

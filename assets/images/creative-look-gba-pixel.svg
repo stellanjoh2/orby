@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#080808"/>
+  <rect x="6" y="18" width="52" height="28" rx="3" fill="#5b4fb5"/>
+  <rect x="10" y="22" width="44" height="4" fill="#ff6b6b"/>
+  <rect x="10" y="26" width="44" height="4" fill="#ffd93d"/>
+  <rect x="10" y="30" width="44" height="4" fill="#6bcb77"/>
+  <rect x="10" y="34" width="44" height="4" fill="#4d96ff"/>
+  <rect x="10" y="38" width="44" height="4" fill="#080808"/>
+  <rect x="22" y="12" width="20" height="4" rx="1" fill="#8b7fd4"/>
+  <text x="8" y="58" fill="#a7a8a8" font-family="Courier New, monospace" font-size="6">GBA</text>
+</svg>

@@ -255,10 +255,45 @@ export class ImageExporter {
       logicalSize.x,
       logicalSize.y,
     );
+    this.postPipeline?.creativeLookC64?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+    this.postPipeline?.creativeLookGameBoy?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+    this.postPipeline?.creativeLookNes?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+    this.postPipeline?.creativeLookMegaDrive?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+    this.postPipeline?.creativeLookIntellivision?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+    this.postPipeline?.creativeLookGba?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
+    this.postPipeline?.creativeLookApple2?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
   }
 
   _unpinAsciiExportReference() {
     this.postPipeline?.creativeLookAscii?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookC64?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookGameBoy?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookNes?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookMegaDrive?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookIntellivision?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookGba?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookApple2?.unpinReferenceLogicalSize?.();
   }
 
   /**

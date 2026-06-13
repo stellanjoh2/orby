@@ -412,6 +412,7 @@ export class GroundController {
     );
 
     this.podium = null;
+    this.podiumRoot = null;
     this.podiumReflector = null;
     this._glassSepBlur = null;
     this.backdropEnabled = !!options.backdropEnabled;
@@ -467,10 +468,11 @@ export class GroundController {
 
   disposeBase() {
     this.disposeBaseReflector();
-    if (!this.podium) return;
-    this.scene.remove(this.podium);
-    disposeObjectGpuResources(this.podium);
+    if (!this.podiumRoot) return;
+    this.scene.remove(this.podiumRoot);
+    if (this.podium) disposeObjectGpuResources(this.podium);
     this.podium = null;
+    this.podiumRoot = null;
   }
 
   disposeGrid() {
@@ -535,7 +537,10 @@ export class GroundController {
     this.podium.receiveShadow = true;
     this.podium.material.wireframe = this.debugWireframeEnabled;
     this.podium.visible = this.solidEnabled;
-    this.scene.add(this.podium);
+
+    this.podiumRoot = new THREE.Group();
+    this.podiumRoot.add(this.podium);
+    this.scene.add(this.podiumRoot);
 
     this.applyBaseEnvironment(
       this._lastEnvTexture ?? this.scene.environment,
@@ -615,7 +620,7 @@ export class GroundController {
     reflector.receiveShadow = false;
     reflector.userData.meshglBaseGlassReflector = true;
 
-    this.podium.add(reflector);
+    this.podiumRoot.add(reflector);
     this.podiumReflector = reflector;
 
     this._glassSepBlur = new BaseGlassSeparableBlur(this.renderer, rw, rh);
@@ -872,7 +877,7 @@ export class GroundController {
   setSolidEnabled(enabled) {
     this.solidEnabled = !!enabled;
 
-    if (!this.podium) {
+    if (!this.podiumRoot) {
       console.warn('[GroundController] Podium missing, rebuilding default…');
       this.buildDefaultBase();
     }
@@ -910,7 +915,7 @@ export class GroundController {
 
   setGroundY(value) {
     this.groundY = value ?? 0;
-    if (this.podium) this.podium.position.y = this.groundY;
+    if (this.podiumRoot) this.podiumRoot.position.y = this.groundY;
   }
 
   setGridY(value) {

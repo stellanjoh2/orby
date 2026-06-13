@@ -51,7 +51,7 @@ export function applyStudioFoldouts(state, setOpen) {
 
   setOpen('hdri', !!state.hdriEnabled);
   setOpen('base', podiumOn);
-  setOpen('base-glass', podiumOn && glassOn);
+  setOpen('base-glass', glassOn);
   setOpen('backdrop', backdropOn);
   setOpen('background-gradient', !!state.backgroundGradient?.enabled && isBackgroundFallbackActive(state));
   setOpen('lights-rig', lightsOn);
@@ -114,8 +114,9 @@ export function applyToggleSectionMute(state, setMuted) {
 
   // Studio tab
   setMuted('hdri', !state.hdriEnabled);
-  setMuted('base', !podiumOn);
-  setMuted('base-glass', !(podiumOn && glassOn));
+  setMuted('base', !podiumOn && !glassOn);
+  setMuted('base-material', !podiumOn);
+  setMuted('base-glass', !glassOn);
   setMuted('backdrop', !backdropOn);
   setMuted('lights', !lightsOn);
   setMuted('keyLight', !(lightsOn && state.lights?.key?.enabled === true));

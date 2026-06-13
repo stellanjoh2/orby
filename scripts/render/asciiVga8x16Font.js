@@ -55,3 +55,39 @@ export function blitVga8x16Glyph(ctx, ch, destX, destY, scale = 1) {
   }
   ctx.putImageData(img, destX, destY);
 }
+
+/**
+ * Blit 8×16 VGA into a target pixel rect (nearest-neighbor fit).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} ch
+ * @param {number} destX
+ * @param {number} destY
+ * @param {number} destW
+ * @param {number} destH
+ */
+export function blitVga8x16GlyphFit(ctx, ch, destX, destY, destW, destH) {
+  const code = ch.charCodeAt(0);
+  if (code < 0 || code > 255) return;
+  const outW = Math.max(1, Math.floor(destW));
+  const outH = Math.max(1, Math.floor(destH));
+  const font = getVga8x16FontBytes();
+  const offset = code * 16;
+  const img = ctx.createImageData(outW, outH);
+  const d = img.data;
+
+  for (let py = 0; py < outH; py += 1) {
+    const srcRow = Math.min(15, Math.floor((py * 16) / outH));
+    const byte = font[offset + srcRow] ?? 0;
+    for (let px = 0; px < outW; px += 1) {
+      const srcCol = Math.min(7, Math.floor((px * 8) / outW));
+      const on = (byte >> (7 - srcCol)) & 1;
+      const v = on ? 255 : 0;
+      const i = (py * outW + px) * 4;
+      d[i] = v;
+      d[i + 1] = v;
+      d[i + 2] = v;
+      d[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, destX, destY);
+}

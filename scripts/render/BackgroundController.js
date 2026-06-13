@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { APP_BACKGROUND } from '../constants.js';
 import { HdriShadowReceiver } from './HdriShadowReceiver.js';
 
 /**
@@ -11,7 +12,7 @@ import { HdriShadowReceiver } from './HdriShadowReceiver.js';
  * - Visibility based on HDRI background state
  */
 export class BackgroundController {
-  constructor({ renderer, scene, camera, initialColor = '#080808' } = {}) {
+  constructor({ renderer, scene, camera, initialColor = APP_BACKGROUND } = {}) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;

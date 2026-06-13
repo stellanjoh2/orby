@@ -8,6 +8,51 @@ import {
   creativeLookAsciiFixedScale,
   creativeLookAsciiFixedIntensity,
 } from './creativeLookAsciiArt.js';
+import {
+  ASCII_2_LUMINANCE_PREP_FRAGMENT,
+  creativeLookAscii2FixedScale,
+  creativeLookAscii2FixedIntensity,
+} from './creativeLookAscii2Art.js';
+import {
+  ASCII_3_LUMINANCE_PREP_FRAGMENT,
+  creativeLookAscii3FixedScale,
+  creativeLookAscii3FixedIntensity,
+} from './creativeLookAscii3Art.js';
+import {
+  C64_PREP_FRAGMENT,
+  creativeLookC64FixedScale,
+  creativeLookC64FixedIntensity,
+} from './creativeLookC64Art.js';
+import {
+  GB_PREP_FRAGMENT,
+  creativeLookGameBoyFixedScale,
+  creativeLookGameBoyFixedIntensity,
+} from './creativeLookGameBoyArt.js';
+import {
+  NES_PREP_FRAGMENT,
+  creativeLookNesFixedScale,
+  creativeLookNesFixedIntensity,
+} from './creativeLookNesArt.js';
+import {
+  MD_PREP_FRAGMENT,
+  creativeLookMegaDriveFixedScale,
+  creativeLookMegaDriveFixedIntensity,
+} from './creativeLookMegaDriveArt.js';
+import {
+  INTV_PREP_FRAGMENT,
+  creativeLookIntellivisionFixedScale,
+  creativeLookIntellivisionFixedIntensity,
+} from './creativeLookIntellivisionArt.js';
+import {
+  GBA_PREP_FRAGMENT,
+  creativeLookGbaFixedScale,
+  creativeLookGbaFixedIntensity,
+} from './creativeLookGbaArt.js';
+import {
+  A2_PREP_FRAGMENT,
+  creativeLookApple2FixedScale,
+  creativeLookApple2FixedIntensity,
+} from './creativeLookApple2Art.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
@@ -18,7 +63,7 @@ import {
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'pixel-art' | 'ascii-art' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'snes' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'pixel-art' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'snes' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -26,7 +71,16 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'plasma',
   'toon',
   'pixel-art',
+  'c64-pixel',
+  'gameboy-pixel',
+  'gba-pixel',
+  'nes-pixel',
+  'megadrive-pixel',
+  'intellivision-pixel',
+  'apple2-pixel',
   'ascii-art',
+  'ascii-art-2',
+  'ascii-art-3',
   'holographic',
   'voronoi',
   'scanline-hologram',
@@ -54,6 +108,9 @@ export const CREATIVE_LOOK_MASTER_HUE_MAX = 180;
 export const CREATIVE_LOOK_INTENSITY_MIN = 0;
 export const CREATIVE_LOOK_INTENSITY_MAX = 2;
 export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
+
+/** Default Shader Lab intensity for Scanline Hologram (strength slider). */
+export const SCANLINE_HOLOGRAM_DEFAULT_INTENSITY = 0.25;
 
 /** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
 export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
@@ -131,7 +188,16 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'psx',
   'snes',
   'pixel-art',
+  'c64-pixel',
+  'gameboy-pixel',
+  'gba-pixel',
+  'nes-pixel',
+  'megadrive-pixel',
+  'intellivision-pixel',
+  'apple2-pixel',
   'ascii-art',
+  'ascii-art-2',
+  'ascii-art-3',
   'scanline-hologram',
   'wire-pulse',
   'vertex-points',
@@ -145,7 +211,76 @@ export function creativeLookAllowsTransparency(preset) {
 /** Screen-space Bayer dither — no shadow-map vertex chunks (avoids compile issues on thin alpha shells). */
 export function creativeLookPresetUsesShadowReceive(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id !== 'pixel-art' && id !== 'ascii-art';
+  return id !== 'pixel-art' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isGameBoyPixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'gameboy-pixel';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isC64PixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'c64-pixel';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isNesPixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'nes-pixel';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isMegaDrivePixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'megadrive-pixel';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isGbaPixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'gba-pixel';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isIntellivisionPixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'intellivision-pixel';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isApple2PixelCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'apple2-pixel';
+}
+
+/** Two-pass screen grid: ASCII terminal or C64 flat pixels (not mesh-shader pixel-art). */
+export function isFlatPostCreativeLookPreset(preset) {
+  return (
+    isAsciiCreativeLookPreset(preset) ||
+    isC64PixelCreativeLookPreset(preset) ||
+    isGameBoyPixelCreativeLookPreset(preset) ||
+    isGbaPixelCreativeLookPreset(preset) ||
+    isNesPixelCreativeLookPreset(preset) ||
+    isMegaDrivePixelCreativeLookPreset(preset) ||
+    isIntellivisionPixelCreativeLookPreset(preset) ||
+    isApple2PixelCreativeLookPreset(preset)
+  );
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function creativeLookFlatPostVariant(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (isAsciiCreativeLookPreset(id)) return 'ascii';
+  if (id === 'c64-pixel') return 'c64-pixel';
+  if (id === 'gameboy-pixel') return 'gameboy-pixel';
+  if (id === 'nes-pixel') return 'nes-pixel';
+  if (id === 'megadrive-pixel') return 'megadrive-pixel';
+  if (id === 'intellivision-pixel') return 'intellivision-pixel';
+  if (id === 'gba-pixel') return 'gba-pixel';
+  if (id === 'apple2-pixel') return 'apple2-pixel';
+  return null;
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isAsciiCreativeLookPreset(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return id === 'ascii-art' || id === 'ascii-art-2' || id === 'ascii-art-3';
 }
 
 /** Reference effective studio intensities at lights master 1.0 (LightsController multipliers). */
@@ -247,6 +382,13 @@ export function normalizeCreativeLookIntensity(value) {
   const v = Number(value);
   if (!Number.isFinite(v)) return CREATIVE_LOOK_INTENSITY_DEFAULT;
   return THREE.MathUtils.clamp(v, CREATIVE_LOOK_INTENSITY_MIN, CREATIVE_LOOK_INTENSITY_MAX);
+}
+
+/** Preset-specific intensity when the slider is not locked (`creativeLookFixedIntensity`). */
+export function creativeLookDefaultIntensity(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'scanline-hologram') return SCANLINE_HOLOGRAM_DEFAULT_INTENSITY;
+  return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
 /** Shadow lift (+) vs black crush (−) for Shader Lab output grading. */
@@ -533,7 +675,21 @@ export function creativeLookUsesRetroDecimation(preset) {
 export function creativeLookFixedPatternScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'ascii-art') return creativeLookAsciiFixedScale();
+  if (id === 'ascii-art-2') return creativeLookAscii3FixedScale();
+  if (id === 'ascii-art-3') return creativeLookAscii2FixedScale();
+  if (id === 'c64-pixel') return creativeLookC64FixedScale();
+  if (id === 'gameboy-pixel') return creativeLookGameBoyFixedScale();
+  if (id === 'nes-pixel') return creativeLookNesFixedScale();
+  if (id === 'megadrive-pixel') return creativeLookMegaDriveFixedScale();
+  if (id === 'intellivision-pixel') return creativeLookIntellivisionFixedScale();
+  if (id === 'gba-pixel') return creativeLookGbaFixedScale();
+  if (id === 'apple2-pixel') return creativeLookApple2FixedScale();
   return creativeLookRetroConsoleFixedScale(preset);
+}
+
+/** Whether Shader Lab Master Hue is locked (fixed palette). */
+export function creativeLookPresetLocksMasterHue(_preset) {
+  return false;
 }
 
 /** Whether Shader Lab Scale slider is locked (fixed grid). */
@@ -543,13 +699,48 @@ export function creativeLookPresetLocksPatternScale(preset) {
 
 /** Whether Shader Lab Intensity slider is locked (fixed baked look). */
 export function creativeLookPresetLocksIntensity(preset) {
-  return normalizeCreativeLookPreset(preset) === 'ascii-art';
+  return (
+    isAsciiCreativeLookPreset(preset) ||
+    isC64PixelCreativeLookPreset(preset) ||
+    isGameBoyPixelCreativeLookPreset(preset) ||
+    isNesPixelCreativeLookPreset(preset) ||
+    isMegaDrivePixelCreativeLookPreset(preset) ||
+    isIntellivisionPixelCreativeLookPreset(preset) ||
+    isGbaPixelCreativeLookPreset(preset) ||
+    isApple2PixelCreativeLookPreset(preset)
+  );
+}
+
+/** Whether Shader Lab anim speed / pause controls apply (preset reads animated `uTime`). */
+export function creativeLookPresetUsesShaderAnimation(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return (
+    id === 'flow-field' ||
+    id === 'plasma' ||
+    id === 'holographic' ||
+    id === 'spectral-storm' ||
+    id === 'voronoi' ||
+    id === 'scanline-hologram' ||
+    id === 'wire-pulse' ||
+    id === 'vertex-points' ||
+    id === 'ps2-crush' ||
+    id === 'psx'
+  );
 }
 
 /** Fixed intensity for presets that lock the slider, or `null`. */
 export function creativeLookFixedIntensity(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'ascii-art') return creativeLookAsciiFixedIntensity();
+  if (id === 'ascii-art-2') return creativeLookAscii3FixedIntensity();
+  if (id === 'ascii-art-3') return creativeLookAscii2FixedIntensity();
+  if (id === 'c64-pixel') return creativeLookC64FixedIntensity();
+  if (id === 'gameboy-pixel') return creativeLookGameBoyFixedIntensity();
+  if (id === 'nes-pixel') return creativeLookNesFixedIntensity();
+  if (id === 'megadrive-pixel') return creativeLookMegaDriveFixedIntensity();
+  if (id === 'intellivision-pixel') return creativeLookIntellivisionFixedIntensity();
+  if (id === 'gba-pixel') return creativeLookGbaFixedIntensity();
+  if (id === 'apple2-pixel') return creativeLookApple2FixedIntensity();
   return null;
 }
 
@@ -571,7 +762,16 @@ export function formatCreativeLookPresetLabel(preset) {
     plasma: 'Plasma',
     toon: 'Toon',
     'pixel-art': 'Pixel Art',
+    'c64-pixel': 'C64 Pixel',
+    'gameboy-pixel': 'Game Boy',
+    'nes-pixel': 'NES',
+    'megadrive-pixel': 'Mega Drive',
+    'intellivision-pixel': 'Intellivision',
+    'gba-pixel': 'Game Boy Advance',
+    'apple2-pixel': 'Apple II',
     'ascii-art': 'ASCII Art',
+    'ascii-art-2': 'ASCII 2',
+    'ascii-art-3': 'ASCII 3',
     holographic: 'Holographic',
     'spectral-storm': 'Spectral Storm',
     voronoi: 'Voronoi',
@@ -2260,7 +2460,8 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat, { shadows: false });
   }
 
-  if (id === 'ascii-art') {
+  if (id === 'c64-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
     const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
     if (map) {
       map.minFilter = THREE.LinearFilter;
@@ -2270,13 +2471,172 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       uniforms: {
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: ASCII_LUMINANCE_PREP_FRAGMENT,
+      fragmentShader: C64_PREP_FRAGMENT,
       ...commonMatOpts,
     });
-    mat.userData.orbyCreativeLook = 'ascii-art';
+    mat.userData.orbyCreativeLook = 'c64-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'gameboy-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: GB_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'gameboy-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'gba-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xc8b8e8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: GBA_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'gba-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'nes-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: NES_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'nes-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'megadrive-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: MD_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'megadrive-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'intellivision-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xd8c8a0);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: INTV_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'intellivision-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'apple2-pixel') {
+    const tint = diffuseTint ?? new THREE.Color(0xd8d8d8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: A2_PREP_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = 'apple2-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'ascii-art' || id === 'ascii-art-2' || id === 'ascii-art-3') {
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const prepass =
+      id === 'ascii-art-2'
+        ? ASCII_3_LUMINANCE_PREP_FRAGMENT
+        : id === 'ascii-art-3'
+          ? ASCII_2_LUMINANCE_PREP_FRAGMENT
+          : ASCII_LUMINANCE_PREP_FRAGMENT;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: prepass,
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = id;
     return finish(mat, { shadows: false });
   }
 

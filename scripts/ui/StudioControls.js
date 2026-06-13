@@ -46,6 +46,26 @@ export class StudioControls {
     };
   }
 
+  _baseGlassSurfaceCtx() {
+    return {
+      inputs: {
+        surfacePreset: this.ui.inputs.baseGlassSurfPreset,
+        surfaceScale: this.ui.inputs.baseGlassSurfScale,
+        surfaceScaleOutputKey: 'baseGlassSurfScale',
+        surfaceStrength: this.ui.inputs.baseGlassSurfStrength,
+        surfaceStrengthOutputKey: 'baseGlassSurfStrength',
+      },
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+      ui: this.ui,
+      helpers: this.helpers,
+    };
+  }
+
+  _isBaseGlassOn(state) {
+    return !!(state.baseGlassSurface ?? state.podiumReflectMesh ?? false);
+  }
+
   _backdropSurfaceCtx() {
     return {
       inputs: {
@@ -354,14 +374,18 @@ export class StudioControls {
       this.stateStore.set('baseRoughness', value);
       this.eventBus.emit('studio:base-roughness', value);
     });
-    bindBaseSurfaceControls(this._baseSurfaceCtx());
+    bindBaseSurfaceControls(this._baseSurfaceCtx(), {
+      mirrorCtx: this._baseGlassSurfaceCtx(),
+      mirrorCanEdit: (st) => this._isBaseGlassOn(st),
+    });
+    bindBaseSurfaceControls(this._baseGlassSurfaceCtx(), {
+      mirrorCtx: this._baseSurfaceCtx(),
+      mirrorCanEdit: (st) => !!st.groundSolid,
+    });
     this.ui.inputs.baseGlassSurface?.addEventListener('change', (event) => {
       const enabled = !!event.target.checked;
-      const podiumUp = !!this.stateStore.getState().groundSolid;
-      if (podiumUp) {
-        if (enabled) this.ui.uiSounds?.playShelfShow();
-        else this.ui.uiSounds?.playShelfHide();
-      }
+      if (enabled) this.ui.uiSounds?.playShelfShow();
+      else this.ui.uiSounds?.playShelfHide();
       this.stateStore.set('baseGlassSurface', enabled);
       this.eventBus.emit('studio:base-glass-surface', enabled);
       this.ui.applyBlockStates?.(this.stateStore.getState());
@@ -870,6 +894,7 @@ export class StudioControls {
       this.helpers.updateValueLabel('baseRoughness', v, 'decimal');
     }
     syncBaseSurfaceControls(this._baseSurfaceCtx(), state, !!state.groundSolid);
+    syncBaseSurfaceControls(this._baseGlassSurfaceCtx(), state, this._isBaseGlassOn(state));
     if (this.ui.inputs.baseGlassSurface) {
       this.ui.inputs.baseGlassSurface.checked = !!(
         state.baseGlassSurface ??

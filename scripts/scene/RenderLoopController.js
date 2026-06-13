@@ -27,7 +27,7 @@ function buildFrameContext(scene) {
       !!scene.colorCheckerRoot || toggleScaleAnimActive(scene._ccToggleCtx),
     /** Run while mesh exists so scale-out still runs after state flips off (same frame). */
     baseAppearActive:
-      !!scene.groundController?.podium ||
+      !!scene.groundController?.podiumRoot ||
       toggleScaleAnimActive(scene._baseToggleCtx),
     baseGlassAppearActive:
       !!scene.groundController?.podiumReflector ||

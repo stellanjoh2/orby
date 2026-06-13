@@ -21,6 +21,9 @@ import {
   creativeSnesMergeFactor,
   creativeLookUsesRetroDecimation,
   creativeLookFixedPatternScale,
+  creativeLookDefaultIntensity,
+  creativeLookPresetUsesShaderAnimation,
+  isFlatPostCreativeLookPreset,
   normalizeCreativeLookIntensity,
   normalizeCreativeLookLiftCrush,
   normalizeCreativeLookMasterHue,
@@ -62,6 +65,7 @@ import {
   WIREFRAME_OPACITY_OVERLAY,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  ORBY_BLACK,
   ORBY_LIME,
 } from '../constants.js';
 
@@ -573,7 +577,7 @@ export class MaterialController {
     const glassTintHex =
       typeof rawTint === 'string' && /^#[0-9A-Fa-f]{6}$/.test(rawTint.trim())
         ? rawTint.trim()
-        : '#ffffff';
+        : ORBY_BLACK;
     const rawRef = adv?.glassReflection;
     const glassReflection = Number.isFinite(Number(rawRef))
       ? Math.min(4, Math.max(0, Number(rawRef)))
@@ -1412,7 +1416,7 @@ export class MaterialController {
     const glassTintHex =
       typeof rawTint === 'string' && /^#[0-9A-Fa-f]{6}$/.test(rawTint.trim())
         ? rawTint.trim()
-        : '#ffffff';
+        : ORBY_BLACK;
     const bodyDarken = Math.max(0.06, 1 - 0.72 * glassBody);
     /** Pull effective coverage toward opaque when body is high (stacks with Glass opacity). */
     const bodyOpacity = Math.min(
@@ -2419,19 +2423,27 @@ export class MaterialController {
     this.creativeLookSettings.masterHue = normalizeCreativeLookMasterHue(
       this.creativeLookSettings.masterHue,
     );
-    this.creativeLookSettings.intensity = normalizeCreativeLookIntensity(
-      this.creativeLookSettings.intensity,
-    );
     this.creativeLookSettings.liftCrush = normalizeCreativeLookLiftCrush(
       this.creativeLookSettings.liftCrush,
     );
     this.creativeLookSettings.preset = normalizeCreativeLookPreset(
       this.creativeLookSettings.preset,
     );
-    const fixedScale = creativeLookFixedPatternScale(this.creativeLookSettings.preset);
+    const nextPreset = this.creativeLookSettings.preset;
+    const fixedScale = creativeLookFixedPatternScale(nextPreset);
     if (fixedScale != null) {
       this.creativeLookSettings.patternScale = fixedScale;
     }
+    if (
+      nextPreset !== prevPreset &&
+      nextPreset === 'scanline-hologram' &&
+      patch.intensity === undefined
+    ) {
+      this.creativeLookSettings.intensity = creativeLookDefaultIntensity(nextPreset);
+    }
+    this.creativeLookSettings.intensity = normalizeCreativeLookIntensity(
+      this.creativeLookSettings.intensity,
+    );
 
     if (!options.skipStateStore && this.stateStore) {
       this.stateStore.set('creativeLook', this.creativeLookSettings);
@@ -2495,34 +2507,14 @@ export class MaterialController {
 
     this._syncCreativeLookToonLightUniforms();
 
-    const animPreset =
-      preset === 'flow-field' ||
-      preset === 'plasma' ||
-      preset === 'holographic' ||
-      preset === 'spectral-storm' ||
-      preset === 'voronoi' ||
-      preset === 'scanline-hologram' ||
-      preset === 'wire-pulse' ||
-      preset === 'vertex-points' ||
-      preset === 'ps2-crush' ||
-      preset === 'psx';
-    if (animPreset) {
+    if (creativeLookPresetUsesShaderAnimation(preset)) {
       this.currentModel.traverse((child) => {
         if (!child.isMesh) return;
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
           if (
-            (tag === 'flow-field' ||
-              tag === 'plasma' ||
-              tag === 'holographic' ||
-              tag === 'spectral-storm' ||
-              tag === 'voronoi' ||
-              tag === 'scanline-hologram' ||
-              tag === 'wire-pulse' ||
-              tag === 'vertex-points' ||
-              tag === 'ps2-crush' ||
-              tag === 'psx') &&
+            creativeLookPresetUsesShaderAnimation(tag) &&
             m.uniforms?.uTime
           ) {
             m.uniforms.uTime.value = effectiveTime;
@@ -2549,7 +2541,7 @@ export class MaterialController {
       });
     }
 
-    if (preset === 'ascii-art') {
+    if (isFlatPostCreativeLookPreset(preset)) {
       if (typeof this.onCreativeLookAsciiSync === 'function') {
         this.onCreativeLookAsciiSync();
       }

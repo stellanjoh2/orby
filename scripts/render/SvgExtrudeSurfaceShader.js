@@ -5,7 +5,6 @@ export const SVG_EXTRUDE_SURFACE_PRESETS = [
   { id: 'carPaint', label: 'Car paint (metallic flake)', kind: 'procedural', proceduralIndex: 1 },
   { id: 'brushed', label: 'Brushed metal', kind: 'procedural', proceduralIndex: 2 },
   { id: 'ceramic', label: 'Ceramic (micro-grain)', kind: 'procedural', proceduralIndex: 3 },
-  { id: 'satin', label: 'Satin plastic', kind: 'procedural', proceduralIndex: 4 },
   {
     id: 'scratchedMetal',
     label: 'Scratched metal',
@@ -45,7 +44,6 @@ const PRESET_TO_INDEX = {
   carPaint: 1,
   brushed: 2,
   ceramic: 3,
-  satin: 4,
   scratchedMetal: 0,
   brushedIron: 0,
   dirtyMetal: 0,
@@ -411,12 +409,6 @@ const METALNESS_INJECT = /* glsl */ `	#include <metalnessmap_fragment>
 				float g = 0.5 * coarse + 0.5 * fine;
 				roughnessFactor = clamp( roughnessFactor * ( 0.72 + 0.48 * g ), 0.04, 1.0 );
 				roughnessFactor = clamp( roughnessFactor + 0.12 * ( orbyFbm3( p * 26.0 ) - 0.5 ), 0.04, 1.0 );
-			} else {
-				// Satin: soft broad + mid waves (velvety plastic)
-				float broad = 0.5 + 0.5 * orbyFbm3( p * 0.7 );
-				float wavy = 0.5 + 0.5 * orbyFbm3( p * 3.2 );
-				float t = 0.55 * broad + 0.45 * wavy;
-				roughnessFactor = clamp( roughnessFactor * ( 0.58 + 0.52 * t ), 0.04, 1.0 );
 			}
 		}
 	}
@@ -617,7 +609,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
   }
 
   const proceduralIndex =
-    config.kind === 'procedural' ? Math.max(1, Math.min(4, config.proceduralIndex)) : 0;
+    config.kind === 'procedural' ? Math.max(1, Math.min(3, config.proceduralIndex)) : 0;
   const surfaceStrength = clampSurfaceStrength(
     opts.strength !== undefined ? opts.strength : 1,
   );
@@ -688,7 +680,7 @@ export function applySvgExtrudeSurfaceToMaterial(material, opts) {
  * @returns {boolean}
  */
 export function applySvgExtrudeProceduralToMaterial(material, opts) {
-  const presetIndex = Math.max(0, Math.min(4, Math.floor(Number(opts.presetIndex)) || 0));
+  const presetIndex = Math.max(0, Math.min(3, Math.floor(Number(opts.presetIndex)) || 0));
   if (presetIndex < 1) {
     const presetId = material.userData?.svgExtrudeSurfacePresetId;
     if (presetId && getSvgExtrudeSurfacePresetConfig(presetId).kind === 'normalMap') {
@@ -808,7 +800,7 @@ export function resolveOrbySurfaceUniformState(presetId, scale, strength, normal
   const clampedScale = surfaceUiScaleToShaderScale(scale);
   const surfaceStrength = clampSurfaceStrength(strength ?? 1);
   const proceduralIndex =
-    config.kind === 'procedural' ? Math.max(1, Math.min(4, config.proceduralIndex)) : 0;
+    config.kind === 'procedural' ? Math.max(1, Math.min(3, config.proceduralIndex)) : 0;
   const normalStrength =
     config.kind === 'normalMap'
       ? resolveSvgExtrudeNormalStrength(config, surfaceStrength)

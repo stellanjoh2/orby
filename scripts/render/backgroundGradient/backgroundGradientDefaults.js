@@ -1,4 +1,4 @@
-import { ORBY_BLACK, ORBY_LIME } from '../../constants.js';
+import { APP_BACKGROUND, ORBY_BLACK, ORBY_LIME } from '../../constants.js';
 
 /** @typedef {{ color: string, position: number }} BackgroundGradientStop */
 /** @typedef {{ enabled: boolean, type: 'linear' | 'radial', angle: number, centerX: number, centerY: number, stops: BackgroundGradientStop[] }} BackgroundGradientConfig */
@@ -12,7 +12,7 @@ export const DEFAULT_BACKGROUND_GRADIENT = Object.freeze({
   centerX: 50,
   centerY: 50,
   stops: Object.freeze([
-    { color: ORBY_BLACK, position: 0 },
+    { color: APP_BACKGROUND, position: 0 },
     { color: ORBY_LIME, position: 100 },
   ]),
 });
@@ -102,5 +102,5 @@ export function normalizeBackgroundGradient(config) {
 export function getBackgroundGradientFallbackColor(config) {
   const normalized = normalizeBackgroundGradient(config);
   const stops = sortedBackgroundGradientStops(normalized.stops);
-  return stops[0]?.color ?? ORBY_BLACK;
+  return stops[0]?.color ?? APP_BACKGROUND;
 }

@@ -6,14 +6,18 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   MATERIAL_EMISSIVE_SLIDER_MAX,
+  ORBY_BLACK,
 } from '../constants.js';
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
 import {
   CREATIVE_LOOK_PRESETS,
   creativeLookFixedIntensity,
+  creativeLookDefaultIntensity,
   creativeLookFixedPatternScale,
   creativeLookPresetLocksIntensity,
+  creativeLookPresetLocksMasterHue,
   creativeLookPresetLocksPatternScale,
+  creativeLookPresetUsesShaderAnimation,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 import {
@@ -579,6 +583,11 @@ export class MeshControls {
           const fixedIntensity = creativeLookFixedIntensity(preset);
           if (fixedIntensity != null) {
             this.stateStore.set('creativeLook.intensity', fixedIntensity);
+          } else if (normalizeCreativeLookPreset(preset) === 'scanline-hologram') {
+            this.stateStore.set(
+              'creativeLook.intensity',
+              creativeLookDefaultIntensity(preset),
+            );
           }
           if (uvCheckerWasOn) {
             this.stateStore.set('advanced.uvChecker', false);
@@ -1207,8 +1216,8 @@ export class MeshControls {
       }
     }
     if (this.ui.inputs.glassTint) {
-      const t = state.advanced?.glassTint ?? '#ffffff';
-      const valid = typeof t === 'string' && /^#[0-9A-Fa-f]{6}$/.test(t) ? t : '#ffffff';
+      const t = state.advanced?.glassTint ?? ORBY_BLACK;
+      const valid = typeof t === 'string' && /^#[0-9A-Fa-f]{6}$/.test(t) ? t : ORBY_BLACK;
       if (document.activeElement !== this.ui.inputs.glassTint) {
         this.ui.inputs.glassTint.value = valid;
       }
@@ -1281,6 +1290,8 @@ export class MeshControls {
     if (this.ui.inputs.creativeLookEnabled) {
       this.ui.inputs.creativeLookEnabled.checked = !!state.creativeLook?.enabled;
     }
+    const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
+    const shaderAnimSupported = creativeLookPresetUsesShaderAnimation(clPreset);
     if (this.ui.inputs.creativeLookPauseAnimations) {
       const paused = !!state.creativeLook?.pauseShaderAnimations;
       this.ui.inputs.creativeLookPauseAnimations.classList.toggle('active', paused);
@@ -1289,7 +1300,7 @@ export class MeshControls {
         : 'Pause shader animations';
       this.ui.setControlDisabled(
         'creativeLookPauseAnimations',
-        !state.creativeLook?.enabled,
+        !state.creativeLook?.enabled || !shaderAnimSupported,
       );
     }
     if (this.ui.inputs.creativeLookBloomEnabled) {
@@ -1313,11 +1324,10 @@ export class MeshControls {
       }
       this.ui.setControlDisabled(
         'creativeLookShaderAnimationSpeed',
-        !state.creativeLook?.enabled,
+        !state.creativeLook?.enabled || !shaderAnimSupported,
       );
     }
     if (this.ui.inputs.creativeLookPatternScale) {
-      const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
       const scaleLocked = creativeLookPresetLocksPatternScale(clPreset);
       const rawScale = Number(state.creativeLook?.patternScale);
       const patternScale = scaleLocked
@@ -1341,6 +1351,7 @@ export class MeshControls {
       );
     }
     if (this.ui.inputs.creativeLookMasterHue) {
+      const hueLocked = creativeLookPresetLocksMasterHue(clPreset);
       const rawHue = Number(state.creativeLook?.masterHue);
       const masterHue = Number.isFinite(rawHue)
         ? Math.min(180, Math.max(-180, Math.round(rawHue)))
@@ -1350,10 +1361,12 @@ export class MeshControls {
         this.ui.inputs.creativeLookMasterHue.value = masterHue;
         this.helpers.updateValueLabel('creativeLookMasterHue', masterHue, 'angle');
       }
-      this.ui.setControlDisabled('creativeLookMasterHue', !state.creativeLook?.enabled);
+      this.ui.setControlDisabled(
+        'creativeLookMasterHue',
+        !state.creativeLook?.enabled || hueLocked,
+      );
     }
     if (this.ui.inputs.creativeLookIntensity) {
-      const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
       const intensityLocked = creativeLookPresetLocksIntensity(clPreset);
       const rawIntensity = Number(state.creativeLook?.intensity);
       const intensity = intensityLocked
@@ -1383,7 +1396,6 @@ export class MeshControls {
       }
       this.ui.setControlDisabled('creativeLookLiftCrush', !state.creativeLook?.enabled);
     }
-    const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
     this.ui.setCreativeLookActive?.(clPreset);
     this.ui.toggleCreativeLookGrid?.(!!state.creativeLook?.enabled);
 

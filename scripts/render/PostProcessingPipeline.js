@@ -26,6 +26,13 @@ import { GradingController } from './GradingController.js';
 import { BloomCompositeController } from './BloomCompositeController.js';
 import { CreativeLookViewportBloom } from './CreativeLookViewportBloom.js';
 import { CreativeLookAsciiPass } from './CreativeLookAsciiPass.js';
+import { CreativeLookC64Pass } from './CreativeLookC64Pass.js';
+import { CreativeLookGameBoyPass } from './CreativeLookGameBoyPass.js';
+import { CreativeLookNesPass } from './CreativeLookNesPass.js';
+import { CreativeLookMegaDrivePass } from './CreativeLookMegaDrivePass.js';
+import { CreativeLookIntellivisionPass } from './CreativeLookIntellivisionPass.js';
+import { CreativeLookGbaPass } from './CreativeLookGbaPass.js';
+import { CreativeLookApple2Pass } from './CreativeLookApple2Pass.js';
 import {
   AMBIENT_OCCLUSION_INTENSITY_MAX,
   AMBIENT_OCCLUSION_INTENSITY_MIN,
@@ -180,8 +187,36 @@ export class PostProcessingPipeline {
     this.creativeLookAscii = new CreativeLookAsciiPass(renderer);
     this.creativeLookAsciiPass = this.creativeLookAscii.getPass();
 
+    this.creativeLookC64 = new CreativeLookC64Pass(renderer);
+    this.creativeLookC64Pass = this.creativeLookC64.getPass();
+
+    this.creativeLookGameBoy = new CreativeLookGameBoyPass(renderer);
+    this.creativeLookGameBoyPass = this.creativeLookGameBoy.getPass();
+
+    this.creativeLookNes = new CreativeLookNesPass(renderer);
+    this.creativeLookNesPass = this.creativeLookNes.getPass();
+
+    this.creativeLookMegaDrive = new CreativeLookMegaDrivePass(renderer);
+    this.creativeLookMegaDrivePass = this.creativeLookMegaDrive.getPass();
+
+    this.creativeLookIntellivision = new CreativeLookIntellivisionPass(renderer);
+    this.creativeLookIntellivisionPass = this.creativeLookIntellivision.getPass();
+
+    this.creativeLookGba = new CreativeLookGbaPass(renderer);
+    this.creativeLookGbaPass = this.creativeLookGba.getPass();
+
+    this.creativeLookApple2 = new CreativeLookApple2Pass(renderer);
+    this.creativeLookApple2Pass = this.creativeLookApple2.getPass();
+
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.creativeLookAsciiPass);
+    this.composer.addPass(this.creativeLookC64Pass);
+    this.composer.addPass(this.creativeLookGameBoyPass);
+    this.composer.addPass(this.creativeLookNesPass);
+    this.composer.addPass(this.creativeLookMegaDrivePass);
+    this.composer.addPass(this.creativeLookIntellivisionPass);
+    this.composer.addPass(this.creativeLookGbaPass);
+    this.composer.addPass(this.creativeLookApple2Pass);
     this.composer.addPass(this.creativeLookViewportBloomPass);
     this.composer.addPass(this.n8aoPass);
     this.composer.addPass(this.bokehPass);
@@ -212,6 +247,13 @@ export class PostProcessingPipeline {
     this._managedPasses = [
       { pass: this.renderPass, key: 'renderPass' },
       { pass: this.creativeLookAsciiPass, key: 'creativeLookAsciiPass' },
+      { pass: this.creativeLookC64Pass, key: 'creativeLookC64Pass' },
+      { pass: this.creativeLookGameBoyPass, key: 'creativeLookGameBoyPass' },
+      { pass: this.creativeLookNesPass, key: 'creativeLookNesPass' },
+      { pass: this.creativeLookMegaDrivePass, key: 'creativeLookMegaDrivePass' },
+      { pass: this.creativeLookIntellivisionPass, key: 'creativeLookIntellivisionPass' },
+      { pass: this.creativeLookGbaPass, key: 'creativeLookGbaPass' },
+      { pass: this.creativeLookApple2Pass, key: 'creativeLookApple2Pass' },
       { pass: this.creativeLookViewportBloomPass, key: 'creativeLookViewportBloomPass' },
       { pass: this.n8aoPass, key: 'n8aoPass' },
       { pass: this.bokehPass, key: 'bokehPass' },
@@ -254,6 +296,8 @@ export class PostProcessingPipeline {
     this._asciiBloomActive = false;
     /** @type {boolean} */
     this._asciiAnamorphicActive = false;
+    /** @type {'ascii' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null} */
+    this._flatPostVariant = null;
   }
 
   /**
@@ -351,6 +395,41 @@ export class PostProcessingPipeline {
         pass.renderToScreen = false;
         continue;
       }
+      if (key === 'creativeLookC64Pass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookGameBoyPass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookNesPass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookMegaDrivePass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookIntellivisionPass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookGbaPass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
+      if (key === 'creativeLookApple2Pass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
       if (key === 'creativeLookViewportBloomPass') {
         pass.enabled = false;
         pass.renderToScreen = false;
@@ -429,7 +508,17 @@ export class PostProcessingPipeline {
       const { pass, key } = this._managedPasses[i];
       const snap = this._creativeLookAsciiSnapshot[i];
 
-      if (key === 'renderPass' || key === 'creativeLookAsciiPass') {
+      if (
+        key === 'renderPass' ||
+        key === 'creativeLookAsciiPass' ||
+        key === 'creativeLookC64Pass' ||
+        key === 'creativeLookGameBoyPass' ||
+        key === 'creativeLookNesPass' ||
+        key === 'creativeLookMegaDrivePass' ||
+        key === 'creativeLookIntellivisionPass' ||
+        key === 'creativeLookGbaPass' ||
+        key === 'creativeLookApple2Pass'
+      ) {
         pass.enabled = true;
         pass.renderToScreen = false;
         continue;
@@ -456,8 +545,34 @@ export class PostProcessingPipeline {
       pass.enabled = false;
       pass.renderToScreen = false;
     }
+    this._applyFlatPostPassEnabled();
+  }
+
+  _applyFlatPostPassEnabled() {
+    const variant = this._flatPostVariant;
     if (this.creativeLookAsciiPass) {
-      this.creativeLookAsciiPass.enabled = true;
+      this.creativeLookAsciiPass.enabled = variant === 'ascii';
+    }
+    if (this.creativeLookC64Pass) {
+      this.creativeLookC64Pass.enabled = variant === 'c64-pixel';
+    }
+    if (this.creativeLookGameBoyPass) {
+      this.creativeLookGameBoyPass.enabled = variant === 'gameboy-pixel';
+    }
+    if (this.creativeLookNesPass) {
+      this.creativeLookNesPass.enabled = variant === 'nes-pixel';
+    }
+    if (this.creativeLookMegaDrivePass) {
+      this.creativeLookMegaDrivePass.enabled = variant === 'megadrive-pixel';
+    }
+    if (this.creativeLookIntellivisionPass) {
+      this.creativeLookIntellivisionPass.enabled = variant === 'intellivision-pixel';
+    }
+    if (this.creativeLookGbaPass) {
+      this.creativeLookGbaPass.enabled = variant === 'gba-pixel';
+    }
+    if (this.creativeLookApple2Pass) {
+      this.creativeLookApple2Pass.enabled = variant === 'apple2-pixel';
     }
   }
 
@@ -552,6 +667,50 @@ export class PostProcessingPipeline {
    */
   updateCreativeLookAscii(settings) {
     this.creativeLookAscii?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab C64 Pixel — screen-space palette crush after the colormap prepass. */
+  updateCreativeLookC64(settings) {
+    this.creativeLookC64?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab Game Boy — 4-shade DMG post pass. */
+  updateCreativeLookGameBoy(settings) {
+    this.creativeLookGameBoy?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab NES — 2C02 PPU system palette post pass. */
+  updateCreativeLookNes(settings) {
+    this.creativeLookNes?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab Mega Drive — 9-bit VDP palette post pass. */
+  updateCreativeLookMegaDrive(settings) {
+    this.creativeLookMegaDrive?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab Intellivision — STIC 16-color palette post pass. */
+  updateCreativeLookIntellivision(settings) {
+    this.creativeLookIntellivision?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab Game Boy Advance — 15-bit high-color post pass. */
+  updateCreativeLookGba(settings) {
+    this.creativeLookGba?.updateSettings(settings ?? {});
+  }
+
+  /** Shader Lab Apple II — HGR NTSC artifact post pass. */
+  updateCreativeLookApple2(settings) {
+    this.creativeLookApple2?.updateSettings(settings ?? {});
+  }
+
+  /**
+   * @param {{ enabled?: boolean, variant?: 'ascii' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null }} mode
+   */
+  setCreativeLookFlatPostMode(mode = {}) {
+    const enabled = mode.enabled === true;
+    this._flatPostVariant = enabled ? (mode.variant ?? 'ascii') : null;
+    this._applyFlatPostPassEnabled();
   }
 
   /**

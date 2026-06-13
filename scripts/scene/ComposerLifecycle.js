@@ -1,8 +1,12 @@
 import * as THREE from 'three';
+import { APP_BACKGROUND } from '../constants.js';
 import { fullViewportLogicalSize } from '../render/fullViewportLogicalSize.js';
 import {
+  hideGroundGridForPass,
   hideTransformGizmosForPass,
+  renderGroundGridOverlay,
   renderTransformGizmoOverlay,
+  restoreGroundGridFromPass,
   restoreTransformGizmosFromPass,
 } from '../render/transformGizmoLayers.js';
 
@@ -22,6 +26,7 @@ export class ComposerLifecycle {
     getCreativeLookViewportBloomActive,
     getCreativeLookAsciiActive,
     getTransformControls,
+    getGroundGrid,
     getRenderState,
     syncPostProcessingForLogicalSize,
     beforeComposerRender,
@@ -35,6 +40,7 @@ export class ComposerLifecycle {
     this.backgroundController = backgroundController;
     this.getCreativeLookEnabled = getCreativeLookEnabled ?? (() => false);
     this.getTransformControls = getTransformControls ?? (() => []);
+    this.getGroundGrid = getGroundGrid ?? (() => null);
     this.getCreativeLookViewportBloomActive =
       getCreativeLookViewportBloomActive ?? (() => false);
     this.getCreativeLookAsciiActive = getCreativeLookAsciiActive ?? (() => false);
@@ -45,6 +51,8 @@ export class ComposerLifecycle {
     this._creativeBloomWasSuppressed = false;
     /** @type {Array<{ gizmo: import('three').Object3D, visible: boolean }> | null} */
     this._gizmoPassVisibility = null;
+    /** @type {{ grid: import('three').Object3D, visible: boolean } | null} */
+    this._gridPassVisibility = null;
   }
 
   /**
@@ -96,7 +104,7 @@ export class ComposerLifecycle {
       const gradient = this.backgroundController?.gradientController;
       const hex = gradient?.isActive?.()
         ? gradient.getFallbackColor()
-        : this.backgroundController?.getColor() ?? '#080808';
+        : this.backgroundController?.getColor() ?? APP_BACKGROUND;
       r.setClearColor(new THREE.Color(hex), 1);
       return;
     }
@@ -148,6 +156,11 @@ export class ComposerLifecycle {
         this.getTransformControls?.() ?? [],
       );
     }
+    const grid = this.getGroundGrid?.();
+    const overlayGrid = asciiTerminal && grid?.visible === true;
+    if (overlayGrid) {
+      this._gridPassVisibility = hideGroundGridForPass(grid);
+    }
     if (viewportBloom) {
       this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       this.postPipeline?.pushCreativeLookViewportPresentation?.();
@@ -169,10 +182,19 @@ export class ComposerLifecycle {
         this._gizmoPassVisibility = null;
         this._renderTransformGizmoOverlay();
       }
+      if (this._gridPassVisibility) {
+        restoreGroundGridFromPass(this._gridPassVisibility);
+        this._gridPassVisibility = null;
+        this._renderGroundGridOverlay();
+      }
     } finally {
       if (this._gizmoPassVisibility) {
         restoreTransformGizmosFromPass(this._gizmoPassVisibility);
         this._gizmoPassVisibility = null;
+      }
+      if (this._gridPassVisibility) {
+        restoreGroundGridFromPass(this._gridPassVisibility);
+        this._gridPassVisibility = null;
       }
       if (viewportBloom) {
         this.postPipeline?.popCreativeLookViewportPresentation?.();
@@ -189,6 +211,15 @@ export class ComposerLifecycle {
       renderer: this.renderer,
       camera: this.camera,
       gizmos: this.getTransformControls?.() ?? [],
+    });
+  }
+
+  /** Ground grid on top of ASCII terminal post — normal line art, not glyphs. */
+  _renderGroundGridOverlay() {
+    renderGroundGridOverlay({
+      renderer: this.renderer,
+      camera: this.camera,
+      grid: this.getGroundGrid?.(),
     });
   }
 

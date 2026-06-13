@@ -126,6 +126,8 @@
   --shelf-label-font-size: 14px;
   /* Lime section headlines (.block-title) and compact preset grids (Lens, ISO, …) */
   --shelf-headline-font-size: 12px;
+  /* Native selects + custom combobox triggers (shelf pills, support forms) */
+  --orby-dropdown-height: 24px;
   /* Tab name only (Object, Studio, …) — 28px @ 2560×1440 reference */
   --shelf-tab-title-font-size: 28px;
   /* Horizontal gap between paired large CTAs (marketing CTA, dropzone, fullscreen prompts) */
@@ -305,7 +307,7 @@ body[data-theme='violet'],
 body[data-theme='aqua'] {
   /* Default near-black — surfaces, buttons on lime, scene background */
   --orby-black: #080808;
-  --orby-app-bg: var(--orby-black);
+  --orby-app-bg: #000000;
   /* FAQ panels, tooltips — softer than app black so hints don’t read as errors */
   --orby-surface-muted: #202020;
   /* Frosted dark chrome — shelf, toasts, and other main-UI overlays */
@@ -1078,7 +1080,7 @@ html.orby-gate-unlocked .orby-entry-gate,
 
 /* Bug report — Information panel + modal */
 .bug-report-panel-description {
-  margin: 0 0 1rem 0;
+  margin: 0 0 var(--shelf-section-gap);
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--text-dim);
@@ -1086,7 +1088,7 @@ html.orby-gate-unlocked .orby-entry-gate,
 
 .bug-report-panel-block .bug-report-panel-open.accent-action-btn {
   width: 100%;
-  margin-top: 0.15rem;
+  margin-top: 0;
 }
 
 .bug-report-content {
@@ -1237,7 +1239,10 @@ html.orby-gate-unlocked .orby-entry-gate,
 
 /* Match shelf .select-line chevron: extra right inset so the arrow doesn’t hug the edge */
 .bug-report-field select {
-  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  height: var(--orby-dropdown-height);
+  min-height: var(--orby-dropdown-height);
+  padding: 0 2rem 0 0.75rem;
+  line-height: var(--orby-dropdown-height);
   appearance: none;
   color-scheme: dark;
   background-color: rgba(255, 255, 255, 0.12);
@@ -1416,10 +1421,12 @@ html.orby-gate-unlocked .orby-entry-gate,
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
-  line-height: 1.35;
+  line-height: var(--orby-dropdown-height);
   outline: none;
   box-sizing: border-box;
-  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  height: var(--orby-dropdown-height);
+  min-height: var(--orby-dropdown-height);
+  padding: 0 2rem 0 0.75rem;
   appearance: none;
   background-color: rgba(255, 255, 255, 0.12);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -1445,7 +1452,7 @@ html.orby-gate-unlocked .orby-entry-gate,
 
 .bug-report-severity-trigger-inner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.55rem;
   min-width: 0;
   pointer-events: none;
@@ -1455,6 +1462,9 @@ html.orby-gate-unlocked .orby-entry-gate,
   flex: 1;
   min-width: 0;
   font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bug-report-severity-level {
@@ -1748,9 +1758,9 @@ html.orby-gate-unlocked .orby-entry-gate,
   justify-content: center !important;
 }
 
-/* Export button specific spacing */
+/* Export button specific spacing — gap on .export-controls owns rhythm */
 #exportPng {
-  margin-top: 0.5rem;
+  margin-top: 0;
 }
 
 /* Flat orby pill — accent / ghost; --normal (home) / --xl (fullscreen big-message) */
@@ -3507,15 +3517,14 @@ html:not(.mobile-landing) .dropzone-hero-credit .orby-stagger-word {
   --shelf-span-control: 2;
   --shelf-span-control-full: 2 / -1;
   --shelf-span-label-toggle: 1 / 3;
-  /* Shared pill height — toggles and dropdowns align on the same track */
   --shelf-toggle-track-height: calc(0.65rem + 0.5rem);
-  --shelf-dropdown-pill-height: var(--shelf-toggle-track-height);
+  --shelf-dropdown-pill-height: var(--orby-dropdown-height);
   --shelf-select-inner-stroke: 2px;
   /* Vertical rhythm — 24px @ 2560: headlines (.block-title), dividers, control rows, foldout tops */
   --shelf-section-gap: 24px;
   /* Card inset from shelf chrome — independent of section gap */
   --shelf-shell-rhythm: 12px;
-  --shelf-control-gap: calc(var(--shelf-section-gap) / 2); /* stacked accent buttons (Scene, Export camera actions) */
+  --shelf-control-gap: var(--shelf-section-gap); /* same rhythm as control rows — flex stacks, export groups, foldouts */
   --shelf-pill-grid-gap: 0.4rem; /* horizontal gap in .segmented + .export-button-group (Turntable, Export pills) */
   --shelf-rhythm: var(--shelf-shell-rhythm);
   --shelf-g: calc(var(--shelf-rhythm) / 2);
@@ -3600,7 +3609,7 @@ html:not(.mobile-landing) .shelf {
   --shelf-sphere-ring-border: round(3px * var(--studio-ui-scale), 1px);
   --shelf-picker-grid-gap: calc(8px * var(--studio-ui-scale));
   --shelf-toggle-track-height: calc(1.15rem * var(--studio-ui-scale));
-  --shelf-dropdown-pill-height: var(--shelf-toggle-track-height);
+  --shelf-dropdown-pill-height: calc(var(--orby-dropdown-height) * var(--studio-ui-scale));
   --shelf-select-inner-stroke: calc(2px * var(--studio-ui-scale));
   width: calc(380px * var(--studio-ui-scale));
 }
@@ -3715,19 +3724,40 @@ html:not(.mobile-landing) .shelf .hdri-grid {
 }
 
 html:not(.mobile-landing) .shelf .mode-icons,
-html:not(.mobile-landing) .shelf #creativeLookGrid.hdri-grid {
+html:not(.mobile-landing) .shelf #creativeLookGrid .hdri-grid {
   gap: var(--shelf-picker-grid-gap);
   padding: 0;
 }
 
-/* Shader Lab — same 4-up picker grid metrics as Object Display */
-#creativeLookGrid.hdri-grid {
+/* Shader Lab — grouped preset sections + 4-up picker grid per section */
+.creative-look-grid {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--shelf-section-gap) * 0.85);
+  margin-bottom: var(--shelf-section-gap);
+}
+
+.creative-look-grid-section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--shelf-section-gap) * 0.45);
+}
+
+.creative-look-grid-section-label {
+  margin: 0;
+  font-size: var(--shelf-label-font-size);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text-dim);
+}
+
+#creativeLookGrid .hdri-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   justify-items: center;
   align-items: center;
   gap: var(--shelf-picker-grid-gap);
   padding: 0;
-  margin-bottom: var(--shelf-section-gap);
+  margin-bottom: 0;
 }
 
 html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__plus {
@@ -3738,11 +3768,11 @@ html:not(.mobile-landing) .shelf .hdri-icon--upload .hdri-icon__check {
   font-size: calc(1.35rem * var(--studio-ui-scale));
 }
 
-/* Scene / Object accent buttons — half rhythm; export option groups use full section gap */
+/* Scene / Object accent buttons — same vertical rhythm as control rows */
 html:not(.mobile-landing) .shelf .scene-controls,
 html:not(.mobile-landing) .shelf .export-controls:not(:has(> .export-option-group)),
 html:not(.mobile-landing) .shelf .map-slots-action-row {
-  gap: var(--shelf-control-gap);
+  gap: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .export-controls:has(> .export-option-group) {
@@ -3755,14 +3785,12 @@ html:not(.mobile-landing) .shelf .accent-action-btn {
   gap: calc(0.4rem * var(--studio-ui-scale));
 }
 
-html:not(.mobile-landing) .shelf .select-line {
-  margin-bottom: var(--shelf-section-gap);
-}
-
 html:not(.mobile-landing) .shelf .select-line select {
   font-size: var(--shelf-headline-font-size);
+  height: var(--shelf-dropdown-pill-height);
   min-height: var(--shelf-dropdown-pill-height);
-  padding-block: calc((var(--shelf-dropdown-pill-height) - 1em) / 2);
+  padding-block: 0;
+  line-height: var(--shelf-dropdown-pill-height);
   padding-inline: calc(0.65rem * var(--studio-ui-scale)) calc(1.35rem * var(--studio-ui-scale));
   background-position: right calc(0.45rem * var(--studio-ui-scale)) center;
   background-size: calc(10px * var(--studio-ui-scale)) calc(10px * var(--studio-ui-scale));
@@ -3859,7 +3887,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .about-content kbd {
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .bug-report-panel-description {
   font-size: calc(0.88rem * var(--studio-ui-scale));
-  margin-bottom: calc(1rem * var(--studio-ui-scale));
+  margin-bottom: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-note {
@@ -3867,12 +3895,29 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-note {
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcuts-grid {
-  gap: calc(0.5rem * var(--studio-ui-scale));
+  gap: 0;
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-row {
   gap: calc(1rem * var(--studio-ui-scale));
-  padding: calc(0.5rem * var(--studio-ui-scale)) 0;
+  padding-top: 0;
+  padding-bottom: calc(var(--shelf-section-gap) / 2);
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-row:last-child {
+  padding-bottom: 0;
+}
+
+html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-row + .shortcut-row,
+html:not(.mobile-landing)
+  .shelf
+  .panel[data-panel='info']
+  .panel-block
+  + .panel-block:not(:has(> .block-title))
+  > .shortcuts-grid
+  > .shortcut-row:first-child {
+  border-top: 1px solid var(--stroke);
+  padding-top: calc(var(--shelf-section-gap) / 2);
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .shortcut-keys kbd {
@@ -3894,12 +3939,12 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dt {
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-list dd {
-  margin: 0 0 var(--shelf-section-gap) 0;
+  margin: 0;
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype-container {
   padding: calc(2rem * var(--studio-ui-scale)) calc(1rem * var(--studio-ui-scale));
-  margin-bottom: calc(1rem * var(--studio-ui-scale));
+  margin-bottom: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype {
@@ -3909,7 +3954,7 @@ html:not(.mobile-landing) .shelf .panel[data-panel='info'] .info-logotype {
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .microcopy {
   font-size: calc(0.75rem * var(--studio-ui-scale));
-  margin-bottom: calc(0.5rem * var(--studio-ui-scale));
+  margin-bottom: var(--shelf-section-gap);
 }
 
 html:not(.mobile-landing) .shelf .panel[data-panel='info'] .panel-header p {
@@ -4047,7 +4092,7 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
 
 .shortcuts-grid {
   display: grid;
-  gap: 0.5rem;
+  gap: 0;
   margin: 0;
 }
 
@@ -4056,12 +4101,19 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 1rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--stroke);
+  padding-top: 0;
+  padding-bottom: calc(var(--shelf-section-gap) / 2);
 }
 
 .shortcut-row:last-child {
-  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Divider centered in 24px band — half padding above/below each rule */
+.shortcut-row + .shortcut-row,
+.panel-block + .panel-block:not(:has(> .block-title)) > .shortcuts-grid > .shortcut-row:first-child {
+  border-top: 1px solid var(--stroke);
+  padding-top: calc(var(--shelf-section-gap) / 2);
 }
 
 .shortcut-action {
@@ -4113,7 +4165,7 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
   justify-content: center;
   align-items: center;
   padding: 2rem 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--shelf-section-gap);
   overflow: hidden;
 }
 
@@ -4147,7 +4199,7 @@ html:not(.mobile-landing) .viewport > .viewport-load-spinner__elapsed {
 }
 
 .info-list dd {
-  margin: 0 0 var(--shelf-section-gap) 0;
+  margin: 0;
   color: var(--text-dim);
   font-size: var(--shelf-label-font-size);
   line-height: 1.4;
@@ -4198,7 +4250,7 @@ a.about-highlight:focus-visible {
 .microcopy {
   font-size: 0.75rem;
   color: var(--text-dim);
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--shelf-section-gap);
 }
 
 .about-content p {
@@ -4439,6 +4491,22 @@ a.about-highlight:focus-visible {
 .subsection.is-muted .block-title .block-reset-btn.is-dirty:not(:disabled):not(.is-disabled),
 .panel-block.is-muted .block-title .block-reset-btn.is-dirty:not(:disabled):not(.is-disabled) {
   opacity: calc(0.75 * var(--muted-section-text-scale));
+}
+
+.panel-block[data-block="base"] .base-placement-controls {
+  padding-top: var(--shelf-section-gap);
+}
+
+.panel-block[data-block="base"].is-muted .base-placement-controls {
+  display: none;
+}
+
+.panel-block[data-block="base"] .base-placement-controls:has(+ .effect-foldout) > :last-child {
+  margin-bottom: 0;
+}
+
+.panel-block[data-block="base"] .base-placement-controls + .effect-foldout.effect-foldout--expanded {
+  padding-top: 0;
 }
 
 .subsection.is-muted :where(
@@ -4902,7 +4970,7 @@ a.about-highlight:focus-visible {
 }
 
 .panel-hint.map-slots-hint {
-  margin: 0 0 0.65rem;
+  margin: 0 0 var(--shelf-section-gap);
   font-size: 0.78rem;
   line-height: 1.35;
   color: var(--text-dim);
@@ -4951,7 +5019,7 @@ a.about-highlight:focus-visible {
 }
 
 .topology-warnings-results {
-  margin-top: 0.75rem;
+  margin-top: var(--shelf-section-gap);
 }
 
 .topology-warnings-list {
@@ -5051,7 +5119,7 @@ a.about-highlight:focus-visible {
 .advanced-import-details summary {
   cursor: pointer;
   color: var(--text-dim);
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--shelf-section-gap);
   list-style-position: outside;
   display: flex;
   align-items: center;
@@ -5059,10 +5127,6 @@ a.about-highlight:focus-visible {
 
 .advanced-import-details .slider-line {
   margin-top: 0;
-}
-
-.advanced-import-details .slider-line:first-of-type {
-  margin-top: 0.35rem;
 }
 
 .advanced-glass-controls:not([hidden]) {
@@ -5199,13 +5263,14 @@ button.advanced-info-doc-btn {
 
 /*
  * Surface control mounts — plain wrappers; spacing comes from .panel-block-divider
- * or .font-extrude-surface-group. Restore row rhythm when nested in a foldout.
+ * or .font-extrude-surface-group. Rows inside use normal .slider-line rhythm.
  */
-.effect-foldout > .surface-controls-mount {
-  margin-bottom: var(--shelf-section-gap);
+.effect-foldout > .surface-controls-mount:has(+ .panel-block-divider) {
+  margin-bottom: 0;
 }
 
-.effect-foldout > .surface-controls-mount:has(+ .panel-block-divider) {
+/* Section-ending mount — card padding owns bottom inset (match Base Glass rhythm) */
+:is(.effect-foldout, .subsection) > .surface-controls-mount:last-child {
   margin-bottom: 0;
 }
 
@@ -5244,6 +5309,8 @@ button.advanced-info-doc-btn {
   :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
 :is(.panel-block, .subsection)
   > .effect-foldout:has(~ :last-child[hidden])
+  :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
+:is(.effect-foldout, .subsection) > .surface-controls-mount:last-child
   :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child,
 .effect-foldout > .surface-controls-mount:has(+ .panel-block-divider)
   :is(.slider-line, .color-line, .select-line, .map-slot-row):last-child {
@@ -5290,6 +5357,30 @@ button.advanced-info-doc-btn {
   align-items: center;
   gap: 0.35em;
   max-width: 100%;
+}
+
+/* Neutral info icon — extra detail on hover/focus for select shelf controls */
+.feature-info-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 0.12em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--text-dim) 82%, var(--orby-app-bg));
+  cursor: help;
+}
+
+.feature-info-hint i {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+}
+
+.feature-info-hint:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--text-dim) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .color-line span:first-child,
@@ -5353,16 +5444,14 @@ button.advanced-info-doc-btn {
   border-radius: 999px;
   box-sizing: border-box;
   display: inline-block;
-  height: auto;
-  min-height: var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem)));
-  padding-block: calc(
-    (var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem))) - 1em) / 2
-  );
+  height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
+  min-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
+  padding-block: 0;
   padding-inline: 0.65rem 1.35rem;
   color: var(--text);
   font-family: inherit;
   font-size: var(--shelf-headline-font-size);
-  line-height: 1;
+  line-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
   appearance: none;
   -webkit-appearance: none;
   /* Native popup list on Windows/Chromium reads color-scheme from the select, not :root */
@@ -5752,7 +5841,7 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 #svgExtrudeColorDepths {
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 
 #svgExtrudeColorDepths .slider-line {
@@ -5764,13 +5853,31 @@ input[type='range']:disabled::-moz-range-thumb {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0.18rem 0.3rem;
+  /* Reserve trailing gutter so WebKit steppers sit beside the digits, not on top */
+  --svg-extrude-number-spin-gutter: 0.85rem;
+  padding: 0.18rem var(--svg-extrude-number-spin-gutter) 0.18rem 0.3rem;
   border: none;
   border-radius: 6px;
   background-color: rgba(255, 255, 255, 0.15);
   color: var(--text);
   font-size: var(--shelf-label-font-size);
   text-align: right;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+#svgExtrudeColorDepths .svg-extrude-inline-number::-webkit-inner-spin-button,
+#svgExtrudeColorDepths .svg-extrude-inline-number::-webkit-outer-spin-button {
+  opacity: 0;
+  margin: 0;
+  margin-inline-end: -0.05rem;
+  transition: opacity 0.12s ease;
+}
+
+#svgExtrudeColorDepths .svg-extrude-inline-number:is(:hover, :focus)::-webkit-inner-spin-button,
+#svgExtrudeColorDepths .svg-extrude-inline-number:is(:hover, :focus)::-webkit-outer-spin-button {
+  opacity: 1;
 }
 
 #svgExtrudeColorDepths .svg-extrude-inline-number:focus {
@@ -5779,7 +5886,7 @@ input[type='range']:disabled::-moz-range-thumb {
 }
 
 .svg-extrude-note {
-  margin: 0.35rem 0 0;
+  margin: 0 0 var(--shelf-section-gap);
   color: var(--text-dim);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -6087,10 +6194,9 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   min-width: 10px;
   border-radius: 50%;
   margin-right: 0.35rem;
-  overflow: visible;
-  outline: 1px solid rgba(255, 255, 255, 0.28);
-  outline-offset: 0;
-  box-shadow: none;
+  overflow: hidden;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 
@@ -6104,7 +6210,7 @@ input.color-chip:not(.is-disabled-handle):is(:hover, :focus-visible) {
   margin: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: var(--shelf-section-gap);
 }
 
 .stats-block dl > div {
@@ -6269,13 +6375,6 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 
 .animation-time-reference-line {
   /* Exception: custom 2-col row (frame numbers + pill select), not --shelf-row-grid */
-  --animation-ref-pill-pad-y: 0.35rem;
-  --animation-ref-pill-font-size: var(--shelf-headline-font-size);
-  --animation-ref-pill-line-height: 1.25;
-  --animation-ref-pill-height: calc(
-    var(--animation-ref-pill-pad-y) * 2 +
-    var(--animation-ref-pill-line-height) * var(--animation-ref-pill-font-size)
-  );
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 0.45rem;
   align-items: center;
@@ -6287,7 +6386,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 }
 
 .animation-time-reference-foldout.effect-foldout--expanded + #animationClipModeSegmented {
-  margin-top: calc(18px * var(--studio-ui-scale, 1));
+  margin-top: var(--shelf-section-gap);
 }
 
 #animationBlock .animation-time-reference-line > .animation-frame-numbers {
@@ -6313,11 +6412,12 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   width: auto;
   min-width: calc(5.25rem * var(--studio-ui-scale, 1));
   max-width: 100%;
-  height: var(--animation-ref-pill-height);
+  height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
+  min-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
   padding-block: 0;
   padding-inline: 0.7rem 1.6rem;
-  line-height: var(--animation-ref-pill-line-height);
-  font-size: var(--animation-ref-pill-font-size);
+  line-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
+  font-size: var(--shelf-headline-font-size);
   flex-shrink: 0;
 }
 
@@ -6522,11 +6622,11 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   color: var(--warning);
 }
 
-/* Export — full section gap between option groups; half gap inside groups (label → pills, pill rows) */
+/* Export — uniform section gap between groups and inside option groups */
 .export-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--shelf-control-gap);
+  gap: var(--shelf-section-gap);
 }
 
 .export-controls:has(> .export-option-group) {
@@ -6541,23 +6641,18 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 .scene-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--shelf-control-gap);
+  gap: var(--shelf-section-gap);
 }
 
 .export-option-group {
   display: flex;
   flex-direction: column;
-  gap: var(--shelf-control-gap);
+  gap: var(--shelf-section-gap);
 }
 
 /* Flex gap owns row rhythm here — .slider-line margin-bottom would stack on top of gap */
 .export-option-group > :is(.slider-line, .color-line, .select-line, .map-slot-row) {
   margin-bottom: 0;
-}
-
-/* Label-less groups (movement sliders, mesh animations) — match standard shelf row spacing */
-.export-option-group:not(:has(> .export-label)) {
-  gap: var(--shelf-section-gap);
 }
 
 .export-label {
@@ -6640,7 +6735,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 .export-block p {
   font-size: 0.75rem;
   color: var(--text-dim);
-  margin-top: 0.6rem;
+  margin-top: var(--shelf-section-gap);
   letter-spacing: -0.01em;
 }
 
@@ -6653,10 +6748,10 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 
 .export-video-foldout {
   border-top: 1px solid var(--stroke);
-  padding-top: 0.9rem;
+  padding-top: var(--shelf-section-gap);
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: var(--shelf-section-gap);
 }
 
 .export-video-foldout--borderless {
@@ -6674,7 +6769,7 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 }
 
 #exportMeshAnimationClipWrap:not([hidden]) {
-  margin-top: 0.15rem;
+  margin-top: 0;
 }
 
 /* Transparent background — fixed vertical slot; muted unless .PNG format */
@@ -7188,6 +7283,7 @@ body.ui-hidden .shelf {
  */
 .block-title.has-toggle:has(
     + .effect-foldout,
+    + .base-placement-controls,
     + .histogram-container,
     + .look-filter-presets-container,
     + .tone-curve-foldout,
@@ -7278,7 +7374,7 @@ body.ui-hidden .shelf {
 }
 
 .creative-look-foldout--expanded {
-  max-height: 56rem;
+  max-height: 72rem;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
 }
@@ -7332,7 +7428,7 @@ body.ui-hidden .shelf {
 .creative-look-foldout-body {
   display: flex;
   flex-direction: column;
-  gap: var(--shelf-control-gap);
+  gap: var(--shelf-section-gap);
 }
 
 /* Foldout uses flex gap — drop per-row margin so spacing matches shelf rhythm once. */
@@ -7340,32 +7436,14 @@ body.ui-hidden .shelf {
   margin-bottom: 0;
 }
 
-.creative-look-bloom-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.creative-look-bloom-block > :is(.slider-line, .select-line) {
+/* Flex gap owns spacing — avoid stacking margin-bottom on grid blocks inside the foldout */
+.creative-look-foldout-body > .creative-look-grid {
   margin-bottom: 0;
 }
 
 /* Same intrinsic width as Snap to Mesh ghost CTAs — avoid column stretch from .ghost-btn */
 .creative-look-foldout-body > .creative-look-pause-btn {
   align-self: flex-start;
-}
-
-.creative-look-bloom-note {
-  margin: 0;
-  font-size: var(--shelf-label-font-size);
-  line-height: 1.45;
-  color: var(--warning);
-  letter-spacing: -0.01em;
-}
-
-.creative-look-bloom-note .fa-circle-exclamation {
-  margin-right: 0.35rem;
-  vertical-align: -0.1em;
 }
 
 .look-filter-grid {
@@ -7702,7 +7780,7 @@ body.ui-hidden .shelf {
 }
 
 .panel[data-panel='info'] details.info-section > .info-section__body {
-  padding-top: var(--shelf-rhythm);
+  padding-top: var(--shelf-section-gap);
 }
 
 .panel[data-panel='info'] details.info-section > .info-section__body > .shortcuts-grid:first-child,
@@ -7711,10 +7789,9 @@ body.ui-hidden .shelf {
 }
 
 .panel[data-panel='info'] {
-  /* Single vertical rhythm for Information prose (FAQ, lists, SVG Extrude, etc.) */
-  --info-prose-gap: var(--shelf-rhythm);
-  /* Extra breath before FAQ / transparency subheads so titles sit with the copy below */
-  --info-prose-section-gap: calc(2 * var(--info-prose-gap));
+  /* Information prose — same 24px rhythm as shelf control rows */
+  --info-prose-gap: var(--shelf-section-gap);
+  --info-prose-section-gap: var(--shelf-section-gap);
 }
 
 .panel[data-panel='info'] .about-content {
@@ -7774,6 +7851,25 @@ body.ui-hidden .shelf {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   padding-top: var(--info-prose-section-gap);
+}
+
+/* Split feature / FAQ lists — stack markup (before initInfoSections) */
+.panel[data-panel='info'] .info-panel-stack > .panel-block:not(:last-child) .about-content > ul:last-child > li:last-child {
+  margin-bottom: var(--info-prose-gap);
+}
+
+.panel[data-panel='info'] .info-panel-stack > .panel-block + .panel-block:has(> .about-content > ul:first-child) {
+  padding-top: 0;
+}
+
+/* Same rhythm after info-panel-stack is flattened into details.info-section */
+.panel[data-panel='info'] .info-section__body > .about-content:not(:last-child) > ul:last-child > li:last-child {
+  margin-bottom: var(--info-prose-gap);
+}
+
+.panel[data-panel='info'] .info-section__body > .about-content + .about-content > ul:first-child {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .panel[data-panel='info'] .info-panel-stack > .panel-block:not(:last-child) {
@@ -7999,8 +8095,8 @@ body.ui-hidden .shelf {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  min-height: var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem)));
-  height: var(--shelf-dropdown-pill-height, var(--shelf-toggle-track-height, calc(0.65rem + 0.5rem)));
+  min-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
+  height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
   border: none;
   border-radius: 999px;
   padding-block: 0;
@@ -8008,7 +8104,7 @@ body.ui-hidden .shelf {
   color: var(--text);
   font-family: inherit;
   font-size: var(--shelf-headline-font-size);
-  line-height: 1;
+  line-height: var(--shelf-dropdown-pill-height, var(--orby-dropdown-height));
   appearance: none;
   -webkit-appearance: none;
   background-color: rgba(255, 255, 255, 0.25);
@@ -8192,7 +8288,7 @@ body.ui-hidden .shelf {
 
 .font-extrude-generate {
   width: 100%;
-  margin-top: 0.5rem;
+  margin-top: var(--shelf-section-gap);
 }
 
 .font-extrude-generate.is-loading {

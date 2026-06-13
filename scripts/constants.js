@@ -2,8 +2,11 @@
 
 import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
 
-/** Default near-black — app surfaces, lime CTAs, scene background, letterbox mattes. */
+/** Default near-black — app surfaces, lime CTAs, letterbox mattes, UI chrome. */
 export const ORBY_BLACK = '#080808';
+
+/** Scene / viewport clear color — pure black (Shader Lab, exports, default backdrop). */
+export const APP_BACKGROUND = '#000000';
 
 /** Orby Lime — logotype, CTAs, wireframe default, UI accents. Mirror: --orby-lime */
 export const ORBY_LIME = '#c4ff00';

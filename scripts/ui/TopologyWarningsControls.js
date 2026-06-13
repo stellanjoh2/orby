@@ -137,14 +137,12 @@ export class TopologyWarningsControls {
     const hasModel = !!this._getModel?.();
     this._scanBtn.disabled = !hasModel;
     this._scanBtn.classList.toggle('is-active', this._active);
-
-    if (this._active) {
-      this._scanBtn.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i> Close Mesh Health';
-      this._scanBtn.dataset.tooltip = 'Hide topology warnings and viewport highlights';
-    } else {
-      this._scanBtn.innerHTML = '<i class="fa-solid fa-stethoscope" aria-hidden="true"></i> Run Mesh Health Check';
-      this._scanBtn.dataset.tooltip = 'Analyze the loaded model for common topology problems';
-    }
+    this._scanBtn.setAttribute('aria-pressed', this._active ? 'true' : 'false');
+    this._scanBtn.innerHTML =
+      '<i class="fa-solid fa-stethoscope" aria-hidden="true"></i> Mesh Health';
+    this._scanBtn.dataset.tooltip = this._active
+      ? 'Hide topology warnings and viewport highlights'
+      : 'Analyze the loaded model for common topology problems';
   }
 
   _updateTabSelection() {

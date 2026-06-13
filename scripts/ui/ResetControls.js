@@ -10,6 +10,7 @@ import {
   DEFAULT_BACKDROP_METALNESS,
   DEFAULT_BACKDROP_ROUGHNESS,
   effectiveVignetteIntensity,
+  ORBY_BLACK,
 } from '../constants.js';
 import { deepClone } from '../utils/deepClone.js';
 import { deepEqual } from '../utils/deepEqual.js';
@@ -71,6 +72,7 @@ const RESET_DIRTY_PATHS = {
   ],
   'base-glass': [
     'baseGlassSurface', 'baseGlassBrightness', 'baseGlassBlur', 'baseGlassAmount',
+    'baseSurfacePreset', 'baseSurfaceScale', 'baseSurfaceStrength',
   ],
   backdrop: [
     'backdropEnabled', 'backdropScale', 'backdropWidth', 'backdropColor',
@@ -480,7 +482,7 @@ export class ResetControls {
       );
       this.stateStore.set('advanced.glassOpacity', defaults.advanced?.glassOpacity ?? 0.45);
       this.stateStore.set('advanced.glassReflection', defaults.advanced?.glassReflection ?? 2);
-      this.stateStore.set('advanced.glassTint', defaults.advanced?.glassTint ?? '#ffffff');
+      this.stateStore.set('advanced.glassTint', defaults.advanced?.glassTint ?? ORBY_BLACK);
       this.stateStore.set('advanced.glassBody', defaults.advanced?.glassBody ?? 0);
       this.stateStore.set(
         'advanced.blendSortingMitigation',
@@ -1109,11 +1111,19 @@ export class ResetControls {
               this.stateStore.set('baseGlassBrightness', defaults.baseGlassBrightness);
               this.stateStore.set('baseGlassBlur', defaults.baseGlassBlur);
               this.stateStore.set('baseGlassAmount', defaults.baseGlassAmount);
+              this.stateStore.set('baseSurfacePreset', defaults.baseSurfacePreset ?? 'none');
+              this.stateStore.set('baseSurfaceScale', defaults.baseSurfaceScale ?? 1);
+              this.stateStore.set('baseSurfaceStrength', defaults.baseSurfaceStrength ?? 1);
             });
             this.eventBus.emit('studio:base-glass-surface', defaults.baseGlassSurface);
             this.eventBus.emit('studio:base-glass-brightness', defaults.baseGlassBrightness);
             this.eventBus.emit('studio:base-glass-blur', defaults.baseGlassBlur);
             this.eventBus.emit('studio:base-glass-amount', defaults.baseGlassAmount);
+            this.eventBus.emit('studio:base-surface', {
+              preset: defaults.baseSurfacePreset ?? 'none',
+              scale: defaults.baseSurfaceScale ?? 1,
+              strength: defaults.baseSurfaceStrength ?? 1,
+            });
             this.ui.syncControls(this.stateStore.getState());
             break;
 
@@ -1476,7 +1486,7 @@ export class ResetControls {
             );
             this.stateStore.set('advanced.glassOpacity', defaults.advanced?.glassOpacity ?? 0.45);
             this.stateStore.set('advanced.glassReflection', defaults.advanced?.glassReflection ?? 2);
-            this.stateStore.set('advanced.glassTint', defaults.advanced?.glassTint ?? '#ffffff');
+            this.stateStore.set('advanced.glassTint', defaults.advanced?.glassTint ?? ORBY_BLACK);
             this.stateStore.set('advanced.glassBody', defaults.advanced?.glassBody ?? 0);
             this.stateStore.set(
               'advanced.blendSortingMitigation',

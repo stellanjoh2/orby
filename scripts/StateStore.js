@@ -9,7 +9,9 @@ import {
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
+  ORBY_BLACK,
   ORBY_LIME,
+  APP_BACKGROUND,
 } from './constants.js';
 import { defaultAberration } from './render/chromaticAberration.js';
 import { normalizeToneCurve } from './math/toneCurvePchip.js';
@@ -114,8 +116,8 @@ export class StateStore {
         glassOpacity: 0.45,
         /** Multiplier on scene HDRI env intensity for those materials (1 ≈ same as non-glass). */
         glassReflection: 2,
-        /** Base body tint (darker / colored glass). #ffffff = neutral. */
-        glassTint: '#ffffff',
+        /** Base body tint (darker / colored glass). Default black reads better on window meshes. */
+        glassTint: ORBY_BLACK,
         /** 0 = import-like; 1 = crush glTF transmission + darken (less see-through). */
         glassBody: 0,
         /**
@@ -181,7 +183,7 @@ export class StateStore {
       baseSurfacePreset: DEFAULT_SVG_EXTRUDE_SURFACE_PRESET,
       baseSurfaceScale: DEFAULT_SVG_EXTRUDE_SURFACE_SCALE,
       baseSurfaceStrength: DEFAULT_SVG_EXTRUDE_SURFACE_STRENGTH,
-      /** Planar glass reflection on solid base top — off until user enables Glass (requires base). */
+      /** Planar glass reflection on solid base top — independent toggle; shares placement/scale with base. */
       baseGlassSurface: false,
       baseGlassBlur: DEFAULT_BASE_GLASS_BLUR,
       baseGlassAmount: DEFAULT_BASE_GLASS_AMOUNT,
@@ -435,7 +437,7 @@ export class StateStore {
       antiAliasing: 'fxaa',
       renderQuality: 'medium',
       toneMapping: 'aces-filmic',
-      background: '#080808',
+      background: APP_BACKGROUND,
       backgroundGradient: {
         enabled: false,
         type: 'linear',
@@ -443,7 +445,7 @@ export class StateStore {
         centerX: 50,
         centerY: 50,
         stops: [
-          { color: '#080808', position: 0 },
+          { color: APP_BACKGROUND, position: 0 },
           { color: ORBY_LIME, position: 100 },
         ],
       },

@@ -4,10 +4,10 @@
  * so receivers outside the mesh bbox do not get a false square shadow.
  */
 export const SHADOW_CAMERA_ORTHO_PADDING_BY_QUALITY = {
-  low: 2.4,
-  medium: 2.0,
-  high: 1.6,
-  ultra: 1.2,
+  low: 2.2,
+  medium: 1.8,
+  high: 1.4,
+  ultra: 1.0,
 };
 
 /** HdriShadowReceiver disc sizing — keep in sync with shadow camera padding above. */
@@ -18,9 +18,9 @@ export const STUDIO_BACKDROP_SHADOW_REACH_PADDING = 0.5;
 
 /** Shadow map resolution (texels per side) per lights Shadow Quality preset. */
 export const SHADOW_MAP_SIZE_BY_QUALITY = {
-  low: 512,
-  medium: 1024,
-  high: 2048,
+  low: 1024,
+  medium: 2048,
+  high: 3072,
   ultra: 4096,
 };
 
@@ -30,21 +30,21 @@ export const SHADOW_MAP_SIZE_BY_QUALITY = {
  * (VSM can streak on large cyclorama / HDRI receivers).
  */
 export const SHADOW_BLUR_SAMPLES_BY_QUALITY = {
-  low: 4,
-  medium: 8,
-  high: 16,
+  low: 8,
+  medium: 12,
+  high: 24,
   ultra: 32,
 };
 
 /**
  * Gobo softness kernel tier — 0 = single tap, 1 = 5-tap separable (~9 fetches),
- * 2 = isotropic 3×3 (~9 fetches). Ultra matches high; quality tier only affects cast-shadow maps.
+ * 2 = isotropic 3×3 (~9 fetches). Ultra uses the widest kernel.
  */
 export const GOBO_BLUR_MODE_BY_QUALITY = {
   low: 0,
   medium: 1,
   high: 1,
-  ultra: 1,
+  ultra: 2,
 };
 
 export function normalizeShadowQuality(quality) {
@@ -77,7 +77,7 @@ export function goboBlurModeForQuality(quality) {
 }
 
 /** Default lights Softness slider value (0 = hard edge, 4 = max penumbra). */
-export const DEFAULT_LIGHTS_SHADOW_SOFTNESS = 0.25;
+export const DEFAULT_LIGHTS_SHADOW_SOFTNESS = 0.6;
 
 const SHADOW_SOFTNESS_REFERENCE_QUALITY = 'low';
 

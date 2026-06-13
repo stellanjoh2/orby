@@ -3,11 +3,26 @@ import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/
 import {
   ASCII_ART_INK_HEX,
   ASCII_POST_FRAGMENT,
+  ASCII_SHADOW_INK_FLOOR,
   creativeAsciiCellSize,
   ensureAsciiFontAtlasLoaded,
   getSharedAsciiFontAtlas,
 } from './creativeLookAsciiArt.js';
-import { ORBY_BLACK } from '../constants.js';
+import {
+  ASCII_2_INK_HEX,
+  ASCII_2_POST_FRAGMENT,
+  creativeAscii2CellSize,
+  ensureAscii2FontAtlasLoaded,
+  getSharedAscii2FontAtlas,
+} from './creativeLookAscii2Art.js';
+import {
+  ASCII_3_INK_HEX,
+  ASCII_3_POST_FRAGMENT,
+  creativeAscii3CellSize,
+  ensureAscii3FontAtlasLoaded,
+  getSharedAscii3FontAtlas,
+} from './creativeLookAscii3Art.js';
+import { APP_BACKGROUND } from '../constants.js';
 
 const VERTEX_SHADER = /* glsl */ `
 varying vec2 vUv;
@@ -17,17 +32,62 @@ void main() {
 }
 `;
 
+/** @typedef {'ascii-art' | 'ascii-art-2' | 'ascii-art-3'} AsciiCreativeLookVariant */
+
+/** @type {Record<AsciiCreativeLookVariant, {
+ *   fragment: string,
+ *   inkHex: number,
+ *   inkFloor: number,
+ *   edgeCharCount: number,
+ *   cellSize: () => { width: number, height: number },
+ *   getAtlas: () => ReturnType<typeof getSharedAsciiFontAtlas>,
+ *   ensureAtlas: () => Promise<ReturnType<typeof getSharedAsciiFontAtlas>>,
+ * }>} */
+const ASCII_VARIANTS = {
+  'ascii-art': {
+    fragment: ASCII_POST_FRAGMENT,
+    inkHex: ASCII_ART_INK_HEX,
+    inkFloor: ASCII_SHADOW_INK_FLOOR,
+    edgeCharCount: 0,
+    cellSize: creativeAsciiCellSize,
+    getAtlas: getSharedAsciiFontAtlas,
+    ensureAtlas: ensureAsciiFontAtlasLoaded,
+  },
+  'ascii-art-2': {
+    fragment: ASCII_3_POST_FRAGMENT,
+    inkHex: ASCII_3_INK_HEX,
+    inkFloor: ASCII_SHADOW_INK_FLOOR,
+    edgeCharCount: 0,
+    cellSize: creativeAscii3CellSize,
+    getAtlas: getSharedAscii3FontAtlas,
+    ensureAtlas: ensureAscii3FontAtlasLoaded,
+  },
+  'ascii-art-3': {
+    fragment: ASCII_2_POST_FRAGMENT,
+    inkHex: ASCII_2_INK_HEX,
+    inkFloor: ASCII_SHADOW_INK_FLOOR,
+    edgeCharCount: 0,
+    cellSize: creativeAscii2CellSize,
+    getAtlas: getSharedAscii2FontAtlas,
+    ensureAtlas: ensureAscii2FontAtlasLoaded,
+  },
+};
+
 /**
- * Screen-space ASCII pass — 2× VGA grid, Orby lime duotone, Master Hue.
+ * Screen-space ASCII pass — VGA (1), fine terminal (2), or braille (3); Orby lime, Master Hue.
  */
 export class CreativeLookAsciiPass {
   /** @param {import('three').WebGLRenderer} renderer */
   constructor(renderer) {
     this.renderer = renderer;
     this._pixelRatio = Math.max(1, renderer?.getPixelRatio?.() ?? 1);
+    /** @type {AsciiCreativeLookVariant} */
+    this._variant = 'ascii-art';
 
     const atlas = getSharedAsciiFontAtlas();
     void ensureAsciiFontAtlasLoaded().then(() => this._bindAtlas(getSharedAsciiFontAtlas()));
+    void ensureAscii2FontAtlasLoaded();
+    void ensureAscii3FontAtlasLoaded();
 
     const cell = creativeAsciiCellSize();
     this.material = new THREE.ShaderMaterial({
@@ -36,13 +96,15 @@ export class CreativeLookAsciiPass {
         uResolution: { value: new THREE.Vector2(1, 1) },
         uCellSize: { value: new THREE.Vector2(cell.width, cell.height) },
         uInkColor: { value: new THREE.Color(ASCII_ART_INK_HEX) },
-        uBgColor: { value: new THREE.Color(ORBY_BLACK) },
+        uBgColor: { value: new THREE.Color(APP_BACKGROUND) },
         uFontAtlas: { value: atlas.texture },
         uCharCount: { value: atlas.charCount },
         uCellGlyphSize: { value: new THREE.Vector2(atlas.cellGlyphW, atlas.cellGlyphH) },
         uAtlasGlyphSize: { value: new THREE.Vector2(atlas.atlasGlyphW, atlas.atlasGlyphH) },
         uAtlasGrid: { value: new THREE.Vector2(atlas.cols, atlas.rows) },
         uMasterHue: { value: 0 },
+        uInkFloor: { value: ASCII_SHADOW_INK_FLOOR },
+        uEdgeCharCount: { value: 0 },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: ASCII_POST_FRAGMENT,
@@ -60,6 +122,17 @@ export class CreativeLookAsciiPass {
     this._applyCellSize();
   }
 
+  /** @param {AsciiCreativeLookVariant | string} variant */
+  _resolveVariant(variant) {
+    if (variant === 'ascii-art-2' || variant === 'ascii-art-3') return variant;
+    return 'ascii-art';
+  }
+
+  /** @param {AsciiCreativeLookVariant} variant */
+  _config(variant) {
+    return ASCII_VARIANTS[variant] ?? ASCII_VARIANTS['ascii-art'];
+  }
+
   /** @param {ReturnType<typeof getSharedAsciiFontAtlas>} atlas */
   _bindAtlas(atlas) {
     if (!atlas) return;
@@ -72,8 +145,35 @@ export class CreativeLookAsciiPass {
     this._atlasBound = true;
   }
 
+  /** @param {AsciiCreativeLookVariant | string} variant */
+  _applyVariant(variant) {
+    const next = this._resolveVariant(variant);
+    if (next === this._variant && this._atlasBound) return;
+    this._variant = next;
+
+    const cfg = this._config(next);
+    this.material.fragmentShader = cfg.fragment;
+    this.material.needsUpdate = true;
+    this.material.uniforms.uInkColor.value.setHex(cfg.inkHex);
+    this.material.uniforms.uInkFloor.value = cfg.inkFloor;
+    this.material.uniforms.uEdgeCharCount.value = cfg.edgeCharCount;
+
+    const atlas = cfg.getAtlas();
+    this._bindAtlas(atlas);
+    this._applyCellSize();
+
+    void cfg.ensureAtlas().then(() => {
+      if (this._variant !== next) return;
+      this._bindAtlas(cfg.getAtlas());
+    });
+  }
+
+  _cellSizeForVariant() {
+    return this._config(this._variant).cellSize();
+  }
+
   _applyCellSize() {
-    const cell = creativeAsciiCellSize();
+    const cell = this._cellSizeForVariant();
     const res = this.material.uniforms.uResolution.value;
     const ref = this._referenceLogicalSize;
     const refW = Math.max(1, ref.x);
@@ -121,10 +221,13 @@ export class CreativeLookAsciiPass {
   }
 
   /**
-   * @param {{ enabled?: boolean, masterHue?: number }} settings
+   * @param {{ enabled?: boolean, masterHue?: number, variant?: AsciiCreativeLookVariant | string }} settings
    */
   updateSettings(settings = {}) {
     if (!settings) return;
+    if (typeof settings.variant === 'string') {
+      this._applyVariant(settings.variant);
+    }
     if (typeof settings.enabled === 'boolean') {
       this.pass.enabled = settings.enabled;
     }
@@ -132,12 +235,14 @@ export class CreativeLookAsciiPass {
       this.material.uniforms.uMasterHue.value = settings.masterHue;
     }
     if (!this._atlasBound) {
-      void ensureAsciiFontAtlasLoaded().then(() => this._bindAtlas(getSharedAsciiFontAtlas()));
+      const cfg = this._config(this._variant);
+      void cfg.ensureAtlas().then(() => this._bindAtlas(cfg.getAtlas()));
     }
   }
 
   refreshAtlas() {
-    this._bindAtlas(getSharedAsciiFontAtlas());
+    const cfg = this._config(this._variant);
+    this._bindAtlas(cfg.getAtlas());
     this.material.uniforms.uFontAtlas.value.needsUpdate = true;
   }
 

@@ -53,7 +53,7 @@ import { openInfoSectionTarget } from './ui/infoSections.js';
 import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
-import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted, ensureBaseSurfaceControlsMounted, ensureBackdropSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
+import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted, ensureBaseSurfaceControlsMounted, ensureBaseGlassSurfaceControlsMounted, ensureBackdropSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { BackgroundGradientControls } from './ui/BackgroundGradientControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
@@ -304,6 +304,7 @@ export class UIManager {
     ensureSvgExtrudeCoreControlsMounted();
     ensureSvgExtrudeSurfaceControlsMounted();
     ensureBaseSurfaceControlsMounted();
+    ensureBaseGlassSurfaceControlsMounted();
     ensureBackdropSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
@@ -349,7 +350,6 @@ export class UIManager {
     this.dom.fbxMapSlotsBlock = q('#fbxMapSlotsBlock');
     this.dom.claySubsectionDivider = q('#claySubsectionDivider');
     this.dom.svgExtrudePanelBlock = q('#svgExtrudePanelBlock');
-    this.dom.studioBaseGlassPanel = q('#studioBaseGlassPanel');
     this.dom.animationBlock = q('#animationBlock');
     this.dom.animationSelect = q('#animationSelect');
     this.dom.playPause = q('#playPause');
@@ -495,6 +495,9 @@ export class UIManager {
       baseSurfacePreset: q('#baseSurfacePreset'),
       baseSurfaceScale: q('#baseSurfaceScale'),
       baseSurfaceStrength: q('#baseSurfaceStrength'),
+      baseGlassSurfPreset: q('#baseGlassSurfPreset'),
+      baseGlassSurfScale: q('#baseGlassSurfScale'),
+      baseGlassSurfStrength: q('#baseGlassSurfStrength'),
       baseGlassSurface: q('#baseGlassSurface'),
       baseGlassBrightness: q('#baseGlassBrightness'),
       baseGlassBlur: q('#baseGlassBlur'),
@@ -3269,29 +3272,28 @@ export class UIManager {
     
     // Lights / base / backdrop foldouts — applyStudioFoldouts
     
-    // Base Glass panel only exists once base is enabled
     const podiumOn = !!currentState.groundSolid;
     const glassOn = !!(
       currentState.baseGlassSurface ??
       currentState.podiumReflectMesh ??
       false
     );
-    if (this.dom.studioBaseGlassPanel) {
-      this.dom.studioBaseGlassPanel.hidden = !podiumOn;
-    }
+    const basePlacementActive = podiumOn || glassOn;
+    this.setControlDisabled(['groundY', 'baseScale', 'baseSnap'], !basePlacementActive);
     this.setControlDisabled(
       [
         'groundSolidColor',
-        'groundY',
-        'baseScale',
         'baseMetalness',
         'baseRoughness',
         'baseSurfacePreset',
         'baseSurfaceScale',
         'baseSurfaceStrength',
-        'baseSnap',
       ],
       !podiumOn,
+    );
+    this.setControlDisabled(
+      ['baseGlassSurfPreset', 'baseGlassSurfScale', 'baseGlassSurfStrength'],
+      !glassOn,
     );
     this.setControlDisabled('baseGlassBrightness', !glassOn);
     this.setControlDisabled('baseGlassBlur', !glassOn);

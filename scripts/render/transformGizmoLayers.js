@@ -53,3 +53,46 @@ export function renderTransformGizmoOverlay({ renderer, camera, gizmos }) {
   renderer.autoClear = prevAutoClear;
   resetRendererFullViewport(renderer);
 }
+
+/**
+ * Hide the studio ground grid for the ASCII scene draw (it is composited after the post pass).
+ * @param {import('three').Object3D | null | undefined} grid
+ * @returns {{ grid: import('three').Object3D, visible: boolean } | null}
+ */
+export function hideGroundGridForPass(grid) {
+  if (!grid) return null;
+  const snapshot = { grid, visible: grid.visible };
+  grid.visible = false;
+  return snapshot;
+}
+
+/**
+ * @param {{ grid: import('three').Object3D, visible: boolean } | null | undefined} snapshot
+ */
+export function restoreGroundGridFromPass(snapshot) {
+  if (!snapshot) return;
+  snapshot.grid.visible = snapshot.visible;
+}
+
+/**
+ * Draw the ground grid after the ASCII post stack — crisp lines, not glyph conversion.
+ * @param {{
+ *   renderer: import('three').WebGLRenderer,
+ *   camera: import('three').Camera,
+ *   grid: import('three').Object3D | null | undefined,
+ * }} ctx
+ */
+export function renderGroundGridOverlay({ renderer, camera, grid }) {
+  if (!renderer || !camera || !grid?.visible) return;
+
+  const prevAutoClear = renderer.autoClear;
+  renderer.autoClear = false;
+  renderer.setRenderTarget(null);
+  resetRendererFullViewport(renderer);
+
+  grid.updateMatrixWorld(true);
+  renderer.render(grid, camera);
+
+  renderer.autoClear = prevAutoClear;
+  resetRendererFullViewport(renderer);
+}

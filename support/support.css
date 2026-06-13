@@ -4,6 +4,7 @@
  */
 
 body.legal-doc--support {
+  --orby-dropdown-height: 24px;
   --legal-bg: var(--orby-black);
   --legal-surface: #101010;
   --stroke: var(--legal-border);
@@ -159,7 +160,7 @@ body.legal-doc--support {
 
 .legal-support-bug-report .bug-report-severity-trigger-inner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.55rem;
   pointer-events: none;
 }
@@ -333,7 +334,10 @@ body.legal-doc--support {
 .legal-support-bug-report .bug-report-field select,
 .legal-support-bug-report .bug-report-severity-trigger {
   width: 100%;
-  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  height: var(--orby-dropdown-height);
+  min-height: var(--orby-dropdown-height);
+  padding: 0 2rem 0 0.75rem;
+  line-height: var(--orby-dropdown-height);
   appearance: none;
   color-scheme: dark;
   background-color: rgba(255, 255, 255, 0.06);
