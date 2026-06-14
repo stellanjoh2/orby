@@ -15,7 +15,7 @@ import {
   applyMobileLensSliderValue,
 } from './mobileFxControls.js';
 import { MobileScene, MOBILE_HDRI_STRENGTH_DEFAULT, MOBILE_HDRI_STRENGTH_MAX } from './MobileScene.js';
-import { takeMobileModelHandoff, markMobileAppSessionActive } from '../../../scripts/orbyMobileHandoff.js';
+import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff } from '../../../scripts/orbyMobileHandoff.js';
 
 /** Left inset for preset rails — keep in sync with --orby-mobile-preset-rail-inset */
 const MOBILE_PRESET_RAIL_INSET = 16;
@@ -42,6 +42,7 @@ export class MobileShell {
     void this.scene
       .init()
       .then(async () => {
+        await waitForMobileModelHandoff(2000);
         const file = await takeMobileModelHandoff();
         if (!file) return;
         await this.scene.loadFile(file);

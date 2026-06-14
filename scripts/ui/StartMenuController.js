@@ -3,6 +3,7 @@
  * Handles drag & drop, file input, visibility, and all start menu interactions
  */
 import gsap from 'gsap';
+import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 import { TEXT_REVEAL_PACE } from './bigMessageHeadlineReveal.js';
 import { ensureLottie } from './lottieLoader.js';
 
@@ -257,7 +258,9 @@ export class StartMenuController {
 
     const emitFile = (file) => {
       if (!file) return;
-      this.eventBus.emit('file:selected', file);
+      void handoffFileToMobileAppIfLanding(file).then((handled) => {
+        if (!handled) this.eventBus.emit('file:selected', file);
+      });
     };
 
     // Drag and drop handlers
