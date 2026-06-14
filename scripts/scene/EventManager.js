@@ -1,5 +1,6 @@
 import { resolveRenderQualityTier } from '../constants.js';
 import { isOrbySceneFile } from '../import/dispatchImportFile.js';
+import { handoffFileToMobileAppIfLanding } from '../orbyMobileHandoff.js';
 
 /**
  * EventManager - Handles all eventBus event listeners for SceneManager
@@ -528,15 +529,20 @@ export class EventManager {
         return;
       }
 
+      if (await handoffFileToMobileAppIfLanding(file)) return;
+
       s.loadFile(file, loadOpts);
     });
     eventBus.on('file:bundle', async (bundle) => {
       if (Array.isArray(bundle) && bundle.length === 1) {
         const entry = bundle[0];
         const file = entry instanceof File ? entry : entry?.file;
-        if (file instanceof File && isOrbySceneFile(file)) {
-          await this.loadOrbySceneFromUserFile(s, file);
-          return;
+        if (file instanceof File) {
+          if (isOrbySceneFile(file)) {
+            await this.loadOrbySceneFromUserFile(s, file);
+            return;
+          }
+          if (await handoffFileToMobileAppIfLanding(file)) return;
         }
       }
       s.loadFileBundle(bundle);
