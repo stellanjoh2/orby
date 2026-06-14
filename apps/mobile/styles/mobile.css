@@ -48,7 +48,7 @@
   --brand-font-headline: 'Mattone Bold', system-ui, sans-serif;
   --orby-mobile-sheet-peek: 10.75rem;
   --orby-mobile-sheet-expanded: 58svh;
-  --orby-mobile-dock-h: calc(54px + env(safe-area-inset-bottom, 0px));
+  --orby-mobile-dock-h: calc(65px + env(safe-area-inset-bottom, 0px));
   --orby-mobile-top-h: env(safe-area-inset-top, 0px);
   --orby-mobile-preset-w: 4.25rem;
   --orby-mobile-preset-gap: 0.65rem;
@@ -57,6 +57,7 @@
   --ui-frosted-bg: rgba(8, 8, 8, 0.78);
   --ui-frosted-blur: 15px;
   --orby-mobile-border: color-mix(in srgb, var(--orby-lime) 12%, transparent);
+  --ui-accent-outer-glow-compact: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 *,
@@ -200,7 +201,7 @@ button {
   align-items: center;
   gap: 1px;
   max-width: calc(100% - 16px);
-  padding: 4px;
+  padding: 6px 5px 5px;
   border-radius: 999px;
   background: var(--ui-frosted-bg);
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
@@ -212,11 +213,11 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-width: 44px;
-  padding: 5px 6px 3px;
+  gap: 3px;
+  min-width: 53px;
+  padding: 8px 7px 5px;
   border-radius: 999px;
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -225,8 +226,8 @@ button {
 
 .orby-mobile-dock__thumb {
   display: block;
-  width: 26px;
-  height: 26px;
+  width: 31px;
+  height: 31px;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid transparent;
@@ -236,8 +237,8 @@ button {
 .orby-mobile-dock__icon {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 31px;
+  height: 31px;
   border-radius: 50%;
   color: var(--text-dim);
   background: color-mix(in srgb, var(--orby-black) 55%, white 4%);
@@ -257,8 +258,8 @@ button {
 }
 
 .orby-mobile-dock__btn--icon {
-  min-width: 38px;
-  padding: 7px;
+  min-width: 46px;
+  padding: 9px;
   color: var(--orby-lime);
 }
 
@@ -275,7 +276,7 @@ button {
 .orby-mobile-dock__sep {
   flex: 0 0 auto;
   width: 1px;
-  height: 26px;
+  height: 31px;
   margin: 0 1px;
   background: color-mix(in srgb, white 10%, transparent);
 }
@@ -532,74 +533,26 @@ button {
   opacity: 1;
 }
 
+.orby-mobile[data-sheet='peek'][data-active-tab='light'] .orby-mobile-sheet {
+  height: 14.25rem;
+}
+
 .orby-mobile-preset:active {
   transform: scale(0.97);
 }
 
-/* Long-press HDRI brightness popover */
-.orby-mobile-hdri-brightness {
-  position: fixed;
-  z-index: 40;
-  min-width: 13.75rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: 0.75rem;
-  background: var(--ui-frosted-bg);
-  backdrop-filter: blur(var(--ui-frosted-blur));
-  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
-  border: 1px solid color-mix(in srgb, var(--orby-lime) 22%, transparent);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-  pointer-events: auto;
-  opacity: 0;
-  transform: translateY(6px) scale(0.96);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
+/* HDRI brightness + blurriness (below preset rail) */
+.orby-mobile-hdri-controls {
+  flex: 0 0 auto;
+  padding: 0 14px 4px;
 }
 
-.orby-mobile-hdri-brightness.is-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+.orby-mobile-hdri-controls__row {
+  margin-bottom: 8px;
 }
 
-.orby-mobile-hdri-brightness__control {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0;
-}
-
-.orby-mobile-hdri-brightness__label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.orby-mobile-hdri-brightness__control input[type='range'] {
-  width: 100%;
-  min-width: 0;
-  accent-color: var(--orby-lime);
-}
-
-.orby-mobile-hdri-brightness__value {
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--orby-lime);
-  min-width: 2rem;
-  text-align: right;
-}
-
-.orby-mobile-preset.is-brightness-open .orby-mobile-preset__thumb {
-  box-shadow:
-    0 0 0 2px var(--orby-lime),
-    0 0 18px color-mix(in srgb, var(--orby-lime) 45%, transparent);
-}
-
-.orby-mobile-preset.is-brightness-open .orby-mobile-preset__name {
-  color: var(--orby-lime);
+.orby-mobile-hdri-controls__row:last-child {
+  margin-bottom: 0;
 }
 
 .orby-mobile-panel--adjust {
@@ -644,11 +597,137 @@ button {
 
 .orby-mobile-fx-grade input[type='range'] {
   width: 100%;
-  accent-color: var(--orby-lime);
+  min-width: 0;
+  height: 2px;
+  border-radius: 1px;
+  position: relative;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  transition: opacity 0.2s ease;
+}
+
+.orby-mobile-fx-grade input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  transition: background 0.2s ease;
+}
+
+.orby-mobile-fx-grade input[type='range']:is(:active, :focus-visible)::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+}
+
+.orby-mobile-fx-grade input[type='range']::-moz-range-track {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 50%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border: none;
+  transition: background 0.2s ease;
+}
+
+.orby-mobile-fx-grade input[type='range']:is(:active, :focus-visible)::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-start, 0%),
+    color-mix(in srgb, var(--accent) 75%, transparent) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) var(--slider-fill-end, 0%),
+    rgba(255, 255, 255, 0.15) 100%
+  );
+}
+
+.orby-mobile-fx-grade input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: none;
+  margin-top: -5px;
+  transition:
+    transform 0.15s ease,
+    width 0.15s ease,
+    height 0.15s ease,
+    background 0.2s ease,
+    box-shadow 0.15s ease;
+}
+
+.orby-mobile-fx-grade input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    transform 0.15s ease,
+    width 0.15s ease,
+    height 0.15s ease,
+    background 0.2s ease,
+    box-shadow 0.15s ease;
+}
+
+.orby-mobile-fx-grade input[type='range']:hover::-webkit-slider-thumb {
+  transform: scale(1.083);
+  box-shadow: var(--ui-accent-outer-glow-compact);
+}
+
+.orby-mobile-fx-grade input[type='range']:active::-webkit-slider-thumb {
+  transform: scale(1.333);
+  box-shadow: var(--ui-accent-outer-glow-compact);
+}
+
+.orby-mobile-fx-grade input[type='range']:hover::-moz-range-thumb {
+  transform: scale(1.083);
+  box-shadow: var(--ui-accent-outer-glow-compact);
+}
+
+.orby-mobile-fx-grade input[type='range']:active::-moz-range-thumb {
+  transform: scale(1.333);
+  box-shadow: var(--ui-accent-outer-glow-compact);
 }
 
 .orby-mobile-fx-grade input[type='range']:disabled {
   opacity: 0.35;
+}
+
+.orby-mobile-fx-grade input[type='range']:disabled::-webkit-slider-thumb,
+.orby-mobile-fx-grade input[type='range']:disabled::-moz-range-thumb {
+  background: #999;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .orby-mobile-fx-grade__value {
@@ -741,41 +820,6 @@ button {
   outline-offset: 2px;
 }
 
-.orby-mobile-fx-orbit {
-  display: grid;
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.orby-mobile-fx-orbit__label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.orby-mobile-fx-orbit__group {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.orby-mobile-fx-orbit__btn {
-  padding: 8px 6px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, white 10%, transparent);
-  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
-  color: var(--text-dim);
-  font-size: 0.72rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.orby-mobile-fx-orbit__btn.is-active {
-  color: var(--orby-black);
-  background: var(--orby-lime);
-  border-color: var(--orby-lime);
-}
-
 .orby-mobile-fx-reset-cam {
   width: 100%;
   margin-top: 4px;
@@ -787,31 +831,6 @@ button {
   font-size: 0.72rem;
   font-weight: 500;
   cursor: pointer;
-}
-
-/* 21∶9 cinema mattes */
-.orby-mobile-letterbox {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.orby-mobile-letterbox__bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: var(--orby-app-bg);
-}
-
-.orby-mobile-letterbox__bar--top {
-  top: 0;
-  height: max(0px, calc((100cqh - 100cqw * 9 / 21) / 2));
-}
-
-.orby-mobile-letterbox__bar--bottom {
-  bottom: 0;
-  height: max(0px, calc((100cqh - 100cqw * 9 / 21) / 2));
 }
 
 /* ── Scrim + toast ── */

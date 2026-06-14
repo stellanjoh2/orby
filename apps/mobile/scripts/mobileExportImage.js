@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ORBY_BLACK } from '../../../scripts/constants.js';
+import { getComposerOutputRenderTarget } from '../../../scripts/render/composerOutputBuffer.js';
 import { encodeCanvasToBlob } from '../../../scripts/render/encodeImageBlob.js';
 
 /** Match desktop default opaque still export scale. */
@@ -7,39 +7,11 @@ const EXPORT_SCALE = 2;
 const MAX_EXPORT_PX = 4096;
 
 /**
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} w
- * @param {number} h
- */
-function fillCinematicLetterbox219Mattes(ctx, w, h) {
-  if (w <= 0 || h <= 0) return;
-  const r219 = 21 / 9;
-  const ar = w / h;
-  ctx.fillStyle = ORBY_BLACK;
-  if (ar >= r219) {
-    const innerW = h * r219;
-    const gap = w - innerW;
-    const left = Math.floor(gap / 2);
-    const right = gap - left;
-    ctx.fillRect(0, 0, left, h);
-    ctx.fillRect(w - right, 0, right, h);
-  } else {
-    const innerH = (w * 9) / 21;
-    const gap = h - innerH;
-    const top = Math.floor(gap / 2);
-    const bottom = gap - top;
-    ctx.fillRect(0, 0, w, top);
-    ctx.fillRect(0, h - bottom, w, bottom);
-  }
-}
-
-/**
  * @param {Uint8Array} pixels
  * @param {number} width
  * @param {number} height
- * @param {boolean} cinematicLetterbox219
  */
-function pixelsToCanvas(pixels, width, height, cinematicLetterbox219) {
+function pixelsToCanvas(pixels, width, height) {
   const flipped = new Uint8ClampedArray(width * height * 4);
   const rowStride = width * 4;
   for (let y = 0; y < height; y += 1) {
@@ -55,10 +27,38 @@ function pixelsToCanvas(pixels, width, height, cinematicLetterbox219) {
   const imageData = ctx.createImageData(width, height);
   imageData.data.set(flipped);
   ctx.putImageData(imageData, 0, 0);
-  if (cinematicLetterbox219) {
-    fillCinematicLetterbox219Mattes(ctx, width, height);
-  }
   return canvas;
+}
+
+/**
+ * Half-float composer buffers are not readable on many mobile GPUs — copy to RGBA8 first
+ * (same path as desktop ImageExporter).
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer} composer
+ * @param {number} fallbackWidth
+ * @param {number} fallbackHeight
+ */
+function readComposerOutputPixels(renderer, composer, fallbackWidth, fallbackHeight) {
+  const outputRT = getComposerOutputRenderTarget(composer);
+  const width = Math.max(1, outputRT?.width ?? fallbackWidth ?? 1);
+  const height = Math.max(1, outputRT?.height ?? fallbackHeight ?? 1);
+  const byteRT = new THREE.WebGLRenderTarget(width, height, {
+    type: THREE.UnsignedByteType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    depthBuffer: false,
+    stencilBuffer: false,
+  });
+
+  try {
+    composer.copyPass.render(renderer, byteRT, outputRT, 0, false);
+    const pixels = new Uint8Array(width * height * 4);
+    renderer.readRenderTargetPixels(byteRT, 0, 0, width, height, pixels);
+    return { pixels, width, height };
+  } finally {
+    byteRT.dispose();
+  }
 }
 
 /**
@@ -118,8 +118,10 @@ export async function exportMobileSceneJpeg(mobileScene) {
     const composer = post.composer;
     const prevRenderToScreen = composer.renderToScreen;
     composer.renderToScreen = false;
+    const animTime =
+      mobileScene.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
     try {
-      composer.render();
+      post.render(animTime);
     } finally {
       composer.renderToScreen = prevRenderToScreen;
     }
@@ -127,17 +129,18 @@ export async function exportMobileSceneJpeg(mobileScene) {
     const gl = renderer.getContext();
     gl?.finish?.();
 
-    const target = composer.readBuffer;
-    const pixels = new Uint8Array(exportW * exportH * 4);
-    renderer.readRenderTargetPixels(target, 0, 0, exportW, exportH, pixels);
-
-    const canvas = pixelsToCanvas(
-      pixels,
+    const { pixels, width: pixelW, height: pixelH } = readComposerOutputPixels(
+      renderer,
+      composer,
       exportW,
       exportH,
-      mobileScene.getCinematicLetterbox(),
     );
+
+    const canvas = pixelsToCanvas(pixels, pixelW, pixelH);
     const blob = await encodeCanvasToBlob(canvas, 'jpeg');
+    if (!blob?.size) {
+      throw new Error('JPEG encode produced empty blob');
+    }
     const baseName =
       mobileScene._currentFileName?.replace(/\.(glb|gltf)$/i, '') || 'orby';
     const filename = `${baseName}-orby.jpg`;
@@ -167,14 +170,16 @@ export async function exportMobileSceneJpeg(mobileScene) {
  * @returns {Promise<'shared' | 'downloaded'>}
  */
 async function saveImageBlob(blob, filename) {
-  const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+  const mime = blob.type || 'image/jpeg';
+  const file = new File([blob], filename, { type: mime });
 
   if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file] });
+      await navigator.share({ files: [file], title: filename });
       return 'shared';
     } catch (err) {
       if (err?.name === 'AbortError') throw err;
+      console.warn('[Orby Mobile] Web Share failed, falling back to download', err);
     }
   }
 
@@ -187,8 +192,11 @@ async function saveImageBlob(blob, filename) {
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
-  } finally {
+    // Revoke after the browser has started the download (immediate revoke breaks mobile Safari).
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (err) {
     URL.revokeObjectURL(url);
+    throw err;
   }
   return 'downloaded';
 }

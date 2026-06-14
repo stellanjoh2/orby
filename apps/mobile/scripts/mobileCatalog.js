@@ -1,12 +1,12 @@
 /** Mobile-only catalog — paths under repo `assets/`. */
 
 export const MOBILE_HDRI = [
+  { id: 'beach', label: 'Beach', thumb: 'images/hdri-thumbnail-beach.png', tint: '#5a7fb5' },
   { id: 'congress', label: 'Congress', thumb: 'images/hdri-thumbnail-congress.png', tint: '#e8e8e8' },
   { id: 'luminous-sky', label: 'Forest', thumb: 'images/hdri-thumbnail-forest.png', tint: '#3a4a2f' },
   { id: 'sunset', label: 'Sunset', thumb: 'images/hdri-thumbnail-sunset.png', tint: '#4a3a2a' },
   { id: 'meadow', label: 'Meadow', thumb: 'images/hdri-thumbnail-meadow.png', tint: '#6b7a4a' },
   { id: 'abandoned', label: 'Abandoned', thumb: 'images/hdri-thumbnail-abandoned.png', tint: '#4a4540' },
-  { id: 'beach', label: 'Beach', thumb: 'images/hdri-thumbnail-beach.png', tint: '#5a7fb5' },
   { id: 'blue-hour', label: 'Blue hour', thumb: 'images/hdri-thumbnail-blue-hour.png', tint: '#2a3a5a' },
   { id: 'sunny-parking', label: 'Parking', thumb: 'images/hdri-thumbnail-sunny-parking.png', tint: '#8a9098' },
 ];

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { MeshglEffectComposer } from '../../../scripts/render/MeshglEffectComposer.js';
+import { MeshglRenderPass } from '../../../scripts/render/MeshglRenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js';
 import {
@@ -27,6 +27,7 @@ import {
 } from '../../../scripts/constants.js';
 import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
 import { getNestedValue, setNestedValue } from './mobileFxControls.js';
+import { MobileCreativeLookPost } from './MobileCreativeLookPost.js';
 
 const TONE_MAPPING_MAP = {
   none: 0,
@@ -51,10 +52,13 @@ export class MobilePost {
     const rh = Math.max(1, Math.floor(size.y));
 
     // Default composer buffers (linear) — matches desktop; sRGB/HalfFloat RT crushed HDRI contrast.
-    this.composer = new EffectComposer(renderer);
-    this.renderPass = new RenderPass(scene, camera);
+    this.composer = new MeshglEffectComposer(renderer);
+    this.renderPass = new MeshglRenderPass(scene, camera);
     this.renderPass.clearAlpha = 1;
     this.composer.addPass(this.renderPass);
+
+    this.creativeLooks = new MobileCreativeLookPost(renderer);
+    this.creativeLooks.mount(this.composer);
 
     this.bloomPass = new UnrealBloomPass(new THREE.Vector2(rw, rh), 0.2, 0.2, 1.0);
     this.bloomPass.enabled = false;
@@ -109,6 +113,7 @@ export class MobilePost {
 
   dispose() {
     this._disposeToneLut();
+    this.creativeLooks?.dispose?.();
     this.composer?.dispose?.();
   }
 
@@ -159,6 +164,7 @@ export class MobilePost {
 
   setSize(w, h) {
     this.composer.setSize(w, h);
+    this.creativeLooks?.setSize(w, h);
     if (this.uniforms.resolution) {
       this.uniforms.resolution.value.set(w, h);
     }
@@ -170,8 +176,20 @@ export class MobilePost {
     }
   }
 
-  render() {
+  /**
+   * @param {number} [creativeLookAnimTime]
+   */
+  render(creativeLookAnimTime = 0) {
+    this.creativeLooks?.prepareRender(this, creativeLookAnimTime);
     this.composer.render();
+  }
+
+  /** @param {string | null | undefined} presetId */
+  syncCreativeLook(presetId) {
+    this.creativeLooks?.sync(presetId);
+    if (!presetId || presetId === 'none' || presetId === 'standard') {
+      this._applyFxState(this._fxState);
+    }
   }
 
   /** @param {{ bloomTint?: string } | undefined} mood */

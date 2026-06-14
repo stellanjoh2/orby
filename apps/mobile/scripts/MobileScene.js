@@ -78,8 +78,13 @@ export class MobileScene {
 
     this.post = new MobilePost(this.renderer, this.scene, this.camera);
     this.creativeLooks = new MobileCreativeLooks(this.renderer, this.scene, this.camera);
+    this.creativeLooks.onCreativeLookSync = () => {
+      this.post.syncCreativeLook(this._creativeLookPreset);
+    };
     /** @type {number} */
     this._hdriStrength = MOBILE_HDRI_STRENGTH_DEFAULT;
+    /** @type {number} */
+    this._hdriBlurriness = 0;
 
     /** @type {THREE.Object3D | null} */
     this.currentModel = null;
@@ -93,24 +98,6 @@ export class MobileScene {
     this._resizeObserver = null;
     /** @type {string | null} */
     this._creativeLookPreset = null;
-    /** @type {'off' | 'slow' | 'fast'} */
-    this._autoOrbitMode = 'off';
-    this._letterboxEnabled = false;
-    /** @type {HTMLElement | null} */
-    this._letterboxEl = null;
-
-    const viewport = mount.parentElement;
-    if (viewport) {
-      this._letterboxEl = document.createElement('div');
-      this._letterboxEl.className = 'orby-mobile-letterbox';
-      this._letterboxEl.hidden = true;
-      this._letterboxEl.setAttribute('aria-hidden', 'true');
-      this._letterboxEl.innerHTML = `
-        <div class="orby-mobile-letterbox__bar orby-mobile-letterbox__bar--top"></div>
-        <div class="orby-mobile-letterbox__bar orby-mobile-letterbox__bar--bottom"></div>
-      `;
-      viewport.append(this._letterboxEl);
-    }
 
     /** @type {string | null} */
     this._currentFileName = null;
@@ -151,7 +138,6 @@ export class MobileScene {
   async init() {
     this._bindResize();
     this._bindMeshPicking();
-    this._applyHdriStrength();
     await this.setHdri('beach');
     this._startLoop();
   }
@@ -190,12 +176,12 @@ export class MobileScene {
     const tick = () => {
       this._raf = requestAnimationFrame(tick);
       const dt = this.clock.getDelta();
-      this._syncAutoOrbit();
       this.controls.update();
       this.transformControlsRotate.updateMatrixWorld?.();
       this.creativeLooks.tick(dt);
       this.post.tick(dt);
-      this.post.render();
+      const animTime = this.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
+      this.post.render(animTime);
     };
     tick();
   }
@@ -308,9 +294,8 @@ export class MobileScene {
 
       this.scene.environment = this._hdriPmrem.texture;
       this.scene.background = texture;
-      this.scene.backgroundBlurriness = 0;
 
-      this._applyHdriStrength();
+      this._applyHdriEnvironment();
       this.post.applyHdriMood(HDRI_MOODS[presetId]);
       this.onFxStateChanged?.();
     } catch (err) {
@@ -319,10 +304,15 @@ export class MobileScene {
     }
   }
 
-  _applyHdriStrength() {
+  _applyHdriEnvironment() {
     const strength = this._hdriStrength;
+    const blur = this._hdriBlurriness;
     this.scene.environmentIntensity = strength;
     this.scene.backgroundIntensity = strength;
+    if ('backgroundBlurriness' in this.scene) {
+      this.scene.backgroundBlurriness = blur;
+    }
+    this.creativeLooks.setHdriBlurriness(blur);
     this.creativeLooks.syncEnvironment(this.scene.environment, strength);
   }
 
@@ -333,11 +323,25 @@ export class MobileScene {
       0,
       MOBILE_HDRI_STRENGTH_MAX,
     );
-    this._applyHdriStrength();
+    this._applyHdriEnvironment();
   }
 
   getHdriStrength() {
     return this._hdriStrength;
+  }
+
+  /** @param {number} value */
+  setHdriBlurriness(value) {
+    this._hdriBlurriness = THREE.MathUtils.clamp(value, 0, 1);
+    this._applyHdriEnvironment();
+  }
+
+  getHdriBlurriness() {
+    return this._hdriBlurriness;
+  }
+
+  getHdriPresetId() {
+    return this._hdriPresetId;
   }
 
   /** @param {string} url */
@@ -462,14 +466,14 @@ export class MobileScene {
     }
   }
 
-  _syncAutoOrbit() {
-    const mode = this._autoOrbitMode;
-    if (mode === 'off') {
-      this.controls.autoRotate = false;
-      return;
-    }
-    this.controls.autoRotate = true;
-    this.controls.autoRotateSpeed = mode === 'fast' ? 1.8 : 0.65;
+  /**
+   * @param {string} presetId — creative-look id, or `none` / `standard`
+   */
+  setCreativeLook(presetId) {
+    const id = presetId === 'standard' ? 'none' : presetId;
+    this._creativeLookPreset = id === 'none' ? null : id;
+    this.creativeLooks.setCreativeLook(id);
+    this.post.syncCreativeLook(id);
   }
 
   /** @param {number} fovDeg */
@@ -481,38 +485,6 @@ export class MobileScene {
 
   getFov() {
     return this.camera.fov;
-  }
-
-  /** @param {boolean} enabled */
-  setCinematicLetterbox(enabled) {
-    this._letterboxEnabled = enabled;
-    if (!this._letterboxEl) return;
-    this._letterboxEl.hidden = !enabled;
-    this._letterboxEl.classList.toggle('orby-mobile-letterbox--shown', enabled);
-    this._letterboxEl.setAttribute('aria-hidden', enabled ? 'false' : 'true');
-  }
-
-  getCinematicLetterbox() {
-    return this._letterboxEnabled;
-  }
-
-  /** @param {'off' | 'slow' | 'fast'} mode */
-  setAutoOrbit(mode) {
-    this._autoOrbitMode = mode === 'slow' || mode === 'fast' ? mode : 'off';
-    this._syncAutoOrbit();
-  }
-
-  getAutoOrbit() {
-    return this._autoOrbitMode;
-  }
-
-  /**
-   * @param {string} presetId — creative-look id, or `none` / `standard`
-   */
-  setCreativeLook(presetId) {
-    const id = presetId === 'standard' ? 'none' : presetId;
-    this._creativeLookPreset = id === 'none' ? null : id;
-    this.creativeLooks.setCreativeLook(id);
   }
 
   /** @param {string} presetId */
@@ -554,9 +526,9 @@ export class MobileScene {
     return {
       ...this.post.getFxSnapshot(),
       fov: this.getFov(),
-      letterbox: this.getCinematicLetterbox(),
-      autoOrbit: this.getAutoOrbit(),
       hdriStrength: this._hdriStrength,
+      hdriBlurriness: this._hdriBlurriness,
+      hdriPresetId: this._hdriPresetId,
     };
   }
 

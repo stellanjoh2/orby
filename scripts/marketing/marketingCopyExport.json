@@ -2,7 +2,7 @@
   "meta": {
     "product": "Orby",
     "page": "Homepage landing (dropzone hero + marketing one-pager)",
-    "generatedAt": "2026-06-12T11:31:48.088Z",
+    "generatedAt": "2026-06-14T21:34:05.996Z",
     "generator": "scripts/marketing/exportMarketingCopy.mjs",
     "sourceFiles": [
       "index.html",
@@ -82,7 +82,7 @@
         "Set the stage.",
         "Send it."
       ],
-      "lede": "Orby is more than a 3D viewer. It's a focused studio for turning files into presentations — whether that's a photogrammetry scan, a game asset, or your logotype extruded into a mesh. Inspect it, stage it, export it without ever leaving the tab. Capture your assets the way they were meant to be seen, ready for your website, portfolio, or next presentation.",
+      "lede": "Orby is more than a 3D viewer. Import your scan, game asset, or logotype — pose it, light it, export it as video or image. Ready for your website, portfolio, or next presentation.",
       "bullets": null,
       "cta": null
     },
@@ -359,7 +359,7 @@
         "Try it out",
         "for free now"
       ],
-      "lede": "",
+      "lede": "Drop a model in the browser and start presenting — no account, no upload queue.\nYour files stay on your machine.",
       "bullets": null,
       "cta": {
         "primary": {

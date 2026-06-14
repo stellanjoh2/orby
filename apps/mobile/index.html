@@ -36,9 +36,9 @@
       </main>
 
       <nav class="orby-mobile-dock" aria-label="Actions">
-        <button type="button" class="orby-mobile-dock__btn" data-open-tab="light" aria-label="Light" aria-expanded="false">
+        <button type="button" class="orby-mobile-dock__btn" data-open-tab="light" aria-label="HDRI" aria-expanded="false">
           <span class="orby-mobile-dock__thumb"><img data-dock-thumb src="/assets/images/hdri-thumbnail-beach.png" alt="" width="28" height="28" /></span>
-          <span>Light</span>
+          <span>HDRI</span>
         </button>
         <button type="button" class="orby-mobile-dock__btn" data-open-tab="style" aria-label="Style" aria-expanded="false">
           <span class="orby-mobile-dock__thumb"><img data-dock-thumb src="/assets/images/look-filters/none.png" alt="" width="28" height="28" /></span>
@@ -88,9 +88,9 @@
             <div class="orby-mobile-preset-rail" data-rail="light">
               <div class="orby-mobile-preset-rail__track" data-rail-track="light"></div>
             </div>
-            <div class="orby-mobile-hdri-brightness" data-hdri-brightness hidden>
-              <label class="orby-mobile-hdri-brightness__control">
-                <span class="orby-mobile-hdri-brightness__label">Brightness</span>
+            <div class="orby-mobile-hdri-controls">
+              <label class="orby-mobile-fx-grade slider-line orby-mobile-hdri-controls__row">
+                <span class="orby-mobile-fx-grade__label slider-line-label">Brightness</span>
                 <input
                   type="range"
                   data-hdri-brightness-input
@@ -100,7 +100,20 @@
                   value="2"
                   aria-label="HDRI brightness"
                 />
-                <span class="orby-mobile-hdri-brightness__value" data-hdri-brightness-value>2.0</span>
+                <span class="orby-mobile-fx-grade__value" data-hdri-brightness-value>2.0</span>
+              </label>
+              <label class="orby-mobile-fx-grade slider-line orby-mobile-hdri-controls__row">
+                <span class="orby-mobile-fx-grade__label slider-line-label">Blurriness</span>
+                <input
+                  type="range"
+                  data-hdri-blur-input
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0"
+                  aria-label="HDRI blurriness"
+                />
+                <span class="orby-mobile-fx-grade__value" data-hdri-blur-value>0.00</span>
               </label>
             </div>
           </div>

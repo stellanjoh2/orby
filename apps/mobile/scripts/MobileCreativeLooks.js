@@ -36,10 +36,15 @@ export class MobileCreativeLooks {
       afterCreativeLookMaterialRebuild: () => {
         this.renderer.compile(this.scene, this.camera);
       },
+      onCreativeLookAsciiSync: () => {
+        this.onCreativeLookSync?.();
+      },
     });
 
     /** @type {THREE.Object3D | null} */
     this.currentModel = null;
+    /** @type {(() => void) | null} */
+    this.onCreativeLookSync = null;
     this._elapsed = 0;
   }
 
@@ -47,6 +52,11 @@ export class MobileCreativeLooks {
   setHdriStrength(strength) {
     this.stateStore.set('hdriStrength', strength);
     this.stateStore.set('hdriEnabled', strength > 0);
+  }
+
+  /** @param {number} blurriness */
+  setHdriBlurriness(blurriness) {
+    this.stateStore.set('hdriBlurriness', blurriness);
   }
 
   /**
@@ -57,7 +67,8 @@ export class MobileCreativeLooks {
   syncEnvironment(envTexture, intensity) {
     this.setHdriStrength(intensity);
     if (this.currentModel && envTexture) {
-      this.materialController.updateMaterialsEnvironment(envTexture, intensity);
+      const blur = this.stateStore.getState().hdriBlurriness ?? 0;
+      this.materialController.updateMaterialsEnvironment(envTexture, intensity, blur);
     }
   }
 

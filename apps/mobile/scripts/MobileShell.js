@@ -19,9 +19,6 @@ import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelH
 
 /** Left inset for preset rails — keep in sync with --orby-mobile-preset-rail-inset */
 const MOBILE_PRESET_RAIL_INSET = 16;
-/** Long-press on Light HDRI spheres opens brightness control. */
-const HDRI_BRIGHTNESS_LONG_PRESS_MS = 480;
-const HDRI_BRIGHTNESS_MOVE_CANCEL_PX = 14;
 /** @typedef {'closed' | 'peek' | 'expanded'} SheetState */
 /** @typedef {'light' | 'style' | 'filters' | 'fx'} MobileTab */
 /** @typedef {'light' | 'style' | 'filters'} PresetTab */
@@ -75,21 +72,20 @@ export class MobileShell {
     this._railScrollTimer = null;
     /** @type {PresetTab | null} */
     this._railScrollingTab = null;
+    this._suppressRailLeadingSelection = false;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    this._railSuppressTimer = null;
 
-    this._hdriBrightnessEl = root.querySelector('[data-hdri-brightness]');
     this._hdriBrightnessInput = root.querySelector('[data-hdri-brightness-input]');
     this._hdriBrightnessValue = root.querySelector('[data-hdri-brightness-value]');
-    /** @type {HTMLElement | null} */
-    this._hdriBrightnessAnchor = null;
-    /** @type {{ timer: ReturnType<typeof setTimeout>, x: number, y: number, btn: HTMLElement } | null} */
-    this._hdriPress = null;
-    this._hdriLongPressTriggered = false;
-    this._suppressPresetClick = false;
+    this._hdriBlurInput = root.querySelector('[data-hdri-blur-input]');
+    this._hdriBlurValue = root.querySelector('[data-hdri-blur-value]');
 
     this._renderPresetRails();
     this._renderFxControls();
     this._bind();
     this._syncSelectionUi();
+    this._syncHdriControlsUi();
   }
 
   /** @param {MobileTab} tab */
@@ -171,39 +167,6 @@ export class MobileShell {
 
     camList.append(this._mkFxSlider({ ...MOBILE_CAMERA_FOV, path: 'fov' }));
 
-    const letterboxRow = this._mkFxSwitchRow('21∶9 letterbox', {
-      inputAttrs: 'data-fx-camera="letterbox"',
-      onChange: (e) => {
-        const on = /** @type {HTMLInputElement} */ (e.target).checked;
-        this.scene.setCinematicLetterbox(on);
-        this.showToast(on ? 'Letterbox on' : 'Letterbox off');
-      },
-    });
-    camList.append(letterboxRow);
-
-    const orbitWrap = document.createElement('div');
-    orbitWrap.className = 'orby-mobile-fx-orbit';
-    orbitWrap.innerHTML = '<span class="orby-mobile-fx-orbit__label">Auto-orbit</span>';
-    const orbitGroup = document.createElement('div');
-    orbitGroup.className = 'orby-mobile-fx-orbit__group';
-    orbitGroup.setAttribute('role', 'group');
-    orbitGroup.setAttribute('aria-label', 'Auto-orbit speed');
-    for (const mode of /** @type {const} */ (['off', 'slow', 'fast'])) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'orby-mobile-fx-orbit__btn';
-      btn.dataset.fxOrbit = mode;
-      btn.textContent = mode === 'off' ? 'Off' : mode === 'slow' ? 'Slow' : 'Fast';
-      btn.addEventListener('click', () => {
-        this.scene.setAutoOrbit(mode);
-        this._syncOrbitUi(mode);
-        this.showToast(mode === 'off' ? 'Orbit off' : `Orbit ${mode}`);
-      });
-      orbitGroup.append(btn);
-    }
-    orbitWrap.append(orbitGroup);
-    camList.append(orbitWrap);
-
     const resetCamBtn = document.createElement('button');
     resetCamBtn.type = 'button';
     resetCamBtn.className = 'orby-mobile-fx-reset-cam';
@@ -220,13 +183,44 @@ export class MobileShell {
     this._syncFxControlsUi();
   }
 
+  /** @param {HTMLInputElement} slider */
+  _updateSliderFill(slider) {
+    if (!slider || slider.type !== 'range') return;
+    const min = parseFloat(slider.min) || 0;
+    const max = parseFloat(slider.max) || 100;
+    const value = parseFloat(slider.value) || 0;
+    const isCentered = min < 0 && max > 0;
+    if (isCentered) {
+      const center = 0;
+      const range = max - min;
+      const centerPercent = ((center - min) / range) * 100;
+      if (value === center) {
+        slider.style.setProperty('--slider-fill-start', `${centerPercent}%`);
+        slider.style.setProperty('--slider-fill-end', `${centerPercent}%`);
+      } else if (value > center) {
+        const valuePercent = ((value - min) / range) * 100;
+        slider.style.setProperty('--slider-fill-start', `${centerPercent}%`);
+        slider.style.setProperty('--slider-fill-end', `${valuePercent}%`);
+      } else {
+        const valuePercent = ((value - min) / range) * 100;
+        slider.style.setProperty('--slider-fill-start', `${valuePercent}%`);
+        slider.style.setProperty('--slider-fill-end', `${centerPercent}%`);
+      }
+      return;
+    }
+    const range = max - min;
+    const fillPercent = range > 0 ? ((value - min) / range) * 100 : 0;
+    slider.style.setProperty('--slider-fill-start', '0%');
+    slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
+  }
+
   /** @param {{ path: string, label: string, min: number, max: number, step: number, format: (v: number) => string, defaultValue?: number }} def */
   _mkFxSlider(def) {
     const row = document.createElement('label');
-    row.className = 'orby-mobile-fx-grade';
+    row.className = 'orby-mobile-fx-grade slider-line';
     const initial = def.defaultValue ?? def.min;
     row.innerHTML = `
-      <span class="orby-mobile-fx-grade__label">${def.label}</span>
+      <span class="orby-mobile-fx-grade__label slider-line-label">${def.label}</span>
       <input type="range" data-fx-path="${def.path}" min="${def.min}" max="${def.max}" step="${def.step}" value="${initial}" />
       <span class="orby-mobile-fx-grade__value" data-fx-value="${def.path}"></span>
     `;
@@ -235,8 +229,10 @@ export class MobileShell {
     input?.addEventListener('input', () => {
       const value = Number(input.value);
       if (output) output.textContent = def.format(value);
+      this._updateSliderFill(input);
       this._onFxManualAdjust(def.path, value);
     });
+    if (input instanceof HTMLInputElement) this._updateSliderFill(input);
     return row;
   }
 
@@ -258,9 +254,9 @@ export class MobileShell {
   /** @param {typeof MOBILE_FX_LENS_ROWS[number]} row */
   _mkFxLensSlider(row) {
     const el = document.createElement('label');
-    el.className = 'orby-mobile-fx-grade';
+    el.className = 'orby-mobile-fx-grade slider-line';
     el.innerHTML = `
-      <span class="orby-mobile-fx-grade__label">${row.label}</span>
+      <span class="orby-mobile-fx-grade__label slider-line-label">${row.label}</span>
       <input
         type="range"
         data-fx-lens="${row.sliderPath}"
@@ -276,8 +272,10 @@ export class MobileShell {
     input?.addEventListener('input', () => {
       const value = Number(input.value);
       if (output) output.textContent = row.format(value);
+      if (input instanceof HTMLInputElement) this._updateSliderFill(input);
       this._onFxLensAdjust(row, value);
     });
+    if (input instanceof HTMLInputElement) this._updateSliderFill(input);
     return el;
   }
 
@@ -297,12 +295,6 @@ export class MobileShell {
     }
   }
 
-  _syncOrbitUi(mode) {
-    this.root.querySelectorAll('[data-fx-orbit]').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.getAttribute('data-fx-orbit') === mode);
-    });
-  }
-
   _syncFxControlsUi() {
     const snap = this.scene.getFxSnapshot();
     const state = snap.state ?? {};
@@ -319,6 +311,7 @@ export class MobileShell {
       }
       if (typeof value === 'number') {
         el.value = String(value);
+        this._updateSliderFill(el);
         const output = this.root.querySelector(`[data-fx-value="${path}"]`);
         if (output instanceof HTMLElement) {
           if (path === 'camera.temperature') {
@@ -348,17 +341,12 @@ export class MobileShell {
       if (!(el instanceof HTMLInputElement)) continue;
       const value = getMobileLensSliderUiValue(state, row);
       el.value = String(value);
+      this._updateSliderFill(el);
       const output = this.root.querySelector(`[data-fx-lens-value="${row.sliderPath}"]`);
       if (output instanceof HTMLElement) {
         output.textContent = row.format(value);
       }
     }
-
-    const letterbox = this.root.querySelector('[data-fx-camera="letterbox"]');
-    if (letterbox instanceof HTMLInputElement) {
-      letterbox.checked = snap.letterbox;
-    }
-    this._syncOrbitUi(snap.autoOrbit);
   }
 
   /** @deprecated */
@@ -379,10 +367,6 @@ export class MobileShell {
     });
 
     this.root.addEventListener('click', (e) => {
-      if (this._suppressPresetClick) {
-        this._suppressPresetClick = false;
-        return;
-      }
       const pick = e.target.closest('.orby-mobile-preset');
       if (!pick) return;
       const panel = pick.closest('[data-panel]');
@@ -393,7 +377,7 @@ export class MobileShell {
       }
     });
 
-    this._bindHdriLongPress();
+    this._bindHdriControls();
 
     for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
       const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
@@ -443,143 +427,61 @@ export class MobileShell {
       const t = e.target;
       if (!(t instanceof Element)) return;
       if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock')) return;
-      this._dismissHdriBrightness();
       this.setSheetState('closed');
     });
   }
 
-  _bindHdriLongPress() {
-    const track = this.root.querySelector('[data-rail-track="light"]');
-    if (!track) return;
-
-    track.addEventListener('pointerdown', (e) => this._onHdriPresetPointerDown(e));
-    track.addEventListener('pointermove', (e) => this._onHdriPresetPointerMove(e));
-    track.addEventListener('pointerup', (e) => this._onHdriPresetPointerUp(e));
-    track.addEventListener('pointercancel', (e) => this._onHdriPresetPointerUp(e));
-
+  _bindHdriControls() {
     this._hdriBrightnessInput?.addEventListener('input', () => {
       const value = Number(this._hdriBrightnessInput?.value ?? MOBILE_HDRI_STRENGTH_DEFAULT);
+      if (this._hdriBrightnessInput instanceof HTMLInputElement) {
+        this._updateSliderFill(this._hdriBrightnessInput);
+      }
       if (this._hdriBrightnessValue instanceof HTMLElement) {
         this._hdriBrightnessValue.textContent = value.toFixed(1);
       }
       this.scene.setHdriStrength(value);
     });
 
-    this._hdriBrightnessInput?.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
+    this._hdriBlurInput?.addEventListener('input', () => {
+      const value = Number(this._hdriBlurInput?.value ?? 0);
+      if (this._hdriBlurInput instanceof HTMLInputElement) {
+        this._updateSliderFill(this._hdriBlurInput);
+      }
+      if (this._hdriBlurValue instanceof HTMLElement) {
+        this._hdriBlurValue.textContent = value.toFixed(2);
+      }
+      this.scene.setHdriBlurriness(value);
     });
   }
 
-  /** @param {PointerEvent} e */
-  _onHdriPresetPointerDown(e) {
-    if (e.button !== 0) return;
-    const btn = e.target.closest('.orby-mobile-preset[data-hdri]');
-    if (!(btn instanceof HTMLElement)) return;
-
-    this._clearHdriPressTimer();
-    this._hdriPress = {
-      timer: setTimeout(() => {
-        this._hdriLongPressTriggered = true;
-        this._hdriPress = null;
-        this._openHdriBrightness(btn);
-      }, HDRI_BRIGHTNESS_LONG_PRESS_MS),
-      x: e.clientX,
-      y: e.clientY,
-      btn,
-    };
-    btn.setPointerCapture?.(e.pointerId);
+  _syncHdriSelectionFromScene() {
+    const presetId = this.scene.getHdriPresetId();
+    const item = MOBILE_HDRI.find((h) => h.id === presetId) ?? MOBILE_HDRI[0];
+    this.selection.light = item;
   }
 
-  /** @param {PointerEvent} e */
-  _onHdriPresetPointerMove(e) {
-    if (!this._hdriPress) return;
-    const dx = e.clientX - this._hdriPress.x;
-    const dy = e.clientY - this._hdriPress.y;
-    if (Math.hypot(dx, dy) > HDRI_BRIGHTNESS_MOVE_CANCEL_PX) {
-      this._clearHdriPressTimer();
-    }
-  }
-
-  /** @param {PointerEvent} e */
-  _onHdriPresetPointerUp(e) {
-    const triggered = this._hdriLongPressTriggered;
-    if (this._hdriPress) {
-      const btn = this._hdriPress.btn;
-      this._clearHdriPressTimer();
-      btn.releasePointerCapture?.(e.pointerId);
-    }
-    if (triggered) {
-      this._suppressPresetClick = true;
-      this._hdriLongPressTriggered = false;
-    }
-  }
-
-  _clearHdriPressTimer() {
-    if (!this._hdriPress) return;
-    clearTimeout(this._hdriPress.timer);
-    this._hdriPress = null;
-  }
-
-  /** @param {HTMLElement} btn */
-  _openHdriBrightness(btn) {
-    this._suppressPresetClick = true;
-    navigator.vibrate?.(12);
-
-    const id = btn.getAttribute('data-hdri');
-    if (id && id !== this.selection.light.id) {
-      this._select('light', btn);
-    }
-
-    this._hdriBrightnessAnchor = btn;
-    this._syncHdriBrightnessUi();
-    this._positionHdriBrightness(btn);
-
-    if (this._hdriBrightnessEl instanceof HTMLElement) {
-      this._hdriBrightnessEl.hidden = false;
-      this._hdriBrightnessEl.classList.add('is-visible');
-    }
-
-    btn.classList.add('is-brightness-open');
-    this.root.querySelectorAll('.orby-mobile-preset[data-hdri]').forEach((el) => {
-      if (el !== btn) el.classList.remove('is-brightness-open');
-    });
-  }
-
-  _dismissHdriBrightness() {
-    if (this._hdriBrightnessEl instanceof HTMLElement) {
-      this._hdriBrightnessEl.hidden = true;
-      this._hdriBrightnessEl.classList.remove('is-visible');
-    }
-    this._hdriBrightnessAnchor = null;
-    this.root.querySelectorAll('.orby-mobile-preset.is-brightness-open').forEach((el) => {
-      el.classList.remove('is-brightness-open');
-    });
-  }
-
-  _syncHdriBrightnessUi() {
+  _syncHdriControlsUi() {
     const strength = this.scene.getHdriStrength();
+    const blur = this.scene.getHdriBlurriness();
+
     if (this._hdriBrightnessInput instanceof HTMLInputElement) {
       this._hdriBrightnessInput.min = '0';
       this._hdriBrightnessInput.max = String(MOBILE_HDRI_STRENGTH_MAX);
       this._hdriBrightnessInput.value = String(strength);
+      this._updateSliderFill(this._hdriBrightnessInput);
     }
     if (this._hdriBrightnessValue instanceof HTMLElement) {
       this._hdriBrightnessValue.textContent = strength.toFixed(1);
     }
-  }
 
-  /** @param {HTMLElement} anchor */
-  _positionHdriBrightness(anchor) {
-    if (!(this._hdriBrightnessEl instanceof HTMLElement)) return;
-    const rect = anchor.getBoundingClientRect();
-    const popW = this._hdriBrightnessEl.offsetWidth || 220;
-    const left = Math.min(
-      Math.max(12, rect.left + rect.width / 2 - popW / 2),
-      window.innerWidth - popW - 12,
-    );
-    const bottom = window.innerHeight - rect.top + 10;
-    this._hdriBrightnessEl.style.left = `${left}px`;
-    this._hdriBrightnessEl.style.bottom = `${bottom}px`;
+    if (this._hdriBlurInput instanceof HTMLInputElement) {
+      this._hdriBlurInput.value = String(blur);
+      this._updateSliderFill(this._hdriBlurInput);
+    }
+    if (this._hdriBlurValue instanceof HTMLElement) {
+      this._hdriBlurValue.textContent = blur.toFixed(2);
+    }
   }
 
   /** @param {MobileTab} tab */
@@ -596,6 +498,11 @@ export class MobileShell {
     if (tab === 'fx') {
       this.setSheetState('expanded');
       return;
+    }
+    if (tab === 'light') {
+      this._syncHdriSelectionFromScene();
+      this._syncHdriControlsUi();
+      this._syncSelectionUi();
     }
     this.setSheetState('peek');
     requestAnimationFrame(() => {
@@ -624,9 +531,6 @@ export class MobileShell {
 
   /** @param {SheetState} state */
   setSheetState(state) {
-    if (state === 'closed') {
-      this._dismissHdriBrightness();
-    }
     this.sheetState = state;
     this.root.dataset.sheet = state;
     this._syncDockTabState();
@@ -647,9 +551,6 @@ export class MobileShell {
     this.selection[tab] = item;
 
     if (tab === 'light') {
-      if (this._hdriBrightnessEl && !this._hdriBrightnessEl.hidden) {
-        this._dismissHdriBrightness();
-      }
       void this.scene.setHdri(item.id);
     }
     if (tab === 'style') {
@@ -672,7 +573,13 @@ export class MobileShell {
     const elRect = el.getBoundingClientRect();
     const anchorX = trackRect.left + MOBILE_PRESET_RAIL_INSET;
     const delta = elRect.left - anchorX;
+    this._suppressRailLeadingSelection = true;
+    clearTimeout(this._railSuppressTimer);
     track.scrollTo({ left: track.scrollLeft + delta, behavior });
+    this._railSuppressTimer = setTimeout(() => {
+      this._suppressRailLeadingSelection = false;
+      this._railSuppressTimer = null;
+    }, 180);
   }
 
   /** @param {PresetTab} tab */
@@ -699,6 +606,7 @@ export class MobileShell {
 
   /** @param {PresetTab} tab */
   _applyRailLeadingSelection(tab) {
+    if (this._suppressRailLeadingSelection) return;
     const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
     if (!(track instanceof HTMLElement)) return;
     const leading = this._getRailLeadingPreset(track);
