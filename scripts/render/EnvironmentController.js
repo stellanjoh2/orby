@@ -19,6 +19,8 @@ export class EnvironmentController {
     onEnvironmentMapUpdated = null,
     /** When HDRI is not drawing the backdrop, hand background back to BackgroundController. */
     onReleaseSceneBackground = null,
+    /** When false, HDRI still lights the scene but does not set `scene.background`. */
+    shouldDrawHdriBackdrop = null,
   } = {}) {
     this.scene = scene;
     this.renderer = renderer;
@@ -33,6 +35,7 @@ export class EnvironmentController {
     this.rotation = rotation;
     this.fallbackColor = fallbackColor;
     this.onReleaseSceneBackground = onReleaseSceneBackground;
+    this.shouldDrawHdriBackdrop = shouldDrawHdriBackdrop;
 
     this.textureLoader = new THREE.TextureLoader();
     this.hdriLoader = new RGBELoader();
@@ -457,7 +460,12 @@ export class EnvironmentController {
     }
     this._notifyEnvironmentMapUpdated(envTexture, envIntensity);
 
-    if (this.backgroundEnabled && activeTexture) {
+    const drawHdriBackdrop =
+      this.backgroundEnabled
+      && activeTexture
+      && (typeof this.shouldDrawHdriBackdrop !== 'function' || this.shouldDrawHdriBackdrop());
+
+    if (drawHdriBackdrop) {
       let bgTexture = rotatedSource || activeTexture;
       if (this.blurriness > 0 && envTexture) {
         bgTexture = envTexture;

@@ -239,6 +239,8 @@ export class StateStore {
         liftCrush: 0,
         /** Viewport bloom shortcut (independent of Camera & FX bloom.enabled). */
         viewportBloom: false,
+        /** Preset-specific sliders — e.g. sketch strokeWidth / rasterSize. */
+        presetParams: {},
       },
       fresnel: {
         enabled: false,

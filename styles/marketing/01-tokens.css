@@ -131,7 +131,7 @@
   );
   --orby-marketing-split-media-crop-scale: 1;
 
-  --orby-marketing-bg: var(--orby-app-bg, var(--orby-black, #080808));
+  --orby-marketing-bg: var(--orby-black, #080808);
   --orby-marketing-text: rgba(255, 255, 255, 0.88);
   --orby-marketing-text-dim: rgba(255, 255, 255, 0.58);
   /* Body copy — Geist Light, same as legal About manifesto */

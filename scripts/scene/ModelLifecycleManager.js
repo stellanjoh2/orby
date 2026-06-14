@@ -19,6 +19,7 @@ import {
   fbxMaterialReportModalTitle,
 } from '../import/fbxMaterialReport.js';
 import { isBoneOnlyArmature } from '../import/bvhArmatureBounds.js';
+import { deferSpinnerPaint } from '../utils/viewportLoadSpinner.js';
 
 /** Modal copy after loading `.fbx` — FBX material/textures path is still WIP in Orby. */
 const FBX_IMPORT_WIP_ALERT_BODY =
@@ -423,8 +424,7 @@ export class ModelLifecycleManager {
   async loadFile(file, options = {}) {
     const s = this.scene;
     if (!file) return;
-    await s.ui.ensureStudioUiReady();
-    await s.ensureStudioReady();
+
     const previousFile = s.currentFile;
     const hadExistingModel = !!s.currentModel;
 
@@ -432,18 +432,25 @@ export class ModelLifecycleManager {
     s.ui.updateTitle(file.name);
     s.ui.updateTopBarDetail(`${file.name} — Loading…`);
     s.ui.setDropzoneVisible(false);
-    await s.syncViewportSize();
-    s.startRenderLoop();
 
-    const isFirstLoad = s.isFirstModelLoad;
-    if (isFirstLoad) {
-      const startExposure = 0.1;
-      s.autoExposureController?.setExposure(startExposure);
-      s.eventBus.emit('scene:exposure', startExposure);
-    }
-
+    s.ui.setLoadSpinnerStatusPrefix?.('Loading');
     s.ui.beginLoadSpinner();
+    s.ui.beginLoadSpinnerElapsed?.();
+    await deferSpinnerPaint();
+
     try {
+      await s.ui.ensureStudioUiReady();
+      await s.ensureStudioReady();
+      await s.syncViewportSize();
+      s.startRenderLoop();
+
+      const isFirstLoad = s.isFirstModelLoad;
+      if (isFirstLoad) {
+        const startExposure = 0.1;
+        s.autoExposureController?.setExposure(startExposure);
+        s.eventBus.emit('scene:exposure', startExposure);
+      }
+
       const svgExtrudeState = s.stateStore.getState()?.svgExtrude || {};
       const asset = await s.modelLoader.loadFile(file, {
         svgExtrudeDepth: svgExtrudeState.depth,
@@ -500,13 +507,19 @@ export class ModelLifecycleManager {
   async loadFileBundle(files) {
     const s = this.scene;
     if (!files?.length) return;
-    await s.ui.ensureStudioUiReady();
-    await s.ensureStudioReady();
+
     s.ui.setDropzoneVisible(false);
-    await s.syncViewportSize();
-    s.startRenderLoop();
+    s.ui.setLoadSpinnerStatusPrefix?.('Loading');
     s.ui.beginLoadSpinner();
+    s.ui.beginLoadSpinnerElapsed?.();
+    await deferSpinnerPaint();
+
     try {
+      await s.ui.ensureStudioUiReady();
+      await s.ensureStudioReady();
+      await s.syncViewportSize();
+      s.startRenderLoop();
+
       const asset = await s.modelLoader.loadFileBundle(files);
       const sourceFile = asset.sourceFile ?? files[0]?.file;
       if (sourceFile) {

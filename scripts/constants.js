@@ -1,6 +1,7 @@
 // Application-wide constants
 
 import { COLOR_CHECKER_MESH_WIDTH } from './scene/ColorCheckerMesh.js';
+import { resolveCreativeLookSketchParams } from './render/creativeLookSketchArt.js';
 
 /** Default near-black — app surfaces, lime CTAs, letterbox mattes, UI chrome. */
 export const ORBY_BLACK = '#080808';
@@ -524,9 +525,78 @@ export function isCreativeLookViewportPostActive(state) {
   return !!cl.enabled && !!cl.viewportBloom && !tier.forceBloomOff;
 }
 
-/** Cam/FX bloom sliders stay usable while Shader Lab viewport bloom is on. */
+/**
+ * Shader Lab Vectrex — phosphor persistence post; Cam/FX bloom when viewportBloom is on.
+ * @param {{ creativeLook?: { enabled?: boolean, preset?: string }, renderQuality?: string }} state
+ */
+export function isCreativeLookVectrexPostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  return preset === 'vectrex';
+}
+
+/**
+ * Shader Lab Watercolour — Kuwahara painterly post; auto-on with preset.
+ * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
+ */
+export function isCreativeLookWatercolourPostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  return preset === 'watercolour';
+}
+
+/**
+ * Shader Lab Sketch — stipple grain + ink outline post; auto-on with preset.
+ * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
+ */
+export function isCreativeLookSketchPostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  if (preset !== 'sketch' && preset !== 'sketch-colour') return false;
+  const params = resolveCreativeLookSketchParams(cl.presetParams, cl.patternScale);
+  return params.rasterSize > 0;
+}
+
+/** @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state */
+export function isCreativeLookSketchColourPostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  return preset === 'sketch-colour';
+}
+
+/** Flat-post Shader Lab presets that can run Cam/FX bloom in the ascii terminal stack. */
+const SHADER_LAB_FLAT_POST_PRESETS = new Set([
+  'ascii-art',
+  'ascii-art-2',
+  'ascii-art-3',
+  'ega-pixel',
+  'c64-pixel',
+  'gameboy-pixel',
+  'gba-pixel',
+  'nes-pixel',
+  'megadrive-pixel',
+  'intellivision-pixel',
+  'apple2-pixel',
+]);
+
+/** Cam/FX bloom sliders — Shader Lab viewport bloom, or flat-post Cam/FX bloom stack. */
 export function isBloomTuningActive(state) {
-  return !!state?.bloom?.enabled || isCreativeLookViewportPostActive(state);
+  const cl = state?.creativeLook ?? {};
+  if (cl.enabled !== true) {
+    return !!state?.bloom?.enabled;
+  }
+  if (cl.viewportBloom) {
+    return true;
+  }
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  if (SHADER_LAB_FLAT_POST_PRESETS.has(preset)) {
+    return isBloomPipelineActive(state);
+  }
+  return false;
 }
 
 /** Anamorphic streak runs when bloom output exists (Cam/FX bloom or Shader Lab viewport bloom). */

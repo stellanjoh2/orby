@@ -63,17 +63,37 @@ import {
   VGA_DOS_PALETTE_COUNT,
   getVgaDosPaletteTexture,
 } from './creativeLookVgaDos3dArt.js';
+import {
+  creativeWatercolourVertexDrift,
+  creativeWatercolourWobbleScale,
+  WATERCOLOUR_BAND_INK_STRENGTH,
+  WATERCOLOUR_LIGHT_BANDS,
+  WATERCOLOUR_PREPASS_SOFT_BLEND,
+  WATERCOLOUR_SHADE_CEIL,
+  WATERCOLOUR_SHADE_FLOOR,
+} from './creativeLookWatercolourArt.js';
+import {
+  SKETCH_FRAGMENT,
+  SKETCH_PATTERN_SCALE_MAX,
+  SKETCH_PATTERN_SCALE_MIN,
+  creativeSketchVertexDrift,
+  creativeSketchWobbleScale,
+  normalizeCreativeLookSketchPatternScale,
+} from './creativeLookSketchArt.js';
+import {
+  SKETCH_COLOUR_FRAGMENT,
+} from './creativeLookSketchColourArt.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, vectrex, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -99,6 +119,10 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'ps2-crush',
   'psx',
   'vga-dos-3d',
+  'vectrex',
+  'watercolour',
+  'sketch',
+  'sketch-colour',
   'chrome',
   'glass',
   'spectral-storm',
@@ -122,6 +146,9 @@ export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
 /** Default Shader Lab intensity for Scanline Hologram (strength slider). */
 export const SCANLINE_HOLOGRAM_DEFAULT_INTENSITY = 0.25;
 
+/** Default Shader Lab scale for Vectrex (analog beam wobble amount). */
+export const VECTREX_DEFAULT_PATTERN_SCALE = 0.5;
+
 /** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
 export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
 
@@ -131,16 +158,42 @@ export const CREATIVE_PSX_PATTERN_SCALE = 2.5;
 /** Fixed creative Scale for VGA/DOS 3D — moderate decimation between PS2 and PSX. */
 export const CREATIVE_VGA_DOS_3D_PATTERN_SCALE = 2.2;
 
-/** Wire Pulse / Vertex Points need per-triangle barycentrics (non-indexed triangle soup). */
+/** Wire Pulse / Vertex Points / Vectrex need per-triangle barycentrics (non-indexed triangle soup). */
 export function creativeLookUsesWirePulseGeometry(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'wire-pulse' || id === 'vertex-points';
+  return id === 'wire-pulse' || id === 'vertex-points' || id === 'vectrex';
 }
 
-/** Wire Pulse and Vertex Points draw in the transparent pass (see-through holographic shell). */
+/** Wire Pulse, Vertex Points, and Vectrex draw in the transparent pass. */
 export function creativeLookForceTransparentDraw(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'wire-pulse' || id === 'vertex-points';
+  return id === 'wire-pulse' || id === 'vertex-points' || id === 'vectrex';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isVectrexCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'vectrex';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isWatercolourCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'watercolour';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isSketchCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'sketch';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isSketchColourCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'sketch-colour';
+}
+
+/** B&W Sketch + coloured Sketch Colour — shared geometry, sliders, and post stack. */
+export function isSketchFamilyCreativeLookPreset(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return id === 'sketch' || id === 'sketch-colour';
 }
 
 /** @param {number} side @param {number} shaderAlpha */
@@ -211,6 +264,8 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'scanline-hologram',
   'wire-pulse',
   'vertex-points',
+  'vectrex',
+  'watercolour',
 ]);
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -221,7 +276,7 @@ export function creativeLookAllowsTransparency(preset) {
 /** Screen-space Bayer dither — no shadow-map vertex chunks (avoids compile issues on thin alpha shells). */
 export function creativeLookPresetUsesShadowReceive(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id !== 'ega-pixel' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3';
+  return id !== 'ega-pixel' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3' && id !== 'watercolour' && id !== 'sketch' && id !== 'sketch-colour' && id !== 'vectrex';
 }
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -425,6 +480,32 @@ export function creativeLookDefaultIntensity(preset) {
   return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
+/** Preset-specific scale when switching presets, or `null` to keep the current scale. */
+export function creativeLookDefaultPatternScale(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'vectrex') return VECTREX_DEFAULT_PATTERN_SCALE;
+  return null;
+}
+
+/** Shader Lab Scale slider bounds per preset (Sketch uses bespoke Stroke / Raster sliders). */
+export function creativeLookPatternScaleBounds(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  if (id === 'sketch' || id === 'sketch-colour') {
+    return { min: SKETCH_PATTERN_SCALE_MIN, max: SKETCH_PATTERN_SCALE_MAX };
+  }
+  return { min: 0.02, max: 5 };
+}
+
+/** Clamp stored Scale to preset bounds; fixed-grid presets return their locked value. */
+export function normalizeCreativeLookPatternScale(preset, value) {
+  const fixed = creativeLookFixedPatternScale(preset);
+  if (fixed != null) return fixed;
+  const { min, max } = creativeLookPatternScaleBounds(preset);
+  const ps = Number(value);
+  if (!Number.isFinite(ps)) return 1;
+  return THREE.MathUtils.clamp(ps, min, max);
+}
+
 /** Shadow lift (+) vs black crush (−) for Shader Lab output grading. */
 export const CREATIVE_LOOK_LIFT_CRUSH_MIN = -1;
 export const CREATIVE_LOOK_LIFT_CRUSH_MAX = 1;
@@ -570,8 +651,12 @@ export function createCreativeLookShadowUniforms(options = {}) {
 export function syncCreativeLookShadowTint(material, options = {}) {
   if (!material?.isShaderMaterial || !material.userData?.orbyCreativeLook) return;
   if (!creativeLookPresetUsesShadowReceive(material.userData.orbyCreativeLook)) {
-    if (material.lights) {
-      material.lights = false;
+    if (
+      material.lights
+      || material.uniforms?.directionalLightShadows
+      || material.uniforms?.ambientLightColor
+    ) {
+      clearCreativeLookLightingUniforms(material);
       material.needsUpdate = true;
     }
     return;
@@ -596,12 +681,21 @@ export function syncCreativeLookShadowTint(material, options = {}) {
  */
 export function attachCreativeLookDepthMaterial(material) {
   if (!material?.isShaderMaterial) return;
-  ensureCreativeLookLightingUniforms(material);
   if (!material.customDepthMaterial) {
     material.customDepthMaterial = new THREE.MeshDepthMaterial({
       depthPacking: THREE.RGBADepthPacking,
     });
   }
+}
+
+/** Drop merged `UniformsLib.lights` when a preset does not receive shadow maps. */
+export function clearCreativeLookLightingUniforms(material) {
+  if (!material?.isShaderMaterial) return;
+  material.lights = false;
+  for (const key of Object.keys(THREE.UniformsLib.lights)) {
+    delete material.uniforms?.[key];
+  }
+  delete material.uniforms?.receiveShadow;
 }
 
 /**
@@ -703,7 +797,7 @@ export function normalizeCreativeLookPreset(preset) {
 /** @param {CreativeLookPreset | string | undefined} preset */
 export function creativeLookUsesRetroDecimation(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'ps2-crush' || id === 'psx' || id === 'vga-dos-3d';
+  return id === 'ps2-crush' || id === 'psx' || id === 'vga-dos-3d' || id === 'watercolour' || id === 'sketch' || id === 'sketch-colour';
 }
 
 /** Fixed pattern scale for retro console presets and ASCII Art, or `null` if live scale applies. */
@@ -760,8 +854,12 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'scanline-hologram' ||
     id === 'wire-pulse' ||
     id === 'vertex-points' ||
+    id === 'vectrex' ||
     id === 'ps2-crush' ||
-    id === 'psx'
+    id === 'psx' ||
+    id === 'watercolour' ||
+    id === 'sketch' ||
+    id === 'sketch-colour'
   );
 }
 
@@ -819,6 +917,10 @@ export function formatCreativeLookPresetLabel(preset) {
     'ps2-crush': 'PS2 Crush',
     psx: 'PSX',
     'vga-dos-3d': 'VGA/DOS 3D',
+    vectrex: 'Vectrex',
+    watercolour: 'Watercolour',
+    sketch: 'Sketch',
+    'sketch-colour': 'Sketch Colour',
     chrome: 'True Chrome',
     glass: 'Glass',
   });
@@ -1251,6 +1353,42 @@ void main() {
 }
 `;
 
+/** Colormap prepass — soft wrap + light bands (fuzzy base, some edge hooks). */
+const WATERCOLOUR_FRAGMENT = /* glsl */ `
+varying vec3 vWorldNormal;
+varying vec3 vTexAffine;
+uniform vec3 uLightDir;
+uniform vec3 uTint;
+uniform sampler2D uMap;
+uniform float uHasMap;
+uniform float uOpacity;
+
+void main() {
+  vec3 baseCol = clamp(uTint, vec3(0.0), vec3(1.0));
+  float mapAlpha = 1.0;
+  if (uHasMap > 0.5) {
+    vec2 uvAff = vTexAffine.xy / max(vTexAffine.z, 1e-5);
+    vec4 mapSample = texture2D(uMap, uvAff);
+    baseCol = mapSample.rgb;
+    mapAlpha = mapSample.a;
+  }
+
+  vec3 N = normalize(vWorldNormal);
+  vec3 L = normalize(uLightDir);
+  float ndl = max(dot(N, L), 0.0);
+  float bands = ${WATERCOLOUR_LIGHT_BANDS.toFixed(1)};
+  float stepped = floor(ndl * bands) / max(bands - 1.0, 1.0);
+  float wrap = smoothstep(0.0, 1.0, ndl * 0.3 + 0.7);
+  float shadeT = mix(stepped, wrap, ${WATERCOLOUR_PREPASS_SOFT_BLEND.toFixed(2)});
+  float shade = mix(${WATERCOLOUR_SHADE_FLOOR.toFixed(2)}, ${WATERCOLOUR_SHADE_CEIL.toFixed(2)}, shadeT);
+  float bandInk = abs(fract(ndl * bands - 0.001) - 0.5) * 2.0;
+  shade *= 1.0 - smoothstep(0.84, 1.0, bandInk) * ${WATERCOLOUR_BAND_INK_STRENGTH.toFixed(3)};
+  vec3 col = baseCol * shade;
+
+  gl_FragColor = vec4(col, uOpacity * mapAlpha);
+}
+`;
+
 /** Shared flat-post mesh vertex (EGA, C64, Game Boy, etc.). */
 const PIXEL_ART_VERTEX = /* glsl */ `
 #include <common>
@@ -1507,6 +1645,112 @@ void main() {
   #include <skinning_vertex>
   ${CREATIVE_LOOK_WORLD_POSITION_VS}
   #include <shadowmap_vertex>
+
+  vWorldPosition = worldPosition.xyz;
+
+  vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+  vec4 clip = projectionMatrix * mvPosition;
+  vTexAffine = vec3(uv * clip.w, clip.w);
+
+  float snap = max(uSnapGrid, 16.0);
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float jitter = mix(0.08, 0.38, max(d, 0.0)) * (1.0 - max(-d, 0.0) * 0.4);
+  float t = uTime;
+  vec2 drift = vec2(
+    sin(t * 1.65 + transformed.x * 2.85 + transformed.z * 1.4),
+    cos(t * 1.35 + transformed.y * 2.35 + transformed.x * 0.9)
+  ) * jitter;
+
+  vec2 ndc = clip.xy / max(abs(clip.w), 1e-5);
+  ndc = (floor(ndc * snap + drift) + 0.5) / snap;
+  clip.xy = ndc * clip.w;
+
+  gl_Position = clip;
+}
+`;
+
+/** Watercolour wobble — smooth clip-space drift, no screen-pixel grid snap. */
+const WATERCOLOUR_VERTEX = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform float uTime;
+uniform float uWobbleScale;
+uniform float uIntensity;
+
+void main() {
+  #include <uv_vertex>
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+
+  vWorldPosition = worldPosition.xyz;
+
+  vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+  vec4 clip = projectionMatrix * mvPosition;
+  vTexAffine = vec3(uv * clip.w, clip.w);
+
+  float wobble = max(uWobbleScale, 48.0);
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float d = inten - 1.0;
+  float jitter = mix(0.06, 0.28, max(d, 0.0)) * (1.0 - max(-d, 0.0) * 0.4);
+  float t = uTime;
+  vec2 drift = vec2(
+    sin(t * 1.65 + transformed.x * 2.85 + transformed.z * 1.4),
+    cos(t * 1.35 + transformed.y * 2.35 + transformed.x * 0.9)
+  ) * jitter;
+
+  vec2 ndc = clip.xy / max(abs(clip.w), 1e-5);
+  ndc += drift * (2.2 / wobble);
+  clip.xy = ndc * clip.w;
+
+  gl_Position = clip;
+}
+`;
+
+/** PSX-style snap/drift without shadow-map varyings (watercolour uses fake lighting in the fragment). */
+const RETRO_CONSOLE_VERTEX_NO_SHADOW = /* glsl */ `
+#include <common>
+#include <uv_pars_vertex>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+varying vec3 vTexAffine;
+uniform float uTime;
+uniform float uSnapGrid;
+uniform float uIntensity;
+
+void main() {
+  #include <uv_vertex>
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
 
   vWorldPosition = worldPosition.xyz;
 
@@ -1875,6 +2119,103 @@ void main() {
 }
 `;
 
+/** Vectrex P31 phosphor — Wire Pulse barycentrics + analog beam wobble. */
+const VECTREX_VERTEX = /* glsl */ `
+#include <common>
+#include <morphtarget_pars_vertex>
+#include <skinning_pars_vertex>
+#include <shadowmap_pars_vertex>
+
+attribute vec3 barycentric;
+varying vec3 vBarycentric;
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+
+void main() {
+  #include <beginnormal_vertex>
+  #include <morphnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+  #include <begin_vertex>
+  #include <morphtarget_vertex>
+  #include <skinning_vertex>
+
+  ${CREATIVE_LOOK_WORLD_POSITION_VS}
+  #include <shadowmap_vertex>
+  vWorldPosition = worldPosition.xyz;
+  vBarycentric = barycentric;
+
+  vec4 clip = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+  float sc = max(uPatternScale, 0.02);
+  float t = uTime;
+  // Analog beam jitter in screen space (after skinning/morph) — object-space wobble vanishes on animated rigs.
+  float wobblePx = sc * 0.0016 * clip.w;
+  float amp = mix(0.35, 2.6, clamp(sc / 2.0, 0.0, 1.0));
+  clip.x += sin(t * 47.0 + vWorldPosition.x * 14.0 + vWorldPosition.z * 9.0) * wobblePx * amp;
+  clip.y += cos(t * 53.0 + vWorldPosition.y * 12.0 + vWorldPosition.x * 6.0) * wobblePx * amp;
+  clip.x += sin(t * 17.3) * wobblePx * 0.35;
+  clip.y += cos(t * 19.1) * wobblePx * 0.28;
+
+  gl_Position = clip;
+}
+`;
+
+const VECTREX_FRAGMENT = /* glsl */ `
+varying vec3 vBarycentric;
+varying vec3 vWorldNormal;
+varying vec3 vWorldPosition;
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+uniform float uOpacity;
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 V = normalize(cameraPosition - vWorldPosition);
+  float ndv = max(dot(N, V), 0.0);
+  float fresnel = pow(1.0 - ndv, 2.35);
+
+  float inten = clamp(uIntensity, 0.0, 2.0);
+
+  vec3 bary = vBarycentric;
+  vec3 dBary = fwidth(bary);
+  float edgeWidth = mix(0.4, 3.4, inten * 0.5);
+  vec3 edgeAA = smoothstep(vec3(0.0), dBary * edgeWidth, bary);
+  float wireMask = 1.0 - min(min(edgeAA.x, edgeAA.y), edgeAA.z);
+
+  float db = max(max(dBary.x, dBary.y), dBary.z);
+  float cornerReach = mix(0.05, 0.48, inten * 0.5) * max(db * 6.0, 1e-5);
+  float va = smoothstep(1.0 - cornerReach, 1.0, bary.x);
+  float vb = smoothstep(1.0 - cornerReach, 1.0, bary.y);
+  float vc = smoothstep(1.0 - cornerReach, 1.0, bary.z);
+  float vertexMask = max(va, max(vb, vc));
+  vertexMask = pow(clamp(vertexMask, 0.0, 1.0), 1.25);
+
+  float beam = 0.86 + 0.14 * sin(dot(vWorldPosition, vec3(13.7, 7.3, 11.1)) * 3.6 + uTime * 2.0);
+
+  // P31 phosphor green — vivid beam, soft shoulder so brightness / persistence stay green.
+  vec3 wireIdle = vec3(0.022, 0.2, 0.05) * (0.55 + fresnel * 0.25);
+  vec3 wireHot = vec3(0.22, 0.9, 0.27);
+
+  vec3 col = vec3(0.0);
+  col += wireIdle * wireMask * beam;
+  col += wireHot * wireMask * beam * (0.74 + inten * 0.34);
+  col += wireHot * vertexMask * 0.46 * beam;
+
+  float peak = max(col.r, max(col.g, col.b));
+  col /= 1.0 + peak * 0.26;
+
+  float alpha = wireMask * (0.62 + inten * 0.18) + vertexMask * 0.28 + fresnel * 0.04;
+  alpha = clamp(alpha, 0.0, 1.0) * uOpacity;
+
+  gl_FragColor = vec4(col, alpha);
+}
+`;
+
 /** Vertex slip: horizontal band displacement in clip space (whole mesh slices shift sideways). */
 const SCANLINE_HOLOGRAM_VERTEX = /* glsl */ `
 #include <common>
@@ -2197,7 +2538,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     toneMapped: true,
   };
 
-  const finish = (mat, { shadows = true } = {}) => {
+  const finish = (mat, { shadows = true, castShadowDepth = shadows } = {}) => {
     if (mat.isShaderMaterial) {
       if (opts.skinning) mat.skinning = true;
       if (opts.morphTargets) mat.morphTargets = true;
@@ -2205,8 +2546,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     if ('outputColorSpace' in mat && THREE.LinearSRGBColorSpace) {
       mat.outputColorSpace = THREE.LinearSRGBColorSpace;
     }
-    if (mat.isShaderMaterial && shadows) {
+    if (mat.isShaderMaterial && castShadowDepth) {
       attachCreativeLookDepthMaterial(mat);
+    }
+    if (mat.isShaderMaterial && shadows) {
+      ensureCreativeLookLightingUniforms(mat);
     }
     return mat;
   };
@@ -2279,6 +2623,96 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     });
     mat.userData.orbyCreativeLook = 'toon';
     return finish(mat);
+  }
+
+  if (id === 'watercolour') {
+    const tint = diffuseTint ?? new THREE.Color(0xffffff);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uWobbleScale: { value: creativeWatercolourWobbleScale(patternScale) },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WATERCOLOUR_VERTEX,
+      fragmentShader: lookFragNoShadow(WATERCOLOUR_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.uniforms.uIntensity.value = creativeWatercolourVertexDrift(patternScale);
+    mat.userData.orbyCreativeLook = 'watercolour';
+    return finish(mat, { shadows: false, castShadowDepth: true });
+  }
+
+  if (id === 'sketch') {
+    const tint = diffuseTint ?? new THREE.Color(0xffffff);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const strokeWidth = Number.isFinite(opts.sketchStrokeWidth)
+      ? opts.sketchStrokeWidth
+      : patternScale;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uWobbleScale: { value: creativeSketchWobbleScale(strokeWidth) },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WATERCOLOUR_VERTEX,
+      fragmentShader: SKETCH_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.uniforms.uIntensity.value = creativeSketchVertexDrift(strokeWidth);
+    mat.userData.orbyCreativeLook = 'sketch';
+    return finish(mat, { shadows: false, castShadowDepth: true });
+  }
+
+  if (id === 'sketch-colour') {
+    const tint = diffuseTint ?? new THREE.Color(0xffffff);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const strokeWidth = Number.isFinite(opts.sketchStrokeWidth)
+      ? opts.sketchStrokeWidth
+      : patternScale;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uWobbleScale: { value: creativeSketchWobbleScale(strokeWidth) },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WATERCOLOUR_VERTEX,
+      fragmentShader: SKETCH_COLOUR_FRAGMENT,
+      ...commonMatOpts,
+    });
+    mat.uniforms.uIntensity.value = creativeSketchVertexDrift(strokeWidth);
+    mat.userData.orbyCreativeLook = 'sketch-colour';
+    return finish(mat, { shadows: false, castShadowDepth: true });
   }
 
   if (id === 'ega-pixel') {
@@ -2668,6 +3102,23 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     });
     mat.userData.orbyCreativeLook = 'vertex-points';
     return finish(mat);
+  }
+
+  if (id === 'vectrex') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: VECTREX_VERTEX,
+      fragmentShader: lookFragNoShadow(VECTREX_FRAGMENT),
+      ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
+    });
+    mat.userData.orbyCreativeLook = 'vectrex';
+    return finish(mat, { shadows: false, castShadowDepth: false });
   }
 
   if (id === 'glass') {

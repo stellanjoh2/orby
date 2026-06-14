@@ -21,16 +21,37 @@ import {
   creativeLookUsesRetroDecimation,
   creativeLookFixedPatternScale,
   creativeLookDefaultIntensity,
+  creativeLookDefaultPatternScale,
+  creativeLookPatternScaleBounds,
+  normalizeCreativeLookPatternScale,
   creativeLookPresetUsesShaderAnimation,
   isFlatPostCreativeLookPreset,
+  isWatercolourCreativeLookPreset,
+  isSketchCreativeLookPreset,
+  isSketchColourCreativeLookPreset,
+  isSketchFamilyCreativeLookPreset,
+  isVectrexCreativeLookPreset,
   normalizeCreativeLookIntensity,
   normalizeCreativeLookLiftCrush,
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPreset,
   applyCreativeLookPhysicalMasterHue,
+  clearCreativeLookLightingUniforms,
   ensureCreativeLookLightingUniforms,
   syncCreativeLookShadowTint,
 } from './CreativeLookMaterials.js';
+import {
+  creativeWatercolourMergeFactor,
+  creativeWatercolourVertexDrift,
+  creativeWatercolourWobbleScale,
+} from './creativeLookWatercolourArt.js';
+import {
+  creativeSketchMergeFactor,
+  creativeSketchVertexDrift,
+  creativeSketchWobbleScale,
+  resolveCreativeLookSketchParams,
+} from './creativeLookSketchArt.js';
+import { normalizeCreativeLookPresetParams } from './creativeLookPresetSliders.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
   applySvgExtrudeSurfaceToMaterial,
@@ -267,6 +288,7 @@ export class MaterialController {
       intensity: 1,
       liftCrush: 0,
       viewportBloom: false,
+      presetParams: {},
     };
     /** Clock time (seconds) for animated presets (flow-field, plasma). */
     this._creativeLookTime = 0;
@@ -323,14 +345,19 @@ export class MaterialController {
         const sp = Number(icl.shaderAnimationSpeed);
         return Number.isFinite(sp) ? THREE.MathUtils.clamp(sp, 0, 2) : 0.4;
       })(),
-      patternScale: (() => {
-        const ps = Number(icl.patternScale);
-        return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
-      })(),
+      patternScale: normalizeCreativeLookPatternScale(
+        normalizeCreativeLookPreset(icl.preset),
+        icl.patternScale,
+      ),
       masterHue: normalizeCreativeLookMasterHue(icl.masterHue),
       intensity: normalizeCreativeLookIntensity(icl.intensity),
       liftCrush: normalizeCreativeLookLiftCrush(icl.liftCrush),
       viewportBloom: icl.viewportBloom === true,
+      presetParams: normalizeCreativeLookPresetParams(
+        normalizeCreativeLookPreset(icl.preset),
+        icl.presetParams ?? {},
+        icl.patternScale,
+      ),
     };
     this.materialSettings = {
       brightness:
@@ -1625,7 +1652,37 @@ export class MaterialController {
   _shaderLabBypassesGlassPresentation() {
     if (!this.creativeLookSettings?.enabled) return false;
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+    if (
+      isSketchFamilyCreativeLookPreset(preset)
+      && !this._creativeLookSketchMaterialsActive()
+    ) {
+      return false;
+    }
     return preset !== 'glass' && preset !== 'chrome';
+  }
+
+  /** Sketch / Sketch Colour — raster size 0 turns the effect off while the preset stays selected. */
+  _creativeLookSketchMaterialsActive(settings = this.creativeLookSettings) {
+    const preset = normalizeCreativeLookPreset(settings.preset);
+    if (!isSketchFamilyCreativeLookPreset(preset)) return true;
+    const params = resolveCreativeLookSketchParams(
+      settings.presetParams,
+      settings.patternScale,
+    );
+    return params.rasterSize > 0;
+  }
+
+  _shouldApplyCreativeLookMaterials(settings = this.creativeLookSettings) {
+    if (!settings.enabled) return false;
+    return this._creativeLookSketchMaterialsActive(settings);
+  }
+
+  _restoreCreativeLookBaseMaterials() {
+    this._restorePs2CrushGeometry();
+    this._restoreWirePulseGeometry();
+    this._restoreScanlineGeometry();
+    this.setShading(this.currentShading);
+    this._restoreMeshShadowDefaults();
   }
 
   /**
@@ -2041,16 +2098,23 @@ export class MaterialController {
 
   _applyCreativeLookOverride() {
     if (!this.currentModel || !this.creativeLookSettings.enabled) return;
+    if (!this._shouldApplyCreativeLookMaterials()) return;
 
     const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
-    const patternScale = this._resolveCreativeLookPatternScale(
+    const patternScale = normalizeCreativeLookPatternScale(
       preset,
       this.creativeLookSettings.patternScale,
     );
+    const sketchParams = isSketchFamilyCreativeLookPreset(preset)
+      ? this._resolveSketchParams()
+      : null;
 
     // Always sync geometry when Shader Lab is on — PS2/PSX/VGA decimation strips normals and
     // breaks other presets if we bail out early for textures/wireframe shading.
-    this._syncRetroConsoleGeometryForPreset(preset, patternScale);
+    this._syncRetroConsoleGeometryForPreset(
+      preset,
+      sketchParams?.strokeWidth ?? patternScale,
+    );
 
     // Shader Lab replaces mesh materials even in textures/wireframe display modes so imports
     // with missing maps (common FBX drops) still render as stylized geometry.
@@ -2111,6 +2175,7 @@ export class MaterialController {
           side: origMat?.side ?? THREE.FrontSide,
           time: this._creativeLookTime,
           patternScale,
+          sketchStrokeWidth: sketchParams?.strokeWidth,
           hdriBlurriness: Number.isFinite(hdriBlur)
             ? THREE.MathUtils.clamp(hdriBlur, 0, 1)
             : 0,
@@ -2134,7 +2199,7 @@ export class MaterialController {
       // Shader Lab uses dedicated depth materials for shadow-map casting; receiveShadow uses
       // custom shadow-map chunks in the creative look shaders (see CreativeLookMaterials).
       child.castShadow = true;
-      child.receiveShadow = true;
+      child.receiveShadow = creativeLookPresetUsesShadowReceive(preset);
     });
 
     this._syncCreativeLookShadowTint();
@@ -2184,6 +2249,15 @@ export class MaterialController {
   _applyRetroConsoleGeometry(preset, patternScale) {
     if (!this.currentModel) return;
     const id = normalizeCreativeLookPreset(preset);
+    if (id === 'watercolour') {
+      this._applyWatercolourGeometry(patternScale);
+      return;
+    }
+    if (id === 'sketch' || id === 'sketch-colour') {
+      this._applySketchGeometry(patternScale);
+      return;
+    }
+
     const mergeFactor =
       id === 'psx'
         ? creativePsxMergeFactor(patternScale)
@@ -2259,6 +2333,170 @@ export class MaterialController {
         flat.computeBoundingSphere();
 
         child.geometry = flat;
+        child.userData.orbyPs2CrushedGeometry = true;
+      } catch (_) {
+        working.dispose?.();
+        child.geometry = source;
+        child.userData.orbyPs2CrushedGeometry = true;
+      }
+    });
+  }
+
+  /**
+   * Watercolour decimation — edge-collapse along real mesh edges, keeps indexed topology + normals.
+   * @param {number} patternScale
+   */
+  _applyWatercolourGeometry(patternScale) {
+    if (!this.currentModel) return;
+    const mergeFactor = creativeWatercolourMergeFactor(patternScale);
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      if (this.isWindowMesh(child)) return;
+      if (!this.originalMaterials.get(child)) return;
+      const geom = child.geometry;
+      if (!geom?.attributes?.position) return;
+
+      if (!child.userData.orbyPs2OriginalGeometry) {
+        child.userData.orbyPs2OriginalGeometry = geom;
+      }
+
+      const source = child.userData.orbyPs2OriginalGeometry;
+      const current = child.geometry;
+      if (current !== source && child.userData.orbyPs2CrushedGeometry) {
+        current.dispose?.();
+      }
+
+      if (
+        child.isSkinnedMesh ||
+        source.attributes.skinIndex ||
+        source.attributes.skinWeight
+      ) {
+        child.geometry = source;
+        child.userData.orbyPs2CrushedGeometry = true;
+        return;
+      }
+
+      let working = source.clone();
+      try {
+        if (!working.index) {
+          const merged = mergeVertices(working);
+          if (merged !== working) {
+            working.dispose?.();
+            working = merged;
+          }
+        }
+
+        if (!working.index || working.attributes.position.count < 9) {
+          if (!working.attributes.normal) {
+            working.computeVertexNormals();
+          }
+          child.geometry = working;
+          child.userData.orbyPs2CrushedGeometry = true;
+          return;
+        }
+
+        let meanEdge = estimatePs2CrushMeanEdgeLength(working);
+        if (!Number.isFinite(meanEdge) || meanEdge <= 1e-8) {
+          working.computeBoundingBox();
+          const size = new THREE.Vector3();
+          working.boundingBox.getSize(size);
+          meanEdge = Math.max(size.x, size.y, size.z, 1e-6) / 48;
+        }
+
+        const maxEdge = meanEdge * mergeFactor;
+        let decimated = decimatePs2CrushGeometry(working, maxEdge);
+        if (decimated !== working) {
+          working.dispose?.();
+          working = decimated;
+        }
+
+        working.computeVertexNormals();
+        working.computeBoundingSphere();
+
+        child.geometry = working;
+        child.userData.orbyPs2CrushedGeometry = true;
+      } catch (_) {
+        working.dispose?.();
+        child.geometry = source;
+        child.userData.orbyPs2CrushedGeometry = true;
+      }
+    });
+  }
+
+  /**
+   * Sketch decimation — edge-collapse along real mesh edges, keeps indexed topology + normals.
+   * @param {number} patternScale
+   */
+  _applySketchGeometry(patternScale) {
+    if (!this.currentModel) return;
+    const mergeFactor = creativeSketchMergeFactor(patternScale);
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      if (this.isWindowMesh(child)) return;
+      if (!this.originalMaterials.get(child)) return;
+      const geom = child.geometry;
+      if (!geom?.attributes?.position) return;
+
+      if (!child.userData.orbyPs2OriginalGeometry) {
+        child.userData.orbyPs2OriginalGeometry = geom;
+      }
+
+      const source = child.userData.orbyPs2OriginalGeometry;
+      const current = child.geometry;
+      if (current !== source && child.userData.orbyPs2CrushedGeometry) {
+        current.dispose?.();
+      }
+
+      if (
+        child.isSkinnedMesh ||
+        source.attributes.skinIndex ||
+        source.attributes.skinWeight
+      ) {
+        child.geometry = source;
+        child.userData.orbyPs2CrushedGeometry = true;
+        return;
+      }
+
+      let working = source.clone();
+      try {
+        if (!working.index) {
+          const merged = mergeVertices(working);
+          if (merged !== working) {
+            working.dispose?.();
+            working = merged;
+          }
+        }
+
+        if (!working.index || working.attributes.position.count < 9) {
+          if (!working.attributes.normal) {
+            working.computeVertexNormals();
+          }
+          child.geometry = working;
+          child.userData.orbyPs2CrushedGeometry = true;
+          return;
+        }
+
+        let meanEdge = estimatePs2CrushMeanEdgeLength(working);
+        if (!Number.isFinite(meanEdge) || meanEdge <= 1e-8) {
+          working.computeBoundingBox();
+          const size = new THREE.Vector3();
+          working.boundingBox.getSize(size);
+          meanEdge = Math.max(size.x, size.y, size.z, 1e-6) / 48;
+        }
+
+        const maxEdge = meanEdge * mergeFactor;
+        let decimated = decimatePs2CrushGeometry(working, maxEdge);
+        if (decimated !== working) {
+          working.dispose?.();
+          working = decimated;
+        }
+
+        working.computeVertexNormals();
+        working.computeBoundingSphere();
+
+        child.geometry = working;
         child.userData.orbyPs2CrushedGeometry = true;
       } catch (_) {
         working.dispose?.();
@@ -2364,16 +2602,11 @@ export class MaterialController {
     });
   }
 
-  /**
-   * PS2 / PSX / VGA/DOS 3D use a fixed scale (decimation is apply-time only, not live).
-   * @param {string} preset
-   * @param {number | undefined} patternScale
-   */
-  _resolveCreativeLookPatternScale(preset, patternScale) {
-    const fixed = creativeLookFixedPatternScale(preset);
-    if (fixed != null) return fixed;
-    const ps = Number(patternScale);
-    return Number.isFinite(ps) ? THREE.MathUtils.clamp(ps, 0.02, 5) : 1;
+  _resolveSketchParams(source = this.creativeLookSettings) {
+    return resolveCreativeLookSketchParams(
+      source?.presetParams,
+      source?.patternScale ?? 1,
+    );
   }
 
   /**
@@ -2401,6 +2634,10 @@ export class MaterialController {
   setCreativeLookSettings(patch, options = {}) {
     const prevEnabled = this.creativeLookSettings.enabled;
     const prevPreset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+    const prevSketchStroke = isSketchFamilyCreativeLookPreset(prevPreset)
+      ? this._resolveSketchParams().strokeWidth
+      : null;
+    const prevAppliesMaterials = this._shouldApplyCreativeLookMaterials(this.creativeLookSettings);
 
     this.creativeLookSettings = {
       ...this.creativeLookSettings,
@@ -2416,9 +2653,10 @@ export class MaterialController {
       ? THREE.MathUtils.clamp(sp, 0, 2)
       : 0.4;
     const ps = Number(this.creativeLookSettings.patternScale);
-    this.creativeLookSettings.patternScale = Number.isFinite(ps)
-      ? THREE.MathUtils.clamp(ps, 0.02, 5)
-      : 1;
+    this.creativeLookSettings.patternScale = normalizeCreativeLookPatternScale(
+      this.creativeLookSettings.preset,
+      ps,
+    );
     this.creativeLookSettings.masterHue = normalizeCreativeLookMasterHue(
       this.creativeLookSettings.masterHue,
     );
@@ -2429,9 +2667,35 @@ export class MaterialController {
       this.creativeLookSettings.preset,
     );
     const nextPreset = this.creativeLookSettings.preset;
+    const mergedPresetParams = {
+      ...(this.creativeLookSettings.presetParams ?? {}),
+      ...(patch.presetParams ?? {}),
+    };
+    if (
+      (nextPreset === 'sketch' || nextPreset === 'sketch-colour') &&
+      nextPreset !== prevPreset &&
+      patch.presetParams?.sketch === undefined
+    ) {
+      const fb = this.creativeLookSettings.patternScale;
+      mergedPresetParams.sketch = {
+        strokeWidth: fb,
+        rasterSize: fb,
+        ...mergedPresetParams.sketch,
+      };
+    }
+    this.creativeLookSettings.presetParams = normalizeCreativeLookPresetParams(
+      nextPreset,
+      mergedPresetParams,
+      this.creativeLookSettings.patternScale,
+    );
     const fixedScale = creativeLookFixedPatternScale(nextPreset);
     if (fixedScale != null) {
       this.creativeLookSettings.patternScale = fixedScale;
+    } else if (nextPreset !== prevPreset && patch.patternScale === undefined) {
+      const defaultScale = creativeLookDefaultPatternScale(nextPreset);
+      if (defaultScale != null) {
+        this.creativeLookSettings.patternScale = defaultScale;
+      }
     }
     if (
       nextPreset !== prevPreset &&
@@ -2454,10 +2718,16 @@ export class MaterialController {
     }
 
     if (!this.creativeLookSettings.enabled) {
-      this._restorePs2CrushGeometry();
-      this._restoreWirePulseGeometry();
-      this.setShading(this.currentShading);
-      this._restoreMeshShadowDefaults();
+      this._restoreCreativeLookBaseMaterials();
+      return;
+    }
+
+    const nextAppliesMaterials = this._shouldApplyCreativeLookMaterials();
+    if (!nextAppliesMaterials) {
+      this._restoreCreativeLookBaseMaterials();
+      if (typeof this.onCreativeLookAsciiSync === 'function') {
+        this.onCreativeLookAsciiSync();
+      }
       return;
     }
 
@@ -2466,9 +2736,25 @@ export class MaterialController {
     const redundant =
       prevEnabled &&
       this.creativeLookSettings.enabled &&
-      prevPreset === this.creativeLookSettings.preset;
+      prevPreset === this.creativeLookSettings.preset &&
+      prevAppliesMaterials;
     if (redundant) {
       this._syncCreativeLookLiveUniforms(this.creativeLookSettings);
+      if (isSketchFamilyCreativeLookPreset(nextPreset)) {
+        const nextStroke = this._resolveSketchParams().strokeWidth;
+        if (prevSketchStroke !== null && prevSketchStroke !== nextStroke) {
+          this._syncRetroConsoleGeometryForPreset(nextPreset, nextStroke);
+        }
+      }
+      if (
+        (isFlatPostCreativeLookPreset(nextPreset) ||
+          isWatercolourCreativeLookPreset(nextPreset) ||
+          isSketchFamilyCreativeLookPreset(nextPreset) ||
+          isVectrexCreativeLookPreset(nextPreset)) &&
+        typeof this.onCreativeLookAsciiSync === 'function'
+      ) {
+        this.onCreativeLookAsciiSync();
+      }
       return;
     }
 
@@ -2482,8 +2768,16 @@ export class MaterialController {
     animSpeed = THREE.MathUtils.clamp(animSpeed, 0, 2);
     let patternScale = Number(cl.patternScale);
     if (!Number.isFinite(patternScale)) patternScale = 1;
-    patternScale = THREE.MathUtils.clamp(patternScale, 0.02, 5);
+    patternScale = normalizeCreativeLookPatternScale(
+      normalizeCreativeLookPreset(cl.preset),
+      patternScale,
+    );
     this.creativeLookSettings.patternScale = patternScale;
+    this.creativeLookSettings.presetParams = normalizeCreativeLookPresetParams(
+      normalizeCreativeLookPreset(cl.preset),
+      cl.presetParams ?? {},
+      patternScale,
+    );
 
     const scaledClock = elapsedSeconds * animSpeed;
 
@@ -2525,7 +2819,12 @@ export class MaterialController {
       });
     }
 
-    if (isFlatPostCreativeLookPreset(preset)) {
+    if (
+      isFlatPostCreativeLookPreset(preset) ||
+      isWatercolourCreativeLookPreset(preset) ||
+      isSketchFamilyCreativeLookPreset(preset) ||
+      isVectrexCreativeLookPreset(preset)
+    ) {
       if (typeof this.onCreativeLookAsciiSync === 'function') {
         this.onCreativeLookAsciiSync();
       }
@@ -2579,7 +2878,13 @@ export class MaterialController {
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
           if (
-            (tag === 'toon' || tag === 'ps2-crush' || tag === 'psx' || tag === 'vga-dos-3d') &&
+            (tag === 'toon' ||
+              tag === 'ps2-crush' ||
+              tag === 'psx' ||
+              tag === 'vga-dos-3d' ||
+              tag === 'watercolour' ||
+              tag === 'sketch' ||
+              tag === 'sketch-colour') &&
             m.uniforms?.uLightDir
           ) {
             m.uniforms.uLightDir.value.copy(dir);
@@ -2594,7 +2899,13 @@ export class MaterialController {
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         for (const m of mats) {
           const tag = m?.userData?.orbyCreativeLook;
-          if (tag !== 'toon' && tag !== 'ps2-crush' && tag !== 'psx' && tag !== 'vga-dos-3d') continue;
+          if (
+            tag !== 'toon' &&
+            tag !== 'ps2-crush' &&
+            tag !== 'psx' &&
+            tag !== 'vga-dos-3d'
+          )
+            continue;
           if (m.uniforms?.uLightScale) m.uniforms.uLightScale.value = lightScale;
           if (m.uniforms?.uAmbientFloor) m.uniforms.uAmbientFloor.value = ambientFloor;
         }
@@ -2616,7 +2927,16 @@ export class MaterialController {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       for (const m of mats) {
         if (!m?.userData?.orbyCreativeLook) continue;
-        if (creativeLookPresetUsesShadowReceive(m.userData.orbyCreativeLook)) {
+        if (!creativeLookPresetUsesShadowReceive(m.userData.orbyCreativeLook)) {
+          if (
+            m.lights
+            || m.uniforms?.directionalLightShadows
+            || m.uniforms?.ambientLightColor
+          ) {
+            clearCreativeLookLightingUniforms(m);
+            m.needsUpdate = true;
+          }
+        } else {
           ensureCreativeLookLightingUniforms(m);
         }
         if (m.uniforms?.uMasterHue) {
@@ -2629,7 +2949,33 @@ export class MaterialController {
           m.uniforms.uBrightness.value = brightness;
         }
         if (m.uniforms?.uIntensity) {
-          m.uniforms.uIntensity.value = intensity;
+          if (m.userData.orbyCreativeLook === 'watercolour') {
+            const ps = normalizeCreativeLookPatternScale(
+              'watercolour',
+              source?.patternScale ?? this.creativeLookSettings.patternScale,
+            );
+            m.uniforms.uIntensity.value = creativeWatercolourVertexDrift(ps);
+          } else if (m.userData.orbyCreativeLook === 'sketch' || m.userData.orbyCreativeLook === 'sketch-colour') {
+            const { strokeWidth } = this._resolveSketchParams(source);
+            m.uniforms.uIntensity.value = creativeSketchVertexDrift(strokeWidth);
+          } else {
+            m.uniforms.uIntensity.value = intensity;
+          }
+        }
+        if (m.userData.orbyCreativeLook === 'watercolour') {
+          const ps = normalizeCreativeLookPatternScale(
+            'watercolour',
+            source?.patternScale ?? this.creativeLookSettings.patternScale,
+          );
+          if (m.uniforms?.uWobbleScale) {
+            m.uniforms.uWobbleScale.value = creativeWatercolourWobbleScale(ps);
+          }
+        }
+        if (m.userData.orbyCreativeLook === 'sketch' || m.userData.orbyCreativeLook === 'sketch-colour') {
+          const { strokeWidth } = this._resolveSketchParams(source);
+          if (m.uniforms?.uWobbleScale) {
+            m.uniforms.uWobbleScale.value = creativeSketchWobbleScale(strokeWidth);
+          }
         }
         if (m.isMeshPhysicalMaterial) {
           applyCreativeLookPhysicalMasterHue(m, masterHue, brightness);
@@ -2640,6 +2986,11 @@ export class MaterialController {
 
   getCreativeLookSettings() {
     return { ...this.creativeLookSettings };
+  }
+
+  /** Shader animation clock — shared by mesh shaders and Vectrex phosphor post. */
+  getCreativeLookAnimationTime() {
+    return this._creativeLookTime;
   }
 
   setClaySettings(patch) {

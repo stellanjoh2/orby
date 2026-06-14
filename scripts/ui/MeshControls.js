@@ -13,13 +13,31 @@ import {
   CREATIVE_LOOK_PRESETS,
   creativeLookFixedIntensity,
   creativeLookDefaultIntensity,
+  creativeLookDefaultPatternScale,
   creativeLookFixedPatternScale,
+  creativeLookPatternScaleBounds,
+  normalizeCreativeLookPatternScale,
   creativeLookPresetLocksIntensity,
   creativeLookPresetLocksMasterHue,
   creativeLookPresetLocksPatternScale,
   creativeLookPresetUsesShaderAnimation,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
+import {
+  CREATIVE_LOOK_ALL_PRESET_SLIDER_IDS,
+  creativeLookPresetHidesPatternScale,
+  getCreativeLookPresetSliderDefs,
+} from '../render/creativeLookPresetSliders.js';
+import {
+  normalizeCreativeLookSketchRasterSize,
+  normalizeCreativeLookSketchStrokeWidth,
+  resolveCreativeLookSketchParams,
+} from '../render/creativeLookSketchArt.js';
+import {
+  creativeLookInkControlsVisible,
+  normalizeCreativeLookStrokeColor,
+  resolveCreativeLookInkParams,
+} from '../render/creativeLookInkArt.js';
 import {
   bindSvgExtrudeControls,
   bindExtrudeBevelControls,
@@ -470,6 +488,13 @@ export class MeshControls {
       container.classList.toggle('creative-look-foldout--collapsed', !open);
       container.classList.toggle('creative-look-foldout--expanded', open);
     };
+    const disableRenderBackdropForShaderLab = () => {
+      this.stateStore.set('hdriBackground', false);
+      this.eventBus.emit('studio:hdri-background', false);
+      if (this.ui.inputs.hdriBackground) {
+        this.ui.inputs.hdriBackground.checked = false;
+      }
+    };
     updateCreativeLookFoldout(!!this.stateStore.getState().creativeLook?.enabled);
 
     this.ui.inputs.creativeLookEnabled?.addEventListener('change', (event) => {
@@ -489,6 +514,9 @@ export class MeshControls {
           this.stateStore.set('advanced.normalView', false);
         }
       });
+      if (enabled) {
+        disableRenderBackdropForShaderLab();
+      }
       updateCreativeLookFoldout(enabled);
       if (uvCheckerWasOn) {
         this.eventBus.emit('mesh:uv-checker', false);
@@ -515,13 +543,15 @@ export class MeshControls {
       if (fixedScale != null) return;
       const value = parseFloat(event.target.value);
       if (!Number.isFinite(value)) return;
-      const scale = Math.max(0.02, Math.min(5, value));
+      const scale = normalizeCreativeLookPatternScale(preset, value);
       this.helpers.updateValueLabel('creativeLookPatternScale', scale, 'multiplier');
       this.stateStore.set('creativeLook.patternScale', scale);
     });
     if (this.ui.inputs.creativeLookPatternScale) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookPatternScale);
     }
+    this._bindCreativeLookPresetSliders();
+    this._bindCreativeLookInkControls();
     this.ui.inputs.creativeLookMasterHue?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       if (!Number.isFinite(value)) return;
@@ -559,6 +589,7 @@ export class MeshControls {
     });
     this.ui.inputs.creativeLookBloomEnabled?.addEventListener('change', (event) => {
       this.stateStore.set('creativeLook.viewportBloom', event.target.checked);
+      this.eventBus.emit('mesh:creative-look');
     });
     this.ui.inputs.creativeLookButtons?.forEach?.((button) => {
       button.addEventListener('click', () => {
@@ -566,6 +597,7 @@ export class MeshControls {
         if (!CREATIVE_LOOK_PRESETS.includes(preset)) return;
         if (button.disabled) return;
         const state = this.stateStore.getState().creativeLook || {};
+        const creativeLookWasEnabled = !!state.enabled;
         const prev = normalizeCreativeLookPreset(state.preset);
         if (preset !== prev) this.ui.uiSounds?.playSelect();
         // See `creativeLookEnabled` handler — Shader Lab and UV Checker overlay are mutually
@@ -579,6 +611,19 @@ export class MeshControls {
           const fixedScale = creativeLookFixedPatternScale(preset);
           if (fixedScale != null) {
             this.stateStore.set('creativeLook.patternScale', fixedScale);
+          } else {
+            const defaultScale = creativeLookDefaultPatternScale(preset);
+            if (defaultScale != null) {
+              this.stateStore.set('creativeLook.patternScale', defaultScale);
+            } else {
+              const currentScale = Number(state.patternScale);
+              if (Number.isFinite(currentScale)) {
+                this.stateStore.set(
+                  'creativeLook.patternScale',
+                  normalizeCreativeLookPatternScale(preset, currentScale),
+                );
+              }
+            }
           }
           const fixedIntensity = creativeLookFixedIntensity(preset);
           if (fixedIntensity != null) {
@@ -589,6 +634,22 @@ export class MeshControls {
               creativeLookDefaultIntensity(preset),
             );
           }
+          if (
+            normalizeCreativeLookPreset(preset) === 'sketch'
+            || normalizeCreativeLookPreset(preset) === 'sketch-colour'
+          ) {
+            const fb = Number.isFinite(Number(state.patternScale))
+              ? Number(state.patternScale)
+              : 1;
+            this.stateStore.set('creativeLook.presetParams', {
+              ...(state.presetParams ?? {}),
+              sketch: {
+                strokeWidth: fb,
+                rasterSize: fb,
+                ...(state.presetParams?.sketch ?? {}),
+              },
+            });
+          }
           if (uvCheckerWasOn) {
             this.stateStore.set('advanced.uvChecker', false);
           }
@@ -597,6 +658,9 @@ export class MeshControls {
           }
         });
         updateCreativeLookFoldout(true);
+        if (!creativeLookWasEnabled) {
+          disableRenderBackdropForShaderLab();
+        }
         if (this.ui.inputs.creativeLookEnabled) {
           this.ui.inputs.creativeLookEnabled.checked = true;
         }
@@ -1329,12 +1393,18 @@ export class MeshControls {
     }
     if (this.ui.inputs.creativeLookPatternScale) {
       const scaleLocked = creativeLookPresetLocksPatternScale(clPreset);
+      const hidesScale = creativeLookPresetHidesPatternScale(clPreset);
+      const patternScaleRow = document.getElementById('creativeLookPatternScaleRow');
+      if (patternScaleRow) {
+        patternScaleRow.hidden = hidesScale;
+      }
       const rawScale = Number(state.creativeLook?.patternScale);
+      const { min: scaleMin, max: scaleMax } = creativeLookPatternScaleBounds(clPreset);
+      this.ui.inputs.creativeLookPatternScale.min = String(scaleMin);
+      this.ui.inputs.creativeLookPatternScale.max = String(scaleMax);
       const patternScale = scaleLocked
         ? (creativeLookFixedPatternScale(clPreset) ?? 1)
-        : Number.isFinite(rawScale)
-          ? Math.min(5, Math.max(0.02, rawScale))
-          : 1;
+        : normalizeCreativeLookPatternScale(clPreset, rawScale);
       const active =
         document.activeElement === this.ui.inputs.creativeLookPatternScale;
       if (!active) {
@@ -1347,9 +1417,11 @@ export class MeshControls {
       }
       this.ui.setControlDisabled(
         'creativeLookPatternScale',
-        !state.creativeLook?.enabled || scaleLocked,
+        !state.creativeLook?.enabled || scaleLocked || hidesScale,
       );
     }
+    this._syncCreativeLookPresetSliders(state, clPreset);
+    this._syncCreativeLookInkControls(state, clPreset);
     if (this.ui.inputs.creativeLookMasterHue) {
       const hueLocked = creativeLookPresetLocksMasterHue(clPreset);
       const rawHue = Number(state.creativeLook?.masterHue);
@@ -1409,6 +1481,121 @@ export class MeshControls {
 
     // Wireframe mode now uses the overlay system, so overlay controls are always enabled
     // Users can adjust "Always on" and "Only visible faces" even when in Wireframe mode
+  }
+
+  _bindCreativeLookPresetSliders() {
+    const bindOne = (inputId, stateKey, normalize, formatValue) => {
+      const input = this.ui.inputs[inputId];
+      if (!input) return;
+      input.addEventListener('input', (event) => {
+        const preset = normalizeCreativeLookPreset(
+          this.stateStore.getState().creativeLook?.preset,
+        );
+        if (preset !== 'sketch' && preset !== 'sketch-colour') return;
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        const clamped = normalize(value);
+        const customLabel = formatValue?.(clamped);
+        if (customLabel != null) {
+          this.helpers.updateValueLabel(inputId, customLabel);
+        } else {
+          this.helpers.updateValueLabel(inputId, clamped, 'multiplier');
+        }
+        this.stateStore.set(`creativeLook.presetParams.sketch.${stateKey}`, clamped);
+        this.eventBus.emit('mesh:creative-look');
+      });
+      this.helpers.enableSliderKeyboardStepping(input);
+    };
+    bindOne(
+      'creativeLookSketchStrokeWidth',
+      'strokeWidth',
+      normalizeCreativeLookSketchStrokeWidth,
+    );
+    bindOne(
+      'creativeLookSketchRasterSize',
+      'rasterSize',
+      normalizeCreativeLookSketchRasterSize,
+      (value) => (value <= 0 ? 'Off' : null),
+    );
+  }
+
+  _bindCreativeLookInkControls() {
+    const color = this.ui.inputs.creativeLookInkStrokeColor;
+    color?.addEventListener('input', (event) => {
+      const preset = normalizeCreativeLookPreset(
+        this.stateStore.getState().creativeLook?.preset,
+      );
+      if (!creativeLookInkControlsVisible(preset)) return;
+      this.stateStore.set(
+        'creativeLook.presetParams.ink.strokeColor',
+        normalizeCreativeLookStrokeColor(event.target.value),
+      );
+      this.eventBus.emit('mesh:creative-look');
+    });
+  }
+
+  _syncCreativeLookInkControls(state, clPreset) {
+    const enabled = !!state.creativeLook?.enabled;
+    const inkVisible = creativeLookInkControlsVisible(clPreset, enabled);
+
+    document
+      .querySelectorAll('.creative-look-preset-ink[data-ink-control="strokeColor"]')
+      .forEach((row) => {
+        row.hidden = !inkVisible;
+      });
+
+    if (!inkVisible) return;
+
+    const ink = resolveCreativeLookInkParams(state.creativeLook?.presetParams, clPreset);
+    const colorInput = this.ui.inputs.creativeLookInkStrokeColor;
+    if (colorInput && document.activeElement !== colorInput) {
+      colorInput.value = ink.strokeColor;
+    }
+    this.ui.setControlDisabled('creativeLookInkStrokeColor', !enabled);
+  }
+
+  _syncCreativeLookPresetSliders(state, clPreset) {
+    const defs = getCreativeLookPresetSliderDefs(clPreset);
+    const enabled = !!state.creativeLook?.enabled;
+    const visibleIds = new Set(defs.map((def) => def.id));
+    const root = document.getElementById('creativeLookPresetSliders');
+    const inkVisible = creativeLookInkControlsVisible(clPreset, enabled);
+    if (root) {
+      root.hidden = visibleIds.size === 0 && !inkVisible;
+    }
+    for (const sliderId of CREATIVE_LOOK_ALL_PRESET_SLIDER_IDS) {
+      const row = document.querySelector(
+        `.creative-look-preset-slider[data-slider-id="${sliderId}"]`,
+      );
+      if (row) {
+        row.hidden = !enabled || !visibleIds.has(sliderId);
+      }
+    }
+    if (defs.length === 0) return;
+
+    const sketchParams = resolveCreativeLookSketchParams(
+      state.creativeLook?.presetParams,
+      state.creativeLook?.patternScale,
+    );
+    for (const def of defs) {
+      const input = this.ui.inputs[def.id];
+      if (!input) continue;
+      input.min = String(def.min);
+      input.max = String(def.max);
+      const value = def.stateKey === 'strokeWidth'
+        ? sketchParams.strokeWidth
+        : sketchParams.rasterSize;
+      const active = document.activeElement === input;
+      if (!active) {
+        input.value = value;
+        if (def.stateKey === 'rasterSize' && value <= 0) {
+          this.helpers.updateValueLabel(def.id, 'Off');
+        } else {
+          this.helpers.updateValueLabel(def.id, value, def.format ?? 'multiplier');
+        }
+      }
+      this.ui.setControlDisabled(def.id, !enabled);
+    }
   }
 
   renderSvgColorDepthControls(state) {

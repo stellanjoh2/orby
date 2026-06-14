@@ -174,7 +174,7 @@
   /* Bottom-left viewport chrome — home frame; studio overrides on html:not(.mobile-landing) */
   --viewport-chrome-inset-x: var(--orby-home-padding-x);
   --viewport-chrome-inset-y: var(--orby-home-padding-y);
-  --viewport-load-spinner-lift: 192px;
+  --viewport-load-spinner-lift: 120px;
   --shelf-inset: 48px;
 }
 
@@ -221,7 +221,7 @@ html:not(.mobile-landing) {
   --shelf-inset: calc(48px * var(--studio-ui-scale));
   --viewport-chrome-inset-x: var(--shelf-inset);
   --viewport-chrome-inset-y: var(--shelf-inset);
-  --viewport-load-spinner-lift: calc(192px * var(--studio-ui-scale));
+  --viewport-load-spinner-lift: calc(120px * var(--studio-ui-scale));
   --ui-frosted-blur: calc(15px * var(--studio-ui-scale));
   --app-settings-chrome-radius: calc(18px * var(--studio-ui-scale));
   --shelf-label-font-size: calc(14px * var(--studio-ui-scale));
@@ -6004,10 +6004,10 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   opacity: 0.9;
 }
 
-/* Load indicator — favicon, bottom-left (inset matches toast + .demo-logotype) */
+/* Load indicator — favicon, bottom-left corner (inset matches toast + .demo-logotype) */
 .viewport-load-spinner {
   position: absolute;
-  bottom: calc(var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem)) + var(--viewport-load-spinner-lift, 192px));
+  bottom: calc(var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem)) + var(--viewport-load-spinner-lift, 120px));
   left: var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem));
   display: flex;
   flex-direction: row;
@@ -6020,7 +6020,7 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   visibility: hidden;
   opacity: 0;
   transform: scale(0.94);
-  transform-origin: center center;
+  transform-origin: left bottom;
   transition:
     opacity 0.2s ease,
     transform 0.2s ease,
@@ -7379,9 +7379,11 @@ body.ui-hidden .shelf {
 }
 
 .creative-look-foldout--expanded {
-  max-height: 72rem;
+  max-height: 120rem;
   opacity: 1;
   padding-top: var(--shelf-section-gap);
+  padding-bottom: var(--shelf-section-gap);
+  overflow: visible;
 }
 
 .creative-look-foldout--collapsed {
@@ -7446,7 +7448,28 @@ body.ui-hidden .shelf {
   margin-bottom: 0;
 }
 
-/* Same intrinsic width as Snap to Mesh ghost CTAs — avoid column stretch from .ghost-btn */
+/* Preset sliders (Sketch stroke / raster) participate in foldout flex rhythm — no wrapper gap. */
+.creative-look-preset-sliders {
+  display: contents;
+}
+
+.creative-look-preset-sliders[hidden] {
+  display: none !important;
+}
+
+.creative-look-preset-slider[hidden] {
+  display: none !important;
+}
+
+.creative-look-preset-ink[hidden] {
+  display: none !important;
+}
+
+.creative-look-preset-sliders > :is(.slider-line, .color-line) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .creative-look-foldout-body > .creative-look-pause-btn {
   align-self: flex-start;
 }

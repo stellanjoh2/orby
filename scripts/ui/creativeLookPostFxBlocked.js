@@ -1,14 +1,18 @@
 import {
   isAnamorphicBloomPipelineActive,
   isBloomPipelineActive,
+  isBloomTuningActive,
   isCreativeLookViewportPostActive,
 } from '../constants.js';
 import {
   isFlatPostCreativeLookPreset,
+  isVectrexCreativeLookPreset,
+  isWatercolourCreativeLookPreset,
+  isSketchFamilyCreativeLookPreset,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 
-/** @typedef {'default' | 'viewport-bloom' | 'flat-post'} CreativeLookPostFxMode */
+/** @typedef {'default' | 'viewport-bloom' | 'flat-post' | 'watercolour' | 'sketch' | 'vectrex'} CreativeLookPostFxMode */
 
 /** Camera & FX + grading controls that map to `data-subsection` keys. */
 export const CREATIVE_LOOK_POST_FX_SUBSECTIONS = /** @type {const} */ ([
@@ -108,6 +112,9 @@ const GRADING_INPUTS = [
   'lookFilterPresetsOpen',
 ];
 
+/** Camera tab exposure — kept live in Shader Lab (grading pass applies it). */
+const EXPOSURE_INPUTS = ['exposure', 'autoExposure'];
+
 const SUBSECTION_INPUTS = /** @type {Record<string, string[]>} */ ({
   'ambient-occlusion': AO_INPUTS,
   dof: DOF_INPUTS,
@@ -164,7 +171,11 @@ export function getCreativeLookPostFxUiBlocks(state) {
   if (cl.enabled !== true) return null;
 
   const viewportBloom = isCreativeLookViewportPostActive(state);
+  const bloomTuningActive = isBloomTuningActive(state);
   const flatPost = isFlatPostCreativeLookPreset(normalizeCreativeLookPreset(cl.preset));
+  const watercolour = isWatercolourCreativeLookPreset(cl.preset);
+  const sketch = isSketchFamilyCreativeLookPreset(cl.preset);
+  const vectrex = isVectrexCreativeLookPreset(cl.preset);
   const bloomCamFxOn = isBloomPipelineActive(state);
 
   /** @type {Set<string>} */
@@ -186,59 +197,110 @@ export function getCreativeLookPostFxUiBlocks(state) {
     for (const id of ids) disabledInputs.add(id);
   };
 
-  if (viewportBloom) {
-    mute('ambient-occlusion');
-    mute('dof');
-    mute('volumetric-scattering');
-    mute('lens-dirt');
-    mute('color-tone');
-    mute('tone-curve');
-    mute('look-filters');
-    disable('exposure', 'autoExposure', 'toneMapping', 'antiAliasing');
-    disable('toggleBloom');
-    return {
-      mode: 'viewport-bloom',
-      mutedSubsections,
-      clickBlockedSubsections,
-      disabledInputs,
-    };
-  }
+  /** @type {CreativeLookPostFxMode} */
+  let mode = 'default';
 
-  if (flatPost) {
+  if (watercolour) {
+    mode = 'watercolour';
     mute('ambient-occlusion');
     mute('dof');
     mute('volumetric-scattering');
     mute('lens-dirt');
-    mute('grain');
     mute('aberration');
     mute('fisheye');
     mute('vignette');
     mute('color-tone');
     mute('tone-curve');
     mute('look-filters');
-    disable('exposure', 'autoExposure', 'toneMapping', 'antiAliasing');
-    if (!bloomCamFxOn) {
+    mute('anamorphic-lens-flare');
+    disable('toneMapping', 'antiAliasing', 'toggleBloom');
+    if (!viewportBloom) {
+      mute('bloom');
+    }
+  } else if (sketch) {
+    mode = 'sketch';
+    mute('ambient-occlusion');
+    mute('dof');
+    mute('volumetric-scattering');
+    mute('lens-dirt');
+    mute('aberration');
+    mute('fisheye');
+    mute('vignette');
+    mute('color-tone');
+    mute('tone-curve');
+    mute('look-filters');
+    mute('anamorphic-lens-flare');
+    disable('toneMapping', 'antiAliasing', 'toggleBloom');
+    if (!viewportBloom) {
+      mute('bloom');
+    }
+  } else if (vectrex) {
+    mode = 'vectrex';
+    mute('ambient-occlusion');
+    mute('dof');
+    mute('volumetric-scattering');
+    mute('lens-dirt');
+    mute('aberration');
+    mute('fisheye');
+    mute('vignette');
+    mute('color-tone');
+    mute('tone-curve');
+    mute('look-filters');
+    mute('anamorphic-lens-flare');
+    disable('toneMapping', 'antiAliasing', 'toggleBloom');
+    if (!viewportBloom) {
+      mute('bloom');
+    }
+  } else if (flatPost) {
+    mode = 'flat-post';
+    mute('ambient-occlusion');
+    mute('dof');
+    mute('volumetric-scattering');
+    mute('lens-dirt');
+    mute('aberration');
+    mute('fisheye');
+    mute('vignette');
+    mute('color-tone');
+    mute('tone-curve');
+    mute('look-filters');
+    disable('toneMapping', 'antiAliasing');
+    if (!bloomCamFxOn && !viewportBloom) {
       mute('bloom');
     }
     if (!isAnamorphicBloomPipelineActive(state)) {
       mute('anamorphic-lens-flare');
     }
-    return {
-      mode: 'flat-post',
-      mutedSubsections,
-      clickBlockedSubsections,
-      disabledInputs,
-    };
+  } else if (viewportBloom) {
+    mode = 'viewport-bloom';
+    mute('ambient-occlusion');
+    mute('dof');
+    mute('volumetric-scattering');
+    mute('lens-dirt');
+    mute('color-tone');
+    mute('tone-curve');
+    mute('look-filters');
+    disable('toneMapping', 'antiAliasing');
+    disable('toggleBloom');
+  } else {
+    // Default Shader Lab — Cam/FX bloom toggle off; use Shader Lab Bloom toggle instead.
+    disable('toggleBloom');
   }
 
-  // Default Shader Lab — Cam/FX bloom is forced off; use Shader Lab Bloom or flat-post paths.
-  mute('bloom', { clickBlocked: false });
-  disable('toggleBloom');
-  for (const id of BLOOM_INPUTS) {
-    if (id !== 'toggleBloom') disabledInputs.delete(id);
+  // Shader Lab bloom uses Cam/FX threshold/strength/radius sliders — keep subsection live.
+  if (bloomTuningActive) {
+    mutedSubsections.delete('bloom');
+    clickBlockedSubsections.delete('bloom');
+    for (const id of BLOOM_INPUTS) {
+      if (id !== 'toggleBloom') disabledInputs.delete(id);
+    }
   }
+
+  if (cl.enabled) {
+    disabledInputs.add('toggleBloom');
+  }
+
   return {
-    mode: 'default',
+    mode,
     mutedSubsections,
     clickBlockedSubsections,
     disabledInputs,
@@ -270,6 +332,14 @@ export function applyCreativeLookPostFxUiBlocks(state, api) {
   for (const id of blocks.disabledInputs) {
     markShaderLabBlocked(api.getInput?.(id));
   }
+
+  const bloomTuningActive = isBloomTuningActive(state);
+  api.setMuted('bloom', !bloomTuningActive);
+  const bloomSliders = BLOOM_INPUTS.filter((id) => id !== 'toggleBloom');
+  api.setControlsDisabled(bloomSliders, !bloomTuningActive);
+  api.setControlsDisabled(EXPOSURE_INPUTS, false);
+  api.setControlsDisabled(['toggleGrain'], false);
+  api.setControlsDisabled(['grainIntensity'], !state?.grain?.enabled);
 }
 
 let _shaderLabBlockedClickBound = false;

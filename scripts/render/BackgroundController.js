@@ -21,6 +21,8 @@ export class BackgroundController {
     // Track HDRI state to know when to show/hide background
     this.hdriBackgroundEnabled = false;
     this.hdriEnabled = false;
+    /** Shader Lab — solid color / gradient replaces the HDRI backdrop image. */
+    this.creativeLookBackdropActive = false;
     
     // Create background sphere for DOF depth handling
     this.backgroundSphere = this._createBackgroundSphere(this.color);
@@ -117,6 +119,17 @@ export class BackgroundController {
     this.refreshAppearance();
   }
 
+  /** @param {boolean} active */
+  setCreativeLookBackdropActive(active) {
+    this.creativeLookBackdropActive = !!active;
+    this.refreshAppearance();
+  }
+
+  usesFallbackBackdrop() {
+    // Respect Render Backdrop even during Shader Lab (creative look defaults it off on entry).
+    return !(this.hdriBackgroundEnabled && this.hdriEnabled);
+  }
+
   setReceiveShadowsAoEnabled(enabled) {
     this.hdriShadowReceiver?.setReceiveShadowsAoEnabled(enabled);
   }
@@ -146,8 +159,8 @@ export class BackgroundController {
    * Only shows when HDRI background is disabled
    */
   _applyClearColor() {
-    // If HDRI background is on, don't show solid color (HDRI texture will show)
-    if (this.hdriBackgroundEnabled && this.hdriEnabled) {
+    // If HDRI backdrop is on (and Shader Lab isn't overriding it), don't show solid color.
+    if (!this.usesFallbackBackdrop()) {
       /* Sphere stays hidden for the beauty pass so `scene.background` shows the HDRI.
          MeshglBokehPass turns it on only for the DOF depth prepass so depth matches color. */
       if (this.backgroundSphere) {

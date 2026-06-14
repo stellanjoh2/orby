@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { APP_BACKGROUND } from '../constants.js';
 import { fullViewportLogicalSize } from '../render/fullViewportLogicalSize.js';
+import { isSketchColourCreativeLookPreset } from '../render/CreativeLookMaterials.js';
 import {
   hideGroundGridForPass,
   hideTransformGizmosForPass,
@@ -25,6 +26,9 @@ export class ComposerLifecycle {
     getCreativeLookEnabled,
     getCreativeLookViewportBloomActive,
     getCreativeLookAsciiActive,
+    getCreativeLookWatercolourActive,
+    getCreativeLookSketchActive,
+    getCreativeLookVectrexActive,
     getTransformControls,
     getGroundGrid,
     getRenderState,
@@ -44,6 +48,12 @@ export class ComposerLifecycle {
     this.getCreativeLookViewportBloomActive =
       getCreativeLookViewportBloomActive ?? (() => false);
     this.getCreativeLookAsciiActive = getCreativeLookAsciiActive ?? (() => false);
+    this.getCreativeLookWatercolourActive =
+      getCreativeLookWatercolourActive ?? (() => false);
+    this.getCreativeLookSketchActive =
+      getCreativeLookSketchActive ?? (() => false);
+    this.getCreativeLookVectrexActive =
+      getCreativeLookVectrexActive ?? (() => false);
     this.getRenderState = getRenderState ?? (() => ({}));
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.beforeComposerRender = beforeComposerRender;
@@ -149,6 +159,20 @@ export class ComposerLifecycle {
     beforeRender?.();
     const viewportBloom = this.getCreativeLookViewportBloomActive() === true;
     const asciiTerminal = this.getCreativeLookAsciiActive() === true;
+    const watercolour = this.getCreativeLookWatercolourActive() === true;
+    const sketch = this.getCreativeLookSketchActive() === true;
+    const vectrex = this.getCreativeLookVectrexActive() === true;
+    if (!watercolour) {
+      this.postPipeline?.releaseCreativeLookWatercolour?.();
+    }
+    if (!sketch) {
+      this.postPipeline?.releaseCreativeLookSketch?.();
+    }
+    if (!vectrex) {
+      this.postPipeline?.releaseCreativeLookVectrex?.();
+    } else {
+      this.applyCreativeLookBloomSuppression();
+    }
     const shaderLabOn = this.getCreativeLookEnabled() === true;
     const overlayGizmos = overlayTransformGizmos && shaderLabOn;
     if (overlayGizmos) {
@@ -161,7 +185,26 @@ export class ComposerLifecycle {
     if (overlayGrid) {
       this._gridPassVisibility = hideGroundGridForPass(grid);
     }
-    if (viewportBloom) {
+    if (watercolour) {
+      if (viewportBloom) {
+        this.postPipeline?.prepareCreativeLookViewportPresentation?.();
+      }
+      this.postPipeline?.pushCreativeLookWatercolourPresentation?.({ viewportBloom });
+    } else if (sketch) {
+      if (viewportBloom) {
+        this.postPipeline?.prepareCreativeLookViewportPresentation?.();
+      }
+      const state = this.getRenderState();
+      const passKey = isSketchColourCreativeLookPreset(state?.creativeLook?.preset)
+        ? 'creativeLookSketchColourPass'
+        : 'creativeLookSketchPass';
+      this.postPipeline?.pushCreativeLookSketchPresentation?.({ viewportBloom, passKey });
+    } else if (vectrex) {
+      if (viewportBloom) {
+        this.postPipeline?.prepareCreativeLookViewportPresentation?.();
+      }
+      this.postPipeline?.pushCreativeLookVectrexPresentation?.({ viewportBloom });
+    } else if (viewportBloom) {
       this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       this.postPipeline?.pushCreativeLookViewportPresentation?.();
     } else if (asciiTerminal) {
@@ -196,10 +239,20 @@ export class ComposerLifecycle {
         restoreGroundGridFromPass(this._gridPassVisibility);
         this._gridPassVisibility = null;
       }
-      if (viewportBloom) {
+      if (watercolour) {
+        this.postPipeline?.popCreativeLookWatercolourPresentation?.();
+      } else if (sketch) {
+        this.postPipeline?.popCreativeLookSketchPresentation?.();
+      } else if (vectrex) {
+        this.postPipeline?.popCreativeLookVectrexPresentation?.();
+      } else if (viewportBloom) {
         this.postPipeline?.popCreativeLookViewportPresentation?.();
       } else if (asciiTerminal) {
         this.postPipeline?.popCreativeLookAsciiPresentation?.();
+      } else {
+        this.postPipeline?.releaseCreativeLookWatercolour?.();
+        this.postPipeline?.releaseCreativeLookSketch?.();
+        this.postPipeline?.releaseCreativeLookVectrex?.();
       }
       this.resetRendererViewportToCanvas();
     }

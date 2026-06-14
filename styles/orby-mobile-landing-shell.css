@@ -4,6 +4,12 @@
  * Marketing typography/layout: styles/marketing/15-mobile.css.
  */
 
+/* Home marketing scroll — brand black behind transparent intro / section seams */
+html.orby-home-scroll,
+html.orby-home-scroll body {
+  background: var(--orby-black, #080808);
+}
+
 html.mobile-landing {
   --orby-home-padding-x: clamp(1.25rem, 5vw, 1.5rem);
   /* Nav chrome + overlay menu share one inset (px — immune to legal rem scaling) */
@@ -22,8 +28,8 @@ html.mobile-landing {
 
 html.mobile-landing,
 html.mobile-landing body {
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
+  background-color: var(--orby-black, #080808) !important;
+  background: var(--orby-black, #080808) !important;
 }
 
 html.mobile-landing body {
@@ -34,8 +40,8 @@ html.mobile-landing body {
 }
 
 html.mobile-landing #app {
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
+  background-color: var(--orby-black, #080808) !important;
+  background: var(--orby-black, #080808) !important;
   min-height: 100svh !important;
   height: auto !important;
 }
@@ -52,8 +58,8 @@ html.mobile-landing.orby-home-scroll .workspace {
 }
 
 html.mobile-landing .workspace {
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
+  background-color: var(--orby-black, #080808) !important;
+  background: var(--orby-black, #080808) !important;
   flex: none !important;
   min-height: 0 !important;
   height: auto !important;
@@ -61,8 +67,8 @@ html.mobile-landing .workspace {
 
 html.mobile-landing .viewport {
   clip-path: none !important;
-  background-color: var(--orby-app-bg) !important;
-  background: var(--orby-app-bg) !important;
+  background-color: var(--orby-black, #080808) !important;
+  background: var(--orby-black, #080808) !important;
   flex: none !important;
   width: 100% !important;
   min-height: 0 !important;
@@ -75,8 +81,8 @@ html.mobile-landing #webgl {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none;
-  background: var(--orby-app-bg) !important;
-  background-color: var(--orby-app-bg) !important;
+  background: var(--orby-black, #080808) !important;
+  background-color: var(--orby-black, #080808) !important;
 }
 
 html.mobile-landing .dropzone,

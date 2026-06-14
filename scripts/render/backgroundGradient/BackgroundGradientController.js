@@ -51,8 +51,8 @@ export class BackgroundGradientController {
   isActive() {
     const bg = this.backgroundController;
     if (!this.config.enabled || !bg) return false;
-    // Show gradient when Render Backdrop is off — HDRI may still light the mesh.
-    return !(bg.hdriEnabled && bg.hdriBackgroundEnabled);
+    // Show gradient when Render Backdrop is off or Shader Lab owns the backdrop.
+    return bg.usesFallbackBackdrop?.() === true;
   }
 
   getFallbackColor() {

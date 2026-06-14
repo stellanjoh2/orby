@@ -993,6 +993,9 @@
                     <button type="button" data-creative-look="vga-dos-3d" class="hdri-icon" data-tooltip="VGA/DOS 3D — stable snap, affine UVs, nearest crushed textures, flat DOS lighting, 256-color palette (no dither)">
                       <img src="./assets/images/creative-look-vga-dos-3d.svg" alt="VGA/DOS 3D" width="192" height="192" />
                     </button>
+                    <button type="button" data-creative-look="vectrex" class="hdri-icon" data-tooltip="Vectrex — P31 phosphor wireframe on black; steady green CRT lines, vertex glow, analog wobble (Scale). Intensity = line brightness">
+                      <img src="./assets/images/creative-look-vectrex.svg" alt="Vectrex" width="192" height="192" />
+                    </button>
                       </div>
                     </div>
                     <div class="creative-look-grid-section">
@@ -1006,6 +1009,20 @@
                     </button>
                     <button type="button" data-creative-look="ascii-art-3" class="hdri-icon" data-tooltip="ASCII 3 — braille halftone (bonus look); finer 12×20 grid; 25% ink in shadows, Master Hue (Scale &amp; Intensity locked)">
                       <img src="./assets/images/creative-look-ascii-art-2.svg" alt="ASCII 3" width="192" height="192" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">Artistic</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="watercolour" class="hdri-icon" data-tooltip="Watercolour — clip-space mesh wobble + soft colormap + comic ink + outward paint bleed; Kuwahara post with mega-halo; Scale = brush size &amp; wobble, Intensity = paint strength">
+                      <img src="./assets/images/creative-look-watercolour.svg" alt="Watercolour" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="sketch" class="hdri-icon" data-tooltip="Sketch — high-contrast B&amp;W pencil illustration; harsh toon shadow bands + manga screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
+                      <img src="./assets/images/creative-look-sketch.svg" alt="Sketch" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="sketch-colour" class="hdri-icon" data-tooltip="Sketch Colour — coloured manga illustration; watercolour-washed fills + screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
+                      <img src="./assets/images/creative-look-sketch-colour.svg" alt="Sketch Colour" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1069,8 +1086,8 @@
                     />
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
-                  <label class="slider-line">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply).">Scale</span>
+                  <label class="slider-line" id="creativeLookPatternScaleRow">
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -1081,6 +1098,41 @@
                     />
                     <span class="value" data-output="creativeLookPatternScale">1.00×</span>
                   </label>
+                  <div id="creativeLookPresetSliders" class="creative-look-preset-sliders" hidden>
+                    <label class="slider-line creative-look-preset-slider" data-slider-id="creativeLookSketchStrokeWidth" hidden>
+                      <span data-tooltip="Ink outline thickness, silhouette edge dilation, and mesh wobble. Independent of screentone raster.">Stroke Width</span>
+                      <input
+                        type="range"
+                        id="creativeLookSketchStrokeWidth"
+                        min="0.2"
+                        max="2.8"
+                        step="0.02"
+                        value="1"
+                      />
+                      <span class="value" data-output="creativeLookSketchStrokeWidth">1.00×</span>
+                    </label>
+                    <label class="slider-line creative-look-preset-slider" data-slider-id="creativeLookSketchRasterSize" hidden>
+                      <span data-tooltip="0 = off. Manga screentone dot pitch and paper grain scale. Independent of stroke width.">Raster Size</span>
+                      <input
+                        type="range"
+                        id="creativeLookSketchRasterSize"
+                        min="0"
+                        max="2.8"
+                        step="0.02"
+                        value="1"
+                      />
+                      <span class="value" data-output="creativeLookSketchRasterSize">1.00×</span>
+                    </label>
+                    <label class="color-line creative-look-preset-ink" data-ink-control="strokeColor" hidden>
+                      <span data-tooltip="Ink outlines, band strokes, and screentone dots.">Stroke Colour</span>
+                      <input
+                        type="color"
+                        id="creativeLookInkStrokeColor"
+                        class="color-chip"
+                        value="#080808"
+                      />
+                    </label>
+                  </div>
                   <div class="slider-line slider-line--toggle-only">
                     <span class="slider-line-label">
                       Bloom

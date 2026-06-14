@@ -1,5 +1,6 @@
 import {
   isAnamorphicBloomPipelineActive,
+  isBloomTuningActive,
   isVignetteUiEnabled,
 } from '../constants.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
@@ -21,7 +22,7 @@ export function applyEffectFoldouts(state, setOpen) {
   setOpen('fisheye', fisheyeOn && !isoOn);
   setOpen('vignette', isVignetteUiEnabled(state.camera ?? {}));
   setOpen('dof', !!state.dof?.enabled);
-  setOpen('bloom', !!state.bloom?.enabled);
+  setOpen('bloom', isBloomTuningActive(state));
   setOpen(
     'anamorphic-lens-flare',
     isAnamorphicBloomPipelineActive(state) && abOn,
@@ -136,7 +137,7 @@ export function applyToggleSectionMute(state, setMuted) {
   setMuted('ambient-occlusion', !state.ambientOcclusion?.enabled);
   setMuted('dof', !state.dof?.enabled);
   setMuted('volumetric-scattering', !godRaysOn || isoOn);
-  setMuted('bloom', !state.bloom?.enabled);
+  setMuted('bloom', !isBloomTuningActive(state));
   setMuted('anamorphic-lens-flare', !isAnamorphicBloomPipelineActive(state) || !abOn);
   setMuted('lens-flare', !lensFlareOn || isoOn);
   setMuted('lens-dirt', !state.lensDirt?.enabled);
