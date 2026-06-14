@@ -594,11 +594,7 @@ export class EventManager {
     eventBus.on('export:png', (settings) => s.exportPng(settings));
     eventBus.on('export:svg', () => s.exportSvgSilhouette());
     eventBus.on('export:svg-color', (payload) =>
-      s.exportSvgColor(
-        payload && typeof payload === 'object' && 'detail' in payload
-          ? payload.detail
-          : undefined,
-      ),
+      s.exportSvgColor(payload && typeof payload === 'object' ? payload : {}),
     );
     eventBus.on('export:svg-glb', () => s.exportSvgGlb());
     eventBus.on('scene:batch-apply-start', () => {

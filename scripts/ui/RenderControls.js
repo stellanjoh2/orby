@@ -890,7 +890,10 @@ export class RenderControls {
       const level =
         raw === 'low' || raw === 'medium' || raw === 'high' ? raw : 'high';
       this.stateStore.set('svgColorDetail', level);
-      this.eventBus.emit('export:svg-color', { detail: level });
+      this.eventBus.emit('export:svg-color', {
+        detail: level,
+        transparent: this.ui.exportSettings.transparent,
+      });
     });
     this.ui.buttons.exportSvgGlb?.addEventListener('click', () => {
       this.eventBus.emit('export:svg-glb');

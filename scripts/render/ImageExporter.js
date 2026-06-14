@@ -2,6 +2,12 @@ import * as THREE from 'three';
 import { ORBY_BLACK } from '../constants.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
+import {
+  buildScreenPixelSvg,
+  buildScreenPixelSvgFromGlPixels,
+  resolveScreenPixelGridLayout,
+  sampleScreenPixelGridFromCanvasData,
+} from './screenPixelSvgExport.js';
 import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js';
 import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js';
 
@@ -729,6 +735,132 @@ export class ImageExporter {
       }
       this._restoreState(state);
     }
+  }
+
+  /**
+   * Export the current Screen pixels look as a hard-edged rect-grid SVG (WYSIWYG viewport grid).
+   * @param {string} presetId — active screen-pixel creative look preset
+   * @param {{ transparent?: boolean }} [opts]
+   */
+  async exportSvgScreenPixel(currentFile, presetId, opts = {}) {
+    const transparent = opts.transparent === true;
+    const state = this._saveState();
+    const originalBloomEnabled = this.postPipeline?.bloomPass?.enabled;
+    const originalFxaaEnabled = this.postPipeline?.fxaaPass?.enabled;
+    const originalRenderPassClearAlpha = this.postPipeline?.renderPass?.clearAlpha ?? 1;
+    try {
+      if (this.postPipeline?.bloomPass) {
+        this.postPipeline.bloomPass.enabled = false;
+      }
+      if (this.postPipeline?.fxaaPass) {
+        this.postPipeline.fxaaPass.enabled = false;
+      }
+      if (this.postPipeline?.renderPass) {
+        this.postPipeline.renderPass.clearAlpha = 0;
+      }
+      // Transparent prepass so flat-post shaders fill empty cells with uBgColor
+      // instead of 15-bit-quantizing an opaque HDRI/studio background (GBA grid artifact).
+      this._setupTransparentRender();
+
+      const canvas = this.renderer.domElement;
+      const width = Math.max(1, canvas.width || 1);
+      const height = Math.max(1, canvas.height || 1);
+
+      if (typeof this.renderComposerPassForExport === 'function') {
+        this.renderComposerPassForExport({ transparent: true });
+        this._ensureFullDrawingBufferViewport();
+      } else if (this.composer) {
+        this._ensureFullDrawingBufferViewport();
+        this.composer.render();
+        this._ensureFullDrawingBufferViewport();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
+
+      const gl = this.renderer.getContext();
+      if (gl && typeof gl.finish === 'function') {
+        gl.finish();
+      }
+
+      let svg = '';
+      const capture = this.composer
+        ? this._readComposerOutputPixels(width, height)
+        : null;
+
+      if (capture?.pixels) {
+        svg = buildScreenPixelSvgFromGlPixels(
+          capture.pixels,
+          capture.width,
+          capture.height,
+          presetId,
+          { transparent },
+        );
+      } else {
+        svg = await this._buildScreenPixelSvgFromCanvasDataUrl(
+          canvas.toDataURL('image/png'),
+          width,
+          height,
+          presetId,
+          { transparent },
+        );
+      }
+
+      if (!svg) {
+        throw new Error('Pixel SVG export failed');
+      }
+      this._downloadText(svg, currentFile, 'pixel.svg', 'image/svg+xml');
+    } finally {
+      if (this.postPipeline?.bloomPass && originalBloomEnabled !== undefined) {
+        this.postPipeline.bloomPass.enabled = originalBloomEnabled;
+      }
+      if (this.postPipeline?.fxaaPass && originalFxaaEnabled !== undefined) {
+        this.postPipeline.fxaaPass.enabled = originalFxaaEnabled;
+      }
+      if (this.postPipeline?.renderPass) {
+        this.postPipeline.renderPass.clearAlpha = originalRenderPassClearAlpha;
+      }
+      this._restoreState(state);
+    }
+  }
+
+  _buildScreenPixelSvgFromCanvasDataUrl(dataUrl, width, height, presetId, opts = {}) {
+    const transparent = opts.transparent === true;
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = width;
+          offscreen.height = height;
+          const ctx = offscreen.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Canvas 2D unavailable'));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const layout = resolveScreenPixelGridLayout(presetId, width, height);
+          const cells = sampleScreenPixelGridFromCanvasData(
+            imageData.data,
+            width,
+            height,
+            layout,
+          );
+          resolve(buildScreenPixelSvg(cells, layout.cols, layout.rows, {
+            pixelWidth: width,
+            pixelHeight: height,
+            cellPxW: layout.cellPxW,
+            cellPxH: layout.cellPxH,
+            transparent,
+          }));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = () => reject(new Error('Pixel capture failed'));
+      img.src = dataUrl;
+    });
   }
 
   /**

@@ -57,6 +57,7 @@ import {
   creativeLookMasterHueRadians,
   formatCreativeLookPresetLabel,
   isFlatPostCreativeLookPreset,
+  isScreenPixelCreativeLookPreset,
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPreset,
 } from './render/CreativeLookMaterials.js';
@@ -4696,25 +4697,44 @@ export class SceneManager {
     }
   }
 
-  async exportSvgColor(detail = 'high') {
+  async exportSvgColor(settings = {}) {
     if (!this.currentModel) {
       this.ui?.showToast?.('Load a mesh before exporting SVG');
       return;
     }
+    const storeCl = this.stateStore?.getState()?.creativeLook ?? {};
+    const mcCl = this.materialController?.getCreativeLookSettings?.() ?? {};
+    const presetId = normalizeCreativeLookPreset(storeCl.preset ?? mcCl.preset);
+    const creativeLookOn = (storeCl.enabled ?? mcCl.enabled) === true;
+    const usePixelSvg = creativeLookOn && isScreenPixelCreativeLookPreset(presetId);
+
     const level =
-      detail === 'low' || detail === 'medium' || detail === 'high' ? detail : 'high';
+      settings.detail === 'low' || settings.detail === 'medium' || settings.detail === 'high'
+        ? settings.detail
+        : 'high';
+    const transparent = settings.transparent === true;
     try {
-      this.ui?.showToast?.('Exporting SVG (color)…');
-      await this.imageExporter.exportSvgColor(
-        this.currentModel,
-        this.currentFile,
-        level,
-      );
+      this.ui?.showToast?.(usePixelSvg ? 'Exporting pixel SVG…' : 'Exporting SVG (color)…');
+      if (usePixelSvg) {
+        await this.imageExporter.exportSvgScreenPixel(this.currentFile, presetId, {
+          transparent,
+        });
+      } else {
+        await this.imageExporter.exportSvgColor(
+          this.currentModel,
+          this.currentFile,
+          level,
+        );
+      }
       this.ui?.uiSounds?.playRenderFinished();
-      this.ui?.showToast?.('SVG (color) exported', 3200, { notification: false });
+      this.ui?.showToast?.(
+        usePixelSvg ? 'Pixel SVG exported' : 'SVG (color) exported',
+        3200,
+        { notification: false },
+      );
     } catch (error) {
       console.error('SVG (color) export failed', error);
-      this.ui?.showToast?.('SVG (color) export failed');
+      this.ui?.showToast?.('SVG export failed');
     }
   }
 

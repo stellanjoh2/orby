@@ -264,6 +264,23 @@ export function isApple2PixelCreativeLookPreset(preset) {
   return normalizeCreativeLookPreset(preset) === 'apple2-pixel';
 }
 
+/** Shader Lab “Screen pixels” grid — matches index.html creative-look section. */
+export const SCREEN_PIXEL_CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
+  'ega-pixel',
+  'c64-pixel',
+  'gameboy-pixel',
+  'gba-pixel',
+  'nes-pixel',
+  'megadrive-pixel',
+  'intellivision-pixel',
+  'apple2-pixel',
+]);
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isScreenPixelCreativeLookPreset(preset) {
+  return SCREEN_PIXEL_CREATIVE_LOOK_PRESETS.includes(normalizeCreativeLookPreset(preset));
+}
+
 /** Two-pass screen grid: ASCII terminal, EGA, or retro flat pixels. */
 export function isFlatPostCreativeLookPreset(preset) {
   return (
