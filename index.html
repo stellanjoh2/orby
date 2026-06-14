@@ -6,6 +6,20 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual"
     />
+    <!-- /mobile landing: base + mobile-landing class before any relative asset links -->
+    <script>
+      (function () {
+        try {
+          var path = (location.pathname || '/').replace(/\/$/, '') || '/';
+          if (path !== '/mobile') return;
+          var base = document.createElement('base');
+          base.href = '/';
+          document.head.appendChild(base);
+          document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
+          document.documentElement.classList.add('orby-gate-unlocked');
+        } catch (e) {}
+      })();
+    </script>
     <style>
       /* First-paint boot — external styles.css may load a frame later */
       html,
@@ -94,6 +108,12 @@
           var VERIFIED_KEY = 'orby_site_gate_verified';
           var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
           var CHALLENGE_EVERY_N_VISITS = 5;
+          var mobileLandingPath =
+            (location.pathname || '/').replace(/\/$/, '') || '/';
+          if (mobileLandingPath === '/mobile') {
+            document.documentElement.classList.add('orby-gate-unlocked');
+            return;
+          }
           var prev = parseInt(sessionStorage.getItem(VISIT_SEQ_KEY) || '0', 10);
           var visitSeq = (isNaN(prev) ? 0 : prev) + 1;
           sessionStorage.setItem(VISIT_SEQ_KEY, String(visitSeq));
@@ -4573,9 +4593,9 @@
               </div>
 
               <div class="panel-block export-block" style="display: none;">
-                <button id="exportPng" class="accent-action-btn" data-tooltip="Export current view as PNG image">
+                <button id="exportImageLegacy" class="accent-action-btn" data-tooltip="Export current view as image">
                   <i class="fa-solid fa-download"></i>
-                  Export .PNG
+                  Export image
                 </button>
               </div>
 
@@ -4613,16 +4633,24 @@
             <h2 class="panel-header-title" data-header="export">Export</h2>
             <section class="panel" data-panel="export">
               <div class="panel-block">
-                <div class="block-title">PNG</div>
+                <div class="block-title">Image</div>
                 <p class="export-format-sub">
-                  Raster snapshot of the current view—lighting, materials, and post effects included. Toggle transparency to drop the background; size is relative to the viewer—1× matches your current screen resolution, 2× exports at double that (larger file, more detail).
+                  Raster snapshot of the current view—lighting, materials, and post effects included. Choose PNG, JPEG, or WebP; toggle transparency when the format supports it. Size is relative to the viewer—1× matches your current screen resolution, 2× exports at double that (larger file, more detail).
                 </p>
                 <div class="export-controls">
                   <div class="export-option-group">
+                    <label class="export-label">Format</label>
+                    <div class="export-button-group export-button-group--triple">
+                      <button type="button" data-export-image-format="png" class="export-option-btn active" data-tooltip="Lossless PNG with optional transparency">.PNG</button>
+                      <button type="button" data-export-image-format="jpeg" class="export-option-btn" data-tooltip="Smaller JPEG — no transparency">.JPEG</button>
+                      <button type="button" data-export-image-format="webp" class="export-option-btn" data-tooltip="WebP with optional transparency">.WEBP</button>
+                    </div>
+                  </div>
+                  <div id="exportImageTransparentSettings" class="export-option-group">
                     <label class="export-label">Transparent</label>
                     <div class="export-button-group">
-                      <button data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
-                      <button data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
+                      <button type="button" data-export-transparent="false" class="export-option-btn" data-tooltip="Export with solid background">NO</button>
+                      <button type="button" data-export-transparent="true" class="export-option-btn active" data-tooltip="Export with transparent background">YES</button>
                     </div>
                   </div>
                   <div class="export-option-group">
@@ -4632,9 +4660,9 @@
                       <button data-export-size="2" class="export-option-btn active" data-tooltip="Export at 2× resolution (higher quality)">2X</button>
                     </div>
                   </div>
-                  <button id="exportPngButton" class="accent-action-btn" data-tooltip="Export current view as PNG image">
+                  <button id="exportImageButton" class="accent-action-btn" data-tooltip="Export current view as image">
                     <i class="fa-solid fa-download"></i>
-                    Export .PNG
+                    <span class="export-image-btn-label">Export .PNG</span>
                   </button>
                 </div>
               </div>

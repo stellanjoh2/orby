@@ -38,8 +38,21 @@ function isMobileDeviceImpl() {
   }
 }
 
+function isOrbyMobileLandingRouteImpl() {
+  try {
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    return path === '/mobile';
+  } catch {
+    return false;
+  }
+}
+
 function shouldShowMobileLandingImpl() {
-  return isForcedMobileLandingDebugImpl() || isMobileDeviceImpl();
+  return (
+    isForcedMobileLandingDebugImpl()
+    || isMobileDeviceImpl()
+    || isOrbyMobileLandingRouteImpl()
+  );
 }
 
 function isMobileLandingImpl() {
@@ -60,7 +73,11 @@ function isLegalSubpageMobileViewportImpl() {
 }
 
 function shouldApplyMobileLandingClassesImpl() {
-  return shouldShowMobileLandingImpl() || isLegalSubpageMobileViewportImpl();
+  return (
+    shouldShowMobileLandingImpl()
+    || isLegalSubpageMobileViewportImpl()
+    || isOrbyMobileLandingRouteImpl()
+  );
 }
 
 function ensureMobileLandingClassImpl() {
@@ -91,6 +108,8 @@ function callApi(method) {
       return shouldShowMobileLandingImpl();
     case 'isMobileLanding':
       return isMobileLandingImpl();
+    case 'isOrbyMobileLandingRoute':
+      return isOrbyMobileLandingRouteImpl();
     case 'ensureMobileLandingClass':
       return ensureMobileLandingClassImpl();
     default:
@@ -112,6 +131,10 @@ export function shouldShowMobileLanding() {
 
 export function isMobileLanding() {
   return callApi('isMobileLanding');
+}
+
+export function isOrbyMobileLandingRoute() {
+  return callApi('isOrbyMobileLandingRoute');
 }
 
 /** Idempotent — adds html.mobile-landing and html.orby-home-scroll. */

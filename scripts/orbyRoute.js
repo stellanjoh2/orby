@@ -1,12 +1,22 @@
 /** Shared client-side route detection for home vs in-app 404 experience. */
 
+import { ORBY_MOBILE_LANDING_PATH } from './orbyMobileAppRoute.js';
+
 export function getOrbyPathname() {
   return window.location.pathname || '/';
 }
 
+function normalizeOrbyPath(pathname) {
+  return (pathname || '/').replace(/\/$/, '') || '/';
+}
+
 export function isOrbyHomePath(pathname = getOrbyPathname()) {
-  const path = pathname || '/';
-  return path === '/' || path === '/index.html';
+  const path = normalizeOrbyPath(pathname);
+  return (
+    path === '/'
+    || path === '/index.html'
+    || path === ORBY_MOBILE_LANDING_PATH
+  );
 }
 
 export function isOrbyNotFoundDebug() {

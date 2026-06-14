@@ -291,6 +291,44 @@ if (subpageNavUpdated > 0) {
   console.log(`🧭 Injected subpage site nav into ${subpageNavUpdated} HTML files`);
 }
 
+// Orby Mobile viewer at /mobile/app (landing stays at /mobile → index.html)
+const mobileSrcDir = join(__dirname, 'apps', 'mobile');
+if (existsSync(mobileSrcDir)) {
+  const mobileDistDir = join(distDir, 'mobile', 'app');
+  mkdirSync(join(mobileDistDir, 'styles'), { recursive: true });
+  mkdirSync(join(mobileDistDir, 'scripts'), { recursive: true });
+  await esbuild.build({
+    entryPoints: [join(mobileSrcDir, 'scripts', 'main.js')],
+    bundle: true,
+    minify: true,
+    sourcemap: false,
+    format: 'esm',
+    target: ['es2020'],
+    outfile: join(mobileDistDir, 'scripts', 'main.js'),
+    treeShaking: true,
+    legalComments: 'none',
+    external: ['three'],
+    plugins: [
+      {
+        name: 'external-three-jsm',
+        setup(build) {
+          build.onResolve({ filter: /^three\// }, (args) => ({
+            path: args.path,
+            external: true,
+          }));
+        },
+      },
+    ],
+    banner: {
+      js: '/* Orby Mobile — https://orby.studio/mobile/app */',
+    },
+  });
+  cpSync(join(mobileSrcDir, 'index.html'), join(mobileDistDir, 'index.html'));
+  cpSync(join(mobileSrcDir, 'styles', 'mobile.css'), join(mobileDistDir, 'styles', 'mobile.css'));
+  cpSync(join(distDir, 'index.html'), join(distDir, 'mobile', 'index.html'));
+  console.log('📱 Orby Mobile bundle → dist/mobile/app/');
+}
+
 // Copy CNAME for GitHub Pages
 if (existsSync('CNAME')) {
   cpSync('CNAME', join(distDir, 'CNAME'));

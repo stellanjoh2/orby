@@ -7,6 +7,22 @@
       "destination": "/api/$1"
     },
     {
+      "source": "/mobile/app",
+      "destination": "/mobile/app/"
+    },
+    {
+      "source": "/mobile/app/",
+      "destination": "/mobile/app/index.html"
+    },
+    {
+      "source": "/mobile",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mobile/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

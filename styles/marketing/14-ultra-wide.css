@@ -80,7 +80,7 @@
   #orby-marketing .orby-marketing__section--cta,
   #orby-marketing .orby-marketing__section--cta .orby-marketing__cta-stage {
     /*
-     * CTA right PNG should mirror the 2560 composition while scaling up to 3840,
+     * CTA hummingbird PNG should mirror the 2560 composition while scaling up to 3840,
      * like the dropzone deco assets.
      */
     --orby-cta-ultra-ramp: calc(
@@ -88,14 +88,9 @@
     );
     --orby-cta-ultra-size-trim: calc(1 - 0.12 * var(--orby-cta-ultra-ramp));
     --orby-cta-asset-shift-x: calc(8% + 240px * var(--orby-cta-ultra-ramp));
-    --orby-cta-asset-left-shift-x: calc(-8% - 240px * var(--orby-cta-ultra-ramp));
     --orby-intro-scale-right: 1;
-    --orby-intro-scale-left: 1;
     --orby-intro-right-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
-    --orby-intro-left-nudge: calc(350px - 500px * var(--orby-cta-ultra-ramp));
-    --orby-cta-hummingbird-inset-top: calc(clamp(4.5rem, 10vh, 7.5rem) * var(--orby-ultra-wide-factor));
     --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-ultra-wide-factor));
-    --orby-cta-asset-shift-y: calc(100px - 140px * var(--orby-cta-ultra-ramp));
     --orby-cta-asset-max-h: min(
       100dvh,
       calc(

@@ -509,7 +509,8 @@ export const MARKETING_SECTIONS = [
     type: 'cta',
     id: 'orby-marketing-cta',
     title: 'Try it out\nfor free now',
-    lede: '',
+    lede:
+      'Drop a model in the browser and start presenting — no account, no upload queue.\nYour files stay on your machine.',
     ctaLabel: 'Browse files',
     secondaryCtaLabel: 'Load sample',
     footerContactEmail: 'orby-admin@proton.me',

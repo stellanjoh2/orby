@@ -23,7 +23,9 @@ export function escapeMarketingHtml(text) {
 export function renderMarketingBodyHtml(text, gradientPhrases = []) {
   const raw = String(text ?? '');
   const phrases = gradientPhrases?.filter(Boolean) ?? [];
-  if (!phrases.length) return escapeMarketingHtml(raw);
+  if (!phrases.length) {
+    return escapeMarketingHtml(raw).replace(/\n/g, '<br>');
+  }
 
   /** @type {{ type: 'text' | 'gradient', value: string }[]} */
   let segments = [{ type: 'text', value: raw }];
@@ -62,7 +64,7 @@ export function renderMarketingBodyHtml(text, gradientPhrases = []) {
     .map((segment) =>
       segment.type === 'gradient'
         ? `<span class="orby-marketing__gradient-text">${escapeMarketingHtml(segment.value)}</span>`
-        : escapeMarketingHtml(segment.value),
+        : escapeMarketingHtml(segment.value).replace(/\n/g, '<br>'),
     )
     .join('');
 }

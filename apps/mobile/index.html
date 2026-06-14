@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" class="orby-mobile-app">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="/mobile/app/" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#080808" />
+    <meta name="orby-mobile-asset-base" content="/assets/" />
+    <meta name="robots" content="noindex" />
+    <title>Orby Mobile</title>
+    <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/mobile.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+          "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/loaders/GLTFLoader.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/GLTFLoader.js",
+          "three/examples/jsm/libs/meshopt_decoder.module.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/libs/meshopt_decoder.module.js",
+          "three/examples/jsm/postprocessing/EffectComposer.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js",
+          "three/examples/jsm/postprocessing/RenderPass.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/RenderPass.js",
+          "three/examples/jsm/postprocessing/ShaderPass.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "three/examples/jsm/postprocessing/UnrealBloomPass.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/UnrealBloomPass.js",
+          "three/examples/jsm/postprocessing/FilmPass.js": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/FilmPass.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-active-tab="light">
+      <main class="orby-mobile-viewport" aria-label="3D viewport">
+        <div class="orby-mobile-viewport__canvas"></div>
+      </main>
+
+      <nav class="orby-mobile-dock" aria-label="Actions">
+        <button type="button" class="orby-mobile-dock__btn" data-open-tab="light" aria-label="Light" aria-expanded="false">
+          <span class="orby-mobile-dock__thumb"><img data-dock-thumb src="/assets/images/hdri-thumbnail-beach.png" alt="" width="28" height="28" /></span>
+          <span>Light</span>
+        </button>
+        <button type="button" class="orby-mobile-dock__btn" data-open-tab="style" aria-label="Style" aria-expanded="false">
+          <span class="orby-mobile-dock__thumb"><img data-dock-thumb src="/assets/images/look-filters/none.png" alt="" width="28" height="28" /></span>
+          <span>Style</span>
+        </button>
+        <button type="button" class="orby-mobile-dock__btn" data-open-tab="filters" aria-label="Filters" aria-expanded="false">
+          <span class="orby-mobile-dock__thumb"><img data-dock-thumb src="/assets/images/look-filters/none.png" alt="" width="28" height="28" /></span>
+          <span>Filters</span>
+        </button>
+        <button type="button" class="orby-mobile-dock__btn orby-mobile-dock__btn--fx" data-open-tab="fx" aria-label="Adjust" aria-expanded="false">
+          <span class="orby-mobile-dock__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span>Adjust</span>
+        </button>
+        <span class="orby-mobile-dock__sep" aria-hidden="true"></span>
+        <label class="orby-mobile-dock__btn orby-mobile-dock__btn--icon" for="orbyMobileFileInput" data-action="load">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 16V4m0 0 4 4m-4-4-4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span class="orby-mobile-sr-only">Import model</span>
+        </label>
+        <button type="button" class="orby-mobile-dock__btn orby-mobile-dock__btn--icon" data-action="export" aria-label="Export image">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 8v12m0 0 4-4m-4 4-4-4M4 6v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </nav>
+
+      <section class="orby-mobile-sheet" aria-label="Adjustments">
+        <div class="orby-mobile-sheet__body">
+          <div class="orby-mobile-panel orby-mobile-panel--presets" data-panel="light">
+            <div class="orby-mobile-preset-rail" data-rail="light">
+              <div class="orby-mobile-preset-rail__track" data-rail-track="light"></div>
+            </div>
+            <div class="orby-mobile-hdri-brightness" data-hdri-brightness hidden>
+              <label class="orby-mobile-hdri-brightness__control">
+                <span class="orby-mobile-hdri-brightness__label">Brightness</span>
+                <input
+                  type="range"
+                  data-hdri-brightness-input
+                  min="0"
+                  max="3"
+                  step="0.1"
+                  value="2"
+                  aria-label="HDRI brightness"
+                />
+                <span class="orby-mobile-hdri-brightness__value" data-hdri-brightness-value>2.0</span>
+              </label>
+            </div>
+          </div>
+          <div class="orby-mobile-panel orby-mobile-panel--presets" data-panel="style" hidden>
+            <div class="orby-mobile-preset-rail" data-rail="style">
+              <div class="orby-mobile-preset-rail__track" data-rail-track="style"></div>
+            </div>
+          </div>
+          <div class="orby-mobile-panel orby-mobile-panel--presets" data-panel="filters" hidden>
+            <div class="orby-mobile-preset-rail" data-rail="filters">
+              <div class="orby-mobile-preset-rail__track" data-rail-track="filters"></div>
+            </div>
+          </div>
+          <div class="orby-mobile-panel orby-mobile-panel--adjust" data-panel="fx" hidden>
+            <div class="orby-mobile-panel__head">
+              <p class="orby-mobile-panel__title">Adjust</p>
+              <button type="button" class="orby-mobile-ghost-btn" data-action="reset-fx">
+                Reset grade
+              </button>
+            </div>
+            <div class="orby-mobile-fx-controls" data-fx-controls></div>
+          </div>
+        </div>
+      </section>
+
+      <button type="button" class="orby-mobile-scrim" data-sheet-dismiss hidden aria-label="Close panel"></button>
+      <div class="orby-mobile-toast" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <input
+      id="orbyMobileFileInput"
+      type="file"
+      class="orby-mobile-sr-file"
+      accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+      aria-label="Import 3D model"
+      tabindex="-1"
+    />
+
+    <script type="module" src="scripts/main.js"></script>
+  </body>
+</html>

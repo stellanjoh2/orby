@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import { ORBY_BLACK } from '../constants.js';
+import { encodeCanvasToBlob } from './encodeImageBlob.js';
+import {
+  getImageExportFormat,
+  imageExportDownloadSuffix,
+  normalizeImageExportFormat,
+} from './imageExportFormats.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import {
@@ -14,7 +20,7 @@ import { ShaderPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/
 /**
  * ImageExporter
  * 
- * Handles exporting the 3D scene as images (PNG, transparent PNG, etc.)
+ * Handles exporting the 3D scene as raster images (PNG, JPEG, WebP, etc.)
  * Manages render targets, cropping, pixel manipulation, and file downloads
  */
 export class ImageExporter {
@@ -167,25 +173,14 @@ export class ImageExporter {
     }
   }
 
-  async _compositeCinematicLetterbox219OntoPngDataUrl(dataUrl, w, h) {
-    const img = new Image();
-    const ok = await new Promise((resolve) => {
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = dataUrl;
-    });
-    if (!ok) return dataUrl;
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
+  _applyCinematicLetterbox219ToCanvas(canvas) {
     const ctx = canvas.getContext('2d');
-    if (!ctx) return dataUrl;
-    ctx.drawImage(img, 0, 0, w, h);
-    this._fillCinematicLetterbox219Mattes(ctx, w, h);
-    return canvas.toDataURL('image/png');
+    if (!ctx) return canvas;
+    this._fillCinematicLetterbox219Mattes(ctx, canvas.width, canvas.height);
+    return canvas;
   }
 
-  _pixelsToFlippedPngDataUrl(pixels, targetWidth, targetHeight, { cinematicLetterbox219 = false } = {}) {
+  _pixelsToFlippedCanvas(pixels, targetWidth, targetHeight, { cinematicLetterbox219 = false } = {}) {
     const flipped = new Uint8ClampedArray(targetWidth * targetHeight * 4);
     const rowStride = targetWidth * 4;
     for (let y = 0; y < targetHeight; y += 1) {
@@ -203,7 +198,7 @@ export class ImageExporter {
     if (cinematicLetterbox219) {
       this._fillCinematicLetterbox219Mattes(ctx, targetWidth, targetHeight);
     }
-    return exportCanvas.toDataURL('image/png');
+    return exportCanvas;
   }
 
   /**
@@ -383,13 +378,13 @@ export class ImageExporter {
     }
   }
 
-  _captureComposerOutputAsPngDataUrl(
+  _captureComposerOutputAsCanvas(
     fallbackWidth,
     fallbackHeight,
     { cinematicLetterbox219 = false } = {},
   ) {
     const capture = this._readComposerOutputPixels(fallbackWidth, fallbackHeight);
-    if (!capture) return '';
+    if (!capture) return null;
     const fw = Math.max(1, fallbackWidth ?? 1);
     const fh = Math.max(1, fallbackHeight ?? 1);
     let { pixels, width, height } = capture;
@@ -398,9 +393,20 @@ export class ImageExporter {
       width = fw;
       height = fh;
     }
-    return this._pixelsToFlippedPngDataUrl(pixels, width, height, {
+    return this._pixelsToFlippedCanvas(pixels, width, height, {
       cinematicLetterbox219,
     });
+  }
+
+  _captureComposerOutputAsPngDataUrl(
+    fallbackWidth,
+    fallbackHeight,
+    { cinematicLetterbox219 = false } = {},
+  ) {
+    const canvas = this._captureComposerOutputAsCanvas(fallbackWidth, fallbackHeight, {
+      cinematicLetterbox219,
+    });
+    return canvas ? canvas.toDataURL('image/png') : '';
   }
 
   /** Nearest-neighbor resize when composer RT and canvas backing store diverge. */
@@ -422,19 +428,19 @@ export class ImageExporter {
   }
 
   /**
-   * Export scene as PNG (with background)
-   * Captures the full viewport at the current aspect ratio
-   */
-  /**
+   * Export scene as a raster still (with background).
+   * Captures the full viewport at the current aspect ratio.
    * @param {boolean} [cinematicLetterbox219] — when true, paint 21∶9 mattes like the viewport overlay.
    */
-  async exportPng(
+  async exportImage(
     currentFile,
     originalSize,
     originalPixelRatio,
     size = 1,
     cinematicLetterbox219 = false,
+    format = 'png',
   ) {
+    const formatId = normalizeImageExportFormat(format);
     const scale = Math.max(0.25, Number(size) || 1);
     const { width: targetWidth, height: targetHeight } =
       this._resolveExportPixelSize(scale);
@@ -479,13 +485,28 @@ export class ImageExporter {
 
     const tw = exportW;
     const th = exportH;
-    let dataUrl = this.composer
-      ? this._captureComposerOutputAsPngDataUrl(tw, th, { cinematicLetterbox219 })
-      : this.renderer.domElement.toDataURL('image/png');
-    if (!this.composer && cinematicLetterbox219) {
-      dataUrl = await this._compositeCinematicLetterbox219OntoPngDataUrl(dataUrl, tw, th);
+    /** @type {HTMLCanvasElement} */
+    let canvas;
+    if (this.composer) {
+      canvas = this._captureComposerOutputAsCanvas(tw, th, { cinematicLetterbox219 });
+    } else {
+      canvas = this.renderer.domElement;
+      if (cinematicLetterbox219) {
+        const copy = document.createElement('canvas');
+        copy.width = tw;
+        copy.height = th;
+        const ctx = copy.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, tw, th);
+        this._applyCinematicLetterbox219ToCanvas(copy);
+        canvas = copy;
+      }
     }
-    this._downloadImage(dataUrl, currentFile, 'orby.png');
+    if (!canvas) {
+      throw new Error('Image capture failed');
+    }
+
+    const blob = await encodeCanvasToBlob(canvas, formatId);
+    this._downloadBlob(blob, currentFile, imageExportDownloadSuffix(false, formatId));
 
     // Restore original settings
     this.renderer.setPixelRatio(originalPixelRatio);
@@ -507,12 +528,42 @@ export class ImageExporter {
     }
   }
 
+  /** @deprecated Use {@link exportImage} — kept for video frame capture. */
+  async exportPng(
+    currentFile,
+    originalSize,
+    originalPixelRatio,
+    size = 1,
+    cinematicLetterbox219 = false,
+  ) {
+    return this.exportImage(
+      currentFile,
+      originalSize,
+      originalPixelRatio,
+      size,
+      cinematicLetterbox219,
+      'png',
+    );
+  }
+
   /**
-   * Export scene as transparent PNG.
+   * Export scene with transparent background.
    * Uses a coarse screen-space AABB for the render/read region, then tightens the
    * export to the actual non-transparent pixels so irregular silhouettes avoid empty margins.
    */
-  async exportTransparentPng(currentModel, currentFile, cameraController, size = 2) {
+  async exportTransparentImage(
+    currentModel,
+    currentFile,
+    cameraController,
+    size = 2,
+    format = 'png',
+  ) {
+    const formatId = normalizeImageExportFormat(format);
+    const formatMeta = getImageExportFormat(formatId);
+    if (!formatMeta.supportsAlpha) {
+      console.warn(`${formatMeta.label} does not support transparency`);
+      return false;
+    }
     if (!currentModel) {
       console.warn('No model loaded to export');
       return false;
@@ -537,20 +588,24 @@ export class ImageExporter {
       this._restoreState(state);
       return false;
     }
-    
+
     // Render to render target with transparency
     const renderTarget = this._renderToTarget(cropInfo, state);
 
     // Extract and export cropped region
-    const dataUrl = this._extractCroppedImage(renderTarget, cropInfo, state);
-
-    // Download the image
-    this._downloadImage(dataUrl, currentFile, 'transparent.png');
+    const canvas = this._extractCroppedCanvas(renderTarget, cropInfo, state);
+    const blob = await encodeCanvasToBlob(canvas, formatId);
+    this._downloadBlob(blob, currentFile, imageExportDownloadSuffix(true, formatId));
 
     // Clean up and restore state
     renderTarget.dispose();
     this._restoreState(state);
     return true;
+  }
+
+  /** @deprecated Use {@link exportTransparentImage}. */
+  async exportTransparentPng(currentModel, currentFile, cameraController, size = 2) {
+    return this.exportTransparentImage(currentModel, currentFile, cameraController, size, 'png');
   }
 
   /**
@@ -1468,7 +1523,7 @@ export class ImageExporter {
    * Extract cropped region from render target and convert to image.
    * Tightens the crop using the rendered alpha so the PNG matches the silhouette, not the 3D AABB.
    */
-  _extractCroppedImage(renderTarget, cropInfo, state) {
+  _extractCroppedCanvas(renderTarget, cropInfo, state) {
     const tightPadding = 3; // px around opaque content (edge soften may use partial alpha)
 
     const exportDensity =
@@ -1545,7 +1600,7 @@ export class ImageExporter {
     imageData.data.set(flippedPixels);
     exportContext.putImageData(imageData, 0, 0);
 
-    return exportCanvas.toDataURL('image/png');
+    return exportCanvas;
   }
 
   /**
@@ -2753,6 +2808,18 @@ export class ImageExporter {
     link.href = dataUrl;
     link.download = `${name.replace(/\.[a-z0-9]+$/i, '')}-${suffix}`;
     link.click();
+  }
+
+  _downloadBlob(blob, currentFile, suffix) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const name = currentFile?.name ?? 'orby';
+    link.href = url;
+    link.download = `${name.replace(/\.[a-z0-9]+$/i, '')}-${suffix}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   _downloadText(text, currentFile, suffix, mime = 'text/plain') {

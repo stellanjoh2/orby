@@ -47,6 +47,20 @@ if (ensureMobileLandingClass()) {
     );
   }
   setMobileSplashChromeMetaTags();
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('browse') === '1') {
+      q.delete('browse');
+      const next = q.toString();
+      const url = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
+      window.history.replaceState(null, '', url);
+      requestAnimationFrame(() => {
+        document.getElementById('browseButton')?.click();
+      });
+    }
+  } catch {
+    /* URL blocked */
+  }
 }
 
 if (isSafariBrowser()) {

@@ -8,7 +8,7 @@
   max-height: 100dvh;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   margin: 0;
   padding-top: max(0px, env(safe-area-inset-top, 0px));
   padding-right: var(--orby-home-padding-x);
@@ -19,20 +19,10 @@
   border-radius: var(--orby-marketing-section-radius);
   --brand-text: var(--orby-marketing-on-lime-ink);
   color: var(--brand-text);
-  --orby-cta-asset-lift: clamp(
-    calc(3.5rem * var(--orby-marketing-scale)),
-    12vh,
-    calc(6.25rem * var(--orby-marketing-scale))
-  );
-  /* Lime CTAs — same footprint as global magic pills (size tokens on .orby-magic-btn) */
   --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
-  --orby-intro-left-nudge: clamp(100px, 26vw, 350px);
-  /* Hummingbird — top-left of lime @ 2560 (below rounded corner + safe area) */
-  --orby-cta-hummingbird-inset-top: clamp(4.5rem, 10vh, 7.5rem);
-  /* Horizontal nudge on `left` (transform % was ignoring px bumps) */
+  --orby-intro-right-nudge: clamp(100px, 26vw, 350px);
   --orby-cta-hummingbird-offset-x: 100px;
-  --orby-cta-hummingbird-shift-y: 0px;
-  --orby-intro-scale-left: min(1, calc(88dvh / 1041));
+  --orby-intro-scale-right: min(1, calc(88dvh / 1041));
   --orby-cta-asset-max-h: min(88dvh, 1150px);
 }
 
@@ -46,60 +36,30 @@
   pointer-events: none;
   z-index: 3;
   overflow: hidden;
-  --orby-intro-scale-right: min(1, calc(88dvh / 1225));
   --orby-intro-edge-inset: clamp(0.5rem, 14vw, 6rem);
   --orby-intro-right-nudge: clamp(100px, 26vw, 350px);
-  --orby-intro-left-nudge: clamp(100px, 26vw, 350px);
-  --orby-cta-asset-right-lift: calc(
-    var(--orby-cta-asset-lift) + clamp(1.5rem, 6vh, 4.5rem)
-  );
   --orby-cta-asset-max-h: min(88dvh, 1150px);
 }
 
-/*
- * Left — intro-asset-right.png (hummingbird). Top-left anchor (not % center — large
- * negative translateY only leaves the tail visible at the bottom of the viewport).
- */
-.orby-marketing__section--cta > .orby-marketing__intro-asset--left {
+/* Right — intro-asset-right.png (hummingbird), vertically centered with copy block */
+.orby-marketing__section--cta .orby-marketing__intro-asset--right {
   position: absolute;
   z-index: 3;
-  top: var(--orby-cta-hummingbird-inset-top);
+  top: 50%;
   bottom: auto;
-  left: calc(
-    var(--orby-intro-edge-inset) - var(--orby-intro-left-nudge, 350px) +
+  right: calc(
+    var(--orby-intro-edge-inset) - var(--orby-intro-right-nudge, 350px) +
       var(--orby-cta-hummingbird-offset-x, 0px)
   );
-  right: auto;
+  left: auto;
   max-height: var(--orby-cta-asset-max-h);
   max-width: var(--orby-cta-asset-max-w, min(58vw, 920px));
   width: auto;
   height: auto;
   pointer-events: none;
   object-fit: contain;
-  object-position: left top;
-  transform: translate3d(
-      var(--orby-cta-asset-left-shift-x, -8%),
-      var(--orby-cta-hummingbird-shift-y, 0px),
-      0
-    )
-    scale(var(--orby-intro-scale-left, 1));
-}
-
-/* Right — intro-asset-left.png */
-.orby-marketing__section--cta .orby-marketing__intro-asset--right {
-  top: auto;
-  bottom: var(--orby-cta-asset-right-lift);
-  max-height: var(--orby-cta-asset-max-h);
-  max-width: var(--orby-cta-asset-max-w, min(58vw, 920px));
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  object-position: right bottom;
-  transform: translate3d(
-      var(--orby-cta-asset-shift-x, 8%),
-      var(--orby-cta-asset-shift-y, 100px),
-      0
-    )
+  object-position: right center;
+  transform: translate3d(var(--orby-cta-asset-shift-x, 8%), -50%, 0)
     scale(var(--orby-intro-scale-right, 1));
 }
 
@@ -107,62 +67,59 @@
   position: relative;
   z-index: 4;
   box-sizing: border-box;
-  width: min(var(--orby-marketing-site-max), 100%);
-  margin-inline: auto;
+  width: 100%;
+  max-width: var(--orby-marketing-site-max);
+  margin: 0;
   padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
-  text-align: center;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 0;
+  align-self: center;
+  gap: var(--orby-marketing-space-md);
   overflow: visible;
+  container-type: inline-size;
+  container-name: orby-cta-copy;
 }
 
-.orby-marketing__cta-center > .orby-marketing__title--cta + .orby-marketing__lede--cta {
-  margin-top: var(--orby-marketing-headline-body-gap);
-}
-
-.orby-marketing__cta-center > .orby-marketing__title--cta + .orby-marketing__cta-actions,
-.orby-marketing__cta-center > .orby-marketing__lede--cta + .orby-marketing__cta-actions {
-  margin-top: var(--orby-marketing-headline-actions-gap);
-}
-
-.orby-marketing__cta-center .orby-marketing__title--cta {
-  margin: 0;
-  margin-bottom: 0;
-  width: auto;
+.orby-marketing__section--cta .orby-marketing__title--intro {
+  margin-inline: 0;
+  width: max-content;
   max-width: 100%;
-  box-sizing: border-box;
-  padding-inline: clamp(
-    calc(0.5rem * var(--orby-marketing-scale)),
-    3vw,
-    calc(1.5rem * var(--orby-marketing-scale))
-  );
+  color: var(--brand-text);
+  text-shadow: none;
 }
 
-.orby-marketing__lede--cta {
-  max-width: var(--orby-marketing-lede-measure);
-  margin: 0;
+.orby-marketing__section--cta .orby-marketing__lede--intro {
+  margin-inline: 0;
+  width: 100%;
+  max-width: 100%;
   color: color-mix(in srgb, var(--brand-text) 62%, transparent);
 }
 
-/* Side-by-side peers (CTA buttons, future button pairs) */
-.orby-marketing__peer-row,
+.orby-marketing__cta-center > .orby-marketing__title--intro + .orby-marketing__lede--intro {
+  margin-top: 0;
+}
+
+.orby-marketing__cta-center > .orby-marketing__title--intro + .orby-marketing__cta-actions,
+.orby-marketing__cta-center > .orby-marketing__lede--intro + .orby-marketing__cta-actions {
+  margin-top: var(--orby-marketing-headline-actions-gap);
+}
+
 .orby-marketing__cta-actions {
   position: relative;
   z-index: 6;
   display: flex;
   flex-flow: row wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--orby-marketing-peer-gap);
   width: auto;
   max-width: none;
 }
 
 @media (max-width: 699px) {
-  .orby-marketing__peer-row,
   .orby-marketing__cta-actions {
     flex-direction: column;
     flex-wrap: nowrap;
@@ -176,6 +133,65 @@
   transform: none;
   animation: none;
   white-space: nowrap;
+}
+
+/*
+ * CTA copy rhythm — mirror PNG turntable intro (1920+ desktop).
+ */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .orby-marketing__section--cta .orby-marketing__title--intro {
+    font-size: 112px;
+    line-height: 1.1;
+  }
+
+  .orby-marketing__section--cta
+    .orby-marketing__title--intro
+    .orby-marketing__title-line {
+    line-height: 1.1;
+  }
+
+  #orby-marketing
+    .orby-marketing__section--cta
+    .orby-marketing__title--intro.brand-font-headline {
+    line-height: 1.1;
+  }
+
+  .orby-marketing__cta-center {
+    padding-right: calc(var(--orby-marketing-col-gap) - var(--orby-marketing-gutter-text-inset));
+  }
+}
+
+@media (min-width: 1920px) {
+  .orby-marketing__cta-center {
+    gap: 0;
+    overflow: visible;
+  }
+
+  .orby-marketing__section--cta .orby-marketing__title--intro {
+    margin-bottom: 0;
+  }
+
+  .orby-marketing__section--cta
+    .orby-marketing__title--intro
+    + .orby-marketing__lede--intro {
+    margin-top: var(--orby-marketing-headline-actions-gap);
+  }
+
+  .orby-marketing__section--cta .orby-marketing__lede--intro {
+    width: min(
+      132%,
+      calc(
+        (var(--orby-marketing-lede-measure) + var(--orby-marketing-col-gap) + 50cqi) * 1.32
+      ),
+      calc(100vw - var(--orby-home-padding-x) - var(--orby-marketing-col-gap-half))
+    );
+    max-width: min(
+      calc(
+        (var(--orby-marketing-lede-measure) + var(--orby-marketing-col-gap) + 50cqi) * 1.32
+      ),
+      calc(100vw - var(--orby-home-padding-x) - var(--orby-marketing-col-gap-half))
+    );
+  }
 }
 
 /*
@@ -387,7 +403,7 @@
 }
 
 /*
- * Below 1920 — MacBook band: CTA PNGs −25% vs vw/1920 base; 1920+ unchanged.
+ * Below 1920 — MacBook band: CTA PNG −25% vs vw/1920 base; 1920+ unchanged.
  */
 @media (max-width: 1919px) {
   .orby-marketing__section--cta,
@@ -404,27 +420,40 @@
       88dvh,
       calc(1150px * var(--orby-cta-narrow-scale))
     );
-    --orby-intro-left-nudge: clamp(
+    --orby-intro-right-nudge: clamp(
       calc(100px * var(--orby-cta-narrow-scale)),
       calc(26vw * var(--orby-cta-narrow-scale)),
       calc(350px * var(--orby-cta-narrow-scale))
     );
-    --orby-intro-right-nudge: var(--orby-intro-left-nudge);
     --orby-cta-hummingbird-offset-x: calc(100px * var(--orby-cta-narrow-scale));
     --orby-cta-asset-shift-x: calc(8% * var(--orby-cta-narrow-scale));
-    --orby-cta-asset-left-shift-x: calc(-8% * var(--orby-cta-narrow-scale));
-    --orby-cta-asset-shift-y: calc(100px * var(--orby-cta-narrow-scale));
-    --orby-intro-scale-left: min(
-      1,
-      calc(88dvh / 1041 * var(--orby-cta-narrow-scale))
-    );
     --orby-intro-scale-right: min(
       1,
-      calc(88dvh / 1225 * var(--orby-cta-narrow-scale))
+      calc(88dvh / 1041 * var(--orby-cta-narrow-scale))
     );
   }
 
   .orby-marketing__footer-bar {
     --orby-footer-edge-x: var(--orby-marketing-edge-inset, var(--orby-home-padding-x));
+  }
+}
+
+/* Side-by-side peers (future button pairs outside CTA) */
+.orby-marketing__peer-row {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--orby-marketing-peer-gap);
+  width: auto;
+  max-width: none;
+}
+
+@media (max-width: 699px) {
+  .orby-marketing__peer-row {
+    flex-direction: column;
+    flex-wrap: nowrap;
   }
 }

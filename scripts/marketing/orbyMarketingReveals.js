@@ -202,8 +202,7 @@ function isMarketingHeadline(el) {
   if (!el) return false;
   return (
     el.classList.contains('orby-marketing__title') ||
-    el.classList.contains('orby-marketing__title--intro') ||
-    el.classList.contains('orby-marketing__title--cta')
+    el.classList.contains('orby-marketing__title--intro')
   );
 }
 

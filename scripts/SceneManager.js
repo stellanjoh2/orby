@@ -118,6 +118,10 @@ import {
   showFisheyePngExportBlockedAlert,
 } from './export/fisheyeExportAlert.js';
 import {
+  getImageExportFormat,
+  normalizeImageExportFormat,
+} from './render/imageExportFormats.js';
+import {
   supportsExtrudeBevel,
   runSvgExtrudeImporterMutation,
   sanitizeSvgExtrudeColorDepths,
@@ -4836,29 +4840,39 @@ export class SceneManager {
     }
   }
 
-  async exportPng(settings = {}) {
+  async exportImage(settings = {}) {
     if (isFisheyeEnabledInState(this.stateStore)) {
       showFisheyePngExportBlockedAlert(this.ui);
       return;
     }
-    const { transparent = false, size = 2 } = settings;
+    const formatId = normalizeImageExportFormat(settings.format);
+    const formatMeta = getImageExportFormat(formatId);
+    let { transparent = false, size = 2 } = settings;
+    if (transparent && !formatMeta.supportsAlpha) {
+      transparent = false;
+    }
     this._suppressResizeForExport = true;
     try {
       if (transparent) {
         if (!this.currentModel) {
-          this.ui?.showToast?.('Load a mesh before exporting PNG');
+          this.ui?.showToast?.('Load a mesh before exporting image');
           return;
         }
-        const ok = await this.imageExporter.exportTransparentPng(
+        const ok = await this.imageExporter.exportTransparentImage(
           this.currentModel,
           this.currentFile,
           this.cameraController,
           size,
+          formatId,
         );
         if (ok) {
-          this.ui?.showToast?.('Transparent PNG exported', 3200, { notification: false });
+          this.ui?.showToast?.(
+            `Transparent ${formatMeta.label} exported`,
+            3200,
+            { notification: false },
+          );
         } else {
-          this.ui?.showToast?.('PNG export failed');
+          this.ui?.showToast?.(`${formatMeta.label} export failed`);
         }
       } else {
         const originalSize = new THREE.Vector2();
@@ -4868,22 +4882,27 @@ export class SceneManager {
         const cinematicLetterbox219 = !!this.stateStore
           .getState()
           .camera?.cinematicLetterbox219;
-        await this.imageExporter.exportPng(
+        await this.imageExporter.exportImage(
           this.currentFile,
           originalSize,
           originalPixelRatio,
           size,
           cinematicLetterbox219,
+          formatId,
         );
-        this.ui?.showToast?.('PNG exported', 3200, { notification: false });
+        this.ui?.showToast?.(`${formatMeta.label} exported`, 3200, { notification: false });
       }
     } catch (error) {
-      console.error('PNG export failed', error);
-      this.ui?.showToast?.('PNG export failed');
+      console.error('Image export failed', error);
+      this.ui?.showToast?.(`${formatMeta.label} export failed`);
     } finally {
       this._suppressResizeForExport = false;
       this.handleResize();
     }
+  }
+
+  async exportPng(settings = {}) {
+    return this.exportImage({ ...settings, format: 'png' });
   }
 
   async exportSvgSilhouette() {

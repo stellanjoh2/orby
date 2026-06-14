@@ -12,6 +12,7 @@ import {
   STYLES_HREF,
 } from './orbyMarketingConstants.js';
 import { isMobileLanding } from '../orbyMobileLanding.js';
+import { isOrbyHomePath } from '../orbyRoute.js';
 import {
   bindMarketingCopyEmail,
   unbindMarketingCopyEmail,
@@ -31,8 +32,7 @@ function isMegaRevealSection(section) {
 let sectionsCache = null;
 
 function shouldSkipMarketing() {
-  const path = window.location.pathname || '/';
-  return path !== '/' && path !== '/index.html';
+  return !isOrbyHomePath();
 }
 
 function isDropzoneHome() {
@@ -158,20 +158,12 @@ function bindMarketingInteractions(root) {
     const browseBtn = event.target.closest('[data-orby-marketing-browse]');
     if (browseBtn) {
       event.preventDefault();
-      if (isMobileLanding()) {
-        showMobileDesktopOnlyModal();
-        return;
-      }
       document.getElementById('browseButton')?.click();
       return;
     }
     const sampleBtn = event.target.closest('[data-orby-marketing-load-sample]');
     if (sampleBtn) {
       event.preventDefault();
-      if (isMobileLanding()) {
-        showMobileDesktopOnlyModal();
-        return;
-      }
       document.getElementById('loadTestLink')?.click();
       return;
     }

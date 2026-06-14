@@ -47,8 +47,41 @@
     return false;
   }
 
+  function isOrbyMobileLandingRoute() {
+    try {
+      var path =
+        typeof global.location !== 'undefined'
+          ? (global.location.pathname || '/').replace(/\/$/, '') || '/'
+          : '/';
+      return path === '/mobile';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function ensureOrbyMobileLandingBaseHref() {
+    if (!isOrbyMobileLandingRoute()) return;
+    try {
+      var base = document.querySelector('base');
+      if (!base) {
+        base = document.createElement('base');
+        document.head.insertBefore(base, document.head.firstChild);
+      }
+      base.setAttribute('href', '/');
+    } catch (e) {}
+  }
+
+  function clearMobileAppSessionOnLanding() {
+    if (!isOrbyMobileLandingRoute()) return;
+    try {
+      if (global.sessionStorage) {
+        global.sessionStorage.removeItem('orby_mobile_active');
+      }
+    } catch (e) {}
+  }
+
   function shouldShowMobileLanding() {
-    return isForcedMobileLandingDebug() || isMobileDevice();
+    return isForcedMobileLandingDebug() || isMobileDevice() || isOrbyMobileLandingRoute();
   }
 
   function isMobileLanding() {
@@ -82,7 +115,11 @@
   }
 
   function shouldApplyMobileLandingClasses() {
-    return shouldShowMobileLanding() || isLegalSubpageMobileViewport();
+    return (
+      shouldShowMobileLanding() ||
+      isLegalSubpageMobileViewport() ||
+      isOrbyMobileLandingRoute()
+    );
   }
 
   function applyMobileLandingClasses() {
@@ -111,12 +148,15 @@
     MOBILE_LANDING_MAX_WIDTH_PX: MOBILE_LANDING_MAX_WIDTH_PX,
     isForcedMobileLandingDebug: isForcedMobileLandingDebug,
     isMobileDevice: isMobileDevice,
+    isOrbyMobileLandingRoute: isOrbyMobileLandingRoute,
     shouldShowMobileLanding: shouldShowMobileLanding,
     isMobileLanding: isMobileLanding,
     ensureMobileLandingClass: ensureMobileLandingClass,
     applyMobileLandingBootClasses: applyMobileLandingBootClasses,
   };
 
+  ensureOrbyMobileLandingBaseHref();
+  clearMobileAppSessionOnLanding();
   applyMobileLandingBootClasses();
 
   function syncLegalSubpageMobileLanding() {

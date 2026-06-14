@@ -111,6 +111,11 @@ html.orby-scroll-cue-faded .orby-marketing-scroll-cue {
     --orby-intro-scale-left: min(1, calc(78dvh / 1041));
     --orby-intro-scale-right: min(1, calc(78dvh / 1225));
   }
+
+  .orby-marketing__section--cta,
+  .orby-marketing__cta-stage {
+    --orby-intro-scale-right: min(1, calc(78dvh / 1041));
+  }
 }
 
 @media (max-width: 768px) {
@@ -138,12 +143,16 @@ html.orby-scroll-cue-faded .orby-marketing-scroll-cue {
     --orby-intro-scale-right: min(1, calc(70dvh / 1225));
     --orby-cta-asset-max-h: min(72dvh, 900px);
   }
+
+  .orby-marketing__section--cta,
+  .orby-marketing__cta-stage {
+    --orby-intro-scale-right: min(1, calc(70dvh / 1041));
+  }
 }
 
 @media (max-width: 520px) {
   .orby-marketing__intro-stage,
-  .orby-marketing__section--cta > .orby-marketing__intro-asset--left,
-  .orby-marketing__cta-stage {
+  .orby-marketing__section--cta .orby-marketing__cta-stage {
     display: none;
   }
 

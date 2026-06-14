@@ -282,7 +282,7 @@ function renderIntroSection(section) {
         </div>
       </div>
       <div class="orby-marketing__intro-center">
-      <p class="orby-marketing__intro-mobile-notice">This site is best experienced on larger screens — the studio only works on desktops.</p>
+      <p class="orby-marketing__intro-mobile-notice">On a phone? Browse a GLB below to style and export — or open the full studio on desktop.</p>
       <div class="orby-marketing__intro-center-stack">
       ${section.eyebrow ? `<p class="orby-marketing__eyebrow" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.eyebrow)}</p>` : ''}
       <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
@@ -506,32 +506,23 @@ function renderFaqSection(section) {
 
 function renderCtaSection(section) {
   return `<section class="orby-marketing__section orby-marketing__section--mega orby-marketing__section--cta" id="${escapeMarketingHtml(section.id)}" aria-labelledby="${escapeMarketingHtml(section.id)}-title">
-    <img
-      class="orby-marketing__intro-asset orby-marketing__intro-asset--left"
-      src="./assets/marketing/intro-asset-right.png"
-      alt=""
-      width="1440"
-      height="1041"
-      decoding="async"
-      aria-hidden="true"
-      data-orby-marketing-intro-asset="left"
-    />
     <div class="orby-marketing__cta-stage" aria-hidden="true">
       <img
         class="orby-marketing__intro-asset orby-marketing__intro-asset--right"
-        src="./assets/marketing/intro-asset-left.png"
+        src="./assets/marketing/intro-asset-right.png"
         alt=""
-        width="1300"
-        height="1225"
+        width="1440"
+        height="1041"
         decoding="async"
+        aria-hidden="true"
         data-orby-marketing-intro-asset="right"
       />
     </div>
     <div class="orby-marketing__cta-center">
-      <h2 class="orby-marketing__title orby-marketing__title--intro orby-marketing__title--cta brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
+      <h2 class="orby-marketing__title orby-marketing__title--intro brand-font-headline" id="${escapeMarketingHtml(section.id)}-title" data-orby-marketing-reveal="text">${renderIntroHeadline(section.title)}</h2>
       ${
         section.lede
-          ? `<p class="orby-marketing__lede orby-marketing__lede--cta" data-orby-marketing-reveal="text">${escapeMarketingHtml(section.lede)}</p>`
+          ? `<p class="orby-marketing__lede orby-marketing__lede--intro" data-orby-marketing-reveal="text">${renderMarketingBodyHtml(section.lede, section.gradientPhrases)}</p>`
           : ''
       }
       <div class="orby-marketing__cta-actions">

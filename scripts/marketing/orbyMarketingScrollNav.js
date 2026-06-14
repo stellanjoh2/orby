@@ -303,11 +303,11 @@ function initSiteNavNow(options) {
     const browseBtn = event.target.closest('[data-orby-marketing-browse]');
     if (browseBtn) {
       event.preventDefault();
-      if (mode === 'subpage') {
-        window.location.assign(homeHref);
-      } else {
-        document.getElementById('browseButton')?.click();
+      if (mode === 'subpage' && isMobileLanding()) {
+        window.location.assign('/?browse=1');
+        return;
       }
+      document.getElementById('browseButton')?.click();
       return;
     }
     const topBtn = event.target.closest('[data-orby-marketing-scroll-top]');
