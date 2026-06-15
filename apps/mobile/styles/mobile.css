@@ -235,6 +235,32 @@ button {
   outline: none;
 }
 
+.orby-mobile-viewport[data-loading] .orby-mobile-webgl {
+  opacity: 0.72;
+}
+
+.orby-mobile-viewport[data-loading]::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  top: calc(env(safe-area-inset-top, 0px) + 50%);
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 2px solid color-mix(in srgb, var(--orby-lime) 28%, transparent);
+  border-top-color: var(--orby-lime);
+  border-radius: 50%;
+  animation: orby-mobile-spin 0.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes orby-mobile-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .orby-mobile-viewport__empty {
   position: absolute;
   inset: 0;

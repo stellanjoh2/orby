@@ -22,12 +22,20 @@ import {
   resolveMobileStyleSliderValue,
 } from './mobileStyleControls.js';
 import { MobileScene, MOBILE_HDRI_STRENGTH_DEFAULT, MOBILE_HDRI_STRENGTH_MAX } from './MobileScene.js';
-import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff } from '../../../scripts/orbyMobileHandoff.js';
+import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff, hasMobileHandoffPendingFlag } from '../../../scripts/orbyMobileHandoff.js';
 import { copyMobileDebugSettings, loadMobileDebugSample } from './mobileDebugExport.js';
 import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
 
 /** Left inset for preset rails — keep in sync with --orby-mobile-preset-rail-inset */
 const MOBILE_PRESET_RAIL_INSET = 16;
+
+function urlHasHandoffFlag() {
+  try {
+    return new URLSearchParams(window.location.search).get('handoff') === '1';
+  } catch {
+    return false;
+  }
+}
 /** @typedef {'closed' | 'peek' | 'expanded'} SheetState */
 /** @typedef {'light' | 'style' | 'filters' | 'fx'} MobileTab */
 /** @typedef {'light' | 'style' | 'filters'} PresetTab */
@@ -37,28 +45,6 @@ export class MobileShell {
   constructor(root) {
     this.root = root;
     this.viewportEl = root.querySelector('.orby-mobile-viewport');
-    this.scene = new MobileScene(root.querySelector('.orby-mobile-viewport__canvas'));
-    this.scene.onModelLoaded = () => {
-      markMobileAppSessionActive();
-      if (this.viewportEl) this.viewportEl.dataset.hasModel = 'true';
-      this.scene.setCreativeLook(this.selection.style.id);
-    };
-    this.scene.onError = (message) => this.showToast(message);
-    this.scene.onFxStateChanged = () => this._syncFxControlsUi();
-    this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
-    void this.scene
-      .init()
-      .then(async () => {
-        await waitForMobileModelHandoff(2000);
-        const file = await takeMobileModelHandoff();
-        if (!file) return;
-        await this.scene.loadFile(file);
-        this.showToast(`Loaded ${file.name}`);
-      })
-      .catch((err) => {
-        console.error('[Orby Mobile] Scene init failed', err);
-        this.showToast('Viewer failed to start');
-      });
     this.sheet = root.querySelector('.orby-mobile-sheet');
     this.dock = root.querySelector('.orby-mobile-dock');
     this.toast = root.querySelector('.orby-mobile-toast');
@@ -85,6 +71,28 @@ export class MobileShell {
     this._suppressRailLeadingSelection = false;
     /** @type {ReturnType<typeof setTimeout> | null} */
     this._railSuppressTimer = null;
+    /** @type {HTMLElement | null} */
+    this._emptyEl = null;
+
+    this._bindChrome();
+
+    try {
+      this.scene = new MobileScene(root.querySelector('.orby-mobile-viewport__canvas'));
+    } catch (err) {
+      console.error('[Orby Mobile] Scene construction failed', err);
+      this.showToast('3D viewer unavailable');
+      return;
+    }
+    this.scene.onModelLoaded = () => {
+      markMobileAppSessionActive();
+      if (this.viewportEl) this.viewportEl.dataset.hasModel = 'true';
+      this._showEmptyState(false);
+      this.scene.setCreativeLook(this.selection.style.id);
+    };
+    this.scene.onError = (message) => this.showToast(message);
+    this.scene.onFxStateChanged = () => this._syncFxControlsUi();
+    this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
+    void this._bootScene();
 
     this._hdriBrightnessInput = root.querySelector('[data-hdri-brightness-input]');
     this._hdriBrightnessValue = root.querySelector('[data-hdri-brightness-value]');
@@ -110,10 +118,71 @@ export class MobileShell {
     this._renderPresetRails();
     this._renderFxControls();
     this._renderStyleControls();
-    this._bind();
+    this._bindSceneControls();
     this._syncSelectionUi();
     this._syncHdriControlsUi();
     this._syncHdriBackgroundUi();
+  }
+
+  async _bootScene() {
+    this.viewportEl?.setAttribute('data-loading', 'true');
+    try {
+      await this.scene.init();
+      const expectsHandoff = hasMobileHandoffPendingFlag() || urlHasHandoffFlag();
+      if (expectsHandoff) {
+        await waitForMobileModelHandoff(2000);
+        const file = await takeMobileModelHandoff();
+        if (file) {
+          await this.scene.loadFile(file);
+          this.showToast(`Loaded ${file.name}`);
+          return;
+        }
+        this.showToast('Model didn\'t transfer — load a sample or pick again');
+      } else {
+        const file = await takeMobileModelHandoff();
+        if (file) {
+          await this.scene.loadFile(file);
+          this.showToast(`Loaded ${file.name}`);
+          return;
+        }
+      }
+      if (!this.scene.currentModel) {
+        this._showEmptyState(true);
+      }
+    } catch (err) {
+      console.error('[Orby Mobile] Scene init failed', err);
+      this.showToast('Viewer failed to start');
+    } finally {
+      this.viewportEl?.removeAttribute('data-loading');
+    }
+  }
+
+  /** @param {boolean} visible */
+  _showEmptyState(visible) {
+    if (!this.viewportEl) return;
+    if (!this._emptyEl) {
+      const empty = document.createElement('div');
+      empty.className = 'orby-mobile-viewport__empty';
+      empty.innerHTML = `
+        <p class="orby-mobile-viewport__lede">No model loaded</p>
+        <p class="orby-mobile-viewport__hint">Pick a GLB on the landing page, or load a sample here.</p>
+        <div class="orby-mobile-browse-host">
+          <button type="button" class="orby-mobile-browse-cta orby-magic-btn">Load sample</button>
+        </div>
+      `;
+      empty.querySelector('button')?.addEventListener('click', () => {
+        void loadMobileDebugSample(this.scene).then((result) => {
+          if (result === 'loaded') {
+            this.showToast('Loaded sample');
+          } else {
+            this.showToast('Sample load failed');
+          }
+        });
+      });
+      this.viewportEl.append(empty);
+      this._emptyEl = empty;
+    }
+    this._emptyEl.hidden = !visible;
   }
 
   /** @param {MobileTab} tab */
@@ -513,7 +582,7 @@ export class MobileShell {
     this._syncFxControlsUi();
   }
 
-  _bind() {
+  _bindChrome() {
     this.root.querySelectorAll('[data-open-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = /** @type {MobileTab} */ (btn.getAttribute('data-open-tab'));
@@ -525,6 +594,16 @@ export class MobileShell {
       this.setSheetState('closed');
     });
 
+    document.addEventListener('pointerdown', (e) => {
+      if (this.sheetState === 'closed') return;
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-export-btn') || t.closest('.orby-mobile-debug-bar') || t.closest('.orby-mobile-viewport__empty')) return;
+      this.setSheetState('closed');
+    });
+  }
+
+  _bindSceneControls() {
     this.root.addEventListener('click', (e) => {
       const pick = e.target.closest('.orby-mobile-preset');
       if (!pick) return;
@@ -591,15 +670,6 @@ export class MobileShell {
         this.showToast(`Loaded ${file.name}`);
       });
       if (this.fileInput) this.fileInput.value = '';
-    });
-
-
-    document.addEventListener('pointerdown', (e) => {
-      if (this.sheetState === 'closed') return;
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-export-btn') || t.closest('.orby-mobile-debug-bar')) return;
-      this.setSheetState('closed');
     });
   }
 
@@ -830,6 +900,8 @@ export class MobileShell {
     }
     if (tab === 'style') {
       this._syncStyleControlsUi();
+      this.setSheetState('peek');
+      this._syncStyleSheetState();
       requestAnimationFrame(() => {
         this._scrollRailToSelection('style');
       });

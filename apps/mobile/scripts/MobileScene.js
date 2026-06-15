@@ -54,6 +54,13 @@ export class MobileScene {
       alpha: false,
       powerPreference: 'high-performance',
     });
+    if (!this.renderer.getContext()) {
+      throw new Error('WebGL unavailable');
+    }
+    this.canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.onError?.('Graphics paused — reload the page');
+    });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.toneMappingExposure = 1;
@@ -178,8 +185,8 @@ export class MobileScene {
   async init() {
     this._bindResize();
     this._bindMeshPicking();
-    await this.setHdri('beach');
     this._startLoop();
+    await this.setHdri('beach');
   }
 
   dispose() {
