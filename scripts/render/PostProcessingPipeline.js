@@ -34,6 +34,7 @@ import { CreativeLookMegaDrivePass } from './CreativeLookMegaDrivePass.js';
 import { CreativeLookIntellivisionPass } from './CreativeLookIntellivisionPass.js';
 import { CreativeLookGbaPass } from './CreativeLookGbaPass.js';
 import { CreativeLookApple2Pass } from './CreativeLookApple2Pass.js';
+import { CreativeLookDitherPass } from './CreativeLookDitherPass.js';
 import { CreativeLookVectrex } from './CreativeLookVectrexPass.js';
 import { CreativeLookWatercolour } from './CreativeLookWatercolourPass.js';
 import { CreativeLookSketch } from './CreativeLookSketchPass.js';
@@ -227,6 +228,9 @@ export class PostProcessingPipeline {
     this.creativeLookApple2 = new CreativeLookApple2Pass(renderer);
     this.creativeLookApple2Pass = this.creativeLookApple2.getPass();
 
+    this.creativeLookDither = new CreativeLookDitherPass(renderer);
+    this.creativeLookDitherPass = this.creativeLookDither.getPass();
+
     this.creativeLookVectrex = new CreativeLookVectrex(renderer);
     this.creativeLookVectrexPass = this.creativeLookVectrex.getPass();
 
@@ -249,6 +253,7 @@ export class PostProcessingPipeline {
     this.composer.addPass(this.creativeLookIntellivisionPass);
     this.composer.addPass(this.creativeLookGbaPass);
     this.composer.addPass(this.creativeLookApple2Pass);
+    this.composer.addPass(this.creativeLookDitherPass);
     this.composer.addPass(this.creativeLookVectrexPass);
     this.composer.addPass(this.creativeLookWatercolourPass);
     this.composer.addPass(this.creativeLookSketchPass);
@@ -291,6 +296,7 @@ export class PostProcessingPipeline {
       { pass: this.creativeLookIntellivisionPass, key: 'creativeLookIntellivisionPass' },
       { pass: this.creativeLookGbaPass, key: 'creativeLookGbaPass' },
       { pass: this.creativeLookApple2Pass, key: 'creativeLookApple2Pass' },
+      { pass: this.creativeLookDitherPass, key: 'creativeLookDitherPass' },
       { pass: this.creativeLookVectrexPass, key: 'creativeLookVectrexPass' },
       { pass: this.creativeLookWatercolourPass, key: 'creativeLookWatercolourPass' },
       { pass: this.creativeLookSketchPass, key: 'creativeLookSketchPass' },
@@ -343,7 +349,7 @@ export class PostProcessingPipeline {
     this._asciiBloomActive = false;
     /** @type {boolean} */
     this._asciiAnamorphicActive = false;
-    /** @type {'ascii' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null} */
+    /** @type {'ascii' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | null} */
     this._flatPostVariant = null;
   }
 
@@ -482,6 +488,11 @@ export class PostProcessingPipeline {
         pass.renderToScreen = false;
         continue;
       }
+      if (key === 'creativeLookDitherPass') {
+        pass.enabled = snap.enabled;
+        pass.renderToScreen = false;
+        continue;
+      }
       if (key === 'creativeLookVectrexPass') {
         pass.enabled = false;
         pass.renderToScreen = false;
@@ -582,6 +593,7 @@ export class PostProcessingPipeline {
           key === 'creativeLookIntellivisionPass' ||
           key === 'creativeLookGbaPass' ||
           key === 'creativeLookApple2Pass' ||
+          key === 'creativeLookDitherPass' ||
           key === 'creativeLookWatercolourPass' ||
           key === 'creativeLookSketchPass' ||
           key === 'creativeLookSketchColourPass' ||
@@ -622,6 +634,7 @@ export class PostProcessingPipeline {
         key === 'creativeLookIntellivisionPass' ||
         key === 'creativeLookGbaPass' ||
         key === 'creativeLookApple2Pass' ||
+        key === 'creativeLookDitherPass' ||
         key === 'creativeLookWatercolourPass' ||
         key === 'creativeLookSketchPass' ||
         key === 'creativeLookSketchColourPass' ||
@@ -963,7 +976,8 @@ export class PostProcessingPipeline {
         key === 'creativeLookMegaDrivePass' ||
         key === 'creativeLookIntellivisionPass' ||
         key === 'creativeLookGbaPass' ||
-        key === 'creativeLookApple2Pass'
+        key === 'creativeLookApple2Pass' ||
+        key === 'creativeLookDitherPass'
       ) {
         pass.enabled = true;
         pass.renderToScreen = false;
@@ -1040,6 +1054,12 @@ export class PostProcessingPipeline {
     }
     if (this.creativeLookApple2Pass) {
       this.creativeLookApple2Pass.enabled = variant === 'apple2-pixel';
+    }
+    if (this.creativeLookDitherPass) {
+      this.creativeLookDitherPass.enabled =
+        variant === 'dither-neutral'
+        || variant === 'dither-tritone'
+        || variant === 'dither-crosshatch';
     }
     if (this.creativeLookWatercolourPass && !this._creativeLookWatercolourSnapshot) {
       this.creativeLookWatercolourPass.enabled = false;
@@ -1185,6 +1205,11 @@ export class PostProcessingPipeline {
     this.creativeLookApple2?.updateSettings(settings ?? {});
   }
 
+  /** Shader Lab Dither — neutral 4×4 Bayer ordered dither post pass. */
+  updateCreativeLookDither(settings) {
+    this.creativeLookDither?.updateSettings(settings ?? {});
+  }
+
   /** Shader Lab Vectrex — phosphor persistence + bloom post pass. */
   updateCreativeLookVectrex(settings) {
     this.creativeLookVectrex?.updateSettings(settings ?? {});
@@ -1206,7 +1231,7 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * @param {{ enabled?: boolean, variant?: 'ascii' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | null }} mode
+   * @param {{ enabled?: boolean, variant?: 'ascii' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | null }} mode
    */
   setCreativeLookFlatPostMode(mode = {}) {
     const enabled = mode.enabled === true;

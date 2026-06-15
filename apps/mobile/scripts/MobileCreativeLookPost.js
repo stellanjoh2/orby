@@ -6,6 +6,7 @@ import { CreativeLookGameBoyPass } from '../../../scripts/render/CreativeLookGam
 import { CreativeLookNesPass } from '../../../scripts/render/CreativeLookNesPass.js';
 import { CreativeLookMegaDrivePass } from '../../../scripts/render/CreativeLookMegaDrivePass.js';
 import { CreativeLookGbaPass } from '../../../scripts/render/CreativeLookGbaPass.js';
+import { CreativeLookDitherPass } from '../../../scripts/render/CreativeLookDitherPass.js';
 import { CreativeLookVectrex } from '../../../scripts/render/CreativeLookVectrexPass.js';
 import { CreativeLookWatercolour } from '../../../scripts/render/CreativeLookWatercolourPass.js';
 import { CreativeLookSketch } from '../../../scripts/render/CreativeLookSketchPass.js';
@@ -26,6 +27,7 @@ import { ensureAsciiFontAtlasLoaded } from '../../../scripts/render/creativeLook
 import { resolveCreativeLookInkParams } from '../../../scripts/render/creativeLookInkArt.js';
 import { resolveCreativeLookSketchParams } from '../../../scripts/render/creativeLookSketchArt.js';
 import { creativeLookWatercolourRadius } from '../../../scripts/render/creativeLookWatercolourArt.js';
+import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
 
 /**
  * Screen-space Shader Lab passes for Orby Mobile — material prepass runs in
@@ -51,6 +53,7 @@ export class MobileCreativeLookPost {
     this.creativeLookNes = new CreativeLookNesPass(renderer);
     this.creativeLookMegaDrive = new CreativeLookMegaDrivePass(renderer);
     this.creativeLookGba = new CreativeLookGbaPass(renderer);
+    this.creativeLookDither = new CreativeLookDitherPass(renderer);
     this.creativeLookVectrex = new CreativeLookVectrex(renderer);
     this.creativeLookWatercolour = new CreativeLookWatercolour(renderer);
     this.creativeLookSketch = new CreativeLookSketch(renderer);
@@ -63,6 +66,7 @@ export class MobileCreativeLookPost {
     this.creativeLookNesPass = this.creativeLookNes.getPass();
     this.creativeLookMegaDrivePass = this.creativeLookMegaDrive.getPass();
     this.creativeLookGbaPass = this.creativeLookGba.getPass();
+    this.creativeLookDitherPass = this.creativeLookDither.getPass();
     this.creativeLookVectrexPass = this.creativeLookVectrex.getPass();
     this.creativeLookWatercolourPass = this.creativeLookWatercolour.getPass();
     this.creativeLookSketchPass = this.creativeLookSketch.getPass();
@@ -77,6 +81,9 @@ export class MobileCreativeLookPost {
       'nes-pixel': this.creativeLookNesPass,
       'megadrive-pixel': this.creativeLookMegaDrivePass,
       'gba-pixel': this.creativeLookGbaPass,
+      'dither-neutral': this.creativeLookDitherPass,
+      'dither-tritone': this.creativeLookDitherPass,
+      'dither-crosshatch': this.creativeLookDitherPass,
     };
 
     this._allCreativePasses = [
@@ -87,6 +94,7 @@ export class MobileCreativeLookPost {
       this.creativeLookNesPass,
       this.creativeLookMegaDrivePass,
       this.creativeLookGbaPass,
+      this.creativeLookDitherPass,
       this.creativeLookVectrexPass,
       this.creativeLookWatercolourPass,
       this.creativeLookSketchPass,
@@ -95,6 +103,9 @@ export class MobileCreativeLookPost {
     this._creativePassSet = new Set(this._allCreativePasses);
     /** @type {{ min: number, mag: number } | null} */
     this._composerFilterRestore = null;
+    /** @type {object} */
+    this._settings = {};
+    this._viewportBloomStackActive = false;
   }
 
   /**
@@ -112,10 +123,11 @@ export class MobileCreativeLookPost {
     }
   }
 
-  /** @param {string | null | undefined} presetId */
-  sync(presetId) {
+  /** @param {string | null | undefined} presetId @param {object} [settings] */
+  sync(presetId, settings = {}) {
     const id = presetId ? normalizeCreativeLookPreset(presetId) : null;
     this._presetId = id;
+    this._settings = settings;
 
     if (!id || id === 'none' || id === 'standard') {
       this._presentationMode = 'none';
@@ -125,18 +137,18 @@ export class MobileCreativeLookPost {
       return;
     }
 
-    const masterHueRad = creativeLookMasterHueRadians(0);
-    const patternScale = normalizeCreativeLookPatternScale(id, 1);
-    const intensity = normalizeCreativeLookIntensity(undefined);
+    const masterHueRad = creativeLookMasterHueRadians(settings.masterHue ?? 0);
+    const patternScale = normalizeCreativeLookPatternScale(id, settings.patternScale ?? 1);
+    const intensity = normalizeCreativeLookIntensity(settings.intensity);
 
     if (isFlatPostCreativeLookPreset(id)) {
       this._presentationMode = 'flat';
       this._flatVariant = creativeLookFlatPostVariant(id);
-      this._syncFlatPostSettings(id, masterHueRad);
+      this._syncFlatPostSettings(id, masterHueRad, settings);
       if (this._flatVariant === 'ascii') {
         void ensureAsciiFontAtlasLoaded().then(() => {
           this.creativeLookAscii.refreshAtlas?.();
-          this._syncFlatPostSettings(id, masterHueRad);
+          this._syncFlatPostSettings(id, masterHueRad, settings);
         });
       }
       return;
@@ -177,9 +189,14 @@ export class MobileCreativeLookPost {
     this._restoreComposerFilter();
   }
 
-  /** @param {string} presetId @param {number} masterHueRad */
-  _syncFlatPostSettings(presetId, masterHueRad) {
+  /** @param {string} presetId @param {number} masterHueRad @param {object} [settings] */
+  _syncFlatPostSettings(presetId, masterHueRad, settings = {}) {
     const enabled = this._presentationMode === 'flat';
+    const patternScale = normalizeCreativeLookPatternScale(
+      presetId,
+      settings.patternScale ?? 1,
+    );
+    const intensity = normalizeCreativeLookIntensity(settings.intensity);
     const ascii = { enabled: enabled && this._flatVariant === 'ascii', variant: presetId, masterHue: masterHueRad };
     this.creativeLookAscii.updateSettings(ascii);
     this.creativeLookEga.updateSettings({ enabled: enabled && this._flatVariant === 'ega-pixel', masterHue: masterHueRad });
@@ -188,6 +205,17 @@ export class MobileCreativeLookPost {
     this.creativeLookNes.updateSettings({ enabled: enabled && this._flatVariant === 'nes-pixel', masterHue: masterHueRad });
     this.creativeLookMegaDrive.updateSettings({ enabled: enabled && this._flatVariant === 'megadrive-pixel', masterHue: masterHueRad });
     this.creativeLookGba.updateSettings({ enabled: enabled && this._flatVariant === 'gba-pixel', masterHue: masterHueRad });
+    this.creativeLookDither.updateSettings({
+      enabled:
+        enabled
+        && (this._flatVariant === 'dither-neutral'
+          || this._flatVariant === 'dither-tritone'
+          || this._flatVariant === 'dither-crosshatch'),
+      variant: this._flatVariant ?? 'dither-neutral',
+      masterHue: masterHueRad,
+      patternScale,
+      intensity,
+    });
   }
 
   /** @param {string} presetId @param {number} patternScale @param {number} intensity @param {number} time */
@@ -217,22 +245,44 @@ export class MobileCreativeLookPost {
 
   /** @param {import('./MobilePost.js').MobilePost} mobilePost @param {number} [animTime] */
   prepareRender(mobilePost, animTime = 0) {
-    if (this._presentationMode === 'none') return;
+    const cl = mobilePost.getCreativeLookSettings?.() ?? this._settings ?? {};
+    const viewportBloom = !!cl.enabled && !!cl.viewportBloom;
+
+    if (this._presentationMode === 'none') {
+      if (!viewportBloom || !this._presetId) {
+        if (this._viewportBloomStackActive) {
+          mobilePost._applyFxState(mobilePost._fxState);
+          this._viewportBloomStackActive = false;
+        }
+        return;
+      }
+      this._viewportBloomStackActive = true;
+      this._applyViewportBloomStack(mobilePost);
+      return;
+    }
+
+    this._viewportBloomStackActive = false;
 
     if (this._presentationMode === 'sketch' && this._presetId) {
-      const patternScale = normalizeCreativeLookPatternScale(this._presetId, 1);
+      const patternScale = normalizeCreativeLookPatternScale(
+        this._presetId,
+        cl.patternScale ?? 1,
+      );
       this._syncSketchSettings(
         this._presetId,
         patternScale,
-        normalizeCreativeLookIntensity(undefined),
+        normalizeCreativeLookIntensity(cl.intensity),
         animTime,
       );
     }
 
     const state = mobilePost._fxState ?? {};
     const bloomActive =
-      Boolean(state.bloom?.enabled !== false)
-      && Number(state.bloom?.strength ?? 0) > 0.0001;
+      viewportBloom
+      || (
+        Boolean(state.bloom?.enabled !== false)
+        && Number(state.bloom?.strength ?? 0) > 0.0001
+      );
     const grainActive =
       Boolean(state.grain?.enabled !== false)
       && Number(state.grain?.intensity ?? 0) > 0.0001;
@@ -243,7 +293,7 @@ export class MobileCreativeLookPost {
     const {
       renderPass,
       bloomPass,
-      bloomTintPass,
+      bloomCompositePass,
       filmPass,
       grainTintPass,
       gradingPass,
@@ -266,8 +316,11 @@ export class MobileCreativeLookPost {
       this._setComposerNearestFilter(true);
       gradingPass.enabled = true;
       if (bloomActive) {
+        if (viewportBloom) {
+          this._configureViewportBloom(mobilePost);
+        }
         bloomPass.enabled = true;
-        bloomTintPass.enabled = true;
+        bloomCompositePass.enabled = true;
       }
       if (grainActive) {
         filmPass.enabled = true;
@@ -298,6 +351,7 @@ export class MobileCreativeLookPost {
     } else if (this._presentationMode === 'vectrex') {
       this._restoreComposerFilter();
       this.creativeLookVectrexPass.enabled = true;
+      gradingPass.enabled = true;
       if (grainActive) {
         filmPass.enabled = true;
         grainTintPass.enabled = true;
@@ -305,6 +359,43 @@ export class MobileCreativeLookPost {
       if (aberrationActive) aberrationPass.enabled = true;
     }
 
+    mobilePost._syncRenderToScreen();
+  }
+
+  /** @param {import('./MobilePost.js').MobilePost} mobilePost */
+  _configureViewportBloom(mobilePost) {
+    const bloomDefaults = { ...MOBILE_FX_DEFAULTS.bloom, enabled: true };
+    const thresh = Number(bloomDefaults.threshold);
+    bloomDefaults.threshold = Number.isFinite(thresh)
+      ? THREE.MathUtils.clamp(thresh * 0.78 + 0.08, 0.05, 0.92)
+      : 0.65;
+    mobilePost._updateBloom(bloomDefaults);
+  }
+
+  /** @param {import('./MobilePost.js').MobilePost} mobilePost */
+  _applyViewportBloomStack(mobilePost) {
+    const {
+      renderPass,
+      bloomPass,
+      bloomCompositePass,
+      gradingPass,
+      composer,
+    } = mobilePost;
+
+    this._disableAllCreativePasses();
+    this._restoreComposerFilter();
+
+    for (const pass of composer.passes) {
+      if (!this._creativePassSet.has(pass)) {
+        pass.enabled = false;
+      }
+    }
+
+    this._configureViewportBloom(mobilePost);
+    renderPass.enabled = true;
+    bloomPass.enabled = true;
+    bloomCompositePass.enabled = true;
+    gradingPass.enabled = true;
     mobilePost._syncRenderToScreen();
   }
 
@@ -317,6 +408,7 @@ export class MobileCreativeLookPost {
     this.creativeLookNes.setSize(w, h);
     this.creativeLookMegaDrive.setSize(w, h);
     this.creativeLookGba.setSize(w, h);
+    this.creativeLookDither.setSize(w, h);
     this.creativeLookVectrex.setSize(w, h);
     this.creativeLookWatercolour.setSize(w, h);
     this.creativeLookSketch.setSize(w, h);

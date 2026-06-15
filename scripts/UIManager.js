@@ -68,6 +68,7 @@ import { ShelfOverlaySuppression } from './ui/ShelfOverlaySuppression.js';
 import { UISounds } from './ui/UISounds.js';
 import { UIManagerModalOverlays } from './ui/UIManagerModalOverlays.js';
 import { mergeAberrationSettings } from './render/chromaticAberration.js';
+import { creativeLookPresetSupportsMaterialPbrSliders } from './render/CreativeLookMaterials.js';
 import { inferToastCaution, resolveToastIconKind } from './ui/toastVariant.js';
 
 /** Toasts longer than this use a dismissible dialog (OK) so they stay readable. */
@@ -3258,9 +3259,12 @@ export class UIManager {
     );
 
     const creativeLookOn = !!currentState.creativeLook?.enabled;
+    const materialPbrSlidersOn =
+      creativeLookOn &&
+      creativeLookPresetSupportsMaterialPbrSliders(currentState.creativeLook?.preset);
     this.setControlDisabled(
       ['materialMetalness', 'materialRoughness', 'materialEmissive'],
-      creativeLookOn,
+      creativeLookOn && !materialPbrSlidersOn,
     );
 
     const fisheyeOn = !!currentState.fisheye?.enabled;

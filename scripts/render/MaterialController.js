@@ -26,6 +26,8 @@ import {
   normalizeCreativeLookPatternScale,
   creativeLookPresetUsesShaderAnimation,
   isFlatPostCreativeLookPreset,
+  isDitherPixelCreativeLookPreset,
+  shouldResetDitherPresetTuning,
   isWatercolourCreativeLookPreset,
   isSketchCreativeLookPreset,
   isSketchColourCreativeLookPreset,
@@ -84,6 +86,7 @@ import {
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
   DEFAULT_MATERIAL_BRIGHTNESS,
+  DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   ORBY_BLACK,
   ORBY_LIME,
@@ -2186,6 +2189,8 @@ export class MaterialController {
           liftCrush: this.creativeLookSettings.liftCrush,
           materialBrightness:
             this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+          materialMetalness: this.materialSettings.metalness ?? DEFAULT_MATERIAL_METALNESS,
+          materialRoughness: this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
           skinning,
           morphTargets,
         });
@@ -2689,8 +2694,11 @@ export class MaterialController {
       this.creativeLookSettings.patternScale,
     );
     const fixedScale = creativeLookFixedPatternScale(nextPreset);
+    const resetDitherTuning = shouldResetDitherPresetTuning(prevPreset, nextPreset);
     if (fixedScale != null) {
       this.creativeLookSettings.patternScale = fixedScale;
+    } else if (resetDitherTuning) {
+      this.creativeLookSettings.patternScale = creativeLookDefaultPatternScale(nextPreset);
     } else if (nextPreset !== prevPreset && patch.patternScale === undefined) {
       const defaultScale = creativeLookDefaultPatternScale(nextPreset);
       if (defaultScale != null) {
@@ -2698,9 +2706,12 @@ export class MaterialController {
       }
     }
     if (
-      nextPreset !== prevPreset &&
-      nextPreset === 'scanline-hologram' &&
-      patch.intensity === undefined
+      resetDitherTuning
+      || (
+        nextPreset !== prevPreset
+        && patch.intensity === undefined
+        && (nextPreset === 'scanline-hologram' || isDitherPixelCreativeLookPreset(nextPreset))
+      )
     ) {
       this.creativeLookSettings.intensity = creativeLookDefaultIntensity(nextPreset);
     }
@@ -2947,6 +2958,14 @@ export class MaterialController {
         }
         if (m.uniforms?.uBrightness) {
           m.uniforms.uBrightness.value = brightness;
+        }
+        if (m.uniforms?.uMetalness) {
+          m.uniforms.uMetalness.value =
+            this.materialSettings.metalness ?? DEFAULT_MATERIAL_METALNESS;
+        }
+        if (m.uniforms?.uRoughness) {
+          m.uniforms.uRoughness.value =
+            this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
         }
         if (m.uniforms?.uIntensity) {
           if (m.userData.orbyCreativeLook === 'watercolour') {

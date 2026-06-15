@@ -50,20 +50,16 @@ function applyMaterialTextureColorSpaces(material) {
 
 /**
  * Match desktop import color management so GLB albedo/normal/ORM maps display correctly.
+ * Environment map + intensity are applied via MaterialController after load.
  * @param {THREE.Object3D} root
- * @param {{ envMapIntensity?: number }} [opts]
  */
-export function prepareMobileImportModel(root, opts = {}) {
-  const envMapIntensity = opts.envMapIntensity ?? 2;
+export function prepareMobileImportModel(root) {
   root.traverse((child) => {
     if (!child.isMesh || !child.material) return;
     const mats = Array.isArray(child.material) ? child.material : [child.material];
     mats.forEach((material) => {
       if (!material) return;
       applyMaterialTextureColorSpaces(material);
-      if ('envMapIntensity' in material) {
-        material.envMapIntensity = envMapIntensity;
-      }
       material.needsUpdate = true;
     });
   });

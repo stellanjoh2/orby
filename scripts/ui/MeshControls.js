@@ -21,6 +21,8 @@ import {
   creativeLookPresetLocksMasterHue,
   creativeLookPresetLocksPatternScale,
   creativeLookPresetUsesShaderAnimation,
+  isDitherPixelCreativeLookPreset,
+  shouldResetDitherPresetTuning,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 import {
@@ -600,6 +602,7 @@ export class MeshControls {
         const creativeLookWasEnabled = !!state.enabled;
         const prev = normalizeCreativeLookPreset(state.preset);
         if (preset !== prev) this.ui.uiSounds?.playSelect();
+        const resetDitherTuning = shouldResetDitherPresetTuning(prev, preset);
         // See `creativeLookEnabled` handler — Shader Lab and UV Checker overlay are mutually
         // exclusive. Disable the overlay before the shader takes over.
         const uvCheckerWasOn = !!this.stateStore.getState().advanced?.uvChecker;
@@ -611,6 +614,8 @@ export class MeshControls {
           const fixedScale = creativeLookFixedPatternScale(preset);
           if (fixedScale != null) {
             this.stateStore.set('creativeLook.patternScale', fixedScale);
+          } else if (resetDitherTuning) {
+            this.stateStore.set('creativeLook.patternScale', creativeLookDefaultPatternScale(preset));
           } else {
             const defaultScale = creativeLookDefaultPatternScale(preset);
             if (defaultScale != null) {
@@ -628,7 +633,11 @@ export class MeshControls {
           const fixedIntensity = creativeLookFixedIntensity(preset);
           if (fixedIntensity != null) {
             this.stateStore.set('creativeLook.intensity', fixedIntensity);
-          } else if (normalizeCreativeLookPreset(preset) === 'scanline-hologram') {
+          } else if (
+            resetDitherTuning
+            || normalizeCreativeLookPreset(preset) === 'scanline-hologram'
+            || isDitherPixelCreativeLookPreset(preset)
+          ) {
             this.stateStore.set(
               'creativeLook.intensity',
               creativeLookDefaultIntensity(preset),

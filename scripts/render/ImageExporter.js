@@ -288,6 +288,10 @@ export class ImageExporter {
       logicalSize.x,
       logicalSize.y,
     );
+    this.postPipeline?.creativeLookDither?.pinReferenceLogicalSize?.(
+      logicalSize.x,
+      logicalSize.y,
+    );
   }
 
   _unpinAsciiExportReference() {
@@ -300,6 +304,7 @@ export class ImageExporter {
     this.postPipeline?.creativeLookIntellivision?.unpinReferenceLogicalSize?.();
     this.postPipeline?.creativeLookGba?.unpinReferenceLogicalSize?.();
     this.postPipeline?.creativeLookApple2?.unpinReferenceLogicalSize?.();
+    this.postPipeline?.creativeLookDither?.unpinReferenceLogicalSize?.();
   }
 
   /**

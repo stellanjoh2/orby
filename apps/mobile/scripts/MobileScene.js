@@ -9,6 +9,10 @@ import {
 } from '../../../scripts/camera/cameraDefaults.js';
 import { MOBILE_HDRI_PRESETS } from './mobileHdriConfig.js';
 import { HDRI_MOODS, HDRI_STRENGTH_UNIT } from '../../../scripts/config/hdri.js';
+import { EnvironmentController } from '../../../scripts/render/EnvironmentController.js';
+import { BackgroundController } from '../../../scripts/render/BackgroundController.js';
+import { BackgroundGradientController } from '../../../scripts/render/backgroundGradient/BackgroundGradientController.js';
+import { APP_BACKGROUND } from '../../../scripts/constants.js';
 import { MobilePost } from './MobilePost.js';
 import {
   configureMobileGltfLoader,
@@ -52,6 +56,7 @@ export class MobileScene {
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.toneMappingExposure = 1;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(ORBY_BLACK, 1);
 
@@ -66,10 +71,6 @@ export class MobileScene {
     this.controls.minDistance = 0.05;
     this.controls.maxDistance = 500;
 
-    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-    this.pmremGenerator.compileEquirectangularShader();
-    this.textureLoader = new THREE.TextureLoader();
-
     this.gltfLoader = new GLTFLoader();
     if (this.gltfLoader.setMeshoptDecoder) {
       this.gltfLoader.setMeshoptDecoder(MeshoptDecoder);
@@ -78,22 +79,60 @@ export class MobileScene {
 
     this.post = new MobilePost(this.renderer, this.scene, this.camera);
     this.creativeLooks = new MobileCreativeLooks(this.renderer, this.scene, this.camera);
+    this.post.setCreativeLookSettingsGetter(() => this.creativeLooks.getCreativeLookSettings());
     this.creativeLooks.onCreativeLookSync = () => {
       this.post.syncCreativeLook(this._creativeLookPreset);
+    };
+    this.creativeLooks.onCreativeLookStateChanged = () => {
+      this.onCreativeLookStateChanged?.();
+    };
+    this.creativeLooks.onEnvironmentResync = () => {
+      this._syncModelEnvironment();
     };
     /** @type {number} */
     this._hdriStrength = MOBILE_HDRI_STRENGTH_DEFAULT;
     /** @type {number} */
     this._hdriBlurriness = 0;
+    this._hdriBackgroundEnabled = true;
+
+    this.backgroundController = new BackgroundController({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      initialColor: APP_BACKGROUND,
+    });
+    this.backgroundGradientController = new BackgroundGradientController({
+      renderer: this.renderer,
+      scene: this.scene,
+      backgroundController: this.backgroundController,
+    });
+    this.backgroundController.setGradientController(this.backgroundGradientController);
+    this.backgroundController.setHdriEnabled(true);
+    this.backgroundController.setHdriBackgroundEnabled(this._hdriBackgroundEnabled);
+
+    this.environmentController = new EnvironmentController(this.scene, this.renderer, {
+      presets: MOBILE_HDRI_PRESETS,
+      moods: HDRI_MOODS,
+      initialPreset: 'beach',
+      enabled: true,
+      backgroundEnabled: this._hdriBackgroundEnabled,
+      strength: this._hdriStrength,
+      blurriness: this._hdriBlurriness,
+      fallbackColor: this.backgroundController.getColor(),
+      onReleaseSceneBackground: () => this.backgroundController.refreshAppearance(),
+      shouldDrawHdriBackdrop: () => this._hdriBackgroundEnabled,
+      onEnvironmentMapUpdated: (texture, intensity) => {
+        this._onEnvironmentMapUpdated(texture, intensity);
+      },
+    });
+
+    this.post.beforeComposerRender = () => {
+      this.creativeLooks.materialController.syncImportGltfGlassMaterials?.();
+    };
 
     /** @type {THREE.Object3D | null} */
     this.currentModel = null;
-    /** @type {THREE.Texture | null} */
-    this._hdriTexture = null;
-    /** @type {THREE.WebGLRenderTarget | null} */
-    this._hdriPmrem = null;
     this._hdriPresetId = 'beach';
-    this._hdriLoadId = 0;
     this._raf = 0;
     this._resizeObserver = null;
     /** @type {string | null} */
@@ -109,6 +148,7 @@ export class MobileScene {
     this.onError = null;
     /** @type {(() => void) | null} */
     this.onFxStateChanged = null;
+    this.onCreativeLookStateChanged = null;
 
     this.raycaster = new THREE.Raycaster();
     this._pickNdc = new THREE.Vector2();
@@ -150,9 +190,9 @@ export class MobileScene {
     this.transformControlsRotate?.dispose?.();
     this.scene.remove(this.transformControlsRotate);
     this._clearModel();
-    this._disposeHdri();
+    this.backgroundGradientController?.dispose?.();
+    this.environmentController?.dispose();
     this.post?.dispose();
-    this.pmremGenerator?.dispose();
     this.controls?.dispose();
     this.renderer?.dispose();
     this.canvas.remove();
@@ -166,6 +206,10 @@ export class MobileScene {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h, false);
       this.post.setSize(w, h);
+      const gl = this.renderer.getContext();
+      const dbw = gl?.drawingBufferWidth ?? w;
+      const dbh = gl?.drawingBufferHeight ?? h;
+      this.backgroundGradientController?.handleResize?.(dbw, dbh);
     };
     apply();
     this._resizeObserver = new ResizeObserver(apply);
@@ -264,39 +308,23 @@ export class MobileScene {
     return this._rotateGizmoEnabled;
   }
 
-  _disposeHdri() {
-    this._hdriPmrem?.dispose();
-    this._hdriPmrem = null;
-    this._hdriTexture?.dispose();
-    this._hdriTexture = null;
-    this.scene.background = null;
+  /** @param {THREE.Texture | null} envTexture @param {number} intensity */
+  _onEnvironmentMapUpdated(envTexture, intensity) {
+    this.creativeLooks.setHdriStrength(intensity);
+    this.creativeLooks.setHdriBlurriness(this._hdriBlurriness);
+    this._syncModelEnvironment();
   }
 
   /**
    * @param {string} presetId
    */
   async setHdri(presetId) {
-    const config = MOBILE_HDRI_PRESETS[presetId];
-    if (!config?.url) return;
+    if (!MOBILE_HDRI_PRESETS[presetId]) return;
 
-    const loadId = ++this._hdriLoadId;
+    this._hdriPresetId = presetId;
     try {
-      const texture = await this._loadLdrEquirect(config.url);
-      if (loadId !== this._hdriLoadId) {
-        texture.dispose();
-        return;
-      }
-
-      this._disposeHdri();
-      this._hdriTexture = texture;
-      this._hdriPresetId = presetId;
-      this._hdriPmrem = this.pmremGenerator.fromEquirectangular(texture);
-
-      this.scene.environment = this._hdriPmrem.texture;
-      this.scene.background = texture;
-
-      this._applyHdriEnvironment();
-      this.post.applyHdriMood(HDRI_MOODS[presetId]);
+      const mood = await this.environmentController.setPreset(presetId);
+      this.post.applyHdriMood(mood ?? HDRI_MOODS[presetId]);
       this.onFxStateChanged?.();
     } catch (err) {
       console.error('[Orby Mobile] HDRI load failed', presetId, err);
@@ -304,16 +332,18 @@ export class MobileScene {
     }
   }
 
-  _applyHdriEnvironment() {
-    const strength = this._hdriStrength;
-    const blur = this._hdriBlurriness;
-    this.scene.environmentIntensity = strength;
-    this.scene.backgroundIntensity = strength;
-    if ('backgroundBlurriness' in this.scene) {
-      this.scene.backgroundBlurriness = blur;
-    }
-    this.creativeLooks.setHdriBlurriness(blur);
-    this.creativeLooks.syncEnvironment(this.scene.environment, strength);
+  /** Effective IBL intensity — matches UI HDRI strength (no hidden multiplier). */
+  getEffectiveHdriIntensity(strength = this._hdriStrength) {
+    return strength;
+  }
+
+  /** @deprecated alias */
+  _effectiveHdriIntensity(strength) {
+    return this.getEffectiveHdriIntensity(strength);
+  }
+
+  getCurrentFileName() {
+    return this._currentFileName;
   }
 
   /** @param {number} value */
@@ -323,7 +353,7 @@ export class MobileScene {
       0,
       MOBILE_HDRI_STRENGTH_MAX,
     );
-    this._applyHdriEnvironment();
+    this.environmentController?.setStrength(this._hdriStrength);
   }
 
   getHdriStrength() {
@@ -333,7 +363,8 @@ export class MobileScene {
   /** @param {number} value */
   setHdriBlurriness(value) {
     this._hdriBlurriness = THREE.MathUtils.clamp(value, 0, 1);
-    this._applyHdriEnvironment();
+    this.environmentController?.setBlurriness(this._hdriBlurriness);
+    this._syncModelEnvironment();
   }
 
   getHdriBlurriness() {
@@ -344,22 +375,110 @@ export class MobileScene {
     return this._hdriPresetId;
   }
 
-  /** @param {string} url */
-  _loadLdrEquirect(url) {
-    return new Promise((resolve, reject) => {
-      this.textureLoader.load(
-        url,
-        (texture) => {
-          texture.mapping = THREE.EquirectangularReflectionMapping;
-          texture.colorSpace = THREE.SRGBColorSpace;
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.ClampToEdgeWrapping;
-          resolve(texture);
-        },
-        undefined,
-        reject,
-      );
+  getHdriBackgroundEnabled() {
+    return this._hdriBackgroundEnabled;
+  }
+
+  /** @param {boolean} enabled */
+  setHdriBackground(enabled) {
+    this._hdriBackgroundEnabled = !!enabled;
+    const bgColor = this.backgroundController.getColor();
+    this.environmentController.setFallbackColor(bgColor);
+    this.backgroundController.setHdriBackgroundEnabled(this._hdriBackgroundEnabled);
+    this.environmentController.setBackgroundEnabled(this._hdriBackgroundEnabled);
+  }
+
+  getBackgroundColor() {
+    return this.backgroundController.getColor();
+  }
+
+  /** @param {string} color */
+  setBackgroundColor(color) {
+    this.backgroundController.setColor(color);
+    if (!this._hdriBackgroundEnabled) {
+      this.environmentController.setFallbackColor(color);
+    }
+  }
+
+  getBackgroundGradient() {
+    return this.backgroundGradientController.getConfig();
+  }
+
+  /** @param {Partial<import('../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js').BackgroundGradientConfig>} patch */
+  setBackgroundGradient(patch) {
+    this.backgroundGradientController.setConfig(patch);
+    if (!this._hdriBackgroundEnabled) {
+      this.backgroundController.refreshAppearance();
+    }
+  }
+
+  /** Re-apply HDRI env map + intensities on every material rebuild. */
+  _syncModelEnvironment() {
+    const env = this.scene.environment;
+    if (!env) return;
+
+    const intensity = Math.max(0, this._hdriStrength);
+    this.scene.environmentIntensity = intensity;
+    if ('backgroundIntensity' in this.scene) {
+      this.scene.backgroundIntensity = intensity;
+    }
+
+    this.creativeLooks.syncEnvironment(env, intensity, this._hdriBlurriness);
+
+    if (!this.currentModel) return;
+
+    const mc = this.creativeLooks.materialController;
+    mc.updateMaterialsEnvironment(env, intensity, this._hdriBlurriness);
+    mc.syncImportGltfGlassMaterials?.(undefined, { forcePresentation: true });
+
+    // r167: per-material envMap ignores scene.environmentIntensity — envMapIntensity must match HDRI slider.
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const m of mats) {
+        if (
+          m.isMeshStandardMaterial
+          || m.isMeshPhysicalMaterial
+          || m.isMeshLambertMaterial
+          || m.isMeshPhongMaterial
+        ) {
+          m.envMap = env;
+          if ('envMapIntensity' in m) {
+            m.envMapIntensity = intensity;
+          }
+          m.needsUpdate = true;
+        }
+      }
     });
+  }
+
+  /** Desktop repairRenderSurfacesAfterModelLoad parity — composer buffers + env resync. */
+  _repairRenderSurfacesAfterModelLoad() {
+    const sz = new THREE.Vector2();
+    this.renderer.getSize(sz);
+    if (sz.x > 0 && sz.y > 0) {
+      this.post.setSize(sz.x, sz.y);
+    }
+    this.post.composerLifecycle?.ensureComposerBuffersMatchRenderer?.();
+    this.post.composerLifecycle?.resetRendererViewportToCanvas?.();
+    this._syncModelEnvironment();
+  }
+
+  /** @param {THREE.Object3D} object */
+  _setModel(object) {
+    this._clearModel();
+    normalizeImportScale(object);
+    prepareMobileImportModel(object);
+    this.currentModel = object;
+    this.scene.add(object);
+    this.creativeLooks.setModel(object);
+    if (this._creativeLookPreset && this._creativeLookPreset !== 'none') {
+      this.creativeLooks.setCreativeLook(this._creativeLookPreset);
+    }
+    this._syncModelEnvironment();
+    this._repairRenderSurfacesAfterModelLoad();
+    this._frameModel(object);
+    this.renderer.compile(this.scene, this.camera);
   }
 
   /** @param {File} file */
@@ -393,24 +512,6 @@ export class MobileScene {
         reject,
       );
     });
-  }
-
-  /** @param {THREE.Object3D} object */
-  _setModel(object) {
-    this._clearModel();
-    normalizeImportScale(object);
-    prepareMobileImportModel(object, { envMapIntensity: this._hdriStrength });
-    this.currentModel = object;
-    this.scene.add(object);
-    this.creativeLooks.setModel(object);
-    if (this._creativeLookPreset && this._creativeLookPreset !== 'none') {
-      this.creativeLooks.setCreativeLook(this._creativeLookPreset);
-    }
-    if (this.scene.environment) {
-      this.creativeLooks.syncEnvironment(this.scene.environment, this._hdriStrength);
-    }
-    this._frameModel(object);
-    this.renderer.compile(this.scene, this.camera);
   }
 
   _clearModel() {
@@ -473,7 +574,25 @@ export class MobileScene {
     const id = presetId === 'standard' ? 'none' : presetId;
     this._creativeLookPreset = id === 'none' ? null : id;
     this.creativeLooks.setCreativeLook(id);
-    this.post.syncCreativeLook(id);
+    this.post.syncCreativeLook(this._creativeLookPreset);
+  }
+
+  getCreativeLookSettings() {
+    return this.creativeLooks.getCreativeLookSettings();
+  }
+
+  /** @param {string} path @param {number | boolean} value */
+  setCreativeLookValue(path, value) {
+    this.creativeLooks.setCreativeLookSettings({ [path]: value });
+    this.post.syncCreativeLook(this._creativeLookPreset);
+  }
+
+  togglePauseShaderAnimations() {
+    return this.creativeLooks.togglePauseShaderAnimations();
+  }
+
+  toggleViewportBloom() {
+    return this.creativeLooks.toggleViewportBloom();
   }
 
   /** @param {number} fovDeg */

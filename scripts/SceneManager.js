@@ -67,6 +67,7 @@ import {
   isSketchColourCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
   isSketchCreativeLookPreset,
+  isDitherPixelCreativeLookPreset,
   normalizeCreativeLookIntensity,
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPatternScale,
@@ -1298,6 +1299,7 @@ export class SceneManager {
     this.postPipeline?.creativeLookIntellivision?.setSize(width, height);
     this.postPipeline?.creativeLookGba?.setSize(width, height);
     this.postPipeline?.creativeLookApple2?.setSize(width, height);
+    this.postPipeline?.creativeLookDither?.setSize(width, height);
     this.postPipeline?.creativeLookWatercolour?.setSize(width, height);
     this.postPipeline?.creativeLookSketch?.setSize(width, height);
     this.postPipeline?.creativeLookVectrex?.setSize(width, height);
@@ -4462,6 +4464,19 @@ export class SceneManager {
       masterHue: masterHueRad,
     };
 
+    const patternScale = normalizeCreativeLookPatternScale(
+      presetId,
+      Number(storeCl.patternScale ?? mcCl.patternScale),
+    );
+    const intensity = normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity);
+    const ditherSettings = {
+      enabled: enabled && isDitherPixelCreativeLookPreset(presetId),
+      variant: presetId,
+      masterHue: masterHueRad,
+      patternScale,
+      intensity,
+    };
+
     this.postPipeline?.setCreativeLookFlatPostMode?.({ enabled, variant: flatVariant });
     this.postPipeline?.updateCreativeLookAscii(asciiSettings);
     this.postPipeline?.updateCreativeLookEga?.(egaSettings);
@@ -4472,16 +4487,13 @@ export class SceneManager {
     this.postPipeline?.updateCreativeLookIntellivision?.(intellivisionSettings);
     this.postPipeline?.updateCreativeLookGba?.(gbaSettings);
     this.postPipeline?.updateCreativeLookApple2?.(apple2Settings);
+    this.postPipeline?.updateCreativeLookDither?.(ditherSettings);
 
     const watercolourOn = creativeLookOn && isWatercolourCreativeLookPreset(presetId);
     const sketchOn = creativeLookOn && isSketchCreativeLookPreset(presetId);
     const sketchColourOn = creativeLookOn && isSketchColourCreativeLookPreset(presetId);
     const sketchFamilyOn = sketchOn || sketchColourOn;
     const vectrexOn = creativeLookOn && isVectrexCreativeLookPreset(presetId);
-    const patternScale = normalizeCreativeLookPatternScale(
-      presetId,
-      Number(storeCl.patternScale ?? mcCl.patternScale),
-    );
     const presetParams = storeCl.presetParams ?? mcCl.presetParams;
     const watercolourInk = resolveCreativeLookInkParams(presetParams, 'watercolour');
     const watercolourSettings = {
@@ -4550,6 +4562,7 @@ export class SceneManager {
           this.postPipeline?.creativeLookIntellivision?.setSize(sz.x, sz.y);
           this.postPipeline?.creativeLookGba?.setSize(sz.x, sz.y);
           this.postPipeline?.creativeLookApple2?.setSize(sz.x, sz.y);
+          this.postPipeline?.creativeLookDither?.setSize(sz.x, sz.y);
         }
         if (watercolourOn) {
           this.postPipeline?.creativeLookWatercolour?.setSize(sz.x, sz.y);

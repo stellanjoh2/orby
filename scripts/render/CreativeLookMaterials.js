@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { DEFAULT_MATERIAL_BRIGHTNESS } from '../constants.js';
+import {
+  DEFAULT_MATERIAL_BRIGHTNESS,
+  DEFAULT_MATERIAL_METALNESS,
+  DEFAULT_MATERIAL_ROUGHNESS,
+} from '../constants.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
 import { createShadowTintUniformValues } from './ShadowTint.js';
 import {
@@ -59,6 +63,20 @@ import {
   creativeLookApple2FixedIntensity,
 } from './creativeLookApple2Art.js';
 import {
+  DITHER_NEUTRAL_PREP_FRAGMENT,
+  DITHER_NEUTRAL_DEFAULT_INTENSITY,
+  DITHER_NEUTRAL_DEFAULT_PATTERN_SCALE,
+  DITHER_TRITONE_DEFAULT_INTENSITY,
+  DITHER_TRITONE_DEFAULT_PATTERN_SCALE,
+  DITHER_CROSSHATCH_DEFAULT_INTENSITY,
+  DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE,
+  DITHER_PIXEL_CREATIVE_LOOK_PRESETS,
+} from './creativeLookDitherArt.js';
+import {
+  withCreativeLookPrepPbrModulation,
+  isCreativeLookMaterialPbrSliderPreset,
+} from './creativeLookMaterialPbrArt.js';
+import {
   VGA_DOS_3D_FRAGMENT,
   VGA_DOS_PALETTE_COUNT,
   getVgaDosPaletteTexture,
@@ -93,7 +111,7 @@ import {
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -108,6 +126,9 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'megadrive-pixel',
   'intellivision-pixel',
   'apple2-pixel',
+  'dither-neutral',
+  'dither-tritone',
+  'dither-crosshatch',
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
@@ -258,6 +279,9 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'megadrive-pixel',
   'intellivision-pixel',
   'apple2-pixel',
+  'dither-neutral',
+  'dither-tritone',
+  'dither-crosshatch',
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
@@ -319,6 +343,36 @@ export function isApple2PixelCreativeLookPreset(preset) {
   return normalizeCreativeLookPreset(preset) === 'apple2-pixel';
 }
 
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isDitherNeutralCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'dither-neutral';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isDitherTritoneCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'dither-tritone';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isDitherCrosshatchCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'dither-crosshatch';
+}
+
+/** Shader Lab Dither — hard square pixel presets. */
+export function isDitherPixelCreativeLookPreset(preset) {
+  return DITHER_PIXEL_CREATIVE_LOOK_PRESETS.includes(normalizeCreativeLookPreset(preset));
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isDitherCreativeLookPreset(preset) {
+  return isDitherPixelCreativeLookPreset(preset);
+}
+
+/** Object → Material brightness / metalness / roughness sliders in Shader Lab. */
+export function creativeLookPresetSupportsMaterialPbrSliders(preset) {
+  return isCreativeLookMaterialPbrSliderPreset(normalizeCreativeLookPreset(preset));
+}
+
 /** Shader Lab “Screen pixels” grid — matches index.html creative-look section. */
 export const SCREEN_PIXEL_CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'ega-pixel',
@@ -347,7 +401,10 @@ export function isFlatPostCreativeLookPreset(preset) {
     isNesPixelCreativeLookPreset(preset) ||
     isMegaDrivePixelCreativeLookPreset(preset) ||
     isIntellivisionPixelCreativeLookPreset(preset) ||
-    isApple2PixelCreativeLookPreset(preset)
+    isApple2PixelCreativeLookPreset(preset) ||
+    isDitherNeutralCreativeLookPreset(preset) ||
+    isDitherTritoneCreativeLookPreset(preset) ||
+    isDitherCrosshatchCreativeLookPreset(preset)
   );
 }
 
@@ -363,6 +420,9 @@ export function creativeLookFlatPostVariant(preset) {
   if (id === 'intellivision-pixel') return 'intellivision-pixel';
   if (id === 'gba-pixel') return 'gba-pixel';
   if (id === 'apple2-pixel') return 'apple2-pixel';
+  if (id === 'dither-neutral') return 'dither-neutral';
+  if (id === 'dither-tritone') return 'dither-tritone';
+  if (id === 'dither-crosshatch') return 'dither-crosshatch';
   return null;
 }
 
@@ -477,6 +537,9 @@ export function normalizeCreativeLookIntensity(value) {
 export function creativeLookDefaultIntensity(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'scanline-hologram') return SCANLINE_HOLOGRAM_DEFAULT_INTENSITY;
+  if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_INTENSITY;
+  if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_INTENSITY;
+  if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_INTENSITY;
   return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
@@ -484,7 +547,20 @@ export function creativeLookDefaultIntensity(preset) {
 export function creativeLookDefaultPatternScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'vectrex') return VECTREX_DEFAULT_PATTERN_SCALE;
+  if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_PATTERN_SCALE;
+  if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_PATTERN_SCALE;
+  if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE;
   return null;
+}
+
+/**
+ * When switching between two dither pixel presets, always snap Scale + Intensity to the
+ * destination preset's defaults (Neutral vs Tritone tuning differs).
+ */
+export function shouldResetDitherPresetTuning(prevPreset, nextPreset) {
+  const prev = normalizeCreativeLookPreset(prevPreset);
+  const next = normalizeCreativeLookPreset(nextPreset);
+  return prev !== next && isDitherPixelCreativeLookPreset(prev) && isDitherPixelCreativeLookPreset(next);
 }
 
 /** Shader Lab Scale slider bounds per preset (Sketch uses bespoke Stroke / Raster sliders). */
@@ -492,6 +568,9 @@ export function creativeLookPatternScaleBounds(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'sketch' || id === 'sketch-colour') {
     return { min: SKETCH_PATTERN_SCALE_MIN, max: SKETCH_PATTERN_SCALE_MAX };
+  }
+  if (isDitherPixelCreativeLookPreset(id)) {
+    return { min: 0, max: 5 };
   }
   return { min: 0.02, max: 5 };
 }
@@ -786,7 +865,8 @@ export function normalizeCreativeLookPreset(preset) {
   let p = typeof preset === 'string' ? preset : '';
   if (p === 'matcap' || p === 'halftone') p = 'spectral-storm';
   if (p === 'glass-holo') p = 'holographic';
-  if (p === 'ordered-dither' || p === 'pixel-art') p = 'ega-pixel';
+  if (p === 'ordered-dither') p = 'dither-neutral';
+  if (p === 'pixel-art') p = 'ega-pixel';
   if (p === 'snes') p = 'vga-dos-3d';
   if (typeof p === 'string' && CREATIVE_LOOK_PRESETS.includes(p)) {
     return /** @type {CreativeLookPreset} */ (p);
@@ -905,6 +985,9 @@ export function formatCreativeLookPresetLabel(preset) {
     'intellivision-pixel': 'Intellivision',
     'gba-pixel': 'Game Boy Advance',
     'apple2-pixel': 'Apple II',
+    'dither-neutral': 'Neutral',
+    'dither-tritone': 'Tritone',
+    'dither-crosshatch': 'Crosshatch',
     'ascii-art': 'ASCII Art',
     'ascii-art-2': 'ASCII 2',
     'ascii-art-3': 'ASCII 3',
@@ -2474,6 +2557,8 @@ void main() {
  * @param {number} [opts.intensity] — effect punch (0–2, 1 = default)
  * @param {number} [opts.liftCrush] — shadow lift (+) vs crush (−), -1…1
  * @param {number} [opts.materialBrightness] — matches Object → Material brightness (live)
+ * @param {number} [opts.materialMetalness] — matches Object → Material metalness (live)
+ * @param {number} [opts.materialRoughness] — matches Object → Material roughness (live)
  * @param {boolean} [opts.skinning] — enable skeletal animation (SkinnedMesh / GLB rigs)
  * @param {boolean} [opts.morphTargets] — enable morph-target animation
  * @returns {THREE.ShaderMaterial | THREE.MeshPhysicalMaterial}
@@ -2509,7 +2594,17 @@ export function createCreativeLookMaterial(preset, opts = {}) {
   const materialBrightness = Number.isFinite(Number(opts.materialBrightness))
     ? Number(opts.materialBrightness)
     : DEFAULT_MATERIAL_BRIGHTNESS;
+  const materialMetalness = Number.isFinite(Number(opts.materialMetalness))
+    ? THREE.MathUtils.clamp(Number(opts.materialMetalness), 0, 1)
+    : DEFAULT_MATERIAL_METALNESS;
+  const materialRoughness = Number.isFinite(Number(opts.materialRoughness))
+    ? THREE.MathUtils.clamp(Number(opts.materialRoughness), 0, 1)
+    : DEFAULT_MATERIAL_ROUGHNESS;
   const brightnessUniform = { uBrightness: { value: materialBrightness } };
+  const pbrUniforms = {
+    uMetalness: { value: materialMetalness },
+    uRoughness: { value: materialRoughness },
+  };
   const shadowUniforms = createCreativeLookShadowUniforms();
   const gradeUniforms = {
     ...hueUniform,
@@ -2527,6 +2622,10 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     withCreativeLookPostProcess(withCreativeLookShadowReceive(fragmentShader));
   const lookFragNoShadow = (fragmentShader) =>
     withCreativeLookPostProcess(fragmentShader, { shadowTint: false });
+  const flatPostPrepFrag = (fragmentShader, mode = 'lit') =>
+    lookFragNoShadow(withCreativeLookPrepPbrModulation(fragmentShader, { mode }));
+  const retroLitPrepFrag = (fragmentShader, mode) =>
+    lookFrag(withCreativeLookPrepPbrModulation(fragmentShader, { mode }));
 
   /** Align with post half-float + linear workflow; `toneMapped: false` mismatched encoding on some GPUs (random black frames). Bloom still reads scene RT before exposure/tone passes. */
   const commonMatOpts = {
@@ -2672,11 +2771,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: WATERCOLOUR_VERTEX,
-      fragmentShader: SKETCH_FRAGMENT,
+      fragmentShader: withCreativeLookPrepPbrModulation(SKETCH_FRAGMENT, { mode: 'sketch' }),
       ...commonMatOpts,
     });
     mat.uniforms.uIntensity.value = creativeSketchVertexDrift(strokeWidth);
@@ -2703,11 +2803,14 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: WATERCOLOUR_VERTEX,
-      fragmentShader: SKETCH_COLOUR_FRAGMENT,
+      fragmentShader: withCreativeLookPrepPbrModulation(SKETCH_COLOUR_FRAGMENT, {
+        mode: 'sketch-colour',
+      }),
       ...commonMatOpts,
     });
     mat.uniforms.uIntensity.value = creativeSketchVertexDrift(strokeWidth);
@@ -2728,9 +2831,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: EGA_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(EGA_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'ega-pixel';
@@ -2750,9 +2855,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: C64_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(C64_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'c64-pixel';
@@ -2772,9 +2879,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: GB_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(GB_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'gameboy-pixel';
@@ -2794,9 +2903,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: GBA_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(GBA_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'gba-pixel';
@@ -2816,9 +2927,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: NES_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(NES_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'nes-pixel';
@@ -2838,9 +2951,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: MD_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(MD_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'megadrive-pixel';
@@ -2860,9 +2975,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: INTV_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(INTV_PREP_FRAGMENT),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'intellivision-pixel';
@@ -2882,12 +2999,38 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: A2_PREP_FRAGMENT,
+      fragmentShader: flatPostPrepFrag(A2_PREP_FRAGMENT, 'lum'),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'apple2-pixel';
+    return finish(mat, { shadows: false });
+  }
+
+  if (id === 'dither-neutral' || id === 'dither-tritone' || id === 'dither-crosshatch') {
+    const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uTint: { value: tint },
+        uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
+      },
+      vertexShader: PIXEL_ART_VERTEX,
+      fragmentShader: lookFragNoShadow(DITHER_NEUTRAL_PREP_FRAGMENT),
+      ...commonMatOpts,
+    });
+    mat.userData.orbyCreativeLook = id;
     return finish(mat, { shadows: false });
   }
 
@@ -2908,9 +3051,11 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uMap: { value: map },
         uHasMap: { value: map ? 1 : 0 },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: prepass,
+      fragmentShader: withCreativeLookPrepPbrModulation(prepass, { mode: 'form' }),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = id;
@@ -2932,11 +3077,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uOpacity: { value: shaderAlpha },
         ...toonLightUniforms,
+        ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: RETRO_CONSOLE_VERTEX,
-      fragmentShader: lookFrag(PS2_CRUSH_FRAGMENT),
+      fragmentShader: retroLitPrepFrag(PS2_CRUSH_FRAGMENT, 'ps2'),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'ps2-crush';
@@ -2961,11 +3107,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uHasMap: { value: map ? 1 : 0 },
         uOpacity: { value: shaderAlpha },
         ...toonLightUniforms,
+        ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: RETRO_CONSOLE_VERTEX,
-      fragmentShader: lookFrag(PSX_FRAGMENT),
+      fragmentShader: retroLitPrepFrag(PSX_FRAGMENT, 'psx'),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'psx';
@@ -2990,11 +3137,12 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uPaletteCount: { value: VGA_DOS_PALETTE_COUNT },
         uOpacity: { value: shaderAlpha },
         ...toonLightUniforms,
+        ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: VGA_DOS_3D_VERTEX,
-      fragmentShader: lookFrag(VGA_DOS_3D_FRAGMENT),
+      fragmentShader: retroLitPrepFrag(VGA_DOS_3D_FRAGMENT, 'vga'),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = 'vga-dos-3d';
@@ -3110,11 +3258,14 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTime: { value: time },
         uPatternScale: { value: patternScale },
         uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
         ...gradeUniforms,
         ...intensityUniform,
       },
       vertexShader: VECTREX_VERTEX,
-      fragmentShader: lookFragNoShadow(VECTREX_FRAGMENT),
+      fragmentShader: lookFragNoShadow(
+        withCreativeLookPrepPbrModulation(VECTREX_FRAGMENT, { mode: 'vectrex' }),
+      ),
       ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
     });
     mat.userData.orbyCreativeLook = 'vectrex';

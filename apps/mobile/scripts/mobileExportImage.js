@@ -1,10 +1,118 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../../../scripts/render/composerOutputBuffer.js';
 import { encodeCanvasToBlob } from '../../../scripts/render/encodeImageBlob.js';
+import { fullViewportLogicalSize } from '../../../scripts/render/fullViewportLogicalSize.js';
+import { resetMobileRendererViewport } from './mobileComposerFrame.js';
 
 /** Match desktop default opaque still export scale. */
 const EXPORT_SCALE = 2;
 const MAX_EXPORT_PX = 4096;
+
+/**
+ * @param {THREE.WebGLRenderer} renderer
+ * @returns {{ width: number, height: number }}
+ */
+function syncRendererInternalSizeToCanvasBackingStore(renderer) {
+  const canvas = renderer.domElement;
+  const cw = Math.max(1, canvas.width | 0);
+  const ch = Math.max(1, canvas.height | 0);
+  const logical = new THREE.Vector2();
+  renderer.getSize(logical);
+  const pr = Math.max(1e-6, renderer.getPixelRatio());
+  const lx = Math.round(logical.x);
+  const ly = Math.round(logical.y);
+  if (lx !== cw || ly !== ch) {
+    if (typeof renderer.setDrawingBufferSize === 'function') {
+      renderer.setDrawingBufferSize(cw, ch, pr);
+    } else {
+      renderer.setSize(cw, ch, false);
+    }
+  }
+  return { width: cw, height: ch };
+}
+
+/**
+ * EffectComposer RTs must match the real drawing buffer (mobile GPUs often clamp canvas size).
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {import('./MobilePost.js').MobilePost} post
+ */
+function ensureComposerMatchesDrawingBuffer(renderer, post) {
+  const composer = post.composer;
+  if (!composer?.renderTarget1) return;
+  const gl = renderer.getContext();
+  let bw;
+  let bh;
+  if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+    bw = gl.drawingBufferWidth;
+    bh = gl.drawingBufferHeight;
+  } else {
+    const db = new THREE.Vector2();
+    renderer.getDrawingBufferSize(db);
+    bw = db.x;
+    bh = db.y;
+  }
+  const rt = composer.renderTarget1;
+  if (rt.width === bw && rt.height === bh) return;
+  const logical = fullViewportLogicalSize(renderer);
+  post.setSize(logical.x, logical.y);
+}
+
+/**
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {THREE.Camera} camera
+ * @param {import('./MobilePost.js').MobilePost} post
+ * @param {number} targetWidth
+ * @param {number} targetHeight
+ * @returns {{ width: number, height: number }}
+ */
+function setExportFramebufferSize(renderer, camera, post, targetWidth, targetHeight) {
+  renderer.setPixelRatio(1);
+  renderer.setSize(targetWidth, targetHeight, false);
+  const synced = syncRendererInternalSizeToCanvasBackingStore(renderer);
+  camera.aspect = synced.width / Math.max(1e-6, synced.height);
+  camera.updateProjectionMatrix();
+  post.setSize(synced.width, synced.height);
+  ensureComposerMatchesDrawingBuffer(renderer, post);
+  return synced;
+}
+
+/** @param {THREE.WebGLRenderer} renderer @param {number} width @param {number} height */
+function setExportViewport(renderer, width, height) {
+  const w = Math.max(1, Math.floor(width));
+  const h = Math.max(1, Math.floor(height));
+  renderer.setRenderTarget(null);
+  renderer.setViewport(0, 0, w, h);
+  if (typeof renderer.setScissor === 'function') {
+    renderer.setScissor(0, 0, w, h);
+  }
+  if (typeof renderer.setScissorTest === 'function') {
+    renderer.setScissorTest(false);
+  }
+}
+
+/**
+ * @param {Uint8Array} src
+ * @param {number} srcW
+ * @param {number} srcH
+ * @param {number} dstW
+ * @param {number} dstH
+ */
+function resampleRgba(src, srcW, srcH, dstW, dstH) {
+  const dst = new Uint8Array(dstW * dstH * 4);
+  for (let y = 0; y < dstH; y += 1) {
+    const sy = Math.min(srcH - 1, Math.floor((y / dstH) * srcH));
+    for (let x = 0; x < dstW; x += 1) {
+      const sx = Math.min(srcW - 1, Math.floor((x / dstW) * srcW));
+      const si = (sy * srcW + sx) * 4;
+      const di = (y * dstW + x) * 4;
+      dst[di] = src[si];
+      dst[di + 1] = src[si + 1];
+      dst[di + 2] = src[si + 2];
+      dst[di + 3] = src[si + 3];
+    }
+  }
+  return dst;
+}
 
 /**
  * @param {Uint8Array} pixels
@@ -105,11 +213,13 @@ export async function exportMobileSceneJpeg(mobileScene) {
   }
 
   try {
-    camera.aspect = logicalW / logicalH;
-    camera.updateProjectionMatrix();
-    renderer.setPixelRatio(1);
-    renderer.setSize(exportW, exportH, false);
-    post.setSize(exportW, exportH);
+    const { width: captureW, height: captureH } = setExportFramebufferSize(
+      renderer,
+      camera,
+      post,
+      exportW,
+      exportH,
+    );
 
     mobileScene.controls.update();
     mobileScene.creativeLooks.tick(0);
@@ -121,7 +231,10 @@ export async function exportMobileSceneJpeg(mobileScene) {
     const animTime =
       mobileScene.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
     try {
-      post.render(animTime);
+      setExportViewport(renderer, captureW, captureH);
+      ensureComposerMatchesDrawingBuffer(renderer, post);
+      post.creativeLooks?.prepareRender(post, animTime);
+      post.composerLifecycle.renderComposerPassForExport();
     } finally {
       composer.renderToScreen = prevRenderToScreen;
     }
@@ -129,12 +242,18 @@ export async function exportMobileSceneJpeg(mobileScene) {
     const gl = renderer.getContext();
     gl?.finish?.();
 
-    const { pixels, width: pixelW, height: pixelH } = readComposerOutputPixels(
+    ensureComposerMatchesDrawingBuffer(renderer, post);
+    let { pixels, width: pixelW, height: pixelH } = readComposerOutputPixels(
       renderer,
       composer,
-      exportW,
-      exportH,
+      captureW,
+      captureH,
     );
+    if (pixelW !== captureW || pixelH !== captureH) {
+      pixels = resampleRgba(pixels, pixelW, pixelH, captureW, captureH);
+      pixelW = captureW;
+      pixelH = captureH;
+    }
 
     const canvas = pixelsToCanvas(pixels, pixelW, pixelH);
     const blob = await encodeCanvasToBlob(canvas, 'jpeg');
@@ -156,9 +275,12 @@ export async function exportMobileSceneJpeg(mobileScene) {
     }
     renderer.setPixelRatio(origPixelRatio);
     renderer.setSize(origSize.x, origSize.y, false);
+    syncRendererInternalSizeToCanvasBackingStore(renderer);
     camera.aspect = origAspect;
     camera.updateProjectionMatrix();
     post.setSize(origSize.x, origSize.y);
+    post.composerLifecycle?.ensureComposerBuffersMatchRenderer?.();
+    resetMobileRendererViewport(renderer);
     mobileScene._exportInProgress = false;
   }
 }

@@ -316,6 +316,13 @@ if (existsSync(mobileSrcDir)) {
             path: args.path,
             external: true,
           }));
+          build.onResolve({ filter: /^https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.167\.0\// }, (args) => {
+            const sub = args.path.replace('https://cdn.jsdelivr.net/npm/three@0.167.0/', '');
+            if (sub === 'build/three.module.js') {
+              return { path: 'three', external: true };
+            }
+            return { path: `three/${sub}`, external: true };
+          });
         },
       },
     ],

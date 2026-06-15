@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#080808"/>
+  <!-- placeholder portrait — warm gold Bayer blocks on orby-black -->
+  <g opacity="0.95">
+    <!-- highlight cheek / brow -->
+    <rect x="18" y="14" width="3" height="3" fill="#f0c84a"/>
+    <rect x="22" y="14" width="3" height="3" fill="#080808"/>
+    <rect x="26" y="14" width="3" height="3" fill="#e8b830"/>
+    <rect x="30" y="14" width="3" height="3" fill="#080808"/>
+    <rect x="34" y="14" width="3" height="3" fill="#c89418"/>
+    <rect x="38" y="14" width="3" height="3" fill="#080808"/>
+    <!-- sunglasses band -->
+    <rect x="16" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="19" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="22" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="25" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="28" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="31" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="34" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="37" y="20" width="3" height="3" fill="#080808"/>
+    <rect x="40" y="20" width="3" height="3" fill="#080808"/>
+    <!-- mid face crosshatch -->
+    <rect x="20" y="26" width="3" height="3" fill="#080808"/>
+    <rect x="23" y="26" width="3" height="3" fill="#a87810"/>
+    <rect x="26" y="26" width="3" height="3" fill="#080808"/>
+    <rect x="29" y="26" width="3" height="3" fill="#d4a020"/>
+    <rect x="32" y="26" width="3" height="3" fill="#080808"/>
+    <rect x="35" y="26" width="3" height="3" fill="#886008"/>
+    <rect x="20" y="29" width="3" height="3" fill="#c89418"/>
+    <rect x="23" y="29" width="3" height="3" fill="#080808"/>
+    <rect x="26" y="29" width="3" height="3" fill="#f0c84a"/>
+    <rect x="29" y="29" width="3" height="3" fill="#080808"/>
+    <rect x="32" y="29" width="3" height="3" fill="#b88814"/>
+    <rect x="35" y="29" width="3" height="3" fill="#080808"/>
+    <!-- jaw / neck ramp -->
+    <rect x="22" y="36" width="3" height="3" fill="#080808"/>
+    <rect x="25" y="36" width="3" height="3" fill="#705008"/>
+    <rect x="28" y="36" width="3" height="3" fill="#080808"/>
+    <rect x="31" y="36" width="3" height="3" fill="#986810"/>
+    <rect x="34" y="36" width="3" height="3" fill="#080808"/>
+    <rect x="24" y="39" width="3" height="3" fill="#080808"/>
+    <rect x="27" y="39" width="3" height="3" fill="#584004"/>
+    <rect x="30" y="39" width="3" height="3" fill="#080808"/>
+    <rect x="33" y="39" width="3" height="3" fill="#705008"/>
+  </g>
+  <!-- corner Bayer swatch -->
+  <rect x="8" y="48" width="2" height="2" fill="#f0c84a"/>
+  <rect x="10" y="48" width="2" height="2" fill="#080808"/>
+  <rect x="12" y="48" width="2" height="2" fill="#a87810"/>
+  <rect x="14" y="48" width="2" height="2" fill="#080808"/>
+  <rect x="8" y="50" width="2" height="2" fill="#080808"/>
+  <rect x="10" y="50" width="2" height="2" fill="#705008"/>
+  <rect x="12" y="50" width="2" height="2" fill="#080808"/>
+  <rect x="14" y="50" width="2" height="2" fill="#d4a020"/>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#080808"/>
+  <!-- tritone crush preview: shadow / mid / highlight tiers -->
+  <g opacity="0.98">
+    <!-- shadow band -->
+    <rect x="14" y="12" width="3" height="3" fill="#141820"/>
+    <rect x="17" y="12" width="3" height="3" fill="#080808"/>
+    <rect x="20" y="12" width="3" height="3" fill="#101418"/>
+    <rect x="23" y="12" width="3" height="3" fill="#080808"/>
+    <rect x="26" y="12" width="3" height="3" fill="#181c24"/>
+    <rect x="29" y="12" width="3" height="3" fill="#080808"/>
+    <rect x="32" y="12" width="3" height="3" fill="#12161c"/>
+    <rect x="35" y="12" width="3" height="3" fill="#080808"/>
+    <rect x="38" y="12" width="3" height="3" fill="#161a22"/>
+    <!-- mid band crosshatch -->
+    <rect x="16" y="24" width="3" height="3" fill="#080808"/>
+    <rect x="19" y="24" width="3" height="3" fill="#6a7890"/>
+    <rect x="22" y="24" width="3" height="3" fill="#080808"/>
+    <rect x="25" y="24" width="3" height="3" fill="#8898b0"/>
+    <rect x="28" y="24" width="3" height="3" fill="#080808"/>
+    <rect x="31" y="24" width="3" height="3" fill="#748498"/>
+    <rect x="34" y="24" width="3" height="3" fill="#080808"/>
+    <rect x="37" y="24" width="3" height="3" fill="#8292a8"/>
+    <rect x="18" y="27" width="3" height="3" fill="#586878"/>
+    <rect x="21" y="27" width="3" height="3" fill="#080808"/>
+    <rect x="24" y="27" width="3" height="3" fill="#98a8c0"/>
+    <rect x="27" y="27" width="3" height="3" fill="#080808"/>
+    <rect x="30" y="27" width="3" height="3" fill="#708090"/>
+    <rect x="33" y="27" width="3" height="3" fill="#080808"/>
+    <rect x="36" y="27" width="3" height="3" fill="#8c9cb4"/>
+    <!-- highlight band -->
+    <rect x="20" y="38" width="3" height="3" fill="#080808"/>
+    <rect x="23" y="38" width="3" height="3" fill="#d8e4f4"/>
+    <rect x="26" y="38" width="3" height="3" fill="#080808"/>
+    <rect x="29" y="38" width="3" height="3" fill="#eef4ff"/>
+    <rect x="32" y="38" width="3" height="3" fill="#080808"/>
+    <rect x="35" y="38" width="3" height="3" fill="#c8d4e8"/>
+    <rect x="22" y="41" width="3" height="3" fill="#080808"/>
+    <rect x="25" y="41" width="3" height="3" fill="#f4f8ff"/>
+    <rect x="28" y="41" width="3" height="3" fill="#080808"/>
+    <rect x="31" y="41" width="3" height="3" fill="#dce8f8"/>
+    <rect x="34" y="41" width="3" height="3" fill="#080808"/>
+    <rect x="37" y="41" width="3" height="3" fill="#e8f0fc"/>
+  </g>
+</svg>

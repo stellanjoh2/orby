@@ -17,7 +17,6 @@ export class MeshglRenderPass extends RenderPass {
     const oldAutoClear = renderer.autoClear;
     renderer.autoClear = false;
 
-    let oldClearAlpha;
     let oldOverrideMaterial;
 
     if (this.overrideMaterial !== null) {
@@ -25,14 +24,17 @@ export class MeshglRenderPass extends RenderPass {
       this.scene.overrideMaterial = this.overrideMaterial;
     }
 
-    if (this.clearColor !== null) {
-      renderer.getClearColor(this._oldClearColor);
-      renderer.setClearColor(this.clearColor, renderer.getClearAlpha());
+    // Apply pass clear alpha before clearColor — bloom passes can leave clearAlpha=0 on the
+    // renderer; setClearColor(..., getClearAlpha()) would otherwise clear the scene RT wrong.
+    if (this.clearAlpha !== null) {
+      renderer.setClearAlpha(this.clearAlpha);
     }
 
-    if (this.clearAlpha !== null) {
-      oldClearAlpha = renderer.getClearAlpha();
-      renderer.setClearAlpha(this.clearAlpha);
+    if (this.clearColor !== null) {
+      renderer.getClearColor(this._oldClearColor);
+      const clearAlpha =
+        this.clearAlpha !== null ? this.clearAlpha : renderer.getClearAlpha();
+      renderer.setClearColor(this.clearColor, clearAlpha);
     }
 
     if (this.clearDepth === true) {
@@ -60,7 +62,8 @@ export class MeshglRenderPass extends RenderPass {
         renderer.setClearColor(this._oldClearColor);
       }
       if (this.clearAlpha !== null) {
-        renderer.setClearAlpha(oldClearAlpha);
+        // Do not restore bloom-pass clearAlpha=0 — studio canvas is alpha:true.
+        renderer.setClearAlpha(this.clearAlpha);
       }
       if (this.overrideMaterial !== null) {
         this.scene.overrideMaterial = oldOverrideMaterial;

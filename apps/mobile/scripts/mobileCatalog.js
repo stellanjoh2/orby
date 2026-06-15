@@ -40,6 +40,9 @@ const CREATIVE_LOOK_ITEMS = [
   { id: 'gba-pixel', label: 'GBA', thumb: 'images/creative-look-gba-pixel.svg' },
   { id: 'nes-pixel', label: 'NES', thumb: 'images/creative-look-nes-pixel.svg' },
   { id: 'megadrive-pixel', label: 'Mega Drive', thumb: 'images/creative-look-megadrive-pixel.svg' },
+  { id: 'dither-neutral', label: 'Neutral', thumb: 'images/creative-look-dither-neutral.svg' },
+  { id: 'dither-tritone', label: 'Tritone', thumb: 'images/creative-look-dither-tritone.svg' },
+  { id: 'dither-crosshatch', label: 'Crosshatch', thumb: 'images/creative-look-dither-crosshatch.svg' },
   { id: 'ps2-crush', label: 'PS2 Crush', thumb: 'images/creative-look-ps2-crush.svg' },
   { id: 'psx', label: 'PSX', thumb: 'images/creative-look-psx.svg' },
   { id: 'vectrex', label: 'Vectrex', thumb: 'images/creative-look-vectrex.svg' },
@@ -65,6 +68,13 @@ export const MOBILE_CREATIVE_LOOK_SECTIONS = [
     label: 'Screen pixels',
     items: CREATIVE_LOOK_ITEMS.filter((x) =>
       ['ega-pixel', 'c64-pixel', 'gameboy-pixel', 'gba-pixel', 'nes-pixel', 'megadrive-pixel'].includes(x.id),
+    ),
+  },
+  {
+    id: 'dither',
+    label: 'Dither',
+    items: CREATIVE_LOOK_ITEMS.filter((x) =>
+      ['dither-neutral', 'dither-tritone', 'dither-crosshatch'].includes(x.id),
     ),
   },
   {

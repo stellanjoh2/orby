@@ -46,13 +46,56 @@
   --text: #ececec;
   --text-dim: #9a9a9a;
   --brand-font-headline: 'Mattone Bold', system-ui, sans-serif;
-  --orby-mobile-sheet-peek: 10.75rem;
-  --orby-mobile-sheet-expanded: 58svh;
-  --orby-mobile-dock-h: calc(65px + env(safe-area-inset-bottom, 0px));
+  --orby-mobile-sheet-peek: var(--orby-mobile-sheet-peek-rail);
+  --orby-mobile-sheet-expanded: 50svh;
+  /* Peek tiers — sheet height = content block + dock stack (border-box includes padding-bottom) */
+  --orby-mobile-dock-stack: calc(
+    var(--orby-mobile-dock-bottom) + var(--orby-mobile-dock-h) + var(--orby-mobile-sheet-dock-gap)
+  );
+  --orby-mobile-rail-label-row: 1.125rem; /* 14px label + line-height */
+  --orby-mobile-rail-block-h: calc(
+    var(--orby-mobile-v-gap) + var(--orby-mobile-preset-thumb) + var(--orby-mobile-v-gap-sm) +
+      var(--orby-mobile-rail-label-row) + var(--orby-mobile-v-gap-sm)
+  );
+  --orby-mobile-sheet-peek-rail: min(
+    calc(var(--orby-mobile-rail-block-h) + var(--orby-mobile-dock-stack)),
+    52svh
+  );
+  --orby-mobile-sheet-peek-settings: min(
+    calc(var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 11.5rem + var(--orby-mobile-dock-stack)),
+    54svh
+  );
+  --orby-mobile-sheet-peek-settings-lg: min(
+    calc(var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 18rem + var(--orby-mobile-dock-stack)),
+    62svh
+  );
+  --orby-mobile-dock-h: calc(78px + env(safe-area-inset-bottom, 0px));
+  --orby-mobile-dock-bottom: 8px;
+  --orby-mobile-sheet-dock-gap: 1.75rem; /* 28px — shelf labels → dock */
+  --orby-mobile-dock-thumb: 37px;
+  --orby-mobile-dock-btn-min-w: 72px;
+  --orby-mobile-type-sm: 14px;
+  --orby-mobile-type-size: 16px;
+  --orby-mobile-dock-font: var(--orby-mobile-type-sm);
+  --orby-mobile-rail-label-size: var(--orby-mobile-type-sm);
   --orby-mobile-top-h: env(safe-area-inset-top, 0px);
-  --orby-mobile-preset-w: 4.25rem;
-  --orby-mobile-preset-gap: 0.65rem;
   --orby-mobile-preset-rail-inset: 16px;
+  /* Large tappable presets — ~3 visible + peek; scroll for more */
+  --orby-mobile-preset-gap: 1rem;
+  --orby-mobile-preset-thumb: min(
+    6.25rem,
+    calc((100vw - var(--orby-mobile-preset-rail-inset) - 2 * var(--orby-mobile-preset-gap)) / 3.15)
+  );
+  /* Vertical rhythm — Darkroom-style touch spacing (label row → track → next control) */
+  --orby-mobile-v-gap-sm: 0.625rem; /* 10px — tight inset */
+  --orby-mobile-v-gap: 1.125rem; /* 18px — control groups */
+  --orby-mobile-v-gap-lg: 1.5rem; /* 24px — section breaks */
+  --orby-mobile-rail-to-controls: 1.625rem; /* 26px — preset rail → sliders */
+  --orby-mobile-slider-label-gap: 0.25rem; /* 4px — label + value → track */
+  --orby-mobile-slider-row-gap: 1.25rem; /* 20px — between slider rows */
+  --orby-mobile-panel-pad-x: 1rem; /* 16px */
+  --orby-mobile-toggle-w: 51px;
+  --orby-mobile-toggle-h: 31px;
   /* Frosted chrome — match desktop shelf / toast (styles.css --ui-frosted-*) */
   --ui-frosted-bg: rgba(8, 8, 8, 0.78);
   --ui-frosted-blur: 15px;
@@ -74,6 +117,7 @@ html.orby-mobile-app body {
   background: var(--orby-black);
   color: var(--text);
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  font-size: var(--orby-mobile-type-size);
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
@@ -123,6 +167,64 @@ button {
   position: absolute;
   inset: 0;
   z-index: 1;
+}
+
+.orby-mobile-debug-bar {
+  position: absolute;
+  z-index: 4;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.orby-mobile-export-btn {
+  position: absolute;
+  z-index: 5;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--orby-mobile-border);
+  border-radius: 999px;
+  background: var(--ui-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  color: var(--orby-lime);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--orby-black) 38%, transparent);
+  touch-action: manipulation;
+}
+
+.orby-mobile-export-btn:active {
+  transform: scale(0.96);
+}
+
+.orby-mobile-debug-btn {
+  pointer-events: auto;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--orby-mobile-border);
+  background: var(--ui-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  color: color-mix(in srgb, var(--orby-lime) 88%, white);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--orby-black) 38%, transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.orby-mobile-debug-btn:active {
+  transform: scale(0.97);
 }
 
 .orby-mobile-webgl {
@@ -182,7 +284,7 @@ button {
   --orby-magic-btn-pad-inline: 1.35rem;
 }
 
-.orby-mobile-browse-cta.orby-magic-btn {
+.orby-mobile-browse-cta.orby-magic-btn:not(:hover):not(:focus-visible):not(:active) {
   color: var(--orby-lime);
 }
 
@@ -195,13 +297,13 @@ button {
   position: fixed;
   z-index: 40;
   left: 50%;
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--orby-mobile-dock-bottom) + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%) translate3d(0, 0, 0);
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 6px;
   max-width: calc(100% - 16px);
-  padding: 6px 5px 5px;
+  padding: 7px 14px 6px;
   border-radius: 999px;
   background: var(--ui-frosted-bg);
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
@@ -213,21 +315,20 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  min-width: 53px;
-  padding: 8px 7px 5px;
+  gap: 4px;
+  min-width: var(--orby-mobile-dock-btn-min-w);
+  padding: 10px 10px 6px;
   border-radius: 999px;
-  font-size: 0.6rem;
+  font-size: var(--orby-mobile-dock-font);
   font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
+  letter-spacing: 0.01em;
+  color: var(--text);
 }
 
 .orby-mobile-dock__thumb {
   display: block;
-  width: 31px;
-  height: 31px;
+  width: var(--orby-mobile-dock-thumb);
+  height: var(--orby-mobile-dock-thumb);
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid transparent;
@@ -237,8 +338,8 @@ button {
 .orby-mobile-dock__icon {
   display: grid;
   place-items: center;
-  width: 31px;
-  height: 31px;
+  width: var(--orby-mobile-dock-thumb);
+  height: var(--orby-mobile-dock-thumb);
   border-radius: 50%;
   color: var(--text-dim);
   background: color-mix(in srgb, var(--orby-black) 55%, white 4%);
@@ -258,8 +359,8 @@ button {
 }
 
 .orby-mobile-dock__btn--icon {
-  min-width: 46px;
-  padding: 9px;
+  min-width: 55px;
+  padding: 11px;
   color: var(--orby-lime);
 }
 
@@ -276,7 +377,7 @@ button {
 .orby-mobile-dock__sep {
   flex: 0 0 auto;
   width: 1px;
-  height: 31px;
+  height: var(--orby-mobile-dock-thumb);
   margin: 0 1px;
   background: color-mix(in srgb, white 10%, transparent);
 }
@@ -301,7 +402,7 @@ button {
   flex-direction: column;
   height: var(--orby-mobile-sheet-peek);
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-  border-radius: 18px 18px 0 0;
+  border-radius: 0;
   background: var(--ui-frosted-bg);
   border: 1px solid var(--orby-mobile-border);
   border-bottom: none;
@@ -322,13 +423,12 @@ button {
   transform: translate3d(0, 0, 0);
   visibility: visible;
   pointer-events: auto;
-  /* Clear the floating dock pill */
-  padding-bottom: calc(var(--orby-mobile-dock-h) + 6px + env(safe-area-inset-bottom, 0px));
+  /* Clear the floating dock pill + breathing room above labels */
+  padding-bottom: var(--orby-mobile-dock-stack);
 }
 
 .orby-mobile[data-sheet='peek'] .orby-mobile-sheet {
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
-  padding-bottom: calc(var(--orby-mobile-dock-h) + 18px + env(safe-area-inset-bottom, 0px));
 }
 
 .orby-mobile[data-sheet='expanded'] .orby-mobile-sheet {
@@ -336,7 +436,7 @@ button {
 }
 
 .orby-mobile[data-sheet='expanded'][data-active-tab='fx'] {
-  --orby-mobile-sheet-expanded: 62svh;
+  --orby-mobile-sheet-expanded: 50svh;
 }
 
 .orby-mobile-sheet__meta {
@@ -373,42 +473,6 @@ button {
   display: none !important;
 }
 
-.orby-mobile-panel__title {
-  margin: 0;
-  padding: 0;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.orby-mobile-panel__head {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 16px 6px;
-}
-
-.orby-mobile[data-sheet='expanded'] .orby-mobile-panel__head {
-  display: flex;
-}
-
-.orby-mobile[data-sheet='expanded'] .orby-mobile-panel__head .orby-mobile-panel__title {
-  display: block;
-  padding: 0;
-}
-
-.orby-mobile[data-sheet='expanded'] .orby-mobile-panel__title {
-  display: block;
-}
-
-.orby-mobile[data-sheet='peek'] .orby-mobile-panel__title,
-.orby-mobile[data-sheet='closed'] .orby-mobile-panel__title {
-  display: none;
-}
-
 /* ── Preset rails (horizontal swipe, left-aligned) ── */
 .orby-mobile-panel--presets {
   justify-content: flex-start;
@@ -428,23 +492,17 @@ button {
 }
 
 .orby-mobile-preset-rail::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 2.5rem;
-  z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(270deg, color-mix(in srgb, var(--ui-frosted-bg) 92%, transparent) 10%, transparent);
+  display: none;
 }
 
 .orby-mobile-preset-rail__track {
+  --orby-mobile-preset-w: var(--orby-mobile-preset-thumb);
   display: flex;
   align-items: flex-end;
   gap: var(--orby-mobile-preset-gap);
   width: 100%;
-  padding: 0 var(--orby-mobile-preset-rail-inset) 2px;
+  padding: var(--orby-mobile-v-gap) var(--orby-mobile-preset-rail-inset) var(--orby-mobile-v-gap-sm)
+    var(--orby-mobile-preset-rail-inset);
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -463,7 +521,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: var(--orby-mobile-v-gap-sm);
   padding: 0;
   border: none;
   background: none;
@@ -474,17 +532,16 @@ button {
 .orby-mobile-preset__thumb {
   position: relative;
   display: block;
-  width: 3.35rem;
-  height: 3.35rem;
+  width: var(--orby-mobile-preset-thumb);
+  height: var(--orby-mobile-preset-thumb);
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid transparent;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
   transition:
-    width 0.22s ease,
-    height 0.22s ease,
     border-color 0.22s ease,
-    box-shadow 0.22s ease;
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
 }
 
 .orby-mobile-preset[data-hdri] .orby-mobile-preset__thumb,
@@ -505,10 +562,10 @@ button {
 
 .orby-mobile-preset__name {
   max-width: var(--orby-mobile-preset-w);
-  font-size: 0.58rem;
+  font-size: var(--orby-mobile-rail-label-size);
   font-weight: 500;
-  letter-spacing: 0.03em;
-  line-height: 1.15;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -522,10 +579,9 @@ button {
 }
 
 .orby-mobile-preset.is-selected .orby-mobile-preset__thumb {
-  width: 3.85rem;
-  height: 3.85rem;
   border-color: var(--orby-lime);
   box-shadow: 0 0 14px color-mix(in srgb, var(--orby-lime) 35%, transparent);
+  transform: scale(1.04);
 }
 
 .orby-mobile-preset.is-selected .orby-mobile-preset__name {
@@ -534,7 +590,24 @@ button {
 }
 
 .orby-mobile[data-sheet='peek'][data-active-tab='light'] .orby-mobile-sheet {
-  height: 14.25rem;
+  height: var(--orby-mobile-sheet-peek-settings);
+}
+
+.orby-mobile[data-hdri-backdrop='off'][data-sheet='peek'][data-active-tab='light'] .orby-mobile-sheet {
+  height: var(--orby-mobile-sheet-peek-settings-lg);
+}
+
+.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet,
+.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet {
+  height: var(--orby-mobile-sheet-peek-rail);
+}
+
+.orby-mobile[data-sheet='expanded'][data-active-tab='style'] {
+  --orby-mobile-sheet-expanded: var(--orby-mobile-sheet-peek-settings-lg);
+}
+
+.orby-mobile[data-sheet='expanded'][data-active-tab='style'] .orby-mobile-sheet {
+  height: var(--orby-mobile-sheet-peek-settings-lg);
 }
 
 .orby-mobile-preset:active {
@@ -542,21 +615,61 @@ button {
 }
 
 /* HDRI brightness + blurriness (below preset rail) */
+.orby-mobile-panel[data-panel='light'] {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .orby-mobile-hdri-controls {
-  flex: 0 0 auto;
-  padding: 0 14px 4px;
-}
-
-.orby-mobile-hdri-controls__row {
-  margin-bottom: 8px;
-}
-
-.orby-mobile-hdri-controls__row:last-child {
-  margin-bottom: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
 }
 
 .orby-mobile-panel--adjust {
   min-height: 0;
+}
+
+.orby-mobile-panel--style {
+  min-height: 0;
+}
+
+/* Shader Lab controls (below style preset rail) */
+.orby-mobile-style-controls {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
+}
+
+.orby-mobile-style-controls:not(.is-visible) {
+  display: none;
+}
+
+.orby-mobile-style-pause {
+  width: 100%;
+  margin-top: var(--orby-mobile-v-gap);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, white 10%, transparent);
+  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.orby-mobile-style-pause.is-active {
+  color: var(--orby-lime);
+  border-color: color-mix(in srgb, var(--orby-lime) 35%, transparent);
+}
+
+.orby-mobile-style-pause:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* ── Adjust panel (sliders + camera) ── */
@@ -565,40 +678,53 @@ button {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 4px 14px 12px;
+  padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap);
 }
 
-.orby-mobile-fx-section + .orby-mobile-fx-section {
-  margin-top: 14px;
+.orby-mobile-fx-divider {
+  border: 0;
+  height: 1px;
+  margin: var(--orby-mobile-v-gap-lg) 0;
+  background: color-mix(in srgb, white 9%, transparent);
 }
 
-.orby-mobile-fx-section__label {
-  margin: 0 0 8px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
+/* Darkroom-style slider rows — label + value on top, track full-width below */
 .orby-mobile-fx-grade {
   display: grid;
-  grid-template-columns: 5.5rem 1fr 3rem;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: 0.72rem;
-  color: var(--text-dim);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.75rem;
+  row-gap: var(--orby-mobile-slider-label-gap);
+  margin: 0 0 var(--orby-mobile-slider-row-gap);
+  font-size: var(--orby-mobile-type-size);
+  color: var(--text);
+}
+
+.orby-mobile-fx-grade:last-child {
+  margin-bottom: 0;
 }
 
 .orby-mobile-fx-grade__label {
+  grid-column: 1;
+  grid-row: 1;
   font-weight: 500;
+  color: var(--text);
+}
+
+.orby-mobile-fx-grade__value {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--text);
 }
 
 .orby-mobile-fx-grade input[type='range'] {
+  grid-column: 1 / -1;
+  grid-row: 2;
   width: 100%;
   min-width: 0;
-  height: 2px;
+  height: 28px;
+  margin: 0;
+  touch-action: pan-x;
   border-radius: 1px;
   position: relative;
   -webkit-appearance: none;
@@ -668,13 +794,13 @@ button {
 .orby-mobile-fx-grade input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
   box-shadow: none;
-  margin-top: -5px;
+  margin-top: -7px;
   transition:
     transform 0.15s ease,
     width 0.15s ease,
@@ -684,8 +810,8 @@ button {
 }
 
 .orby-mobile-fx-grade input[type='range']::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--accent);
   border: none;
@@ -741,13 +867,17 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 8px;
-  font-size: 0.72rem;
+  margin: 0 0 var(--orby-mobile-slider-row-gap);
+  font-size: var(--orby-mobile-type-size);
   color: var(--text);
 }
 
+.orby-mobile-fx-toggle:last-child {
+  margin-bottom: 0;
+}
+
 .orby-mobile-fx-toggle--lens {
-  margin-bottom: 4px;
+  margin-bottom: var(--orby-mobile-v-gap);
 }
 
 .orby-mobile-fx-toggle__label {
@@ -758,8 +888,8 @@ button {
 
 /* iOS-style switches — same pattern as desktop .effect-toggle (styles.css) */
 .orby-mobile-app .effect-toggle {
-  --toggle-track-width: 51px;
-  --toggle-track-height: 31px;
+  --toggle-track-width: var(--orby-mobile-toggle-w);
+  --toggle-track-height: var(--orby-mobile-toggle-h);
   --toggle-thumb-size: 27px;
   --toggle-thumb-offset: 2px;
   position: relative;
@@ -820,9 +950,9 @@ button {
   outline-offset: 2px;
 }
 
-.orby-mobile-fx-reset-cam {
+.orby-mobile-fx-reset {
   width: 100%;
-  margin-top: 4px;
+  margin-top: var(--orby-mobile-v-gap-lg);
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, white 10%, transparent);
@@ -831,6 +961,83 @@ button {
   font-size: 0.72rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+.orby-mobile-color-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 var(--orby-mobile-slider-row-gap);
+  font-size: var(--orby-mobile-type-size);
+  color: var(--text);
+}
+
+.orby-mobile-color-line span {
+  font-weight: 500;
+}
+
+.orby-mobile-color-line input[type='color'] {
+  flex: 0 0 auto;
+  width: var(--orby-mobile-toggle-w);
+  height: var(--orby-mobile-toggle-h);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.orby-mobile-color-line input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: inherit;
+  background: transparent;
+}
+
+.orby-mobile-color-line input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: inherit;
+}
+
+.orby-mobile-color-line input[type='color']::-moz-color-swatch {
+  border: none;
+  border-radius: inherit;
+}
+
+.orby-mobile-bg-controls {
+  margin-top: var(--orby-mobile-v-gap-sm);
+  padding-top: var(--orby-mobile-v-gap-sm);
+  border-top: 1px solid color-mix(in srgb, white 9%, transparent);
+}
+
+.orby-mobile-bg-gradient {
+  margin-top: var(--orby-mobile-v-gap-sm);
+}
+
+.orby-mobile-seg {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 var(--orby-mobile-slider-row-gap);
+}
+
+.orby-mobile-seg__btn {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, white 10%, transparent);
+  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
+  color: var(--text);
+  font-size: var(--orby-mobile-type-size);
+  font-weight: 500;
+}
+
+.orby-mobile-seg__btn.is-active {
+  color: var(--orby-black);
+  background: var(--orby-lime);
+  border-color: color-mix(in srgb, var(--orby-lime) 55%, transparent);
 }
 
 /* ── Scrim + toast ── */

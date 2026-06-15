@@ -615,7 +615,8 @@ html.mobile-landing .orby-marketing__intro-actions .orby-magic-btn-host {
   display: inline-block;
 }
 
-html.mobile-landing .orby-marketing__intro-browse.orby-magic-btn {
+html.mobile-landing
+  .orby-marketing__intro-browse.orby-magic-btn:not(:hover):not(:focus-visible):not(:active) {
   color: var(--brand-primary, #c4ff00);
 }
 

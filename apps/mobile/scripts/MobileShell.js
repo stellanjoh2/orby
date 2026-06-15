@@ -14,8 +14,17 @@ import {
   getMobileLensSliderUiValue,
   applyMobileLensSliderValue,
 } from './mobileFxControls.js';
+import {
+  MOBILE_STYLE_SLIDERS,
+  isMobileStyleSliderDisabled,
+  isMobileStyleSliderHidden,
+  mobileStyleSliderBounds,
+  resolveMobileStyleSliderValue,
+} from './mobileStyleControls.js';
 import { MobileScene, MOBILE_HDRI_STRENGTH_DEFAULT, MOBILE_HDRI_STRENGTH_MAX } from './MobileScene.js';
 import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff } from '../../../scripts/orbyMobileHandoff.js';
+import { copyMobileDebugSettings, loadMobileDebugSample } from './mobileDebugExport.js';
+import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
 
 /** Left inset for preset rails — keep in sync with --orby-mobile-preset-rail-inset */
 const MOBILE_PRESET_RAIL_INSET = 16;
@@ -36,6 +45,7 @@ export class MobileShell {
     };
     this.scene.onError = (message) => this.showToast(message);
     this.scene.onFxStateChanged = () => this._syncFxControlsUi();
+    this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
     void this.scene
       .init()
       .then(async () => {
@@ -80,12 +90,30 @@ export class MobileShell {
     this._hdriBrightnessValue = root.querySelector('[data-hdri-brightness-value]');
     this._hdriBlurInput = root.querySelector('[data-hdri-blur-input]');
     this._hdriBlurValue = root.querySelector('[data-hdri-blur-value]');
+    this._hdriBackgroundInput = root.querySelector('[data-hdri-background-input]');
+    this._bgControls = root.querySelector('[data-bg-controls]');
+    this._bgColorInput = root.querySelector('[data-bg-color-input]');
+    this._bgGradientEnabled = root.querySelector('[data-bg-gradient-enabled]');
+    this._bgGradientPanel = root.querySelector('[data-bg-gradient-panel]');
+    this._bgGradientTypeButtons = Array.from(root.querySelectorAll('[data-bg-gradient-type]'));
+    this._bgGradientStop0 = root.querySelector('[data-bg-gradient-stop-0]');
+    this._bgGradientStop1 = root.querySelector('[data-bg-gradient-stop-1]');
+    this._bgGradientAngle = root.querySelector('[data-bg-gradient-angle]');
+    this._bgGradientAngleValue = root.querySelector('[data-bg-gradient-angle-value]');
+    this._bgGradientAngleRow = root.querySelector('[data-bg-gradient-angle-row]');
+    this._bgGradientCenterRows = root.querySelector('[data-bg-gradient-center-rows]');
+    this._bgGradientCenterX = root.querySelector('[data-bg-gradient-center-x]');
+    this._bgGradientCenterXValue = root.querySelector('[data-bg-gradient-center-x-value]');
+    this._bgGradientCenterY = root.querySelector('[data-bg-gradient-center-y]');
+    this._bgGradientCenterYValue = root.querySelector('[data-bg-gradient-center-y-value]');
 
     this._renderPresetRails();
     this._renderFxControls();
+    this._renderStyleControls();
     this._bind();
     this._syncSelectionUi();
     this._syncHdriControlsUi();
+    this._syncHdriBackgroundUi();
   }
 
   /** @param {MobileTab} tab */
@@ -117,7 +145,7 @@ export class MobileShell {
     btn.setAttribute('aria-label', item.label);
     btn.innerHTML = `
       <span class="orby-mobile-preset__thumb">
-        <img src="${mobileAssetUrl(item.thumb)}" alt="" width="72" height="72" decoding="async" />
+        <img src="${mobileAssetUrl(item.thumb)}" alt="" width="100" height="100" decoding="async" />
       </span>
       <span class="orby-mobile-preset__name">${item.label}</span>
     `;
@@ -133,16 +161,32 @@ export class MobileShell {
     }
   }
 
+  _mkFxDivider() {
+    const divider = document.createElement('hr');
+    divider.className = 'orby-mobile-fx-divider';
+    divider.setAttribute('aria-hidden', 'true');
+    return divider;
+  }
+
+  _resetFxGrade() {
+    this.scene.resetFx();
+    this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
+    this._syncFxControlsUi();
+    this._syncSelectionUi();
+    this.showToast('Grade reset');
+  }
+
   _renderFxControls() {
     const host = this.root.querySelector('[data-fx-controls]');
     if (!host) return;
 
     host.replaceChildren();
 
-    for (const section of MOBILE_FX_SLIDER_SECTIONS) {
+    for (let i = 0; i < MOBILE_FX_SLIDER_SECTIONS.length; i++) {
+      if (i > 0) host.append(this._mkFxDivider());
+      const section = MOBILE_FX_SLIDER_SECTIONS[i];
       const sectionEl = document.createElement('div');
       sectionEl.className = 'orby-mobile-fx-section';
-      sectionEl.innerHTML = `<p class="orby-mobile-fx-section__label">${section.label}</p>`;
       const list = document.createElement('div');
       list.className = 'orby-mobile-fx-section__sliders';
       list.append(...section.sliders.map((def) => this._mkFxSlider(def)));
@@ -150,37 +194,152 @@ export class MobileShell {
       host.append(sectionEl);
     }
 
+    host.append(this._mkFxDivider());
+
     const lensSection = document.createElement('div');
     lensSection.className = 'orby-mobile-fx-section';
-    lensSection.innerHTML = '<p class="orby-mobile-fx-section__label">Lens</p>';
     const lensList = document.createElement('div');
     lensList.className = 'orby-mobile-fx-section__lens';
     lensList.append(...MOBILE_FX_LENS_ROWS.map((row) => this._mkFxLensSlider(row)));
     lensSection.append(lensList);
     host.append(lensSection);
 
+    host.append(this._mkFxDivider());
+
     const camSection = document.createElement('div');
     camSection.className = 'orby-mobile-fx-section';
-    camSection.innerHTML = '<p class="orby-mobile-fx-section__label">Camera</p>';
     const camList = document.createElement('div');
     camList.className = 'orby-mobile-fx-section__camera';
-
     camList.append(this._mkFxSlider({ ...MOBILE_CAMERA_FOV, path: 'fov' }));
-
-    const resetCamBtn = document.createElement('button');
-    resetCamBtn.type = 'button';
-    resetCamBtn.className = 'orby-mobile-fx-reset-cam';
-    resetCamBtn.textContent = 'Reset camera framing';
-    resetCamBtn.addEventListener('click', () => {
-      this.scene.resetCamera();
-      this.showToast('Camera reset');
-    });
-    camList.append(resetCamBtn);
-
     camSection.append(camList);
     host.append(camSection);
 
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'orby-mobile-fx-reset';
+    resetBtn.textContent = 'Reset grade';
+    resetBtn.addEventListener('click', () => this._resetFxGrade());
+    host.append(resetBtn);
+
     this._syncFxControlsUi();
+  }
+
+  _renderStyleControls() {
+    const host = this.root.querySelector('[data-style-controls]');
+    if (!host) return;
+
+    host.replaceChildren();
+
+    for (const def of MOBILE_STYLE_SLIDERS) {
+      host.append(this._mkStyleSlider(def));
+    }
+
+    host.append(this._mkFxDivider());
+
+    host.append(
+      this._mkFxSwitchRow('Bloom', {
+        inputAttrs: 'data-style-bloom',
+        onChange: () => {
+          this.scene.toggleViewportBloom();
+          this._syncStyleControlsUi();
+        },
+      }),
+    );
+
+    const pauseBtn = document.createElement('button');
+    pauseBtn.type = 'button';
+    pauseBtn.className = 'orby-mobile-style-pause';
+    pauseBtn.dataset.stylePause = '';
+    pauseBtn.addEventListener('click', () => {
+      const paused = this.scene.togglePauseShaderAnimations();
+      this._syncStyleControlsUi();
+      this.showToast(paused ? 'Shader animations paused' : 'Shader animations resumed');
+    });
+    host.append(pauseBtn);
+  }
+
+  /** @param {typeof MOBILE_STYLE_SLIDERS[number]} def */
+  _mkStyleSlider(def) {
+    const row = document.createElement('label');
+    row.className = 'orby-mobile-fx-grade slider-line';
+    row.dataset.stylePath = def.path;
+    row.innerHTML = `
+      <span class="orby-mobile-fx-grade__label slider-line-label">${def.label}</span>
+      <input type="range" data-style-path="${def.path}" min="${def.min}" max="${def.max}" step="${def.step}" value="${def.defaultValue ?? def.min}" />
+      <span class="orby-mobile-fx-grade__value" data-style-value="${def.path}"></span>
+    `;
+    const input = row.querySelector('input');
+    const output = row.querySelector('[data-style-value]');
+    input?.addEventListener('input', () => {
+      const value = Number(input.value);
+      if (output) output.textContent = def.format(value);
+      this._updateSliderFill(input);
+      this.scene.setCreativeLookValue(def.path, value);
+    });
+    if (input instanceof HTMLInputElement) this._updateSliderFill(input);
+    return row;
+  }
+
+  _syncStyleControlsUi() {
+    const host = this.root.querySelector('[data-style-controls]');
+    const styleActive = this.selection.style.id !== 'none' && this.selection.style.id !== 'standard';
+    this.root.dataset.stylePanel = styleActive ? 'controls' : 'presets-only';
+    if (host instanceof HTMLElement) {
+      host.hidden = !styleActive;
+      host.classList.toggle('is-visible', styleActive);
+    }
+
+    const preset = styleActive ? this.selection.style.id : null;
+    const cl = this.scene.getCreativeLookSettings();
+
+    for (const def of MOBILE_STYLE_SLIDERS) {
+      const row = host?.querySelector(`[data-style-path="${def.path}"]`)?.closest('.orby-mobile-fx-grade');
+      const input = host?.querySelector(`[data-style-path="${def.path}"]`);
+      const output = host?.querySelector(`[data-style-value="${def.path}"]`);
+      if (!(input instanceof HTMLInputElement)) continue;
+
+      const hidden = isMobileStyleSliderHidden(preset, def.path);
+      if (row instanceof HTMLElement) {
+        row.hidden = hidden;
+      }
+      if (hidden) continue;
+
+      const bounds = mobileStyleSliderBounds(preset, def.path);
+      input.min = String(bounds.min);
+      input.max = String(bounds.max);
+      input.step = String(bounds.step);
+
+      const value = resolveMobileStyleSliderValue(preset, def.path, cl[def.path]);
+      input.value = String(value);
+      input.disabled = !styleActive || isMobileStyleSliderDisabled(preset, def.path);
+      if (output instanceof HTMLElement) {
+        output.textContent = def.format(value);
+      }
+      this._updateSliderFill(input);
+    }
+
+    const bloomInput = host?.querySelector('[data-style-bloom]');
+    if (bloomInput instanceof HTMLInputElement) {
+      bloomInput.checked = !!cl.viewportBloom;
+      bloomInput.disabled = !styleActive;
+    }
+
+    const pauseBtn = host?.querySelector('[data-style-pause]');
+    if (pauseBtn instanceof HTMLButtonElement) {
+      const shaderAnimSupported = preset != null && !isMobileStyleSliderDisabled(preset, 'shaderAnimationSpeed');
+      const paused = !!cl.pauseShaderAnimations;
+      pauseBtn.textContent = paused ? 'Resume shader animations' : 'Pause shader animations';
+      pauseBtn.classList.toggle('is-active', paused);
+      pauseBtn.disabled = !styleActive || !shaderAnimSupported;
+    }
+
+    this._syncStyleSheetState();
+  }
+
+  _syncStyleSheetState() {
+    if (this.activeTab !== 'style' || this.sheetState === 'closed') return;
+    const hasLook = this.selection.style.id !== 'none' && this.selection.style.id !== 'standard';
+    this.setSheetState(hasLook ? 'expanded' : 'peek');
   }
 
   /** @param {HTMLInputElement} slider */
@@ -378,11 +537,32 @@ export class MobileShell {
     });
 
     this._bindHdriControls();
+    this._bindHdriBackgroundControls();
 
     for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
       const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
       track?.addEventListener('scroll', () => this._onPresetRailScroll(tab), { passive: true });
     }
+
+    this.root.querySelector('[data-action="copy-settings"]')?.addEventListener('click', () => {
+      void copyMobileDebugSettings(this.scene, this.selection).then((result) => {
+        if (result === 'copied') {
+          this.showToast('Settings copied');
+        } else {
+          this.showToast('Copy failed');
+        }
+      });
+    });
+
+    this.root.querySelector('[data-action="load-sample"]')?.addEventListener('click', () => {
+      void loadMobileDebugSample(this.scene).then((result) => {
+        if (result === 'loaded') {
+          this.showToast('Loaded sample');
+        } else {
+          this.showToast('Sample load failed');
+        }
+      });
+    });
 
     this.root.querySelector('[data-action="export"]')?.addEventListener('click', () => {
       void this.scene.exportImage().then(
@@ -414,21 +594,159 @@ export class MobileShell {
     });
 
 
-    this.root.querySelector('[data-action="reset-fx"]')?.addEventListener('click', () => {
-      this.scene.resetFx();
-      this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
-      this._syncFxControlsUi();
-      this._syncSelectionUi();
-      this.showToast('Grade reset');
-    });
-
     document.addEventListener('pointerdown', (e) => {
       if (this.sheetState === 'closed') return;
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock')) return;
+      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-export-btn') || t.closest('.orby-mobile-debug-bar')) return;
       this.setSheetState('closed');
     });
+  }
+
+  _bindHdriBackgroundControls() {
+    this._hdriBackgroundInput?.addEventListener('change', () => {
+      const enabled = !!this._hdriBackgroundInput?.checked;
+      this.scene.setHdriBackground(enabled);
+      this._syncHdriBackgroundUi();
+    });
+
+    this._bgColorInput?.addEventListener('input', () => {
+      const color = this._bgColorInput?.value;
+      if (!color) return;
+      this.scene.setBackgroundColor(color);
+    });
+
+    this._bgGradientEnabled?.addEventListener('change', () => {
+      const enabled = !!this._bgGradientEnabled?.checked;
+      this.scene.setBackgroundGradient({ enabled });
+      this._syncHdriBackgroundUi();
+    });
+
+    this._bgGradientTypeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const type = button.getAttribute('data-bg-gradient-type');
+        if (type !== 'linear' && type !== 'radial') return;
+        this.scene.setBackgroundGradient({ type });
+        this._syncHdriBackgroundUi();
+      });
+    });
+
+    this._bgGradientStop0?.addEventListener('input', () => {
+      this._commitBackgroundGradientStops();
+    });
+    this._bgGradientStop1?.addEventListener('input', () => {
+      this._commitBackgroundGradientStops();
+    });
+
+    this._bgGradientAngle?.addEventListener('input', () => {
+      const angle = Number(this._bgGradientAngle?.value ?? 180);
+      if (this._bgGradientAngle instanceof HTMLInputElement) {
+        this._updateSliderFill(this._bgGradientAngle);
+      }
+      if (this._bgGradientAngleValue instanceof HTMLElement) {
+        this._bgGradientAngleValue.textContent = `${Math.round(angle)}°`;
+      }
+      this.scene.setBackgroundGradient({ angle });
+    });
+
+    this._bgGradientCenterX?.addEventListener('input', () => {
+      const centerX = Number(this._bgGradientCenterX?.value ?? 50);
+      if (this._bgGradientCenterX instanceof HTMLInputElement) {
+        this._updateSliderFill(this._bgGradientCenterX);
+      }
+      if (this._bgGradientCenterXValue instanceof HTMLElement) {
+        this._bgGradientCenterXValue.textContent = `${Math.round(centerX)}%`;
+      }
+      this.scene.setBackgroundGradient({ centerX });
+    });
+
+    this._bgGradientCenterY?.addEventListener('input', () => {
+      const centerY = Number(this._bgGradientCenterY?.value ?? 50);
+      if (this._bgGradientCenterY instanceof HTMLInputElement) {
+        this._updateSliderFill(this._bgGradientCenterY);
+      }
+      if (this._bgGradientCenterYValue instanceof HTMLElement) {
+        this._bgGradientCenterYValue.textContent = `${Math.round(centerY)}%`;
+      }
+      this.scene.setBackgroundGradient({ centerY });
+    });
+  }
+
+  _commitBackgroundGradientStops() {
+    const gradient = this.scene.getBackgroundGradient();
+    const stops = [...gradient.stops];
+    if (this._bgGradientStop0?.value) {
+      stops[0] = { ...stops[0], color: this._bgGradientStop0.value };
+    }
+    if (this._bgGradientStop1?.value) {
+      stops[1] = { ...stops[1], color: this._bgGradientStop1.value };
+    }
+    this.scene.setBackgroundGradient({ stops });
+  }
+
+  _syncHdriBackgroundUi() {
+    const backdropOn = this.scene.getHdriBackgroundEnabled();
+    this.root.dataset.hdriBackdrop = backdropOn ? 'on' : 'off';
+    const gradient = normalizeBackgroundGradient(this.scene.getBackgroundGradient());
+    const bgColor = this.scene.getBackgroundColor();
+
+    if (this._hdriBackgroundInput instanceof HTMLInputElement) {
+      this._hdriBackgroundInput.checked = backdropOn;
+    }
+    if (this._bgControls instanceof HTMLElement) {
+      this._bgControls.hidden = backdropOn;
+    }
+    if (this._bgColorInput instanceof HTMLInputElement) {
+      this._bgColorInput.value = bgColor;
+      this._bgColorInput.disabled = gradient.enabled;
+    }
+    if (this._bgGradientEnabled instanceof HTMLInputElement) {
+      this._bgGradientEnabled.checked = gradient.enabled;
+    }
+    if (this._bgGradientPanel instanceof HTMLElement) {
+      this._bgGradientPanel.hidden = !gradient.enabled;
+    }
+
+    this._bgGradientTypeButtons.forEach((button) => {
+      const type = button.getAttribute('data-bg-gradient-type');
+      button.classList.toggle('is-active', type === gradient.type);
+    });
+
+    const stops = gradient.stops;
+    if (this._bgGradientStop0 instanceof HTMLInputElement && stops[0]) {
+      this._bgGradientStop0.value = stops[0].color;
+    }
+    if (this._bgGradientStop1 instanceof HTMLInputElement && stops[1]) {
+      this._bgGradientStop1.value = stops[1].color;
+    }
+
+    if (this._bgGradientAngle instanceof HTMLInputElement) {
+      this._bgGradientAngle.value = String(gradient.angle);
+      this._updateSliderFill(this._bgGradientAngle);
+    }
+    if (this._bgGradientAngleValue instanceof HTMLElement) {
+      this._bgGradientAngleValue.textContent = `${Math.round(gradient.angle)}°`;
+    }
+    if (this._bgGradientAngleRow instanceof HTMLElement) {
+      this._bgGradientAngleRow.hidden = gradient.type !== 'linear';
+    }
+    if (this._bgGradientCenterRows instanceof HTMLElement) {
+      this._bgGradientCenterRows.hidden = gradient.type !== 'radial';
+    }
+    if (this._bgGradientCenterX instanceof HTMLInputElement) {
+      this._bgGradientCenterX.value = String(gradient.centerX);
+      this._updateSliderFill(this._bgGradientCenterX);
+    }
+    if (this._bgGradientCenterXValue instanceof HTMLElement) {
+      this._bgGradientCenterXValue.textContent = `${Math.round(gradient.centerX)}%`;
+    }
+    if (this._bgGradientCenterY instanceof HTMLInputElement) {
+      this._bgGradientCenterY.value = String(gradient.centerY);
+      this._updateSliderFill(this._bgGradientCenterY);
+    }
+    if (this._bgGradientCenterYValue instanceof HTMLElement) {
+      this._bgGradientCenterYValue.textContent = `${Math.round(gradient.centerY)}%`;
+    }
   }
 
   _bindHdriControls() {
@@ -502,7 +820,20 @@ export class MobileShell {
     if (tab === 'light') {
       this._syncHdriSelectionFromScene();
       this._syncHdriControlsUi();
+      this._syncHdriBackgroundUi();
       this._syncSelectionUi();
+      this.setSheetState('peek');
+      requestAnimationFrame(() => {
+        this._scrollRailToSelection('light');
+      });
+      return;
+    }
+    if (tab === 'style') {
+      this._syncStyleControlsUi();
+      requestAnimationFrame(() => {
+        this._scrollRailToSelection('style');
+      });
+      return;
     }
     this.setSheetState('peek');
     requestAnimationFrame(() => {
@@ -556,6 +887,7 @@ export class MobileShell {
     if (tab === 'style') {
       const lookId = item.id === 'standard' ? 'none' : item.id;
       this.scene.setCreativeLook(lookId);
+      this._syncStyleControlsUi();
     }
     if (tab === 'filters') {
       this.scene.applyLookFilter(item.id);
@@ -652,6 +984,7 @@ export class MobileShell {
         thumb.src = mobileAssetUrl(this.selection[tab].thumb);
       }
     }
+    this._syncStyleControlsUi();
   }
 
   /** @param {string} message */

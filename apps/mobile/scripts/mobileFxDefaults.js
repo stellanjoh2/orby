@@ -1,6 +1,6 @@
 import { CAMERA_TEMPERATURE_NEUTRAL_K } from '../../../scripts/constants.js';
 
-/** Minimal defaults for mobile look-filter merge (matches desktop StateStore). */
+/** Mobile look-filter merge defaults — matches desktop StateStore (no hidden lifts). */
 export const MOBILE_FX_DEFAULTS = {
   lookFilterPreset: 'none',
   exposure: 1.0,

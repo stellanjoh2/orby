@@ -116,13 +116,16 @@ export class ComposerLifecycle {
         ? gradient.getFallbackColor()
         : this.backgroundController?.getColor() ?? APP_BACKGROUND;
       r.setClearColor(new THREE.Color(hex), 1);
+      r.setClearAlpha(1);
       return;
     }
     if (bg.isColor) {
       r.setClearColor(bg, 1);
+      r.setClearAlpha(1);
       return;
     }
     r.setClearColor(0x000000, 1);
+    r.setClearAlpha(1);
   }
 
   /**
@@ -255,6 +258,9 @@ export class ComposerLifecycle {
         this.postPipeline?.releaseCreativeLookVectrex?.();
       }
       this.resetRendererViewportToCanvas();
+      if (typeof this.renderer?.setClearAlpha === 'function') {
+        this.renderer.setClearAlpha(1);
+      }
     }
   }
 

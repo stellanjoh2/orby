@@ -581,6 +581,9 @@ const SHADER_LAB_FLAT_POST_PRESETS = new Set([
   'megadrive-pixel',
   'intellivision-pixel',
   'apple2-pixel',
+  'dither-neutral',
+  'dither-tritone',
+  'dither-crosshatch',
 ]);
 
 /** Cam/FX bloom sliders — Shader Lab viewport bloom, or flat-post Cam/FX bloom stack. */

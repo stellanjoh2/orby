@@ -4,37 +4,28 @@ import { MeshglEffectComposer } from '../../../scripts/render/MeshglEffectCompos
 import { MeshglRenderPass } from '../../../scripts/render/MeshglRenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js';
-import {
-  GradingShader,
-  BloomTintShader,
-  GrainTintShader,
-} from '../../../scripts/shaders/index.js';
+import { GrainTintShader } from '../../../scripts/shaders/index.js';
+import { BloomCompositeController } from '../../../scripts/render/BloomCompositeController.js';
 import { mergeLookFilterState } from '../../../scripts/render/lookFilterPresets.js';
-import {
-  buildToneCurveLutBytes,
-  normalizeToneCurve,
-} from '../../../scripts/math/toneCurvePchip.js';
 import {
   applyChromaticAberrationToPass,
   AberrationShader,
 } from '../../../scripts/render/chromaticAberration.js';
 import {
+  ANAMORPHIC_BLOOM_QUALITY_DEFAULT,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   cameraShadowsUiToShader,
   effectiveVignetteIntensity,
+  resolveAnamorphicBloomQualityTier,
 } from '../../../scripts/constants.js';
-import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
+import { MOBILE_BLOOM_RESOLUTION_SCALE } from './mobileParityDefaults.js';
 import { getNestedValue, setNestedValue } from './mobileFxControls.js';
 import { MobileCreativeLookPost } from './MobileCreativeLookPost.js';
-
-const TONE_MAPPING_MAP = {
-  none: 0,
-  reinhard: 2,
-  'aces-filmic': 4,
-};
-
+import { GradingController } from '../../../scripts/render/GradingController.js';
+import { ComposerLifecycle } from '../../../scripts/scene/ComposerLifecycle.js';
+import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
 /**
  * Mobile post stack — grading + bloom + grain + chromatic aberration.
  */
@@ -60,13 +51,17 @@ export class MobilePost {
     this.creativeLooks = new MobileCreativeLookPost(renderer);
     this.creativeLooks.mount(this.composer);
 
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(rw, rh), 0.2, 0.2, 1.0);
+    const bloomW = Math.max(1, Math.floor(rw * MOBILE_BLOOM_RESOLUTION_SCALE));
+    const bloomH = Math.max(1, Math.floor(rh * MOBILE_BLOOM_RESOLUTION_SCALE));
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 0.2, 0.2, 1.0);
     this.bloomPass.enabled = false;
     this.composer.addPass(this.bloomPass);
 
-    this.bloomTintPass = new ShaderPass(BloomTintShader);
-    this.bloomTintPass.enabled = false;
-    this.composer.addPass(this.bloomTintPass);
+    const abTier = resolveAnamorphicBloomQualityTier(ANAMORPHIC_BLOOM_QUALITY_DEFAULT);
+    this.bloomCompositeController = new BloomCompositeController(renderer, abTier.sampleRadius);
+    this.bloomCompositePass = this.bloomCompositeController.getPass();
+    this.bloomCompositePass.enabled = false;
+    this.composer.addPass(this.bloomCompositePass);
 
     this.filmPass = new FilmPass(0.0, 0.0, 648, false);
     this.filmPass.enabled = false;
@@ -76,22 +71,34 @@ export class MobilePost {
     this.grainTintPass.enabled = false;
     this.composer.addPass(this.grainTintPass);
 
-    this.gradingPass = new ShaderPass(GradingShader);
+    this.gradingController = new GradingController(renderer);
+    this.gradingPass = this.gradingController.getPass();
     this.gradingPass.renderToScreen = false;
-    this.uniforms = this.gradingPass.uniforms;
+    this.gradingPass.enabled = true;
+    this.uniforms = this.gradingController.uniforms;
     this.composer.addPass(this.gradingPass);
 
     this.aberrationPass = new ShaderPass(AberrationShader);
-    this.aberrationPass.renderToScreen = true;
+    this.aberrationPass.renderToScreen = false;
     this.composer.addPass(this.aberrationPass);
 
-    /** @type {THREE.DataTexture | null} */
-    this._toneLutTexture = null;
-    this._curveNorm = normalizeToneCurve(MOBILE_FX_DEFAULTS.toneCurve);
-    this._uploadToneLut(this._curveNorm);
+    /** @type {(() => void) | null} */
+    this.beforeComposerRender = null;
+
+    this.composerLifecycle = new ComposerLifecycle({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      composer: this.composer,
+      postPipeline: this,
+      syncPostProcessingForLogicalSize: (w, h) => this.setSize(w, h),
+      beforeComposerRender: () => this.beforeComposerRender?.(),
+    });
 
     this._fxState = this._cloneFxState(MOBILE_FX_DEFAULTS);
     this._lookFilterPreset = 'none';
+    /** @type {(() => object) | null} */
+    this._creativeLookSettingsGetter = null;
     this.reset();
   }
 
@@ -112,38 +119,8 @@ export class MobilePost {
   }
 
   dispose() {
-    this._disposeToneLut();
     this.creativeLooks?.dispose?.();
     this.composer?.dispose?.();
-  }
-
-  _disposeToneLut() {
-    this._toneLutTexture?.dispose?.();
-    this._toneLutTexture = null;
-  }
-
-  /** @param {object} curve */
-  _uploadToneLut(curve) {
-    this._disposeToneLut();
-    const { data, width, height, tailSlope } = buildToneCurveLutBytes(curve);
-    const tex = new THREE.DataTexture(
-      data,
-      width,
-      height,
-      THREE.RGBAFormat,
-      THREE.UnsignedByteType,
-    );
-    tex.needsUpdate = true;
-    tex.minFilter = THREE.NearestFilter;
-    tex.magFilter = THREE.NearestFilter;
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.generateMipmaps = false;
-    tex.flipY = false;
-    tex.unpackAlignment = 1;
-    this._toneLutTexture = tex;
-    if (this.uniforms.toneCurveLut) this.uniforms.toneCurveLut.value = tex;
-    if (this.uniforms.toneHdrTailSlope) this.uniforms.toneHdrTailSlope.value = tailSlope;
   }
 
   reset() {
@@ -163,14 +140,22 @@ export class MobilePost {
   }
 
   setSize(w, h) {
+    const pr = this.renderer.getPixelRatio();
+    this.composer.setPixelRatio(pr);
     this.composer.setSize(w, h);
     this.creativeLooks?.setSize(w, h);
-    if (this.uniforms.resolution) {
-      this.uniforms.resolution.value.set(w, h);
-    }
+    this.gradingController?.setResolution(w, h);
+    const bloomW = Math.max(1, Math.floor(w * MOBILE_BLOOM_RESOLUTION_SCALE));
+    const bloomH = Math.max(1, Math.floor(h * MOBILE_BLOOM_RESOLUTION_SCALE));
     if (this.bloomPass) {
-      this.bloomPass.setSize(w, h);
+      if (this.bloomPass.resolution) {
+        this.bloomPass.resolution.set(bloomW, bloomH);
+      }
+      if (typeof this.bloomPass.setSize === 'function') {
+        this.bloomPass.setSize(bloomW, bloomH);
+      }
     }
+    this.bloomCompositeController?.setResolution(w, h);
     if (this.aberrationPass?.uniforms?.aspectRatio) {
       this.aberrationPass.uniforms.aspectRatio.value = w / Math.max(1, h);
     }
@@ -181,12 +166,21 @@ export class MobilePost {
    */
   render(creativeLookAnimTime = 0) {
     this.creativeLooks?.prepareRender(this, creativeLookAnimTime);
-    this.composer.render();
+    this.composerLifecycle.renderComposerPass();
+  }
+
+  /** @param {() => object} getter */
+  setCreativeLookSettingsGetter(getter) {
+    this._creativeLookSettingsGetter = getter;
+  }
+
+  getCreativeLookSettings() {
+    return this._creativeLookSettingsGetter?.() ?? {};
   }
 
   /** @param {string | null | undefined} presetId */
   syncCreativeLook(presetId) {
-    this.creativeLooks?.sync(presetId);
+    this.creativeLooks?.sync(presetId, this.getCreativeLookSettings());
     if (!presetId || presetId === 'none' || presetId === 'standard') {
       this._applyFxState(this._fxState);
     }
@@ -286,40 +280,25 @@ export class MobilePost {
     const cam = state.camera ?? {};
     const defaultsCam = MOBILE_FX_DEFAULTS.camera;
 
-    if (this.uniforms.exposure) {
-      this.uniforms.exposure.value = state.exposure ?? 1;
-    }
-    this._setUniform('contrast', cam.contrast ?? 1);
-    this._setUniform('saturation', cam.saturation ?? 1);
-    this._setUniform('temperature', this._kelvinToShader(cam.temperature));
-    this._setUniform('tint', (cam.tint ?? 0) / 100);
-    this._setUniform('highlights', (cam.highlights ?? 0) / 100);
-    this._setUniform('shadows', cameraShadowsUiToShader(cam.shadows ?? 0));
-    this._setUniform('clarity', cam.clarity ?? 0);
-    this._setUniform('fade', cam.fade ?? 0);
-    this._setUniform('sharpness', cam.sharpness ?? 0);
-
-    const curve = normalizeToneCurve(state.toneCurve ?? MOBILE_FX_DEFAULTS.toneCurve);
-    this._curveNorm = curve;
-    this._uploadToneLut(curve);
-
-    const toneMappingValue = TONE_MAPPING_MAP[state.toneMapping] ?? 4;
-    if (this.uniforms.toneMappingType) {
-      this.uniforms.toneMappingType.value = toneMappingValue;
-    }
-    if (this.uniforms.vignetteIntensity) {
-      this.uniforms.vignetteIntensity.value = effectiveVignetteIntensity(cam, defaultsCam);
-    }
-    if (this.uniforms.vignetteColor) {
-      this.uniforms.vignetteColor.value.set(cam.vignetteColor ?? '#080808');
-    }
+    this.gradingController.setExposure(state.exposure ?? 1);
+    this.gradingController.setContrast(cam.contrast ?? 1);
+    this.gradingController.setSaturation(cam.saturation ?? 1);
+    this.gradingController.setTemperature(this._kelvinToShader(cam.temperature));
+    this.gradingController.setTint((cam.tint ?? 0) / 100);
+    this.gradingController.setHighlights((cam.highlights ?? 0) / 100);
+    this.gradingController.setShadows(cameraShadowsUiToShader(cam.shadows ?? 0));
+    this.gradingController.setClarity(cam.clarity ?? 0);
+    this.gradingController.setFade(cam.fade ?? 0);
+    this.gradingController.setSharpness(cam.sharpness ?? 0);
+    this.gradingController.setToneCurve(state.toneCurve ?? MOBILE_FX_DEFAULTS.toneCurve);
+    this.gradingController.setToneMapping(state.toneMapping ?? 'aces-filmic');
+    this.gradingController.setVignette(effectiveVignetteIntensity(cam, defaultsCam));
+    this.gradingController.setVignetteColor(cam.vignetteColor ?? '#080808');
 
     this._updateBloom(state.bloom);
     this._updateGrain(state.grain);
     applyChromaticAberrationToPass(this.aberrationPass, state.aberration);
 
-    this._updateToneCurveIdentity();
-    this._updateBypass();
     this._syncRenderToScreen();
   }
 
@@ -341,15 +320,11 @@ export class MobilePost {
     }
     this.bloomPass.enabled = active;
 
-    if (this.bloomTintPass) {
-      this.bloomTintPass.enabled = active;
-      if (active && this.bloomTintPass.uniforms) {
-        this.bloomTintPass.uniforms.tint.value.set(settings.color ?? '#ffe9cc');
-        this.bloomTintPass.uniforms.strength.value = THREE.MathUtils.clamp(
-          strength * 7.5,
-          0,
-          15,
-        );
+    if (this.bloomCompositeController) {
+      if (!active) {
+        this.bloomCompositeController.setBloomTint(false);
+      } else {
+        this.bloomCompositeController.setBloomTint(true, settings);
       }
     }
   }
@@ -396,40 +371,6 @@ export class MobilePost {
       return (clamped - neutral) / (CAMERA_TEMPERATURE_MAX_K - neutral);
     }
     return (clamped - neutral) / (neutral - CAMERA_TEMPERATURE_MIN_K);
-  }
-
-  /** @param {string} key @param {number} value */
-  _setUniform(key, value) {
-    if (this.uniforms[key]) this.uniforms[key].value = value;
-  }
-
-  _updateToneCurveIdentity() {
-    if (!this.uniforms.toneCurveIdentity) return;
-    const c = this._curveNorm;
-    const eps = 0.002;
-    const onDiag =
-      Math.abs(c.blackY) < eps
-      && Math.abs(c.whiteY - 1) < eps
-      && Math.abs(c.p1.x - c.p1.y) < eps
-      && Math.abs(c.p2.x - c.p2.y) < eps;
-    this.uniforms.toneCurveIdentity.value = onDiag ? 1 : 0;
-  }
-
-  _updateBypass() {
-    if (!this.uniforms.bypass) return;
-    const u = this.uniforms;
-    const atDefaults =
-      Math.abs(u.contrast.value - 1) < 0.0001
-      && Math.abs(u.saturation.value - 1) < 0.0001
-      && Math.abs(u.temperature.value) < 0.0001
-      && Math.abs(u.tint.value) < 0.0001
-      && Math.abs(u.highlights.value) < 0.0001
-      && Math.abs(u.shadows.value) < 0.0001
-      && Math.abs(u.clarity.value) < 0.0001
-      && Math.abs(u.fade.value) < 0.0001
-      && Math.abs(u.sharpness.value) < 0.0001
-      && (u.toneCurveIdentity?.value ?? 1) > 0.5;
-    u.bypass.value = atDefaults ? 1 : 0;
   }
 
   _syncRenderToScreen() {

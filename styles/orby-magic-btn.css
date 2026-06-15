@@ -208,47 +208,55 @@
   }
 }
 
-.orby-magic-btn:hover,
-.orby-magic-btn:focus-visible {
-  --orby-magic-btn-spin: var(--orby-magic-btn-spin-hover);
+@media (hover: hover) and (pointer: fine) {
+  .orby-magic-btn:hover,
+  .orby-magic-btn:focus-visible {
+    --orby-magic-btn-spin: var(--orby-magic-btn-spin-hover);
+    color: var(--brand-text, var(--orby-black));
+    outline: none;
+  }
+
+  .orby-magic-btn:hover .orby-magic-btn__fill,
+  .orby-magic-btn:focus-visible .orby-magic-btn__fill {
+    opacity: 1;
+  }
+
+  .orby-magic-btn:hover .orby-magic-btn__inner,
+  .orby-magic-btn:focus-visible .orby-magic-btn__inner {
+    transform: translateX(4px);
+  }
+
+  .orby-magic-btn:hover .orby-magic-btn__arrow,
+  .orby-magic-btn:focus-visible .orby-magic-btn__arrow {
+    transform: translateX(9px);
+  }
+
+  .orby-magic-btn:hover::before,
+  .orby-magic-btn:focus-visible::before {
+    box-shadow:
+      0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
+        color-mix(in srgb, var(--brand-primary) 48%, transparent),
+      0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
+        color-mix(in srgb, var(--orby-magic-accent) 26%, transparent),
+      0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
+        color-mix(in srgb, var(--orby-magic-accent) 14%, transparent);
+  }
+
+  .orby-magic-btn:hover::after,
+  .orby-magic-btn:focus-visible::after {
+    opacity: 0.68;
+    filter: blur(calc(var(--orby-magic-btn-glow-blur) * 1.3)) saturate(1.08);
+  }
+}
+
+/* Touch press — filled pill + dark label (avoid sticky :hover on coarse pointers) */
+.orby-magic-btn:active:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono) {
   color: var(--brand-text, var(--orby-black));
-  outline: none;
-}
-
-.orby-magic-btn:hover .orby-magic-btn__fill,
-.orby-magic-btn:focus-visible .orby-magic-btn__fill {
-  opacity: 1;
-}
-
-.orby-magic-btn:hover .orby-magic-btn__inner,
-.orby-magic-btn:focus-visible .orby-magic-btn__inner {
-  transform: translateX(4px);
-}
-
-.orby-magic-btn:hover .orby-magic-btn__arrow,
-.orby-magic-btn:focus-visible .orby-magic-btn__arrow {
-  transform: translateX(9px);
-}
-
-.orby-magic-btn:hover::before,
-.orby-magic-btn:focus-visible::before {
-  box-shadow:
-    0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
-      color-mix(in srgb, var(--brand-primary) 48%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
-      color-mix(in srgb, var(--orby-magic-accent) 26%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
-      color-mix(in srgb, var(--orby-magic-accent) 14%, transparent);
-}
-
-.orby-magic-btn:hover::after,
-.orby-magic-btn:focus-visible::after {
-  opacity: 0.68;
-  filter: blur(calc(var(--orby-magic-btn-glow-blur) * 1.3)) saturate(1.08);
-}
-
-.orby-magic-btn:active {
   filter: brightness(0.96);
+}
+
+.orby-magic-btn:active:not(.orby-magic-btn--on-lime):not(.orby-magic-btn--mono) .orby-magic-btn__fill {
+  opacity: 1;
 }
 
 html.safari-browser .orby-magic-btn-host {
@@ -274,9 +282,11 @@ html.safari-browser .orby-magic-btn::after {
   opacity: 0.2;
 }
 
-html.safari-browser .orby-magic-btn:hover::after,
-html.safari-browser .orby-magic-btn:focus-visible::after {
-  opacity: 0.34;
+@media (hover: hover) and (pointer: fine) {
+  html.safari-browser .orby-magic-btn:hover::after,
+  html.safari-browser .orby-magic-btn:focus-visible::after {
+    opacity: 0.34;
+  }
 }
 
 html.safari-browser .orby-magic-btn::before {
@@ -289,15 +299,17 @@ html.safari-browser .orby-magic-btn::before {
       color-mix(in srgb, var(--orby-magic-accent) 4.5%, transparent);
 }
 
-html.safari-browser .orby-magic-btn:hover::before,
-html.safari-browser .orby-magic-btn:focus-visible::before {
-  box-shadow:
-    0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
-      color-mix(in srgb, var(--brand-primary) 24%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
-      color-mix(in srgb, var(--orby-magic-accent) 13%, transparent),
-    0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
-      color-mix(in srgb, var(--orby-magic-accent) 7%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  html.safari-browser .orby-magic-btn:hover::before,
+  html.safari-browser .orby-magic-btn:focus-visible::before {
+    box-shadow:
+      0 0 calc(var(--orby-magic-btn-rim-a) * 1.45)
+        color-mix(in srgb, var(--brand-primary) 24%, transparent),
+      0 0 calc(var(--orby-magic-btn-rim-b) * 1.25)
+        color-mix(in srgb, var(--orby-magic-accent) 13%, transparent),
+      0 0 calc(var(--orby-magic-btn-rim-c) * 1.15)
+        color-mix(in srgb, var(--orby-magic-accent) 7%, transparent);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
