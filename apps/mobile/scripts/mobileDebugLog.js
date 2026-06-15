@@ -47,8 +47,16 @@ export function markMobileDebugLog(name, data = null) {
  * @returns {Record<string, string>}
  */
 export function buildMobileDebugSceneExtra(scene) {
+  const extra = {};
+  try {
+    const raw = localStorage.getItem('orby_mobile_last_export');
+    if (raw) extra.lastExport = raw;
+  } catch {
+    /* ignore */
+  }
+
   if (!scene) {
-    return { scene: 'not constructed' };
+    return { scene: 'not constructed', ...extra };
   }
 
   let webgl = 'unknown';
@@ -65,6 +73,7 @@ export function buildMobileDebugSceneExtra(scene) {
     hasModel: scene.currentModel ? 'yes' : 'no',
     modelFile: scene.getCurrentFileName?.() ?? 'none',
     hdri: scene.getHdriPresetId?.() ?? 'unknown',
+    ...extra,
   };
 }
 

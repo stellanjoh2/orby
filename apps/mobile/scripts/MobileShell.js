@@ -1,18 +1,20 @@
 import {
   MOBILE_HDRI,
-  MOBILE_CREATIVE_LOOKS,
   MOBILE_FX,
+  MOBILE_STYLE_RAIL,
   mobileAssetUrl,
   findCreativeLook,
-  MOBILE_STYLE_NONE,
 } from './mobileCatalog.js';
 import {
   MOBILE_FX_SLIDER_SECTIONS,
   MOBILE_FX_LENS_ROWS,
+  MOBILE_FX_BLOOM_SLIDERS,
   MOBILE_CAMERA_FOV,
   getNestedValue,
   getMobileLensSliderUiValue,
+  getMobileBloomIntensityUiValue,
   applyMobileLensSliderValue,
+  applyMobileBloomSliderValue,
 } from './mobileFxControls.js';
 import {
   MOBILE_STYLE_SLIDERS,
@@ -129,6 +131,7 @@ export class MobileShell {
     this._renderPresetRails();
     this._renderFxControls();
     this._renderStyleControls();
+    this._setDebugMenuOpen(false);
     this._bindSceneControls();
     this._syncSelectionUi();
     this._syncHdriControlsUi();
@@ -183,20 +186,28 @@ export class MobileShell {
       const empty = document.createElement('div');
       empty.className = 'orby-mobile-viewport__empty';
       empty.innerHTML = `
-        <p class="orby-mobile-viewport__lede">No model loaded</p>
-        <p class="orby-mobile-viewport__hint">Pick a GLB on the landing page, or load a sample here.</p>
-        <div class="orby-mobile-browse-host">
-          <button type="button" class="orby-mobile-browse-cta orby-magic-btn">Load sample</button>
-        </div>
+        <span class="orby-magic-btn-host orby-mobile-browse-host">
+          <button type="button" class="orby-mobile-browse-cta orby-magic-btn" aria-label="Load GLB model">
+            <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+            <span class="orby-magic-btn__inner">
+              <span class="orby-magic-btn__label">Load .glb</span>
+              <span class="orby-magic-btn__arrow" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </span>
+          </button>
+        </span>
       `;
       empty.querySelector('button')?.addEventListener('click', () => {
-        void loadMobileDebugSample(this.scene).then((result) => {
-          if (result === 'loaded') {
-            this.showToast('Loaded sample');
-          } else {
-            this.showToast('Sample load failed');
-          }
-        });
+        this.fileInput?.click();
       });
       this.viewportEl.append(empty);
       this._emptyEl = empty;
@@ -207,12 +218,7 @@ export class MobileShell {
   /** @param {MobileTab} tab */
   _catalogForTab(tab) {
     if (tab === 'light') return MOBILE_HDRI;
-    if (tab === 'style') {
-      return [
-        MOBILE_STYLE_NONE,
-        ...MOBILE_CREATIVE_LOOKS.filter((x) => x.id !== 'none'),
-      ];
-    }
+    if (tab === 'style') return MOBILE_STYLE_RAIL;
     if (tab === 'filters') return MOBILE_FX;
     return [];
   }
@@ -282,6 +288,14 @@ export class MobileShell {
     lensSection.append(lensList);
     host.append(lensSection);
 
+    const bloomSection = document.createElement('div');
+    bloomSection.className = 'orby-mobile-fx-section';
+    const bloomList = document.createElement('div');
+    bloomList.className = 'orby-mobile-fx-section__bloom';
+    bloomList.append(...MOBILE_FX_BLOOM_SLIDERS.map((def) => this._mkFxBloomSlider(def)));
+    bloomSection.append(bloomList);
+    host.append(bloomSection);
+
     const camSection = document.createElement('div');
     camSection.className = 'orby-mobile-fx-section';
     const camList = document.createElement('div');
@@ -290,11 +304,7 @@ export class MobileShell {
     camSection.append(camList);
     host.append(camSection);
 
-    const resetBtn = document.createElement('button');
-    resetBtn.type = 'button';
-    resetBtn.className = 'orby-mobile-fx-reset';
-    resetBtn.textContent = 'Reset grade';
-    resetBtn.addEventListener('click', () => this._resetFxGrade());
+    const resetBtn = this._mkPanelResetBtn('Reset grade', () => this._resetFxGrade());
     host.append(resetBtn);
 
     this._syncFxControlsUi();
@@ -309,27 +319,25 @@ export class MobileShell {
     for (const def of MOBILE_STYLE_SLIDERS) {
       host.append(this._mkStyleSlider(def));
     }
+    const resetBtn = this._mkPanelResetBtn('Reset shaders', () => this._resetStyleSliders());
+    resetBtn.dataset.styleReset = '';
+    host.append(resetBtn);
+  }
 
-    host.append(
-      this._mkFxSwitchRow('Bloom', {
-        inputAttrs: 'data-style-bloom',
-        onChange: () => {
-          this.scene.toggleViewportBloom();
-          this._syncStyleControlsUi();
-        },
-      }),
-    );
+  /** @param {string} label @param {() => void} onClick */
+  _mkPanelResetBtn(label, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'orby-mobile-pill-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
 
-    const pauseBtn = document.createElement('button');
-    pauseBtn.type = 'button';
-    pauseBtn.className = 'orby-mobile-style-pause';
-    pauseBtn.dataset.stylePause = '';
-    pauseBtn.addEventListener('click', () => {
-      const paused = this.scene.togglePauseShaderAnimations();
-      this._syncStyleControlsUi();
-      this.showToast(paused ? 'Shader animations paused' : 'Shader animations resumed');
-    });
-    host.append(pauseBtn);
+  _resetStyleSliders() {
+    if (!this.scene.resetCreativeLookSliders()) return;
+    this._syncStyleControlsUi();
+    this.showToast('Shaders reset');
   }
 
   /** @param {typeof MOBILE_STYLE_SLIDERS[number]} def */
@@ -395,19 +403,9 @@ export class MobileShell {
       this._updateSliderFill(input);
     }
 
-    const bloomInput = host?.querySelector('[data-style-bloom]');
-    if (bloomInput instanceof HTMLInputElement) {
-      bloomInput.checked = !!cl.viewportBloom;
-      bloomInput.disabled = !styleActive;
-    }
-
-    const pauseBtn = host?.querySelector('[data-style-pause]');
-    if (pauseBtn instanceof HTMLButtonElement) {
-      const shaderAnimSupported = preset != null && !isMobileStyleSliderDisabled(preset, 'shaderAnimationSpeed');
-      const paused = !!cl.pauseShaderAnimations;
-      pauseBtn.textContent = paused ? 'Resume shader animations' : 'Pause shader animations';
-      pauseBtn.classList.toggle('is-active', paused);
-      pauseBtn.disabled = !styleActive || !shaderAnimSupported;
+    const resetBtn = host?.querySelector('[data-style-reset]');
+    if (resetBtn instanceof HTMLButtonElement) {
+      resetBtn.disabled = !styleActive;
     }
 
     this._syncStyleSheetState();
@@ -494,19 +492,33 @@ export class MobileShell {
     return row;
   }
 
-  /** @param {string} label @param {{ inputAttrs?: string, extraClass?: string, onChange: (e: Event) => void }} opts */
-  _mkFxSwitchRow(label, { inputAttrs = '', extraClass = '', onChange }) {
-    const row = document.createElement('div');
-    row.className = `orby-mobile-fx-toggle${extraClass ? ` ${extraClass}` : ''}`;
+  /** @param {typeof MOBILE_FX_BLOOM_SLIDERS[number]} def */
+  _mkFxBloomSlider(def) {
+    const row = document.createElement('label');
+    row.className = 'orby-mobile-fx-grade slider-line';
+    const initial = def.defaultValue ?? def.min;
     row.innerHTML = `
-      <span class="orby-mobile-fx-toggle__label">${label}</span>
-      <label class="effect-toggle">
-        <input type="checkbox" ${inputAttrs} />
-        <span class="effect-indicator" aria-hidden="true"></span>
-      </label>
+      <span class="orby-mobile-fx-grade__label slider-line-label">${def.label}</span>
+      <input type="range" data-fx-bloom="${def.path}" min="${def.min}" max="${def.max}" step="${def.step}" value="${initial}" />
+      <span class="orby-mobile-fx-grade__value" data-fx-bloom-value="${def.path}"></span>
     `;
-    row.querySelector('input')?.addEventListener('change', onChange);
+    const input = row.querySelector('input');
+    const output = row.querySelector('[data-fx-bloom-value]');
+    input?.addEventListener('input', () => {
+      const value = Number(input.value);
+      if (output) output.textContent = def.format(value);
+      if (input instanceof HTMLInputElement) this._updateSliderFill(input);
+      this._onBloomAdjust(def.path, value);
+    });
+    if (input instanceof HTMLInputElement) this._updateSliderFill(input);
     return row;
+  }
+
+  /** @param {string} path @param {number} value */
+  _onBloomAdjust(path, value) {
+    applyMobileBloomSliderValue(this.scene, path, value);
+    this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
+    this._syncSelectionUi();
   }
 
   /** @param {typeof MOBILE_FX_LENS_ROWS[number]} row */
@@ -605,6 +617,20 @@ export class MobileShell {
         output.textContent = row.format(value);
       }
     }
+
+    for (const def of MOBILE_FX_BLOOM_SLIDERS) {
+      const el = this.root.querySelector(`[data-fx-bloom="${def.path}"]`);
+      if (!(el instanceof HTMLInputElement)) continue;
+      const value = def.path === 'bloom.strength'
+        ? getMobileBloomIntensityUiValue(state)
+        : Number(getNestedValue(state, def.path) ?? def.defaultValue ?? def.min);
+      el.value = String(value);
+      this._updateSliderFill(el);
+      const output = this.root.querySelector(`[data-fx-bloom-value="${def.path}"]`);
+      if (output instanceof HTMLElement) {
+        output.textContent = def.format(value);
+      }
+    }
   }
 
   /** @deprecated */
@@ -656,15 +682,8 @@ export class MobileShell {
 
     this.root.querySelector('[data-action="toggle-debug"]')?.addEventListener('click', (e) => {
       const menu = this.root.querySelector('.orby-mobile-debug-menu');
-      const toggle = e.currentTarget;
-      if (!(menu instanceof HTMLElement) || !(toggle instanceof HTMLElement)) return;
-      const open = menu.dataset.debugMenu !== 'open';
-      menu.dataset.debugMenu = open ? 'open' : 'closed';
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      const items = menu.querySelector('.orby-mobile-debug-menu__items');
-      if (items instanceof HTMLElement) {
-        items.hidden = !open;
-      }
+      if (!(menu instanceof HTMLElement)) return;
+      this._setDebugMenuOpen(menu.dataset.debugMenu !== 'open');
     });
 
     this.root.querySelector('[data-action="copy-settings"]')?.addEventListener('click', () => {
@@ -928,6 +947,7 @@ export class MobileShell {
     }
 
     this.setActiveTab(tab);
+    this._resetSheetScroll(tab);
     if (tab === 'fx') {
       this.setSheetState('expanded');
       return;
@@ -949,7 +969,7 @@ export class MobileShell {
       this.setSheetState('peek');
       this._syncStyleSheetState();
       requestAnimationFrame(() => {
-        this._scrollRailToSelection('style');
+        this._syncStyleRailScroll();
       });
       return;
     }
@@ -957,6 +977,32 @@ export class MobileShell {
     requestAnimationFrame(() => {
       this._scrollRailToSelection(/** @type {PresetTab} */ (tab));
     });
+  }
+
+  /** @param {PresetTab} tab */
+  _resetRailScroll(tab) {
+    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
+    if (track instanceof HTMLElement) track.scrollLeft = 0;
+  }
+
+  _syncStyleRailScroll() {
+    const id = this.selection.style.id;
+    if (id === 'none' || id === 'standard') {
+      this._resetRailScroll('style');
+      return;
+    }
+    this._scrollRailToSelection('style');
+  }
+
+  /** @param {MobileTab} tab */
+  _resetSheetScroll(tab) {
+    if (tab === 'fx') {
+      const el = this.root.querySelector('[data-panel="fx"] .orby-mobile-fx-controls');
+      if (el instanceof HTMLElement) el.scrollTop = 0;
+      return;
+    }
+    const panel = this.root.querySelector(`[data-panel="${tab}"]`);
+    if (panel instanceof HTMLElement) panel.scrollTop = 0;
   }
 
   /** @param {MobileTab} tab */
@@ -1016,8 +1062,15 @@ export class MobileShell {
     const item = catalog.find((x) => x.id === id);
     if (!item) return;
 
-    if (tab === 'light' || tab === 'style') {
-      this._engagedPresetTabs.add(tab);
+    if (tab === 'light') {
+      this._engagedPresetTabs.add('light');
+    }
+    if (tab === 'style') {
+      if (item.id === 'none' || item.id === 'standard') {
+        this._engagedPresetTabs.delete('style');
+      } else {
+        this._engagedPresetTabs.add('style');
+      }
     }
 
     this.selection[tab] = item;

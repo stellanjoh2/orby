@@ -21,9 +21,9 @@ export const MOBILE_FX_DEFAULTS = {
     vignetteColor: '#080808',
   },
   bloom: {
-    enabled: true,
+    enabled: false,
     threshold: 1.0,
-    strength: 0.2,
+    strength: 0,
     radius: 0.2,
     color: '#ffe9cc',
   },

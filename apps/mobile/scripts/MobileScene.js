@@ -210,6 +210,7 @@ export class MobileScene {
 
   _bindResize() {
     const apply = () => {
+      if (this._exportInProgress) return;
       const w = Math.max(1, this.mount.clientWidth);
       const h = Math.max(1, this.mount.clientHeight);
       this.camera.aspect = w / h;
@@ -229,6 +230,7 @@ export class MobileScene {
   _startLoop() {
     const tick = () => {
       this._raf = requestAnimationFrame(tick);
+      if (this._exportInProgress) return;
       const dt = this.clock.getDelta();
       this.controls.update();
       this.transformControlsRotate.updateMatrixWorld?.();
@@ -598,12 +600,8 @@ export class MobileScene {
     this.post.syncCreativeLook(this._creativeLookPreset);
   }
 
-  togglePauseShaderAnimations() {
-    return this.creativeLooks.togglePauseShaderAnimations();
-  }
-
-  toggleViewportBloom() {
-    return this.creativeLooks.toggleViewportBloom();
+  resetCreativeLookSliders() {
+    return this.creativeLooks.resetCreativeLookSliders();
   }
 
   /** @param {number} fovDeg */

@@ -81,6 +81,9 @@
       if (global.sessionStorage) {
         global.sessionStorage.removeItem('orby_mobile_active');
       }
+      if (global.localStorage) {
+        global.localStorage.removeItem('orby_mobile_active_persist');
+      }
     } catch (e) {}
   }
 

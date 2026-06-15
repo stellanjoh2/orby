@@ -29,6 +29,7 @@ import { resolveCreativeLookInkParams } from '../../../scripts/render/creativeLo
 import { resolveCreativeLookSketchParams } from '../../../scripts/render/creativeLookSketchArt.js';
 import { creativeLookWatercolourRadius } from '../../../scripts/render/creativeLookWatercolourArt.js';
 import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
+import { pinMobileSquarePixelReferences } from './mobileSquarePixelGrid.js';
 
 /**
  * Screen-space Shader Lab passes for Orby Mobile — material prepass runs in
@@ -103,6 +104,16 @@ export class MobileCreativeLookPost {
       this.creativeLookSketchColourPass,
     ];
     this._creativePassSet = new Set(this._allCreativePasses);
+    /** Screen-pixel grid passes — fixed landscape refs; square-corrected on mobile. */
+    this._squarePixelPasses = [
+      this.creativeLookEga,
+      this.creativeLookC64,
+      this.creativeLookGameBoy,
+      this.creativeLookNes,
+      this.creativeLookMegaDrive,
+      this.creativeLookGba,
+      this.creativeLookDither,
+    ];
     /** @type {{ min: number, mag: number } | null} */
     this._composerFilterRestore = null;
     /** @type {object} */
@@ -406,6 +417,11 @@ export class MobileCreativeLookPost {
 
   /** @param {number} w @param {number} h */
   setSize(w, h) {
+    const pr = Math.max(1, this.renderer?.getPixelRatio?.() ?? 1);
+    const physW = Math.max(1, Math.floor(w * pr));
+    const physH = Math.max(1, Math.floor(h * pr));
+    pinMobileSquarePixelReferences(this._squarePixelPasses, physW, physH);
+
     this.creativeLookAscii.setSize(w, h);
     this.creativeLookEga.setSize(w, h);
     this.creativeLookC64.setSize(w, h);

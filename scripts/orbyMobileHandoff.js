@@ -13,6 +13,8 @@ const STORE = 'pending';
 const RECORD_KEY = 'model';
 
 export const ORBY_MOBILE_SESSION_KEY = 'orby_mobile_active';
+/** Survives iOS tab kills (sessionStorage does not). */
+export const ORBY_MOBILE_SESSION_PERSIST_KEY = 'orby_mobile_active_persist';
 /** Set before IDB write so /mobile/app can wait for the staged file (iOS navigation race). */
 export const ORBY_MOBILE_HANDOFF_PENDING_KEY = 'orby_mobile_handoff_pending';
 
@@ -149,6 +151,11 @@ export function markMobileAppSessionActive() {
   } catch {
     /* sessionStorage blocked */
   }
+  try {
+    localStorage.setItem(ORBY_MOBILE_SESSION_PERSIST_KEY, String(Date.now()));
+  } catch {
+    /* localStorage blocked */
+  }
 }
 
 export function clearMobileAppSession() {
@@ -157,11 +164,21 @@ export function clearMobileAppSession() {
   } catch {
     /* sessionStorage blocked */
   }
+  try {
+    localStorage.removeItem(ORBY_MOBILE_SESSION_PERSIST_KEY);
+  } catch {
+    /* localStorage blocked */
+  }
 }
 
 export function hasMobileAppSession() {
   try {
-    return sessionStorage.getItem(ORBY_MOBILE_SESSION_KEY) === '1';
+    if (sessionStorage.getItem(ORBY_MOBILE_SESSION_KEY) === '1') return true;
+  } catch {
+    /* sessionStorage blocked */
+  }
+  try {
+    return Boolean(localStorage.getItem(ORBY_MOBILE_SESSION_PERSIST_KEY));
   } catch {
     return false;
   }

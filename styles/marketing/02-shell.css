@@ -55,6 +55,17 @@ html.orby-home-scroll body.dropzone-visible .viewport {
 
 html.orby-home-scroll body.dropzone-visible .dropzone {
   overflow: visible;
+  /* Match page + marketing sections (--orby-black); dropzone default uses --orby-app-bg (#000) */
+  background-color: var(--orby-black, #080808);
+  --dropzone-frost-fill: color-mix(in srgb, var(--orby-black, #080808) 50%, transparent);
+}
+
+html.orby-home-scroll.orby-dropzone-shell-pending .workspace {
+  background: var(--orby-black, #080808);
+}
+
+html.orby-home-scroll.orby-marketing-reduced body.dropzone-visible .dropzone::before {
+  --dropzone-frost-fill: var(--orby-black, #080808);
 }
 
 html.orby-home-scroll #orby-marketing[hidden] {

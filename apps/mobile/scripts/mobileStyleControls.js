@@ -1,4 +1,6 @@
 import {
+  creativeLookDefaultIntensity,
+  creativeLookDefaultPatternScale,
   creativeLookFixedIntensity,
   creativeLookFixedPatternScale,
   creativeLookPatternScaleBounds,
@@ -9,7 +11,10 @@ import {
   normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
 } from '../../../scripts/render/CreativeLookMaterials.js';
-import { creativeLookPresetHidesPatternScale } from '../../../scripts/render/creativeLookPresetSliders.js';
+import {
+  creativeLookPresetHidesPatternScale,
+  normalizeCreativeLookPresetParams,
+} from '../../../scripts/render/creativeLookPresetSliders.js';
 
 /** @typedef {{ path: string, label: string, min: number, max: number, step: number, format: (v: number) => string, defaultValue?: number }} StyleSliderDef */
 
@@ -128,4 +133,24 @@ export function mobileStyleSliderBounds(preset, path) {
 export function isMobileStyleSliderHidden(preset, path) {
   if (path !== 'patternScale') return false;
   return creativeLookPresetHidesPatternScale(normalizeCreativeLookPreset(preset ?? 'neon-edge'));
+}
+
+/** @param {string | null | undefined} presetId */
+export function buildMobileCreativeLookResetPatch(presetId) {
+  const preset = normalizeCreativeLookPreset(presetId ?? 'neon-edge');
+  const fixedScale = creativeLookFixedPatternScale(preset);
+  const defaultScale = creativeLookDefaultPatternScale(preset);
+  const patternScale = fixedScale ?? defaultScale ?? 1;
+  const fixedIntensity = creativeLookFixedIntensity(preset);
+
+  return {
+    shaderAnimationSpeed: 0.4,
+    masterHue: 0,
+    liftCrush: 0,
+    pauseShaderAnimations: false,
+    viewportBloom: false,
+    intensity: fixedIntensity ?? creativeLookDefaultIntensity(preset),
+    patternScale,
+    presetParams: normalizeCreativeLookPresetParams(preset, {}, patternScale),
+  };
 }

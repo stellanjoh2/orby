@@ -4,6 +4,7 @@ import { MaterialController } from '../../../scripts/render/MaterialController.j
 import {
   computeCreativeLookToonLightScalars,
 } from '../../../scripts/render/CreativeLookMaterials.js';
+import { buildMobileCreativeLookResetPatch } from './mobileStyleControls.js';
 import {
   MOBILE_MATERIAL_DEFAULTS,
   MOBILE_MATERIAL_MR_MAP_DEFAULTS,
@@ -154,6 +155,14 @@ export class MobileCreativeLooks {
     return !on;
   }
 
+  /** Reset slider tuning for the active shader preset (keeps preset selected). */
+  resetCreativeLookSliders() {
+    if (!this.materialController.creativeLookSettings.enabled) return false;
+    const preset = this.materialController.creativeLookSettings.preset;
+    this.setCreativeLookSettings(buildMobileCreativeLookResetPatch(preset));
+    return true;
+  }
+
   /**
    * @param {string} presetId — creative-look id, or `none` / `standard` to restore PBR
    */
@@ -163,6 +172,9 @@ export class MobileCreativeLooks {
         enabled: false,
         preset: 'neon-edge',
       });
+      this.onCreativeLookStateChanged?.();
+      this.onCreativeLookSync?.();
+      this.onEnvironmentResync?.();
       return;
     }
     this.materialController.setCreativeLookSettings({

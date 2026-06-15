@@ -89,13 +89,13 @@ export function resolveOrbyStaticMobileRedirect(pathname = typeof window !== 'un
   const hash = typeof window !== 'undefined' ? window.location.hash || '' : '';
   const suffix = `${search}${hash}`;
 
-  if (path === ORBY_MOBILE_GATE_PATH) {
+  if (path === ORBY_MOBILE_GATE_PATH && !pathname.endsWith('/')) {
     return `${ORBY_MOBILE_GATE_PATH}/${suffix}`;
   }
-  if (path === ORBY_MOBILE_APP_PATH) {
+  if (path === ORBY_MOBILE_APP_PATH && !pathname.endsWith('/')) {
     return `${ORBY_MOBILE_APP_PATH}/${suffix}`;
   }
-  if (path === ORBY_MOBILE_LEARN_PATH) {
+  if (path === ORBY_MOBILE_LEARN_PATH && !pathname.endsWith('/')) {
     return `${ORBY_MOBILE_LEARN_PATH}/${suffix}`;
   }
   return null;

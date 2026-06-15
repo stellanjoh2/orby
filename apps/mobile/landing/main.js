@@ -3,7 +3,7 @@ import {
   stageMobileModelHandoff,
   clearMobileHandoffPending,
 } from '../../../scripts/orbyMobileHandoff.js';
-import { orbyMobileAppUrl } from '../../../scripts/orbyMobileAppRoute.js';
+import { orbyMobileAppUrl, orbyMobileLearnUrl } from '../../../scripts/orbyMobileAppRoute.js';
 
 /** @param {File} file */
 function isMobileModelFile(file) {
@@ -70,12 +70,23 @@ async function handleFile(file) {
   }
 }
 
+function bindLearnLink() {
+  const learnLink = document.getElementById('orbyMobileGateLearnLink');
+  if (!learnLink) return;
+
+  learnLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.location.assign(`${orbyMobileLearnUrl()}/`);
+  });
+}
+
 function bindGate() {
   const root = document.getElementById('orbyMobileGate');
   const browseBtn = document.getElementById('orbyMobileGateBrowse');
   const fileInput = document.getElementById('orbyMobileGateFileInput');
   const dropzone = root?.querySelector('.orby-mobile-gate__dropzone');
 
+  bindLearnLink();
   browseBtn?.addEventListener('click', () => fileInput?.click());
 
   fileInput?.addEventListener('change', () => {

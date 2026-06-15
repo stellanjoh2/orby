@@ -141,15 +141,6 @@ export const MOBILE_FX_LENS_ROWS = [
     format: (v) => v.toFixed(3),
   },
   {
-    togglePath: 'bloom.enabled',
-    sliderPath: 'bloom.strength',
-    label: 'Bloom',
-    min: 0,
-    max: 1,
-    step: 0.01,
-    format: (v) => v.toFixed(2),
-  },
-  {
     togglePath: 'aberration.enabled',
     sliderPath: 'aberration.amount',
     label: 'Chromatic aberration',
@@ -159,6 +150,52 @@ export const MOBILE_FX_LENS_ROWS = [
     format: (v) => v.toFixed(4),
   },
 ];
+
+/** Mobile Adjust — bloom intensity (0 = off) + radius as paired sliders. */
+export const MOBILE_FX_BLOOM_SLIDERS = /** @type {FxSliderDef[]} */ ([
+  {
+    path: 'bloom.strength',
+    label: 'Bloom intensity',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    defaultValue: 0,
+  },
+  {
+    path: 'bloom.radius',
+    label: 'Bloom radius',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    defaultValue: MOBILE_FX_DEFAULTS.bloom.radius,
+  },
+]);
+
+/** @param {object | undefined} state */
+export function getMobileBloomIntensityUiValue(state) {
+  const bloom = state?.bloom ?? {};
+  const strength = Number(bloom.strength ?? 0);
+  if (!bloom.enabled || strength <= 0.0001) return 0;
+  return strength;
+}
+
+/**
+ * @param {{ setFxValue: (path: string, value: number | boolean) => void }} scene
+ * @param {string} path
+ * @param {number} value
+ */
+export function applyMobileBloomSliderValue(scene, path, value) {
+  if (path === 'bloom.strength') {
+    const amount = Math.max(0, value);
+    const off = amount <= 0.0001;
+    scene.setFxValue('bloom.enabled', !off);
+    scene.setFxValue('bloom.strength', off ? 0 : amount);
+    return;
+  }
+  scene.setFxValue(path, value);
+}
 
 /** @param {object | undefined} state @param {typeof MOBILE_FX_LENS_ROWS[number]} row */
 export function isMobileLensEffectActive(state, row) {

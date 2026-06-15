@@ -22,8 +22,7 @@ export const MOBILE_STYLE_NONE = {
   thumb: 'images/look-filters/none.png',
 };
 
-const CREATIVE_LOOK_ITEMS = [
-  MOBILE_STYLE_NONE,
+const MOBILE_SHADER_PRESETS = [
   { id: 'neon-edge', label: 'Neon Edge', thumb: 'images/creative-look-neon-edge.png' },
   { id: 'flow-field', label: 'Flow Field', thumb: 'images/creative-look-flow-field.png' },
   { id: 'plasma', label: 'Plasma', thumb: 'images/creative-look-plasma.png' },
@@ -55,50 +54,53 @@ const CREATIVE_LOOK_ITEMS = [
   { id: 'glass', label: 'Glass', thumb: 'images/creative-look-glass.png' },
 ];
 
-/** @type {{ id: string, label: string, items: typeof CREATIVE_LOOK_ITEMS }[]} */
+/** Shader dock rail — None first (import PBR), then stylized presets. */
+export const MOBILE_STYLE_RAIL = [MOBILE_STYLE_NONE, ...MOBILE_SHADER_PRESETS];
+
+/** @type {{ id: string, label: string, items: typeof MOBILE_SHADER_PRESETS }[]} */
 export const MOBILE_CREATIVE_LOOK_SECTIONS = [
   {
     id: 'effects',
     label: 'Effects',
-    items: CREATIVE_LOOK_ITEMS.filter((x) =>
+    items: MOBILE_SHADER_PRESETS.filter((x) =>
       ['neon-edge', 'flow-field', 'plasma', 'holographic', 'voronoi', 'scanline-hologram', 'wire-pulse', 'vertex-points', 'spectral-storm', 'toon'].includes(x.id),
     ),
   },
   {
     id: 'pixels',
     label: 'Screen pixels',
-    items: CREATIVE_LOOK_ITEMS.filter((x) =>
+    items: MOBILE_SHADER_PRESETS.filter((x) =>
       ['ega-pixel', 'c64-pixel', 'gameboy-pixel', 'gba-pixel', 'nes-pixel', 'megadrive-pixel'].includes(x.id),
     ),
   },
   {
     id: 'dither',
     label: 'Dither',
-    items: CREATIVE_LOOK_ITEMS.filter((x) =>
+    items: MOBILE_SHADER_PRESETS.filter((x) =>
       ['dither-neutral', 'dither-tritone', 'dither-crosshatch', 'dither-raster'].includes(x.id),
     ),
   },
   {
     id: 'retro',
     label: 'Retro 3D',
-    items: CREATIVE_LOOK_ITEMS.filter((x) => ['ps2-crush', 'psx', 'vectrex'].includes(x.id)),
+    items: MOBILE_SHADER_PRESETS.filter((x) => ['ps2-crush', 'psx', 'vectrex'].includes(x.id)),
   },
   {
     id: 'artistic',
     label: 'Artistic',
-    items: CREATIVE_LOOK_ITEMS.filter((x) =>
+    items: MOBILE_SHADER_PRESETS.filter((x) =>
       ['watercolour', 'sketch', 'sketch-colour', 'ascii-art'].includes(x.id),
     ),
   },
   {
     id: 'materials',
     label: 'Materials',
-    items: CREATIVE_LOOK_ITEMS.filter((x) => ['chrome', 'glass'].includes(x.id)),
+    items: MOBILE_SHADER_PRESETS.filter((x) => ['chrome', 'glass'].includes(x.id)),
   },
 ];
 
-/** Flat list for selection + horizontal strip. */
-export const MOBILE_CREATIVE_LOOKS = CREATIVE_LOOK_ITEMS;
+/** Flat list for selection lookup (includes None). */
+export const MOBILE_CREATIVE_LOOKS = MOBILE_STYLE_RAIL;
 
 export const MOBILE_FX = [
   { id: 'none', label: 'None', thumb: 'images/look-filters/none.png' },

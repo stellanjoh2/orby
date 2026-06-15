@@ -93,6 +93,7 @@
   --orby-mobile-rail-to-controls: 1.625rem; /* 26px — preset rail → sliders */
   --orby-mobile-slider-label-gap: 0; /* label + value flush to track */
   --orby-mobile-slider-row-gap: 1.25rem; /* 20px — between slider rows */
+  --orby-mobile-slider-row-gap-loose: 1.625rem; /* 26px — lens / bloom / camera blocks */
   --orby-mobile-slider-touch-h: 44px; /* min tap target (Apple HIG) */
   --orby-mobile-slider-thumb: 24px;
   --orby-mobile-slider-track-h: 2px;
@@ -102,6 +103,8 @@
   /* Frosted chrome — match desktop shelf / toast (styles.css --ui-frosted-*) */
   --ui-frosted-bg: rgba(8, 8, 8, 0.78);
   --ui-frosted-blur: 15px;
+  --orby-mobile-dock-frosted-bg: rgba(8, 8, 8, 0.48);
+  --orby-mobile-dock-frosted-blur: 22px;
   --orby-mobile-border: color-mix(in srgb, var(--orby-lime) 12%, transparent);
   --ui-accent-outer-glow-compact: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
 }
@@ -213,7 +216,6 @@ button {
 }
 
 .orby-mobile-debug-menu__items {
-  display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
@@ -221,7 +223,12 @@ button {
   pointer-events: none;
 }
 
-.orby-mobile-debug-menu[data-debug-menu='open'] .orby-mobile-debug-menu__items {
+.orby-mobile-debug-menu__items[hidden] {
+  display: none !important;
+}
+
+.orby-mobile-debug-menu[data-debug-menu='open'] .orby-mobile-debug-menu__items:not([hidden]) {
+  display: flex;
   pointer-events: auto;
 }
 
@@ -248,8 +255,11 @@ button {
   transform: scale(0.96);
 }
 
-.orby-mobile-debug-btn {
+.orby-mobile-debug-menu[data-debug-menu='open'] .orby-mobile-debug-btn {
   pointer-events: auto;
+}
+
+.orby-mobile-debug-btn {
   padding: 7px 14px;
   border-radius: 999px;
   border: 1px solid var(--orby-mobile-border);
@@ -309,42 +319,20 @@ button {
   position: absolute;
   inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
   padding: 1.5rem;
   padding-bottom: calc(1.5rem + var(--orby-mobile-dock-h) + 8px);
-  text-align: center;
   pointer-events: none;
   z-index: 2;
 }
 
-.orby-mobile-viewport__empty .orby-mobile-browse-host,
-.orby-mobile-viewport__empty .orby-mobile-viewport__lede,
-.orby-mobile-viewport__empty .orby-mobile-viewport__hint {
+.orby-mobile-viewport__empty .orby-mobile-browse-host {
   pointer-events: auto;
 }
 
 .orby-mobile-viewport__empty[hidden] {
   display: none !important;
-}
-
-.orby-mobile-viewport__lede {
-  margin: 0;
-  max-width: 16ch;
-  font-family: var(--brand-font-headline);
-  font-size: clamp(1.35rem, 5.5vw, 1.65rem);
-  line-height: 1.15;
-  color: #fff;
-  text-wrap: balance;
-}
-
-.orby-mobile-viewport__hint {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  letter-spacing: 0.02em;
 }
 
 .orby-mobile-browse-host {
@@ -375,9 +363,10 @@ button {
   max-width: calc(100% - 16px);
   padding: 7px 14px 6px;
   border-radius: 999px;
-  background: var(--ui-frosted-bg);
-  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
-  backdrop-filter: blur(var(--ui-frosted-blur));
+  border: 1px solid var(--orby-mobile-border);
+  background: var(--orby-mobile-dock-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(160%);
+  backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(160%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -525,6 +514,43 @@ button {
 .orby-mobile-ghost-btn:active {
   color: var(--orby-lime);
   border-color: color-mix(in srgb, var(--orby-lime) 35%, transparent);
+}
+
+/* Frosted lime pill — panel reset actions (Adjust, Shader, etc.) */
+.orby-mobile-pill-btn {
+  width: 100%;
+  margin-top: var(--orby-mobile-v-gap-lg);
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--orby-mobile-border);
+  background: var(--ui-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  color: color-mix(in srgb, var(--orby-lime) 88%, white);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--orby-black) 38%, transparent);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.orby-mobile-pill-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  color: var(--orby-lime);
+  border-color: color-mix(in srgb, var(--orby-lime) 35%, transparent);
+}
+
+.orby-mobile-pill-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.orby-mobile-style-controls .orby-mobile-pill-btn {
+  flex: 0 0 auto;
+  margin-bottom: var(--orby-mobile-v-gap-sm);
 }
 
 .orby-mobile-sheet__body {
@@ -685,17 +711,17 @@ button {
   transform: scale(0.97);
 }
 
-/* HDRI brightness + blurriness (below preset rail) */
-.orby-mobile-panel[data-panel='light'] {
+/* HDRI + shader panels — one vertical scroll (rail + sliders move together) */
+.orby-mobile-panel[data-panel='light'],
+.orby-mobile-panel--style {
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .orby-mobile-hdri-controls {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 0 0 auto;
   padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
 }
 
@@ -707,44 +733,14 @@ button {
   min-height: 0;
 }
 
-.orby-mobile-panel--style {
-  min-height: 0;
-}
-
 /* Shader Lab controls (below style preset rail) */
 .orby-mobile-style-controls {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 0 0 auto;
   padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
 }
 
 .orby-mobile-style-controls:not(.is-visible) {
   display: none;
-}
-
-.orby-mobile-style-pause {
-  width: 100%;
-  margin-top: var(--orby-mobile-v-gap);
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, white 10%, transparent);
-  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
-  color: var(--text-dim);
-  font-size: 0.72rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.orby-mobile-style-pause.is-active {
-  color: var(--orby-lime);
-  border-color: color-mix(in srgb, var(--orby-lime) 35%, transparent);
-}
-
-.orby-mobile-style-pause:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
 }
 
 /* ── Adjust panel (sliders + camera) ── */
@@ -772,6 +768,21 @@ button {
   margin-bottom: 0;
 }
 
+.orby-mobile-fx-section__lens .orby-mobile-fx-grade,
+.orby-mobile-fx-section__bloom .orby-mobile-fx-grade,
+.orby-mobile-fx-section__camera .orby-mobile-fx-grade {
+  margin-bottom: var(--orby-mobile-slider-row-gap-loose);
+}
+
+.orby-mobile-fx-section__bloom {
+  margin-top: var(--orby-mobile-v-gap-sm);
+}
+
+.orby-mobile-fx-section__camera {
+  margin-top: var(--orby-mobile-v-gap);
+  padding-top: var(--orby-mobile-v-gap-sm);
+}
+
 .orby-mobile-fx-grade__label {
   grid-column: 1;
   grid-row: 1;
@@ -794,7 +805,8 @@ button {
   min-height: var(--orby-mobile-slider-touch-h);
   margin: 0;
   padding: 0;
-  touch-action: pan-x;
+  touch-action: pan-y;
+  pointer-events: none;
   -webkit-tap-highlight-color: transparent;
   border-radius: 1px;
   position: relative;
@@ -872,6 +884,8 @@ button {
   background: var(--accent);
   cursor: pointer;
   box-shadow: none;
+  pointer-events: auto;
+  touch-action: none;
   margin-top: calc((var(--orby-mobile-slider-track-h) - var(--orby-mobile-slider-thumb)) / 2);
   transition:
     transform 0.15s ease,
@@ -889,6 +903,8 @@ button {
   border: none;
   cursor: pointer;
   box-shadow: none;
+  pointer-events: auto;
+  touch-action: none;
   transition:
     transform 0.15s ease,
     width 0.15s ease,
@@ -1020,19 +1036,6 @@ button {
 .orby-mobile-app .effect-toggle input:focus-visible + .effect-indicator {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
-}
-
-.orby-mobile-fx-reset {
-  width: 100%;
-  margin-top: var(--orby-mobile-v-gap-lg);
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, white 10%, transparent);
-  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
-  color: var(--text-dim);
-  font-size: 0.72rem;
-  font-weight: 500;
-  cursor: pointer;
 }
 
 .orby-mobile-color-line {
@@ -1190,6 +1193,14 @@ button {
   .orby-mobile-toast {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .orby-mobile-dock {
+    background: color-mix(in srgb, var(--orby-black) 88%, white 3%);
+  }
+
+  .orby-mobile-sheet,
+  .orby-mobile-toast {
     background: color-mix(in srgb, var(--orby-black) 94%, white 3%);
   }
 
