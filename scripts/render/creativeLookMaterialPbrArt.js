@@ -75,11 +75,17 @@ export const CREATIVE_LOOK_MATERIAL_PBR_SLIDER_PRESETS = /** @type {const} */ ([
 /** @param {string} fragmentShader */
 export function prependCreativeLookPrepPbrGlsl(fragmentShader) {
   let s = fragmentShader.trim();
-  if (!s.includes('uniform float uMetalness;')) {
-    s = `${CREATIVE_LOOK_PREP_PBR_UNIFORMS_GLSL}\n${s}`;
+  const needsUniforms = !s.includes('uniform float uMetalness;');
+  const needsFunctions = !s.includes('creativeLookModulatePrepPbr');
+  let prefix = '';
+  if (needsUniforms) {
+    prefix += CREATIVE_LOOK_PREP_PBR_UNIFORMS_GLSL.trim();
   }
-  if (!s.includes('creativeLookModulatePrepPbr')) {
-    s = `${CREATIVE_LOOK_PREP_PBR_FUNCTIONS_GLSL}\n${s}`;
+  if (needsFunctions) {
+    prefix += (prefix ? '\n' : '') + CREATIVE_LOOK_PREP_PBR_FUNCTIONS_GLSL.trim();
+  }
+  if (prefix) {
+    s = `${prefix}\n${s}`;
   }
   return s;
 }
@@ -129,7 +135,7 @@ export function withCreativeLookPrepPbrModulation(fragmentShader, options = {}) 
     baseCol = texture2D(uMap, vUv).rgb;
   }
 `;
-      if (!s.includes('vec3 baseCol')) {
+      if (!/vec3 baseCol\s*=/.test(s)) {
         s = s.replace(
           '  vec3 N = normalize(vWorldNormal);',
           `${baseSample}
