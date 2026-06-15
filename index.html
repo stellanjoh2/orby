@@ -11,7 +11,26 @@
       (function () {
         try {
           var path = (location.pathname || '/').replace(/\/$/, '') || '/';
-          if (path !== '/mobile') return;
+          if (path === '/mobile') {
+            location.replace('/mobile/' + location.search + location.hash);
+            return;
+          }
+          if (path === '/mobile/app') {
+            location.replace('/mobile/app/' + location.search + location.hash);
+            return;
+          }
+          if (path === '/mobile/learn') {
+            location.replace('/mobile/learn/' + location.search + location.hash);
+            return;
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
+          var path = (location.pathname || '/').replace(/\/$/, '') || '/';
+          if (path !== '/mobile/learn') return;
           var base = document.createElement('base');
           base.href = '/';
           document.head.appendChild(base);
@@ -110,7 +129,7 @@
           var CHALLENGE_EVERY_N_VISITS = 5;
           var mobileLandingPath =
             (location.pathname || '/').replace(/\/$/, '') || '/';
-          if (mobileLandingPath === '/mobile') {
+          if (mobileLandingPath === '/mobile/learn') {
             document.documentElement.classList.add('orby-gate-unlocked');
             return;
           }
@@ -703,7 +722,7 @@
                     <span class="value" data-output="materialBrightness">1.50</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Control metallic appearance (0 = dielectric, 1 = metal)">Metalness</span>
+                    <span data-tooltip="Scales each material's authored metalness — 1.0 matches the file">Metalness</span>
                     <input
                       id="materialMetalness"
                       type="range"
@@ -715,16 +734,16 @@
                     <span class="value" data-output="materialMetalness">0.00</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Control surface smoothness (0 = mirror, 1 = rough)">Roughness</span>
+                    <span data-tooltip="Scales each material's authored roughness — 1.0 matches the file">Roughness</span>
                     <input
                       id="materialRoughness"
                       type="range"
                       min="0"
                       max="1"
                       step="0.01"
-                      value="0.5"
+                      value="1"
                     />
-                    <span class="value" data-output="materialRoughness">0.50</span>
+                    <span class="value" data-output="materialRoughness">1.00</span>
                   </label>
                   <label class="slider-line">
                     <span data-tooltip="Add glowing emissive light to materials (great for sci-fi effects)">Emissive</span>
@@ -913,7 +932,18 @@
                 <div class="panel-block-divider"></div>
                 <div class="subsection" data-subsection="creative-look" data-block="creative-look">
                   <div class="block-title has-toggle creative-look-heading">
-                    <span>Shader Lab</span>
+                    <div class="creative-look-heading-start">
+                      <span>Shader Lab</span>
+                      <button
+                        type="button"
+                        id="creativeLookBakeThumbsBtn"
+                        class="creative-look-bake-thumbs-btn"
+                        hidden
+                        data-tooltip="Dev: bake Shader Lab preset thumbnails from the current mesh and camera (npm run dev only)"
+                      >
+                        re-render thumbs
+                      </button>
+                    </div>
                     <div class="creative-look-heading-actions">
                       <button
                         class="block-reset-btn"
@@ -959,10 +989,10 @@
                       <img src="./assets/images/creative-look-scanline-hologram.png" alt="Scanline Hologram" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="wire-pulse" class="hdri-icon" data-tooltip="Wire Pulse — holographic wireframe with emissive light pulses. Intensity = line thickness. Scale = pulse spacing">
-                      <img src="./assets/images/creative-look-wire-pulse.svg" alt="Wire Pulse" width="192" height="192" />
+                      <img src="./assets/images/creative-look-wire-pulse.png" alt="Wire Pulse" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="vertex-points" class="hdri-icon" data-tooltip="Vertex Points — holographic mesh vertices only; emissive pulses travel through the point cloud. Intensity = point size. Scale = pulse spacing">
-                      <img src="./assets/images/creative-look-vertex-points.svg" alt="Vertex Points" width="192" height="192" />
+                      <img src="./assets/images/creative-look-vertex-points.png" alt="Vertex Points" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="spectral-storm" class="hdri-icon" data-tooltip="Spectral Storm — very slow BW plasma, extreme contrast (mostly pure black/white), strobing rim">
                       <img src="./assets/images/creative-look-spectral-storm.png" alt="Spectral Storm" width="192" height="192" />
@@ -976,28 +1006,28 @@
                       <p class="creative-look-grid-section-label">Screen pixels</p>
                       <div class="hdri-grid">
                     <button type="button" data-creative-look="ega-pixel" class="hdri-icon" data-tooltip="EGA Pixel — 640×350 macro pixels; SCUMM / Monkey Island–inspired 16-color palette with purple/blue dither; colormap cel prepass + 2×2 Bayer; Master Hue shifts palette (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-ega-pixel.svg" alt="EGA Pixel" width="192" height="192" />
+                      <img src="./assets/images/creative-look-ega-pixel.png" alt="EGA Pixel" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="c64-pixel" class="hdri-icon" data-tooltip="C64 Pixel — 320×200 macro pixels; colormap cel prepass + 16-color palette + 2×2 dither; Master Hue shifts palette (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-c64-pixel.svg" alt="C64 Pixel" width="192" height="192" />
+                      <img src="./assets/images/creative-look-c64-pixel.png" alt="C64 Pixel" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="gameboy-pixel" class="hdri-icon" data-tooltip="Game Boy — original DMG 4-shade greenscale; 160×144 macro pixels; colormap → luma + Master Hue shifts palette (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-gameboy-pixel.svg" alt="Game Boy" width="192" height="192" />
+                      <img src="./assets/images/creative-look-gameboy-pixel.png" alt="Game Boy" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="gba-pixel" class="hdri-icon" data-tooltip="Game Boy Advance — 15-bit high-color (32,768); 240×160 macro pixels; colormap cel prepass + 2×2 dither; Master Hue shifts output (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-gba-pixel.svg" alt="Game Boy Advance" width="192" height="192" />
+                      <img src="./assets/images/creative-look-gba-pixel.png" alt="Game Boy Advance" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="nes-pixel" class="hdri-icon" data-tooltip="NES — 2C02 PPU palette (55 unique / 64 indices); 256×224 NTSC macro pixels; colormap cel prepass + 2×2 dither; Master Hue shifts palette (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-nes-pixel.svg" alt="NES" width="192" height="192" />
+                      <img src="./assets/images/creative-look-nes-pixel.png" alt="NES" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="megadrive-pixel" class="hdri-icon" data-tooltip="Mega Drive — 9-bit VDP palette (512 colors); 320×224 NTSC macro pixels; colormap cel prepass + 2×2 dither; Master Hue shifts output (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-megadrive-pixel.svg" alt="Mega Drive" width="192" height="192" />
+                      <img src="./assets/images/creative-look-megadrive-pixel.png" alt="Mega Drive" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="intellivision-pixel" class="hdri-icon" data-tooltip="Intellivision — STIC 16-color palette (Primary + Pastel); 160×96 macro pixels; colormap cel prepass + 2×2 dither; Master Hue shifts palette (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-intellivision-pixel.svg" alt="Intellivision" width="192" height="192" />
+                      <img src="./assets/images/creative-look-intellivision-pixel.png" alt="Intellivision" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="apple2-pixel" class="hdri-icon" data-tooltip="Apple II — HGR 280×192 VRAM dots; orange/green artifact fills (Oil's Well style), white on peaks only; MSB phase every 7 px; Master Hue (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-apple2-pixel.svg" alt="Apple II" width="192" height="192" />
+                      <img src="./assets/images/creative-look-apple2-pixel.png" alt="Apple II" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1005,13 +1035,16 @@
                       <p class="creative-look-grid-section-label">Dither</p>
                       <div class="hdri-grid">
                     <button type="button" data-creative-look="dither-neutral" class="hdri-icon" data-tooltip="Neutral — hard square pixels with 4×4 Bayer ordered dither; default Scale 0 (finest), Intensity 2; Master Hue shifts output">
-                      <img src="./assets/images/creative-look-dither-neutral.svg" alt="Neutral Dither" width="192" height="192" />
+                      <img src="./assets/images/creative-look-dither-neutral.png" alt="Neutral Dither" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="dither-tritone" class="hdri-icon" data-tooltip="Tritone — extreme 3-tier luminance crush with Bayer crosshatch; default Scale 0.5, Intensity 2; Master Hue shifts output">
-                      <img src="./assets/images/creative-look-dither-tritone.svg" alt="Tritone Dither" width="192" height="192" />
+                    <button type="button" data-creative-look="dither-tritone" class="hdri-icon" data-tooltip="Tritone — hard 3-tier luminance poster (crushed shadows, lifted highlights); default Scale 0.5, Intensity 2">
+                      <img src="./assets/images/creative-look-dither-tritone.png" alt="Tritone Dither" width="192" height="192" />
                     </button>
-                    <button type="button" data-creative-look="dither-crosshatch" class="hdri-icon" data-tooltip="Crosshatch — extreme 8-color crush with transposed Bayer lattice; default Scale 1, Intensity 0.2; Master Hue shifts output">
-                      <img src="./assets/images/creative-look-dither-crosshatch.svg" alt="Crosshatch Dither" width="192" height="192" />
+                    <button type="button" data-creative-look="dither-crosshatch" class="hdri-icon" data-tooltip="Crosshatch — extreme 8-color crush with transposed Bayer lattice; default Scale 1, Intensity 0; Master Hue shifts output">
+                      <img src="./assets/images/creative-look-dither-crosshatch.png" alt="Crosshatch Dither" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="dither-raster" class="hdri-icon" data-tooltip="Raster — amplitude halftone dots sized by luminance; default Scale 1, Intensity 0 (raise for more crush)">
+                      <img src="./assets/images/creative-look-dither-raster.png" alt="Raster Dither" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1019,16 +1052,16 @@
                       <p class="creative-look-grid-section-label">Retro 3D</p>
                       <div class="hdri-grid">
                     <button type="button" data-creative-look="ps2-crush" class="hdri-icon" data-tooltip="PS2 Crush — mesh decimation, affine UVs, bilinear low-res textures, flat light bands (24-bit, no dither)">
-                      <img src="./assets/images/creative-look-ps2-crush.svg" alt="PS2 Crush" width="192" height="192" />
+                      <img src="./assets/images/creative-look-ps2-crush.png" alt="PS2 Crush" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="psx" class="hdri-icon" data-tooltip="PSX — coarser mesh decimation, affine UVs, nearest-neighbor crushed textures, 15-bit bands + 2×2 ordered dither">
-                      <img src="./assets/images/creative-look-psx.svg" alt="PSX" width="192" height="192" />
+                      <img src="./assets/images/creative-look-psx.png" alt="PSX" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="vga-dos-3d" class="hdri-icon" data-tooltip="VGA/DOS 3D — stable snap, affine UVs, nearest crushed textures, flat DOS lighting, 256-color palette (no dither)">
-                      <img src="./assets/images/creative-look-vga-dos-3d.svg" alt="VGA/DOS 3D" width="192" height="192" />
+                      <img src="./assets/images/creative-look-vga-dos-3d.png" alt="VGA/DOS 3D" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="vectrex" class="hdri-icon" data-tooltip="Vectrex — P31 phosphor wireframe on black; steady green CRT lines, vertex glow, analog wobble (Scale). Intensity = line brightness">
-                      <img src="./assets/images/creative-look-vectrex.svg" alt="Vectrex" width="192" height="192" />
+                      <img src="./assets/images/creative-look-vectrex.png" alt="Vectrex" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1036,13 +1069,13 @@
                       <p class="creative-look-grid-section-label">ASCII</p>
                       <div class="hdri-grid">
                     <button type="button" data-creative-look="ascii-art" class="hdri-icon" data-tooltip="ASCII Art — ORBY letters + abstract charset; VGA 4× atlas / 2× screen; lime duotone, Master Hue (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-ascii-art.svg" alt="ASCII Art" width="192" height="192" />
+                      <img src="./assets/images/creative-look-ascii-art.png" alt="ASCII Art" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="ascii-art-2" class="hdri-icon" data-tooltip="ASCII 2 — conventional terminal charset (ASCII 1–inspired); finer 12×20 grid; 25% ink in shadows, Master Hue (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-ascii-art-3.svg" alt="ASCII 2" width="192" height="192" />
+                      <img src="./assets/images/creative-look-ascii-art-3.png" alt="ASCII 2" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="ascii-art-3" class="hdri-icon" data-tooltip="ASCII 3 — braille halftone (bonus look); finer 12×20 grid; 25% ink in shadows, Master Hue (Scale &amp; Intensity locked)">
-                      <img src="./assets/images/creative-look-ascii-art-2.svg" alt="ASCII 3" width="192" height="192" />
+                      <img src="./assets/images/creative-look-ascii-art-2.png" alt="ASCII 3" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1050,13 +1083,13 @@
                       <p class="creative-look-grid-section-label">Artistic</p>
                       <div class="hdri-grid">
                     <button type="button" data-creative-look="watercolour" class="hdri-icon" data-tooltip="Watercolour — clip-space mesh wobble + soft colormap + comic ink + outward paint bleed; Kuwahara post with mega-halo; Scale = brush size &amp; wobble, Intensity = paint strength">
-                      <img src="./assets/images/creative-look-watercolour.svg" alt="Watercolour" width="192" height="192" />
+                      <img src="./assets/images/creative-look-watercolour.png" alt="Watercolour" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="sketch" class="hdri-icon" data-tooltip="Sketch — high-contrast B&amp;W pencil illustration; harsh toon shadow bands + manga screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
-                      <img src="./assets/images/creative-look-sketch.svg" alt="Sketch" width="192" height="192" />
+                      <img src="./assets/images/creative-look-sketch.png" alt="Sketch" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="sketch-colour" class="hdri-icon" data-tooltip="Sketch Colour — coloured manga illustration; watercolour-washed fills + screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
-                      <img src="./assets/images/creative-look-sketch-colour.svg" alt="Sketch Colour" width="192" height="192" />
+                      <img src="./assets/images/creative-look-sketch-colour.png" alt="Sketch Colour" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -4872,6 +4905,15 @@
                       </div>
                     </div>
                   </div>
+                  <div id="exportPngFolderSettings" class="export-png-folder is-muted">
+                    <div class="export-option-group">
+                      <label class="export-label">Output folder</label>
+                      <div class="export-path-row">
+                        <button type="button" id="exportPngFolderChoose" class="export-option-btn export-path-choose" data-tooltip="Choose a folder — frames write directly to disk (Chrome / Edge)">Choose…</button>
+                        <span id="exportPngFolderLabel" class="export-path-label">No folder — downloads as ZIP</span>
+                      </div>
+                    </div>
+                  </div>
                   <div id="exportMp4Settings" class="export-video-foldout export-video-foldout--borderless">
                     <div class="export-option-group">
                       <label class="export-label">Quality</label>
@@ -4906,7 +4948,7 @@
                       <button data-video-resolution="2160p" class="export-option-btn" data-tooltip="3840 × 2160 (4K). Heavy encode; some browsers may fall back.">2160p</button>
                     </div>
                   </div>
-                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence with selected camera movements">
+                  <button id="exportVideoButton" class="accent-action-btn" data-tooltip="Export MP4 or PNG sequence. For long PNG exports, choose an output folder to write frames directly to disk.">
                     <i class="fa-solid fa-film"></i>
                     Export Video
                   </button>

@@ -20,6 +20,7 @@ import {
   isVectrexCreativeLookPreset,
   isWatercolourCreativeLookPreset,
   normalizeCreativeLookIntensity,
+  normalizeCreativeLookLiftCrush,
   normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
 } from '../../../scripts/render/CreativeLookMaterials.js';
@@ -84,6 +85,7 @@ export class MobileCreativeLookPost {
       'dither-neutral': this.creativeLookDitherPass,
       'dither-tritone': this.creativeLookDitherPass,
       'dither-crosshatch': this.creativeLookDitherPass,
+      'dither-raster': this.creativeLookDitherPass,
     };
 
     this._allCreativePasses = [
@@ -197,6 +199,7 @@ export class MobileCreativeLookPost {
       settings.patternScale ?? 1,
     );
     const intensity = normalizeCreativeLookIntensity(settings.intensity);
+    const liftCrush = normalizeCreativeLookLiftCrush(settings.liftCrush);
     const ascii = { enabled: enabled && this._flatVariant === 'ascii', variant: presetId, masterHue: masterHueRad };
     this.creativeLookAscii.updateSettings(ascii);
     this.creativeLookEga.updateSettings({ enabled: enabled && this._flatVariant === 'ega-pixel', masterHue: masterHueRad });
@@ -210,11 +213,13 @@ export class MobileCreativeLookPost {
         enabled
         && (this._flatVariant === 'dither-neutral'
           || this._flatVariant === 'dither-tritone'
-          || this._flatVariant === 'dither-crosshatch'),
+          || this._flatVariant === 'dither-crosshatch'
+          || this._flatVariant === 'dither-raster'),
       variant: this._flatVariant ?? 'dither-neutral',
       masterHue: masterHueRad,
       patternScale,
       intensity,
+      liftCrush,
     });
   }
 

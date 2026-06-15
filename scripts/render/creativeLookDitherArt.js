@@ -1,5 +1,8 @@
 import { APP_BACKGROUND } from '../constants.js';
-import { FLAT_POST_MASTER_HUE_GLSL } from './creativeLookFlatPostMasterHue.js';
+import {
+  CREATIVE_LOOK_LIFT_CRUSH_GLSL,
+  FLAT_POST_MASTER_HUE_GLSL,
+} from './creativeLookFlatPostMasterHue.js';
 
 /** Reference logical grid — 320 cols at 4 px/texel (1280 wide). */
 export const DITHER_NEUTRAL_NATIVE_WIDTH = 320;
@@ -22,13 +25,28 @@ export const DITHER_TRITONE_DEFAULT_PATTERN_SCALE = 0.5;
 export const DITHER_TRITONE_DEFAULT_INTENSITY = 2;
 
 export const DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE = 1;
-export const DITHER_CROSSHATCH_DEFAULT_INTENSITY = 0.2;
+export const DITHER_CROSSHATCH_DEFAULT_INTENSITY = 0;
+
+export const DITHER_RASTER_DEFAULT_PATTERN_SCALE = 1;
+export const DITHER_RASTER_DEFAULT_INTENSITY = 0;
+export const DITHER_RASTER_MIN_CELL_PX = 8;
+export const DITHER_RASTER_SPHERE_GAP_PX = 1;
+
+/** @param {number} [patternScale] */
+export function creativeDitherRasterCellSize(patternScale = DITHER_RASTER_DEFAULT_PATTERN_SCALE) {
+  const cell = creativeDitherCellSize(patternScale);
+  return {
+    width: Math.max(DITHER_RASTER_MIN_CELL_PX, cell.width),
+    height: Math.max(DITHER_RASTER_MIN_CELL_PX, cell.height),
+  };
+}
 
 /** Shader Lab Dither — hard square pixel presets (round halftone is a separate subgroup). */
 export const DITHER_PIXEL_CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'dither-neutral',
   'dither-tritone',
   'dither-crosshatch',
+  'dither-raster',
 ]);
 
 /** @param {number} [patternScale] */
@@ -155,6 +173,7 @@ void main() {
 
   float bayer = ditherBayer4(ivec2(ip)) / 16.0;
   vec3 crushed = ditherCrush(cellColor.rgb, bayer, uIntensity);
+  crushed = applyCreativeLiftCrush(crushed);
   gl_FragColor = vec4(crushed, 1.0);
 }
 `;
@@ -168,6 +187,8 @@ uniform vec3 uBgColor;
 uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+
+${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 
 ${DITHER_BAYER4_GLSL}
 
@@ -189,7 +210,7 @@ vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
 ${DITHER_POST_MAIN_GLSL}
 `;
 
-/** Extreme tritone — 3 luminance tiers + Bayer crosshatch, heavy contrast crush. */
+/** Tritone — hard 3-tier luminance poster with Neutral-style Bayer band edges. */
 export const DITHER_TRITONE_POST_FRAGMENT = /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform vec2 uResolution;
@@ -199,35 +220,40 @@ uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
 
+${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
+
 ${DITHER_BAYER4_GLSL}
 
 const vec3 DITHER_LUMA = vec3(0.2126, 0.7152, 0.0722);
 
 vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
   rgb = applyFlatPostMasterHue(rgb);
-  float crush = clamp(intensity / 2.0, 0.0, 1.0);
-
-  float lum = dot(rgb, DITHER_LUMA);
-  lum = pow(clamp(lum, 0.0, 1.0), mix(1.0, 2.1, crush));
-  lum = (lum - 0.5) * mix(1.0, 2.55, crush) + 0.5;
-  lum = clamp(lum, 0.0, 1.0);
-
-  float t = lum * 2.0;
-  float bandF = floor(t + bayer * 0.92 - 0.04);
-  int band = int(clamp(bandF, 0.0, 2.0));
+  float t = clamp(intensity / 2.0, 0.0, 1.0);
 
   float srcLum = max(dot(rgb, DITHER_LUMA), 1e-4);
-  vec3 dir = rgb / srcLum;
-  float tierLum;
-  if (band <= 0) {
-    tierLum = mix(0.06, 0.18, crush);
-  } else if (band == 1) {
-    tierLum = mix(0.34, 0.48, 0.35 + crush * 0.35);
-  } else {
-    tierLum = mix(0.82, 0.98, 1.0 - crush * 0.12);
+  float lum = srcLum;
+  lum = pow(lum, mix(1.0, 2.45, t));
+  lum = (lum - 0.5) * mix(1.0, 3.35, t) + 0.5;
+  lum = clamp(lum, 0.0, 1.0);
+
+  float shadowTier = mix(0.11, 0.05, t);
+  float midTier = mix(0.50, 0.38, t);
+  float highTier = mix(0.84, 0.96, t);
+
+  float band = floor(lum * 3.0 + bayer * 0.96 - 0.02);
+  band = clamp(band, 0.0, 2.0);
+
+  float tierLum = shadowTier;
+  if (band >= 1.5) {
+    tierLum = highTier;
+  } else if (band >= 0.5) {
+    tierLum = midTier;
   }
 
-  return clamp(dir * tierLum, 0.0, 1.0);
+  vec3 outCol = clamp(rgb * (tierLum / srcLum), 0.0, 1.0);
+  float outLum = dot(outCol, DITHER_LUMA);
+  outCol = mix(vec3(outLum), outCol, mix(1.0, 1.22, t));
+  return clamp(outCol, 0.0, 1.0);
 }
 
 ${DITHER_POST_MAIN_GLSL}
@@ -272,6 +298,8 @@ uniform vec3 uBgColor;
 uniform float uIntensity;
 
 ${FLAT_POST_MASTER_HUE_GLSL}
+
+${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
 
 ${DITHER_CROSSHATCH4_GLSL}
 
@@ -377,6 +405,84 @@ vec3 ditherCrush(vec3 rgb, float bayer, float intensity) {
 }
 
 ${DITHER_POST_MAIN_GLSL}
+`;
+
+/** Amplitude-modulated halftone — circular raster dots sized by cell luminance. */
+export const DITHER_RASTER_POST_FRAGMENT = /* glsl */ `
+uniform sampler2D tDiffuse;
+uniform vec2 uResolution;
+uniform vec2 uCellSize;
+uniform vec3 uBgColor;
+uniform float uIntensity;
+
+${FLAT_POST_MASTER_HUE_GLSL}
+
+${CREATIVE_LOOK_LIFT_CRUSH_GLSL}
+
+const vec3 DITHER_LUMA = vec3(0.2126, 0.7152, 0.0722);
+const float RASTER_MIN_CELL_PX = ${DITHER_RASTER_MIN_CELL_PX}.0;
+const float RASTER_GAP_PX = ${DITHER_RASTER_SPHERE_GAP_PX}.0;
+
+float rasterDiscCoverage(vec2 localPx, float radiusPx) {
+  float cov = 0.0;
+  cov += step(length(localPx + vec2(-0.25, -0.25)), radiusPx);
+  cov += step(length(localPx + vec2( 0.25, -0.25)), radiusPx);
+  cov += step(length(localPx + vec2(-0.25,  0.25)), radiusPx);
+  cov += step(length(localPx + vec2( 0.25,  0.25)), radiusPx);
+  return cov * 0.25;
+}
+
+void main() {
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 cellPx = max(uCellSize, vec2(RASTER_MIN_CELL_PX));
+  vec2 ip = gl_FragCoord.xy;
+  vec2 cellId = floor(ip / cellPx);
+
+  vec2 centerPx = cellId * cellPx + cellPx * 0.5;
+  vec2 centerUv = centerPx / res;
+  vec4 cellColor = texture2D(tDiffuse, centerUv);
+  float srcLuma = dot(cellColor.rgb, DITHER_LUMA);
+
+  if (cellColor.a < 0.04 && srcLuma < 0.001) {
+    gl_FragColor = vec4(uBgColor, 1.0);
+    return;
+  }
+
+  vec2 localPx = ip + 0.5 - centerPx;
+  float cellHalf = min(cellPx.x, cellPx.y) * 0.5;
+
+  float t = clamp(uIntensity / 2.0, 0.0, 1.0);
+
+  float lum = clamp(srcLuma * mix(1.42, 1.0, t) + mix(0.10, 0.0, t), 0.0, 1.0);
+  lum = mix(lum, sqrt(lum), mix(0.52, 0.0, t));
+  lum = pow(lum, mix(0.80, 1.85, t));
+  lum = (lum - 0.5) * mix(1.0, 2.35, t) + 0.5;
+  lum = clamp(lum, 0.0, 1.0);
+
+  float depthT = lum;
+  depthT = pow(depthT, mix(1.15, 1.7, t));
+  depthT = (depthT - 0.5) * mix(1.3, 2.15, t) + 0.5;
+  depthT = clamp(depthT, 0.0, 1.0);
+  depthT = depthT * depthT * (3.0 - 2.0 * depthT);
+
+  float maxRadiusPx = max(cellHalf - RASTER_GAP_PX * 0.5, 1.0);
+  float minRadiusPx = max(maxRadiusPx * mix(0.18, 0.05, t), 0.75);
+  float radiusPx = mix(minRadiusPx, maxRadiusPx, depthT);
+
+  float inDot = rasterDiscCoverage(localPx, radiusPx);
+
+  vec3 dotCol = applyFlatPostMasterHue(cellColor.rgb);
+  dotCol *= mix(1.62, 1.0, t);
+  float dotLum = max(dot(dotCol, DITHER_LUMA), 1e-4);
+  float minDotLum = mix(0.68, 0.12, t);
+  dotCol = clamp(dotCol * max(minDotLum / dotLum, 1.0), 0.0, 1.0);
+  dotCol *= mix(0.90, 1.08, depthT);
+  dotCol = clamp(dotCol, 0.0, 1.0);
+
+  vec3 outCol = mix(uBgColor, dotCol, inDot);
+  outCol = applyCreativeLiftCrush(outCol);
+  gl_FragColor = vec4(outCol, 1.0);
+}
 `;
 
 export const DITHER_NEUTRAL_BG_HEX = parseInt(APP_BACKGROUND.slice(1), 16);

@@ -7,6 +7,7 @@ import {
   cameraShadowsUiToShader,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  getMaterialMrResetDefaults,
   DEFAULT_BACKDROP_METALNESS,
   DEFAULT_BACKDROP_ROUGHNESS,
   effectiveVignetteIntensity,
@@ -520,10 +521,15 @@ export class ResetControls {
       );
       this.stateStore.set('advanced.centerPivot', defaults.advanced?.centerPivot ?? false);
       // Reset material properties
-      this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
-      this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
-      this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
-      this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+      {
+        const mrDefaults = getMaterialMrResetDefaults(
+          !!this.stateStore.getState().material?.importUsesAuthoredPbr,
+        );
+        this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
+        this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
+        this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
+        this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
+      }
       });
       this.eventBus.emit('scene:batch-apply-start');
       try {
@@ -539,10 +545,15 @@ export class ResetControls {
       this.eventBus.emit('mesh:clay-color', defaults.clay.color);
       this.eventBus.emit('mesh:clay-normal-map', defaults.clay.normalMap);
       // Emit material reset events
-      this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
-      this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
-      this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
-      this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
+      {
+        const mrDefaults = getMaterialMrResetDefaults(
+          !!this.stateStore.getState().material?.importUsesAuthoredPbr,
+        );
+        this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
+        this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
+        this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
+        this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
+      }
       this.eventBus.emit('render:fresnel', defaults.fresnel);
       this.eventBus.emit('mesh:subsurface', defaults.subsurface);
       resetSvgExtrudeState(this.stateStore, this.eventBus, defaults);
@@ -825,19 +836,23 @@ export class ResetControls {
         const resetType = (button.dataset.reset ?? '').trim();
 
         switch (resetType) {
-          case 'material':
+          case 'material': {
+            const mrDefaults = getMaterialMrResetDefaults(
+              !!this.stateStore.getState().material?.importUsesAuthoredPbr,
+            );
             this.stateStore.batch(() => {
               this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
-              this.stateStore.set('material.metalness', defaults.material?.metalness ?? 0.0);
-              this.stateStore.set('material.roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
+              this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
+              this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
               this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
             });
             this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
-            this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? 0.0);
-            this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS);
+            this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
+            this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
             this.ui.syncUIFromState();
             break;
+          }
             
           case 'clay':
             this.stateStore.set('clay', defaults.clay);

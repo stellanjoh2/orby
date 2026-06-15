@@ -1,0 +1,1 @@
+../../apps/mobile/landing/main.js

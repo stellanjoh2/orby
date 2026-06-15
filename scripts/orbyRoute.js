@@ -1,6 +1,6 @@
 /** Shared client-side route detection for home vs in-app 404 experience. */
 
-import { ORBY_MOBILE_LANDING_PATH } from './orbyMobileAppRoute.js';
+import { ORBY_MOBILE_LEARN_PATH } from './orbyMobileAppRoute.js';
 
 export function getOrbyPathname() {
   return window.location.pathname || '/';
@@ -15,7 +15,7 @@ export function isOrbyHomePath(pathname = getOrbyPathname()) {
   return (
     path === '/'
     || path === '/index.html'
-    || path === ORBY_MOBILE_LANDING_PATH
+    || path === ORBY_MOBILE_LEARN_PATH
   );
 }
 

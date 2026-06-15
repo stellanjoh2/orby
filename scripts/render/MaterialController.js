@@ -88,6 +88,7 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  IMPORT_MATERIAL_MR_MULTIPLIER,
   ORBY_BLACK,
   ORBY_LIME,
 } from '../constants.js';
@@ -377,6 +378,10 @@ export class MaterialController {
     this.stateStore?.set(
       'material.importHasMrMaps',
       this._modelHasImportMrMaps(model),
+    );
+    this.stateStore?.set(
+      'material.importUsesAuthoredPbr',
+      this._modelHasAuthoredPbrMaterials(model),
     );
     // Note: Fresnel will be applied by setShading, which is called after setModel
   }
@@ -935,52 +940,106 @@ export class MaterialController {
     return hasMaps;
   }
 
-  /**
-   * First PBR material on the import — used to seed global metalness/roughness sliders.
-   * @returns {{ metalness: number, roughness: number } | null}
-   */
-  _readImportPbrFactors(object) {
-    if (!object) return null;
-    let found = null;
+  /** Whether any import material is standard/physical PBR (per-material authored factors). */
+  _modelHasAuthoredPbrMaterials(object) {
+    if (!object) return false;
+    let hasPbr = false;
     object.traverse((child) => {
-      if (found || !child.isMesh) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      if (hasPbr || !child.isMesh) return;
+      const stored = this.originalMaterials.get(child);
+      const mats = stored
+        ? Array.isArray(stored)
+          ? stored
+          : [stored]
+        : Array.isArray(child.material)
+          ? child.material
+          : [child.material];
       for (const mat of mats) {
-        if (!mat) continue;
-        if (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) continue;
-        const metalness = Number.isFinite(mat.metalness)
-          ? THREE.MathUtils.clamp(mat.metalness, 0, 1)
-          : 0;
-        const roughness = Number.isFinite(mat.roughness)
-          ? THREE.MathUtils.clamp(mat.roughness, 0, 1)
-          : DEFAULT_MATERIAL_ROUGHNESS;
-        found = { metalness, roughness };
-        return;
+        if (mat?.isMeshStandardMaterial || mat?.isMeshPhysicalMaterial) {
+          hasPbr = true;
+          return;
+        }
       }
     });
-    return found;
-  }
-
-  /** On mesh load, align global PBR sliders with authored glTF/GLB factors. */
-  _syncImportPbrFromModel(model) {
-    const importPbr = this._readImportPbrFactors(model);
-    if (!importPbr) return;
-    this.materialSettings.metalness = importPbr.metalness;
-    this.materialSettings.roughness = importPbr.roughness;
-    this.stateStore?.set('material.metalness', importPbr.metalness);
-    this.stateStore?.set('material.roughness', importPbr.roughness);
+    return hasPbr;
   }
 
   /**
-   * Shaded mode: keep import MR maps when present; sliders multiply map samples.
-   * Scalar-only imports strip maps so sliders are the sole control.
+   * Authored metalness/roughness from import snapshot (or live import mat).
+   * @param {import('three').Material | null | undefined} importMat
+   * @returns {{ metalness: number, roughness: number, hasMrMaps: boolean } | null}
+   */
+  _resolveAuthoredMetalRoughness(importMat) {
+    const baseline = importMat?.userData?.orbyGltfImportBaseline;
+    if (baseline?.metalness !== undefined || baseline?.roughness !== undefined) {
+      return {
+        metalness: Number.isFinite(baseline.metalness) ? baseline.metalness : 0,
+        roughness: Number.isFinite(baseline.roughness)
+          ? baseline.roughness
+          : DEFAULT_MATERIAL_ROUGHNESS,
+        hasMrMaps: !!baseline.hasMrMaps,
+      };
+    }
+    if (
+      importMat &&
+      (importMat.isMeshStandardMaterial || importMat.isMeshPhysicalMaterial)
+    ) {
+      return {
+        metalness: Number.isFinite(importMat.metalness) ? importMat.metalness : 0,
+        roughness: Number.isFinite(importMat.roughness)
+          ? importMat.roughness
+          : DEFAULT_MATERIAL_ROUGHNESS,
+        hasMrMaps: this._importMaterialHasMrMaps(importMat),
+      };
+    }
+    return null;
+  }
+
+  /** On mesh load, set global MR sliders to neutral multipliers (1.0 = as-authored). */
+  _syncImportPbrFromModel(model) {
+    if (!this._modelHasAuthoredPbrMaterials(model)) return;
+    const neutral = IMPORT_MATERIAL_MR_MULTIPLIER;
+    this.materialSettings.metalness = neutral;
+    this.materialSettings.roughness = neutral;
+    this.stateStore?.set('material.metalness', neutral);
+    this.stateStore?.set('material.roughness', neutral);
+  }
+
+  /**
+   * Shaded mode: scale authored factors by global sliders; keep import MR maps when present.
+   * Scalar-only and mapped materials share the same multiplier semantics.
    */
   _applyShadedMetalRoughness(target, importMat) {
     if (!target) return;
+    const globalM = Number.isFinite(this.materialSettings.metalness)
+      ? this.materialSettings.metalness
+      : IMPORT_MATERIAL_MR_MULTIPLIER;
+    const globalR = Number.isFinite(this.materialSettings.roughness)
+      ? this.materialSettings.roughness
+      : IMPORT_MATERIAL_MR_MULTIPLIER;
+
+    const authored = this._resolveAuthoredMetalRoughness(importMat);
+    if (authored) {
+      target.metalness = THREE.MathUtils.clamp(authored.metalness * globalM, 0, 1);
+      target.roughness = THREE.MathUtils.clamp(authored.roughness * globalR, 0, 1);
+      if (authored.hasMrMaps && importMat) {
+        if (importMat.metalnessMap && !target.metalnessMap) {
+          target.metalnessMap = importMat.metalnessMap;
+        }
+        if (importMat.roughnessMap && !target.roughnessMap) {
+          target.roughnessMap = importMat.roughnessMap;
+        }
+      } else {
+        if ('metalnessMap' in target) target.metalnessMap = null;
+        if ('roughnessMap' in target) target.roughnessMap = null;
+      }
+      return;
+    }
+
+    target.metalness = globalM;
+    target.roughness = globalR;
     const hasMrMaps = this._importMaterialHasMrMaps(importMat);
-    target.metalness = this.materialSettings.metalness;
-    target.roughness = this.materialSettings.roughness;
-    if (hasMrMaps) {
+    if (hasMrMaps && importMat) {
       if (importMat.metalnessMap && !target.metalnessMap) {
         target.metalnessMap = importMat.metalnessMap;
       }
@@ -1015,6 +1074,15 @@ export class MaterialController {
         baseline.roughness = Number.isFinite(m.roughness) ? m.roughness : undefined;
         baseline.ior = Number.isFinite(m.ior) ? m.ior : undefined;
         baseline.color = m.color?.clone?.() ?? null;
+      }
+      if (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) {
+        baseline.metalness = Number.isFinite(m.metalness)
+          ? THREE.MathUtils.clamp(m.metalness, 0, 1)
+          : 0;
+        baseline.roughness = Number.isFinite(m.roughness)
+          ? THREE.MathUtils.clamp(m.roughness, 0, 1)
+          : DEFAULT_MATERIAL_ROUGHNESS;
+        baseline.hasMrMaps = this._importMaterialHasMrMaps(m);
       }
       if (
         (m.emissiveMap || this._importMaterialHasEmissiveBaseline(m)) &&
@@ -1795,7 +1863,7 @@ export class MaterialController {
       
       const isGlass = this.isWindowMesh(child);
       // Window meshes keep import glass until Shader Lab replaces them (opaque stylized presets).
-      if (isGlass && !this._shaderLabBypassesGlassPresentation()) return;
+      if (isGlass && this._shaderLabBypassesGlassPresentation()) return;
       
       const original = this.originalMaterials.get(child);
       if (!original) return;
@@ -2710,7 +2778,7 @@ export class MaterialController {
       || (
         nextPreset !== prevPreset
         && patch.intensity === undefined
-        && (nextPreset === 'scanline-hologram' || isDitherPixelCreativeLookPreset(nextPreset))
+        && (nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'vertex-points' || isDitherPixelCreativeLookPreset(nextPreset))
       )
     ) {
       this.creativeLookSettings.intensity = creativeLookDefaultIntensity(nextPreset);
@@ -4845,6 +4913,7 @@ export class MaterialController {
     this.currentShading = null;
     this.originalMaterials = new WeakMap();
     this.stateStore?.set('material.importHasMrMaps', false);
+    this.stateStore?.set('material.importUsesAuthoredPbr', false);
   }
 
   getClaySettings() {

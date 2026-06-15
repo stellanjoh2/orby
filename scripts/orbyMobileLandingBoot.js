@@ -47,20 +47,24 @@
     return false;
   }
 
-  function isOrbyMobileLandingRoute() {
+  function isOrbyMobileLearnRoute() {
     try {
       var path =
         typeof global.location !== 'undefined'
           ? (global.location.pathname || '/').replace(/\/$/, '') || '/'
           : '/';
-      return path === '/mobile';
+      return path === '/mobile/learn';
     } catch (e) {
       return false;
     }
   }
 
+  function isOrbyMobileLandingRoute() {
+    return isOrbyMobileLearnRoute();
+  }
+
   function ensureOrbyMobileLandingBaseHref() {
-    if (!isOrbyMobileLandingRoute()) return;
+    if (!isOrbyMobileLearnRoute()) return;
     try {
       var base = document.querySelector('base');
       if (!base) {
@@ -72,7 +76,7 @@
   }
 
   function clearMobileAppSessionOnLanding() {
-    if (!isOrbyMobileLandingRoute()) return;
+    if (!isOrbyMobileLearnRoute()) return;
     try {
       if (global.sessionStorage) {
         global.sessionStorage.removeItem('orby_mobile_active');
@@ -81,7 +85,7 @@
   }
 
   function shouldShowMobileLanding() {
-    return isForcedMobileLandingDebug() || isMobileDevice() || isOrbyMobileLandingRoute();
+    return isForcedMobileLandingDebug() || isMobileDevice() || isOrbyMobileLearnRoute();
   }
 
   function isMobileLanding() {
@@ -118,7 +122,7 @@
     return (
       shouldShowMobileLanding() ||
       isLegalSubpageMobileViewport() ||
-      isOrbyMobileLandingRoute()
+      isOrbyMobileLearnRoute()
     );
   }
 
@@ -148,6 +152,7 @@
     MOBILE_LANDING_MAX_WIDTH_PX: MOBILE_LANDING_MAX_WIDTH_PX,
     isForcedMobileLandingDebug: isForcedMobileLandingDebug,
     isMobileDevice: isMobileDevice,
+    isOrbyMobileLearnRoute: isOrbyMobileLearnRoute,
     isOrbyMobileLandingRoute: isOrbyMobileLandingRoute,
     shouldShowMobileLanding: shouldShowMobileLanding,
     isMobileLanding: isMobileLanding,

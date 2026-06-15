@@ -6,6 +6,8 @@
 html.mobile-landing {
   --orby-marketing-edge-inset: var(--orby-mobile-nav-edge-x, var(--orby-home-padding-x));
   --orby-marketing-nav-offset: calc(56px + env(safe-area-inset-top, 0px));
+  /* Big-message prompts (404, thank-you) — match marketing headline → CTA rhythm */
+  --orby-big-message-headline-actions-gap: clamp(1.5rem, 6svh, 2.5rem);
 }
 
 html.mobile-landing .orby-marketing__section--intro.orby-marketing__section--intro-turntable,
@@ -1171,4 +1173,29 @@ html.orby-mobile-modal-open {
 
 html.orby-mobile-modal-open body {
   overflow: hidden;
+}
+
+/* ── 404 prompt — reuse mobile marketing section headline scale ── */
+
+html.mobile-landing body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-stack {
+  --orby-big-message-stack-scale: 1;
+  max-width: min(100%, 24rem);
+  padding-inline: var(--orby-home-padding-x);
+  box-sizing: border-box;
+  transform: none;
+  scale: none;
+}
+
+html.mobile-landing body.orby-not-found-active #orbyFullscreenPrompt .bug-report-thank-you-message {
+  /* Same clamp as .orby-marketing__title on mobile (--orby-section-headline-*) */
+  font-size: clamp(1.68rem, 7.9vw, 2.4rem);
+  letter-spacing: -0.03em;
+  line-height: var(--orby-marketing-section-headline-line, 1.1);
+  text-wrap: balance;
+}
+
+html.mobile-landing body.orby-not-found-active #orbyFullscreenPrompt .orby-not-found-symbol {
+  width: clamp(72px, 20vw, 104px);
+  height: clamp(72px, 20vw, 104px);
+  margin: 0 auto clamp(0.35rem, 1.5svh, 0.75rem);
 }

@@ -69,6 +69,7 @@ import {
   isSketchCreativeLookPreset,
   isDitherPixelCreativeLookPreset,
   normalizeCreativeLookIntensity,
+  normalizeCreativeLookLiftCrush,
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
@@ -4469,12 +4470,14 @@ export class SceneManager {
       Number(storeCl.patternScale ?? mcCl.patternScale),
     );
     const intensity = normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity);
+    const liftCrush = normalizeCreativeLookLiftCrush(storeCl.liftCrush ?? mcCl.liftCrush);
     const ditherSettings = {
       enabled: enabled && isDitherPixelCreativeLookPreset(presetId),
       variant: presetId,
       masterHue: masterHueRad,
       patternScale,
       intensity,
+      liftCrush,
     };
 
     this.postPipeline?.setCreativeLookFlatPostMode?.({ enabled, variant: flatVariant });
@@ -5069,6 +5072,9 @@ export class SceneManager {
       if (Number.isFinite(index)) {
         video.meshAnimationClipIndex = index;
       }
+    }
+    if (this.ui?.pngExportDirectoryHandle) {
+      video.pngOutputDirectoryHandle = this.ui.pngExportDirectoryHandle;
     }
     return video;
   }

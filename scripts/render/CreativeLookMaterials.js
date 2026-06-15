@@ -62,6 +62,7 @@ import {
   creativeLookApple2FixedScale,
   creativeLookApple2FixedIntensity,
 } from './creativeLookApple2Art.js';
+import { CREATIVE_LOOK_LIFT_CRUSH_GLSL } from './creativeLookFlatPostMasterHue.js';
 import {
   DITHER_NEUTRAL_PREP_FRAGMENT,
   DITHER_NEUTRAL_DEFAULT_INTENSITY,
@@ -70,6 +71,8 @@ import {
   DITHER_TRITONE_DEFAULT_PATTERN_SCALE,
   DITHER_CROSSHATCH_DEFAULT_INTENSITY,
   DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE,
+  DITHER_RASTER_DEFAULT_INTENSITY,
+  DITHER_RASTER_DEFAULT_PATTERN_SCALE,
   DITHER_PIXEL_CREATIVE_LOOK_PRESETS,
 } from './creativeLookDitherArt.js';
 import {
@@ -111,7 +114,7 @@ import {
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -129,6 +132,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'dither-neutral',
   'dither-tritone',
   'dither-crosshatch',
+  'dither-raster',
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
@@ -167,8 +171,20 @@ export const CREATIVE_LOOK_INTENSITY_DEFAULT = 1;
 /** Default Shader Lab intensity for Scanline Hologram (strength slider). */
 export const SCANLINE_HOLOGRAM_DEFAULT_INTENSITY = 0.25;
 
+/** Default Shader Lab intensity for Vectrex (line brightness). */
+export const VECTREX_DEFAULT_INTENSITY = 0.25;
+
+/** Default Shader Lab intensity for Wire Pulse (line thickness). */
+export const WIRE_PULSE_DEFAULT_INTENSITY = 0.25;
+
+/** Default Shader Lab intensity for Vertex Points (point size). */
+export const VERTEX_POINTS_DEFAULT_INTENSITY = 2;
+
 /** Default Shader Lab scale for Vectrex (analog beam wobble amount). */
 export const VECTREX_DEFAULT_PATTERN_SCALE = 0.5;
+
+/** Default Shader Lab scale for Flow Field (world-space color drift density). */
+export const FLOW_FIELD_DEFAULT_PATTERN_SCALE = 0.1;
 
 /** Fixed creative Scale for PS2 Crush — decimation runs once at apply (not live). */
 export const CREATIVE_PS2_CRUSH_PATTERN_SCALE = 2;
@@ -282,6 +298,7 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'dither-neutral',
   'dither-tritone',
   'dither-crosshatch',
+  'dither-raster',
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
@@ -358,6 +375,11 @@ export function isDitherCrosshatchCreativeLookPreset(preset) {
   return normalizeCreativeLookPreset(preset) === 'dither-crosshatch';
 }
 
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isDitherRasterCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'dither-raster';
+}
+
 /** Shader Lab Dither — hard square pixel presets. */
 export function isDitherPixelCreativeLookPreset(preset) {
   return DITHER_PIXEL_CREATIVE_LOOK_PRESETS.includes(normalizeCreativeLookPreset(preset));
@@ -404,7 +426,8 @@ export function isFlatPostCreativeLookPreset(preset) {
     isApple2PixelCreativeLookPreset(preset) ||
     isDitherNeutralCreativeLookPreset(preset) ||
     isDitherTritoneCreativeLookPreset(preset) ||
-    isDitherCrosshatchCreativeLookPreset(preset)
+    isDitherCrosshatchCreativeLookPreset(preset) ||
+    isDitherRasterCreativeLookPreset(preset)
   );
 }
 
@@ -423,6 +446,7 @@ export function creativeLookFlatPostVariant(preset) {
   if (id === 'dither-neutral') return 'dither-neutral';
   if (id === 'dither-tritone') return 'dither-tritone';
   if (id === 'dither-crosshatch') return 'dither-crosshatch';
+  if (id === 'dither-raster') return 'dither-raster';
   return null;
 }
 
@@ -537,19 +561,25 @@ export function normalizeCreativeLookIntensity(value) {
 export function creativeLookDefaultIntensity(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'scanline-hologram') return SCANLINE_HOLOGRAM_DEFAULT_INTENSITY;
+  if (id === 'vectrex') return VECTREX_DEFAULT_INTENSITY;
+  if (id === 'wire-pulse') return WIRE_PULSE_DEFAULT_INTENSITY;
+  if (id === 'vertex-points') return VERTEX_POINTS_DEFAULT_INTENSITY;
   if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_INTENSITY;
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_INTENSITY;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_INTENSITY;
+  if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_INTENSITY;
   return CREATIVE_LOOK_INTENSITY_DEFAULT;
 }
 
 /** Preset-specific scale when switching presets, or `null` to keep the current scale. */
 export function creativeLookDefaultPatternScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
+  if (id === 'flow-field') return FLOW_FIELD_DEFAULT_PATTERN_SCALE;
   if (id === 'vectrex') return VECTREX_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE;
+  if (id === 'dither-raster') return DITHER_RASTER_DEFAULT_PATTERN_SCALE;
   return null;
 }
 
@@ -570,6 +600,9 @@ export function creativeLookPatternScaleBounds(preset) {
     return { min: SKETCH_PATTERN_SCALE_MIN, max: SKETCH_PATTERN_SCALE_MAX };
   }
   if (isDitherPixelCreativeLookPreset(id)) {
+    if (id === 'dither-raster') {
+      return { min: 0.25, max: 5 };
+    }
     return { min: 0, max: 5 };
   }
   return { min: 0.02, max: 5 };
@@ -646,25 +679,6 @@ vec3 applyCreativeMasterHue(vec3 color) {
 }
 `;
 
-const CREATIVE_LOOK_LIFT_CRUSH_GLSL = /* glsl */ `
-uniform float uLiftCrush;
-
-const vec3 CREATIVE_LUMA = vec3(0.2126, 0.7152, 0.0722);
-
-vec3 applyCreativeLiftCrush(vec3 color) {
-  if (abs(uLiftCrush) < 0.0001) return color;
-  float l = dot(color, CREATIVE_LUMA);
-  float lift = max(uLiftCrush, 0.0);
-  float crush = max(-uLiftCrush, 0.0);
-  float shadowMask = 1.0 - smoothstep(0.0, 0.78, l);
-  float crushMask = 1.0 - smoothstep(0.03, 0.62, l);
-  color += shadowMask * lift * 0.22;
-  color = max(color - crushMask * crush * 0.24, vec3(0.0));
-  color *= 1.0 - crushMask * crush * 0.57;
-  return clamp(color, 0.0, 4.0);
-}
-`;
-
 const CREATIVE_LOOK_BRIGHTNESS_GLSL = /* glsl */ `
 uniform float uBrightness;
 
@@ -685,7 +699,7 @@ uniform float uOrbyShadowStrength;
 uniform float uOrbyShadowOpacity;
 `;
 
-function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity', shadowTint = true) {
+function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity', shadowTint = true, skipLiftCrush = false) {
   const shadowBlock = shadowTint
     ? `#ifdef USE_SHADOWMAP
   float orbyShadowAmt = getShadowMask() * uOrbyShadowStrength * uOrbyShadowOpacity;
@@ -693,17 +707,18 @@ function creativeLookFinalColorChain(colorVar, alphaExpr = 'uOpacity', shadowTin
   #endif
   `
     : '';
-  return `${colorVar} = applyCreativeLiftCrush(${colorVar});
-  ${shadowBlock}${colorVar} = applyCreativeMasterHue(${colorVar});
+  const liftCrushStep = skipLiftCrush ? '' : `${colorVar} = applyCreativeLiftCrush(${colorVar});
+  `;
+  return `${liftCrushStep}${shadowBlock}${colorVar} = applyCreativeMasterHue(${colorVar});
   ${colorVar} = applyCreativeBrightness(${colorVar});
   gl_FragColor = vec4(${colorVar}, ${alphaExpr});`;
 }
 
-function injectCreativeLookFinalColorChain(combined, shadowTint = true) {
+function injectCreativeLookFinalColorChain(combined, shadowTint = true, skipLiftCrush = false) {
   return combined.replace(
     /gl_FragColor = vec4\((\w+), ([^)]+)\);/g,
     (_, colorVar, alphaExpr) =>
-      creativeLookFinalColorChain(colorVar, alphaExpr.trim(), shadowTint),
+      creativeLookFinalColorChain(colorVar, alphaExpr.trim(), shadowTint, skipLiftCrush),
   );
 }
 
@@ -800,8 +815,9 @@ export function ensureCreativeLookLightingUniforms(material) {
 /** Prepends lift/crush + master-hue helpers and applies both before output. */
 export function withCreativeLookPostProcess(fragmentShader, options = {}) {
   const shadowTint = options.shadowTint !== false;
+  const skipLiftCrush = options.skipLiftCrush === true;
   let combined = fragmentShader.trim();
-  if (!combined.includes('uniform float uLiftCrush;')) {
+  if (!skipLiftCrush && !combined.includes('uniform float uLiftCrush;')) {
     combined = `${CREATIVE_LOOK_LIFT_CRUSH_GLSL}\n${combined}`;
   }
   if (!combined.includes('uniform float uMasterHue;')) {
@@ -813,13 +829,13 @@ export function withCreativeLookPostProcess(fragmentShader, options = {}) {
   if (/\w+ = applyCreativeBrightness\(\w+\);/.test(combined)) {
     return combined;
   }
-  if (/\w+ = applyCreativeLiftCrush\(\w+\);/.test(combined)) {
+  if (!skipLiftCrush && /\w+ = applyCreativeLiftCrush\(\w+\);/.test(combined)) {
     return combined;
   }
   if (/\w+ = applyCreativeMasterHue\(\w+\);/.test(combined)) {
-    return injectCreativeLookFinalColorChain(combined, shadowTint);
+    return injectCreativeLookFinalColorChain(combined, shadowTint, skipLiftCrush);
   }
-  return injectCreativeLookFinalColorChain(combined, shadowTint);
+  return injectCreativeLookFinalColorChain(combined, shadowTint, skipLiftCrush);
 }
 
 /** Prepends master-hue helper and applies it to the main rgb output. */
@@ -988,6 +1004,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'dither-neutral': 'Neutral',
     'dither-tritone': 'Tritone',
     'dither-crosshatch': 'Crosshatch',
+    'dither-raster': 'Raster',
     'ascii-art': 'ASCII Art',
     'ascii-art-2': 'ASCII 2',
     'ascii-art-3': 'ASCII 3',
@@ -3010,13 +3027,17 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat, { shadows: false });
   }
 
-  if (id === 'dither-neutral' || id === 'dither-tritone' || id === 'dither-crosshatch') {
+  if (id === 'dither-neutral' || id === 'dither-tritone' || id === 'dither-crosshatch' || id === 'dither-raster') {
     const tint = diffuseTint ?? new THREE.Color(0xe8e0d8);
     const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
     if (map) {
       map.minFilter = THREE.LinearFilter;
       map.magFilter = THREE.LinearFilter;
     }
+    const ditherGradeUniforms = {
+      ...hueUniform,
+      ...brightnessUniform,
+    };
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uMap: { value: map },
@@ -3024,10 +3045,13 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         uTint: { value: tint },
         uOpacity: { value: shaderAlpha },
         ...pbrUniforms,
-        ...gradeUniforms,
+        ...ditherGradeUniforms,
       },
       vertexShader: PIXEL_ART_VERTEX,
-      fragmentShader: lookFragNoShadow(DITHER_NEUTRAL_PREP_FRAGMENT),
+      fragmentShader: withCreativeLookPostProcess(DITHER_NEUTRAL_PREP_FRAGMENT, {
+        shadowTint: false,
+        skipLiftCrush: true,
+      }),
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = id;

@@ -38,13 +38,17 @@ function isMobileDeviceImpl() {
   }
 }
 
-function isOrbyMobileLandingRouteImpl() {
+function isOrbyMobileLearnRouteImpl() {
   try {
     const path = window.location.pathname.replace(/\/$/, '') || '/';
-    return path === '/mobile';
+    return path === '/mobile/learn';
   } catch {
     return false;
   }
+}
+
+function isOrbyMobileLandingRouteImpl() {
+  return isOrbyMobileLearnRouteImpl();
 }
 
 function shouldShowMobileLandingImpl() {

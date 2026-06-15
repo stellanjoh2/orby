@@ -103,23 +103,22 @@ export class MobileCreativeLooks {
    * @param {THREE.Object3D} model
    */
   applyStudioMaterialDefaults(model) {
+    const importUsesAuthoredPbr = this.materialController._modelHasAuthoredPbrMaterials(model);
     const hasMrMaps = this.materialController._modelHasImportMrMaps(model);
-    const pbr = hasMrMaps
+    const mrDefaults = importUsesAuthoredPbr
       ? MOBILE_MATERIAL_MR_MAP_DEFAULTS
-      : {
-          metalness: this.materialController.materialSettings.metalness,
-          roughness: this.materialController.materialSettings.roughness,
-        };
+      : MOBILE_MATERIAL_SCALAR_DEFAULTS;
 
     const brightness = MOBILE_MATERIAL_DEFAULTS.brightness;
-    const metalness = hasMrMaps ? pbr.metalness : (Number.isFinite(pbr.metalness) ? pbr.metalness : MOBILE_MATERIAL_SCALAR_DEFAULTS.metalness);
-    const roughness = hasMrMaps ? pbr.roughness : (Number.isFinite(pbr.roughness) ? pbr.roughness : MOBILE_MATERIAL_SCALAR_DEFAULTS.roughness);
+    const metalness = mrDefaults.metalness;
+    const roughness = mrDefaults.roughness;
 
     this.stateStore.set('material.brightness', brightness);
     this.stateStore.set('material.metalness', metalness);
     this.stateStore.set('material.roughness', roughness);
     this.stateStore.set('material.emissive', MOBILE_MATERIAL_DEFAULTS.emissive);
     this.stateStore.set('material.importHasMrMaps', hasMrMaps);
+    this.stateStore.set('material.importUsesAuthoredPbr', importUsesAuthoredPbr);
 
     this.materialController.setMaterialBrightness(brightness);
     this.materialController.setMaterialMetalness(metalness);

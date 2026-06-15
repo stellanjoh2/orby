@@ -6,6 +6,7 @@ import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   MATERIAL_EMISSIVE_SLIDER_MAX,
+  getMaterialMrResetDefaults,
   ORBY_BLACK,
 } from '../constants.js';
 import { applyWireframeOnlyVisibleOnEnter } from './wireframeEnterDefaults.js';
@@ -636,6 +637,9 @@ export class MeshControls {
           } else if (
             resetDitherTuning
             || normalizeCreativeLookPreset(preset) === 'scanline-hologram'
+            || normalizeCreativeLookPreset(preset) === 'vectrex'
+            || normalizeCreativeLookPreset(preset) === 'wire-pulse'
+            || normalizeCreativeLookPreset(preset) === 'vertex-points'
             || isDitherPixelCreativeLookPreset(preset)
           ) {
             this.stateStore.set(
@@ -801,6 +805,7 @@ export class MeshControls {
         if ('disabled' in el) el.disabled = !enabled;
         if (el.classList) el.classList.toggle('is-disabled', !enabled);
       });
+      this.ui.syncExportPngFolderUi();
     };
     const updateMp4Ui = () => {
       const wrap = this.ui.inputs.exportMp4Settings;
@@ -1085,8 +1090,14 @@ export class MeshControls {
       });
     });
 
+    this.ui.buttons.exportPngFolderChoose?.addEventListener('click', () => {
+      if (this.ui.exportSettings.video?.format !== 'png') return;
+      this.ui.pickPngExportDirectory();
+    });
+
     updatePngTransparentUi();
     updateMp4Ui();
+    this.ui.syncExportPngFolderUi();
   }
 
   refreshAdvancedGlassControls(state) {
@@ -1173,7 +1184,8 @@ export class MeshControls {
       const isInteracting = this.materialInteracting?.metalness || 
                            document.activeElement === this.ui.inputs.materialMetalness;
       if (!isInteracting) {
-        const metalness = state.material?.metalness ?? 0.0;
+        const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+        const metalness = state.material?.metalness ?? mrDefaults.metalness;
         this.ui.inputs.materialMetalness.value = metalness;
         this.helpers.updateValueLabel('materialMetalness', metalness, 'decimal');
       }
@@ -1183,7 +1195,8 @@ export class MeshControls {
       const isInteracting = this.materialInteracting?.roughness || 
                            document.activeElement === this.ui.inputs.materialRoughness;
       if (!isInteracting) {
-        const roughness = state.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
+        const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+        const roughness = state.material?.roughness ?? mrDefaults.roughness;
         this.ui.inputs.materialRoughness.value = roughness;
         this.helpers.updateValueLabel('materialRoughness', roughness, 'decimal');
       }
@@ -1198,7 +1211,10 @@ export class MeshControls {
         this.helpers.updateValueLabel('materialEmissive', emissive, 'decimal');
       }
     }
-    this.ui.syncMaterialMrMapTooltips?.(!!state.material?.importHasMrMaps);
+    this.ui.syncMaterialMrMapTooltips?.(
+      !!state.material?.importUsesAuthoredPbr,
+      !!state.material?.importHasMrMaps,
+    );
     syncSvgExtrudeControls(this._svgExtrudeCtx(), state, { requireEnabled: true });
     if (this.ui.inputs.reverseNormals) {
       this.ui.inputs.reverseNormals.checked = !!state.advanced?.reverseNormals;

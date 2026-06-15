@@ -15,12 +15,20 @@
       "destination": "/mobile/app/index.html"
     },
     {
+      "source": "/mobile/learn",
+      "destination": "/mobile/learn/"
+    },
+    {
+      "source": "/mobile/learn/",
+      "destination": "/mobile/learn/index.html"
+    },
+    {
       "source": "/mobile",
-      "destination": "/index.html"
+      "destination": "/mobile/"
     },
     {
       "source": "/mobile/",
-      "destination": "/index.html"
+      "destination": "/mobile/index.html"
     },
     {
       "source": "/(.*)",

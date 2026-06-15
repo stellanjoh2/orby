@@ -72,8 +72,10 @@ export class MobileShell {
     this._suppressRailLeadingSelection = false;
     /** @type {ReturnType<typeof setTimeout> | null} */
     this._railSuppressTimer = null;
+    /** @type {Set<PresetTab>} */
+    this._engagedPresetTabs = new Set();
     /** @type {HTMLElement | null} */
-    this._emptyEl = null;
+    this._hdriControlsEl = null;
 
     this._bindChrome();
 
@@ -107,6 +109,7 @@ export class MobileShell {
     this._hdriBlurInput = root.querySelector('[data-hdri-blur-input]');
     this._hdriBlurValue = root.querySelector('[data-hdri-blur-value]');
     this._hdriBackgroundInput = root.querySelector('[data-hdri-background-input]');
+    this._hdriControlsEl = root.querySelector('.orby-mobile-hdri-controls');
     this._bgControls = root.querySelector('[data-bg-controls]');
     this._bgColorInput = root.querySelector('[data-bg-color-input]');
     this._bgGradientEnabled = root.querySelector('[data-bg-gradient-enabled]');
@@ -129,6 +132,7 @@ export class MobileShell {
     this._bindSceneControls();
     this._syncSelectionUi();
     this._syncHdriControlsUi();
+    this._syncHdriPanelUi();
     this._syncHdriBackgroundUi();
   }
 
@@ -140,7 +144,7 @@ export class MobileShell {
       markMobileDebugLog('shell:scene-init-done');
       const expectsHandoff = hasMobileHandoffPendingFlag() || urlHasHandoffFlag();
       if (expectsHandoff) {
-        await waitForMobileModelHandoff(2000);
+        await waitForMobileModelHandoff(4000);
         const file = await takeMobileModelHandoff();
         if (file) {
           await this.scene.loadFile(file);
@@ -245,13 +249,6 @@ export class MobileShell {
     }
   }
 
-  _mkFxDivider() {
-    const divider = document.createElement('hr');
-    divider.className = 'orby-mobile-fx-divider';
-    divider.setAttribute('aria-hidden', 'true');
-    return divider;
-  }
-
   _resetFxGrade() {
     this.scene.resetFx();
     this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
@@ -267,7 +264,6 @@ export class MobileShell {
     host.replaceChildren();
 
     for (let i = 0; i < MOBILE_FX_SLIDER_SECTIONS.length; i++) {
-      if (i > 0) host.append(this._mkFxDivider());
       const section = MOBILE_FX_SLIDER_SECTIONS[i];
       const sectionEl = document.createElement('div');
       sectionEl.className = 'orby-mobile-fx-section';
@@ -278,8 +274,6 @@ export class MobileShell {
       host.append(sectionEl);
     }
 
-    host.append(this._mkFxDivider());
-
     const lensSection = document.createElement('div');
     lensSection.className = 'orby-mobile-fx-section';
     const lensList = document.createElement('div');
@@ -287,8 +281,6 @@ export class MobileShell {
     lensList.append(...MOBILE_FX_LENS_ROWS.map((row) => this._mkFxLensSlider(row)));
     lensSection.append(lensList);
     host.append(lensSection);
-
-    host.append(this._mkFxDivider());
 
     const camSection = document.createElement('div');
     camSection.className = 'orby-mobile-fx-section';
@@ -317,8 +309,6 @@ export class MobileShell {
     for (const def of MOBILE_STYLE_SLIDERS) {
       host.append(this._mkStyleSlider(def));
     }
-
-    host.append(this._mkFxDivider());
 
     host.append(
       this._mkFxSwitchRow('Bloom', {
@@ -366,7 +356,10 @@ export class MobileShell {
 
   _syncStyleControlsUi() {
     const host = this.root.querySelector('[data-style-controls]');
-    const styleActive = this.selection.style.id !== 'none' && this.selection.style.id !== 'standard';
+    const styleActive =
+      this._engagedPresetTabs.has('style') &&
+      this.selection.style.id !== 'none' &&
+      this.selection.style.id !== 'standard';
     this.root.dataset.stylePanel = styleActive ? 'controls' : 'presets-only';
     if (host instanceof HTMLElement) {
       host.hidden = !styleActive;
@@ -422,8 +415,30 @@ export class MobileShell {
 
   _syncStyleSheetState() {
     if (this.activeTab !== 'style' || this.sheetState === 'closed') return;
-    const hasLook = this.selection.style.id !== 'none' && this.selection.style.id !== 'standard';
+    const hasLook =
+      this._engagedPresetTabs.has('style') &&
+      this.selection.style.id !== 'none' &&
+      this.selection.style.id !== 'standard';
     this.setSheetState(hasLook ? 'expanded' : 'peek');
+  }
+
+  _syncHdriPanelUi() {
+    const engaged = this._engagedPresetTabs.has('light');
+    this.root.dataset.hdriPanel = engaged ? 'controls' : 'presets-only';
+    if (this._hdriControlsEl instanceof HTMLElement) {
+      this._hdriControlsEl.hidden = !engaged;
+      this._hdriControlsEl.classList.toggle('is-visible', engaged);
+    }
+    this._syncHdriSheetState();
+  }
+
+  _syncHdriSheetState() {
+    if (this.activeTab !== 'light' || this.sheetState === 'closed') return;
+    if (!this._engagedPresetTabs.has('light')) {
+      this.setSheetState('peek');
+      return;
+    }
+    this.setSheetState('peek');
   }
 
   /** @param {HTMLInputElement} slider */
@@ -613,7 +628,7 @@ export class MobileShell {
       if (this.sheetState === 'closed') return;
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-export-btn') || t.closest('.orby-mobile-debug-bar') || t.closest('.orby-mobile-viewport__empty')) return;
+      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-export-btn') || t.closest('.orby-mobile-debug-menu') || t.closest('.orby-mobile-viewport__empty')) return;
       this.setSheetState('closed');
     });
   }
@@ -633,10 +648,24 @@ export class MobileShell {
     this._bindHdriControls();
     this._bindHdriBackgroundControls();
 
-    for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
+    // Filters only — HDRI and Style change on tap, not while scrolling the rail.
+    for (const tab of /** @type {const} */ (['filters'])) {
       const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
       track?.addEventListener('scroll', () => this._onPresetRailScroll(tab), { passive: true });
     }
+
+    this.root.querySelector('[data-action="toggle-debug"]')?.addEventListener('click', (e) => {
+      const menu = this.root.querySelector('.orby-mobile-debug-menu');
+      const toggle = e.currentTarget;
+      if (!(menu instanceof HTMLElement) || !(toggle instanceof HTMLElement)) return;
+      const open = menu.dataset.debugMenu !== 'open';
+      menu.dataset.debugMenu = open ? 'open' : 'closed';
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const items = menu.querySelector('.orby-mobile-debug-menu__items');
+      if (items instanceof HTMLElement) {
+        items.hidden = !open;
+      }
+    });
 
     this.root.querySelector('[data-action="copy-settings"]')?.addEventListener('click', () => {
       void copyMobileDebugSettings(this.scene, this.selection).then((result) => {
@@ -832,6 +861,7 @@ export class MobileShell {
     if (this._bgGradientCenterYValue instanceof HTMLElement) {
       this._bgGradientCenterYValue.textContent = `${Math.round(gradient.centerY)}%`;
     }
+    this._syncHdriSheetState();
   }
 
   _bindHdriControls() {
@@ -905,6 +935,7 @@ export class MobileShell {
     if (tab === 'light') {
       this._syncHdriSelectionFromScene();
       this._syncHdriControlsUi();
+      this._syncHdriPanelUi();
       this._syncHdriBackgroundUi();
       this._syncSelectionUi();
       this.setSheetState('peek');
@@ -949,12 +980,31 @@ export class MobileShell {
 
   /** @param {SheetState} state */
   setSheetState(state) {
+    if (state === 'closed') {
+      this._engagedPresetTabs.clear();
+    }
     this.sheetState = state;
     this.root.dataset.sheet = state;
     this._syncDockTabState();
     const scrim = this.root.querySelector('.orby-mobile-scrim');
     if (scrim instanceof HTMLElement) {
       scrim.hidden = state === 'closed';
+    }
+  }
+
+  /** @param {boolean} open */
+  _setDebugMenuOpen(open) {
+    const menu = this.root.querySelector('.orby-mobile-debug-menu');
+    const toggle = this.root.querySelector('[data-action="toggle-debug"]');
+    const items = menu?.querySelector('.orby-mobile-debug-menu__items');
+    if (menu instanceof HTMLElement) {
+      menu.dataset.debugMenu = open ? 'open' : 'closed';
+    }
+    if (toggle instanceof HTMLElement) {
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    if (items instanceof HTMLElement) {
+      items.hidden = !open;
     }
   }
 
@@ -966,10 +1016,15 @@ export class MobileShell {
     const item = catalog.find((x) => x.id === id);
     if (!item) return;
 
+    if (tab === 'light' || tab === 'style') {
+      this._engagedPresetTabs.add(tab);
+    }
+
     this.selection[tab] = item;
 
     if (tab === 'light') {
       void this.scene.setHdri(item.id);
+      this._syncHdriPanelUi();
     }
     if (tab === 'style') {
       const lookId = item.id === 'standard' ? 'none' : item.id;

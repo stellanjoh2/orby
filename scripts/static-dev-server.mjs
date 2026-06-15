@@ -2,20 +2,23 @@
  * Zero-dependency static server for local dev (replaces python -m http.server).
  * Usage: npm run dev   → http://127.0.0.1:8000/
  *
- * Mobile routes (see repo `mobile/` — landing symlink + app symlink):
- *   /mobile      → marketing landing (mobile/index.html → index.html)
- *   /mobile/app  → 3D viewer (mobile/app → apps/mobile)
+ * Mobile routes:
+ *   /mobile        → minimal gate (apps/mobile/landing)
+ *   /mobile/learn  → full marketing scroll (index.html)
+ *   /mobile/app    → 3D viewer (apps/mobile)
  */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectAllSubpageSiteNav } from './marketing/injectSubpageSiteNav.mjs';
+import { processCreativeLookThumbnail } from './dev/processCreativeLookThumbnail.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const mobileLandingFile = path.join(root, 'mobile', 'index.html');
-const mobileAppRoot = path.join(root, 'mobile', 'app');
+const mobileGateRoot = path.join(root, 'apps', 'mobile', 'landing');
+const mobileGateSymlink = path.join(root, 'mobile', 'index.html');
+const mobileAppRoot = path.join(root, 'apps', 'mobile');
 const port = Number(process.env.PORT || 8000);
 
 const MIME = {
@@ -58,7 +61,22 @@ function safeJoin(base, requestPath) {
 /** @param {string} urlPath */
 function resolveFilePath(urlPath) {
   if (urlPath === '/mobile' || urlPath === '/mobile/') {
-    return mobileLandingFile;
+    if (fs.existsSync(mobileGateRoot)) {
+      return path.join(mobileGateRoot, 'index.html');
+    }
+    if (fs.existsSync(mobileGateSymlink)) {
+      return fs.realpathSync(mobileGateSymlink);
+    }
+    return null;
+  }
+  if (urlPath === '/mobile/learn' || urlPath === '/mobile/learn/') {
+    return path.join(root, 'index.html');
+  }
+  if (urlPath.startsWith('/mobile/scripts/landing.js')) {
+    return path.join(mobileGateRoot, 'main.js');
+  }
+  if (urlPath.startsWith('/mobile/styles/landing.css')) {
+    return path.join(mobileGateRoot, 'landing.css');
   }
   if (urlPath === '/mobile/app' || urlPath === '/mobile/app/') {
     return path.join(mobileAppRoot, 'index.html');
@@ -73,14 +91,102 @@ function resolveFilePath(urlPath) {
   return safeJoin(root, urlPath.replace(/^\//, ''));
 }
 
+const DEV_THUMB_PATH = '/__dev__/creative-look-thumbnail';
+const DEV_THUMB_OUT_DIR = path.join(root, 'assets', 'images');
+
+/** @param {import('node:http').IncomingMessage} req @param {number} [limitBytes] */
+function readRequestBody(req, limitBytes = 24 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limitBytes) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+/** @param {import('node:http').IncomingMessage} req */
+function isLocalDevRequest(req) {
+  const remote = req.socket?.remoteAddress ?? '';
+  return remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+}
+
+/** @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res */
+async function handleCreativeLookThumbnailUpload(req, res) {
+  if (!isLocalDevRequest(req)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Dev thumbnail endpoint is localhost-only.');
+    return;
+  }
+
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+  const preset = url.searchParams.get('preset') ?? '';
+  const size = Number(url.searchParams.get('size') || 192);
+
+  try {
+    const pngBuffer = await readRequestBody(req);
+    if (!pngBuffer.length) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Empty PNG body.');
+      return;
+    }
+
+    const saved = await processCreativeLookThumbnail({
+      pngBuffer,
+      preset,
+      size,
+      outDir: DEV_THUMB_OUT_DIR,
+    });
+
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        filename: saved.filename,
+        bytes: saved.bytes,
+        thumbSize: saved.thumbSize,
+        relativePath: `assets/images/${saved.filename}`,
+      }),
+    );
+  } catch (err) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end(err?.message || 'Thumbnail processing failed.');
+  }
+}
+
 const server = http.createServer(async (req, res) => {
+  const urlPath = req.url?.split('?')[0] ?? '/';
+
+  if (urlPath === DEV_THUMB_PATH && req.method === 'POST') {
+    await handleCreativeLookThumbnailUpload(req, res);
+    return;
+  }
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.writeHead(405, { Allow: 'GET, HEAD' });
+    res.writeHead(405, { Allow: 'GET, HEAD, POST' });
     res.end();
     return;
   }
 
-  const urlPath = req.url.split('?')[0];
+  if (urlPath === '/mobile') {
+    res.writeHead(301, { Location: '/mobile/' });
+    res.end();
+    return;
+  }
+
+  if (urlPath === '/mobile/learn') {
+    res.writeHead(301, { Location: '/mobile/learn/' });
+    res.end();
+    return;
+  }
 
   if (urlPath === '/mobile/app') {
     res.writeHead(301, { Location: '/mobile/app/' });
@@ -149,6 +255,11 @@ server.listen(port, '0.0.0.0', () => {
     console.warn('[Orby] Subpage nav inject skipped:', err?.message || err);
   }
   console.log(`Orby dev server → http://127.0.0.1:${port}/`);
-  console.log(`Orby mobile landing → http://127.0.0.1:${port}/mobile`);
-  console.log(`Orby mobile viewer  → http://127.0.0.1:${port}/mobile/app/  (Ctrl+C to stop)`);
+  console.log(`Orby mobile gate    → http://127.0.0.1:${port}/mobile`);
+  console.log(`Orby mobile learn   → http://127.0.0.1:${port}/mobile/learn`);
+  console.log(`Orby mobile viewer   → http://127.0.0.1:${port}/mobile/app/  (Ctrl+C to stop)`);
+  console.log(
+    'Creative look thumbs → load a mesh, frame the shot, then in the browser console:\n' +
+      '  await orby.dev.bakeCreativeLookThumbnails()',
+  );
 });

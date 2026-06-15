@@ -98,15 +98,33 @@ export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
 /** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
 export const DEFAULT_MATERIAL_BRIGHTNESS = 1.5;
 
+/** Neutral multiplier on import — 1.0 preserves authored glTF metalness/roughness factors. */
+export const IMPORT_MATERIAL_MR_MULTIPLIER = 1;
+
 /** Object → Material slider tooltips (`index.html` defaults match the non-map variants). */
 export const MATERIAL_METALNESS_TOOLTIP =
   'Control metallic appearance (0 = dielectric, 1 = metal)';
 export const MATERIAL_METALNESS_MR_MAP_TOOLTIP =
   'Multiplies the metalness map — 1.0 matches the file; lower or higher scales the texture';
+export const MATERIAL_METALNESS_AUTHORED_TOOLTIP =
+  'Scales each material\'s authored metalness — 1.0 matches the file';
 export const MATERIAL_ROUGHNESS_TOOLTIP =
   'Control surface smoothness (0 = mirror, 1 = rough)';
 export const MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP =
   'Multiplies the roughness map — 1.0 matches the file; lower or higher scales the texture';
+export const MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP =
+  'Scales each material\'s authored roughness — 1.0 matches the file';
+
+/** Material reset / UI fallbacks when a PBR import uses per-material authored factors. */
+export function getMaterialMrResetDefaults(importUsesAuthoredPbr = false) {
+  if (importUsesAuthoredPbr) {
+    return {
+      metalness: IMPORT_MATERIAL_MR_MULTIPLIER,
+      roughness: IMPORT_MATERIAL_MR_MULTIPLIER,
+    };
+  }
+  return { metalness: 0.0, roughness: DEFAULT_MATERIAL_ROUGHNESS };
+}
 
 /** Camera → Shadows UI — symmetric around 0 so the thumb sits centered at default; maps via {@link cameraShadowsUiToShader}. */
 export const CAMERA_SHADOWS_UI_MIN = -50;
@@ -584,6 +602,7 @@ const SHADER_LAB_FLAT_POST_PRESETS = new Set([
   'dither-neutral',
   'dither-tritone',
   'dither-crosshatch',
+  'dither-raster',
 ]);
 
 /** Cam/FX bloom sliders — Shader Lab viewport bloom, or flat-post Cam/FX bloom stack. */

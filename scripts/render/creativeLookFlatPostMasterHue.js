@@ -1,3 +1,23 @@
+/** Shadow lift (+) vs black crush (−) on flat-post / dither output. */
+export const CREATIVE_LOOK_LIFT_CRUSH_GLSL = /* glsl */ `
+uniform float uLiftCrush;
+
+const vec3 CREATIVE_LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 applyCreativeLiftCrush(vec3 color) {
+  if (abs(uLiftCrush) < 0.0001) return color;
+  float l = dot(color, CREATIVE_LUMA);
+  float lift = max(uLiftCrush, 0.0);
+  float crush = max(-uLiftCrush, 0.0);
+  float shadowMask = 1.0 - smoothstep(0.0, 0.78, l);
+  float crushMask = 1.0 - smoothstep(0.03, 0.62, l);
+  color += shadowMask * lift * 0.22;
+  color = max(color - crushMask * crush * 0.24, vec3(0.0));
+  color *= 1.0 - crushMask * crush * 0.57;
+  return clamp(color, 0.0, 4.0);
+}
+`;
+
 /** YIQ hue rotation — shifts flat-post palette crush input and palette entries together. */
 export const FLAT_POST_MASTER_HUE_GLSL = /* glsl */ `
 uniform float uMasterHue;

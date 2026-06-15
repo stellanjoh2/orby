@@ -53,6 +53,8 @@ export class StateStore {
         emissive: 0.0,
         /** True when the loaded mesh has import metalness/roughness maps (sliders multiply textures). */
         importHasMrMaps: false,
+        /** True when import carries per-material PBR factors (sliders scale authored values; 1.0 = file). */
+        importUsesAuthoredPbr: false,
       },
       /** Shown when the loaded source file is `.fbx` — manual texture slot assignment. */
       fbxMapSlots: {

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" class="orby-mobile-gate">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="/mobile/" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#080808" />
+    <meta name="description" content="Browse a GLB to light, style, and export in Orby Mobile." />
+    <title>Orby Mobile</title>
+    <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/landing.css" />
+  </head>
+  <body>
+    <div id="orbyMobileGate" class="orby-mobile-gate" data-state="boot">
+      <section class="orby-mobile-gate__hero" aria-label="Import a model">
+        <div class="orby-mobile-gate__dropzone" id="orbyMobileGateDropzone">
+          <div class="orby-mobile-gate__deco" aria-hidden="true">
+            <picture class="orby-mobile-gate__deco-slot orby-mobile-gate__deco-slot--ur">
+              <img
+                class="orby-mobile-gate__deco-img"
+                src="/assets/marketing/orby-hero-area-topright.jpg"
+                alt=""
+                width="2880"
+                height="2880"
+                decoding="async"
+              />
+            </picture>
+            <picture class="orby-mobile-gate__deco-slot orby-mobile-gate__deco-slot--ll">
+              <img
+                class="orby-mobile-gate__deco-img"
+                src="/assets/marketing/orby-hero-area-bottomleft.jpg"
+                alt=""
+                width="2880"
+                height="2880"
+                decoding="async"
+              />
+            </picture>
+          </div>
+
+          <div class="orby-mobile-gate__frame">
+            <div class="orby-mobile-gate__frame-inner">
+              <div class="orby-mobile-gate__logo" aria-hidden="true">
+                <img
+                  src="/assets/images/orby-logotype.svg"
+                  alt=""
+                  width="1677"
+                  height="694"
+                  decoding="async"
+                />
+              </div>
+
+              <p class="orby-mobile-gate__headline">
+                <span class="orby-mobile-gate__headline-line">Browse your <span class="brand-highlight">GLB</span></span>
+                <span class="orby-mobile-gate__headline-line orby-mobile-gate__headline-line--second"
+                  >to light, style, and export</span
+                >
+              </p>
+
+              <div class="orby-mobile-gate__actions">
+                <span class="orby-magic-btn-host">
+                  <button
+                    id="orbyMobileGateBrowse"
+                    type="button"
+                    class="orby-magic-btn dropzone-btn"
+                  >
+                    <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+                    <span class="orby-magic-btn__inner">
+                      <span class="orby-magic-btn__label">Browse files</span>
+                      <span class="orby-magic-btn__arrow" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path
+                            d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                            stroke="currentColor"
+                            stroke-width="1.75"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="orby-mobile-gate__learn">
+        <p class="orby-mobile-gate__learn-copy">Want to learn more about Orby Mobile?</p>
+        <a class="orby-mobile-gate__learn-link" href="/mobile/learn/">Explore features</a>
+      </footer>
+
+      <div class="orby-mobile-gate-toast" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <input
+      id="orbyMobileGateFileInput"
+      type="file"
+      class="orby-mobile-gate-sr-only"
+      accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+      aria-label="Import GLB or GLTF model"
+      tabindex="-1"
+    />
+
+    <script type="module" src="scripts/landing.js"></script>
+  </body>
+</html>

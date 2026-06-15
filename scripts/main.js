@@ -109,7 +109,55 @@ function ensureGamepad() {
 
 // WebGL studio boots on first model load (see SceneManager.ensureStudioReady).
 
-window.orby = { eventBus, stateStore, ui, scene, tooltips, ensureGamepad, get gamepad() { return gamepad; } };
+window.orby = {
+  eventBus,
+  stateStore,
+  ui,
+  scene,
+  tooltips,
+  ensureGamepad,
+  dev: {},
+  get gamepad() {
+    return gamepad;
+  },
+};
+
+if (!isMobileLanding()) {
+  void import('./dev/bakeCreativeLookThumbnails.js')
+    .then(({ bakeCreativeLookThumbnails }) => {
+      window.orby.dev.bakeCreativeLookThumbnails = bakeCreativeLookThumbnails;
+
+      const bakeBtn = document.getElementById('creativeLookBakeThumbsBtn');
+      if (bakeBtn) {
+        bakeBtn.hidden = false;
+        bakeBtn.addEventListener('click', async () => {
+          if (bakeBtn.disabled) return;
+          bakeBtn.disabled = true;
+          const prevLabel = bakeBtn.textContent;
+          bakeBtn.textContent = 'baking…';
+          try {
+            await bakeCreativeLookThumbnails();
+          } catch (err) {
+            console.error('[Orby dev] Thumbnail bake failed', err);
+            ui?.showToast?.(err?.message || 'Thumbnail bake failed', 3600, {
+              notification: false,
+            });
+          } finally {
+            bakeBtn.disabled = false;
+            bakeBtn.textContent = prevLabel;
+          }
+        });
+      }
+
+      console.info(
+        '[Orby dev] Shader Lab thumbnail bake ready:\n' +
+          '  await orby.dev.bakeCreativeLookThumbnails()',
+      );
+    })
+    .catch((err) => {
+      console.warn('[Orby dev] Thumbnail bake module failed to load', err);
+    });
+}
 
 /** Dev: ?exportOverlayDebug=1 — open PNG export overlay on the dropzone for layout QA */
 try {

@@ -52,7 +52,7 @@
   --orby-mobile-dock-stack: calc(
     var(--orby-mobile-dock-bottom) + var(--orby-mobile-dock-h) + var(--orby-mobile-sheet-dock-gap)
   );
-  --orby-mobile-rail-label-row: 1.125rem; /* 14px label + line-height */
+  --orby-mobile-rail-label-row: 0.875rem; /* 11px label + line-height */
   --orby-mobile-rail-block-h: calc(
     var(--orby-mobile-v-gap) + var(--orby-mobile-preset-thumb) + var(--orby-mobile-v-gap-sm) +
       var(--orby-mobile-rail-label-row) + var(--orby-mobile-v-gap-sm)
@@ -74,8 +74,8 @@
   --orby-mobile-sheet-dock-gap: 1.75rem; /* 28px — shelf labels → dock */
   --orby-mobile-dock-thumb: 37px;
   --orby-mobile-dock-btn-min-w: 72px;
-  --orby-mobile-type-sm: 14px;
-  --orby-mobile-type-size: 16px;
+  --orby-mobile-type-sm: 11px;
+  --orby-mobile-type-size: 15px;
   --orby-mobile-dock-font: var(--orby-mobile-type-sm);
   --orby-mobile-rail-label-size: var(--orby-mobile-type-sm);
   --orby-mobile-top-h: env(safe-area-inset-top, 0px);
@@ -91,8 +91,11 @@
   --orby-mobile-v-gap: 1.125rem; /* 18px — control groups */
   --orby-mobile-v-gap-lg: 1.5rem; /* 24px — section breaks */
   --orby-mobile-rail-to-controls: 1.625rem; /* 26px — preset rail → sliders */
-  --orby-mobile-slider-label-gap: 0.25rem; /* 4px — label + value → track */
+  --orby-mobile-slider-label-gap: 0; /* label + value flush to track */
   --orby-mobile-slider-row-gap: 1.25rem; /* 20px — between slider rows */
+  --orby-mobile-slider-touch-h: 44px; /* min tap target (Apple HIG) */
+  --orby-mobile-slider-thumb: 24px;
+  --orby-mobile-slider-track-h: 2px;
   --orby-mobile-panel-pad-x: 1rem; /* 16px */
   --orby-mobile-toggle-w: 51px;
   --orby-mobile-toggle-h: 31px;
@@ -169,19 +172,57 @@ button {
   z-index: 1;
 }
 
-.orby-mobile-debug-bar {
+.orby-mobile-debug-menu {
   position: absolute;
   z-index: 4;
   top: calc(env(safe-area-inset-top, 0px) + 8px);
-  left: 50%;
+  left: calc(env(safe-area-inset-left, 0px) + 12px);
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: calc(100% - 72px);
-  align-items: center;
-  gap: 8px;
-  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   pointer-events: none;
+}
+
+.orby-mobile-debug-toggle {
+  pointer-events: auto;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--orby-mobile-border);
+  background: var(--ui-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  color: color-mix(in srgb, var(--orby-lime) 88%, white);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--orby-black) 38%, transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.orby-mobile-debug-toggle:active {
+  transform: scale(0.97);
+}
+
+.orby-mobile-debug-toggle[aria-expanded='true'] {
+  color: var(--orby-lime);
+  border-color: color-mix(in srgb, var(--orby-lime) 35%, transparent);
+}
+
+.orby-mobile-debug-menu__items {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 9.5rem;
+  pointer-events: none;
+}
+
+.orby-mobile-debug-menu[data-debug-menu='open'] .orby-mobile-debug-menu__items {
+  pointer-events: auto;
 }
 
 .orby-mobile-export-btn {
@@ -618,17 +659,18 @@ button {
   opacity: 1;
 }
 
-.orby-mobile[data-sheet='peek'][data-active-tab='light'] .orby-mobile-sheet {
-  height: var(--orby-mobile-sheet-peek-settings);
-}
-
-.orby-mobile[data-hdri-backdrop='off'][data-sheet='peek'][data-active-tab='light'] .orby-mobile-sheet {
-  height: var(--orby-mobile-sheet-peek-settings-lg);
-}
-
+.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-sheet,
 .orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet,
 .orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet {
   height: var(--orby-mobile-sheet-peek-rail);
+}
+
+.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='controls'] .orby-mobile-sheet {
+  height: var(--orby-mobile-sheet-peek-settings);
+}
+
+.orby-mobile[data-hdri-backdrop='off'][data-sheet='peek'][data-active-tab='light'][data-hdri-panel='controls'] .orby-mobile-sheet {
+  height: var(--orby-mobile-sheet-peek-settings-lg);
 }
 
 .orby-mobile[data-sheet='expanded'][data-active-tab='style'] {
@@ -655,6 +697,10 @@ button {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
+}
+
+.orby-mobile-hdri-controls:not(.is-visible) {
+  display: none;
 }
 
 .orby-mobile-panel--adjust {
@@ -710,13 +756,6 @@ button {
   padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap);
 }
 
-.orby-mobile-fx-divider {
-  border: 0;
-  height: 1px;
-  margin: var(--orby-mobile-v-gap-lg) 0;
-  background: color-mix(in srgb, white 9%, transparent);
-}
-
 /* Darkroom-style slider rows — label + value on top, track full-width below */
 .orby-mobile-fx-grade {
   display: grid;
@@ -751,21 +790,25 @@ button {
   grid-row: 2;
   width: 100%;
   min-width: 0;
-  height: 28px;
+  height: var(--orby-mobile-slider-touch-h);
+  min-height: var(--orby-mobile-slider-touch-h);
   margin: 0;
+  padding: 0;
   touch-action: pan-x;
+  -webkit-tap-highlight-color: transparent;
   border-radius: 1px;
   position: relative;
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
   outline: none;
+  cursor: pointer;
   transition: opacity 0.2s ease;
 }
 
 .orby-mobile-fx-grade input[type='range']::-webkit-slider-runnable-track {
   width: 100%;
-  height: 2px;
+  height: var(--orby-mobile-slider-track-h);
   border-radius: 1px;
   background: linear-gradient(
     to right,
@@ -793,7 +836,7 @@ button {
 
 .orby-mobile-fx-grade input[type='range']::-moz-range-track {
   width: 100%;
-  height: 2px;
+  height: var(--orby-mobile-slider-track-h);
   border-radius: 1px;
   background: linear-gradient(
     to right,
@@ -823,13 +866,13 @@ button {
 .orby-mobile-fx-grade input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: var(--orby-mobile-slider-thumb);
+  height: var(--orby-mobile-slider-thumb);
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
   box-shadow: none;
-  margin-top: -7px;
+  margin-top: calc((var(--orby-mobile-slider-track-h) - var(--orby-mobile-slider-thumb)) / 2);
   transition:
     transform 0.15s ease,
     width 0.15s ease,
@@ -839,8 +882,8 @@ button {
 }
 
 .orby-mobile-fx-grade input[type='range']::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: var(--orby-mobile-slider-thumb);
+  height: var(--orby-mobile-slider-thumb);
   border-radius: 50%;
   background: var(--accent);
   border: none;
@@ -855,22 +898,22 @@ button {
 }
 
 .orby-mobile-fx-grade input[type='range']:hover::-webkit-slider-thumb {
-  transform: scale(1.083);
+  transform: scale(1.08);
   box-shadow: var(--ui-accent-outer-glow-compact);
 }
 
 .orby-mobile-fx-grade input[type='range']:active::-webkit-slider-thumb {
-  transform: scale(1.333);
+  transform: scale(1.18);
   box-shadow: var(--ui-accent-outer-glow-compact);
 }
 
 .orby-mobile-fx-grade input[type='range']:hover::-moz-range-thumb {
-  transform: scale(1.083);
+  transform: scale(1.08);
   box-shadow: var(--ui-accent-outer-glow-compact);
 }
 
 .orby-mobile-fx-grade input[type='range']:active::-moz-range-thumb {
-  transform: scale(1.333);
+  transform: scale(1.18);
   box-shadow: var(--ui-accent-outer-glow-compact);
 }
 
@@ -1039,7 +1082,6 @@ button {
 .orby-mobile-bg-controls {
   margin-top: var(--orby-mobile-v-gap-sm);
   padding-top: var(--orby-mobile-v-gap-sm);
-  border-top: 1px solid color-mix(in srgb, white 9%, transparent);
 }
 
 .orby-mobile-bg-gradient {

@@ -6806,6 +6806,15 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   opacity: 0.52;
 }
 
+/* Output folder — fixed vertical slot; muted unless .PNG format */
+.export-png-folder {
+  transition: opacity 0.2s ease;
+}
+
+.export-png-folder.is-muted {
+  opacity: 0.52;
+}
+
 .export-path-row {
   display: flex;
   align-items: center;
@@ -6813,10 +6822,17 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 }
 
 .export-path-label {
+  flex: 1;
+  min-width: 0;
   font-size: 0.75rem;
   color: var(--text-dim);
   line-height: 1.35;
   word-break: break-word;
+}
+
+.export-path-choose {
+  flex: 0 0 auto;
+  min-width: 6.5rem;
 }
 
 .help-overlay {
@@ -7419,6 +7435,39 @@ body.ui-hidden .shelf {
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
+}
+
+.creative-look-heading-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.creative-look-bake-thumbs-btn {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--orby-black) 88%, var(--accent) 12%);
+  color: var(--text-dim);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.2;
+  flex-shrink: 0;
+  transition: color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.creative-look-bake-thumbs-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.creative-look-bake-thumbs-btn:disabled {
+  opacity: 0.45;
+  cursor: wait;
 }
 
 .gobo-panel-btn {

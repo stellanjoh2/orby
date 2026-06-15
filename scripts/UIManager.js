@@ -14,8 +14,11 @@ import {
   DEFAULT_MATERIAL_METALNESS,
   MATERIAL_METALNESS_TOOLTIP,
   MATERIAL_METALNESS_MR_MAP_TOOLTIP,
+  MATERIAL_METALNESS_AUTHORED_TOOLTIP,
   MATERIAL_ROUGHNESS_TOOLTIP,
   MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP,
+  MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP,
+  getMaterialMrResetDefaults,
   DEFAULT_BASE_GLASS_BLUR,
   DEFAULT_BASE_GLASS_AMOUNT,
   DEFAULT_BASE_GLASS_BRIGHTNESS,
@@ -645,6 +648,8 @@ export class UIManager {
       colorCheckerRawToggle: q('#colorCheckerRawToggle'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
       exportPngTransparentSettings: q('#exportPngTransparentSettings'),
+      exportPngFolderSettings: q('#exportPngFolderSettings'),
+      exportPngFolderLabel: q('#exportPngFolderLabel'),
       exportMp4Settings: q('#exportMp4Settings'),
       exportZoomDistance: q('#exportZoomDistance'),
       exportZoomDistanceSettings: q('#exportZoomDistanceSettings'),
@@ -674,6 +679,7 @@ export class UIManager {
       exportSvgColor: q('#exportSvgColorButton'),
       exportSvgGlb: q('#exportSvgGlbButton'),
       exportVideo: q('#exportVideoButton'),
+      exportPngFolderChoose: q('#exportPngFolderChoose'),
       exportVideoPreview: q('#exportVideoPreviewButton'),
       exportVideoCameraSave: q('#exportVideoCameraSaveButton'),
       exportVideoCameraRestore: q('#exportVideoCameraRestoreButton'),
@@ -721,6 +727,9 @@ export class UIManager {
         meshAnimationClipIndex: 0,
       },
     };
+
+    /** File System Access handle for PNG sequence folder export (session only). */
+    this.pngExportDirectoryHandle = null;
 
     this.dom.blocks = {};
     this.dom.subsections = {};
@@ -2362,6 +2371,57 @@ export class UIManager {
     }
   }
 
+  static supportsPngFolderExport() {
+    return typeof window !== 'undefined'
+      && typeof window.showDirectoryPicker === 'function';
+  }
+
+  syncExportPngFolderUi() {
+    const wrap = this.inputs.exportPngFolderSettings;
+    const label = this.inputs.exportPngFolderLabel;
+    const chooseBtn = this.buttons.exportPngFolderChoose;
+    const pngFormat = this.exportSettings.video?.format === 'png';
+    const supported = UIManager.supportsPngFolderExport();
+
+    if (wrap) {
+      wrap.hidden = !pngFormat;
+      wrap.classList.toggle('is-muted', !supported);
+    }
+    if (chooseBtn) {
+      chooseBtn.disabled = !pngFormat || !supported;
+      chooseBtn.classList.toggle('is-disabled', !pngFormat || !supported);
+    }
+    if (label) {
+      if (!supported) {
+        label.textContent = 'Needs Chrome or Edge — otherwise downloads as ZIP';
+      } else if (this.pngExportDirectoryHandle?.name) {
+        label.textContent = `${this.pngExportDirectoryHandle.name} — frames write as rendered`;
+      } else {
+        label.textContent = 'No folder — downloads as ZIP (large exports may fail)';
+      }
+    }
+  }
+
+  async pickPngExportDirectory() {
+    if (!UIManager.supportsPngFolderExport()) {
+      this.showToast?.('Folder export needs Chrome or Edge');
+      return null;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      this.pngExportDirectoryHandle = handle;
+      this.syncExportPngFolderUi();
+      this.showToast?.(`Output folder: ${handle.name}`, 2800, { notification: false });
+      return handle;
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('PNG export folder picker failed', error);
+        this.showToast?.('Couldn’t choose folder');
+      }
+      return null;
+    }
+  }
+
   setAnimationSpeedEnabled(enabled) {
     this.animationControls?.setAnimationSpeedEnabled(enabled);
   }
@@ -2386,25 +2446,29 @@ export class UIManager {
     this.animationControls?.syncAnimationTimeReference(checked, available);
   }
 
-  /** Swap Metalness/Roughness tooltips when import MR maps are present (1.0 = pass-through multiplier). */
-  syncMaterialMrMapTooltips(importHasMrMaps = false) {
+  /** Swap Metalness/Roughness tooltips for PBR imports (1.0 = pass-through multiplier). */
+  syncMaterialMrMapTooltips(importUsesAuthoredPbr = false, importHasMrMaps = false) {
     const metalLabel = this.inputs.materialMetalness
       ?.closest('.slider-line')
       ?.querySelector('span[data-tooltip]');
     const roughLabel = this.inputs.materialRoughness
       ?.closest('.slider-line')
       ?.querySelector('span[data-tooltip]');
+    const metalTooltip = importUsesAuthoredPbr
+      ? MATERIAL_METALNESS_AUTHORED_TOOLTIP
+      : importHasMrMaps
+        ? MATERIAL_METALNESS_MR_MAP_TOOLTIP
+        : MATERIAL_METALNESS_TOOLTIP;
+    const roughTooltip = importUsesAuthoredPbr
+      ? MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP
+      : importHasMrMaps
+        ? MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP
+        : MATERIAL_ROUGHNESS_TOOLTIP;
     if (metalLabel) {
-      metalLabel.setAttribute(
-        'data-tooltip',
-        importHasMrMaps ? MATERIAL_METALNESS_MR_MAP_TOOLTIP : MATERIAL_METALNESS_TOOLTIP,
-      );
+      metalLabel.setAttribute('data-tooltip', metalTooltip);
     }
     if (roughLabel) {
-      roughLabel.setAttribute(
-        'data-tooltip',
-        importHasMrMaps ? MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP : MATERIAL_ROUGHNESS_TOOLTIP,
-      );
+      roughLabel.setAttribute('data-tooltip', roughTooltip);
     }
   }
 
@@ -2432,12 +2496,14 @@ export class UIManager {
       this.updateValueLabel('materialBrightness', brightness, 'decimal');
     }
     if (this.inputs.materialMetalness) {
-      const metalness = state.material?.metalness ?? 0.0;
+      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const metalness = state.material?.metalness ?? mrDefaults.metalness;
       this.inputs.materialMetalness.value = metalness;
       this.updateValueLabel('materialMetalness', metalness, 'decimal');
     }
     if (this.inputs.materialRoughness) {
-      const roughness = state.material?.roughness ?? DEFAULT_MATERIAL_ROUGHNESS;
+      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const roughness = state.material?.roughness ?? mrDefaults.roughness;
       this.inputs.materialRoughness.value = roughness;
       this.updateValueLabel('materialRoughness', roughness, 'decimal');
     }
@@ -2446,7 +2512,10 @@ export class UIManager {
       this.inputs.materialEmissive.value = emissive;
       this.updateValueLabel('materialEmissive', emissive, 'decimal');
     }
-    this.syncMaterialMrMapTooltips(!!state.material?.importHasMrMaps);
+    this.syncMaterialMrMapTooltips(
+      !!state.material?.importUsesAuthoredPbr,
+      !!state.material?.importHasMrMaps,
+    );
     this.inputs.clayColor.value = state.clay.color;
     if (this.inputs.clayNormalMap) {
       this.inputs.clayNormalMap.checked = state.clay.normalMap !== false;

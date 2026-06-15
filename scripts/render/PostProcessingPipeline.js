@@ -1059,7 +1059,8 @@ export class PostProcessingPipeline {
       this.creativeLookDitherPass.enabled =
         variant === 'dither-neutral'
         || variant === 'dither-tritone'
-        || variant === 'dither-crosshatch';
+        || variant === 'dither-crosshatch'
+        || variant === 'dither-raster';
     }
     if (this.creativeLookWatercolourPass && !this._creativeLookWatercolourSnapshot) {
       this.creativeLookWatercolourPass.enabled = false;

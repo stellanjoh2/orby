@@ -4,6 +4,7 @@ import {
   Pass,
 } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js';
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
+import { VECTREX_DEFAULT_INTENSITY } from './CreativeLookMaterials.js';
 import {
   VECTREX_PERSISTENCE_DECAY,
 } from './creativeLookVectrexArt.js';
@@ -116,7 +117,7 @@ class CreativeLookVectrexPass extends Pass {
     this._settings = {
       decay: VECTREX_PERSISTENCE_DECAY,
       bloomStrength: 0,
-      intensity: 1,
+      intensity: VECTREX_DEFAULT_INTENSITY,
       time: 0,
     };
 
@@ -147,7 +148,7 @@ class CreativeLookVectrexPass extends Pass {
         tBloom: { value: null },
         decay: { value: VECTREX_PERSISTENCE_DECAY },
         bloomStrength: { value: 0 },
-        intensity: { value: 1 },
+        intensity: { value: VECTREX_DEFAULT_INTENSITY },
         uResolution: { value: new THREE.Vector2(1, 1) },
         uTime: { value: 0 },
       },

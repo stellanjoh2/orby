@@ -286,6 +286,63 @@ export class VideoExporter {
     return true;
   }
 
+  async _ensureDirectoryWritePermission(dirHandle) {
+    if (!dirHandle) return false;
+    const opts = { mode: 'readwrite' };
+    if ((await dirHandle.queryPermission(opts)) === 'granted') return true;
+    if ((await dirHandle.requestPermission(opts)) === 'granted') return true;
+    return false;
+  }
+
+  async _preparePngSequenceOutputFolder({
+    parentHandle,
+    baseName,
+    durationSec,
+    fps,
+    spinSettings,
+    resolution,
+    mode = 'turntable',
+  }) {
+    const folderName = this._sequenceFolderName(
+      baseName,
+      durationSec,
+      fps,
+      spinSettings,
+      resolution,
+      mode,
+    );
+    const sequenceDirHandle = await parentHandle.getDirectoryHandle(folderName, { create: true });
+    return { folderName, sequenceDirHandle };
+  }
+
+  async _writeBlobToDirectory(dirHandle, fileName, blob) {
+    const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  }
+
+  _dataUrlToBlob(dataUrl) {
+    const comma = dataUrl.indexOf(',');
+    if (comma < 0) return new Blob();
+    const header = dataUrl.slice(0, comma);
+    const mimeMatch = header.match(/data:([^;,]+)/i);
+    const mime = mimeMatch?.[1] || 'application/octet-stream';
+    const binary = atob(dataUrl.slice(comma + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mime });
+  }
+
+  _captureCurrentFramePngBlob({ transparent = false } = {}) {
+    const dataUrl = transparent
+      ? this._captureTransparentFramePngDataUrl()
+      : this._renderAndCaptureCurrentFramePng();
+    return this._dataUrlToBlob(dataUrl);
+  }
+
   /**
    * Offline frame render — matches still PNG export (composer pass + viewport repair).
    * @param {{ transparent?: boolean }} [opts]
@@ -911,6 +968,7 @@ export class VideoExporter {
           fps,
           movTransparent: shouldUseTransparentFrames,
           clipCount: meshAnimation.clipCount,
+          pngOutputDirectoryHandle: settings?.pngOutputDirectoryHandle ?? null,
         },
         assetName: baseName,
         animationClipLabel: meshAnimation.include
@@ -1014,13 +1072,38 @@ export class VideoExporter {
 
       this.ui?.showToast?.(`Rendering ${totalFrames} frames…`);
       let transparentSetupSnapshot = null;
+      let sequenceDirHandle = null;
+      let sequenceFolderLabel = null;
+      let useFolderExport = false;
       try {
         if (shouldUseTransparentFrames) {
           transparentSetupSnapshot = this._applyTransparentFrameSetup();
         }
 
+        const outputDirectoryHandle = settings?.pngOutputDirectoryHandle ?? null;
+        if (outputDirectoryHandle) {
+          const permitted = await this._ensureDirectoryWritePermission(outputDirectoryHandle);
+          if (permitted) {
+            const prepared = await this._preparePngSequenceOutputFolder({
+              parentHandle: outputDirectoryHandle,
+              baseName,
+              durationSec,
+              fps,
+              spinSettings,
+              resolution,
+              mode: modeLabel,
+            });
+            sequenceDirHandle = prepared.sequenceDirHandle;
+            sequenceFolderLabel = `${outputDirectoryHandle.name}/${prepared.folderName}`;
+            useFolderExport = true;
+          } else {
+            this.ui?.showToast?.('Folder access denied — exporting as ZIP instead');
+          }
+        }
+
         const bufferedFiles = [];
         let exportCancelled = false;
+        let framesWritten = 0;
         for (let i = 0; i < totalFrames; i += 1) {
           if (this._exportCancelRequested) {
             exportCancelled = true;
@@ -1041,12 +1124,16 @@ export class VideoExporter {
             fps,
             meshAnimation,
           });
-          const dataUrl = shouldUseTransparentFrames
-            ? this._captureTransparentFramePngDataUrl()
-            : this._renderAndCaptureCurrentFramePng();
-          const blob = await (await fetch(dataUrl)).blob();
+          const blob = this._captureCurrentFramePngBlob({
+            transparent: shouldUseTransparentFrames,
+          });
           const fileName = this._frameNameForSequence(baseName, modeLabel, durationSec, i);
-          bufferedFiles.push({ fileName, blob });
+          if (useFolderExport && sequenceDirHandle) {
+            await this._writeBlobToDirectory(sequenceDirHandle, fileName, blob);
+            framesWritten += 1;
+          } else {
+            bufferedFiles.push({ fileName, blob });
+          }
           this.ui?.updateOfflineExportOverlayProgress?.({
             frameIndex: i + 1,
             totalFrames,
@@ -1055,6 +1142,13 @@ export class VideoExporter {
 
         if (exportCancelled) {
           this.ui?.showToast?.('PNG export cancelled', 3200, { notification: false });
+        } else if (useFolderExport && framesWritten > 0) {
+          this.ui?.uiSounds?.playRenderFinished();
+          this.ui?.showToast?.(
+            `PNG sequence saved (${framesWritten} frames) → ${sequenceFolderLabel}`,
+            4200,
+            { notification: false },
+          );
         } else if (bufferedFiles.length > 0) {
           const zipped = await this._downloadSequenceAsZip({
             files: bufferedFiles,

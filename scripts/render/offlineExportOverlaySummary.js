@@ -107,7 +107,12 @@ function buildExportRows(exportJob, assetName, animationClipLabel) {
   const rows = [];
   const asset = displayAssetName(assetName);
   if (asset) addRow(rows, 'Asset', asset);
-  addRow(rows, 'Output', 'PNG sequence (ZIP)');
+  const folderName = exportJob.pngOutputDirectoryHandle?.name;
+  addRow(
+    rows,
+    'Output',
+    folderName ? `PNG sequence → ${folderName}` : 'PNG sequence (ZIP)',
+  );
   addRow(
     rows,
     'Resolution',

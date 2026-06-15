@@ -183,7 +183,7 @@
     </script>
   </head>
   <body>
-    <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-active-tab="light">
+    <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-active-tab="light" data-hdri-panel="presets-only" data-style-panel="presets-only">
       <main class="orby-mobile-viewport" aria-label="3D viewport">
         <div class="orby-mobile-viewport__canvas"></div>
         <button type="button" class="orby-mobile-export-btn" data-action="export" aria-label="Export image">
@@ -197,16 +197,27 @@
             />
           </svg>
         </button>
-        <div class="orby-mobile-debug-bar">
-          <button type="button" class="orby-mobile-debug-btn" data-action="copy-settings">
-            Copy settings
+        <div class="orby-mobile-debug-menu" data-debug-menu="closed">
+          <button
+            type="button"
+            class="orby-mobile-debug-toggle"
+            data-action="toggle-debug"
+            aria-expanded="false"
+            aria-controls="orbyMobileDebugItems"
+          >
+            Debug
           </button>
-          <button type="button" class="orby-mobile-debug-btn" data-action="load-sample">
-            Load sample
-          </button>
-          <button type="button" class="orby-mobile-debug-btn" data-action="copy-errors">
-            Copy errors
-          </button>
+          <div class="orby-mobile-debug-menu__items" id="orbyMobileDebugItems" hidden>
+            <button type="button" class="orby-mobile-debug-btn" data-action="copy-settings">
+              Copy settings
+            </button>
+            <button type="button" class="orby-mobile-debug-btn" data-action="load-sample">
+              Load sample
+            </button>
+            <button type="button" class="orby-mobile-debug-btn" data-action="copy-errors">
+              Copy errors
+            </button>
+          </div>
         </div>
       </main>
 

@@ -1,5 +1,6 @@
 /**
- * Stages a GLB/GLTF on the marketing landing (/mobile) and opens /mobile/app after pick.
+ * Stages a GLB/GLTF on the mobile gate (/mobile) or learn page (/mobile/learn),
+ * then opens /mobile/app after pick.
  * IndexedDB bridges the navigation — files never leave the device.
  */
 import { isOrbySceneFile } from './import/dispatchImportFile.js';
@@ -91,14 +92,18 @@ export async function stageMobileModelHandoff(file) {
 }
 
 /** @returns {Promise<boolean>} */
-export async function hasPendingMobileModelHandoff() {
-  if (hasMobileHandoffPendingFlag()) return true;
+async function hasStagedMobileModelRecord() {
   try {
     const record = await readPendingRecord();
     return Boolean(record?.buffer && record?.name);
   } catch {
     return false;
   }
+}
+
+/** @returns {Promise<boolean>} */
+export async function hasPendingMobileModelHandoff() {
+  return hasStagedMobileModelRecord();
 }
 
 /**
@@ -108,10 +113,10 @@ export async function hasPendingMobileModelHandoff() {
 export async function waitForMobileModelHandoff(maxMs = 4000) {
   const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
-    if (await hasPendingMobileModelHandoff()) return true;
+    if (await hasStagedMobileModelRecord()) return true;
     await new Promise((resolve) => window.setTimeout(resolve, 80));
   }
-  return hasPendingMobileModelHandoff();
+  return hasStagedMobileModelRecord();
 }
 
 /** @returns {Promise<File | null>} */
@@ -182,7 +187,7 @@ function navigateToMobileApp() {
   window.setTimeout(() => {
     try {
       const path = window.location.pathname.replace(/\/$/, '') || '/';
-      if (path === '/mobile' || path === '/' || path.endsWith('/index.html')) {
+      if (path === '/mobile' || path === '/mobile/learn' || path === '/' || path.endsWith('/index.html')) {
         window.location.assign(url);
       }
     } catch {

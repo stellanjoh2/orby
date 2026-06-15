@@ -53,6 +53,7 @@ export const CREATIVE_LOOK_MATERIAL_PBR_SLIDER_PRESETS = /** @type {const} */ ([
   'dither-neutral',
   'dither-tritone',
   'dither-crosshatch',
+  'dither-raster',
   'ega-pixel',
   'c64-pixel',
   'gameboy-pixel',

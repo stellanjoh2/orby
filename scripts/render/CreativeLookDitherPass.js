@@ -8,8 +8,10 @@ import {
   DITHER_NEUTRAL_REF_LOGICAL_HEIGHT,
   DITHER_NEUTRAL_REF_LOGICAL_WIDTH,
   DITHER_CROSSHATCH_POST_FRAGMENT,
+  DITHER_RASTER_POST_FRAGMENT,
   DITHER_TRITONE_POST_FRAGMENT,
   creativeDitherCellSize,
+  creativeDitherRasterCellSize,
 } from './creativeLookDitherArt.js';
 
 const VERTEX_SHADER = /* glsl */ `
@@ -20,13 +22,14 @@ void main() {
 }
 `;
 
-/** @typedef {'dither-neutral' | 'dither-tritone' | 'dither-crosshatch'} DitherCreativeLookVariant */
+/** @typedef {'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster'} DitherCreativeLookVariant */
 
 /** @type {Record<DitherCreativeLookVariant, string>} */
 const DITHER_VARIANT_FRAGMENTS = {
   'dither-neutral': DITHER_NEUTRAL_POST_FRAGMENT,
   'dither-tritone': DITHER_TRITONE_POST_FRAGMENT,
   'dither-crosshatch': DITHER_CROSSHATCH_POST_FRAGMENT,
+  'dither-raster': DITHER_RASTER_POST_FRAGMENT,
 };
 
 /**
@@ -50,6 +53,7 @@ export class CreativeLookDitherPass {
         uBgColor: { value: new THREE.Color(DITHER_NEUTRAL_BG_HEX) },
         uMasterHue: { value: 0 },
         uIntensity: { value: DITHER_NEUTRAL_DEFAULT_INTENSITY },
+        uLiftCrush: { value: 0 },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: DITHER_NEUTRAL_POST_FRAGMENT,
@@ -71,6 +75,7 @@ export class CreativeLookDitherPass {
   _resolveVariant(variant) {
     if (variant === 'dither-tritone') return 'dither-tritone';
     if (variant === 'dither-crosshatch') return 'dither-crosshatch';
+    if (variant === 'dither-raster') return 'dither-raster';
     return 'dither-neutral';
   }
 
@@ -81,10 +86,13 @@ export class CreativeLookDitherPass {
     this._variant = next;
     this.material.fragmentShader = DITHER_VARIANT_FRAGMENTS[next];
     this.material.needsUpdate = true;
+    this._applyCellSize();
   }
 
   _applyCellSize() {
-    const cell = creativeDitherCellSize(this._patternScale);
+    const cell = this._variant === 'dither-raster'
+      ? creativeDitherRasterCellSize(this._patternScale)
+      : creativeDitherCellSize(this._patternScale);
     const res = this.material.uniforms.uResolution.value;
     const ref = this._referenceLogicalSize;
     const refW = Math.max(1, ref.x);
@@ -131,7 +139,7 @@ export class CreativeLookDitherPass {
     this._applyCellSize();
   }
 
-  /** @param {{ enabled?: boolean, variant?: string, masterHue?: number, patternScale?: number, intensity?: number }} settings */
+  /** @param {{ enabled?: boolean, variant?: string, masterHue?: number, patternScale?: number, intensity?: number, liftCrush?: number }} settings */
   updateSettings(settings = {}) {
     if (!settings) return;
     if (typeof settings.variant === 'string') {
@@ -149,6 +157,9 @@ export class CreativeLookDitherPass {
     }
     if (typeof settings.intensity === 'number') {
       this.material.uniforms.uIntensity.value = settings.intensity;
+    }
+    if (typeof settings.liftCrush === 'number') {
+      this.material.uniforms.uLiftCrush.value = settings.liftCrush;
     }
   }
 

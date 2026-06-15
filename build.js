@@ -291,10 +291,40 @@ if (subpageNavUpdated > 0) {
   console.log(`🧭 Injected subpage site nav into ${subpageNavUpdated} HTML files`);
 }
 
-// Orby Mobile viewer at /mobile/app (landing stays at /mobile → index.html)
+// Orby Mobile — minimal gate at /mobile, viewer at /mobile/app, marketing at /mobile/learn
 const mobileSrcDir = join(__dirname, 'apps', 'mobile');
 if (existsSync(mobileSrcDir)) {
-  const mobileDistDir = join(distDir, 'mobile', 'app');
+  const mobileGateDir = join(distDir, 'mobile');
+  const mobileLandingSrc = join(mobileSrcDir, 'landing');
+  mkdirSync(join(mobileGateDir, 'styles'), { recursive: true });
+  mkdirSync(join(mobileGateDir, 'scripts'), { recursive: true });
+
+  if (existsSync(mobileLandingSrc)) {
+    await esbuild.build({
+      entryPoints: [join(mobileLandingSrc, 'main.js')],
+      bundle: true,
+      minify: true,
+      sourcemap: false,
+      format: 'esm',
+      target: ['es2020'],
+      outfile: join(mobileGateDir, 'scripts', 'landing.js'),
+      treeShaking: true,
+      legalComments: 'none',
+      banner: {
+        js: '/* Orby Mobile gate — https://orby.studio/mobile */',
+      },
+    });
+    cpSync(join(mobileLandingSrc, 'index.html'), join(mobileGateDir, 'index.html'));
+    cpSync(join(mobileLandingSrc, 'landing.css'), join(mobileGateDir, 'styles', 'landing.css'));
+    console.log('📱 Orby Mobile gate → dist/mobile/');
+  }
+
+  const mobileLearnDir = join(mobileGateDir, 'learn');
+  mkdirSync(mobileLearnDir, { recursive: true });
+  writeFileSync(join(mobileLearnDir, 'index.html'), updatedHtml);
+  console.log('📱 Orby Mobile learn → dist/mobile/learn/');
+
+  const mobileDistDir = join(mobileGateDir, 'app');
   mkdirSync(join(mobileDistDir, 'styles'), { recursive: true });
   mkdirSync(join(mobileDistDir, 'scripts'), { recursive: true });
   await esbuild.build({
@@ -332,8 +362,7 @@ if (existsSync(mobileSrcDir)) {
   });
   cpSync(join(mobileSrcDir, 'index.html'), join(mobileDistDir, 'index.html'));
   cpSync(join(mobileSrcDir, 'styles', 'mobile.css'), join(mobileDistDir, 'styles', 'mobile.css'));
-  cpSync(join(distDir, 'index.html'), join(distDir, 'mobile', 'index.html'));
-  console.log('📱 Orby Mobile bundle → dist/mobile/app/');
+  console.log('📱 Orby Mobile viewer → dist/mobile/app/');
 }
 
 // Copy CNAME for GitHub Pages
