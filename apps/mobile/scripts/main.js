@@ -6,6 +6,10 @@ import {
   waitForMobileModelHandoff,
 } from '../../../scripts/orbyMobileHandoff.js';
 import { orbyMobileLandingUrl } from '../../../scripts/orbyMobileAppRoute.js';
+import { installMobileDebugLogCapture, markMobileDebugLog } from './mobileDebugLog.js';
+
+installMobileDebugLogCapture();
+markMobileDebugLog('main:module-loaded');
 
 function urlHasHandoffFlag() {
   try {
@@ -44,8 +48,10 @@ async function boot() {
   if (!root) return;
 
   root.dataset.boot = 'pending';
+  markMobileDebugLog('main:boot-start');
 
   const entry = await resolveMobileEntry();
+  markMobileDebugLog('main:entry-resolved', { entry });
   if (entry === 'landing') {
     window.location.replace(orbyMobileLandingUrl());
     return;
@@ -54,8 +60,10 @@ async function boot() {
   root.dataset.boot = 'ready';
   try {
     new MobileShell(root);
+    markMobileDebugLog('main:shell-constructed');
   } catch (err) {
     console.error('[Orby Mobile] Boot failed', err);
+    markMobileDebugLog('main:boot-failed', { message: String(err?.message || err) });
     root.dataset.boot = 'error';
     showBootError(root);
   }
@@ -63,6 +71,7 @@ async function boot() {
 
 void boot().catch((err) => {
   console.error('[Orby Mobile] Unhandled boot error', err);
+  markMobileDebugLog('main:boot-unhandled', { message: String(err?.message || err) });
   const root = document.getElementById('orbyMobile');
   if (root) {
     root.dataset.boot = 'error';

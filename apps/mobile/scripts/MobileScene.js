@@ -20,6 +20,7 @@ import {
 } from './mobilePrepareImport.js';
 import { MobileCreativeLooks } from './MobileCreativeLooks.js';
 import { TransformControls } from '../../../scripts/vendor/TransformControls.js';
+import { markMobileDebugLog } from './mobileDebugLog.js';
 
 const ORBY_BLACK = '#080808';
 /** Match desktop SceneManager transform widget size. */
@@ -55,10 +56,12 @@ export class MobileScene {
       powerPreference: 'high-performance',
     });
     if (!this.renderer.getContext()) {
+      markMobileDebugLog('scene:webgl-unavailable');
       throw new Error('WebGL unavailable');
     }
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
+      markMobileDebugLog('scene:webgl-context-lost');
       this.onError?.('Graphics paused — reload the page');
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -335,6 +338,7 @@ export class MobileScene {
       this.onFxStateChanged?.();
     } catch (err) {
       console.error('[Orby Mobile] HDRI load failed', presetId, err);
+      markMobileDebugLog('scene:hdri-failed', { presetId, message: String(err?.message || err) });
       this.onError?.('HDRI failed to load');
     }
   }

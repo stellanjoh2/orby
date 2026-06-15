@@ -13,6 +13,166 @@
     <title>Orby Mobile</title>
     <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles/mobile.css" />
+    <script>
+      (function () {
+        var MAX = 100;
+        var state = {
+          startedAt: new Date().toISOString(),
+          entries: [],
+          markers: [],
+        };
+
+        function serializeError(err) {
+          if (!err) return '';
+          if (typeof err === 'string') return err;
+          if (err instanceof Error) return err.stack || err.message || String(err);
+          try {
+            return JSON.stringify(err);
+          } catch (e) {
+            return String(err);
+          }
+        }
+
+        function push(level, message, detail) {
+          state.entries.push({
+            t: Date.now(),
+            level: level,
+            message: String(message || ''),
+            detail: detail || null,
+          });
+          if (state.entries.length > MAX) state.entries.shift();
+        }
+
+        function mark(name, data) {
+          state.markers.push({ t: Date.now(), name: name, data: data || null });
+          if (state.markers.length > MAX) state.markers.shift();
+        }
+
+        function formatReport(extra) {
+          var root = document.getElementById('orbyMobile');
+          var lines = [
+            'Orby Mobile debug log',
+            'exported: ' + new Date().toISOString(),
+            'started: ' + state.startedAt,
+            'url: ' + location.href,
+            'ua: ' + navigator.userAgent,
+            'boot: ' + (root && root.dataset ? root.dataset.boot || 'unknown' : 'unknown'),
+            'viewport: ' + window.innerWidth + 'x' + window.innerHeight + ' @' + window.devicePixelRatio,
+          ];
+          if (extra) {
+            Object.keys(extra).forEach(function (key) {
+              lines.push(key + ': ' + extra[key]);
+            });
+          }
+          lines.push('', '--- markers ---');
+          if (!state.markers.length) lines.push('(none)');
+          else {
+            state.markers.forEach(function (m) {
+              lines.push(
+                '[' + new Date(m.t).toISOString() + '] ' + m.name + (m.data ? ' ' + JSON.stringify(m.data) : ''),
+              );
+            });
+          }
+          lines.push('', '--- log ---');
+          if (!state.entries.length) lines.push('(no errors captured)');
+          else {
+            state.entries.forEach(function (e) {
+              var line = '[' + new Date(e.t).toISOString() + '] ' + e.level.toUpperCase() + ': ' + e.message;
+              if (e.detail) line += ' ' + JSON.stringify(e.detail);
+              lines.push(line);
+            });
+          }
+          return lines.join('\n');
+        }
+
+        function copyReport(extra) {
+          var text = formatReport(extra);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).then(
+              function () {
+                return true;
+              },
+              function () {
+                return fallbackCopy(text);
+              },
+            );
+          }
+          return Promise.resolve(fallbackCopy(text));
+        }
+
+        function fallbackCopy(text) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try {
+            ok = document.execCommand('copy');
+          } catch (e) {
+            ok = false;
+          }
+          ta.remove();
+          return ok;
+        }
+
+        function showCopyToast(message) {
+          var toast = document.querySelector('.orby-mobile-toast');
+          if (!toast) return;
+          toast.textContent = message;
+          toast.hidden = false;
+          toast.classList.add('is-visible');
+          window.setTimeout(function () {
+            toast.classList.remove('is-visible');
+            window.setTimeout(function () {
+              toast.hidden = true;
+            }, 220);
+          }, 2000);
+        }
+
+        window.__orbyMobileDebugLog = {
+          push: push,
+          mark: mark,
+          _state: state,
+          formatReport: formatReport,
+          copyReport: copyReport,
+          getExtra: function () {
+            return {};
+          },
+        };
+
+        window.addEventListener(
+          'error',
+          function (e) {
+            push('error', e.message || 'Script error', {
+              file: e.filename || null,
+              line: e.lineno || null,
+              col: e.colno || null,
+            });
+          },
+          true,
+        );
+
+        window.addEventListener('unhandledrejection', function (e) {
+          push('rejection', serializeError(e.reason), null);
+        });
+
+        mark('inline-capture:ready');
+
+        document.addEventListener('DOMContentLoaded', function () {
+          var btn = document.querySelector('[data-action="copy-errors"]');
+          if (!btn) return;
+          btn.addEventListener('click', function () {
+            var extra = window.__orbyMobileDebugLog.getExtra ? window.__orbyMobileDebugLog.getExtra() : {};
+            copyReport(extra).then(function (ok) {
+              showCopyToast(ok ? 'Errors copied' : 'Copy failed');
+            });
+          });
+        });
+      })();
+    </script>
     <script type="importmap">
       {
         "imports": {
@@ -50,6 +210,9 @@
           </button>
           <button type="button" class="orby-mobile-debug-btn" data-action="load-sample">
             Load sample
+          </button>
+          <button type="button" class="orby-mobile-debug-btn" data-action="copy-errors">
+            Copy errors
           </button>
         </div>
       </main>

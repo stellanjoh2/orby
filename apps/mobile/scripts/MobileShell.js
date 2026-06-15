@@ -24,6 +24,7 @@ import {
 import { MobileScene, MOBILE_HDRI_STRENGTH_DEFAULT, MOBILE_HDRI_STRENGTH_MAX } from './MobileScene.js';
 import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff, hasMobileHandoffPendingFlag } from '../../../scripts/orbyMobileHandoff.js';
 import { copyMobileDebugSettings, loadMobileDebugSample } from './mobileDebugExport.js';
+import { buildMobileDebugSceneExtra, markMobileDebugLog } from './mobileDebugLog.js';
 import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
 
 /** Left inset for preset rails — keep in sync with --orby-mobile-preset-rail-inset */
@@ -76,13 +77,20 @@ export class MobileShell {
 
     this._bindChrome();
 
+    markMobileDebugLog('shell:chrome-bound');
+
     try {
       this.scene = new MobileScene(root.querySelector('.orby-mobile-viewport__canvas'));
     } catch (err) {
       console.error('[Orby Mobile] Scene construction failed', err);
+      markMobileDebugLog('shell:scene-construct-failed', { message: String(err?.message || err) });
       this.showToast('3D viewer unavailable');
       return;
     }
+    if (window.__orbyMobileDebugLog) {
+      window.__orbyMobileDebugLog.getExtra = () => buildMobileDebugSceneExtra(this.scene);
+    }
+    markMobileDebugLog('shell:scene-constructed');
     this.scene.onModelLoaded = () => {
       markMobileAppSessionActive();
       if (this.viewportEl) this.viewportEl.dataset.hasModel = 'true';
@@ -126,31 +134,38 @@ export class MobileShell {
 
   async _bootScene() {
     this.viewportEl?.setAttribute('data-loading', 'true');
+    markMobileDebugLog('shell:scene-init-start');
     try {
       await this.scene.init();
+      markMobileDebugLog('shell:scene-init-done');
       const expectsHandoff = hasMobileHandoffPendingFlag() || urlHasHandoffFlag();
       if (expectsHandoff) {
         await waitForMobileModelHandoff(2000);
         const file = await takeMobileModelHandoff();
         if (file) {
           await this.scene.loadFile(file);
+          markMobileDebugLog('shell:model-loaded', { name: file.name, source: 'handoff' });
           this.showToast(`Loaded ${file.name}`);
           return;
         }
+        markMobileDebugLog('shell:handoff-missing');
         this.showToast('Model didn\'t transfer — load a sample or pick again');
       } else {
         const file = await takeMobileModelHandoff();
         if (file) {
           await this.scene.loadFile(file);
+          markMobileDebugLog('shell:model-loaded', { name: file.name, source: 'handoff' });
           this.showToast(`Loaded ${file.name}`);
           return;
         }
       }
       if (!this.scene.currentModel) {
+        markMobileDebugLog('shell:no-model');
         this._showEmptyState(true);
       }
     } catch (err) {
       console.error('[Orby Mobile] Scene init failed', err);
+      markMobileDebugLog('shell:scene-init-failed', { message: String(err?.message || err) });
       this.showToast('Viewer failed to start');
     } finally {
       this.viewportEl?.removeAttribute('data-loading');
