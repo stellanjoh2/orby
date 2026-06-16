@@ -181,7 +181,7 @@ export function resolveSliderDefaultValue(slider, inputKey, defaults) {
 }
 
 /** True when `clientX` is over the slider thumb (not the track). */
-export function isPointerOnSliderThumb(slider, clientX) {
+export function isPointerOnSliderThumb(slider, clientX, tolerancePx = 10) {
   if (!(slider instanceof HTMLInputElement) || slider.type !== 'range') return false;
 
   const rect = slider.getBoundingClientRect();
@@ -201,5 +201,5 @@ export function isPointerOnSliderThumb(slider, clientX) {
     getComputedStyle(slider).direction === 'rtl';
   const thumbCenterX = isRtl ? rect.right - ratio * rect.width : rect.left + ratio * rect.width;
 
-  return Math.abs(clientX - thumbCenterX) <= 10;
+  return Math.abs(clientX - thumbCenterX) <= tolerancePx;
 }

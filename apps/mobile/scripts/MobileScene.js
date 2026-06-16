@@ -20,6 +20,7 @@ import {
 } from './mobilePrepareImport.js';
 import { MobileCreativeLooks } from './MobileCreativeLooks.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
+import { validateOrbyMobileModelFile } from '../../../scripts/orbyMobileModelLimits.js';
 
 const ORBY_BLACK = '#080808';
 /** Match desktop shelf slider: 0–3, default `hdriStrength` 2 (StateStore). */
@@ -75,6 +76,13 @@ export class MobileScene {
     this.controls.dampingFactor = 0.08;
     this.controls.minDistance = 0.05;
     this.controls.maxDistance = 500;
+    this.controls.addEventListener('start', () => {
+      if (!this.currentModel) return;
+      this.onOrbitChromeChange?.(true);
+    });
+    this.controls.addEventListener('end', () => {
+      this.onOrbitChromeChange?.(false);
+    });
 
     this.gltfLoader = new GLTFLoader();
     if (this.gltfLoader.setMeshoptDecoder) {
@@ -153,7 +161,10 @@ export class MobileScene {
     this.onError = null;
     /** @type {(() => void) | null} */
     this.onFxStateChanged = null;
+    /** @type {(() => void) | null} */
     this.onCreativeLookStateChanged = null;
+    /** @type {((hidden: boolean) => void) | null} */
+    this.onOrbitChromeChange = null;
 
     this._compareHeld = false;
   }
@@ -386,10 +397,11 @@ export class MobileScene {
   /** @param {File} file */
   async loadFile(file) {
     if (!file) return;
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    if (ext !== 'glb' && ext !== 'gltf') {
-      this.onError?.('Mobile supports GLB / GLTF only');
-      return;
+
+    const check = validateOrbyMobileModelFile(file);
+    if (!check.ok) {
+      this.onError?.(check.message);
+      throw new Error(check.message);
     }
 
     try {
@@ -400,7 +412,11 @@ export class MobileScene {
       this.onModelLoaded?.();
     } catch (err) {
       console.error('[Orby Mobile] Model load failed', err);
-      this.onError?.('Could not load model');
+      const message = err instanceof Error && err.message.includes('too large')
+        ? err.message
+        : 'Could not load model — file may be too large for this device';
+      this.onError?.(message);
+      throw err;
     }
   }
 

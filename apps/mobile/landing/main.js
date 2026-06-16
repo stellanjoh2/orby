@@ -3,6 +3,7 @@ import {
   stageMobileModelHandoff,
   clearMobileHandoffPending,
 } from '../../../scripts/orbyMobileHandoff.js';
+import { validateOrbyMobileModelFile } from '../../../scripts/orbyMobileModelLimits.js';
 import { orbyMobileAppUrl } from '../../../scripts/orbyMobileAppRoute.js';
 
 /** @param {File} file */
@@ -56,6 +57,12 @@ async function handleFile(file) {
     return;
   }
 
+  const check = validateOrbyMobileModelFile(file);
+  if (!check.ok) {
+    showToast(check.message);
+    return;
+  }
+
   const root = document.getElementById('orbyMobileGate');
   if (root) root.dataset.state = 'loading';
 
@@ -66,7 +73,7 @@ async function handleFile(file) {
     console.error('[Orby Mobile] Gate handoff failed', err);
     clearMobileHandoffPending();
     if (root) root.dataset.state = 'ready';
-    showToast('Could not open Orby Mobile — try again');
+    showToast(err instanceof Error ? err.message : 'Could not open Orby Mobile — try again');
   }
 }
 

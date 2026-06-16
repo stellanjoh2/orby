@@ -25,6 +25,7 @@ import {
 } from './mobileStyleControls.js';
 import { MobileScene, MOBILE_HDRI_STRENGTH_DEFAULT, MOBILE_HDRI_STRENGTH_MAX } from './MobileScene.js';
 import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff, hasMobileHandoffPendingFlag } from '../../../scripts/orbyMobileHandoff.js';
+import { readOrbyMobileHandoffWaitMs, validateOrbyMobileModelFile } from '../../../scripts/orbyMobileModelLimits.js';
 import { copyMobileDebugSettings, loadMobileDebugSample } from './mobileDebugExport.js';
 import { buildMobileDebugSceneExtra, markMobileDebugLog } from './mobileDebugLog.js';
 import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
@@ -124,6 +125,7 @@ export class MobileShell {
     this.scene.onError = (message) => this.showToast(message);
     this.scene.onFxStateChanged = () => this._syncFxControlsUi();
     this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
+    this.scene.onOrbitChromeChange = (hidden) => this._setOrbitChromeHidden(hidden);
     void this._bootScene();
 
     this._hdriBrightnessInput = root.querySelector('[data-hdri-brightness-input]');
@@ -168,15 +170,16 @@ export class MobileShell {
       markMobileDebugLog('shell:scene-init-done');
       const expectsHandoff = hasMobileHandoffPendingFlag() || urlHasHandoffFlag();
       if (expectsHandoff) {
-        await waitForMobileModelHandoff(4000);
+        const handoffWaitMs = readOrbyMobileHandoffWaitMs();
+        await waitForMobileModelHandoff(handoffWaitMs);
         const file = await takeMobileModelHandoff();
         if (file) {
           await this.scene.loadFile(file);
-          markMobileDebugLog('shell:model-loaded', { name: file.name, source: 'handoff' });
+          markMobileDebugLog('shell:model-loaded', { name: file.name, size: file.size, source: 'handoff' });
           this.showToast(`Loaded ${file.name}`);
           return;
         }
-        markMobileDebugLog('shell:handoff-missing');
+        markMobileDebugLog('shell:handoff-missing', { waitMs: handoffWaitMs });
         this.showToast('Model didn\'t transfer — load a sample or pick again');
       } else {
         const file = await takeMobileModelHandoff();
@@ -863,10 +866,22 @@ export class MobileShell {
     this.fileInput?.addEventListener('change', () => {
       const file = this.fileInput?.files?.[0];
       if (!file) return;
+
+      const check = validateOrbyMobileModelFile(file);
+      if (!check.ok) {
+        this.showToast(check.message);
+        if (this.fileInput) this.fileInput.value = '';
+        return;
+      }
+
       this.viewportEl?.setAttribute('data-loading', 'true');
       void this.scene.loadFile(file).then(() => {
         this.showToast(`Loaded ${file.name}`);
         mobileHaptic('success');
+      }).catch((err) => {
+        console.error('[Orby Mobile] Model load failed', err);
+        markMobileDebugLog('shell:model-load-failed', { name: file.name, size: file.size, message: String(err?.message || err) });
+        this.showToast(err instanceof Error ? err.message : 'Could not load model');
       }).finally(() => {
         this.viewportEl?.removeAttribute('data-loading');
       });
@@ -1184,6 +1199,15 @@ export class MobileShell {
       mobileHaptic('light');
     } else if (wasOpen && state === 'closed') {
       mobileHaptic('soft');
+    }
+  }
+
+  /** @param {boolean} hidden */
+  _setOrbitChromeHidden(hidden) {
+    if (hidden) {
+      this.root.dataset.orbitChrome = 'hidden';
+    } else {
+      delete this.root.dataset.orbitChrome;
     }
   }
 

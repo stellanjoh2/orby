@@ -6,6 +6,15 @@
 import { isOrbySceneFile } from './import/dispatchImportFile.js';
 import { isMobileLanding, isMobileDevice } from './orbyMobileLanding.js';
 import { goToOrbyMobile, isOrbyMobileLandingRoute, orbyMobileAppUrl } from './orbyMobileAppRoute.js';
+import {
+  clearOrbyMobileHandoffSize,
+  formatOrbyMobileModelSize,
+  isOrbyMobileModelWithinLimit,
+  orbyMobileModelTooLargeMessage,
+  readOrbyMobileHandoffWaitMs,
+  rememberOrbyMobileHandoffSize,
+  validateOrbyMobileModelFile,
+} from './orbyMobileModelLimits.js';
 
 const DB_NAME = 'orby-mobile-handoff';
 const DB_VERSION = 1;
@@ -31,6 +40,13 @@ function openDb() {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'));
   });
+}
+
+/** @param {object | null} record */
+function recordHasModelBlob(record) {
+  if (!record?.name) return false;
+  if (record.blob instanceof Blob) return true;
+  return Boolean(record.buffer);
 }
 
 /** @returns {Promise<object | null>} */
@@ -60,6 +76,7 @@ export function clearMobileHandoffPending() {
   } catch {
     /* sessionStorage blocked */
   }
+  clearOrbyMobileHandoffSize();
 }
 
 export function hasMobileHandoffPendingFlag() {
@@ -75,12 +92,19 @@ export function hasMobileHandoffPendingFlag() {
  * @returns {Promise<void>}
  */
 export async function stageMobileModelHandoff(file) {
+  const check = validateOrbyMobileModelFile(file);
+  if (!check.ok) {
+    throw new Error(check.message);
+  }
+
   markMobileHandoffPending();
-  const buffer = await file.arrayBuffer();
+  rememberOrbyMobileHandoffSize(file.size);
+
   const record = {
     name: file.name,
     type: file.type || 'model/gltf-binary',
-    buffer,
+    blob: file,
+    size: file.size,
     stagedAt: Date.now(),
   };
   const db = await openDb();
@@ -97,7 +121,7 @@ export async function stageMobileModelHandoff(file) {
 async function hasStagedMobileModelRecord() {
   try {
     const record = await readPendingRecord();
-    return Boolean(record?.buffer && record?.name);
+    return recordHasModelBlob(record);
   } catch {
     return false;
   }
@@ -112,7 +136,7 @@ export async function hasPendingMobileModelHandoff() {
  * Poll until the landing page finishes staging (navigation often beats IDB on mobile Safari).
  * @param {number} [maxMs]
  */
-export async function waitForMobileModelHandoff(maxMs = 4000) {
+export async function waitForMobileModelHandoff(maxMs = readOrbyMobileHandoffWaitMs()) {
   const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
     if (await hasStagedMobileModelRecord()) return true;
@@ -124,7 +148,7 @@ export async function waitForMobileModelHandoff(maxMs = 4000) {
 /** @returns {Promise<File | null>} */
 export async function takeMobileModelHandoff() {
   const record = await readPendingRecord();
-  if (!record?.buffer || !record.name) {
+  if (!recordHasModelBlob(record)) {
     clearMobileHandoffPending();
     return null;
   }
@@ -139,10 +163,11 @@ export async function takeMobileModelHandoff() {
   db.close();
   clearMobileHandoffPending();
 
-  const blob = new Blob([record.buffer], {
-    type: record.type || 'model/gltf-binary',
-  });
-  return new File([blob], record.name, { type: blob.type });
+  const type = record.type || 'model/gltf-binary';
+  const blob = record.blob instanceof Blob
+    ? record.blob
+    : new Blob([record.buffer], { type });
+  return new File([blob], record.name, { type: blob.type || type });
 }
 
 export function markMobileAppSessionActive() {
@@ -231,6 +256,11 @@ export async function handoffFileToMobileAppIfLanding(file) {
     return true;
   }
 
+  if (!isOrbyMobileModelWithinLimit(file.size)) {
+    showLandingToast(orbyMobileModelTooLargeMessage(file.size));
+    return true;
+  }
+
   try {
     await stageMobileModelHandoff(file);
     navigateToMobileApp();
@@ -238,7 +268,10 @@ export async function handoffFileToMobileAppIfLanding(file) {
   } catch (err) {
     console.error('[Orby] Mobile handoff failed', err);
     clearMobileHandoffPending();
-    showLandingToast('Could not open Orby Mobile — try again');
+    const message = err instanceof Error && err.message.includes('too large')
+      ? err.message
+      : `Could not open Orby Mobile — ${formatOrbyMobileModelSize(file.size)} may be too heavy for this device`;
+    showLandingToast(message);
     return true;
   }
 }
