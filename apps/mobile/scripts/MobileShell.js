@@ -131,6 +131,7 @@ export class MobileShell {
     this.scene.onFxStateChanged = () => this._syncFxControlsUi();
     this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
     this.scene.onOrbitChromeChange = (hidden) => this._setOrbitChromeHidden(hidden);
+    this.scene.onOrbitInteractionStart = () => this._cancelViewportCompareHold();
     void this._bootScene();
 
     this._hdriBrightnessInput = root.querySelector('[data-hdri-brightness-input]');
@@ -186,21 +187,13 @@ export class MobileShell {
         await waitForMobileModelHandoff(handoffWaitMs);
         const file = await takeMobileModelHandoff();
         if (file) {
-          await this.scene.loadFile(file);
-          markMobileDebugLog('shell:model-loaded', { name: file.name, size: file.size, source: 'handoff' });
-          this.showToast(`Loaded ${file.name}`);
-          return;
+          if (await this._loadHandoffFile(file, 'handoff')) return;
         }
         markMobileDebugLog('shell:handoff-missing', { waitMs: handoffWaitMs });
         this.showToast('Model didn\'t transfer — load a sample or pick again');
       } else {
         const file = await takeMobileModelHandoff();
-        if (file) {
-          await this.scene.loadFile(file);
-          markMobileDebugLog('shell:model-loaded', { name: file.name, source: 'handoff' });
-          this.showToast(`Loaded ${file.name}`);
-          return;
-        }
+        if (file && (await this._loadHandoffFile(file, 'handoff'))) return;
       }
       if (!this.scene.currentModel) {
         markMobileDebugLog('shell:no-model');
@@ -212,6 +205,31 @@ export class MobileShell {
       this.showToast('Viewer failed to start');
     } finally {
       this.viewportEl?.removeAttribute('data-loading');
+    }
+  }
+
+  /**
+   * @param {File} file
+   * @param {string} source
+   * @returns {Promise<boolean>} true when the model loaded
+   */
+  async _loadHandoffFile(file, source) {
+    try {
+      await this.scene.loadFile(file);
+      markMobileDebugLog('shell:model-loaded', { name: file.name, size: file.size, source });
+      this.showToast(`Loaded ${file.name}`);
+      return true;
+    } catch (err) {
+      console.error('[Orby Mobile] Model load failed', err);
+      markMobileDebugLog('shell:model-load-failed', {
+        name: file.name,
+        size: file.size,
+        source,
+        message: String(err?.message || err),
+      });
+      this.showToast('Could not load model — pick again or try a sample');
+      this._showEmptyState(true);
+      return false;
     }
   }
 
@@ -714,6 +732,17 @@ export class MobileShell {
     });
   }
 
+  _cancelViewportCompareHold() {
+    clearTimeout(this._compareHoldTimer);
+    this._compareHoldTimer = null;
+    this._comparePointer = null;
+    if (this._compareActive && this.scene) {
+      this.scene.setCompareHeld(false);
+      this.viewportEl?.removeAttribute('data-compare');
+    }
+    this._compareActive = false;
+  }
+
   _bindViewportInteractions() {
     if (!this.viewportEl) return;
 
@@ -846,6 +875,9 @@ export class MobileShell {
     });
 
     this.root.querySelector('[data-action="export"]')?.addEventListener('click', () => {
+      this._sliderFocus?.release();
+      this._rangeTouch?.release();
+      this._closeColorPicker();
       if (this._exportBtn instanceof HTMLElement) {
         this._exportBtn.dataset.busy = 'true';
         this._exportBtn.setAttribute('aria-busy', 'true');
@@ -1256,9 +1288,6 @@ export class MobileShell {
 
   /** @param {SheetState} state */
   setSheetState(state) {
-    if (state === 'closed') {
-      this._engagedPresetTabs.clear();
-    }
     const stateChanged = this.sheetState !== state;
     if (stateChanged) {
       this._sliderFocus?.release();
@@ -1333,7 +1362,9 @@ export class MobileShell {
     }
     if (tab === 'style') {
       const lookId = item.id === 'standard' ? 'none' : item.id;
-      this.scene.setCreativeLook(lookId);
+      if (changed) {
+        this.scene.setCreativeLook(lookId);
+      }
       this._syncStyleControlsUi();
     }
     if (tab === 'filters') {

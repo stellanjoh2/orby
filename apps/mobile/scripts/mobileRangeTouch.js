@@ -1,4 +1,10 @@
+import { isPointerOnSliderThumb } from '../../../scripts/ui/sliderDefaultPaths.js';
 import { mobileHaptic } from './mobileHaptics.js';
+
+/** Brief thumb hold — filters scroll brush-pasts without feeling laggy. */
+const SLIDER_ARM_HOLD_MS = 80;
+const SCROLL_CANCEL_MOVE_PX = 10;
+const THUMB_HIT_TOLERANCE_PX = 22;
 
 /** @param {HTMLInputElement} input */
 function parseSliderBounds(input) {
@@ -46,6 +52,7 @@ function scrollContainerFor(input) {
 /**
  * iOS Safari often fails to drag custom-styled `<input type="range">` inside
  * overflow scrollers. Drive values from touch/pointer events instead of native range drag.
+ * Touch: thumb-only + ~80ms hold so scrolling past the track does not retune values.
  * @param {{ root: HTMLElement }} opts
  */
 export function bindMobileRangeTouch({ root }) {
@@ -59,6 +66,21 @@ export function bindMobileRangeTouch({ root }) {
   let lockedOverflow = null;
   /** Set when touchstart already opened a drag — skip duplicate pointerdown on iOS. */
   let touchHandled = false;
+  /** @type {{
+   *   input: HTMLInputElement,
+   *   id: number,
+   *   startX: number,
+   *   startY: number,
+   *   lastX: number,
+   *   timer: ReturnType<typeof setTimeout>,
+   * } | null} */
+  let pending = null;
+
+  const cancelPending = () => {
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pending = null;
+  };
 
   const releaseChrome = () => {
     root.querySelectorAll('.is-slider-focus').forEach((row) => {
@@ -102,16 +124,15 @@ export function bindMobileRangeTouch({ root }) {
     if (target.closest('.effect-toggle, button, .orby-mobile-preset, .orby-mobile-color-swatch')) {
       return null;
     }
-
     if (target instanceof HTMLInputElement && target.type === 'range' && !target.disabled) {
       return target;
     }
-
-    const row = target.closest('.orby-mobile-fx-grade');
-    if (!(row instanceof HTMLElement)) return null;
-    const input = row.querySelector('input[type="range"]');
-    return input instanceof HTMLInputElement && !input.disabled ? input : null;
+    return null;
   };
+
+  /** @param {HTMLInputElement} input @param {number} clientX */
+  const isThumbHit = (input, clientX) =>
+    isPointerOnSliderThumb(input, clientX, THUMB_HIT_TOLERANCE_PX);
 
   /**
    * @param {HTMLInputElement} input
@@ -120,6 +141,7 @@ export function bindMobileRangeTouch({ root }) {
    */
   const startDrag = (input, id, clientX) => {
     if (dragInput) return;
+    cancelPending();
     dragInput = input;
     dragId = id;
     engageChrome(input);
@@ -135,6 +157,7 @@ export function bindMobileRangeTouch({ root }) {
   };
 
   const endDrag = () => {
+    cancelPending();
     if (!dragInput) return;
     const input = dragInput;
     dragInput = null;
@@ -144,24 +167,64 @@ export function bindMobileRangeTouch({ root }) {
     releaseChrome();
   };
 
+  /**
+   * @param {HTMLInputElement} input
+   * @param {number} id
+   * @param {number} clientX
+   * @param {number} clientY
+   */
+  const armDrag = (input, id, clientX, clientY) => {
+    if (dragInput || !isThumbHit(input, clientX)) return false;
+    cancelPending();
+    pending = {
+      input,
+      id,
+      startX: clientX,
+      startY: clientY,
+      lastX: clientX,
+      timer: setTimeout(() => {
+        if (!pending || pending.id !== id) return;
+        const snap = pending;
+        pending = null;
+        startDrag(snap.input, snap.id, snap.lastX);
+      }, SLIDER_ARM_HOLD_MS),
+    };
+    return true;
+  };
+
+  /** @param {number} id @param {number} clientX @param {number} clientY */
+  const trackPendingMove = (id, clientX, clientY) => {
+    if (!pending || pending.id !== id) return;
+    pending.lastX = clientX;
+    const dx = clientX - pending.startX;
+    const dy = clientY - pending.startY;
+    if (Math.abs(dy) > SCROLL_CANCEL_MOVE_PX && Math.abs(dy) > Math.abs(dx)) {
+      cancelPending();
+    }
+  };
+
   /** @param {TouchEvent} e */
   const onTouchStart = (e) => {
-    if (dragInput || e.touches.length !== 1) return;
+    if (dragInput || pending || e.touches.length !== 1) return;
 
     const touch = e.touches[0];
     const input =
       resolveRangeInput(e.target)
       ?? resolveRangeInput(document.elementFromPoint(touch.clientX, touch.clientY));
-    if (!input) return;
+    if (!input || !armDrag(input, touch.identifier, touch.clientX, touch.clientY)) return;
 
-    e.preventDefault();
-    e.stopPropagation();
     touchHandled = true;
-    startDrag(input, touch.identifier, touch.clientX);
   };
 
   /** @param {TouchEvent} e */
   const onTouchMove = (e) => {
+    if (pending) {
+      const touch = [...e.touches].find((t) => t.identifier === pending?.id);
+      if (touch) {
+        trackPendingMove(touch.identifier, touch.clientX, touch.clientY);
+      }
+    }
+
     if (dragId == null || !dragInput) return;
 
     const touch = [...e.touches].find((t) => t.identifier === dragId);
@@ -173,9 +236,11 @@ export function bindMobileRangeTouch({ root }) {
 
   /** @param {TouchEvent} e */
   const onTouchEnd = (e) => {
-    if (dragId == null) return;
     for (const touch of e.changedTouches) {
-      if (touch.identifier !== dragId) continue;
+      if (pending?.id === touch.identifier) {
+        cancelPending();
+      }
+      if (dragId == null || touch.identifier !== dragId) continue;
       endDrag();
       return;
     }
@@ -183,7 +248,7 @@ export function bindMobileRangeTouch({ root }) {
 
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
-    if (e.pointerType === 'mouse' || dragInput) return;
+    if (e.pointerType === 'mouse' || dragInput || pending) return;
 
     if (touchHandled) {
       touchHandled = false;
@@ -191,22 +256,17 @@ export function bindMobileRangeTouch({ root }) {
     }
 
     const input = resolveRangeInput(e.target);
-    if (!input) return;
+    if (!input || !armDrag(input, e.pointerId, e.clientX, e.clientY)) return;
 
-    e.preventDefault();
     e.stopPropagation();
-
-    startDrag(input, e.pointerId, e.clientX);
-
-    try {
-      input.setPointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
   };
 
   /** @param {PointerEvent} e */
   const onPointerMove = (e) => {
+    if (pending && e.pointerId === pending.id) {
+      trackPendingMove(e.pointerId, e.clientX, e.clientY);
+    }
+
     if (dragId == null || e.pointerId !== dragId || !dragInput) return;
     e.preventDefault();
     applyValue(dragInput, e.clientX);
@@ -214,6 +274,9 @@ export function bindMobileRangeTouch({ root }) {
 
   /** @param {PointerEvent} e */
   const onPointerEnd = (e) => {
+    if (pending?.id === e.pointerId) {
+      cancelPending();
+    }
     if (dragId == null || e.pointerId !== dragId) return;
 
     if (dragInput) {
@@ -227,12 +290,12 @@ export function bindMobileRangeTouch({ root }) {
     endDrag();
   };
 
-  root.addEventListener('touchstart', onTouchStart, { capture: true, passive: false });
+  root.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
   document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
   document.addEventListener('touchend', onTouchEnd, { capture: true });
   document.addEventListener('touchcancel', onTouchEnd, { capture: true });
 
-  root.addEventListener('pointerdown', onPointerDown, { capture: true, passive: false });
+  root.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true });
   document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
   document.addEventListener('pointerup', onPointerEnd, { capture: true });
   document.addEventListener('pointercancel', onPointerEnd, { capture: true });
@@ -240,11 +303,12 @@ export function bindMobileRangeTouch({ root }) {
   return {
     release: () => {
       touchHandled = false;
+      cancelPending();
       dragInput = null;
       dragId = null;
       unlockScroll();
       releaseChrome();
     },
-    isActive: () => dragInput != null || root.dataset.sliderFocus != null,
+    isActive: () => dragInput != null || pending != null || root.dataset.sliderFocus != null,
   };
-}
+};

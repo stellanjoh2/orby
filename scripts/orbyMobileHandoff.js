@@ -100,10 +100,13 @@ export async function stageMobileModelHandoff(file) {
   markMobileHandoffPending();
   rememberOrbyMobileHandoffSize(file.size);
 
+  // iOS Safari invalidates File/Blob handles after navigation — persist bytes in IDB.
+  const buffer = await file.arrayBuffer();
+
   const record = {
     name: file.name,
     type: file.type || 'model/gltf-binary',
-    blob: file,
+    buffer,
     size: file.size,
     stagedAt: Date.now(),
   };
@@ -164,9 +167,18 @@ export async function takeMobileModelHandoff() {
   clearMobileHandoffPending();
 
   const type = record.type || 'model/gltf-binary';
-  const blob = record.blob instanceof Blob
-    ? record.blob
-    : new Blob([record.buffer], { type });
+  let buffer = record.buffer;
+  if (!buffer && record.blob instanceof Blob) {
+    try {
+      buffer = await record.blob.arrayBuffer();
+    } catch {
+      // Stale File handle from older staging (pre-buffer handoff).
+      return null;
+    }
+  }
+  if (!buffer) return null;
+
+  const blob = new Blob([buffer], { type });
   return new File([blob], record.name, { type: blob.type || type });
 }
 

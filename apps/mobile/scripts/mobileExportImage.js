@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { getComposerOutputRenderTarget } from '../../../scripts/render/composerOutputBuffer.js';
-import { encodeCanvasToBlob } from '../../../scripts/render/encodeImageBlob.js';
 import { fullViewportLogicalSize } from '../../../scripts/render/fullViewportLogicalSize.js';
 import { resetMobileRendererViewport } from './mobileComposerFrame.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
@@ -10,10 +9,11 @@ import { markMobileDebugLog } from './mobileDebugLog.js';
  * Desktop uses 2×; mobile stays at 1× to avoid tab kills during readback/encode.
  */
 const EXPORT_SCALE = 1;
-/** Hard cap — iOS Safari often kills tabs above ~2048² with post FX RTs in flight. */
-const MAX_EXPORT_PX = 2048;
-/** ~3.5 MP RGBA readback ceiling before we scale down further. */
-const MAX_EXPORT_PIXELS = 3_500_000;
+/** Hard cap — iOS Safari often kills tabs above ~1536² with post FX RTs in flight. */
+const MAX_EXPORT_PX = 1536;
+/** ~2 MP RGBA readback ceiling before we scale down further. */
+const MAX_EXPORT_PIXELS = 2_000_000;
+const MOBILE_JPEG_QUALITY = 0.82;
 const MOBILE_EXPORT_TRACE_KEY = 'orby_mobile_last_export';
 
 /** @param {string} phase @param {Record<string, unknown>} [data] */
@@ -209,6 +209,63 @@ function resolveExportSize(logicalW, logicalH, previewDensity) {
   return { width: w, height: h };
 }
 
+/** @returns {Promise<void>} */
+function waitFrames(count = 2) {
+  let left = count;
+  return new Promise((resolve) => {
+    const step = () => {
+      left -= 1;
+      if (left <= 0) resolve();
+      else requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} [quality]
+ * @returns {Promise<Blob>}
+ */
+function encodeMobileJpeg(canvas, quality = MOBILE_JPEG_QUALITY) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('JPEG encode failed'));
+      },
+      'image/jpeg',
+      quality,
+    );
+  });
+}
+
+/**
+ * @param {import('./MobileScene.js').MobileScene} mobileScene
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {THREE.Vector2} origSize
+ * @param {number} origPixelRatio
+ * @param {number} origAspect
+ * @param {import('./MobilePost.js').MobilePost} post
+ */
+async function restoreMobilePreviewFrame(mobileScene, renderer, origSize, origPixelRatio, origAspect, post) {
+  renderer.setPixelRatio(origPixelRatio);
+  renderer.setSize(origSize.x, origSize.y, false);
+  syncRendererInternalSizeToCanvasBackingStore(renderer);
+  mobileScene.camera.aspect = origAspect;
+  mobileScene.camera.updateProjectionMatrix();
+  post.setSize(origSize.x, origSize.y);
+  post.composerLifecycle?.ensureComposerBuffersMatchRenderer?.();
+  resetMobileRendererViewport(renderer);
+  await waitFrames(1);
+  mobileScene.controls.update();
+  mobileScene.creativeLooks.tick(0);
+  post.tick(0);
+  const animTime =
+    mobileScene.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
+  post.render(animTime);
+}
+
 /**
  * @param {import('./MobileScene.js').MobileScene} mobileScene
  * @returns {Promise<'shared' | 'downloaded' | 'no-model' | 'failed'>}
@@ -239,8 +296,7 @@ export async function exportMobileSceneJpeg(mobileScene) {
     pixelRatio: origPixelRatio,
   });
 
-  // Let the preview loop skip a frame before we resize GL buffers.
-  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await waitFrames(2);
 
   try {
     const { width: captureW, height: captureH } = setExportFramebufferSize(
@@ -288,9 +344,12 @@ export async function exportMobileSceneJpeg(mobileScene) {
     traceMobileExport('readback-done', { pixelW, pixelH });
     const canvas = pixelsToCanvas(pixels, pixelW, pixelH);
     pixels = null;
-    const blob = await encodeCanvasToBlob(canvas, 'jpeg');
+    let blob = await encodeMobileJpeg(canvas);
     if (!blob?.size) {
       throw new Error('JPEG encode produced empty blob');
+    }
+    if (blob.size > 8 * 1024 * 1024) {
+      blob = await encodeMobileJpeg(canvas, 0.68);
     }
     traceMobileExport('encoded', { bytes: blob.size });
     const baseName =
@@ -306,14 +365,19 @@ export async function exportMobileSceneJpeg(mobileScene) {
     traceMobileExport('failed', { message: String(err?.message || err) });
     return 'failed';
   } finally {
-    renderer.setPixelRatio(origPixelRatio);
-    renderer.setSize(origSize.x, origSize.y, false);
-    syncRendererInternalSizeToCanvasBackingStore(renderer);
-    camera.aspect = origAspect;
-    camera.updateProjectionMatrix();
-    post.setSize(origSize.x, origSize.y);
-    post.composerLifecycle?.ensureComposerBuffersMatchRenderer?.();
-    resetMobileRendererViewport(renderer);
+    try {
+      await restoreMobilePreviewFrame(
+        mobileScene,
+        renderer,
+        origSize,
+        origPixelRatio,
+        origAspect,
+        post,
+      );
+    } catch (restoreErr) {
+      console.error('[Orby Mobile] Export restore failed', restoreErr);
+      traceMobileExport('restore-failed', { message: String(restoreErr?.message || restoreErr) });
+    }
     mobileScene._exportInProgress = false;
   }
 }

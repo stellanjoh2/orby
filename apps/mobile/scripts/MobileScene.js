@@ -78,6 +78,7 @@ export class MobileScene {
     this.controls.maxDistance = 500;
     this.controls.addEventListener('start', () => {
       if (!this.currentModel) return;
+      this.onOrbitInteractionStart?.();
       this.onOrbitChromeChange?.(true);
     });
     this.controls.addEventListener('end', () => {
@@ -166,8 +167,12 @@ export class MobileScene {
     this.onCreativeLookStateChanged = null;
     /** @type {((hidden: boolean) => void) | null} */
     this.onOrbitChromeChange = null;
+    /** @type {(() => void) | null} */
+    this.onOrbitInteractionStart = null;
 
     this._compareHeld = false;
+    /** @type {ReturnType<MobileCreativeLooks['getCreativeLookSettings']> | null} */
+    this._compareCreativeSnapshot = null;
   }
 
   async init() {
@@ -496,15 +501,15 @@ export class MobileScene {
     if (this._compareHeld === held) return;
     this._compareHeld = held;
     if (held) {
-      this.creativeLooks.setCreativeLook('none');
+      this._compareCreativeSnapshot = this.creativeLooks.getCreativeLookSettings();
+      this.creativeLooks.setCreativeLookSettings({ enabled: false });
       this.post.setCompareHeld(true);
       return;
     }
     this.post.setCompareHeld(false);
-    if (this._creativeLookPreset) {
-      this.creativeLooks.setCreativeLook(this._creativeLookPreset);
-    } else {
-      this.creativeLooks.setCreativeLook('none');
+    if (this._compareCreativeSnapshot) {
+      this.creativeLooks.setCreativeLookSettings(this._compareCreativeSnapshot);
+      this._compareCreativeSnapshot = null;
     }
     this.post.syncCreativeLook(this._creativeLookPreset);
   }

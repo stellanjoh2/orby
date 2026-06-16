@@ -168,10 +168,7 @@ export class MobileCreativeLooks {
    */
   setCreativeLook(presetId) {
     if (presetId === 'none' || presetId === 'standard') {
-      this.materialController.setCreativeLookSettings({
-        enabled: false,
-        preset: 'neon-edge',
-      });
+      this.materialController.setCreativeLookSettings({ enabled: false });
       this.onCreativeLookStateChanged?.();
       this.onCreativeLookSync?.();
       this.onEnvironmentResync?.();
