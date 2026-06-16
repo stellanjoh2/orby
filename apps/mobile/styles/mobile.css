@@ -949,7 +949,7 @@ button {
   min-height: var(--orby-mobile-slider-touch-h);
   margin: calc(-1 * var(--orby-mobile-slider-label-pull)) 0 calc(-1 * var(--orby-mobile-slider-touch-bleed));
   padding: 0;
-  touch-action: none;
+  touch-action: pan-x;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   border-radius: 1px;
@@ -1029,7 +1029,7 @@ button {
   cursor: pointer;
   box-shadow: none;
   pointer-events: auto;
-  touch-action: none;
+  touch-action: pan-x;
   margin-top: calc((var(--orby-mobile-slider-track-h) - var(--orby-mobile-slider-thumb)) / 2);
   transition:
     transform 0.15s ease,
@@ -1048,7 +1048,7 @@ button {
   cursor: pointer;
   box-shadow: none;
   pointer-events: auto;
-  touch-action: none;
+  touch-action: pan-x;
   transition:
     transform 0.15s ease,
     width 0.15s ease,
@@ -1157,17 +1157,24 @@ button {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  touch-action: none !important;
+  touch-action: pan-x !important;
 }
 
 @media (hover: none) {
   .orby-mobile-fx-grade input[type='range'] {
-    touch-action: none;
+    touch-action: pan-x;
   }
 
   .orby-mobile-fx-grade.is-slider-focus,
   .orby-mobile-fx-grade.is-slider-focus input[type='range'] {
-    touch-action: none;
+    touch-action: pan-x;
+  }
+
+  /* Never block sibling sliders if focus release misses on iOS */
+  .orby-mobile[data-slider-focus] .orby-mobile-fx-grade:not(.is-slider-focus) input[type='range'] {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 0.45;
   }
 }
 
