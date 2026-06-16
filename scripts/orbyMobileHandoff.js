@@ -27,6 +27,10 @@ export const ORBY_MOBILE_SESSION_PERSIST_KEY = 'orby_mobile_active_persist';
 /** Set before IDB write so /mobile/app can wait for the staged file (iOS navigation race). */
 export const ORBY_MOBILE_HANDOFF_PENDING_KEY = 'orby_mobile_handoff_pending';
 
+/**
+ * @typedef {{ name: string, type: string, buffer: ArrayBuffer, size: number }} MobileModelHandoff
+ */
+
 /** @returns {Promise<IDBDatabase>} */
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -42,24 +46,126 @@ function openDb() {
   });
 }
 
-/** @param {object | null} record */
-function recordHasModelBlob(record) {
-  if (!record?.name) return false;
-  if (record.blob instanceof Blob) return true;
-  return Boolean(record.buffer);
+/** @param {object} record */
+async function writePendingRecord(record) {
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(record, RECORD_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB write failed'));
+  });
+  db.close();
+}
+
+async function clearPendingRecord() {
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(RECORD_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB delete failed'));
+  });
+  db.close();
 }
 
 /** @returns {Promise<object | null>} */
 async function readPendingRecord() {
-  const db = await openDb();
-  const record = await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(RECORD_KEY);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB read failed'));
-  });
-  db.close();
-  return record;
+  try {
+    const db = await openDb();
+    const record = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(RECORD_KEY);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => reject(req.error ?? new Error('IndexedDB read failed'));
+    });
+    db.close();
+    return record;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Copy model bytes out of an IDB record. Never returns live Blob/File handles — iOS
+ * invalidates those after navigation ("The object can not be found here.").
+ * @param {object | null | undefined} record
+ * @returns {MobileModelHandoff | null}
+ */
+function extractHandoffFromRecord(record) {
+  if (!record?.name) return null;
+
+  const type = record.type || 'model/gltf-binary';
+  const size = Number.isFinite(record.size) ? record.size : 0;
+
+  try {
+    if (record.bytes instanceof Uint8Array && record.bytes.byteLength > 0) {
+      const copy = record.bytes.slice();
+      return {
+        name: record.name,
+        type,
+        buffer: copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength),
+        size: size || copy.byteLength,
+      };
+    }
+
+    if (record.buffer instanceof ArrayBuffer && record.buffer.byteLength > 0) {
+      return {
+        name: record.name,
+        type,
+        buffer: record.buffer.slice(0),
+        size: size || record.buffer.byteLength,
+      };
+    }
+
+    if (ArrayBuffer.isView(record.buffer) && record.buffer.byteLength > 0) {
+      const view = /** @type {ArrayBufferView} */ (record.buffer);
+      const copy = new Uint8Array(view.byteLength);
+      copy.set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+      return {
+        name: record.name,
+        type,
+        buffer: copy.buffer,
+        size: size || copy.byteLength,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/** @param {object | null | undefined} record */
+function recordHasModelBytes(record) {
+  if (extractHandoffFromRecord(record)) return true;
+  if (!record?.name) return false;
+  // Legacy blob/File rows — present in IDB but must be re-read asynchronously.
+  return record.blob instanceof Blob;
+}
+
+/**
+ * @param {object | null | undefined} record
+ * @returns {Promise<MobileModelHandoff | null>}
+ */
+async function extractHandoffFromRecordAsync(record) {
+  const direct = extractHandoffFromRecord(record);
+  if (direct) return direct;
+
+  if (!record?.name || !(record.blob instanceof Blob)) return null;
+
+  try {
+    const bytes = new Uint8Array(await record.blob.arrayBuffer());
+    if (!bytes.byteLength) return null;
+    return {
+      name: record.name,
+      type: record.type || 'model/gltf-binary',
+      buffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      size: Number.isFinite(record.size) ? record.size : bytes.byteLength,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function markMobileHandoffPending() {
@@ -100,31 +206,30 @@ export async function stageMobileModelHandoff(file) {
   markMobileHandoffPending();
   rememberOrbyMobileHandoffSize(file.size);
 
-  // iOS Safari invalidates File/Blob handles after navigation — persist bytes in IDB.
-  const buffer = await file.arrayBuffer();
-
+  // Uint8Array survives IDB + navigation on iOS; File/Blob handles do not.
+  const bytes = new Uint8Array(await file.arrayBuffer());
   const record = {
     name: file.name,
     type: file.type || 'model/gltf-binary',
-    buffer,
+    bytes,
     size: file.size,
     stagedAt: Date.now(),
   };
-  const db = await openDb();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(record, RECORD_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB write failed'));
-  });
-  db.close();
+  await writePendingRecord(record);
+
+  const verify = extractHandoffFromRecord(await readPendingRecord());
+  if (!verify?.buffer?.byteLength) {
+    await clearPendingRecord();
+    clearMobileHandoffPending();
+    throw new Error('Handoff staging failed on this device — try again');
+  }
 }
 
 /** @returns {Promise<boolean>} */
 async function hasStagedMobileModelRecord() {
   try {
     const record = await readPendingRecord();
-    return recordHasModelBlob(record);
+    return recordHasModelBytes(record);
   } catch {
     return false;
   }
@@ -148,38 +253,35 @@ export async function waitForMobileModelHandoff(maxMs = readOrbyMobileHandoffWai
   return hasStagedMobileModelRecord();
 }
 
-/** @returns {Promise<File | null>} */
+/** @returns {Promise<MobileModelHandoff | null>} */
 export async function takeMobileModelHandoff() {
-  const record = await readPendingRecord();
-  if (!recordHasModelBlob(record)) {
+  try {
+    const record = await readPendingRecord();
+    if (!recordHasModelBytes(record)) {
+      clearMobileHandoffPending();
+      return null;
+    }
+
+    const handoff = await extractHandoffFromRecordAsync(record);
+    if (!handoff?.buffer?.byteLength) {
+      await clearPendingRecord();
+      clearMobileHandoffPending();
+      return null;
+    }
+
+    await clearPendingRecord();
+    clearMobileHandoffPending();
+    return handoff;
+  } catch (err) {
+    console.error('[Orby Mobile] Handoff read failed', err);
+    try {
+      await clearPendingRecord();
+    } catch {
+      /* ignore */
+    }
     clearMobileHandoffPending();
     return null;
   }
-
-  const db = await openDb();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(RECORD_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB delete failed'));
-  });
-  db.close();
-  clearMobileHandoffPending();
-
-  const type = record.type || 'model/gltf-binary';
-  let buffer = record.buffer;
-  if (!buffer && record.blob instanceof Blob) {
-    try {
-      buffer = await record.blob.arrayBuffer();
-    } catch {
-      // Stale File handle from older staging (pre-buffer handoff).
-      return null;
-    }
-  }
-  if (!buffer) return null;
-
-  const blob = new Blob([buffer], { type });
-  return new File([blob], record.name, { type: blob.type || type });
 }
 
 export function markMobileAppSessionActive() {

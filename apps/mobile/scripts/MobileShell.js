@@ -185,15 +185,15 @@ export class MobileShell {
       if (expectsHandoff) {
         const handoffWaitMs = readOrbyMobileHandoffWaitMs();
         await waitForMobileModelHandoff(handoffWaitMs);
-        const file = await takeMobileModelHandoff();
-        if (file) {
-          if (await this._loadHandoffFile(file, 'handoff')) return;
+        const handoff = await takeMobileModelHandoff();
+        if (handoff) {
+          if (await this._loadHandoffPayload(handoff, 'handoff')) return;
         }
         markMobileDebugLog('shell:handoff-missing', { waitMs: handoffWaitMs });
         this.showToast('Model didn\'t transfer — load a sample or pick again');
       } else {
-        const file = await takeMobileModelHandoff();
-        if (file && (await this._loadHandoffFile(file, 'handoff'))) return;
+        const handoff = await takeMobileModelHandoff();
+        if (handoff && (await this._loadHandoffPayload(handoff, 'handoff'))) return;
       }
       if (!this.scene.currentModel) {
         markMobileDebugLog('shell:no-model');
@@ -209,21 +209,25 @@ export class MobileShell {
   }
 
   /**
-   * @param {File} file
+   * @param {{ name: string, buffer: ArrayBuffer, size: number }} payload
    * @param {string} source
    * @returns {Promise<boolean>} true when the model loaded
    */
-  async _loadHandoffFile(file, source) {
+  async _loadHandoffPayload(payload, source) {
     try {
-      await this.scene.loadFile(file);
-      markMobileDebugLog('shell:model-loaded', { name: file.name, size: file.size, source });
-      this.showToast(`Loaded ${file.name}`);
+      await this.scene.loadModelBuffer(payload.name, payload.buffer, payload.size);
+      markMobileDebugLog('shell:model-loaded', {
+        name: payload.name,
+        size: payload.size,
+        source,
+      });
+      this.showToast(`Loaded ${payload.name}`);
       return true;
     } catch (err) {
       console.error('[Orby Mobile] Model load failed', err);
       markMobileDebugLog('shell:model-load-failed', {
-        name: file.name,
-        size: file.size,
+        name: payload.name,
+        size: payload.size,
         source,
         message: String(err?.message || err),
       });

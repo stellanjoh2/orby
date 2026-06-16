@@ -20,7 +20,7 @@ import {
 } from './mobilePrepareImport.js';
 import { MobileCreativeLooks } from './MobileCreativeLooks.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
-import { validateOrbyMobileModelFile } from '../../../scripts/orbyMobileModelLimits.js';
+import { validateOrbyMobileModelFile, isOrbyMobileModelWithinLimit, orbyMobileModelTooLargeMessage } from '../../../scripts/orbyMobileModelLimits.js';
 
 const ORBY_BLACK = '#080808';
 /** Match desktop shelf slider: 0–3, default `hdriStrength` 2 (StateStore). */
@@ -406,20 +406,26 @@ export class MobileScene {
     this.renderer.compile(this.scene, this.camera);
   }
 
-  /** @param {File} file */
-  async loadFile(file) {
-    if (!file) return;
-
-    const check = validateOrbyMobileModelFile(file);
-    if (!check.ok) {
-      this.onError?.(check.message);
-      throw new Error(check.message);
+  /** @param {ArrayBuffer} buffer @param {string} name @param {number} [byteLength] */
+  async loadModelBuffer(name, buffer, byteLength = buffer?.byteLength ?? 0) {
+    if (!buffer?.byteLength) {
+      throw new Error('Empty model data');
+    }
+    const ext = name.split('.').pop()?.toLowerCase() ?? '';
+    if (ext !== 'glb' && ext !== 'gltf') {
+      const message = 'Mobile supports GLB / GLTF only';
+      this.onError?.(message);
+      throw new Error(message);
+    }
+    if (!isOrbyMobileModelWithinLimit(byteLength || buffer.byteLength)) {
+      const message = orbyMobileModelTooLargeMessage(byteLength || buffer.byteLength);
+      this.onError?.(message);
+      throw new Error(message);
     }
 
     try {
-      const buffer = await file.arrayBuffer();
       const gltf = await this._parseGlb(buffer);
-      this._currentFileName = file.name;
+      this._currentFileName = name;
       this._setModel(gltf.scene);
       this.onModelLoaded?.();
     } catch (err) {
@@ -430,6 +436,20 @@ export class MobileScene {
       this.onError?.(message);
       throw err;
     }
+  }
+
+  /** @param {File} file */
+  async loadFile(file) {
+    if (!file) return;
+
+    const check = validateOrbyMobileModelFile(file);
+    if (!check.ok) {
+      this.onError?.(check.message);
+      throw new Error(check.message);
+    }
+
+    const buffer = await file.arrayBuffer();
+    await this.loadModelBuffer(file.name, buffer, file.size);
   }
 
   /** @param {ArrayBuffer} buffer */
