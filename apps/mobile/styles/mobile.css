@@ -1161,6 +1161,10 @@ button {
 }
 
 @media (hover: none) and (pointer: coarse) {
+  .orby-mobile-fx-grade.slider-line {
+    touch-action: none;
+  }
+
   .orby-mobile-fx-grade input[type='range'] {
     touch-action: none;
   }
@@ -1168,13 +1172,6 @@ button {
   .orby-mobile-fx-grade.is-slider-focus,
   .orby-mobile-fx-grade.is-slider-focus input[type='range'] {
     touch-action: none !important;
-  }
-
-  /* Never block sibling sliders if focus release misses on iOS */
-  .orby-mobile[data-slider-focus] .orby-mobile-fx-grade:not(.is-slider-focus) input[type='range'] {
-    visibility: visible;
-    pointer-events: auto;
-    opacity: 0.45;
   }
 }
 

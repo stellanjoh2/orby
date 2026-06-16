@@ -1,7 +1,5 @@
 import { mobileHaptic } from './mobileHaptics.js';
 
-const coarseTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)');
-
 /** @param {HTMLInputElement} input */
 function parseSliderBounds(input) {
   const min = parseFloat(input.min);
@@ -38,23 +36,42 @@ function formatSliderValue(value, step) {
   return String(Math.round(value));
 }
 
+/** @param {HTMLInputElement} input */
+function scrollContainerFor(input) {
+  return input.closest(
+    '.orby-mobile-fx-controls, .orby-mobile-panel[data-panel="light"], .orby-mobile-panel--style',
+  );
+}
+
 /**
  * iOS Safari often fails to drag custom-styled `<input type="range">` inside
- * overflow scrollers — native behavior works in desktop preview (mouse) but not
- * on real touch. Drive value updates from pointer events instead.
+ * overflow scrollers. Drive values from touch/pointer events instead of native range drag.
  * @param {{ root: HTMLElement }} opts
  */
 export function bindMobileRangeTouch({ root }) {
   /** @type {HTMLInputElement | null} */
   let dragInput = null;
   /** @type {number | null} */
-  let dragPointerId = null;
+  let dragId = null;
+  /** @type {HTMLElement | null} */
+  let lockedScroller = null;
+  /** @type {string | null} */
+  let lockedOverflow = null;
+  /** Set when touchstart already opened a drag — skip duplicate pointerdown on iOS. */
+  let touchHandled = false;
 
   const releaseChrome = () => {
     root.querySelectorAll('.is-slider-focus').forEach((row) => {
       row.classList.remove('is-slider-focus');
     });
     delete root.dataset.sliderFocus;
+  };
+
+  const unlockScroll = () => {
+    if (!(lockedScroller instanceof HTMLElement)) return;
+    lockedScroller.style.overflow = lockedOverflow ?? '';
+    lockedScroller = null;
+    lockedOverflow = null;
   };
 
   /** @param {HTMLInputElement} input */
@@ -96,10 +113,82 @@ export function bindMobileRangeTouch({ root }) {
     return input instanceof HTMLInputElement && !input.disabled ? input : null;
   };
 
+  /**
+   * @param {HTMLInputElement} input
+   * @param {number} id
+   * @param {number} clientX
+   */
+  const startDrag = (input, id, clientX) => {
+    if (dragInput) return;
+    dragInput = input;
+    dragId = id;
+    engageChrome(input);
+
+    const scroller = scrollContainerFor(input);
+    if (scroller instanceof HTMLElement) {
+      lockedScroller = scroller;
+      lockedOverflow = scroller.style.overflow || '';
+      scroller.style.overflow = 'hidden';
+    }
+
+    applyValue(input, clientX);
+  };
+
+  const endDrag = () => {
+    if (!dragInput) return;
+    const input = dragInput;
+    dragInput = null;
+    dragId = null;
+    unlockScroll();
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    releaseChrome();
+  };
+
+  /** @param {TouchEvent} e */
+  const onTouchStart = (e) => {
+    if (dragInput || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const input =
+      resolveRangeInput(e.target)
+      ?? resolveRangeInput(document.elementFromPoint(touch.clientX, touch.clientY));
+    if (!input) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    touchHandled = true;
+    startDrag(input, touch.identifier, touch.clientX);
+  };
+
+  /** @param {TouchEvent} e */
+  const onTouchMove = (e) => {
+    if (dragId == null || !dragInput) return;
+
+    const touch = [...e.touches].find((t) => t.identifier === dragId);
+    if (!touch) return;
+
+    e.preventDefault();
+    applyValue(dragInput, touch.clientX);
+  };
+
+  /** @param {TouchEvent} e */
+  const onTouchEnd = (e) => {
+    if (dragId == null) return;
+    for (const touch of e.changedTouches) {
+      if (touch.identifier !== dragId) continue;
+      endDrag();
+      return;
+    }
+  };
+
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
-    if (!coarseTouchDevice.matches) return;
-    if (e.pointerType === 'mouse') return;
+    if (e.pointerType === 'mouse' || dragInput) return;
+
+    if (touchHandled) {
+      touchHandled = false;
+      return;
+    }
 
     const input = resolveRangeInput(e.target);
     if (!input) return;
@@ -107,45 +196,55 @@ export function bindMobileRangeTouch({ root }) {
     e.preventDefault();
     e.stopPropagation();
 
-    dragInput = input;
-    dragPointerId = e.pointerId;
-    engageChrome(input);
-    input.setPointerCapture(e.pointerId);
-    applyValue(input, e.clientX);
+    startDrag(input, e.pointerId, e.clientX);
+
+    try {
+      input.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
   };
 
   /** @param {PointerEvent} e */
   const onPointerMove = (e) => {
-    if (dragPointerId == null || e.pointerId !== dragPointerId || !dragInput) return;
+    if (dragId == null || e.pointerId !== dragId || !dragInput) return;
     e.preventDefault();
     applyValue(dragInput, e.clientX);
   };
 
   /** @param {PointerEvent} e */
   const onPointerEnd = (e) => {
-    if (dragPointerId == null || e.pointerId !== dragPointerId || !dragInput) return;
+    if (dragId == null || e.pointerId !== dragId) return;
 
-    const input = dragInput;
-    dragInput = null;
-    dragPointerId = null;
-
-    try {
-      input.releasePointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
+    if (dragInput) {
+      try {
+        dragInput.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
     }
 
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    releaseChrome();
+    endDrag();
   };
 
+  root.addEventListener('touchstart', onTouchStart, { capture: true, passive: false });
+  document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+  document.addEventListener('touchend', onTouchEnd, { capture: true });
+  document.addEventListener('touchcancel', onTouchEnd, { capture: true });
+
   root.addEventListener('pointerdown', onPointerDown, { capture: true, passive: false });
-  root.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
-  root.addEventListener('pointerup', onPointerEnd, { capture: true });
-  root.addEventListener('pointercancel', onPointerEnd, { capture: true });
+  document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
+  document.addEventListener('pointerup', onPointerEnd, { capture: true });
+  document.addEventListener('pointercancel', onPointerEnd, { capture: true });
 
   return {
-    release: releaseChrome,
+    release: () => {
+      touchHandled = false;
+      dragInput = null;
+      dragId = null;
+      unlockScroll();
+      releaseChrome();
+    },
     isActive: () => dragInput != null || root.dataset.sliderFocus != null,
   };
 }
