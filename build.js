@@ -18,6 +18,17 @@ function formatVersionBanner(versionLine) {
   return `v${v} · ${utcDate} ${utcTime}`;
 }
 
+function injectMobileAssetCacheBust(html, version) {
+  const v = encodeURIComponent(version.trim());
+  return html
+    .replace(
+      '<meta name="orby-mobile-asset-base"',
+      `<meta name="orby-mobile-build" content="${version.trim()}" />\n    <meta name="orby-mobile-asset-base"`,
+    )
+    .replace('href="styles/mobile.css"', `href="styles/mobile.css?v=${v}"`)
+    .replace('src="scripts/main.js"', `src="scripts/main.js?v=${v}"`);
+}
+
 function injectVersionIntoHtml(html) {
   const versionPath = join(__dirname, 'VERSION');
   if (!existsSync(versionPath)) return html;
@@ -362,6 +373,15 @@ if (existsSync(mobileSrcDir)) {
   });
   cpSync(join(mobileSrcDir, 'index.html'), join(mobileDistDir, 'index.html'));
   cpSync(join(mobileSrcDir, 'styles', 'mobile.css'), join(mobileDistDir, 'styles', 'mobile.css'));
+  const mobileVersionPath = join(__dirname, 'VERSION');
+  if (existsSync(mobileVersionPath)) {
+    const mobileVersion = readFileSync(mobileVersionPath, 'utf-8').trim();
+    const mobileIndexRaw = readFileSync(join(mobileDistDir, 'index.html'), 'utf-8');
+    writeFileSync(
+      join(mobileDistDir, 'index.html'),
+      injectMobileAssetCacheBust(mobileIndexRaw, mobileVersion),
+    );
+  }
   console.log('📱 Orby Mobile viewer → dist/mobile/app/');
 }
 

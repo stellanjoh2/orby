@@ -5,12 +5,27 @@ const SLIDER_FOCUS_HOLD_MS = 380;
 const SLIDER_FOCUS_CANCEL_MOVE_PX = 12;
 const SLIDER_FOCUS_DRAG_ENGAGE_PX = 6;
 const MOBILE_THUMB_HIT_PX = 14;
+const TOUCH_THUMB_HIT_PX = 18;
 
 const finePointerMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
 
 /** Mouse / trackpad while reviewing the mobile app in a desktop browser — not the full Orby desktop UI. */
 const isFinePointer = (pointerType) =>
   pointerType === 'mouse' || finePointerMedia.matches;
+
+/**
+ * @param {HTMLInputElement} input
+ * @param {PointerEvent} e
+ */
+function shouldStartSliderFocusPending(input, e) {
+  const tolerance = e.pointerType === 'touch' || e.pointerType === 'pen'
+    ? TOUCH_THUMB_HIT_PX
+    : MOBILE_THUMB_HIT_PX;
+  if (isPointerOnSliderThumb(input, e.clientX, tolerance)) return true;
+  // Direct touch on the range control (not the label) is thumb intent, not scroll.
+  if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.target === input) return true;
+  return false;
+}
 
 /**
  * While dragging a range slider thumb, fade chrome and keep the active control in place.
@@ -35,6 +50,13 @@ export function bindMobileSliderFocus({ root }) {
    *   timer: ReturnType<typeof setTimeout>,
    * } | null} */
   let pending = null;
+  /** @type {{
+   *   input: HTMLInputElement,
+   *   row: HTMLElement,
+   *   pointerId: number,
+   *   pointerType: string,
+   * } | null} */
+  let touchSession = null;
 
   const cancelPending = () => {
     if (!pending) return;
@@ -44,6 +66,7 @@ export function bindMobileSliderFocus({ root }) {
 
   const release = () => {
     cancelPending();
+    touchSession = null;
     if (!activeRow) return;
     activeRow.classList.remove('is-slider-focus');
     activeRow = null;
@@ -78,8 +101,6 @@ export function bindMobileSliderFocus({ root }) {
    * @param {PointerEvent} e
    */
   const startPending = (input, row, e) => {
-    if (!isPointerOnSliderThumb(input, e.clientX, MOBILE_THUMB_HIT_PX)) return;
-
     cancelPending();
     pending = {
       input,
@@ -97,6 +118,17 @@ export function bindMobileSliderFocus({ root }) {
     };
   };
 
+  /**
+   * @param {HTMLInputElement} input
+   * @param {HTMLElement} row
+   * @param {number} pointerId
+   * @param {string} pointerType
+   */
+  const engageFromInput = (input, row, pointerId, pointerType) => {
+    cancelPending();
+    engage(input, row, pointerId, pointerType);
+  };
+
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -108,9 +140,23 @@ export function bindMobileSliderFocus({ root }) {
     const input = row.querySelector('input[type="range"]');
     if (!(input instanceof HTMLInputElement) || input.disabled) return;
 
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      touchSession = {
+        input,
+        row,
+        pointerId: e.pointerId,
+        pointerType: e.pointerType,
+      };
+    }
+
     // Mouse review of the mobile site: engage immediately. Real touch keeps thumb + hold.
     if (isFinePointer(e.pointerType)) {
       engage(input, row, e.pointerId, e.pointerType);
+      return;
+    }
+
+    if (!shouldStartSliderFocusPending(input, e)) {
+      touchSession = null;
       return;
     }
 
@@ -123,11 +169,8 @@ export function bindMobileSliderFocus({ root }) {
 
     const dx = e.clientX - pending.startX;
     const dy = e.clientY - pending.startY;
-    if (Math.hypot(dx, dy) > SLIDER_FOCUS_CANCEL_MOVE_PX) {
-      cancelPending();
-      return;
-    }
 
+    // Engage horizontal thumb drags before scroll-cancel eats the gesture (common on phones).
     if (
       Math.abs(dx) >= SLIDER_FOCUS_DRAG_ENGAGE_PX
       && Math.abs(dx) > Math.abs(dy)
@@ -135,6 +178,11 @@ export function bindMobileSliderFocus({ root }) {
       const snap = pending;
       cancelPending();
       engage(snap.input, snap.row, snap.pointerId, snap.pointerType);
+      return;
+    }
+
+    if (Math.abs(dy) > SLIDER_FOCUS_CANCEL_MOVE_PX && Math.abs(dy) > Math.abs(dx)) {
+      cancelPending();
     }
   };
 
@@ -142,6 +190,9 @@ export function bindMobileSliderFocus({ root }) {
   const onPointerUp = (e) => {
     if (pending?.pointerId === e.pointerId) {
       cancelPending();
+    }
+    if (touchSession?.pointerId === e.pointerId) {
+      touchSession = null;
     }
     if (activePointerId == null || e.pointerId !== activePointerId) return;
     // iOS cancels pointer events when native range drag starts; touchend releases instead.
@@ -165,6 +216,9 @@ export function bindMobileSliderFocus({ root }) {
       if (pending?.pointerId === touch.identifier) {
         cancelPending();
       }
+      if (touchSession?.pointerId === touch.identifier) {
+        touchSession = null;
+      }
       if (activeTouchId == null || touch.identifier !== activeTouchId) continue;
       release();
       return;
@@ -178,10 +232,14 @@ export function bindMobileSliderFocus({ root }) {
       if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
       if (!root.contains(e.target)) return;
       if (root.dataset.sliderFocus != null) return;
-      if (!pending || pending.input !== e.target) return;
-      const snap = pending;
-      cancelPending();
-      engage(snap.input, snap.row, snap.pointerId, snap.pointerType);
+
+      const row = e.target.closest('.orby-mobile-fx-grade');
+      if (!(row instanceof HTMLElement)) return;
+
+      const session = pending ?? touchSession;
+      if (!session || session.input !== e.target) return;
+
+      engageFromInput(e.target, row, session.pointerId, session.pointerType);
     },
     true,
   );
@@ -195,4 +253,4 @@ export function bindMobileSliderFocus({ root }) {
     release,
     isActive: () => root.dataset.sliderFocus != null,
   };
-};
+}
