@@ -32,6 +32,8 @@ import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundG
 import { mobileHaptic } from './mobileHaptics.js';
 import { bindMobileSheetDrag } from './mobileSheetDrag.js';
 import { bindMobileSliderFocus } from './mobileSliderFocus.js';
+import { MobileHsvColorPicker } from './MobileHsvColorPicker.js';
+import { ORBY_BLACK } from '../../../scripts/constants.js';
 
 function urlHasHandoffFlag() {
   try {
@@ -135,12 +137,14 @@ export class MobileShell {
     this._hdriBackgroundInput = root.querySelector('[data-hdri-background-input]');
     this._hdriControlsEl = root.querySelector('.orby-mobile-hdri-controls');
     this._bgControls = root.querySelector('[data-bg-controls]');
-    this._bgColorInput = root.querySelector('[data-bg-color-input]');
+    this._bgSolidPickerHost = root.querySelector('[data-bg-solid-picker-host]');
     this._bgGradientEnabled = root.querySelector('[data-bg-gradient-enabled]');
     this._bgGradientPanel = root.querySelector('[data-bg-gradient-panel]');
     this._bgGradientTypeButtons = Array.from(root.querySelectorAll('[data-bg-gradient-type]'));
-    this._bgGradientStop0 = root.querySelector('[data-bg-gradient-stop-0]');
-    this._bgGradientStop1 = root.querySelector('[data-bg-gradient-stop-1]');
+    this._bgGradientStopButtons = Array.from(root.querySelectorAll('[data-bg-gradient-stop-index]'));
+    this._bgGradientPickerHost = root.querySelector('[data-bg-gradient-picker-host]');
+    /** @type {0 | 1} */
+    this._activeGradientStopIndex = 0;
     this._bgGradientAngle = root.querySelector('[data-bg-gradient-angle]');
     this._bgGradientAngleValue = root.querySelector('[data-bg-gradient-angle-value]');
     this._bgGradientAngleRow = root.querySelector('[data-bg-gradient-angle-row]');
@@ -149,6 +153,8 @@ export class MobileShell {
     this._bgGradientCenterXValue = root.querySelector('[data-bg-gradient-center-x-value]');
     this._bgGradientCenterY = root.querySelector('[data-bg-gradient-center-y]');
     this._bgGradientCenterYValue = root.querySelector('[data-bg-gradient-center-y-value]');
+
+    this._initBackgroundColorPickers();
 
     this._renderPresetRails();
     this._renderFxControls();
@@ -889,17 +895,53 @@ export class MobileShell {
     });
   }
 
+  _initBackgroundColorPickers() {
+    if (this._bgSolidPickerHost instanceof HTMLElement) {
+      this._bgSolidPicker = new MobileHsvColorPicker(this._bgSolidPickerHost, {
+        ariaLabel: 'Background color',
+        defaultValue: ORBY_BLACK,
+        onInput: (color) => this.scene.setBackgroundColor(color),
+      });
+    }
+
+    if (this._bgGradientPickerHost instanceof HTMLElement) {
+      this._bgGradientPicker = new MobileHsvColorPicker(this._bgGradientPickerHost, {
+        ariaLabel: 'Gradient color',
+        defaultValue: ORBY_BLACK,
+        onInput: (color) => this._commitActiveGradientStop(color),
+      });
+    }
+  }
+
+  /** @param {string} color */
+  _commitActiveGradientStop(color) {
+    const gradient = this.scene.getBackgroundGradient();
+    const stops = [...gradient.stops];
+    const index = this._activeGradientStopIndex;
+    if (!stops[index]) return;
+    stops[index] = { ...stops[index], color };
+    this.scene.setBackgroundGradient({ stops });
+    this._syncGradientStopSwatches(stops);
+  }
+
+  /** @param {{ color: string }[]} stops */
+  _syncGradientStopSwatches(stops) {
+    this._bgGradientStopButtons.forEach((button) => {
+      const index = Number(button.getAttribute('data-bg-gradient-stop-index'));
+      const swatch = button.querySelector('.orby-mobile-gradient-stop__swatch');
+      const stop = stops[index];
+      if (swatch instanceof HTMLElement && stop?.color) {
+        swatch.style.backgroundColor = stop.color;
+      }
+      button.classList.toggle('is-active', index === this._activeGradientStopIndex);
+    });
+  }
+
   _bindHdriBackgroundControls() {
     this._hdriBackgroundInput?.addEventListener('change', () => {
       const enabled = !!this._hdriBackgroundInput?.checked;
       this.scene.setHdriBackground(enabled);
       this._syncHdriBackgroundUi();
-    });
-
-    this._bgColorInput?.addEventListener('input', () => {
-      const color = this._bgColorInput?.value;
-      if (!color) return;
-      this.scene.setBackgroundColor(color);
     });
 
     this._bgGradientEnabled?.addEventListener('change', () => {
@@ -917,11 +959,18 @@ export class MobileShell {
       });
     });
 
-    this._bgGradientStop0?.addEventListener('input', () => {
-      this._commitBackgroundGradientStops();
-    });
-    this._bgGradientStop1?.addEventListener('input', () => {
-      this._commitBackgroundGradientStops();
+    this._bgGradientStopButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = Number(button.getAttribute('data-bg-gradient-stop-index'));
+        if (index !== 0 && index !== 1) return;
+        this._activeGradientStopIndex = /** @type {0 | 1} */ (index);
+        const gradient = normalizeBackgroundGradient(this.scene.getBackgroundGradient());
+        const stop = gradient.stops[index];
+        if (stop?.color) {
+          this._bgGradientPicker?.setValue(stop.color);
+        }
+        this._syncGradientStopSwatches(gradient.stops);
+      });
     });
 
     this._bgGradientAngle?.addEventListener('input', () => {
@@ -958,18 +1007,6 @@ export class MobileShell {
     });
   }
 
-  _commitBackgroundGradientStops() {
-    const gradient = this.scene.getBackgroundGradient();
-    const stops = [...gradient.stops];
-    if (this._bgGradientStop0?.value) {
-      stops[0] = { ...stops[0], color: this._bgGradientStop0.value };
-    }
-    if (this._bgGradientStop1?.value) {
-      stops[1] = { ...stops[1], color: this._bgGradientStop1.value };
-    }
-    this.scene.setBackgroundGradient({ stops });
-  }
-
   _syncHdriBackgroundUi() {
     const backdropOn = this.scene.getHdriBackgroundEnabled();
     this.root.dataset.hdriBackdrop = backdropOn ? 'on' : 'off';
@@ -982,10 +1019,12 @@ export class MobileShell {
     if (this._bgControls instanceof HTMLElement) {
       this._bgControls.hidden = backdropOn;
     }
-    if (this._bgColorInput instanceof HTMLInputElement) {
-      this._bgColorInput.value = bgColor;
-      this._bgColorInput.disabled = gradient.enabled;
+    if (this._bgSolidPickerHost instanceof HTMLElement) {
+      this._bgSolidPickerHost.hidden = gradient.enabled;
     }
+    this._bgSolidPicker?.setValue(bgColor);
+    this._bgSolidPicker?.setDisabled(gradient.enabled);
+
     if (this._bgGradientEnabled instanceof HTMLInputElement) {
       this._bgGradientEnabled.checked = gradient.enabled;
     }
@@ -999,11 +1038,10 @@ export class MobileShell {
     });
 
     const stops = gradient.stops;
-    if (this._bgGradientStop0 instanceof HTMLInputElement && stops[0]) {
-      this._bgGradientStop0.value = stops[0].color;
-    }
-    if (this._bgGradientStop1 instanceof HTMLInputElement && stops[1]) {
-      this._bgGradientStop1.value = stops[1].color;
+    this._syncGradientStopSwatches(stops);
+    const activeStop = stops[this._activeGradientStopIndex] ?? stops[0];
+    if (activeStop?.color) {
+      this._bgGradientPicker?.setValue(activeStop.color);
     }
 
     if (this._bgGradientAngle instanceof HTMLInputElement) {

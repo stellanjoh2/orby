@@ -543,8 +543,8 @@ button {
     height 0.32s cubic-bezier(0.32, 0.72, 0, 1),
     transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
     visibility 0.32s,
-    background var(--orby-mobile-chrome-fade) ease,
-    box-shadow var(--orby-mobile-chrome-fade) ease;
+    background var(--orby-mobile-chrome-fade) linear,
+    box-shadow var(--orby-mobile-chrome-fade) linear;
   pointer-events: none;
   touch-action: pan-y;
   overflow: visible;
@@ -677,7 +677,7 @@ button {
   backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(150%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 58%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 58%);
-  transition: opacity var(--orby-mobile-chrome-fade) ease;
+  transition: opacity var(--orby-mobile-chrome-fade) linear;
 }
 
 .orby-mobile-panel {
@@ -1080,34 +1080,42 @@ button {
 .orby-mobile-scrim,
 .orby-mobile-sheet__grabber,
 .orby-mobile-preset-rail,
+.orby-mobile-preset,
 .orby-mobile-fx-grade,
 .orby-mobile-fx-toggle,
 .orby-mobile-pill-btn,
 .orby-mobile-color-line,
-.orby-mobile-seg,
-.orby-mobile-bg-controls,
-.orby-mobile-bg-gradient,
-.orby-mobile-style-controls,
-.orby-mobile-hdri-controls > * {
-  transition: opacity var(--orby-mobile-chrome-fade) ease;
+.orby-mobile-hsv-picker-host,
+.orby-mobile-gradient-stops,
+.orby-mobile-seg {
+  transition: opacity var(--orby-mobile-chrome-fade) linear;
 }
 
+/* Slider focus — hide all chrome in one beat; never opacity-fade ancestor wrappers (breaks nested active row). */
 .orby-mobile[data-slider-focus] .orby-mobile-dock,
 .orby-mobile[data-slider-focus] .orby-mobile-export-btn,
 .orby-mobile[data-slider-focus] .orby-mobile-debug-menu,
 .orby-mobile[data-slider-focus] .orby-mobile-scrim,
 .orby-mobile[data-slider-focus] .orby-mobile-sheet__grabber,
 .orby-mobile[data-slider-focus] .orby-mobile-preset-rail,
+.orby-mobile[data-slider-focus] .orby-mobile-preset,
+.orby-mobile[data-slider-focus] .orby-mobile-preset__name,
 .orby-mobile[data-slider-focus] .orby-mobile-fx-grade:not(.is-slider-focus),
 .orby-mobile[data-slider-focus] .orby-mobile-fx-toggle,
 .orby-mobile[data-slider-focus] .orby-mobile-pill-btn,
 .orby-mobile[data-slider-focus] .orby-mobile-color-line,
+.orby-mobile[data-slider-focus] .orby-mobile-hsv-picker-host,
+.orby-mobile[data-slider-focus] .orby-mobile-gradient-stops,
 .orby-mobile[data-slider-focus] .orby-mobile-seg,
-.orby-mobile[data-slider-focus] .orby-mobile-bg-controls,
-.orby-mobile[data-slider-focus] .orby-mobile-bg-gradient,
-.orby-mobile[data-slider-focus] .orby-mobile-style-controls,
-.orby-mobile[data-slider-focus] .orby-mobile-hdri-controls > :not(.is-slider-focus) {
-  opacity: 0;
+.orby-mobile[data-slider-focus] .orby-mobile-sheet::after {
+  opacity: 0 !important;
+  pointer-events: none;
+  transition: opacity var(--orby-mobile-chrome-fade) linear !important;
+}
+
+.orby-mobile[data-slider-focus] .orby-mobile-fx-grade:not(.is-slider-focus) input[type='range'] {
+  opacity: 0 !important;
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -1117,20 +1125,22 @@ button {
   backdrop-filter: none;
   box-shadow: none;
   pointer-events: none;
-}
-
-.orby-mobile[data-slider-focus] .orby-mobile-sheet::after {
-  opacity: 0;
+  transition:
+    background var(--orby-mobile-chrome-fade) linear,
+    box-shadow var(--orby-mobile-chrome-fade) linear;
 }
 
 .orby-mobile-fx-grade.is-slider-focus {
   position: relative;
-  z-index: 1;
+  z-index: 5;
   pointer-events: auto;
   opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .orby-mobile-fx-grade.is-slider-focus input[type='range'] {
+  opacity: 1 !important;
+  visibility: visible !important;
   pointer-events: auto;
 }
 
@@ -1151,6 +1161,7 @@ button {
 .orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-debug-menu {
   opacity: 0;
   pointer-events: none;
+  transition: opacity var(--orby-mobile-chrome-fade) linear !important;
 }
 
 .orby-mobile-fx-toggle {
@@ -1249,35 +1260,69 @@ button {
   font-weight: 500;
 }
 
-.orby-mobile-color-line input[type='color'] {
+.orby-mobile-hsv-picker-host {
+  margin: 0 0 var(--orby-mobile-slider-row-gap);
+}
+
+.orby-mobile-hsv-picker {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  touch-action: none;
+}
+
+.orby-mobile-hsv-picker__canvas {
+  display: block;
+  width: min(280px, 100%);
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  cursor: crosshair;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.orby-mobile-hsv-picker.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.orby-mobile-gradient-stops {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 var(--orby-mobile-slider-row-gap);
+}
+
+.orby-mobile-gradient-stop {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, white 10%, transparent);
+  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
+  color: var(--text);
+  font-size: var(--orby-mobile-type-size);
+  font-weight: 500;
+}
+
+.orby-mobile-gradient-stop.is-active {
+  color: var(--orby-black);
+  background: var(--orby-lime);
+  border-color: color-mix(in srgb, var(--orby-lime) 55%, transparent);
+}
+
+.orby-mobile-gradient-stop__swatch {
   flex: 0 0 auto;
-  width: var(--orby-mobile-toggle-w);
-  height: var(--orby-mobile-toggle-h);
-  padding: 0;
-  border: 1px solid var(--orby-mobile-border);
-  border-radius: 999px;
-  background: transparent;
-  appearance: none;
-  -webkit-appearance: none;
-  overflow: hidden;
-  cursor: pointer;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--orby-lime) 10%, transparent);
-}
-
-.orby-mobile-color-line input[type='color']::-webkit-color-swatch-wrapper {
-  padding: 2px;
-  border-radius: inherit;
-  background: transparent;
-}
-
-.orby-mobile-color-line input[type='color']::-webkit-color-swatch {
-  border: 1px solid var(--orby-mobile-border);
-  border-radius: inherit;
-}
-
-.orby-mobile-color-line input[type='color']::-moz-color-swatch {
-  border: 1px solid var(--orby-mobile-border);
-  border-radius: inherit;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, white 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orby-black) 18%, transparent);
 }
 
 .orby-mobile-seg {

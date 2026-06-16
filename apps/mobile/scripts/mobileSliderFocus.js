@@ -8,12 +8,9 @@ const MOBILE_THUMB_HIT_PX = 14;
 
 const finePointerMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
 
-/** Touch-first chrome hide — skip on desktop mouse so native range dragging stays intact. */
-const shouldHandleSliderFocus = (pointerType) => {
-  if (pointerType === 'mouse') return false;
-  if (finePointerMedia.matches) return false;
-  return true;
-};
+/** Mouse / trackpad while reviewing the mobile app in a desktop browser — not the full Orby desktop UI. */
+const isFinePointer = (pointerType) =>
+  pointerType === 'mouse' || finePointerMedia.matches;
 
 /**
  * While dragging a range slider thumb, fade chrome and keep the active control in place.
@@ -103,7 +100,6 @@ export function bindMobileSliderFocus({ root }) {
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (!shouldHandleSliderFocus(e.pointerType)) return;
     if (!(e.target instanceof Element)) return;
 
     const row = e.target.closest('.orby-mobile-fx-grade');
@@ -111,6 +107,12 @@ export function bindMobileSliderFocus({ root }) {
 
     const input = row.querySelector('input[type="range"]');
     if (!(input instanceof HTMLInputElement) || input.disabled) return;
+
+    // Mouse review of the mobile site: engage immediately. Real touch keeps thumb + hold.
+    if (isFinePointer(e.pointerType)) {
+      engage(input, row, e.pointerId, e.pointerType);
+      return;
+    }
 
     startPending(input, row, e);
   };
@@ -170,6 +172,19 @@ export function bindMobileSliderFocus({ root }) {
   };
 
   root.addEventListener('pointerdown', onPointerDown, true);
+  root.addEventListener(
+    'input',
+    (e) => {
+      if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
+      if (!root.contains(e.target)) return;
+      if (root.dataset.sliderFocus != null) return;
+      if (!pending || pending.input !== e.target) return;
+      const snap = pending;
+      cancelPending();
+      engage(snap.input, snap.row, snap.pointerId, snap.pointerType);
+    },
+    true,
+  );
   document.addEventListener('pointermove', onPointerMove, true);
   document.addEventListener('pointerup', onPointerUp, true);
   document.addEventListener('pointercancel', onPointerCancel, true);
