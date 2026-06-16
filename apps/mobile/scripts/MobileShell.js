@@ -443,7 +443,9 @@ export class MobileShell {
       this._engagedPresetTabs.has('style') &&
       this.selection.style.id !== 'none' &&
       this.selection.style.id !== 'standard';
-    this.setSheetState(hasLook ? 'expanded' : 'peek');
+    const next = /** @type {SheetState} */ (hasLook ? 'expanded' : 'peek');
+    if (this.sheetState === next) return;
+    this.setSheetState(next);
   }
 
   _syncHdriPanelUi() {
@@ -459,10 +461,10 @@ export class MobileShell {
   _syncHdriSheetState() {
     if (this.activeTab !== 'light' || this.sheetState === 'closed') return;
     if (!this._engagedPresetTabs.has('light')) {
-      this.setSheetState('peek');
+      if (this.sheetState !== 'peek') this.setSheetState('peek');
       return;
     }
-    this.setSheetState('peek');
+    if (this.sheetState !== 'peek') this.setSheetState('peek');
   }
 
   /** @param {HTMLInputElement} slider */
@@ -1165,7 +1167,10 @@ export class MobileShell {
     if (state === 'closed') {
       this._engagedPresetTabs.clear();
     }
-    this._sliderFocus?.release();
+    const stateChanged = this.sheetState !== state;
+    if (stateChanged) {
+      this._sliderFocus?.release();
+    }
     const wasOpen = this.sheetState !== 'closed';
     this.sheetState = state;
     this.root.dataset.sheet = state;
