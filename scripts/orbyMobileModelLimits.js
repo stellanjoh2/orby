@@ -1,5 +1,5 @@
 /** Soft cap for GLB/GLTF on Orby Mobile — above this iOS often OOMs during handoff + parse. */
-export const ORBY_MOBILE_MAX_MODEL_BYTES = 80 * 1024 * 1024;
+export const ORBY_MOBILE_MAX_MODEL_BYTES = 75 * 1024 * 1024;
 
 export const ORBY_MOBILE_HANDOFF_SIZE_KEY = 'orby_mobile_handoff_size';
 

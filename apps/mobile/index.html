@@ -190,6 +190,14 @@
           <div class="orby-mobile-color-picker__host" data-color-picker-host></div>
           <button type="button" class="orby-mobile-color-picker__done" data-color-picker-done>Done</button>
         </div>
+        <div
+          class="orby-mobile-viewport__load-spinner viewport-load-spinner"
+          data-viewport-load-spinner
+          aria-hidden="true"
+          role="status"
+        >
+          <img src="/assets/images/favicon.svg" alt="" width="56" height="56" draggable="false" />
+        </div>
         <button type="button" class="orby-mobile-export-btn" data-action="export" aria-label="Export image">
           <span class="orby-mobile-export-btn__icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -202,7 +210,9 @@
               />
             </svg>
           </span>
-          <span class="orby-mobile-export-btn__spinner" aria-hidden="true"></span>
+          <span class="orby-mobile-export-btn__spinner" aria-hidden="true">
+            <img src="/assets/images/favicon.svg" alt="" width="22" height="22" draggable="false" />
+          </span>
         </button>
         <div class="orby-mobile-debug-menu" data-debug-menu="closed">
           <button

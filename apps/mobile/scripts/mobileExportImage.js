@@ -5,14 +5,11 @@ import { resetMobileRendererViewport } from './mobileComposerFrame.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
 
 /**
- * Preview already runs at device pixel ratio (capped at 2×) — extra scale blows mobile memory.
- * Desktop uses 2×; mobile stays at 1× to avoid tab kills during readback/encode.
+ * Preview already runs at device pixel ratio (capped at 2×) — export matches that backing store.
  */
 const EXPORT_SCALE = 1;
-/** Hard cap — iOS Safari often kills tabs above ~1536² with post FX RTs in flight. */
-const MAX_EXPORT_PX = 1536;
-/** ~2 MP RGBA readback ceiling before we scale down further. */
-const MAX_EXPORT_PIXELS = 2_000_000;
+/** iOS-practical longest-edge cap — above this Safari often kills tabs during readback. */
+const MOBILE_EXPORT_MAX_PX = 2048;
 const MOBILE_JPEG_QUALITY = 0.82;
 const MOBILE_EXPORT_TRACE_KEY = 'orby_mobile_last_export';
 
@@ -189,24 +186,66 @@ function readComposerOutputPixels(renderer, composer, fallbackWidth, fallbackHei
 }
 
 /**
- * @param {number} logicalW
- * @param {number} logicalH
- * @param {number} previewDensity
+ * @param {THREE.WebGLRenderer} renderer
+ * @returns {{ width: number, height: number }}
  */
-function resolveExportSize(logicalW, logicalH, previewDensity) {
-  let w = Math.max(1, Math.round(logicalW * previewDensity * EXPORT_SCALE));
-  let h = Math.max(1, Math.round(logicalH * previewDensity * EXPORT_SCALE));
-  if (w > MAX_EXPORT_PX || h > MAX_EXPORT_PX) {
-    const fit = Math.min(MAX_EXPORT_PX / w, MAX_EXPORT_PX / h);
-    w = Math.max(1, Math.floor(w * fit));
-    h = Math.max(1, Math.floor(h * fit));
+function getPreviewDrawingBufferSize(renderer) {
+  const gl = renderer.getContext();
+  if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+    return { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight };
   }
-  if (w * h > MAX_EXPORT_PIXELS) {
-    const fit = Math.sqrt(MAX_EXPORT_PIXELS / (w * h));
-    w = Math.max(1, Math.floor(w * fit));
-    h = Math.max(1, Math.floor(h * fit));
+  const logical = new THREE.Vector2();
+  renderer.getSize(logical);
+  const pr = Math.max(1, renderer.getPixelRatio());
+  return {
+    width: Math.max(1, Math.round(logical.x * pr)),
+    height: Math.max(1, Math.round(logical.y * pr)),
+  };
+}
+
+/**
+ * @param {THREE.WebGLRenderer} renderer
+ * @returns {number}
+ */
+function getMaxExportPixelDimension(renderer) {
+  const gl = renderer.getContext();
+  if (!gl) return MOBILE_EXPORT_MAX_PX;
+  const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || MOBILE_EXPORT_MAX_PX;
+  const maxRb = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || maxTex;
+  return Math.max(1, Math.min(maxTex, maxRb, MOBILE_EXPORT_MAX_PX));
+}
+
+/**
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {number} width
+ * @param {number} height
+ * @returns {{ width: number, height: number }}
+ */
+function clampExportPixelSize(renderer, width, height) {
+  const cap = getMaxExportPixelDimension(renderer);
+  let w = Math.max(1, Math.round(width));
+  let h = Math.max(1, Math.round(height));
+  if (w <= cap && h <= cap) {
+    return { width: w, height: h };
   }
-  return { width: w, height: h };
+  const fit = Math.min(cap / w, cap / h);
+  return {
+    width: Math.max(1, Math.floor(w * fit)),
+    height: Math.max(1, Math.floor(h * fit)),
+  };
+}
+
+/**
+ * Export at the live preview backing-store size (1× WYSIWYG), only shrinking for GPU / iOS limits.
+ * @param {THREE.WebGLRenderer} renderer
+ */
+function resolveExportSize(renderer) {
+  const preview = getPreviewDrawingBufferSize(renderer);
+  return clampExportPixelSize(
+    renderer,
+    preview.width * EXPORT_SCALE,
+    preview.height * EXPORT_SCALE,
+  );
 }
 
 /** @returns {Promise<void>} */
@@ -283,14 +322,13 @@ export async function exportMobileSceneJpeg(mobileScene) {
   renderer.getSize(origSize);
   const origPixelRatio = renderer.getPixelRatio();
   const origAspect = camera.aspect;
-  const { width: exportW, height: exportH } = resolveExportSize(
-    logicalW,
-    logicalH,
-    origPixelRatio,
-  );
+  const previewBuffer = getPreviewDrawingBufferSize(renderer);
+  const { width: exportW, height: exportH } = resolveExportSize(renderer);
   traceMobileExport('start', {
     logicalW,
     logicalH,
+    previewBufferW: previewBuffer.width,
+    previewBufferH: previewBuffer.height,
     exportW,
     exportH,
     pixelRatio: origPixelRatio,
@@ -299,6 +337,13 @@ export async function exportMobileSceneJpeg(mobileScene) {
   await waitFrames(2);
 
   try {
+    post.creativeLooks?.pinExportPixelReferences?.(
+      origSize.x,
+      origSize.y,
+      previewBuffer.width,
+      previewBuffer.height,
+    );
+
     const { width: captureW, height: captureH } = setExportFramebufferSize(
       renderer,
       camera,
@@ -366,6 +411,7 @@ export async function exportMobileSceneJpeg(mobileScene) {
     return 'failed';
   } finally {
     try {
+      post.creativeLooks?.unpinExportPixelReferences?.();
       await restoreMobilePreviewFrame(
         mobileScene,
         renderer,

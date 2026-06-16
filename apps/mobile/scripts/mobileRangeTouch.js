@@ -174,7 +174,22 @@ export function bindMobileRangeTouch({ root }) {
    * @param {number} clientY
    */
   const armDrag = (input, id, clientX, clientY) => {
-    if (dragInput || !isThumbHit(input, clientX)) return false;
+    if (dragInput) return false;
+
+    const rect = input.getBoundingClientRect();
+    const onTrack =
+      clientX >= rect.left
+      && clientX <= rect.right
+      && clientY >= rect.top - THUMB_HIT_TOLERANCE_PX
+      && clientY <= rect.bottom + THUMB_HIT_TOLERANCE_PX;
+    if (!onTrack) return false;
+
+    if (!isThumbHit(input, clientX)) {
+      applyValue(input, clientX);
+      startDrag(input, id, clientX);
+      return true;
+    }
+
     cancelPending();
     pending = {
       input,

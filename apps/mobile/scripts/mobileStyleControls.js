@@ -68,10 +68,11 @@ export const MOBILE_STYLE_SLIDERS = /** @type {StyleSliderDef[]} */ ([
 ]);
 
 /**
+ * Shader Lab row has no wired effect for this preset — keep it out of the panel.
  * @param {string | null | undefined} preset
  * @param {string} path
  */
-export function isMobileStyleSliderDisabled(preset, path) {
+export function isMobileStyleSliderMuted(preset, path) {
   const id = normalizeCreativeLookPreset(preset ?? 'neon-edge');
   if (path === 'masterHue') return creativeLookPresetLocksMasterHue(id);
   if (path === 'intensity') return creativeLookPresetLocksIntensity(id);
@@ -85,6 +86,11 @@ export function isMobileStyleSliderDisabled(preset, path) {
     return !creativeLookPresetUsesShaderAnimation(id);
   }
   return false;
+}
+
+/** @deprecated Use {@link isMobileStyleSliderMuted}. */
+export function isMobileStyleSliderDisabled(preset, path) {
+  return isMobileStyleSliderMuted(preset, path);
 }
 
 /**
@@ -126,25 +132,9 @@ export function mobileStyleSliderBounds(preset, path) {
   return { min, max, step: 0.02 };
 }
 
-/**
- * @param {string | null | undefined} preset
- * @param {string} path
- */
+/** @param {string | null | undefined} preset @param {string} path */
 export function isMobileStyleSliderHidden(preset, path) {
-  const id = normalizeCreativeLookPreset(preset ?? 'neon-edge');
-  if (path === 'patternScale') {
-    return (
-      creativeLookPresetHidesPatternScale(id)
-      || creativeLookPresetLocksPatternScale(id)
-    );
-  }
-  if (path === 'intensity') {
-    return creativeLookPresetLocksIntensity(id);
-  }
-  if (path === 'shaderAnimationSpeed') {
-    return !creativeLookPresetUsesShaderAnimation(id);
-  }
-  return false;
+  return isMobileStyleSliderMuted(preset, path);
 }
 
 /** @param {string | null | undefined} presetId */

@@ -18,8 +18,7 @@ import {
 } from './mobileFxControls.js';
 import {
   MOBILE_STYLE_SLIDERS,
-  isMobileStyleSliderDisabled,
-  isMobileStyleSliderHidden,
+  isMobileStyleSliderMuted,
   mobileStyleSliderBounds,
   resolveMobileStyleSliderValue,
 } from './mobileStyleControls.js';
@@ -58,6 +57,8 @@ export class MobileShell {
   constructor(root) {
     this.root = root;
     this.viewportEl = root.querySelector('.orby-mobile-viewport');
+    this._loadSpinnerEl = root.querySelector('[data-viewport-load-spinner]');
+    this._loadSpinnerDepth = 0;
     this.sheet = root.querySelector('.orby-mobile-sheet');
     this.dock = root.querySelector('.orby-mobile-dock');
     this.toast = root.querySelector('.orby-mobile-toast');
@@ -77,15 +78,6 @@ export class MobileShell {
     };
 
     this._toastTimer = null;
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    this._railScrollTimer = null;
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    this._railScrollEndTimer = null;
-    /** @type {PresetTab | null} */
-    this._railScrollingTab = null;
-    this._suppressRailLeadingSelection = false;
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    this._railSuppressTimer = null;
     /** @type {Set<PresetTab>} */
     this._engagedPresetTabs = new Set();
     /** @type {HTMLElement | null} */
@@ -132,6 +124,10 @@ export class MobileShell {
     this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
     this.scene.onOrbitChromeChange = (hidden) => this._setOrbitChromeHidden(hidden);
     this.scene.onOrbitInteractionStart = () => this._cancelViewportCompareHold();
+    this.scene.onCreativeLookLoading = (loading) => {
+      if (loading) this._beginLoadSpinner();
+      else this._endLoadSpinner();
+    };
     void this._bootScene();
 
     this._hdriBrightnessInput = root.querySelector('[data-hdri-brightness-input]');
@@ -176,7 +172,7 @@ export class MobileShell {
   }
 
   async _bootScene() {
-    this.viewportEl?.setAttribute('data-loading', 'true');
+    this._beginLoadSpinner();
     markMobileDebugLog('shell:scene-init-start');
     try {
       await this.scene.init();
@@ -204,7 +200,7 @@ export class MobileShell {
       markMobileDebugLog('shell:scene-init-failed', { message: String(err?.message || err) });
       this.showToast('Viewer failed to start');
     } finally {
-      this.viewportEl?.removeAttribute('data-loading');
+      this._endLoadSpinner();
     }
   }
 
@@ -234,6 +230,31 @@ export class MobileShell {
       this.showToast('Could not load model — pick again or try a sample');
       this._showEmptyState(true);
       return false;
+    }
+  }
+
+  _beginLoadSpinner() {
+    this._loadSpinnerDepth += 1;
+    this._syncLoadSpinner();
+  }
+
+  _endLoadSpinner() {
+    this._loadSpinnerDepth = Math.max(0, this._loadSpinnerDepth - 1);
+    this._syncLoadSpinner();
+  }
+
+  _syncLoadSpinner() {
+    const on = this._loadSpinnerDepth > 0;
+    if (this.viewportEl) {
+      if (on) {
+        this.viewportEl.setAttribute('data-loading', 'true');
+      } else {
+        this.viewportEl.removeAttribute('data-loading');
+      }
+    }
+    if (this._loadSpinnerEl instanceof HTMLElement) {
+      this._loadSpinnerEl.classList.toggle('is-visible', on);
+      this._loadSpinnerEl.setAttribute('aria-hidden', on ? 'false' : 'true');
     }
   }
 
@@ -318,9 +339,28 @@ export class MobileShell {
     }
   }
 
+  /** @param {PresetTab} tab */
+  _shouldShowRailSelection(tab) {
+    if (!this._engagedPresetTabs.has(tab)) return false;
+    const id = this.selection[tab].id;
+    if (tab === 'style' && (id === 'none' || id === 'standard')) return false;
+    if (tab === 'filters' && id === 'none') return false;
+    return true;
+  }
+
+  /** @param {PresetTab} tab */
+  _syncPresetRailScroll(tab) {
+    if (this._shouldShowRailSelection(tab)) {
+      this._scrollRailToSelection(tab);
+      return;
+    }
+    this._resetRailScroll(tab);
+  }
+
   _resetFxGrade() {
     this.scene.resetFx();
     this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
+    this._engagedPresetTabs.delete('filters');
     this._syncFxControlsUi();
     this._syncSelectionUi();
     this.showToast('Grade reset');
@@ -446,11 +486,11 @@ export class MobileShell {
       const output = host?.querySelector(`[data-style-value="${def.path}"]`);
       if (!(input instanceof HTMLInputElement)) continue;
 
-      const hidden = isMobileStyleSliderHidden(preset, def.path);
+      const muted = isMobileStyleSliderMuted(preset, def.path);
       if (row instanceof HTMLElement) {
-        row.hidden = hidden;
+        row.hidden = muted;
       }
-      if (hidden) continue;
+      if (muted) continue;
 
       const bounds = mobileStyleSliderBounds(preset, def.path);
       input.min = String(bounds.min);
@@ -459,7 +499,7 @@ export class MobileShell {
 
       const value = resolveMobileStyleSliderValue(preset, def.path, cl[def.path]);
       input.value = String(value);
-      input.disabled = !styleActive || isMobileStyleSliderDisabled(preset, def.path);
+      input.disabled = !styleActive;
       if (output instanceof HTMLElement) {
         output.textContent = def.format(value);
       }
@@ -583,6 +623,7 @@ export class MobileShell {
   _onBloomAdjust(path, value) {
     applyMobileBloomSliderValue(this.scene, path, value);
     this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
+    this._engagedPresetTabs.delete('filters');
     this._syncSelectionUi();
   }
 
@@ -618,6 +659,7 @@ export class MobileShell {
   _onFxLensAdjust(row, value) {
     applyMobileLensSliderValue(this.scene, row, value);
     this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
+    this._engagedPresetTabs.delete('filters');
     this._syncSelectionUi();
   }
 
@@ -626,6 +668,7 @@ export class MobileShell {
     this.scene.setFxValue(path, value);
     if (!opts?.preservePreset) {
       this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
+      this._engagedPresetTabs.delete('filters');
       this._syncSelectionUi();
     }
   }
@@ -830,8 +873,14 @@ export class MobileShell {
       const tab = panel?.getAttribute('data-panel');
       if (tab === 'light' || tab === 'style' || tab === 'filters') {
         this._select(/** @type {PresetTab} */ (tab), pick);
-        this._scrollPresetIntoView(/** @type {PresetTab} */ (tab), pick, 'smooth');
-        this._updateRailCenterHighlight(/** @type {PresetTab} */ (tab));
+        const attr = this._dataAttrForTab(/** @type {PresetTab} */ (tab));
+        const pickId = pick.getAttribute(attr);
+        const isClearPick =
+          (tab === 'style' && (pickId === 'none' || pickId === 'standard')) ||
+          (tab === 'filters' && pickId === 'none');
+        if (!isClearPick) {
+          this._scrollPresetIntoView(/** @type {PresetTab} */ (tab), pick, 'smooth');
+        }
       }
     });
 
@@ -844,13 +893,6 @@ export class MobileShell {
         mobileHaptic('light');
       }
     });
-
-    // Center-snap carousel — live preview while scrolling, magnetic settle on release.
-    for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
-      const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
-      track?.addEventListener('scroll', () => this._onPresetRailScroll(tab), { passive: true });
-      track?.addEventListener('scrollend', () => this._onPresetRailScrollEnd(tab), { passive: true });
-    }
 
     this.root.querySelector('[data-action="toggle-debug"]')?.addEventListener('click', (e) => {
       const menu = this.root.querySelector('.orby-mobile-debug-menu');
@@ -923,7 +965,7 @@ export class MobileShell {
         return;
       }
 
-      this.viewportEl?.setAttribute('data-loading', 'true');
+      this._beginLoadSpinner();
       void this.scene.loadFile(file).then(() => {
         this.showToast(`Loaded ${file.name}`);
         mobileHaptic('success');
@@ -932,9 +974,9 @@ export class MobileShell {
         markMobileDebugLog('shell:model-load-failed', { name: file.name, size: file.size, message: String(err?.message || err) });
         this.showToast(err instanceof Error ? err.message : 'Could not load model');
       }).finally(() => {
-        this.viewportEl?.removeAttribute('data-loading');
+        this._endLoadSpinner();
+        if (this.fileInput) this.fileInput.value = '';
       });
-      if (this.fileInput) this.fileInput.value = '';
     });
   }
 
@@ -1226,22 +1268,24 @@ export class MobileShell {
       this._syncSelectionUi();
       this.setSheetState('peek');
       requestAnimationFrame(() => {
-        this._scrollRailToSelection('light');
+        this._syncPresetRailScroll('light');
       });
       return;
     }
     if (tab === 'style') {
       this._syncStyleControlsUi();
+      this._syncSelectionUi();
       this.setSheetState('peek');
       this._syncStyleSheetState();
       requestAnimationFrame(() => {
-        this._syncStyleRailScroll();
+        this._syncPresetRailScroll('style');
       });
       return;
     }
+    this._syncSelectionUi();
     this.setSheetState('peek');
     requestAnimationFrame(() => {
-      this._scrollRailToSelection(/** @type {PresetTab} */ (tab));
+      this._syncPresetRailScroll(/** @type {PresetTab} */ (tab));
     });
   }
 
@@ -1249,15 +1293,6 @@ export class MobileShell {
   _resetRailScroll(tab) {
     const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
     if (track instanceof HTMLElement) track.scrollLeft = 0;
-  }
-
-  _syncStyleRailScroll() {
-    const id = this.selection.style.id;
-    if (id === 'none' || id === 'standard') {
-      this._resetRailScroll('style');
-      return;
-    }
-    this._scrollRailToSelection('style');
   }
 
   /** @param {MobileTab} tab */
@@ -1353,8 +1388,17 @@ export class MobileShell {
     if (tab === 'style') {
       if (item.id === 'none' || item.id === 'standard') {
         this._engagedPresetTabs.delete('style');
+        this._resetRailScroll('style');
       } else {
         this._engagedPresetTabs.add('style');
+      }
+    }
+    if (tab === 'filters') {
+      if (item.id === 'none') {
+        this._engagedPresetTabs.delete('filters');
+        this._resetRailScroll('filters');
+      } else {
+        this._engagedPresetTabs.add('filters');
       }
     }
 
@@ -1402,81 +1446,7 @@ export class MobileShell {
     const elCenter = elRect.left + elRect.width / 2;
     if (Math.abs(elCenter - anchorX) < 3) return;
 
-    this._suppressRailLeadingSelection = true;
-    clearTimeout(this._railSuppressTimer);
     el.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
-    const ms = behavior === 'smooth' ? 360 : 120;
-    this._railSuppressTimer = setTimeout(() => {
-      this._suppressRailLeadingSelection = false;
-      this._railSuppressTimer = null;
-    }, ms);
-  }
-
-  /** @param {PresetTab} tab */
-  _updateRailCenterHighlight(tab) {
-    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
-    if (!(track instanceof HTMLElement)) return;
-    const centered = this._getRailCenteredPreset(track);
-    track.querySelectorAll('.orby-mobile-preset').forEach((el) => {
-      if (el instanceof HTMLElement) {
-        el.classList.toggle('is-rail-center', el === centered);
-      }
-    });
-  }
-
-  /** @param {PresetTab} tab */
-  _onPresetRailScroll(tab) {
-    if (this.activeTab !== tab || this.sheetState === 'closed') return;
-    this._railScrollingTab = tab;
-    this._updateRailCenterHighlight(tab);
-    clearTimeout(this._railScrollTimer);
-    this._railScrollTimer = setTimeout(() => {
-      this._railScrollTimer = null;
-      if (this._railScrollingTab !== tab || this._suppressRailLeadingSelection) return;
-      this._applyRailCenteredSelection(tab);
-    }, 90);
-    clearTimeout(this._railScrollEndTimer);
-    this._railScrollEndTimer = setTimeout(() => {
-      this._railScrollEndTimer = null;
-      this._finishRailScroll(tab);
-    }, 140);
-  }
-
-  /** @param {PresetTab} tab */
-  _onPresetRailScrollEnd(tab) {
-    if (this.activeTab !== tab || this.sheetState === 'closed') return;
-    clearTimeout(this._railScrollTimer);
-    clearTimeout(this._railScrollEndTimer);
-    this._railScrollTimer = null;
-    this._railScrollEndTimer = null;
-    this._finishRailScroll(tab);
-  }
-
-  /** @param {PresetTab} tab */
-  _finishRailScroll(tab) {
-    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
-    if (!(track instanceof HTMLElement)) return;
-    const centered = this._getRailCenteredPreset(track);
-    if (!(centered instanceof HTMLElement)) return;
-
-    this._snapRailPresetToCenter(centered, 'smooth');
-    this._updateRailCenterHighlight(tab);
-
-    if (this._suppressRailLeadingSelection) return;
-    this._applyRailCenteredSelection(tab);
-  }
-
-  /** @param {PresetTab} tab */
-  _applyRailCenteredSelection(tab) {
-    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
-    if (!(track instanceof HTMLElement)) return;
-    const centered = this._getRailCenteredPreset(track);
-    if (!(centered instanceof HTMLElement)) return;
-    const currentId = this.selection[tab].id;
-    const attr = this._dataAttrForTab(tab);
-    const nextId = centered.getAttribute(attr);
-    if (!nextId || nextId === currentId) return;
-    this._select(tab, centered);
   }
 
   /** @param {PresetTab} tab */
@@ -1486,52 +1456,24 @@ export class MobileShell {
     const el = this.root.querySelector(`[data-rail-track="${tab}"] [${attr}="${CSS.escape(id)}"]`);
     if (el instanceof HTMLElement) {
       this._scrollPresetIntoView(tab, el, 'auto');
-      this._updateRailCenterHighlight(tab);
     }
-  }
-
-  /** @param {HTMLElement} track */
-  _getRailCenterX(track) {
-    const trackRect = track.getBoundingClientRect();
-    return trackRect.left + trackRect.width / 2;
-  }
-
-  /** @param {HTMLElement} track */
-  _getRailCenteredPreset(track) {
-    const anchorX = this._getRailCenterX(track);
-    let best = null;
-    let bestDist = Infinity;
-    for (const child of track.children) {
-      if (!(child instanceof HTMLElement)) continue;
-      const rect = child.getBoundingClientRect();
-      const center = rect.left + rect.width / 2;
-      const dist = Math.abs(center - anchorX);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = child;
-      }
-    }
-    return best;
   }
 
   _syncSelectionUi() {
     for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
       const attr = this._dataAttrForTab(tab);
       const id = this.selection[tab].id;
+      const showSelected = this._shouldShowRailSelection(tab);
       this.root.querySelectorAll(`[${attr}]`).forEach((el) => {
-        const on = el.getAttribute(attr) === id;
+        const on = showSelected && el.getAttribute(attr) === id;
         el.classList.toggle('is-selected', on);
         el.setAttribute('aria-current', on ? 'true' : 'false');
       });
 
       const dockBtn = this.root.querySelector(`[data-open-tab="${tab}"]`);
       const thumb = dockBtn?.querySelector('[data-dock-thumb] img');
-      if (thumb instanceof HTMLImageElement) {
+      if (thumb instanceof HTMLImageElement && showSelected) {
         thumb.src = mobileAssetUrl(this.selection[tab].thumb);
-      }
-
-      if (tab === this.activeTab && this.sheetState !== 'closed') {
-        this._updateRailCenterHighlight(tab);
       }
     }
     this._syncStyleControlsUi();

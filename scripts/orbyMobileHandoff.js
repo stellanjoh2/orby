@@ -26,6 +26,10 @@ export const ORBY_MOBILE_SESSION_KEY = 'orby_mobile_active';
 export const ORBY_MOBILE_SESSION_PERSIST_KEY = 'orby_mobile_active_persist';
 /** Set before IDB write so /mobile/app can wait for the staged file (iOS navigation race). */
 export const ORBY_MOBILE_HANDOFF_PENDING_KEY = 'orby_mobile_handoff_pending';
+/** Survives iOS navigation when sessionStorage is cleared. */
+export const ORBY_MOBILE_HANDOFF_PENDING_PERSIST_KEY = 'orby_mobile_handoff_pending_persist';
+/** Shown on the gate when the viewer redirects after a failed transfer. */
+export const ORBY_MOBILE_HANDOFF_ERROR_KEY = 'orby_mobile_handoff_error';
 
 /**
  * @typedef {{ name: string, type: string, buffer: ArrayBuffer, size: number }} MobileModelHandoff
@@ -174,6 +178,11 @@ export function markMobileHandoffPending() {
   } catch {
     /* sessionStorage blocked */
   }
+  try {
+    localStorage.setItem(ORBY_MOBILE_HANDOFF_PENDING_PERSIST_KEY, String(Date.now()));
+  } catch {
+    /* localStorage blocked */
+  }
 }
 
 export function clearMobileHandoffPending() {
@@ -182,12 +191,42 @@ export function clearMobileHandoffPending() {
   } catch {
     /* sessionStorage blocked */
   }
+  try {
+    localStorage.removeItem(ORBY_MOBILE_HANDOFF_PENDING_PERSIST_KEY);
+  } catch {
+    /* localStorage blocked */
+  }
   clearOrbyMobileHandoffSize();
+}
+
+/** @param {string} [message] */
+export function markMobileHandoffFailed(message = 'Model didn\'t transfer — pick again') {
+  try {
+    sessionStorage.setItem(ORBY_MOBILE_HANDOFF_ERROR_KEY, message);
+  } catch {
+    /* sessionStorage blocked */
+  }
+}
+
+/** @returns {string | null} */
+export function takeMobileHandoffErrorMessage() {
+  try {
+    const message = sessionStorage.getItem(ORBY_MOBILE_HANDOFF_ERROR_KEY);
+    if (message) sessionStorage.removeItem(ORBY_MOBILE_HANDOFF_ERROR_KEY);
+    return message;
+  } catch {
+    return null;
+  }
 }
 
 export function hasMobileHandoffPendingFlag() {
   try {
-    return sessionStorage.getItem(ORBY_MOBILE_HANDOFF_PENDING_KEY) === '1';
+    if (sessionStorage.getItem(ORBY_MOBILE_HANDOFF_PENDING_KEY) === '1') return true;
+  } catch {
+    /* sessionStorage blocked */
+  }
+  try {
+    return Boolean(localStorage.getItem(ORBY_MOBILE_HANDOFF_PENDING_PERSIST_KEY));
   } catch {
     return false;
   }
@@ -195,9 +234,10 @@ export function hasMobileHandoffPendingFlag() {
 
 /**
  * @param {File} file
+ * @param {Uint8Array} [preReadBytes] bytes already read from the picker (iOS Files/iCloud)
  * @returns {Promise<void>}
  */
-export async function stageMobileModelHandoff(file) {
+export async function stageMobileModelHandoff(file, preReadBytes) {
   const check = validateOrbyMobileModelFile(file);
   if (!check.ok) {
     throw new Error(check.message);
@@ -207,7 +247,17 @@ export async function stageMobileModelHandoff(file) {
   rememberOrbyMobileHandoffSize(file.size);
 
   // Uint8Array survives IDB + navigation on iOS; File/Blob handles do not.
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  let bytes;
+  if (preReadBytes instanceof Uint8Array && preReadBytes.byteLength > 0) {
+    bytes = preReadBytes;
+  } else {
+    try {
+      bytes = new Uint8Array(await file.arrayBuffer());
+    } catch (err) {
+      clearMobileHandoffPending();
+      throw err instanceof Error ? err : new Error('Could not read file — try again');
+    }
+  }
   const record = {
     name: file.name,
     type: file.type || 'model/gltf-binary',
@@ -376,7 +426,15 @@ export async function handoffFileToMobileAppIfLanding(file) {
   }
 
   try {
-    await stageMobileModelHandoff(file);
+    let bytes;
+    try {
+      bytes = new Uint8Array(await file.arrayBuffer());
+    } catch (readErr) {
+      console.error('[Orby] Mobile handoff file read failed', readErr);
+      showLandingToast('Could not read file — try again');
+      return true;
+    }
+    await stageMobileModelHandoff(file, bytes);
     navigateToMobileApp();
     return true;
   } catch (err) {

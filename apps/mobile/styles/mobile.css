@@ -277,14 +277,19 @@ button {
 }
 
 .orby-mobile-export-btn__spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid color-mix(in srgb, var(--orby-lime) 28%, transparent);
-  border-top-color: var(--orby-lime);
-  border-radius: 50%;
+  display: block;
+  width: 22px;
+  height: 22px;
   opacity: 0;
-  animation: orby-mobile-spin 0.8s linear infinite;
   pointer-events: none;
+}
+
+.orby-mobile-export-btn__spinner img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  animation: orby-mobile-viewport-load-spin 0.6s linear infinite;
 }
 
 .orby-mobile-export-btn[data-busy] {
@@ -342,25 +347,69 @@ button {
   opacity: 0.72;
 }
 
-.orby-mobile-viewport[data-loading]::after {
-  content: '';
+.orby-mobile-viewport__load-spinner {
   position: absolute;
   z-index: 3;
   top: calc(env(safe-area-inset-top, 0px) + 50%);
   left: 50%;
-  width: 28px;
-  height: 28px;
-  margin: -14px 0 0 -14px;
-  border: 2px solid color-mix(in srgb, var(--orby-lime) 28%, transparent);
-  border-top-color: var(--orby-lime);
-  border-radius: 50%;
-  animation: orby-mobile-spin 0.8s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
   pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.94);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0s linear 0.2s;
 }
 
-@keyframes orby-mobile-spin {
+.orby-mobile-viewport__load-spinner.is-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0s linear 0s;
+}
+
+.orby-mobile-viewport__load-spinner img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  animation: orby-mobile-viewport-load-spin 0.6s linear infinite;
+}
+
+@keyframes orby-mobile-viewport-load-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orby-mobile-viewport__load-spinner {
+    transform: none;
+    transition:
+      opacity 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+
+  .orby-mobile-viewport__load-spinner.is-visible {
+    transform: none;
+    transition:
+      opacity 0.2s ease,
+      visibility 0s linear 0s;
+  }
+
+  .orby-mobile-viewport__load-spinner img,
+  .orby-mobile-export-btn__spinner img {
+    animation-duration: 3s;
   }
 }
 
@@ -708,7 +757,7 @@ button {
   display: none !important;
 }
 
-/* ── Preset rails (center-snap carousel) ── */
+/* ── Preset rails (free horizontal scroll, tap to select) ── */
 .orby-mobile-panel--presets {
   justify-content: flex-start;
 }
@@ -749,7 +798,6 @@ button {
     var(--orby-mobile-rail-center-pad);
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -760,8 +808,6 @@ button {
 
 .orby-mobile-preset {
   flex: 0 0 var(--orby-mobile-preset-w);
-  scroll-snap-align: center;
-  scroll-snap-stop: always;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -777,11 +823,6 @@ button {
     transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
     opacity var(--orby-mobile-chrome-fade) linear,
     color 0.22s ease;
-}
-
-.orby-mobile-preset.is-rail-center {
-  opacity: 1;
-  transform: scale(1);
 }
 
 .orby-mobile-preset__thumb {
@@ -833,6 +874,8 @@ button {
 
 .orby-mobile-preset.is-selected {
   color: var(--text);
+  opacity: 1;
+  transform: scale(1);
 }
 
 .orby-mobile-preset.is-selected .orby-mobile-preset__thumb {

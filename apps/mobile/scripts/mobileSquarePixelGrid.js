@@ -8,6 +8,56 @@
  * MobileCreativeLookPost.setSize().
  */
 
+/** @type {WeakSet<object>} Passes pinned to the preview grid during JPEG export. */
+const exportPreviewPinned = new WeakSet();
+
+/**
+ * @param {object | null | undefined} pass
+ * @returns {boolean}
+ */
+export function isMobileExportPixelReferencePinned(pass) {
+  return !!pass && exportPreviewPinned.has(pass);
+}
+
+/**
+ * Keep preview cell density when export backing-store size differs from the live viewport.
+ * @param {object | null | undefined} pass
+ * @param {number} previewPhysW
+ * @param {number} previewPhysH
+ */
+export function pinMobileExportPixelReference(pass, previewPhysW, previewPhysH) {
+  if (!pass?.material?.uniforms?.uCellSize || !pass._referenceLogicalSize) return;
+  exportPreviewPinned.add(pass);
+  pass._referenceLogicalSize.set(Math.max(1, previewPhysW), Math.max(1, previewPhysH));
+  pass._referencePinned = true;
+  pass._applyCellSize?.();
+}
+
+/** @param {object | null | undefined} pass */
+export function unpinMobileExportPixelReference(pass) {
+  if (!pass) return;
+  exportPreviewPinned.delete(pass);
+  pass._referencePinned = false;
+}
+
+/**
+ * @param {readonly object[]} passes
+ * @param {number} previewPhysW
+ * @param {number} previewPhysH
+ */
+export function pinMobileExportPixelReferences(passes, previewPhysW, previewPhysH) {
+  for (const pass of passes) {
+    pinMobileExportPixelReference(pass, previewPhysW, previewPhysH);
+  }
+}
+
+/** @param {readonly object[]} passes */
+export function unpinMobileExportPixelReferences(passes) {
+  for (const pass of passes) {
+    unpinMobileExportPixelReference(pass);
+  }
+}
+
 /**
  * @param {object | null | undefined} pass
  * @param {number} physW
@@ -15,8 +65,10 @@
  */
 export function pinMobileSquarePixelReference(pass, physW, physH) {
   if (!pass?.material?.uniforms?.uCellSize || !pass._referenceLogicalSize) return;
+  if (exportPreviewPinned.has(pass)) return;
   pass._referenceLogicalSize.set(Math.max(1, physW), Math.max(1, physH));
   pass._referencePinned = true;
+  pass._applyCellSize?.();
 }
 
 /**

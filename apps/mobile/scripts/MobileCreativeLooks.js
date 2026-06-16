@@ -56,7 +56,15 @@ export class MobileCreativeLooks {
     this.onCreativeLookSync = null;
     /** @type {(() => void) | null} */
     this.onEnvironmentResync = null;
+    /** @type {((loading: boolean) => void) | null} */
+    this.onCreativeLookLoading = null;
+    /** @type {((presetId: string) => Promise<void>) | null} */
+    this.prepareCreativeLookPost = null;
+    /** @type {((presetId: string) => boolean) | null} */
+    this.needsCreativeLookPostPrepare = null;
     this._elapsed = 0;
+    /** @type {Promise<void>} */
+    this._creativeLookApplyChain = Promise.resolve();
   }
 
   /** @param {number} strength */
@@ -165,21 +173,67 @@ export class MobileCreativeLooks {
 
   /**
    * @param {string} presetId — creative-look id, or `none` / `standard` to restore PBR
+   * @returns {Promise<void>}
    */
   setCreativeLook(presetId) {
-    if (presetId === 'none' || presetId === 'standard') {
-      this.materialController.setCreativeLookSettings({ enabled: false });
+    this._creativeLookApplyChain = this._creativeLookApplyChain
+      .catch(() => {})
+      .then(() => this._applyCreativeLookOnce(presetId));
+    return this._creativeLookApplyChain;
+  }
+
+  /**
+   * Serialize material rebuilds — rapid rail swipes were overlapping GPU work and crashing mobile WebGL.
+   * @param {string} presetId
+   */
+  async _applyCreativeLookOnce(presetId) {
+    const patch =
+      presetId === 'none' || presetId === 'standard'
+        ? { enabled: false }
+        : { enabled: true, preset: presetId };
+    const heavy = this.materialController.willRebuildCreativeLookMaterials(patch);
+    const needsPostPrepare =
+      presetId !== 'none'
+      && presetId !== 'standard'
+      && this.needsCreativeLookPostPrepare?.(presetId);
+    const showSpinner = heavy || needsPostPrepare;
+
+    if (showSpinner) {
+      this.onCreativeLookLoading?.(true);
+    }
+
+    try {
+      if (needsPostPrepare) {
+        await this.prepareCreativeLookPost?.(presetId);
+      }
+
+      if (heavy) {
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
+      }
+
+      if (presetId === 'none' || presetId === 'standard') {
+        this.materialController.setCreativeLookSettings({ enabled: false });
+        this.onCreativeLookStateChanged?.();
+        this.onCreativeLookSync?.();
+        this.onEnvironmentResync?.();
+        return;
+      }
+      this.materialController.setCreativeLookSettings({
+        enabled: true,
+        preset: presetId,
+      });
       this.onCreativeLookStateChanged?.();
       this.onCreativeLookSync?.();
-      this.onEnvironmentResync?.();
-      return;
+    } catch (err) {
+      console.error('[Orby Mobile] Shader apply failed', presetId, err);
+      this.onCreativeLookStateChanged?.();
+    } finally {
+      if (showSpinner) {
+        this.onCreativeLookLoading?.(false);
+      }
     }
-    this.materialController.setCreativeLookSettings({
-      enabled: true,
-      preset: presetId,
-    });
-    this.onCreativeLookStateChanged?.();
-    this.onCreativeLookSync?.();
   }
 
   /** @param {number} dt */

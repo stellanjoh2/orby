@@ -3,6 +3,8 @@ import {
   hasMobileAppSession,
   hasMobileHandoffPendingFlag,
   hasPendingMobileModelHandoff,
+  clearMobileHandoffPending,
+  markMobileHandoffFailed,
   waitForMobileModelHandoff,
 } from '../../../scripts/orbyMobileHandoff.js';
 import { orbyMobileLandingUrl } from '../../../scripts/orbyMobileAppRoute.js';
@@ -53,6 +55,10 @@ async function boot() {
   const entry = await resolveMobileEntry();
   markMobileDebugLog('main:entry-resolved', { entry });
   if (entry === 'landing') {
+    if (hasMobileHandoffPendingFlag() || urlHasHandoffFlag()) {
+      markMobileHandoffFailed();
+      clearMobileHandoffPending();
+    }
     window.location.replace(orbyMobileLandingUrl());
     return;
   }

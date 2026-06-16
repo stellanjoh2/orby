@@ -121,9 +121,16 @@ export class MobileScene {
     this.creativeLooks.onCreativeLookStateChanged = () => {
       this.onCreativeLookStateChanged?.();
     };
+    this.creativeLooks.onCreativeLookLoading = (loading) => {
+      this.onCreativeLookLoading?.(loading);
+    };
     this.creativeLooks.onEnvironmentResync = () => {
       this._syncModelEnvironment();
     };
+    this.creativeLooks.prepareCreativeLookPost = (presetId) =>
+      this.post.creativeLooks.prepareForPreset(presetId);
+    this.creativeLooks.needsCreativeLookPostPrepare = (presetId) =>
+      this.post.creativeLooks.needsPrepare(presetId);
 
     this.environmentController = new EnvironmentController(this.scene, this.renderer, {
       presets: MOBILE_HDRI_PRESETS,
@@ -169,6 +176,8 @@ export class MobileScene {
     this.onOrbitChromeChange = null;
     /** @type {(() => void) | null} */
     this.onOrbitInteractionStart = null;
+    /** @type {((loading: boolean) => void) | null} */
+    this.onCreativeLookLoading = null;
 
     this._compareHeld = false;
     /** @type {ReturnType<MobileCreativeLooks['getCreativeLookSettings']> | null} */
@@ -540,12 +549,12 @@ export class MobileScene {
 
   /**
    * @param {string} presetId — creative-look id, or `none` / `standard`
+   * @returns {Promise<void>}
    */
   setCreativeLook(presetId) {
     const id = presetId === 'standard' ? 'none' : presetId;
     this._creativeLookPreset = id === 'none' ? null : id;
-    this.creativeLooks.setCreativeLook(id);
-    this.post.syncCreativeLook(this._creativeLookPreset);
+    return this.creativeLooks.setCreativeLook(id);
   }
 
   getCreativeLookSettings() {

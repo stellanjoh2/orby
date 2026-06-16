@@ -2,6 +2,7 @@ import { isOrbySceneFile } from '../../../scripts/import/dispatchImportFile.js';
 import {
   stageMobileModelHandoff,
   clearMobileHandoffPending,
+  takeMobileHandoffErrorMessage,
 } from '../../../scripts/orbyMobileHandoff.js';
 import { validateOrbyMobileModelFile } from '../../../scripts/orbyMobileModelLimits.js';
 import { orbyMobileAppUrl } from '../../../scripts/orbyMobileAppRoute.js';
@@ -63,11 +64,21 @@ async function handleFile(file) {
     return;
   }
 
+  /** @type {Uint8Array} */
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+  } catch (err) {
+    console.error('[Orby Mobile] Gate file read failed', err);
+    showToast('Could not read file — try again');
+    return;
+  }
+
   const root = document.getElementById('orbyMobileGate');
   if (root) root.dataset.state = 'loading';
 
   try {
-    await stageMobileModelHandoff(file);
+    await stageMobileModelHandoff(file, bytes);
     navigateToMobileApp();
   } catch (err) {
     console.error('[Orby Mobile] Gate handoff failed', err);
@@ -105,11 +116,17 @@ function bindGate() {
 
   fileInput?.addEventListener('change', () => {
     const file = fileInput.files?.[0];
-    fileInput.value = '';
-    if (file) void handleFile(file);
+    if (!file) return;
+    // Keep the input value until bytes are read — iOS Files/iCloud invalidates File handles on clear.
+    void handleFile(file).finally(() => {
+      fileInput.value = '';
+    });
   });
 
   if (root) root.dataset.state = 'ready';
+
+  const handoffError = takeMobileHandoffErrorMessage();
+  if (handoffError) showToast(handoffError);
 }
 
 bindGate();

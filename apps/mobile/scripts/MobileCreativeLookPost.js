@@ -29,11 +29,49 @@ import { resolveCreativeLookInkParams } from '../../../scripts/render/creativeLo
 import { resolveCreativeLookSketchParams } from '../../../scripts/render/creativeLookSketchArt.js';
 import { creativeLookWatercolourRadius } from '../../../scripts/render/creativeLookWatercolourArt.js';
 import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
-import { pinMobileSquarePixelReferences } from './mobileSquarePixelGrid.js';
+import {
+  pinMobileExportPixelReferences,
+  pinMobileSquarePixelReferences,
+  unpinMobileExportPixelReferences,
+} from './mobileSquarePixelGrid.js';
+
+/** Stable composer insert order — only mounted passes occupy slots. */
+const PASS_KEYS = [
+  'ascii',
+  'ega',
+  'c64',
+  'gameboy',
+  'nes',
+  'megadrive',
+  'gba',
+  'dither',
+  'vectrex',
+  'watercolour',
+  'sketch',
+  'sketchColour',
+];
+
+const SQUARE_PIXEL_KEYS = ['ega', 'c64', 'gameboy', 'nes', 'megadrive', 'gba', 'dither'];
+
+/** @type {Record<string, string>} */
+const FLAT_VARIANT_TO_PASS_KEY = {
+  ascii: 'ascii',
+  'ega-pixel': 'ega',
+  'c64-pixel': 'c64',
+  'gameboy-pixel': 'gameboy',
+  'nes-pixel': 'nes',
+  'megadrive-pixel': 'megadrive',
+  'gba-pixel': 'gba',
+  'dither-neutral': 'dither',
+  'dither-tritone': 'dither',
+  'dither-crosshatch': 'dither',
+  'dither-raster': 'dither',
+};
 
 /**
  * Screen-space Shader Lab passes for Orby Mobile — material prepass runs in
  * MaterialController; this module adds the missing ASCII / pixel / sketch / etc. post stack.
+ * Passes are created and mounted into the composer only when a preset needs them.
  */
 export class MobileCreativeLookPost {
   /** @param {THREE.WebGLRenderer} renderer */
@@ -48,92 +86,189 @@ export class MobileCreativeLookPost {
     /** @type {import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer | null} */
     this._composer = null;
 
-    this.creativeLookAscii = new CreativeLookAsciiPass(renderer);
-    this.creativeLookEga = new CreativeLookEgaPass(renderer);
-    this.creativeLookC64 = new CreativeLookC64Pass(renderer);
-    this.creativeLookGameBoy = new CreativeLookGameBoyPass(renderer);
-    this.creativeLookNes = new CreativeLookNesPass(renderer);
-    this.creativeLookMegaDrive = new CreativeLookMegaDrivePass(renderer);
-    this.creativeLookGba = new CreativeLookGbaPass(renderer);
-    this.creativeLookDither = new CreativeLookDitherPass(renderer);
-    this.creativeLookVectrex = new CreativeLookVectrex(renderer);
-    this.creativeLookWatercolour = new CreativeLookWatercolour(renderer);
-    this.creativeLookSketch = new CreativeLookSketch(renderer);
-    this.creativeLookSketchColour = new CreativeLookSketchColour(renderer);
+    /** @type {Record<string, object>} */
+    this._instances = {};
+    /** @type {Set<string>} */
+    this._mountedKeys = new Set();
+    /** @type {Set<import('three/examples/jsm/postprocessing/Pass.js').Pass>} */
+    this._creativePassSet = new Set();
 
-    this.creativeLookAsciiPass = this.creativeLookAscii.getPass();
-    this.creativeLookEgaPass = this.creativeLookEga.getPass();
-    this.creativeLookC64Pass = this.creativeLookC64.getPass();
-    this.creativeLookGameBoyPass = this.creativeLookGameBoy.getPass();
-    this.creativeLookNesPass = this.creativeLookNes.getPass();
-    this.creativeLookMegaDrivePass = this.creativeLookMegaDrive.getPass();
-    this.creativeLookGbaPass = this.creativeLookGba.getPass();
-    this.creativeLookDitherPass = this.creativeLookDither.getPass();
-    this.creativeLookVectrexPass = this.creativeLookVectrex.getPass();
-    this.creativeLookWatercolourPass = this.creativeLookWatercolour.getPass();
-    this.creativeLookSketchPass = this.creativeLookSketch.getPass();
-    this.creativeLookSketchColourPass = this.creativeLookSketchColour.getPass();
-
-    /** @type {Record<string, import('three/examples/jsm/postprocessing/Pass.js').Pass>} */
-    this._flatPassByVariant = {
-      ascii: this.creativeLookAsciiPass,
-      'ega-pixel': this.creativeLookEgaPass,
-      'c64-pixel': this.creativeLookC64Pass,
-      'gameboy-pixel': this.creativeLookGameBoyPass,
-      'nes-pixel': this.creativeLookNesPass,
-      'megadrive-pixel': this.creativeLookMegaDrivePass,
-      'gba-pixel': this.creativeLookGbaPass,
-      'dither-neutral': this.creativeLookDitherPass,
-      'dither-tritone': this.creativeLookDitherPass,
-      'dither-crosshatch': this.creativeLookDitherPass,
-      'dither-raster': this.creativeLookDitherPass,
-    };
-
-    this._allCreativePasses = [
-      this.creativeLookAsciiPass,
-      this.creativeLookEgaPass,
-      this.creativeLookC64Pass,
-      this.creativeLookGameBoyPass,
-      this.creativeLookNesPass,
-      this.creativeLookMegaDrivePass,
-      this.creativeLookGbaPass,
-      this.creativeLookDitherPass,
-      this.creativeLookVectrexPass,
-      this.creativeLookWatercolourPass,
-      this.creativeLookSketchPass,
-      this.creativeLookSketchColourPass,
-    ];
-    this._creativePassSet = new Set(this._allCreativePasses);
-    /** Screen-pixel grid passes — fixed landscape refs; square-corrected on mobile. */
-    this._squarePixelPasses = [
-      this.creativeLookEga,
-      this.creativeLookC64,
-      this.creativeLookGameBoy,
-      this.creativeLookNes,
-      this.creativeLookMegaDrive,
-      this.creativeLookGba,
-      this.creativeLookDither,
-    ];
     /** @type {{ min: number, mag: number } | null} */
     this._composerFilterRestore = null;
     /** @type {object} */
     this._settings = {};
     this._viewportBloomStackActive = false;
+    this._exportPixelPinned = false;
+    this._logicalW = 1;
+    this._logicalH = 1;
   }
 
   /**
-   * Insert creative passes immediately after the scene RenderPass.
+   * @param {string} presetId
+   * @returns {string[]}
+   */
+  _requiredPassKeys(presetId) {
+    const id = normalizeCreativeLookPreset(presetId);
+    if (!id || id === 'none' || id === 'standard') return [];
+
+    if (isFlatPostCreativeLookPreset(id)) {
+      const variant = creativeLookFlatPostVariant(id);
+      const key = variant ? FLAT_VARIANT_TO_PASS_KEY[variant] : null;
+      return key ? [key] : [];
+    }
+    if (isWatercolourCreativeLookPreset(id)) return ['watercolour'];
+    if (isSketchColourCreativeLookPreset(id)) return ['sketchColour'];
+    if (isSketchCreativeLookPreset(id)) return ['sketch'];
+    if (isVectrexCreativeLookPreset(id)) return ['vectrex'];
+    return [];
+  }
+
+  /**
+   * Whether selecting this preset still needs lazy pass init / mount work.
+   * @param {string} presetId
+   */
+  needsPrepare(presetId) {
+    const keys = this._requiredPassKeys(presetId);
+    return keys.some((key) => !this._mountedKeys.has(key));
+  }
+
+  /**
+   * Create and mount post passes for a preset before material rebuild.
+   * @param {string} presetId
+   */
+  async prepareForPreset(presetId) {
+    const keys = this._requiredPassKeys(presetId);
+    if (!keys.length || !this._composer) return;
+
+    for (const key of keys) {
+      this._ensureInstance(key);
+      this._mountPassKey(key);
+      this._applySizeToKey(key);
+    }
+
+    if (keys.includes('ascii')) {
+      await ensureAsciiFontAtlasLoaded();
+      this._instances.ascii?.refreshAtlas?.();
+    }
+  }
+
+  /** @param {string} key */
+  _ensureInstance(key) {
+    if (this._instances[key]) return this._instances[key];
+
+    /** @type {object} */
+    let instance;
+    switch (key) {
+      case 'ascii':
+        instance = new CreativeLookAsciiPass(this.renderer);
+        break;
+      case 'ega':
+        instance = new CreativeLookEgaPass(this.renderer);
+        break;
+      case 'c64':
+        instance = new CreativeLookC64Pass(this.renderer);
+        break;
+      case 'gameboy':
+        instance = new CreativeLookGameBoyPass(this.renderer);
+        break;
+      case 'nes':
+        instance = new CreativeLookNesPass(this.renderer);
+        break;
+      case 'megadrive':
+        instance = new CreativeLookMegaDrivePass(this.renderer);
+        break;
+      case 'gba':
+        instance = new CreativeLookGbaPass(this.renderer);
+        break;
+      case 'dither':
+        instance = new CreativeLookDitherPass(this.renderer);
+        break;
+      case 'vectrex':
+        instance = new CreativeLookVectrex(this.renderer);
+        break;
+      case 'watercolour':
+        instance = new CreativeLookWatercolour(this.renderer);
+        break;
+      case 'sketch':
+        instance = new CreativeLookSketch(this.renderer);
+        break;
+      case 'sketchColour':
+        instance = new CreativeLookSketchColour(this.renderer);
+        break;
+      default:
+        return null;
+    }
+
+    this._instances[key] = instance;
+    return instance;
+  }
+
+  /** @param {string} key */
+  _getPass(key) {
+    const instance = this._ensureInstance(key);
+    if (!instance?.getPass) return null;
+    return instance.getPass();
+  }
+
+  /** @param {string} key */
+  _mountPassKey(key) {
+    if (this._mountedKeys.has(key) || !this._composer) return;
+    const pass = this._getPass(key);
+    if (!pass) return;
+
+    const orderIdx = PASS_KEYS.indexOf(key);
+    let insertAt = 1;
+    for (let i = 0; i < orderIdx; i += 1) {
+      if (this._mountedKeys.has(PASS_KEYS[i])) insertAt += 1;
+    }
+
+    pass.enabled = false;
+    pass.renderToScreen = false;
+    this._composer.passes.splice(insertAt, 0, pass);
+    this._mountedKeys.add(key);
+    this._creativePassSet.add(pass);
+  }
+
+  /** @param {string} key */
+  _applySizeToKey(key) {
+    const instance = this._instances[key];
+    if (!instance?.setSize) return;
+    instance.setSize(this._logicalW, this._logicalH);
+  }
+
+  /** @returns {object[]} */
+  _initializedSquarePixelPasses() {
+    return SQUARE_PIXEL_KEYS
+      .map((key) => this._instances[key])
+      .filter(Boolean);
+  }
+
+  /**
+   * Pin screen-pixel grid density to the live preview while export resizes the GL backing store.
+   * @param {number} previewLogicalW
+   * @param {number} previewLogicalH
+   * @param {number} previewPhysW
+   * @param {number} previewPhysH
+   */
+  pinExportPixelReferences(previewLogicalW, previewLogicalH, previewPhysW, previewPhysH) {
+    this._exportPixelPinned = true;
+    pinMobileExportPixelReferences(this._initializedSquarePixelPasses(), previewPhysW, previewPhysH);
+    this._instances.ascii?.pinReferenceLogicalSize?.(previewLogicalW, previewLogicalH);
+  }
+
+  unpinExportPixelReferences() {
+    if (!this._exportPixelPinned) return;
+    this._exportPixelPinned = false;
+    unpinMobileExportPixelReferences(this._initializedSquarePixelPasses());
+    this._instances.ascii?.unpinReferenceLogicalSize?.();
+  }
+
+  /**
+   * Store composer reference — creative passes mount on first preset selection.
    * @param {import('three/examples/jsm/postprocessing/EffectComposer.js').EffectComposer} composer
    */
   mount(composer) {
     this._composer = composer;
-    let insertAt = 1;
-    for (const pass of this._allCreativePasses) {
-      pass.enabled = false;
-      pass.renderToScreen = false;
-      composer.passes.splice(insertAt, 0, pass);
-      insertAt += 1;
-    }
   }
 
   /** @param {string | null | undefined} presetId @param {object} [settings] */
@@ -158,12 +293,6 @@ export class MobileCreativeLookPost {
       this._presentationMode = 'flat';
       this._flatVariant = creativeLookFlatPostVariant(id);
       this._syncFlatPostSettings(id, masterHueRad, settings);
-      if (this._flatVariant === 'ascii') {
-        void ensureAsciiFontAtlasLoaded().then(() => {
-          this.creativeLookAscii.refreshAtlas?.();
-          this._syncFlatPostSettings(id, masterHueRad, settings);
-        });
-      }
       return;
     }
 
@@ -171,7 +300,7 @@ export class MobileCreativeLookPost {
       this._presentationMode = 'watercolour';
       this._flatVariant = null;
       const ink = resolveCreativeLookInkParams({}, 'watercolour');
-      this.creativeLookWatercolour.updateSettings({
+      this._instances.watercolour?.updateSettings?.({
         enabled: true,
         patternScale,
         radius: creativeLookWatercolourRadius(patternScale),
@@ -192,7 +321,7 @@ export class MobileCreativeLookPost {
     if (isVectrexCreativeLookPreset(id)) {
       this._presentationMode = 'vectrex';
       this._flatVariant = null;
-      this.creativeLookVectrex.updateSettings({ enabled: true, intensity });
+      this._instances.vectrex?.updateSettings?.({ enabled: true, intensity });
       return;
     }
 
@@ -212,14 +341,14 @@ export class MobileCreativeLookPost {
     const intensity = normalizeCreativeLookIntensity(settings.intensity);
     const liftCrush = normalizeCreativeLookLiftCrush(settings.liftCrush);
     const ascii = { enabled: enabled && this._flatVariant === 'ascii', variant: presetId, masterHue: masterHueRad };
-    this.creativeLookAscii.updateSettings(ascii);
-    this.creativeLookEga.updateSettings({ enabled: enabled && this._flatVariant === 'ega-pixel', masterHue: masterHueRad });
-    this.creativeLookC64.updateSettings({ enabled: enabled && this._flatVariant === 'c64-pixel', masterHue: masterHueRad });
-    this.creativeLookGameBoy.updateSettings({ enabled: enabled && this._flatVariant === 'gameboy-pixel', masterHue: masterHueRad });
-    this.creativeLookNes.updateSettings({ enabled: enabled && this._flatVariant === 'nes-pixel', masterHue: masterHueRad });
-    this.creativeLookMegaDrive.updateSettings({ enabled: enabled && this._flatVariant === 'megadrive-pixel', masterHue: masterHueRad });
-    this.creativeLookGba.updateSettings({ enabled: enabled && this._flatVariant === 'gba-pixel', masterHue: masterHueRad });
-    this.creativeLookDither.updateSettings({
+    this._instances.ascii?.updateSettings?.(ascii);
+    this._instances.ega?.updateSettings?.({ enabled: enabled && this._flatVariant === 'ega-pixel', masterHue: masterHueRad });
+    this._instances.c64?.updateSettings?.({ enabled: enabled && this._flatVariant === 'c64-pixel', masterHue: masterHueRad });
+    this._instances.gameboy?.updateSettings?.({ enabled: enabled && this._flatVariant === 'gameboy-pixel', masterHue: masterHueRad });
+    this._instances.nes?.updateSettings?.({ enabled: enabled && this._flatVariant === 'nes-pixel', masterHue: masterHueRad });
+    this._instances.megadrive?.updateSettings?.({ enabled: enabled && this._flatVariant === 'megadrive-pixel', masterHue: masterHueRad });
+    this._instances.gba?.updateSettings?.({ enabled: enabled && this._flatVariant === 'gba-pixel', masterHue: masterHueRad });
+    this._instances.dither?.updateSettings?.({
       enabled:
         enabled
         && (this._flatVariant === 'dither-neutral'
@@ -245,13 +374,13 @@ export class MobileCreativeLookPost {
       rasterSize: sketchParams.rasterSize,
       intensity,
     };
-    this.creativeLookSketch.updateSettings({
+    this._instances.sketch?.updateSettings?.({
       ...frame,
       enabled: isSketchCreativeLookPreset(presetId) && sketchParams.rasterSize > 0,
       strokeColor: sketchInk.strokeColor,
       preset: 'sketch',
     });
-    this.creativeLookSketchColour.updateSettings({
+    this._instances.sketchColour?.updateSettings?.({
       ...frame,
       enabled: isSketchColourCreativeLookPreset(presetId) && sketchParams.rasterSize > 0,
       strokeColor: colourInk.strokeColor,
@@ -332,7 +461,8 @@ export class MobileCreativeLookPost {
     renderPass.enabled = true;
 
     if (this._presentationMode === 'flat') {
-      const flatPass = this._flatVariant ? this._flatPassByVariant[this._flatVariant] : null;
+      const passKey = this._flatVariant ? FLAT_VARIANT_TO_PASS_KEY[this._flatVariant] : null;
+      const flatPass = passKey ? this._getPass(passKey) : null;
       if (flatPass) flatPass.enabled = true;
       this._setComposerNearestFilter(true);
       gradingPass.enabled = true;
@@ -349,7 +479,8 @@ export class MobileCreativeLookPost {
       }
     } else if (this._presentationMode === 'watercolour') {
       this._restoreComposerFilter();
-      this.creativeLookWatercolourPass.enabled = true;
+      const pass = this._getPass('watercolour');
+      if (pass) pass.enabled = true;
       gradingPass.enabled = true;
       if (grainActive) {
         filmPass.enabled = true;
@@ -358,11 +489,9 @@ export class MobileCreativeLookPost {
       if (aberrationActive) aberrationPass.enabled = true;
     } else if (this._presentationMode === 'sketch') {
       this._restoreComposerFilter();
-      if (isSketchColourCreativeLookPreset(this._presetId)) {
-        this.creativeLookSketchColourPass.enabled = true;
-      } else {
-        this.creativeLookSketchPass.enabled = true;
-      }
+      const sketchKey = isSketchColourCreativeLookPreset(this._presetId) ? 'sketchColour' : 'sketch';
+      const pass = this._getPass(sketchKey);
+      if (pass) pass.enabled = true;
       gradingPass.enabled = true;
       if (grainActive) {
         filmPass.enabled = true;
@@ -371,7 +500,8 @@ export class MobileCreativeLookPost {
       if (aberrationActive) aberrationPass.enabled = true;
     } else if (this._presentationMode === 'vectrex') {
       this._restoreComposerFilter();
-      this.creativeLookVectrexPass.enabled = true;
+      const pass = this._getPass('vectrex');
+      if (pass) pass.enabled = true;
       gradingPass.enabled = true;
       if (grainActive) {
         filmPass.enabled = true;
@@ -422,27 +552,22 @@ export class MobileCreativeLookPost {
 
   /** @param {number} w @param {number} h */
   setSize(w, h) {
+    this._logicalW = Math.max(1, w);
+    this._logicalH = Math.max(1, h);
     const pr = Math.max(1, this.renderer?.getPixelRatio?.() ?? 1);
     const physW = Math.max(1, Math.floor(w * pr));
     const physH = Math.max(1, Math.floor(h * pr));
-    pinMobileSquarePixelReferences(this._squarePixelPasses, physW, physH);
+    if (!this._exportPixelPinned) {
+      pinMobileSquarePixelReferences(this._initializedSquarePixelPasses(), physW, physH);
+    }
 
-    this.creativeLookAscii.setSize(w, h);
-    this.creativeLookEga.setSize(w, h);
-    this.creativeLookC64.setSize(w, h);
-    this.creativeLookGameBoy.setSize(w, h);
-    this.creativeLookNes.setSize(w, h);
-    this.creativeLookMegaDrive.setSize(w, h);
-    this.creativeLookGba.setSize(w, h);
-    this.creativeLookDither.setSize(w, h);
-    this.creativeLookVectrex.setSize(w, h);
-    this.creativeLookWatercolour.setSize(w, h);
-    this.creativeLookSketch.setSize(w, h);
-    this.creativeLookSketchColour.setSize(w, h);
+    for (const key of this._mountedKeys) {
+      this._applySizeToKey(key);
+    }
   }
 
   _disableAllCreativePasses() {
-    for (const pass of this._allCreativePasses) {
+    for (const pass of this._creativePassSet) {
       pass.enabled = false;
     }
   }
@@ -482,5 +607,11 @@ export class MobileCreativeLookPost {
 
   dispose() {
     this._restoreComposerFilter();
+    for (const key of Object.keys(this._instances)) {
+      this._instances[key]?.dispose?.();
+    }
+    this._instances = {};
+    this._mountedKeys.clear();
+    this._creativePassSet.clear();
   }
 }
