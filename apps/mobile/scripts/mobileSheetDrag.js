@@ -32,6 +32,7 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
   /** @param {EventTarget | null} target */
   const canStartDrag = (target) => {
     if (!(target instanceof Element)) return false;
+    if (root.dataset.sliderFocus != null) return false;
     if (root.dataset.sheet === 'closed') return false;
     if (target.closest('input, button, textarea, select, label, .orby-mobile-preset, .effect-toggle')) {
       return false;

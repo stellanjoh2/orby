@@ -30,6 +30,7 @@ import { buildMobileDebugSceneExtra, markMobileDebugLog } from './mobileDebugLog
 import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
 import { mobileHaptic } from './mobileHaptics.js';
 import { bindMobileSheetDrag } from './mobileSheetDrag.js';
+import { bindMobileSliderFocus } from './mobileSliderFocus.js';
 
 function urlHasHandoffFlag() {
   try {
@@ -87,6 +88,8 @@ export class MobileShell {
     this._hdriControlsEl = null;
     /** @type {ReturnType<typeof bindMobileSheetDrag> | null} */
     this._sheetDrag = null;
+    /** @type {ReturnType<typeof bindMobileSliderFocus> | null} */
+    this._sliderFocus = null;
     /** @type {{ time: number, x: number, y: number }} */
     this._lastViewportTap = { time: 0, x: 0, y: 0 };
     /** @type {{ id: number, x: number, y: number } | null} */
@@ -662,6 +665,8 @@ export class MobileShell {
   }
 
   _bindChrome() {
+    this._sliderFocus = bindMobileSliderFocus({ root: this.root });
+
     if (this.sheet) {
       this._sheetDrag = bindMobileSheetDrag({
         root: this.root,
@@ -682,6 +687,7 @@ export class MobileShell {
     });
 
     document.addEventListener('pointerdown', (e) => {
+      if (this.root.dataset.sliderFocus != null) return;
       if (this.sheetState === 'closed') return;
       const t = e.target;
       if (!(t instanceof Element)) return;
@@ -1159,6 +1165,7 @@ export class MobileShell {
     if (state === 'closed') {
       this._engagedPresetTabs.clear();
     }
+    this._sliderFocus?.release();
     const wasOpen = this.sheetState !== 'closed';
     this.sheetState = state;
     this.root.dataset.sheet = state;

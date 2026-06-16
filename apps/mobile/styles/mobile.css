@@ -114,6 +114,8 @@
   --orby-mobile-dock-frosted-blur: 22px;
   --orby-mobile-border: color-mix(in srgb, var(--orby-lime) 12%, transparent);
   --ui-accent-outer-glow-compact: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
+  --orby-mobile-slider-focus-out: 0.12s;
+  --orby-mobile-slider-focus-in: 0.22s;
 }
 
 *,
@@ -1069,6 +1071,72 @@ button {
   color: var(--text);
 }
 
+/* ── Slider focus — fade chrome while dragging; active row stays in place ── */
+.orby-mobile-dock,
+.orby-mobile-export-btn,
+.orby-mobile-debug-menu,
+.orby-mobile-scrim,
+.orby-mobile-sheet__grabber,
+.orby-mobile-preset-rail,
+.orby-mobile-fx-grade,
+.orby-mobile-fx-toggle,
+.orby-mobile-pill-btn,
+.orby-mobile-color-line,
+.orby-mobile-seg,
+.orby-mobile-bg-controls {
+  transition: opacity var(--orby-mobile-slider-focus-in) ease;
+}
+
+.orby-mobile[data-slider-focus] .orby-mobile-dock,
+.orby-mobile[data-slider-focus] .orby-mobile-export-btn,
+.orby-mobile[data-slider-focus] .orby-mobile-debug-menu,
+.orby-mobile[data-slider-focus] .orby-mobile-scrim,
+.orby-mobile[data-slider-focus] .orby-mobile-sheet__grabber,
+.orby-mobile[data-slider-focus] .orby-mobile-preset-rail,
+.orby-mobile[data-slider-focus] .orby-mobile-fx-grade:not(.is-slider-focus),
+.orby-mobile[data-slider-focus] .orby-mobile-fx-toggle,
+.orby-mobile[data-slider-focus] .orby-mobile-pill-btn,
+.orby-mobile[data-slider-focus] .orby-mobile-color-line,
+.orby-mobile[data-slider-focus] .orby-mobile-seg,
+.orby-mobile[data-slider-focus] .orby-mobile-bg-controls {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--orby-mobile-slider-focus-out) ease;
+}
+
+.orby-mobile[data-slider-focus] .orby-mobile-sheet {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  pointer-events: none;
+  transition:
+    background var(--orby-mobile-slider-focus-out) ease,
+    box-shadow var(--orby-mobile-slider-focus-out) ease;
+}
+
+.orby-mobile[data-slider-focus] .orby-mobile-sheet::after {
+  opacity: 0;
+  transition: opacity var(--orby-mobile-slider-focus-out) ease;
+}
+
+.orby-mobile-fx-grade.is-slider-focus {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: none;
+  opacity: 1 !important;
+}
+
+.orby-mobile-fx-grade.is-slider-focus input[type='range'] {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.orby-mobile-fx-grade.is-slider-focus .orby-mobile-fx-grade__label {
+  color: var(--orby-lime);
+}
+
 .orby-mobile-fx-toggle {
   display: flex;
   align-items: center;
@@ -1306,7 +1374,16 @@ button {
   .orby-mobile-sheet,
   .orby-mobile-dock,
   .orby-mobile-toast,
-  .orby-mobile-scrim {
+  .orby-mobile-scrim,
+  .orby-mobile-export-btn,
+  .orby-mobile-debug-menu,
+  .orby-mobile-preset-rail,
+  .orby-mobile-fx-grade,
+  .orby-mobile-fx-toggle,
+  .orby-mobile-pill-btn,
+  .orby-mobile-color-line,
+  .orby-mobile-seg,
+  .orby-mobile-bg-controls {
     transition: none;
   }
 

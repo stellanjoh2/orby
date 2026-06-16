@@ -29,6 +29,7 @@
   --brand-text: var(--orby-black);
   --brand-font-headline: 'Mattone Bold', 'Geist', system-ui, sans-serif;
   --orby-gate-headline-actions-gap: 28px;
+  --orby-gate-cta-foot-gap: 150px;
   --orby-gate-headline-size: 36px;
   --orby-gate-lede-size: 18px;
   --orby-gate-lede-line: 1.36;
@@ -332,7 +333,7 @@ html.orby-mobile-gate body {
   padding:
     max(env(safe-area-inset-top, 0px), 12px)
     0
-    calc(clamp(9rem, 24vh, 11rem) + env(safe-area-inset-bottom, 0px));
+    max(env(safe-area-inset-bottom, 0px), 12px);
   background: var(--brand-primary, var(--orby-lime));
   color: var(--brand-text, var(--orby-black));
   text-align: center;
@@ -392,21 +393,15 @@ html.orby-mobile-gate body {
 }
 
 .orby-mobile-gate__learn-foot {
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  right: 0;
-  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 24px;
+  gap: 12px;
   width: 100%;
-  padding:
-    clamp(1.5rem, 5vh, 2.25rem)
-    var(--orby-gate-inset-x)
-    calc(clamp(1.25rem, 4vh, 1.75rem) + env(safe-area-inset-bottom, 0px));
+  margin-top: max(
+    0px,
+    calc(var(--orby-gate-cta-foot-gap) - var(--orby-gate-headline-actions-gap))
+  );
   pointer-events: none;
 }
 
