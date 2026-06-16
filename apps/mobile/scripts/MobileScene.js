@@ -90,18 +90,6 @@ export class MobileScene {
     }
     configureMobileGltfLoader(this.gltfLoader);
 
-    this.post = new MobilePost(this.renderer, this.scene, this.camera);
-    this.creativeLooks = new MobileCreativeLooks(this.renderer, this.scene, this.camera);
-    this.post.setCreativeLookSettingsGetter(() => this.creativeLooks.getCreativeLookSettings());
-    this.creativeLooks.onCreativeLookSync = () => {
-      this.post.syncCreativeLook(this._creativeLookPreset);
-    };
-    this.creativeLooks.onCreativeLookStateChanged = () => {
-      this.onCreativeLookStateChanged?.();
-    };
-    this.creativeLooks.onEnvironmentResync = () => {
-      this._syncModelEnvironment();
-    };
     /** @type {number} */
     this._hdriStrength = MOBILE_HDRI_STRENGTH_DEFAULT;
     /** @type {number} */
@@ -122,6 +110,19 @@ export class MobileScene {
     this.backgroundController.setGradientController(this.backgroundGradientController);
     this.backgroundController.setHdriEnabled(true);
     this.backgroundController.setHdriBackgroundEnabled(this._hdriBackgroundEnabled);
+
+    this.post = new MobilePost(this.renderer, this.scene, this.camera, this.backgroundController);
+    this.creativeLooks = new MobileCreativeLooks(this.renderer, this.scene, this.camera);
+    this.post.setCreativeLookSettingsGetter(() => this.creativeLooks.getCreativeLookSettings());
+    this.creativeLooks.onCreativeLookSync = () => {
+      this.post.syncCreativeLook(this._creativeLookPreset);
+    };
+    this.creativeLooks.onCreativeLookStateChanged = () => {
+      this.onCreativeLookStateChanged?.();
+    };
+    this.creativeLooks.onEnvironmentResync = () => {
+      this._syncModelEnvironment();
+    };
 
     this.environmentController = new EnvironmentController(this.scene, this.renderer, {
       presets: MOBILE_HDRI_PRESETS,
@@ -307,9 +308,11 @@ export class MobileScene {
 
   /** @param {string} color */
   setBackgroundColor(color) {
+    if (!color) return;
     this.backgroundController.setColor(color);
     if (!this._hdriBackgroundEnabled) {
       this.environmentController.setFallbackColor(color);
+      this.backgroundController.refreshAppearance();
     }
   }
 
@@ -321,7 +324,11 @@ export class MobileScene {
   setBackgroundGradient(patch) {
     this.backgroundGradientController.setConfig(patch);
     if (!this._hdriBackgroundEnabled) {
-      this.backgroundController.refreshAppearance();
+      if (this.backgroundGradientController.isActive()) {
+        this.backgroundGradientController.syncToDrawingBuffer(undefined, undefined, { forceRedraw: true });
+      } else {
+        this.backgroundController.refreshAppearance();
+      }
     }
   }
 

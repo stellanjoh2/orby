@@ -2,7 +2,6 @@
 <html lang="en" class="orby-mobile-gate">
   <head>
     <meta charset="UTF-8" />
-    <base href="/mobile/" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
@@ -11,7 +10,7 @@
     <meta name="description" content="Browse a GLB to light, style, and export in Orby Mobile." />
     <title>Orby Mobile</title>
     <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles/landing.css" />
+    <link rel="stylesheet" href="/mobile/styles/landing.css" />
   </head>
   <body>
     <div id="orbyMobileGate" class="orby-mobile-gate" data-state="boot">
@@ -178,6 +177,18 @@
       tabindex="-1"
     />
 
-    <script type="module" src="scripts/landing.js"></script>
+    <script type="module" src="/mobile/scripts/landing.js"></script>
+    <script>
+      (function () {
+        var link = document.getElementById('orbyMobileGateLearnLink');
+        if (!link) return;
+        var learnPath = '/mobile/learn/';
+        link.setAttribute('href', learnPath);
+        link.addEventListener('click', function (event) {
+          event.preventDefault();
+          window.location.assign(learnPath + window.location.search + window.location.hash);
+        });
+      })();
+    </script>
   </body>
 </html>

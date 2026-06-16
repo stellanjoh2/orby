@@ -33,11 +33,12 @@ import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
  * Mobile post stack — grading + bloom + grain + chromatic aberration.
  */
 export class MobilePost {
-  /** @param {THREE.WebGLRenderer} renderer @param {THREE.Scene} scene @param {THREE.Camera} camera */
-  constructor(renderer, scene, camera) {
+  /** @param {THREE.WebGLRenderer} renderer @param {THREE.Scene} scene @param {THREE.Camera} camera @param {import('../../../scripts/render/BackgroundController.js').BackgroundController} backgroundController */
+  constructor(renderer, scene, camera, backgroundController) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
+    this.backgroundController = backgroundController;
     this._grainTime = 0;
     /** @type {number} Composer output width in physical pixels — for mobile grain boost. */
     this._composerPixelWidth = 1;
@@ -97,6 +98,7 @@ export class MobilePost {
       camera: this.camera,
       composer: this.composer,
       postPipeline: this,
+      backgroundController: this.backgroundController,
       syncPostProcessingForLogicalSize: (w, h) => this.setSize(w, h),
       beforeComposerRender: () => this.beforeComposerRender?.(),
     });

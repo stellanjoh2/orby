@@ -949,7 +949,7 @@ button {
   margin: calc(-1 * var(--orby-mobile-slider-label-pull)) 0 calc(-1 * var(--orby-mobile-slider-touch-bleed));
   padding: 0;
   touch-action: pan-y;
-  pointer-events: none;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   border-radius: 1px;
   position: relative;
@@ -1106,6 +1106,7 @@ button {
 .orby-mobile-fx-toggle,
 .orby-mobile-pill-btn,
 .orby-mobile-color-line,
+.orby-mobile-color-picker,
 .orby-mobile-hsv-picker-host,
 .orby-mobile-gradient-stops,
 .orby-mobile-gradient-stop,
@@ -1127,6 +1128,7 @@ button {
 .orby-mobile[data-slider-focus] .orby-mobile-fx-toggle,
 .orby-mobile[data-slider-focus] .orby-mobile-pill-btn,
 .orby-mobile[data-slider-focus] .orby-mobile-color-line,
+.orby-mobile[data-slider-focus] .orby-mobile-color-picker,
 .orby-mobile[data-slider-focus] .orby-mobile-hsv-picker-host,
 .orby-mobile[data-slider-focus] .orby-mobile-gradient-stops,
 .orby-mobile[data-slider-focus] .orby-mobile-gradient-stop,
@@ -1142,10 +1144,6 @@ button {
   pointer-events: none;
 }
 
-.orby-mobile[data-slider-focus] .orby-mobile-sheet {
-  pointer-events: none;
-}
-
 .orby-mobile-fx-grade.is-slider-focus {
   position: relative;
   z-index: 5;
@@ -1157,10 +1155,15 @@ button {
 .orby-mobile-fx-grade.is-slider-focus input[type='range'] {
   opacity: 1 !important;
   visibility: visible !important;
-  pointer-events: auto;
+  pointer-events: auto !important;
+  touch-action: none !important;
 }
 
 @media (hover: none) {
+  .orby-mobile-fx-grade input[type='range'] {
+    touch-action: none;
+  }
+
   .orby-mobile-fx-grade.is-slider-focus,
   .orby-mobile-fx-grade.is-slider-focus input[type='range'] {
     touch-action: none;
@@ -1276,8 +1279,45 @@ button {
   font-weight: 500;
 }
 
-.orby-mobile-hsv-picker-host {
-  margin: 0 0 var(--orby-mobile-slider-row-gap);
+.orby-mobile-color-swatch {
+  flex: 0 0 auto;
+  width: var(--orby-mobile-toggle-w);
+  height: var(--orby-mobile-toggle-h);
+  padding: 0;
+  border: 1px solid var(--orby-mobile-border);
+  border-radius: 999px;
+  background: var(--orby-black);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--orby-lime) 10%, transparent);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.orby-mobile-color-swatch:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* ── Color picker overlay — viewport-only chrome while active ── */
+.orby-mobile-color-picker {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: max(1rem, env(safe-area-inset-bottom, 0px)) 1rem 1.5rem;
+  pointer-events: none;
+}
+
+.orby-mobile-color-picker[hidden] {
+  display: none !important;
+}
+
+.orby-mobile-color-picker__host {
+  width: min(300px, calc(100% - 2rem));
+  pointer-events: auto;
 }
 
 .orby-mobile-hsv-picker {
@@ -1289,7 +1329,7 @@ button {
 
 .orby-mobile-hsv-picker__canvas {
   display: block;
-  width: min(280px, 100%);
+  width: 100%;
   max-width: 100%;
   height: auto;
   aspect-ratio: 1;
@@ -1298,6 +1338,7 @@ button {
   cursor: crosshair;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.35));
 }
 
 .orby-mobile-hsv-picker.is-disabled {
@@ -1305,40 +1346,26 @@ button {
   pointer-events: none;
 }
 
-.orby-mobile-gradient-stops {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 var(--orby-mobile-slider-row-gap);
-}
-
-.orby-mobile-gradient-stop {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, white 10%, transparent);
-  background: color-mix(in srgb, var(--orby-black) 70%, white 4%);
+.orby-mobile-color-picker__done {
+  pointer-events: auto;
+  min-width: 7.5rem;
+  padding: 0.72rem 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--orby-lime) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orby-black) 72%, white 4%);
   color: var(--text);
   font-size: var(--orby-mobile-type-size);
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.orby-mobile-gradient-stop.is-active {
-  color: var(--orby-black);
-  background: var(--orby-lime);
-  border-color: color-mix(in srgb, var(--orby-lime) 55%, transparent);
-}
-
-.orby-mobile-gradient-stop__swatch {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, white 18%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orby-black) 18%, transparent);
+.orby-mobile[data-color-picker='open'] .orby-mobile-dock,
+.orby-mobile[data-color-picker='open'] .orby-mobile-sheet,
+.orby-mobile[data-color-picker='open'] .orby-mobile-scrim,
+.orby-mobile[data-color-picker='open'] .orby-mobile-export-btn,
+.orby-mobile[data-color-picker='open'] .orby-mobile-debug-menu {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .orby-mobile-seg {

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
+import { APP_BACKGROUND } from '../../../scripts/constants.js';
 import { fullViewportLogicalSize } from '../../../scripts/render/fullViewportLogicalSize.js';
-
-const ORBY_BLACK = '#080808';
 
 /**
  * Desktop ComposerLifecycle frame prep — mobile was skipping this, which let bloom passes
@@ -20,11 +19,16 @@ export function resetMobileRendererViewport(renderer) {
 /**
  * @param {THREE.WebGLRenderer} renderer
  * @param {THREE.Scene} scene
+ * @param {import('../../../scripts/render/BackgroundController.js').BackgroundController | null | undefined} [backgroundController]
  */
-export function syncMobileRendererClearForSceneBackground(renderer, scene) {
+export function syncMobileRendererClearForSceneBackground(renderer, scene, backgroundController) {
   const bg = scene.background;
   if (bg == null) {
-    renderer.setClearColor(new THREE.Color(ORBY_BLACK), 1);
+    const gradient = backgroundController?.gradientController;
+    const hex = gradient?.isActive?.()
+      ? gradient.getFallbackColor()
+      : backgroundController?.getColor?.() ?? APP_BACKGROUND;
+    renderer.setClearColor(new THREE.Color(hex), 1);
     renderer.setClearAlpha(1);
     return;
   }
@@ -41,6 +45,8 @@ export function syncMobileRendererClearForSceneBackground(renderer, scene) {
  * @param {THREE.WebGLRenderer} renderer
  * @param {import('../../../scripts/render/MeshglEffectComposer.js').MeshglEffectComposer} composer
  * @param {(w: number, h: number) => void} resyncSize
+ * @param {THREE.Scene} [scene]
+ * @param {import('../../../scripts/render/BackgroundController.js').BackgroundController | null | undefined} [backgroundController]
  */
 export function ensureMobileComposerBuffersMatchRenderer(renderer, composer, resyncSize) {
   if (!composer?.renderTarget1) return;
@@ -69,9 +75,10 @@ export function ensureMobileComposerBuffersMatchRenderer(renderer, composer, res
  * @param {THREE.Scene} scene
  * @param {import('../../../scripts/render/MeshglEffectComposer.js').MeshglEffectComposer} composer
  * @param {(w: number, h: number) => void} resyncSize
+ * @param {import('../../../scripts/render/BackgroundController.js').BackgroundController | null | undefined} [backgroundController]
  */
-export function prepareMobileComposerFrame(renderer, scene, composer, resyncSize) {
+export function prepareMobileComposerFrame(renderer, scene, composer, resyncSize, backgroundController) {
   ensureMobileComposerBuffersMatchRenderer(renderer, composer, resyncSize);
   resetMobileRendererViewport(renderer);
-  syncMobileRendererClearForSceneBackground(renderer, scene);
+  syncMobileRendererClearForSceneBackground(renderer, scene, backgroundController);
 }

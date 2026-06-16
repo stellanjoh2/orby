@@ -19,8 +19,6 @@ export class MobileHsvColorPicker {
     this._disabled = false;
     /** @type {'hue' | 'sv' | null} */
     this._dragMode = null;
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    this._inputTimer = null;
 
     host.classList.add('orby-mobile-hsv-picker');
     host.replaceChildren();
@@ -71,13 +69,16 @@ export class MobileHsvColorPicker {
     this.canvas.setAttribute('aria-disabled', disabled ? 'true' : 'false');
   }
 
+  resize() {
+    this._resize();
+  }
+
   destroy() {
     this._resizeObserver.disconnect();
     this.canvas.removeEventListener('pointerdown', this._onPointerDown);
     window.removeEventListener('pointermove', this._onPointerMove);
     window.removeEventListener('pointerup', this._onPointerUp);
     window.removeEventListener('pointercancel', this._onPointerUp);
-    if (this._inputTimer) clearTimeout(this._inputTimer);
     this.host.replaceChildren();
     this.host.classList.remove('orby-mobile-hsv-picker', 'is-disabled');
   }
@@ -280,12 +281,7 @@ export class MobileHsvColorPicker {
 
   _emitInput() {
     if (!this.onInput) return;
-    const hex = this.getValue();
-    if (this._inputTimer) clearTimeout(this._inputTimer);
-    this._inputTimer = setTimeout(() => {
-      this._inputTimer = null;
-      this.onInput?.(hex);
-    }, 16);
+    this.onInput(this.getValue());
   }
 
   /** @param {PointerEvent} event */
@@ -320,10 +316,6 @@ export class MobileHsvColorPicker {
     this._dragMode = null;
     if (this.canvas.hasPointerCapture(event.pointerId)) {
       this.canvas.releasePointerCapture(event.pointerId);
-    }
-    if (this._inputTimer) {
-      clearTimeout(this._inputTimer);
-      this._inputTimer = null;
     }
     this.onInput?.(this.getValue());
   }

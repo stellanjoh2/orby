@@ -1,11 +1,12 @@
 import { mobileHaptic } from './mobileHaptics.js';
 
-/** Ignore the first touchend iOS fires when it takes over native range dragging. */
+/** Ignore early touchend iOS fires when native range drag takes over. */
 const TOUCH_END_GRACE_MS = 450;
+/** Debounced release after a tap that never produced input/change. */
+const TOUCH_TAP_RELEASE_MS = 48;
 
 /**
  * While dragging a range slider, fade chrome and keep the active control in place.
- * Engages immediately on slider interaction (same feel as mouse review in a desktop browser).
  * @param {{ root: HTMLElement }} opts
  */
 export function bindMobileSliderFocus({ root }) {
@@ -19,6 +20,8 @@ export function bindMobileSliderFocus({ root }) {
   let activeTouchId = null;
   /** @type {number} */
   let touchEngageAt = 0;
+  /** @type {boolean} */
+  let touchHadInput = false;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let touchReleaseTimer = null;
 
@@ -37,6 +40,7 @@ export function bindMobileSliderFocus({ root }) {
     activePointerId = null;
     activeTouchId = null;
     touchEngageAt = 0;
+    touchHadInput = false;
     delete root.dataset.sliderFocus;
   };
 
@@ -57,6 +61,7 @@ export function bindMobileSliderFocus({ root }) {
     activePointerId = pointerId;
     activeTouchId = pointerType === 'mouse' ? null : pointerId;
     touchEngageAt = activeTouchId != null ? performance.now() : 0;
+    touchHadInput = false;
     root.dataset.sliderFocus = 'true';
     row.classList.add('is-slider-focus');
     mobileHaptic('soft');
@@ -91,7 +96,7 @@ export function bindMobileSliderFocus({ root }) {
       touchReleaseTimer = null;
       if (activeTouchId == null) return;
       release();
-    }, 40);
+    }, TOUCH_TAP_RELEASE_MS);
   };
 
   /** @param {PointerEvent} e */
@@ -117,6 +122,7 @@ export function bindMobileSliderFocus({ root }) {
     if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
     if (!root.contains(e.target)) return;
     clearTouchReleaseTimer();
+    touchHadInput = true;
     if (root.dataset.sliderFocus != null && activeInput === e.target) return;
     const row = e.target.closest('.orby-mobile-fx-grade');
     if (!(row instanceof HTMLElement)) return;
@@ -127,13 +133,6 @@ export function bindMobileSliderFocus({ root }) {
 
   /** @param {Event} e */
   const onChange = (e) => {
-    if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
-    if (activeInput !== e.target) return;
-    release();
-  };
-
-  /** @param {FocusEvent} e */
-  const onBlur = (e) => {
     if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
     if (activeInput !== e.target) return;
     release();
@@ -157,8 +156,9 @@ export function bindMobileSliderFocus({ root }) {
   const onTouchEnd = (e) => {
     for (const touch of e.changedTouches) {
       if (activeTouchId == null || touch.identifier !== activeTouchId) continue;
-      // iOS hands native range drags to the browser and fires an early touchend.
       if (performance.now() - touchEngageAt < TOUCH_END_GRACE_MS) return;
+      // Native drag: wait for change; input keeps focus alive during the gesture.
+      if (touchHadInput) return;
       scheduleTouchRelease();
       return;
     }
@@ -168,7 +168,6 @@ export function bindMobileSliderFocus({ root }) {
   root.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
   root.addEventListener('input', onInput, true);
   root.addEventListener('change', onChange, true);
-  root.addEventListener('blur', onBlur, true);
   document.addEventListener('pointerup', onPointerUp, true);
   document.addEventListener('pointercancel', onPointerCancel, true);
   document.addEventListener('touchend', onTouchEnd, true);

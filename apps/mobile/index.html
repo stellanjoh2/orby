@@ -186,6 +186,10 @@
     <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-active-tab="light" data-hdri-panel="presets-only" data-style-panel="presets-only">
       <main class="orby-mobile-viewport" aria-label="3D viewport">
         <div class="orby-mobile-viewport__canvas"></div>
+        <div class="orby-mobile-color-picker" data-color-picker-layer hidden>
+          <div class="orby-mobile-color-picker__host" data-color-picker-host></div>
+          <button type="button" class="orby-mobile-color-picker__done" data-color-picker-done>Done</button>
+        </div>
         <button type="button" class="orby-mobile-export-btn" data-action="export" aria-label="Export image">
           <span class="orby-mobile-export-btn__icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -290,7 +294,15 @@
                 </label>
               </div>
               <div class="orby-mobile-bg-controls" data-bg-controls hidden>
-                <div class="orby-mobile-hsv-picker-host" data-bg-solid-picker-host></div>
+                <label class="orby-mobile-color-line" data-bg-solid-color-row>
+                  <span>Color</span>
+                  <button
+                    type="button"
+                    class="orby-mobile-color-swatch"
+                    data-bg-color-open
+                    aria-label="Background color"
+                  ></button>
+                </label>
                 <div class="orby-mobile-fx-toggle">
                   <span class="orby-mobile-fx-toggle__label">Gradient</span>
                   <label class="effect-toggle">
@@ -304,17 +316,24 @@
                     <button type="button" class="orby-mobile-seg__btn is-active" data-bg-gradient-type="linear">Linear</button>
                     <button type="button" class="orby-mobile-seg__btn" data-bg-gradient-type="radial">Radial</button>
                   </div>
-                  <div class="orby-mobile-gradient-stops" role="group" aria-label="Gradient colors">
-                    <button type="button" class="orby-mobile-gradient-stop is-active" data-bg-gradient-stop-index="0">
-                      <span class="orby-mobile-gradient-stop__swatch" aria-hidden="true"></span>
-                      <span>Start</span>
-                    </button>
-                    <button type="button" class="orby-mobile-gradient-stop" data-bg-gradient-stop-index="1">
-                      <span class="orby-mobile-gradient-stop__swatch" aria-hidden="true"></span>
-                      <span>End</span>
-                    </button>
-                  </div>
-                  <div class="orby-mobile-hsv-picker-host" data-bg-gradient-picker-host></div>
+                  <label class="orby-mobile-color-line">
+                    <span>Start color</span>
+                    <button
+                      type="button"
+                      class="orby-mobile-color-swatch"
+                      data-bg-gradient-color="0"
+                      aria-label="Gradient start color"
+                    ></button>
+                  </label>
+                  <label class="orby-mobile-color-line">
+                    <span>End color</span>
+                    <button
+                      type="button"
+                      class="orby-mobile-color-swatch"
+                      data-bg-gradient-color="1"
+                      aria-label="Gradient end color"
+                    ></button>
+                  </label>
                   <label class="orby-mobile-fx-grade slider-line" data-bg-gradient-angle-row>
                     <span class="orby-mobile-fx-grade__label slider-line-label">Angle</span>
                     <input type="range" data-bg-gradient-angle min="0" max="360" step="1" value="180" aria-label="Gradient angle" />

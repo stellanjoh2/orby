@@ -29,7 +29,7 @@
   --brand-text: var(--orby-black);
   --brand-font-headline: 'Mattone Bold', 'Geist', system-ui, sans-serif;
   --orby-gate-headline-actions-gap: 28px;
-  --orby-gate-cta-foot-gap: 150px;
+  --orby-gate-cta-foot-gap: 75px;
   --orby-gate-headline-size: 36px;
   --orby-gate-lede-size: 18px;
   --orby-gate-lede-line: 1.36;
@@ -316,7 +316,7 @@ html.orby-mobile-gate body {
 .orby-mobile-gate__learn {
   box-sizing: border-box;
   position: relative;
-  z-index: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -478,6 +478,16 @@ html.orby-mobile-gate body {
   --orby-magic-btn-glow-pad: 0px;
   padding: 0;
   margin: 0;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.orby-mobile-gate__learn-cta {
+  position: relative;
+  z-index: 4;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Flat inverted pills on lime — same as marketing CTA */
