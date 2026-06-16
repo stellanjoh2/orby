@@ -910,6 +910,7 @@ button {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-dock-stack);
 }
 
@@ -948,7 +949,7 @@ button {
   min-height: var(--orby-mobile-slider-touch-h);
   margin: calc(-1 * var(--orby-mobile-slider-label-pull)) 0 calc(-1 * var(--orby-mobile-slider-touch-bleed));
   padding: 0;
-  touch-action: pan-y;
+  touch-action: none;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   border-radius: 1px;

@@ -1,12 +1,39 @@
+import { isPointerOnSliderThumb } from '../../../scripts/ui/sliderDefaultPaths.js';
 import { mobileHaptic } from './mobileHaptics.js';
 
-/** Ignore early touchend iOS fires when native range drag takes over. */
-const TOUCH_END_GRACE_MS = 450;
-/** Debounced release after a tap that never produced input/change. */
-const TOUCH_TAP_RELEASE_MS = 48;
+const SLIDER_FOCUS_HOLD_MS = 380;
+const SLIDER_FOCUS_CANCEL_MOVE_PX = 12;
+const SLIDER_FOCUS_DRAG_ENGAGE_PX = 6;
+const MOBILE_THUMB_HIT_PX = 14;
+const TOUCH_THUMB_HIT_PX = 18;
+/** Defer touch release so `change` can fire after iOS native range drag. */
+const TOUCH_RELEASE_DELAY_MS = 64;
+
+const finePointerMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+/** Desktop browser preview — mouse or fine pointer; not a real phone touch surface. */
+const isFinePointer = (pointerType) =>
+  pointerType === 'mouse' || finePointerMedia.matches;
 
 /**
- * While dragging a range slider, fade chrome and keep the active control in place.
+ * @param {HTMLInputElement} input
+ * @param {PointerEvent} e
+ */
+function shouldStartSliderFocusPending(input, e) {
+  const tolerance =
+    e.pointerType === 'touch' || e.pointerType === 'pen'
+      ? TOUCH_THUMB_HIT_PX
+      : MOBILE_THUMB_HIT_PX;
+  if (isPointerOnSliderThumb(input, e.clientX, tolerance)) return true;
+  // Direct touch on the track — thumb intent, not sheet scroll.
+  if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.target === input) return true;
+  return false;
+}
+
+/**
+ * While dragging a range slider thumb, fade chrome and keep the active control in place.
+ * Desktop preview: engage immediately on pointer down (mouse).
+ * Real touch: thumb hit + hold, or horizontal drag before scroll steals the gesture.
  * @param {{ root: HTMLElement }} opts
  */
 export function bindMobileSliderFocus({ root }) {
@@ -16,12 +43,25 @@ export function bindMobileSliderFocus({ root }) {
   let activeInput = null;
   /** @type {number | null} */
   let activePointerId = null;
-  /** @type {number | null} */
-  let activeTouchId = null;
-  /** @type {number} */
-  let touchEngageAt = 0;
-  /** @type {boolean} */
-  let touchHadInput = false;
+  /** @type {string | null} */
+  let activePointerType = null;
+  /** @type {{
+   *   input: HTMLInputElement,
+   *   row: HTMLElement,
+   *   pointerId: number,
+   *   pointerType: string,
+   *   startX: number,
+   *   startY: number,
+   *   timer: ReturnType<typeof setTimeout>,
+   * } | null} */
+  let pending = null;
+  /** @type {{
+   *   input: HTMLInputElement,
+   *   row: HTMLElement,
+   *   pointerId: number,
+   *   pointerType: string,
+   * } | null} */
+  let touchSession = null;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let touchReleaseTimer = null;
 
@@ -31,16 +71,22 @@ export function bindMobileSliderFocus({ root }) {
     touchReleaseTimer = null;
   };
 
+  const cancelPending = () => {
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pending = null;
+  };
+
   const release = () => {
+    cancelPending();
     clearTouchReleaseTimer();
+    touchSession = null;
     if (!activeRow) return;
     activeRow.classList.remove('is-slider-focus');
     activeRow = null;
     activeInput = null;
     activePointerId = null;
-    activeTouchId = null;
-    touchEngageAt = 0;
-    touchHadInput = false;
+    activePointerType = null;
     delete root.dataset.sliderFocus;
   };
 
@@ -51,7 +97,7 @@ export function bindMobileSliderFocus({ root }) {
    * @param {string} pointerType
    */
   const engage = (input, row, pointerId, pointerType) => {
-    if (activeInput === input && root.dataset.sliderFocus != null) return;
+    cancelPending();
     clearTouchReleaseTimer();
     if (activeRow !== row) {
       activeRow?.classList.remove('is-slider-focus');
@@ -59,119 +105,171 @@ export function bindMobileSliderFocus({ root }) {
     activeInput = input;
     activeRow = row;
     activePointerId = pointerId;
-    activeTouchId = pointerType === 'mouse' ? null : pointerId;
-    touchEngageAt = activeTouchId != null ? performance.now() : 0;
-    touchHadInput = false;
+    activePointerType = pointerType;
     root.dataset.sliderFocus = 'true';
     row.classList.add('is-slider-focus');
     mobileHaptic('soft');
   };
 
   /**
-   * @param {EventTarget | null} target
-   * @returns {{ input: HTMLInputElement, row: HTMLElement } | null}
-   */
-  const resolveSlider = (target) => {
-    if (!(target instanceof Element)) return null;
-    const row = target.closest('.orby-mobile-fx-grade');
-    if (!(row instanceof HTMLElement) || !root.contains(row)) return null;
-    const input = row.querySelector('input[type="range"]');
-    if (!(input instanceof HTMLInputElement) || input.disabled) return null;
-    return { input, row };
-  };
-
-  /**
    * @param {HTMLInputElement} input
    * @param {HTMLElement} row
-   * @param {number} pointerId
-   * @param {string} pointerType
+   * @param {PointerEvent} e
    */
-  const engageSlider = (input, row, pointerId, pointerType) => {
-    engage(input, row, pointerId, pointerType);
+  const startPending = (input, row, e) => {
+    cancelPending();
+    pending = {
+      input,
+      row,
+      pointerId: e.pointerId,
+      pointerType: e.pointerType,
+      startX: e.clientX,
+      startY: e.clientY,
+      timer: setTimeout(() => {
+        if (!pending) return;
+        const snap = pending;
+        pending = null;
+        engage(snap.input, snap.row, snap.pointerId, snap.pointerType);
+      }, SLIDER_FOCUS_HOLD_MS),
+    };
   };
 
   const scheduleTouchRelease = () => {
     clearTouchReleaseTimer();
     touchReleaseTimer = setTimeout(() => {
       touchReleaseTimer = null;
-      if (activeTouchId == null) return;
+      if (activePointerType === 'mouse') return;
       release();
-    }, TOUCH_TAP_RELEASE_MS);
+    }, TOUCH_RELEASE_DELAY_MS);
   };
 
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const hit = resolveSlider(e.target);
-    if (!hit) return;
-    engageSlider(hit.input, hit.row, e.pointerId, e.pointerType);
-  };
+    if (!(e.target instanceof Element)) return;
 
-  /** @param {TouchEvent} e */
-  const onTouchStart = (e) => {
-    for (const touch of e.changedTouches) {
-      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-      const hit = resolveSlider(el);
-      if (!hit) continue;
-      engageSlider(hit.input, hit.row, touch.identifier, 'touch');
-    }
-  };
-
-  /** @param {Event} e */
-  const onInput = (e) => {
-    if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
-    if (!root.contains(e.target)) return;
-    clearTouchReleaseTimer();
-    touchHadInput = true;
-    if (root.dataset.sliderFocus != null && activeInput === e.target) return;
     const row = e.target.closest('.orby-mobile-fx-grade');
-    if (!(row instanceof HTMLElement)) return;
-    const pointerId = activeTouchId ?? activePointerId ?? 0;
-    const pointerType = activeTouchId != null ? 'touch' : 'mouse';
-    engageSlider(e.target, row, pointerId, pointerType);
+    if (!(row instanceof HTMLElement) || !root.contains(row)) return;
+
+    const input = row.querySelector('input[type="range"]');
+    if (!(input instanceof HTMLInputElement) || input.disabled) return;
+
+    clearTouchReleaseTimer();
+
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      touchSession = {
+        input,
+        row,
+        pointerId: e.pointerId,
+        pointerType: e.pointerType,
+      };
+    } else {
+      touchSession = null;
+    }
+
+    // Desktop mobile preview — engage immediately (matches mouse review UX).
+    if (isFinePointer(e.pointerType)) {
+      engage(input, row, e.pointerId, e.pointerType);
+      return;
+    }
+
+    if (!shouldStartSliderFocusPending(input, e)) {
+      touchSession = null;
+      return;
+    }
+
+    startPending(input, row, e);
   };
 
-  /** @param {Event} e */
-  const onChange = (e) => {
-    if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
-    if (activeInput !== e.target) return;
-    release();
+  /** @param {PointerEvent} e */
+  const onPointerMove = (e) => {
+    if (!pending || e.pointerId !== pending.pointerId) return;
+
+    const dx = e.clientX - pending.startX;
+    const dy = e.clientY - pending.startY;
+
+    // Engage horizontal thumb drags before scroll-cancel eats the gesture on phones.
+    if (Math.abs(dx) >= SLIDER_FOCUS_DRAG_ENGAGE_PX && Math.abs(dx) > Math.abs(dy)) {
+      const snap = pending;
+      cancelPending();
+      engage(snap.input, snap.row, snap.pointerId, snap.pointerType);
+      return;
+    }
+
+    if (Math.abs(dy) > SLIDER_FOCUS_CANCEL_MOVE_PX && Math.abs(dy) > Math.abs(dx)) {
+      cancelPending();
+      touchSession = null;
+    }
   };
 
   /** @param {PointerEvent} e */
   const onPointerUp = (e) => {
+    if (pending?.pointerId === e.pointerId) {
+      cancelPending();
+    }
+    if (touchSession?.pointerId === e.pointerId) {
+      touchSession = null;
+    }
     if (activePointerId == null || e.pointerId !== activePointerId) return;
-    if (activeTouchId != null) return;
-    release();
+
+    if (e.pointerType === 'mouse') {
+      release();
+      return;
+    }
+
+    // iOS fires an early pointerup when the native range control takes over — wait for change.
+    scheduleTouchRelease();
   };
 
   /** @param {PointerEvent} e */
   const onPointerCancel = (e) => {
+    if (pending?.pointerId === e.pointerId) {
+      cancelPending();
+    }
+    if (touchSession?.pointerId === e.pointerId) {
+      touchSession = null;
+    }
     if (activePointerId == null || e.pointerId !== activePointerId) return;
-    if (activeTouchId != null) return;
-    release();
-  };
-
-  /** @param {TouchEvent} e */
-  const onTouchEnd = (e) => {
-    for (const touch of e.changedTouches) {
-      if (activeTouchId == null || touch.identifier !== activeTouchId) continue;
-      if (performance.now() - touchEngageAt < TOUCH_END_GRACE_MS) return;
-      // Native drag: wait for change; input keeps focus alive during the gesture.
-      if (touchHadInput) return;
-      scheduleTouchRelease();
+    if (e.pointerType === 'mouse') {
+      release();
       return;
     }
+    scheduleTouchRelease();
   };
 
   root.addEventListener('pointerdown', onPointerDown, true);
-  root.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
-  root.addEventListener('input', onInput, true);
-  root.addEventListener('change', onChange, true);
+  root.addEventListener(
+    'input',
+    (e) => {
+      if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
+      if (!root.contains(e.target)) return;
+
+      const row = e.target.closest('.orby-mobile-fx-grade');
+      if (!(row instanceof HTMLElement)) return;
+
+      clearTouchReleaseTimer();
+
+      if (root.dataset.sliderFocus != null && activeInput === e.target) return;
+
+      const session = pending ?? touchSession;
+      if (!session || session.input !== e.target) return;
+
+      engage(e.target, row, session.pointerId, session.pointerType);
+    },
+    true,
+  );
+  root.addEventListener(
+    'change',
+    (e) => {
+      if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
+      if (activeInput !== e.target) return;
+      release();
+    },
+    true,
+  );
+  document.addEventListener('pointermove', onPointerMove, true);
   document.addEventListener('pointerup', onPointerUp, true);
   document.addEventListener('pointercancel', onPointerCancel, true);
-  document.addEventListener('touchend', onTouchEnd, true);
-  document.addEventListener('touchcancel', onTouchEnd, true);
 
   return {
     release,
