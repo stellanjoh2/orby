@@ -1160,14 +1160,14 @@ button {
   touch-action: pan-x !important;
 }
 
-@media (hover: none) {
+@media (hover: none) and (pointer: coarse) {
   .orby-mobile-fx-grade input[type='range'] {
-    touch-action: pan-x;
+    touch-action: none;
   }
 
   .orby-mobile-fx-grade.is-slider-focus,
   .orby-mobile-fx-grade.is-slider-focus input[type='range'] {
-    touch-action: pan-x;
+    touch-action: none !important;
   }
 
   /* Never block sibling sliders if focus release misses on iOS */

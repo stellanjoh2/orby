@@ -8,16 +8,11 @@ const MOBILE_THUMB_HIT_PX = 14;
 const TOUCH_THUMB_HIT_PX = 18;
 
 const finePointerMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+const coarseTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)');
 
-/**
- * Slider-focus chrome only on real touch surfaces — desktop mouse / DevTools preview
- * keeps native range inputs untouched (matches ec2d8a5 behavior that worked in review).
- */
-const shouldHandleSliderFocus = (pointerType) => {
-  if (pointerType === 'mouse') return false;
-  if (finePointerMedia.matches) return false;
-  return true;
-};
+/** Desktop browser / DevTools mobile preview — mouse or fine pointer. */
+const isFinePointer = (pointerType) =>
+  pointerType === 'mouse' || finePointerMedia.matches;
 
 /**
  * @param {HTMLInputElement} input
@@ -34,7 +29,8 @@ function shouldStartSliderFocusPending(input, e) {
 }
 
 /**
- * While dragging a range slider thumb, fade chrome and keep the active control in place.
+ * Chrome fade while dragging sliders — desktop preview only.
+ * Real phones use bindMobileRangeTouch for drag + the same chrome fade.
  * @param {{ root: HTMLElement }} opts
  */
 export function bindMobileSliderFocus({ root }) {
@@ -122,8 +118,8 @@ export function bindMobileSliderFocus({ root }) {
 
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
+    if (coarseTouchDevice.matches) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (!shouldHandleSliderFocus(e.pointerType)) return;
     if (!(e.target instanceof Element)) return;
 
     const row = e.target.closest('.orby-mobile-fx-grade');
@@ -131,6 +127,12 @@ export function bindMobileSliderFocus({ root }) {
 
     const input = row.querySelector('input[type="range"]');
     if (!(input instanceof HTMLInputElement) || input.disabled) return;
+
+    // Desktop mobile preview — engage immediately (native range + chrome fade).
+    if (isFinePointer(e.pointerType)) {
+      engage(input, row, e.pointerId);
+      return;
+    }
 
     touchSession = {
       input,
@@ -149,6 +151,7 @@ export function bindMobileSliderFocus({ root }) {
 
   /** @param {PointerEvent} e */
   const onPointerMove = (e) => {
+    if (coarseTouchDevice.matches) return;
     if (!pending || e.pointerId !== pending.pointerId) return;
 
     const dx = e.clientX - pending.startX;
@@ -169,6 +172,7 @@ export function bindMobileSliderFocus({ root }) {
 
   /** @param {PointerEvent} e */
   const onPointerUp = (e) => {
+    if (coarseTouchDevice.matches) return;
     if (pending?.pointerId === e.pointerId) {
       cancelPending();
     }
@@ -181,6 +185,7 @@ export function bindMobileSliderFocus({ root }) {
 
   /** @param {PointerEvent} e */
   const onPointerCancel = (e) => {
+    if (coarseTouchDevice.matches) return;
     if (pending?.pointerId === e.pointerId) {
       cancelPending();
     }
@@ -195,6 +200,7 @@ export function bindMobileSliderFocus({ root }) {
   root.addEventListener(
     'input',
     (e) => {
+      if (coarseTouchDevice.matches) return;
       if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
       if (!root.contains(e.target)) return;
       if (root.dataset.sliderFocus != null && activeInput === e.target) return;
@@ -212,6 +218,7 @@ export function bindMobileSliderFocus({ root }) {
   root.addEventListener(
     'change',
     (e) => {
+      if (coarseTouchDevice.matches) return;
       if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
       if (activeInput !== e.target) return;
       release();

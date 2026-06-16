@@ -31,6 +31,7 @@ import { buildMobileDebugSceneExtra, markMobileDebugLog } from './mobileDebugLog
 import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
 import { mobileHaptic } from './mobileHaptics.js';
 import { bindMobileSheetDrag } from './mobileSheetDrag.js';
+import { bindMobileRangeTouch } from './mobileRangeTouch.js';
 import { bindMobileSliderFocus } from './mobileSliderFocus.js';
 import { MobileHsvColorPicker } from './MobileHsvColorPicker.js';
 import { ORBY_BLACK } from '../../../scripts/constants.js';
@@ -93,6 +94,8 @@ export class MobileShell {
     this._sheetDrag = null;
     /** @type {ReturnType<typeof bindMobileSliderFocus> | null} */
     this._sliderFocus = null;
+    /** @type {ReturnType<typeof bindMobileRangeTouch> | null} */
+    this._rangeTouch = null;
     /** @type {{ time: number, x: number, y: number }} */
     this._lastViewportTap = { time: 0, x: 0, y: 0 };
     /** @type {{ id: number, x: number, y: number } | null} */
@@ -680,6 +683,7 @@ export class MobileShell {
 
   _bindChrome() {
     this._sliderFocus = bindMobileSliderFocus({ root: this.root });
+    this._rangeTouch = bindMobileRangeTouch({ root: this.root });
 
     if (this.sheet) {
       this._sheetDrag = bindMobileSheetDrag({
@@ -1258,6 +1262,7 @@ export class MobileShell {
     const stateChanged = this.sheetState !== state;
     if (stateChanged) {
       this._sliderFocus?.release();
+      this._rangeTouch?.release();
     }
     const wasOpen = this.sheetState !== 'closed';
     this.sheetState = state;
