@@ -7,6 +7,13 @@ import {
   isVignetteUiEnabled,
 } from '../../../scripts/constants.js';
 import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
+import {
+  MOBILE_ABERRATION_AMOUNT_MAX,
+  MOBILE_ABERRATION_AMOUNT_STEP,
+  MOBILE_BLOOM_STRENGTH_MAX,
+  MOBILE_GRAIN_INTENSITY_MAX,
+  MOBILE_GRAIN_INTENSITY_STEP,
+} from './mobileParityDefaults.js';
 
 /** @typedef {{ path: string, label: string, min: number, max: number, step: number, format: (v: number) => string, defaultValue?: number }} FxSliderDef */
 /** @typedef {{ id: string, label: string, sliders: FxSliderDef[] }} FxSliderSection */
@@ -136,8 +143,8 @@ export const MOBILE_FX_LENS_ROWS = [
     sliderPath: 'grain.intensity',
     label: 'Grain',
     min: 0,
-    max: 0.15,
-    step: 0.001,
+    max: MOBILE_GRAIN_INTENSITY_MAX,
+    step: MOBILE_GRAIN_INTENSITY_STEP,
     format: (v) => v.toFixed(3),
   },
   {
@@ -145,8 +152,8 @@ export const MOBILE_FX_LENS_ROWS = [
     sliderPath: 'aberration.amount',
     label: 'Chromatic aberration',
     min: 0,
-    max: 0.0025,
-    step: 0.00005,
+    max: MOBILE_ABERRATION_AMOUNT_MAX,
+    step: MOBILE_ABERRATION_AMOUNT_STEP,
     format: (v) => v.toFixed(4),
   },
 ];
@@ -157,7 +164,7 @@ export const MOBILE_FX_BLOOM_SLIDERS = /** @type {FxSliderDef[]} */ ([
     path: 'bloom.strength',
     label: 'Bloom intensity',
     min: 0,
-    max: 1,
+    max: MOBILE_BLOOM_STRENGTH_MAX,
     step: 0.01,
     format: (v) => v.toFixed(2),
     defaultValue: 0,

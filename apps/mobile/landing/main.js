@@ -3,7 +3,7 @@ import {
   stageMobileModelHandoff,
   clearMobileHandoffPending,
 } from '../../../scripts/orbyMobileHandoff.js';
-import { orbyMobileAppUrl, orbyMobileLearnUrl } from '../../../scripts/orbyMobileAppRoute.js';
+import { orbyMobileAppUrl } from '../../../scripts/orbyMobileAppRoute.js';
 
 /** @param {File} file */
 function isMobileModelFile(file) {
@@ -70,23 +70,30 @@ async function handleFile(file) {
   }
 }
 
-function bindLearnLink() {
-  const learnLink = document.getElementById('orbyMobileGateLearnLink');
-  if (!learnLink) return;
+function bindScrollCue() {
+  const cue = document.querySelector('.orby-mobile-gate__scroll-cue');
+  const learn = document.querySelector('.orby-mobile-gate__learn');
+  if (!cue || !learn) return;
 
-  learnLink.addEventListener('click', (event) => {
-    event.preventDefault();
-    window.location.assign(`${orbyMobileLearnUrl()}/`);
+  cue.addEventListener('click', () => {
+    learn.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+
+  const fadeThreshold = 48;
+  const update = () => {
+    cue.classList.toggle('orby-mobile-gate__scroll-cue--faded', window.scrollY > fadeThreshold);
+  };
+
+  window.addEventListener('scroll', update, { passive: true });
+  update();
 }
 
 function bindGate() {
   const root = document.getElementById('orbyMobileGate');
   const browseBtn = document.getElementById('orbyMobileGateBrowse');
   const fileInput = document.getElementById('orbyMobileGateFileInput');
-  const dropzone = root?.querySelector('.orby-mobile-gate__dropzone');
 
-  bindLearnLink();
+  bindScrollCue();
   browseBtn?.addEventListener('click', () => fileInput?.click());
 
   fileInput?.addEventListener('change', () => {
@@ -94,22 +101,6 @@ function bindGate() {
     fileInput.value = '';
     if (file) void handleFile(file);
   });
-
-  if (dropzone) {
-    dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropzone.classList.add('is-dragover');
-    });
-    dropzone.addEventListener('dragleave', () => {
-      dropzone.classList.remove('is-dragover');
-    });
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('is-dragover');
-      const file = e.dataTransfer?.files?.[0];
-      if (file) void handleFile(file);
-    });
-  }
 
   if (root) root.dataset.state = 'ready';
 }

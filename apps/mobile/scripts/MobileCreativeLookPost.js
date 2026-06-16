@@ -279,6 +279,11 @@ export class MobileCreativeLookPost {
 
     this._viewportBloomStackActive = false;
 
+    if (this._presentationMode === 'flat' && this._presetId) {
+      const masterHueRad = creativeLookMasterHueRadians(cl.masterHue ?? 0);
+      this._syncFlatPostSettings(this._presetId, masterHueRad, cl);
+    }
+
     if (this._presentationMode === 'sketch' && this._presetId) {
       const patternScale = normalizeCreativeLookPatternScale(
         this._presetId,

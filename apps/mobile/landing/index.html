@@ -16,87 +16,154 @@
   <body>
     <div id="orbyMobileGate" class="orby-mobile-gate" data-state="boot">
       <section class="orby-mobile-gate__hero" aria-label="Import a model">
-        <div class="orby-mobile-gate__dropzone" id="orbyMobileGateDropzone">
-          <div class="orby-mobile-gate__deco" aria-hidden="true">
-            <picture class="orby-mobile-gate__deco-slot orby-mobile-gate__deco-slot--ur">
-              <img
-                class="orby-mobile-gate__deco-img"
-                src="/assets/marketing/orby-hero-area-topright.jpg"
-                alt=""
-                width="2880"
-                height="2880"
-                decoding="async"
-              />
-            </picture>
-            <picture class="orby-mobile-gate__deco-slot orby-mobile-gate__deco-slot--ll">
-              <img
-                class="orby-mobile-gate__deco-img"
-                src="/assets/marketing/orby-hero-area-bottomleft.jpg"
-                alt=""
-                width="2880"
-                height="2880"
-                decoding="async"
-              />
-            </picture>
+        <div class="orby-mobile-gate__hero-bg" aria-hidden="true">
+          <img
+            class="orby-mobile-gate__hero-bg-img"
+            src="/assets/marketing/orby-hero-area-topright.jpg"
+            alt=""
+            width="2880"
+            height="2880"
+            decoding="async"
+          />
+        </div>
+
+        <div class="orby-mobile-gate__hero-inner">
+          <div class="orby-mobile-gate__logo" aria-hidden="true">
+            <img
+              src="/assets/images/orby-logotype.svg"
+              alt=""
+              width="1677"
+              height="694"
+              decoding="async"
+            />
           </div>
 
-          <div class="orby-mobile-gate__frame">
-            <div class="orby-mobile-gate__frame-inner">
-              <div class="orby-mobile-gate__logo" aria-hidden="true">
-                <img
-                  src="/assets/images/orby-logotype.svg"
-                  alt=""
-                  width="1677"
-                  height="694"
-                  decoding="async"
-                />
-              </div>
+          <p class="orby-mobile-gate__headline">
+            <span class="orby-mobile-gate__headline-line"
+              >Pick a <span class="brand-highlight">GLB</span> file to</span
+            >
+            <span class="orby-mobile-gate__headline-line orby-mobile-gate__headline-line--second"
+              >review and style</span
+            >
+          </p>
 
-              <p class="orby-mobile-gate__headline">
-                <span class="orby-mobile-gate__headline-line">Browse your <span class="brand-highlight">GLB</span></span>
-                <span class="orby-mobile-gate__headline-line orby-mobile-gate__headline-line--second"
-                  >to light, style, and export</span
-                >
-              </p>
-
-              <div class="orby-mobile-gate__actions">
-                <span class="orby-magic-btn-host">
-                  <button
-                    id="orbyMobileGateBrowse"
-                    type="button"
-                    class="orby-magic-btn dropzone-btn"
-                  >
-                    <span class="orby-magic-btn__fill" aria-hidden="true"></span>
-                    <span class="orby-magic-btn__inner">
-                      <span class="orby-magic-btn__label">Browse files</span>
-                      <span class="orby-magic-btn__arrow" aria-hidden="true">
-                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path
-                            d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
-                            stroke="currentColor"
-                            stroke-width="1.75"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </span>
-                    </span>
-                  </button>
+          <div class="orby-mobile-gate__actions">
+            <span class="orby-magic-btn-host">
+              <button
+                id="orbyMobileGateBrowse"
+                type="button"
+                class="orby-magic-btn dropzone-btn"
+              >
+                <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+                <span class="orby-magic-btn__inner">
+                  <span class="orby-magic-btn__label">Browse files</span>
+                  <span class="orby-magic-btn__arrow" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
                 </span>
-              </div>
-            </div>
+              </button>
+            </span>
           </div>
         </div>
+
+        <button
+          type="button"
+          class="orby-mobile-gate__scroll-cue"
+          aria-label="Scroll to learn more"
+        >
+          <span class="orby-mobile-gate__scroll-cue-icon" aria-hidden="true"></span>
+        </button>
+
+        <p class="orby-mobile-gate__hero-credit">
+          <span class="orby-mobile-gate__hero-credit-label">Featured Dropzone Artists:</span>
+          <span class="orby-mobile-gate__hero-credit-sep" aria-hidden="true"> · </span>
+          <a
+            href="https://sketchfab.com/3d-models/purple-music-0302fbca6ac745bc8db2a6248c21438a"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Purple Music</a
+          >
+          by Moon on
+          <a href="https://sketchfab.com/" target="_blank" rel="noopener noreferrer">Sketchfab</a>
+        </p>
       </section>
 
       <footer class="orby-mobile-gate__learn">
-        <p class="orby-mobile-gate__learn-copy">Want to learn more about Orby Mobile?</p>
-        <a
-          id="orbyMobileGateLearnLink"
-          class="orby-mobile-gate__learn-link"
-          href="/mobile/learn/"
-          >Explore features</a
-        >
+        <div class="orby-mobile-gate__learn-main">
+          <div class="orby-mobile-gate__learn-intro">
+            <p class="orby-mobile-gate__learn-copy">Want to learn more about Orby?</p>
+            <p class="orby-mobile-gate__learn-lede">
+              Orby Mobile is a quick preview — load a GLB, style it, and export a still. The full
+              studio adds custom HDRIs, Shader Lab, animation preview, turntable video, and a lot
+              more.
+            </p>
+          </div>
+          <span class="orby-magic-btn-host orby-magic-btn-host--on-lime">
+            <a
+              id="orbyMobileGateLearnLink"
+              class="orby-magic-btn orby-magic-btn--on-lime orby-magic-btn--outline-lime orby-mobile-gate__learn-cta"
+              href="/mobile/learn/"
+            >
+              <span class="orby-magic-btn__ring" aria-hidden="true"></span>
+              <span class="orby-magic-btn__inner">
+                <span class="orby-magic-btn__label">Full overview</span>
+                <span class="orby-magic-btn__arrow" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </span>
+            </a>
+          </span>
+        </div>
+
+        <div class="orby-mobile-gate__learn-foot">
+          <div class="orby-mobile-gate__learn-social">
+            <a
+              class="orby-mobile-gate__learn-social-link"
+              href="https://www.instagram.com/dropittoorby"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+            >
+              <span
+                class="orby-mobile-gate__learn-social-icon orby-mobile-gate__learn-social-icon--instagram"
+                aria-hidden="true"
+              ></span>
+            </a>
+            <a
+              class="orby-mobile-gate__learn-social-link"
+              href="https://github.com/stellanjoh2/orby"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+            >
+              <span
+                class="orby-mobile-gate__learn-social-icon orby-mobile-gate__learn-social-icon--github"
+                aria-hidden="true"
+              ></span>
+            </a>
+          </div>
+          <p class="orby-mobile-gate__learn-meta">
+            Orby is a free, open-source personal project<br />
+            released under the
+            <a class="orby-mobile-gate__learn-meta-link" href="/LICENSE">MIT License</a>.
+          </p>
+        </div>
       </footer>
 
       <div class="orby-mobile-gate-toast" role="status" aria-live="polite" hidden></div>

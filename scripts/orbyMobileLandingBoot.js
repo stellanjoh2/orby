@@ -2,7 +2,8 @@
  * Mobile landing — sync head bootstrap (index.html).
  * Applies html.mobile-landing before first paint; modules read window.__ORBY_MOBILE_LANDING__.
  *
- * Keep detection logic in sync with fallbacks in orbyMobileLanding.js (subpages without this script).
+ * Keep detection logic in sync with fallbacks in orbyMobileLanding.js (subpages without this script)
+ * and the mobile home redirect in index.html (head, before first paint).
  *
  * Debug on desktop: ?orbyMobile=1, ?mobileLanding, sessionStorage orby_mobile_landing=1,
  * or window.__ORBY_DEBUG_MOBILE_LANDING__ = true before reload.

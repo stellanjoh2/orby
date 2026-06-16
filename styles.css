@@ -4021,8 +4021,13 @@ html:not(.mobile-landing) .viewport > .demo-logotype {
 }
 
 html:not(.mobile-landing) .viewport > .viewport-load-spinner {
-  bottom: calc(var(--viewport-chrome-inset-y) + var(--viewport-load-spinner-lift));
-  left: var(--viewport-chrome-inset-x);
+  position: fixed;
+  bottom: calc(
+    max(var(--viewport-chrome-inset-y), env(safe-area-inset-bottom, 0px)) +
+      var(--viewport-load-spinner-lift)
+  );
+  left: max(var(--viewport-chrome-inset-x), env(safe-area-inset-left, 0px));
+  z-index: 16;
   gap: calc(12px * var(--studio-ui-scale));
   width: auto;
   height: calc(70px * var(--studio-ui-scale));
@@ -6024,18 +6029,21 @@ body:not(.dropzone-visible) .viewport-fullscreen-btn {
   opacity: 0.9;
 }
 
-/* Load indicator — favicon, bottom-left corner (inset matches toast + .demo-logotype) */
+/* Load indicator — favicon, bottom-left (fixed like .toast; lifted above notification toasts) */
 .viewport-load-spinner {
-  position: absolute;
-  bottom: calc(var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem)) + var(--viewport-load-spinner-lift, 120px));
-  left: var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem));
+  position: fixed;
+  bottom: calc(
+    max(var(--viewport-chrome-inset-y, clamp(1rem, 4vw, 4.5rem)), env(safe-area-inset-bottom, 0px)) +
+      var(--viewport-load-spinner-lift, 120px)
+  );
+  left: max(var(--viewport-chrome-inset-x, clamp(1rem, 4vw, 4.5rem)), env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
   width: auto;
   height: 70px;
-  z-index: 14;
+  z-index: 16;
   pointer-events: none;
   visibility: hidden;
   opacity: 0;
@@ -6944,6 +6952,11 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
 /* Marketing home — same frame inset as studio UI */
 html.orby-home-scroll .toast {
   z-index: 100060;
+}
+
+/* Marketing home — pin load spinner to viewport (not the scrollable dropzone stack) */
+html.orby-home-scroll:not(.mobile-landing) .viewport-load-spinner {
+  z-index: 100061;
 }
 
 @keyframes toast {

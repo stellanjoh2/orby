@@ -20,7 +20,10 @@ import {
   effectiveVignetteIntensity,
   resolveAnamorphicBloomQualityTier,
 } from '../../../scripts/constants.js';
-import { MOBILE_BLOOM_RESOLUTION_SCALE } from './mobileParityDefaults.js';
+import {
+  MOBILE_BLOOM_RESOLUTION_SCALE,
+  mobileEffectiveGrainIntensity,
+} from './mobileParityDefaults.js';
 import { getNestedValue, setNestedValue } from './mobileFxControls.js';
 import { MobileCreativeLookPost } from './MobileCreativeLookPost.js';
 import { GradingController } from '../../../scripts/render/GradingController.js';
@@ -36,11 +39,14 @@ export class MobilePost {
     this.scene = scene;
     this.camera = camera;
     this._grainTime = 0;
+    /** @type {number} Composer output width in physical pixels — for mobile grain boost. */
+    this._composerPixelWidth = 1;
 
     const size = new THREE.Vector2();
     renderer.getSize(size);
     const rw = Math.max(1, Math.floor(size.x));
     const rh = Math.max(1, Math.floor(size.y));
+    this._composerPixelWidth = Math.max(1, Math.floor(rw * renderer.getPixelRatio()));
 
     // Default composer buffers (linear) — matches desktop; sRGB/HalfFloat RT crushed HDRI contrast.
     this.composer = new MeshglEffectComposer(renderer);
@@ -97,6 +103,9 @@ export class MobilePost {
 
     this._fxState = this._cloneFxState(MOBILE_FX_DEFAULTS);
     this._lookFilterPreset = 'none';
+    /** @type {{ state: object, preset: string } | null} */
+    this._compareRestore = null;
+    this._compareHeld = false;
     /** @type {(() => object) | null} */
     this._creativeLookSettingsGetter = null;
     this.reset();
@@ -141,6 +150,7 @@ export class MobilePost {
 
   setSize(w, h) {
     const pr = this.renderer.getPixelRatio();
+    this._composerPixelWidth = Math.max(1, Math.floor(w * pr));
     this.composer.setPixelRatio(pr);
     this.composer.setSize(w, h);
     this.creativeLooks?.setSize(w, h);
@@ -159,6 +169,9 @@ export class MobilePost {
     if (this.aberrationPass?.uniforms?.aspectRatio) {
       this.aberrationPass.uniforms.aspectRatio.value = w / Math.max(1, h);
     }
+    if (this._fxState?.grain) {
+      this._updateGrain(this._fxState.grain);
+    }
   }
 
   /**
@@ -167,6 +180,31 @@ export class MobilePost {
   render(creativeLookAnimTime = 0) {
     this.creativeLooks?.prepareRender(this, creativeLookAnimTime);
     this.composerLifecycle.renderComposerPass();
+  }
+
+  /** @param {boolean} held — press-hold compare (neutral grade / no filter) */
+  setCompareHeld(held) {
+    if (this._compareHeld === held) return;
+    this._compareHeld = held;
+    if (held) {
+      this._compareRestore = {
+        state: this._cloneFxState(this._fxState),
+        preset: this._lookFilterPreset,
+      };
+      const neutral = mergeLookFilterState('none', MOBILE_FX_DEFAULTS, MOBILE_FX_DEFAULTS);
+      this._applyFxState(neutral);
+      return;
+    }
+    if (this._compareRestore) {
+      this._fxState = this._compareRestore.state;
+      this._lookFilterPreset = this._compareRestore.preset;
+      this._applyFxState(this._fxState);
+      this._compareRestore = null;
+    }
+  }
+
+  isCompareHeld() {
+    return this._compareHeld;
   }
 
   /** @param {() => object} getter */
@@ -199,6 +237,7 @@ export class MobilePost {
 
   /** @param {string} presetId */
   applyLookFilter(presetId) {
+    if (this._compareHeld) return this.getFxSnapshot();
     this._lookFilterPreset = presetId;
     this._fxState = mergeLookFilterState(
       presetId,
@@ -215,6 +254,7 @@ export class MobilePost {
    * @param {{ preservePreset?: boolean }} [opts]
    */
   setFxValue(path, value, { preservePreset = false } = {}) {
+    if (this._compareHeld) return;
     setNestedValue(this._fxState, path, value);
     if (!preservePreset) {
       this._lookFilterPreset = 'none';
@@ -335,23 +375,27 @@ export class MobilePost {
     const wants = settings.enabled === undefined ? true : Boolean(settings.enabled);
     const intensity = wants ? (settings.intensity || 0) : 0;
     const active = intensity > 0.0001;
+    const effectiveIntensity = mobileEffectiveGrainIntensity(
+      intensity,
+      this._composerPixelWidth,
+    );
 
     if (this.filmPass) {
       this.filmPass.enabled = active;
       const material = this.filmPass.material;
       if (material?.uniforms) {
         if (material.uniforms.nIntensity) {
-          material.uniforms.nIntensity.value = intensity * 0.5;
+          material.uniforms.nIntensity.value = effectiveIntensity * 0.5;
         }
         if (material.uniforms.sIntensity) {
-          material.uniforms.sIntensity.value = intensity * 0.5;
+          material.uniforms.sIntensity.value = effectiveIntensity * 0.5;
         }
       }
     }
     if (this.grainTintPass) {
       this.grainTintPass.enabled = active;
       if (this.grainTintPass.uniforms?.intensity) {
-        this.grainTintPass.uniforms.intensity.value = intensity;
+        this.grainTintPass.uniforms.intensity.value = effectiveIntensity;
       }
       if (this.grainTintPass.uniforms?.tint) {
         this.grainTintPass.uniforms.tint.value.set(settings.color ?? '#ffffff');

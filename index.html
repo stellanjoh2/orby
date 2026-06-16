@@ -23,6 +23,32 @@
             location.replace('/mobile/learn/' + location.search + location.hash);
             return;
           }
+          // Mobile home → minimal gate at /mobile/ (keep in sync with orbyMobileLandingBoot.js)
+          if (path === '/' || path === '/index.html') {
+            if (typeof window !== 'undefined' && window.__ORBY_DEBUG_MOBILE_LANDING__ === true) {
+              return;
+            }
+            try {
+              if (sessionStorage.getItem('orby_mobile_landing') === '1') return;
+            } catch (e) {}
+            try {
+              var q = new URLSearchParams(location.search);
+              if (q.get('orbyMobile') === '1' || q.has('mobileLanding')) return;
+            } catch (e) {}
+            var MOBILE_UA_RE =
+              /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            var isMobile = MOBILE_UA_RE.test(navigator.userAgent || '');
+            if (!isMobile) {
+              try {
+                isMobile =
+                  window.matchMedia &&
+                  window.matchMedia('(max-width: 768px)').matches;
+              } catch (e) {}
+            }
+            if (isMobile) {
+              location.replace('/mobile/' + location.search + location.hash);
+            }
+          }
         } catch (e) {}
       })();
     </script>

@@ -1,6 +1,6 @@
 /**
  * Orby Mobile gate — /mobile
- * Dropzone-inspired hero for portrait viewports; keeps brand black + frosted frame + magic pill.
+ * Portrait gate: logo + browse above the fold; lime learn band below.
  */
 @import url('/styles/orby-brand-tokens.css');
 @import url('/styles/orby-magic-btn.css');
@@ -28,11 +28,12 @@
   --brand-primary: var(--orby-lime);
   --brand-text: var(--orby-black);
   --brand-font-headline: 'Mattone Bold', 'Geist', system-ui, sans-serif;
-  --orby-gate-inset-x: clamp(14px, 4.5vw, 22px);
-  --orby-gate-inset-y: clamp(14px, 3.5vh, 24px);
-  --orby-gate-frame-radius: clamp(20px, 6vw, 36px);
-  --orby-gate-frame-stroke: 1.5px;
-  --orby-gate-frost-blur: 18px;
+  --orby-gate-headline-actions-gap: 28px;
+  --orby-gate-headline-size: 36px;
+  --orby-gate-lede-size: 18px;
+  --orby-gate-lede-line: 1.36;
+  --orby-gate-hero-bg-pos-x: calc(50% - 15px);
+  --orby-gate-hero-bg-pos-y: calc(50% - 80px);
 }
 
 *,
@@ -50,6 +51,10 @@ html.orby-mobile-gate body {
   font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
+  scroll-snap-type: y mandatory;
+  /* Match html.mobile-landing copy + chrome insets — not desktop --orby-home-padding-x */
+  --orby-gate-inset-x: clamp(1.25rem, 5vw, 1.5rem);
+  --orby-gate-edge-x: clamp(16px, 5vw, 24px);
 }
 
 .orby-mobile-gate-sr-only {
@@ -65,42 +70,49 @@ html.orby-mobile-gate body {
 }
 
 .orby-mobile-gate {
-  min-height: 100dvh;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 
 .orby-mobile-gate__hero {
-  flex: 1 1 0;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100lvh;
+  height: 100vh;
+  height: 100dvh;
+  height: 100lvh;
+  isolation: isolate;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   padding:
     max(env(safe-area-inset-top, 0px), 12px)
     var(--orby-gate-inset-x)
-    0;
+    calc(clamp(3rem, 10vh, 4.5rem) + env(safe-area-inset-bottom, 0px));
 }
 
-.orby-mobile-gate__dropzone {
-  position: relative;
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  isolation: isolate;
-  overflow: hidden;
-  border-radius: calc(var(--orby-gate-frame-radius) + 4px);
+/* Mask sub-pixel viewport seams — lime must not peek before scroll */
+.orby-mobile-gate__hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 8px;
+  background: var(--orby-black);
+  z-index: 4;
+  pointer-events: none;
 }
 
-.orby-mobile-gate__dropzone.is-dragover .orby-mobile-gate__frame::before {
-  border-color: color-mix(in srgb, var(--brand-primary) 55%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-primary) 18%, transparent);
-}
-
-/* Corner hero deco — same assets as desktop dropzone, scaled for phone */
-.orby-mobile-gate__deco {
+/* Full-bleed hero art — centered behind copy */
+.orby-mobile-gate__hero-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -108,71 +120,138 @@ html.orby-mobile-gate body {
   overflow: hidden;
 }
 
-.orby-mobile-gate__deco-slot {
-  position: absolute;
-  display: block;
-  width: clamp(120px, 42vw, 220px);
-  aspect-ratio: 1;
-  opacity: 0.92;
-}
-
-.orby-mobile-gate__deco-slot--ur {
-  top: -4%;
-  right: -8%;
-}
-
-.orby-mobile-gate__deco-slot--ll {
-  bottom: -6%;
-  left: -10%;
-}
-
-.orby-mobile-gate__deco-img {
+.orby-mobile-gate__hero-bg-img {
   width: 100%;
   height: 100%;
+  min-width: 100%;
+  min-height: 100%;
   object-fit: cover;
+  object-position: var(--orby-gate-hero-bg-pos-x) var(--orby-gate-hero-bg-pos-y);
   display: block;
-  filter: saturate(1.05) contrast(1.02);
 }
 
-.orby-mobile-gate__frame {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-  align-self: center;
-}
-
-.orby-mobile-gate__frame::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--orby-gate-frame-radius);
-  border: var(--orby-gate-frame-stroke) solid color-mix(in srgb, var(--brand-primary) 28%, transparent);
-  -webkit-backdrop-filter: blur(var(--orby-gate-frost-blur)) saturate(1.1);
-  backdrop-filter: blur(var(--orby-gate-frost-blur)) saturate(1.1);
-  background: linear-gradient(
-    color-mix(in srgb, var(--orby-black) 52%, transparent),
-    color-mix(in srgb, var(--orby-black) 52%, transparent)
-  );
-  pointer-events: none;
-}
-
-.orby-mobile-gate__frame-inner {
+.orby-mobile-gate__hero-inner {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.65rem, 2.5vw, 1rem);
+  gap: 0;
+  width: 100%;
+  max-width: none;
+  flex: 1 1 auto;
   text-align: center;
-  padding: clamp(1.75rem, 7vw, 2.75rem) clamp(1.1rem, 4.5vw, 1.75rem);
-  min-height: clamp(320px, 58svh, 520px);
+}
+
+/* Scroll cue — marketing arrow only */
+.orby-mobile-gate__scroll-cue {
+  --orby-scroll-cue-drop: 5px;
+  --orby-scroll-cue-lift: 12px;
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + var(--orby-scroll-cue-lift));
+  z-index: 2;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.14s ease-out;
+}
+
+.orby-mobile-gate__scroll-cue:focus-visible {
+  outline: none;
+}
+
+.orby-mobile-gate__scroll-cue-icon {
+  display: block;
+  width: 16px;
+  aspect-ratio: 86.6 / 75;
+  background-color: var(--brand-primary, var(--orby-lime));
+  -webkit-mask-image: url('/assets/marketing/arrow-down.svg');
+  mask-image: url('/assets/marketing/arrow-down.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  animation: orbyGateScrollCueDrop 1.35s ease-out infinite;
+  transition:
+    background-color 0.2s ease,
+    filter 0.2s ease;
+}
+
+.orby-mobile-gate__scroll-cue:hover .orby-mobile-gate__scroll-cue-icon,
+.orby-mobile-gate__scroll-cue:focus-visible .orby-mobile-gate__scroll-cue-icon {
+  background-color: #fff;
+  animation-play-state: paused;
+  filter:
+    drop-shadow(0 0 3px var(--brand-primary, var(--orby-lime)))
+    drop-shadow(0 0 10px color-mix(in srgb, var(--brand-primary, var(--orby-lime)) 62%, transparent));
+}
+
+.orby-mobile-gate__scroll-cue--faded {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Hero credit — vertical rail, bottom-right (matches dropzone hero credit) */
+.orby-mobile-gate__hero-credit {
+  position: absolute;
+  right: max(var(--orby-gate-edge-x), env(safe-area-inset-right, 0px));
+  bottom: calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + var(--orby-scroll-cue-lift, 12px));
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  color: color-mix(in srgb, #888 50%, var(--orby-black));
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  text-align: center;
+  pointer-events: auto;
+}
+
+.orby-mobile-gate__hero-credit-label,
+.orby-mobile-gate__hero-credit-sep {
+  color: inherit;
+}
+
+.orby-mobile-gate__hero-credit a {
+  color: var(--text-link, var(--orby-blue));
+  text-decoration: none;
+}
+
+.orby-mobile-gate__hero-credit a:hover,
+.orby-mobile-gate__hero-credit a:focus-visible {
+  color: var(--brand-primary, var(--orby-lime));
+  outline: none;
+}
+
+@keyframes orbyGateScrollCueDrop {
+  0% {
+    transform: translateY(0);
+  }
+  72% {
+    transform: translateY(var(--orby-scroll-cue-drop, 5px));
+  }
+  73%,
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .orby-mobile-gate__logo {
-  width: min(78vw, 320px);
+  width: min(42vw, 168px);
   margin: 0 auto;
   animation: orbyGateLogoReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -184,13 +263,17 @@ html.orby-mobile-gate body {
 }
 
 .orby-mobile-gate__headline {
-  margin: 0;
-  max-width: 18ch;
+  box-sizing: border-box;
+  margin: 36px 0 0;
+  width: 100%;
+  max-width: 100%;
   font-family: var(--brand-font-headline);
   font-weight: 700;
-  font-size: clamp(1.35rem, 5.8vw, 1.85rem);
-  letter-spacing: 0.04em;
+  font-size: var(--orby-gate-headline-size);
+  letter-spacing: 0.03em;
   line-height: 1.18;
+  overflow-wrap: break-word;
+  word-break: normal;
   animation: orbyGateHeadlineReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
 
@@ -209,63 +292,278 @@ html.orby-mobile-gate body {
 }
 
 .orby-mobile-gate__actions {
-  margin-top: clamp(0.35rem, 1.5vw, 0.75rem);
+  margin-top: var(--orby-gate-headline-actions-gap);
   animation: orbyGateActionsReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
 }
 
-.orby-mobile-gate__dropzone .orby-magic-btn-host,
-.orby-mobile-gate__dropzone .orby-magic-btn.dropzone-btn {
+.orby-mobile-gate__hero .orby-magic-btn-host,
+.orby-mobile-gate__hero .orby-magic-btn.dropzone-btn {
   --orby-magic-btn-pad-block: 1.15rem;
   --orby-magic-btn-pad-inline: 1.45rem;
   --orby-magic-btn-min-height: 3.35rem;
 }
 
-.orby-mobile-gate__dropzone .orby-magic-btn.dropzone-btn {
+.orby-mobile-gate__hero .orby-magic-btn.dropzone-btn {
   font-size: clamp(0.82rem, 3.6vw, 0.95rem);
 }
 
-.orby-mobile-gate[data-state='loading'] .orby-mobile-gate__dropzone {
+.orby-mobile-gate[data-state='loading'] .orby-mobile-gate__hero {
   pointer-events: none;
   opacity: 0.72;
 }
 
 .orby-mobile-gate__learn {
-  flex: 0 0 auto;
+  box-sizing: border-box;
   position: relative;
-  z-index: 2;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100lvh;
+  height: 100vh;
+  height: 100dvh;
+  height: 100lvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   padding:
-    clamp(1.75rem, 6vh, 2.5rem)
-    var(--orby-gate-inset-x)
-    calc(clamp(1.25rem, 4vh, 2rem) + env(safe-area-inset-bottom, 0px));
+    max(env(safe-area-inset-top, 0px), 12px)
+    0
+    calc(clamp(9rem, 24vh, 11rem) + env(safe-area-inset-bottom, 0px));
+  background: var(--brand-primary, var(--orby-lime));
+  color: var(--brand-text, var(--orby-black));
   text-align: center;
 }
 
-.orby-mobile-gate__learn-copy {
-  margin: 0 0 0.55rem;
-  font-size: clamp(0.82rem, 3.4vw, 0.95rem);
-  color: color-mix(in srgb, #fff 62%, transparent);
-  line-height: 1.45;
+.orby-mobile-gate__learn-main {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--orby-gate-headline-actions-gap);
+  width: 100%;
+  padding-inline: var(--orby-gate-inset-x);
 }
 
-.orby-mobile-gate__learn-link {
+.orby-mobile-gate__learn-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 3.5vh, 18px);
+  width: 100%;
+  max-width: 100%;
+}
+
+.orby-mobile-gate__learn-copy {
+  box-sizing: border-box;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  font-family: var(--brand-font-headline);
+  font-weight: 700;
+  font-size: var(--orby-gate-headline-size);
+  letter-spacing: 0.04em;
+  line-height: 1.18;
+  color: var(--brand-text, var(--orby-black));
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  text-wrap: balance;
+}
+
+.orby-mobile-gate__learn-lede {
+  box-sizing: border-box;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
+  font-size: var(--orby-gate-lede-size);
+  line-height: var(--orby-gate-lede-line);
+  letter-spacing: -0.01em;
+  color: var(--orby-black);
+  text-wrap: balance;
+}
+
+.orby-mobile-gate__learn-foot {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  width: 100%;
+  padding:
+    clamp(1.5rem, 5vh, 2.25rem)
+    var(--orby-gate-inset-x)
+    calc(clamp(1.25rem, 4vh, 1.75rem) + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+.orby-mobile-gate__learn-foot a {
+  pointer-events: auto;
+}
+
+.orby-mobile-gate__learn-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.35rem, 5vw, 1.75rem);
+}
+
+.orby-mobile-gate__learn-social-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  color: var(--orby-blue, #00c4ff);
-  font-size: clamp(0.86rem, 3.6vw, 0.98rem);
-  font-weight: 400;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--orby-black);
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--orby-blue, #00c4ff) 35%, transparent);
-  padding: 0.35rem 0.1rem;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: color-mix(in srgb, var(--orby-blue, #00c4ff) 25%, transparent);
-  transition: color 0.16s ease, border-color 0.16s ease;
 }
 
-.orby-mobile-gate__learn-link:hover,
-.orby-mobile-gate__learn-link:focus-visible {
-  color: var(--brand-primary);
-  border-bottom-color: color-mix(in srgb, var(--brand-primary) 45%, transparent);
+.orby-mobile-gate__learn-social-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--orby-black) 45%, transparent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.orby-mobile-gate__learn-social-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: 100%;
+  mask-size: 100%;
+}
+
+.orby-mobile-gate__learn-social-icon--instagram {
+  -webkit-mask-image: url('/assets/icons/Instagram_Glyph_Black.svg');
+  mask-image: url('/assets/icons/Instagram_Glyph_Black.svg');
+}
+
+.orby-mobile-gate__learn-social-icon--github {
+  -webkit-mask-image: url('/assets/icons/GitHub_Invertocat_Black.svg');
+  mask-image: url('/assets/icons/GitHub_Invertocat_Black.svg');
+}
+
+.orby-mobile-gate__learn-meta {
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--orby-black);
+  text-wrap: balance;
+}
+
+.orby-mobile-gate__learn-meta-link,
+.orby-mobile-gate__learn-meta-link:visited {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--orby-black) 35%, transparent);
+  text-underline-offset: 0.14em;
+}
+
+.orby-mobile-gate__learn .orby-magic-btn-host--on-lime {
+  --orby-magic-btn-glow-pad: 0px;
+  padding: 0;
+  margin: 0;
+}
+
+/* Flat inverted pills on lime — same as marketing CTA */
+.orby-magic-btn--on-lime::before,
+.orby-magic-btn--on-lime::after {
+  display: none;
+  content: none;
+}
+
+.orby-magic-btn--on-lime .orby-magic-btn__fill {
+  display: none;
+}
+
+.orby-magic-btn--on-lime .orby-magic-btn__inner {
+  min-height: 0;
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--solid-lime {
+  background: var(--brand-text, var(--orby-black));
+  color: var(--brand-primary, var(--orby-lime));
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime {
+  background: transparent;
+  color: var(--brand-text, var(--orby-black));
+  border: none;
+  overflow: visible;
+  transition:
+    background 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime .orby-magic-btn__ring {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--orby-magic-btn-stroke) solid var(--brand-text, var(--orby-black));
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .orby-magic-btn--on-lime.orby-magic-btn--solid-lime:hover,
+  .orby-magic-btn--on-lime.orby-magic-btn--solid-lime:focus-visible {
+    background: color-mix(in srgb, var(--brand-text, var(--orby-black)) 86%, white);
+    color: var(--brand-primary, var(--orby-lime));
+    outline: none;
+  }
+
+  .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:hover,
+  .orby-magic-btn--on-lime.orby-magic-btn--outline-lime:focus-visible {
+    background: var(--brand-text, var(--orby-black));
+    color: var(--brand-primary, var(--orby-lime));
+    outline: none;
+  }
+
+  .orby-magic-btn--on-lime:hover .orby-magic-btn__inner,
+  .orby-magic-btn--on-lime:focus-visible .orby-magic-btn__inner {
+    transform: translateX(4px);
+  }
+
+  .orby-magic-btn--on-lime:hover .orby-magic-btn__arrow,
+  .orby-magic-btn--on-lime:focus-visible .orby-magic-btn__arrow {
+    transform: translateX(9px);
+  }
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--solid-lime:active {
+  background: color-mix(in srgb, var(--brand-text, var(--orby-black)) 86%, white);
+  color: var(--brand-primary, var(--orby-lime));
+  filter: brightness(0.96);
+}
+
+.orby-magic-btn--on-lime.orby-magic-btn--outline-lime:active {
+  background: var(--brand-text, var(--orby-black));
+  color: var(--brand-primary, var(--orby-lime));
+  filter: brightness(0.96);
 }
 
 .orby-mobile-gate-toast {
@@ -334,14 +632,16 @@ html.orby-mobile-gate body {
     opacity: 1;
     transform: none;
   }
+
+  .orby-mobile-gate__scroll-cue-icon {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
 }
 
 @media (min-width: 769px) {
   .orby-mobile-gate__hero {
     padding-top: max(env(safe-area-inset-top, 0px), 24px);
-  }
-
-  .orby-mobile-gate__frame-inner {
-    min-height: clamp(360px, 52svh, 560px);
   }
 }

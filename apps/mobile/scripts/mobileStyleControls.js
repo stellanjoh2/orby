@@ -131,8 +131,20 @@ export function mobileStyleSliderBounds(preset, path) {
  * @param {string} path
  */
 export function isMobileStyleSliderHidden(preset, path) {
-  if (path !== 'patternScale') return false;
-  return creativeLookPresetHidesPatternScale(normalizeCreativeLookPreset(preset ?? 'neon-edge'));
+  const id = normalizeCreativeLookPreset(preset ?? 'neon-edge');
+  if (path === 'patternScale') {
+    return (
+      creativeLookPresetHidesPatternScale(id)
+      || creativeLookPresetLocksPatternScale(id)
+    );
+  }
+  if (path === 'intensity') {
+    return creativeLookPresetLocksIntensity(id);
+  }
+  if (path === 'shaderAnimationSpeed') {
+    return !creativeLookPresetUsesShaderAnimation(id);
+  }
+  return false;
 }
 
 /** @param {string | null | undefined} presetId */

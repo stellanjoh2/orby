@@ -19,14 +19,9 @@ import {
   prepareMobileImportModel,
 } from './mobilePrepareImport.js';
 import { MobileCreativeLooks } from './MobileCreativeLooks.js';
-import { TransformControls } from '../../../scripts/vendor/TransformControls.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
 
 const ORBY_BLACK = '#080808';
-/** Match desktop SceneManager transform widget size. */
-const ROTATE_GIZMO_SIZE = 1.5;
-const MESH_TAP_MOVE_PX = 8;
-const MESH_TAP_TIME_MS = 250;
 /** Match desktop shelf slider: 0–3, default `hdriStrength` 2 (StateStore). */
 export const MOBILE_HDRI_STRENGTH_DEFAULT = 2 * HDRI_STRENGTH_UNIT;
 export const MOBILE_HDRI_STRENGTH_MAX = 3 * HDRI_STRENGTH_UNIT;
@@ -160,34 +155,11 @@ export class MobileScene {
     this.onFxStateChanged = null;
     this.onCreativeLookStateChanged = null;
 
-    this.raycaster = new THREE.Raycaster();
-    this._pickNdc = new THREE.Vector2();
-    /** @type {{ x: number, y: number, time: number, id: number } | null} */
-    this._pointerDown = null;
-    this._gizmoPointerActive = false;
-    this._rotateGizmoEnabled = false;
-
-    this.transformControlsRotate = new TransformControls(this.camera, this.canvas);
-    this.transformControlsRotate.setMode('rotate');
-    this.transformControlsRotate.setSpace('local');
-    this.transformControlsRotate.setSize(ROTATE_GIZMO_SIZE);
-    this.transformControlsRotate.visible = false;
-    this.scene.add(this.transformControlsRotate);
-
-    this.transformControlsRotate.addEventListener('dragging-changed', (event) => {
-      this.controls.enabled = !event.value;
-    });
-    this.transformControlsRotate.addEventListener('mouseDown', () => {
-      this._gizmoPointerActive = true;
-    });
-    this.transformControlsRotate.addEventListener('mouseUp', () => {
-      this._gizmoPointerActive = false;
-    });
+    this._compareHeld = false;
   }
 
   async init() {
     this._bindResize();
-    this._bindMeshPicking();
     this._startLoop();
     await this.setHdri('beach');
   }
@@ -195,10 +167,6 @@ export class MobileScene {
   dispose() {
     cancelAnimationFrame(this._raf);
     this._resizeObserver?.disconnect();
-    this._unbindMeshPicking();
-    this._setRotateGizmoEnabled(false);
-    this.transformControlsRotate?.dispose?.();
-    this.scene.remove(this.transformControlsRotate);
     this._clearModel();
     this.backgroundGradientController?.dispose?.();
     this.environmentController?.dispose();
@@ -233,91 +201,12 @@ export class MobileScene {
       if (this._exportInProgress) return;
       const dt = this.clock.getDelta();
       this.controls.update();
-      this.transformControlsRotate.updateMatrixWorld?.();
       this.creativeLooks.tick(dt);
       this.post.tick(dt);
       const animTime = this.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
       this.post.render(animTime);
     };
     tick();
-  }
-
-  _bindMeshPicking() {
-    this._onPickPointerDown = (e) => this._handlePickPointerDown(e);
-    this._onPickPointerUp = (e) => this._handlePickPointerUp(e);
-    this._onPickPointerCancel = () => {
-      this._pointerDown = null;
-    };
-    this.canvas.addEventListener('pointerdown', this._onPickPointerDown);
-    this.canvas.addEventListener('pointerup', this._onPickPointerUp);
-    this.canvas.addEventListener('pointercancel', this._onPickPointerCancel);
-  }
-
-  _unbindMeshPicking() {
-    if (this._onPickPointerDown) {
-      this.canvas.removeEventListener('pointerdown', this._onPickPointerDown);
-    }
-    if (this._onPickPointerUp) {
-      this.canvas.removeEventListener('pointerup', this._onPickPointerUp);
-    }
-    if (this._onPickPointerCancel) {
-      this.canvas.removeEventListener('pointercancel', this._onPickPointerCancel);
-    }
-  }
-
-  /** @param {PointerEvent} e */
-  _handlePickPointerDown(e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    this._pointerDown = {
-      x: e.clientX,
-      y: e.clientY,
-      time: performance.now(),
-      id: e.pointerId,
-    };
-  }
-
-  /** @param {PointerEvent} e */
-  _handlePickPointerUp(e) {
-    if (!this._pointerDown || e.pointerId !== this._pointerDown.id) return;
-    if (this._gizmoPointerActive || this.transformControlsRotate.dragging) {
-      this._pointerDown = null;
-      return;
-    }
-
-    const dx = e.clientX - this._pointerDown.x;
-    const dy = e.clientY - this._pointerDown.y;
-    const dt = performance.now() - this._pointerDown.time;
-    this._pointerDown = null;
-
-    if (!this.currentModel) return;
-    if (Math.hypot(dx, dy) > MESH_TAP_MOVE_PX || dt > MESH_TAP_TIME_MS) return;
-
-    this._clientToNdc(e.clientX, e.clientY, this._pickNdc);
-    this.raycaster.setFromCamera(this._pickNdc, this.camera);
-    const hits = this.raycaster.intersectObject(this.currentModel, true);
-    this._setRotateGizmoEnabled(hits.length > 0);
-  }
-
-  /** @param {number} clientX @param {number} clientY @param {THREE.Vector2} target */
-  _clientToNdc(clientX, clientY, target) {
-    const rect = this.canvas.getBoundingClientRect();
-    target.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    target.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-  }
-
-  /** @param {boolean} enabled */
-  _setRotateGizmoEnabled(enabled) {
-    this._rotateGizmoEnabled = enabled;
-    this.transformControlsRotate.visible = enabled;
-    if (enabled && this.currentModel) {
-      this.transformControlsRotate.attach(this.currentModel);
-    } else {
-      this.transformControlsRotate.detach();
-    }
-  }
-
-  isRotateGizmoEnabled() {
-    return this._rotateGizmoEnabled;
   }
 
   /** @param {THREE.Texture | null} envTexture @param {number} intensity */
@@ -529,7 +418,6 @@ export class MobileScene {
 
   _clearModel() {
     if (!this.currentModel) return;
-    this._setRotateGizmoEnabled(false);
     this.creativeLooks.clearModel();
     this.scene.remove(this.currentModel);
     this.currentModel.traverse((child) => {
@@ -578,6 +466,28 @@ export class MobileScene {
       );
       this.controls.update();
     }
+  }
+
+  /** @param {boolean} held */
+  setCompareHeld(held) {
+    if (this._compareHeld === held) return;
+    this._compareHeld = held;
+    if (held) {
+      this.creativeLooks.setCreativeLook('none');
+      this.post.setCompareHeld(true);
+      return;
+    }
+    this.post.setCompareHeld(false);
+    if (this._creativeLookPreset) {
+      this.creativeLooks.setCreativeLook(this._creativeLookPreset);
+    } else {
+      this.creativeLooks.setCreativeLook('none');
+    }
+    this.post.syncCreativeLook(this._creativeLookPreset);
+  }
+
+  isCompareHeld() {
+    return this._compareHeld;
   }
 
   /**

@@ -33,3 +33,35 @@ export const MOBILE_MATERIAL_SCALAR_DEFAULTS = {
 /** Desktop `renderQuality: medium` × `bloom.quality: medium` internal bloom scale. */
 export const MOBILE_BLOOM_RESOLUTION_SCALE =
   RENDER_QUALITY.medium.bloomResolutionScale * BLOOM_QUALITY.medium.resolutionScale;
+
+/** Desktop `#aberrationAmount` slider max — mobile had wrongly capped at legacy offset 0.0025. */
+export const MOBILE_ABERRATION_AMOUNT_MAX = 0.02;
+export const MOBILE_ABERRATION_AMOUNT_STEP = 0.0001;
+
+/** Desktop `#grainIntensity` UI 0–1 → stored 0–0.15; mobile slider uses stored values directly. */
+export const MOBILE_GRAIN_INTENSITY_MAX = 0.15;
+export const MOBILE_GRAIN_INTENSITY_STEP = 0.001;
+
+/**
+ * Film grain uses screen-space UV — same stored intensity reads finer on narrow mobile buffers.
+ * Boost at render time (not in stored state) so look-filter presets stay portable.
+ */
+export const MOBILE_GRAIN_REFERENCE_PIXEL_WIDTH = 1600;
+export const MOBILE_GRAIN_INTENSITY_SCALE_MAX = 2.5;
+
+/** Desktop `#bloomStrength` slider max — mobile was capped at 1. */
+export const MOBILE_BLOOM_STRENGTH_MAX = 2;
+
+/**
+ * @param {number} intensity Stored grain intensity (0..{@link MOBILE_GRAIN_INTENSITY_MAX}).
+ * @param {number} [pixelWidth] Composer output width in physical pixels.
+ */
+export function mobileEffectiveGrainIntensity(intensity, pixelWidth) {
+  if (!Number.isFinite(intensity) || intensity <= 0) return 0;
+  const w = Math.max(1, pixelWidth ?? MOBILE_GRAIN_REFERENCE_PIXEL_WIDTH);
+  const scale = Math.min(
+    MOBILE_GRAIN_INTENSITY_SCALE_MAX,
+    Math.max(1, MOBILE_GRAIN_REFERENCE_PIXEL_WIDTH / w),
+  );
+  return intensity * scale;
+}

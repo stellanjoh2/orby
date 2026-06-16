@@ -28,9 +28,8 @@ import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelH
 import { copyMobileDebugSettings, loadMobileDebugSample } from './mobileDebugExport.js';
 import { buildMobileDebugSceneExtra, markMobileDebugLog } from './mobileDebugLog.js';
 import { normalizeBackgroundGradient } from '../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
-
-/** Left inset for preset rails — keep in sync with --orby-mobile-preset-rail-inset */
-const MOBILE_PRESET_RAIL_INSET = 16;
+import { mobileHaptic } from './mobileHaptics.js';
+import { bindMobileSheetDrag } from './mobileSheetDrag.js';
 
 function urlHasHandoffFlag() {
   try {
@@ -39,6 +38,12 @@ function urlHasHandoffFlag() {
     return false;
   }
 }
+
+const VIEWPORT_DOUBLE_TAP_MS = 320;
+const VIEWPORT_DOUBLE_TAP_DIST_PX = 36;
+const VIEWPORT_COMPARE_HOLD_MS = 380;
+const VIEWPORT_COMPARE_MOVE_PX = 14;
+
 /** @typedef {'closed' | 'peek' | 'expanded'} SheetState */
 /** @typedef {'light' | 'style' | 'filters' | 'fx'} MobileTab */
 /** @typedef {'light' | 'style' | 'filters'} PresetTab */
@@ -69,6 +74,8 @@ export class MobileShell {
     this._toastTimer = null;
     /** @type {ReturnType<typeof setTimeout> | null} */
     this._railScrollTimer = null;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    this._railScrollEndTimer = null;
     /** @type {PresetTab | null} */
     this._railScrollingTab = null;
     this._suppressRailLeadingSelection = false;
@@ -78,6 +85,16 @@ export class MobileShell {
     this._engagedPresetTabs = new Set();
     /** @type {HTMLElement | null} */
     this._hdriControlsEl = null;
+    /** @type {ReturnType<typeof bindMobileSheetDrag> | null} */
+    this._sheetDrag = null;
+    /** @type {{ time: number, x: number, y: number }} */
+    this._lastViewportTap = { time: 0, x: 0, y: 0 };
+    /** @type {{ id: number, x: number, y: number } | null} */
+    this._comparePointer = null;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    this._compareHoldTimer = null;
+    this._compareActive = false;
+    this._exportBtn = root.querySelector('[data-action="export"]');
 
     this._bindChrome();
 
@@ -137,6 +154,7 @@ export class MobileShell {
     this._syncHdriControlsUi();
     this._syncHdriPanelUi();
     this._syncHdriBackgroundUi();
+    this._bindViewportInteractions();
   }
 
   async _bootScene() {
@@ -213,6 +231,11 @@ export class MobileShell {
       this._emptyEl = empty;
     }
     this._emptyEl.hidden = !visible;
+    if (visible) {
+      this.viewportEl.removeAttribute('data-has-model');
+    } else if (this.scene?.currentModel) {
+      this.viewportEl.dataset.hasModel = 'true';
+    }
   }
 
   /** @param {MobileTab} tab */
@@ -639,6 +662,14 @@ export class MobileShell {
   }
 
   _bindChrome() {
+    if (this.sheet) {
+      this._sheetDrag = bindMobileSheetDrag({
+        root: this.root,
+        sheet: this.sheet,
+        onDismiss: () => this.setSheetState('closed'),
+      });
+    }
+
     this.root.querySelectorAll('[data-open-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = /** @type {MobileTab} */ (btn.getAttribute('data-open-tab'));
@@ -659,6 +690,81 @@ export class MobileShell {
     });
   }
 
+  _bindViewportInteractions() {
+    if (!this.viewportEl) return;
+
+    const isChromeTarget = (el) => {
+      if (!(el instanceof Element)) return false;
+      return !!el.closest(
+        '.orby-mobile-export-btn, .orby-mobile-debug-menu, .orby-mobile-viewport__empty, .orby-mobile-browse-cta',
+      );
+    };
+
+    this.viewportEl.addEventListener('pointerdown', (e) => {
+      if (isChromeTarget(e.target)) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      this._comparePointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      clearTimeout(this._compareHoldTimer);
+      this._compareHoldTimer = setTimeout(() => {
+        this._compareHoldTimer = null;
+        if (!this._comparePointer || !this.scene) return;
+        this._compareActive = true;
+        this.scene.setCompareHeld(true);
+        this.viewportEl?.setAttribute('data-compare', 'true');
+        mobileHaptic('soft');
+      }, VIEWPORT_COMPARE_HOLD_MS);
+    });
+
+    this.viewportEl.addEventListener('pointermove', (e) => {
+      if (!this._comparePointer || e.pointerId !== this._comparePointer.id) return;
+      if (this._compareActive) return;
+      const dx = e.clientX - this._comparePointer.x;
+      const dy = e.clientY - this._comparePointer.y;
+      if (Math.hypot(dx, dy) > VIEWPORT_COMPARE_MOVE_PX) {
+        clearTimeout(this._compareHoldTimer);
+        this._compareHoldTimer = null;
+        this._comparePointer = null;
+      }
+    });
+
+    const endCompare = () => {
+      clearTimeout(this._compareHoldTimer);
+      this._compareHoldTimer = null;
+      if (this._compareActive && this.scene) {
+        this.scene.setCompareHeld(false);
+        this.viewportEl?.removeAttribute('data-compare');
+      }
+      this._compareActive = false;
+      this._comparePointer = null;
+    };
+
+    this.viewportEl.addEventListener('pointerup', (e) => {
+      if (isChromeTarget(e.target)) return;
+
+      if (!this._compareActive) {
+        const now = performance.now();
+        const dt = now - this._lastViewportTap.time;
+        const dist = Math.hypot(
+          e.clientX - this._lastViewportTap.x,
+          e.clientY - this._lastViewportTap.y,
+        );
+        if (dt < VIEWPORT_DOUBLE_TAP_MS && dist < VIEWPORT_DOUBLE_TAP_DIST_PX && this.scene) {
+          this.scene.resetCamera();
+          mobileHaptic('medium');
+          this._lastViewportTap = { time: 0, x: 0, y: 0 };
+          endCompare();
+          return;
+        }
+        this._lastViewportTap = { time: now, x: e.clientX, y: e.clientY };
+      }
+
+      endCompare();
+    });
+
+    this.viewportEl.addEventListener('pointercancel', endCompare);
+  }
+
   _bindSceneControls() {
     this.root.addEventListener('click', (e) => {
       const pick = e.target.closest('.orby-mobile-preset');
@@ -668,16 +774,25 @@ export class MobileShell {
       if (tab === 'light' || tab === 'style' || tab === 'filters') {
         this._select(/** @type {PresetTab} */ (tab), pick);
         this._scrollPresetIntoView(/** @type {PresetTab} */ (tab), pick, 'smooth');
+        this._updateRailCenterHighlight(/** @type {PresetTab} */ (tab));
       }
     });
 
     this._bindHdriControls();
     this._bindHdriBackgroundControls();
 
-    // Filters only — HDRI and Style change on tap, not while scrolling the rail.
-    for (const tab of /** @type {const} */ (['filters'])) {
+    this.root.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t instanceof HTMLInputElement && t.closest('.effect-toggle')) {
+        mobileHaptic('light');
+      }
+    });
+
+    // Center-snap carousel — live preview while scrolling, magnetic settle on release.
+    for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
       const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
       track?.addEventListener('scroll', () => this._onPresetRailScroll(tab), { passive: true });
+      track?.addEventListener('scrollend', () => this._onPresetRailScrollEnd(tab), { passive: true });
     }
 
     this.root.querySelector('[data-action="toggle-debug"]')?.addEventListener('click', (e) => {
@@ -707,11 +822,17 @@ export class MobileShell {
     });
 
     this.root.querySelector('[data-action="export"]')?.addEventListener('click', () => {
+      if (this._exportBtn instanceof HTMLElement) {
+        this._exportBtn.dataset.busy = 'true';
+        this._exportBtn.setAttribute('aria-busy', 'true');
+      }
       void this.scene.exportImage().then(
         (result) => {
           if (result === 'shared') {
+            mobileHaptic('success');
             this.showToast('Saved to Photos');
           } else if (result === 'downloaded') {
+            mobileHaptic('success');
             this.showToast('Image saved');
           } else if (result === 'no-model') {
             this.showToast('Load a model first');
@@ -723,14 +844,23 @@ export class MobileShell {
           if (err?.name === 'AbortError') return;
           this.showToast('Export failed');
         },
-      );
+      ).finally(() => {
+        if (this._exportBtn instanceof HTMLElement) {
+          delete this._exportBtn.dataset.busy;
+          this._exportBtn.removeAttribute('aria-busy');
+        }
+      });
     });
 
     this.fileInput?.addEventListener('change', () => {
       const file = this.fileInput?.files?.[0];
       if (!file) return;
+      this.viewportEl?.setAttribute('data-loading', 'true');
       void this.scene.loadFile(file).then(() => {
         this.showToast(`Loaded ${file.name}`);
+        mobileHaptic('success');
+      }).finally(() => {
+        this.viewportEl?.removeAttribute('data-loading');
       });
       if (this.fileInput) this.fileInput.value = '';
     });
@@ -1029,12 +1159,19 @@ export class MobileShell {
     if (state === 'closed') {
       this._engagedPresetTabs.clear();
     }
+    const wasOpen = this.sheetState !== 'closed';
     this.sheetState = state;
     this.root.dataset.sheet = state;
+    this._sheetDrag?.reset();
     this._syncDockTabState();
     const scrim = this.root.querySelector('.orby-mobile-scrim');
     if (scrim instanceof HTMLElement) {
       scrim.hidden = state === 'closed';
+    }
+    if (!wasOpen && state !== 'closed') {
+      mobileHaptic('light');
+    } else if (wasOpen && state === 'closed') {
+      mobileHaptic('soft');
     }
   }
 
@@ -1061,6 +1198,7 @@ export class MobileShell {
     const id = pick.getAttribute(attr);
     const item = catalog.find((x) => x.id === id);
     if (!item) return;
+    const changed = this.selection[tab].id !== id;
 
     if (tab === 'light') {
       this._engagedPresetTabs.add('light');
@@ -1090,23 +1228,106 @@ export class MobileShell {
     }
 
     this._syncSelectionUi();
+    if (changed) {
+      mobileHaptic('selection');
+    }
   }
 
   /** @param {PresetTab} tab @param {HTMLElement} el @param {ScrollBehavior} [behavior] */
   _scrollPresetIntoView(tab, el, behavior = 'auto') {
-    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
-    if (!(track instanceof HTMLElement) || !(el instanceof HTMLElement)) return;
+    if (!(el instanceof HTMLElement)) return;
+    this._snapRailPresetToCenter(el, behavior);
+  }
+
+  /**
+   * @param {HTMLElement} el
+   * @param {ScrollBehavior} [behavior]
+   */
+  _snapRailPresetToCenter(el, behavior = 'smooth') {
+    const track = el.parentElement;
+    if (!(track instanceof HTMLElement)) return;
+
     const trackRect = track.getBoundingClientRect();
+    const anchorX = trackRect.left + trackRect.width / 2;
     const elRect = el.getBoundingClientRect();
-    const anchorX = trackRect.left + MOBILE_PRESET_RAIL_INSET;
-    const delta = elRect.left - anchorX;
+    const elCenter = elRect.left + elRect.width / 2;
+    if (Math.abs(elCenter - anchorX) < 3) return;
+
     this._suppressRailLeadingSelection = true;
     clearTimeout(this._railSuppressTimer);
-    track.scrollTo({ left: track.scrollLeft + delta, behavior });
+    el.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
+    const ms = behavior === 'smooth' ? 360 : 120;
     this._railSuppressTimer = setTimeout(() => {
       this._suppressRailLeadingSelection = false;
       this._railSuppressTimer = null;
-    }, 180);
+    }, ms);
+  }
+
+  /** @param {PresetTab} tab */
+  _updateRailCenterHighlight(tab) {
+    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
+    if (!(track instanceof HTMLElement)) return;
+    const centered = this._getRailCenteredPreset(track);
+    track.querySelectorAll('.orby-mobile-preset').forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.classList.toggle('is-rail-center', el === centered);
+      }
+    });
+  }
+
+  /** @param {PresetTab} tab */
+  _onPresetRailScroll(tab) {
+    if (this.activeTab !== tab || this.sheetState === 'closed') return;
+    this._railScrollingTab = tab;
+    this._updateRailCenterHighlight(tab);
+    clearTimeout(this._railScrollTimer);
+    this._railScrollTimer = setTimeout(() => {
+      this._railScrollTimer = null;
+      if (this._railScrollingTab !== tab || this._suppressRailLeadingSelection) return;
+      this._applyRailCenteredSelection(tab);
+    }, 90);
+    clearTimeout(this._railScrollEndTimer);
+    this._railScrollEndTimer = setTimeout(() => {
+      this._railScrollEndTimer = null;
+      this._finishRailScroll(tab);
+    }, 140);
+  }
+
+  /** @param {PresetTab} tab */
+  _onPresetRailScrollEnd(tab) {
+    if (this.activeTab !== tab || this.sheetState === 'closed') return;
+    clearTimeout(this._railScrollTimer);
+    clearTimeout(this._railScrollEndTimer);
+    this._railScrollTimer = null;
+    this._railScrollEndTimer = null;
+    this._finishRailScroll(tab);
+  }
+
+  /** @param {PresetTab} tab */
+  _finishRailScroll(tab) {
+    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
+    if (!(track instanceof HTMLElement)) return;
+    const centered = this._getRailCenteredPreset(track);
+    if (!(centered instanceof HTMLElement)) return;
+
+    this._snapRailPresetToCenter(centered, 'smooth');
+    this._updateRailCenterHighlight(tab);
+
+    if (this._suppressRailLeadingSelection) return;
+    this._applyRailCenteredSelection(tab);
+  }
+
+  /** @param {PresetTab} tab */
+  _applyRailCenteredSelection(tab) {
+    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
+    if (!(track instanceof HTMLElement)) return;
+    const centered = this._getRailCenteredPreset(track);
+    if (!(centered instanceof HTMLElement)) return;
+    const currentId = this.selection[tab].id;
+    const attr = this._dataAttrForTab(tab);
+    const nextId = centered.getAttribute(attr);
+    if (!nextId || nextId === currentId) return;
+    this._select(tab, centered);
   }
 
   /** @param {PresetTab} tab */
@@ -1116,45 +1337,26 @@ export class MobileShell {
     const el = this.root.querySelector(`[data-rail-track="${tab}"] [${attr}="${CSS.escape(id)}"]`);
     if (el instanceof HTMLElement) {
       this._scrollPresetIntoView(tab, el, 'auto');
+      this._updateRailCenterHighlight(tab);
     }
   }
 
-  /** @param {PresetTab} tab */
-  _onPresetRailScroll(tab) {
-    if (this.activeTab !== tab || this.sheetState === 'closed') return;
-    this._railScrollingTab = tab;
-    clearTimeout(this._railScrollTimer);
-    this._railScrollTimer = setTimeout(() => {
-      this._railScrollTimer = null;
-      if (this._railScrollingTab !== tab) return;
-      this._applyRailLeadingSelection(tab);
-    }, 90);
-  }
-
-  /** @param {PresetTab} tab */
-  _applyRailLeadingSelection(tab) {
-    if (this._suppressRailLeadingSelection) return;
-    const track = this.root.querySelector(`[data-rail-track="${tab}"]`);
-    if (!(track instanceof HTMLElement)) return;
-    const leading = this._getRailLeadingPreset(track);
-    if (!leading) return;
-    const currentId = this.selection[tab].id;
-    const attr = this._dataAttrForTab(tab);
-    const nextId = leading.getAttribute(attr);
-    if (!nextId || nextId === currentId) return;
-    this._select(tab, leading);
+  /** @param {HTMLElement} track */
+  _getRailCenterX(track) {
+    const trackRect = track.getBoundingClientRect();
+    return trackRect.left + trackRect.width / 2;
   }
 
   /** @param {HTMLElement} track */
-  _getRailLeadingPreset(track) {
-    const trackRect = track.getBoundingClientRect();
-    const anchorX = trackRect.left + MOBILE_PRESET_RAIL_INSET;
+  _getRailCenteredPreset(track) {
+    const anchorX = this._getRailCenterX(track);
     let best = null;
     let bestDist = Infinity;
     for (const child of track.children) {
       if (!(child instanceof HTMLElement)) continue;
       const rect = child.getBoundingClientRect();
-      const dist = Math.abs(rect.left - anchorX);
+      const center = rect.left + rect.width / 2;
+      const dist = Math.abs(center - anchorX);
       if (dist < bestDist) {
         bestDist = dist;
         best = child;
@@ -1177,6 +1379,10 @@ export class MobileShell {
       const thumb = dockBtn?.querySelector('[data-dock-thumb] img');
       if (thumb instanceof HTMLImageElement) {
         thumb.src = mobileAssetUrl(this.selection[tab].thumb);
+      }
+
+      if (tab === this.activeTab && this.sheetState !== 'closed') {
+        this._updateRailCenterHighlight(tab);
       }
     }
     this._syncStyleControlsUi();

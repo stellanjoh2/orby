@@ -239,11 +239,6 @@ export async function exportMobileSceneJpeg(mobileScene) {
     pixelRatio: origPixelRatio,
   });
 
-  const origGizmoVisible = mobileScene.transformControlsRotate?.visible ?? false;
-  if (mobileScene.transformControlsRotate) {
-    mobileScene.transformControlsRotate.visible = false;
-  }
-
   // Let the preview loop skip a frame before we resize GL buffers.
   await new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -311,9 +306,6 @@ export async function exportMobileSceneJpeg(mobileScene) {
     traceMobileExport('failed', { message: String(err?.message || err) });
     return 'failed';
   } finally {
-    if (mobileScene.transformControlsRotate) {
-      mobileScene.transformControlsRotate.visible = origGizmoVisible;
-    }
     renderer.setPixelRatio(origPixelRatio);
     renderer.setSize(origSize.x, origSize.y, false);
     syncRendererInternalSizeToCanvasBackingStore(renderer);

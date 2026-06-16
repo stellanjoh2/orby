@@ -321,7 +321,23 @@ function waitForOrby() {
   });
 }
 
+function dismissMobileLandingChromeFor404() {
+  if (!document.documentElement.classList.contains('mobile-landing')) return;
+  const nav = document.querySelector('[data-orby-marketing-scroll-nav]');
+  if (!nav) return;
+  nav.classList.remove(
+    'orby-marketing-scroll-nav--menu-open',
+    'orby-marketing-scroll-nav--visible',
+    'orby-marketing-scroll-nav--mobile-fixed',
+  );
+  const toggle = nav.querySelector('[data-orby-marketing-nav-toggle]');
+  toggle?.setAttribute('aria-expanded', 'false');
+  const menu = nav.querySelector('[data-orby-marketing-nav-menu]');
+  menu?.setAttribute('aria-hidden', 'true');
+}
+
 function applyNotFoundUiState() {
+  dismissMobileLandingChromeFor404();
   document.body.classList.add('orby-not-found-active');
   document.body.classList.remove('orby-not-found-fade-ready');
   // Trigger a route-local fade from black into the 404 scene/UI.
