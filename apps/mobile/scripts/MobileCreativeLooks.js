@@ -5,6 +5,7 @@ import {
   computeCreativeLookToonLightScalars,
 } from '../../../scripts/render/CreativeLookMaterials.js';
 import { buildMobileCreativeLookResetPatch } from './mobileStyleControls.js';
+import { MATERIAL_EMISSIVE_SLIDER_MAX } from '../../../scripts/constants.js';
 import {
   MOBILE_MATERIAL_DEFAULTS,
   MOBILE_MATERIAL_MR_MAP_DEFAULTS,
@@ -141,6 +142,53 @@ export class MobileCreativeLooks {
     this.materialController.setMaterialMetalness(metalness);
     this.materialController.setMaterialRoughness(roughness);
     this.materialController.setMaterialEmissive(MOBILE_MATERIAL_DEFAULTS.emissive);
+  }
+
+  getMaterialSettings() {
+    const state = this.stateStore.getState();
+    const importUsesAuthoredPbr = !!state.material?.importUsesAuthoredPbr;
+    const mrDefaults = importUsesAuthoredPbr
+      ? MOBILE_MATERIAL_MR_MAP_DEFAULTS
+      : MOBILE_MATERIAL_SCALAR_DEFAULTS;
+    return {
+      brightness: state.material?.brightness ?? MOBILE_MATERIAL_DEFAULTS.brightness,
+      metalness: state.material?.metalness ?? mrDefaults.metalness,
+      roughness: state.material?.roughness ?? mrDefaults.roughness,
+      emissive: state.material?.emissive ?? MOBILE_MATERIAL_DEFAULTS.emissive,
+    };
+  }
+
+  /** @param {'brightness' | 'metalness' | 'roughness' | 'emissive'} key @param {number} value */
+  setMaterialValue(key, value) {
+    const mc = this.materialController;
+    switch (key) {
+      case 'brightness': {
+        const clamped = Math.max(0, Math.min(5, value));
+        this.stateStore.set('material.brightness', clamped);
+        mc.setMaterialBrightness(clamped);
+        break;
+      }
+      case 'metalness': {
+        const clamped = Math.max(0, Math.min(1, value));
+        this.stateStore.set('material.metalness', clamped);
+        mc.setMaterialMetalness(clamped);
+        break;
+      }
+      case 'roughness': {
+        const clamped = Math.max(0, Math.min(1, value));
+        this.stateStore.set('material.roughness', clamped);
+        mc.setMaterialRoughness(clamped);
+        break;
+      }
+      case 'emissive': {
+        const clamped = Math.max(0, Math.min(MATERIAL_EMISSIVE_SLIDER_MAX, value));
+        this.stateStore.set('material.emissive', clamped);
+        mc.setMaterialEmissive(clamped);
+        break;
+      }
+      default:
+        break;
+    }
   }
 
   clearModel() {

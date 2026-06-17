@@ -23,6 +23,7 @@ import {
   mobileStyleSliderBounds,
   resolveMobileStyleSliderValue,
 } from './mobileStyleControls.js';
+import { MOBILE_MATERIAL_SLIDERS } from './mobileMaterialControls.js';
 import { MobileScene, MOBILE_HDRI_STRENGTH_DEFAULT, MOBILE_HDRI_STRENGTH_MAX } from './MobileScene.js';
 import { takeMobileModelHandoff, markMobileAppSessionActive, waitForMobileModelHandoff, hasMobileHandoffPendingFlag } from '../../../scripts/orbyMobileHandoff.js';
 import { readOrbyMobileHandoffWaitMs, validateOrbyMobileModelFile } from '../../../scripts/orbyMobileModelLimits.js';
@@ -97,6 +98,9 @@ export class MobileShell {
     /** @type {{ time: number, x: number, y: number }} */
     this._lastViewportTap = { time: 0, x: 0, y: 0 };
     this._exportBtn = root.querySelector('[data-action="export"]');
+    this._objectMenuEl = root.querySelector('.orby-mobile-object-menu');
+    this._objectBtn = root.querySelector('[data-action="toggle-object"]');
+    this._objectPanelEl = root.querySelector('[data-object-panel]');
 
     this._bindChrome();
 
@@ -119,6 +123,8 @@ export class MobileShell {
       if (this.viewportEl) this.viewportEl.dataset.hasModel = 'true';
       this._showEmptyState(false);
       this.scene.setCreativeLook(this.selection.style.id);
+      this._syncObjectControlsUi();
+      this._syncFxControlsUi();
     };
     this.scene.onError = (message) => this.showToast(message);
     this.scene.onFxStateChanged = () => this._syncFxControlsUi();
@@ -160,9 +166,11 @@ export class MobileShell {
     this._initBackgroundColorPickers();
 
     this._renderPresetRails();
+    this._renderObjectControls();
     this._renderFxControls();
     this._renderStyleControls();
     this._setDebugMenuOpen(false);
+    this._setObjectMenuOpen(false);
     this._bindSceneControls();
     this._syncSelectionUi();
     this._syncHdriControlsUi();
@@ -385,6 +393,15 @@ export class MobileShell {
     this.showToast('Grade reset');
   }
 
+  _renderObjectControls() {
+    const host = this.root.querySelector('[data-object-controls]');
+    if (!host) return;
+
+    host.replaceChildren();
+    host.append(...MOBILE_MATERIAL_SLIDERS.map((def) => this._mkMaterialSlider(def)));
+    this._syncObjectControlsUi();
+  }
+
   _renderFxControls() {
     const host = this.root.querySelector('[data-fx-controls]');
     if (!host) return;
@@ -598,6 +615,28 @@ export class MobileShell {
     slider.style.setProperty('--slider-fill-end', `${fillPercent}%`);
   }
 
+  /** @param {typeof MOBILE_MATERIAL_SLIDERS[number]} def */
+  _mkMaterialSlider(def) {
+    const row = document.createElement('label');
+    row.className = 'orby-mobile-fx-grade slider-line';
+    const initial = def.defaultValue ?? def.min;
+    row.innerHTML = `
+      <span class="orby-mobile-fx-grade__label slider-line-label">${def.label}</span>
+      <input type="range" data-material-path="${def.path}" min="${def.min}" max="${def.max}" step="${def.step}" value="${initial}" />
+      <span class="orby-mobile-fx-grade__value" data-material-value="${def.path}"></span>
+    `;
+    const input = row.querySelector('input');
+    const output = row.querySelector('[data-material-value]');
+    input?.addEventListener('input', () => {
+      const value = Number(input.value);
+      if (output) output.textContent = def.format(value);
+      this._updateSliderFill(input);
+      this.scene.setMaterialValue(def.path, value);
+    });
+    if (input instanceof HTMLInputElement) this._updateSliderFill(input);
+    return row;
+  }
+
   /** @param {{ path: string, label: string, min: number, max: number, step: number, format: (v: number) => string, defaultValue?: number }} def */
   _mkFxSlider(def) {
     const row = document.createElement('label');
@@ -693,6 +732,24 @@ export class MobileShell {
       this.selection.filters = MOBILE_FX.find((x) => x.id === 'none') ?? MOBILE_FX[0];
       this._engagedPresetTabs.delete('filters');
       this._syncSelectionUi();
+    }
+  }
+
+  _syncObjectControlsUi() {
+    const material = this.scene?.getMaterialSettings?.() ?? {};
+
+    for (const def of MOBILE_MATERIAL_SLIDERS) {
+      const el = this.root.querySelector(`[data-material-path="${def.path}"]`);
+      if (!(el instanceof HTMLInputElement)) continue;
+      if (document.activeElement === el) continue;
+      const value = material[def.path];
+      if (typeof value !== 'number') continue;
+      el.value = String(value);
+      this._updateSliderFill(el);
+      const output = this.root.querySelector(`[data-material-value="${def.path}"]`);
+      if (output instanceof HTMLElement) {
+        output.textContent = def.format(value);
+      }
     }
   }
 
@@ -802,12 +859,30 @@ export class MobileShell {
       this.setSheetState('closed');
     });
 
+    this.root.querySelector('[data-action="toggle-object"]')?.addEventListener('click', () => {
+      const open = this._objectMenuEl?.dataset.objectMenu !== 'open';
+      if (open) {
+        this.setSheetState('closed');
+        this._setDebugMenuOpen(false);
+      }
+      this._setObjectMenuOpen(open);
+      mobileHaptic('light');
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+      if (this._objectMenuEl?.dataset.objectMenu !== 'open') return;
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest('.orby-mobile-object-menu')) return;
+      this._setObjectMenuOpen(false);
+    });
+
     document.addEventListener('pointerdown', (e) => {
       if (this.root.dataset.sliderFocus != null) return;
       if (this.sheetState === 'closed') return;
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-export-btn') || t.closest('.orby-mobile-debug-menu') || t.closest('.orby-mobile-viewport__empty')) return;
+      if (t.closest('.orby-mobile-sheet') || t.closest('.orby-mobile-dock') || t.closest('.orby-mobile-top-actions') || t.closest('.orby-mobile-debug-menu') || t.closest('.orby-mobile-viewport__empty')) return;
       this.setSheetState('closed');
     });
   }
@@ -818,7 +893,7 @@ export class MobileShell {
     const isChromeTarget = (el) => {
       if (!(el instanceof Element)) return false;
       return !!el.closest(
-        '.orby-mobile-export-btn, .orby-mobile-debug-menu, .orby-mobile-viewport__empty, .orby-mobile-browse-cta',
+        '.orby-mobile-top-actions, .orby-mobile-debug-menu, .orby-mobile-viewport__empty, .orby-mobile-browse-cta',
       );
     };
 
@@ -996,6 +1071,7 @@ export class MobileShell {
     }
 
     this._colorPickerTarget = target;
+    this._setObjectMenuOpen(false);
     this._colorPicker.setValue(color);
     this._colorPicker.setDisabled(false);
     if (this._colorPickerLayer instanceof HTMLElement) {
@@ -1237,6 +1313,8 @@ export class MobileShell {
 
   /** @param {MobileTab} tab */
   openSheet(tab) {
+    this._setObjectMenuOpen(false);
+
     const sameTabOpen =
       this.sheetState !== 'closed' && this.activeTab === tab;
 
@@ -1436,6 +1514,19 @@ export class MobileShell {
       this.root.dataset.orbitChrome = 'hidden';
     } else {
       delete this.root.dataset.orbitChrome;
+    }
+  }
+
+  /** @param {boolean} open */
+  _setObjectMenuOpen(open) {
+    if (this._objectMenuEl instanceof HTMLElement) {
+      this._objectMenuEl.dataset.objectMenu = open ? 'open' : 'closed';
+    }
+    if (this._objectBtn instanceof HTMLElement) {
+      this._objectBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    if (this._objectPanelEl instanceof HTMLElement) {
+      this._objectPanelEl.hidden = !open;
     }
   }
 

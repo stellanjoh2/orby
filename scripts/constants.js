@@ -97,6 +97,11 @@ export const DEFAULT_BACKDROP_METALNESS = 0.02;
 export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
 /** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
 export const DEFAULT_MATERIAL_BRIGHTNESS = 1.5;
+/**
+ * Peak linear RGB after brightness scale on albedo-mapped imports — keeps map × tint in HDR headroom
+ * for tonemap without hard clipping that reads as “burnt” texture (desktop + mobile share MaterialController).
+ */
+export const MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK = 2.5;
 
 /** Neutral multiplier on import — 1.0 preserves authored glTF metalness/roughness factors. */
 export const IMPORT_MATERIAL_MR_MULTIPLIER = 1;

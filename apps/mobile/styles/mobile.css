@@ -207,7 +207,7 @@ button {
 .orby-mobile-debug-menu {
   position: absolute;
   z-index: 4;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  top: 8px;
   left: calc(env(safe-area-inset-left, 0px) + 12px);
   display: flex;
   flex-direction: column;
@@ -261,11 +261,82 @@ button {
   pointer-events: auto;
 }
 
-.orby-mobile-export-btn {
+.orby-mobile-top-actions {
   position: absolute;
   z-index: 5;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  /* Viewport already insets below the notch via --orby-mobile-top-h */
+  top: 8px;
   right: calc(env(safe-area-inset-right, 0px) + 12px);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  transition: opacity var(--orby-mobile-chrome-fade) linear;
+}
+
+.orby-mobile-object-menu {
+  position: relative;
+  flex: 0 0 auto;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.orby-mobile-viewport[data-has-model='true'] .orby-mobile-object-menu {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.orby-mobile-object-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(19.5rem, calc(100vw - 2 * var(--orby-mobile-sheet-inset-x)));
+  max-height: min(24rem, calc(100dvh - var(--orby-mobile-top-h) - 5.5rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--orby-mobile-v-gap-lg) var(--orby-mobile-panel-pad-x)
+    calc(var(--orby-mobile-v-gap-lg) + var(--orby-mobile-slider-touch-bleed));
+  border: 1px solid var(--orby-mobile-border);
+  border-radius: 16px;
+  background: var(--ui-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
+  backdrop-filter: blur(var(--ui-frosted-blur));
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--orby-black) 42%, transparent);
+  transform-origin: top right;
+  transition:
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.22s;
+}
+
+.orby-mobile-object-menu[data-object-menu='closed'] .orby-mobile-object-panel {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.orby-mobile-object-menu[data-object-menu='open'] .orby-mobile-object-panel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s;
+}
+
+.orby-mobile-object-panel[hidden] {
+  display: block !important;
+}
+
+.orby-mobile-object-panel__controls .orby-mobile-fx-grade:last-child {
+  margin-bottom: 0;
+}
+
+.orby-mobile-object-btn,
+.orby-mobile-export-btn {
   display: grid;
   place-items: center;
   width: 44px;
@@ -278,6 +349,30 @@ button {
   color: var(--orby-lime);
   box-shadow: 0 8px 28px color-mix(in srgb, var(--orby-black) 38%, transparent);
   touch-action: manipulation;
+}
+
+.orby-mobile-object-btn[aria-expanded='true'] {
+  background: var(--orby-lime);
+  color: var(--orby-black);
+  border-color: var(--orby-lime);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--orby-lime) 35%, transparent);
+}
+
+.orby-mobile-object-btn:active {
+  transform: scale(0.96);
+}
+
+.orby-mobile-object-btn__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+}
+
+.orby-mobile-object-btn__icon svg {
+  display: block;
+  width: 26px;
+  height: 26px;
 }
 
 .orby-mobile-export-btn__icon,
@@ -402,6 +497,19 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .orby-mobile-object-panel {
+    transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+  }
+
+  .orby-mobile-object-menu[data-object-menu='open'] .orby-mobile-object-panel {
+    transform: none;
+    transition: opacity 0.2s ease, visibility 0s linear 0s;
+  }
+
+  .orby-mobile-object-menu[data-object-menu='closed'] .orby-mobile-object-panel {
+    transform: none;
+  }
+
   .orby-mobile-viewport__load-spinner {
     transform: none;
     transition:
@@ -1266,6 +1374,8 @@ button {
 
 /* ── Chrome fade — one opacity beat for hide/reveal (slider focus, orbit, etc.) ── */
 .orby-mobile-export-btn,
+.orby-mobile-object-btn,
+.orby-mobile-object-panel,
 .orby-mobile-debug-menu,
 .orby-mobile-scrim,
 .orby-mobile-sheet__grabber,
@@ -1288,6 +1398,7 @@ button {
 
 .orby-mobile[data-slider-focus] .orby-mobile-dock,
 .orby-mobile[data-slider-focus] .orby-mobile-export-btn,
+.orby-mobile[data-slider-focus] .orby-mobile-object-btn,
 .orby-mobile[data-slider-focus] .orby-mobile-debug-menu,
 .orby-mobile[data-slider-focus] .orby-mobile-scrim,
 .orby-mobile[data-slider-focus] .orby-mobile-sheet__grabber,
@@ -1366,7 +1477,7 @@ button {
   transform: translateX(-50%) translate3d(0, var(--orby-mobile-dock-orbit-shift), 0);
 }
 
-.orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-export-btn,
+.orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-top-actions,
 .orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-debug-menu {
   opacity: 0;
   pointer-events: none;
@@ -1554,6 +1665,8 @@ button {
 .orby-mobile[data-color-picker='open'] .orby-mobile-sheet,
 .orby-mobile[data-color-picker='open'] .orby-mobile-scrim,
 .orby-mobile[data-color-picker='open'] .orby-mobile-export-btn,
+.orby-mobile[data-color-picker='open'] .orby-mobile-object-btn,
+.orby-mobile[data-color-picker='open'] .orby-mobile-object-panel,
 .orby-mobile[data-color-picker='open'] .orby-mobile-debug-menu {
   opacity: 0 !important;
   visibility: hidden;
@@ -1677,6 +1790,8 @@ button {
   .orby-mobile-toast,
   .orby-mobile-scrim,
   .orby-mobile-export-btn,
+  .orby-mobile-object-btn,
+  .orby-mobile-object-panel,
   .orby-mobile-debug-menu,
   .orby-mobile-dock__indicator,
   .orby-mobile-preset-rail,

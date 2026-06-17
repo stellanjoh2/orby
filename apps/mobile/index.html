@@ -198,22 +198,55 @@
         >
           <img src="/assets/images/favicon.svg" alt="" width="56" height="56" draggable="false" />
         </div>
-        <button type="button" class="orby-mobile-export-btn" data-action="export" aria-label="Export image">
-          <span class="orby-mobile-export-btn__icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 16V4m0 0 4 4m-4-4-4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </span>
-          <span class="orby-mobile-export-btn__spinner" aria-hidden="true">
-            <img src="/assets/images/favicon.svg" alt="" width="22" height="22" draggable="false" />
-          </span>
-        </button>
+        <div class="orby-mobile-top-actions">
+          <div class="orby-mobile-object-menu" data-object-menu="closed">
+            <div
+              class="orby-mobile-object-panel"
+              id="orbyMobileObjectPanel"
+              data-object-panel
+              hidden
+              role="region"
+              aria-label="Object"
+            >
+              <div class="orby-mobile-object-panel__controls" data-object-controls></div>
+            </div>
+            <button
+              type="button"
+              class="orby-mobile-object-btn"
+              data-action="toggle-object"
+              aria-label="Object"
+              aria-expanded="false"
+              aria-controls="orbyMobileObjectPanel"
+            >
+              <span class="orby-mobile-object-btn__icon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 4.5 18.65 8.25V15.75L12 19.5 5.35 15.75V8.25L12 4.5Z"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+          </div>
+          <button type="button" class="orby-mobile-export-btn" data-action="export" aria-label="Export image">
+            <span class="orby-mobile-export-btn__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 16V4m0 0 4 4m-4-4-4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span class="orby-mobile-export-btn__spinner" aria-hidden="true">
+              <img src="/assets/images/favicon.svg" alt="" width="22" height="22" draggable="false" />
+            </span>
+          </button>
+        </div>
         <div class="orby-mobile-debug-menu" data-debug-menu="closed">
           <button
             type="button"

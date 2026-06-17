@@ -89,6 +89,7 @@ import {
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
   IMPORT_MATERIAL_MR_MULTIPLIER,
+  MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK,
   ORBY_BLACK,
   ORBY_LIME,
 } from '../constants.js';
@@ -3150,10 +3151,24 @@ export class MaterialController {
     }
   }
 
+  /** @param {THREE.Color} color @param {THREE.Material} [importMat] */
+  _softCapTexturedBrightnessAlbedo(color, importMat) {
+    if (!color?.isColor || !importMat) return;
+    const hasAlbedo =
+      !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
+    if (!hasAlbedo) return;
+    const peak = Math.max(color.r, color.g, color.b);
+    const maxPeak = MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK;
+    if (peak > maxPeak) {
+      color.multiplyScalar(maxPeak / peak);
+    }
+  }
+
   /**
    * Brightness-adjusted albedo. Dielectrics may exceed 1.0 (HDR-style diffuse boost).
    * When metalness is active (scalar-only PBR), clamp to [0, 1] so conductor F0 does not blow out specular.
    * Skipped when {@link importMat} has MR maps — the slider is a map multiplier, not surface metalness.
+   * Albedo-mapped imports get a soft HDR peak so map × tint does not clip before tonemap.
    * @param {THREE.Color|string} sourceColor
    * @param {number} [brightness]
    * @param {number|null} [metalnessForClamp] — pass `0` for unlit/textures; omit to use slider metalness
@@ -3274,6 +3289,7 @@ export class MaterialController {
       color.g = THREE.MathUtils.lerp(color.g, clamp(color.g), metal);
       color.b = THREE.MathUtils.lerp(color.b, clamp(color.b), metal);
     }
+    this._softCapTexturedBrightnessAlbedo(color, importMat);
     return color;
   }
 

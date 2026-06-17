@@ -587,6 +587,15 @@ export class MobileScene {
     this.onFxStateChanged?.();
   }
 
+  getMaterialSettings() {
+    return this.creativeLooks.getMaterialSettings();
+  }
+
+  /** @param {'brightness' | 'metalness' | 'roughness' | 'emissive'} key @param {number} value */
+  setMaterialValue(key, value) {
+    this.creativeLooks.setMaterialValue(key, value);
+  }
+
   /**
    * @param {'exposure' | 'contrast' | 'saturation' | 'temperature'} key
    * @param {number} value
