@@ -35,6 +35,9 @@ export class MobileScene {
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'orby-mobile-webgl';
     this.canvas.setAttribute('aria-hidden', 'true');
+    this._preventCanvasSelection = (event) => event.preventDefault();
+    this.canvas.addEventListener('contextmenu', this._preventCanvasSelection);
+    this.canvas.addEventListener('selectstart', this._preventCanvasSelection);
     mount.append(this.canvas);
 
     this.clock = new THREE.Clock();
@@ -193,6 +196,8 @@ export class MobileScene {
     this.post?.dispose();
     this.controls?.dispose();
     this.renderer?.dispose();
+    this.canvas.removeEventListener('contextmenu', this._preventCanvasSelection);
+    this.canvas.removeEventListener('selectstart', this._preventCanvasSelection);
     this.canvas.remove();
   }
 

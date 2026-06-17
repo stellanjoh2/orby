@@ -184,6 +184,9 @@ button {
   overflow: hidden;
   container-type: size;
   container-name: orby-mobile-viewport;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .orby-mobile-viewport__canvas {
@@ -191,6 +194,9 @@ button {
   inset: 0;
   z-index: 1;
   transition: filter 0.45s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Idle state — soften HDRI behind Load CTA until a model is imported */
@@ -270,7 +276,7 @@ button {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  transition: opacity var(--orby-mobile-chrome-fade) linear;
+  transition: var(--orby-mobile-chrome-transition);
 }
 
 .orby-mobile-object-menu {
@@ -306,7 +312,12 @@ button {
   transition:
     opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 0s linear 0.22s;
+    visibility 0s linear 0.22s,
+    background var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    border-color var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    box-shadow var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    -webkit-backdrop-filter var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    backdrop-filter var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease);
 }
 
 .orby-mobile-object-menu[data-object-menu='closed'] .orby-mobile-object-panel {
@@ -324,7 +335,12 @@ button {
   transition:
     opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 0s linear 0s;
+    visibility 0s linear 0s,
+    background var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    border-color var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    box-shadow var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    -webkit-backdrop-filter var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    backdrop-filter var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease);
 }
 
 .orby-mobile-object-panel[hidden] {
@@ -445,6 +461,9 @@ button {
   height: 100%;
   touch-action: none;
   outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .orby-mobile-viewport[data-loading] .orby-mobile-webgl {
@@ -586,7 +605,7 @@ button {
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
   isolation: isolate;
   transition:
-    opacity var(--orby-mobile-chrome-fade) linear,
+    var(--orby-mobile-chrome-transition),
     transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -609,18 +628,18 @@ button {
 
 .orby-mobile-dock__indicator.is-traveling {
   transition:
-    left 0.56s cubic-bezier(0.94, 0.01, 0.06, 0.99),
-    top 0.56s cubic-bezier(0.94, 0.01, 0.06, 0.99),
-    transform 0.56s cubic-bezier(0.94, 0.01, 0.06, 0.99),
-    opacity 0.22s ease;
+    left 0.42s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    top 0.42s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    transform 0.42s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    opacity 0.165s ease;
 }
 
 .orby-mobile-dock__indicator.is-entering {
   transition:
-    left 0.38s cubic-bezier(0.94, 0.01, 0.06, 0.99),
-    top 0.38s cubic-bezier(0.94, 0.01, 0.06, 0.99),
-    transform 0.38s cubic-bezier(0.94, 0.01, 0.06, 0.99),
-    opacity 0.22s ease;
+    left 0.285s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    top 0.285s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    transform 0.285s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    opacity 0.165s ease;
 }
 
 .orby-mobile-dock__btn[data-open-tab='light'],
@@ -651,6 +670,7 @@ button {
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--text);
+  transition: color 0.22s ease;
 }
 
 .orby-mobile-dock__thumb {
@@ -669,7 +689,7 @@ button {
   width: var(--orby-mobile-dock-thumb);
   height: var(--orby-mobile-dock-thumb);
   border-radius: 50%;
-  color: var(--text-dim);
+  color: var(--text);
   background: color-mix(in srgb, var(--orby-black) 55%, white 4%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
 }
@@ -711,7 +731,7 @@ button {
 }
 
 .orby-mobile-dock__btn.is-active {
-  color: var(--text);
+  color: var(--orby-lime);
 }
 
 .orby-mobile-dock__btn.is-active .orby-mobile-dock__thumb,
@@ -910,7 +930,7 @@ button {
   backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(150%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%, transparent 80%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 40%, transparent 80%);
-  transition: opacity var(--orby-mobile-chrome-fade) linear;
+  transition: var(--orby-mobile-chrome-transition);
 }
 
 /* Frosted sheet — one continuous veil into the dock zone (no stacked black band) */
@@ -933,7 +953,7 @@ button {
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
   backdrop-filter: blur(var(--ui-frosted-blur));
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
-  transition: opacity var(--orby-mobile-chrome-fade) linear;
+  transition: var(--orby-mobile-chrome-transition);
 }
 
 .orby-mobile[data-sheet='expanded'] .orby-mobile-sheet::before {
@@ -1003,13 +1023,12 @@ button {
   padding: 0;
   border: none;
   background: none;
-  color: var(--text-dim);
+  color: var(--text);
   transform: scale(0.9);
   transform-origin: center center;
   transition:
     transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
-    opacity var(--orby-mobile-chrome-fade) linear,
-    color 0.22s ease;
+    var(--orby-mobile-chrome-transition);
 }
 
 .orby-mobile-preset__thumb {
@@ -1042,25 +1061,32 @@ button {
   display: block;
 }
 
-/* Clear / off presets — empty dark sphere or card with X */
+/* Clear / off presets — outline + X only (sphere or filter card) */
 .orby-mobile-preset--clear .orby-mobile-preset__thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--orby-black);
-  border: 1px solid color-mix(in srgb, white 14%, transparent);
-  box-shadow: inset 0 -0.35rem 0.75rem rgba(0, 0, 0, 0.35);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, white 22%, transparent);
+  box-shadow: none;
 }
 
 .orby-mobile-preset__clear-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, white 42%, var(--orby-black));
+  color: color-mix(in srgb, white 38%, transparent);
+}
+
+.orby-mobile-preset--clear.is-selected .orby-mobile-preset__thumb {
+  background: var(--orby-lime);
+  border-color: var(--orby-lime);
+  outline: none;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--orby-lime) 35%, transparent);
 }
 
 .orby-mobile-preset--clear.is-selected .orby-mobile-preset__clear-icon {
-  color: var(--orby-lime);
+  color: var(--orby-black);
 }
 
 /* Preset thumbs — quick fade-in when HDRI / Shader / Filter dock tab opens */
@@ -1101,10 +1127,8 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.72;
-  transition:
-    opacity var(--orby-mobile-chrome-fade) linear,
-    color 0.22s ease;
+  color: var(--text);
+  transition: var(--orby-mobile-chrome-transition);
 }
 
 .orby-mobile-preset:not(.is-selected) .orby-mobile-preset__thumb img {
@@ -1127,7 +1151,6 @@ button {
 
 .orby-mobile-preset.is-selected .orby-mobile-preset__name {
   color: var(--orby-lime);
-  opacity: 1;
 }
 
 /* Preset rails — compact peek until a preset opens controls above the shelf */
@@ -1210,6 +1233,7 @@ button {
   grid-row: 1;
   font-weight: 500;
   color: var(--text);
+  transition: color var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease);
 }
 
 .orby-mobile-fx-grade__value {
@@ -1237,7 +1261,10 @@ button {
   background: transparent;
   outline: none;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    filter var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    visibility 0s linear 0s;
 }
 
 .orby-mobile-fx-grade input[type='range']::-webkit-slider-runnable-track {
@@ -1372,16 +1399,13 @@ button {
   color: var(--text);
 }
 
-/* ── Chrome fade — one opacity beat for hide/reveal (slider focus, orbit, etc.) ── */
+/* ── Chrome fade — one beat for hide/reveal (slider focus, orbit, etc.) ── */
 .orby-mobile-export-btn,
 .orby-mobile-object-btn,
-.orby-mobile-object-panel,
 .orby-mobile-debug-menu,
 .orby-mobile-scrim,
 .orby-mobile-sheet__grabber,
 .orby-mobile-preset-rail,
-.orby-mobile-preset,
-.orby-mobile-preset__name,
 .orby-mobile-fx-grade,
 .orby-mobile-fx-toggle,
 .orby-mobile-pill-btn,
@@ -1390,10 +1414,8 @@ button {
 .orby-mobile-hsv-picker-host,
 .orby-mobile-gradient-stops,
 .orby-mobile-gradient-stop,
-.orby-mobile-seg,
-.orby-mobile-sheet::before,
-.orby-mobile-sheet__shelf::before {
-  transition: opacity var(--orby-mobile-chrome-fade) linear;
+.orby-mobile-seg {
+  transition: var(--orby-mobile-chrome-transition);
 }
 
 .orby-mobile[data-slider-focus] .orby-mobile-dock,
@@ -1420,9 +1442,25 @@ button {
   pointer-events: none;
 }
 
+/* Object panel — drop frosted chrome so the active slider floats over the model */
+.orby-mobile[data-slider-focus] .orby-mobile-object-panel {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.orby-mobile[data-slider-focus] .orby-mobile-object-panel .orby-mobile-fx-grade.is-slider-focus {
+  pointer-events: auto;
+}
+
 .orby-mobile[data-slider-focus] .orby-mobile-fx-grade:not(.is-slider-focus) input[type='range'] {
   visibility: hidden;
   pointer-events: none;
+  transition: visibility 0s linear var(--orby-mobile-chrome-fade);
 }
 
 .orby-mobile-fx-grade.is-slider-focus {
@@ -1481,7 +1519,7 @@ button {
 .orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-debug-menu {
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--orby-mobile-chrome-fade) linear !important;
+  transition: var(--orby-mobile-chrome-transition) !important;
 }
 
 .orby-mobile-fx-toggle {

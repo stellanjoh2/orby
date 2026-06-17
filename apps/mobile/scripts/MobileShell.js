@@ -870,6 +870,7 @@ export class MobileShell {
     });
 
     document.addEventListener('pointerdown', (e) => {
+      if (this.root.dataset.sliderFocus != null) return;
       if (this._objectMenuEl?.dataset.objectMenu !== 'open') return;
       const t = e.target;
       if (!(t instanceof Element)) return;
