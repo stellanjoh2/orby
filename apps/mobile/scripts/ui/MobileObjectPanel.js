@@ -15,6 +15,7 @@ export class MobileObjectPanel {
 
     host.replaceChildren();
     host.append(...MOBILE_MATERIAL_SLIDERS.map((def) => this._mkMaterialSlider(def)));
+    host.append(this._mkAutoRotateToggle());
     this.sync();
   }
 
@@ -34,6 +35,11 @@ export class MobileObjectPanel {
       if (output instanceof HTMLElement) {
         output.textContent = def.format(value);
       }
+    }
+
+    const autoRotateInput = root.querySelector('[data-object-auto-rotate]');
+    if (autoRotateInput instanceof HTMLInputElement && document.activeElement !== autoRotateInput) {
+      autoRotateInput.checked = !!scene?.getAutoRotate?.();
     }
   }
 
@@ -57,6 +63,26 @@ export class MobileObjectPanel {
       scene.setMaterialValue(def.path, value);
     });
     if (input instanceof HTMLInputElement) updateMobileSliderFill(input);
+    return row;
+  }
+
+  _mkAutoRotateToggle() {
+    const { scene } = this.ctx;
+    const row = document.createElement('div');
+    row.className = 'orby-mobile-fx-toggle';
+    row.innerHTML = `
+      <span class="orby-mobile-fx-toggle__label">Auto-rotate</span>
+      <label class="effect-toggle">
+        <input type="checkbox" data-object-auto-rotate />
+        <span class="effect-indicator" aria-hidden="true"></span>
+        <span class="orby-mobile-sr-only">Auto-rotate object</span>
+      </label>
+    `;
+    const input = row.querySelector('[data-object-auto-rotate]');
+    input?.addEventListener('change', () => {
+      if (!(input instanceof HTMLInputElement)) return;
+      scene.setAutoRotate(input.checked);
+    });
     return row;
   }
 }

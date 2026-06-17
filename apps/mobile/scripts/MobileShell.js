@@ -86,6 +86,10 @@ export class MobileShell {
           this.presetRails.syncSelectionUi();
         }
       },
+      onSheetClosed: () => {
+        this.presetRails.disengageAll();
+        this.hdriControls.syncPanel();
+      },
     });
     panelCtx.syncPresetSheetState = () => this.sheetController.syncPresetSheetState();
 

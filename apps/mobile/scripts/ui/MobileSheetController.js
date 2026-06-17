@@ -15,6 +15,7 @@ import { mobileHaptic } from '../mobileHaptics.js';
  *   getSheetDrag: () => { reset?: () => void } | null,
  *   closeObjectMenu: () => void,
  *   onTabOpened: (tab: MobileTab) => void,
+ *   onSheetClosed?: () => void,
  * }} MobileSheetControllerDeps
  */
 
@@ -97,6 +98,7 @@ export class MobileSheetController {
       mobileHaptic('light');
     } else if (wasOpen && state === 'closed') {
       mobileHaptic('soft');
+      this.deps.onSheetClosed?.();
     }
   }
 

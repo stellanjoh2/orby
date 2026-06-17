@@ -22,6 +22,8 @@ import { MobileCreativeLooks } from './MobileCreativeLooks.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
 import { validateOrbyMobileModelFile, isOrbyMobileModelWithinLimit, orbyMobileModelTooLargeMessage } from '../../../scripts/orbyMobileModelLimits.js';
 import { findCreativeLook } from './mobileCatalog.js';
+import { MESH_AUTO_ROTATE_SPEED_NORMAL } from '../../../scripts/config/meshAutoRotate.js';
+import { captureAndApplyCenterPivot } from '../../../scripts/scene/centerModelPivot.js';
 
 const ORBY_BLACK = '#080808';
 /** Match desktop shelf slider: 0–3, default `hdriStrength` 2 (StateStore). */
@@ -42,6 +44,9 @@ export class MobileScene {
 
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
+    this.modelRoot = new THREE.Group();
+    this.modelRoot.name = 'MobileModelRoot';
+    this.scene.add(this.modelRoot);
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
     this.camera.position.set(
       DEFAULT_CAMERA_POSITION.x,
@@ -166,6 +171,7 @@ export class MobileScene {
     /** @type {string | null} */
     this._currentFileName = null;
     this._exportInProgress = false;
+    this._autoRotateEnabled = false;
 
     /** @type {(() => void) | null} */
     this.onModelLoaded = null;
@@ -226,6 +232,9 @@ export class MobileScene {
       if (this._exportInProgress) return;
       const dt = this.clock.getDelta();
       this.controls.update();
+      if (this._autoRotateEnabled && this.currentModel) {
+        this.modelRoot.rotation.y += dt * MESH_AUTO_ROTATE_SPEED_NORMAL;
+      }
       this.creativeLooks.tick(dt);
       this.post.tick(dt);
       const animTime = this.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
@@ -402,8 +411,10 @@ export class MobileScene {
     this._clearModel();
     normalizeImportScale(object);
     prepareMobileImportModel(object);
+    this._resetModelRoot();
     this.currentModel = object;
-    this.scene.add(object);
+    this.modelRoot.add(object);
+    captureAndApplyCenterPivot(this.modelRoot, object);
     this.creativeLooks.setModel(object);
     if (this._creativeLookPreset && this._creativeLookPreset !== 'none') {
       this.creativeLooks.setCreativeLook(this._creativeLookPreset);
@@ -484,7 +495,7 @@ export class MobileScene {
   _clearModel() {
     if (!this.currentModel) return;
     this.creativeLooks.clearModel();
-    this.scene.remove(this.currentModel);
+    this.modelRoot.remove(this.currentModel);
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
       child.geometry?.dispose?.();
@@ -492,6 +503,13 @@ export class MobileScene {
       mats.forEach((m) => m?.dispose?.());
     });
     this.currentModel = null;
+    this._resetModelRoot();
+  }
+
+  _resetModelRoot() {
+    this.modelRoot.position.set(0, 0, 0);
+    this.modelRoot.rotation.set(0, 0, 0);
+    this.modelRoot.scale.setScalar(1);
   }
 
   /** @param {THREE.Object3D} object */
@@ -599,6 +617,15 @@ export class MobileScene {
   /** @param {'brightness' | 'metalness' | 'roughness' | 'emissive'} key @param {number} value */
   setMaterialValue(key, value) {
     this.creativeLooks.setMaterialValue(key, value);
+  }
+
+  /** @param {boolean} enabled */
+  setAutoRotate(enabled) {
+    this._autoRotateEnabled = !!enabled;
+  }
+
+  getAutoRotate() {
+    return this._autoRotateEnabled;
   }
 
   /**

@@ -152,6 +152,15 @@ export class MobilePresetRails {
     if (track instanceof HTMLElement) track.scrollLeft = 0;
   }
 
+  /** Collapse secondary controls; reopening a tab starts at preset rails only. */
+  disengageAll() {
+    this.ctx.engagedPresetTabs.clear();
+    this.syncSelectionUi();
+    for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
+      this.resetRailScroll(tab);
+    }
+  }
+
   /** @param {PresetTab} tab @param {HTMLElement} el @param {ScrollBehavior} [behavior] */
   scrollPresetIntoView(tab, el, behavior = 'auto') {
     if (!(el instanceof HTMLElement)) return;
