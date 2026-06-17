@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { LineMaterial } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineMaterial.js';
+import { LineSegmentsGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineSegments2 } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/lines/LineSegments2.js';
 import {
   decimatePs2CrushGeometry,
   estimatePs2CrushMeanEdgeLength,
@@ -29,6 +32,7 @@ import {
   isDitherPixelCreativeLookPreset,
   shouldResetDitherPresetTuning,
   isWatercolourCreativeLookPreset,
+  isGouacheCreativeLookPreset,
   isSketchCreativeLookPreset,
   isSketchColourCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
@@ -42,6 +46,11 @@ import {
   ensureCreativeLookLightingUniforms,
   syncCreativeLookShadowTint,
 } from './CreativeLookMaterials.js';
+import {
+  creativeGouacheMergeFactor,
+  creativeGouacheVertexDrift,
+  creativeGouacheWobbleScale,
+} from './creativeLookGouacheArt.js';
 import {
   creativeWatercolourMergeFactor,
   creativeWatercolourVertexDrift,
@@ -85,6 +94,8 @@ import {
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
   WIREFRAME_OPACITY_OVERLAY,
+  DEFAULT_WIREFRAME_LINE_WIDTH,
+  wireframeLineWidthToPixels,
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_METALNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
@@ -262,6 +273,10 @@ export class MaterialController {
     this.originalMaterials = new WeakMap();
     /** @type {THREE.Mesh[]|null} Wire overlay meshes (parented next to their source mesh for correct hierarchy). */
     this.wireframeOverlayMeshes = null;
+    /** @type {import('three/examples/jsm/lines/LineMaterial.js').LineMaterial|null} */
+    this._wireframeLineMaterial = null;
+    /** @type {THREE.MeshBasicMaterial|null} */
+    this._wireframeBasicMaterial = null;
     /** UV Checker overlay (Atlux map) — extracted to keep this controller focused on materials/shading. */
     this.uvCheckerOverlay = new UvCheckerOverlay();
     /** Normal / tangent diagnostic overlay (Object → Advanced). */
@@ -330,6 +345,7 @@ export class MaterialController {
         color: ORBY_LIME,
         onlyVisibleFaces: true,
         hideMesh: false,
+        thickness: DEFAULT_WIREFRAME_LINE_WIDTH,
       }),
     };
     {
@@ -2250,6 +2266,7 @@ export class MaterialController {
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
+      if (child.userData.isWireframeOverlay) return;
 
       const importOriginal = this.originalMaterials.get(child);
       if (!importOriginal) return;
@@ -2381,7 +2398,11 @@ export class MaterialController {
     if (!this.currentModel) return;
     const id = normalizeCreativeLookPreset(preset);
     if (id === 'watercolour') {
-      this._applyWatercolourGeometry(patternScale);
+      this._applyArtisticDecimationGeometry(patternScale, creativeWatercolourMergeFactor);
+      return;
+    }
+    if (id === 'gouache') {
+      this._applyArtisticDecimationGeometry(patternScale, creativeGouacheMergeFactor);
       return;
     }
     if (id === 'sketch' || id === 'sketch-colour') {
@@ -2474,12 +2495,13 @@ export class MaterialController {
   }
 
   /**
-   * Watercolour decimation — edge-collapse along real mesh edges, keeps indexed topology + normals.
+   * Artistic decimation — edge-collapse along real mesh edges, keeps indexed topology + normals.
    * @param {number} patternScale
+   * @param {(scale: number) => number} mergeFactorFn
    */
-  _applyWatercolourGeometry(patternScale) {
+  _applyArtisticDecimationGeometry(patternScale, mergeFactorFn) {
     if (!this.currentModel) return;
-    const mergeFactor = creativeWatercolourMergeFactor(patternScale);
+    const mergeFactor = mergeFactorFn(patternScale);
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
@@ -2886,6 +2908,7 @@ export class MaterialController {
       if (
         (isFlatPostCreativeLookPreset(nextPreset) ||
           isWatercolourCreativeLookPreset(nextPreset) ||
+          isGouacheCreativeLookPreset(nextPreset) ||
           isSketchFamilyCreativeLookPreset(nextPreset) ||
           isVectrexCreativeLookPreset(nextPreset)) &&
         typeof this.onCreativeLookAsciiSync === 'function'
@@ -2959,6 +2982,7 @@ export class MaterialController {
     if (
       isFlatPostCreativeLookPreset(preset) ||
       isWatercolourCreativeLookPreset(preset) ||
+      isGouacheCreativeLookPreset(preset) ||
       isSketchFamilyCreativeLookPreset(preset) ||
       isVectrexCreativeLookPreset(preset)
     ) {
@@ -3020,6 +3044,7 @@ export class MaterialController {
               tag === 'psx' ||
               tag === 'vga-dos-3d' ||
               tag === 'watercolour' ||
+              tag === 'gouache' ||
               tag === 'sketch' ||
               tag === 'sketch-colour') &&
             m.uniforms?.uLightDir
@@ -3100,6 +3125,12 @@ export class MaterialController {
               source?.patternScale ?? this.creativeLookSettings.patternScale,
             );
             m.uniforms.uIntensity.value = creativeWatercolourVertexDrift(ps);
+          } else if (m.userData.orbyCreativeLook === 'gouache') {
+            const ps = normalizeCreativeLookPatternScale(
+              'gouache',
+              source?.patternScale ?? this.creativeLookSettings.patternScale,
+            );
+            m.uniforms.uIntensity.value = creativeGouacheVertexDrift(ps);
           } else if (m.userData.orbyCreativeLook === 'sketch' || m.userData.orbyCreativeLook === 'sketch-colour') {
             const { strokeWidth } = this._resolveSketchParams(source);
             m.uniforms.uIntensity.value = creativeSketchVertexDrift(strokeWidth);
@@ -3114,6 +3145,15 @@ export class MaterialController {
           );
           if (m.uniforms?.uWobbleScale) {
             m.uniforms.uWobbleScale.value = creativeWatercolourWobbleScale(ps);
+          }
+        }
+        if (m.userData.orbyCreativeLook === 'gouache') {
+          const ps = normalizeCreativeLookPatternScale(
+            'gouache',
+            source?.patternScale ?? this.creativeLookSettings.patternScale,
+          );
+          if (m.uniforms?.uWobbleScale) {
+            m.uniforms.uWobbleScale.value = creativeGouacheWobbleScale(ps);
           }
         }
         if (m.userData.orbyCreativeLook === 'sketch' || m.userData.orbyCreativeLook === 'sketch-colour') {
@@ -3590,24 +3630,125 @@ export class MaterialController {
 
   clearWireframeOverlay() {
     const meshes = this.wireframeOverlayMeshes;
-    if (meshes && meshes.length) {
+    if (meshes?.length) {
       for (const child of meshes) {
-        if (child.isMesh) {
-          if (child.geometry && child.userData.isCloned) {
-            child.geometry.dispose();
-          }
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach((mat) => mat?.dispose?.());
-            } else {
-              child.material.dispose();
-            }
-          }
-          child.parent?.remove(child);
+        child.parent?.remove(child);
+        if (child.userData.ownsGeometry || child.userData.isCloned) {
+          child.geometry?.dispose?.();
         }
       }
-      this.wireframeOverlayMeshes = null;
     }
+    this._wireframeLineMaterial?.dispose?.();
+    this._wireframeLineMaterial = null;
+    this._wireframeBasicMaterial?.dispose?.();
+    this._wireframeBasicMaterial = null;
+    this.wireframeOverlayMeshes = null;
+  }
+
+  _resolveWireframeLineResolution(width, height, pixelRatio = 1) {
+    const w = width > 0 ? width : window.innerWidth;
+    const h = height > 0 ? height : window.innerHeight;
+    const dpr = Math.max(1e-6, pixelRatio || window.devicePixelRatio || 1);
+    return {
+      x: Math.max(1, Math.floor(w * dpr)),
+      y: Math.max(1, Math.floor(h * dpr)),
+    };
+  }
+
+  _syncWireframeLineMaterialResolution(width, height, pixelRatio = 1) {
+    if (!this._wireframeLineMaterial?.resolution) return;
+    const res = this._resolveWireframeLineResolution(width, height, pixelRatio);
+    this._wireframeLineMaterial.resolution.set(res.x, res.y);
+  }
+
+  syncWireframeLineResolution(width, height, pixelRatio = 1) {
+    this._syncWireframeLineMaterialResolution(width, height, pixelRatio);
+  }
+
+  _resolveWireframeSurfaceOffset() {
+    return WIREFRAME_OFFSET;
+  }
+
+  _buildOffsetWireframeSourceGeometry(sourceGeometry) {
+    const geometry = sourceGeometry.clone();
+    const merged = mergeVertices(geometry, 1e-4);
+    const working = merged !== geometry ? merged : geometry;
+    if (merged !== geometry) {
+      geometry.dispose();
+    }
+    working.deleteAttribute('normal');
+    working.computeVertexNormals();
+
+    const positions = working.attributes.position;
+    const offset = this._resolveWireframeSurfaceOffset();
+    for (let i = 0; i < positions.count; i++) {
+      const normal = new THREE.Vector3();
+      normal.fromBufferAttribute(working.attributes.normal, i);
+      const position = new THREE.Vector3();
+      position.fromBufferAttribute(positions, i);
+      position.addScaledVector(normal, offset);
+      positions.setXYZ(i, position.x, position.y, position.z);
+    }
+    positions.needsUpdate = true;
+    return working;
+  }
+
+  _buildWireframeLineGeometry(sourceGeometry) {
+    const wireframe = new THREE.WireframeGeometry(sourceGeometry);
+    const lineGeometry = new LineSegmentsGeometry();
+    lineGeometry.setPositions(wireframe.attributes.position.array);
+    wireframe.dispose();
+    return lineGeometry;
+  }
+
+  _createWireframeLineMaterial({
+    color,
+    onlyVisibleFaces,
+    thickness,
+    width,
+    height,
+    pixelRatio,
+  }) {
+    const material = new LineMaterial({
+      color: new THREE.Color(color).getHex(),
+      linewidth: wireframeLineWidthToPixels(thickness),
+      depthTest: onlyVisibleFaces,
+      depthWrite: false,
+      transparent: !onlyVisibleFaces,
+      opacity: onlyVisibleFaces
+        ? WIREFRAME_OPACITY_VISIBLE
+        : WIREFRAME_OPACITY_OVERLAY,
+      toneMapped: true,
+      worldUnits: false,
+    });
+    if (onlyVisibleFaces) {
+      material.polygonOffset = true;
+      material.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
+      material.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
+    }
+    const res = this._resolveWireframeLineResolution(width, height, pixelRatio);
+    material.resolution.set(res.x, res.y);
+    return material;
+  }
+
+  _createWireframeBasicMaterial({ color, onlyVisibleFaces, thickness }) {
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      wireframe: true,
+      depthTest: onlyVisibleFaces,
+      depthWrite: false,
+      transparent: !onlyVisibleFaces,
+      opacity: onlyVisibleFaces
+        ? WIREFRAME_OPACITY_VISIBLE
+        : WIREFRAME_OPACITY_OVERLAY,
+    });
+    material.linewidth = wireframeLineWidthToPixels(thickness);
+    if (onlyVisibleFaces) {
+      material.polygonOffset = true;
+      material.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
+      material.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
+    }
+    return material;
   }
 
   updateWireframeOverlay() {
@@ -3638,25 +3779,24 @@ export class MaterialController {
     if (shouldShowOverlay) {
       this.wireframeOverlayMeshes = [];
 
-      const { color, onlyVisibleFaces } = this.wireframeSettings;
-      const wireMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(color),
-        wireframe: true,
-        depthTest: onlyVisibleFaces, // Enable depth test when only showing visible faces
-        depthWrite: false,
-        transparent: !onlyVisibleFaces, // No transparency when showing only visible faces
-        opacity: onlyVisibleFaces
-          ? WIREFRAME_OPACITY_VISIBLE
-          : WIREFRAME_OPACITY_OVERLAY,
+      const {
+        color,
+        onlyVisibleFaces,
+        thickness = DEFAULT_WIREFRAME_LINE_WIDTH,
+      } = this.wireframeSettings;
+      this._wireframeLineMaterial = this._createWireframeLineMaterial({
+        color,
+        onlyVisibleFaces,
+        thickness,
+        width: 0,
+        height: 0,
+        pixelRatio: window.devicePixelRatio || 1,
       });
-
-      // Add depth offset to prevent z-fighting when showing only visible faces
-      // Increased values help with darker colors where z-fighting is more visible
-      if (onlyVisibleFaces) {
-        wireMaterial.polygonOffset = true;
-        wireMaterial.polygonOffsetFactor = WIREFRAME_POLYGON_OFFSET_FACTOR;
-        wireMaterial.polygonOffsetUnits = WIREFRAME_POLYGON_OFFSET_UNITS;
-      }
+      this._wireframeBasicMaterial = this._createWireframeBasicMaterial({
+        color,
+        onlyVisibleFaces,
+        thickness,
+      });
 
       // Create wireframe meshes that follow the model.
       // Parent each wire mesh to the same Object3D as the source mesh so local transforms
@@ -3674,44 +3814,33 @@ export class MaterialController {
         // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
         if (child.isInstancedMesh) return;
 
-        let geometry = child.geometry;
-        let isCloned = false;
+        let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry);
+        const sourceGeometry = offsetGeometry;
 
-        // If onlyVisibleFaces is enabled, push vertices along normals (smooth after merge).
-        if (onlyVisibleFaces) {
-          geometry = child.geometry.clone();
-          isCloned = true;
-          const merged = mergeVertices(geometry, 1e-4);
-          if (merged !== geometry) {
-            geometry.dispose();
-            geometry = merged;
-          }
-          geometry.deleteAttribute('normal');
-          geometry.computeVertexNormals();
-
-          const positions = geometry.attributes.position;
-
-          const offset = WIREFRAME_OFFSET;
-          for (let i = 0; i < positions.count; i++) {
-            const normal = new THREE.Vector3();
-            normal.fromBufferAttribute(geometry.attributes.normal, i);
-            const position = new THREE.Vector3();
-            position.fromBufferAttribute(positions, i);
-            position.addScaledVector(normal, offset);
-            positions.setXYZ(i, position.x, position.y, position.z);
-          }
-          positions.needsUpdate = true;
+        let wireMesh;
+        if (child.isSkinnedMesh) {
+          wireMesh = new THREE.SkinnedMesh(
+            sourceGeometry,
+            this._wireframeBasicMaterial,
+          );
+          wireMesh.userData.ownsGeometry = true;
+        } else {
+          const lineGeometry = this._buildWireframeLineGeometry(sourceGeometry);
+          wireMesh = new LineSegments2(lineGeometry, this._wireframeLineMaterial);
+          wireMesh.frustumCulled = false;
+          wireMesh.userData.ownsGeometry = true;
+          offsetGeometry.dispose();
         }
 
-        const wireMesh = child.isSkinnedMesh
-          ? new THREE.SkinnedMesh(geometry, wireMaterial)
-          : new THREE.Mesh(geometry, wireMaterial);
-
         wireMesh.userData.originalMesh = child;
-        wireMesh.userData.isCloned = isCloned;
+        wireMesh.userData.isCloned = !!child.isSkinnedMesh;
         wireMesh.userData.isWireframeOverlay = true;
         wireMesh.name = child.name ? `${child.name}_wireframe` : 'wireframe';
         wireMesh.renderOrder = 999;
+
+        wireMesh.position.copy(child.position);
+        wireMesh.rotation.copy(child.rotation);
+        wireMesh.scale.copy(child.scale);
 
         if (child.isSkinnedMesh) {
           wireMesh.bind(child.skeleton, child.bindMatrix);

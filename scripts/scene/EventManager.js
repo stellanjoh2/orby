@@ -161,6 +161,9 @@ export class EventManager {
     eventBus.on('mesh:wireframe-hide-mesh', (value) => {
       s.setWireframeSettings({ hideMesh: value });
     });
+    eventBus.on('mesh:wireframe-thickness', (value) => {
+      s.setWireframeSettings({ thickness: value });
+    });
     eventBus.on('mesh:creative-look', () => {
       const cl = s.stateStore.getState().creativeLook ?? {
         enabled: false,

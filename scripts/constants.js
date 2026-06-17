@@ -62,11 +62,23 @@ export function normalizeAnimationDisplayFps(fps) {
 }
 
 /** Push wireframe overlay along normals (studio units: 1 unit = 1 m). */
-export const WIREFRAME_OFFSET = 0.002;
-export const WIREFRAME_POLYGON_OFFSET_FACTOR = 2;
-export const WIREFRAME_POLYGON_OFFSET_UNITS = 2;
+export const WIREFRAME_OFFSET = 0.1;
+/** Negative values pull wireframe toward the camera in the depth buffer (matches UV/normal overlays). */
+export const WIREFRAME_POLYGON_OFFSET_FACTOR = -4;
+export const WIREFRAME_POLYGON_OFFSET_UNITS = -4;
 export const WIREFRAME_OPACITY_VISIBLE = 1.0;
 export const WIREFRAME_OPACITY_OVERLAY = 0.8;
+/** Default wireframe line thickness slider value (maps to screen-space pixels via LineMaterial). */
+export const DEFAULT_WIREFRAME_LINE_WIDTH = 1;
+
+export function clampWireframeLineWidth(value) {
+  return Math.min(2.5, Math.max(0.5, Number(value) || DEFAULT_WIREFRAME_LINE_WIDTH));
+}
+
+/** Slider value maps to screen-space line width in pixels (LineMaterial). */
+export function wireframeLineWidthToPixels(width) {
+  return clampWireframeLineWidth(width);
+}
 
 export const PODIUM_TOP_RADIUS_OFFSET = 0.08;
 export const PODIUM_SEGMENTS = 96;
@@ -593,6 +605,17 @@ export function isCreativeLookWatercolourPostActive(state) {
 }
 
 /**
+ * Shader Lab Gouache — flat poster paint post; auto-on with preset.
+ * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
+ */
+export function isCreativeLookGouachePostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  return preset === 'gouache';
+}
+
+/**
  * Shader Lab Sketch — stipple grain + ink outline post; auto-on with preset.
  * @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state
  */
@@ -613,11 +636,20 @@ export function isCreativeLookSketchColourPostActive(state) {
   return preset === 'sketch-colour';
 }
 
+/** @param {{ creativeLook?: { enabled?: boolean, preset?: string } }} state */
+export function isCreativeLookAscii4PostActive(state) {
+  const cl = state.creativeLook && typeof state.creativeLook === 'object' ? state.creativeLook : {};
+  if (!cl.enabled) return false;
+  const preset = typeof cl.preset === 'string' ? cl.preset : '';
+  return preset === 'ascii-art-4';
+}
+
 /** Flat-post Shader Lab presets that can run Cam/FX bloom in the ascii terminal stack. */
 const SHADER_LAB_FLAT_POST_PRESETS = new Set([
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
+  'ascii-art-4',
   'ega-pixel',
   'c64-pixel',
   'gameboy-pixel',

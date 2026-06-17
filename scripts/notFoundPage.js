@@ -34,6 +34,7 @@ const NOT_FOUND_PRESET = {
     color: ORBY_LIME,
     onlyVisibleFaces: true,
     hideMesh: false,
+    thickness: 1,
   },
   fresnel: {
     enabled: false,

@@ -472,6 +472,7 @@ export class UIManager {
       wireframeColor: q('#wireframeColor'),
       wireframeOnlyVisibleFaces: q('#wireframeOnlyVisibleFaces'),
       wireframeHideMesh: q('#wireframeHideMesh'),
+      wireframeThickness: q('#wireframeThickness'),
       animationShowBones: q('#animationShowBones'),
       animationShowJointNames: q('#animationShowJointNames'),
       animationTimeReference: q('#animationTimeReference'),
@@ -2554,6 +2555,15 @@ export class UIManager {
       }
       if (this.inputs.wireframeOnlyVisibleFaces) {
         this.inputs.wireframeOnlyVisibleFaces.checked = !!state.wireframe.onlyVisibleFaces;
+      }
+      if (this.inputs.wireframeThickness) {
+        this.inputs.wireframeThickness.value =
+          state.wireframe.thickness ?? 1;
+        this.updateValueLabel(
+          'wireframeThickness',
+          state.wireframe.thickness ?? 1,
+          'decimal',
+        );
       }
     }
     

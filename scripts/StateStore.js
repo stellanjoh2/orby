@@ -156,7 +156,7 @@ export class StateStore {
         stlSmoothShading: true,
         stlSmoothingAngle: 40,
         /** Move mesh pivot to bounding-box center (see centerModelPivot.js). */
-        centerPivot: false,
+        centerPivot: true,
       },
       hdri: 'beach',
       /** Filename when {@link hdri} is `custom` (blob URL is session-only). */
@@ -212,6 +212,7 @@ export class StateStore {
         color: ORBY_LIME,
         onlyVisibleFaces: true,
         hideMesh: false,
+        thickness: 1,
       },
       animation: {
         showBones: false,

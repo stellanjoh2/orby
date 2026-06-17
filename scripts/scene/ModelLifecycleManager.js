@@ -203,7 +203,7 @@ export class ModelLifecycleManager {
 
     s.materialController.prepareMesh(object);
     s._setupStlSmoothingForModel(object);
-    s._applyCenterPivotFromState();
+    s.setCenterPivot(true, { updateState: true, showToast: false });
 
     const wasFirstLoad = s.isFirstModelLoad;
     if (s.isFirstModelLoad) {

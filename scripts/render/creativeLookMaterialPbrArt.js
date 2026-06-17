@@ -1,13 +1,17 @@
 /** Shared import-mesh brightness / metalness / roughness for Shader Lab prep passes. */
+import {
+  CREATIVE_LOOK_APPLY_BRIGHTNESS_GLSL,
+  CREATIVE_LOOK_BRIGHTNESS_UNIFORM_GLSL,
+} from './creativeLookBrightnessArt.js';
 
 export const CREATIVE_LOOK_PREP_PBR_UNIFORMS_GLSL = /* glsl */ `
 uniform float uMetalness;
 uniform float uRoughness;
 `;
 
-export const CREATIVE_LOOK_PREP_BRIGHTNESS_UNIFORM_GLSL = /* glsl */ `
-uniform float uBrightness;
-`;
+export const CREATIVE_LOOK_PREP_BRIGHTNESS_UNIFORM_GLSL = CREATIVE_LOOK_BRIGHTNESS_UNIFORM_GLSL;
+
+export const CREATIVE_LOOK_PREP_BRIGHTNESS_FUNCTIONS_GLSL = CREATIVE_LOOK_APPLY_BRIGHTNESS_GLSL;
 
 export const CREATIVE_LOOK_PREP_PBR_FUNCTIONS_GLSL = /* glsl */ `
 vec3 creativeLookModulatePrepPbr(vec3 lit, vec3 baseCol, vec3 N, vec3 V) {
@@ -65,11 +69,13 @@ export const CREATIVE_LOOK_MATERIAL_PBR_SLIDER_PRESETS = /** @type {const} */ ([
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
+  'ascii-art-4',
   'ps2-crush',
   'psx',
   'vga-dos-3d',
   'sketch',
   'sketch-colour',
+  'gouache',
   'vectrex',
 ]);
 
@@ -84,6 +90,12 @@ export function prependCreativeLookPrepPbrGlsl(fragmentShader) {
   }
   if (needsFunctions) {
     prefix += (prefix ? '\n' : '') + CREATIVE_LOOK_PREP_PBR_FUNCTIONS_GLSL.trim();
+  }
+  if (!s.includes('uniform float uBrightness;')) {
+    prefix += (prefix ? '\n' : '') + CREATIVE_LOOK_PREP_BRIGHTNESS_UNIFORM_GLSL.trim();
+  }
+  if (!s.includes('applyCreativeBrightness')) {
+    prefix += (prefix ? '\n' : '') + CREATIVE_LOOK_PREP_BRIGHTNESS_FUNCTIONS_GLSL.trim();
   }
   if (prefix) {
     s = `${prefix}\n${s}`;
@@ -145,7 +157,8 @@ export function withCreativeLookPrepPbrModulation(fragmentShader, options = {}) 
       }
       s = s.replace(
         '  gl_FragColor = vec4(form, ndv, 1.0, uOpacity * mapAlpha);',
-        `  form = clamp(form * uBrightness + creativeLookPrepPbrFormBoost(N, ${vExpr}, baseCol), 0.0, 1.0);
+        `  float brightEff = creativeLookBrightnessEffectiveScale(uBrightness, uMetalness);
+  form = clamp(form * brightEff + creativeLookPrepPbrFormBoost(N, ${vExpr}, baseCol), 0.0, 1.0);
   gl_FragColor = vec4(form, ndv, 1.0, uOpacity * mapAlpha);`,
       );
     }
@@ -170,14 +183,14 @@ export function withCreativeLookPrepPbrModulation(fragmentShader, options = {}) 
     return s;
   }
 
-  if (mode === 'sketch' || mode === 'sketch-colour') {
+  if (mode === 'sketch' || mode === 'sketch-colour' || mode === 'gouache') {
     if (!s.includes('uniform float uBrightness;')) {
       s = `${CREATIVE_LOOK_PREP_BRIGHTNESS_UNIFORM_GLSL}${s}`;
     }
     if (s.includes('  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));')) {
       s = s.replace(
         '  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));',
-        `  col *= uBrightness;
+        `  col *= creativeLookBrightnessEffectiveScale(uBrightness, uMetalness);
   col = creativeLookModulatePrepPbr(col, baseCol, N, V);
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));`,
       );
@@ -186,7 +199,7 @@ export function withCreativeLookPrepPbrModulation(fragmentShader, options = {}) 
     ) {
       s = s.replace(
         '  gl_FragColor = vec4(col, min(ndv * uOpacity * mapAlpha, 0.99));',
-        `  col *= uBrightness;
+        `  col *= creativeLookBrightnessEffectiveScale(uBrightness, uMetalness);
   col = creativeLookModulatePrepPbr(col, baseCol, N, V);
   gl_FragColor = vec4(col, min(ndv * uOpacity * mapAlpha, 0.99));`,
       );

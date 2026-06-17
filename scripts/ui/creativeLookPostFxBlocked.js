@@ -8,11 +8,12 @@ import {
   isFlatPostCreativeLookPreset,
   isVectrexCreativeLookPreset,
   isWatercolourCreativeLookPreset,
+  isGouacheCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
 
-/** @typedef {'default' | 'viewport-bloom' | 'flat-post' | 'watercolour' | 'sketch' | 'vectrex'} CreativeLookPostFxMode */
+/** @typedef {'default' | 'viewport-bloom' | 'flat-post' | 'watercolour' | 'gouache' | 'sketch' | 'vectrex'} CreativeLookPostFxMode */
 
 /** Camera & FX + grading controls that map to `data-subsection` keys. */
 export const CREATIVE_LOOK_POST_FX_SUBSECTIONS = /** @type {const} */ ([
@@ -174,6 +175,7 @@ export function getCreativeLookPostFxUiBlocks(state) {
   const bloomTuningActive = isBloomTuningActive(state);
   const flatPost = isFlatPostCreativeLookPreset(normalizeCreativeLookPreset(cl.preset));
   const watercolour = isWatercolourCreativeLookPreset(cl.preset);
+  const gouache = isGouacheCreativeLookPreset(cl.preset);
   const sketch = isSketchFamilyCreativeLookPreset(cl.preset);
   const vectrex = isVectrexCreativeLookPreset(cl.preset);
   const bloomCamFxOn = isBloomPipelineActive(state);
@@ -202,6 +204,23 @@ export function getCreativeLookPostFxUiBlocks(state) {
 
   if (watercolour) {
     mode = 'watercolour';
+    mute('ambient-occlusion');
+    mute('dof');
+    mute('volumetric-scattering');
+    mute('lens-dirt');
+    mute('aberration');
+    mute('fisheye');
+    mute('vignette');
+    mute('color-tone');
+    mute('tone-curve');
+    mute('look-filters');
+    mute('anamorphic-lens-flare');
+    disable('toneMapping', 'antiAliasing', 'toggleBloom');
+    if (!viewportBloom) {
+      mute('bloom');
+    }
+  } else if (gouache) {
+    mode = 'gouache';
     mute('ambient-occlusion');
     mute('dof');
     mute('volumetric-scattering');

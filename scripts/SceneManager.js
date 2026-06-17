@@ -19,8 +19,10 @@ import {
   isAnamorphicBloomPipelineActive,
   isCreativeLookViewportPostActive,
   isCreativeLookWatercolourPostActive,
+  isCreativeLookGouachePostActive,
   isCreativeLookSketchPostActive,
   isCreativeLookSketchColourPostActive,
+  isCreativeLookAscii4PostActive,
   isCreativeLookVectrexPostActive,
   resolveRenderQualityTier,
   isKeyLightOnlyShadowCastingRenderQuality,
@@ -64,6 +66,7 @@ import {
   isScreenPixelCreativeLookPreset,
   isVectrexCreativeLookPreset,
   isWatercolourCreativeLookPreset,
+  isGouacheCreativeLookPreset,
   isSketchColourCreativeLookPreset,
   isSketchFamilyCreativeLookPreset,
   isSketchCreativeLookPreset,
@@ -86,6 +89,7 @@ import { isArtisticCreativeLookPreset } from './render/creativeLookPresetSliders
 import { ensureAsciiFontAtlasLoaded } from './render/creativeLookAsciiArt.js';
 import { ensureAscii2FontAtlasLoaded } from './render/creativeLookAscii2Art.js';
 import { ensureAscii3FontAtlasLoaded } from './render/creativeLookAscii3Art.js';
+import { ensureAscii4FontAtlasLoaded } from './render/creativeLookAscii4Art.js';
 import { LensFlareController } from './render/LensFlareController.js';
 import { keyLightParamsFromLensFlare } from './render/lensFlareKeyLightSync.js';
 import { GodRaysController } from './render/GodRaysController.js';
@@ -1070,6 +1074,10 @@ export class SceneManager {
         const state = this.stateStore.getState();
         return isCreativeLookWatercolourPostActive(state);
       },
+      getCreativeLookGouacheActive: () => {
+        const state = this.stateStore.getState();
+        return isCreativeLookGouachePostActive(state);
+      },
       getCreativeLookSketchActive: () => {
         const state = this.stateStore.getState();
         return isCreativeLookSketchPostActive(state);
@@ -1078,6 +1086,8 @@ export class SceneManager {
         const state = this.stateStore.getState();
         return isCreativeLookVectrexPostActive(state);
       },
+      getWireframeOverlayMeshes: () =>
+        this.materialController?.wireframeOverlayMeshes ?? [],
       getRenderState: () => this.stateStore.getState(),
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
@@ -1093,6 +1103,14 @@ export class SceneManager {
         }
         if (isCreativeLookSketchPostActive(this.stateStore.getState())) {
           this._prepareCreativeLookSketchFrameUniforms();
+        }
+        if (isCreativeLookGouachePostActive(this.stateStore.getState())) {
+          this._prepareCreativeLookGouacheFrameUniforms();
+        }
+        if (isCreativeLookAscii4PostActive(this.stateStore.getState())) {
+          this.postPipeline?.updateCreativeLookAscii?.({
+            time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
+          });
         }
       },
       onRestoreBloomAfterCreativeLook: () => {
@@ -1153,6 +1171,14 @@ export class SceneManager {
         }
         if (isCreativeLookSketchPostActive(this.stateStore.getState())) {
           this._prepareCreativeLookSketchFrameUniforms();
+        }
+        if (isCreativeLookGouachePostActive(this.stateStore.getState())) {
+          this._prepareCreativeLookGouacheFrameUniforms();
+        }
+        if (isCreativeLookAscii4PostActive(this.stateStore.getState())) {
+          this.postPipeline?.updateCreativeLookAscii?.({
+            time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
+          });
         }
       },
       renderComposerPassForExport: (opts) =>
@@ -1306,6 +1332,11 @@ export class SceneManager {
     this.postPipeline?.creativeLookVectrex?.setSize(width, height);
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
+    this.materialController?.syncWireframeLineResolution?.(
+      width,
+      height,
+      this.renderer?.getPixelRatio?.() ?? 1,
+    );
     this.diagnosticsController?.syncBoneLineResolution?.(width, height);
     this.syncPerspectiveCameraFovAndLens();
   }
@@ -3766,7 +3797,7 @@ export class SceneManager {
 
   /**
    * @param {boolean} enabled
-   * @param {{ updateState?: boolean }} [options]
+   * @param {{ updateState?: boolean, showToast?: boolean }} [options]
    */
   setCenterPivot(enabled, options = {}) {
     const wantCentered = !!enabled;
@@ -3804,7 +3835,7 @@ export class SceneManager {
     }
 
     this._afterPivotChange();
-    if (wantCentered) {
+    if (wantCentered && options.showToast !== false) {
       this.ui?.showToast?.('Pivot centered', 3200, { notification: false });
     }
     return true;
@@ -4493,6 +4524,7 @@ export class SceneManager {
     this.postPipeline?.updateCreativeLookDither?.(ditherSettings);
 
     const watercolourOn = creativeLookOn && isWatercolourCreativeLookPreset(presetId);
+    const gouacheOn = creativeLookOn && isGouacheCreativeLookPreset(presetId);
     const sketchOn = creativeLookOn && isSketchCreativeLookPreset(presetId);
     const sketchColourOn = creativeLookOn && isSketchColourCreativeLookPreset(presetId);
     const sketchFamilyOn = sketchOn || sketchColourOn;
@@ -4510,6 +4542,19 @@ export class SceneManager {
     this.postPipeline?.updateCreativeLookWatercolour?.(watercolourSettings);
     if (!watercolourOn) {
       this.postPipeline?.releaseCreativeLookWatercolour?.();
+    }
+
+    const gouacheInk = resolveCreativeLookInkParams(presetParams, 'gouache');
+    const gouacheSettings = {
+      enabled: gouacheOn,
+      patternScale,
+      intensity: normalizeCreativeLookIntensity(storeCl.intensity ?? mcCl.intensity),
+      strokeColor: gouacheInk.strokeColor,
+      preset: 'gouache',
+    };
+    this.postPipeline?.updateCreativeLookGouache?.(gouacheSettings);
+    if (!gouacheOn) {
+      this.postPipeline?.releaseCreativeLookGouache?.();
     }
 
     const sketchParams = resolveCreativeLookSketchParams(
@@ -4551,7 +4596,7 @@ export class SceneManager {
 
     this._syncCreativeLookStudioBackground(creativeLookOn, presetId);
 
-    if (enabled || watercolourOn || sketchFamilyOn || vectrexOn) {
+    if (enabled || watercolourOn || gouacheOn || sketchFamilyOn || vectrexOn) {
       const sz = new THREE.Vector2();
       this.renderer.getSize(sz);
       if (sz.x > 0 && sz.y > 0) {
@@ -4570,6 +4615,9 @@ export class SceneManager {
         if (watercolourOn) {
           this.postPipeline?.creativeLookWatercolour?.setSize(sz.x, sz.y);
         }
+        if (gouacheOn) {
+          this.postPipeline?.creativeLookGouache?.setSize(sz.x, sz.y);
+        }
         if (sketchOn) {
           this.postPipeline?.creativeLookSketch?.setSize(sz.x, sz.y);
         }
@@ -4586,13 +4634,34 @@ export class SceneManager {
             ? ensureAscii3FontAtlasLoaded
             : presetId === 'ascii-art-3'
               ? ensureAscii2FontAtlasLoaded
-              : ensureAsciiFontAtlasLoaded;
+              : presetId === 'ascii-art-4'
+                ? ensureAscii4FontAtlasLoaded
+                : ensureAsciiFontAtlasLoaded;
         void loadAtlas().then(() => {
           this.postPipeline?.creativeLookAscii?.refreshAtlas?.();
           this.postPipeline?.updateCreativeLookAscii(asciiSettings);
         });
       }
     }
+  }
+
+  /** Per-frame Gouache post uniforms — pattern scale drives ink width & chalk grain. */
+  _prepareCreativeLookGouacheFrameUniforms() {
+    if (!isCreativeLookGouachePostActive(this.stateStore.getState())) return;
+    const cl = this.stateStore.getState().creativeLook ?? {};
+    const presetId = normalizeCreativeLookPreset(cl.preset);
+    const patternScale = normalizeCreativeLookPatternScale(
+      presetId,
+      Number(cl.patternScale),
+    );
+    const gouacheInk = resolveCreativeLookInkParams(cl.presetParams, 'gouache');
+    this.postPipeline?.updateCreativeLookGouache?.({
+      time: this.materialController?.getCreativeLookAnimationTime?.() ?? 0,
+      patternScale,
+      intensity: normalizeCreativeLookIntensity(cl.intensity),
+      strokeColor: gouacheInk.strokeColor,
+      preset: presetId,
+    });
   }
 
   /** Per-frame Sketch post uniforms — stroke / raster must not be omitted (defaults reset ink & halftone). */

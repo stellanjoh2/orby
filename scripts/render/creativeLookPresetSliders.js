@@ -24,6 +24,7 @@ export const CREATIVE_LOOK_ARTISTIC_PRESETS = /** @type {const} */ ([
   'watercolour',
   'sketch',
   'sketch-colour',
+  'gouache',
 ]);
 
 /**
@@ -136,7 +137,7 @@ export function normalizeCreativeLookPresetParams(
   if (preset === 'sketch' || preset === 'sketch-colour') {
     next.sketch = resolveCreativeLookSketchParams(next, patternScaleFallback);
   }
-  if (preset === 'watercolour' || preset === 'sketch' || preset === 'sketch-colour') {
+  if (preset === 'watercolour' || preset === 'sketch' || preset === 'sketch-colour' || preset === 'gouache') {
     const ink = resolveCreativeLookInkParams(next, preset);
     next.ink = {
       strokeColor: ink.strokeColor,

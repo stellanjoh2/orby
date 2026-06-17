@@ -23,6 +23,11 @@ import {
   creativeLookAscii3FixedIntensity,
 } from './creativeLookAscii3Art.js';
 import {
+  ASCII_4_LUMINANCE_PREP_FRAGMENT,
+  creativeLookAscii4FixedScale,
+  creativeLookAscii4FixedIntensity,
+} from './creativeLookAscii4Art.js';
+import {
   EGA_PREP_FRAGMENT,
   creativeLookEgaFixedScale,
   creativeLookEgaFixedIntensity,
@@ -80,6 +85,11 @@ import {
   isCreativeLookMaterialPbrSliderPreset,
 } from './creativeLookMaterialPbrArt.js';
 import {
+  CREATIVE_LOOK_APPLY_BRIGHTNESS_GLSL,
+  CREATIVE_LOOK_BRIGHTNESS_UNIFORM_GLSL,
+  creativeLookBrightnessEffectiveScale,
+} from './creativeLookBrightnessArt.js';
+import {
   VGA_DOS_3D_FRAGMENT,
   VGA_DOS_PALETTE_COUNT,
   getVgaDosPaletteTexture,
@@ -104,6 +114,11 @@ import {
 import {
   SKETCH_COLOUR_FRAGMENT,
 } from './creativeLookSketchColourArt.js';
+import {
+  GOUACHE_FRAGMENT,
+  creativeGouacheVertexDrift,
+  creativeGouacheWobbleScale,
+} from './creativeLookGouacheArt.js';
 
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
@@ -114,7 +129,7 @@ import {
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -136,6 +151,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
+  'ascii-art-4',
   'holographic',
   'voronoi',
   'scanline-hologram',
@@ -148,6 +164,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'watercolour',
   'sketch',
   'sketch-colour',
+  'gouache',
   'chrome',
   'glass',
   'spectral-storm',
@@ -227,6 +244,11 @@ export function isSketchColourCreativeLookPreset(preset) {
   return normalizeCreativeLookPreset(preset) === 'sketch-colour';
 }
 
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isGouacheCreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'gouache';
+}
+
 /** B&W Sketch + coloured Sketch Colour — shared geometry, sliders, and post stack. */
 export function isSketchFamilyCreativeLookPreset(preset) {
   const id = normalizeCreativeLookPreset(preset);
@@ -302,11 +324,13 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'ascii-art',
   'ascii-art-2',
   'ascii-art-3',
+  'ascii-art-4',
   'scanline-hologram',
   'wire-pulse',
   'vertex-points',
   'vectrex',
   'watercolour',
+  'gouache',
 ]);
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -317,7 +341,7 @@ export function creativeLookAllowsTransparency(preset) {
 /** Screen-space Bayer dither — no shadow-map vertex chunks (avoids compile issues on thin alpha shells). */
 export function creativeLookPresetUsesShadowReceive(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id !== 'ega-pixel' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3' && id !== 'watercolour' && id !== 'sketch' && id !== 'sketch-colour' && id !== 'vectrex';
+  return id !== 'ega-pixel' && id !== 'c64-pixel' && id !== 'gameboy-pixel' && id !== 'gba-pixel' && id !== 'nes-pixel' && id !== 'megadrive-pixel' && id !== 'intellivision-pixel' && id !== 'apple2-pixel' && id !== 'ascii-art' && id !== 'ascii-art-2' && id !== 'ascii-art-3' && id !== 'ascii-art-4' && id !== 'watercolour' && id !== 'sketch' && id !== 'sketch-colour' && id !== 'gouache' && id !== 'vectrex';
 }
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -453,7 +477,12 @@ export function creativeLookFlatPostVariant(preset) {
 /** @param {CreativeLookPreset | string | undefined} preset */
 export function isAsciiCreativeLookPreset(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'ascii-art' || id === 'ascii-art-2' || id === 'ascii-art-3';
+  return id === 'ascii-art' || id === 'ascii-art-2' || id === 'ascii-art-3' || id === 'ascii-art-4';
+}
+
+/** @param {CreativeLookPreset | string | undefined} preset */
+export function isAscii4CreativeLookPreset(preset) {
+  return normalizeCreativeLookPreset(preset) === 'ascii-art-4';
 }
 
 /** Reference effective studio intensities at lights master 1.0 (LightsController multipliers). */
@@ -680,12 +709,9 @@ vec3 applyCreativeMasterHue(vec3 color) {
 `;
 
 const CREATIVE_LOOK_BRIGHTNESS_GLSL = /* glsl */ `
-uniform float uBrightness;
+${CREATIVE_LOOK_BRIGHTNESS_UNIFORM_GLSL}
 
-vec3 applyCreativeBrightness(vec3 color) {
-  if (abs(uBrightness - 1.0) < 0.0001) return color;
-  return color * uBrightness;
-}
+${CREATIVE_LOOK_APPLY_BRIGHTNESS_GLSL}
 `;
 
 const CREATIVE_LOOK_SHADOW_FRAGMENT_HEADER = /* glsl */ `
@@ -861,18 +887,28 @@ export function applyCreativeLookPhysicalMasterHue(mat, degrees, brightness) {
   if (!src) return;
   const hue = normalizeCreativeLookMasterHue(degrees);
   const b = Number(brightness);
-  const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
-  mat.color.copy(rotateCreativeLookHue(src.color, hue)).multiplyScalar(scale);
+  const metal = Math.min(1, Math.max(0, Number(mat.metalness ?? 0)));
+  const scale = creativeLookBrightnessEffectiveScale(b, { metalness: metal });
+
+  const applyScaled = (target, source) => {
+    if (!target || !source) return;
+    target.copy(rotateCreativeLookHue(source, hue)).multiplyScalar(scale);
+    if (metal > 1e-4) {
+      target.r = Math.min(1, Math.max(0, target.r));
+      target.g = Math.min(1, Math.max(0, target.g));
+      target.b = Math.min(1, Math.max(0, target.b));
+    }
+  };
+
+  applyScaled(mat.color, src.color);
   if (src.specularColor) {
-    mat.specularColor.copy(rotateCreativeLookHue(src.specularColor, hue)).multiplyScalar(scale);
+    applyScaled(mat.specularColor, src.specularColor);
   }
   if (src.sheenColor) {
-    mat.sheenColor.copy(rotateCreativeLookHue(src.sheenColor, hue)).multiplyScalar(scale);
+    applyScaled(mat.sheenColor, src.sheenColor);
   }
   if (src.attenuationColor) {
-    mat.attenuationColor
-      .copy(rotateCreativeLookHue(src.attenuationColor, hue))
-      .multiplyScalar(scale);
+    applyScaled(mat.attenuationColor, src.attenuationColor);
   }
 }
 
@@ -893,7 +929,7 @@ export function normalizeCreativeLookPreset(preset) {
 /** @param {CreativeLookPreset | string | undefined} preset */
 export function creativeLookUsesRetroDecimation(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'ps2-crush' || id === 'psx' || id === 'vga-dos-3d' || id === 'watercolour' || id === 'sketch' || id === 'sketch-colour';
+  return id === 'ps2-crush' || id === 'psx' || id === 'vga-dos-3d' || id === 'watercolour' || id === 'sketch' || id === 'sketch-colour' || id === 'gouache';
 }
 
 /** Fixed pattern scale for retro console presets and ASCII Art, or `null` if live scale applies. */
@@ -902,6 +938,7 @@ export function creativeLookFixedPatternScale(preset) {
   if (id === 'ascii-art') return creativeLookAsciiFixedScale();
   if (id === 'ascii-art-2') return creativeLookAscii3FixedScale();
   if (id === 'ascii-art-3') return creativeLookAscii2FixedScale();
+  if (id === 'ascii-art-4') return creativeLookAscii4FixedScale();
   if (id === 'ega-pixel') return creativeLookEgaFixedScale();
   if (id === 'c64-pixel') return creativeLookC64FixedScale();
   if (id === 'gameboy-pixel') return creativeLookGameBoyFixedScale();
@@ -955,7 +992,9 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'psx' ||
     id === 'watercolour' ||
     id === 'sketch' ||
-    id === 'sketch-colour'
+    id === 'sketch-colour' ||
+    id === 'gouache' ||
+    id === 'ascii-art-4'
   );
 }
 
@@ -965,6 +1004,7 @@ export function creativeLookFixedIntensity(preset) {
   if (id === 'ascii-art') return creativeLookAsciiFixedIntensity();
   if (id === 'ascii-art-2') return creativeLookAscii3FixedIntensity();
   if (id === 'ascii-art-3') return creativeLookAscii2FixedIntensity();
+  if (id === 'ascii-art-4') return creativeLookAscii4FixedIntensity();
   if (id === 'ega-pixel') return creativeLookEgaFixedIntensity();
   if (id === 'c64-pixel') return creativeLookC64FixedIntensity();
   if (id === 'gameboy-pixel') return creativeLookGameBoyFixedIntensity();
@@ -1008,6 +1048,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'ascii-art': 'ASCII Art',
     'ascii-art-2': 'ASCII 2',
     'ascii-art-3': 'ASCII 3',
+    'ascii-art-4': 'ASCII 4',
     holographic: 'Holographic',
     'spectral-storm': 'Spectral Storm',
     voronoi: 'Voronoi',
@@ -1021,6 +1062,7 @@ export function formatCreativeLookPresetLabel(preset) {
     watercolour: 'Watercolour',
     sketch: 'Sketch',
     'sketch-colour': 'Sketch Colour',
+    gouache: 'Gouache',
     chrome: 'True Chrome',
     glass: 'Glass',
   });
@@ -2835,6 +2877,37 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat, { shadows: false, castShadowDepth: true });
   }
 
+  if (id === 'gouache') {
+    const tint = diffuseTint ?? new THREE.Color(0xffffff);
+    const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
+    if (map) {
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+    }
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uWobbleScale: { value: creativeGouacheWobbleScale(patternScale) },
+        uLightDir: { value: new THREE.Vector3(0.35, 0.92, 0.42).normalize() },
+        uTint: { value: tint },
+        uMap: { value: map },
+        uHasMap: { value: map ? 1 : 0 },
+        uOpacity: { value: shaderAlpha },
+        ...pbrUniforms,
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: WATERCOLOUR_VERTEX,
+      fragmentShader: withCreativeLookPrepPbrModulation(GOUACHE_FRAGMENT, {
+        mode: 'gouache',
+      }),
+      ...commonMatOpts,
+    });
+    mat.uniforms.uIntensity.value = creativeGouacheVertexDrift(patternScale);
+    mat.userData.orbyCreativeLook = 'gouache';
+    return finish(mat, { shadows: false, castShadowDepth: true });
+  }
+
   if (id === 'ega-pixel') {
     const tint = diffuseTint ?? new THREE.Color(0xc8b8e8);
     const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
@@ -3058,7 +3131,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     return finish(mat, { shadows: false });
   }
 
-  if (id === 'ascii-art' || id === 'ascii-art-2' || id === 'ascii-art-3') {
+  if (id === 'ascii-art' || id === 'ascii-art-2' || id === 'ascii-art-3' || id === 'ascii-art-4') {
     const map = opts.diffuseMap?.isTexture ? opts.diffuseMap.clone() : null;
     if (map) {
       map.minFilter = THREE.LinearFilter;
@@ -3069,7 +3142,9 @@ export function createCreativeLookMaterial(preset, opts = {}) {
         ? ASCII_3_LUMINANCE_PREP_FRAGMENT
         : id === 'ascii-art-3'
           ? ASCII_2_LUMINANCE_PREP_FRAGMENT
-          : ASCII_LUMINANCE_PREP_FRAGMENT;
+          : id === 'ascii-art-4'
+            ? ASCII_4_LUMINANCE_PREP_FRAGMENT
+            : ASCII_LUMINANCE_PREP_FRAGMENT;
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uMap: { value: map },

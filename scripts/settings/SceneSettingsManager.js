@@ -356,6 +356,9 @@ export class SceneSettingsManager {
         if (payload.wireframe.hideMesh !== undefined) {
           this.eventBus.emit('mesh:wireframe-hide-mesh', payload.wireframe.hideMesh);
         }
+        if (payload.wireframe.thickness !== undefined) {
+          this.eventBus.emit('mesh:wireframe-thickness', payload.wireframe.thickness);
+        }
       }
       if (payload.creativeLook) {
         this.stateStore.set('creativeLook', payload.creativeLook);

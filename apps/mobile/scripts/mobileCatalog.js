@@ -84,6 +84,7 @@ const MOBILE_SHADER_PRESETS = [
   { id: 'watercolour', label: 'Watercolour', thumb: 'images/creative-look-watercolour.png' },
   { id: 'sketch', label: 'Sketch', thumb: 'images/creative-look-sketch.png' },
   { id: 'sketch-colour', label: 'Sketch Colour', thumb: 'images/creative-look-sketch-colour.png' },
+  { id: 'gouache', label: 'Gouache', thumb: 'images/creative-look-gouache.png' },
   { id: 'chrome', label: 'Chrome', thumb: 'images/creative-look-chrome.png' },
 ];
 
@@ -117,7 +118,7 @@ export const MOBILE_CREATIVE_LOOK_SECTIONS = [
     id: 'artistic',
     label: 'Artistic',
     items: MOBILE_SHADER_PRESETS.filter((x) =>
-      ['watercolour', 'sketch', 'sketch-colour'].includes(x.id),
+      ['watercolour', 'sketch', 'sketch-colour', 'gouache'].includes(x.id),
     ),
   },
   {

@@ -22,6 +22,14 @@ import {
   ensureAscii3FontAtlasLoaded,
   getSharedAscii3FontAtlas,
 } from './creativeLookAscii3Art.js';
+import {
+  ASCII_4_LIME_HEX,
+  ASCII_4_POST_FRAGMENT,
+  ASCII_4_SHADOW_INK_FLOOR,
+  creativeAscii4CellSize,
+  ensureAscii4FontAtlasLoaded,
+  getSharedAscii4FontAtlas,
+} from './creativeLookAscii4Art.js';
 import { APP_BACKGROUND } from '../constants.js';
 
 const VERTEX_SHADER = /* glsl */ `
@@ -32,7 +40,7 @@ void main() {
 }
 `;
 
-/** @typedef {'ascii-art' | 'ascii-art-2' | 'ascii-art-3'} AsciiCreativeLookVariant */
+/** @typedef {'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4'} AsciiCreativeLookVariant */
 
 /** @type {Record<AsciiCreativeLookVariant, {
  *   fragment: string,
@@ -71,6 +79,15 @@ const ASCII_VARIANTS = {
     getAtlas: getSharedAscii2FontAtlas,
     ensureAtlas: ensureAscii2FontAtlasLoaded,
   },
+  'ascii-art-4': {
+    fragment: ASCII_4_POST_FRAGMENT,
+    inkHex: ASCII_4_LIME_HEX,
+    inkFloor: ASCII_4_SHADOW_INK_FLOOR,
+    edgeCharCount: 0,
+    cellSize: creativeAscii4CellSize,
+    getAtlas: getSharedAscii4FontAtlas,
+    ensureAtlas: ensureAscii4FontAtlasLoaded,
+  },
 };
 
 /**
@@ -88,6 +105,7 @@ export class CreativeLookAsciiPass {
     void ensureAsciiFontAtlasLoaded().then(() => this._bindAtlas(getSharedAsciiFontAtlas()));
     void ensureAscii2FontAtlasLoaded();
     void ensureAscii3FontAtlasLoaded();
+    void ensureAscii4FontAtlasLoaded();
 
     const cell = creativeAsciiCellSize();
     this.material = new THREE.ShaderMaterial({
@@ -105,6 +123,7 @@ export class CreativeLookAsciiPass {
         uMasterHue: { value: 0 },
         uInkFloor: { value: ASCII_SHADOW_INK_FLOOR },
         uEdgeCharCount: { value: 0 },
+        uTime: { value: 0 },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: ASCII_POST_FRAGMENT,
@@ -124,7 +143,13 @@ export class CreativeLookAsciiPass {
 
   /** @param {AsciiCreativeLookVariant | string} variant */
   _resolveVariant(variant) {
-    if (variant === 'ascii-art-2' || variant === 'ascii-art-3') return variant;
+    if (
+      variant === 'ascii-art-2' ||
+      variant === 'ascii-art-3' ||
+      variant === 'ascii-art-4'
+    ) {
+      return variant;
+    }
     return 'ascii-art';
   }
 
@@ -221,7 +246,7 @@ export class CreativeLookAsciiPass {
   }
 
   /**
-   * @param {{ enabled?: boolean, masterHue?: number, variant?: AsciiCreativeLookVariant | string }} settings
+   * @param {{ enabled?: boolean, masterHue?: number, time?: number, variant?: AsciiCreativeLookVariant | string }} settings
    */
   updateSettings(settings = {}) {
     if (!settings) return;
@@ -233,6 +258,9 @@ export class CreativeLookAsciiPass {
     }
     if (typeof settings.masterHue === 'number') {
       this.material.uniforms.uMasterHue.value = settings.masterHue;
+    }
+    if (typeof settings.time === 'number') {
+      this.material.uniforms.uTime.value = settings.time;
     }
     if (!this._atlasBound) {
       const cfg = this._config(this._variant);

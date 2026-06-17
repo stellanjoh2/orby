@@ -9,6 +9,7 @@ export const CREATIVE_LOOK_ARTISTIC_INK_PRESETS = /** @type {const} */ ([
   'watercolour',
   'sketch',
   'sketch-colour',
+  'gouache',
 ]);
 
 export const CREATIVE_LOOK_INK_STROKE_UNIFORMS_GLSL = /* glsl */ `

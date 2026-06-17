@@ -945,6 +945,18 @@
                       <span class="sr-only">Hide mesh</span>
                     </label>
                   </div>
+                  <label class="slider-line">
+                    <span data-tooltip="Wireframe line thickness">Thickness</span>
+                    <input
+                      id="wireframeThickness"
+                      type="range"
+                      min="0.5"
+                      max="2.5"
+                      step="0.05"
+                      value="1"
+                    />
+                    <span class="value" data-output="wireframeThickness">1.00</span>
+                  </label>
                   <label class="color-line">
                     <span>Color</span>
                     <input
@@ -1104,6 +1116,9 @@
                     <button type="button" data-creative-look="ascii-art-3" class="hdri-icon" data-tooltip="ASCII 3 — braille halftone (bonus look); finer 12×20 grid; 25% ink in shadows, Master Hue (Scale &amp; Intensity locked)">
                       <img src="./assets/images/creative-look-ascii-art-2.png" alt="ASCII 3" width="192" height="192" />
                     </button>
+                    <button type="button" data-creative-look="ascii-art-4" class="hdri-icon" data-tooltip="ASCII 4 — Split Block; CP437 half-blocks; fine 12×20 grid; Orby lime with 50% mid-fill; deep shadows black out; cycling glyphs; Master Hue (Scale &amp; Intensity locked, Anim Speed)">
+                      <img src="./assets/images/creative-look-ascii-art.png" alt="ASCII 4" width="192" height="192" />
+                    </button>
                       </div>
                     </div>
                     <div class="creative-look-grid-section">
@@ -1117,6 +1132,9 @@
                     </button>
                     <button type="button" data-creative-look="sketch-colour" class="hdri-icon" data-tooltip="Sketch Colour — coloured manga illustration; watercolour-washed fills + screentone + ink outlines; paper backdrop; Stroke Width &amp; Raster Size sliders, Intensity = contrast &amp; ink">
                       <img src="./assets/images/creative-look-sketch-colour.png" alt="Sketch Colour" width="192" height="192" />
+                    </button>
+                    <button type="button" data-creative-look="gouache" class="hdri-icon" data-tooltip="Gouache — matte poster paint; flat opaque colour blocks + chalk grain + comic ink outlines; paper backdrop; Scale = block size &amp; ink, Intensity = chalk &amp; opacity">
+                      <img src="./assets/images/creative-look-gouache.png" alt="Gouache" width="192" height="192" />
                     </button>
                       </div>
                     </div>

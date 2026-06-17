@@ -10,6 +10,11 @@ import {
   restoreGroundGridFromPass,
   restoreTransformGizmosFromPass,
 } from '../render/transformGizmoLayers.js';
+import {
+  hideWireframeOverlaysForPass,
+  renderWireframeOverlay,
+  restoreWireframeOverlaysFromPass,
+} from '../render/wireframeOverlayPass.js';
 
 /**
  * EffectComposer prep, render, and viewport/clear repair — shared by the live loop,
@@ -28,7 +33,9 @@ export class ComposerLifecycle {
     getCreativeLookAsciiActive,
     getCreativeLookWatercolourActive,
     getCreativeLookSketchActive,
+    getCreativeLookGouacheActive,
     getCreativeLookVectrexActive,
+    getWireframeOverlayMeshes,
     getTransformControls,
     getGroundGrid,
     getRenderState,
@@ -52,8 +59,11 @@ export class ComposerLifecycle {
       getCreativeLookWatercolourActive ?? (() => false);
     this.getCreativeLookSketchActive =
       getCreativeLookSketchActive ?? (() => false);
+    this.getCreativeLookGouacheActive =
+      getCreativeLookGouacheActive ?? (() => false);
     this.getCreativeLookVectrexActive =
       getCreativeLookVectrexActive ?? (() => false);
+    this.getWireframeOverlayMeshes = getWireframeOverlayMeshes ?? (() => []);
     this.getRenderState = getRenderState ?? (() => ({}));
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.beforeComposerRender = beforeComposerRender;
@@ -63,6 +73,8 @@ export class ComposerLifecycle {
     this._gizmoPassVisibility = null;
     /** @type {{ grid: import('three').Object3D, visible: boolean } | null} */
     this._gridPassVisibility = null;
+    /** @type {Array<{ mesh: import('three').Mesh, visible: boolean }> | null} */
+    this._wireframePassVisibility = null;
   }
 
   /**
@@ -164,12 +176,16 @@ export class ComposerLifecycle {
     const asciiTerminal = this.getCreativeLookAsciiActive() === true;
     const watercolour = this.getCreativeLookWatercolourActive() === true;
     const sketch = this.getCreativeLookSketchActive() === true;
+    const gouache = this.getCreativeLookGouacheActive() === true;
     const vectrex = this.getCreativeLookVectrexActive() === true;
     if (!watercolour) {
       this.postPipeline?.releaseCreativeLookWatercolour?.();
     }
     if (!sketch) {
       this.postPipeline?.releaseCreativeLookSketch?.();
+    }
+    if (!gouache) {
+      this.postPipeline?.releaseCreativeLookGouache?.();
     }
     if (!vectrex) {
       this.postPipeline?.releaseCreativeLookVectrex?.();
@@ -178,10 +194,15 @@ export class ComposerLifecycle {
     }
     const shaderLabOn = this.getCreativeLookEnabled() === true;
     const overlayGizmos = overlayTransformGizmos && shaderLabOn;
+    const wireframeMeshes = this.getWireframeOverlayMeshes?.() ?? [];
+    const overlayWireframe = shaderLabOn && wireframeMeshes.length > 0;
     if (overlayGizmos) {
       this._gizmoPassVisibility = hideTransformGizmosForPass(
         this.getTransformControls?.() ?? [],
       );
+    }
+    if (overlayWireframe) {
+      this._wireframePassVisibility = hideWireframeOverlaysForPass(wireframeMeshes);
     }
     const grid = this.getGroundGrid?.();
     const overlayGrid = asciiTerminal && grid?.visible === true;
@@ -193,6 +214,11 @@ export class ComposerLifecycle {
         this.postPipeline?.prepareCreativeLookViewportPresentation?.();
       }
       this.postPipeline?.pushCreativeLookWatercolourPresentation?.({ viewportBloom });
+    } else if (gouache) {
+      if (viewportBloom) {
+        this.postPipeline?.prepareCreativeLookViewportPresentation?.();
+      }
+      this.postPipeline?.pushCreativeLookGouachePresentation?.({ viewportBloom });
     } else if (sketch) {
       if (viewportBloom) {
         this.postPipeline?.prepareCreativeLookViewportPresentation?.();
@@ -233,6 +259,11 @@ export class ComposerLifecycle {
         this._gridPassVisibility = null;
         this._renderGroundGridOverlay();
       }
+      if (this._wireframePassVisibility) {
+        restoreWireframeOverlaysFromPass(this._wireframePassVisibility);
+        this._wireframePassVisibility = null;
+        this._renderWireframeOverlay();
+      }
     } finally {
       if (this._gizmoPassVisibility) {
         restoreTransformGizmosFromPass(this._gizmoPassVisibility);
@@ -242,8 +273,14 @@ export class ComposerLifecycle {
         restoreGroundGridFromPass(this._gridPassVisibility);
         this._gridPassVisibility = null;
       }
+      if (this._wireframePassVisibility) {
+        restoreWireframeOverlaysFromPass(this._wireframePassVisibility);
+        this._wireframePassVisibility = null;
+      }
       if (watercolour) {
         this.postPipeline?.popCreativeLookWatercolourPresentation?.();
+      } else if (gouache) {
+        this.postPipeline?.popCreativeLookGouachePresentation?.();
       } else if (sketch) {
         this.postPipeline?.popCreativeLookSketchPresentation?.();
       } else if (vectrex) {
@@ -254,6 +291,7 @@ export class ComposerLifecycle {
         this.postPipeline?.popCreativeLookAsciiPresentation?.();
       } else {
         this.postPipeline?.releaseCreativeLookWatercolour?.();
+        this.postPipeline?.releaseCreativeLookGouache?.();
         this.postPipeline?.releaseCreativeLookSketch?.();
         this.postPipeline?.releaseCreativeLookVectrex?.();
       }
@@ -279,6 +317,15 @@ export class ComposerLifecycle {
       renderer: this.renderer,
       camera: this.camera,
       grid: this.getGroundGrid?.(),
+    });
+  }
+
+  /** Wireframe on top of Shader Lab post — plain lines, not stylized pixels or screentone. */
+  _renderWireframeOverlay() {
+    renderWireframeOverlay({
+      renderer: this.renderer,
+      camera: this.camera,
+      wireframeMeshes: this.getWireframeOverlayMeshes?.() ?? [],
     });
   }
 

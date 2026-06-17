@@ -5,6 +5,7 @@
 import {
   DEFAULT_MATERIAL_BRIGHTNESS,
   DEFAULT_MATERIAL_ROUGHNESS,
+  DEFAULT_WIREFRAME_LINE_WIDTH,
   MATERIAL_EMISSIVE_SLIDER_MAX,
   getMaterialMrResetDefaults,
   ORBY_BLACK,
@@ -484,6 +485,16 @@ export class MeshControls {
       this.stateStore.set('wireframe.hideMesh', enabled);
       this.eventBus.emit('mesh:wireframe-hide-mesh', enabled);
     });
+    this.ui.inputs.wireframeThickness?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (!Number.isFinite(value)) return;
+      this.helpers.updateValueLabel('wireframeThickness', value, 'decimal');
+      this.stateStore.set('wireframe.thickness', value);
+      this.eventBus.emit('mesh:wireframe-thickness', value);
+    });
+    if (this.ui.inputs.wireframeThickness) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.wireframeThickness);
+    }
 
     const updateCreativeLookFoldout = (open) => {
       const container = document.querySelector('#creativeLookSectionContainer');
@@ -1365,6 +1376,15 @@ export class MeshControls {
       }
       if (this.ui.inputs.wireframeHideMesh) {
         this.ui.inputs.wireframeHideMesh.checked = !!state.wireframe.hideMesh;
+      }
+      if (this.ui.inputs.wireframeThickness) {
+        this.ui.inputs.wireframeThickness.value =
+          state.wireframe.thickness ?? DEFAULT_WIREFRAME_LINE_WIDTH;
+        this.helpers.updateValueLabel(
+          'wireframeThickness',
+          state.wireframe.thickness ?? DEFAULT_WIREFRAME_LINE_WIDTH,
+          'decimal',
+        );
       }
     }
 
