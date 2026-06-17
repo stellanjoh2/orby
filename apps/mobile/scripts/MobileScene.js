@@ -21,6 +21,7 @@ import {
 import { MobileCreativeLooks } from './MobileCreativeLooks.js';
 import { markMobileDebugLog } from './mobileDebugLog.js';
 import { validateOrbyMobileModelFile, isOrbyMobileModelWithinLimit, orbyMobileModelTooLargeMessage } from '../../../scripts/orbyMobileModelLimits.js';
+import { findCreativeLook } from './mobileCatalog.js';
 
 const ORBY_BLACK = '#080808';
 /** Match desktop shelf slider: 0–3, default `hdriStrength` 2 (StateStore). */
@@ -523,7 +524,8 @@ export class MobileScene {
    * @returns {Promise<void>}
    */
   setCreativeLook(presetId) {
-    const id = presetId === 'standard' ? 'none' : presetId;
+    const raw = presetId === 'standard' ? 'none' : presetId;
+    const id = raw === 'none' ? 'none' : findCreativeLook(raw).id;
     this._creativeLookPreset = id === 'none' ? null : id;
     return this.creativeLooks.setCreativeLook(id);
   }

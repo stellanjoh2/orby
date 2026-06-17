@@ -189,11 +189,7 @@ export function bindMobileRangeTouch({ root }) {
       && clientY <= rect.bottom + THUMB_HIT_TOLERANCE_PX;
     if (!onTrack) return false;
 
-    if (!isThumbHit(input, clientX)) {
-      applyValue(input, clientX);
-      startDrag(input, id, clientX);
-      return true;
-    }
+    if (!isThumbHit(input, clientX)) return false;
 
     cancelPending();
     pending = {

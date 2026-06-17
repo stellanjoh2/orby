@@ -337,7 +337,7 @@ if (existsSync(mobileSrcDir)) {
 
   const mobileDistDir = join(mobileGateDir, 'app');
   mkdirSync(join(mobileDistDir, 'styles'), { recursive: true });
-  mkdirSync(join(mobileDistDir, 'scripts'), { recursive: true });
+  mkdirSync(join(mobileDistDir, 'scripts', 'chunks'), { recursive: true });
   await esbuild.build({
     entryPoints: [join(mobileSrcDir, 'scripts', 'main.js')],
     bundle: true,
@@ -345,7 +345,10 @@ if (existsSync(mobileSrcDir)) {
     sourcemap: false,
     format: 'esm',
     target: ['es2020'],
-    outfile: join(mobileDistDir, 'scripts', 'main.js'),
+    outdir: join(mobileDistDir, 'scripts'),
+    splitting: true,
+    entryNames: '[name]',
+    chunkNames: 'chunks/[name]-[hash]',
     treeShaking: true,
     legalComments: 'none',
     external: ['three'],

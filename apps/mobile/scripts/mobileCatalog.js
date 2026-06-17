@@ -22,36 +22,40 @@ export const MOBILE_STYLE_NONE = {
   thumb: 'images/look-filters/none.png',
 };
 
+/** Desktop Shader Lab presets not shipped on mobile (see MOBILE_SHADER_PRESETS_CUT). */
+export const MOBILE_SHADER_PRESETS_CUT = [
+  { id: 'flow-field', label: 'Flow Field' },
+  { id: 'voronoi', label: 'Voronoi' },
+  { id: 'wire-pulse', label: 'Wire Pulse' },
+  { id: 'vertex-points', label: 'Vertex Points' },
+  { id: 'spectral-storm', label: 'Spectral Storm' },
+  { id: 'dither-crosshatch', label: 'Crosshatch' },
+  { id: 'dither-raster', label: 'Raster' },
+  { id: 'ps2-crush', label: 'PS2 Crush' },
+  { id: 'psx', label: 'PSX' },
+  { id: 'vectrex', label: 'Vectrex' },
+  { id: 'ascii-art', label: 'ASCII' },
+  { id: 'glass', label: 'Glass' },
+  { id: 'c64-pixel', label: 'C64' },
+  { id: 'gameboy-pixel', label: 'Game Boy' },
+  { id: 'nes-pixel', label: 'NES' },
+];
+
 const MOBILE_SHADER_PRESETS = [
   { id: 'neon-edge', label: 'Neon Edge', thumb: 'images/creative-look-neon-edge.png' },
-  { id: 'flow-field', label: 'Flow Field', thumb: 'images/creative-look-flow-field.png' },
-  { id: 'plasma', label: 'Plasma', thumb: 'images/creative-look-plasma.png' },
   { id: 'holographic', label: 'Holographic', thumb: 'images/creative-look-holographic.png' },
-  { id: 'voronoi', label: 'Voronoi', thumb: 'images/creative-look-voronoi.png' },
+  { id: 'plasma', label: 'Plasma', thumb: 'images/creative-look-plasma.png' },
   { id: 'scanline-hologram', label: 'Scanline', thumb: 'images/creative-look-scanline-hologram.png' },
-  { id: 'wire-pulse', label: 'Wire Pulse', thumb: 'images/creative-look-wire-pulse.png' },
-  { id: 'vertex-points', label: 'Vertex Points', thumb: 'images/creative-look-vertex-points.png' },
-  { id: 'spectral-storm', label: 'Spectral Storm', thumb: 'images/creative-look-spectral-storm.png' },
   { id: 'toon', label: 'Toon', thumb: 'images/creative-look-toon.png' },
   { id: 'ega-pixel', label: 'EGA Pixel', thumb: 'images/creative-look-ega-pixel.png' },
-  { id: 'c64-pixel', label: 'C64', thumb: 'images/creative-look-c64-pixel.png' },
-  { id: 'gameboy-pixel', label: 'Game Boy', thumb: 'images/creative-look-gameboy-pixel.png' },
   { id: 'gba-pixel', label: 'GBA', thumb: 'images/creative-look-gba-pixel.png' },
-  { id: 'nes-pixel', label: 'NES', thumb: 'images/creative-look-nes-pixel.png' },
   { id: 'megadrive-pixel', label: 'Mega Drive', thumb: 'images/creative-look-megadrive-pixel.png' },
   { id: 'dither-neutral', label: 'Neutral', thumb: 'images/creative-look-dither-neutral.png' },
   { id: 'dither-tritone', label: 'Tritone', thumb: 'images/creative-look-dither-tritone.png' },
-  { id: 'dither-crosshatch', label: 'Crosshatch', thumb: 'images/creative-look-dither-crosshatch.png' },
-  { id: 'dither-raster', label: 'Raster', thumb: 'images/creative-look-dither-raster.png' },
-  { id: 'ps2-crush', label: 'PS2 Crush', thumb: 'images/creative-look-ps2-crush.png' },
-  { id: 'psx', label: 'PSX', thumb: 'images/creative-look-psx.png' },
-  { id: 'vectrex', label: 'Vectrex', thumb: 'images/creative-look-vectrex.png' },
   { id: 'watercolour', label: 'Watercolour', thumb: 'images/creative-look-watercolour.png' },
   { id: 'sketch', label: 'Sketch', thumb: 'images/creative-look-sketch.png' },
   { id: 'sketch-colour', label: 'Sketch Colour', thumb: 'images/creative-look-sketch-colour.png' },
-  { id: 'ascii-art', label: 'ASCII', thumb: 'images/creative-look-ascii-art.png' },
   { id: 'chrome', label: 'Chrome', thumb: 'images/creative-look-chrome.png' },
-  { id: 'glass', label: 'Glass', thumb: 'images/creative-look-glass.png' },
 ];
 
 /** Shader dock rail — None first (import PBR), then stylized presets. */
@@ -63,39 +67,34 @@ export const MOBILE_CREATIVE_LOOK_SECTIONS = [
     id: 'effects',
     label: 'Effects',
     items: MOBILE_SHADER_PRESETS.filter((x) =>
-      ['neon-edge', 'flow-field', 'plasma', 'holographic', 'voronoi', 'scanline-hologram', 'wire-pulse', 'vertex-points', 'spectral-storm', 'toon'].includes(x.id),
+      ['neon-edge', 'holographic', 'plasma', 'scanline-hologram', 'toon'].includes(x.id),
     ),
   },
   {
     id: 'pixels',
     label: 'Screen pixels',
     items: MOBILE_SHADER_PRESETS.filter((x) =>
-      ['ega-pixel', 'c64-pixel', 'gameboy-pixel', 'gba-pixel', 'nes-pixel', 'megadrive-pixel'].includes(x.id),
+      ['ega-pixel', 'gba-pixel', 'megadrive-pixel'].includes(x.id),
     ),
   },
   {
     id: 'dither',
     label: 'Dither',
     items: MOBILE_SHADER_PRESETS.filter((x) =>
-      ['dither-neutral', 'dither-tritone', 'dither-crosshatch', 'dither-raster'].includes(x.id),
+      ['dither-neutral', 'dither-tritone'].includes(x.id),
     ),
-  },
-  {
-    id: 'retro',
-    label: 'Retro 3D',
-    items: MOBILE_SHADER_PRESETS.filter((x) => ['ps2-crush', 'psx', 'vectrex'].includes(x.id)),
   },
   {
     id: 'artistic',
     label: 'Artistic',
     items: MOBILE_SHADER_PRESETS.filter((x) =>
-      ['watercolour', 'sketch', 'sketch-colour', 'ascii-art'].includes(x.id),
+      ['watercolour', 'sketch', 'sketch-colour'].includes(x.id),
     ),
   },
   {
     id: 'materials',
     label: 'Materials',
-    items: MOBILE_SHADER_PRESETS.filter((x) => ['chrome', 'glass'].includes(x.id)),
+    items: MOBILE_SHADER_PRESETS.filter((x) => ['chrome'].includes(x.id)),
   },
 ];
 

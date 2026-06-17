@@ -1,16 +1,4 @@
 import * as THREE from 'three';
-import { CreativeLookAsciiPass } from '../../../scripts/render/CreativeLookAsciiPass.js';
-import { CreativeLookEgaPass } from '../../../scripts/render/CreativeLookEgaPass.js';
-import { CreativeLookC64Pass } from '../../../scripts/render/CreativeLookC64Pass.js';
-import { CreativeLookGameBoyPass } from '../../../scripts/render/CreativeLookGameBoyPass.js';
-import { CreativeLookNesPass } from '../../../scripts/render/CreativeLookNesPass.js';
-import { CreativeLookMegaDrivePass } from '../../../scripts/render/CreativeLookMegaDrivePass.js';
-import { CreativeLookGbaPass } from '../../../scripts/render/CreativeLookGbaPass.js';
-import { CreativeLookDitherPass } from '../../../scripts/render/CreativeLookDitherPass.js';
-import { CreativeLookVectrex } from '../../../scripts/render/CreativeLookVectrexPass.js';
-import { CreativeLookWatercolour } from '../../../scripts/render/CreativeLookWatercolourPass.js';
-import { CreativeLookSketch } from '../../../scripts/render/CreativeLookSketchPass.js';
-import { CreativeLookSketchColour } from '../../../scripts/render/CreativeLookSketchColourPass.js';
 import {
   creativeLookFlatPostVariant,
   creativeLookMasterHueRadians,
@@ -24,10 +12,6 @@ import {
   normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
 } from '../../../scripts/render/CreativeLookMaterials.js';
-import { ensureAsciiFontAtlasLoaded } from '../../../scripts/render/creativeLookAsciiArt.js';
-import { resolveCreativeLookInkParams } from '../../../scripts/render/creativeLookInkArt.js';
-import { resolveCreativeLookSketchParams } from '../../../scripts/render/creativeLookSketchArt.js';
-import { creativeLookWatercolourRadius } from '../../../scripts/render/creativeLookWatercolourArt.js';
 import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
 import {
   pinMobileExportPixelReferences,
@@ -69,9 +53,68 @@ const FLAT_VARIANT_TO_PASS_KEY = {
 };
 
 /**
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {string} key
+ */
+async function createCreativeLookPassInstance(renderer, key) {
+  switch (key) {
+    case 'ascii': {
+      const { CreativeLookAsciiPass } = await import('../../../scripts/render/CreativeLookAsciiPass.js');
+      return new CreativeLookAsciiPass(renderer);
+    }
+    case 'ega': {
+      const { CreativeLookEgaPass } = await import('../../../scripts/render/CreativeLookEgaPass.js');
+      return new CreativeLookEgaPass(renderer);
+    }
+    case 'c64': {
+      const { CreativeLookC64Pass } = await import('../../../scripts/render/CreativeLookC64Pass.js');
+      return new CreativeLookC64Pass(renderer);
+    }
+    case 'gameboy': {
+      const { CreativeLookGameBoyPass } = await import('../../../scripts/render/CreativeLookGameBoyPass.js');
+      return new CreativeLookGameBoyPass(renderer);
+    }
+    case 'nes': {
+      const { CreativeLookNesPass } = await import('../../../scripts/render/CreativeLookNesPass.js');
+      return new CreativeLookNesPass(renderer);
+    }
+    case 'megadrive': {
+      const { CreativeLookMegaDrivePass } = await import('../../../scripts/render/CreativeLookMegaDrivePass.js');
+      return new CreativeLookMegaDrivePass(renderer);
+    }
+    case 'gba': {
+      const { CreativeLookGbaPass } = await import('../../../scripts/render/CreativeLookGbaPass.js');
+      return new CreativeLookGbaPass(renderer);
+    }
+    case 'dither': {
+      const { CreativeLookDitherPass } = await import('../../../scripts/render/CreativeLookDitherPass.js');
+      return new CreativeLookDitherPass(renderer);
+    }
+    case 'vectrex': {
+      const { CreativeLookVectrex } = await import('../../../scripts/render/CreativeLookVectrexPass.js');
+      return new CreativeLookVectrex(renderer);
+    }
+    case 'watercolour': {
+      const { CreativeLookWatercolour } = await import('../../../scripts/render/CreativeLookWatercolourPass.js');
+      return new CreativeLookWatercolour(renderer);
+    }
+    case 'sketch': {
+      const { CreativeLookSketch } = await import('../../../scripts/render/CreativeLookSketchPass.js');
+      return new CreativeLookSketch(renderer);
+    }
+    case 'sketchColour': {
+      const { CreativeLookSketchColour } = await import('../../../scripts/render/CreativeLookSketchColourPass.js');
+      return new CreativeLookSketchColour(renderer);
+    }
+    default:
+      return null;
+  }
+}
+
+/**
  * Screen-space Shader Lab passes for Orby Mobile — material prepass runs in
  * MaterialController; this module adds the missing ASCII / pixel / sketch / etc. post stack.
- * Passes are created and mounted into the composer only when a preset needs them.
+ * Pass modules load on first preset selection (dynamic import).
  */
 export class MobileCreativeLookPost {
   /** @param {THREE.WebGLRenderer} renderer */
@@ -88,6 +131,8 @@ export class MobileCreativeLookPost {
 
     /** @type {Record<string, object>} */
     this._instances = {};
+    /** @type {Record<string, Promise<object | null>>} */
+    this._instancePromises = {};
     /** @type {Set<string>} */
     this._mountedKeys = new Set();
     /** @type {Set<import('three/examples/jsm/postprocessing/Pass.js').Pass>} */
@@ -101,6 +146,13 @@ export class MobileCreativeLookPost {
     this._exportPixelPinned = false;
     this._logicalW = 1;
     this._logicalH = 1;
+
+    /** @type {typeof import('../../../scripts/render/creativeLookInkArt.js') | null} */
+    this._inkArt = null;
+    /** @type {typeof import('../../../scripts/render/creativeLookSketchArt.js') | null} */
+    this._sketchArt = null;
+    /** @type {typeof import('../../../scripts/render/creativeLookWatercolourArt.js') | null} */
+    this._watercolourArt = null;
   }
 
   /**
@@ -133,6 +185,38 @@ export class MobileCreativeLookPost {
   }
 
   /**
+   * @param {string[]} keys
+   */
+  async _loadArtForPassKeys(keys) {
+    if (keys.includes('ascii')) {
+      const { ensureAsciiFontAtlasLoaded } = await import('../../../scripts/render/creativeLookAsciiArt.js');
+      await ensureAsciiFontAtlasLoaded();
+      this._instances.ascii?.refreshAtlas?.();
+    }
+
+    if (keys.includes('watercolour')) {
+      const [inkArt, watercolourArt] = await Promise.all([
+        import('../../../scripts/render/creativeLookInkArt.js'),
+        import('../../../scripts/render/creativeLookWatercolourArt.js'),
+      ]);
+      this._inkArt = inkArt;
+      this._watercolourArt = watercolourArt;
+    }
+
+    if (keys.includes('sketch') || keys.includes('sketchColour')) {
+      const loads = [import('../../../scripts/render/creativeLookSketchArt.js')];
+      if (!this._inkArt) {
+        loads.push(import('../../../scripts/render/creativeLookInkArt.js'));
+      }
+      const modules = await Promise.all(loads);
+      this._sketchArt = modules[0];
+      if (!this._inkArt) {
+        this._inkArt = modules[1];
+      }
+    }
+  }
+
+  /**
    * Create and mount post passes for a preset before material rebuild.
    * @param {string} presetId
    */
@@ -140,72 +224,37 @@ export class MobileCreativeLookPost {
     const keys = this._requiredPassKeys(presetId);
     if (!keys.length || !this._composer) return;
 
+    await Promise.all(keys.map((key) => this._ensureInstance(key)));
+
     for (const key of keys) {
-      this._ensureInstance(key);
       this._mountPassKey(key);
       this._applySizeToKey(key);
     }
 
-    if (keys.includes('ascii')) {
-      await ensureAsciiFontAtlasLoaded();
-      this._instances.ascii?.refreshAtlas?.();
-    }
+    await this._loadArtForPassKeys(keys);
   }
 
   /** @param {string} key */
-  _ensureInstance(key) {
+  async _ensureInstance(key) {
     if (this._instances[key]) return this._instances[key];
 
-    /** @type {object} */
-    let instance;
-    switch (key) {
-      case 'ascii':
-        instance = new CreativeLookAsciiPass(this.renderer);
-        break;
-      case 'ega':
-        instance = new CreativeLookEgaPass(this.renderer);
-        break;
-      case 'c64':
-        instance = new CreativeLookC64Pass(this.renderer);
-        break;
-      case 'gameboy':
-        instance = new CreativeLookGameBoyPass(this.renderer);
-        break;
-      case 'nes':
-        instance = new CreativeLookNesPass(this.renderer);
-        break;
-      case 'megadrive':
-        instance = new CreativeLookMegaDrivePass(this.renderer);
-        break;
-      case 'gba':
-        instance = new CreativeLookGbaPass(this.renderer);
-        break;
-      case 'dither':
-        instance = new CreativeLookDitherPass(this.renderer);
-        break;
-      case 'vectrex':
-        instance = new CreativeLookVectrex(this.renderer);
-        break;
-      case 'watercolour':
-        instance = new CreativeLookWatercolour(this.renderer);
-        break;
-      case 'sketch':
-        instance = new CreativeLookSketch(this.renderer);
-        break;
-      case 'sketchColour':
-        instance = new CreativeLookSketchColour(this.renderer);
-        break;
-      default:
-        return null;
+    if (!this._instancePromises[key]) {
+      this._instancePromises[key] = createCreativeLookPassInstance(this.renderer, key)
+        .then((instance) => {
+          if (instance) {
+            this._instances[key] = instance;
+          }
+          delete this._instancePromises[key];
+          return instance;
+        });
     }
 
-    this._instances[key] = instance;
-    return instance;
+    return this._instancePromises[key];
   }
 
   /** @param {string} key */
   _getPass(key) {
-    const instance = this._ensureInstance(key);
+    const instance = this._instances[key];
     if (!instance?.getPass) return null;
     return instance.getPass();
   }
@@ -299,15 +348,17 @@ export class MobileCreativeLookPost {
     if (isWatercolourCreativeLookPreset(id)) {
       this._presentationMode = 'watercolour';
       this._flatVariant = null;
-      const ink = resolveCreativeLookInkParams({}, 'watercolour');
-      this._instances.watercolour?.updateSettings?.({
-        enabled: true,
-        patternScale,
-        radius: creativeLookWatercolourRadius(patternScale),
-        intensity,
-        strokeColor: ink.strokeColor,
-        preset: 'watercolour',
-      });
+      if (this._inkArt && this._watercolourArt) {
+        const ink = this._inkArt.resolveCreativeLookInkParams({}, 'watercolour');
+        this._instances.watercolour?.updateSettings?.({
+          enabled: true,
+          patternScale,
+          radius: this._watercolourArt.creativeLookWatercolourRadius(patternScale),
+          intensity,
+          strokeColor: ink.strokeColor,
+          preset: 'watercolour',
+        });
+      }
       return;
     }
 
@@ -365,9 +416,11 @@ export class MobileCreativeLookPost {
 
   /** @param {string} presetId @param {number} patternScale @param {number} intensity @param {number} time */
   _syncSketchSettings(presetId, patternScale, intensity, time) {
-    const sketchParams = resolveCreativeLookSketchParams({}, patternScale);
-    const sketchInk = resolveCreativeLookInkParams({}, 'sketch');
-    const colourInk = resolveCreativeLookInkParams({}, 'sketch-colour');
+    if (!this._sketchArt || !this._inkArt) return;
+
+    const sketchParams = this._sketchArt.resolveCreativeLookSketchParams({}, patternScale);
+    const sketchInk = this._inkArt.resolveCreativeLookInkParams({}, 'sketch');
+    const colourInk = this._inkArt.resolveCreativeLookInkParams({}, 'sketch-colour');
     const frame = {
       time,
       strokeWidth: sketchParams.strokeWidth,
@@ -611,7 +664,11 @@ export class MobileCreativeLookPost {
       this._instances[key]?.dispose?.();
     }
     this._instances = {};
+    this._instancePromises = {};
     this._mountedKeys.clear();
     this._creativePassSet.clear();
+    this._inkArt = null;
+    this._sketchArt = null;
+    this._watercolourArt = null;
   }
 }
