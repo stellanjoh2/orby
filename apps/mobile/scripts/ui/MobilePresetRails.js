@@ -1,5 +1,5 @@
 import {
-  MOBILE_HDRI,
+  MOBILE_HDRI_RAIL,
   MOBILE_FX,
   MOBILE_STYLE_RAIL,
   mobileAssetUrl,
@@ -53,6 +53,7 @@ export class MobilePresetRails {
         const attr = this._dataAttrForTab(/** @type {PresetTab} */ (tab));
         const pickId = pick.getAttribute(attr);
         const isClearPick =
+          (tab === 'light' && pickId === 'none') ||
           (tab === 'style' && (pickId === 'none' || pickId === 'standard')) ||
           (tab === 'filters' && pickId === 'none');
         if (!isClearPick) {
@@ -114,10 +115,7 @@ export class MobilePresetRails {
       });
 
       const dockBtn = root.querySelector(`[data-open-tab="${tab}"]`);
-      const thumb = dockBtn?.querySelector('[data-dock-thumb] img');
-      if (thumb instanceof HTMLImageElement && showSelected) {
-        thumb.src = mobileAssetUrl(selection[tab].thumb);
-      }
+      this._syncDockThumb(dockBtn, selection[tab]);
     }
     this.deps.stylePanel.sync();
   }
@@ -169,7 +167,7 @@ export class MobilePresetRails {
 
   /** @param {PresetTab} tab */
   _catalogForTab(tab) {
-    if (tab === 'light') return MOBILE_HDRI;
+    if (tab === 'light') return MOBILE_HDRI_RAIL;
     if (tab === 'style') return MOBILE_STYLE_RAIL;
     if (tab === 'filters') return MOBILE_FX;
     return [];
@@ -200,7 +198,13 @@ export class MobilePresetRails {
 
     if (isMobileClearPreset(item.id)) {
       const clearLabel =
-        tab === 'style' ? 'Clear shader' : tab === 'filters' ? 'Clear filter' : item.label;
+        tab === 'style'
+          ? 'Clear shader'
+          : tab === 'filters'
+            ? 'Clear filter'
+            : tab === 'light'
+              ? 'Custom background'
+              : item.label;
       btn.classList.add('orby-mobile-preset--clear');
       btn.setAttribute('aria-label', clearLabel);
       btn.innerHTML = `
@@ -224,6 +228,27 @@ export class MobilePresetRails {
       <span class="orby-mobile-preset__name">${item.label}</span>
     `;
     return btn;
+  }
+
+  /** @param {Element | null | undefined} dockBtn @param {{ id: string, thumb?: string }} item */
+  _syncDockThumb(dockBtn, item) {
+    const isClear = isMobileClearPreset(item.id);
+    const thumbWrap = dockBtn?.querySelector('.orby-mobile-dock__thumb');
+    const thumb = dockBtn?.querySelector('[data-dock-thumb]');
+    const clearIcon = dockBtn?.querySelector('[data-dock-clear]');
+
+    if (thumbWrap instanceof HTMLElement) {
+      thumbWrap.classList.toggle('orby-mobile-dock__thumb--clear', isClear);
+    }
+    if (thumb instanceof HTMLImageElement) {
+      thumb.hidden = isClear;
+      if (!isClear && item.thumb) {
+        thumb.src = mobileAssetUrl(item.thumb);
+      }
+    }
+    if (clearIcon instanceof HTMLElement) {
+      clearIcon.hidden = !isClear;
+    }
   }
 
   /**

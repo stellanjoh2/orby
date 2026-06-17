@@ -1,5 +1,13 @@
 /** Mobile-only catalog — paths under repo `assets/`. */
 
+/** Custom solid / gradient backdrop — no HDRI sphere in the viewport. */
+export const MOBILE_HDRI_NONE = {
+  id: 'none',
+  label: 'None',
+  thumb: '',
+};
+
+/** HDRI environment presets (IBL + optional backdrop). */
 export const MOBILE_HDRI = [
   { id: 'beach', label: 'Beach', thumb: 'images/hdri-thumbnail-beach.png', tint: '#5a7fb5' },
   { id: 'congress', label: 'Congress', thumb: 'images/hdri-thumbnail-congress.png', tint: '#e8e8e8' },
@@ -10,6 +18,22 @@ export const MOBILE_HDRI = [
   { id: 'blue-hour', label: 'Blue hour', thumb: 'images/hdri-thumbnail-blue-hour.png', tint: '#2a3a5a' },
   { id: 'sunny-parking', label: 'Parking', thumb: 'images/hdri-thumbnail-sunny-parking.png', tint: '#8a9098' },
 ];
+
+/** HDRI dock rail — None (custom bg) first, then environment presets. Default selection is Beach. */
+export const MOBILE_HDRI_RAIL = [MOBILE_HDRI_NONE, ...MOBILE_HDRI];
+
+/** @param {string} id */
+export function isMobileHdriEnvPreset(id) {
+  return id !== 'none';
+}
+
+/** @param {string} id */
+export function findMobileHdri(id) {
+  if (id === 'none') return MOBILE_HDRI_NONE;
+  return MOBILE_HDRI.find((h) => h.id === id)
+    ?? MOBILE_HDRI.find((h) => h.id === 'beach')
+    ?? MOBILE_HDRI[0];
+}
 
 /**
  * Shader Lab creative looks — ids match desktop `data-creative-look` / MaterialController presets.

@@ -1,4 +1,4 @@
-import { MOBILE_HDRI } from '../mobileCatalog.js';
+import { MOBILE_HDRI, MOBILE_HDRI_NONE } from '../mobileCatalog.js';
 import {
   MOBILE_HDRI_STRENGTH_DEFAULT,
   MOBILE_HDRI_STRENGTH_MAX,
@@ -29,7 +29,6 @@ export class MobileHdriControls {
     this._brightnessValue = root.querySelector('[data-hdri-brightness-value]');
     this._blurInput = root.querySelector('[data-hdri-blur-input]');
     this._blurValue = root.querySelector('[data-hdri-blur-value]');
-    this._backgroundInput = root.querySelector('[data-hdri-background-input]');
     this._controlsEl = root.querySelector('.orby-mobile-hdri-controls');
     this._bgControls = root.querySelector('[data-bg-controls]');
     this._bgSolidColorRow = root.querySelector('[data-bg-solid-color-row]');
@@ -62,15 +61,22 @@ export class MobileHdriControls {
 
   syncSelectionFromScene() {
     const { scene, selection } = this.ctx;
+    if (!scene.getHdriBackgroundEnabled()) {
+      selection.light = MOBILE_HDRI_NONE;
+      return;
+    }
     const presetId = scene.getHdriPresetId();
-    const item = MOBILE_HDRI.find((h) => h.id === presetId) ?? MOBILE_HDRI[0];
+    const item = MOBILE_HDRI.find((h) => h.id === presetId)
+      ?? MOBILE_HDRI.find((h) => h.id === 'beach')
+      ?? MOBILE_HDRI[0];
     selection.light = item;
   }
 
   syncPanel() {
-    const { root, engagedPresetTabs, syncPresetSheetState } = this.ctx;
+    const { root, engagedPresetTabs, selection, syncPresetSheetState } = this.ctx;
     const engaged = engagedPresetTabs.has('light');
-    root.dataset.hdriPanel = engaged ? 'controls' : 'presets-only';
+    const isNone = selection.light?.id === 'none';
+    root.dataset.hdriPanel = !engaged ? 'presets-only' : (isNone ? 'background' : 'controls');
     if (this._controlsEl instanceof HTMLElement) {
       this._controlsEl.hidden = !engaged;
       this._controlsEl.classList.toggle('is-visible', engaged);
@@ -103,18 +109,10 @@ export class MobileHdriControls {
   }
 
   syncBackground() {
-    const { root, scene } = this.ctx;
-    const backdropOn = scene.getHdriBackgroundEnabled();
-    root.dataset.hdriBackdrop = backdropOn ? 'on' : 'off';
+    const { scene } = this.ctx;
     const gradient = normalizeBackgroundGradient(scene.getBackgroundGradient());
     const bgColor = scene.getBackgroundColor();
 
-    if (this._backgroundInput instanceof HTMLInputElement) {
-      this._backgroundInput.checked = backdropOn;
-    }
-    if (this._bgControls instanceof HTMLElement) {
-      this._bgControls.hidden = backdropOn;
-    }
     if (this._bgSolidColorRow instanceof HTMLElement) {
       this._bgSolidColorRow.hidden = gradient.enabled;
     }
@@ -195,12 +193,6 @@ export class MobileHdriControls {
 
   _bindHdriBackgroundControls() {
     const { scene } = this.ctx;
-
-    this._backgroundInput?.addEventListener('change', () => {
-      const enabled = !!this._backgroundInput?.checked;
-      scene.setHdriBackground(enabled);
-      this.syncBackground();
-    });
 
     this._bgGradientEnabled?.addEventListener('change', () => {
       const enabled = !!this._bgGradientEnabled?.checked;

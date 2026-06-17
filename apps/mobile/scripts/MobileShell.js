@@ -1,5 +1,5 @@
 import {
-  MOBILE_HDRI,
+  findMobileHdri,
   MOBILE_FX,
   findCreativeLook,
 } from './mobileCatalog.js';
@@ -30,7 +30,7 @@ export class MobileShell {
     this._dockIndicatorEl = root.querySelector('.orby-mobile-dock__indicator');
 
     this.selection = {
-      light: MOBILE_HDRI.find((h) => h.id === 'beach') ?? MOBILE_HDRI[0],
+      light: findMobileHdri('beach'),
       style: findCreativeLook('none'),
       filters: MOBILE_FX[0],
     };
@@ -112,8 +112,15 @@ export class MobileShell {
       sheetController: this.sheetController,
       onApplyPreset: (tab, item, changed) => {
         if (tab === 'light') {
-          void this.scene.setHdri(item.id);
+          if (item.id === 'none') {
+            this.scene.setHdriBackground(false);
+          } else {
+            void this.scene.setHdri(item.id);
+            this.scene.setHdriBackground(true);
+          }
           this.hdriControls.syncPanel();
+          this.hdriControls.syncBackground();
+          this.hdriControls.syncControls();
         }
         if (tab === 'style') {
           const lookId = item.id === 'standard' ? 'none' : item.id;

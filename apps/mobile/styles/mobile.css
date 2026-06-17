@@ -124,6 +124,10 @@
   --orby-mobile-border: color-mix(in srgb, var(--orby-lime) 12%, transparent);
   --ui-accent-outer-glow-compact: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
   --orby-mobile-chrome-fade: 0.14s;
+  --orby-mobile-chrome-fade-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --orby-mobile-chrome-transition:
+    opacity var(--orby-mobile-chrome-fade) var(--orby-mobile-chrome-fade-ease),
+    transform 0.22s var(--orby-mobile-chrome-fade-ease);
   --orby-mobile-dock-orbit-shift: 10px;
 }
 
@@ -216,11 +220,13 @@ button {
   z-index: 4;
   top: 8px;
   left: calc(env(safe-area-inset-left, 0px) + 12px);
+  transform: translate3d(0, 0, 0);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
   pointer-events: none;
+  transition: var(--orby-mobile-chrome-transition);
 }
 
 .orby-mobile-debug-toggle {
@@ -274,6 +280,7 @@ button {
   /* Viewport already insets below the notch via --orby-mobile-top-h */
   top: 8px;
   right: calc(env(safe-area-inset-right, 0px) + 12px);
+  transform: translate3d(0, 0, 0);
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -702,6 +709,26 @@ button {
   display: block;
 }
 
+.orby-mobile-dock__thumb--clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--orby-mobile-border);
+}
+
+.orby-mobile-dock__clear-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--orby-mobile-border);
+}
+
+.orby-mobile-dock__clear-icon[hidden],
+.orby-mobile-dock__thumb--clear img[hidden] {
+  display: none !important;
+}
+
 .orby-mobile-dock__btn:active {
   background: color-mix(in srgb, var(--orby-lime) 10%, transparent);
   color: var(--text);
@@ -1067,7 +1094,7 @@ button {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid color-mix(in srgb, white 22%, transparent);
+  border: 1px solid var(--orby-mobile-border);
   box-shadow: none;
 }
 
@@ -1075,7 +1102,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, white 38%, transparent);
+  color: var(--orby-mobile-border);
 }
 
 .orby-mobile-preset--clear.is-selected .orby-mobile-preset__thumb {
@@ -1187,6 +1214,14 @@ button {
 }
 
 .orby-mobile-hdri-controls:not(.is-visible) {
+  display: none;
+}
+
+.orby-mobile[data-hdri-panel='controls'] [data-bg-controls] {
+  display: none;
+}
+
+.orby-mobile[data-hdri-panel='background'] [data-hdri-env-controls] {
   display: none;
 }
 
@@ -1527,6 +1562,7 @@ button {
 .orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-debug-menu {
   opacity: 0;
   pointer-events: none;
+  transform: translate3d(0, calc(-1 * var(--orby-mobile-dock-orbit-shift)), 0);
   transition: var(--orby-mobile-chrome-transition) !important;
 }
 
