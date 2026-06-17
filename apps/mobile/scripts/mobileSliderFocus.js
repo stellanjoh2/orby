@@ -1,48 +1,22 @@
-import { mobileHaptic } from './mobileHaptics.js';
 import { isShelfLockZone } from './mobileShelfLock.js';
 
 /**
- * Chrome fade while dragging sliders — desktop mouse preview only.
- * Real touch/pen uses bindMobileRangeTouch for drag + the same chrome fade.
- * @param {{ root: HTMLElement }} opts
+ * Engage shared slider chrome on pointer down (mouse everywhere; touch in object panel).
+ * Touch value drag in the bottom sheet still uses bindMobileRangeTouch + the same chrome.
+ * @param {{ root: HTMLElement, chrome: ReturnType<typeof import('./mobileSliderChrome.js').createMobileSliderChrome> }} opts
  */
-export function bindMobileSliderFocus({ root }) {
-  /** @type {HTMLElement | null} */
-  let activeRow = null;
-  /** @type {HTMLInputElement | null} */
-  let activeInput = null;
+export function bindMobileSliderFocus({ root, chrome }) {
   /** @type {number | null} */
   let activePointerId = null;
 
   const release = () => {
-    if (!activeRow) return;
-    activeRow.classList.remove('is-slider-focus');
-    activeRow = null;
-    activeInput = null;
     activePointerId = null;
-    delete root.dataset.sliderFocus;
-  };
-
-  /**
-   * @param {HTMLInputElement} input
-   * @param {HTMLElement} row
-   * @param {number} pointerId
-   */
-  const engage = (input, row, pointerId) => {
-    if (activeRow !== row) {
-      activeRow?.classList.remove('is-slider-focus');
-    }
-    activeInput = input;
-    activeRow = row;
-    activePointerId = pointerId;
-    root.dataset.sliderFocus = 'true';
-    row.classList.add('is-slider-focus');
-    mobileHaptic('soft');
+    chrome.release();
   };
 
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.button !== 0) return;
     if (!(e.target instanceof Element)) return;
 
     const row = e.target.closest('.orby-mobile-fx-grade');
@@ -52,7 +26,11 @@ export function bindMobileSliderFocus({ root }) {
     if (!(input instanceof HTMLInputElement) || input.disabled) return;
     if (isShelfLockZone(root, e.clientX, e.clientY)) return;
 
-    engage(input, row, e.pointerId);
+    const inObjectPanel = row.closest('.orby-mobile-object-panel') != null;
+    if (e.pointerType !== 'mouse' && !inObjectPanel) return;
+
+    activePointerId = e.pointerId;
+    chrome.engage(input);
   };
 
   /** @param {PointerEvent} e */
@@ -66,7 +44,7 @@ export function bindMobileSliderFocus({ root }) {
     'change',
     (e) => {
       if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return;
-      if (activeInput !== e.target) return;
+      if (chrome.getActiveInput() !== e.target) return;
       release();
     },
     true,
@@ -76,6 +54,6 @@ export function bindMobileSliderFocus({ root }) {
 
   return {
     release,
-    isActive: () => root.dataset.sliderFocus != null,
+    isActive: () => chrome.isActive(),
   };
 }

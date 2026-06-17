@@ -1400,6 +1400,8 @@ button {
 }
 
 /* ── Chrome fade — one beat for hide/reveal (slider focus, orbit, etc.) ── */
+.orby-mobile-dock,
+.orby-mobile-sheet,
 .orby-mobile-export-btn,
 .orby-mobile-object-btn,
 .orby-mobile-debug-menu,
@@ -1438,6 +1440,12 @@ button {
 .orby-mobile[data-slider-focus] .orby-mobile-seg,
 .orby-mobile[data-slider-focus] .orby-mobile-sheet::before,
 .orby-mobile[data-slider-focus] .orby-mobile-sheet__shelf::before {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* Object / top sliders — hide bottom sheet chrome; sheet sliders keep the panel visible */
+.orby-mobile[data-slider-focus]:not(:has(.orby-mobile-sheet .is-slider-focus)) .orby-mobile-sheet {
   opacity: 0 !important;
   pointer-events: none;
 }

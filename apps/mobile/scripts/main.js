@@ -9,17 +9,10 @@ import {
 } from '../../../scripts/orbyMobileHandoff.js';
 import { orbyMobileLandingUrl } from '../../../scripts/orbyMobileAppRoute.js';
 import { installMobileDebugLogCapture, markMobileDebugLog } from './mobileDebugLog.js';
+import { urlHasHandoffFlag } from './mobileHandoffUtils.js';
 
 installMobileDebugLogCapture();
 markMobileDebugLog('main:module-loaded');
-
-function urlHasHandoffFlag() {
-  try {
-    return new URLSearchParams(window.location.search).get('handoff') === '1';
-  } catch {
-    return false;
-  }
-}
 
 /** @param {HTMLElement} root */
 function showBootError(root) {

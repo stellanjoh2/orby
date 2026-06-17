@@ -1,5 +1,4 @@
 import { isPointerOnSliderThumb } from '../../../scripts/ui/sliderDefaultPaths.js';
-import { mobileHaptic } from './mobileHaptics.js';
 import { isShelfLockZone } from './mobileShelfLock.js';
 
 /** Brief thumb hold — filters scroll brush-pasts without feeling laggy. */
@@ -62,9 +61,9 @@ function scrollContainerFor(input) {
  * iOS Safari often fails to drag custom-styled `<input type="range">` inside
  * overflow scrollers. Drive values from touch/pointer events instead of native range drag.
  * Touch: thumb-only + ~80ms hold so scrolling past the track does not retune values.
- * @param {{ root: HTMLElement }} opts
+ * @param {{ root: HTMLElement, chrome: ReturnType<typeof import('./mobileSliderChrome.js').createMobileSliderChrome> }} opts
  */
-export function bindMobileRangeTouch({ root }) {
+export function bindMobileRangeTouch({ root, chrome }) {
   /** @type {HTMLInputElement | null} */
   let dragInput = null;
   /** @type {number | null} */
@@ -91,30 +90,11 @@ export function bindMobileRangeTouch({ root }) {
     pending = null;
   };
 
-  const releaseChrome = () => {
-    root.querySelectorAll('.is-slider-focus').forEach((row) => {
-      row.classList.remove('is-slider-focus');
-    });
-    delete root.dataset.sliderFocus;
-  };
-
   const unlockScroll = () => {
     if (!(lockedScroller instanceof HTMLElement)) return;
     lockedScroller.style.overflow = lockedOverflow ?? '';
     lockedScroller = null;
     lockedOverflow = null;
-  };
-
-  /** @param {HTMLInputElement} input */
-  const engageChrome = (input) => {
-    const row = input.closest('.orby-mobile-fx-grade');
-    if (!(row instanceof HTMLElement)) return;
-    root.querySelectorAll('.is-slider-focus').forEach((el) => {
-      if (el !== row) el.classList.remove('is-slider-focus');
-    });
-    root.dataset.sliderFocus = 'true';
-    row.classList.add('is-slider-focus');
-    mobileHaptic('soft');
   };
 
   /** @param {HTMLInputElement} input @param {number} clientX */
@@ -153,7 +133,7 @@ export function bindMobileRangeTouch({ root }) {
     cancelPending();
     dragInput = input;
     dragId = id;
-    engageChrome(input);
+    chrome.engage(input);
 
     const scroller = scrollContainerFor(input);
     if (scroller instanceof HTMLElement) {
@@ -173,7 +153,7 @@ export function bindMobileRangeTouch({ root }) {
     dragId = null;
     unlockScroll();
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    releaseChrome();
+    chrome.release();
   };
 
   /**
@@ -328,8 +308,8 @@ export function bindMobileRangeTouch({ root }) {
       dragInput = null;
       dragId = null;
       unlockScroll();
-      releaseChrome();
+      chrome.release();
     },
-    isActive: () => dragInput != null || pending != null || root.dataset.sliderFocus != null,
+    isActive: () => dragInput != null || pending != null || chrome.isActive(),
   };
 };
