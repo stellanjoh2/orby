@@ -727,10 +727,31 @@ export class MaterialController {
     const b = importMat.userData?.orbyGltfImportBaseline;
     // KHR_materials_transmission imports use BLEND fallback — baseline opacity/map are for the native pass.
     if (b && !hasImportTransmission) {
-      target.transparent = b.transparent;
-      target.opacity = b.opacity;
-      target.depthWrite = b.depthWrite;
-      if ('alphaHash' in target) target.alphaHash = b.alphaHash;
+      if (importMat.userData?.orbyGlassPresentation) {
+        target.transparent = !!importMat.transparent;
+        target.opacity = Number.isFinite(importMat.opacity) ? importMat.opacity : 1;
+        target.depthWrite = importMat.depthWrite !== false;
+        if (importMat.color?.isColor) target.color.copy(importMat.color);
+        if ('alphaHash' in target) target.alphaHash = !!importMat.alphaHash;
+      } else {
+        const mitigation = importMat.userData?.orbyBlendMitigation;
+        if (mitigation === 'opaque') {
+          target.transparent = false;
+          target.opacity = 1;
+          target.depthWrite = true;
+          if ('alphaHash' in target) target.alphaHash = false;
+        } else if (mitigation === 'alphaHash') {
+          target.transparent = b.transparent;
+          target.opacity = b.opacity;
+          target.depthWrite = b.depthWrite;
+          if ('alphaHash' in target) target.alphaHash = true;
+        } else {
+          target.transparent = b.transparent;
+          target.opacity = b.opacity;
+          target.depthWrite = b.depthWrite;
+          if ('alphaHash' in target) target.alphaHash = b.alphaHash;
+        }
+      }
       if (b.alphaMode) target.userData.alphaMode = b.alphaMode;
     }
     if (importMat.userData?.orbyEmissiveBlend || this._materialIsEmissiveDisplay(importMat)) {
@@ -1378,6 +1399,7 @@ export class MaterialController {
   /**
    * Near-opaque BLEND + DoubleSide without cutout maps is a common exporter mistake (opacity 1, no alpha
    * texture). Alpha-hash dithers the whole surface; prefer forcing an opaque draw instead.
+   * BLEND + baseColorTexture keeps alpha in the albedo map (Sketchfab ground shadows, decals) — never opaque.
    */
   _materialIsFalseBlendShell(m) {
     if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return false;
@@ -1386,6 +1408,7 @@ export class MaterialController {
     const op = Number.isFinite(m.opacity) ? m.opacity : 1;
     if (op < GLTF_FULL_OPACITY_BLEND_THRESHOLD) return false;
     if (m.alphaMap) return false;
+    if (m.map?.isTexture) return false;
     if (m.alphaTest > 0) return false;
     // BLEND + emissive (HUD / MFD screens) or transmission glass — author intended real alpha or refraction.
     if (m.userData?.orbyEmissiveBlend || this._materialIsEmissiveDisplay(m)) return false;
@@ -1496,6 +1519,29 @@ export class MaterialController {
   /**
    * Apply Advanced glass opacity (transparency mode Auto only). Reflection strength is applied in updateMaterialsEnvironment.
    */
+  _applyHeuristicGlassAppearanceToMaterial(m, { glassTintHex, bodyDarken, bodyOpacity }) {
+    if (!m || (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial)) return;
+    if (this._materialHasImportTransmission(m)) return;
+    m.color.set(glassTintHex);
+    m.color.multiplyScalar(bodyDarken);
+    m.opacity = bodyOpacity;
+    m.transparent = true;
+    m.depthWrite = false;
+    m.needsUpdate = true;
+  }
+
+  /** Live shaded clones — window/glass meshes without KHR transmission. */
+  _applyRenderedHeuristicGlassPresentation(object, glass, mode) {
+    if (!object || mode !== 'default') return;
+    object.traverse((child) => {
+      if (!child.isMesh || !this.isWindowMesh(child)) return;
+      const liveMats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const live of liveMats) {
+        this._applyHeuristicGlassAppearanceToMaterial(live, glass);
+      }
+    });
+  }
+
   applyGlassAppearanceFromState(object) {
     if (!object || !this.stateStore) return;
     if (this._shaderLabBypassesGlassPresentation()) return;
@@ -1520,6 +1566,7 @@ export class MaterialController {
       1,
       glassOpacity + glassBody * (1 - glassOpacity) * 0.55,
     );
+    const glass = { glassTintHex, bodyDarken, bodyOpacity };
 
     this._forEachImportMeshMaterial(object, (mesh, m) => {
       if (!this.isWindowMesh(mesh)) return;
@@ -1537,14 +1584,9 @@ export class MaterialController {
         return;
       }
 
-      // Heuristic window/glass without glTF transmission — opacity/tint/body sliders apply.
-      m.color.set(glassTintHex);
-      m.color.multiplyScalar(bodyDarken);
-      m.opacity = bodyOpacity;
-      m.transparent = true;
-      m.depthWrite = false;
-      m.needsUpdate = true;
+      this._applyHeuristicGlassAppearanceToMaterial(m, glass);
     });
+    this._applyRenderedHeuristicGlassPresentation(object, glass, mode);
     this._applyRenderedImportGltfGlassPresentation(object);
   }
 
@@ -1569,7 +1611,7 @@ export class MaterialController {
       const baseOp = b ? b.opacity : (Number.isFinite(m.opacity) ? m.opacity : 1);
       const baseTr = b ? b.transparent : m.transparent;
 
-      if (baseTr && baseOp >= GLTF_FULL_OPACITY_BLEND_THRESHOLD) {
+      if (baseTr && baseOp >= GLTF_FULL_OPACITY_BLEND_THRESHOLD && !m.map?.isTexture) {
         m.transparent = false;
         m.opacity = 1;
         m.depthWrite = true;
@@ -3199,7 +3241,13 @@ export class MaterialController {
     const hasAlbedo =
       !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
     if (hasAlbedo && this._isNearBlackDiffuseColor(importMat.color)) {
-      return new THREE.Color('#ffffff');
+      // BLEND + black factor × albedo is glTF modulate semantics (Sketchfab ground shadows).
+      // White-balancing is for FBX Phong/Lambert black tints only — not alpha-masked decals.
+      const alphaMode =
+        importMat.userData?.alphaMode ?? this._inferGltfAlphaMode(importMat);
+      if (alphaMode !== 'BLEND') {
+        return new THREE.Color('#ffffff');
+      }
     }
     return importMat.color?.clone?.() ?? new THREE.Color('#ffffff');
   }

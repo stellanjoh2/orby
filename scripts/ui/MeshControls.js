@@ -1175,7 +1175,8 @@ export class MeshControls {
       rotationZ: state.rotationZ ?? 0,
     });
     if (this.ui.inputs.materialBrightness) {
-      const brightness = state.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS;
+      const mrDefaults = getMaterialMrResetDefaults(!!state.material?.importUsesAuthoredPbr);
+      const brightness = state.material?.brightness ?? mrDefaults.brightness;
       this.ui.inputs.materialBrightness.value = brightness;
       this.helpers.updateValueLabel('materialBrightness', brightness, 'decimal');
     }

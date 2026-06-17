@@ -13,6 +13,7 @@ import {
 } from './orbyMarketingConstants.js';
 import { isMobileLanding } from '../orbyMobileLanding.js';
 import { isOrbyHomePath } from '../orbyRoute.js';
+import { isOrbyMobileLearnRoute, orbyMobileGateUrl } from '../orbyMobileAppRoute.js';
 import {
   bindMarketingCopyEmail,
   unbindMarketingCopyEmail,
@@ -153,11 +154,19 @@ function showMobileDesktopOnlyModal() {
   modal.querySelector('.orby-mobile-desktop-only-modal__dismiss')?.focus();
 }
 
+function navigateMobileLearnBrowse() {
+  window.location.assign(`${orbyMobileGateUrl()}/`);
+}
+
 function bindMarketingInteractions(root) {
   root.addEventListener('click', (event) => {
     const browseBtn = event.target.closest('[data-orby-marketing-browse]');
     if (browseBtn) {
       event.preventDefault();
+      if (isOrbyMobileLearnRoute()) {
+        navigateMobileLearnBrowse();
+        return;
+      }
       document.getElementById('browseButton')?.click();
       return;
     }

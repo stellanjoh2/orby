@@ -10,16 +10,17 @@
     <script>
       (function () {
         try {
-          var path = (location.pathname || '/').replace(/\/$/, '') || '/';
-          if (path === '/mobile') {
+          var pathname = location.pathname || '/';
+          var path = pathname.replace(/\/$/, '') || '/';
+          if (pathname === '/mobile') {
             location.replace('/mobile/' + location.search + location.hash);
             return;
           }
-          if (path === '/mobile/app') {
+          if (pathname === '/mobile/app') {
             location.replace('/mobile/app/' + location.search + location.hash);
             return;
           }
-          if (path === '/mobile/learn') {
+          if (pathname === '/mobile/learn') {
             location.replace('/mobile/learn/' + location.search + location.hash);
             return;
           }
@@ -1939,7 +1940,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.766 · 2026-06-17 11:27:01 UTC</div>
+              <div class="info-version-tag">v0.5.768 · 2026-06-17 12:02:05 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -2980,7 +2981,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.766 · 2026-06-17 11:27:01 UTC</div>
+              <div class="info-version-tag">v0.5.768 · 2026-06-17 12:02:05 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4695,7 +4696,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.766 · 2026-06-17 11:27:01 UTC</div>
+              <div class="info-version-tag">v0.5.768 · 2026-06-17 12:02:05 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4978,7 +4979,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.766 · 2026-06-17 11:27:01 UTC</div>
+              <div class="info-version-tag">v0.5.768 · 2026-06-17 12:02:05 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -5043,7 +5044,7 @@
               ></div>
 
 
-              <div class="info-version-tag">v0.5.766 · 2026-06-17 11:27:01 UTC</div>
+              <div class="info-version-tag">v0.5.768 · 2026-06-17 12:02:05 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

@@ -50,6 +50,10 @@ function injectVersionIntoHtml(html) {
       `src="./scripts/entry.js?v=${v}"`,
     )
     .replace(
+      /src="\/scripts\/mobileLearnBoot\.js(?:\?v=[^"]*)?"/,
+      `src="/scripts/mobileLearnBoot.js?v=${v}"`,
+    )
+    .replace(
       /<meta name="orby-version" content="[^"]*"\s*\/>/,
       `<meta name="orby-version" content="${v}" />`,
     );
@@ -156,6 +160,25 @@ cpSync(
   join(distDir, 'scripts', 'orbyMobileLandingBoot.js'),
 );
 cpSync(join(__dirname, 'scripts', 'orbyStatsBeacon.js'), join(distDir, 'scripts', 'orbyStatsBeacon.js'));
+cpSync(
+  join(__dirname, 'scripts', 'orbyMarketingPerformanceBoot.js'),
+  join(distDir, 'scripts', 'orbyMarketingPerformanceBoot.js'),
+);
+
+await esbuild.build({
+  entryPoints: ['scripts/mobileLearnBoot.js'],
+  bundle: true,
+  minify: true,
+  sourcemap: false,
+  format: 'esm',
+  target: ['es2020'],
+  outfile: join(distDir, 'scripts', 'mobileLearnBoot.js'),
+  treeShaking: true,
+  legalComments: 'none',
+  banner: {
+    js: '/* Orby Mobile learn — https://orby.studio/mobile/learn */',
+  },
+});
 
 // Copy HTML (refresh version banners from VERSION for deterministic deploys)
 const indexHtml = readFileSync('index.html', 'utf-8');
@@ -332,7 +355,15 @@ if (existsSync(mobileSrcDir)) {
 
   const mobileLearnDir = join(mobileGateDir, 'learn');
   mkdirSync(mobileLearnDir, { recursive: true });
-  writeFileSync(join(mobileLearnDir, 'index.html'), updatedHtml);
+  const mobileLearnTemplate = join(mobileSrcDir, 'learn', 'index.html');
+  if (existsSync(mobileLearnTemplate)) {
+    const mobileLearnHtml = injectTurnstileSiteKey(
+      injectStatsApiUrl(injectBugReportApiUrl(injectVersionIntoHtml(readFileSync(mobileLearnTemplate, 'utf-8')))),
+    );
+    writeFileSync(join(mobileLearnDir, 'index.html'), mobileLearnHtml);
+  } else {
+    writeFileSync(join(mobileLearnDir, 'index.html'), updatedHtml);
+  }
   console.log('📱 Orby Mobile learn → dist/mobile/learn/');
 
   const mobileDistDir = join(mobileGateDir, 'app');

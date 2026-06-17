@@ -17,6 +17,7 @@ import { processCreativeLookThumbnail } from './dev/processCreativeLookThumbnail
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const mobileGateRoot = path.join(root, 'apps', 'mobile', 'landing');
+const mobileLearnRoot = path.join(root, 'apps', 'mobile', 'learn');
 const mobileGateSymlink = path.join(root, 'mobile', 'index.html');
 const mobileAppRoot = path.join(root, 'apps', 'mobile');
 const port = Number(process.env.PORT || 8000);
@@ -70,7 +71,15 @@ function resolveFilePath(urlPath) {
     return null;
   }
   if (urlPath === '/mobile/learn' || urlPath === '/mobile/learn/') {
+    if (fs.existsSync(path.join(mobileLearnRoot, 'index.html'))) {
+      return path.join(mobileLearnRoot, 'index.html');
+    }
     return path.join(root, 'index.html');
+  }
+  if (urlPath === '/scripts/mobileLearnBoot.js') {
+    const distBoot = path.join(root, 'dist', 'scripts', 'mobileLearnBoot.js');
+    if (fs.existsSync(distBoot)) return distBoot;
+    return path.join(root, 'scripts', 'mobileLearnBoot.js');
   }
   if (urlPath.startsWith('/mobile/scripts/landing.js')) {
     return path.join(mobileGateRoot, 'main.js');

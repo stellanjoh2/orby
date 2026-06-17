@@ -1,0 +1,3199 @@
+{
+  "inputs": {
+    "apps/mobile/scripts/mobileCatalog.js": {
+      "bytes": 6719,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/scene/ColorCheckerMesh.js": {
+      "bytes": 8171,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookSketchArt.js": {
+      "bytes": 19752,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/constants.js": {
+      "bytes": 24397,
+      "imports": [
+        {
+          "path": "scripts/scene/ColorCheckerMesh.js",
+          "kind": "import-statement",
+          "original": "./scene/ColorCheckerMesh.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./render/creativeLookSketchArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileFxDefaults.js": {
+      "bytes": 956,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileParityDefaults.js": {
+      "bytes": 2513,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileFxControls.js": {
+      "bytes": 7339,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileFxDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileFxDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileParityDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileParityDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/utils/textureReady.js": {
+      "bytes": 1181,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/ShadowTint.js": {
+      "bytes": 9270,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/asciiVga8x16Font.js": {
+      "bytes": 8256,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookAsciiArt.js": {
+      "bytes": 11493,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/asciiVga8x16Font.js",
+          "kind": "import-statement",
+          "original": "./asciiVga8x16Font.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/asciiBrailleFont.js": {
+      "bytes": 2398,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookAscii2Art.js": {
+      "bytes": 9489,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/asciiBrailleFont.js",
+          "kind": "import-statement",
+          "original": "./asciiBrailleFont.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAsciiArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAsciiArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookAscii3Art.js": {
+      "bytes": 9727,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/asciiVga8x16Font.js",
+          "kind": "import-statement",
+          "original": "./asciiVga8x16Font.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAsciiArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAsciiArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookFlatPostMasterHue.js": {
+      "bytes": 1406,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookEgaArt.js": {
+      "bytes": 8935,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookC64Art.js": {
+      "bytes": 8486,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookGameBoyArt.js": {
+      "bytes": 5735,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookNesArt.js": {
+      "bytes": 10036,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookMegaDriveArt.js": {
+      "bytes": 4726,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookIntellivisionArt.js": {
+      "bytes": 8291,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookGbaArt.js": {
+      "bytes": 4768,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookApple2Art.js": {
+      "bytes": 6595,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookDitherArt.js": {
+      "bytes": 14268,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookMaterialPbrArt.js": {
+      "bytes": 8848,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookVgaDos3dArt.js": {
+      "bytes": 5082,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookInkArt.js": {
+      "bytes": 2111,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookWatercolourArt.js": {
+      "bytes": 21360,
+      "imports": [
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookInkArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookSketchColourArt.js": {
+      "bytes": 16078,
+      "imports": [
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookInkArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookWatercolourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookWatercolourArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookMaterials.js": {
+      "bytes": 115638,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/utils/textureReady.js",
+          "kind": "import-statement",
+          "original": "../utils/textureReady.js"
+        },
+        {
+          "path": "scripts/render/ShadowTint.js",
+          "kind": "import-statement",
+          "original": "./ShadowTint.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAsciiArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAsciiArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAscii2Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAscii2Art.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAscii3Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAscii3Art.js"
+        },
+        {
+          "path": "scripts/render/creativeLookEgaArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookEgaArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookC64Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookC64Art.js"
+        },
+        {
+          "path": "scripts/render/creativeLookGameBoyArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookGameBoyArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookNesArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookNesArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookMegaDriveArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookMegaDriveArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookIntellivisionArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookIntellivisionArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookGbaArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookGbaArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookApple2Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookApple2Art.js"
+        },
+        {
+          "path": "scripts/render/creativeLookFlatPostMasterHue.js",
+          "kind": "import-statement",
+          "original": "./creativeLookFlatPostMasterHue.js"
+        },
+        {
+          "path": "scripts/render/creativeLookDitherArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookDitherArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookMaterialPbrArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookMaterialPbrArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookVgaDos3dArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookVgaDos3dArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookWatercolourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookWatercolourArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchColourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchColourArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAsciiArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAsciiArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookPresetSliders.js": {
+      "bytes": 4247,
+      "imports": [
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookInkArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileStyleControls.js": {
+      "bytes": 4827,
+      "imports": [
+        {
+          "path": "scripts/render/CreativeLookMaterials.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookMaterials.js"
+        },
+        {
+          "path": "scripts/render/creativeLookPresetSliders.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/creativeLookPresetSliders.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/bvhArmatureBounds.js": {
+      "bytes": 1483,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/normalizeImportScale.js": {
+      "bytes": 1981,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/import/bvhArmatureBounds.js",
+          "kind": "import-statement",
+          "original": "./bvhArmatureBounds.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/camera/cameraDefaults.js": {
+      "bytes": 562,
+      "imports": [],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileHdriConfig.js": {
+      "bytes": 1214,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/config/hdri.js": {
+      "bytes": 2845,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/chromaticAberration.js": {
+      "bytes": 4097,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/shaders/index.js": {
+      "bytes": 29195,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/chromaticAberration.js",
+          "kind": "import-statement",
+          "original": "../render/chromaticAberration.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/EnvironmentController.js": {
+      "bytes": 19630,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/EXRLoader.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/RGBELoader.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/shaders/index.js",
+          "kind": "import-statement",
+          "original": "../shaders/index.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/config/shadowQuality.js": {
+      "bytes": 3331,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/HdriShadowReceiver.js": {
+      "bytes": 12096,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/config/shadowQuality.js",
+          "kind": "import-statement",
+          "original": "../config/shadowQuality.js"
+        },
+        {
+          "path": "scripts/render/ShadowTint.js",
+          "kind": "import-statement",
+          "original": "./ShadowTint.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/BackgroundController.js": {
+      "bytes": 7348,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/HdriShadowReceiver.js",
+          "kind": "import-statement",
+          "original": "./HdriShadowReceiver.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/backgroundGradient/backgroundGradientDefaults.js": {
+      "bytes": 3132,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/backgroundGradient/backgroundGradientCanvas.js": {
+      "bytes": 4101,
+      "imports": [
+        {
+          "path": "scripts/render/backgroundGradient/backgroundGradientDefaults.js",
+          "kind": "import-statement",
+          "original": "./backgroundGradientDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/backgroundGradient/BackgroundGradientController.js": {
+      "bytes": 5001,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/backgroundGradient/backgroundGradientCanvas.js",
+          "kind": "import-statement",
+          "original": "./backgroundGradientCanvas.js"
+        },
+        {
+          "path": "scripts/render/backgroundGradient/backgroundGradientDefaults.js",
+          "kind": "import-statement",
+          "original": "./backgroundGradientDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/fullViewportLogicalSize.js": {
+      "bytes": 943,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/resetRendererFullViewport.js": {
+      "bytes": 436,
+      "imports": [
+        {
+          "path": "scripts/render/fullViewportLogicalSize.js",
+          "kind": "import-statement",
+          "original": "./fullViewportLogicalSize.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/MeshglEffectComposer.js": {
+      "bytes": 1961,
+      "imports": [
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/MaskPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/MeshglRenderPass.js": {
+      "bytes": 2801,
+      "imports": [
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/RenderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/BloomCompositeController.js": {
+      "bytes": 5368,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/shaders/index.js",
+          "kind": "import-statement",
+          "original": "../shaders/index.js"
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/math/toneCurvePchip.js": {
+      "bytes": 7296,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/utils/deepClone.js": {
+      "bytes": 385,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/lookFilterPresets.js": {
+      "bytes": 9956,
+      "imports": [
+        {
+          "path": "scripts/math/toneCurvePchip.js",
+          "kind": "import-statement",
+          "original": "../math/toneCurvePchip.js"
+        },
+        {
+          "path": "scripts/utils/deepClone.js",
+          "kind": "import-statement",
+          "original": "../utils/deepClone.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookAsciiPass.js": {
+      "bytes": 8190,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookAsciiArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAsciiArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAscii2Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAscii2Art.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAscii3Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookAscii3Art.js"
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookEgaPass.js": {
+      "bytes": 3137,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookEgaArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookEgaArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookC64Pass.js": {
+      "bytes": 3137,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookC64Art.js",
+          "kind": "import-statement",
+          "original": "./creativeLookC64Art.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookGameBoyPass.js": {
+      "bytes": 3151,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookGameBoyArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookGameBoyArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookNesPass.js": {
+      "bytes": 3392,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookNesArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookNesArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookMegaDrivePass.js": {
+      "bytes": 3166,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookMegaDriveArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookMegaDriveArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookGbaPass.js": {
+      "bytes": 3147,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookGbaArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookGbaArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookDitherPass.js": {
+      "bytes": 5601,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/creativeLookDitherArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookDitherArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookVectrexArt.js": {
+      "bytes": 483,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookVectrexPass.js": {
+      "bytes": 11137,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookMaterials.js",
+          "kind": "import-statement",
+          "original": "./CreativeLookMaterials.js"
+        },
+        {
+          "path": "scripts/render/creativeLookVectrexArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookVectrexArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/creativeLookOutlineWidth.js": {
+      "bytes": 619,
+      "imports": [
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookWatercolourPass.js": {
+      "bytes": 9734,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        },
+        {
+          "path": "scripts/render/creativeLookWatercolourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookWatercolourArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookOutlineWidth.js",
+          "kind": "import-statement",
+          "original": "./creativeLookOutlineWidth.js"
+        },
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookInkArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookSketchPass.js": {
+      "bytes": 5188,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookInkArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/CreativeLookSketchColourPass.js": {
+      "bytes": 7365,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchColourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchColourArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookInkArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookWatercolourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookWatercolourArt.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileSquarePixelGrid.js": {
+      "bytes": 2682,
+      "imports": [],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/MobileCreativeLookPost.js": {
+      "bytes": 21406,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/CreativeLookAsciiPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookAsciiPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookEgaPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookEgaPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookC64Pass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookC64Pass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookGameBoyPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookGameBoyPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookNesPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookNesPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookMegaDrivePass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookMegaDrivePass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookGbaPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookGbaPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookDitherPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookDitherPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookVectrexPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookVectrexPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookWatercolourPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookWatercolourPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookSketchPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookSketchPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookSketchColourPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookSketchColourPass.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookMaterials.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookMaterials.js"
+        },
+        {
+          "path": "scripts/render/creativeLookAsciiArt.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/creativeLookAsciiArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookInkArt.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/creativeLookInkArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookWatercolourArt.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/creativeLookWatercolourArt.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileFxDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileFxDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileSquarePixelGrid.js",
+          "kind": "import-statement",
+          "original": "./mobileSquarePixelGrid.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/GradingController.js": {
+      "bytes": 7143,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/shaders/index.js",
+          "kind": "import-statement",
+          "original": "../shaders/index.js"
+        },
+        {
+          "path": "scripts/math/toneCurvePchip.js",
+          "kind": "import-statement",
+          "original": "../math/toneCurvePchip.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/transformGizmoLayers.js": {
+      "bytes": 3080,
+      "imports": [
+        {
+          "path": "scripts/render/resetRendererFullViewport.js",
+          "kind": "import-statement",
+          "original": "./resetRendererFullViewport.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/scene/ComposerLifecycle.js": {
+      "bytes": 12396,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/render/fullViewportLogicalSize.js",
+          "kind": "import-statement",
+          "original": "../render/fullViewportLogicalSize.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookMaterials.js",
+          "kind": "import-statement",
+          "original": "../render/CreativeLookMaterials.js"
+        },
+        {
+          "path": "scripts/render/transformGizmoLayers.js",
+          "kind": "import-statement",
+          "original": "../render/transformGizmoLayers.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/MobilePost.js": {
+      "bytes": 14438,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/MeshglEffectComposer.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/MeshglEffectComposer.js"
+        },
+        {
+          "path": "scripts/render/MeshglRenderPass.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/MeshglRenderPass.js"
+        },
+        {
+          "path": "three/examples/jsm/postprocessing/UnrealBloomPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/postprocessing/FilmPass.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/shaders/index.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/shaders/index.js"
+        },
+        {
+          "path": "scripts/render/BloomCompositeController.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/BloomCompositeController.js"
+        },
+        {
+          "path": "scripts/render/lookFilterPresets.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/lookFilterPresets.js"
+        },
+        {
+          "path": "scripts/render/chromaticAberration.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/chromaticAberration.js"
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileParityDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileParityDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileFxControls.js",
+          "kind": "import-statement",
+          "original": "./mobileFxControls.js"
+        },
+        {
+          "path": "apps/mobile/scripts/MobileCreativeLookPost.js",
+          "kind": "import-statement",
+          "original": "./MobileCreativeLookPost.js"
+        },
+        {
+          "path": "scripts/render/GradingController.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/GradingController.js"
+        },
+        {
+          "path": "scripts/scene/ComposerLifecycle.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/scene/ComposerLifecycle.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileFxDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileFxDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/gltfKHRSpecularGlossinessPlugin.js": {
+      "bytes": 1778,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobilePrepareImport.js": {
+      "bytes": 1930,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/gltfKHRSpecularGlossinessPlugin.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/gltfKHRSpecularGlossinessPlugin.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/state/migrateLegacyGroundKeys.js": {
+      "bytes": 1133,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/import/extrudeBoxUvs.js": {
+      "bytes": 2488,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/svgExtrudeCapNormals.js": {
+      "bytes": 3864,
+      "imports": [
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/extrudeImporterShared.js": {
+      "bytes": 3828,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/import/extrudeBoxUvs.js",
+          "kind": "import-statement",
+          "original": "./extrudeBoxUvs.js"
+        },
+        {
+          "path": "scripts/import/svgExtrudeCapNormals.js",
+          "kind": "import-statement",
+          "original": "./svgExtrudeCapNormals.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/extrudeBevel.js": {
+      "bytes": 1776,
+      "imports": [
+        {
+          "path": "scripts/import/extrudeImporterShared.js",
+          "kind": "import-statement",
+          "original": "./extrudeImporterShared.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/extrudeDefaults.js": {
+      "bytes": 4694,
+      "imports": [
+        {
+          "path": "scripts/import/extrudeBevel.js",
+          "kind": "import-statement",
+          "original": "./extrudeBevel.js"
+        },
+        {
+          "path": "scripts/import/extrudeImporterShared.js",
+          "kind": "import-statement",
+          "original": "./extrudeImporterShared.js"
+        },
+        {
+          "path": "scripts/import/extrudeImporterShared.js",
+          "kind": "import-statement",
+          "original": "./extrudeImporterShared.js"
+        },
+        {
+          "path": "scripts/import/extrudeBevel.js",
+          "kind": "import-statement",
+          "original": "./extrudeBevel.js"
+        },
+        {
+          "path": "scripts/import/extrudeImporterShared.js",
+          "kind": "import-statement",
+          "original": "./extrudeImporterShared.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/config/gobos.js": {
+      "bytes": 645,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/GoboProjection.js": {
+      "bytes": 24453,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/config/gobos.js",
+          "kind": "import-statement",
+          "original": "../config/gobos.js"
+        },
+        {
+          "path": "scripts/config/shadowQuality.js",
+          "kind": "import-statement",
+          "original": "../config/shadowQuality.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/StateStore.js": {
+      "bytes": 22210,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "./constants.js"
+        },
+        {
+          "path": "scripts/render/chromaticAberration.js",
+          "kind": "import-statement",
+          "original": "./render/chromaticAberration.js"
+        },
+        {
+          "path": "scripts/math/toneCurvePchip.js",
+          "kind": "import-statement",
+          "original": "./math/toneCurvePchip.js"
+        },
+        {
+          "path": "scripts/utils/deepClone.js",
+          "kind": "import-statement",
+          "original": "./utils/deepClone.js"
+        },
+        {
+          "path": "scripts/state/migrateLegacyGroundKeys.js",
+          "kind": "import-statement",
+          "original": "./state/migrateLegacyGroundKeys.js"
+        },
+        {
+          "path": "scripts/import/extrudeDefaults.js",
+          "kind": "import-statement",
+          "original": "./import/extrudeDefaults.js"
+        },
+        {
+          "path": "scripts/render/GoboProjection.js",
+          "kind": "import-statement",
+          "original": "./render/GoboProjection.js"
+        },
+        {
+          "path": "scripts/config/gobos.js",
+          "kind": "import-statement",
+          "original": "./config/gobos.js"
+        },
+        {
+          "path": "scripts/config/shadowQuality.js",
+          "kind": "import-statement",
+          "original": "./config/shadowQuality.js"
+        },
+        {
+          "path": "scripts/camera/cameraDefaults.js",
+          "kind": "import-statement",
+          "original": "./camera/cameraDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/Ps2CrushDecimator.js": {
+      "bytes": 7131,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/extrudeShapeSanitize.js": {
+      "bytes": 5643,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/extrudeDetail.js": {
+      "bytes": 3544,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/import/opentypePathToShape.js": {
+      "bytes": 16088,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/FontExtrudeImporter.js": {
+      "bytes": 13778,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        },
+        {
+          "path": "scripts/import/extrudeBevel.js",
+          "kind": "import-statement",
+          "original": "./extrudeBevel.js"
+        },
+        {
+          "path": "scripts/import/extrudeImporterShared.js",
+          "kind": "import-statement",
+          "original": "./extrudeImporterShared.js"
+        },
+        {
+          "path": "scripts/import/extrudeShapeSanitize.js",
+          "kind": "import-statement",
+          "original": "./extrudeShapeSanitize.js"
+        },
+        {
+          "path": "scripts/import/extrudeDetail.js",
+          "kind": "import-statement",
+          "original": "./extrudeDetail.js"
+        },
+        {
+          "path": "scripts/import/opentypePathToShape.js",
+          "kind": "import-statement",
+          "original": "./opentypePathToShape.js"
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/SvgExtrudeSurfaceShader.js": {
+      "bytes": 30251,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/mapInspectTypes.js": {
+      "bytes": 22090,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/import/fbxMaterialReport.js": {
+      "bytes": 8961,
+      "imports": [
+        {
+          "path": "scripts/render/mapInspectTypes.js",
+          "kind": "import-statement",
+          "original": "../render/mapInspectTypes.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/fbxMapSlotsSettings.js": {
+      "bytes": 7439,
+      "imports": [
+        {
+          "path": "scripts/import/fbxMaterialReport.js",
+          "kind": "import-statement",
+          "original": "./fbxMaterialReport.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/fbxOrmPackingShader.js": {
+      "bytes": 3187,
+      "imports": [
+        {
+          "path": "scripts/import/fbxMapSlotsSettings.js",
+          "kind": "import-statement",
+          "original": "../import/fbxMapSlotsSettings.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/normalViewMaterial.js": {
+      "bytes": 3188,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/NormalViewOverlay.js": {
+      "bytes": 5257,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/normalViewMaterial.js",
+          "kind": "import-statement",
+          "original": "./normalViewMaterial.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/UvCheckerOverlay.js": {
+      "bytes": 13132,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/mapInspectChannelMaterial.js": {
+      "bytes": 1198,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/MapInspectPreview.js": {
+      "bytes": 3948,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/mapInspectChannelMaterial.js",
+          "kind": "import-statement",
+          "original": "./mapInspectChannelMaterial.js"
+        },
+        {
+          "path": "scripts/render/mapInspectTypes.js",
+          "kind": "import-statement",
+          "original": "./mapInspectTypes.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/render/MaterialController.js": {
+      "bytes": 184789,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/Ps2CrushDecimator.js",
+          "kind": "import-statement",
+          "original": "./Ps2CrushDecimator.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookMaterials.js",
+          "kind": "import-statement",
+          "original": "./CreativeLookMaterials.js"
+        },
+        {
+          "path": "scripts/render/creativeLookWatercolourArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookWatercolourArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookSketchArt.js",
+          "kind": "import-statement",
+          "original": "./creativeLookSketchArt.js"
+        },
+        {
+          "path": "scripts/render/creativeLookPresetSliders.js",
+          "kind": "import-statement",
+          "original": "./creativeLookPresetSliders.js"
+        },
+        {
+          "path": "scripts/import/FontExtrudeImporter.js",
+          "kind": "import-statement",
+          "original": "../import/FontExtrudeImporter.js"
+        },
+        {
+          "path": "scripts/render/SvgExtrudeSurfaceShader.js",
+          "kind": "import-statement",
+          "original": "./SvgExtrudeSurfaceShader.js"
+        },
+        {
+          "path": "scripts/import/fbxMaterialReport.js",
+          "kind": "import-statement",
+          "original": "../import/fbxMaterialReport.js"
+        },
+        {
+          "path": "scripts/import/fbxMapSlotsSettings.js",
+          "kind": "import-statement",
+          "original": "../import/fbxMapSlotsSettings.js"
+        },
+        {
+          "path": "scripts/render/fbxOrmPackingShader.js",
+          "kind": "import-statement",
+          "original": "./fbxOrmPackingShader.js"
+        },
+        {
+          "path": "scripts/utils/textureReady.js",
+          "kind": "import-statement",
+          "original": "../utils/textureReady.js"
+        },
+        {
+          "path": "scripts/render/NormalViewOverlay.js",
+          "kind": "import-statement",
+          "original": "./NormalViewOverlay.js"
+        },
+        {
+          "path": "scripts/render/UvCheckerOverlay.js",
+          "kind": "import-statement",
+          "original": "./UvCheckerOverlay.js"
+        },
+        {
+          "path": "scripts/render/MapInspectPreview.js",
+          "kind": "import-statement",
+          "original": "./MapInspectPreview.js"
+        },
+        {
+          "path": "scripts/render/ShadowTint.js",
+          "kind": "import-statement",
+          "original": "./ShadowTint.js"
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/MobileCreativeLooks.js": {
+      "bytes": 8579,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/StateStore.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/StateStore.js"
+        },
+        {
+          "path": "scripts/render/MaterialController.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/MaterialController.js"
+        },
+        {
+          "path": "scripts/render/CreativeLookMaterials.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/CreativeLookMaterials.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileStyleControls.js",
+          "kind": "import-statement",
+          "original": "./mobileStyleControls.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileParityDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileParityDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileDebugLog.js": {
+      "bytes": 2668,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/orbyMobileModelLimits.js": {
+      "bytes": 2690,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/render/composerOutputBuffer.js": {
+      "bytes": 449,
+      "imports": [],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileComposerFrame.js": {
+      "bytes": 3192,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        },
+        {
+          "path": "scripts/render/fullViewportLogicalSize.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/fullViewportLogicalSize.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileExportImage.js": {
+      "bytes": 14968,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/render/composerOutputBuffer.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/composerOutputBuffer.js"
+        },
+        {
+          "path": "scripts/render/fullViewportLogicalSize.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/fullViewportLogicalSize.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileComposerFrame.js",
+          "kind": "import-statement",
+          "original": "./mobileComposerFrame.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileDebugLog.js",
+          "kind": "import-statement",
+          "original": "./mobileDebugLog.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/MobileScene.js": {
+      "bytes": 19857,
+      "imports": [
+        {
+          "path": "three",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/controls/OrbitControls.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/loaders/GLTFLoader.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/libs/meshopt_decoder.module.js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "scripts/import/normalizeImportScale.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/import/normalizeImportScale.js"
+        },
+        {
+          "path": "scripts/camera/cameraDefaults.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/camera/cameraDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileHdriConfig.js",
+          "kind": "import-statement",
+          "original": "./mobileHdriConfig.js"
+        },
+        {
+          "path": "scripts/config/hdri.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/config/hdri.js"
+        },
+        {
+          "path": "scripts/render/EnvironmentController.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/EnvironmentController.js"
+        },
+        {
+          "path": "scripts/render/BackgroundController.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/BackgroundController.js"
+        },
+        {
+          "path": "scripts/render/backgroundGradient/BackgroundGradientController.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/backgroundGradient/BackgroundGradientController.js"
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        },
+        {
+          "path": "apps/mobile/scripts/MobilePost.js",
+          "kind": "import-statement",
+          "original": "./MobilePost.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobilePrepareImport.js",
+          "kind": "import-statement",
+          "original": "./mobilePrepareImport.js"
+        },
+        {
+          "path": "apps/mobile/scripts/MobileCreativeLooks.js",
+          "kind": "import-statement",
+          "original": "./MobileCreativeLooks.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileDebugLog.js",
+          "kind": "import-statement",
+          "original": "./mobileDebugLog.js"
+        },
+        {
+          "path": "scripts/orbyMobileModelLimits.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/orbyMobileModelLimits.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileExportImage.js",
+          "kind": "dynamic-import",
+          "original": "./mobileExportImage.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/import/dispatchImportFile.js": {
+      "bytes": 288,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/orbyMobileLanding.js": {
+      "bytes": 4101,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/orbyMobileAppRoute.js": {
+      "bytes": 3089,
+      "imports": [],
+      "format": "esm"
+    },
+    "scripts/orbyMobileHandoff.js": {
+      "bytes": 13390,
+      "imports": [
+        {
+          "path": "scripts/import/dispatchImportFile.js",
+          "kind": "import-statement",
+          "original": "./import/dispatchImportFile.js"
+        },
+        {
+          "path": "scripts/orbyMobileLanding.js",
+          "kind": "import-statement",
+          "original": "./orbyMobileLanding.js"
+        },
+        {
+          "path": "scripts/orbyMobileAppRoute.js",
+          "kind": "import-statement",
+          "original": "./orbyMobileAppRoute.js"
+        },
+        {
+          "path": "scripts/orbyMobileModelLimits.js",
+          "kind": "import-statement",
+          "original": "./orbyMobileModelLimits.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileDebugExport.js": {
+      "bytes": 5183,
+      "imports": [
+        {
+          "path": "apps/mobile/scripts/mobileParityDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileParityDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileFxDefaults.js",
+          "kind": "import-statement",
+          "original": "./mobileFxDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileCatalog.js",
+          "kind": "import-statement",
+          "original": "./mobileCatalog.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileHaptics.js": {
+      "bytes": 638,
+      "imports": [],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileSheetDrag.js": {
+      "bytes": 3528,
+      "imports": [
+        {
+          "path": "apps/mobile/scripts/mobileHaptics.js",
+          "kind": "import-statement",
+          "original": "./mobileHaptics.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "scripts/ui/sliderDefaultPaths.js": {
+      "bytes": 8168,
+      "imports": [
+        {
+          "path": "scripts/import/extrudeDefaults.js",
+          "kind": "import-statement",
+          "original": "../import/extrudeDefaults.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileRangeTouch.js": {
+      "bytes": 9999,
+      "imports": [
+        {
+          "path": "scripts/ui/sliderDefaultPaths.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/ui/sliderDefaultPaths.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileHaptics.js",
+          "kind": "import-statement",
+          "original": "./mobileHaptics.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileSliderFocus.js": {
+      "bytes": 2283,
+      "imports": [
+        {
+          "path": "apps/mobile/scripts/mobileHaptics.js",
+          "kind": "import-statement",
+          "original": "./mobileHaptics.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/mobileColorUtils.js": {
+      "bytes": 2584,
+      "imports": [
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/MobileHsvColorPicker.js": {
+      "bytes": 9597,
+      "imports": [
+        {
+          "path": "apps/mobile/scripts/mobileColorUtils.js",
+          "kind": "import-statement",
+          "original": "./mobileColorUtils.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/MobileShell.js": {
+      "bytes": 56827,
+      "imports": [
+        {
+          "path": "apps/mobile/scripts/mobileCatalog.js",
+          "kind": "import-statement",
+          "original": "./mobileCatalog.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileFxControls.js",
+          "kind": "import-statement",
+          "original": "./mobileFxControls.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileStyleControls.js",
+          "kind": "import-statement",
+          "original": "./mobileStyleControls.js"
+        },
+        {
+          "path": "apps/mobile/scripts/MobileScene.js",
+          "kind": "import-statement",
+          "original": "./MobileScene.js"
+        },
+        {
+          "path": "scripts/orbyMobileHandoff.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/orbyMobileHandoff.js"
+        },
+        {
+          "path": "scripts/orbyMobileModelLimits.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/orbyMobileModelLimits.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileDebugExport.js",
+          "kind": "import-statement",
+          "original": "./mobileDebugExport.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileDebugLog.js",
+          "kind": "import-statement",
+          "original": "./mobileDebugLog.js"
+        },
+        {
+          "path": "scripts/render/backgroundGradient/backgroundGradientDefaults.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileHaptics.js",
+          "kind": "import-statement",
+          "original": "./mobileHaptics.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileSheetDrag.js",
+          "kind": "import-statement",
+          "original": "./mobileSheetDrag.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileRangeTouch.js",
+          "kind": "import-statement",
+          "original": "./mobileRangeTouch.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileSliderFocus.js",
+          "kind": "import-statement",
+          "original": "./mobileSliderFocus.js"
+        },
+        {
+          "path": "apps/mobile/scripts/MobileHsvColorPicker.js",
+          "kind": "import-statement",
+          "original": "./MobileHsvColorPicker.js"
+        },
+        {
+          "path": "scripts/constants.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/constants.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "apps/mobile/scripts/main.js": {
+      "bytes": 2604,
+      "imports": [
+        {
+          "path": "apps/mobile/scripts/MobileShell.js",
+          "kind": "import-statement",
+          "original": "./MobileShell.js"
+        },
+        {
+          "path": "scripts/orbyMobileHandoff.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/orbyMobileHandoff.js"
+        },
+        {
+          "path": "scripts/orbyMobileAppRoute.js",
+          "kind": "import-statement",
+          "original": "../../../scripts/orbyMobileAppRoute.js"
+        },
+        {
+          "path": "apps/mobile/scripts/mobileDebugLog.js",
+          "kind": "import-statement",
+          "original": "./mobileDebugLog.js"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "../../../../tmp/mobile-meta.js": {
+      "imports": [
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/controls/OrbitControls.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/loaders/GLTFLoader.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/libs/meshopt_decoder.module.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/EXRLoader.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/loaders/RGBELoader.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/EffectComposer.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/MaskPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/RenderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/postprocessing/UnrealBloomPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three/examples/jsm/postprocessing/FilmPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/Pass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/ShaderPass.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "three",
+          "kind": "require-call",
+          "external": true
+        }
+      ],
+      "exports": [],
+      "entryPoint": "apps/mobile/scripts/main.js",
+      "inputs": {
+        "scripts/scene/ColorCheckerMesh.js": {
+          "bytesInOutput": 103
+        },
+        "scripts/render/creativeLookSketchArt.js": {
+          "bytesInOutput": 12567
+        },
+        "scripts/constants.js": {
+          "bytesInOutput": 1706
+        },
+        "scripts/render/fullViewportLogicalSize.js": {
+          "bytesInOutput": 286
+        },
+        "apps/mobile/scripts/mobileDebugLog.js": {
+          "bytesInOutput": 1049
+        },
+        "scripts/render/composerOutputBuffer.js": {
+          "bytesInOutput": 60
+        },
+        "apps/mobile/scripts/mobileComposerFrame.js": {
+          "bytesInOutput": 160
+        },
+        "apps/mobile/scripts/mobileExportImage.js": {
+          "bytesInOutput": 6018
+        },
+        "apps/mobile/scripts/mobileCatalog.js": {
+          "bytesInOutput": 4815
+        },
+        "apps/mobile/scripts/mobileFxControls.js": {
+          "bytesInOutput": 2921
+        },
+        "apps/mobile/scripts/mobileFxDefaults.js": {
+          "bytesInOutput": 491
+        },
+        "apps/mobile/scripts/mobileParityDefaults.js": {
+          "bytesInOutput": 354
+        },
+        "scripts/render/CreativeLookMaterials.js": {
+          "bytesInOutput": 65064
+        },
+        "scripts/utils/textureReady.js": {
+          "bytesInOutput": 595
+        },
+        "scripts/render/ShadowTint.js": {
+          "bytesInOutput": 4945
+        },
+        "scripts/render/creativeLookAsciiArt.js": {
+          "bytesInOutput": 6513
+        },
+        "scripts/render/asciiVga8x16Font.js": {
+          "bytesInOutput": 6379
+        },
+        "scripts/render/creativeLookAscii2Art.js": {
+          "bytesInOutput": 5759
+        },
+        "scripts/render/asciiBrailleFont.js": {
+          "bytesInOutput": 759
+        },
+        "scripts/render/creativeLookAscii3Art.js": {
+          "bytesInOutput": 5870
+        },
+        "scripts/render/creativeLookEgaArt.js": {
+          "bytesInOutput": 6897
+        },
+        "scripts/render/creativeLookFlatPostMasterHue.js": {
+          "bytesInOutput": 1135
+        },
+        "scripts/render/creativeLookC64Art.js": {
+          "bytesInOutput": 6396
+        },
+        "scripts/render/creativeLookGameBoyArt.js": {
+          "bytesInOutput": 3449
+        },
+        "scripts/render/creativeLookNesArt.js": {
+          "bytesInOutput": 6508
+        },
+        "scripts/render/creativeLookMegaDriveArt.js": {
+          "bytesInOutput": 3364
+        },
+        "scripts/render/creativeLookIntellivisionArt.js": {
+          "bytesInOutput": 6274
+        },
+        "scripts/render/creativeLookGbaArt.js": {
+          "bytesInOutput": 3474
+        },
+        "scripts/render/creativeLookApple2Art.js": {
+          "bytesInOutput": 4927
+        },
+        "scripts/render/creativeLookDitherArt.js": {
+          "bytesInOutput": 11069
+        },
+        "scripts/render/creativeLookMaterialPbrArt.js": {
+          "bytesInOutput": 5902
+        },
+        "scripts/render/creativeLookVgaDos3dArt.js": {
+          "bytesInOutput": 3405
+        },
+        "scripts/render/creativeLookInkArt.js": {
+          "bytesInOutput": 515
+        },
+        "scripts/render/creativeLookWatercolourArt.js": {
+          "bytesInOutput": 14916
+        },
+        "scripts/render/creativeLookSketchColourArt.js": {
+          "bytesInOutput": 12279
+        },
+        "scripts/render/creativeLookPresetSliders.js": {
+          "bytesInOutput": 1495
+        },
+        "apps/mobile/scripts/mobileStyleControls.js": {
+          "bytesInOutput": 1449
+        },
+        "apps/mobile/scripts/MobileScene.js": {
+          "bytesInOutput": 11397
+        },
+        "scripts/import/normalizeImportScale.js": {
+          "bytesInOutput": 702
+        },
+        "scripts/import/bvhArmatureBounds.js": {
+          "bytesInOutput": 205
+        },
+        "scripts/camera/cameraDefaults.js": {
+          "bytesInOutput": 182
+        },
+        "apps/mobile/scripts/mobileHdriConfig.js": {
+          "bytesInOutput": 685
+        },
+        "scripts/config/hdri.js": {
+          "bytesInOutput": 913
+        },
+        "scripts/render/EnvironmentController.js": {
+          "bytesInOutput": 10806
+        },
+        "scripts/shaders/index.js": {
+          "bytesInOutput": 22587
+        },
+        "scripts/render/chromaticAberration.js": {
+          "bytesInOutput": 1633
+        },
+        "scripts/render/BackgroundController.js": {
+          "bytesInOutput": 3109
+        },
+        "scripts/render/HdriShadowReceiver.js": {
+          "bytesInOutput": 6930
+        },
+        "scripts/config/shadowQuality.js": {
+          "bytesInOutput": 21
+        },
+        "scripts/render/backgroundGradient/BackgroundGradientController.js": {
+          "bytesInOutput": 2382
+        },
+        "scripts/render/backgroundGradient/backgroundGradientDefaults.js": {
+          "bytesInOutput": 1277
+        },
+        "scripts/render/backgroundGradient/backgroundGradientCanvas.js": {
+          "bytesInOutput": 558
+        },
+        "apps/mobile/scripts/MobilePost.js": {
+          "bytesInOutput": 7462
+        },
+        "scripts/render/MeshglEffectComposer.js": {
+          "bytesInOutput": 941
+        },
+        "scripts/render/resetRendererFullViewport.js": {
+          "bytesInOutput": 129
+        },
+        "scripts/render/MeshglRenderPass.js": {
+          "bytesInOutput": 1041
+        },
+        "scripts/render/BloomCompositeController.js": {
+          "bytesInOutput": 2860
+        },
+        "scripts/math/toneCurvePchip.js": {
+          "bytesInOutput": 3050
+        },
+        "scripts/utils/deepClone.js": {
+          "bytesInOutput": 105
+        },
+        "scripts/render/lookFilterPresets.js": {
+          "bytesInOutput": 3992
+        },
+        "apps/mobile/scripts/MobileCreativeLookPost.js": {
+          "bytesInOutput": 9394
+        },
+        "scripts/render/CreativeLookAsciiPass.js": {
+          "bytesInOutput": 3786
+        },
+        "scripts/render/CreativeLookEgaPass.js": {
+          "bytesInOutput": 1733
+        },
+        "scripts/render/CreativeLookC64Pass.js": {
+          "bytesInOutput": 1733
+        },
+        "scripts/render/CreativeLookGameBoyPass.js": {
+          "bytesInOutput": 1733
+        },
+        "scripts/render/CreativeLookNesPass.js": {
+          "bytesInOutput": 1856
+        },
+        "scripts/render/CreativeLookMegaDrivePass.js": {
+          "bytesInOutput": 1733
+        },
+        "scripts/render/CreativeLookGbaPass.js": {
+          "bytesInOutput": 1733
+        },
+        "scripts/render/CreativeLookDitherPass.js": {
+          "bytesInOutput": 2655
+        },
+        "scripts/render/CreativeLookVectrexPass.js": {
+          "bytesInOutput": 6731
+        },
+        "scripts/render/CreativeLookWatercolourPass.js": {
+          "bytesInOutput": 5105
+        },
+        "scripts/render/creativeLookOutlineWidth.js": {
+          "bytesInOutput": 125
+        },
+        "scripts/render/CreativeLookSketchPass.js": {
+          "bytesInOutput": 2380
+        },
+        "scripts/render/CreativeLookSketchColourPass.js": {
+          "bytesInOutput": 3590
+        },
+        "apps/mobile/scripts/mobileSquarePixelGrid.js": {
+          "bytesInOutput": 583
+        },
+        "scripts/render/GradingController.js": {
+          "bytesInOutput": 4151
+        },
+        "scripts/scene/ComposerLifecycle.js": {
+          "bytesInOutput": 6302
+        },
+        "scripts/render/transformGizmoLayers.js": {
+          "bytesInOutput": 721
+        },
+        "apps/mobile/scripts/mobilePrepareImport.js": {
+          "bytesInOutput": 818
+        },
+        "scripts/render/gltfKHRSpecularGlossinessPlugin.js": {
+          "bytesInOutput": 685
+        },
+        "apps/mobile/scripts/MobileCreativeLooks.js": {
+          "bytesInOutput": 4293
+        },
+        "scripts/StateStore.js": {
+          "bytesInOutput": 6481
+        },
+        "scripts/state/migrateLegacyGroundKeys.js": {
+          "bytesInOutput": 629
+        },
+        "scripts/import/extrudeImporterShared.js": {
+          "bytesInOutput": 38
+        },
+        "scripts/import/extrudeBoxUvs.js": {
+          "bytesInOutput": 135
+        },
+        "scripts/import/svgExtrudeCapNormals.js": {
+          "bytesInOutput": 97
+        },
+        "scripts/import/extrudeBevel.js": {
+          "bytesInOutput": 9
+        },
+        "scripts/import/extrudeDefaults.js": {
+          "bytesInOutput": 261
+        },
+        "scripts/render/GoboProjection.js": {
+          "bytesInOutput": 87
+        },
+        "scripts/config/gobos.js": {
+          "bytesInOutput": 10
+        },
+        "scripts/render/MaterialController.js": {
+          "bytesInOutput": 84094
+        },
+        "scripts/render/Ps2CrushDecimator.js": {
+          "bytesInOutput": 2727
+        },
+        "scripts/import/FontExtrudeImporter.js": {
+          "bytesInOutput": 240
+        },
+        "scripts/import/extrudeShapeSanitize.js": {
+          "bytesInOutput": 23
+        },
+        "scripts/import/opentypePathToShape.js": {
+          "bytesInOutput": 23
+        },
+        "scripts/render/SvgExtrudeSurfaceShader.js": {
+          "bytesInOutput": 14449
+        },
+        "scripts/render/mapInspectTypes.js": {
+          "bytesInOutput": 1656
+        },
+        "scripts/import/fbxMaterialReport.js": {
+          "bytesInOutput": 117
+        },
+        "scripts/import/fbxMapSlotsSettings.js": {
+          "bytesInOutput": 1526
+        },
+        "scripts/render/fbxOrmPackingShader.js": {
+          "bytesInOutput": 1618
+        },
+        "scripts/render/NormalViewOverlay.js": {
+          "bytesInOutput": 2270
+        },
+        "scripts/render/normalViewMaterial.js": {
+          "bytesInOutput": 1555
+        },
+        "scripts/render/UvCheckerOverlay.js": {
+          "bytesInOutput": 4302
+        },
+        "scripts/render/MapInspectPreview.js": {
+          "bytesInOutput": 1556
+        },
+        "scripts/render/mapInspectChannelMaterial.js": {
+          "bytesInOutput": 663
+        },
+        "scripts/orbyMobileModelLimits.js": {
+          "bytesInOutput": 921
+        },
+        "scripts/orbyMobileAppRoute.js": {
+          "bytesInOutput": 41
+        },
+        "scripts/orbyMobileHandoff.js": {
+          "bytesInOutput": 3137
+        },
+        "apps/mobile/scripts/mobileDebugExport.js": {
+          "bytesInOutput": 2558
+        },
+        "apps/mobile/scripts/MobileShell.js": {
+          "bytesInOutput": 35252
+        },
+        "apps/mobile/scripts/mobileHaptics.js": {
+          "bytesInOutput": 211
+        },
+        "apps/mobile/scripts/mobileSheetDrag.js": {
+          "bytesInOutput": 1527
+        },
+        "scripts/ui/sliderDefaultPaths.js": {
+          "bytesInOutput": 477
+        },
+        "apps/mobile/scripts/mobileRangeTouch.js": {
+          "bytesInOutput": 3803
+        },
+        "apps/mobile/scripts/mobileSliderFocus.js": {
+          "bytesInOutput": 941
+        },
+        "apps/mobile/scripts/mobileColorUtils.js": {
+          "bytesInOutput": 1104
+        },
+        "apps/mobile/scripts/MobileHsvColorPicker.js": {
+          "bytesInOutput": 5202
+        },
+        "apps/mobile/scripts/main.js": {
+          "bytesInOutput": 1085
+        }
+      },
+      "bytes": 546331
+    }
+  }
+}

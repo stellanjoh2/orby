@@ -525,7 +525,7 @@ export class ResetControls {
         const mrDefaults = getMaterialMrResetDefaults(
           !!this.stateStore.getState().material?.importUsesAuthoredPbr,
         );
-        this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
+        this.stateStore.set('material.brightness', defaults.material?.brightness ?? mrDefaults.brightness);
         this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
         this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
         this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
@@ -549,7 +549,7 @@ export class ResetControls {
         const mrDefaults = getMaterialMrResetDefaults(
           !!this.stateStore.getState().material?.importUsesAuthoredPbr,
         );
-        this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
+        this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
         this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
         this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
         this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);
@@ -841,12 +841,12 @@ export class ResetControls {
               !!this.stateStore.getState().material?.importUsesAuthoredPbr,
             );
             this.stateStore.batch(() => {
-              this.stateStore.set('material.brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
+              this.stateStore.set('material.brightness', defaults.material?.brightness ?? mrDefaults.brightness);
               this.stateStore.set('material.metalness', defaults.material?.metalness ?? mrDefaults.metalness);
               this.stateStore.set('material.roughness', defaults.material?.roughness ?? mrDefaults.roughness);
               this.stateStore.set('material.emissive', defaults.material?.emissive ?? 0.0);
             });
-            this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS);
+            this.eventBus.emit('mesh:material-brightness', defaults.material?.brightness ?? mrDefaults.brightness);
             this.eventBus.emit('mesh:material-metalness', defaults.material?.metalness ?? mrDefaults.metalness);
             this.eventBus.emit('mesh:material-roughness', defaults.material?.roughness ?? mrDefaults.roughness);
             this.eventBus.emit('mesh:material-emissive', defaults.material?.emissive ?? 0.0);

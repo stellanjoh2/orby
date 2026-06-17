@@ -121,9 +121,14 @@ export function getMaterialMrResetDefaults(importUsesAuthoredPbr = false) {
     return {
       metalness: IMPORT_MATERIAL_MR_MULTIPLIER,
       roughness: IMPORT_MATERIAL_MR_MULTIPLIER,
+      brightness: DEFAULT_MATERIAL_BRIGHTNESS,
     };
   }
-  return { metalness: 0.0, roughness: DEFAULT_MATERIAL_ROUGHNESS };
+  return {
+    metalness: 0.0,
+    roughness: DEFAULT_MATERIAL_ROUGHNESS,
+    brightness: DEFAULT_MATERIAL_BRIGHTNESS,
+  };
 }
 
 /** Camera → Shadows UI — symmetric around 0 so the thumb sits centered at default; maps via {@link cameraShadowsUiToShader}. */

@@ -3,6 +3,7 @@
  */
 import { MARKETING_SECTIONS } from './orbyMarketingContent.js';
 import { ensureMobileLandingClass, isMobileLanding } from '../orbyMobileLanding.js';
+import { isOrbyMobileLearnRoute, orbyMobileGateUrl } from '../orbyMobileAppRoute.js';
 import { ensureSiteNavStyles } from './orbySiteNavStyles.js';
 import { renderSiteNav } from './orbyMarketingTemplates.js';
 import { subscribeMarketingScroll } from './orbyMarketingScrollDispatcher.js';
@@ -303,6 +304,10 @@ function initSiteNavNow(options) {
     const browseBtn = event.target.closest('[data-orby-marketing-browse]');
     if (browseBtn) {
       event.preventDefault();
+      if (isOrbyMobileLearnRoute()) {
+        window.location.assign(`${orbyMobileGateUrl()}/`);
+        return;
+      }
       if (mode === 'subpage' && isMobileLanding()) {
         window.location.assign('/?browse=1');
         return;

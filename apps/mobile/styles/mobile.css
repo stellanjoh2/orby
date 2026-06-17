@@ -643,7 +643,7 @@ button {
 
 .orby-mobile-sheet__grabber {
   position: absolute;
-  z-index: 2;
+  z-index: 5;
   top: 10px;
   left: 50%;
   width: 36px;
@@ -747,8 +747,7 @@ button {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding-top: var(--orby-mobile-sheet-grabber-zone);
+  overflow: visible;
 }
 
 .orby-mobile-sheet__scroll {
@@ -758,6 +757,8 @@ button {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  /* Clearance for grabber — lives on the scroller so thumbs/dots clip at the sheet top, not inset */
+  padding-top: var(--orby-mobile-sheet-grabber-zone);
   padding-bottom: var(--orby-mobile-sheet-shelf-h);
 }
 

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual"
+    />
+    <script>
+      (function () {
+        try {
+          var pathname = location.pathname || '/';
+          if (pathname === '/mobile/learn') {
+            location.replace('/mobile/learn/' + location.search + location.hash);
+            return;
+          }
+          var path = pathname.replace(/\/$/, '') || '/';
+          if (path !== '/mobile/learn') return;
+          var base = document.createElement('base');
+          base.href = '/';
+          document.head.appendChild(base);
+          document.documentElement.classList.add('mobile-landing', 'orby-home-scroll', 'orby-gate-unlocked');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      html,
+      body {
+        background: #080808;
+      }
+      html.mobile-landing .orby-marketing-scroll-nav {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: none !important;
+      }
+    </style>
+    <script>
+      window.__ORBY_ENTRY_GATE_ENABLED__ = true;
+    </script>
+    <script>
+      (function () {
+        try {
+          var path = (location.pathname || '/').replace(/\/$/, '') || '/';
+          if (path === '/mobile/learn') {
+            document.documentElement.classList.add('orby-gate-unlocked');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta
+      name="description"
+      content="Learn about Orby — free 3D model viewer and browser studio for artists."
+    />
+    <title>Orby — Free 3D Model Viewer | Professional Studio in Your Browser</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg" />
+    <link rel="stylesheet" href="/styles/fontawesome/orby-icons.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles/marketing/09-scroll-cue-responsive.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.7/+esm",
+          "gsap/ScrollTrigger": "https://cdn.jsdelivr.net/npm/gsap@3.12.7/ScrollTrigger.js"
+        }
+      }
+    </script>
+    <script src="/scripts/orbyMobileLandingBoot.js"></script>
+    <script src="/scripts/orbyMarketingPerformanceBoot.js"></script>
+    <meta name="orby-version" content="dev" />
+    <meta name="orby-bug-report-api" content="" />
+    <meta name="orby-stats-api" content="" />
+    <meta name="orby-turnstile-site-key" content="" />
+  </head>
+  <body data-theme="violet">
+    <nav
+      class="orby-marketing-scroll-nav orby-marketing-scroll-nav--mobile-fixed"
+      data-orby-marketing-scroll-nav
+      aria-label="Site"
+    >
+      <div class="orby-marketing-scroll-nav__bar">
+        <a
+          class="orby-marketing-scroll-nav__brand"
+          href="/mobile/"
+          data-orby-marketing-scroll-top
+          aria-label="Back to Orby Mobile"
+        >
+          <span class="orby-marketing-scroll-nav__brand-mark" aria-hidden="true"></span>
+        </a>
+        <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--inline">
+          <a class="orby-marketing-scroll-nav__link" href="/about/">About</a>
+          <a class="orby-marketing-scroll-nav__link" href="/support/">Support</a>
+          <a class="orby-marketing-scroll-nav__link" href="/legal/privacy-policy.html">Privacy Policy</a>
+          <a class="orby-marketing-scroll-nav__link" href="/credits/">Credits</a>
+          <a class="orby-marketing-scroll-nav__link" href="/brand/">Brand</a>
+          <a class="orby-marketing-scroll-nav__link" href="/stats/">Statistics</a>
+        </div>
+        <button
+          type="button"
+          class="orby-marketing-scroll-nav__menu-toggle"
+          data-orby-marketing-nav-toggle
+          aria-expanded="false"
+          aria-controls="orby-site-nav-menu"
+          aria-label="Open menu"
+        >
+          <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+          <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+          <span class="orby-marketing-scroll-nav__menu-bar" aria-hidden="true"></span>
+        </button>
+        <div class="orby-marketing-scroll-nav__cta">
+          <span class="orby-magic-btn-host">
+            <a
+              class="orby-magic-btn orby-magic-btn--nav-outline orby-marketing-scroll-nav__browse"
+              href="/mobile/"
+              data-orby-marketing-browse
+            >
+              <span class="orby-magic-btn__fill" aria-hidden="true"></span>
+              <span class="orby-magic-btn__inner">
+                <span class="orby-magic-btn__label">Browse files</span>
+                <span class="orby-magic-btn__arrow" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M3.5 8h9M9 4.5L12.5 8 9 11.5"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </span>
+            </a>
+          </span>
+        </div>
+      </div>
+      <div
+        class="orby-marketing-scroll-nav__menu"
+        id="orby-site-nav-menu"
+        data-orby-marketing-nav-menu
+        aria-hidden="true"
+      >
+        <div class="orby-marketing-scroll-nav__links orby-marketing-scroll-nav__links--overlay">
+          <a class="orby-marketing-scroll-nav__link" href="/about/">About</a>
+          <a class="orby-marketing-scroll-nav__link" href="/support/">Support</a>
+          <a class="orby-marketing-scroll-nav__link" href="/legal/privacy-policy.html">Privacy Policy</a>
+          <a class="orby-marketing-scroll-nav__link" href="/credits/">Credits</a>
+          <a class="orby-marketing-scroll-nav__link" href="/brand/">Brand</a>
+          <a class="orby-marketing-scroll-nav__link" href="/stats/">Statistics</a>
+        </div>
+        <div class="orby-marketing-scroll-nav__menu-social">
+          <a
+            class="orby-marketing-scroll-nav__menu-social-link"
+            href="https://www.instagram.com/dropittoorby"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+          >
+            <span
+              class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--instagram"
+              aria-hidden="true"
+            ></span>
+          </a>
+          <a
+            class="orby-marketing-scroll-nav__menu-social-link"
+            href="https://github.com/stellanjoh2/orby"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub"
+          >
+            <span
+              class="orby-marketing-scroll-nav__menu-social-icon orby-marketing-scroll-nav__menu-social-icon--github"
+              aria-hidden="true"
+            ></span>
+          </a>
+        </div>
+      </div>
+    </nav>
+    <script src="/scripts/orbyEntryGate.js"></script>
+    <div id="app"></div>
+    <script type="module" src="/scripts/mobileLearnBoot.js"></script>
+  </body>
+</html>
