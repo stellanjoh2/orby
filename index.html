@@ -3584,19 +3584,17 @@
                     <div class="look-filter-grid" role="list" aria-label="Look Filters">
                       <button
                         type="button"
-                        class="look-filter-tile"
+                        class="look-filter-tile look-filter-tile--clear"
                         data-look-filter="none"
                         role="listitem"
                         aria-pressed="false"
+                        aria-label="Clear look filter"
                       >
-                        <img
-                          class="look-filter-tile__thumb"
-                          data-src="./assets/images/look-filters/none.png"
-                          alt=""
-                          width="96"
-                          height="96"
-                          decoding="async"
-                        />
+                        <span class="look-filter-tile__thumb look-filter-tile__thumb--clear" aria-hidden="true">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                          </svg>
+                        </span>
                         <span class="look-filter-tile__label">None</span>
                       </button>
                       <button

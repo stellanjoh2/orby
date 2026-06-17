@@ -7621,6 +7621,31 @@ body.ui-hidden .shelf {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.look-filter-tile__thumb--clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--orby-black);
+  color: color-mix(in srgb, white 42%, var(--orby-black));
+  box-shadow: inset 0 -0.35rem 0.75rem rgba(0, 0, 0, 0.35);
+}
+
+.look-filter-tile--clear.is-selected .look-filter-tile__thumb--clear {
+  color: var(--accent);
+}
+
+.look-filter-tile--clear .look-filter-tile__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .look-filter-tile__label {
   line-height: 1.2;
   padding: 0.3rem 0.2rem 0.32rem;

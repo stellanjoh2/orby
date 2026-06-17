@@ -1,4 +1,5 @@
 import { mobileHaptic } from './mobileHaptics.js';
+import { isShelfLockZone } from './mobileShelfLock.js';
 
 /**
  * Chrome fade while dragging sliders — desktop mouse preview only.
@@ -49,6 +50,7 @@ export function bindMobileSliderFocus({ root }) {
 
     const input = row.querySelector('input[type="range"]');
     if (!(input instanceof HTMLInputElement) || input.disabled) return;
+    if (isShelfLockZone(root, e.clientX, e.clientY)) return;
 
     engage(input, row, e.pointerId);
   };

@@ -47,7 +47,10 @@
   --text-dim: #9a9a9a;
   --brand-font-headline: 'Mattone Bold', system-ui, sans-serif;
   --orby-mobile-sheet-peek: var(--orby-mobile-sheet-peek-rail);
-  --orby-mobile-sheet-expanded: 50svh;
+  /* Slider shelves (HDRI / Shader / Filter / Adjust) share one expanded ceiling */
+  --orby-mobile-sheet-max: 80vh;
+  --orby-mobile-sheet-max: 80svh;
+  --orby-mobile-sheet-expanded: var(--orby-mobile-sheet-max);
   --orby-mobile-dock-h: calc(78px + env(safe-area-inset-bottom, 0px));
   --orby-mobile-dock-bottom: 8px;
   --orby-mobile-shelf-compact: 0.75; /* 25% tighter shelf rail chrome */
@@ -57,25 +60,9 @@
   );
   --orby-mobile-rail-label-row: 0.875rem; /* 11px label + line-height */
   --orby-mobile-sheet-grabber-zone: calc(10px + 4px + 10px); /* grabber offset + bar + clearance */
-  --orby-mobile-sheet-fx-expanded: 60svh; /* Adjust panel — ~20% above half-screen on touch devices */
-  --orby-mobile-sheet-fx-max: 72svh;
   --orby-mobile-sheet-peek-rail: min(
     calc(var(--orby-mobile-sheet-grabber-zone) + var(--orby-mobile-sheet-shelf-h)),
     52svh
-  );
-  --orby-mobile-sheet-peek-settings: min(
-    calc(
-      var(--orby-mobile-sheet-grabber-zone) + var(--orby-mobile-rail-to-controls) + 11.5rem +
-        var(--orby-mobile-sheet-shelf-h)
-    ),
-    54svh
-  );
-  --orby-mobile-sheet-peek-settings-lg: min(
-    calc(
-      var(--orby-mobile-sheet-grabber-zone) + var(--orby-mobile-rail-to-controls) + 18rem +
-        var(--orby-mobile-sheet-shelf-h)
-    ),
-    62svh
   );
   --orby-mobile-sheet-dock-fade-h: calc(var(--orby-mobile-dock-stack) + 0.75rem);
   --orby-mobile-dock-thumb: 37px;
@@ -127,6 +114,9 @@
   --ui-frosted-blur: 15px;
   --orby-mobile-dock-frosted-bg: rgba(8, 8, 8, 0.48);
   --orby-mobile-dock-frosted-blur: 22px;
+  /* Preset shelf fade — +20pp vs prior mix so sliders behind spheres read softer */
+  --orby-mobile-shelf-fade-mid: 48%;
+  --orby-mobile-shelf-fade-end: 75%;
   --orby-mobile-border: color-mix(in srgb, var(--orby-lime) 12%, transparent);
   --ui-accent-outer-glow-compact: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
   --orby-mobile-chrome-fade: 0.14s;
@@ -674,17 +664,13 @@ button {
   box-shadow: none;
 }
 
+/* All dock tabs (HDRI / Shader / Filter / Adjust) share one expanded attach point */
 .orby-mobile[data-sheet='expanded'] .orby-mobile-sheet {
   height: var(--orby-mobile-sheet-expanded);
 }
 
-.orby-mobile[data-sheet='expanded'][data-active-tab='fx'] {
-  --orby-mobile-sheet-expanded: min(var(--orby-mobile-sheet-fx-expanded), var(--orby-mobile-sheet-fx-max));
-}
-
-.orby-mobile[data-sheet='expanded'][data-active-tab='fx'] .orby-mobile-sheet {
-  max-height: var(--orby-mobile-sheet-fx-max);
-  overflow: hidden;
+.orby-mobile[data-active-tab='fx'] .orby-mobile-sheet__shelf {
+  display: none;
 }
 
 .orby-mobile-sheet__meta {
@@ -792,23 +778,24 @@ button {
   isolation: isolate;
 }
 
-/* Frosted shelf — blur controls scrolling underneath (matches dock fade) */
+/* Frosted shelf — blur controls scrolling underneath; captures touches over hidden sliders */
 .orby-mobile-sheet__shelf::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
-  pointer-events: none;
+  pointer-events: auto;
+  touch-action: pan-y;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    color-mix(in srgb, var(--orby-black) 28%, transparent) 48%,
-    color-mix(in srgb, var(--orby-black) 55%, transparent) 100%
+    color-mix(in srgb, var(--orby-black) var(--orby-mobile-shelf-fade-mid), transparent) 48%,
+    color-mix(in srgb, var(--orby-black) var(--orby-mobile-shelf-fade-end), transparent) 100%
   );
   -webkit-backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(150%);
   backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(150%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
   transition: opacity var(--orby-mobile-chrome-fade) linear;
 }
 
@@ -960,6 +947,39 @@ button {
   display: block;
 }
 
+/* Clear / off presets — empty dark sphere or card with X */
+.orby-mobile-preset--clear .orby-mobile-preset__thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--orby-black);
+  border: 1px solid color-mix(in srgb, white 14%, transparent);
+  box-shadow: inset 0 -0.35rem 0.75rem rgba(0, 0, 0, 0.35);
+}
+
+.orby-mobile-preset__clear-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, white 42%, var(--orby-black));
+}
+
+.orby-mobile-preset--clear.is-selected .orby-mobile-preset__clear-icon {
+  color: var(--orby-lime);
+}
+
+.orby-mobile-preset--clear .orby-mobile-preset__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Preset thumbs — quick fade-in when HDRI / Shader / Filter dock tab opens */
 @keyframes orby-preset-thumb-in {
   from {
@@ -1025,33 +1045,6 @@ button {
 .orby-mobile-preset.is-selected .orby-mobile-preset__name {
   color: var(--orby-lime);
   opacity: 1;
-}
-
-/* Sheet height = grabber + scroll (controls) + shelf (rail + dock gap). Shelf stays pinned. */
-.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-sheet,
-.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet,
-.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet {
-  height: var(--orby-mobile-sheet-peek-rail);
-}
-
-.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='controls'] .orby-mobile-sheet {
-  height: var(--orby-mobile-sheet-peek-settings);
-}
-
-.orby-mobile[data-hdri-backdrop='off'][data-sheet='peek'][data-active-tab='light'][data-hdri-panel='controls'] .orby-mobile-sheet {
-  height: var(--orby-mobile-sheet-peek-settings-lg);
-}
-
-.orby-mobile[data-sheet='expanded'][data-active-tab='style'] {
-  --orby-mobile-sheet-expanded: var(--orby-mobile-sheet-peek-settings-lg);
-}
-
-.orby-mobile[data-sheet='expanded'][data-active-tab='style'] .orby-mobile-sheet {
-  height: var(--orby-mobile-sheet-peek-settings-lg);
-}
-
-.orby-mobile[data-active-tab='fx'] .orby-mobile-sheet__shelf {
-  display: none;
 }
 
 /* Gap between expanding controls and the pinned preset rail */
@@ -1643,7 +1636,8 @@ button {
 
 @media (min-width: 768px) {
   .orby-mobile {
-    --orby-mobile-sheet-fx-expanded: 50svh; /* desktop preview — keep half-screen cap */
+    --orby-mobile-sheet-max: 50vh; /* desktop preview — keep half-screen cap */
+    --orby-mobile-sheet-max: 50svh;
   }
 
   .orby-mobile-sheet {

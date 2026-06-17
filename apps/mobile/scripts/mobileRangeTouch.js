@@ -1,5 +1,6 @@
 import { isPointerOnSliderThumb } from '../../../scripts/ui/sliderDefaultPaths.js';
 import { mobileHaptic } from './mobileHaptics.js';
+import { isShelfLockZone } from './mobileShelfLock.js';
 
 /** Brief thumb hold — filters scroll brush-pasts without feeling laggy. */
 const SLIDER_ARM_HOLD_MS = 80;
@@ -180,6 +181,7 @@ export function bindMobileRangeTouch({ root }) {
    */
   const armDrag = (input, id, clientX, clientY) => {
     if (dragInput) return false;
+    if (isShelfLockZone(root, clientX, clientY)) return false;
 
     const rect = input.getBoundingClientRect();
     const onTrack =

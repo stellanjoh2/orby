@@ -4,6 +4,7 @@ import {
   MOBILE_STYLE_RAIL,
   mobileAssetUrl,
   findCreativeLook,
+  isMobileClearPreset,
 } from './mobileCatalog.js';
 import {
   MOBILE_FX_SLIDER_SECTIONS,
@@ -32,6 +33,7 @@ import { mobileHaptic } from './mobileHaptics.js';
 import { bindMobileSheetDrag } from './mobileSheetDrag.js';
 import { bindMobileRangeTouch } from './mobileRangeTouch.js';
 import { bindMobileSliderFocus } from './mobileSliderFocus.js';
+import { bindMobileShelfLock } from './mobileShelfLock.js';
 import { MobileHsvColorPicker } from './MobileHsvColorPicker.js';
 import { ORBY_BLACK } from '../../../scripts/constants.js';
 
@@ -318,6 +320,25 @@ export class MobileShell {
     btn.type = 'button';
     btn.className = 'orby-mobile-preset';
     btn.setAttribute(this._dataAttrForTab(tab), item.id);
+
+    if (isMobileClearPreset(item.id)) {
+      const clearLabel =
+        tab === 'style' ? 'Clear shader' : tab === 'filters' ? 'Clear filter' : item.label;
+      btn.classList.add('orby-mobile-preset--clear');
+      btn.setAttribute('aria-label', clearLabel);
+      btn.innerHTML = `
+        <span class="orby-mobile-preset__thumb">
+          <span class="orby-mobile-preset__clear-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </span>
+        </span>
+        <span class="orby-mobile-preset__name">${item.label}</span>
+      `;
+      return btn;
+    }
+
     btn.setAttribute('aria-label', item.label);
     btn.innerHTML = `
       <span class="orby-mobile-preset__thumb">
@@ -508,19 +529,6 @@ export class MobileShell {
     if (resetBtn instanceof HTMLButtonElement) {
       resetBtn.disabled = !styleActive;
     }
-
-    this._syncStyleSheetState();
-  }
-
-  _syncStyleSheetState() {
-    if (this.activeTab !== 'style' || this.sheetState === 'closed') return;
-    const hasLook =
-      this._engagedPresetTabs.has('style') &&
-      this.selection.style.id !== 'none' &&
-      this.selection.style.id !== 'standard';
-    const next = /** @type {SheetState} */ (hasLook ? 'expanded' : 'peek');
-    if (this.sheetState === next) return;
-    this.setSheetState(next);
   }
 
   _syncHdriPanelUi() {
@@ -530,16 +538,6 @@ export class MobileShell {
       this._hdriControlsEl.hidden = !engaged;
       this._hdriControlsEl.classList.toggle('is-visible', engaged);
     }
-    this._syncHdriSheetState();
-  }
-
-  _syncHdriSheetState() {
-    if (this.activeTab !== 'light' || this.sheetState === 'closed') return;
-    if (!this._engagedPresetTabs.has('light')) {
-      if (this.sheetState !== 'peek') this.setSheetState('peek');
-      return;
-    }
-    if (this.sheetState !== 'peek') this.setSheetState('peek');
   }
 
   /** @param {HTMLInputElement} slider */
@@ -747,6 +745,12 @@ export class MobileShell {
   _bindChrome() {
     this._sliderFocus = bindMobileSliderFocus({ root: this.root });
     this._rangeTouch = bindMobileRangeTouch({ root: this.root });
+
+    const shelf = this.root.querySelector('.orby-mobile-sheet__shelf');
+    const sheetScroll = this.root.querySelector('.orby-mobile-sheet__scroll');
+    if (shelf instanceof HTMLElement && sheetScroll instanceof HTMLElement) {
+      bindMobileShelfLock({ root: this.root, shelf, scroll: sheetScroll });
+    }
 
     if (this.sheet) {
       this._sheetDrag = bindMobileSheetDrag({
@@ -1134,7 +1138,6 @@ export class MobileShell {
     if (this._bgGradientCenterYValue instanceof HTMLElement) {
       this._bgGradientCenterYValue.textContent = `${Math.round(gradient.centerY)}%`;
     }
-    this._syncHdriSheetState();
   }
 
   _bindHdriControls() {
@@ -1217,40 +1220,29 @@ export class MobileShell {
 
     this.setActiveTab(tab);
     this._resetSheetScroll(tab);
-    if (tab === 'fx') {
-      this.setSheetState('expanded');
-      return;
-    }
+
     if (tab === 'light') {
       this._syncHdriSelectionFromScene();
+      this._engagedPresetTabs.add('light');
       this._syncHdriControlsUi();
-      this._syncHdriPanelUi();
       this._syncHdriBackgroundUi();
       this._syncSelectionUi();
-      this.setSheetState('peek');
-      this._playPresetRailEnter('light');
-      requestAnimationFrame(() => {
-        this._syncPresetRailScroll('light');
-      });
-      return;
-    }
-    if (tab === 'style') {
+      this._syncHdriPanelUi();
+    } else if (tab === 'style') {
       this._syncStyleControlsUi();
       this._syncSelectionUi();
-      this.setSheetState('peek');
-      this._syncStyleSheetState();
-      this._playPresetRailEnter('style');
-      requestAnimationFrame(() => {
-        this._syncPresetRailScroll('style');
-      });
-      return;
+    } else if (tab === 'filters') {
+      this._syncSelectionUi();
     }
-    this._syncSelectionUi();
-    this.setSheetState('peek');
-    this._playPresetRailEnter('filters');
-    requestAnimationFrame(() => {
-      this._syncPresetRailScroll(/** @type {PresetTab} */ (tab));
-    });
+
+    this.setSheetState('expanded');
+
+    if (tab === 'light' || tab === 'style' || tab === 'filters') {
+      this._playPresetRailEnter(/** @type {PresetTab} */ (tab));
+      requestAnimationFrame(() => {
+        this._syncPresetRailScroll(/** @type {PresetTab} */ (tab));
+      });
+    }
   }
 
   /** @param {PresetTab} tab */

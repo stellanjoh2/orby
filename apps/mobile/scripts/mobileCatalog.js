@@ -22,6 +22,11 @@ export const MOBILE_STYLE_NONE = {
   thumb: 'images/look-filters/none.png',
 };
 
+/** @param {string} id */
+export function isMobileClearPreset(id) {
+  return id === 'none' || id === 'standard';
+}
+
 /** Desktop Shader Lab presets not shipped on mobile (see MOBILE_SHADER_PRESETS_CUT). */
 export const MOBILE_SHADER_PRESETS_CUT = [
   { id: 'flow-field', label: 'Flow Field' },
