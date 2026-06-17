@@ -180,6 +180,9 @@ function readComposerOutputPixels(renderer, composer, fallbackWidth, fallbackHei
     const pixels = new Uint8Array(width * height * 4);
     renderer.readRenderTargetPixels(byteRT, 0, 0, width, height, pixels);
     return { pixels, width, height };
+  } catch (err) {
+    const detail = `${width}x${height}`;
+    throw new Error(`Pixel readback failed (${detail}): ${err?.message || err}`);
   } finally {
     byteRT.dispose();
   }
@@ -262,16 +265,60 @@ function waitFrames(count = 2) {
 }
 
 /**
+ * @param {string} dataUrl
+ * @returns {Blob | null}
+ */
+function dataUrlToJpegBlob(dataUrl) {
+  const comma = dataUrl.indexOf(',');
+  if (comma < 0) return null;
+  const meta = dataUrl.slice(0, comma);
+  const body = dataUrl.slice(comma + 1);
+  const isBase64 = meta.includes(';base64');
+  const bytes = isBase64 ? atob(body) : decodeURIComponent(body);
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i += 1) {
+    out[i] = bytes.charCodeAt(i);
+  }
+  const mime = meta.match(/^data:([^;,]+)/)?.[1] || 'image/jpeg';
+  return new Blob([out], { type: mime });
+}
+
+/**
+ * iOS Safari sometimes never calls the toBlob callback under memory pressure — fall back to toDataURL.
  * @param {HTMLCanvasElement} canvas
  * @param {number} [quality]
  * @returns {Promise<Blob>}
  */
 function encodeMobileJpeg(canvas, quality = MOBILE_JPEG_QUALITY) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (blob, err) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      if (blob) resolve(blob);
+      else reject(err ?? new Error('JPEG encode failed'));
+    };
+
+    const timer = window.setTimeout(() => {
+      try {
+        finish(dataUrlToJpegBlob(canvas.toDataURL('image/jpeg', quality)));
+      } catch (err) {
+        finish(null, err instanceof Error ? err : new Error('JPEG encode timed out'));
+      }
+    }, 12_000);
+
     canvas.toBlob(
       (blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('JPEG encode failed'));
+        if (blob) {
+          finish(blob);
+          return;
+        }
+        try {
+          finish(dataUrlToJpegBlob(canvas.toDataURL('image/jpeg', quality)));
+        } catch (err) {
+          finish(null, err instanceof Error ? err : new Error('JPEG encode failed'));
+        }
       },
       'image/jpeg',
       quality,
@@ -307,11 +354,17 @@ async function restoreMobilePreviewFrame(mobileScene, renderer, origSize, origPi
 
 /**
  * @param {import('./MobileScene.js').MobileScene} mobileScene
- * @returns {Promise<'shared' | 'downloaded' | 'no-model' | 'failed'>}
+ * @returns {Promise<'shared' | 'downloaded' | 'no-model' | 'busy' | 'failed'>}
  */
 export async function exportMobileSceneJpeg(mobileScene) {
-  if (!mobileScene?.currentModel) return 'no-model';
-  if (mobileScene._exportInProgress) return 'failed';
+  if (!mobileScene?.currentModel) {
+    traceMobileExport('skipped', { reason: 'no-model' });
+    return 'no-model';
+  }
+  if (mobileScene._exportInProgress) {
+    traceMobileExport('skipped', { reason: 'in-progress' });
+    return 'busy';
+  }
 
   mobileScene._exportInProgress = true;
   const { renderer, camera, post, mount } = mobileScene;

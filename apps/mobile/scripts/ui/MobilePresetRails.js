@@ -102,7 +102,7 @@ export class MobilePresetRails {
   }
 
   syncSelectionUi() {
-    const { root, selection, engagedPresetTabs } = this.ctx;
+    const { root, selection } = this.ctx;
     for (const tab of /** @type {const} */ (['light', 'style', 'filters'])) {
       const attr = this._dataAttrForTab(tab);
       const id = selection[tab].id;
@@ -182,10 +182,9 @@ export class MobilePresetRails {
     return 'data-filter';
   }
 
-  /** @param {PresetTab} tab */
+  /** Whether the rail should highlight the current scene selection (green ring + dock thumb). */
   _shouldShowRailSelection(tab) {
-    const { selection, engagedPresetTabs } = this.ctx;
-    if (!engagedPresetTabs.has(tab)) return false;
+    const { selection } = this.ctx;
     const id = selection[tab].id;
     if (tab === 'style' && (id === 'none' || id === 'standard')) return false;
     if (tab === 'filters' && id === 'none') return false;

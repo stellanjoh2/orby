@@ -46,11 +46,39 @@ export function markMobileDebugLog(name, data = null) {
  * @param {import('./MobileScene.js').MobileScene | null | undefined} scene
  * @returns {Record<string, string>}
  */
+function formatLastExportTrace(raw, sessionStartedAt) {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const phase = parsed?.phase ?? 'unknown';
+    const parts = [`${phase}`];
+    if (parsed?.result) parts.push(String(parsed.result));
+    if (parsed?.reason) parts.push(String(parsed.reason));
+    if (parsed?.message) parts.push(String(parsed.message));
+    if (typeof parsed?.t === 'number') {
+      const ageMs = Date.now() - parsed.t;
+      const ageMin = Math.max(0, Math.round(ageMs / 60_000));
+      parts.push(`${ageMin}m ago`);
+      if (sessionStartedAt) {
+        const sessionStartMs = Date.parse(sessionStartedAt);
+        if (Number.isFinite(sessionStartMs) && parsed.t < sessionStartMs) {
+          parts.push('STALE (before this session)');
+        }
+      }
+    }
+    return parts.join(' · ');
+  } catch {
+    return raw;
+  }
+}
+
 export function buildMobileDebugSceneExtra(scene) {
   const extra = {};
+  const sessionStartedAt = window.__orbyMobileDebugLog?._state?.startedAt ?? null;
   try {
     const raw = localStorage.getItem('orby_mobile_last_export');
-    if (raw) extra.lastExport = raw;
+    const formatted = formatLastExportTrace(raw, sessionStartedAt);
+    if (formatted) extra.lastExport = formatted;
   } catch {
     /* ignore */
   }

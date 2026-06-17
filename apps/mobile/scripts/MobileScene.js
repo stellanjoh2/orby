@@ -13,6 +13,7 @@ import { EnvironmentController } from '../../../scripts/render/EnvironmentContro
 import { BackgroundController } from '../../../scripts/render/BackgroundController.js';
 import { BackgroundGradientController } from '../../../scripts/render/backgroundGradient/BackgroundGradientController.js';
 import { APP_BACKGROUND } from '../../../scripts/constants.js';
+import { exportMobileSceneJpeg } from './mobileExportImage.js';
 import { MobilePost } from './MobilePost.js';
 import {
   configureMobileGltfLoader,
@@ -171,6 +172,8 @@ export class MobileScene {
     /** @type {string | null} */
     this._currentFileName = null;
     this._exportInProgress = false;
+    /** @type {Promise<'shared' | 'downloaded' | 'no-model' | 'busy' | 'failed'> | null} */
+    this._exportFlight = null;
     this._autoRotateEnabled = false;
 
     /** @type {(() => void) | null} */
@@ -630,9 +633,13 @@ export class MobileScene {
     };
   }
 
-  /** @returns {Promise<'shared' | 'downloaded' | 'no-model' | 'failed'>} */
-  async exportImage() {
-    const { exportMobileSceneJpeg } = await import('./mobileExportImage.js');
-    return exportMobileSceneJpeg(this);
+  /** @returns {Promise<'shared' | 'downloaded' | 'no-model' | 'busy' | 'failed'>} */
+  exportImage() {
+    if (!this._exportFlight) {
+      this._exportFlight = exportMobileSceneJpeg(this).finally(() => {
+        this._exportFlight = null;
+      });
+    }
+    return this._exportFlight;
   }
 }

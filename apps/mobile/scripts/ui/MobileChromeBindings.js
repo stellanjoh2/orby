@@ -271,13 +271,16 @@ export class MobileChromeBindings {
             showToast('Image saved');
           } else if (result === 'no-model') {
             showToast('Load a model first');
+          } else if (result === 'busy') {
+            /* same export already running — spinner stays on the first tap */
           } else {
-            showToast('Export failed');
+            showToast('Export failed — copy debug log');
           }
         },
         (err) => {
           if (err?.name === 'AbortError') return;
-          showToast('Export failed');
+          console.error('[Orby Mobile] Export rejected', err);
+          showToast('Export failed — copy debug log');
         },
       ).finally(() => {
         if (this._exportBtn instanceof HTMLElement) {
