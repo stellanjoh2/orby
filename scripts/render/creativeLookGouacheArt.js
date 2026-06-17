@@ -3,14 +3,12 @@ import {
   CREATIVE_LOOK_RESOLVE_STROKE_INK_GLSL,
 } from './creativeLookInkArt.js';
 import {
-  SKETCH_INK_DILATE,
   SKETCH_INK_WOBBLE,
   SKETCH_OUTLINE_ANIM_AMP,
   SKETCH_OUTLINE_ANIM_FPS,
   SKETCH_OUTLINE_REFERENCE_PIXEL_RATIO,
   SKETCH_PAPER_RGB,
   SKETCH_SHADOW_BLACK_RGB,
-  SKETCH_SILHOUETTE_EDGE,
   SKETCH_VIEW_RIM_POWER,
   SKETCH_VIEW_RIM_POST,
 } from './creativeLookSketchArt.js';
@@ -44,13 +42,41 @@ export const GOUACHE_INK_EDGE_HIGH = 0.3;
 export const GOUACHE_INK_STRENGTH = 1.38;
 export const GOUACHE_INK_WOBBLE = SKETCH_INK_WOBBLE * 0.85;
 
+/** Shader Lab Scale bounds — matches global slider (0.02–5). */
+export const GOUACHE_PATTERN_SCALE_MIN = 0.02;
+export const GOUACHE_PATTERN_SCALE_MAX = 5;
+
+/** Post ink width @ min / max Scale (Sketch Stroke Width floor is 0.2). */
+export const GOUACHE_INK_WIDTH_MIN = 0.18;
+export const GOUACHE_INK_WIDTH_MAX = 2.2;
+
+/** Edge dilation — thinner than Sketch so min Scale can read as fine pen. */
+export const GOUACHE_INK_DILATE_MIN = 0.72;
+export const GOUACHE_INK_DILATE_MAX = 1.42;
+
+/** Silhouette ink boost — lighter than Sketch so outer contour stays delicate. */
+export const GOUACHE_SILHOUETTE_EDGE = 1.22;
+
+/** @param {number | undefined} patternScale */
+export function normalizeCreativeLookGouachePatternScale(patternScale) {
+  const ps = Number(patternScale);
+  if (!Number.isFinite(ps)) return 1;
+  return Math.max(GOUACHE_PATTERN_SCALE_MIN, Math.min(GOUACHE_PATTERN_SCALE_MAX, ps));
+}
+
+/** 0–1 across Shader Lab Scale slider. */
+export function creativeLookGouacheScaleT(patternScale) {
+  const ps = normalizeCreativeLookGouachePatternScale(patternScale);
+  return (ps - GOUACHE_PATTERN_SCALE_MIN)
+    / (GOUACHE_PATTERN_SCALE_MAX - GOUACHE_PATTERN_SCALE_MIN);
+}
+
 /**
  * Clip-space wobble divisor — gentler than Watercolour; Scale still widens blocks & ink.
  * @param {number} patternScale
  */
 export function creativeGouacheWobbleScale(patternScale) {
-  const ps = Math.max(0.1, Math.min(5, Number(patternScale) || 1));
-  const t = (ps - 0.1) / 4.9;
+  const t = creativeLookGouacheScaleT(patternScale);
   return 240 - t * 80;
 }
 
@@ -59,8 +85,7 @@ export function creativeGouacheWobbleScale(patternScale) {
  * @param {number} patternScale
  */
 export function creativeGouacheVertexDrift(patternScale) {
-  const ps = Math.max(0.1, Math.min(5, Number(patternScale) || 1));
-  const t = (ps - 0.1) / 4.9;
+  const t = creativeLookGouacheScaleT(patternScale);
   return 0.32 + t * 0.38;
 }
 
@@ -69,22 +94,25 @@ export function creativeGouacheVertexDrift(patternScale) {
  * @param {number} patternScale
  */
 export function creativeGouacheMergeFactor(patternScale) {
-  const ps = Math.max(0.1, Math.min(5, Number(patternScale) || 1));
-  const t = (ps - 0.1) / 4.9;
+  const t = creativeLookGouacheScaleT(patternScale);
   return 1.0 + t * 0.72;
 }
 
 /** @param {number} patternScale */
 export function creativeLookGouacheInkWidth(patternScale) {
-  const ps = Math.max(0.1, Math.min(5, Number(patternScale) || 1));
-  const t = (ps - 0.1) / 4.9;
-  return 0.75 + t * 1.45;
+  const t = creativeLookGouacheScaleT(patternScale);
+  return GOUACHE_INK_WIDTH_MIN + t * (GOUACHE_INK_WIDTH_MAX - GOUACHE_INK_WIDTH_MIN);
+}
+
+/** @param {number} patternScale */
+export function creativeLookGouacheInkDilate(patternScale) {
+  const t = creativeLookGouacheScaleT(patternScale);
+  return GOUACHE_INK_DILATE_MIN + t * (GOUACHE_INK_DILATE_MAX - GOUACHE_INK_DILATE_MIN);
 }
 
 /** @param {number} patternScale */
 export function creativeLookGouacheGrainScale(patternScale) {
-  const ps = Math.max(0.1, Math.min(5, Number(patternScale) || 1));
-  const t = (ps - 0.1) / 4.9;
+  const t = creativeLookGouacheScaleT(patternScale);
   return 0.85 + t * 1.35;
 }
 
@@ -158,12 +186,20 @@ float silhouetteEdge(sampler2D tex, vec2 uv, vec2 texel) {
   return length(vec2(px - nx, py - ny));
 }
 
+float gouacheInkDilate() {
+  return mix(
+    ${GOUACHE_INK_DILATE_MIN.toFixed(2)},
+    ${GOUACHE_INK_DILATE_MAX.toFixed(2)},
+    smoothstep(${GOUACHE_INK_WIDTH_MIN.toFixed(2)}, 1.15, uInkWidthScale)
+  );
+}
+
 float silhouetteEdgeThick(sampler2D tex, vec2 uv, vec2 texel) {
   vec2 inkTexel = texel * uOutlinePxScale * uInkWidthScale;
   float e = silhouetteEdge(tex, uv, inkTexel);
-  float dilate = ${SKETCH_INK_DILATE.toFixed(2)};
+  float dilate = gouacheInkDilate();
   vec2 o1 = inkTexel * dilate;
-  vec2 o2 = inkTexel * dilate * 1.55;
+  vec2 o2 = inkTexel * dilate * 1.45;
   e = max(e, silhouetteEdge(tex, uv + vec2(o1.x, 0.0), texel));
   e = max(e, silhouetteEdge(tex, uv - vec2(o1.x, 0.0), texel));
   e = max(e, silhouetteEdge(tex, uv + vec2(0.0, o1.y), texel));
@@ -200,9 +236,9 @@ float edgeStrength(sampler2D tex, vec2 uv, vec2 texel) {
 float edgeStrengthThick(sampler2D tex, vec2 uv, vec2 texel) {
   vec2 inkTexel = texel * uOutlinePxScale * uInkWidthScale;
   float e = edgeStrength(tex, uv, inkTexel);
-  float dilate = ${SKETCH_INK_DILATE.toFixed(2)};
+  float dilate = gouacheInkDilate();
   vec2 o1 = inkTexel * dilate;
-  vec2 o2 = inkTexel * dilate * 1.55;
+  vec2 o2 = inkTexel * dilate * 1.45;
   e = max(e, edgeStrength(tex, uv + vec2(o1.x, 0.0), texel));
   e = max(e, edgeStrength(tex, uv - vec2(o1.x, 0.0), texel));
   e = max(e, edgeStrength(tex, uv + vec2(0.0, o1.y), texel));
@@ -319,7 +355,7 @@ const float INK_STRENGTH = ${GOUACHE_INK_STRENGTH.toFixed(4)};
 const float POST_BANDS = ${GOUACHE_POST_BANDS.toFixed(1)};
 const float POST_BAND_INK = ${GOUACHE_POST_BAND_INK.toFixed(4)};
 const float CHALK = ${GOUACHE_MATTTE_CHALK.toFixed(4)};
-const float SIL_EDGE = ${SKETCH_SILHOUETTE_EDGE.toFixed(4)};
+const float SIL_EDGE = ${GOUACHE_SILHOUETTE_EDGE.toFixed(4)};
 const float VIEW_RIM = ${SKETCH_VIEW_RIM_POST.toFixed(4)};
 const float OVERLAP = ${GOUACHE_OVERLAP_DARKEN.toFixed(4)};
 

@@ -116,6 +116,8 @@ import {
 } from './creativeLookSketchColourArt.js';
 import {
   GOUACHE_FRAGMENT,
+  GOUACHE_PATTERN_SCALE_MIN,
+  GOUACHE_PATTERN_SCALE_MAX,
   creativeGouacheVertexDrift,
   creativeGouacheWobbleScale,
 } from './creativeLookGouacheArt.js';
@@ -627,6 +629,9 @@ export function creativeLookPatternScaleBounds(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'sketch' || id === 'sketch-colour') {
     return { min: SKETCH_PATTERN_SCALE_MIN, max: SKETCH_PATTERN_SCALE_MAX };
+  }
+  if (id === 'gouache') {
+    return { min: GOUACHE_PATTERN_SCALE_MIN, max: GOUACHE_PATTERN_SCALE_MAX };
   }
   if (isDitherPixelCreativeLookPreset(id)) {
     if (id === 'dither-raster') {
