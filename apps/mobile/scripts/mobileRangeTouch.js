@@ -49,7 +49,7 @@ function scrollContainerFor(input) {
       '.orby-mobile-fx-controls, .orby-mobile-panel[data-panel="light"], .orby-mobile-panel--style'
     )
   ) {
-    return input.closest('.orby-mobile-sheet__body');
+    return input.closest('.orby-mobile-sheet__scroll');
   }
   return null;
 }

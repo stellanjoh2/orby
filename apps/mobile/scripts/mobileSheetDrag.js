@@ -23,7 +23,7 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
   const getActiveScroller = () => {
     const tab = root.dataset.activeTab;
     if (tab === 'fx' || tab === 'light' || tab === 'style' || tab === 'filters') {
-      return root.querySelector('.orby-mobile-sheet__body');
+      return root.querySelector('.orby-mobile-sheet__scroll');
     }
     return null;
   };

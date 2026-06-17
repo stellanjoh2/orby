@@ -239,6 +239,7 @@
       </main>
 
       <nav class="orby-mobile-dock" aria-label="Actions">
+        <span class="orby-mobile-dock__indicator" aria-hidden="true" hidden></span>
         <button type="button" class="orby-mobile-dock__btn" data-open-tab="light" aria-label="HDRI" aria-expanded="false">
           <span class="orby-mobile-dock__thumb"><img data-dock-thumb src="/assets/images/hdri-thumbnail-beach.png" alt="" width="34" height="34" /></span>
           <span>Hdri</span>
@@ -264,10 +265,8 @@
       <section class="orby-mobile-sheet" aria-label="Adjustments">
         <div class="orby-mobile-sheet__grabber" aria-hidden="true"></div>
         <div class="orby-mobile-sheet__body">
-          <div class="orby-mobile-panel orby-mobile-panel--presets" data-panel="light">
-            <div class="orby-mobile-preset-rail" data-rail="light">
-              <div class="orby-mobile-preset-rail__track" data-rail-track="light"></div>
-            </div>
+          <div class="orby-mobile-sheet__scroll">
+            <div class="orby-mobile-panel" data-panel="light">
             <div class="orby-mobile-hdri-controls">
               <label class="orby-mobile-fx-grade slider-line orby-mobile-hdri-controls__row">
                 <span class="orby-mobile-fx-grade__label slider-line-label">Brightness</span>
@@ -365,19 +364,23 @@
               </div>
             </div>
           </div>
-          <div class="orby-mobile-panel orby-mobile-panel--presets orby-mobile-panel--style" data-panel="style" hidden>
-            <div class="orby-mobile-preset-rail" data-rail="style">
-              <div class="orby-mobile-preset-rail__track" data-rail-track="style"></div>
-            </div>
+          <div class="orby-mobile-panel orby-mobile-panel--style" data-panel="style" hidden>
             <div class="orby-mobile-style-controls" data-style-controls hidden></div>
-          </div>
-          <div class="orby-mobile-panel orby-mobile-panel--presets" data-panel="filters" hidden>
-            <div class="orby-mobile-preset-rail" data-rail="filters">
-              <div class="orby-mobile-preset-rail__track" data-rail-track="filters"></div>
-            </div>
           </div>
           <div class="orby-mobile-panel orby-mobile-panel--adjust" data-panel="fx" hidden>
             <div class="orby-mobile-fx-controls" data-fx-controls></div>
+          </div>
+          </div>
+          <div class="orby-mobile-sheet__shelf" aria-label="Presets">
+            <div class="orby-mobile-preset-rail" data-rail="light" data-panel="light">
+              <div class="orby-mobile-preset-rail__track" data-rail-track="light"></div>
+            </div>
+            <div class="orby-mobile-preset-rail" data-rail="style" data-panel="style" hidden>
+              <div class="orby-mobile-preset-rail__track" data-rail-track="style"></div>
+            </div>
+            <div class="orby-mobile-preset-rail" data-rail="filters" data-panel="filters" hidden>
+              <div class="orby-mobile-preset-rail__track" data-rail-track="filters"></div>
+            </div>
           </div>
         </div>
       </section>

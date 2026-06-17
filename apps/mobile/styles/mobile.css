@@ -48,41 +48,35 @@
   --brand-font-headline: 'Mattone Bold', system-ui, sans-serif;
   --orby-mobile-sheet-peek: var(--orby-mobile-sheet-peek-rail);
   --orby-mobile-sheet-expanded: 50svh;
-  /* Peek tiers — sheet height = content block + dock stack (border-box includes padding-bottom) */
+  --orby-mobile-dock-h: calc(78px + env(safe-area-inset-bottom, 0px));
+  --orby-mobile-dock-bottom: 8px;
+  --orby-mobile-shelf-compact: 0.75; /* 25% tighter shelf rail chrome */
+  --orby-mobile-sheet-dock-gap: max(0px, calc(1.75rem * var(--orby-mobile-shelf-compact) - 8px)); /* labels → dock */
   --orby-mobile-dock-stack: calc(
     var(--orby-mobile-dock-bottom) + var(--orby-mobile-dock-h) + var(--orby-mobile-sheet-dock-gap)
   );
   --orby-mobile-rail-label-row: 0.875rem; /* 11px label + line-height */
-  --orby-mobile-rail-block-h: calc(
-    2px + var(--orby-mobile-preset-thumb) + var(--orby-mobile-v-gap-sm) +
-      var(--orby-mobile-rail-label-row) + var(--orby-mobile-v-gap-sm)
-  );
   --orby-mobile-sheet-grabber-zone: calc(10px + 4px + 10px); /* grabber offset + bar + clearance */
-  --orby-mobile-sheet-fx-max: 66svh;
+  --orby-mobile-sheet-fx-expanded: 60svh; /* Adjust panel — ~20% above half-screen on touch devices */
+  --orby-mobile-sheet-fx-max: 72svh;
   --orby-mobile-sheet-peek-rail: min(
-    calc(
-      var(--orby-mobile-rail-block-h) + var(--orby-mobile-dock-stack) +
-        var(--orby-mobile-sheet-grabber-zone)
-    ),
+    calc(var(--orby-mobile-sheet-grabber-zone) + var(--orby-mobile-sheet-shelf-h)),
     52svh
   );
   --orby-mobile-sheet-peek-settings: min(
     calc(
-      var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 11.5rem +
-        var(--orby-mobile-dock-stack) + var(--orby-mobile-sheet-grabber-zone)
+      var(--orby-mobile-sheet-grabber-zone) + var(--orby-mobile-rail-to-controls) + 11.5rem +
+        var(--orby-mobile-sheet-shelf-h)
     ),
     54svh
   );
   --orby-mobile-sheet-peek-settings-lg: min(
     calc(
-      var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 18rem +
-        var(--orby-mobile-dock-stack) + var(--orby-mobile-sheet-grabber-zone)
+      var(--orby-mobile-sheet-grabber-zone) + var(--orby-mobile-rail-to-controls) + 18rem +
+        var(--orby-mobile-sheet-shelf-h)
     ),
     62svh
   );
-  --orby-mobile-dock-h: calc(78px + env(safe-area-inset-bottom, 0px));
-  --orby-mobile-dock-bottom: 8px;
-  --orby-mobile-sheet-dock-gap: 1.75rem; /* 28px — shelf labels → dock */
   --orby-mobile-sheet-dock-fade-h: calc(var(--orby-mobile-dock-stack) + 0.75rem);
   --orby-mobile-dock-thumb: 37px;
   --orby-mobile-dock-btn-min-w: 72px;
@@ -99,9 +93,19 @@
   );
   /* Vertical rhythm — label row → track → next control (one token per step) */
   --orby-mobile-v-gap-sm: 0.625rem; /* 10px — tight inset */
+  --orby-mobile-rail-v-gap: calc(var(--orby-mobile-v-gap-sm) * var(--orby-mobile-shelf-compact));
+  --orby-mobile-rail-inset-top: 8px; /* shelf rail + labels — nudge down from blur edge */
+  --orby-mobile-rail-block-h: calc(
+    2px + var(--orby-mobile-preset-thumb) + var(--orby-mobile-rail-v-gap) +
+      var(--orby-mobile-rail-label-row) + var(--orby-mobile-rail-v-gap)
+  );
+  /* Shelf = preset rail + dock clearance — pinned to sheet bottom */
+  --orby-mobile-sheet-shelf-h: calc(
+    var(--orby-mobile-rail-inset-top) + var(--orby-mobile-rail-block-h) + var(--orby-mobile-dock-stack)
+  );
   --orby-mobile-v-gap: 1.125rem; /* 18px — control groups */
   --orby-mobile-v-gap-lg: 1.5rem; /* 24px — section breaks */
-  --orby-mobile-rail-to-controls: 1.625rem; /* 26px — preset rail → sliders */
+  --orby-mobile-rail-to-controls: calc(1.625rem * var(--orby-mobile-shelf-compact)); /* preset rail → sliders */
   --orby-mobile-control-col-gap: 0.75rem; /* 12px — label ↔ value / toggle internals */
   --orby-mobile-slider-touch-h: 44px; /* min tap target (Apple HIG) */
   --orby-mobile-slider-thumb: 24px;
@@ -478,9 +482,59 @@ button {
   -webkit-backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(160%);
   backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(160%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  isolation: isolate;
   transition:
     opacity var(--orby-mobile-chrome-fade) linear,
     transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dock tabs — lime sphere slides behind icons (Instagram-style) */
+.orby-mobile-dock__indicator {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  background: var(--orby-lime);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--orby-lime) 35%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  box-sizing: border-box;
+  will-change: left, top, transform, opacity;
+}
+
+.orby-mobile-dock__indicator.is-visible {
+  opacity: 1;
+}
+
+.orby-mobile-dock__indicator.is-traveling {
+  transition:
+    left 0.56s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    top 0.56s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    transform 0.56s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    opacity 0.22s ease;
+}
+
+.orby-mobile-dock__indicator.is-entering {
+  transition:
+    left 0.38s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    top 0.38s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    transform 0.38s cubic-bezier(0.94, 0.01, 0.06, 0.99),
+    opacity 0.22s ease;
+}
+
+.orby-mobile-dock__btn[data-open-tab='light'],
+.orby-mobile-dock__btn[data-open-tab='style'],
+.orby-mobile-dock__btn[data-open-tab='filters'],
+.orby-mobile-dock__btn[data-open-tab='fx'] {
+  position: relative;
+  z-index: 1;
+}
+
+.orby-mobile-dock__btn[data-open-tab='light'] .orby-mobile-dock__thumb,
+.orby-mobile-dock__btn[data-open-tab='style'] .orby-mobile-dock__thumb,
+.orby-mobile-dock__btn[data-open-tab='filters'] .orby-mobile-dock__thumb,
+.orby-mobile-dock__btn[data-open-tab='fx'] .orby-mobile-dock__icon {
+  position: relative;
+  z-index: 1;
 }
 
 .orby-mobile-dock__btn {
@@ -503,8 +557,8 @@ button {
   height: var(--orby-mobile-dock-thumb);
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid transparent;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
+  border: none;
+  background: var(--orby-black);
 }
 
 .orby-mobile-dock__icon {
@@ -538,8 +592,8 @@ button {
 
 .orby-mobile-dock__btn--fx.is-active .orby-mobile-dock__icon {
   color: var(--orby-black);
-  background: var(--orby-lime);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--orby-lime) 35%, transparent);
+  background: transparent;
+  box-shadow: none;
 }
 
 .orby-mobile-dock__btn--icon svg {
@@ -558,9 +612,9 @@ button {
   color: var(--text);
 }
 
-.orby-mobile-dock__btn.is-active .orby-mobile-dock__thumb {
-  border-color: var(--orby-lime);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--orby-lime) 30%, transparent);
+.orby-mobile-dock__btn.is-active .orby-mobile-dock__thumb,
+.orby-mobile-dock__btn.is-active .orby-mobile-dock__icon {
+  outline: none;
 }
 
 /* ── Bottom sheet — fully hidden until a dock pill opens it ── */
@@ -625,7 +679,7 @@ button {
 }
 
 .orby-mobile[data-sheet='expanded'][data-active-tab='fx'] {
-  --orby-mobile-sheet-expanded: min(50svh, var(--orby-mobile-sheet-fx-max));
+  --orby-mobile-sheet-expanded: min(var(--orby-mobile-sheet-fx-expanded), var(--orby-mobile-sheet-fx-max));
 }
 
 .orby-mobile[data-sheet='expanded'][data-active-tab='fx'] .orby-mobile-sheet {
@@ -701,10 +755,61 @@ button {
   z-index: 1;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: var(--orby-mobile-sheet-grabber-zone);
+}
+
+.orby-mobile-sheet__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  padding-bottom: var(--orby-mobile-sheet-shelf-h);
+}
+
+.orby-mobile[data-hdri-panel='controls'] .orby-mobile-sheet__scroll,
+.orby-mobile[data-sheet='expanded'][data-active-tab='style'] .orby-mobile-sheet__scroll {
+  padding-bottom: calc(var(--orby-mobile-sheet-shelf-h) + var(--orby-mobile-rail-to-controls));
+}
+
+.orby-mobile[data-active-tab='fx'] .orby-mobile-sheet__scroll {
+  padding-bottom: 0;
+}
+
+.orby-mobile-sheet__shelf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  overflow: visible;
+  padding-top: var(--orby-mobile-rail-inset-top);
+  padding-bottom: var(--orby-mobile-dock-stack);
+  isolation: isolate;
+}
+
+/* Frosted shelf — blur controls scrolling underneath (matches dock fade) */
+.orby-mobile-sheet__shelf::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--orby-black) 28%, transparent) 48%,
+    color-mix(in srgb, var(--orby-black) 55%, transparent) 100%
+  );
+  -webkit-backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(150%);
+  backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(150%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+  transition: opacity var(--orby-mobile-chrome-fade) linear;
 }
 
 /* Frosted sheet panel — opacity layer so slider-focus fades in sync with dock/chrome */
@@ -754,7 +859,6 @@ button {
 }
 
 .orby-mobile-panel {
-  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -763,18 +867,14 @@ button {
   display: none !important;
 }
 
-/* ── Preset rails (free horizontal scroll, tap to select) ── */
-.orby-mobile-panel--presets {
-  justify-content: flex-start;
+.orby-mobile-preset-rail[hidden] {
+  display: none !important;
 }
 
-.orby-mobile[data-sheet='peek'] .orby-mobile-panel--presets,
-.orby-mobile[data-sheet='expanded'] .orby-mobile-panel--presets {
-  padding-bottom: var(--orby-mobile-dock-stack);
-}
-
+/* ── Preset rails (horizontal scroll, tap to select) ── */
 .orby-mobile-preset-rail {
   position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
@@ -801,7 +901,7 @@ button {
   align-items: center;
   gap: var(--orby-mobile-preset-gap);
   width: 100%;
-  padding: 2px var(--orby-mobile-rail-center-pad) var(--orby-mobile-v-gap-sm);
+  padding: 2px var(--orby-mobile-rail-center-pad) var(--orby-mobile-rail-v-gap);
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
@@ -817,12 +917,11 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--orby-mobile-v-gap-sm);
+  gap: var(--orby-mobile-rail-v-gap);
   padding: 0;
   border: none;
   background: none;
   color: var(--text-dim);
-  opacity: 0.58;
   transform: scale(0.9);
   transform-origin: center center;
   transition:
@@ -833,17 +932,16 @@ button {
 
 .orby-mobile-preset__thumb {
   position: relative;
+  z-index: 1;
   display: block;
   width: var(--orby-mobile-preset-thumb);
   height: var(--orby-mobile-preset-thumb);
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid transparent;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
-  transition:
-    border-color 0.22s ease,
-    box-shadow 0.22s ease,
-    transform 0.22s ease;
+  border: none;
+  background: var(--orby-black);
+  outline: none;
+  transition: outline-color 0.22s ease, transform 0.22s ease;
 }
 
 .orby-mobile-preset[data-hdri] .orby-mobile-preset__thumb,
@@ -862,6 +960,34 @@ button {
   display: block;
 }
 
+/* Preset thumbs — quick fade-in when HDRI / Shader / Filter dock tab opens */
+@keyframes orby-preset-thumb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset__thumb {
+  animation: orby-preset-thumb-in 0.24s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(1) .orby-mobile-preset__thumb { animation-delay: 0ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(2) .orby-mobile-preset__thumb { animation-delay: 18ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(3) .orby-mobile-preset__thumb { animation-delay: 36ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(4) .orby-mobile-preset__thumb { animation-delay: 54ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(5) .orby-mobile-preset__thumb { animation-delay: 72ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(6) .orby-mobile-preset__thumb { animation-delay: 90ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(7) .orby-mobile-preset__thumb { animation-delay: 108ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(8) .orby-mobile-preset__thumb { animation-delay: 126ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(9) .orby-mobile-preset__thumb { animation-delay: 144ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(10) .orby-mobile-preset__thumb { animation-delay: 162ms; }
+.orby-mobile-preset-rail.is-entering .orby-mobile-preset:nth-child(n + 11) .orby-mobile-preset__thumb { animation-delay: 180ms; }
+
 .orby-mobile-preset__name {
   max-width: var(--orby-mobile-preset-w);
   font-size: var(--orby-mobile-rail-label-size);
@@ -878,16 +1004,22 @@ button {
     color 0.22s ease;
 }
 
+.orby-mobile-preset:not(.is-selected) .orby-mobile-preset__thumb img {
+  filter: brightness(0.82) saturate(0.88);
+}
+
 .orby-mobile-preset.is-selected {
   color: var(--text);
-  opacity: 1;
   transform: scale(1);
 }
 
 .orby-mobile-preset.is-selected .orby-mobile-preset__thumb {
-  border-color: var(--orby-lime);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--orby-lime) 35%, transparent);
-  transform: scale(1.04);
+  outline: 2px solid var(--orby-lime);
+  outline-offset: 0;
+}
+
+.orby-mobile-preset.is-selected .orby-mobile-preset__thumb img {
+  filter: none;
 }
 
 .orby-mobile-preset.is-selected .orby-mobile-preset__name {
@@ -895,35 +1027,11 @@ button {
   opacity: 1;
 }
 
+/* Sheet height = grabber + scroll (controls) + shelf (rail + dock gap). Shelf stays pinned. */
 .orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-sheet,
-.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet,
-.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet {
+.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet,
+.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet {
   height: var(--orby-mobile-sheet-peek-rail);
-}
-
-/* Peek preset-only tabs — center thumbs + labels in the gray shelf above the dock */
-.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet__body,
-.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-sheet__body,
-.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet__body {
-  display: flex;
-  flex-direction: column;
-  overflow-y: hidden;
-  padding-top: var(--orby-mobile-sheet-grabber-zone);
-}
-
-.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-panel--presets,
-.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-panel--presets,
-.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-panel--presets {
-  flex: 1;
-  min-height: 0;
-}
-
-.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-preset-rail,
-.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-preset-rail,
-.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-preset-rail {
-  flex: 1;
-  align-items: center;
-  min-height: 0;
 }
 
 .orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='controls'] .orby-mobile-sheet {
@@ -942,11 +1050,21 @@ button {
   height: var(--orby-mobile-sheet-peek-settings-lg);
 }
 
+.orby-mobile[data-active-tab='fx'] .orby-mobile-sheet__shelf {
+  display: none;
+}
+
+/* Gap between expanding controls and the pinned preset rail */
+.orby-mobile[data-hdri-panel='controls'] .orby-mobile-sheet__shelf,
+.orby-mobile[data-sheet='expanded'][data-active-tab='style'] .orby-mobile-sheet__shelf {
+  padding-top: calc(var(--orby-mobile-rail-inset-top) + var(--orby-mobile-rail-to-controls));
+}
+
 .orby-mobile-preset:active {
   transform: scale(0.97);
 }
 
-/* HDRI + shader panels — sheet body scrolls rail + sliders together */
+/* HDRI + shader controls — scroll above the pinned preset shelf */
 .orby-mobile-panel[data-panel='light'],
 .orby-mobile-panel--style {
   min-height: 0;
@@ -955,7 +1073,11 @@ button {
 
 .orby-mobile-hdri-controls {
   flex: 0 0 auto;
-  padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
+  padding: 0 var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap);
+}
+
+.orby-mobile-hdri-controls .orby-mobile-fx-toggle:last-child {
+  margin-bottom: 0;
 }
 
 .orby-mobile-hdri-controls:not(.is-visible) {
@@ -970,7 +1092,11 @@ button {
 /* Shader Lab controls (below style preset rail) */
 .orby-mobile-style-controls {
   flex: 0 0 auto;
-  padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap-sm);
+  padding: 0 var(--orby-mobile-panel-pad-x) var(--orby-mobile-v-gap);
+}
+
+.orby-mobile-style-controls .orby-mobile-fx-toggle:last-child {
+  margin-bottom: 0;
 }
 
 .orby-mobile-style-controls:not(.is-visible) {
@@ -1181,7 +1307,8 @@ button {
 .orby-mobile-gradient-stop,
 .orby-mobile-seg,
 .orby-mobile-sheet::before,
-.orby-mobile-sheet::after {
+.orby-mobile-sheet::after,
+.orby-mobile-sheet__shelf::before {
   transition: opacity var(--orby-mobile-chrome-fade) linear;
 }
 
@@ -1203,7 +1330,8 @@ button {
 .orby-mobile[data-slider-focus] .orby-mobile-gradient-stop,
 .orby-mobile[data-slider-focus] .orby-mobile-seg,
 .orby-mobile[data-slider-focus] .orby-mobile-sheet::before,
-.orby-mobile[data-slider-focus] .orby-mobile-sheet::after {
+.orby-mobile[data-slider-focus] .orby-mobile-sheet::after,
+.orby-mobile[data-slider-focus] .orby-mobile-sheet__shelf::before {
   opacity: 0 !important;
   pointer-events: none;
 }
@@ -1266,6 +1394,7 @@ button {
   font-size: var(--orby-mobile-type-size);
   line-height: 1.2;
   color: var(--text);
+  overflow: visible;
 }
 
 .orby-mobile-fx-toggle__label {
@@ -1287,6 +1416,7 @@ button {
   height: var(--toggle-track-height);
   margin: 0;
   cursor: pointer;
+  overflow: visible;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1512,6 +1642,10 @@ button {
 }
 
 @media (min-width: 768px) {
+  .orby-mobile {
+    --orby-mobile-sheet-fx-expanded: 50svh; /* desktop preview — keep half-screen cap */
+  }
+
   .orby-mobile-sheet {
     left: 50%;
     right: auto;
@@ -1555,6 +1689,7 @@ button {
   .orby-mobile-scrim,
   .orby-mobile-export-btn,
   .orby-mobile-debug-menu,
+  .orby-mobile-dock__indicator,
   .orby-mobile-preset-rail,
   .orby-mobile-fx-grade,
   .orby-mobile-fx-toggle,
@@ -1565,6 +1700,12 @@ button {
     transition: none;
   }
 
+  .orby-mobile-preset-rail.is-entering .orby-mobile-preset__thumb {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
   .orby-mobile-dock,
   .orby-mobile-sheet,
   .orby-mobile-toast {
@@ -1573,7 +1714,8 @@ button {
   }
 
   .orby-mobile[data-sheet='peek'] .orby-mobile-sheet::after,
-  .orby-mobile[data-sheet='expanded'] .orby-mobile-sheet::after {
+  .orby-mobile[data-sheet='expanded'] .orby-mobile-sheet::after,
+  .orby-mobile-sheet__shelf::before {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: linear-gradient(

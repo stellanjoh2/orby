@@ -60,6 +60,10 @@ export class MobileShell {
     this.sheet = root.querySelector('.orby-mobile-sheet');
     this.dock = root.querySelector('.orby-mobile-dock');
     this.toast = root.querySelector('.orby-mobile-toast');
+    /** @type {HTMLElement | null} */
+    this._dockIndicatorEl = root.querySelector('.orby-mobile-dock__indicator');
+    /** @type {MobileTab | null} */
+    this._dockIndicatorTab = null;
     this.fileInput =
       document.getElementById('orbyMobileFileInput') ??
       root.querySelector('#orbyMobileFileInput');
@@ -76,6 +80,8 @@ export class MobileShell {
     };
 
     this._toastTimer = null;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    this._presetRailEnterTimer = null;
     /** @type {Set<PresetTab>} */
     this._engagedPresetTabs = new Set();
     /** @type {HTMLElement | null} */
@@ -750,6 +756,10 @@ export class MobileShell {
       });
     }
 
+    if (this.dock instanceof HTMLElement) {
+      new ResizeObserver(() => this._syncDockIndicator(false)).observe(this.dock);
+    }
+
     this.root.querySelectorAll('[data-open-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = /** @type {MobileTab} */ (btn.getAttribute('data-open-tab'));
@@ -805,8 +815,8 @@ export class MobileShell {
     this.root.addEventListener('click', (e) => {
       const pick = e.target.closest('.orby-mobile-preset');
       if (!pick) return;
-      const panel = pick.closest('[data-panel]');
-      const tab = panel?.getAttribute('data-panel');
+      const rail = pick.closest('[data-rail]');
+      const tab = rail?.getAttribute('data-rail');
       if (tab === 'light' || tab === 'style' || tab === 'filters') {
         this._select(/** @type {PresetTab} */ (tab), pick);
         const attr = this._dataAttrForTab(/** @type {PresetTab} */ (tab));
@@ -1180,6 +1190,21 @@ export class MobileShell {
     }
   }
 
+  /** @param {PresetTab} tab */
+  _playPresetRailEnter(tab) {
+    const rail = this.root.querySelector(`[data-rail="${tab}"]`);
+    if (!(rail instanceof HTMLElement)) return;
+    clearTimeout(this._presetRailEnterTimer ?? undefined);
+    rail.classList.remove('is-entering');
+    requestAnimationFrame(() => {
+      rail.classList.add('is-entering');
+      this._presetRailEnterTimer = setTimeout(() => {
+        rail.classList.remove('is-entering');
+        this._presetRailEnterTimer = null;
+      }, 380);
+    });
+  }
+
   /** @param {MobileTab} tab */
   openSheet(tab) {
     const sameTabOpen =
@@ -1203,6 +1228,7 @@ export class MobileShell {
       this._syncHdriBackgroundUi();
       this._syncSelectionUi();
       this.setSheetState('peek');
+      this._playPresetRailEnter('light');
       requestAnimationFrame(() => {
         this._syncPresetRailScroll('light');
       });
@@ -1213,6 +1239,7 @@ export class MobileShell {
       this._syncSelectionUi();
       this.setSheetState('peek');
       this._syncStyleSheetState();
+      this._playPresetRailEnter('style');
       requestAnimationFrame(() => {
         this._syncPresetRailScroll('style');
       });
@@ -1220,6 +1247,7 @@ export class MobileShell {
     }
     this._syncSelectionUi();
     this.setSheetState('peek');
+    this._playPresetRailEnter('filters');
     requestAnimationFrame(() => {
       this._syncPresetRailScroll(/** @type {PresetTab} */ (tab));
     });
@@ -1233,8 +1261,8 @@ export class MobileShell {
 
   /** @param {MobileTab} tab */
   _resetSheetScroll(tab) {
-    const body = this.root.querySelector('.orby-mobile-sheet__body');
-    if (body instanceof HTMLElement) body.scrollTop = 0;
+    const scroll = this.root.querySelector('.orby-mobile-sheet__scroll');
+    if (scroll instanceof HTMLElement) scroll.scrollTop = 0;
   }
 
   /** @param {MobileTab} tab */
@@ -1244,16 +1272,113 @@ export class MobileShell {
     this.root.querySelectorAll('[data-panel]').forEach((panel) => {
       panel.hidden = panel.getAttribute('data-panel') !== tab;
     });
-    this._syncDockTabState();
   }
 
   _syncDockTabState() {
+    const prevIndicatorTab = this._dockIndicatorTab;
     this.root.querySelectorAll('[data-open-tab]').forEach((btn) => {
       const dockTab = btn.getAttribute('data-open-tab');
       const expanded = this.sheetState !== 'closed' && dockTab === this.activeTab;
       btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       btn.classList.toggle('is-active', expanded);
     });
+    const animateTravel =
+      this.sheetState !== 'closed' &&
+      prevIndicatorTab != null &&
+      prevIndicatorTab !== this.activeTab;
+    this._syncDockIndicator(animateTravel);
+  }
+
+  /** @param {MobileTab} tab @returns {HTMLElement | null} */
+  _dockIndicatorAnchor(tab) {
+    const btn = this.dock?.querySelector(`[data-open-tab="${tab}"]`);
+    if (!(btn instanceof HTMLElement)) return null;
+    const anchor = btn.querySelector('.orby-mobile-dock__thumb, .orby-mobile-dock__icon');
+    return anchor instanceof HTMLElement ? anchor : null;
+  }
+
+  /**
+   * @param {HTMLElement} dock
+   * @param {HTMLElement} anchor
+   */
+  _dockIndicatorPosition(dock, anchor) {
+    const dockRect = dock.getBoundingClientRect();
+    const anchorRect = anchor.getBoundingClientRect();
+    const dockStyle = getComputedStyle(dock);
+    const originX = dockRect.left + parseFloat(dockStyle.borderLeftWidth || '0');
+    const originY = dockRect.top + parseFloat(dockStyle.borderTopWidth || '0');
+    const ring = 2;
+    const anchorSize = Math.min(anchorRect.width, anchorRect.height);
+    const size = anchorSize + ring * 2;
+    const cx = anchorRect.left + anchorRect.width / 2 - originX;
+    const cy = anchorRect.top + anchorRect.height / 2 - originY;
+    return { cx, cy, size };
+  }
+
+  /** @param {boolean} [animate] */
+  _syncDockIndicator(animate = false) {
+    const indicator = this._dockIndicatorEl;
+    const dock = this.dock;
+    if (!(indicator instanceof HTMLElement) || !(dock instanceof HTMLElement)) return;
+
+    const dockTab = this.activeTab;
+    const show = this.sheetState !== 'closed';
+
+    if (!show) {
+      indicator.hidden = true;
+      indicator.classList.remove('is-visible', 'is-traveling', 'is-entering');
+      this._dockIndicatorTab = null;
+      return;
+    }
+
+    const anchor = this._dockIndicatorAnchor(dockTab);
+    if (!anchor) return;
+
+    const { cx, cy, size } = this._dockIndicatorPosition(dock, anchor);
+
+    /** @param {number} scale */
+    const applyPosition = (scale) => {
+      indicator.style.width = `${size}px`;
+      indicator.style.height = `${size}px`;
+      indicator.style.left = `${cx}px`;
+      indicator.style.top = `${cy}px`;
+      indicator.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    };
+
+    if (
+      !animate &&
+      this._dockIndicatorTab === dockTab &&
+      indicator.classList.contains('is-visible') &&
+      !indicator.hidden
+    ) {
+      applyPosition(1);
+      return;
+    }
+
+    indicator.hidden = false;
+
+    const shouldTravel =
+      animate && this._dockIndicatorTab != null && this._dockIndicatorTab !== dockTab;
+    const shouldEnter = !shouldTravel && this._dockIndicatorTab == null;
+
+    indicator.classList.remove('is-traveling', 'is-entering');
+    if (shouldTravel) {
+      indicator.classList.add('is-traveling', 'is-visible');
+      requestAnimationFrame(() => {
+        applyPosition(1);
+      });
+    } else if (shouldEnter) {
+      applyPosition(0.82);
+      indicator.classList.add('is-entering', 'is-visible');
+      requestAnimationFrame(() => {
+        applyPosition(1);
+      });
+    } else {
+      applyPosition(1);
+      indicator.classList.add('is-visible');
+    }
+
+    this._dockIndicatorTab = dockTab;
   }
 
   /** @param {SheetState} state */
