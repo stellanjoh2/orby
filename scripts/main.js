@@ -149,10 +149,6 @@ if (!isMobileLanding()) {
         });
       }
 
-      console.info(
-        '[Orby dev] Shader Lab thumbnail bake ready:\n' +
-          '  await orby.dev.bakeCreativeLookThumbnails()',
-      );
     })
     .catch((err) => {
       console.warn('[Orby dev] Thumbnail bake module failed to load', err);

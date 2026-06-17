@@ -208,21 +208,36 @@
     document.head.appendChild(link);
   }
 
+  function resolveMobileBootScript() {
+    try {
+      if (document.currentScript) return document.currentScript;
+      var scripts = document.querySelectorAll('script[src*="orbyMobileLandingBoot.js"]');
+      return scripts.length ? scripts[scripts.length - 1] : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function resolveAssetBase() {
     try {
-      var script = document.currentScript;
-      var src = script && (script.getAttribute('src') || script.src || '');
+      var script = resolveMobileBootScript();
+      var src = script && (script.src || script.getAttribute('src') || '');
       if (src) {
-        var base = src.replace(/scripts\/orbyMobileLandingBoot\.js(?:\?.*)?$/, '');
-        if (base && base !== src) return base;
+        var absoluteSrc =
+          src.indexOf('://') !== -1 || src.indexOf('//') === 0
+            ? src
+            : new URL(src, document.baseURI || location.href).href;
+        var base = absoluteSrc.replace(/scripts\/orbyMobileLandingBoot\.js(?:\?.*)?$/, '');
+        if (base && base !== absoluteSrc) return base;
       }
     } catch (e) {}
-    return './';
+    return '/';
   }
 
   function preloadMobileScrollNavStyles() {
     if (!shouldApplyMobileLandingClasses()) return;
     var base = resolveAssetBase();
+    if (base.charAt(base.length - 1) !== '/') base += '/';
     preloadMobileStylesheet(
       base + 'styles/marketing/13-scroll-nav.css',
       'data-orby-mobile-scroll-nav-css',

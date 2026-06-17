@@ -96,12 +96,29 @@ export const DEFAULT_MATERIAL_METALNESS = 0.08;
 export const DEFAULT_BACKDROP_METALNESS = 0.02;
 export const DEFAULT_BACKDROP_ROUGHNESS = 0.9;
 /** Albedo multiplier default — slightly above 1 so imports read less underexposed vs HDRI backplates. */
-export const DEFAULT_MATERIAL_BRIGHTNESS = 1.5;
+export const DEFAULT_MATERIAL_BRIGHTNESS = 1.75;
 /**
  * Peak linear RGB after brightness scale on albedo-mapped imports — keeps map × tint in HDR headroom
  * for tonemap without hard clipping that reads as “burnt” texture (desktop + mobile share MaterialController).
  */
 export const MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK = 2.5;
+
+/** Max HDRI env-map boost from Object → Material brightness in Lit / Clay (vs Textures albedo-only). */
+export const MATERIAL_BRIGHTNESS_LIT_ENV_MAX_BOOST = 2.5;
+
+/**
+ * Lit-mode IBL scale tied to brightness — shaded imports stay closer to Textures perceived level.
+ * @param {number} [brightness]
+ */
+export function materialBrightnessLitEnvMultiplier(brightness) {
+  const b = Number(brightness);
+  const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
+  const ratio = scale / DEFAULT_MATERIAL_BRIGHTNESS;
+  return Math.min(
+    MATERIAL_BRIGHTNESS_LIT_ENV_MAX_BOOST,
+    Math.max(0.5, ratio),
+  );
+}
 
 /** Neutral multiplier on import — 1.0 preserves authored glTF metalness/roughness factors. */
 export const IMPORT_MATERIAL_MR_MULTIPLIER = 1;

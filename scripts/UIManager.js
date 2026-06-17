@@ -2454,15 +2454,15 @@ export class UIManager {
     const roughLabel = this.inputs.materialRoughness
       ?.closest('.slider-line')
       ?.querySelector('span[data-tooltip]');
-    const metalTooltip = importUsesAuthoredPbr
-      ? MATERIAL_METALNESS_AUTHORED_TOOLTIP
-      : importHasMrMaps
-        ? MATERIAL_METALNESS_MR_MAP_TOOLTIP
+    const metalTooltip = importHasMrMaps
+      ? MATERIAL_METALNESS_MR_MAP_TOOLTIP
+      : importUsesAuthoredPbr
+        ? MATERIAL_METALNESS_AUTHORED_TOOLTIP
         : MATERIAL_METALNESS_TOOLTIP;
-    const roughTooltip = importUsesAuthoredPbr
-      ? MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP
-      : importHasMrMaps
-        ? MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP
+    const roughTooltip = importHasMrMaps
+      ? MATERIAL_ROUGHNESS_MR_MAP_TOOLTIP
+      : importUsesAuthoredPbr
+        ? MATERIAL_ROUGHNESS_AUTHORED_TOOLTIP
         : MATERIAL_ROUGHNESS_TOOLTIP;
     if (metalLabel) {
       metalLabel.setAttribute('data-tooltip', metalTooltip);

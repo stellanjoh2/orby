@@ -372,26 +372,6 @@ export class MobileScene {
     const mc = this.creativeLooks.materialController;
     mc.updateMaterialsEnvironment(env, intensity, this._hdriBlurriness);
     mc.syncImportGltfGlassMaterials?.(undefined, { forcePresentation: true });
-
-    // r167: per-material envMap ignores scene.environmentIntensity — envMapIntensity must match HDRI slider.
-    this.currentModel.traverse((child) => {
-      if (!child.isMesh || !child.material) return;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      for (const m of mats) {
-        if (
-          m.isMeshStandardMaterial
-          || m.isMeshPhysicalMaterial
-          || m.isMeshLambertMaterial
-          || m.isMeshPhongMaterial
-        ) {
-          m.envMap = env;
-          if ('envMapIntensity' in m) {
-            m.envMapIntensity = intensity;
-          }
-          m.needsUpdate = true;
-        }
-      }
-    });
   }
 
   /** Desktop repairRenderSurfacesAfterModelLoad parity — composer buffers + env resync. */

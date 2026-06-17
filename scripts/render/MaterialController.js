@@ -90,6 +90,7 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
   IMPORT_MATERIAL_MR_MULTIPLIER,
   MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK,
+  materialBrightnessLitEnvMultiplier,
   ORBY_BLACK,
   ORBY_LIME,
 } from '../constants.js';
@@ -282,6 +283,10 @@ export class MaterialController {
     this.shadowTintStrength = 0;
     this.shadowTintOpacity =
       stateStore?.getState()?.lightsShadowOpacity ?? DEFAULT_SHADOW_OPACITY;
+    /** @type {THREE.Texture|null} */
+    this._lastEnvTexture = null;
+    this._lastEnvIntensity = 1;
+    this._lastHdriBlurriness = 0;
     /** When enabled, replaces non-glass mesh materials with creative ShaderMaterials (restored when off). */
     this.creativeLookSettings = {
       enabled: false,
@@ -1029,7 +1034,8 @@ export class MaterialController {
 
   /**
    * Shaded mode: scale authored factors by global sliders; keep import MR maps when present.
-   * Scalar-only and mapped materials share the same multiplier semantics.
+   * Scalar-only: authored × slider. MR-mapped: authored × slider, except when both authored
+   * factors are ~0 (Sketchfab-style placeholder) — then slider is the glTF factor on the map.
    */
   _applyShadedMetalRoughness(target, importMat) {
     if (!target) return;
@@ -1042,8 +1048,17 @@ export class MaterialController {
 
     const authored = this._resolveAuthoredMetalRoughness(importMat);
     if (authored) {
-      target.metalness = THREE.MathUtils.clamp(authored.metalness * globalM, 0, 1);
-      target.roughness = THREE.MathUtils.clamp(authored.roughness * globalR, 0, 1);
+      const mapPlaceholderScalars =
+        authored.hasMrMaps &&
+        authored.metalness < 1e-6 &&
+        authored.roughness < 1e-6;
+      if (mapPlaceholderScalars) {
+        target.metalness = THREE.MathUtils.clamp(globalM, 0, 1);
+        target.roughness = THREE.MathUtils.clamp(globalR, 0, 1);
+      } else {
+        target.metalness = THREE.MathUtils.clamp(authored.metalness * globalM, 0, 1);
+        target.roughness = THREE.MathUtils.clamp(authored.roughness * globalR, 0, 1);
+      }
       if (authored.hasMrMaps && importMat) {
         if (importMat.metalnessMap && !target.metalnessMap) {
           target.metalnessMap = importMat.metalnessMap;
@@ -3151,14 +3166,16 @@ export class MaterialController {
     }
   }
 
-  /** @param {THREE.Color} color @param {THREE.Material} [importMat] */
-  _softCapTexturedBrightnessAlbedo(color, importMat) {
+  /** @param {THREE.Color} color @param {THREE.Material} [importMat] @param {number} [brightness] */
+  _softCapTexturedBrightnessAlbedo(color, importMat, brightness) {
     if (!color?.isColor || !importMat) return;
     const hasAlbedo =
       !!importMat.map?.isTexture || !!importMat.userData?.orbyFbxSlotMaps;
     if (!hasAlbedo) return;
+    const b = Number(brightness ?? this.materialSettings.brightness);
+    const scale = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
     const peak = Math.max(color.r, color.g, color.b);
-    const maxPeak = MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK;
+    const maxPeak = Math.max(MATERIAL_TEXTURED_BRIGHTNESS_HDR_PEAK, scale);
     if (peak > maxPeak) {
       color.multiplyScalar(maxPeak / peak);
     }
@@ -3289,7 +3306,7 @@ export class MaterialController {
       color.g = THREE.MathUtils.lerp(color.g, clamp(color.g), metal);
       color.b = THREE.MathUtils.lerp(color.b, clamp(color.b), metal);
     }
-    this._softCapTexturedBrightnessAlbedo(color, importMat);
+    this._softCapTexturedBrightnessAlbedo(color, importMat, scale);
     return color;
   }
 
@@ -3297,6 +3314,13 @@ export class MaterialController {
     const b = Number(brightness);
     this.materialSettings.brightness = Number.isFinite(b) ? b : DEFAULT_MATERIAL_BRIGHTNESS;
     this.updateMaterials();
+    if (this._lastEnvTexture != null) {
+      this.updateMaterialsEnvironment(
+        this._lastEnvTexture,
+        this._lastEnvIntensity,
+        this._lastHdriBlurriness,
+      );
+    }
   }
 
   setMaterialMetalness(metalness) {
@@ -4110,6 +4134,9 @@ export class MaterialController {
 
   updateMaterialsEnvironment(envTexture, intensity, hdriBlurriness = 0) {
     if (!this.currentModel) return;
+    this._lastEnvTexture = envTexture ?? null;
+    this._lastEnvIntensity = intensity;
+    this._lastHdriBlurriness = hdriBlurriness;
 
     // If we're in textures/unlit mode, skip - MeshBasicMaterial doesn't use environment maps
     if (this.currentShading === 'textures') {
@@ -4118,6 +4145,9 @@ export class MaterialController {
 
     // Clay: env map only; surface props restored after Fresnel (or immediately if Fresnel off).
     if (this.currentShading === 'clay') {
+      const litEnvMul = materialBrightnessLitEnvMultiplier(
+        this.materialSettings.brightness,
+      );
       this.currentModel.traverse((child) => {
         if (!this._isClayMesh(child)) return;
         const materials = Array.isArray(child.material)
@@ -4128,7 +4158,7 @@ export class MaterialController {
             return;
           }
           const envChanged = material.envMap !== envTexture;
-          const nextIntensity = intensity;
+          const nextIntensity = intensity * litEnvMul;
           const intChanged =
             material.envMapIntensity !== undefined &&
             material.envMapIntensity !== nextIntensity;
@@ -4158,6 +4188,9 @@ export class MaterialController {
     const glassEnvMul = Number.isFinite(Number(rawGlassRef))
       ? Math.min(4, Math.max(0, Number(rawGlassRef)))
       : 2;
+    const litEnvMul = materialBrightnessLitEnvMultiplier(
+      this.materialSettings.brightness,
+    );
     
     this.currentModel.traverse((child) => {
       if (!child.isMesh || !child.material) return;
@@ -4227,7 +4260,7 @@ export class MaterialController {
           if (material.envMapIntensity !== undefined) {
             const glassBoost = this.isWindowMesh(child) || importGltfGlass || usesTransmission;
             const userSubsurface = material.userData?.orbySubsurface === true;
-            let envMul = intensity;
+            let envMul = intensity * litEnvMul;
             if (glassBoost) {
               if (userSubsurface) {
                 // Full glass multiplier on curved organic meshes reads as chrome; keep env reflections subtle.

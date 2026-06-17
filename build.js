@@ -261,6 +261,8 @@ const MARKETING_DIST_PARTIALS = [
   '09-scroll-cue-responsive.css',
   '13-scroll-nav.css',
   '14-ultra-wide.css',
+  '15-mobile.css',
+  '15-subpage-mobile-nav.css',
 ];
 const marketingPartialsDir = join(__dirname, 'styles', 'marketing');
 if (existsSync(marketingPartialsDir)) {
