@@ -105,9 +105,6 @@ export class MobilePost {
 
     this._fxState = this._cloneFxState(MOBILE_FX_DEFAULTS);
     this._lookFilterPreset = 'none';
-    /** @type {{ state: object, preset: string } | null} */
-    this._compareRestore = null;
-    this._compareHeld = false;
     /** @type {(() => object) | null} */
     this._creativeLookSettingsGetter = null;
     this.reset();
@@ -184,31 +181,6 @@ export class MobilePost {
     this.composerLifecycle.renderComposerPass();
   }
 
-  /** @param {boolean} held — press-hold compare (neutral grade / no filter) */
-  setCompareHeld(held) {
-    if (this._compareHeld === held) return;
-    this._compareHeld = held;
-    if (held) {
-      this._compareRestore = {
-        state: this._cloneFxState(this._fxState),
-        preset: this._lookFilterPreset,
-      };
-      const neutral = mergeLookFilterState('none', MOBILE_FX_DEFAULTS, MOBILE_FX_DEFAULTS);
-      this._applyFxState(neutral);
-      return;
-    }
-    if (this._compareRestore) {
-      this._fxState = this._compareRestore.state;
-      this._lookFilterPreset = this._compareRestore.preset;
-      this._applyFxState(this._fxState);
-      this._compareRestore = null;
-    }
-  }
-
-  isCompareHeld() {
-    return this._compareHeld;
-  }
-
   /** @param {() => object} getter */
   setCreativeLookSettingsGetter(getter) {
     this._creativeLookSettingsGetter = getter;
@@ -239,7 +211,6 @@ export class MobilePost {
 
   /** @param {string} presetId */
   applyLookFilter(presetId) {
-    if (this._compareHeld) return this.getFxSnapshot();
     this._lookFilterPreset = presetId;
     this._fxState = mergeLookFilterState(
       presetId,
@@ -256,7 +227,6 @@ export class MobilePost {
    * @param {{ preservePreset?: boolean }} [opts]
    */
   setFxValue(path, value, { preservePreset = false } = {}) {
-    if (this._compareHeld) return;
     setNestedValue(this._fxState, path, value);
     if (!preservePreset) {
       this._lookFilterPreset = 'none';

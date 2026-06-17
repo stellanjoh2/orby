@@ -45,8 +45,6 @@ function urlHasHandoffFlag() {
 
 const VIEWPORT_DOUBLE_TAP_MS = 320;
 const VIEWPORT_DOUBLE_TAP_DIST_PX = 36;
-const VIEWPORT_COMPARE_HOLD_MS = 380;
-const VIEWPORT_COMPARE_MOVE_PX = 14;
 
 /** @typedef {'closed' | 'peek' | 'expanded'} SheetState */
 /** @typedef {'light' | 'style' | 'filters' | 'fx'} MobileTab */
@@ -90,11 +88,6 @@ export class MobileShell {
     this._rangeTouch = null;
     /** @type {{ time: number, x: number, y: number }} */
     this._lastViewportTap = { time: 0, x: 0, y: 0 };
-    /** @type {{ id: number, x: number, y: number } | null} */
-    this._comparePointer = null;
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    this._compareHoldTimer = null;
-    this._compareActive = false;
     this._exportBtn = root.querySelector('[data-action="export"]');
 
     this._bindChrome();
@@ -123,7 +116,6 @@ export class MobileShell {
     this.scene.onFxStateChanged = () => this._syncFxControlsUi();
     this.scene.onCreativeLookStateChanged = () => this._syncStyleControlsUi();
     this.scene.onOrbitChromeChange = (hidden) => this._setOrbitChromeHidden(hidden);
-    this.scene.onOrbitInteractionStart = () => this._cancelViewportCompareHold();
     this.scene.onCreativeLookLoading = (loading) => {
       if (loading) this._beginLoadSpinner();
       else this._endLoadSpinner();
@@ -779,17 +771,6 @@ export class MobileShell {
     });
   }
 
-  _cancelViewportCompareHold() {
-    clearTimeout(this._compareHoldTimer);
-    this._compareHoldTimer = null;
-    this._comparePointer = null;
-    if (this._compareActive && this.scene) {
-      this.scene.setCompareHeld(false);
-      this.viewportEl?.removeAttribute('data-compare');
-    }
-    this._compareActive = false;
-  }
-
   _bindViewportInteractions() {
     if (!this.viewportEl) return;
 
@@ -800,69 +781,24 @@ export class MobileShell {
       );
     };
 
-    this.viewportEl.addEventListener('pointerdown', (e) => {
-      if (isChromeTarget(e.target)) return;
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-      this._comparePointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
-      clearTimeout(this._compareHoldTimer);
-      this._compareHoldTimer = setTimeout(() => {
-        this._compareHoldTimer = null;
-        if (!this._comparePointer || !this.scene) return;
-        this._compareActive = true;
-        this.scene.setCompareHeld(true);
-        this.viewportEl?.setAttribute('data-compare', 'true');
-        mobileHaptic('soft');
-      }, VIEWPORT_COMPARE_HOLD_MS);
-    });
-
-    this.viewportEl.addEventListener('pointermove', (e) => {
-      if (!this._comparePointer || e.pointerId !== this._comparePointer.id) return;
-      if (this._compareActive) return;
-      const dx = e.clientX - this._comparePointer.x;
-      const dy = e.clientY - this._comparePointer.y;
-      if (Math.hypot(dx, dy) > VIEWPORT_COMPARE_MOVE_PX) {
-        clearTimeout(this._compareHoldTimer);
-        this._compareHoldTimer = null;
-        this._comparePointer = null;
-      }
-    });
-
-    const endCompare = () => {
-      clearTimeout(this._compareHoldTimer);
-      this._compareHoldTimer = null;
-      if (this._compareActive && this.scene) {
-        this.scene.setCompareHeld(false);
-        this.viewportEl?.removeAttribute('data-compare');
-      }
-      this._compareActive = false;
-      this._comparePointer = null;
-    };
-
     this.viewportEl.addEventListener('pointerup', (e) => {
       if (isChromeTarget(e.target)) return;
+      if (!this.scene) return;
 
-      if (!this._compareActive) {
-        const now = performance.now();
-        const dt = now - this._lastViewportTap.time;
-        const dist = Math.hypot(
-          e.clientX - this._lastViewportTap.x,
-          e.clientY - this._lastViewportTap.y,
-        );
-        if (dt < VIEWPORT_DOUBLE_TAP_MS && dist < VIEWPORT_DOUBLE_TAP_DIST_PX && this.scene) {
-          this.scene.resetCamera();
-          mobileHaptic('medium');
-          this._lastViewportTap = { time: 0, x: 0, y: 0 };
-          endCompare();
-          return;
-        }
-        this._lastViewportTap = { time: now, x: e.clientX, y: e.clientY };
+      const now = performance.now();
+      const dt = now - this._lastViewportTap.time;
+      const dist = Math.hypot(
+        e.clientX - this._lastViewportTap.x,
+        e.clientY - this._lastViewportTap.y,
+      );
+      if (dt < VIEWPORT_DOUBLE_TAP_MS && dist < VIEWPORT_DOUBLE_TAP_DIST_PX) {
+        this.scene.resetCamera();
+        mobileHaptic('medium');
+        this._lastViewportTap = { time: 0, x: 0, y: 0 };
+        return;
       }
-
-      endCompare();
+      this._lastViewportTap = { time: now, x: e.clientX, y: e.clientY };
     });
-
-    this.viewportEl.addEventListener('pointercancel', endCompare);
   }
 
   _bindSceneControls() {
@@ -1297,13 +1233,8 @@ export class MobileShell {
 
   /** @param {MobileTab} tab */
   _resetSheetScroll(tab) {
-    if (tab === 'fx') {
-      const el = this.root.querySelector('[data-panel="fx"] .orby-mobile-fx-controls');
-      if (el instanceof HTMLElement) el.scrollTop = 0;
-      return;
-    }
-    const panel = this.root.querySelector(`[data-panel="${tab}"]`);
-    if (panel instanceof HTMLElement) panel.scrollTop = 0;
+    const body = this.root.querySelector('.orby-mobile-sheet__body');
+    if (body instanceof HTMLElement) body.scrollTop = 0;
   }
 
   /** @param {MobileTab} tab */

@@ -54,19 +54,30 @@
   );
   --orby-mobile-rail-label-row: 0.875rem; /* 11px label + line-height */
   --orby-mobile-rail-block-h: calc(
-    var(--orby-mobile-v-gap) + var(--orby-mobile-preset-thumb) + var(--orby-mobile-v-gap-sm) +
+    2px + var(--orby-mobile-preset-thumb) + var(--orby-mobile-v-gap-sm) +
       var(--orby-mobile-rail-label-row) + var(--orby-mobile-v-gap-sm)
   );
+  --orby-mobile-sheet-grabber-zone: calc(10px + 4px + 10px); /* grabber offset + bar + clearance */
+  --orby-mobile-sheet-fx-max: 66svh;
   --orby-mobile-sheet-peek-rail: min(
-    calc(var(--orby-mobile-rail-block-h) + var(--orby-mobile-dock-stack)),
+    calc(
+      var(--orby-mobile-rail-block-h) + var(--orby-mobile-dock-stack) +
+        var(--orby-mobile-sheet-grabber-zone)
+    ),
     52svh
   );
   --orby-mobile-sheet-peek-settings: min(
-    calc(var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 11.5rem + var(--orby-mobile-dock-stack)),
+    calc(
+      var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 11.5rem +
+        var(--orby-mobile-dock-stack) + var(--orby-mobile-sheet-grabber-zone)
+    ),
     54svh
   );
   --orby-mobile-sheet-peek-settings-lg: min(
-    calc(var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 18rem + var(--orby-mobile-dock-stack)),
+    calc(
+      var(--orby-mobile-rail-block-h) + var(--orby-mobile-rail-to-controls) + 18rem +
+        var(--orby-mobile-dock-stack) + var(--orby-mobile-sheet-grabber-zone)
+    ),
     62svh
   );
   --orby-mobile-dock-h: calc(78px + env(safe-area-inset-bottom, 0px));
@@ -115,6 +126,7 @@
   --orby-mobile-border: color-mix(in srgb, var(--orby-lime) 12%, transparent);
   --ui-accent-outer-glow-compact: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent);
   --orby-mobile-chrome-fade: 0.14s;
+  --orby-mobile-dock-orbit-shift: 10px;
 }
 
 *,
@@ -413,27 +425,6 @@ button {
   }
 }
 
-.orby-mobile-viewport[data-compare='true']::before {
-  content: 'Original';
-  position: absolute;
-  z-index: 4;
-  left: 50%;
-  bottom: calc(var(--orby-mobile-dock-bottom) + var(--orby-mobile-dock-h) + 12px);
-  transform: translateX(-50%);
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--orby-lime);
-  background: var(--ui-frosted-bg);
-  border: 1px solid var(--orby-mobile-border);
-  -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
-  backdrop-filter: blur(var(--ui-frosted-blur));
-  pointer-events: none;
-}
-
 .orby-mobile-viewport__empty {
   position: absolute;
   inset: 0;
@@ -487,6 +478,9 @@ button {
   -webkit-backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(160%);
   backdrop-filter: blur(var(--orby-mobile-dock-frosted-blur)) saturate(160%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  transition:
+    opacity var(--orby-mobile-chrome-fade) linear,
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .orby-mobile-dock__btn {
@@ -600,12 +594,16 @@ button {
 }
 
 .orby-mobile-sheet__grabber {
-  flex: 0 0 auto;
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 50%;
   width: 36px;
   height: 4px;
-  margin: 10px auto 4px;
+  margin: 0;
   border-radius: 999px;
   background: color-mix(in srgb, white 28%, transparent);
+  transform: translateX(-50%);
   touch-action: none;
 }
 
@@ -627,7 +625,12 @@ button {
 }
 
 .orby-mobile[data-sheet='expanded'][data-active-tab='fx'] {
-  --orby-mobile-sheet-expanded: 50svh;
+  --orby-mobile-sheet-expanded: min(50svh, var(--orby-mobile-sheet-fx-max));
+}
+
+.orby-mobile[data-sheet='expanded'][data-active-tab='fx'] .orby-mobile-sheet {
+  max-height: var(--orby-mobile-sheet-fx-max);
+  overflow: hidden;
 }
 
 .orby-mobile-sheet__meta {
@@ -698,7 +701,10 @@ button {
   z-index: 1;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Frosted sheet panel — opacity layer so slider-focus fades in sync with dock/chrome */
@@ -748,7 +754,7 @@ button {
 }
 
 .orby-mobile-panel {
-  height: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -774,6 +780,7 @@ button {
   align-items: flex-start;
   width: 100%;
   padding: 0;
+  overflow: visible;
 }
 
 .orby-mobile-preset-rail::before {
@@ -791,13 +798,12 @@ button {
     calc(50% - var(--orby-mobile-preset-w) / 2)
   );
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--orby-mobile-preset-gap);
   width: 100%;
-  padding: var(--orby-mobile-v-gap) var(--orby-mobile-rail-center-pad) var(--orby-mobile-v-gap-sm)
-    var(--orby-mobile-rail-center-pad);
+  padding: 2px var(--orby-mobile-rail-center-pad) var(--orby-mobile-v-gap-sm);
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -818,7 +824,7 @@ button {
   color: var(--text-dim);
   opacity: 0.58;
   transform: scale(0.9);
-  transform-origin: center bottom;
+  transform-origin: center center;
   transition:
     transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
     opacity var(--orby-mobile-chrome-fade) linear,
@@ -895,6 +901,31 @@ button {
   height: var(--orby-mobile-sheet-peek-rail);
 }
 
+/* Peek preset-only tabs — center thumbs + labels in the gray shelf above the dock */
+.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-sheet__body,
+.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-sheet__body,
+.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-sheet__body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  padding-top: var(--orby-mobile-sheet-grabber-zone);
+}
+
+.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-panel--presets,
+.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-panel--presets,
+.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-panel--presets {
+  flex: 1;
+  min-height: 0;
+}
+
+.orby-mobile[data-sheet='peek'][data-active-tab='filters'] .orby-mobile-preset-rail,
+.orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='presets-only'] .orby-mobile-preset-rail,
+.orby-mobile[data-sheet='peek'][data-active-tab='style'][data-style-panel='presets-only'] .orby-mobile-preset-rail {
+  flex: 1;
+  align-items: center;
+  min-height: 0;
+}
+
 .orby-mobile[data-sheet='peek'][data-active-tab='light'][data-hdri-panel='controls'] .orby-mobile-sheet {
   height: var(--orby-mobile-sheet-peek-settings);
 }
@@ -915,13 +946,11 @@ button {
   transform: scale(0.97);
 }
 
-/* HDRI + shader panels — one vertical scroll (rail + sliders move together) */
+/* HDRI + shader panels — sheet body scrolls rail + sliders together */
 .orby-mobile-panel[data-panel='light'],
 .orby-mobile-panel--style {
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
 }
 
 .orby-mobile-hdri-controls {
@@ -935,6 +964,7 @@ button {
 
 .orby-mobile-panel--adjust {
   min-height: 0;
+  overflow: visible;
 }
 
 /* Shader Lab controls (below style preset rail) */
@@ -949,12 +979,8 @@ button {
 
 /* ── Adjust panel (sliders + camera) ── */
 .orby-mobile-fx-controls {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding: var(--orby-mobile-rail-to-controls) var(--orby-mobile-panel-pad-x) var(--orby-mobile-dock-stack);
+  flex: 0 0 auto;
+  padding: var(--orby-mobile-v-gap-sm) var(--orby-mobile-panel-pad-x) var(--orby-mobile-dock-stack);
 }
 
 /* Darkroom-style slider rows — label + value on top, track full-width below */
@@ -1138,7 +1164,6 @@ button {
 }
 
 /* ── Chrome fade — one opacity beat for hide/reveal (slider focus, orbit, etc.) ── */
-.orby-mobile-dock,
 .orby-mobile-export-btn,
 .orby-mobile-debug-menu,
 .orby-mobile-scrim,
@@ -1219,7 +1244,12 @@ button {
 }
 
 /* ── Orbit — fade viewport chrome while manipulating the camera ── */
-.orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-dock,
+.orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-dock {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translate3d(0, var(--orby-mobile-dock-orbit-shift), 0);
+}
+
 .orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-export-btn,
 .orby-mobile[data-orbit-chrome='hidden'] .orby-mobile-debug-menu {
   opacity: 0;

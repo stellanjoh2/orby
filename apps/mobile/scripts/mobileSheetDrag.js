@@ -22,11 +22,10 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
 
   const getActiveScroller = () => {
     const tab = root.dataset.activeTab;
-    if (tab === 'fx') {
-      return root.querySelector('[data-panel="fx"] .orby-mobile-fx-controls');
+    if (tab === 'fx' || tab === 'light' || tab === 'style' || tab === 'filters') {
+      return root.querySelector('.orby-mobile-sheet__body');
     }
-    const panel = root.querySelector(`[data-panel="${tab}"]`);
-    return panel instanceof HTMLElement ? panel : null;
+    return null;
   };
 
   /** @param {EventTarget | null} target */

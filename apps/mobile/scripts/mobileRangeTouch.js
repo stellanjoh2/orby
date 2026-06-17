@@ -44,9 +44,14 @@ function formatSliderValue(value, step) {
 
 /** @param {HTMLInputElement} input */
 function scrollContainerFor(input) {
-  return input.closest(
-    '.orby-mobile-fx-controls, .orby-mobile-panel[data-panel="light"], .orby-mobile-panel--style',
-  );
+  if (
+    input.closest(
+      '.orby-mobile-fx-controls, .orby-mobile-panel[data-panel="light"], .orby-mobile-panel--style'
+    )
+  ) {
+    return input.closest('.orby-mobile-sheet__body');
+  }
+  return null;
 }
 
 /**
