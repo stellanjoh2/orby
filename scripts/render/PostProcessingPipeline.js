@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { N8AOPass } from 'n8ao';
 import { MeshglEffectComposer } from './MeshglEffectComposer.js';
 import { MeshglRenderPass } from './MeshglRenderPass.js';
+import { focusDistanceToBokehFocalDepth } from './dofFocalDepth.js';
 import { MeshglBokehPass } from './MeshglBokehPass.js';
 import { MeshglGodRaysPass } from './MeshglGodRaysPass.js';
 import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -48,8 +49,9 @@ import {
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  clampDofBlurMul,
+  normalizeDofFocusMode,
   normalizeDofQualityId,
-  resolveDofBokehMaxBlurMul,
   ANAMORPHIC_BLOOM_SPREAD_MAX,
   foldAnamorphicStreakAngleDeg,
   resolveAmbientOcclusionQualityTier,
@@ -1244,35 +1246,56 @@ export class PostProcessingPipeline {
   }
 
   /**
-   * Update depth of field settings
-   * @param {Object} settings - DOF settings object
+   * Update depth of field (Martins Upitis BokehShader2 — three.js dof2).
+   * @param {Object} settings
+   * @param {{ zoomAttenuation?: number, focalLengthMm?: number, cameraNear?: number, cameraFar?: number, camera?: import('three').PerspectiveCamera }} [opts]
    */
-  updateDof(settings) {
+  updateDof(settings, opts = {}) {
     if (!settings) return;
     const qualityId = normalizeDofQualityId(settings.quality);
     const wants =
       settings.enabled === undefined ? true : Boolean(settings.enabled);
-    // Use aperture to determine if DOF should be active (very small aperture = minimal blur)
     const active = wants && settings.aperture > 0.0001;
     if (this.bokehPass) {
       this.bokehPass.enabled = active;
     }
     if (!active) return;
-    const focus = Math.max(
+
+    const camera = opts.camera ?? this.bokehPass?.camera ?? null;
+    const near = opts.cameraNear ?? camera?.near ?? 0.1;
+    const far = opts.cameraFar ?? camera?.far ?? 100;
+    const zoomMul =
+      typeof opts.zoomAttenuation === 'number' && Number.isFinite(opts.zoomAttenuation)
+        ? Math.min(1, Math.max(0, opts.zoomAttenuation))
+        : 1;
+    const focusDistance = Math.max(
       DOF_FOCUS_MIN_M,
       typeof settings.focus === 'number' && !Number.isNaN(settings.focus)
         ? settings.focus
         : DOF_FOCUS_MIN_M,
     );
-    this.bokehPass.uniforms.focus.value = focus;
-    this.bokehPass.uniforms.aperture.value = settings.aperture;
-    // Calculate maxblur from aperture - smaller aperture = more blur
-    // Very conservative maxblur range (0.01-0.04) for smooth, camera-like DOF
-    // This prevents harsh edges and ghosting artifacts, especially on backgrounds
-    // Real camera DOF is subtle and smooth, not aggressive
-    const mul = resolveDofBokehMaxBlurMul(qualityId);
-    const maxblur = Math.min(0.04, Math.max(0.01, settings.aperture * 15 * mul));
-    this.bokehPass.uniforms.maxblur.value = maxblur;
+    const focalDepth = focusDistanceToBokehFocalDepth(focusDistance, camera, near, far);
+    const fgMul = clampDofBlurMul(settings.foregroundBlur);
+    const bgMul = clampDofBlurMul(settings.backgroundBlur);
+    const aperture = Math.max(0.0001, settings.aperture ?? 0.003);
+
+    const fstop = THREE.MathUtils.clamp(0.014 / aperture, 1.4, 16);
+    const maxblur = THREE.MathUtils.clamp(
+      0.45 + aperture * 90 * bgMul * zoomMul,
+      0.35,
+      2.5,
+    );
+
+    this.bokehPass.applySettings?.({
+      focalDepth,
+      focalLengthMm: opts.focalLengthMm ?? 35,
+      fstop,
+      maxblur,
+      foregroundBlur: fgMul,
+      backgroundBlur: bgMul,
+      focusMode: settings.focusMode,
+    });
+    this.bokehPass.setDofQualityTier?.(qualityId);
   }
 
   /**

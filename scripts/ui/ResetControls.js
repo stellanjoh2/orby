@@ -741,10 +741,7 @@ export class ResetControls {
       this.eventBus.emit('scene:batch-apply-start');
       try {
       this.eventBus.emit('render:dof', defaults.dof);
-      this.ui.setEffectControlsDisabled(
-        ['dofFocus', 'dofAperture', 'dofQuality'],
-        !defaults.dof.enabled,
-      );
+      this.ui.renderControls?.syncDofUiState?.(defaults.dof);
       this.eventBus.emit('render:bloom', defaults.bloom);
       this.ui.setEffectControlsDisabled(
         [
@@ -1212,10 +1209,7 @@ export class ResetControls {
               this.stateStore.set('dof', defaults.dof);
             });
             this.eventBus.emit('render:dof', defaults.dof);
-            this.ui.setEffectControlsDisabled(
-              ['dofFocus', 'dofAperture', 'dofQuality'],
-              !defaults.dof.enabled,
-            );
+            this.ui.renderControls?.syncDofUiState?.(defaults.dof);
             this.ui.syncUIFromState();
             break;
             

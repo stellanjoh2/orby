@@ -230,7 +230,11 @@ const NOT_FOUND_PRESET = {
   dof: {
     enabled: false,
     focus: 1.5,
+    focusMode: 'center',
     aperture: 0.003,
+    foregroundBlur: 1,
+    backgroundBlur: 1,
+    zoomAttenuation: true,
     quality: 'high',
   },
   bloom: {

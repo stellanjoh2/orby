@@ -5,6 +5,7 @@ import {
   applyToggleSectionMute,
 } from './ui/effectFoldouts.js';
 import { applyCreativeLookPostFxUiBlocks, bindShaderLabBlockedClickHints } from './ui/creativeLookPostFxBlocked.js';
+import { getImageExportFormat, normalizeImageExportFormat } from './render/imageExportFormats.js';
 import { isBackgroundFallbackActive } from './render/backgroundFallback.js';
 import { HDRI_CUSTOM_ID, HDRI_STRENGTH_UNIT } from './config/hdri.js';
 import {
@@ -569,9 +570,13 @@ export class UIManager {
       fillLightCastShadows: q('#fillLightCastShadows'),
       rimLightCastShadows: q('#rimLightCastShadows'),
       dofFocus: q('#dofFocus'),
+      dofFocusMode: q('#dofFocusMode'),
+      dofForegroundBlur: q('#dofForegroundBlur'),
+      dofBackgroundBlur: q('#dofBackgroundBlur'),
       dofAperture: q('#dofAperture'),
       dofQuality: q('#dofQuality'),
       toggleDof: q('#toggleDof'),
+      toggleDofZoomAttenuation: q('#toggleDofZoomAttenuation'),
       bloomThreshold: q('#bloomThreshold'),
       bloomStrength: q('#bloomStrength'),
       bloomRadius: q('#bloomRadius'),
@@ -648,6 +653,7 @@ export class UIManager {
       colorCheckerScale: q('#colorCheckerScale'),
       colorCheckerRawToggle: q('#colorCheckerRawToggle'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
+      exportImageTransparentSettings: q('#exportImageTransparentSettings'),
       exportPngTransparentSettings: q('#exportPngTransparentSettings'),
       exportPngFolderSettings: q('#exportPngFolderSettings'),
       exportPngFolderLabel: q('#exportPngFolderLabel'),
@@ -676,6 +682,7 @@ export class UIManager {
     this.buttons = {
       transformReset: q('#transformReset'),
       exportPng: q('#exportPngButton'),
+      exportImage: q('#exportImageButton'),
       exportSvg: q('#exportSvgButton'),
       exportSvgColor: q('#exportSvgColorButton'),
       exportSvgGlb: q('#exportSvgGlbButton'),
@@ -702,6 +709,7 @@ export class UIManager {
 
     // Export settings state
     this.exportSettings = {
+      format: 'png',
       transparent: true,
       size: 2,
       video: {
@@ -1725,10 +1733,7 @@ export class UIManager {
         const dof = sanitizeDof(payload.dof);
         this.stateStore.set('dof', dof);
         this.eventBus.emit('render:dof', dof);
-        this.setEffectControlsDisabled(
-          ['dofFocus', 'dofAperture', 'dofQuality'],
-          !payload.dof.enabled,
-        );
+        this.renderControls?.syncDofUiState?.(dof);
       }
 
       // Apply Bloom settings
@@ -2401,6 +2406,38 @@ export class UIManager {
         label.textContent = 'No folder — downloads as ZIP (large exports may fail)';
       }
     }
+  }
+
+  /** Image panel — format label, transparency mute (JPEG has no alpha). */
+  syncImageExportUi() {
+    const formatId = normalizeImageExportFormat(this.exportSettings.format);
+    const format = getImageExportFormat(formatId);
+    const supportsAlpha = format.supportsAlpha;
+    const transparentWrap = this.inputs.exportImageTransparentSettings;
+    const exportBtn = this.buttons.exportImage;
+
+    if (transparentWrap) {
+      transparentWrap.classList.toggle('is-muted', !supportsAlpha);
+      transparentWrap.querySelectorAll('[data-export-transparent]').forEach((btn) => {
+        if ('disabled' in btn) btn.disabled = !supportsAlpha;
+        btn.classList.toggle('is-disabled', !supportsAlpha);
+      });
+    }
+    if (!supportsAlpha) {
+      this.exportSettings.transparent = false;
+      document.querySelectorAll('[data-export-transparent]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.exportTransparent === 'false');
+      });
+    }
+    if (exportBtn) {
+      const label = exportBtn.querySelector('.export-image-btn-label');
+      if (label) {
+        label.textContent = `Export .${format.ext.toUpperCase()}`;
+      }
+    }
+    document.querySelectorAll('[data-export-image-format]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.exportImageFormat === formatId);
+    });
   }
 
   async pickPngExportDirectory() {

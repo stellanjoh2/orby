@@ -10,6 +10,7 @@ export class SceneMeshClickHandler {
     this.eventBus = deps.eventBus;
 
     this.raycaster = new THREE.Raycaster();
+    this._ndc = new THREE.Vector2();
     this.mouseDownPos = null;
     this.mouseDownTime = null;
     this.mouseDownOnCanvas = false;
@@ -19,8 +20,8 @@ export class SceneMeshClickHandler {
   }
 
   attach() {
-    const CLICK_THRESHOLD = 5;
-    const CLICK_TIME_THRESHOLD = 200;
+    const CLICK_THRESHOLD = 14;
+    const CLICK_TIME_THRESHOLD = 280;
 
     this._onMouseDown = (event) => {
       if (event.button !== 0) return;
@@ -42,10 +43,6 @@ export class SceneMeshClickHandler {
     this._onMouseUp = (event) => {
       if (event.button !== 0) return;
 
-      const target = event.target;
-      const clickedOnCanvas =
-        target === this.canvas || this.canvas.contains(target);
-
       const currentModel = this.getCurrentModel();
 
       if (this.mouseDownOnCanvas && this.mouseDownPos && this.mouseDownTime) {
@@ -58,13 +55,15 @@ export class SceneMeshClickHandler {
         const wasClick =
           mouseMove < CLICK_THRESHOLD && mouseTime < CLICK_TIME_THRESHOLD;
 
-        if (wasClick && currentModel && clickedOnCanvas) {
+        if (wasClick && currentModel) {
           const rect = this.canvas.getBoundingClientRect();
-          const mouse = new THREE.Vector2();
-          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-          this.raycaster.setFromCamera(mouse, this.camera);
+          if (rect.width > 0 && rect.height > 0) {
+            this._ndc.x =
+              ((this.mouseDownPos.x - rect.left) / rect.width) * 2 - 1;
+            this._ndc.y =
+              -((this.mouseDownPos.y - rect.top) / rect.height) * 2 + 1;
+            this.raycaster.setFromCamera(this._ndc, this.camera);
+          }
           const intersects = this.raycaster.intersectObject(currentModel, true);
 
           if (intersects.length > 0) {
@@ -83,7 +82,7 @@ export class SceneMeshClickHandler {
             this.eventBus.emit('mesh:scale-widget-enabled', false);
           }
         }
-      } else if (!clickedOnCanvas) {
+      } else if (!this.mouseDownOnCanvas) {
         this.stateStore.set('moveWidgetEnabled', false);
         this.stateStore.set('rotateWidgetEnabled', false);
         this.stateStore.set('scaleWidgetEnabled', false);

@@ -6,6 +6,8 @@ import {
   imageExportDownloadSuffix,
   normalizeImageExportFormat,
 } from './imageExportFormats.js';
+import { isArtisticCreativeLookPreset } from './creativeLookPresetSliders.js';
+import { SKETCH_PAPER_RGB } from './creativeLookSketchArt.js';
 import { fullViewportLogicalSize } from './fullViewportLogicalSize.js';
 import { getComposerOutputRenderTarget } from './composerOutputBuffer.js';
 import {
@@ -45,6 +47,8 @@ export class ImageExporter {
      * when `composer.render()` alone leaves a sub-viewport.
      */
     renderComposerPassForExport,
+    /** @type {() => object | undefined} */
+    getRenderState,
   } = {}) {
     this.renderer = renderer;
     this.scene = scene;
@@ -56,7 +60,147 @@ export class ImageExporter {
     this.syncPostProcessingForLogicalSize = syncPostProcessingForLogicalSize;
     this.syncPerspectiveProjection = syncPerspectiveProjection;
     this.renderComposerPassForExport = renderComposerPassForExport;
+    this.getRenderState = getRenderState;
     this._imageTracerLoaded = false;
+  }
+
+  /**
+   * Artistic Shader Lab presets (gouache, watercolour, sketch) store ndv in mesh alpha
+   * (always < 1). Transparent export must keep composer RGB — replacing edge pixels from
+   * the direct render drops the post pass (ink, poster blocks, chalk).
+   */
+  _preserveComposerRgbForTransparentExport() {
+    const state = this.getRenderState?.();
+    const cl = state?.creativeLook;
+    if (!cl?.enabled) return false;
+    return isArtisticCreativeLookPreset(cl.preset);
+  }
+
+  /**
+   * Artistic Shader Lab presets render on warm paper in the viewport. Transparent export
+   * reuses that same composer path, then keys the paper backdrop to alpha 0.
+   * @param {Uint8Array} pixels — RGBA, top-left origin (post-readback layout)
+   * @param {number} width
+   * @param {number} height
+   */
+  _keyArtisticPaperBackdropToAlpha(pixels, width, height) {
+    const pr = SKETCH_PAPER_RGB.map((v) => Math.round(v * 255));
+    const hardTol = 16;
+    const softTol = 44;
+
+    for (let p = 0; p < width * height; p += 1) {
+      const i = p * 4;
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+      const dr = r - pr[0];
+      const dg = g - pr[1];
+      const db = b - pr[2];
+      const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+      let alpha = 255;
+      if (dist <= hardTol) {
+        alpha = 0;
+      } else if (dist < softTol) {
+        alpha = Math.round(((dist - hardTol) / (softTol - hardTol)) * 255);
+      }
+
+      pixels[i + 3] = alpha;
+      if (alpha === 0) {
+        pixels[i] = 0;
+        pixels[i + 1] = 0;
+        pixels[i + 2] = 0;
+      }
+    }
+  }
+
+  /**
+   * Full-viewport transparent export for gouache / watercolour / sketch — identical composer
+   * stack to the live viewport (paper backdrop, post pass, grading), then paper → alpha.
+   */
+  async _exportArtisticTransparentImage(
+    currentFile,
+    originalSize,
+    originalPixelRatio,
+    size = 2,
+    formatId = 'png',
+  ) {
+    const scale = Math.max(0.25, Number(size) || 1);
+    const { width: targetWidth, height: targetHeight } =
+      this._resolveExportPixelSize(scale);
+
+    this._pinAsciiExportReference(originalSize);
+    try {
+      const { width: exportW, height: exportH } = this._setExportFramebufferSize(
+        targetWidth,
+        targetHeight,
+      );
+      const exportFovScale = this.isLensDistortionActive?.() ? 1.06 : 1;
+      if (this.syncPerspectiveProjection) {
+        this.syncPerspectiveProjection({ fovScale: exportFovScale });
+      }
+
+      const prevComposerRenderToScreen = this.composer?.renderToScreen;
+      if (this.composer) {
+        this.composer.renderToScreen = false;
+      }
+      try {
+        this._ensureComposerMatchesDrawingBuffer({ strict: true });
+        this._setExportViewport(exportW, exportH);
+        if (typeof this.renderComposerPassForExport === 'function') {
+          // Opaque clear + paper backdrop — same as the interactive viewport loop.
+          this.renderComposerPassForExport({ transparent: false });
+        } else if (this.composer) {
+          this.composer.render();
+        } else {
+          this.renderer.render(this.scene, this.camera);
+        }
+      } finally {
+        if (this.composer && prevComposerRenderToScreen !== undefined) {
+          this.composer.renderToScreen = prevComposerRenderToScreen;
+        }
+      }
+
+      const gl = this.renderer.getContext();
+      if (gl && typeof gl.finish === 'function') {
+        gl.finish();
+      }
+
+      const capture = this._readComposerOutputPixels(exportW, exportH);
+      if (!capture?.pixels) {
+        throw new Error('Artistic transparent export capture failed');
+      }
+
+      let { pixels, width, height } = capture;
+      const fw = Math.max(1, exportW);
+      const fh = Math.max(1, exportH);
+      if (width !== fw || height !== fh) {
+        pixels = this._resampleRgba(pixels, width, height, fw, fh);
+        width = fw;
+        height = fh;
+      }
+
+      this._keyArtisticPaperBackdropToAlpha(pixels, width, height);
+      const canvas = this._pixelsToFlippedCanvas(pixels, width, height);
+      const blob = await encodeCanvasToBlob(canvas, formatId);
+      this._downloadBlob(blob, currentFile, imageExportDownloadSuffix(true, formatId));
+
+      this.renderer.setPixelRatio(originalPixelRatio);
+      this.renderer.setSize(originalSize.x, originalSize.y, false);
+      this.camera.aspect = originalSize.x / Math.max(1e-6, originalSize.y);
+      if (this.syncPostProcessingForLogicalSize) {
+        this.syncPostProcessingForLogicalSize(originalSize.x, originalSize.y);
+      } else if (this.composer) {
+        this.composer.setPixelRatio(originalPixelRatio);
+        this.composer.setSize(originalSize.x, originalSize.y);
+      }
+      if (this.syncPerspectiveProjection) {
+        this.syncPerspectiveProjection();
+      }
+      this._ensureFullDrawingBufferViewport();
+    } finally {
+      this._unpinAsciiExportReference();
+    }
   }
 
   /**
@@ -572,6 +716,25 @@ export class ImageExporter {
     if (!currentModel) {
       console.warn('No model loaded to export');
       return false;
+    }
+
+    if (this._preserveComposerRgbForTransparentExport()) {
+      const state = this._saveState();
+      try {
+        await this._exportArtisticTransparentImage(
+          currentFile,
+          state.originalSize,
+          state.originalPixelRatio,
+          size,
+          formatId,
+        );
+        return true;
+      } catch (error) {
+        console.error('Artistic transparent image export failed', error);
+        return false;
+      } finally {
+        this._restoreState(state);
+      }
     }
 
     // Save current state
@@ -1404,13 +1567,16 @@ export class ImageExporter {
         exportH,
         alphaPixels,
       );
+
+      const preserveComposerRgb = this._preserveComposerRgbForTransparentExport();
       
       // Smooth alpha edges to reduce harsh artifacts and green pixel bleed
-      this._smoothAlphaEdges(alphaPixels, exportW, exportH);
-      
-      // Fade silhouette fringe (not the image border — see _fadeOuterEdge)
-      this._fadeOuterEdge(alphaPixels, exportW, exportH);
-      
+      if (!preserveComposerRgb) {
+        this._smoothAlphaEdges(alphaPixels, exportW, exportH);
+        // Fade silhouette fringe (not the image border — see _fadeOuterEdge)
+        this._fadeOuterEdge(alphaPixels, exportW, exportH);
+      }
+
       // Composite: Use RGB from post-processed buffer for opaque pixels, direct render RGB for edge pixels
       // This prevents dark outlines by using clean mesh colors at edges instead of darkened post-processed values
       const pixelCount = exportW * exportH;
@@ -1421,14 +1587,17 @@ export class ImageExporter {
         const directG = alphaPixels[i + 1];
         const directB = alphaPixels[i + 2];
 
-        // Use mesh alpha only - no expansion for bloom outside mesh borders
-        fullPixels[i + 3] = directAlpha;
+        if (preserveComposerRgb) {
+          fullPixels[i + 3] = directAlpha === 0 ? 0 : 255;
+        } else {
+          fullPixels[i + 3] = directAlpha;
+        }
 
         if (directAlpha === 0) {
           fullPixels[i] = 0;
           fullPixels[i + 1] = 0;
           fullPixels[i + 2] = 0;
-        } else if (directAlpha < 255) {
+        } else if (directAlpha < 255 && !preserveComposerRgb) {
           fullPixels[i] = directR;
           fullPixels[i + 1] = directG;
           fullPixels[i + 2] = directB;

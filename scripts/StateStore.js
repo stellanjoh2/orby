@@ -12,6 +12,7 @@ import {
   ORBY_BLACK,
   ORBY_LIME,
   APP_BACKGROUND,
+  defaultDof,
 } from './constants.js';
 import { defaultAberration } from './render/chromaticAberration.js';
 import { normalizeToneCurve } from './math/toneCurvePchip.js';
@@ -343,10 +344,7 @@ export class StateStore {
         quality: 'medium',
       },
       dof: {
-        enabled: false,
-        focus: 1.5, // Very close focus for tight asset viewing
-        aperture: 0.003, // Moderate aperture for subtle DOF
-        quality: 'high',
+        ...defaultDof,
       },
       bloom: {
         enabled: true,

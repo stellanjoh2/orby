@@ -1223,12 +1223,7 @@ export class SceneSettingsManager {
         const dof = sanitizeDof(payload.dof);
         this.stateStore.set('dof', dof);
         this.eventBus.emit('render:dof', dof);
-        if (this.uiHelper?.setEffectControlsDisabled) {
-          this.uiHelper.setEffectControlsDisabled(
-            ['dofFocus', 'dofAperture', 'dofQuality'],
-            !payload.dof.enabled,
-          );
-        }
+        this.uiHelper?.renderControls?.syncDofUiState?.(dof);
       }
       if (payload.bloom) {
         this.stateStore.set('bloom', payload.bloom);

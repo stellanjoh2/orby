@@ -364,7 +364,42 @@ export function foldAnamorphicStreakAngleDeg(raw) {
 /** Minimum focus distance (meters) for depth of field — matches camera near plane. */
 export const DOF_FOCUS_MIN_M = 0.1;
 
-/** DOF quality tier (UI); stock BokehPass uses it only to scale clamped `maxblur`. */
+/** Foreground / background blur multiplier slider range. */
+export const DOF_BLUR_MUL_MIN = 0;
+export const DOF_BLUR_MUL_MAX = 2;
+export const DOF_BLUR_MUL_DEFAULT = 1;
+
+/** @typedef {'manual' | 'center' | 'target'} DofFocusMode */
+
+/** @type {readonly DofFocusMode[]} */
+export const DOF_FOCUS_MODES = Object.freeze(['manual', 'center', 'target']);
+
+/** App default focus behaviour when DOF is enabled. */
+export const DOF_FOCUS_MODE_DEFAULT = /** @type {const} */ ('center');
+
+export const defaultDof = Object.freeze({
+  enabled: false,
+  focus: 1.5,
+  focusMode: DOF_FOCUS_MODE_DEFAULT,
+  aperture: 0.003,
+  foregroundBlur: DOF_BLUR_MUL_DEFAULT,
+  backgroundBlur: DOF_BLUR_MUL_DEFAULT,
+  zoomAttenuation: true,
+  quality: 'high',
+});
+
+/** Render panel control ids disabled when DOF is off. */
+export const DOF_UI_CONTROL_IDS = Object.freeze([
+  'dofFocusMode',
+  'dofFocus',
+  'dofForegroundBlur',
+  'dofBackgroundBlur',
+  'dofAperture',
+  'dofQuality',
+  'toggleDofZoomAttenuation',
+]);
+
+/** DOF quality tier (UI); scales clamped `maxblur` cap and strength multiplier. */
 export const DOF_QUALITY_DEFAULT = /** @type {const} */ ('high');
 
 /**
@@ -379,13 +414,21 @@ export function normalizeDofQualityId(id) {
 }
 
 /**
- * Three.js BokehPass uses a fixed tap count; quality scales the clamped `maxblur` uniform slightly.
+ * Three.js BokehPass uses a fixed tap count; quality scales aperture→maxblur mapping slightly.
  */
 export const DOF_BOKEH_QUALITY_MAXBLUR_MUL = {
   low: 0.9,
   medium: 0.96,
   high: 1.0,
   ultra: 1.06,
+};
+
+/** Tier caps on BokehPass `maxblur` (higher = stronger cinematic defocus on Ultra). */
+export const DOF_BOKEH_QUALITY_MAXBLUR_CAP = {
+  low: 0.04,
+  medium: 0.06,
+  high: 0.1,
+  ultra: 0.16,
 };
 
 /**
@@ -395,6 +438,43 @@ export const DOF_BOKEH_QUALITY_MAXBLUR_MUL = {
 export function resolveDofBokehMaxBlurMul(tier) {
   const k = normalizeDofQualityId(tier);
   return DOF_BOKEH_QUALITY_MAXBLUR_MUL[k] ?? DOF_BOKEH_QUALITY_MAXBLUR_MUL.high;
+}
+
+/**
+ * @param {string | undefined} tier
+ * @returns {number}
+ */
+export function resolveDofMaxBlurCap(tier) {
+  const k = normalizeDofQualityId(tier);
+  return DOF_BOKEH_QUALITY_MAXBLUR_CAP[k] ?? DOF_BOKEH_QUALITY_MAXBLUR_CAP.high;
+}
+
+/**
+ * @param {string | undefined} mode
+ * @returns {DofFocusMode}
+ */
+export function normalizeDofFocusMode(mode) {
+  const s = typeof mode === 'string' ? mode.trim().toLowerCase() : '';
+  if (s === 'click') return 'manual';
+  if (s === 'manual' || s === 'center' || s === 'target') return s;
+  return DOF_FOCUS_MODE_DEFAULT;
+}
+
+/**
+ * @param {number | undefined} value
+ * @returns {number}
+ */
+export function clampDofBlurMul(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return DOF_BLUR_MUL_DEFAULT;
+  return Math.min(DOF_BLUR_MUL_MAX, Math.max(DOF_BLUR_MUL_MIN, value));
+}
+
+/**
+ * @param {object | undefined} dof
+ * @returns {boolean}
+ */
+export function dofNeedsLiveUpdate(dof) {
+  return !!dof?.enabled && (dof.aperture ?? 0) > 0.0001;
 }
 
 /** N8AO intensity slider / pipeline floor (zero reads as “AO off” visually). */
@@ -461,15 +541,39 @@ export function sanitizeAmbientOcclusion(ao) {
  * @returns {object | undefined}
  */
 export function sanitizeDof(dof) {
-  if (!dof || typeof dof.focus !== 'number' || Number.isNaN(dof.focus)) {
-    return dof;
+  if (!dof || typeof dof !== 'object') {
+    return { ...defaultDof };
   }
-  const focus = dof.focus >= DOF_FOCUS_MIN_M ? dof.focus : DOF_FOCUS_MIN_M;
+
+  const focus =
+    typeof dof.focus === 'number' && !Number.isNaN(dof.focus)
+      ? Math.max(DOF_FOCUS_MIN_M, dof.focus)
+      : defaultDof.focus;
   const quality = normalizeDofQualityId(dof.quality);
-  if (focus === dof.focus && quality === dof.quality) {
-    return dof;
-  }
-  return { ...dof, focus, quality };
+  const focusMode =
+    dof.focusMode !== undefined
+      ? normalizeDofFocusMode(dof.focusMode)
+      : 'manual';
+  const foregroundBlur = clampDofBlurMul(dof.foregroundBlur);
+  const backgroundBlur = clampDofBlurMul(dof.backgroundBlur);
+  const zoomAttenuation =
+    dof.zoomAttenuation === undefined ? defaultDof.zoomAttenuation : !!dof.zoomAttenuation;
+  const aperture =
+    typeof dof.aperture === 'number' && !Number.isNaN(dof.aperture)
+      ? dof.aperture
+      : defaultDof.aperture;
+  const enabled = dof.enabled === undefined ? defaultDof.enabled : !!dof.enabled;
+
+  return {
+    enabled,
+    focus,
+    focusMode,
+    aperture,
+    foregroundBlur,
+    backgroundBlur,
+    zoomAttenuation,
+    quality,
+  };
 }
 
 /**

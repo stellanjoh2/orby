@@ -137,7 +137,9 @@ export class MeshglGodRaysPass extends Pass {
 
   _syncDepthTexture(renderer) {
     const bokehDepth =
-      this.bokehPass?.enabled && this.bokehPass.renderTargetDepth?.texture
+      this.bokehPass?.enabled &&
+      this.bokehPass.renderTargetDepth?.texture &&
+      !this.bokehPass.usesBokeh2Depth
         ? this.bokehPass.renderTargetDepth.texture
         : null;
 

@@ -8,6 +8,7 @@ import {
   CAMERA_SHADOWS_UI_MIN,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   DOF_FOCUS_MIN_M,
+  DOF_UI_CONTROL_IDS,
   cameraShadowsUiToShader,
   clampCameraShadowsUi,
   effectiveVignetteIntensity,
@@ -18,6 +19,7 @@ import {
   ANAMORPHIC_BLOOM_SPREAD_MAX,
   foldAnamorphicStreakAngleDeg,
   normalizeAnamorphicBloomQualityId,
+  normalizeDofFocusMode,
   normalizeDofQualityId,
   RENDER_QUALITY_DEFAULT,
   sanitizeAmbientOcclusion,
@@ -51,6 +53,10 @@ export class RenderControls {
     this.toneCurveController = null;
     /** Look-filter thumbs use data-src until the presets fold-out opens once. */
     this._lookFilterThumbsHydrated = false;
+  }
+
+  syncDofUiState(dof) {
+    this._syncDofControlStates?.(dof);
   }
 
   /** Anamorphic Bloom: toggle follows bloom pipeline; sliders follow this toggle (like Lens Dirt). */
@@ -95,17 +101,48 @@ export class RenderControls {
     };
     // DOF
     const emitDof = () => this.eventBus.emit('render:dof', this.stateStore.getState().dof);
+    this._syncDofControlStates = (dof) => {
+      const enabled = !!dof?.enabled;
+      this.ui.setEffectControlsDisabled(DOF_UI_CONTROL_IDS, !enabled);
+      this.ui.setEffectControlsDisabled(['dofFocus'], !enabled);
+    };
+    this.eventBus.on('ui:dof-focus-changed', (focus) => {
+      const value = Math.max(DOF_FOCUS_MIN_M, focus);
+      if (this.ui.inputs.dofFocus) {
+        this.ui.inputs.dofFocus.value = String(value);
+      }
+      this.helpers.updateValueLabel('dofFocus', value, 'distance');
+    });
+    this.eventBus.on('ui:dof-focus-mode-changed', (focusMode) => {
+      const mode = normalizeDofFocusMode(focusMode);
+      if (this.ui.inputs.dofFocusMode) {
+        this.ui.inputs.dofFocusMode.value = mode;
+      }
+      this.stateStore.set('dof.focusMode', mode);
+      this._syncDofControlStates(this.stateStore.getState().dof);
+    });
     this.ui.inputs.toggleDof.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       commitLookFilterTouchWith(() => {
         this.stateStore.set('dof.enabled', enabled);
       });
-      this.ui.setEffectControlsDisabled(
-        ['dofFocus', 'dofAperture', 'dofQuality'],
-        !enabled,
-      );
+      this._syncDofControlStates(this.stateStore.getState().dof);
       emitDof();
     });
+    if (this.ui.inputs.dofFocusMode) {
+      this.ui.inputs.dofFocusMode.addEventListener('change', (event) => {
+        const focusMode = normalizeDofFocusMode(event.target.value);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('dof.focusMode', focusMode);
+        });
+        this.eventBus.emit(
+          'dof:reset-smooth-focus',
+          this.stateStore.getState().dof.focus ?? DOF_FOCUS_MIN_M,
+        );
+        this._syncDofControlStates(this.stateStore.getState().dof);
+        emitDof();
+      });
+    }
     this.ui.inputs.dofFocus.addEventListener('input', (event) => {
       const raw = parseFloat(event.target.value);
       const value = Math.max(DOF_FOCUS_MIN_M, raw);
@@ -114,10 +151,30 @@ export class RenderControls {
       }
       this.helpers.updateValueLabel('dofFocus', value, 'distance');
       commitLookFilterTouchWith(() => {
+        this.stateStore.set('dof.focusMode', 'manual');
         this.stateStore.set('dof.focus', value);
+        if (this.ui.inputs.dofFocusMode) {
+          this.ui.inputs.dofFocusMode.value = 'manual';
+        }
+        this.eventBus.emit('dof:reset-smooth-focus', value);
       });
+      this._syncDofControlStates(this.stateStore.getState().dof);
       emitDof();
     });
+    const bindDofBlurMul = (inputId, stateKey, outputKey) => {
+      const input = this.ui.inputs[inputId];
+      if (!input) return;
+      input.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        this.helpers.updateValueLabel(outputKey, value, 'decimal', 2);
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set(stateKey, value);
+        });
+        emitDof();
+      });
+    };
+    bindDofBlurMul('dofForegroundBlur', 'dof.foregroundBlur', 'dofForegroundBlur');
+    bindDofBlurMul('dofBackgroundBlur', 'dof.backgroundBlur', 'dofBackgroundBlur');
     this.ui.inputs.dofAperture.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
       this.helpers.updateValueLabel('dofAperture', value, 'decimal', 3);
@@ -126,6 +183,14 @@ export class RenderControls {
       });
       emitDof();
     });
+    if (this.ui.inputs.toggleDofZoomAttenuation) {
+      this.ui.inputs.toggleDofZoomAttenuation.addEventListener('change', (event) => {
+        commitLookFilterTouchWith(() => {
+          this.stateStore.set('dof.zoomAttenuation', event.target.checked);
+        });
+        emitDof();
+      });
+    }
     if (this.ui.inputs.dofQuality) {
       this.ui.inputs.dofQuality.addEventListener('change', (event) => {
         const quality = normalizeDofQualityId(event.target.value);
@@ -1033,19 +1098,41 @@ export class RenderControls {
     if (dofFocus !== state.dof.focus) {
       this.stateStore.set('dof.focus', dofFocus);
     }
+    if (this.ui.inputs.dofFocusMode) {
+      this.ui.inputs.dofFocusMode.value = normalizeDofFocusMode(state.dof?.focusMode);
+    }
     this.ui.inputs.dofFocus.value = dofFocus;
     this.helpers.updateValueLabel('dofFocus', dofFocus, 'distance');
+    if (this.ui.inputs.dofForegroundBlur) {
+      this.ui.inputs.dofForegroundBlur.value = state.dof.foregroundBlur ?? 1;
+      this.helpers.updateValueLabel(
+        'dofForegroundBlur',
+        state.dof.foregroundBlur ?? 1,
+        'decimal',
+        2,
+      );
+    }
+    if (this.ui.inputs.dofBackgroundBlur) {
+      this.ui.inputs.dofBackgroundBlur.value = state.dof.backgroundBlur ?? 1;
+      this.helpers.updateValueLabel(
+        'dofBackgroundBlur',
+        state.dof.backgroundBlur ?? 1,
+        'decimal',
+        2,
+      );
+    }
     this.ui.inputs.dofAperture.value = state.dof.aperture;
     this.helpers.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
+    if (this.ui.inputs.toggleDofZoomAttenuation) {
+      this.ui.inputs.toggleDofZoomAttenuation.checked =
+        state.dof.zoomAttenuation !== false;
+    }
     this.ui.inputs.toggleDof.checked = !!state.dof.enabled;
     if (this.ui.inputs.dofQuality) {
       const dq = normalizeDofQualityId(state.dof?.quality);
       this.ui.inputs.dofQuality.value = dq;
     }
-    this.ui.setEffectControlsDisabled(
-      ['dofFocus', 'dofAperture', 'dofQuality'],
-      !state.dof.enabled,
-    );
+    this._syncDofControlStates(state.dof);
     
     // Bloom
     this.ui.inputs.bloomThreshold.value = state.bloom.threshold;

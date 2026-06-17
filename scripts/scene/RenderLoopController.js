@@ -2,6 +2,8 @@
  * Owns the interactive viewport rAF loop: per-frame updates, render, post-render.
  */
 
+import { dofNeedsLiveUpdate } from '../constants.js';
+
 /** @param {ReturnType<import('./toggleScaleAnimation.js').createToggleScaleContext>} ctx */
 function toggleScaleAnimActive(ctx) {
   return ctx?.phase === 'in' || ctx?.phase === 'out';
@@ -122,6 +124,14 @@ export class RenderLoopController {
             s.cameraController.updateAutoOrbit(delta);
           }
           s.cameraController.applyHandheldMotion(delta);
+        },
+      },
+      {
+        id: 'dof-autofocus',
+        when: (_ctx, s) => dofNeedsLiveUpdate(s.stateStore.getState().dof),
+        run: (delta, s) => {
+          s.dofAutofocus?.tick(delta);
+          s.updateDof(s.stateStore.getState().dof);
         },
       },
       {

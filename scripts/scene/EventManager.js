@@ -341,6 +341,9 @@ export class EventManager {
       s.updateDof(settings);
       s.applyRenderQualityVisualOverrides();
     });
+    eventBus.on('dof:reset-smooth-focus', (focus) => {
+      s.dofAutofocus?.resetSmoothFocus?.(focus);
+    });
     eventBus.on('render:bloom', (settings) => {
       s.updateBloom(settings);
       s.applyRenderQualityVisualOverrides();
@@ -600,6 +603,7 @@ export class EventManager {
     });
 
     // Export events
+    eventBus.on('export:image', (settings) => s.exportImage(settings));
     eventBus.on('export:png', (settings) => s.exportPng(settings));
     eventBus.on('export:svg', () => s.exportSvgSilhouette());
     eventBus.on('export:svg-color', (payload) =>

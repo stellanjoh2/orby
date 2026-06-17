@@ -146,6 +146,7 @@ import {
 } from './import/extrudeDefaults.js';
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { SceneBoneHoverHandler } from './scene/SceneBoneHoverHandler.js';
+import { DofAutofocusController } from './render/DofAutofocusController.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { normalizeIsometricState } from './camera/isometricPresets.js';
 import { sanitizeClipPlanes } from './camera/clipPlanes.js';
@@ -723,6 +724,18 @@ export class SceneManager {
     });
     this.godRaysController.init(initialState);
     this.godRaysController.setHdriEnabled(this.hdriEnabled);
+
+    this.dofAutofocus = new DofAutofocusController({
+      getCamera: () => this.camera,
+      getCurrentModel: () => this.currentModel,
+      getControlsTarget: () => this.cameraController?.controls?.target,
+      getModelBounds: () => this.cameraController?.getModelBounds?.(),
+      stateStore: this.stateStore,
+      eventBus: this.eventBus,
+    });
+    this.dofAutofocus.resetSmoothFocus(
+      this.stateStore.getState().dof?.focus ?? 1.5,
+    );
     
     // Histogram is created lazily on first enable (see setHistogramEnabled).
     if (this.stateStore.getState().histogramEnabled) {
@@ -1134,6 +1147,7 @@ export class SceneManager {
       syncPerspectiveProjection: (opts) => this.syncPerspectiveCameraFovAndLens(opts),
       renderComposerPassForExport: (opts) =>
         this.composerLifecycle.renderComposerPassForExport(opts),
+      getRenderState: () => this.stateStore.getState(),
     });
 
     const szComposer = new THREE.Vector2();
@@ -1328,7 +1342,9 @@ export class SceneManager {
     this.postPipeline?.creativeLookApple2?.setSize(width, height);
     this.postPipeline?.creativeLookDither?.setSize(width, height);
     this.postPipeline?.creativeLookWatercolour?.setSize(width, height);
+    this.postPipeline?.creativeLookGouache?.setSize(width, height);
     this.postPipeline?.creativeLookSketch?.setSize(width, height);
+    this.postPipeline?.creativeLookSketchColour?.setSize(width, height);
     this.postPipeline?.creativeLookVectrex?.setSize(width, height);
     this.groundController?.resizeBaseReflector?.(width, height);
     this.groundController?.resizeGridLines?.(width, height);
@@ -1338,6 +1354,9 @@ export class SceneManager {
       this.renderer?.getPixelRatio?.() ?? 1,
     );
     this.diagnosticsController?.syncBoneLineResolution?.(width, height);
+    if (this.postPipeline?.bokehPass?.setSize) {
+      this.postPipeline.bokehPass.setSize(width, height);
+    }
     this.syncPerspectiveCameraFovAndLens();
   }
 
@@ -3328,7 +3347,20 @@ export class SceneManager {
   }
 
   updateDof(settings) {
-    this.postPipeline?.updateDof(settings);
+    const dof = settings ?? this.stateStore.getState().dof;
+    const cam = this.stateStore.getState().camera;
+    const zoomAttenuation = this.dofAutofocus?.computeZoomAttenuation(dof) ?? 1;
+    const focalLengthMm =
+      typeof cam?.lensFocalMm === 'number' && cam.lensFocalMm > 0
+        ? cam.lensFocalMm
+        : 35;
+    this.postPipeline?.updateDof(dof, {
+      zoomAttenuation,
+      focalLengthMm,
+      cameraNear: this.camera?.near,
+      cameraFar: this.camera?.far,
+      camera: this.camera,
+    });
   }
 
   updateBloom(settings) {

@@ -787,6 +787,18 @@ export class MeshControls {
     }
 
     // Export controls
+    document.querySelectorAll('[data-export-image-format]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const format = button.dataset.exportImageFormat;
+        if (!format) return;
+        this.ui.exportSettings.format = format;
+        document.querySelectorAll('[data-export-image-format]').forEach((btn) => {
+          btn.classList.toggle('active', btn === button);
+        });
+        this.ui.syncImageExportUi();
+      });
+    });
+
     document.querySelectorAll('[data-export-transparent]').forEach((button) => {
       button.addEventListener('click', () => {
         const transparent = button.dataset.exportTransparent === 'true';
@@ -806,6 +818,16 @@ export class MeshControls {
         });
       });
     });
+
+    this.ui.buttons.exportImage?.addEventListener('click', () => {
+      this.eventBus.emit('export:image', {
+        format: this.ui.exportSettings.format,
+        transparent: this.ui.exportSettings.transparent,
+        size: this.ui.exportSettings.size,
+      });
+    });
+
+    this.ui.syncImageExportUi();
 
     const updatePngTransparentUi = () => {
       const wrap = this.ui.inputs.exportPngTransparentSettings;

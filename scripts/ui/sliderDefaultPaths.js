@@ -59,6 +59,8 @@ export const SLIDER_DEFAULT_PATHS = {
   goboScale: 'gobo.scale',
   goboRotation: 'gobo.rotation',
   dofFocus: 'dof.focus',
+  dofForegroundBlur: 'dof.foregroundBlur',
+  dofBackgroundBlur: 'dof.backgroundBlur',
   dofAperture: 'dof.aperture',
   bloomThreshold: 'bloom.threshold',
   bloomStrength: 'bloom.strength',

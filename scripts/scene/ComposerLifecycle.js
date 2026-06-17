@@ -351,7 +351,10 @@ export class ComposerLifecycle {
    * @param {{ transparent?: boolean }} [opts] — skip opaque background clear when exporting alpha.
    */
   renderComposerPassForExport({ transparent = false } = {}) {
-    this._runComposerWithCreativeLookPrep({ transparent });
+    this._runComposerWithCreativeLookPrep({
+      transparent,
+      beforeRender: () => this.beforeComposerRender?.(),
+    });
   }
 
   /**

@@ -3860,6 +3860,14 @@
                     data-effect-foldout="dof"
                     aria-hidden="true"
                   >
+                  <label class="select-line">
+                    <span>Focus mode</span>
+                    <select id="dofFocusMode" aria-label="Depth of field focus mode" data-tooltip="Auto (center) tracks the screen center. Manual: drag Focus. Target: orbit pivot depth.">
+                      <option value="manual">Manual</option>
+                      <option value="center" selected>Auto (center)</option>
+                      <option value="target">Orbit target</option>
+                    </select>
+                  </label>
                   <label class="slider-line">
                     <span>Focus</span>
                     <input
@@ -3873,6 +3881,30 @@
                     <span class="value" data-output="dofFocus">1.5m</span>
                   </label>
                   <label class="slider-line">
+                    <span data-tooltip="Blur on geometry nearer than the focal plane (nose, front wings). Keep low to avoid artifacts.">Foreground blur</span>
+                    <input
+                      id="dofForegroundBlur"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="dofForegroundBlur">1.00</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Blur on geometry farther than the focal plane (rear wings, background).">Background blur</span>
+                    <input
+                      id="dofBackgroundBlur"
+                      type="range"
+                      min="0"
+                      max="2"
+                      value="1"
+                      step="0.05"
+                    />
+                    <span class="value" data-output="dofBackgroundBlur">1.00</span>
+                  </label>
+                  <label class="slider-line">
                     <span>Aperture</span>
                     <input
                       id="dofAperture"
@@ -3884,9 +3916,20 @@
                     />
                     <span class="value" data-output="dofAperture">0.003</span>
                   </label>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="slider-line-label">Zoom attenuation</span>
+                    <label
+                      class="effect-toggle"
+                      data-tooltip="Reduce depth of field when the camera pulls back to a wide framing."
+                    >
+                      <input type="checkbox" id="toggleDofZoomAttenuation" checked />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Zoom attenuation</span>
+                    </label>
+                  </div>
                   <label class="select-line">
                     <span>Quality</span>
-                    <select id="dofQuality" aria-label="Depth of field quality" data-tooltip="Three.js BokehPass (same approach as threejsdemos Depth of Field Gallery). Quality scales blur strength; Low is a bit gentler on GPU.">
+                    <select id="dofQuality" aria-label="Depth of field quality" data-tooltip="Martins Upitis bokeh (three.js dof2). Quality sets ring × sample count — High matches the official example defaults.">
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high" selected>High</option>

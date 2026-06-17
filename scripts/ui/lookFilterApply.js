@@ -4,6 +4,7 @@ import {
   isBloomTuningActive,
   isVignetteUiEnabled,
   sanitizeDof,
+  DOF_UI_CONTROL_IDS,
 } from '../constants.js';
 import { LOOK_FILTER_CATALOG, mergeLookFilterState } from '../render/lookFilterPresets.js';
 
@@ -63,11 +64,13 @@ export function applyLookFilterPreset({ eventBus, stateStore, ui, presetId }) {
   eventBus.emit('render:aberration', b.aberration);
   eventBus.emit('render:lens-dirt', b.lensDirt);
 
+  if (ui?.renderControls?.syncDofUiState) {
+    ui.renderControls.syncDofUiState(b.dof);
+  } else if (ui?.setEffectControlsDisabled) {
+    ui.setEffectControlsDisabled(DOF_UI_CONTROL_IDS, !b.dof.enabled);
+  }
+
   if (ui?.setEffectControlsDisabled) {
-    ui.setEffectControlsDisabled(
-      ['dofFocus', 'dofAperture', 'dofQuality'],
-      !b.dof.enabled,
-    );
     ui.setEffectControlsDisabled(
       [
         'bloomThreshold',
