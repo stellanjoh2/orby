@@ -39,8 +39,16 @@ export class MobileCreativeLooks {
         });
       },
       afterCreativeLookMaterialRebuild: () => {
-        this.renderer.compile(this.scene, this.camera);
         this.onEnvironmentResync?.();
+        if (!this.currentModel || typeof this.renderer?.compile !== 'function') return;
+        requestAnimationFrame(() => {
+          if (!this.renderer || !this.scene || !this.camera || !this.currentModel) return;
+          try {
+            this.renderer.compile(this.scene, this.camera);
+          } catch {
+            /* ignore compile failures on partial rebuild */
+          }
+        });
       },
       onCreativeLookAsciiSync: () => {
         this.onCreativeLookSync?.();

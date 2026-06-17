@@ -406,7 +406,16 @@ export class MobileScene {
     this._syncModelEnvironment();
     this._repairRenderSurfacesAfterModelLoad();
     this._frameModel(object);
-    this.renderer.compile(this.scene, this.camera);
+    if (typeof this.renderer?.compile === 'function') {
+      requestAnimationFrame(() => {
+        if (!this.renderer || !this.scene || !this.camera) return;
+        try {
+          this.renderer.compile(this.scene, this.camera);
+        } catch {
+          /* ignore compile failures while materials settle */
+        }
+      });
+    }
   }
 
   /** @param {ArrayBuffer} buffer @param {string} name @param {number} [byteLength] */

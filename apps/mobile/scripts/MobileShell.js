@@ -529,6 +529,8 @@ export class MobileShell {
     if (resetBtn instanceof HTMLButtonElement) {
       resetBtn.disabled = !styleActive;
     }
+
+    this._syncPresetSheetState();
   }
 
   _syncHdriPanelUi() {
@@ -538,6 +540,31 @@ export class MobileShell {
       this._hdriControlsEl.hidden = !engaged;
       this._hdriControlsEl.classList.toggle('is-visible', engaged);
     }
+    this._syncPresetSheetState();
+  }
+
+  /** @param {MobileTab} tab */
+  _presetTabShowsExpandedSheet(tab) {
+    if (tab === 'fx') return true;
+    if (tab === 'light') return this._engagedPresetTabs.has('light');
+    if (tab === 'style') {
+      return (
+        this._engagedPresetTabs.has('style') &&
+        this.selection.style.id !== 'none' &&
+        this.selection.style.id !== 'standard'
+      );
+    }
+    return false;
+  }
+
+  _syncPresetSheetState() {
+    if (this.sheetState === 'closed') return;
+    const tab = this.activeTab;
+    const next = /** @type {SheetState} */ (
+      this._presetTabShowsExpandedSheet(tab) ? 'expanded' : 'peek'
+    );
+    if (this.sheetState === next) return;
+    this.setSheetState(next);
   }
 
   /** @param {HTMLInputElement} slider */
@@ -1223,11 +1250,10 @@ export class MobileShell {
 
     if (tab === 'light') {
       this._syncHdriSelectionFromScene();
-      this._engagedPresetTabs.add('light');
       this._syncHdriControlsUi();
       this._syncHdriBackgroundUi();
-      this._syncSelectionUi();
       this._syncHdriPanelUi();
+      this._syncSelectionUi();
     } else if (tab === 'style') {
       this._syncStyleControlsUi();
       this._syncSelectionUi();
@@ -1235,7 +1261,15 @@ export class MobileShell {
       this._syncSelectionUi();
     }
 
-    this.setSheetState('expanded');
+    if (tab === 'fx') {
+      this.setSheetState('expanded');
+    } else if (this.sheetState === 'closed') {
+      this.setSheetState(
+        this._presetTabShowsExpandedSheet(tab) ? 'expanded' : 'peek',
+      );
+    } else {
+      this._syncPresetSheetState();
+    }
 
     if (tab === 'light' || tab === 'style' || tab === 'filters') {
       this._playPresetRailEnter(/** @type {PresetTab} */ (tab));
@@ -1469,6 +1503,7 @@ export class MobileShell {
     }
 
     this._syncSelectionUi();
+    this._syncPresetSheetState();
     if (changed) {
       mobileHaptic('selection');
     }
