@@ -103,11 +103,24 @@
   --orby-mobile-slider-label-pull: 4px; /* label row → track (negative margin on range) */
   --orby-mobile-slider-row-gap: 1.25rem; /* 20px — track → next label row */
   --orby-mobile-slider-track-h: 2px;
-  /* Thumb center must sit on track ends at 0/100% — inset = half thumb + touch gutter */
-  --orby-mobile-sheet-inset-x: calc(var(--orby-mobile-slider-thumb) / 2 + 0.625rem);
+  --orby-mobile-slider-thumb-active-scale: 1.18;
+  --orby-mobile-slider-thumb-glow: 8px; /* matches --ui-accent-outer-glow-compact blur */
+  /* Room for thumb center at 0/100% — half thumb (active scale) + glow + label gutter */
+  --orby-mobile-slider-edge-bleed: calc(
+    var(--orby-mobile-slider-thumb) / 2 * var(--orby-mobile-slider-thumb-active-scale) +
+      var(--orby-mobile-slider-thumb-glow)
+  );
+  --orby-mobile-sheet-inset-x: calc(var(--orby-mobile-slider-edge-bleed) + 0.625rem);
   --orby-mobile-panel-pad-x: var(--orby-mobile-sheet-inset-x);
   --orby-mobile-preset-rail-inset: var(--orby-mobile-sheet-inset-x);
   --orby-mobile-object-panel-top: calc(var(--orby-mobile-top-h) + 8px + 44px + 8px);
+  /* Grow to fit all controls; stop above dock with a small breathe gap */
+  --orby-mobile-object-panel-bottom-clearance: calc(
+    var(--orby-mobile-dock-stack) + var(--orby-mobile-v-gap)
+  );
+  --orby-mobile-object-panel-max-height: calc(
+    100dvh - var(--orby-mobile-object-panel-top) - var(--orby-mobile-object-panel-bottom-clearance)
+  );
   --orby-mobile-filter-card-radius: 10px;
   --orby-mobile-toggle-w: 51px;
   --orby-mobile-toggle-h: 31px;
@@ -307,11 +320,12 @@ button {
   right: 0;
   top: var(--orby-mobile-object-panel-top);
   width: auto;
-  max-height: min(24rem, calc(100dvh - var(--orby-mobile-object-panel-top) - 1rem));
+  height: max-content;
+  max-height: var(--orby-mobile-object-panel-max-height);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: var(--orby-mobile-v-gap-lg) var(--orby-mobile-panel-pad-x)
+  padding: var(--orby-mobile-v-gap-lg) 0
     calc(var(--orby-mobile-v-gap-lg) + var(--orby-mobile-slider-touch-bleed));
   border: 1px solid var(--orby-mobile-border);
   border-radius: 14px;
@@ -364,13 +378,14 @@ button {
 }
 
 .orby-mobile-object-panel__controls {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
+  padding-inline: var(--orby-mobile-panel-pad-x);
 }
 
 .orby-mobile-object-panel__controls .orby-mobile-fx-toggle:last-child {
@@ -1365,6 +1380,7 @@ button {
   font-size: var(--orby-mobile-type-size);
   line-height: 1.2;
   color: var(--text);
+  overflow: visible;
 }
 
 .orby-mobile-fx-grade__label {
@@ -1589,8 +1605,13 @@ button {
   pointer-events: none;
 }
 
-/* Object panel — shell stays fixed; inner scroller matches sheet scroll-lock behavior */
+/* Object panel — drop frosted shell so the active slider floats over the model */
 .orby-mobile[data-slider-focus] .orby-mobile-object-panel {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   overflow: hidden;
   pointer-events: auto;
 }
@@ -1687,6 +1708,31 @@ button {
   flex: 1;
   min-width: 0;
   font-weight: 500;
+}
+
+.orby-mobile-fx-toggle.is-muted {
+  opacity: 0.5625;
+}
+
+.orby-mobile-fx-toggle.is-muted .orby-mobile-fx-toggle__label {
+  color: var(--text-dim);
+}
+
+.orby-mobile-fx-toggle.is-muted .effect-toggle,
+.orby-mobile-fx-toggle.is-muted .effect-toggle .effect-indicator {
+  cursor: not-allowed;
+}
+
+.orby-mobile-app .orby-mobile-fx-toggle.is-muted .effect-toggle input:disabled + .effect-indicator {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.orby-mobile-app .orby-mobile-fx-toggle.is-muted .effect-toggle input:disabled:checked + .effect-indicator {
+  background-color: color-mix(in srgb, var(--brand-primary) 40%, rgba(255, 255, 255, 0.24));
+}
+
+.orby-mobile-app .orby-mobile-fx-toggle.is-muted .effect-toggle input:disabled + .effect-indicator::before {
+  background-color: color-mix(in srgb, var(--brand-text) 72%, var(--text-dim));
 }
 
 /* iOS-style switches — same pattern as desktop .effect-toggle (styles.css) */

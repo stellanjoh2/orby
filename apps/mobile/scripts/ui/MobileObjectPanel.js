@@ -53,6 +53,11 @@ export class MobileObjectPanel {
       }
     }
 
+    const baseGlassRow = root.querySelector('[data-object-base-glass-row]');
+    if (baseGlassRow instanceof HTMLElement) {
+      baseGlassRow.classList.toggle('is-muted', !baseOn);
+    }
+
     const baseGlassInput = root.querySelector('[data-object-base-glass]');
     if (baseGlassInput instanceof HTMLInputElement) {
       if (document.activeElement !== baseGlassInput) {
@@ -117,6 +122,7 @@ export class MobileObjectPanel {
     const { scene } = this.ctx;
     const row = document.createElement('div');
     row.className = 'orby-mobile-fx-toggle';
+    row.dataset.objectBaseGlassRow = '';
     row.innerHTML = `
       <span class="orby-mobile-fx-toggle__label">Base glass</span>
       <label class="effect-toggle">
