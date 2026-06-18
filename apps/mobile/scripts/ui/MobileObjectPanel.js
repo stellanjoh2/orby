@@ -108,7 +108,6 @@ export class MobileObjectPanel {
       if (output) output.textContent = def.format(value);
       updateMobileSliderFill(input);
       scene.setBaseScale(value);
-      this.sync();
     });
     if (input instanceof HTMLInputElement) updateMobileSliderFill(input);
     return row;

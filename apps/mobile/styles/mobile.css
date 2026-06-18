@@ -308,10 +308,9 @@ button {
   top: var(--orby-mobile-object-panel-top);
   width: auto;
   max-height: min(24rem, calc(100dvh - var(--orby-mobile-object-panel-top) - 1rem));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: var(--orby-mobile-v-gap-lg) var(--orby-mobile-panel-pad-x)
     calc(var(--orby-mobile-v-gap-lg) + var(--orby-mobile-slider-touch-bleed));
   border: 1px solid var(--orby-mobile-border);
@@ -362,6 +361,16 @@ button {
 
 .orby-mobile-object-panel[hidden] {
   display: block !important;
+}
+
+.orby-mobile-object-panel__controls {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .orby-mobile-object-panel__controls .orby-mobile-fx-toggle:last-child {
@@ -1580,17 +1589,16 @@ button {
   pointer-events: none;
 }
 
-/* Object panel — drop frosted chrome so the active slider floats over the model */
+/* Object panel — shell stays fixed; inner scroller matches sheet scroll-lock behavior */
 .orby-mobile[data-slider-focus] .orby-mobile-object-panel {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.orby-mobile[data-slider-focus] .orby-mobile-object-panel__controls {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  pointer-events: auto;
 }
 
 .orby-mobile[data-slider-focus] .orby-mobile-object-panel .orby-mobile-fx-grade.is-slider-focus {

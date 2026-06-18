@@ -44,8 +44,8 @@ function formatSliderValue(value, step) {
 
 /** @param {HTMLInputElement} input */
 function scrollContainerFor(input) {
-  const objectPanel = input.closest('.orby-mobile-object-panel');
-  if (objectPanel instanceof HTMLElement) return objectPanel;
+  const objectScroll = input.closest('.orby-mobile-object-panel__controls');
+  if (objectScroll instanceof HTMLElement) return objectScroll;
 
   if (
     input.closest(
