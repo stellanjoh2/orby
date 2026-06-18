@@ -314,7 +314,7 @@ button {
   padding: var(--orby-mobile-v-gap-lg) var(--orby-mobile-panel-pad-x)
     calc(var(--orby-mobile-v-gap-lg) + var(--orby-mobile-slider-touch-bleed));
   border: 1px solid var(--orby-mobile-border);
-  border-radius: 0 0 14px 14px;
+  border-radius: 14px;
   background: var(--ui-frosted-bg);
   -webkit-backdrop-filter: blur(var(--ui-frosted-blur));
   backdrop-filter: blur(var(--ui-frosted-blur));
