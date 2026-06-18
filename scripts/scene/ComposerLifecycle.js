@@ -9,6 +9,7 @@ import {
   renderTransformGizmoOverlay,
   restoreGroundGridFromPass,
   restoreTransformGizmosFromPass,
+  shouldOverlayTransformGizmos,
 } from '../render/transformGizmoLayers.js';
 import {
   hideWireframeOverlaysForPass,
@@ -193,7 +194,9 @@ export class ComposerLifecycle {
       this.applyCreativeLookBloomSuppression();
     }
     const shaderLabOn = this.getCreativeLookEnabled() === true;
-    const overlayGizmos = overlayTransformGizmos && shaderLabOn;
+    const overlayGizmos =
+      overlayTransformGizmos &&
+      shouldOverlayTransformGizmos(this.postPipeline, shaderLabOn);
     const wireframeMeshes = this.getWireframeOverlayMeshes?.() ?? [];
     const overlayWireframe = shaderLabOn && wireframeMeshes.length > 0;
     if (overlayGizmos) {
@@ -302,7 +305,7 @@ export class ComposerLifecycle {
     }
   }
 
-  /** Crisp transform widgets on top of Shader Lab post (ASCII, bloom, grading, etc.). */
+  /** Crisp transform widgets on top of post stack (Shader Lab, DOF, etc.). */
   _renderTransformGizmoOverlay() {
     renderTransformGizmoOverlay({
       renderer: this.renderer,

@@ -1,6 +1,17 @@
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /**
+ * Transform widgets must composite after post so they stay crisp (Shader Lab, DOF, etc.).
+ * @param {import('./PostProcessingPipeline.js').PostProcessingPipeline | null | undefined} postPipeline
+ * @param {boolean} shaderLabOn
+ * @returns {boolean}
+ */
+export function shouldOverlayTransformGizmos(postPipeline, shaderLabOn) {
+  if (shaderLabOn) return true;
+  return postPipeline?.bokehPass?.enabled === true;
+}
+
+/**
  * Hide transform widgets for the Shader Lab scene draw (ASCII / post stack).
  * @param {Array<import('three').Object3D | null | undefined>} gizmos
  * @returns {Array<{ gizmo: import('three').Object3D, visible: boolean }>}
@@ -27,7 +38,7 @@ export function restoreTransformGizmosFromPass(snapshot) {
 }
 
 /**
- * Draw transform widgets on top after the post stack (ASCII, bloom, grading, etc.).
+ * Draw transform widgets on top after the post stack (Shader Lab, DOF, bloom, grading, etc.).
  * Renders each gizmo subtree individually so the main scene is not double-drawn.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
