@@ -158,6 +158,7 @@ export class MobileShell {
       markMobileAppSessionActive();
       if (this.viewportEl) this.viewportEl.dataset.hasModel = 'true';
       this.modelLoader.showEmptyState(false);
+      this.modelLoader.refreshLoadChrome();
       this.scene.setCreativeLook(this.selection.style.id);
       this.objectPanel.sync();
       this.fxPanel.sync();

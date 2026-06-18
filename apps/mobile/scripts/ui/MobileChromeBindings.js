@@ -3,6 +3,7 @@ import { mobileHaptic } from '../mobileHaptics.js';
 import { bindMobileSheetDrag } from '../mobileSheetDrag.js';
 import { bindMobileRangeTouch } from '../mobileRangeTouch.js';
 import { bindMobileSliderFocus } from '../mobileSliderFocus.js';
+import { bindMobileSliderThumbDoubleTapReset } from '../mobileSliderThumbReset.js';
 import { createMobileSliderChrome } from '../mobileSliderChrome.js';
 import { bindMobileShelfLock } from '../mobileShelfLock.js';
 
@@ -118,6 +119,11 @@ export class MobileChromeBindings {
     this._sliderChrome = createMobileSliderChrome(root);
     this._sliderFocus = bindMobileSliderFocus({ root, chrome: this._sliderChrome });
     this._rangeTouch = bindMobileRangeTouch({ root, chrome: this._sliderChrome });
+    bindMobileSliderThumbDoubleTapReset({
+      root,
+      getCtx: () => ({ selection: this.deps.selection }),
+      isDragActive: () => this._rangeTouch?.isActive() ?? false,
+    });
 
     const shelf = root.querySelector('.orby-mobile-sheet__shelf');
     const sheetScroll = root.querySelector('.orby-mobile-sheet__scroll');

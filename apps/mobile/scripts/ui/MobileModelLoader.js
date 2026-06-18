@@ -111,6 +111,11 @@ export class MobileModelLoader {
     this._syncSpinner();
   }
 
+  /** Re-evaluate chrome hiding when model state changes under an active spinner. */
+  refreshLoadChrome() {
+    this._syncSpinner();
+  }
+
   /** @param {boolean} visible */
   showEmptyState(visible) {
     const { viewportEl, scene } = this.ctx;
@@ -185,12 +190,20 @@ export class MobileModelLoader {
 
   _syncSpinner() {
     const on = this._spinnerDepth > 0;
-    const { viewportEl } = this.ctx;
+    const { viewportEl, root, scene } = this.ctx;
+    const hideChrome = on && !scene?.currentModel;
     if (viewportEl) {
       if (on) {
         viewportEl.setAttribute('data-loading', 'true');
       } else {
         viewportEl.removeAttribute('data-loading');
+      }
+    }
+    if (root instanceof HTMLElement) {
+      if (hideChrome) {
+        root.dataset.modelLoading = 'true';
+      } else {
+        delete root.dataset.modelLoading;
       }
     }
     if (this._spinnerEl instanceof HTMLElement) {

@@ -512,6 +512,20 @@ button {
   opacity: 0.72;
 }
 
+/* Mesh import / boot — spinner only until a model is loaded */
+.orby-mobile[data-model-loading] .orby-mobile-dock,
+.orby-mobile[data-model-loading] .orby-mobile-sheet,
+.orby-mobile[data-model-loading] .orby-mobile-scrim,
+.orby-mobile[data-model-loading] .orby-mobile-object-panel,
+.orby-mobile[data-model-loading] .orby-mobile-viewport .orby-mobile-top-actions,
+.orby-mobile[data-model-loading] .orby-mobile-viewport .orby-mobile-debug-menu,
+.orby-mobile[data-model-loading] .orby-mobile-viewport .orby-mobile-viewport__empty,
+.orby-mobile[data-model-loading] .orby-mobile-viewport .orby-mobile-color-picker {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .orby-mobile-viewport__load-spinner {
   position: absolute;
   z-index: 3;
