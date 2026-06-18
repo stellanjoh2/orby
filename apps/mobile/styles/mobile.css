@@ -311,6 +311,7 @@ button {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: var(--orby-mobile-v-gap-lg) var(--orby-mobile-panel-pad-x)
     calc(var(--orby-mobile-v-gap-lg) + var(--orby-mobile-slider-touch-bleed));
   border: 1px solid var(--orby-mobile-border);
@@ -1586,8 +1587,10 @@ button {
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  overflow: visible;
-  pointer-events: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  pointer-events: auto;
 }
 
 .orby-mobile[data-slider-focus] .orby-mobile-object-panel .orby-mobile-fx-grade.is-slider-focus {

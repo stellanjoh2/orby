@@ -1,7 +1,7 @@
 import { isShelfLockZone } from './mobileShelfLock.js';
 
 /**
- * Engage shared slider chrome on pointer down (mouse everywhere; touch in object panel).
+ * Engage shared slider chrome on mouse pointer down. Touch uses bindMobileRangeTouch.
  * Touch value drag in the bottom sheet still uses bindMobileRangeTouch + the same chrome.
  * @param {{ root: HTMLElement, chrome: ReturnType<typeof import('./mobileSliderChrome.js').createMobileSliderChrome> }} opts
  */
@@ -26,8 +26,9 @@ export function bindMobileSliderFocus({ root, chrome }) {
     if (!(input instanceof HTMLInputElement) || input.disabled) return;
     if (isShelfLockZone(root, e.clientX, e.clientY)) return;
 
-    const inObjectPanel = row.closest('.orby-mobile-object-panel') != null;
-    if (e.pointerType !== 'mouse' && !inObjectPanel) return;
+    // Touch uses bindMobileRangeTouch (thumb hold → chrome.engage). Immediate engage
+    // on pointerdown steals vertical pans meant to scroll the object panel.
+    if (e.pointerType !== 'mouse') return;
 
     activePointerId = e.pointerId;
     chrome.engage(input);
