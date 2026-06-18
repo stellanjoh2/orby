@@ -364,18 +364,41 @@ export function foldAnamorphicStreakAngleDeg(raw) {
 /** Minimum focus distance (meters) for depth of field — matches camera near plane. */
 export const DOF_FOCUS_MIN_M = 0.1;
 
-/** Foreground / background blur multiplier slider range. */
+/** Near / far blur multiplier slider range. */
 export const DOF_BLUR_MUL_MIN = 0;
 export const DOF_BLUR_MUL_MAX = 2;
 export const DOF_BLUR_MUL_DEFAULT = 1;
 
-/** @typedef {'manual' | 'center' | 'target'} DofFocusMode */
+/** @typedef {'manual' | 'auto'} DofFocusMode */
 
 /** @type {readonly DofFocusMode[]} */
-export const DOF_FOCUS_MODES = Object.freeze(['manual', 'center', 'target']);
+export const DOF_FOCUS_MODES = Object.freeze(['manual', 'auto']);
 
 /** App default focus behaviour when DOF is enabled. */
-export const DOF_FOCUS_MODE_DEFAULT = /** @type {const} */ ('center');
+export const DOF_FOCUS_MODE_DEFAULT = /** @type {const} */ ('auto');
+
+/** Standard f-stops shown for the aperture slider (display only). */
+export const DOF_FSTOPS = Object.freeze([1.4, 2, 2.8, 4, 5.6, 8, 11, 16]);
+
+/** Maps shader aperture uniform → photographic f-stop (matches PostProcessingPipeline). */
+export function dofApertureToFStop(aperture) {
+  const a = typeof aperture === 'number' && !Number.isNaN(aperture) ? aperture : 0.003;
+  return Math.max(0.1, 0.014 / Math.max(a, 1e-6));
+}
+
+/** Nearest standard f-stop label for UI, e.g. `f/2.8`. */
+export function formatDofFStopLabel(aperture) {
+  const f = dofApertureToFStop(aperture);
+  let nearest = DOF_FSTOPS[0];
+  for (let i = 1; i < DOF_FSTOPS.length; i++) {
+    const stop = DOF_FSTOPS[i];
+    if (Math.abs(stop - f) < Math.abs(nearest - f)) {
+      nearest = stop;
+    }
+  }
+  const text = Number.isInteger(nearest) ? String(nearest) : String(nearest);
+  return `f/${text}`;
+}
 
 export const defaultDof = Object.freeze({
   enabled: false,
@@ -386,6 +409,7 @@ export const defaultDof = Object.freeze({
   backgroundBlur: DOF_BLUR_MUL_DEFAULT,
   zoomAttenuation: true,
   quality: 'high',
+  showFocusPlane: false,
 });
 
 /** Render panel control ids disabled when DOF is off. */
@@ -455,8 +479,8 @@ export function resolveDofMaxBlurCap(tier) {
  */
 export function normalizeDofFocusMode(mode) {
   const s = typeof mode === 'string' ? mode.trim().toLowerCase() : '';
-  if (s === 'click') return 'manual';
-  if (s === 'manual' || s === 'center' || s === 'target') return s;
+  if (s === 'manual' || s === 'click') return 'manual';
+  if (s === 'auto' || s === 'center' || s === 'target') return 'auto';
   return DOF_FOCUS_MODE_DEFAULT;
 }
 
@@ -563,6 +587,8 @@ export function sanitizeDof(dof) {
       ? dof.aperture
       : defaultDof.aperture;
   const enabled = dof.enabled === undefined ? defaultDof.enabled : !!dof.enabled;
+  const showFocusPlane =
+    dof.showFocusPlane === undefined ? defaultDof.showFocusPlane : !!dof.showFocusPlane;
 
   return {
     enabled,
@@ -573,6 +599,7 @@ export function sanitizeDof(dof) {
     backgroundBlur,
     zoomAttenuation,
     quality,
+    showFocusPlane,
   };
 }
 

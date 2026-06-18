@@ -3862,14 +3862,13 @@
                   >
                   <label class="select-line">
                     <span>Focus mode</span>
-                    <select id="dofFocusMode" aria-label="Depth of field focus mode" data-tooltip="Auto (center) tracks the screen center. Manual: drag Focus. Target: orbit pivot depth.">
+                    <select id="dofFocusMode" aria-label="Depth of field focus mode" data-tooltip="Auto tracks the screen center on the model. Manual locks focus to the distance slider.">
+                      <option value="auto" selected>Auto</option>
                       <option value="manual">Manual</option>
-                      <option value="center" selected>Auto (center)</option>
-                      <option value="target">Orbit target</option>
                     </select>
                   </label>
                   <label class="slider-line">
-                    <span>Focus</span>
+                    <span>Focus distance</span>
                     <input
                       id="dofFocus"
                       type="range"
@@ -3880,8 +3879,19 @@
                     />
                     <span class="value" data-output="dofFocus">1.5m</span>
                   </label>
+                  <div class="slider-line slider-line--toggle-only">
+                    <span class="slider-line-label">Focus plane</span>
+                    <label
+                      class="effect-toggle"
+                      data-tooltip="View-depth focal plane used by the DOF shader (purple = in focus here). If blur seams sit in front of or behind this plane, that is a DOF bug — not wrong slider use."
+                    >
+                      <input type="checkbox" id="toggleDofFocusPlane" />
+                      <span class="effect-indicator" aria-hidden="true"></span>
+                      <span class="sr-only">Show focus plane</span>
+                    </label>
+                  </div>
                   <label class="slider-line">
-                    <span data-tooltip="Blur on geometry nearer than the focal plane (nose, front wings). Keep low to avoid artifacts.">Foreground blur</span>
+                    <span data-tooltip="Blur on geometry nearer than the focal plane (nose, front wings). Keep low to avoid artifacts.">Near blur</span>
                     <input
                       id="dofForegroundBlur"
                       type="range"
@@ -3893,7 +3903,7 @@
                     <span class="value" data-output="dofForegroundBlur">1.00</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Blur on geometry farther than the focal plane (rear wings, background).">Background blur</span>
+                    <span data-tooltip="Blur on geometry farther than the focal plane (rear wings, background).">Far blur</span>
                     <input
                       id="dofBackgroundBlur"
                       type="range"
@@ -3905,26 +3915,26 @@
                     <span class="value" data-output="dofBackgroundBlur">1.00</span>
                   </label>
                   <label class="slider-line">
-                    <span>Aperture</span>
+                    <span data-tooltip="Lens aperture — lower f-stop values yield a shallower depth of field.">F-stop</span>
                     <input
                       id="dofAperture"
                       type="range"
-                      min="0.0005"
-                      max="0.015"
+                      min="0.001"
+                      max="0.01"
                       value="0.003"
                       step="0.0001"
                     />
-                    <span class="value" data-output="dofAperture">0.003</span>
+                    <span class="value" data-output="dofAperture">f/4</span>
                   </label>
                   <div class="slider-line slider-line--toggle-only">
-                    <span class="slider-line-label">Zoom attenuation</span>
+                    <span class="slider-line-label">Compensate zoom</span>
                     <label
                       class="effect-toggle"
                       data-tooltip="Reduce depth of field when the camera pulls back to a wide framing."
                     >
                       <input type="checkbox" id="toggleDofZoomAttenuation" checked />
                       <span class="effect-indicator" aria-hidden="true"></span>
-                      <span class="sr-only">Zoom attenuation</span>
+                      <span class="sr-only">Compensate zoom</span>
                     </label>
                   </div>
                   <label class="select-line">

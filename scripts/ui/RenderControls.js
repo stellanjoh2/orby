@@ -177,7 +177,7 @@ export class RenderControls {
     bindDofBlurMul('dofBackgroundBlur', 'dof.backgroundBlur', 'dofBackgroundBlur');
     this.ui.inputs.dofAperture.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
-      this.helpers.updateValueLabel('dofAperture', value, 'decimal', 3);
+      this.helpers.updateValueLabel('dofAperture', value, 'fstop');
       commitLookFilterTouchWith(() => {
         this.stateStore.set('dof.aperture', value);
       });
@@ -188,6 +188,12 @@ export class RenderControls {
         commitLookFilterTouchWith(() => {
           this.stateStore.set('dof.zoomAttenuation', event.target.checked);
         });
+        emitDof();
+      });
+    }
+    if (this.ui.inputs.toggleDofFocusPlane) {
+      this.ui.inputs.toggleDofFocusPlane.addEventListener('change', (event) => {
+        this.stateStore.set('dof.showFocusPlane', event.target.checked);
         emitDof();
       });
     }
@@ -1122,10 +1128,13 @@ export class RenderControls {
       );
     }
     this.ui.inputs.dofAperture.value = state.dof.aperture;
-    this.helpers.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
+    this.helpers.updateValueLabel('dofAperture', state.dof.aperture, 'fstop');
     if (this.ui.inputs.toggleDofZoomAttenuation) {
       this.ui.inputs.toggleDofZoomAttenuation.checked =
         state.dof.zoomAttenuation !== false;
+    }
+    if (this.ui.inputs.toggleDofFocusPlane) {
+      this.ui.inputs.toggleDofFocusPlane.checked = !!state.dof?.showFocusPlane;
     }
     this.ui.inputs.toggleDof.checked = !!state.dof.enabled;
     if (this.ui.inputs.dofQuality) {

@@ -1,3 +1,4 @@
+import { formatDofFStopLabel } from '../constants.js';
 import {
   isPointerOnSliderThumb,
   resolveSliderDefaultValue,
@@ -28,6 +29,10 @@ export class UIHelpers {
     if (type === 'kelvin') {
       const rounded = Math.round(value);
       return `${rounded}K`;
+    }
+
+    if (type === 'fstop') {
+      return formatDofFStopLabel(value);
     }
 
     const formatMap = {

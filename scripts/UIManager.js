@@ -576,6 +576,7 @@ export class UIManager {
       dofAperture: q('#dofAperture'),
       dofQuality: q('#dofQuality'),
       toggleDof: q('#toggleDof'),
+      toggleDofFocusPlane: q('#toggleDofFocusPlane'),
       toggleDofZoomAttenuation: q('#toggleDofZoomAttenuation'),
       bloomThreshold: q('#bloomThreshold'),
       bloomStrength: q('#bloomStrength'),
@@ -2979,7 +2980,7 @@ export class UIManager {
     this.inputs.dofFocus.value = dofFocus;
     this.updateValueLabel('dofFocus', dofFocus, 'distance');
     this.inputs.dofAperture.value = state.dof.aperture;
-    this.updateValueLabel('dofAperture', state.dof.aperture, 'decimal', 3);
+    this.updateValueLabel('dofAperture', state.dof.aperture, 'fstop');
     this.inputs.toggleDof.checked = !!state.dof.enabled;
     if (this.inputs.dofQuality) {
       const dq = state.dof?.quality;

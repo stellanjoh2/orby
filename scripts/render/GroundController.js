@@ -866,6 +866,7 @@ export class GroundController {
     });
     this.grid = new LineSegments2(geometry, material);
     this.grid.frustumCulled = false;
+    this.grid.userData.skipBokehDepth = true;
     this.gridMaterials = [material];
     this._syncGridMaterialDepthState();
     this._syncGridLineResolution();

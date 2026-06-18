@@ -135,6 +135,13 @@ export class RenderLoopController {
         },
       },
       {
+        id: 'dof-focus-plane',
+        when: (_ctx, s) => !!s.stateStore.getState().dof?.showFocusPlane,
+        run: (_delta, s) => {
+          s.updateDofFocusPlaneTransform();
+        },
+      },
+      {
         id: 'creative-look-time',
         when: (ctx) => ctx.creativeLookEnabled,
         run: (_delta, s) => {

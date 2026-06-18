@@ -147,6 +147,8 @@ import {
 import { SceneMeshClickHandler } from './scene/SceneMeshClickHandler.js';
 import { SceneBoneHoverHandler } from './scene/SceneBoneHoverHandler.js';
 import { DofAutofocusController } from './render/DofAutofocusController.js';
+import { computeModelViewDepthSpan } from './render/dofFocalDepth.js';
+import { DofFocusPlaneHelper } from './render/DofFocusPlaneHelper.js';
 import { ViewportFramingOverlays } from './scene/ViewportFramingOverlays.js';
 import { normalizeIsometricState } from './camera/isometricPresets.js';
 import { sanitizeClipPlanes } from './camera/clipPlanes.js';
@@ -736,6 +738,9 @@ export class SceneManager {
     this.dofAutofocus.resetSmoothFocus(
       this.stateStore.getState().dof?.focus ?? 1.5,
     );
+
+    this.dofFocusPlane = new DofFocusPlaneHelper(this.scene);
+    this._syncDofFocusPlane(this.stateStore.getState().dof);
     
     // Histogram is created lazily on first enable (see setHistogramEnabled).
     if (this.stateStore.getState().histogramEnabled) {
@@ -3348,19 +3353,55 @@ export class SceneManager {
 
   updateDof(settings) {
     const dof = settings ?? this.stateStore.getState().dof;
-    const cam = this.stateStore.getState().camera;
+    const state = this.stateStore.getState();
+    const cam = state.camera;
     const zoomAttenuation = this.dofAutofocus?.computeZoomAttenuation(dof) ?? 1;
     const focalLengthMm =
       typeof cam?.lensFocalMm === 'number' && cam.lensFocalMm > 0
         ? cam.lensFocalMm
         : 35;
+    const bounds = this.cameraController?.getModelBounds?.();
+    const modelViewDepthSpan =
+      this.camera && bounds ? computeModelViewDepthSpan(this.camera, bounds) : null;
     this.postPipeline?.updateDof(dof, {
       zoomAttenuation,
       focalLengthMm,
       cameraNear: this.camera?.near,
       cameraFar: this.camera?.far,
       camera: this.camera,
+      groundPlaneY: state.gridY,
+      groundPlaneEnabled: !!state.groundWire && !!dof?.enabled,
+      modelViewDepthSpan,
     });
+    this._syncDofFocusPlane(dof);
+  }
+
+  _syncDofFocusPlane(dof) {
+    const settings = dof ?? this.stateStore.getState().dof;
+    const show = !!settings?.showFocusPlane;
+    this.dofFocusPlane?.setVisible(show);
+    if (show) {
+      const focalDepth = this.postPipeline?.bokehPass?.uniforms?.focalDepth?.value;
+      this.dofFocusPlane?.update(this.camera, settings?.focus ?? 1.5, {
+        near: this.camera?.near,
+        far: this.camera?.far,
+        focalDepth,
+      });
+    }
+  }
+
+  updateDofFocusPlaneTransform() {
+    if (!this.stateStore.getState().dof?.showFocusPlane) return;
+    const focalDepth = this.postPipeline?.bokehPass?.uniforms?.focalDepth?.value;
+    this.dofFocusPlane?.update(
+      this.camera,
+      this.stateStore.getState().dof?.focus ?? 1.5,
+      {
+        near: this.camera?.near,
+        far: this.camera?.far,
+        focalDepth,
+      },
+    );
   }
 
   updateBloom(settings) {

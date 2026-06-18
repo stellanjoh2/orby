@@ -48,12 +48,7 @@ export class DofAutofocusController {
     const mode = normalizeDofFocusMode(dof.focusMode);
     if (mode === 'manual') return false;
 
-    let targetFocus = null;
-    if (mode === 'center') {
-      targetFocus = this._raycastFocus(this._ndcCenter);
-    } else if (mode === 'target') {
-      targetFocus = this._targetFocusDistance();
-    }
+    let targetFocus = this._raycastFocus(this._ndcCenter);
 
     if (targetFocus == null || !Number.isFinite(targetFocus)) return false;
 
@@ -103,7 +98,7 @@ export class DofAutofocusController {
   _applyFocusPick(focus, dof) {
     this._smoothFocus = focus;
     const mode = normalizeDofFocusMode(dof.focusMode);
-    const lockManual = mode === 'center' || mode === 'target';
+    const lockManual = mode === 'auto';
 
     if (lockManual) {
       this.stateStore.set('dof.focusMode', 'manual');
@@ -124,6 +119,8 @@ export class DofAutofocusController {
   }
 
   /**
+   * Reduce bokeh kernel when the camera is very close so macro framing does not overwhelm;
+   * full strength when pulled back (matches "Compensate zoom").
    * @param {object | undefined} dof
    * @returns {number} 0..1 multiplier
    */
@@ -137,11 +134,11 @@ export class DofAutofocusController {
 
     const dist = camera.position.distanceTo(target);
     const threshold = Math.max(bounds.radius * 0.85, 0.25);
-    if (dist <= threshold) return 1;
+    if (dist >= threshold) return 1;
 
     const span = Math.max(bounds.radius * 1.25, 0.5);
-    const t = Math.min(1, (dist - threshold) / span);
-    return 1 - t * 0.92;
+    const t = Math.min(1, (threshold - dist) / span);
+    return Math.max(0.08, 1 - t * 0.92);
   }
 
   /**

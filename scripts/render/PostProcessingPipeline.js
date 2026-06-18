@@ -78,7 +78,7 @@ export class PostProcessingPipeline {
    * @param {import('three').WebGLRenderer} renderer
    * @param {import('three').Scene} scene
    * @param {import('three').Camera} camera
-   * @param {{ getDofDepthProxy?: () => import('three').Object3D | null }} [opts]
+   * @param {{ getDofDepthProxy?: () => import('three').Object3D | null, getDofDepthProxies?: () => import('three').Object3D[] }} [opts]
    */
   constructor(renderer, scene, camera, opts = {}) {
     this.renderer = renderer;
@@ -105,6 +105,7 @@ export class PostProcessingPipeline {
       focus: 10,
       aperture: 0.003,
       maxblur: 0.01,
+      getDofDepthProxies: opts.getDofDepthProxies,
       getDofDepthProxy: opts.getDofDepthProxy,
     });
 
@@ -1248,7 +1249,7 @@ export class PostProcessingPipeline {
   /**
    * Update depth of field (Martins Upitis BokehShader2 — three.js dof2).
    * @param {Object} settings
-   * @param {{ zoomAttenuation?: number, focalLengthMm?: number, cameraNear?: number, cameraFar?: number, camera?: import('three').PerspectiveCamera }} [opts]
+   * @param {{ zoomAttenuation?: number, focalLengthMm?: number, cameraNear?: number, cameraFar?: number, camera?: import('three').PerspectiveCamera, groundPlaneY?: number, groundPlaneEnabled?: boolean, modelViewDepthSpan?: number | null }} [opts]
    */
   updateDof(settings, opts = {}) {
     if (!settings) return;
@@ -1281,7 +1282,7 @@ export class PostProcessingPipeline {
 
     const fstop = THREE.MathUtils.clamp(0.014 / aperture, 1.4, 16);
     const maxblur = THREE.MathUtils.clamp(
-      0.45 + aperture * 90 * bgMul * zoomMul,
+      0.45 + aperture * 90 * zoomMul,
       0.35,
       2.5,
     );
@@ -1294,6 +1295,9 @@ export class PostProcessingPipeline {
       foregroundBlur: fgMul,
       backgroundBlur: bgMul,
       focusMode: settings.focusMode,
+      groundPlaneY: opts.groundPlaneY,
+      groundPlaneEnabled: opts.groundPlaneEnabled,
+      modelViewDepthSpan: opts.modelViewDepthSpan ?? null,
     });
     this.bokehPass.setDofQualityTier?.(qualityId);
   }

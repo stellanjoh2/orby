@@ -5,9 +5,10 @@ import {
   BokehDepthShader,
   resolveDofBokeh2Quality,
 } from './BokehShader2.js';
+import { resolveDofCocFalloffDistance } from './dofFocalDepth.js';
 
 const {
-  HalfFloatType,
+  FloatType,
   NearestFilter,
   ShaderMaterial,
   UniformsUtils,
@@ -25,6 +26,13 @@ class MeshglBokehPass extends Pass {
     this.camera = camera;
     this.getDofDepthProxy =
       typeof params.getDofDepthProxy === 'function' ? params.getDofDepthProxy : null;
+    this.getDofDepthProxies =
+      typeof params.getDofDepthProxies === 'function'
+        ? params.getDofDepthProxies
+        : () => {
+            const proxy = this.getDofDepthProxy?.();
+            return proxy ? [proxy] : [];
+          };
     /** @type {import('three').Object3D[]} */
     this._bokehDepthHideStack = [];
     /** BokehDepthShader output — not compatible with RGBADepthPacking god-rays reuse. */
@@ -38,7 +46,7 @@ class MeshglBokehPass extends Pass {
     this.renderTargetDepth = new WebGLRenderTarget(1, 1, {
       minFilter: NearestFilter,
       magFilter: NearestFilter,
-      type: HalfFloatType,
+      type: FloatType,
     });
     this.renderTargetDepth.texture.name = 'MeshglBokehPass.depth';
 
@@ -115,26 +123,31 @@ class MeshglBokehPass extends Pass {
    *   foregroundBlur?: number,
    *   backgroundBlur?: number,
    *   focusMode?: string,
+   *   modelViewDepthSpan?: number | null,
    * }} settings
    */
   applySettings(settings) {
     this._lastSettings = settings;
     const u = this.uniforms;
-    const fg = Math.max(0.05, settings.foregroundBlur ?? 1);
-    const bg = Math.max(0.05, settings.backgroundBlur ?? 1);
-    const fgScale = 1.0 / Math.max(0.2, fg);
-    const bgScale = 1.0 / Math.max(0.2, bg);
+    const nearMul = Math.max(0, settings.foregroundBlur ?? 1);
+    const farMul = Math.max(0, settings.backgroundBlur ?? 1);
+    const cocBand = resolveDofCocFalloffDistance(
+      settings.focalDepth ?? 1.5,
+      settings.modelViewDepthSpan,
+    );
 
     u.focalDepth.value = settings.focalDepth;
     u.focalLength.value = settings.focalLengthMm ?? 35;
     u.fstop.value = settings.fstop;
     u.maxblur.value = settings.maxblur;
+    u.nearBlurMul.value = nearMul;
+    u.farBlurMul.value = farMul;
     u.manualdof.value = true;
-    // CoC ramps in meters (view depth) — wide enough to avoid knife-edge transitions.
-    u.ndofstart.value = 0.05 * bgScale;
-    u.ndofdist.value = Math.max(0.55, 1.35 * bgScale);
-    u.fdofstart.value = 0.05 * fgScale;
-    u.fdofdist.value = Math.max(0.45, 1.1 * fgScale);
+    // Ramp width is subject-relative; near/far sliders only scale kernel strength in the shader.
+    u.ndofstart.value = 0.0;
+    u.ndofdist.value = cocBand;
+    u.fdofstart.value = 0.0;
+    u.fdofdist.value = cocBand;
     u.shaderFocus.value = false;
     u.focusCoords.value.set(0.5, 0.5);
     u.noise.value = 1;
@@ -143,12 +156,17 @@ class MeshglBokehPass extends Pass {
     u.gain.value = 0.0;
     u.bias.value = 0.35;
     u.fringe.value = 0.12;
-    u.depthblur.value = 1;
+    u.depthblur.value = 0;
     u.pentagon.value = 0;
     u.vignetting.value = 0;
     u.showFocus.value = 0;
     u.znear.value = this.camera.near;
     u.zfar.value = this.camera.far;
+    u.groundPlaneY.value =
+      typeof settings.groundPlaneY === 'number' && Number.isFinite(settings.groundPlaneY)
+        ? settings.groundPlaneY
+        : 0;
+    u.groundPlaneEnabled.value = settings.groundPlaneEnabled ? 1 : 0;
     this.materialDepth.uniforms.mNear.value = this.camera.near;
     this.materialDepth.uniforms.mFar.value = this.camera.far;
   }
@@ -172,11 +190,15 @@ class MeshglBokehPass extends Pass {
   }
 
   render(renderer, writeBuffer, readBuffer) {
-    const depthProxy = this.getDofDepthProxy?.() ?? null;
-    let restoreDepthProxy = false;
-    if (depthProxy && depthProxy.visible === false) {
-      depthProxy.visible = true;
-      restoreDepthProxy = true;
+    const depthProxies = this.getDofDepthProxies?.() ?? [];
+    /** @type {import('three').Object3D[]} */
+    const restoreDepthProxies = [];
+    for (let i = 0; i < depthProxies.length; i++) {
+      const proxy = depthProxies[i];
+      if (proxy && proxy.visible === false) {
+        proxy.visible = true;
+        restoreDepthProxies.push(proxy);
+      }
     }
 
     this.scene.overrideMaterial = this.materialDepth;
@@ -197,13 +219,28 @@ class MeshglBokehPass extends Pass {
       this._endBokehDepthExclusions();
     }
 
-    if (restoreDepthProxy) {
-      depthProxy.visible = false;
+    for (let i = 0; i < restoreDepthProxies.length; i++) {
+      restoreDepthProxies[i].visible = false;
     }
     this.scene.overrideMaterial = null;
 
     this.uniforms.tColor.value = readBuffer.texture;
     this.uniforms.tDepth.value = this.renderTargetDepth.texture;
+
+    const cam = this.camera;
+    if (cam) {
+      cam.updateMatrixWorld?.();
+      if (cam.projectionMatrixInverse) {
+        this.uniforms.cameraProjectionMatrixInverse.value.copy(cam.projectionMatrixInverse);
+      }
+      if (cam.matrixWorld) {
+        this.uniforms.cameraMatrixWorld.value.copy(cam.matrixWorld);
+      }
+      if (cam.matrixWorldInverse) {
+        this.uniforms.cameraViewMatrix.value.copy(cam.matrixWorldInverse);
+      }
+      this.uniforms.dofCameraWorldPosition.value.setFromMatrixPosition(cam.matrixWorld);
+    }
 
     if (this.renderToScreen) {
       renderer.setRenderTarget(null);

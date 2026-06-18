@@ -1,5 +1,7 @@
 import {
-	Vector2
+	Matrix4,
+	Vector2,
+	Vector3,
 } from 'three';
 
 /**
@@ -52,6 +54,16 @@ const BokehShader = {
 		'fdofstart': { value: 0.4 },
 		'fdofdist': { value: 3.0 },
 
+		'cameraProjectionMatrixInverse': { value: new Matrix4() },
+		'cameraMatrixWorld': { value: new Matrix4() },
+		'cameraViewMatrix': { value: new Matrix4() },
+		'dofCameraWorldPosition': { value: new Vector3() },
+		'groundPlaneY': { value: 0.0 },
+		'groundPlaneEnabled': { value: 0 },
+
+		'nearBlurMul': { value: 1.0 },
+		'farBlurMul': { value: 1.0 },
+
 	},
 
 	vertexShader: /* glsl */`
@@ -102,6 +114,16 @@ const BokehShader = {
 		uniform float fdofstart;
 		uniform float fdofdist;
 
+		uniform mat4 cameraProjectionMatrixInverse;
+		uniform mat4 cameraMatrixWorld;
+		uniform mat4 cameraViewMatrix;
+		uniform vec3 dofCameraWorldPosition;
+		uniform float groundPlaneY;
+		uniform bool groundPlaneEnabled;
+
+		uniform float nearBlurMul;
+		uniform float farBlurMul;
+
 		float CoC = 0.03; //circle of confusion size in mm (35mm film = 0.03mm)
 
 		uniform bool vignetting; // use optical lens vignetting
@@ -131,7 +153,7 @@ const BokehShader = {
 		uniform float dithering;
 
 		uniform bool depthblur; // blur the depth buffer
-		float dbsize = 4.0; // depth blur size — wider = softer depth silhouettes
+		float dbsize = 8.0; // depth blur size — wider = softer CoC transitions on silhouettes
 
 		/*
 		next part is experimental
@@ -245,7 +267,72 @@ const BokehShader = {
 		}
 
 		float viewDepthFromPacked(float packed) {
+			// Float depth RT — black clear = far plane; geometry writes 1−t (linear view depth).
+			if (packed <= 1e-7) {
+				return zfar;
+			}
 			return znear + (1.0 - packed) * (zfar - znear);
+		}
+
+		float viewDepthOnGroundPlane(vec2 uv) {
+			if (!groundPlaneEnabled) {
+				return 1e9;
+			}
+
+			vec2 ndc = uv * 2.0 - 1.0;
+			vec4 clip = vec4(ndc, 1.0, 1.0);
+			vec4 view = cameraProjectionMatrixInverse * clip;
+			view /= view.w;
+			vec3 dirVS = normalize(view.xyz);
+			vec3 dirWS = normalize((cameraMatrixWorld * vec4(dirVS, 0.0)).xyz);
+			vec3 originWS = dofCameraWorldPosition;
+
+			if (abs(dirWS.y) < 1e-5) {
+				return 1e9;
+			}
+
+			float t = (groundPlaneY - originWS.y) / dirWS.y;
+			if (t <= 0.0) {
+				return 1e9;
+			}
+
+			vec3 hitWS = originWS + dirWS * t;
+			vec4 hitVS = cameraViewMatrix * vec4(hitWS, 1.0);
+			return max(0.0, -hitVS.z);
+		}
+
+		bool isFloorBackdropColor(vec3 color) {
+			float luma = dot(color, vec3(0.299, 0.587, 0.114));
+			if (luma < 0.035) {
+				return true;
+			}
+			return color.g > 0.12 && color.g > color.r * 0.95 + 0.04 && color.g > color.b * 0.95 + 0.04;
+		}
+
+		bool isFarPlaneDepth(float sceneDepth) {
+			return sceneDepth > zfar * 0.992;
+		}
+
+		float depthForCoCRamp(vec2 uv, vec3 color) {
+			float sceneDepth = viewDepthFromPacked(texture2D(tDepth, uv).x);
+
+			if (groundPlaneEnabled && isFloorBackdropColor(color)) {
+				float groundDepth = viewDepthOnGroundPlane(uv);
+				if (groundDepth < 1e8) {
+					return groundDepth;
+				}
+			}
+
+			return sceneDepth;
+		}
+
+		float depthForCoC(vec2 uv, vec3 color) {
+			float sceneDepth = depthForCoCRamp(uv, color);
+
+			if (depthblur) {
+				return viewDepthFromPacked(bdepth(uv));
+			}
+			return sceneDepth;
 		}
 
 		float vignette() {
@@ -256,10 +343,37 @@ const BokehShader = {
 
 		float cocFactorForFocus(float depthValue, float focusValue) {
 			float a = depthValue - focusValue;
-			if (a > 0.0) {
-				return smoothstep(0.0, fdofdist, max(0.0, a - fdofstart));
+			float sideStrength = a > 0.0 ? farBlurMul : nearBlurMul;
+			if (sideStrength < 0.001) {
+				return 0.0;
 			}
-			return smoothstep(0.0, ndofdist, max(0.0, -a - ndofstart));
+			float dist = a > 0.0 ? max(fdofdist, 1e-4) : max(ndofdist, 1e-4);
+			// Exponential onset — no flat dead zone, avoids a visible knife-edge at the focal plane.
+			float t = 1.0 - exp(-abs(a) / max(dist * 0.62, 1e-4));
+			return clamp(t, 0.0, 1.0);
+		}
+
+		float cocAtPixel(vec2 uv, float focusValue) {
+			vec3 color = texture2D(tColor, uv).rgb;
+			float d = depthForCoCRamp(uv, color);
+			return cocFactorForFocus(d, focusValue);
+		}
+
+		// Screen-space soften the CoC field so depth steps do not become knife-edge blur borders.
+		float smoothedCoc(vec2 uv, float focusValue) {
+			vec2 px = vec2(1.0 / textureWidth, 1.0 / textureHeight);
+			float acc = cocAtPixel(uv, focusValue) * 2.0;
+			acc += cocAtPixel(uv + px * 2.0, focusValue);
+			acc += cocAtPixel(uv - px * 2.0, focusValue);
+			acc += cocAtPixel(uv + px * vec2(2.0, 0.0), focusValue);
+			acc += cocAtPixel(uv - px * vec2(2.0, 0.0), focusValue);
+			acc += cocAtPixel(uv + px * vec2(0.0, 2.0), focusValue);
+			acc += cocAtPixel(uv - px * vec2(0.0, 2.0), focusValue);
+			acc += cocAtPixel(uv + px * vec2(4.0, 0.0), focusValue);
+			acc += cocAtPixel(uv - px * vec2(4.0, 0.0), focusValue);
+			acc += cocAtPixel(uv + px * vec2(0.0, 4.0), focusValue);
+			acc += cocAtPixel(uv - px * vec2(0.0, 4.0), focusValue);
+			return acc / 12.0;
 		}
 
 		float cocFactor(float depthValue) {
@@ -284,26 +398,31 @@ const BokehShader = {
 			if (pentagon) {
 				p = penta(vec2(pw,ph));
 			}
-			float sampleBlur = sampleCoc(sampleUv);
-			float cocDelta = abs(blur - sampleBlur);
-			float depthWeight = mix(
-				1.0,
-				1.0 - smoothstep(0.04, 0.45, cocDelta),
-				0.08
-			);
-			float weight = mix(1.0, i/rings2, bias) * p * depthWeight;
+			float weight = mix(1.0, i/rings2, bias) * p;
 			col += color(sampleUv, blur) * weight;
 			return weight;
 		}
 
 		void main() {
-			//scene depth calculation
+			vec3 sharp = texture2D(tColor, vUv.xy).rgb;
 
-			float depth = viewDepthFromPacked(texture2D(tDepth,vUv.xy).x);
+			float sceneDepth = viewDepthFromPacked(texture2D(tDepth,vUv.xy).x);
+			float depth;
 
-			// Blur depth?
-			if ( depthblur ) {
-				depth = viewDepthFromPacked(bdepth(vUv.xy));
+			if (groundPlaneEnabled && isFloorBackdropColor(sharp)) {
+				float groundDepth = viewDepthOnGroundPlane(vUv.xy);
+				// Always use the analytic floor plane — grid line geometry depth is screen-space
+				// quads and disagrees with mesh depth, which causes sharp/blurry checkerboard patches.
+				if (groundDepth < 1e8) {
+					depth = groundDepth;
+				} else {
+					depth = sceneDepth;
+				}
+			} else {
+				depth = sceneDepth;
+				if ( depthblur ) {
+					depth = viewDepthFromPacked(bdepth(vUv.xy));
+				}
 			}
 
 			//focal plane calculation
@@ -321,7 +440,7 @@ const BokehShader = {
 			float blur = 0.0;
 
 			if (manualdof) {
-				blur = cocFactorForFocus(depth, fDepth);
+				blur = smoothedCoc(vUv.xy, fDepth);
 			} else {
 				float f = focalLength; // focal length in mm
 				float d = fDepth*1000.0; // focal plane in mm
@@ -335,24 +454,25 @@ const BokehShader = {
 			}
 
 			blur = clamp(blur, 0.0, 1.0);
-			blur = pow(blur, 0.55);
-			float blurAmt = blur * blur * (3.0 - 2.0 * blur);
+			float mixAmt = blur * blur * (3.0 - 2.0 * blur);
+			float sideKernelMul = depth > fDepth ? farBlurMul : nearBlurMul;
+			// Quartic kernel — bokeh grows slowly near focus, mixAmt handles the optical blend.
+			float blurKernel = mixAmt * mixAmt * sideKernelMul;
 
 			// calculation of pattern for dithering
 
-			vec2 noise = vec2(rand(vUv.xy), rand( vUv.xy + vec2( 0.4, 0.6 ) ) )*dithering*blurAmt;
+			vec2 noise = vec2(rand(vUv.xy), rand( vUv.xy + vec2( 0.4, 0.6 ) ) )*dithering*blurKernel;
 
 			// getting blur x and y step factor
 
-			float w = (1.0/textureWidth)*blurAmt*maxblur+noise.x;
-			float h = (1.0/textureHeight)*blurAmt*maxblur+noise.y;
+			float w = (1.0/textureWidth)*blurKernel*maxblur+noise.x;
+			float h = (1.0/textureHeight)*blurKernel*maxblur+noise.y;
 
 			// calculation of final color
 
-			vec3 sharp = texture2D(tColor, vUv.xy).rgb;
 			vec3 col = sharp;
 
-			if (blurAmt > 0.001) {
+			if (mixAmt > 1e-5 && sideKernelMul > 0.001) {
 				col = sharp;
 				float s = 1.0;
 				int ringsamples;
@@ -363,14 +483,15 @@ const BokehShader = {
 
 					for (int j = 0 ; j < maxringsamples ; j++) {
 						if (j >= ringsamples) break;
-						s += gather(float(i), float(j), ringsamples, col, w, h, blurAmt);
+						s += gather(float(i), float(j), ringsamples, col, w, h, mixAmt);
 					}
 					/*unboxend*/
 				}
 
 				col /= s;
-				col = mix(sharp, col, blurAmt);
 			}
+
+			col = mix(sharp, col, mixAmt);
 
 			if (showFocus) {
 				col = debugFocus(col, blur, depth);
