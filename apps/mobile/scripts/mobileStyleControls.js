@@ -22,7 +22,7 @@ import {
 export const MOBILE_STYLE_SLIDERS = /** @type {StyleSliderDef[]} */ ([
   {
     path: 'masterHue',
-    label: 'Master Hue',
+    label: 'Object Hue',
     min: -180,
     max: 180,
     step: 1,

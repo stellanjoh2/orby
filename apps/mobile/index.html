@@ -183,7 +183,7 @@
     </script>
   </head>
   <body>
-    <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-active-tab="light" data-hdri-panel="presets-only" data-style-panel="presets-only">
+    <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-object-menu="closed" data-active-tab="light" data-hdri-panel="presets-only" data-style-panel="presets-only">
       <main class="orby-mobile-viewport" aria-label="3D viewport">
         <div class="orby-mobile-viewport__canvas"></div>
         <div class="orby-mobile-color-picker" data-color-picker-layer hidden>
@@ -200,16 +200,6 @@
         </div>
         <div class="orby-mobile-top-actions">
           <div class="orby-mobile-object-menu" data-object-menu="closed">
-            <div
-              class="orby-mobile-object-panel"
-              id="orbyMobileObjectPanel"
-              data-object-panel
-              hidden
-              role="region"
-              aria-label="Object"
-            >
-              <div class="orby-mobile-object-panel__controls" data-object-controls></div>
-            </div>
             <button
               type="button"
               class="orby-mobile-object-btn"
@@ -270,6 +260,17 @@
           </div>
         </div>
       </main>
+
+      <div
+        class="orby-mobile-object-panel"
+        id="orbyMobileObjectPanel"
+        data-object-panel
+        hidden
+        role="region"
+        aria-label="Object"
+      >
+        <div class="orby-mobile-object-panel__controls" data-object-controls></div>
+      </div>
 
       <nav class="orby-mobile-dock" aria-label="Actions">
         <span class="orby-mobile-dock__indicator" aria-hidden="true" hidden></span>

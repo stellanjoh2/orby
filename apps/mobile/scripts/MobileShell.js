@@ -165,6 +165,7 @@ export class MobileShell {
     this.scene.onError = (message) => this.showToast(message);
     this.scene.onFxStateChanged = () => this.fxPanel.sync();
     this.scene.onCreativeLookStateChanged = () => this.stylePanel.sync();
+    this.scene.onBaseStateChanged = () => this.objectPanel.sync();
     this.scene.onOrbitChromeChange = (hidden) => this.chrome.setOrbitChromeHidden(hidden);
     this.scene.onCreativeLookLoading = (loading) => {
       if (loading) this.modelLoader.beginSpinner();

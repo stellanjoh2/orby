@@ -36,6 +36,8 @@ export class MobileSheetController {
     this.activeTab = 'light';
     /** @type {MobileTab | null} */
     this._dockIndicatorTab = null;
+    /** @type {(() => void) | null} */
+    this._closeAnimationCleanup = null;
   }
 
   /** @param {MobilePresetRails} presetRails */
@@ -51,9 +53,11 @@ export class MobileSheetController {
       this.sheetState !== 'closed' && this.activeTab === tab;
 
     if (sameTabOpen) {
-      this.setSheetState('closed');
+      this.closeSheet(0);
       return;
     }
+
+    this._cancelCloseAnimation();
 
     this.setActiveTab(tab);
     this.resetSheetScroll(tab);
@@ -79,6 +83,13 @@ export class MobileSheetController {
 
   /** @param {SheetState} state */
   setSheetState(state) {
+    if (state === 'closed') {
+      this.closeSheet(0);
+      return;
+    }
+
+    this._cancelCloseAnimation();
+
     const { root } = this.ctx;
     const stateChanged = this.sheetState !== state;
     if (stateChanged) {
@@ -89,6 +100,7 @@ export class MobileSheetController {
     this.sheetState = state;
     root.dataset.sheet = state;
     this.deps.getSheetDrag()?.reset?.();
+    this._clearSheetCloseStyles();
     this.syncDockTabState();
     const scrim = root.querySelector('.orby-mobile-scrim');
     if (scrim instanceof HTMLElement) {
@@ -96,10 +108,99 @@ export class MobileSheetController {
     }
     if (!wasOpen && state !== 'closed') {
       mobileHaptic('light');
-    } else if (wasOpen && state === 'closed') {
+    }
+  }
+
+  /**
+   * Slide the sheet down before applying the closed state.
+   * @param {number} [dragOffsetPx] Current pull-down offset when dismissing via drag.
+   */
+  closeSheet(dragOffsetPx = 0) {
+    if (this.sheetState === 'closed' && !this._closeAnimationCleanup) return;
+
+    this._cancelCloseAnimation();
+
+    const { root } = this.ctx;
+    const wasOpen = this.sheetState !== 'closed';
+    const sheet = this.deps.sheet;
+    const startHeight =
+      sheet instanceof HTMLElement ? sheet.getBoundingClientRect().height : 0;
+
+    this.deps.getSliderFocus()?.release?.();
+    this.deps.getRangeTouch()?.release?.();
+    this.deps.getSheetDrag()?.reset?.();
+
+    this.sheetState = 'closed';
+    root.dataset.sheet = 'closed';
+    this.syncDockTabState();
+
+    const scrim = root.querySelector('.orby-mobile-scrim');
+    if (scrim instanceof HTMLElement) {
+      scrim.hidden = true;
+    }
+
+    if (wasOpen) {
       mobileHaptic('soft');
       this.deps.onSheetClosed?.();
     }
+
+    if (!(sheet instanceof HTMLElement)) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || !wasOpen) {
+      this._clearSheetCloseStyles();
+      return;
+    }
+
+    const startY = Math.max(0, dragOffsetPx);
+    sheet.classList.remove('orby-mobile-sheet--dragging');
+    sheet.style.height = `${startHeight}px`;
+    sheet.classList.add('orby-mobile-sheet--closing');
+    sheet.style.transform = this._sheetSlideTransform(startY);
+
+    void sheet.offsetHeight;
+
+    requestAnimationFrame(() => {
+      sheet.style.transform = this._sheetSlideTransform(100, '%');
+    });
+
+    const finish = () => {
+      if (!this._closeAnimationCleanup) return;
+      sheet.removeEventListener('transitionend', onTransitionEnd);
+      this._clearSheetCloseStyles();
+      this._closeAnimationCleanup = null;
+    };
+
+    /** @param {TransitionEvent} e */
+    const onTransitionEnd = (e) => {
+      if (e.target !== sheet || e.propertyName !== 'transform') return;
+      finish();
+    };
+
+    sheet.addEventListener('transitionend', onTransitionEnd);
+    this._closeAnimationCleanup = finish;
+    window.setTimeout(finish, 420);
+  }
+
+  _cancelCloseAnimation() {
+    if (!this._closeAnimationCleanup) return;
+    this._closeAnimationCleanup();
+  }
+
+  _clearSheetCloseStyles() {
+    const sheet = this.deps.sheet;
+    if (!(sheet instanceof HTMLElement)) return;
+    sheet.classList.remove('orby-mobile-sheet--closing');
+    sheet.style.removeProperty('height');
+    sheet.style.removeProperty('transform');
+  }
+
+  /** @param {number} offsetY @param {'px' | '%'} [unit] */
+  _sheetSlideTransform(offsetY, unit = 'px') {
+    const centered = window.matchMedia('(min-width: 768px)').matches;
+    const x = centered ? 'translateX(-50%) ' : '';
+    const y = unit === '%' ? `${offsetY}%` : `${offsetY}px`;
+    return `${x}translate3d(0, ${y}, 0)`;
   }
 
   /** @param {MobileTab} tab */

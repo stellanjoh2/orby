@@ -82,9 +82,12 @@ export class MobileChromeBindings {
 
   /** @param {boolean} open */
   setObjectMenuOpen(open) {
+    const { root } = this.deps;
+    const state = open ? 'open' : 'closed';
     if (this._objectMenuEl instanceof HTMLElement) {
-      this._objectMenuEl.dataset.objectMenu = open ? 'open' : 'closed';
+      this._objectMenuEl.dataset.objectMenu = state;
     }
+    root.dataset.objectMenu = state;
     if (this._objectBtn instanceof HTMLElement) {
       this._objectBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
@@ -130,7 +133,7 @@ export class MobileChromeBindings {
       this._sheetDrag = bindMobileSheetDrag({
         root,
         sheet,
-        onDismiss: () => sheetController.setSheetState('closed'),
+        onDismiss: (dragOffsetPx = 0) => sheetController.closeSheet(dragOffsetPx),
       });
     }
 
@@ -164,7 +167,10 @@ export class MobileChromeBindings {
       if (this._objectMenuEl?.dataset.objectMenu !== 'open') return;
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest('.orby-mobile-object-menu')) return;
+      if (
+        t.closest('.orby-mobile-object-menu')
+        || t.closest('[data-object-panel]')
+      ) return;
       this.setObjectMenuOpen(false);
     });
 

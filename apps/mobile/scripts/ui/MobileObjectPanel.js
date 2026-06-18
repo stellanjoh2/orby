@@ -1,4 +1,5 @@
 import { MOBILE_MATERIAL_SLIDERS } from '../mobileMaterialControls.js';
+import { MOBILE_BASE_SCALE } from '../mobileObjectBaseControls.js';
 import { updateMobileSliderFill } from '../mobileSliderHelpers.js';
 
 /** @import { MobileUiContext } from '../mobileUiContext.js' */
@@ -15,6 +16,8 @@ export class MobileObjectPanel {
 
     host.replaceChildren();
     host.append(...MOBILE_MATERIAL_SLIDERS.map((def) => this._mkMaterialSlider(def)));
+    host.append(this._mkBaseScaleSlider());
+    host.append(this._mkBaseGlassToggle());
     host.append(this._mkAutoRotateToggle());
     this.sync();
   }
@@ -35,6 +38,27 @@ export class MobileObjectPanel {
       if (output instanceof HTMLElement) {
         output.textContent = def.format(value);
       }
+    }
+
+    const baseScale = scene?.getBaseScale?.() ?? MOBILE_BASE_SCALE.defaultValue;
+    const baseOn = baseScale > 0;
+
+    const baseScaleInput = root.querySelector('[data-object-base-scale]');
+    if (baseScaleInput instanceof HTMLInputElement && document.activeElement !== baseScaleInput) {
+      baseScaleInput.value = String(baseScale);
+      updateMobileSliderFill(baseScaleInput);
+      const output = root.querySelector('[data-object-base-scale-value]');
+      if (output instanceof HTMLElement) {
+        output.textContent = MOBILE_BASE_SCALE.format(baseScale);
+      }
+    }
+
+    const baseGlassInput = root.querySelector('[data-object-base-glass]');
+    if (baseGlassInput instanceof HTMLInputElement) {
+      if (document.activeElement !== baseGlassInput) {
+        baseGlassInput.checked = !!scene?.getBaseGlassSurface?.();
+      }
+      baseGlassInput.disabled = !baseOn;
     }
 
     const autoRotateInput = root.querySelector('[data-object-auto-rotate]');
@@ -63,6 +87,50 @@ export class MobileObjectPanel {
       scene.setMaterialValue(def.path, value);
     });
     if (input instanceof HTMLInputElement) updateMobileSliderFill(input);
+    return row;
+  }
+
+  _mkBaseScaleSlider() {
+    const { scene } = this.ctx;
+    const def = MOBILE_BASE_SCALE;
+    const row = document.createElement('label');
+    row.className = 'orby-mobile-fx-grade slider-line';
+    row.innerHTML = `
+      <span class="orby-mobile-fx-grade__label slider-line-label">${def.label}</span>
+      <input type="range" data-object-base-scale min="${def.min}" max="${def.max}" step="${def.step}" value="${def.defaultValue}" />
+      <span class="orby-mobile-fx-grade__value" data-object-base-scale-value></span>
+    `;
+    const input = row.querySelector('input');
+    const output = row.querySelector('[data-object-base-scale-value]');
+    input?.addEventListener('input', () => {
+      if (!(input instanceof HTMLInputElement)) return;
+      const value = Number(input.value);
+      if (output) output.textContent = def.format(value);
+      updateMobileSliderFill(input);
+      scene.setBaseScale(value);
+      this.sync();
+    });
+    if (input instanceof HTMLInputElement) updateMobileSliderFill(input);
+    return row;
+  }
+
+  _mkBaseGlassToggle() {
+    const { scene } = this.ctx;
+    const row = document.createElement('div');
+    row.className = 'orby-mobile-fx-toggle';
+    row.innerHTML = `
+      <span class="orby-mobile-fx-toggle__label">Base glass</span>
+      <label class="effect-toggle">
+        <input type="checkbox" data-object-base-glass />
+        <span class="effect-indicator" aria-hidden="true"></span>
+        <span class="orby-mobile-sr-only">Base glass</span>
+      </label>
+    `;
+    const input = row.querySelector('[data-object-base-glass]');
+    input?.addEventListener('change', () => {
+      if (!(input instanceof HTMLInputElement)) return;
+      scene.setBaseGlassSurface(input.checked);
+    });
     return row;
   }
 

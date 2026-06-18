@@ -1,24 +1,31 @@
 import { mobileHaptic } from './mobileHaptics.js';
 
-const DISMISS_THRESHOLD_PX = 76;
-const DISMISS_VELOCITY = 0.55;
+const DISMISS_THRESHOLD_PX = 64;
+const DISMISS_VELOCITY = 0.5;
 const RUBBER_BAND = 0.42;
+const DRAG_INTENT_PX = 10;
+
+/** Interactive controls — never start a sheet drag from these. */
+const DRAG_BLOCK =
+  'input, button, textarea, select, .orby-mobile-preset, .effect-toggle, .orby-mobile-color-swatch, .orby-mobile-seg__btn, .orby-mobile-pill-btn';
 
 /**
  * Pull-down to dismiss + rubber-band on the bottom sheet.
  * @param {{
  *   root: HTMLElement,
  *   sheet: HTMLElement,
- *   onDismiss: () => void,
+ *   onDismiss: (dragOffsetPx?: number) => void,
  * }} opts
  */
 export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
   /** @type {number | null} */
   let pointerId = null;
   let startY = 0;
+  let startX = 0;
   let lastY = 0;
   let lastTime = 0;
   let dragging = false;
+  let pending = false;
 
   const getActiveScroller = () => {
     const tab = root.dataset.activeTab;
@@ -28,23 +35,67 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
     return null;
   };
 
-  /** @param {EventTarget | null} target */
-  const canStartDrag = (target) => {
+  const scrollerAtTop = () => {
+    const scroller = getActiveScroller();
+    return !(scroller instanceof HTMLElement) || scroller.scrollTop <= 1;
+  };
+
+  /** @param {Element} target */
+  const isBlockedTarget = (target) => Boolean(target.closest(DRAG_BLOCK));
+
+  /** @param {number} clientY */
+  const isInGrabberZone = (clientY) => {
+    const grabber = sheet.querySelector('.orby-mobile-sheet__grabber');
+    if (!(grabber instanceof HTMLElement)) return false;
+    const rect = grabber.getBoundingClientRect();
+    return clientY >= rect.top && clientY <= rect.bottom;
+  };
+
+  /** @param {EventTarget | null} target @param {number} clientY */
+  const canStartDrag = (target, clientY) => {
     if (!(target instanceof Element)) return false;
     if (root.dataset.sliderFocus != null) return false;
     if (root.dataset.sheet === 'closed') return false;
-    if (target.closest('input, button, textarea, select, label, .orby-mobile-preset, .effect-toggle')) {
+    if (isBlockedTarget(target)) return false;
+    if (!scrollerAtTop()) return false;
+
+    if (target.closest('.orby-mobile-sheet__grabber') || isInGrabberZone(clientY)) {
+      return true;
+    }
+
+    if (
+      target.closest('.orby-mobile-sheet__shelf')
+      && !target.closest('.orby-mobile-preset, button, a, input')
+    ) {
+      return true;
+    }
+
+    if (target.closest('.orby-mobile-preset-rail__track')) {
       return false;
     }
-    if (target.closest('.orby-mobile-sheet__grabber')) return true;
-    const scroller = getActiveScroller();
-    if (scroller instanceof HTMLElement && scroller.scrollTop > 1) return false;
+
+    return target.closest('.orby-mobile-sheet') != null;
+  };
+
+  /** @param {EventTarget | null} target */
+  const canDeferDrag = (target) => {
+    if (!(target instanceof Element)) return false;
+    if (root.dataset.sliderFocus != null) return false;
+    if (root.dataset.sheet === 'closed') return false;
+    if (!scrollerAtTop()) return false;
+    if (isBlockedTarget(target)) return false;
     return target.closest('.orby-mobile-sheet') != null;
   };
 
   const clearDragTransform = () => {
     sheet.classList.remove('orby-mobile-sheet--dragging');
     sheet.style.removeProperty('transform');
+  };
+
+  const beginDrag = () => {
+    dragging = true;
+    pending = false;
+    sheet.classList.add('orby-mobile-sheet--dragging');
   };
 
   const applyDragOffset = (offsetPx) => {
@@ -54,22 +105,60 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
 
   /** @param {PointerEvent} e */
   const onPointerDown = (e) => {
-    if (!canStartDrag(e.target)) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-    dragging = true;
-    pointerId = e.pointerId;
-    startY = e.clientY;
-    lastY = e.clientY;
-    lastTime = performance.now();
-    sheet.classList.add('orby-mobile-sheet--dragging');
-    sheet.setPointerCapture(e.pointerId);
-    e.preventDefault();
+    if (canStartDrag(e.target, e.clientY)) {
+      dragging = true;
+      pending = false;
+      pointerId = e.pointerId;
+      startY = e.clientY;
+      startX = e.clientX;
+      lastY = e.clientY;
+      lastTime = performance.now();
+      beginDrag();
+      sheet.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
+
+    if (canDeferDrag(e.target)) {
+      pending = true;
+      dragging = false;
+      pointerId = e.pointerId;
+      startY = e.clientY;
+      startX = e.clientX;
+      lastY = e.clientY;
+      lastTime = performance.now();
+      sheet.setPointerCapture(e.pointerId);
+    }
   };
 
   /** @param {PointerEvent} e */
   const onPointerMove = (e) => {
-    if (!dragging || e.pointerId !== pointerId) return;
+    if (e.pointerId !== pointerId) return;
+
+    if (pending && !dragging) {
+      const dy = e.clientY - startY;
+      const dx = e.clientX - startX;
+      if (dy > DRAG_INTENT_PX && dy > Math.abs(dx) * 1.2) {
+        beginDrag();
+        e.preventDefault();
+      } else if (dy < -DRAG_INTENT_PX || Math.abs(dx) > DRAG_INTENT_PX * 2) {
+        pending = false;
+        pointerId = null;
+        try {
+          sheet.releasePointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        return;
+      } else {
+        return;
+      }
+    }
+
+    if (!dragging) return;
+
     const dy = e.clientY - startY;
     if (dy > 0) {
       const scroller = getActiveScroller();
@@ -78,11 +167,25 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
     applyDragOffset(dy);
     lastY = e.clientY;
     lastTime = performance.now();
+    e.preventDefault();
   };
 
   /** @param {PointerEvent} e */
   const onPointerEnd = (e) => {
-    if (!dragging || e.pointerId !== pointerId) return;
+    if (e.pointerId !== pointerId) return;
+
+    if (pending && !dragging) {
+      pending = false;
+      pointerId = null;
+      try {
+        sheet.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+
+    if (!dragging) return;
 
     const dy = e.clientY - startY;
     const dt = Math.max(1, performance.now() - lastTime);
@@ -90,8 +193,8 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
     const shouldDismiss = dy > DISMISS_THRESHOLD_PX || velocity > DISMISS_VELOCITY;
 
     dragging = false;
+    pending = false;
     pointerId = null;
-    clearDragTransform();
 
     try {
       sheet.releasePointerCapture(e.pointerId);
@@ -100,9 +203,14 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
     }
 
     if (shouldDismiss && dy > 0) {
-      mobileHaptic('soft');
-      onDismiss();
-    } else if (dy > 8) {
+      sheet.classList.remove('orby-mobile-sheet--dragging');
+      onDismiss(Math.max(0, dy));
+      return;
+    }
+
+    clearDragTransform();
+
+    if (dy > 8) {
       mobileHaptic('light');
     }
   };
@@ -115,8 +223,9 @@ export function bindMobileSheetDrag({ root, sheet, onDismiss }) {
   return {
     reset() {
       dragging = false;
+      pending = false;
       pointerId = null;
-      clearDragTransform();
+      sheet.classList.remove('orby-mobile-sheet--dragging');
     },
   };
 }

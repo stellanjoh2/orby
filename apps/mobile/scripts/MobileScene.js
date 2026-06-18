@@ -8,9 +8,11 @@ import {
   DEFAULT_CAMERA_TARGET,
 } from '../../../scripts/camera/cameraDefaults.js';
 import { MOBILE_HDRI_PRESETS } from './mobileHdriConfig.js';
+import { MOBILE_BASE_SCALE } from './mobileObjectBaseControls.js';
 import { HDRI_MOODS, HDRI_STRENGTH_UNIT } from '../../../scripts/config/hdri.js';
 import { EnvironmentController } from '../../../scripts/render/EnvironmentController.js';
 import { BackgroundController } from '../../../scripts/render/BackgroundController.js';
+import { GroundController } from '../../../scripts/render/GroundController.js';
 import { BackgroundGradientController } from '../../../scripts/render/backgroundGradient/BackgroundGradientController.js';
 import { APP_BACKGROUND } from '../../../scripts/constants.js';
 import { exportMobileSceneJpeg } from './mobileExportImage.js';
@@ -121,6 +123,22 @@ export class MobileScene {
     this.backgroundController.setHdriEnabled(true);
     this.backgroundController.setHdriBackgroundEnabled(this._hdriBackgroundEnabled);
 
+    this._groundSolid = false;
+    this._groundY = 0;
+    this._baseScale = MOBILE_BASE_SCALE.defaultValue;
+    this._baseGlassSurface = false;
+    this.groundController = new GroundController(this.scene, {
+      solidEnabled: false,
+      wireEnabled: false,
+      solidColor: '#808080',
+      groundY: 0,
+      baseScale: MOBILE_BASE_SCALE.minActive,
+      renderer: this.renderer,
+      baseGlassSurface: false,
+      backdropEnabled: false,
+    });
+    this._syncBaseVisibility();
+
     this.post = new MobilePost(this.renderer, this.scene, this.camera, this.backgroundController);
     this.creativeLooks = new MobileCreativeLooks(this.renderer, this.scene, this.camera);
     this.post.setCreativeLookSettingsGetter(() => this.creativeLooks.getCreativeLookSettings());
@@ -188,6 +206,8 @@ export class MobileScene {
     this.onOrbitChromeChange = null;
     /** @type {((loading: boolean) => void) | null} */
     this.onCreativeLookLoading = null;
+    /** @type {(() => void) | null} */
+    this.onBaseStateChanged = null;
   }
 
   async init() {
@@ -201,6 +221,8 @@ export class MobileScene {
     this._resizeObserver?.disconnect();
     this._clearModel();
     this.backgroundGradientController?.dispose?.();
+    this.groundController?.disposeMeshes?.();
+    this.groundController = null;
     this.environmentController?.dispose();
     this.post?.dispose();
     this.controls?.dispose();
@@ -223,6 +245,7 @@ export class MobileScene {
       const dbw = gl?.drawingBufferWidth ?? w;
       const dbh = gl?.drawingBufferHeight ?? h;
       this.backgroundGradientController?.handleResize?.(dbw, dbh);
+      this.groundController?.resizeBaseReflector?.(w, h);
     };
     apply();
     this._resizeObserver = new ResizeObserver(apply);
@@ -369,6 +392,7 @@ export class MobileScene {
     }
 
     this.creativeLooks.syncEnvironment(env, intensity, this._hdriBlurriness);
+    this.groundController?.applyBaseEnvironment(env, intensity, this._hdriBlurriness);
 
     if (!this.currentModel) return;
 
@@ -405,6 +429,9 @@ export class MobileScene {
     this._syncModelEnvironment();
     this._repairRenderSurfacesAfterModelLoad();
     this._frameModel(object);
+    if (this._groundSolid) {
+      this.snapBaseToBottom();
+    }
     if (typeof this.renderer?.compile === 'function') {
       requestAnimationFrame(() => {
         if (!this.renderer || !this.scene || !this.camera) return;
@@ -609,6 +636,97 @@ export class MobileScene {
 
   getAutoRotate() {
     return this._autoRotateEnabled;
+  }
+
+  getBaseScale() {
+    return this._baseScale;
+  }
+
+  getBaseGlassSurface() {
+    return this._baseGlassSurface;
+  }
+
+  /** @param {number} value — 0 turns the base off. */
+  setBaseScale(value) {
+    const uiScale = THREE.MathUtils.clamp(
+      Number(value),
+      MOBILE_BASE_SCALE.min,
+      MOBILE_BASE_SCALE.max,
+    );
+    const wasOff = !this._groundSolid;
+
+    if (uiScale <= 0) {
+      if (this._baseScale === 0 && !this._groundSolid) return;
+      this._baseScale = 0;
+      this._groundSolid = false;
+      if (this._baseGlassSurface) {
+        this._baseGlassSurface = false;
+        this.groundController?.setBaseGlassSurface(false);
+      }
+      this.groundController?.setSolidEnabled(false);
+      this._syncBaseVisibility();
+      this.backgroundController?.setGroundSolid(false);
+      this.onBaseStateChanged?.();
+      return;
+    }
+
+    const effectiveScale = Math.max(MOBILE_BASE_SCALE.minActive, uiScale);
+    this._baseScale = uiScale;
+    this._groundSolid = true;
+    this.groundController?.setSolidEnabled(true);
+    const newGroundY = this.groundController?.setBaseScale(effectiveScale);
+    if (typeof newGroundY === 'number') {
+      this._groundY = newGroundY;
+      this.backgroundController?.setGroundY(newGroundY);
+    }
+    this.backgroundController?.setGroundSolid(true);
+    this._syncBaseVisibility();
+    if (wasOff) {
+      this.snapBaseToBottom();
+    }
+    this.onBaseStateChanged?.();
+  }
+
+  /** @param {boolean} enabled */
+  setBaseGlassSurface(enabled) {
+    const next = !!enabled;
+    if (next === this._baseGlassSurface) return;
+    if (!this._groundSolid && next) return;
+
+    this._baseGlassSurface = next;
+    this.groundController?.setBaseGlassSurface(next);
+    this._syncBaseVisibility();
+    this.onBaseStateChanged?.();
+  }
+
+  /** @returns {boolean} Whether the base Y was updated. */
+  snapBaseToBottom() {
+    if (!this.currentModel) return false;
+
+    this.modelRoot.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(this.modelRoot);
+    if (!bounds || !isFinite(bounds.min.y)) return false;
+
+    const bottomY = this.groundController?.snapBaseToBounds(bounds);
+    if (bottomY === null || bottomY === undefined) return false;
+
+    this._groundY = bottomY;
+    this.backgroundController?.setGroundY(bottomY);
+    return true;
+  }
+
+  _syncBaseVisibility() {
+    const solidOn = this._groundSolid;
+    const glassOn = this._baseGlassSurface && solidOn;
+    const root = this.groundController?.podiumRoot;
+    const podium = this.groundController?.podium;
+    const reflector = this.groundController?.podiumReflector;
+    if (root) root.visible = solidOn || glassOn;
+    if (podium) {
+      podium.visible = solidOn;
+      if (podium.material) podium.material.visible = solidOn;
+    }
+    if (reflector) reflector.visible = glassOn;
   }
 
   /**
