@@ -73,6 +73,7 @@
   --orby-mobile-dock-font: var(--orby-mobile-type-sm);
   --orby-mobile-rail-label-size: var(--orby-mobile-type-sm);
   --orby-mobile-top-h: env(safe-area-inset-top, 0px);
+  --orby-mobile-chrome-side-gutter: 12px; /* debug, export, floating menus */
   /* Large tappable presets — ~3 visible + peek; scroll for more */
   --orby-mobile-preset-gap: 1rem;
   --orby-mobile-preset-thumb: min(
@@ -233,7 +234,7 @@ button {
   position: absolute;
   z-index: 4;
   top: 8px;
-  left: calc(env(safe-area-inset-left, 0px) + 12px);
+  left: calc(env(safe-area-inset-left, 0px) + var(--orby-mobile-chrome-side-gutter));
   transform: translate3d(0, 0, 0);
   display: flex;
   flex-direction: column;
@@ -293,7 +294,7 @@ button {
   z-index: 5;
   /* Viewport already insets below the notch via --orby-mobile-top-h */
   top: 8px;
-  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  right: calc(env(safe-area-inset-right, 0px) + var(--orby-mobile-chrome-side-gutter));
   transform: translate3d(0, 0, 0);
   display: flex;
   align-items: flex-start;
@@ -316,8 +317,8 @@ button {
 .orby-mobile-object-panel {
   position: fixed;
   z-index: 36;
-  left: 0;
-  right: 0;
+  left: calc(env(safe-area-inset-left, 0px) + var(--orby-mobile-chrome-side-gutter));
+  right: calc(env(safe-area-inset-right, 0px) + var(--orby-mobile-chrome-side-gutter));
   top: var(--orby-mobile-object-panel-top);
   width: auto;
   height: max-content;
@@ -848,8 +849,8 @@ button {
 .orby-mobile-sheet {
   position: fixed;
   z-index: 35;
-  left: 0;
-  right: 0;
+  left: calc(env(safe-area-inset-left, 0px) + var(--orby-mobile-chrome-side-gutter));
+  right: calc(env(safe-area-inset-right, 0px) + var(--orby-mobile-chrome-side-gutter));
   bottom: 0;
   display: flex;
   flex-direction: column;
