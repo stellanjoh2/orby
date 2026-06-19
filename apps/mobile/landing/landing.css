@@ -4,6 +4,7 @@
  */
 @import url('/styles/orby-brand-tokens.css');
 @import url('/styles/orby-magic-btn.css');
+@import url('/styles/orby-entry-gate.css');
 
 @font-face {
   font-family: 'Mattone Bold';

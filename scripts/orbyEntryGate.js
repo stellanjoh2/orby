@@ -1,6 +1,6 @@
 /**
  * Site entry gate — access phrase + sessionStorage verification.
- * Used on index.html and about/index.html; pair with head bootstrap in each page.
+ * Used on index.html, about/index.html, and /mobile shells; pair with head bootstrap in each page.
  */
 (function () {
   var STORAGE_KEY = 'orby_site_gate_verified';
@@ -42,16 +42,6 @@
   var bodyObserver = null;
   var enforceTimer = null;
 
-  /** Public marketing route — keep in sync with index.html head bootstrap. */
-  function isOrbyMobileLearnRoute() {
-    try {
-      var path = (window.location.pathname || '/').replace(/\/$/, '') || '/';
-      return path === '/mobile/learn';
-    } catch (e) {
-      return false;
-    }
-  }
-
   function sessionOk() {
     try {
       return sessionStorage.getItem(STORAGE_KEY) === '1';
@@ -79,7 +69,6 @@
   }
 
   function stripForgedUnlock() {
-    if (isOrbyMobileLearnRoute()) return;
     if (!sessionOk() && document.documentElement.classList.contains('orby-gate-unlocked')) {
       document.documentElement.classList.remove('orby-gate-unlocked');
     }
@@ -221,8 +210,6 @@
   if (urlPhrase !== null && tryUnlockWithPhrase(urlPhrase)) {
     /* unlocked from ?orby-access-phrase= */
   } else if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
-    hideGateVeil();
-  } else if (isOrbyMobileLearnRoute()) {
     hideGateVeil();
   } else if (sessionOk()) {
     unlockUI();

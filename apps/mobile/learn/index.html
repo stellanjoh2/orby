@@ -19,7 +19,7 @@
           var base = document.createElement('base');
           base.href = '/';
           document.head.appendChild(base);
-          document.documentElement.classList.add('mobile-landing', 'orby-home-scroll', 'orby-gate-unlocked');
+          document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
         } catch (e) {}
       })();
     </script>
@@ -27,6 +27,12 @@
       html,
       body {
         background: #080808;
+      }
+      .orby-entry-gate {
+        background: #080808;
+      }
+      html:not(.orby-gate-unlocked) body > :not(#orby-entry-gate) {
+        visibility: hidden !important;
       }
       html.mobile-landing .orby-marketing-scroll-nav {
         display: block !important;
@@ -41,9 +47,21 @@
     </script>
     <script>
       (function () {
+        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
+          document.documentElement.classList.add('orby-gate-unlocked');
+          return;
+        }
         try {
-          var path = (location.pathname || '/').replace(/\/$/, '') || '/';
-          if (path === '/mobile/learn') {
+          var VERIFIED_KEY = 'orby_site_gate_verified';
+          var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
+          var CHALLENGE_EVERY_N_VISITS = 5;
+          var prev = parseInt(sessionStorage.getItem(VISIT_SEQ_KEY) || '0', 10);
+          var visitSeq = (isNaN(prev) ? 0 : prev) + 1;
+          sessionStorage.setItem(VISIT_SEQ_KEY, String(visitSeq));
+          if (visitSeq % CHALLENGE_EVERY_N_VISITS === 0) {
+            sessionStorage.removeItem(VERIFIED_KEY);
+          }
+          if (sessionStorage.getItem(VERIFIED_KEY) === '1') {
             document.documentElement.classList.add('orby-gate-unlocked');
           }
         } catch (e) {}

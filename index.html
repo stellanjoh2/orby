@@ -62,7 +62,6 @@
           base.href = '/';
           document.head.appendChild(base);
           document.documentElement.classList.add('mobile-landing', 'orby-home-scroll');
-          document.documentElement.classList.add('orby-gate-unlocked');
         } catch (e) {}
       })();
     </script>
@@ -154,12 +153,6 @@
           var VERIFIED_KEY = 'orby_site_gate_verified';
           var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
           var CHALLENGE_EVERY_N_VISITS = 5;
-          var mobileLandingPath =
-            (location.pathname || '/').replace(/\/$/, '') || '/';
-          if (mobileLandingPath === '/mobile/learn') {
-            document.documentElement.classList.add('orby-gate-unlocked');
-            return;
-          }
           var prev = parseInt(sessionStorage.getItem(VISIT_SEQ_KEY) || '0', 10);
           var visitSeq = (isNaN(prev) ? 0 : prev) + 1;
           sessionStorage.setItem(VISIT_SEQ_KEY, String(visitSeq));
@@ -1977,7 +1970,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.803 · 2026-06-19 13:49:21 UTC</div>
+              <div class="info-version-tag">v0.5.805 · 2026-06-19 18:46:19 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -3018,7 +3011,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.803 · 2026-06-19 13:49:21 UTC</div>
+              <div class="info-version-tag">v0.5.805 · 2026-06-19 18:46:19 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -4786,7 +4779,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.803 · 2026-06-19 13:49:21 UTC</div>
+              <div class="info-version-tag">v0.5.805 · 2026-06-19 18:46:19 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -5069,7 +5062,7 @@
                   </button>
                 </div>
               </div>
-              <div class="info-version-tag">v0.5.803 · 2026-06-19 13:49:21 UTC</div>
+              <div class="info-version-tag">v0.5.805 · 2026-06-19 18:46:19 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>
@@ -5134,7 +5127,7 @@
               ></div>
 
 
-              <div class="info-version-tag">v0.5.803 · 2026-06-19 13:49:21 UTC</div>
+              <div class="info-version-tag">v0.5.805 · 2026-06-19 18:46:19 UTC</div>
               <button type="button" class="info-orby-mark" data-tooltip="Home" aria-label="Home">
                 <img src="./assets/images/favicon.svg" width="28" height="28" alt="" />
               </button>

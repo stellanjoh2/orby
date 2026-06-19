@@ -13,6 +13,40 @@
     <title>Orby Mobile</title>
     <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles/mobile.css" />
+    <style>
+      html,
+      body {
+        background: #080808;
+      }
+      .orby-entry-gate {
+        background: #080808;
+      }
+    </style>
+    <script>
+      window.__ORBY_ENTRY_GATE_ENABLED__ = true;
+    </script>
+    <script>
+      (function () {
+        if (typeof window !== 'undefined' && window.__ORBY_ENTRY_GATE_ENABLED__ === false) {
+          document.documentElement.classList.add('orby-gate-unlocked');
+          return;
+        }
+        try {
+          var VERIFIED_KEY = 'orby_site_gate_verified';
+          var VISIT_SEQ_KEY = 'orby_site_gate_visit_seq';
+          var CHALLENGE_EVERY_N_VISITS = 5;
+          var prev = parseInt(sessionStorage.getItem(VISIT_SEQ_KEY) || '0', 10);
+          var visitSeq = (isNaN(prev) ? 0 : prev) + 1;
+          sessionStorage.setItem(VISIT_SEQ_KEY, String(visitSeq));
+          if (visitSeq % CHALLENGE_EVERY_N_VISITS === 0) {
+            sessionStorage.removeItem(VERIFIED_KEY);
+          }
+          if (sessionStorage.getItem(VERIFIED_KEY) === '1') {
+            document.documentElement.classList.add('orby-gate-unlocked');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script>
       (function () {
         var MAX = 100;
@@ -182,7 +216,8 @@
       }
     </script>
   </head>
-  <body>
+  <body class="orby-entry-gate-page">
+    <script src="/scripts/orbyEntryGate.js"></script>
     <div id="orbyMobile" class="orby-mobile" data-sheet="closed" data-object-menu="closed" data-active-tab="light" data-hdri-panel="presets-only" data-style-panel="presets-only">
       <main class="orby-mobile-viewport" aria-label="3D viewport">
         <div class="orby-mobile-viewport__canvas"></div>
