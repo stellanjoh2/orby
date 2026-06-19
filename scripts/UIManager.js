@@ -863,6 +863,35 @@ export class UIManager {
   }
 
   /**
+   * Confirm dialog — resolves true (OK/Yes) or false (Cancel / dismiss).
+   * @param {string} message
+   * @param {string} [title]
+   * @param {{ okLabel?: string, cancelLabel?: string, modalTone?: 'caution' | 'notification' | 'none', noCautionSound?: boolean }} [options]
+   * @returns {Promise<boolean>}
+   */
+  confirmMessageAlert(message, title = 'Message', options = {}) {
+    if (!this.modalOverlays?.showMessageAlert || !this.dom.messageAlertModal) {
+      return Promise.resolve(true);
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      this.showMessageAlert(message, title, {
+        ...options,
+        confirm: true,
+        onConfirm: () => finish(true),
+        onCancel: () => finish(false),
+      });
+    });
+  }
+
+  /**
    * Full-screen confirm — same visual language as bug-report thank-you.
    * Audio: shelf show/hide via overlay only (podium-style up/down), no notification/caution stack.
    * @param {{ messageHtml: string, cancelLabel?: string, confirmLabel?: string, onConfirm?: () => void, onCancel?: () => void }} opts
@@ -1329,7 +1358,10 @@ export class UIManager {
   setCreativeLookActive(preset) {
     if (!this.inputs.creativeLookButtons?.forEach) return;
     this.inputs.creativeLookButtons.forEach((button) => {
-      button.classList.toggle('active', button.dataset.creativeLook === preset);
+      button.classList.toggle(
+        'active',
+        preset != null && button.dataset.creativeLook === preset,
+      );
     });
   }
 

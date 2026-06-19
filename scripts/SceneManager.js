@@ -57,6 +57,9 @@ import { MeshDiagnosticsController } from './render/MeshDiagnosticsController.js
 import { TopologyWarningsOverlay } from './render/TopologyWarningsOverlay.js';
 import { JointNameLabelsController } from './render/JointNameLabelsController.js';
 import { MaterialController } from './render/MaterialController.js';
+import { applyStaticAnimationFrameZero } from './render/bakeStaticSkinnedGeometry.js';
+import { confirmVoxelHdHighPolyAlert } from './render/voxelHdHighPolyAlert.js';
+import { willApplyVoxelHdGeometry } from './mesh/voxelizationMeshAdvice.js';
 import {
   computeCreativeLookToonLightScalars,
   creativeLookFlatPostVariant,
@@ -76,6 +79,7 @@ import {
   normalizeCreativeLookMasterHue,
   normalizeCreativeLookPatternScale,
   normalizeCreativeLookPreset,
+  resolveCreativeLookPresetChoice,
 } from './render/CreativeLookMaterials.js';
 import {
   creativeLookWatercolourRadius,
@@ -113,7 +117,11 @@ import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
 import { FontTextRevealController } from './scene/FontTextRevealController.js';
 import { HistogramController } from './render/HistogramController.js';
-import { SvgGlbExporter } from './export/SvgGlbExporter.js';
+import { ModelGlbExporter } from './export/ModelGlbExporter.js';
+import {
+  GLB_EXPORT_UNAVAILABLE_HINT,
+  resolveGlbExportKind,
+} from './export/resolveGlbExportKind.js';
 import { EventManager } from './scene/EventManager.js';
 import { RenderLoopController } from './scene/RenderLoopController.js';
 import { ComposerLifecycle } from './scene/ComposerLifecycle.js';
@@ -313,7 +321,7 @@ export class SceneManager {
 
     this.modelLoader = new ModelLoader();
     this.modelLifecycle = new ModelLifecycleManager(this);
-    this.svgGlbExporter = new SvgGlbExporter();
+    this.modelGlbExporter = new ModelGlbExporter();
     this.animationController = this._createAnimationController();
     this._syncAnimationControllerFromState();
     this.fontTextRevealController = new FontTextRevealController({
@@ -625,6 +633,13 @@ export class SceneManager {
         }
       },
       onCreativeLookAsciiSync: () => this._syncCreativeLookAsciiPass(),
+      prepareStaticVoxelPose: () => {
+        if (!this.currentModel) return;
+        applyStaticAnimationFrameZero(this.currentModel, this.animationController);
+      },
+      restoreStaticVoxelPose: () => {
+        this.animationController?.endStaticPoseHold?.();
+      },
       onShadingChanged: (mode) => {
         this.currentShading = mode;
         this.diagnosticsController.setModel(this.currentModel, mode);
@@ -4850,6 +4865,17 @@ export class SceneManager {
     const mc = this.materialController;
     if (!mc) return;
 
+    if (
+      !options.skipVoxelPolyWarning &&
+      willApplyVoxelHdGeometry(mc, creativeLookState)
+    ) {
+      const proceed = await confirmVoxelHdHighPolyAlert(this.ui, this.currentModel);
+      if (!proceed) {
+        this._revertPendingCreativeLookSelection();
+        return;
+      }
+    }
+
     const heavy = mc.willRebuildCreativeLookMaterials(creativeLookState);
     if (heavy) {
       this.ui?.setLoadSpinnerStatusPrefix?.('Loading shader');
@@ -4875,6 +4901,23 @@ export class SceneManager {
         this.ui?.endLoadSpinner?.();
       }
     }
+  }
+
+  /** Undo a Voxel HD selection when the high-poly confirm dialog is cancelled. */
+  _revertPendingCreativeLookSelection() {
+    const mc = this.materialController;
+    if (!mc) return;
+
+    const applied = mc.creativeLookSettings;
+    const preset = resolveCreativeLookPresetChoice(applied.preset);
+    this.stateStore?.batch?.(() => {
+      this.stateStore.set('creativeLook.preset', preset);
+      this.stateStore.set('creativeLook.enabled', !!applied.enabled);
+    });
+    if (this.ui?.inputs?.creativeLookEnabled) {
+      this.ui.inputs.creativeLookEnabled.checked = !!applied.enabled;
+    }
+    this.ui?.setCreativeLookActive?.(applied.enabled ? preset : null);
   }
 
   /**
@@ -5129,19 +5172,33 @@ export class SceneManager {
       this.ui?.showToast?.('Load a mesh before exporting GLB');
       return;
     }
-    if (!this.isSvgExtrudeModel) {
-      this.ui?.showToast?.('Export .GLB is for imported SVG meshes only');
+
+    const exportKind = resolveGlbExportKind({
+      isSvgExtrudeModel: this.isSvgExtrudeModel,
+      creativeLook: this.materialController?.getCreativeLookSettings?.(),
+      modelRoot: this.modelRoot,
+    });
+    if (!exportKind) {
+      this.ui?.showToast?.(GLB_EXPORT_UNAVAILABLE_HINT);
       return;
     }
+
     try {
       this.ui?.showToast?.('Exporting .GLB…');
-      const sourceName = this.currentFile?.name || this.currentAssetMetadata?.assetName || 'svg-extrude';
-      await this.svgGlbExporter.exportFromModelRoot(this.modelRoot, sourceName);
+      const sourceName = this.currentFile?.name
+        || this.currentAssetMetadata?.assetName
+        || (exportKind.mode === 'svg' ? 'svg-extrude' : 'model');
+      await this.modelGlbExporter.export({
+        modelRoot: this.modelRoot,
+        sourceName,
+        exportKind,
+        getOriginalMaterial: (mesh) => this.materialController?.getOriginalMaterial?.(mesh),
+      });
       this.ui?.uiSounds?.playRenderFinished();
       this.ui?.showToast?.('.GLB exported', 3200, { notification: false });
     } catch (error) {
-      console.error('SVG GLB export failed', error);
-      this.ui?.showToast?.('SVG .GLB export failed');
+      console.error('GLB export failed', error);
+      this.ui?.showToast?.('.GLB export failed');
     }
   }
 

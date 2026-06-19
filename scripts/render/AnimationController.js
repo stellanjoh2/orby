@@ -26,6 +26,7 @@ export class AnimationController {
     this._exportDriveSnapshot = null;
     this._exportAction = null;
     this._exportClipIndex = 0;
+    this._voxelPoseSnapshot = null;
     this.playbackSpeed = 1;
     this.playbackReverse = false;
     this.clipPlaybackMode = 'loop';
@@ -260,6 +261,57 @@ export class AnimationController {
     }
   }
 
+  /**
+   * Sample the first animation clip at t = 0 for static mesh baking (voxel / decimation).
+   * Restores the prior clip, time, and pause state via {@link endStaticPoseHold}.
+   */
+  applyStaticPoseAtFrameZero() {
+    if (!this.mixer || !this.animations.length) return;
+
+    this._voxelPoseSnapshot = {
+      time: this.currentAction?.time ?? 0,
+      paused: this.currentAction?.paused ?? true,
+      clipIndex: this.currentClipIndex,
+    };
+
+    const clip = this.animations[0];
+    if (!clip) return;
+
+    if (this.currentAction) {
+      this.currentAction.stop();
+    }
+
+    this.currentAction = this.mixer.clipAction(clip);
+    this.currentAction.reset();
+    this.currentAction.time = 0;
+    this.currentAction.play();
+    this.currentAction.paused = true;
+    this.currentClipIndex = 0;
+    this.mixer.update(0);
+  }
+
+  /** Restore playback pose after {@link applyStaticPoseAtFrameZero}. */
+  endStaticPoseHold() {
+    const snap = this._voxelPoseSnapshot;
+    this._voxelPoseSnapshot = null;
+    if (!snap || !this.mixer || !this.animations.length) return;
+
+    const clip = this.animations[snap.clipIndex] ?? this.animations[0];
+    if (!clip) return;
+
+    if (this.currentAction) {
+      this.currentAction.stop();
+    }
+
+    this.currentClipIndex = snap.clipIndex;
+    this.currentAction = this.mixer.clipAction(clip);
+    this.currentAction.play();
+    this.currentAction.time = THREE.MathUtils.clamp(snap.time, 0, clip.duration);
+    this.currentAction.paused = snap.paused;
+    this.mixer.update(0);
+    this.onTimeUpdate(this.currentAction.time, clip.duration);
+  }
+
   selectAnimation(index) {
     this.playClip(index);
   }
@@ -274,6 +326,7 @@ export class AnimationController {
   }
 
   dispose() {
+    this._voxelPoseSnapshot = null;
     if (this.mixer) {
       this.mixer.removeEventListener('finished', this._handleClipFinished);
       this.mixer.stopAllAction();

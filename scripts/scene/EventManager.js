@@ -177,6 +177,9 @@ export class EventManager {
       };
       void s.applyCreativeLookFromState(cl, { skipStateStore: true });
     });
+    eventBus.on('mesh:creative-look-live', () => {
+      s.materialController?.syncCreativeLookLiveFromStore?.();
+    });
     eventBus.on('mesh:reset-transform', () => {
       s.transformController?.setRotationY(0);
     });

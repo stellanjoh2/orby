@@ -228,7 +228,8 @@ export class StateStore {
       /** Stylized ShaderMaterial overrides for imported meshes (non-glass); off restores GLB materials. */
       creativeLook: {
         enabled: false,
-        preset: 'neon-edge',
+        /** `null` until the user picks a Shader Lab preset (not Neon Edge by default). */
+        preset: null,
         /** When true, animated Shader Lab presets stop advancing `uTime`. */
         pauseShaderAnimations: false,
         /** Multiplier on shader `uTime` for animated presets (0–2). Default tuned for spectral storm pacing. */

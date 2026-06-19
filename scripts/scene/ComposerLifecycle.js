@@ -15,6 +15,7 @@ import {
   hideWireframeOverlaysForPass,
   renderWireframeOverlay,
   restoreWireframeOverlaysFromPass,
+  shouldOverlayWireframeMeshes,
 } from '../render/wireframeOverlayPass.js';
 
 /**
@@ -198,7 +199,9 @@ export class ComposerLifecycle {
       overlayTransformGizmos &&
       shouldOverlayTransformGizmos(this.postPipeline, shaderLabOn);
     const wireframeMeshes = this.getWireframeOverlayMeshes?.() ?? [];
-    const overlayWireframe = shaderLabOn && wireframeMeshes.length > 0;
+    const overlayWireframe =
+      wireframeMeshes.length > 0 &&
+      shouldOverlayWireframeMeshes(this.postPipeline, shaderLabOn);
     if (overlayGizmos) {
       this._gizmoPassVisibility = hideTransformGizmosForPass(
         this.getTransformControls?.() ?? [],
@@ -323,7 +326,7 @@ export class ComposerLifecycle {
     });
   }
 
-  /** Wireframe on top of Shader Lab post — plain lines, not stylized pixels or screentone. */
+  /** Wireframe on top of post stack — crisp lines, not DoF blur or Shader Lab stylization. */
   _renderWireframeOverlay() {
     renderWireframeOverlay({
       renderer: this.renderer,

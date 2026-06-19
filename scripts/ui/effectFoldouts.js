@@ -109,7 +109,10 @@ export function applyToggleSectionMute(state, setMuted) {
   // Object tab
   setMuted('fresnel', !state.fresnel?.enabled);
   setMuted('wireframe', !wireframeActive);
-  setMuted('creative-look', !state.creativeLook?.enabled);
+  setMuted(
+    'creative-look',
+    !state.creativeLookSectionOpen && !state.creativeLook?.enabled,
+  );
   setMuted('grid', !state.groundWire);
   setMuted('font-extrude', !state.fontExtrude?.panelOpen);
 

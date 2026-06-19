@@ -26,6 +26,7 @@ import {
   isDitherPixelCreativeLookPreset,
   shouldResetDitherPresetTuning,
   normalizeCreativeLookPreset,
+  resolveCreativeLookPresetChoice,
 } from '../render/CreativeLookMaterials.js';
 import {
   CREATIVE_LOOK_ALL_PRESET_SLIDER_IDS,
@@ -509,18 +510,43 @@ export class MeshControls {
         this.ui.inputs.hdriBackground.checked = false;
       }
     };
-    updateCreativeLookFoldout(!!this.stateStore.getState().creativeLook?.enabled);
+    const isShaderLabSectionOpen = (state) =>
+      !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled;
+
+    updateCreativeLookFoldout(isShaderLabSectionOpen(this.stateStore.getState()));
 
     this.ui.inputs.creativeLookEnabled?.addEventListener('change', (event) => {
-      const enabled = event.target.checked;
+      const open = event.target.checked;
+      const shaderWasActive = !!this.stateStore.getState().creativeLook?.enabled;
+
+      if (open) {
+        const chosen = resolveCreativeLookPresetChoice(
+          this.stateStore.getState().creativeLook?.preset,
+        );
+        this.stateStore.batch(() => {
+          this.stateStore.set('creativeLookSectionOpen', true);
+          if (chosen) {
+            this.stateStore.set('creativeLook.enabled', true);
+          }
+        });
+        updateCreativeLookFoldout(true);
+        this.ui.toggleCreativeLookGrid(true);
+        this.ui.setCreativeLookActive(chosen);
+        if (chosen) {
+          this.eventBus.emit('mesh:creative-look');
+        }
+        return;
+      }
+
       // Shader Lab replaces mesh materials with ShaderMaterials and is mutually exclusive with the
-      // UV checker overlay (which assumes the originals are intact). Force the overlay off so the
-      // shader preview stays clean.
-      const uvCheckerWasOn = enabled && !!this.stateStore.getState().advanced?.uvChecker;
-      const normalViewWasOn = enabled && !!this.stateStore.getState().advanced?.normalView;
+      // UV checker overlay (which assumes the originals are intact). Force the overlay off when closing.
+      const uvCheckerWasOn = shaderWasActive && !!this.stateStore.getState().advanced?.uvChecker;
+      const normalViewWasOn = shaderWasActive && !!this.stateStore.getState().advanced?.normalView;
       this.stateStore.batch(() => {
-        this.stateStore.set('creativeLook.enabled', enabled);
-        this.stateStore.set('creativeLookSectionOpen', enabled);
+        this.stateStore.set('creativeLookSectionOpen', false);
+        if (shaderWasActive) {
+          this.stateStore.set('creativeLook.enabled', false);
+        }
         if (uvCheckerWasOn) {
           this.stateStore.set('advanced.uvChecker', false);
         }
@@ -528,17 +554,17 @@ export class MeshControls {
           this.stateStore.set('advanced.normalView', false);
         }
       });
-      if (enabled) {
-        disableRenderBackdropForShaderLab();
-      }
-      updateCreativeLookFoldout(enabled);
+      updateCreativeLookFoldout(false);
+      this.ui.toggleCreativeLookGrid(false);
       if (uvCheckerWasOn) {
         this.eventBus.emit('mesh:uv-checker', false);
       }
       if (normalViewWasOn) {
         this.eventBus.emit('mesh:normal-view', false);
       }
-      this.eventBus.emit('mesh:creative-look');
+      if (shaderWasActive) {
+        this.eventBus.emit('mesh:creative-look');
+      }
     });
     this.ui.inputs.creativeLookShaderAnimationSpeed?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value);
@@ -560,6 +586,7 @@ export class MeshControls {
       const scale = normalizeCreativeLookPatternScale(preset, value);
       this.helpers.updateValueLabel('creativeLookPatternScale', scale, 'multiplier');
       this.stateStore.set('creativeLook.patternScale', scale);
+      this.eventBus.emit('mesh:creative-look-live');
     });
     if (this.ui.inputs.creativeLookPatternScale) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookPatternScale);
@@ -572,6 +599,7 @@ export class MeshControls {
       const hue = Math.min(180, Math.max(-180, Math.round(value)));
       this.helpers.updateValueLabel('creativeLookMasterHue', hue, 'angle');
       this.stateStore.set('creativeLook.masterHue', hue);
+      this.eventBus.emit('mesh:creative-look-live');
     });
     if (this.ui.inputs.creativeLookMasterHue) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookMasterHue);
@@ -582,6 +610,7 @@ export class MeshControls {
       const intensity = Math.min(2, Math.max(0, Math.round(value * 100) / 100));
       this.helpers.updateValueLabel('creativeLookIntensity', intensity);
       this.stateStore.set('creativeLook.intensity', intensity);
+      this.eventBus.emit('mesh:creative-look-live');
     });
     if (this.ui.inputs.creativeLookIntensity) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookIntensity);
@@ -592,6 +621,7 @@ export class MeshControls {
       const liftCrush = Math.min(1, Math.max(-1, Math.round(value * 100) / 100));
       this.helpers.updateValueLabel('creativeLookLiftCrush', liftCrush, 'signedDecimal');
       this.stateStore.set('creativeLook.liftCrush', liftCrush);
+      this.eventBus.emit('mesh:creative-look-live');
     });
     if (this.ui.inputs.creativeLookLiftCrush) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.creativeLookLiftCrush);
@@ -612,7 +642,7 @@ export class MeshControls {
         if (button.disabled) return;
         const state = this.stateStore.getState().creativeLook || {};
         const creativeLookWasEnabled = !!state.enabled;
-        const prev = normalizeCreativeLookPreset(state.preset);
+        const prev = resolveCreativeLookPresetChoice(state.preset);
         if (preset !== prev) this.ui.uiSounds?.playSelect();
         const resetDitherTuning = shouldResetDitherPresetTuning(prev, preset);
         // See `creativeLookEnabled` handler — Shader Lab and UV Checker overlay are mutually
@@ -1411,18 +1441,23 @@ export class MeshControls {
     }
 
     {
-      const open = !!state.creativeLook?.enabled;
+      const sectionOpen =
+        !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled;
       const container = document.querySelector('#creativeLookSectionContainer');
       if (container) {
-        container.classList.toggle('creative-look-foldout--collapsed', !open);
-        container.classList.toggle('creative-look-foldout--expanded', open);
+        container.classList.toggle('creative-look-foldout--collapsed', !sectionOpen);
+        container.classList.toggle('creative-look-foldout--expanded', sectionOpen);
       }
     }
 
     if (this.ui.inputs.creativeLookEnabled) {
-      this.ui.inputs.creativeLookEnabled.checked = !!state.creativeLook?.enabled;
+      this.ui.inputs.creativeLookEnabled.checked =
+        !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled;
     }
-    const clPreset = normalizeCreativeLookPreset(state.creativeLook?.preset);
+    const chosenPreset = resolveCreativeLookPresetChoice(state.creativeLook?.preset);
+    const sectionOpen =
+      !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled;
+    const clPreset = chosenPreset ?? normalizeCreativeLookPreset(null);
     const shaderAnimSupported = creativeLookPresetUsesShaderAnimation(clPreset);
     if (this.ui.inputs.creativeLookPauseAnimations) {
       const paused = !!state.creativeLook?.pauseShaderAnimations;
@@ -1536,8 +1571,12 @@ export class MeshControls {
       }
       this.ui.setControlDisabled('creativeLookLiftCrush', !state.creativeLook?.enabled);
     }
-    this.ui.setCreativeLookActive?.(clPreset);
-    this.ui.toggleCreativeLookGrid?.(!!state.creativeLook?.enabled);
+    this.ui.setCreativeLookActive?.(
+      sectionOpen && chosenPreset ? chosenPreset : null,
+    );
+    this.ui.toggleCreativeLookGrid?.(
+      !!state.creativeLookSectionOpen || !!state.creativeLook?.enabled,
+    );
 
     // Radio buttons
     this.ui.inputs.autoRotate.forEach((input) => {

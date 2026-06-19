@@ -147,7 +147,10 @@ export async function bakeCreativeLookThumbnails(options = {}) {
         stateStore.set('creativeLook.pauseShaderAnimations', false);
       });
 
-      await scene.applyCreativeLookFromState(nextCreativeLook, { skipStateStore: true });
+      await scene.applyCreativeLookFromState(nextCreativeLook, {
+        skipStateStore: true,
+        skipVoxelPolyWarning: true,
+      });
       scene.materialController?.updateCreativeLookTime?.(animationSeconds);
 
       await waitFrames(settleFrames);

@@ -1009,7 +1009,7 @@
                     <div class="creative-look-grid-section">
                       <p class="creative-look-grid-section-label">Effects</p>
                       <div class="hdri-grid">
-                    <button type="button" data-creative-look="neon-edge" class="hdri-icon active" data-tooltip="Neon Edge — dark core with cyan rim glow">
+                    <button type="button" data-creative-look="neon-edge" class="hdri-icon" data-tooltip="Neon Edge — dark core with cyan rim glow">
                       <img src="./assets/images/creative-look-neon-edge.png" alt="Neon Edge" width="192" height="192" />
                     </button>
                     <button type="button" data-creative-look="flow-field" class="hdri-icon" data-tooltip="Flow Field — animated color drift in world space">
@@ -1084,6 +1084,14 @@
                     </button>
                     <button type="button" data-creative-look="dither-raster" class="hdri-icon" data-tooltip="Raster — amplitude halftone dots sized by luminance; default Scale 1, Intensity 0 (raise for more crush)">
                       <img src="./assets/images/creative-look-dither-raster.png" alt="Raster Dither" width="192" height="192" />
+                    </button>
+                      </div>
+                    </div>
+                    <div class="creative-look-grid-section">
+                      <p class="creative-look-grid-section-label">Voxel</p>
+                      <div class="hdri-grid">
+                    <button type="button" data-creative-look="voxel-hd" class="hdri-icon" data-tooltip="Voxel HD — high-resolution mesh voxelization into solid axis-aligned cubes; texture colours baked per voxel; Scale locked at 0.50× (runs once at apply)">
+                      <img src="./assets/images/creative-look-voxel-hd.png" alt="Voxel HD" width="192" height="192" />
                     </button>
                       </div>
                     </div>
@@ -1199,7 +1207,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line" id="creativeLookPatternScaleRow">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -4838,12 +4846,12 @@
               <div class="panel-block">
                 <div class="block-title">GLB</div>
                 <p class="export-format-sub">
-                  Turn extruded logos, icons, or other vector graphics into a .GLB for other 3D tools and AR. Only when you started from an imported SVG. Tip: dial in extrusion and materials before exporting.
+                  Export a .GLB for other 3D tools and AR — from an imported SVG extrusion, or from Shader Lab <strong>Voxel HD</strong>, <strong>PS2 Crush</strong>, <strong>PSX</strong>, or <strong>VGA/DOS 3D</strong> (with the look applied). Tip: dial in extrusion or Shader Lab before exporting.
                 </p>
                 <div class="export-controls">
-                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export imported SVG extrusion as .GLB (SVG source only)">
+                  <button id="exportSvgGlbButton" class="accent-action-btn" data-tooltip="Export .GLB — SVG extrusion, or Shader Lab Voxel HD / PS2 Crush / PSX / VGA with the look applied">
                     <i class="fa-solid fa-cube"></i>
-                    Export .GLB (SVG source only)
+                    Export .GLB
                   </button>
                 </div>
               </div>

@@ -898,13 +898,12 @@ export class ResetControls {
 
           case 'creative-look':
             this.stateStore.set('creativeLook', defaults.creativeLook);
+            this.stateStore.set('creativeLookSectionOpen', false);
             if (this.ui.inputs.creativeLookEnabled) {
-              this.ui.inputs.creativeLookEnabled.checked = !!defaults.creativeLook?.enabled;
+              this.ui.inputs.creativeLookEnabled.checked = false;
             }
-            this.ui.setCreativeLookActive(
-              normalizeCreativeLookPreset(defaults.creativeLook?.preset),
-            );
-            this.ui.toggleCreativeLookGrid(!!defaults.creativeLook?.enabled);
+            this.ui.setCreativeLookActive(null);
+            this.ui.toggleCreativeLookGrid(false);
             this.eventBus.emit('mesh:creative-look');
             this.ui.syncUIFromState();
             break;

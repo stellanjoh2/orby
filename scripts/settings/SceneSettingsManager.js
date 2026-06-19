@@ -11,7 +11,7 @@ import {
 import { HDRI_CUSTOM_ID, HDRI_MOODS } from '../config/hdri.js';
 import { migrateLegacyGroundKeys } from '../state/migrateLegacyGroundKeys.js';
 import { mergeAberrationSettings } from '../render/chromaticAberration.js';
-import { normalizeCreativeLookPreset } from '../render/CreativeLookMaterials.js';
+import { resolveCreativeLookPresetChoice } from '../render/CreativeLookMaterials.js';
 import { normalizeStoredGoboScale } from '../render/GoboProjection.js';
 import { resolveDiscGlowFromState } from '../render/LensFlareController.js';
 import { emitGodRaysStudioEvents } from '../GodRaysEffect.js';
@@ -362,12 +362,21 @@ export class SceneSettingsManager {
       }
       if (payload.creativeLook) {
         this.stateStore.set('creativeLook', payload.creativeLook);
-        const preset = normalizeCreativeLookPreset(payload.creativeLook.preset);
+        if (payload.creativeLook.enabled) {
+          this.stateStore.set('creativeLookSectionOpen', true);
+        }
+        const chosen = resolveCreativeLookPresetChoice(payload.creativeLook.preset);
+        const sectionOpen =
+          !!payload.creativeLookSectionOpen || !!payload.creativeLook.enabled;
         if (this.uiHelper?.setCreativeLookActive) {
-          this.uiHelper.setCreativeLookActive(preset);
+          this.uiHelper.setCreativeLookActive(
+            sectionOpen && chosen ? chosen : null,
+          );
         }
         if (this.uiHelper?.toggleCreativeLookGrid) {
-          this.uiHelper.toggleCreativeLookGrid(!!payload.creativeLook.enabled);
+          this.uiHelper.toggleCreativeLookGrid(
+            !!payload.creativeLookSectionOpen || !!payload.creativeLook.enabled,
+          );
         }
         this.eventBus.emit('mesh:creative-look');
       }

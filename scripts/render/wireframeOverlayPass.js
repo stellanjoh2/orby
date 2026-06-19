@@ -1,7 +1,18 @@
 import { resetRendererFullViewport } from './resetRendererFullViewport.js';
 
 /**
- * Hide wireframe overlays for the main scene draw + Shader Lab post stack.
+ * Wireframe must composite after post so lines stay crisp (Shader Lab, DOF, etc.).
+ * @param {import('./PostProcessingPipeline.js').PostProcessingPipeline | null | undefined} postPipeline
+ * @param {boolean} shaderLabOn
+ * @returns {boolean}
+ */
+export function shouldOverlayWireframeMeshes(postPipeline, shaderLabOn) {
+  if (shaderLabOn) return true;
+  return postPipeline?.bokehPass?.enabled === true;
+}
+
+/**
+ * Hide wireframe overlays for the main scene draw + post stack.
  * @param {import('three').Mesh[] | null | undefined} wireframeMeshes
  * @returns {Array<{ mesh: import('three').Mesh, visible: boolean }> | null}
  */
@@ -28,7 +39,7 @@ export function restoreWireframeOverlaysFromPass(snapshot) {
 }
 
 /**
- * Draw wireframe overlays after the post stack — crisp lines, not Shader Lab stylization.
+ * Draw wireframe overlays after the post stack — crisp lines, not DoF blur or Shader Lab stylization.
  * @param {{
  *   renderer: import('three').WebGLRenderer,
  *   camera: import('three').Camera,
