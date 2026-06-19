@@ -636,6 +636,7 @@ export class SceneManager {
       prepareStaticVoxelPose: () => {
         if (!this.currentModel) return;
         applyStaticAnimationFrameZero(this.currentModel, this.animationController);
+        this.fontTextRevealController?.snapGlyphsForVoxelization?.();
       },
       restoreStaticVoxelPose: () => {
         this.animationController?.endStaticPoseHold?.();

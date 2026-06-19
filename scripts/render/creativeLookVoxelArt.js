@@ -74,6 +74,11 @@ export function isVoxelCreativeLookPreset(preset) {
   return VOXEL_LOOK_PRESETS.includes(id);
 }
 
+/** Voxel HD uses the default Shader Lab stack — N8AO stays available (including with viewport bloom). */
+export function creativeLookPresetAllowsAmbientOcclusion(preset) {
+  return isVoxelCreativeLookPreset(preset);
+}
+
 /** @param {string | undefined} preset */
 export function creativeLookUsesVoxelGeometry(preset) {
   return isVoxelCreativeLookPreset(preset);

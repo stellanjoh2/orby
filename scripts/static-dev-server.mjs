@@ -138,7 +138,7 @@ async function handleCreativeLookThumbnailUpload(req, res) {
 
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const preset = url.searchParams.get('preset') ?? '';
-  const size = Number(url.searchParams.get('size') || 192);
+  const size = Number(url.searchParams.get('size') || 128);
 
   try {
     const pngBuffer = await readRequestBody(req);

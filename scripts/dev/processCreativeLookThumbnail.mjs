@@ -16,13 +16,13 @@ const PRESET_RE = /^[a-z0-9-]+$/;
 export async function processCreativeLookThumbnail({
   pngBuffer,
   preset,
-  size = 192,
+  size = 128,
   outDir,
 }) {
   if (!PRESET_RE.test(preset)) {
     throw new Error(`Invalid preset id: ${preset}`);
   }
-  const thumbSize = Math.max(32, Math.min(512, Math.round(Number(size) || 192)));
+  const thumbSize = Math.max(32, Math.min(512, Math.round(Number(size) || 128)));
   const filename = `creative-look-${preset}.png`;
   const dest = path.join(outDir, filename);
 

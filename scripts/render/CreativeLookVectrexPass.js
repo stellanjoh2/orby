@@ -61,15 +61,7 @@ uniform sampler2D tBloom;
 uniform float decay;
 uniform float bloomStrength;
 uniform float intensity;
-uniform vec2 uResolution;
 uniform float uTime;
-
-float vectrexGrid(vec2 uv) {
-  vec2 cells = uResolution / 48.0;
-  vec2 g = abs(fract(uv * cells - 0.5) - 0.5) / fwidth(uv * cells);
-  float line = 1.0 - min(min(g.x, g.y), 1.0);
-  return line * 0.035;
-}
 
 void main() {
   vec3 cur = texture2D(tCurrent, vUv).rgb;
@@ -86,9 +78,6 @@ void main() {
 
   vec3 col = persisted + bloom * bloomStrength * (0.75 + inten * 0.35);
   col = max(col, cur);
-
-  float grid = vectrexGrid(vUv);
-  col += vec3(0.04, 0.11, 0.05) * grid;
 
   col *= 0.985 + 0.015 * sin(uTime * 17.3 + vUv.y * 40.0);
 
@@ -149,7 +138,6 @@ class CreativeLookVectrexPass extends Pass {
         decay: { value: VECTREX_PERSISTENCE_DECAY },
         bloomStrength: { value: 0 },
         intensity: { value: VECTREX_DEFAULT_INTENSITY },
-        uResolution: { value: new THREE.Vector2(1, 1) },
         uTime: { value: 0 },
       },
       vertexShader: VERTEX_SHADER,
@@ -265,7 +253,6 @@ class CreativeLookVectrexPass extends Pass {
       ? THREE.MathUtils.clamp(this._settings.intensity, 0, 2)
       : 1;
     uComp.uTime.value = Number.isFinite(this._settings.time) ? this._settings.time : 0;
-    uComp.uResolution.value.set(w, h);
 
     const radiusPx = 6.5;
     const cycles = 2;
@@ -337,7 +324,7 @@ class CreativeLookVectrexPass extends Pass {
   }
 }
 
-/** Phosphor persistence + bloom + faint grid for Vectrex vector CRT look. */
+/** Phosphor persistence + bloom for Vectrex vector CRT look. */
 export class CreativeLookVectrex {
   /** @param {import('three').WebGLRenderer} renderer */
   constructor(renderer) {

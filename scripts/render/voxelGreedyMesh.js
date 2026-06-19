@@ -350,3 +350,82 @@ export function buildGreedyVoxelMeshGeometry(params) {
   geometry.setIndex(indices);
   return geometry;
 }
+
+/**
+ * One quad per exposed voxel face — no greedy merging (readable cube wireframes on type).
+ *
+ * @param {{
+ *   cells: Set<number>,
+ *   cellColors: Float32Array,
+ *   nx: number,
+ *   ny: number,
+ *   nz: number,
+ *   toIndex: (ix: number, iy: number, iz: number) => number,
+ *   origin: THREE.Vector3,
+ *   voxelSize: number,
+ * }} params
+ * @returns {THREE.BufferGeometry | null}
+ */
+export function buildCubeVoxelMeshGeometry(params) {
+  const { cells, cellColors, nx, ny, nz, toIndex, origin, voxelSize } = params;
+  if (!cells?.size) return null;
+
+  /** @type {number[]} */
+  const positions = [];
+  /** @type {number[]} */
+  const normals = [];
+  /** @type {number[]} */
+  const colors = [];
+  /** @type {number[]} */
+  const indices = [];
+  let vertexOffset = 0;
+
+  for (const idx of cells) {
+    const remZ = Math.floor(idx / (nx * ny));
+    const rem = idx - remZ * nx * ny;
+    const iy = Math.floor(rem / nx);
+    const ix = rem - iy * nx;
+    const iz = remZ;
+
+    for (const pass of GREEDY_FACE_PASSES) {
+      const { dx, dy, dz, planeAxis, faceSign, uAxis, vAxis, planeCoord, sweepAxis } = pass;
+      const key = exposedFaceColorKey(
+        cells, cellColors, nx, ny, nz, toIndex, ix, iy, iz, dx, dy, dz,
+      );
+      if (!key) continue;
+
+      const u0 = uAxis === 'x' ? ix : iy;
+      const v0 = vAxis === 'z' ? iz : (vAxis === 'y' ? iy : ix);
+      const sweepCoord = sweepAxis === 'x' ? ix : sweepAxis === 'y' ? iy : iz;
+      appendMergedQuad({
+        positions,
+        normals,
+        colors,
+        indices,
+        vertexOffset,
+        origin,
+        voxelSize,
+        key,
+        u0,
+        v0,
+        uLen: 1,
+        vLen: 1,
+        planeAxis,
+        planeCoord: planeCoord(sweepCoord),
+        faceSign,
+        uAxis,
+        vAxis,
+      });
+      vertexOffset += 4;
+    }
+  }
+
+  if (positions.length === 0) return null;
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  return geometry;
+}

@@ -104,7 +104,7 @@ export async function bakeCreativeLookThumbnails(options = {}) {
     throw new Error('WebGL studio is still booting — wait a moment and try again.');
   }
 
-  const size = Math.max(32, Math.min(512, Number(options.size) || 192));
+  const size = Math.max(32, Math.min(512, Number(options.size) || 128));
   const animationSeconds = Math.max(0, Number(options.animationSeconds) || 1.25);
   const settleFrames = Math.max(1, Math.round(Number(options.settleFrames) || 4));
   const dryRun = options.dryRun === true;

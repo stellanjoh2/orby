@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
 import { resolveVoxelLookConfig } from './creativeLookVoxelArt.js';
-import { buildGreedyVoxelMeshGeometry } from './voxelGreedyMesh.js';
+import { buildGreedyVoxelMeshGeometry, buildCubeVoxelMeshGeometry } from './voxelGreedyMesh.js';
 
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -990,6 +990,212 @@ function buildScanlineTriangleBucketsZ(tris, triCount, grid) {
   return buckets;
 }
 
+/** @returns {boolean} */
+function pointInTriangle2D(px, py, ax, ay, bx, by, cx, cy) {
+  const v0x = bx - ax;
+  const v0y = by - ay;
+  const v1x = cx - ax;
+  const v1y = cy - ay;
+  const v2x = px - ax;
+  const v2y = py - ay;
+  const dot00 = v0x * v0x + v0y * v0y;
+  const dot01 = v0x * v1x + v0y * v1y;
+  const dot02 = v0x * v2x + v0y * v2y;
+  const dot11 = v1x * v1x + v1y * v1y;
+  const dot12 = v1x * v2x + v1y * v2y;
+  const denom = dot00 * dot11 - dot01 * dot01;
+  if (Math.abs(denom) < 1e-14) return false;
+  const u = (dot11 * dot02 - dot01 * dot12) / denom;
+  const v = (dot00 * dot12 - dot01 * dot02) / denom;
+  return u >= -1e-5 && v >= -1e-5 && u + v <= 1 + 1e-5;
+}
+
+function commitSurfaceVoxel(ix, iy, iz, params, color) {
+  const {
+    toIndex, flags, cellColors, surfaceOwners, meshSurfaceSet,
+  } = params;
+  const idx = toIndex(ix, iy, iz);
+  meshSurfaceSet.add(idx);
+  if (surfaceOwners[idx] < 65535) surfaceOwners[idx] += 1;
+  if (flags[idx] !== 1) {
+    flags[idx] = 1;
+    const base = idx * 3;
+    cellColors[base] = color.r;
+    cellColors[base + 1] = color.g;
+    cellColors[base + 2] = color.b;
+  }
+}
+
+/**
+ * Extrude caps are coplanar and often sit on voxel boundaries — SAT misses them.
+ * Project the triangle onto its plane and stamp the touched slab layers.
+ * @returns {boolean} true when handled as a cap triangle
+ */
+function markCoplanarCapTriangleVoxels(triangle, markParams, sampleColor, ia, ib, ic) {
+  const {
+    origin, voxelSize, nx, ny, nz, toIndex, invVoxel,
+  } = markParams;
+  const {
+    ax, ay, az, bx, by, bz, cx, cy, cz,
+  } = triangle;
+
+  const spanX = Math.max(ax, bx, cx) - Math.min(ax, bx, cx);
+  const spanY = Math.max(ay, by, cy) - Math.min(ay, by, cy);
+  const spanZ = Math.max(az, bz, cz) - Math.min(az, bz, cz);
+  const planeEps = voxelSize * 1e-3;
+
+  /** @type {0 | 1 | 2 | null} */
+  let flatAxis = null;
+  if (spanX < planeEps && spanY > planeEps && spanZ > planeEps) flatAxis = 0;
+  else if (spanY < planeEps && spanX > planeEps && spanZ > planeEps) flatAxis = 1;
+  else if (spanZ < planeEps && spanX > planeEps && spanY > planeEps) flatAxis = 2;
+  if (flatAxis === null) return false;
+
+  const coords = [
+    [ax, ay, az],
+    [bx, by, bz],
+    [cx, cy, cz],
+  ];
+  const flatVal = (coords[0][flatAxis] + coords[1][flatAxis] + coords[2][flatAxis]) / 3;
+  const originFlat = flatAxis === 0 ? origin.x : flatAxis === 1 ? origin.y : origin.z;
+  const axisMax = flatAxis === 0 ? nx : flatAxis === 1 ? ny : nz;
+
+  const rel = (flatVal - originFlat) * invVoxel;
+  const layerMin = Math.max(0, Math.floor(rel - 0.5 + 1e-5));
+  const layerMax = Math.min(axisMax - 1, Math.floor(rel + 0.5 - 1e-5));
+
+  const uAxis = flatAxis === 0 ? 1 : 0;
+  const vAxis = flatAxis === 2 ? 1 : 2;
+  const uMax = uAxis === 0 ? nx : uAxis === 1 ? ny : nz;
+  const vMax = vAxis === 0 ? nx : vAxis === 1 ? ny : nz;
+  const originU = uAxis === 0 ? origin.x : uAxis === 1 ? origin.y : origin.z;
+  const originV = vAxis === 0 ? origin.x : vAxis === 1 ? origin.y : origin.z;
+
+  const u0 = Math.max(0, Math.floor((Math.min(coords[0][uAxis], coords[1][uAxis], coords[2][uAxis]) - originU) * invVoxel));
+  const u1 = Math.min(uMax - 1, Math.floor((Math.max(coords[0][uAxis], coords[1][uAxis], coords[2][uAxis]) - originU) * invVoxel));
+  const v0 = Math.max(0, Math.floor((Math.min(coords[0][vAxis], coords[1][vAxis], coords[2][vAxis]) - originV) * invVoxel));
+  const v1 = Math.min(vMax - 1, Math.floor((Math.max(coords[0][vAxis], coords[1][vAxis], coords[2][vAxis]) - originV) * invVoxel));
+
+  const triU = coords.map((c) => c[uAxis]);
+  const triV = coords.map((c) => c[vAxis]);
+
+  for (let layer = layerMin; layer <= layerMax; layer += 1) {
+    for (let iu = u0; iu <= u1; iu += 1) {
+      for (let iv = v0; iv <= v1; iv += 1) {
+        const pu = originU + (iu + 0.5) * voxelSize;
+        const pv = originV + (iv + 0.5) * voxelSize;
+        if (!pointInTriangle2D(pu, pv, triU[0], triV[0], triU[1], triV[1], triU[2], triV[2])) continue;
+
+        /** @type {[number, number, number]} */
+        const ixiyiz = [0, 0, 0];
+        ixiyiz[flatAxis] = layer;
+        ixiyiz[uAxis] = iu;
+        ixiyiz[vAxis] = iv;
+
+        const cxCell = origin.x + (ixiyiz[0] + 0.5) * voxelSize;
+        const cyCell = origin.y + (ixiyiz[1] + 0.5) * voxelSize;
+        const czCell = origin.z + (ixiyiz[2] + 0.5) * voxelSize;
+        const bc = barycentricOnTriangle(cxCell, cyCell, czCell, ax, ay, az, bx, by, bz, cx, cy, cz);
+        sampleColor(ia, ib, ic, bc.u, bc.v, bc.w, _color);
+        commitSurfaceVoxel(ixiyiz[0], ixiyiz[1], ixiyiz[2], markParams, _color);
+      }
+    }
+  }
+
+  return true;
+}
+
+/** Shortest world-space bbox axis — extrude depth for type / SVG solids. */
+function extrudeAxisIndexFromSize(sx, sy, sz) {
+  if (sx <= sy && sx <= sz) return 0;
+  if (sy <= sz) return 1;
+  return 2;
+}
+
+/**
+ * After interior fill, stamp empty layers between occupied spans on extrusion-axis columns.
+ * Only seals the thin (extrusion) axis by default so multi-glyph lines do not bridge in X/Y.
+ * @param {0 | 1 | 2 | null} [extrudeAxisIndex] 0=x, 1=y, 2=z; null = all axes (legacy)
+ */
+function sealExtrudeCapSlabs(flags, cellColors, nx, ny, nz, toIndex, owned = null, extrudeAxisIndex = 2) {
+  const sealX = extrudeAxisIndex === null || extrudeAxisIndex === 0;
+  const sealY = extrudeAxisIndex === null || extrudeAxisIndex === 1;
+  const sealZ = extrudeAxisIndex === null || extrudeAxisIndex === 2;
+  const sealColumn = (readIdx, writeIdx, axisCount) => {
+    let minLayer = axisCount;
+    let maxLayer = -1;
+    for (let layer = 0; layer < axisCount; layer += 1) {
+      const idx = readIdx(layer);
+      const occupied = owned ? owned.has(idx) : isOccupied(flags, idx);
+      if (!occupied) continue;
+      minLayer = Math.min(minLayer, layer);
+      maxLayer = Math.max(maxLayer, layer);
+    }
+    if (maxLayer < minLayer) return;
+
+    let colorSrcIdx = -1;
+    for (let layer = minLayer; layer <= maxLayer; layer += 1) {
+      const idx = readIdx(layer);
+      if (owned ? owned.has(idx) : isOccupied(flags, idx)) {
+        colorSrcIdx = idx;
+        break;
+      }
+    }
+    if (colorSrcIdx < 0) return;
+
+    for (let layer = minLayer; layer <= maxLayer; layer += 1) {
+      const idx = writeIdx(layer);
+      if (owned) {
+        owned.add(idx);
+        if (flags[idx] !== 1) flags[idx] = 3;
+      } else if (!isOccupied(flags, idx)) {
+        flags[idx] = 3;
+      }
+      const srcBase = colorSrcIdx * 3;
+      const dstBase = idx * 3;
+      cellColors[dstBase] = cellColors[srcBase];
+      cellColors[dstBase + 1] = cellColors[srcBase + 1];
+      cellColors[dstBase + 2] = cellColors[srcBase + 2];
+    }
+  };
+
+  if (sealX) {
+    for (let iz = 0; iz < nz; iz += 1) {
+      for (let iy = 0; iy < ny; iy += 1) {
+        sealColumn(
+          (ix) => toIndex(ix, iy, iz),
+          (ix) => toIndex(ix, iy, iz),
+          nx,
+        );
+      }
+    }
+  }
+
+  if (sealY) {
+    for (let iz = 0; iz < nz; iz += 1) {
+      for (let ix = 0; ix < nx; ix += 1) {
+        sealColumn(
+          (iy) => toIndex(ix, iy, iz),
+          (iy) => toIndex(ix, iy, iz),
+          ny,
+        );
+      }
+    }
+  }
+
+  if (sealZ) {
+    for (let iy = 0; iy < ny; iy += 1) {
+      for (let ix = 0; ix < nx; ix += 1) {
+        sealColumn(
+          (iz) => toIndex(ix, iy, iz),
+          (iz) => toIndex(ix, iy, iz),
+          nz,
+        );
+      }
+    }
+  }
+}
+
 /**
  * Mark surface voxels via SAT triangle–AABB tests.
  */
@@ -998,9 +1204,12 @@ function markMeshSurfaceSat(params) {
     pos, uvAttr, colorAttr, index, sampler, tint, matrixWorld,
     origin, voxelSize, nx, ny, nz, toIndex, invVoxel,
     flags, cellColors, surfaceOwners, meshSurfaceSet,
+    preserveThinFeatures = false,
   } = params;
 
   const hx = voxelSize * 0.5;
+  const satPad = preserveThinFeatures ? voxelSize * 0.15 : 0;
+  const hxSat = hx + satPad;
   const sampleColor = (ia, ib, ic, bu, bv, bw, target) => {
     if (colorAttr) {
       _a.fromBufferAttribute(colorAttr, ia);
@@ -1046,6 +1255,22 @@ function markMeshSurfaceSat(params) {
     const cy = _c.y;
     const cz = _c.z;
 
+    const markParams = {
+      toIndex, flags, cellColors, surfaceOwners, meshSurfaceSet,
+      origin, voxelSize, nx, ny, nz, invVoxel,
+    };
+
+    if (preserveThinFeatures) {
+      markCoplanarCapTriangleVoxels(
+        { ax, ay, az, bx, by, bz, cx, cy, cz },
+        markParams,
+        sampleColor,
+        ia,
+        ib,
+        ic,
+      );
+    }
+
     const ix0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - origin.x) * invVoxel));
     const ix1 = Math.min(nx - 1, Math.floor((Math.max(ax, bx, cx) - origin.x) * invVoxel));
     const iy0 = Math.max(0, Math.floor((Math.min(ay, by, cy) - origin.y) * invVoxel));
@@ -1062,23 +1287,12 @@ function markMeshSurfaceSat(params) {
 
           if (!triangleIntersectsAabb(
             ax, ay, az, bx, by, bz, cx, cy, cz,
-            cxCell, cyCell, czCell, hx, hx, hx,
+            cxCell, cyCell, czCell, hxSat, hxSat, hxSat,
           )) continue;
-
-          const idx = toIndex(ix, iy, iz);
-          meshSurfaceSet.add(idx);
-          if (surfaceOwners[idx] < 65535) surfaceOwners[idx] += 1;
 
           const bc = barycentricOnTriangle(cxCell, cyCell, czCell, ax, ay, az, bx, by, bz, cx, cy, cz);
           sampleColor(ia, ib, ic, bc.u, bc.v, bc.w, _color);
-
-          if (flags[idx] !== 1) {
-            flags[idx] = 1;
-            const base = idx * 3;
-            cellColors[base] = _color.r;
-            cellColors[base + 1] = _color.g;
-            cellColors[base + 2] = _color.b;
-          }
+          commitSurfaceVoxel(ix, iy, iz, markParams, _color);
         }
       }
     }
@@ -1196,13 +1410,25 @@ function cullSmallSurfaceComponents(params) {
 
 function collectMeshOccupiedVoxels(params) {
   const {
-    meshSurfaceSet, flags, surfaceOwners, meshIdx, meshSurfaceSets, nx, ny, nz, toIndex,
+    meshSurfaceSet, flags, cellColors, surfaceOwners, meshIdx, meshSurfaceSets, nx, ny, nz, toIndex,
     shellOnly = false,
+    preserveThinFeatures = false,
+    meshExtrudeAxis = 2,
   } = params;
 
   /** @type {Set<number>} */
   const owned = new Set(meshSurfaceSet);
   if (shellOnly) return owned;
+
+  if (preserveThinFeatures) {
+    // Per-mesh thin-feature grids are exclusive — take the full solid, not a sparse SAT shell.
+    for (let i = 0; i < flags.length; i += 1) {
+      if (flags[i] === 1 || flags[i] === 3) owned.add(i);
+    }
+    sealExtrudeCapSlabs(flags, cellColors, nx, ny, nz, toIndex, owned, meshExtrudeAxis);
+    return owned;
+  }
+
   /** @type {number[]} */
   const queue = [...meshSurfaceSet];
 
@@ -1230,7 +1456,33 @@ function collectMeshOccupiedVoxels(params) {
 }
 
 function mergeCubeGeometryFromCells(params) {
+  if (params.useCubePrimitives) {
+    return buildCubeVoxelMeshGeometry(params);
+  }
   return buildGreedyVoxelMeshGeometry(params);
+}
+
+/** Font/SVG extrude meshes are many small parts — skip shell-only extraction and heavy cleanup. */
+function meshIsExtrudeGenerated(mesh) {
+  const ud = mesh?.userData;
+  return !!(ud?.orbyFontExtrude || ud?.orbySvgExtrude);
+}
+
+/** @param {Array<{ mesh?: THREE.Mesh }>} entries */
+function entriesPreserveThinFeatures(entries) {
+  return entries.length > 0 && entries.every((entry) => meshIsExtrudeGenerated(entry.mesh));
+}
+
+/** Gentler voxel cleanup for type and vector-extrude models (thin strokes, glyph dots). */
+function thinFeatureVoxelCleanupOverrides() {
+  return {
+    cullComponentMinVoxels: 1,
+    spikeErodePasses: 0,
+    spikeMaxNeighbors: 1,
+    surfaceShellErodePasses: 0,
+    danglingSurfaceErodePasses: 0,
+    oneWideRodMinLength: 8,
+  };
 }
 
 function buildModelVoxelGeometries(params) {
@@ -1256,6 +1508,7 @@ function buildModelVoxelGeometries(params) {
     danglingSurfaceErodePasses,
     danglingSurfaceMaxOccupiedNeighbors,
     danglingSurfaceMaxSurfaceNeighbors,
+    preserveThinFeatures = false,
   } = params;
 
   const { origin, voxelSize, nx, ny, nz, toIndex } = grid;
@@ -1292,6 +1545,7 @@ function buildModelVoxelGeometries(params) {
       cellColors,
       surfaceOwners,
       meshSurfaceSet: meshSurfaceSets[meshIdx],
+      preserveThinFeatures,
     });
   }
 
@@ -1319,109 +1573,126 @@ function buildModelVoxelGeometries(params) {
   }
   if (surfaceCount === 0) return null;
 
-  const triangleSoup = buildWorldTriangleSoup(
-    prepared.map((item) => ({
-      pos: item.pos,
-      index: item.index,
-      matrixWorld: item.entry.matrixWorld,
-    })),
-  );
+  const triangleSoup = fillInterior
+    ? buildWorldTriangleSoup(
+      prepared.map((item) => ({
+        pos: item.pos,
+        index: item.index,
+        matrixWorld: item.entry.matrixWorld,
+      })),
+    )
+    : null;
 
   if (fillInterior) {
-    const parityCtx = buildVoxelParityContext(
-      triangleSoup.tris,
-      triangleSoup.triCount,
-      grid,
-      parityMinInsideVotes,
-    );
-    fillInteriorMultiAxisParity(flags, cellColors, parityCtx);
+    if (preserveThinFeatures) {
+      const parityCtx = buildVoxelParityContext(
+        triangleSoup.tris,
+        triangleSoup.triCount,
+        grid,
+        parityMinInsideVotes,
+      );
+      fillInteriorMultiAxisParity(flags, cellColors, parityCtx);
+      modelWorldBbox.getSize(_size);
+      const globalExtrudeAxis = extrudeAxisIndexFromSize(_size.x, _size.y, _size.z);
+      // Seal extrusion-axis gaps between caps; skip parity exterior cull (strips thin type slabs).
+      sealExtrudeCapSlabs(flags, cellColors, nx, ny, nz, toIndex, null, globalExtrudeAxis);
+      propagateFillColors(flags, cellColors, nx, ny, nz, toIndex);
+    } else {
+      const parityCtx = buildVoxelParityContext(
+        triangleSoup.tris,
+        triangleSoup.triCount,
+        grid,
+        parityMinInsideVotes,
+      );
+      fillInteriorMultiAxisParity(flags, cellColors, parityCtx);
 
-    cullFilledExteriorByParity(
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      parityCtx,
-    );
+      cullFilledExteriorByParity(
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        parityCtx,
+      );
 
-    erodeThinOccupiedSpikes({
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      nx,
-      ny,
-      nz,
-      toIndex,
-      maxPasses: spikeErodePasses,
-      maxNeighbors: spikeMaxNeighbors,
-    });
+      erodeThinOccupiedSpikes({
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        nx,
+        ny,
+        nz,
+        toIndex,
+        maxPasses: spikeErodePasses,
+        maxNeighbors: spikeMaxNeighbors,
+      });
 
-    cullOneWideOccupiedRods({
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      nx,
-      ny,
-      nz,
-      toIndex,
-      minRodLength: oneWideRodMinLength,
-      thinMaxNeighbors: oneWideRodThinMaxNeighbors,
-    });
+      cullOneWideOccupiedRods({
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        nx,
+        ny,
+        nz,
+        toIndex,
+        minRodLength: oneWideRodMinLength,
+        thinMaxNeighbors: oneWideRodThinMaxNeighbors,
+      });
 
-    erodeThinSurfaceShell({
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      nx,
-      ny,
-      nz,
-      toIndex,
-      maxPasses: surfaceShellErodePasses,
-      maxNeighbors: surfaceShellMaxNeighbors,
-    });
+      erodeThinSurfaceShell({
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        nx,
+        ny,
+        nz,
+        toIndex,
+        maxPasses: surfaceShellErodePasses,
+        maxNeighbors: surfaceShellMaxNeighbors,
+      });
 
-    peelDanglingSurfaceShell({
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      nx,
-      ny,
-      nz,
-      toIndex,
-      maxPasses: danglingSurfaceErodePasses,
-      maxOccupiedNeighbors: danglingSurfaceMaxOccupiedNeighbors,
-      maxSurfaceNeighbors: danglingSurfaceMaxSurfaceNeighbors,
-    });
+      peelDanglingSurfaceShell({
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        nx,
+        ny,
+        nz,
+        toIndex,
+        maxPasses: danglingSurfaceErodePasses,
+        maxOccupiedNeighbors: danglingSurfaceMaxOccupiedNeighbors,
+        maxSurfaceNeighbors: danglingSurfaceMaxSurfaceNeighbors,
+      });
 
-    cullSmallOccupiedComponents({
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      nx,
-      ny,
-      nz,
-      toIndex,
-      minVoxels: cullComponentMinVoxels,
-    });
+      cullSmallOccupiedComponents({
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        nx,
+        ny,
+        nz,
+        toIndex,
+        minVoxels: cullComponentMinVoxels,
+      });
 
-    cullNeedleSatellites({
-      flags,
-      cellColors,
-      surfaceOwners,
-      meshSurfaceSets,
-      nx,
-      ny,
-      nz,
-      toIndex,
-      minGridGap: satelliteMinGridGapVoxels,
-      maxAspectRatio: needleMaxAspectRatio,
-      maxNeedleVoxels: needleMaxVoxels,
-    });
+      cullNeedleSatellites({
+        flags,
+        cellColors,
+        surfaceOwners,
+        meshSurfaceSets,
+        nx,
+        ny,
+        nz,
+        toIndex,
+        minGridGap: satelliteMinGridGapVoxels,
+        maxAspectRatio: needleMaxAspectRatio,
+        maxNeedleVoxels: needleMaxVoxels,
+      });
+    }
   } else {
     erodeThinOccupiedSpikes({
       flags,
@@ -1480,6 +1751,7 @@ function buildModelVoxelGeometries(params) {
   const totalMeshSurface = meshSurfaceSets.reduce((sum, set) => sum + set.size, 0);
   const meshShellOnly = meshSurfaceSets.map((set, meshIdx) => {
     if (prepared.length <= 1) return false;
+    if (meshIsExtrudeGenerated(prepared[meshIdx].entry.mesh)) return false;
     const surfaceShare = set.size / Math.max(totalMeshSurface, 1);
     const bboxShare = prepared[meshIdx].worldBboxDiagonal / Math.max(modelDiag, 1e-6);
     return surfaceShare < smallMeshSurfaceRatio || bboxShare < smallMeshBboxRatio;
@@ -1490,9 +1762,12 @@ function buildModelVoxelGeometries(params) {
 
   for (let meshIdx = 0; meshIdx < prepared.length; meshIdx += 1) {
     const item = prepared[meshIdx];
+    const meshSize = item.meshBbox.getSize(_size);
+    const meshExtrudeAxis = extrudeAxisIndexFromSize(meshSize.x, meshSize.y, meshSize.z);
     const owned = collectMeshOccupiedVoxels({
       meshSurfaceSet: meshSurfaceSets[meshIdx],
       flags,
+      cellColors,
       surfaceOwners,
       meshIdx,
       meshSurfaceSets,
@@ -1501,6 +1776,8 @@ function buildModelVoxelGeometries(params) {
       nz,
       toIndex,
       shellOnly: meshShellOnly[meshIdx],
+      preserveThinFeatures,
+      meshExtrudeAxis,
     });
 
     if (owned.size === 0) {
@@ -1517,6 +1794,7 @@ function buildModelVoxelGeometries(params) {
       toIndex,
       origin,
       voxelSize,
+      useCubePrimitives: preserveThinFeatures,
     });
 
     if (geometry) {
@@ -1540,24 +1818,43 @@ export function voxelizeModelMeshes(entries, options = {}) {
   const results = new Map();
   if (!entries?.length) return results;
 
+  const preserveThinFeatures = options.preserveThinFeatures ?? entriesPreserveThinFeatures(entries);
+  if (preserveThinFeatures && entries.length > 1) {
+    for (const entry of entries) {
+      const singleMap = voxelizeModelMeshes([entry], options);
+      results.set(entry.mesh, singleMap.get(entry.mesh) ?? null);
+    }
+    return results;
+  }
+
   const cfg = resolveVoxelLookConfig(options.preset);
   let maxAxis = Math.max(8, Math.round(options.maxAxis ?? cfg.maxAxis));
   const fillInterior = options.fillInterior ?? cfg.fillInterior;
-  const maxVoxels = Math.max(1000, Math.round(options.maxVoxels ?? cfg.maxVoxels));
-  const cullComponentMinVoxels = options.cullComponentMinVoxels ?? cfg.cullComponentMinVoxels ?? 10;
+  const thinCleanup = preserveThinFeatures ? thinFeatureVoxelCleanupOverrides() : null;
+  const baseMaxVoxels = Math.max(1000, Math.round(options.maxVoxels ?? cfg.maxVoxels));
+  const maxVoxels = preserveThinFeatures
+    ? Math.min(400000, Math.round(baseMaxVoxels * 2))
+    : baseMaxVoxels;
+  const cullComponentMinVoxels = thinCleanup?.cullComponentMinVoxels
+    ?? options.cullComponentMinVoxels ?? cfg.cullComponentMinVoxels ?? 10;
   const smallMeshSurfaceRatio = options.smallMeshSurfaceRatio ?? cfg.smallMeshSurfaceRatio ?? 0.15;
   const smallMeshBboxRatio = options.smallMeshBboxRatio ?? cfg.smallMeshBboxRatio ?? 0.35;
-  const spikeErodePasses = options.spikeErodePasses ?? cfg.spikeErodePasses ?? 5;
-  const spikeMaxNeighbors = options.spikeMaxNeighbors ?? cfg.spikeMaxNeighbors ?? 2;
+  const spikeErodePasses = thinCleanup?.spikeErodePasses
+    ?? options.spikeErodePasses ?? cfg.spikeErodePasses ?? 5;
+  const spikeMaxNeighbors = thinCleanup?.spikeMaxNeighbors
+    ?? options.spikeMaxNeighbors ?? cfg.spikeMaxNeighbors ?? 2;
   const satelliteMinGridGapVoxels = options.satelliteMinGridGapVoxels ?? cfg.satelliteMinGridGapVoxels ?? 2;
   const needleMaxAspectRatio = options.needleMaxAspectRatio ?? cfg.needleMaxAspectRatio ?? 4;
   const needleMaxVoxels = options.needleMaxVoxels ?? cfg.needleMaxVoxels ?? 64;
   const parityMinInsideVotes = options.parityMinInsideVotes ?? cfg.parityMinInsideVotes ?? 2;
-  const surfaceShellErodePasses = options.surfaceShellErodePasses ?? cfg.surfaceShellErodePasses ?? 2;
+  const surfaceShellErodePasses = thinCleanup?.surfaceShellErodePasses
+    ?? options.surfaceShellErodePasses ?? cfg.surfaceShellErodePasses ?? 2;
   const surfaceShellMaxNeighbors = options.surfaceShellMaxNeighbors ?? cfg.surfaceShellMaxNeighbors ?? 3;
-  const oneWideRodMinLength = options.oneWideRodMinLength ?? cfg.oneWideRodMinLength ?? 3;
+  const oneWideRodMinLength = thinCleanup?.oneWideRodMinLength
+    ?? options.oneWideRodMinLength ?? cfg.oneWideRodMinLength ?? 3;
   const oneWideRodThinMaxNeighbors = options.oneWideRodThinMaxNeighbors ?? cfg.oneWideRodThinMaxNeighbors ?? 3;
-  const danglingSurfaceErodePasses = options.danglingSurfaceErodePasses ?? cfg.danglingSurfaceErodePasses ?? 2;
+  const danglingSurfaceErodePasses = thinCleanup?.danglingSurfaceErodePasses
+    ?? options.danglingSurfaceErodePasses ?? cfg.danglingSurfaceErodePasses ?? 2;
   const danglingSurfaceMaxOccupiedNeighbors = options.danglingSurfaceMaxOccupiedNeighbors
     ?? cfg.danglingSurfaceMaxOccupiedNeighbors ?? 4;
   const danglingSurfaceMaxSurfaceNeighbors = options.danglingSurfaceMaxSurfaceNeighbors
@@ -1590,6 +1887,7 @@ export function voxelizeModelMeshes(entries, options = {}) {
       index: working.index,
       sampler: new TextureColorSampler(entry.diffuseMap),
       tint,
+      meshBbox,
       worldBboxDiagonal: meshBbox.getSize(_size).length(),
     });
   }
@@ -1598,6 +1896,28 @@ export function voxelizeModelMeshes(entries, options = {}) {
     for (const item of prepared) item.working.dispose?.();
     return results;
   }
+
+  const buildParams = {
+    fillInterior,
+    maxVoxels,
+    cullComponentMinVoxels,
+    smallMeshSurfaceRatio,
+    smallMeshBboxRatio,
+    spikeErodePasses,
+    spikeMaxNeighbors,
+    satelliteMinGridGapVoxels,
+    needleMaxAspectRatio,
+    needleMaxVoxels,
+    parityMinInsideVotes,
+    surfaceShellErodePasses,
+    surfaceShellMaxNeighbors,
+    oneWideRodMinLength,
+    oneWideRodThinMaxNeighbors,
+    danglingSurfaceErodePasses,
+    danglingSurfaceMaxOccupiedNeighbors,
+    danglingSurfaceMaxSurfaceNeighbors,
+    preserveThinFeatures,
+  };
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const grid = computeSharedVoxelGrid(worldBbox, maxAxis);
@@ -1609,33 +1929,19 @@ export function voxelizeModelMeshes(entries, options = {}) {
     const built = buildModelVoxelGeometries({
       prepared,
       grid,
-      fillInterior,
-      maxVoxels,
-      cullComponentMinVoxels,
-      smallMeshSurfaceRatio,
-      smallMeshBboxRatio,
       modelWorldBbox: worldBbox,
-      spikeErodePasses,
-      spikeMaxNeighbors,
-      satelliteMinGridGapVoxels,
-      needleMaxAspectRatio,
-      needleMaxVoxels,
-      parityMinInsideVotes,
-      surfaceShellErodePasses,
-      surfaceShellMaxNeighbors,
-      oneWideRodMinLength,
-      oneWideRodThinMaxNeighbors,
-      danglingSurfaceErodePasses,
-      danglingSurfaceMaxOccupiedNeighbors,
-      danglingSurfaceMaxSurfaceNeighbors,
+      ...buildParams,
     });
 
     if (built) {
+      let anyColored = false;
       for (const item of prepared) {
-        results.set(item.entry.mesh, built.get(item.entry.mesh) ?? null);
+        const geom = built.get(item.entry.mesh) ?? null;
+        results.set(item.entry.mesh, geom);
+        if (geom?.attributes?.color?.count > 0) anyColored = true;
         item.working.dispose?.();
       }
-      return results;
+      if (anyColored) return results;
     }
 
     maxAxis = Math.max(16, Math.floor(maxAxis * 0.78));

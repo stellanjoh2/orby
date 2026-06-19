@@ -340,6 +340,8 @@ export class MaterialController {
     this._creativeLookPausedAt = null;
     /** Reused when syncing toon `uLightDir` from scene key light. */
     this._creativeToonKeyDirScratch = new THREE.Vector3();
+    /** Last preset whose ShaderMaterials are on the mesh — drives redundant-apply detection. */
+    this._appliedCreativeLookPreset = null;
     this.materialSettings = {
       brightness: DEFAULT_MATERIAL_BRIGHTNESS,
       metalness: 0.0,
@@ -414,6 +416,7 @@ export class MaterialController {
       emissive: initialState.material?.emissive ?? 0.0,
     };
     this.originalMaterials = new WeakMap();
+    this._appliedCreativeLookPreset = null;
     this.prepareMesh(model);
     this._syncImportPbrFromModel(model);
     this.stateStore?.set(
@@ -1906,6 +1909,7 @@ export class MaterialController {
   }
 
   _restoreCreativeLookBaseMaterials() {
+    this._appliedCreativeLookPreset = null;
     this._restorePs2CrushGeometry();
     this._restoreVoxelGeometry();
     this._restoreWirePulseGeometry();
@@ -1938,12 +1942,19 @@ export class MaterialController {
       diffuseTint = liveMat.color.clone();
     }
     if (
-      diffuseMap &&
-      isTextureImageReady(diffuseMap) &&
-      diffuseTint &&
+      diffuseTint?.isColor &&
       this._isNearBlackDiffuseColor(diffuseTint)
     ) {
       diffuseTint.setRGB(1, 1, 1);
+    }
+    if (!diffuseTint?.isColor && mesh?.userData?.orbySvgBaseColorLinear) {
+      const linear = mesh.userData.orbySvgBaseColorLinear;
+      if (Number.isFinite(linear.r) && Number.isFinite(linear.g) && Number.isFinite(linear.b)) {
+        diffuseTint = new THREE.Color(linear.r, linear.g, linear.b);
+      }
+    }
+    if (!diffuseTint?.isColor && mesh?.userData?.orbySvgBaseColor) {
+      diffuseTint = new THREE.Color(mesh.userData.orbySvgBaseColor);
     }
     return { diffuseMap, diffuseTint };
   }
@@ -2450,6 +2461,7 @@ export class MaterialController {
     });
 
     this._syncCreativeLookShadowTint();
+    this._appliedCreativeLookPreset = preset;
 
     if (this.onMaterialUpdate) {
       this.onMaterialUpdate();
@@ -2781,17 +2793,12 @@ export class MaterialController {
     });
   }
 
-  /** Keep Shader Lab controller fields aligned with state store (slider drags skip full apply). */
+  /** Keep live Shader Lab slider fields aligned with state store (slider drags skip full apply). */
   _syncCreativeLookFieldsFromStore(cl = this.stateStore?.getState()?.creativeLook ?? {}) {
     if (!cl || typeof cl !== 'object') return;
-    if (cl.enabled !== undefined) {
-      this.creativeLookSettings.enabled = !!cl.enabled;
-    }
-    if (cl.preset != null) {
-      const resolved = resolveCreativeLookPresetChoice(cl.preset);
-      if (resolved) this.creativeLookSettings.preset = resolved;
-    }
-    const preset = normalizeCreativeLookPreset(this.creativeLookSettings.preset);
+    // Preset / enabled are owned by setCreativeLookSettings — syncing them here races ahead of
+    // mesh:creative-look and makes the redundant-apply guard skip preset switches.
+    const preset = normalizeCreativeLookPreset(cl.preset ?? this.creativeLookSettings.preset);
     if (cl.patternScale !== undefined) {
       this.creativeLookSettings.patternScale = normalizeCreativeLookPatternScale(
         preset,
@@ -2819,6 +2826,9 @@ export class MaterialController {
       this._applyCreativeLookOverride();
       return;
     }
+    if (isVoxelCreativeLookPreset(preset) && this._meshesNeedVoxelGeometry(preset)) {
+      this._syncRetroConsoleGeometryForPreset(preset, this.creativeLookSettings.patternScale);
+    }
     this._syncCreativeLookLiveUniforms(cl);
   }
 
@@ -2843,6 +2853,33 @@ export class MaterialController {
           needs = true;
           break;
         }
+      }
+    });
+    return needs;
+  }
+
+  /** True when Voxel HD is active but meshes still carry smooth source geometry. */
+  _meshesNeedVoxelGeometry(preset = this.creativeLookSettings?.preset) {
+    if (!this.currentModel || !isVoxelCreativeLookPreset(normalizeCreativeLookPreset(preset))) {
+      return false;
+    }
+    let needs = false;
+    this.currentModel.traverse((child) => {
+      if (needs || !child.isMesh) return;
+      if (this._shouldSkipMeshForVoxelization(child)) return;
+      if (
+        !this.originalMaterials.get(child) &&
+        !child.userData?.orbyFontExtrude &&
+        !child.userData?.orbySvgExtrude
+      ) {
+        return;
+      }
+      if (!child.userData.orbyVoxelPreparedGeometry) {
+        needs = true;
+        return;
+      }
+      if ((child.geometry?.attributes?.color?.count ?? 0) <= 0) {
+        needs = true;
       }
     });
     return needs;
@@ -2883,12 +2920,21 @@ export class MaterialController {
           child.visible = false;
           return;
         }
-        if (!this.originalMaterials.get(child)) return;
+        if (!this.originalMaterials.get(child)) {
+          if (!child.userData?.orbyFontExtrude && !child.userData?.orbySvgExtrude) return;
+        }
         const geom = child.geometry;
         if (!geom?.attributes?.position) return;
 
-        if (!child.userData.orbyVoxelOriginalGeometry) {
-          child.userData.orbyVoxelOriginalGeometry = geom;
+        const hasLiveVoxelColors =
+          !!child.userData.orbyVoxelPreparedGeometry &&
+          (geom?.attributes?.color?.count ?? 0) > 0;
+        if (!hasLiveVoxelColors) {
+          const storedOrig = child.userData.orbyVoxelOriginalGeometry;
+          if (!storedOrig || storedOrig !== geom) {
+            child.userData.orbyVoxelOriginalGeometry = geom;
+          }
+          delete child.userData.orbyVoxelPreparedGeometry;
         }
 
         const source = child.userData.orbyVoxelOriginalGeometry;
@@ -2947,6 +2993,7 @@ export class MaterialController {
             maxAxis: voxelMaxAxis,
             fillInterior: cfg.fillInterior,
             maxVoxels: creativeVoxelMaxVoxels(preset, voxelMaxAxis),
+            preserveThinFeatures: this._isFontExtrudeModel() || !!this.currentModel?.userData?.orbySvgExtrude,
             cullComponentMinVoxels: cfg.cullComponentMinVoxels,
             smallMeshSurfaceRatio: cfg.smallMeshSurfaceRatio,
             smallMeshBboxRatio: cfg.smallMeshBboxRatio,
@@ -2965,6 +3012,10 @@ export class MaterialController {
         );
         if (hasColoredVoxels) break;
         voxelMaxAxis = Math.max(64, Math.floor(voxelMaxAxis * 0.82));
+      }
+
+      if (![...voxelizedByMesh.values()].some((geom) => geom?.attributes?.color?.count > 0)) {
+        console.warn('[Orby] Voxel HD geometry preparation failed — smooth mesh kept.');
       }
 
       for (const entry of voxelEntries) {
@@ -3230,14 +3281,21 @@ export class MaterialController {
     }
 
     // Rebuilding every ShaderMaterial disposes GPU programs; redundant applies (duplicate events /
-    // same state) caused visible black flashes. Only rebuild when enabled preset actually changes.
+    // same state) caused visible black flashes. Only skip rebuild when mesh materials already match.
+    const appliedPreset = normalizeCreativeLookPreset(this._appliedCreativeLookPreset);
     const redundant =
       prevEnabled &&
       this.creativeLookSettings.enabled &&
-      prevPreset === this.creativeLookSettings.preset &&
+      appliedPreset === nextPreset &&
       prevAppliesMaterials;
     if (redundant) {
       this._syncCreativeLookLiveUniforms(this.creativeLookSettings);
+      if (isVoxelCreativeLookPreset(nextPreset) && this._meshesNeedVoxelGeometry(nextPreset)) {
+        this._syncRetroConsoleGeometryForPreset(
+          nextPreset,
+          this.creativeLookSettings.patternScale,
+        );
+      }
       if (isSketchFamilyCreativeLookPreset(nextPreset)) {
         const nextStroke = this._resolveSketchParams().strokeWidth;
         if (prevSketchStroke !== null && prevSketchStroke !== nextStroke) {

@@ -12,6 +12,7 @@ import {
   isSketchFamilyCreativeLookPreset,
   normalizeCreativeLookPreset,
 } from '../render/CreativeLookMaterials.js';
+import { creativeLookPresetAllowsAmbientOcclusion } from '../render/creativeLookVoxelArt.js';
 
 /** @typedef {'default' | 'viewport-bloom' | 'flat-post' | 'watercolour' | 'gouache' | 'sketch' | 'vectrex'} CreativeLookPostFxMode */
 
@@ -316,6 +317,12 @@ export function getCreativeLookPostFxUiBlocks(state) {
 
   if (cl.enabled) {
     disabledInputs.add('toggleBloom');
+  }
+
+  if (creativeLookPresetAllowsAmbientOcclusion(cl.preset)) {
+    mutedSubsections.delete('ambient-occlusion');
+    clickBlockedSubsections.delete('ambient-occlusion');
+    for (const id of AO_INPUTS) disabledInputs.delete(id);
   }
 
   return {

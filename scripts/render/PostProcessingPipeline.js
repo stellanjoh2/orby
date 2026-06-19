@@ -449,8 +449,8 @@ export class PostProcessingPipeline {
       const { pass, key } = this._managedPasses[i];
       const snap = this._creativeLookViewportSnapshot[i];
 
-      if (key === 'renderPass') {
-        pass.enabled = true;
+      if (key === 'renderPass' || key === 'n8aoPass') {
+        pass.enabled = snap.enabled;
         pass.renderToScreen = false;
         continue;
       }

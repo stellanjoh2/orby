@@ -104,6 +104,7 @@ export class UIManager {
     this._loadSpinnerDepth = 0;
     this._loadSpinnerElapsedActive = false;
     this._loadSpinnerElapsedStart = 0;
+    this._loadSpinnerElapsedIntervalId = null;
     /** Status prefix beside elapsed seconds on #viewportLoadSpinnerElapsed (default `Rendering`). */
     this._loadSpinnerStatusPrefix = 'Rendering';
     /** @type {Array<{ text: string, durationMs: number, toastOptions: object }>} */
@@ -121,6 +122,8 @@ export class UIManager {
     this._studioUiReady = false;
     /** @type {Promise<void> | null} */
     this._studioUiPromise = null;
+    this._creativeLookGridEnabled = false;
+    this._creativeLookVoxelHdBlocked = false;
   }
 
   /** Full init (dropzone + studio). Prefer initShell() on marketing home boot. */
@@ -1365,11 +1368,36 @@ export class UIManager {
     });
   }
 
+  /** Mute Voxel HD for generated text (voxelization is unsupported on font extrude). */
+  setCreativeLookVoxelHdBlocked(blocked) {
+    this._creativeLookVoxelHdBlocked = !!blocked;
+    this._syncCreativeLookButtonDisabledState();
+  }
+
   toggleCreativeLookGrid(enabled) {
+    this._creativeLookGridEnabled = !!enabled;
+    this._syncCreativeLookButtonDisabledState();
+  }
+
+  _syncCreativeLookButtonDisabledState() {
     if (!this.inputs.creativeLookButtons?.forEach) return;
+    const gridEnabled = this._creativeLookGridEnabled === true;
     this.inputs.creativeLookButtons.forEach((button) => {
-      button.disabled = !enabled;
-      button.classList.toggle('is-disabled', !enabled);
+      const isVoxelHd = button.dataset.creativeLook === 'voxel-hd';
+      const disabled = !gridEnabled || (isVoxelHd && !!this._creativeLookVoxelHdBlocked);
+      button.disabled = disabled;
+      button.classList.toggle('is-disabled', disabled);
+      if (isVoxelHd) {
+        if (!button.dataset.tooltipDefault) {
+          button.dataset.tooltipDefault = button.getAttribute('data-tooltip') ?? '';
+        }
+        button.setAttribute(
+          'data-tooltip',
+          this._creativeLookVoxelHdBlocked
+            ? 'Voxel HD is not available for generated text'
+            : button.dataset.tooltipDefault,
+        );
+      }
     });
   }
 
@@ -2100,6 +2128,7 @@ export class UIManager {
     this._loadSpinnerElapsedActive = true;
     this._loadSpinnerElapsedStart = performance.now();
     this._syncLoadSpinnerElapsed(0);
+    this._startLoadSpinnerElapsedTick();
   }
 
   setLoadSpinnerElapsedFromStart() {
@@ -2108,7 +2137,21 @@ export class UIManager {
     this._syncLoadSpinnerElapsed(elapsedSec);
   }
 
+  _startLoadSpinnerElapsedTick() {
+    this._stopLoadSpinnerElapsedTick();
+    this._loadSpinnerElapsedIntervalId = setInterval(() => {
+      this.setLoadSpinnerElapsedFromStart();
+    }, 1000);
+  }
+
+  _stopLoadSpinnerElapsedTick() {
+    if (this._loadSpinnerElapsedIntervalId == null) return;
+    clearInterval(this._loadSpinnerElapsedIntervalId);
+    this._loadSpinnerElapsedIntervalId = null;
+  }
+
   endLoadSpinnerElapsed() {
+    this._stopLoadSpinnerElapsedTick();
     this._loadSpinnerElapsedActive = false;
     this._loadSpinnerElapsedStart = 0;
     const el = this.dom.loadSpinnerElapsed;

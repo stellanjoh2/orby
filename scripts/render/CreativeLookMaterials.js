@@ -276,6 +276,18 @@ export function creativeLookHolographicShellMaterialOpts(side, shaderAlpha) {
   };
 }
 
+/** Wire Pulse / Vertex Points / Vectrex — no hidden-line removal; vectors draw through like CRT / x-ray wireframe. */
+export function creativeLookWireVectorMaterialOpts(shaderAlpha) {
+  return {
+    transparent: true,
+    opacity: shaderAlpha,
+    side: THREE.DoubleSide,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: true,
+  };
+}
+
 /**
  * Non-indexed triangle soup + barycentric attribute for wire / vertex shaders.
  * @param {THREE.BufferGeometry} geometry
@@ -3212,8 +3224,6 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       vertexShader: VOXEL_VERTEX,
       fragmentShader: lookFragNoShadow(VOXEL_FRAGMENT),
       vertexColors: true,
-      skinning: false,
-      morphTargets: false,
       ...commonMatOpts,
     });
     mat.userData.orbyCreativeLook = id;
@@ -3387,7 +3397,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       },
       vertexShader: WIRE_PULSE_VERTEX,
       fragmentShader: lookFrag(WIRE_PULSE_FRAGMENT),
-      ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
+      ...creativeLookWireVectorMaterialOpts(shaderAlpha),
     });
     mat.userData.orbyCreativeLook = 'wire-pulse';
     return finish(mat);
@@ -3404,7 +3414,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       },
       vertexShader: WIRE_PULSE_VERTEX,
       fragmentShader: lookFrag(VERTEX_POINTS_FRAGMENT),
-      ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
+      ...creativeLookWireVectorMaterialOpts(shaderAlpha),
     });
     mat.userData.orbyCreativeLook = 'vertex-points';
     return finish(mat);
@@ -3424,7 +3434,7 @@ export function createCreativeLookMaterial(preset, opts = {}) {
       fragmentShader: lookFragNoShadow(
         withCreativeLookPrepPbrModulation(VECTREX_FRAGMENT, { mode: 'vectrex' }),
       ),
-      ...creativeLookHolographicShellMaterialOpts(side, shaderAlpha),
+      ...creativeLookWireVectorMaterialOpts(shaderAlpha),
     });
     mat.userData.orbyCreativeLook = 'vectrex';
     return finish(mat, { shadows: false, castShadowDepth: false });
