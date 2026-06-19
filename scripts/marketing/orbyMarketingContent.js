@@ -87,7 +87,7 @@ export const MARKETING_SECTIONS = [
     id: 'orby-marketing-intro',
     title: 'Drop it in.\nSet the stage.\nSend it.',
     lede:
-      'Orby is more than a 3D viewer. Import your scan, game asset, or logotype — pose it, light it, export it as video or image. Ready for your website, portfolio, or next presentation.',
+      'Orby is more than a 3D viewer — it\'s a virtual studio for all your 3D asset needs. Go photoreal for portfolios and client decks, or push into expressive stylized territory — same file, same tab. Export when it feels right.',
     gradientPhrases: ['more than a 3D viewer'],
   },
   {
