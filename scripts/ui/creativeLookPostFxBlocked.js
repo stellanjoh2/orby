@@ -137,6 +137,24 @@ const SUBSECTION_INPUTS = /** @type {Record<string, string[]>} */ ({
 export const SHADER_LAB_BLOCKED_TOOLTIP =
   'Currently not available while in Shader Lab';
 
+/** Section master toggles Shader Lab may disable — restored when Shader Lab turns off. */
+const SHADER_LAB_MASTER_TOGGLES = /** @type {const} */ ([
+  'toggleAmbientOcclusion',
+  'toggleDof',
+  'godRaysEnabled',
+  'toggleBloom',
+  'lensDirtEnabled',
+  'toggleGrain',
+  'toggleAberration',
+  'toggleVignette',
+  'fisheyeEnabled',
+  'anamorphicBloomEnabled',
+  'lensFlareEnabled',
+  'histogramEnabled',
+  'toneCurveOpen',
+  'lookFilterPresetsOpen',
+]);
+
 /** @type {Set<Element>} */
 let _shaderLabBlockedMarked = new Set();
 
@@ -346,7 +364,11 @@ export function getCreativeLookPostFxUiBlocks(state) {
 export function applyCreativeLookPostFxUiBlocks(state, api) {
   clearShaderLabBlockedMarks();
   const blocks = getCreativeLookPostFxUiBlocks(state);
-  if (!blocks) return;
+  if (!blocks) {
+    // Shader Lab previously set disabled on master toggles; re-enable when it is off.
+    api.setControlsDisabled([...SHADER_LAB_MASTER_TOGGLES], false);
+    return;
+  }
 
   for (const key of blocks.mutedSubsections) {
     api.setMuted(key, true);

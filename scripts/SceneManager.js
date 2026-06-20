@@ -128,8 +128,8 @@ import { ComposerLifecycle } from './scene/ComposerLifecycle.js';
 import { SceneStateApplier } from './scene/SceneStateApplier.js';
 import { ModelLifecycleManager } from './scene/ModelLifecycleManager.js';
 import {
-  isFisheyeEnabledInState,
-  showFisheyePngExportBlockedAlert,
+  shouldBlockFisheyePngExport,
+  showFisheyeTransparentPngExportBlockedAlert,
 } from './export/fisheyeExportAlert.js';
 import {
   getImageExportFormat,
@@ -5043,15 +5043,15 @@ export class SceneManager {
   }
 
   async exportImage(settings = {}) {
-    if (isFisheyeEnabledInState(this.stateStore)) {
-      showFisheyePngExportBlockedAlert(this.ui);
-      return;
-    }
     const formatId = normalizeImageExportFormat(settings.format);
     const formatMeta = getImageExportFormat(formatId);
     let { transparent = false, size = 2 } = settings;
     if (transparent && !formatMeta.supportsAlpha) {
       transparent = false;
+    }
+    if (shouldBlockFisheyePngExport(this.stateStore, { transparent })) {
+      showFisheyeTransparentPngExportBlockedAlert(this.ui);
+      return;
     }
     this._suppressResizeForExport = true;
     try {
@@ -5207,8 +5207,14 @@ export class SceneManager {
     if (this.exportMovementPreview?.isActive?.()) {
       this.exportMovementPreview.stop({ silent: true });
     }
-    if (settings?.format === 'png' && isFisheyeEnabledInState(this.stateStore)) {
-      showFisheyePngExportBlockedAlert(this.ui);
+    const exportSettings = this._videoExportSettingsFromUi(settings);
+    if (
+      exportSettings.format === 'png'
+      && shouldBlockFisheyePngExport(this.stateStore, {
+        transparent: !!exportSettings.movTransparent,
+      })
+    ) {
+      showFisheyeTransparentPngExportBlockedAlert(this.ui);
       return;
     }
     const resumeRenderLoop = this.renderLoop?.isRunning?.() === true;
@@ -5217,7 +5223,7 @@ export class SceneManager {
     }
     this._suppressResizeForExport = true;
     try {
-      await this.videoExporter?.exportVideo(this._videoExportSettingsFromUi(settings));
+      await this.videoExporter?.exportVideo(exportSettings);
     } finally {
       this._suppressResizeForExport = false;
       this.handleResize();

@@ -5,6 +5,7 @@ import {
   DEFAULT_MATERIAL_ROUGHNESS,
 } from '../constants.js';
 import { isTextureImageReady } from '../utils/textureReady.js';
+import { DUST_FIELD_DEFAULT_INTENSITY, DUST_FIELD_DEFAULT_PATTERN_SCALE } from './creativeLookDustField.js';
 import { createShadowTintUniformValues } from './ShadowTint.js';
 import {
   ASCII_LUMINANCE_PREP_FRAGMENT,
@@ -131,13 +132,13 @@ export { creativeLookUsesVoxelGeometry, isVoxelCreativeLookPreset } from './crea
 /**
  * Animated presets read `uTime` as one shared timeline: MaterialController sets
  * `uTime = elapsedSeconds * creativeLook.shaderAnimationSpeed` (after pause freeze).
- * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, vectrex, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
+ * Shader fragments use `float t = uTime` for animated presets (flow-field, plasma, holographic, spectral-storm, voronoi, scanline-hologram, wire-pulse, vertex-points, dust-field, vectrex, ps2-crush, psx). EGA Pixel uses a fixed 640×350 screen grid (no time scroll).
  *
  * The chrome preset uses MeshPhysicalMaterial so PMREM / CubeUV environment maps match the rest of the viewer.
  * The glass preset uses MeshPhysicalMaterial.transmission for real refraction (Three.js transmission pipeline).
  */
 
-/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome' | 'glass'} CreativeLookPreset */
+/** @typedef {'neon-edge' | 'flow-field' | 'plasma' | 'toon' | 'ega-pixel' | 'c64-pixel' | 'gameboy-pixel' | 'gba-pixel' | 'nes-pixel' | 'megadrive-pixel' | 'intellivision-pixel' | 'apple2-pixel' | 'dither-neutral' | 'dither-tritone' | 'dither-crosshatch' | 'dither-raster' | 'ascii-art' | 'ascii-art-2' | 'ascii-art-3' | 'ascii-art-4' | 'holographic' | 'spectral-storm' | 'voronoi' | 'scanline-hologram' | 'wire-pulse' | 'vertex-points' | 'dust-field' | 'ps2-crush' | 'psx' | 'vga-dos-3d' | 'vectrex' | 'voxel-hd' | 'watercolour' | 'sketch' | 'sketch-colour' | 'gouache' | 'chrome' | 'glass'} CreativeLookPreset */
 
 export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'neon-edge',
@@ -165,6 +166,7 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
   'scanline-hologram',
   'wire-pulse',
   'vertex-points',
+  'dust-field',
   'ps2-crush',
   'psx',
   'vga-dos-3d',
@@ -206,6 +208,16 @@ export const WIRE_PULSE_DEFAULT_INTENSITY = 0.25;
 /** Default Shader Lab intensity for Vertex Points (point size). */
 export const VERTEX_POINTS_DEFAULT_INTENSITY = 2;
 
+export {
+  DUST_FIELD_PARTICLE_COUNT,
+  DUST_FIELD_DEFAULT_INTENSITY,
+  DUST_FIELD_DEFAULT_PATTERN_SCALE,
+  isDustFieldCreativeLookPreset,
+  creativeLookUsesDustFieldGeometry,
+  buildDustFieldGeometry,
+  updateDustFieldParticlePositions,
+} from './creativeLookDustField.js';
+
 /** Default Shader Lab scale for Vectrex (analog beam wobble amount). */
 export const VECTREX_DEFAULT_PATTERN_SCALE = 0.5;
 
@@ -227,10 +239,10 @@ export function creativeLookUsesWirePulseGeometry(preset) {
   return id === 'wire-pulse' || id === 'vertex-points' || id === 'vectrex';
 }
 
-/** Wire Pulse, Vertex Points, and Vectrex draw in the transparent pass. */
+/** Wire Pulse, Vertex Points, Dust Field, and Vectrex draw in the transparent pass. */
 export function creativeLookForceTransparentDraw(preset) {
   const id = normalizeCreativeLookPreset(preset);
-  return id === 'wire-pulse' || id === 'vertex-points' || id === 'vectrex';
+  return id === 'wire-pulse' || id === 'vertex-points' || id === 'dust-field' || id === 'vectrex';
 }
 
 /** @param {CreativeLookPreset | string | undefined} preset */
@@ -272,6 +284,18 @@ export function creativeLookHolographicShellMaterialOpts(side, shaderAlpha) {
     side,
     depthTest: true,
     depthWrite: false,
+    toneMapped: true,
+  };
+}
+
+/** Dust Field — additive point sprites sampled from mesh surface. */
+export function creativeLookDustFieldMaterialOpts(shaderAlpha) {
+  return {
+    transparent: true,
+    opacity: shaderAlpha,
+    depthTest: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
     toneMapped: true,
   };
 }
@@ -349,6 +373,7 @@ export const CREATIVE_LOOK_TRANSPARENT_PRESETS = /** @type {const} */ ([
   'scanline-hologram',
   'wire-pulse',
   'vertex-points',
+  'dust-field',
   'vectrex',
   'watercolour',
   'gouache',
@@ -614,6 +639,7 @@ export function creativeLookDefaultIntensity(preset) {
   if (id === 'vectrex') return VECTREX_DEFAULT_INTENSITY;
   if (id === 'wire-pulse') return WIRE_PULSE_DEFAULT_INTENSITY;
   if (id === 'vertex-points') return VERTEX_POINTS_DEFAULT_INTENSITY;
+  if (id === 'dust-field') return DUST_FIELD_DEFAULT_INTENSITY;
   if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_INTENSITY;
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_INTENSITY;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_INTENSITY;
@@ -626,6 +652,7 @@ export function creativeLookDefaultPatternScale(preset) {
   const id = normalizeCreativeLookPreset(preset);
   if (id === 'flow-field') return FLOW_FIELD_DEFAULT_PATTERN_SCALE;
   if (id === 'vectrex') return VECTREX_DEFAULT_PATTERN_SCALE;
+  if (id === 'dust-field') return DUST_FIELD_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-neutral') return DITHER_NEUTRAL_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-tritone') return DITHER_TRITONE_DEFAULT_PATTERN_SCALE;
   if (id === 'dither-crosshatch') return DITHER_CROSSHATCH_DEFAULT_PATTERN_SCALE;
@@ -1018,6 +1045,7 @@ export function creativeLookPresetUsesShaderAnimation(preset) {
     id === 'scanline-hologram' ||
     id === 'wire-pulse' ||
     id === 'vertex-points' ||
+    id === 'dust-field' ||
     id === 'vectrex' ||
     id === 'ps2-crush' ||
     id === 'psx' ||
@@ -1086,6 +1114,7 @@ export function formatCreativeLookPresetLabel(preset) {
     'scanline-hologram': 'Scanline Hologram',
     'wire-pulse': 'Wire Pulse',
     'vertex-points': 'Vertex Points',
+    'dust-field': 'Dust Field',
     'ps2-crush': 'PS2 Crush',
     psx: 'PSX',
     'vga-dos-3d': 'VGA/DOS 3D',
@@ -2315,6 +2344,100 @@ void main() {
 }
 `;
 
+/** Surface-sampled point sprites — mesh-driven magical dust (inspired by particle-mofing look). */
+const DUST_FIELD_VERTEX = /* glsl */ `
+attribute vec4 randomPhase;
+
+varying vec3 vWorldPosition;
+varying float vRandomAlpha;
+varying float vFogDepth;
+varying float vTwinklePhase;
+
+uniform float uTime;
+uniform float uPatternScale;
+uniform float uIntensity;
+
+float dustSineInOut(float x) {
+  return -0.5 * (cos(x) - 1.0);
+}
+
+void main() {
+  vRandomAlpha = randomPhase.x + 0.32;
+  vTwinklePhase = randomPhase.z * 6.28318 + randomPhase.w * 4.17;
+
+  float sc = max(uPatternScale, 0.02);
+  float wobbleAmp = sc * 0.072;
+  float phase = randomPhase.y;
+  float t = uTime;
+
+  float driftX = sin(t * 1.05 + phase * 6.28318);
+  float driftY = cos(t * 0.92 + phase * 4.17 + 1.3);
+  float driftZ = sin(t * 1.18 + phase * 3.71 + 2.1);
+  float driftEnv = dustSineInOut(t * 0.55 + phase * 3.14 + 0.7);
+
+  vec3 wobble = vec3(
+    driftX * dustSineInOut(t * 1.72 + phase * 6.28318),
+    driftY * dustSineInOut(t * 1.38 + phase * 4.17),
+    driftZ * dustSineInOut(t * 1.94 + phase * 3.71)
+  ) * wobbleAmp;
+  wobble += vec3(driftX, driftY, driftZ) * wobbleAmp * 0.22 * driftEnv;
+
+  vec3 pos = position + wobble;
+  vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+
+  vWorldPosition = (modelMatrix * vec4(pos, 1.0)).xyz;
+  vFogDepth = -mvPosition.z;
+
+  float inten = clamp(uIntensity, 0.0, 2.0);
+  float sizeBase = mix(5.0, 20.0, inten * 0.5);
+  float sizePulse = dustSineInOut(sin(t * 2.05 * randomPhase.z + randomPhase.w * 6.28318) * 0.5 + 0.5);
+  float sizeBreath = dustSineInOut(sin(t * 0.78 + phase * 2.4) * 0.5 + 0.5);
+  gl_PointSize = sizeBase + mix(2.0, 10.0, inten * 0.5) * sizePulse + 2.5 * sizeBreath;
+  gl_PointSize *= clamp(320.0 / max(-mvPosition.z, 0.35), 0.35, 2.8);
+}
+`;
+
+const DUST_FIELD_FRAGMENT = /* glsl */ `
+varying vec3 vWorldPosition;
+varying float vRandomAlpha;
+varying float vFogDepth;
+varying float vTwinklePhase;
+
+uniform float uTime;
+uniform float uOpacity;
+
+void main() {
+  vec2 p = gl_PointCoord * 2.0 - 1.0;
+  float len = length(p);
+  if (len > 1.0) discard;
+
+  float alpha = pow(max(1.0 - len, 0.0), 1.28);
+
+  float fogStart = 1.8;
+  float fogEnd = 11.0;
+  float fog = clamp((vFogDepth - fogStart) / max(fogEnd - fogStart, 0.001), 0.0, 1.0);
+
+  float hueMix = fract(vRandomAlpha * 1.73 + dot(vWorldPosition, vec3(0.07, 0.11, 0.05)) * 0.35);
+  vec3 cyan = vec3(0.18, 0.67, 1.0);
+  vec3 magenta = vec3(1.0, 0.35, 0.78);
+  vec3 gold = vec3(1.0, 0.91, 0.55);
+  vec3 col = mix(cyan, magenta, smoothstep(0.15, 0.85, hueMix));
+  col = mix(col, gold, smoothstep(0.72, 0.98, hueMix) * 0.42);
+
+  float twinkle = 0.62 + 0.38 * sin(vTwinklePhase + uTime * 1.85);
+  twinkle *= 0.84 + 0.16 * sin(uTime * 0.95 + vRandomAlpha * 11.0);
+  col *= twinkle;
+
+  vec3 fogCol = vec3(0.015, 0.05, 0.12);
+  col = mix(col, fogCol, fog * 0.72);
+
+  float outAlpha = alpha * vRandomAlpha * uOpacity * (1.0 - fog * 0.35);
+  outAlpha *= 0.78 + 0.22 * sin(vTwinklePhase * 1.37 + uTime * 2.35);
+  gl_FragColor = vec4(col, outAlpha);
+}
+`;
+
 /** Vectrex P31 phosphor — Wire Pulse barycentrics + analog beam wobble. */
 const VECTREX_VERTEX = /* glsl */ `
 #include <common>
@@ -3418,6 +3541,23 @@ export function createCreativeLookMaterial(preset, opts = {}) {
     });
     mat.userData.orbyCreativeLook = 'vertex-points';
     return finish(mat);
+  }
+
+  if (id === 'dust-field') {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: time },
+        uPatternScale: { value: patternScale },
+        uOpacity: { value: shaderAlpha },
+        ...gradeUniforms,
+        ...intensityUniform,
+      },
+      vertexShader: DUST_FIELD_VERTEX,
+      fragmentShader: lookFragNoShadow(DUST_FIELD_FRAGMENT),
+      ...creativeLookDustFieldMaterialOpts(shaderAlpha),
+    });
+    mat.userData.orbyCreativeLook = 'dust-field';
+    return finish(mat, { shadows: false, castShadowDepth: false });
   }
 
   if (id === 'vectrex') {

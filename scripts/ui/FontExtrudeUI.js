@@ -28,8 +28,10 @@ import {
 } from '../scene/FontTextRevealController.js';
 import {
   DEFAULT_FONT_REVEAL_TYPE,
+  DEFAULT_FONT_REVEAL_UNIT,
   normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
+  normalizeFontRevealUnit,
 } from '../scene/fontTextRevealTypes.js';
 import {
   DEFAULT_FONT_KERNING_MODE,
@@ -242,6 +244,7 @@ export class FontExtrudeUI {
       revealEmissiveDecay: block.querySelector('#fontExtrudeRevealEmissiveDecay'),
       revealEmissiveColor: block.querySelector('#fontExtrudeRevealEmissiveColor'),
       revealType: block.querySelector('#fontExtrudeRevealType'),
+      revealUnit: block.querySelector('#fontExtrudeRevealUnit'),
       revealPlay: block.querySelector('#fontExtrudeRevealPlay'),
       revealLoop: block.querySelector('#fontExtrudeRevealLoop'),
       revealScrub: block.querySelector('#fontExtrudeRevealScrub'),
@@ -419,6 +422,15 @@ export class FontExtrudeUI {
       this.stateStore.set('fontExtrude.revealType', value);
       this._withRevealController((controller, model) => {
         controller.onRevealTypeChange?.(model);
+      });
+    });
+
+    els.revealUnit?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const value = normalizeFontRevealUnit(els.revealUnit.value);
+      this.stateStore.set('fontExtrude.revealUnit', value);
+      this._withRevealController((controller, model) => {
+        controller.onRevealTimingChange?.(model);
       });
     });
 
@@ -677,6 +689,12 @@ export class FontExtrudeUI {
     );
     if (this.els.revealType && document.activeElement !== this.els.revealType) {
       this.els.revealType.value = revealType;
+    }
+    const revealUnit = normalizeFontRevealUnit(
+      state?.fontExtrude?.revealUnit ?? DEFAULT_FONT_REVEAL_UNIT,
+    );
+    if (this.els.revealUnit && document.activeElement !== this.els.revealUnit) {
+      this.els.revealUnit.value = revealUnit;
     }
     const revealLoop = state?.fontExtrude?.revealLoop !== false;
     if (this.els.revealLoop && document.activeElement !== this.els.revealLoop) {

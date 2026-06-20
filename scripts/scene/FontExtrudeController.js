@@ -438,11 +438,16 @@ export class FontExtrudeController {
     const lineAdvance = fontSize * lineHeightMul;
     const laidOut = [];
     let contentWidth = 0;
-    /** @type {{ lineText: string, y: number, segments: { glyph: object, x: number }[], inkBounds: { minX: number, maxX: number, width: number } | null }[]} */
+    /** @type {{ lineText: string, y: number, segments: { glyph: object, x: number, wordIndex: number }[], inkBounds: { minX: number, maxX: number, width: number } | null }[]} */
     const lineDrafts = [];
+    let globalWordIndex = 0;
+    let atWordBoundary = true;
+    let hasAnyGlyph = false;
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       const lineText = lines[lineIndex];
+      // Newline ends the prior word — next ink on this line must get its own slot.
+      atWordBoundary = true;
       const segments = [];
       let x = 0;
       /** @type {import('../vendor/opentype.module.js').Glyph | null} */
@@ -456,6 +461,17 @@ export class FontExtrudeController {
         const char = glyphs[i];
         const glyph = font.charToGlyph(char);
         if (!glyph || glyph.unicode === undefined) continue;
+
+        const isWhitespace = /\s/.test(char);
+        if (isWhitespace) {
+          atWordBoundary = true;
+        } else {
+          if (atWordBoundary && hasAnyGlyph) {
+            globalWordIndex += 1;
+          }
+          atWordBoundary = false;
+          hasAnyGlyph = true;
+        }
 
         if (prevGlyph) {
           const step = this._glyphAdvance(prevGlyph, font, fontSize, tracking);
@@ -474,7 +490,9 @@ export class FontExtrudeController {
             );
         }
 
-        segments.push({ glyph, x });
+        if (!isWhitespace) {
+          segments.push({ glyph, x, wordIndex: globalWordIndex });
+        }
         prevGlyph = glyph;
         prevX = x;
         x += this._glyphAdvance(glyph, font, fontSize, tracking);
@@ -519,11 +537,11 @@ export class FontExtrudeController {
         if (i > 0 && i % GLYPH_CHUNK_SIZE === 0) {
           await this._yieldToMain();
         }
-        const { glyph, x: glyphX } = segments[i];
+        const { glyph, x: glyphX, wordIndex } = segments[i];
         const glyphPath = glyph.getPath(glyphX + totalOffset, lineY, fontSize);
         if (!opentypePathHasArea(glyphPath)) continue;
         const pathData = glyphPath.toPathData(2);
-        paths.push({ d: pathData, fill: lineFill, glyphPath });
+        paths.push({ d: pathData, fill: lineFill, glyphPath, wordIndex });
       }
       if (paths.length) {
         laidOut.push({ paths, y: lineY, text: lineText });

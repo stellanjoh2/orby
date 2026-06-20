@@ -120,6 +120,7 @@ const EXPORT_SLIDER_DEFAULTS = {
   exportZoomDistance: 1.5,
   exportTiltAngle: 15,
   exportFovOffset: 0,
+  exportPitchOffset: 0,
 };
 
 export function getAtPath(obj, path) {

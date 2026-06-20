@@ -25,6 +25,7 @@ export const OFFLINE_EXPORT_OVERLAY_PREVIEW_JOB = {
   zoomDistance: 1.5,
   tiltAngle: 15,
   fovOffset: 0,
+  pitchOffset: 0,
   durationSec: 5,
   fps: 24,
   resolution: '1080p',
@@ -67,6 +68,10 @@ function describeMovements(movements, spinSettings, hdriRotationSettings) {
   if (movements.fovOffset) {
     const sign = movements.fovOffset > 0 ? '+' : '';
     parts.push(`FOV ${sign}${movements.fovOffset}°`);
+  }
+  if (movements.pitchOffset) {
+    const sign = movements.pitchOffset > 0 ? '+' : '';
+    parts.push(`Pitch ${sign}${movements.pitchOffset}°`);
   }
   if (spinSettings?.rotationDegrees) {
     parts.push(exportSpinToastLabel(spinSettings));

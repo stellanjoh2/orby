@@ -209,6 +209,7 @@ export class ExportMovementPreview {
         zoomDistance: movements.zoomDistance,
         tilt: movements.tilt,
         tiltAngle: movements.tiltAngle,
+        pitchOffset: movements.pitchOffset,
       });
     }
     if (this._fovDriveStarted) {

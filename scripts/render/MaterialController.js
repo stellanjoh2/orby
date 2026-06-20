@@ -15,6 +15,11 @@ import {
   creativeLookPresetUsesShadowReceive,
   creativeLookUsesWirePulseGeometry,
   prepareCreativeLookWirePulseGeometry,
+  creativeLookUsesDustFieldGeometry,
+  isDustFieldCreativeLookPreset,
+  buildDustFieldGeometry,
+  updateDustFieldParticlePositions,
+  DUST_FIELD_PARTICLE_COUNT,
   creativeChromeRoughness,
   creativeGlassParams,
   creativeLookMasterHueRadians,
@@ -1914,8 +1919,14 @@ export class MaterialController {
     this._restoreVoxelGeometry();
     this._restoreWirePulseGeometry();
     this._restoreScanlineGeometry();
+    this._restoreDustFieldGeometry();
     this.setShading(this.currentShading);
     this._restoreMeshShadowDefaults();
+  }
+
+  /** @returns {THREE.Points | null} */
+  _getDustFieldPoints() {
+    return this.currentModel?.userData?.orbyDustFieldPoints ?? null;
   }
 
   /**
@@ -2339,13 +2350,21 @@ export class MaterialController {
     } else if (creativeLookUsesWirePulseGeometry(preset)) {
       this._restorePs2CrushGeometry();
       this._restoreVoxelGeometry();
+      this._restoreDustFieldGeometry();
       this._restoreScanlineGeometry();
       this._applyWirePulseGeometry();
+    } else if (creativeLookUsesDustFieldGeometry(preset)) {
+      this._restorePs2CrushGeometry();
+      this._restoreVoxelGeometry();
+      this._restoreWirePulseGeometry();
+      this._restoreScanlineGeometry();
+      this._applyDustFieldGeometry();
     } else {
       this._restorePs2CrushGeometry();
       this._restoreVoxelGeometry();
       this._restoreWirePulseGeometry();
       this._restoreScanlineGeometry();
+      this._restoreDustFieldGeometry();
     }
   }
 
@@ -2368,6 +2387,18 @@ export class MaterialController {
       preset,
       sketchParams?.strokeWidth ?? patternScale,
     );
+
+    if (isDustFieldCreativeLookPreset(preset)) {
+      this._applyDustFieldMaterial(preset, patternScale);
+      this._appliedCreativeLookPreset = preset;
+      if (this.onMaterialUpdate) {
+        this.onMaterialUpdate();
+      }
+      if (typeof this.afterCreativeLookMaterialRebuild === 'function') {
+        this.afterCreativeLookMaterialRebuild();
+      }
+      return;
+    }
 
     // Shader Lab replaces mesh materials even in textures/wireframe display modes so imports
     // with missing maps (common FBX drops) still render as stylized geometry.
@@ -2829,6 +2860,10 @@ export class MaterialController {
     if (isVoxelCreativeLookPreset(preset) && this._meshesNeedVoxelGeometry(preset)) {
       this._syncRetroConsoleGeometryForPreset(preset, this.creativeLookSettings.patternScale);
     }
+    if (isDustFieldCreativeLookPreset(preset) && !this._getDustFieldPoints()) {
+      this._syncRetroConsoleGeometryForPreset(preset, this.creativeLookSettings.patternScale);
+      this._applyDustFieldMaterial(preset, this.creativeLookSettings.patternScale);
+    }
     this._syncCreativeLookLiveUniforms(cl);
   }
 
@@ -3145,6 +3180,125 @@ export class MaterialController {
     });
   }
 
+  /** Surface-sample mesh into a model-local point cloud; hides source meshes. */
+  _applyDustFieldGeometry() {
+    if (!this.currentModel) return;
+
+    this._restoreDustFieldGeometry();
+
+    this.currentModel.updateWorldMatrix(true, true);
+
+    const built = buildDustFieldGeometry(this.currentModel, {
+      particleCount: DUST_FIELD_PARTICLE_COUNT,
+      shouldIncludeMesh: (child) => {
+        if (this.isWindowMesh(child)) return false;
+        if (this._shouldSkipMeshForVoxelization(child)) return false;
+        if (
+          !this.originalMaterials.get(child) &&
+          !child.userData?.orbyFontExtrude &&
+          !child.userData?.orbySvgExtrude
+        ) {
+          return false;
+        }
+        return !!child.geometry?.attributes?.position;
+      },
+    });
+
+    if (!built?.geometry) return;
+
+    updateDustFieldParticlePositions(
+      built.anchors,
+      this.currentModel,
+      built.geometry,
+    );
+
+    const points = new THREE.Points(built.geometry);
+    points.frustumCulled = false;
+    points.renderOrder = 12;
+    points.name = 'orbyDustFieldPoints';
+    this.currentModel.add(points);
+    this.currentModel.userData.orbyDustFieldPoints = points;
+    this.currentModel.userData.orbyDustFieldAnchors = built.anchors;
+
+    for (const child of built.meshes) {
+      if (!('orbyDustFieldHiddenVisible' in child.userData)) {
+        child.userData.orbyDustFieldHiddenVisible = child.visible;
+      }
+      child.visible = false;
+    }
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      if (!this._shouldSkipMeshForVoxelization(child)) return;
+      if (!('orbyDustFieldHiddenVisible' in child.userData)) {
+        child.userData.orbyDustFieldHiddenVisible = child.visible;
+      }
+      child.visible = false;
+    });
+  }
+
+  /** Restore meshes and remove the dust-field point cloud. */
+  _restoreDustFieldGeometry() {
+    if (!this.currentModel) return;
+
+    const points = this.currentModel.userData.orbyDustFieldPoints;
+    if (points) {
+      this._disposeTransientMeshMaterials(points);
+      points.geometry?.dispose?.();
+      points.removeFromParent();
+      delete this.currentModel.userData.orbyDustFieldPoints;
+    }
+    delete this.currentModel.userData.orbyDustFieldAnchors;
+
+    this.currentModel.traverse((child) => {
+      if (!child.isMesh) return;
+      if ('orbyDustFieldHiddenVisible' in child.userData) {
+        child.visible = child.userData.orbyDustFieldHiddenVisible;
+        delete child.userData.orbyDustFieldHiddenVisible;
+      }
+    });
+  }
+
+  _updateDustFieldParticlePositions() {
+    const points = this._getDustFieldPoints();
+    const anchors = this.currentModel?.userData?.orbyDustFieldAnchors;
+    if (!points?.geometry || !anchors) return;
+    updateDustFieldParticlePositions(anchors, this.currentModel, points.geometry);
+  }
+
+  /**
+   * @param {string} preset
+   * @param {number} patternScale
+   */
+  _applyDustFieldMaterial(preset, patternScale) {
+    const points = this._getDustFieldPoints();
+    if (!points) return;
+
+    this._disposeTransientMeshMaterials(points);
+
+    const state = this.stateStore?.getState();
+    const hdriBlur = Number(state?.hdriBlurriness ?? 0);
+    points.material = createCreativeLookMaterial(preset, {
+      transparent: true,
+      opacity: 1,
+      side: THREE.DoubleSide,
+      time: this._creativeLookTime,
+      patternScale,
+      hdriBlurriness: Number.isFinite(hdriBlur)
+        ? THREE.MathUtils.clamp(hdriBlur, 0, 1)
+        : 0,
+      masterHue: this.creativeLookSettings.masterHue,
+      intensity: this.creativeLookSettings.intensity,
+      liftCrush: this.creativeLookSettings.liftCrush,
+      materialBrightness:
+        this.materialSettings.brightness ?? DEFAULT_MATERIAL_BRIGHTNESS,
+      materialMetalness: this.materialSettings.metalness ?? DEFAULT_MATERIAL_METALNESS,
+      materialRoughness: this.materialSettings.roughness ?? DEFAULT_MATERIAL_ROUGHNESS,
+    });
+    points.castShadow = false;
+    points.receiveShadow = false;
+  }
+
   _resolveSketchParams(source = this.creativeLookSettings) {
     return resolveCreativeLookSketchParams(
       source?.presetParams,
@@ -3248,7 +3402,7 @@ export class MaterialController {
       || (
         nextPreset !== prevPreset
         && patch.intensity === undefined
-        && (nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'vertex-points' || isDitherPixelCreativeLookPreset(nextPreset))
+        && (nextPreset === 'scanline-hologram' || nextPreset === 'vectrex' || nextPreset === 'wire-pulse' || nextPreset === 'vertex-points' || nextPreset === 'dust-field' || isDitherPixelCreativeLookPreset(nextPreset))
       )
     ) {
       this.creativeLookSettings.intensity = creativeLookDefaultIntensity(nextPreset);
@@ -3295,6 +3449,13 @@ export class MaterialController {
           nextPreset,
           this.creativeLookSettings.patternScale,
         );
+      }
+      if (isDustFieldCreativeLookPreset(nextPreset) && !this._getDustFieldPoints()) {
+        this._syncRetroConsoleGeometryForPreset(
+          nextPreset,
+          this.creativeLookSettings.patternScale,
+        );
+        this._applyDustFieldMaterial(nextPreset, this.creativeLookSettings.patternScale);
       }
       if (isSketchFamilyCreativeLookPreset(nextPreset)) {
         const nextStroke = this._resolveSketchParams().strokeWidth;
@@ -3375,6 +3536,17 @@ export class MaterialController {
           }
         }
       });
+      const dustPoints = this._getDustFieldPoints();
+      const dustMat = dustPoints?.material;
+      if (
+        dustMat?.userData?.orbyCreativeLook === 'dust-field' &&
+        dustMat.uniforms?.uTime
+      ) {
+        dustMat.uniforms.uTime.value = effectiveTime;
+        if (dustMat.uniforms.uPatternScale) {
+          dustMat.uniforms.uPatternScale.value = patternScale;
+        }
+      }
     }
 
     if (
@@ -3422,6 +3594,10 @@ export class MaterialController {
           }
         }
       });
+    }
+
+    if (isDustFieldCreativeLookPreset(preset)) {
+      this._updateDustFieldParticlePositions();
     }
 
     this._syncCreativeLookLiveUniforms(cl);
@@ -3570,6 +3746,30 @@ export class MaterialController {
         }
       }
     });
+
+    const dustPoints = this._getDustFieldPoints();
+    const dustMat = dustPoints?.material;
+    if (dustMat?.userData?.orbyCreativeLook === 'dust-field') {
+      if (dustMat.uniforms?.uMasterHue) {
+        dustMat.uniforms.uMasterHue.value = hueRad;
+      }
+      if (dustMat.uniforms?.uLiftCrush) {
+        dustMat.uniforms.uLiftCrush.value = liftCrush;
+      }
+      if (dustMat.uniforms?.uBrightness) {
+        dustMat.uniforms.uBrightness.value = brightness;
+      }
+      if (dustMat.uniforms?.uIntensity) {
+        dustMat.uniforms.uIntensity.value = intensity;
+      }
+      const ps = normalizeCreativeLookPatternScale(
+        'dust-field',
+        source?.patternScale ?? this.creativeLookSettings.patternScale,
+      );
+      if (dustMat.uniforms?.uPatternScale) {
+        dustMat.uniforms.uPatternScale.value = ps;
+      }
+    }
   }
 
   getCreativeLookSettings() {

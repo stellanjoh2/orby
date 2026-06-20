@@ -87,14 +87,16 @@ export class StateStore {
         fillColor: '#808080',
         /** Total seconds until the last character finishes scale-in (0 = off). */
         revealDurationSec: 2,
-        /** @type {'scale' | 'fade' | 'slideUp' | 'slideDown' | 'pop' | 'rotate' | 'elastic'} */
+        /** @type {'scale' | 'fade' | 'slideUp' | 'slideDown' | 'drop' | 'pop' | 'rotate' | 'elastic'} */
         revealType: 'scale',
+        /** @type {'character' | 'word'} — stagger per letter or per word */
+        revealUnit: 'character',
         /** Preview playback mode: true loops continuously, false stops at end. */
         revealLoop: true,
         /** Per-glyph Z travel distance before landing in place. */
         revealSlideDepth: 0.18,
         /** Fraction of each glyph slot for Z travel (0.1–3; above 1 overlaps later letters). */
-        revealSlideTime: 0.45,
+        revealSlideTime: 1.3,
         /** Z-travel start direction for reveal slide depth. */
         revealSlideDirection: 'back',
         /** Per-letter emissive during reveal, fading to rest after each glyph lands. */

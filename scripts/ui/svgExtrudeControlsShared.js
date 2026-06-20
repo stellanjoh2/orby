@@ -15,7 +15,9 @@ import {
 } from '../import/extrudeDefaults.js';
 import {
   FONT_REVEAL_TYPE_OPTIONS,
+  FONT_REVEAL_UNIT_OPTIONS,
   DEFAULT_FONT_REVEAL_TYPE,
+  DEFAULT_FONT_REVEAL_UNIT,
 } from '../scene/fontTextRevealTypes.js';
 import {
   clampSurfaceStrength,
@@ -877,6 +879,15 @@ function buildFontRevealTypeOptionsHtml() {
   ).join('');
 }
 
+function buildFontRevealUnitOptionsHtml() {
+  return FONT_REVEAL_UNIT_OPTIONS.map(
+    (opt) =>
+      `<option value="${opt.id}"${
+        opt.id === DEFAULT_FONT_REVEAL_UNIT ? ' selected' : ''
+      }>${opt.label}</option>`,
+  ).join('');
+}
+
 /** Reveal animation — only visible once 3D text exists. */
 export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
             <div class="font-extrude-animation" id="fontExtrudeAnimation">
@@ -886,8 +897,14 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                   ${buildFontRevealTypeOptionsHtml()}
                 </select>
               </label>
+              <label class="select-line font-extrude-reveal-unit">
+                <span data-tooltip="Character staggers each letter; Word staggers whole words (better for long text)">Reveal By</span>
+                <select id="fontExtrudeRevealUnit" aria-label="Reveal stagger unit">
+                  ${buildFontRevealUnitOptionsHtml()}
+                </select>
+              </label>
               <label class="slider-line font-extrude-reveal-duration">
-                <span data-tooltip="Character-by-character reveal. Last letter fully lands (including depth slide) at this time. 0 = off.">Reveal Duration</span>
+                <span data-tooltip="Staggered reveal length — last character or word fully lands (including depth slide) at this time. 0 = off.">Reveal Duration</span>
                 <input id="fontExtrudeRevealDuration" type="range" min="0" max="5" step="0.1" value="2" />
                 <span class="value" data-output="fontExtrudeRevealDuration">2.0s</span>
               </label>
@@ -897,9 +914,9 @@ export const FONT_EXTRUDE_ANIMATION_CONTROLS_HTML = `
                 <span class="value" data-output="fontExtrudeRevealSlideDepth">0.18</span>
               </label>
               <label class="slider-line font-extrude-reveal-slide-time">
-                <span data-tooltip="Depth travel length vs each letter's slot. Under 100% lands early; over 100% keeps the soft ease-out going while later letters are already slamming in.">Slide Time</span>
-                <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="3" step="0.01" value="0.45" />
-                <span class="value" data-output="fontExtrudeRevealSlideTime">45%</span>
+                <span data-tooltip="Each letter's animation length vs stagger slot — all reveal types. Under 100% = next letter waits; over 100% = overlap while earlier letters are still settling (bounce, depth slide, etc.).">Slide Time</span>
+                <input id="fontExtrudeRevealSlideTime" type="range" min="0.1" max="3" step="0.01" value="1.3" />
+                <span class="value" data-output="fontExtrudeRevealSlideTime">130%</span>
               </label>
               <label class="select-line font-extrude-reveal-slide-direction">
                 <span data-tooltip="Choose whether depth travel starts from behind or from camera side">Slide Direction</span>

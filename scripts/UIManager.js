@@ -668,6 +668,8 @@ export class UIManager {
       exportTiltAngleSettings: q('#exportTiltAngleSettings'),
       exportFovOffset: q('#exportFovOffset'),
       exportFovOffsetSettings: q('#exportFovOffsetSettings'),
+      exportPitchOffset: q('#exportPitchOffset'),
+      exportPitchOffsetSettings: q('#exportPitchOffsetSettings'),
       exportMovementSliders: q('#exportMovementSliders'),
       exportMeshAnimationSelect: q('#exportMeshAnimationSelect'),
       exportMeshAnimationClipWrap: q('#exportMeshAnimationClipWrap'),
@@ -726,6 +728,7 @@ export class UIManager {
         zoomDistance: 1.5,
         tiltAngle: 15,
         fovOffset: 0,
+        pitchOffset: 0,
         format: 'mp4',
         durationSec: 5,
         spins: 1,
@@ -1234,6 +1237,7 @@ export class UIManager {
     this.setControlDisabled('exportZoomDistance', !!active);
     this.setControlDisabled('exportTiltAngle', !!active);
     this.setControlDisabled('exportFovOffset', !!active);
+    this.setControlDisabled('exportPitchOffset', !!active);
     this.setControlDisabled('exportMeshAnimationSelect', !!active);
     this.setControlDisabled('exportMeshAnimationsEmbed', !!active);
     if (this.buttons.exportVideo) {

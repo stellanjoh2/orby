@@ -633,7 +633,7 @@ export class CameraController {
 
   /**
    * @param {number} t — progress in [0, 1] over export duration
-   * @param {{ rotationDegrees?: number, rotationSign?: 1 | -1, spins?: 0 | 1 | 2, orbit?: boolean, zoom?: 'in' | 'out' | null, zoomDistance?: number, tilt?: 'left' | 'right' | null, tiltAngle?: number }} [options]
+   * @param {{ rotationDegrees?: number, rotationSign?: 1 | -1, spins?: 0 | 1 | 2, orbit?: boolean, zoom?: 'in' | 'out' | null, zoomDistance?: number, tilt?: 'left' | 'right' | null, tiltAngle?: number, pitchOffset?: number }} [options]
    */
   applyExportCameraDriveFrame(t, options = {}) {
     if (!this._exportCameraDriveActive || !this._exportCameraSnapshot || !this.controls?.target) {
@@ -645,6 +645,7 @@ export class CameraController {
       zoomDistance = 0,
       tilt = null,
       tiltAngle = 0,
+      pitchOffset = 0,
     } = options;
     let rotationDegrees = Number(options.rotationDegrees);
     let rotationSign = options.rotationSign === -1 ? -1 : 1;
@@ -672,7 +673,16 @@ export class CameraController {
       radius = Math.min(maxRadius, sn.radius + distance * u);
     }
 
-    this._orbitSpherical.set(radius, sn.phi, theta);
+    let phi = sn.phi;
+    const pitch = Number(pitchOffset) || 0;
+    if (Math.abs(pitch) > 1e-6) {
+      const EPS = 1e-4;
+      // Nod up (+) arcs the camera toward sky; nod down (−) toward ground — fixed orbit target.
+      phi = sn.phi - THREE.MathUtils.degToRad(pitch) * u;
+      phi = THREE.MathUtils.clamp(phi, EPS, Math.PI - EPS);
+    }
+
+    this._orbitSpherical.set(radius, phi, theta);
     this._orbitOffset.setFromSpherical(this._orbitSpherical);
     this.camera.position.copy(target).add(this._orbitOffset);
 

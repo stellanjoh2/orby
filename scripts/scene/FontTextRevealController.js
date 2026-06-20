@@ -11,17 +11,20 @@ import {
   computeGlyphSlotProgress,
   computeGlyphSlideProgress,
   DEFAULT_FONT_REVEAL_TYPE,
+  DEFAULT_FONT_REVEAL_UNIT,
   DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
   DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
   DEFAULT_FONT_REVEAL_SLIDE_TIME,
   normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
+  normalizeFontRevealUnit,
   resetRevealGlyphPose,
 } from './fontTextRevealTypes.js';
 import {
   applyRevealEmissiveSlam,
   clampFontRevealEmissiveDecaySec,
   clampFontRevealEmissiveStrength,
+  computeGlyphEmissiveSlamFactor,
   DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
   DEFAULT_FONT_REVEAL_EMISSIVE_DECAY_SEC,
   DEFAULT_FONT_REVEAL_EMISSIVE_SLAM,
@@ -30,7 +33,6 @@ import {
   normalizeFontRevealEmissiveColor,
   normalizeFontRevealEmissiveSlamEnabled,
   restoreRevealGlyphEmissive,
-  areAllGlyphEmissiveSlamSettled,
 } from './fontTextRevealEmissive.js';
 
 export {
@@ -41,6 +43,7 @@ export {
 } from './fontTextRevealDuration.js';
 export {
   DEFAULT_FONT_REVEAL_TYPE,
+  DEFAULT_FONT_REVEAL_UNIT,
   DEFAULT_FONT_REVEAL_SLIDE_DEPTH,
   DEFAULT_FONT_REVEAL_SLIDE_DIRECTION,
   DEFAULT_FONT_REVEAL_SLIDE_TIME,
@@ -48,6 +51,7 @@ export {
   clampFontRevealSlideTime,
   normalizeFontRevealSlideDirection,
   normalizeFontRevealType,
+  normalizeFontRevealUnit,
 } from './fontTextRevealTypes.js';
 export {
   DEFAULT_FONT_REVEAL_EMISSIVE_COLOR,
@@ -103,6 +107,11 @@ export class FontTextRevealController {
     this._glyphGroups = [];
     /** @type {Array<import('./fontTextRevealTypes.js').RevealGlyphState>} */
     this._glyphStates = [];
+    /** @type {number[] | null} */
+    this._glyphWordIndices = null;
+    this._wordCount = 0;
+    /** @type {Map<number, { center: THREE.Vector3, slideDistance: number }>} */
+    this._wordGroupMeta = new Map();
     /** @type {THREE.Object3D | null} */
     this._boundModel = null;
     this._elapsed = 0;
@@ -111,6 +120,8 @@ export class FontTextRevealController {
     this._previewMode = 'idle';
     this._previewRaf = 0;
     this._previewLastTs = 0;
+    /** Reentrancy guard — {@link #onMaterialBaselineChanged} may call {@link #_reapplyMaterialEmissive} → updateMaterials → callback again. */
+    this._materialBaselineSyncDepth = 0;
   }
 
   getDurationSec() {
@@ -120,6 +131,27 @@ export class FontTextRevealController {
 
   getRevealType() {
     return normalizeFontRevealType(this.stateStore?.getState()?.fontExtrude?.revealType);
+  }
+
+  getRevealUnit() {
+    const unit = normalizeFontRevealUnit(this.stateStore?.getState()?.fontExtrude?.revealUnit);
+    if (unit === 'word' && this._wordCount <= 0) return 'character';
+    return unit;
+  }
+
+  /**
+   * @param {number} glyphIndex
+   * @returns {{ slotIndex: number, slotCount: number }}
+   */
+  _resolveRevealSlot(glyphIndex) {
+    const glyphCount = this._glyphStates.length;
+    if (this.getRevealUnit() === 'word' && this._glyphWordIndices) {
+      return {
+        slotIndex: this._glyphWordIndices[glyphIndex] ?? glyphIndex,
+        slotCount: this._wordCount,
+      };
+    }
+    return { slotIndex: glyphIndex, slotCount: glyphCount };
   }
 
   getSlideDepth() {
@@ -201,13 +233,25 @@ export class FontTextRevealController {
     const duration = this.getDurationSec();
     const count = this._glyphStates.length;
     if (count <= 0 || duration <= 0) return true;
-    return areAllGlyphEmissiveSlamSettled(
-      count,
-      elapsedSec,
-      duration,
-      this.getEmissiveSlamDecaySec(),
-      this._revealTimingOptions(),
-    );
+    const timing = this._revealTimingOptions();
+    const decaySec = this.getEmissiveSlamDecaySec();
+    const checkedSlots = new Set();
+    for (let i = 0; i < count; i += 1) {
+      const { slotIndex, slotCount } = this._resolveRevealSlot(i);
+      const slotKey = `${slotIndex}:${slotCount}`;
+      if (checkedSlots.has(slotKey)) continue;
+      checkedSlots.add(slotKey);
+      const factor = computeGlyphEmissiveSlamFactor(
+        slotIndex,
+        slotCount,
+        elapsedSec,
+        duration,
+        decaySec,
+        timing,
+      );
+      if (factor > 1e-6) return false;
+    }
+    return true;
   }
 
   _shouldRefreshMaterialEmissiveRest() {
@@ -244,7 +288,30 @@ export class FontTextRevealController {
    */
   onMaterialBaselineChanged() {
     if (!this._glyphStates.length) return;
-    this.syncMaterialEmissiveBaseline({ skipReapply: true });
+
+    if (this._materialBaselineSyncDepth > 0) {
+      this.syncMaterialEmissiveBaseline({ skipReapply: true });
+      return;
+    }
+
+    const slamMayBeLive =
+      this.isEmissiveSlamEnabled() &&
+      this.getEmissiveSlamStrength() > 0 &&
+      !this._areRevealEmissiveSlamMaterialsSettled(this._elapsed);
+
+    this._materialBaselineSyncDepth += 1;
+    try {
+      if (slamMayBeLive && typeof this._reapplyMaterialEmissive === 'function') {
+        // Partial material patches (e.g. fill color) leave reveal slam on live emissive;
+        // re-run Mesh → Emissive via MaterialController before capturing rest.
+        this._reapplyMaterialEmissive();
+      } else {
+        this.syncMaterialEmissiveBaseline({ skipReapply: true });
+      }
+    } finally {
+      this._materialBaselineSyncDepth -= 1;
+    }
+
     if (
       this._exportDriveActive
       || this._previewMode === 'playing'
@@ -298,6 +365,9 @@ export class FontTextRevealController {
     this._stopPreviewLoop();
     this._glyphGroups = [];
     this._glyphStates = [];
+    this._glyphWordIndices = null;
+    this._wordCount = 0;
+    this._wordGroupMeta = new Map();
     this._previewMode = 'idle';
 
     if (!isFontExtrudeRevealModel(model)) {
@@ -313,6 +383,7 @@ export class FontTextRevealController {
       this._upgradeLegacyFontMesh(model);
       this._collectGlyphGroups(model);
     }
+    this._buildWordRevealMeta();
     for (const glyphGroup of this._glyphGroups) {
       if (!glyphGroup.userData?.orbyFontGlyphPivotFixed) {
         this._fixGlyphGroupPivot(glyphGroup);
@@ -320,10 +391,56 @@ export class FontTextRevealController {
       }
     }
     this._buildGlyphStates();
+    this._buildWordGroupMeta();
     this.syncMaterialEmissiveBaseline();
 
     this._showIdlePose();
     this._notifyPreviewTime();
+  }
+
+  _buildWordRevealMeta() {
+    const indices = this._glyphGroups.map((group) => {
+      const idx = group.userData?.orbyFontRevealWordIndex;
+      return Number.isFinite(idx) ? idx : NaN;
+    });
+    const hasWordData = indices.length > 0 && indices.every((idx) => Number.isFinite(idx));
+    this._glyphWordIndices = hasWordData ? indices : null;
+    this._wordCount = hasWordData ? Math.max(...indices) + 1 : 0;
+  }
+
+  _buildWordGroupMeta() {
+    this._wordGroupMeta = new Map();
+    if (!this._glyphWordIndices || this._wordCount <= 0 || !this._glyphStates.length) return;
+
+    /** @type {Map<number, number[]>} */
+    const indicesByWord = new Map();
+    for (let i = 0; i < this._glyphWordIndices.length; i += 1) {
+      const wordIndex = this._glyphWordIndices[i];
+      if (!indicesByWord.has(wordIndex)) indicesByWord.set(wordIndex, []);
+      indicesByWord.get(wordIndex).push(i);
+    }
+
+    for (const [wordIndex, glyphIndices] of indicesByWord) {
+      const parent = this._glyphStates[glyphIndices[0]]?.group?.parent;
+      if (!parent) continue;
+
+      parent.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      for (const glyphIndex of glyphIndices) {
+        const { group } = this._glyphStates[glyphIndex];
+        group.updateMatrixWorld(true);
+        box.expandByObject(group);
+      }
+      if (box.isEmpty()) continue;
+
+      const centerWorld = box.getCenter(new THREE.Vector3());
+      const center = parent.worldToLocal(centerWorld.clone());
+      const size = box.getSize(new THREE.Vector3());
+      this._wordGroupMeta.set(wordIndex, {
+        center,
+        slideDistance: Math.max(size.y * 0.75, 0.08),
+      });
+    }
   }
 
   _buildGlyphStates() {
@@ -455,6 +572,9 @@ export class FontTextRevealController {
     this._resetGlyphs();
     this._glyphGroups = [];
     this._glyphStates = [];
+    this._glyphWordIndices = null;
+    this._wordCount = 0;
+    this._wordGroupMeta = new Map();
     this._boundModel = null;
     this._elapsed = 0;
     this._exportDriveActive = false;
@@ -573,30 +693,51 @@ export class FontTextRevealController {
     const emissiveDecaySec = this.getEmissiveSlamDecaySec();
     const emissiveColor = this.getEmissiveSlamColor();
     const timing = { slideDepth, slideTime };
+    const useWordGroup = this.getRevealUnit() === 'word' && this._wordGroupMeta.size > 0;
     for (let i = 0; i < count; i += 1) {
       const state = this._glyphStates[i];
-      const landLinear = computeGlyphSlotProgress(i, count, elapsedSec, duration, timing);
-      const eased = computeGlyphRevealEase(type, i, count, elapsedSec, duration, timing);
-      const slideProgress = computeGlyphSlideProgress(
-        i,
-        count,
+      const { slotIndex, slotCount } = this._resolveRevealSlot(i);
+      const landLinear = computeGlyphSlotProgress(
+        slotIndex,
+        slotCount,
         elapsedSec,
         duration,
         timing,
       );
+      const eased = computeGlyphRevealEase(
+        type,
+        slotIndex,
+        slotCount,
+        elapsedSec,
+        duration,
+        timing,
+      );
+      const slideProgress = computeGlyphSlideProgress(
+        slotIndex,
+        slotCount,
+        elapsedSec,
+        duration,
+        timing,
+      );
+      const wordIndex = this._glyphWordIndices?.[i];
+      const wordPivot =
+        useWordGroup && Number.isFinite(wordIndex)
+          ? this._wordGroupMeta.get(wordIndex)
+          : undefined;
       applyRevealPoseToGlyph(type, eased, state, {
         slideProgress,
         landLinear,
         slideDepth,
         slideDirection,
+        wordPivot,
       });
       applyRevealEmissiveSlam(state, {
         enabled: emissiveEnabled,
         strength: emissiveStrength,
         decaySec: emissiveDecaySec,
         colorHex: emissiveColor,
-        glyphIndex: i,
-        glyphCount: count,
+        glyphIndex: slotIndex,
+        glyphCount: slotCount,
         elapsedSec,
         totalDurationSec: duration,
         slideDepth,

@@ -1,6 +1,9 @@
 export const EXPORT_FOV_OFFSET_MIN = -40;
 export const EXPORT_FOV_OFFSET_MAX = 40;
 
+export const EXPORT_PITCH_OFFSET_MIN = -90;
+export const EXPORT_PITCH_OFFSET_MAX = 90;
+
 /** @param {unknown} value — degrees relative to current FOV at export start (0 = no change) */
 export function normalizeExportFovOffset(value) {
   const n = Number(value);
@@ -8,9 +11,21 @@ export function normalizeExportFovOffset(value) {
   return Math.min(EXPORT_FOV_OFFSET_MAX, Math.max(EXPORT_FOV_OFFSET_MIN, n));
 }
 
+/** @param {unknown} value — degrees pitched around orbit target at export start (0 = no change) */
+export function normalizeExportPitchOffset(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(EXPORT_PITCH_OFFSET_MAX, Math.max(EXPORT_PITCH_OFFSET_MIN, n));
+}
+
 /** @param {{ fovOffset?: unknown }} [movements] */
 export function needsExportFovDrive(movements) {
   return Math.abs(normalizeExportFovOffset(movements?.fovOffset)) > 0;
+}
+
+/** @param {{ pitchOffset?: unknown }} [movements] */
+export function needsExportPitchDrive(movements) {
+  return Math.abs(normalizeExportPitchOffset(movements?.pitchOffset)) > 0;
 }
 
 /**
@@ -41,6 +56,7 @@ export function normalizeExportVideoMovements(settings = {}) {
     ? Math.min(180, Math.max(0, Number(settings.tiltAngle)))
     : 15;
   const fovOffset = normalizeExportFovOffset(settings.fovOffset);
+  const pitchOffset = normalizeExportPitchOffset(settings.pitchOffset);
 
   return {
     turntable,
@@ -52,6 +68,7 @@ export function normalizeExportVideoMovements(settings = {}) {
     zoomDistance,
     tiltAngle,
     fovOffset,
+    pitchOffset,
     zoom: zoomIn ? 'in' : zoomOut ? 'out' : null,
     tilt: tiltLeft ? 'left' : tiltRight ? 'right' : null,
   };
@@ -66,6 +83,8 @@ export function hasExportVideoMovement(movements) {
     || movements?.zoomOut
     || movements?.tiltLeft
     || movements?.tiltRight
+    || needsExportFovDrive(movements)
+    || needsExportPitchDrive(movements)
   );
 }
 
@@ -78,6 +97,10 @@ export function exportVideoMovementLabel(movements) {
   if (movements.zoomOut) parts.push('zoomout');
   if (movements.tiltLeft) parts.push('tiltleft');
   if (movements.tiltRight) parts.push('tiltright');
+  if (movements.pitchOffset) {
+    const sign = movements.pitchOffset > 0 ? 'up' : 'down';
+    parts.push(`pitch${sign}${Math.abs(movements.pitchOffset)}`);
+  }
   return parts.length ? parts.join('_') : 'static';
 }
 
@@ -179,7 +202,7 @@ export function exportHdriRotationToastLabel(hdri) {
   return `${hdri.degrees}° HDRI, ${dir}`;
 }
 
-/** Camera orbit, dolly zoom, and/or roll tilt — turntable only affects mesh rotation. */
+/** Camera orbit, dolly zoom, roll tilt, and/or pitch nod — turntable only affects mesh rotation. */
 export function needsExportCameraDrive(movements) {
   return !!(
     movements?.orbit
@@ -187,6 +210,7 @@ export function needsExportCameraDrive(movements) {
     || movements?.zoomOut
     || movements?.tiltLeft
     || movements?.tiltRight
+    || needsExportPitchDrive(movements)
   );
 }
 

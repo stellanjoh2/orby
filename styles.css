@@ -6565,6 +6565,26 @@ html:not(.mobile-landing) .shelf .animation-timeline #animationScrub::-webkit-sl
   transform: translate(-50%, -50%) scale(1.1);
 }
 
+#creativeLookGrid .hdri-icon.creative-look-icon--labeled {
+  height: calc(var(--shelf-picker-sphere-ring) + 1.05rem);
+}
+
+#creativeLookGrid .creative-look-icon-label {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-size: 0.58rem;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#creativeLookGrid .hdri-icon.active .creative-look-icon-label {
+  color: var(--accent);
+}
+
 .hdri-icon__sphere--placeholder {
   background: linear-gradient(
     145deg,
@@ -7313,6 +7333,13 @@ body.ui-hidden .shelf {
   margin-top: 0;
   margin-bottom: 0;
   padding-top: 0;
+  pointer-events: none;
+}
+
+/* Keep section header toggles above expanded foldouts from subsections below (overflow: visible). */
+.subsection > .block-title.has-toggle {
+  position: relative;
+  z-index: 2;
 }
 
 /*

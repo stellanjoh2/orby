@@ -452,14 +452,63 @@ export class ImageExporter {
   }
 
   /**
+   * Interactive fisheye renders to screen; PNG readback uses composer RTs — keep lens in RT chain.
+   * @returns {{ lensRenderToScreen: boolean } | null}
+   */
+  pinLensDistortionForExportCapture() {
+    const pass = this.postPipeline?.lensDistortionPass;
+    if (!pass?.enabled) return null;
+    const snapshot = { lensRenderToScreen: pass.renderToScreen };
+    pass.renderToScreen = false;
+    return snapshot;
+  }
+
+  /** @param {{ lensRenderToScreen: boolean } | null} snapshot */
+  unpinLensDistortionForExportCapture(snapshot) {
+    if (!snapshot) return;
+    const pass = this.postPipeline?.lensDistortionPass;
+    if (pass) pass.renderToScreen = snapshot.lensRenderToScreen;
+  }
+
+  /**
+   * Actual WebGL drawing buffer pixels (authoritative over canvas.width when CSS caps the element).
+   * @param {number} [fallbackW]
+   * @param {number} [fallbackH]
+   * @returns {{ width: number, height: number }}
+   */
+  _getActualDrawingBufferPixelSize(fallbackW = 1, fallbackH = 1) {
+    const gl = this.renderer.getContext();
+    if (gl?.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+      return { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight };
+    }
+    const db = new THREE.Vector2();
+    this.renderer.getDrawingBufferSize(db);
+    return {
+      width: Math.max(1, Math.round(db.x) || fallbackW),
+      height: Math.max(1, Math.round(db.y) || fallbackH),
+    };
+  }
+
+  /**
    * Resize renderer + post stack for export; returns true backing-store pixels after clamp.
    * @returns {{ width: number, height: number }}
    */
   _setExportFramebufferSize(targetWidth, targetHeight) {
     const { width, height } = this._clampExportPixelSize(targetWidth, targetHeight);
     this.renderer.setPixelRatio(1);
-    this.renderer.setSize(width, height, false);
-    const synced = this._syncRendererInternalSizeToCanvasBackingStore();
+    if (typeof this.renderer.setDrawingBufferSize === 'function') {
+      // Offline 1080p/1440p/4K — do not shrink to on-screen canvas.width (CSS caps ≠ export res).
+      this.renderer.setDrawingBufferSize(width, height, 1);
+    } else {
+      this.renderer.setSize(width, height, false);
+      this._syncRendererInternalSizeToCanvasBackingStore();
+    }
+    const synced = this._getActualDrawingBufferPixelSize(width, height);
+    if (synced.width < width - 2 || synced.height < height - 2) {
+      console.warn(
+        `Export framebuffer clamped to ${synced.width}×${synced.height} (requested ${width}×${height}).`,
+      );
+    }
     this.camera.aspect = synced.width / Math.max(1e-6, synced.height);
     if (this.syncPostProcessingForLogicalSize) {
       this.syncPostProcessingForLogicalSize(synced.width, synced.height);
@@ -607,10 +656,10 @@ export class ImageExporter {
 
     const prevComposerRenderToScreen = this.composer?.renderToScreen;
     if (this.composer) {
-      // Always read the final ping-pong RT (never the canvas). renderToScreen=true only paints
-      // the lens pass to the default FBO and leaves readback mismatched with the viewport.
+      // Read final ping-pong RT — lens pass must also target RTs (see pinLensDistortionForExportCapture).
       this.composer.renderToScreen = false;
     }
+    const lensCapturePin = this.pinLensDistortionForExportCapture();
     try {
       this._ensureComposerMatchesDrawingBuffer({ strict: true });
       this._setExportViewport(exportW, exportH);
@@ -622,6 +671,7 @@ export class ImageExporter {
         this.renderer.render(this.scene, this.camera);
       }
     } finally {
+      this.unpinLensDistortionForExportCapture(lensCapturePin);
       if (this.composer && prevComposerRenderToScreen !== undefined) {
         this.composer.renderToScreen = prevComposerRenderToScreen;
       }

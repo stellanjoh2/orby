@@ -194,6 +194,7 @@ export class VideoExporter {
         zoomDistance: movements.zoomDistance,
         tilt: movements.tilt,
         tiltAngle: movements.tiltAngle,
+        pitchOffset: movements.pitchOffset,
       });
     }
     if (needsExportFovDrive(movements)) {
@@ -392,6 +393,7 @@ export class VideoExporter {
     if (this.composer) {
       const previousRenderToScreen = this.composer.renderToScreen;
       this.composer.renderToScreen = false;
+      const lensCapturePin = this.imageExporter?.pinLensDistortionForExportCapture?.() ?? null;
       try {
         this._renderComposerFrameForCapture();
         this._finishGpuFrame();
@@ -400,6 +402,7 @@ export class VideoExporter {
           targetHeight,
         );
       } finally {
+        this.imageExporter?.unpinLensDistortionForExportCapture?.(lensCapturePin);
         this.composer.renderToScreen = previousRenderToScreen;
       }
     }

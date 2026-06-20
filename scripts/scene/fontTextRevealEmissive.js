@@ -2,37 +2,10 @@ import * as THREE from 'three';
 import { ORBY_LIME } from '../constants.js';
 import { normalizeGlyphFillHex } from '../import/FontExtrudeImporter.js';
 import {
-  clampFontRevealSlideDepth,
-  clampFontRevealSlideTime,
+  computeGlyphRevealLandSec,
+  computeGlyphRevealSlotSec,
   easeSlideSoftOut,
 } from './fontTextRevealTypes.js';
-
-/**
- * @param {number} totalDurationSec
- * @param {number} glyphCount
- * @param {{ slideDepth?: number, slideTime?: number }} timing
- */
-function glyphRevealSlotSec(totalDurationSec, glyphCount, timing) {
-  if (totalDurationSec <= 0 || glyphCount <= 0) return totalDurationSec;
-  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
-  if (slideDepth <= 0) return totalDurationSec / glyphCount;
-  const slideTime = clampFontRevealSlideTime(timing.slideTime);
-  return totalDurationSec / ((glyphCount - 1) + slideTime);
-}
-
-/**
- * @param {number} glyphIndex
- * @param {number} glyphCount
- * @param {number} totalDurationSec
- * @param {{ slideDepth?: number, slideTime?: number }} timing
- */
-function glyphRevealLandSec(glyphIndex, glyphCount, totalDurationSec, timing) {
-  const slot = glyphRevealSlotSec(totalDurationSec, glyphCount, timing);
-  const slideDepth = clampFontRevealSlideDepth(timing.slideDepth);
-  if (slideDepth <= 0) return (glyphIndex + 1) * slot;
-  const slideTime = clampFontRevealSlideTime(timing.slideTime);
-  return glyphIndex * slot + slot * slideTime;
-}
 
 export const DEFAULT_FONT_REVEAL_EMISSIVE_SLAM = false;
 export const DEFAULT_FONT_REVEAL_EMISSIVE_STRENGTH = 1;
@@ -94,9 +67,14 @@ export function computeGlyphEmissiveSlamFactor(
   timing = {},
 ) {
   if (decaySec <= 0 || glyphCount <= 0 || totalDurationSec <= 0) return 0;
-  const slot = glyphRevealSlotSec(totalDurationSec, glyphCount, timing);
+  const slot = computeGlyphRevealSlotSec(totalDurationSec, glyphCount, timing);
   const slotStart = glyphIndex * slot;
-  const landElapsed = glyphRevealLandSec(glyphIndex, glyphCount, totalDurationSec, timing);
+  const landElapsed = computeGlyphRevealLandSec(
+    glyphIndex,
+    glyphCount,
+    totalDurationSec,
+    timing,
+  );
 
   if (elapsedSec < slotStart) return 0;
 

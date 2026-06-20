@@ -150,13 +150,10 @@ export class MeshControls {
 
     // Material controls
     this.ui.inputs.materialBrightness?.addEventListener('input', (event) => {
-      const value = this.helpers.applySnapToCenter(
-        event.target,
-        0,
-        5,
-        DEFAULT_MATERIAL_BRIGHTNESS,
-        event,
-      );
+      const parsed = parseFloat(event.target.value);
+      const value = Number.isFinite(parsed)
+        ? Math.max(0, Math.min(5, parsed))
+        : DEFAULT_MATERIAL_BRIGHTNESS;
       this.helpers.updateValueLabel('materialBrightness', value, 'decimal');
       this.stateStore.set('material.brightness', value);
       this.eventBus.emit('mesh:material-brightness', value);
@@ -689,6 +686,7 @@ export class MeshControls {
             || normalizeCreativeLookPreset(preset) === 'vectrex'
             || normalizeCreativeLookPreset(preset) === 'wire-pulse'
             || normalizeCreativeLookPreset(preset) === 'vertex-points'
+            || normalizeCreativeLookPreset(preset) === 'dust-field'
             || isDitherPixelCreativeLookPreset(preset)
           ) {
             this.stateStore.set(
@@ -996,6 +994,20 @@ export class MeshControls {
       this.helpers.updateValueLabel(
         'exportFovOffset',
         this.ui.exportSettings.video.fovOffset ?? 0,
+        'signedAngle',
+      );
+    }
+
+    if (this.ui.inputs.exportPitchOffset) {
+      this.ui.inputs.exportPitchOffset.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.ui.exportSettings.video.pitchOffset = value;
+        this.helpers.updateValueLabel('exportPitchOffset', value, 'signedAngle');
+      });
+      this.helpers.updateValueLabel(
+        'exportPitchOffset',
+        this.ui.exportSettings.video.pitchOffset ?? 0,
         'signedAngle',
       );
     }

@@ -1002,6 +1002,10 @@
                     <div class="creative-look-grid-section">
                       <p class="creative-look-grid-section-label">Effects</p>
                       <div class="hdri-grid">
+                    <button type="button" data-creative-look="dust-field" class="hdri-icon creative-look-icon--labeled" data-tooltip="Dust Field — 8,000 surface-sampled particles follow your mesh (GLB skinning &amp; morph targets). Intensity = point size. Scale = wobble. Bloom recommended." title="Dust Field">
+                      <img src="./assets/images/creative-look-dust-field.svg" alt="Dust Field" width="128" height="128" />
+                      <span class="creative-look-icon-label">Dust</span>
+                    </button>
                     <button type="button" data-creative-look="neon-edge" class="hdri-icon" data-tooltip="Neon Edge — dark core with cyan rim glow">
                       <img src="./assets/images/creative-look-neon-edge.png" alt="Neon Edge" width="128" height="128" />
                     </button>
@@ -1175,7 +1179,7 @@
                     <span class="value" data-output="creativeLookMasterHue">0°</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Vertex Points: point size. Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
+                    <span data-tooltip="Pushes each preset's signature effect. 1 = default. Wire Pulse: line thickness. Vertex Points / Dust Field: point size. Neon Edge, Holographic, Scanline Hologram, and Spectral Storm also respond.">Intensity</span>
                     <input
                       type="range"
                       id="creativeLookIntensity"
@@ -1199,7 +1203,7 @@
                     <span class="value" data-output="creativeLookLiftCrush">0.00</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
+                    <span data-tooltip="Speed for animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Dust Field, Spectral Storm). True Chrome / Glass ignore. Pause freezes motion.">Anim Speed</span>
                     <input
                       type="range"
                       id="creativeLookShaderAnimationSpeed"
@@ -1211,7 +1215,7 @@
                     <span class="value" data-output="creativeLookShaderAnimationSpeed">0.40</span>
                   </label>
                   <label class="slider-line" id="creativeLookPatternScaleRow">
-                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
+                    <span data-tooltip="Pattern scale (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Dust Field, Spectral Storm). Voxel HD: fixed at 0.50×. EGA / C64 / Game Boy / NES / etc.: fixed grid. True Chrome: reflection sharpness. Glass: thickness &amp; frost. PS2 Crush: fixed at 2×. PSX: fixed at 2.5×. VGA/DOS 3D: fixed at 2.2× (decimation runs once at apply). Watercolour: brush size &amp; wobble. Sketch uses Stroke Width / Raster Size instead.">Scale</span>
                     <input
                       type="range"
                       id="creativeLookPatternScale"
@@ -1277,7 +1281,7 @@
                     type="button"
                     id="creativeLookPauseAnimations"
                     class="ghost-btn small creative-look-pause-btn"
-                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
+                    data-tooltip="Freeze animated Shader Lab presets (Flow Field, Plasma, Holographic, Voronoi, Scanline Hologram, Wire Pulse, Vertex Points, Dust Field, Spectral Storm). True Chrome and Toon keep following the scene / HDRI."
                   >
                     Pause shader animations
                   </button>
@@ -4928,7 +4932,7 @@
                       <span class="value" data-output="exportZoomDistance">1.50m</span>
                     </label>
                     <label id="exportTiltAngleSettings" class="slider-line">
-                      <span data-tooltip="Camera: roll angle applied over the export length (degrees).">Tilt angle</span>
+                      <span data-tooltip="Camera: Dutch roll angle applied over the export length (degrees).">Roll angle</span>
                       <input
                         id="exportTiltAngle"
                         type="range"
@@ -4950,6 +4954,18 @@
                         step="1"
                       />
                       <span class="value" data-output="exportFovOffset">0°</span>
+                    </label>
+                    <label id="exportPitchOffsetSettings" class="slider-line">
+                      <span data-tooltip="Camera: pivot up or down on the orbit target over the export length — like nodding your head. Center = no change; right tilts up, left tilts down.">Pitch animation</span>
+                      <input
+                        id="exportPitchOffset"
+                        type="range"
+                        min="-90"
+                        max="90"
+                        value="0"
+                        step="1"
+                      />
+                      <span class="value" data-output="exportPitchOffset">0°</span>
                     </label>
                   </div>
                   <div class="export-video-preview-actions scene-controls">

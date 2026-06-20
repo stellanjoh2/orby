@@ -42,7 +42,7 @@ export class FontExtrudeImporter {
   constructor() {
     this.sourceName = 'Text';
     this.group = null;
-    /** @type {Array<{ glyphPath: import('../vendor/opentype.module.js').Path }>} */
+    /** @type {Array<{ glyphPath: import('../vendor/opentype.module.js').Path, wordIndex?: number }>} */
     this._glyphEntries = [];
     this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
     this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
@@ -66,7 +66,10 @@ export class FontExtrudeImporter {
     for (const line of layout?.lines || []) {
       for (const entry of line.paths || []) {
         if (entry?.glyphPath && opentypePathHasArea(entry.glyphPath)) {
-          this._glyphEntries.push({ glyphPath: entry.glyphPath });
+          this._glyphEntries.push({
+            glyphPath: entry.glyphPath,
+            wordIndex: Number.isFinite(entry.wordIndex) ? entry.wordIndex : undefined,
+          });
         }
       }
     }
@@ -264,10 +267,13 @@ export class FontExtrudeImporter {
 
     let meshCount = 0;
     let glyphIndex = 0;
-    for (const { glyphPath } of this._glyphEntries) {
+    for (const { glyphPath, wordIndex } of this._glyphEntries) {
       const glyphGroup = new THREE.Group();
       glyphGroup.userData.orbyFontGlyphGroup = true;
       glyphGroup.userData.orbyFontGlyphIndex = glyphIndex;
+      if (Number.isFinite(wordIndex)) {
+        glyphGroup.userData.orbyFontRevealWordIndex = wordIndex;
+      }
 
       const shapes = opentypePathToShapes(glyphPath, detailSettings.curveDivisions);
       for (const shape of shapes) {
