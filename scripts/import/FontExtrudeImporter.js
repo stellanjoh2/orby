@@ -3,7 +3,9 @@ import { DEFAULT_MATERIAL_ROUGHNESS } from '../constants.js';
 import {
   clampExtrudeBevelAmount,
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
-  resolveExtrudeBevelSettings,
+  DEFAULT_FONT_BEVEL_TYPE,
+  normalizeFontBevelType,
+  resolveFontExtrudeBevelSettingsForType,
 } from './extrudeBevel.js';
 import {
   applyExtrudeDirectionOffset,
@@ -15,12 +17,11 @@ import {
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
 } from './extrudeImporterShared.js';
-import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
+import { geometryHasNaNPositions, sanitizeShapeForExtrudeGeometry } from './extrudeShapeSanitize.js';
 import {
   FONT_EXTRUDE_TARGET_CAP_HEIGHT,
   normalizeExtrudeDetail,
-  resolveBevelSideCurveSegments,
-  resolveExtrudeDetailSettings,
+  resolveFontExtrudeDetailSettings,
 } from './extrudeDetail.js';
 import { opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
@@ -36,7 +37,7 @@ export function normalizeGlyphFillHex(value) {
 }
 
 /**
- * Direct opentype glyph → THREE.Shape → stock ExtrudeGeometry (no custom cap triangulation).
+ * opentype glyph → SVGLoader.createShapes() → stock ExtrudeGeometry (same cap path as SVG extrude).
  */
 export class FontExtrudeImporter {
   constructor() {
@@ -52,9 +53,11 @@ export class FontExtrudeImporter {
     this.currentColorPalette = [DEFAULT_GLYPH_FILL];
     this.currentFlipDirection = false;
     this.currentBevelAmount = DEFAULT_EXTRUDE_BEVEL_AMOUNT;
+    /** @type {import('./extrudeBevel.js').FontExtrudeBevelType} */
+    this.currentBevelType = DEFAULT_FONT_BEVEL_TYPE;
     this._layoutFontSize = 72;
     /** @type {'low' | 'medium' | 'high' | 'ultra'} */
-    this._detailLevel = 'medium';
+    this._detailLevel = 'high';
   }
 
   /**
@@ -88,6 +91,9 @@ export class FontExtrudeImporter {
       options.bevelAmount ?? this.currentBevelAmount,
       this.currentDepth,
     );
+    if (options.bevelType !== undefined) {
+      this.currentBevelType = normalizeFontBevelType(options.bevelType);
+    }
     if (options.fillColor) {
       this.currentFillColor = normalizeGlyphFillHex(options.fillColor);
       this.currentColorPalette = [this.currentFillColor];
@@ -162,10 +168,13 @@ export class FontExtrudeImporter {
   }
 
   /**
-   * @param {{ amount?: unknown }} [settings]
+   * @param {{ amount?: unknown, type?: unknown }} [settings]
    */
   setBevelSettings(settings = {}) {
     if (!this._glyphEntries.length) throw new Error('No font layout available');
+    if (settings.type !== undefined) {
+      this.currentBevelType = normalizeFontBevelType(settings.type);
+    }
     if (settings.amount !== undefined) {
       this.currentBevelAmount = clampExtrudeBevelAmount(
         settings.amount,
@@ -213,6 +222,10 @@ export class FontExtrudeImporter {
     return this.currentBevelAmount;
   }
 
+  getBevelType() {
+    return this.currentBevelType;
+  }
+
   getDetail() {
     return this._detailLevel;
   }
@@ -221,6 +234,72 @@ export class FontExtrudeImporter {
     const rebuilt = this._buildGroup(this.currentDepth, this.currentNormalAngleDeg);
     this.group = preserveExtrudeGroupOnRebuild(this.group, rebuilt);
     return this.group;
+  }
+
+  /**
+   * Stock ExtrudeGeometry — NaN positions trigger sanitize/bevel-off, but never drop a glyph.
+   * (Spike heuristics are omitted here; they false-positive on simple glyphs with large cap tris.)
+   *
+   * @param {THREE.Shape} shape
+   * @param {Object} extrudeOptions
+   * @param {number} curveSegments
+   * @param {boolean} bevelEnabled
+   * @returns {THREE.BufferGeometry | null}
+   */
+  _buildFontExtrudeGeometry(shape, extrudeOptions, curveSegments, bevelEnabled) {
+    let sourceShape = shape;
+    let geometry = new THREE.ExtrudeGeometry(sourceShape, extrudeOptions);
+
+    if (geometryHasNaNPositions(geometry) && bevelEnabled) {
+      geometry.dispose();
+      sourceShape = sanitizeShapeForExtrudeGeometry(shape, curveSegments);
+      geometry = new THREE.ExtrudeGeometry(sourceShape, extrudeOptions);
+    }
+
+    if (geometryHasNaNPositions(geometry) && bevelEnabled) {
+      geometry.dispose();
+      geometry = new THREE.ExtrudeGeometry(sourceShape, {
+        ...extrudeOptions,
+        bevelEnabled: false,
+      });
+    }
+
+    if (geometryHasNaNPositions(geometry)) {
+      geometry.dispose();
+      return null;
+    }
+
+    return geometry;
+  }
+
+  /**
+   * @param {import('../vendor/opentype.module.js').Path} glyphPath
+   * @param {Object} extrudeSettings
+   * @param {number} curveSegments
+   * @param {boolean} bevelEnabled
+   * @param {number} curveDivisions
+   * @param {{ nativeCurves?: boolean }} [shapeOptions]
+   * @returns {THREE.BufferGeometry[]}
+   */
+  _extrudeGlyphGeometries(glyphPath, extrudeSettings, curveSegments, bevelEnabled, curveDivisions, shapeOptions = {}) {
+    const shapes = opentypePathToShapes(glyphPath, curveDivisions, shapeOptions);
+    const geometries = [];
+
+    for (const shape of shapes) {
+      const extrudeOptions = {
+        ...extrudeSettings,
+        curveSegments,
+      };
+      const geometry = this._buildFontExtrudeGeometry(
+        shape,
+        extrudeOptions,
+        curveSegments,
+        bevelEnabled,
+      );
+      if (geometry) geometries.push(geometry);
+    }
+
+    return geometries;
   }
 
   _buildGroup(depth, normalAngleDeg) {
@@ -248,16 +327,14 @@ export class FontExtrudeImporter {
     });
 
     const xyNormalizeScale = FONT_EXTRUDE_TARGET_CAP_HEIGHT / this._layoutFontSize;
-    const bevelSettings = resolveExtrudeBevelSettings({
+    const bevelSettings = resolveFontExtrudeBevelSettingsForType(this.currentBevelType, {
       amount: this.currentBevelAmount,
       depth: effectiveDepth,
       xyNormalizeScale,
     });
     const bevelEnabled = !!bevelSettings.bevelEnabled;
-    const detailSettings = resolveExtrudeDetailSettings(this._detailLevel, { bevelEnabled });
-    const curveSegments = bevelEnabled
-      ? resolveBevelSideCurveSegments(this._detailLevel, detailSettings.curveSegments)
-      : detailSettings.curveSegments;
+    const detailSettings = resolveFontExtrudeDetailSettings(this._detailLevel);
+    const curveSegments = detailSettings.curveSegments;
     const extrudeSettings = {
       depth: effectiveDepth,
       steps: 1,
@@ -275,20 +352,25 @@ export class FontExtrudeImporter {
         glyphGroup.userData.orbyFontRevealWordIndex = wordIndex;
       }
 
-      const shapes = opentypePathToShapes(glyphPath, detailSettings.curveDivisions);
-      for (const shape of shapes) {
-        const extrudeOptions = {
-          ...extrudeSettings,
+      let geometries = this._extrudeGlyphGeometries(
+        glyphPath,
+        extrudeSettings,
+        curveSegments,
+        bevelEnabled,
+        detailSettings.curveDivisions,
+      );
+      if (!geometries.length) {
+        geometries = this._extrudeGlyphGeometries(
+          glyphPath,
+          extrudeSettings,
           curveSegments,
-        };
-        let geometry = new THREE.ExtrudeGeometry(shape, extrudeOptions);
-        if (geometryHasNaNPositions(geometry) && bevelSettings?.bevelEnabled) {
-          geometry.dispose();
-          geometry = new THREE.ExtrudeGeometry(shape, {
-            ...extrudeOptions,
-            bevelEnabled: false,
-          });
-        }
+          bevelEnabled,
+          detailSettings.curveDivisions,
+          { nativeCurves: false },
+        );
+      }
+
+      for (const geometry of geometries) {
         const smoothedGeometry = toCreasedNormals(geometry, creaseAngleRad);
         geometry.dispose();
         const mesh = new THREE.Mesh(smoothedGeometry, material.clone());

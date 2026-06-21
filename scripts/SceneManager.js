@@ -143,6 +143,7 @@ import {
 } from './scene/SvgExtrudeSceneOps.js';
 import {
   clampExtrudeBevelAmount,
+  normalizeFontBevelType,
 } from './import/extrudeBevel.js';
 import {
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
@@ -615,6 +616,12 @@ export class SceneManager {
         this._getCreativeLookToonLightScalars(),
       afterCreativeLookMaterialRebuild: () => {
         this._syncCreativeLookAsciiPass();
+        if (this.scene?.environment) {
+          this.updateMaterialsEnvironment(
+            this.scene.environment,
+            Math.max(0, this.hdriStrength),
+          );
+        }
         this.animationController?.resyncPose?.();
         if (
           typeof this.renderer?.compile === 'function' &&
@@ -3776,6 +3783,27 @@ export class SceneManager {
     );
     if (!ok || !updateState) return;
     this.stateStore.set('svgExtrude.bevelAmount', this.svgExtrudeImporter.getBevelAmount());
+  }
+
+  setFontExtrudeBevelType(type, options = {}) {
+    const { updateState = true } = options;
+    if (!this.currentModel?.userData?.orbyFontExtrude) return;
+    if (!supportsExtrudeBevel(this.svgExtrudeImporter)) return;
+    const normalized = normalizeFontBevelType(type);
+    const ok = runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setBevelSettings({ type: normalized }),
+      {
+        logLabel: 'update font bevel type',
+        toastOnError: 'Could not update bevel type',
+      },
+    );
+    if (!ok || !updateState) return;
+    if (typeof this.svgExtrudeImporter.getBevelType === 'function') {
+      this.stateStore.set('fontExtrude.bevelType', this.svgExtrudeImporter.getBevelType());
+    } else {
+      this.stateStore.set('fontExtrude.bevelType', normalized);
+    }
   }
 
   setSvgExtrudeDetail(detail, options = {}) {

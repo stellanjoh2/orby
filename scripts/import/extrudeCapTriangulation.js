@@ -250,6 +250,17 @@ export function triangulateHoledCap(contour, holes) {
   return triangulateSingleHoleAnnulusStrip(contour, holes[0], center);
 }
 
+/**
+ * @param {{ x: number, y: number }[]} contour
+ * @param {Array<{ x: number, y: number }[]>} holes
+ * @returns {boolean}
+ */
+export function isConcentricSingleHoleRing(contour, holes) {
+  if (holes?.length !== 1) return false;
+  if (contour.length < 3 || holes[0].length < 3) return false;
+  return isConcentricSingleHole(contour, holes[0]);
+}
+
 let patchInstalled = false;
 
 function patchedTriangulateShape(contour, holes) {

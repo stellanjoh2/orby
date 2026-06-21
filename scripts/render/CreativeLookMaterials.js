@@ -187,6 +187,12 @@ export const CREATIVE_LOOK_PRESETS = /** @type {const} */ ([
  */
 export const CREATIVE_CHROME_BASE_HEX = 0xeef1f5;
 
+/** Physical env-map presets — need HDRI lighting and Render Backdrop for refraction / reflections. */
+export function creativeLookPresetNeedsHdriBackdrop(preset) {
+  const id = normalizeCreativeLookPreset(preset);
+  return id === 'glass' || id === 'chrome';
+}
+
 /** Full colorwheel range for Shader Lab master hue (degrees). */
 export const CREATIVE_LOOK_MASTER_HUE_MIN = -180;
 export const CREATIVE_LOOK_MASTER_HUE_MAX = 180;

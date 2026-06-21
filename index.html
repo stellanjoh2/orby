@@ -299,14 +299,7 @@
                 <p class="viewport-offline-export__title">Rendering PNG sequence</p>
                 <p class="viewport-offline-export__progress">
                   <span class="viewport-offline-export__progress-leading">
-                    <img
-                      class="viewport-offline-export__spinner"
-                      src="./assets/images/favicon.svg"
-                      alt=""
-                      width="48"
-                      height="48"
-                      draggable="false"
-                    />
+                    <span class="viewport-offline-export__spinner" aria-hidden="true"></span>
                     <span id="viewportOfflineExportFrame" class="viewport-offline-export__stat">Frame 0 / 0</span>
                   </span>
                 </p>
@@ -1058,9 +1051,8 @@
                     <div class="creative-look-grid-section">
                       <p class="creative-look-grid-section-label">Effects</p>
                       <div class="hdri-grid">
-                    <button type="button" data-creative-look="dust-field" class="hdri-icon creative-look-icon--labeled" data-tooltip="Dust Field — 8,000 surface-sampled particles follow your mesh (GLB skinning &amp; morph targets). Intensity = point size. Scale = wobble. Bloom recommended." title="Dust Field">
+                    <button type="button" data-creative-look="dust-field" class="hdri-icon" data-tooltip="Dust Field — 8,000 surface-sampled particles follow your mesh (GLB skinning &amp; morph targets). Intensity = point size. Scale = wobble. Bloom recommended." title="Dust Field">
                       <img src="./assets/images/creative-look-dust-field.svg" alt="Dust Field" width="128" height="128" />
-                      <span class="creative-look-icon-label">Dust</span>
                     </button>
                     <button type="button" data-creative-look="neon-edge" class="hdri-icon" data-tooltip="Neon Edge — dark core with cyan rim glow">
                       <img src="./assets/images/creative-look-neon-edge.png" alt="Neon Edge" width="128" height="128" />

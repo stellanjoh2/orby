@@ -27,6 +27,7 @@ import {
   shouldResetDitherPresetTuning,
   normalizeCreativeLookPreset,
   resolveCreativeLookPresetChoice,
+  creativeLookPresetNeedsHdriBackdrop,
 } from '../render/CreativeLookMaterials.js';
 import { isVoxelCreativeLookPreset } from '../render/creativeLookVoxelArt.js';
 import { isFontExtrudeRevealModel } from '../scene/FontTextRevealController.js';
@@ -502,11 +503,15 @@ export class MeshControls {
       container.classList.toggle('creative-look-foldout--collapsed', !open);
       container.classList.toggle('creative-look-foldout--expanded', open);
     };
-    const disableRenderBackdropForShaderLab = () => {
-      this.stateStore.set('hdriBackground', false);
-      this.eventBus.emit('studio:hdri-background', false);
+    const syncRenderBackdropForShaderLab = (preset) => {
+      const state = this.stateStore.getState();
+      const hdriOn = state.hdriEnabled !== false;
+      const nextBackdrop = creativeLookPresetNeedsHdriBackdrop(preset) && hdriOn;
+      if (!!state.hdriBackground === nextBackdrop) return;
+      this.stateStore.set('hdriBackground', nextBackdrop);
+      this.eventBus.emit('studio:hdri-background', nextBackdrop);
       if (this.ui.inputs.hdriBackground) {
-        this.ui.inputs.hdriBackground.checked = false;
+        this.ui.inputs.hdriBackground.checked = nextBackdrop;
       }
     };
     const isShaderLabSectionOpen = (state) =>
@@ -532,6 +537,7 @@ export class MeshControls {
         this.ui.toggleCreativeLookGrid(true);
         this.ui.setCreativeLookActive(chosen);
         if (chosen) {
+          syncRenderBackdropForShaderLab(chosen);
           this.eventBus.emit('mesh:creative-look');
         }
         return;
@@ -646,7 +652,6 @@ export class MeshControls {
           return;
         }
         const state = this.stateStore.getState().creativeLook || {};
-        const creativeLookWasEnabled = !!state.enabled;
         const prev = resolveCreativeLookPresetChoice(state.preset);
         if (preset !== prev) this.ui.uiSounds?.playSelect();
         const resetDitherTuning = shouldResetDitherPresetTuning(prev, preset);
@@ -718,9 +723,7 @@ export class MeshControls {
           }
         });
         updateCreativeLookFoldout(true);
-        if (!creativeLookWasEnabled) {
-          disableRenderBackdropForShaderLab();
-        }
+        syncRenderBackdropForShaderLab(preset);
         if (this.ui.inputs.creativeLookEnabled) {
           this.ui.inputs.creativeLookEnabled.checked = true;
         }

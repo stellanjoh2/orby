@@ -2216,6 +2216,7 @@ export class UIManager {
     const progress = this.dom.offlineExportOverlay?.querySelector('.viewport-offline-export__progress');
     progress?.classList.remove('is-cancelled');
     this.dom.offlineExportFrame?.classList.remove('is-cancelled');
+    this.dom.offlineExportElapsed?.classList.remove('is-cancelled');
     this._offlineExportFrameProgress = { frameIndex: 0, totalFrames: 0 };
 
     footer?.classList.remove('is-cancelled');
@@ -2242,6 +2243,9 @@ export class UIManager {
     const progress = this.dom.offlineExportOverlay?.querySelector('.viewport-offline-export__progress');
     progress?.classList.add('is-cancelled');
     footer?.classList.add('is-cancelled');
+    this.dom.offlineExportElapsed?.classList.add('is-cancelled');
+    this._stopOfflineExportElapsedTick();
+    this._syncOfflineExportElapsed({ allowWhenCancelled: true });
 
     if (cancelBtn) {
       cancelBtn.textContent = 'Render cancelled';
@@ -2320,9 +2324,10 @@ export class UIManager {
     this._syncOfflineExportElapsed();
   }
 
-  _syncOfflineExportElapsed() {
+  _syncOfflineExportElapsed({ allowWhenCancelled = false } = {}) {
     const valueEl = this.dom.offlineExportElapsedValue;
     if (!valueEl || !this._offlineExportElapsedStart) return;
+    if (this._offlineExportCancelPending && !allowWhenCancelled) return;
     const wholeSec = Math.max(
       0,
       Math.floor((performance.now() - this._offlineExportElapsedStart) / 1000),

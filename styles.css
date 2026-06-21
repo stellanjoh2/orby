@@ -2773,7 +2773,7 @@ body.export-overlay-debug #dropzone {
 
 .viewport-offline-export__progress.is-cancelled .viewport-offline-export__spinner {
   animation-play-state: paused;
-  opacity: 0.35;
+  background-color: var(--warning);
 }
 
 .viewport-offline-export__section {
@@ -2810,7 +2810,15 @@ body.export-overlay-debug #dropzone {
   flex-shrink: 0;
   width: 48px;
   height: 48px;
-  object-fit: contain;
+  background-color: var(--brand-lime);
+  -webkit-mask-image: url('./assets/images/favicon.svg');
+  mask-image: url('./assets/images/favicon.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
   animation: viewport-load-spin 0.6s linear infinite;
 }
 
@@ -2846,6 +2854,10 @@ body.export-overlay-debug #dropzone {
 
 .viewport-offline-export__elapsed-value {
   color: var(--brand-lime);
+}
+
+.viewport-offline-export__elapsed.is-cancelled .viewport-offline-export__elapsed-value {
+  color: var(--warning);
 }
 
 .viewport-offline-export__helper {
@@ -4652,8 +4664,9 @@ a.about-highlight:focus-visible {
   max-width: 100%;
 }
 
-/* Separator that wraps content below the rule (e.g. font Surface block) */
-.font-extrude-surface-group {
+/* Separator that wraps content below the rule (e.g. font Surface / Bevel blocks) */
+.font-extrude-surface-group,
+.extrude-bevel-group {
   margin: var(--shelf-section-gap) 0 0;
   padding: var(--shelf-section-gap) 0 0;
   border-top: 1px solid var(--stroke);
@@ -6798,26 +6811,6 @@ html:not(.mobile-landing) .shelf .animation-timeline #exportPreviewScrub::-webki
 
 #creativeLookGrid .hdri-icon:not(.active):hover:not(:disabled):not(.is-disabled) img {
   transform: translate(-50%, -50%) scale(1.1);
-}
-
-#creativeLookGrid .hdri-icon.creative-look-icon--labeled {
-  height: calc(var(--shelf-picker-sphere-ring) + 1.05rem);
-}
-
-#creativeLookGrid .creative-look-icon-label {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  font-size: 0.58rem;
-  letter-spacing: 0.03em;
-  color: var(--text-dim);
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-#creativeLookGrid .hdri-icon.active .creative-look-icon-label {
-  color: var(--accent);
 }
 
 .hdri-icon__sphere--placeholder {

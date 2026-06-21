@@ -13,6 +13,7 @@ import {
   DEFAULT_EXTRUDE_DEPTH,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from '../import/extrudeDefaults.js';
+import { DEFAULT_FONT_BEVEL_TYPE } from '../import/extrudeBevel.js';
 
 const DEFAULT_FONT_SIZE = 72;
 const PREVIEW_LAYOUT_WIDTH = 520;
@@ -331,9 +332,10 @@ export class FontExtrudeController {
       colorDepths: options.colorDepths ?? svgState.colorDepths ?? {},
       colorOffsets: options.colorOffsets ?? svgState.colorOffsets ?? {},
       flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
-      detail: options.detail ?? fontState.detail ?? 'medium',
+      detail: options.detail ?? fontState.detail ?? 'high',
       fillColor,
       bevelAmount: options.bevelAmount ?? svgState.bevelAmount ?? DEFAULT_EXTRUDE_BEVEL_AMOUNT,
+      bevelType: options.bevelType ?? fontState.bevelType ?? DEFAULT_FONT_BEVEL_TYPE,
     });
     group.userData.orbyFontGenerated = true;
     group.userData.orbyFontExtrude = true;
@@ -395,6 +397,7 @@ export class FontExtrudeController {
         colors: this.fontExtrudeImporter.getAvailableColors(),
         flipDirection: this.fontExtrudeImporter.getFlipDirection(),
         bevelAmount: this.fontExtrudeImporter.getBevelAmount(),
+        bevelType: this.fontExtrudeImporter.getBevelType(),
         detail: this.fontExtrudeImporter.getDetail(),
         importer: this.fontExtrudeImporter,
       },

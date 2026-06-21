@@ -6,9 +6,11 @@ import { FontFamilyPicker } from './FontFamilyPicker.js';
 import {
   bindExtrudeBevelControls,
   bindSvgExtrudeControls,
+  buildExtrudeBevelGroupHtml,
   syncSvgExtrudeControls,
   FONT_EXTRUDE_POST_GEN_CONTROLS_HTML,
 } from './svgExtrudeControlsShared.js';
+import { normalizeFontBevelType } from '../import/extrudeBevel.js';
 import {
   clampFontRevealDurationSec,
   clampFontRevealEmissiveDecaySec,
@@ -188,19 +190,27 @@ export class FontExtrudeUI {
             <input type="color" id="fontExtrudeFillColor" class="color-chip" value="#808080" />
           </label>
           <label class="select-line">
-            <span data-tooltip="Curve smoothness on letters — Ultra is very dense; best for hero exports or small type">Mesh Detail</span>
+            <span data-tooltip="Curve smoothness (curveSegments) — native Bézier outlines like Three.js TextGeometry; High is the default">Mesh Detail</span>
             <select id="fontExtrudeDetail" aria-label="Mesh detail">
               <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="high" selected>High</option>
               <option value="ultra">Ultra</option>
             </select>
           </label>
-          ${FONT_EXTRUDE_POST_GEN_CONTROLS_HTML}
+          ${buildExtrudeBevelGroupHtml({
+            bevelType: { id: 'fontExtrudeBevelType' },
+            bevel: {
+              id: 'fontExtrudeBevelAmount',
+              outputKey: 'fontExtrudeBevelAmount',
+              tooltip: 'Edge bevel size — max 10% of extrusion depth',
+            },
+          })}
           <button type="button" id="fontExtrudeGenerate" class="accent-action-btn font-extrude-generate" disabled data-tooltip="Extrude preview text into a 3D mesh">
             <i class="fa-solid fa-cube" aria-hidden="true"></i>
             <span>Generate 3D Text</span>
           </button>
+          ${FONT_EXTRUDE_POST_GEN_CONTROLS_HTML}
         </div>
       </div>
     `;
@@ -225,6 +235,7 @@ export class FontExtrudeUI {
       kerning: block.querySelector('#fontExtrudeKerning'),
       lineHeight: block.querySelector('#fontExtrudeLineHeight'),
       detail: block.querySelector('#fontExtrudeDetail'),
+      bevelType: block.querySelector('#fontExtrudeBevelType'),
       previewScale: block.querySelector('#fontExtrudePreviewScale'),
       align: block.querySelector('#fontExtrudeAlign'),
       postGen: block.querySelector('#fontExtrudePostGen'),
@@ -348,6 +359,14 @@ export class FontExtrudeUI {
       this.stateStore.set('fontExtrude.detail', value);
       if (this._hasFontMesh()) {
         this.getScene()?.setSvgExtrudeDetail?.(value);
+      }
+    });
+    els.bevelType?.addEventListener('change', () => {
+      this.ui.uiSounds?.playSelect();
+      const value = normalizeFontBevelType(els.bevelType.value);
+      this.stateStore.set('fontExtrude.bevelType', value);
+      if (this._hasFontMesh()) {
+        this.eventBus.emit('mesh:font-extrude-bevel-type', { type: value });
       }
     });
     els.previewScale?.addEventListener('input', () => {
@@ -816,6 +835,9 @@ export class FontExtrudeUI {
     if (this.els.detail) {
       this.els.detail.value = normalizeFontExtrudeDetail(fontState.detail);
     }
+    if (this.els.bevelType && document.activeElement !== this.els.bevelType) {
+      this.els.bevelType.value = normalizeFontBevelType(fontState.bevelType);
+    }
     if (this.els.previewScale && Number.isFinite(fontState.previewScale)) {
       this.els.previewScale.value = String(fontState.previewScale);
       this.ui.updateValueLabel('fontExtrudePreviewScale', fontState.previewScale, 'multiplier');
@@ -1261,7 +1283,8 @@ export class FontExtrudeUI {
       tracking: Number(this.els.tracking?.value ?? fontState.tracking ?? 0),
       kerning: normalizeFontKerningMode(this.els.kerning?.value ?? fontState.kerning),
       lineHeight: Number(this.els.lineHeight?.value ?? fontState.lineHeight ?? 1),
-      detail: normalizeFontExtrudeDetail(this.els.detail?.value ?? fontState.detail ?? 'medium'),
+      detail: normalizeFontExtrudeDetail(this.els.detail?.value ?? fontState.detail ?? 'high'),
+      bevelType: normalizeFontBevelType(this.els.bevelType?.value ?? fontState.bevelType),
       fillColor: normalizeGlyphFillHex(
         this.els.fillColor?.value ?? fontState.fillColor ?? '#808080',
       ),

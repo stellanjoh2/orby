@@ -36,6 +36,18 @@ function formatSurfaceDetailLabel(storedScale) {
  * Shared SVG / font extrude controls (same state.svgExtrude + mesh:* events).
  */
 
+const BEVEL_UNDER_DEVELOPMENT_TOOLTIP =
+  'Under development — bevels are very difficult to get right';
+
+/** Pink exclamation — matches .dev-badge elsewhere in the shelf. */
+function buildBevelDevBadgeHtml() {
+  return `<span class="dev-badge" data-tooltip="${BEVEL_UNDER_DEVELOPMENT_TOOLTIP}" tabindex="0" role="img" aria-label="${BEVEL_UNDER_DEVELOPMENT_TOOLTIP}"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i></span>`;
+}
+
+function buildControlLabelWithDevBadge(label, tooltip) {
+  return `<span class="block-title-name"><span data-tooltip="${tooltip}">${label}</span>${buildBevelDevBadgeHtml()}</span>`;
+}
+
 /**
  * Procedural surface library markup (single source for preset list + labels).
  * @param {{ presetId?: string, scaleId?: string, scaleOutput?: string, strengthId?: string, strengthOutput?: string, presetAriaLabel?: string }} [ids]
@@ -160,7 +172,7 @@ export function buildExtrudeBevelSliderHtml(options = {}) {
   const step = Math.max(0.001, maxBevel / 50);
   return `
             <label class="slider-line">
-              <span data-tooltip="${tooltip}">${label}</span>
+              ${buildControlLabelWithDevBadge(label, tooltip)}
               <input
                 id="${id}"
                 type="range"
@@ -171,6 +183,58 @@ export function buildExtrudeBevelSliderHtml(options = {}) {
               />
               <span class="value" data-output="${outputKey}">${amount.toFixed(2)}</span>
             </label>`;
+}
+
+/**
+ * Font extrude bevel profile — smooth (TextGeometry) vs simple (SVG chamfer).
+ *
+ * @param {{
+ *   id?: string,
+ *   label?: string,
+ *   tooltip?: string,
+ *   value?: 'smooth' | 'simple' | string,
+ * }} [options]
+ */
+export function buildFontBevelTypeSelectHtml(options = {}) {
+  const id = options.id ?? 'fontExtrudeBevelType';
+  const label = options.label ?? 'Bevel Type';
+  const tooltip =
+    options.tooltip ??
+    'Smooth = rounded TextGeometry-style bevel. Simple = straight inward chamfer like SVG extrude.';
+  const value = options.value === 'smooth' ? 'smooth' : 'simple';
+  return `
+            <label class="select-line font-extrude-bevel-type-line">
+              ${buildControlLabelWithDevBadge(label, tooltip)}
+              <select id="${id}" aria-label="Bevel type">
+                <option value="smooth"${value === 'smooth' ? ' selected' : ''}>Smooth</option>
+                <option value="simple"${value === 'simple' ? ' selected' : ''}>Simple</option>
+              </select>
+            </label>`;
+}
+
+/**
+ * Bevel type + amount grouped together (font + SVG extrude).
+ *
+ * @param {{
+ *   depth?: number,
+ *   bevel?: { id?: string, outputKey?: string, label?: string, tooltip?: string, value?: number } | false,
+ *   bevelType?: { id?: string, label?: string, tooltip?: string, value?: 'smooth' | 'simple' | string } | false,
+ * }} [options]
+ */
+export function buildExtrudeBevelGroupHtml(options = {}) {
+  const depth = Number(options.depth ?? DEFAULT_EXTRUDE_DEPTH) || DEFAULT_EXTRUDE_DEPTH;
+  const parts = [];
+  if (options.bevelType !== false) {
+    parts.push(buildFontBevelTypeSelectHtml(options.bevelType ?? {}));
+  }
+  if (options.bevel !== false) {
+    parts.push(buildExtrudeBevelSliderHtml({
+      depth,
+      ...(options.bevel ?? {}),
+    }));
+  }
+  if (!parts.length) return '';
+  return `<div class="extrude-bevel-group" role="group" aria-label="Bevel">${parts.join('')}</div>`;
 }
 
 /**
@@ -201,29 +265,37 @@ export function buildExtrudeDetailSelectHtml(options = {}) {
 }
 
 /**
- * Depth, bevel, and smoothing angle sliders for SVG / font extrude panels.
+ * Depth, detail, smoothing, and bevel controls for SVG / font extrude panels.
  *
  * @param {{
- *   depth?: { id?: string, outputKey?: string, label?: string, tooltip?: string, value?: number },
- *   bevel?: { id?: string, outputKey?: string, label?: string, tooltip?: string, depth?: number, value?: number },
- *   angle?: { id?: string, outputKey?: string, label?: string, tooltip?: string, ariaLabel?: string, value?: number },
+ *   depth?: { id?: string, outputKey?: string, label?: string, tooltip?: string, value?: number } | false,
+ *   bevel?: { id?: string, outputKey?: string, label?: string, tooltip?: string, depth?: number, value?: number } | false,
+ *   bevelType?: { id?: string, label?: string, tooltip?: string, value?: 'smooth' | 'simple' | string } | false,
+ *   angle?: { id?: string, outputKey?: string, label?: string, tooltip?: string, ariaLabel?: string, value?: number } | false,
  *   detail?: { id?: string, label?: string, tooltip?: string, value?: 'low' | 'medium' | 'high' | 'ultra' | string } | false,
  * }} [sections]
  */
 export function buildExtrudeCoreControlsHtml(sections = {}) {
-  const depthOpts = sections.depth ?? {};
-  const bevelOpts = {
-    depth: depthOpts.value ?? DEFAULT_EXTRUDE_DEPTH,
-    ...(sections.bevel ?? {}),
-  };
-  const parts = [
-    buildExtrudeDepthSliderHtml(depthOpts),
-    buildExtrudeBevelSliderHtml(bevelOpts),
-  ];
+  const depthOpts = sections.depth === false ? null : (sections.depth ?? {});
+  const depthValue = Number(depthOpts?.value ?? DEFAULT_EXTRUDE_DEPTH) || DEFAULT_EXTRUDE_DEPTH;
+  const parts = [];
+
+  if (depthOpts) {
+    parts.push(buildExtrudeDepthSliderHtml(depthOpts));
+  }
   if (sections.detail !== false) {
     parts.push(buildExtrudeDetailSelectHtml(sections.detail ?? {}));
   }
-  parts.push(buildExtrudeAngleSliderHtml(sections.angle ?? {}));
+  if (sections.angle !== false) {
+    parts.push(buildExtrudeAngleSliderHtml(sections.angle ?? {}));
+  }
+  if (sections.bevel !== false || sections.bevelType) {
+    parts.push(buildExtrudeBevelGroupHtml({
+      depth: depthValue,
+      bevel: sections.bevel,
+      bevelType: sections.bevelType ?? false,
+    }));
+  }
   return parts.join('');
 }
 
@@ -234,7 +306,8 @@ export function ensureSvgExtrudeCoreControlsMounted() {
   if (
     mount.dataset.mounted === '1' &&
     mount.querySelector('#svgExtrudeDepth') &&
-    mount.querySelector('#svgExtrudeDetail option[value="ultra"]')
+    mount.querySelector('#svgExtrudeDetail option[value="ultra"]') &&
+    mount.querySelector('.extrude-bevel-group')
   ) {
     return;
   }
@@ -995,12 +1068,8 @@ export const FONT_EXTRUDE_POST_GEN_CONTROLS_HTML = `
                 label: 'Extrude Depth',
                 tooltip: 'Overall extrusion depth for generated text',
               },
-              bevel: {
-                id: 'fontExtrudeBevelAmount',
-                outputKey: 'fontExtrudeBevelAmount',
-                tooltip:
-                  'Straight chamfer on cap edges (inward). Max 10% of depth — font outline stays full size',
-              },
+              bevel: false,
+              bevelType: false,
               detail: false,
               angle: {
                 id: 'fontExtrudeMeshAngle',

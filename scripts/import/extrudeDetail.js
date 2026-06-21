@@ -3,12 +3,26 @@
 /** Cap height in studio units — constant per glyph; layout grows with more lines/words. */
 export const FONT_EXTRUDE_TARGET_CAP_HEIGHT = 0.36;
 
+/**
+ * Font extrude curve sampling — mirrors Three.js TextGeometry `curveSegments` tiers.
+ * Native Bézier shapes let ExtrudeGeometry sample curves; no custom cap math needed.
+ *
+ * @type {Record<'low' | 'medium' | 'high' | 'ultra', { curveSegments: number, curveDivisions: number }>}
+ */
+export const FONT_EXTRUDE_DETAIL_PRESETS = {
+  low: { curveSegments: 4, curveDivisions: 4 },
+  medium: { curveSegments: 8, curveDivisions: 8 },
+  high: { curveSegments: 12, curveDivisions: 12 },
+  ultra: { curveSegments: 18, curveDivisions: 18 },
+};
+
+/** SVG extrude tessellation — curveSegments for ExtrudeGeometry; ringSegments caps cap densify. */
 /** @type {Record<'low' | 'medium' | 'high' | 'ultra', { ringSegments: number, curveSegments: number, extractDivisions: number, curveDivisions: number }>} */
 export const EXTRUDE_DETAIL_PRESETS = {
   low: { ringSegments: 32, curveSegments: 6, extractDivisions: 16, curveDivisions: 4 },
   medium: { ringSegments: 64, curveSegments: 12, extractDivisions: 24, curveDivisions: 9 },
   high: { ringSegments: 128, curveSegments: 18, extractDivisions: 32, curveDivisions: 14 },
-  ultra: { ringSegments: 256, curveSegments: 24, extractDivisions: 48, curveDivisions: 18 },
+  ultra: { ringSegments: 64, curveSegments: 24, extractDivisions: 48, curveDivisions: 18 },
 };
 
 /** Ring segment caps when bevel is on — keeps low < medium < high < ultra while avoiding bevel overlap. */
@@ -16,7 +30,7 @@ const EXTRUDE_BEVEL_RING_SEGMENT_CAPS = {
   low: 24,
   medium: 40,
   high: 56,
-  ultra: 88,
+  ultra: 48,
 };
 
 /** Font path sampling caps when bevel is on. */
@@ -71,6 +85,16 @@ export function resolveBevelSideCurveSegments(detail, curveSegments) {
 }
 
 /**
+ * Font extrude detail — stock ExtrudeGeometry path; curveSegments scales like TextGeometry.
+ *
+ * @param {'low' | 'medium' | 'high' | 'ultra' | number | string} [detail]
+ */
+export function resolveFontExtrudeDetailSettings(detail = 'high') {
+  const level = normalizeExtrudeDetail(detail);
+  return { level, ...FONT_EXTRUDE_DETAIL_PRESETS[level] };
+}
+
+/**
  * @param {'low' | 'medium' | 'high' | 'ultra' | number | string} [detail]
  * @param {{ bevelEnabled?: boolean }} [options]
  */
@@ -97,7 +121,7 @@ export function resolveExtrudeDetailSettings(detail = 'medium', options = {}) {
  * @deprecated Use resolveExtrudeDetailSettings
  */
 export function resolveFontExtrudeSampling(detail = 'medium') {
-  const settings = resolveExtrudeDetailSettings(detail, { bevelEnabled: false });
+  const settings = resolveFontExtrudeDetailSettings(detail);
   return {
     curveDivisions: settings.curveDivisions,
     sideSegments: settings.curveSegments,

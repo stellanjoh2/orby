@@ -5,7 +5,7 @@ import { meshUsesSkinning } from './bakeStaticSkinnedGeometry.js';
 export const DUST_FIELD_PARTICLE_COUNT = 8000;
 
 /** Default Shader Lab intensity (point sprite size). */
-export const DUST_FIELD_DEFAULT_INTENSITY = 1.25;
+export const DUST_FIELD_DEFAULT_INTENSITY = 0;
 
 /** Default Shader Lab scale (micro-wobble amplitude). */
 export const DUST_FIELD_DEFAULT_PATTERN_SCALE = 1;

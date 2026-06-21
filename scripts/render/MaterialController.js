@@ -2337,6 +2337,10 @@ export class MaterialController {
   }
 
   _syncRetroConsoleGeometryForPreset(preset, patternScale) {
+    if (!creativeLookUsesDustFieldGeometry(preset)) {
+      this._restoreDustFieldGeometry();
+    }
+
     if (creativeLookUsesVoxelGeometry(preset)) {
       this._restorePs2CrushGeometry();
       this._restoreWirePulseGeometry();
@@ -2350,7 +2354,6 @@ export class MaterialController {
     } else if (creativeLookUsesWirePulseGeometry(preset)) {
       this._restorePs2CrushGeometry();
       this._restoreVoxelGeometry();
-      this._restoreDustFieldGeometry();
       this._restoreScanlineGeometry();
       this._applyWirePulseGeometry();
     } else if (creativeLookUsesDustFieldGeometry(preset)) {
@@ -2364,7 +2367,6 @@ export class MaterialController {
       this._restoreVoxelGeometry();
       this._restoreWirePulseGeometry();
       this._restoreScanlineGeometry();
-      this._restoreDustFieldGeometry();
     }
   }
 
@@ -3536,15 +3538,17 @@ export class MaterialController {
           }
         }
       });
-      const dustPoints = this._getDustFieldPoints();
-      const dustMat = dustPoints?.material;
-      if (
-        dustMat?.userData?.orbyCreativeLook === 'dust-field' &&
-        dustMat.uniforms?.uTime
-      ) {
-        dustMat.uniforms.uTime.value = effectiveTime;
-        if (dustMat.uniforms.uPatternScale) {
-          dustMat.uniforms.uPatternScale.value = patternScale;
+      if (isDustFieldCreativeLookPreset(preset)) {
+        const dustPoints = this._getDustFieldPoints();
+        const dustMat = dustPoints?.material;
+        if (
+          dustMat?.userData?.orbyCreativeLook === 'dust-field' &&
+          dustMat.uniforms?.uTime
+        ) {
+          dustMat.uniforms.uTime.value = effectiveTime;
+          if (dustMat.uniforms.uPatternScale) {
+            dustMat.uniforms.uPatternScale.value = patternScale;
+          }
         }
       }
     }
@@ -3747,27 +3751,32 @@ export class MaterialController {
       }
     });
 
-    const dustPoints = this._getDustFieldPoints();
-    const dustMat = dustPoints?.material;
-    if (dustMat?.userData?.orbyCreativeLook === 'dust-field') {
-      if (dustMat.uniforms?.uMasterHue) {
-        dustMat.uniforms.uMasterHue.value = hueRad;
-      }
-      if (dustMat.uniforms?.uLiftCrush) {
-        dustMat.uniforms.uLiftCrush.value = liftCrush;
-      }
-      if (dustMat.uniforms?.uBrightness) {
-        dustMat.uniforms.uBrightness.value = brightness;
-      }
-      if (dustMat.uniforms?.uIntensity) {
-        dustMat.uniforms.uIntensity.value = intensity;
-      }
-      const ps = normalizeCreativeLookPatternScale(
-        'dust-field',
-        source?.patternScale ?? this.creativeLookSettings.patternScale,
-      );
-      if (dustMat.uniforms?.uPatternScale) {
-        dustMat.uniforms.uPatternScale.value = ps;
+    const preset = normalizeCreativeLookPreset(
+      source?.preset ?? this.creativeLookSettings.preset,
+    );
+    if (isDustFieldCreativeLookPreset(preset)) {
+      const dustPoints = this._getDustFieldPoints();
+      const dustMat = dustPoints?.material;
+      if (dustMat?.userData?.orbyCreativeLook === 'dust-field') {
+        if (dustMat.uniforms?.uMasterHue) {
+          dustMat.uniforms.uMasterHue.value = hueRad;
+        }
+        if (dustMat.uniforms?.uLiftCrush) {
+          dustMat.uniforms.uLiftCrush.value = liftCrush;
+        }
+        if (dustMat.uniforms?.uBrightness) {
+          dustMat.uniforms.uBrightness.value = brightness;
+        }
+        if (dustMat.uniforms?.uIntensity) {
+          dustMat.uniforms.uIntensity.value = intensity;
+        }
+        const ps = normalizeCreativeLookPatternScale(
+          'dust-field',
+          source?.patternScale ?? this.creativeLookSettings.patternScale,
+        );
+        if (dustMat.uniforms?.uPatternScale) {
+          dustMat.uniforms.uPatternScale.value = ps;
+        }
       }
     }
   }

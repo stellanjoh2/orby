@@ -126,6 +126,9 @@ export class EventManager {
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
     eventBus.on('mesh:svg-extrude-bevel', (payload) => s.setSvgExtrudeBevel(payload ?? {}));
+    eventBus.on('mesh:font-extrude-bevel-type', (payload) =>
+      s.setFontExtrudeBevelType(payload?.type ?? payload),
+    );
     eventBus.on('mesh:svg-extrude-detail', (detail) => s.setSvgExtrudeDetail(detail));
     eventBus.on('mesh:svg-extrude-color-depths', (payload) => s.setSvgExtrudeColorDepths(payload));
     eventBus.on('mesh:svg-extrude-color-depth', (payload) => s.setSvgExtrudeColorDepth(payload));
