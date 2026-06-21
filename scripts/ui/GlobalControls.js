@@ -246,6 +246,11 @@ export class GlobalControls {
         target.isContentEditable
       ) {
         if (event.key === 'Escape') {
+          if (window.orby?.scene?.exportMovementPreview?.isActive?.()) {
+            event.preventDefault();
+            this.eventBus.emit('export:movement-preview-stop', { silent: false });
+            return;
+          }
           if (this.ui.bugReport?.isOpen?.()) {
             event.preventDefault();
             this.ui.bugReport.close();
@@ -264,6 +269,11 @@ export class GlobalControls {
       // were treated as animation scrub + preventDefault — blocking normal arrow stepping.
       if (target.tagName === 'INPUT' && target.type === 'range') {
         if (event.key === 'Escape') {
+          if (window.orby?.scene?.exportMovementPreview?.isActive?.()) {
+            event.preventDefault();
+            this.eventBus.emit('export:movement-preview-stop', { silent: false });
+            return;
+          }
           if (this.ui.bugReport?.isOpen?.()) {
             event.preventDefault();
             this.ui.bugReport.close();
@@ -274,6 +284,12 @@ export class GlobalControls {
             hideHelp();
           }
         }
+        return;
+      }
+
+      if (event.key === 'Escape' && window.orby?.scene?.exportMovementPreview?.isActive?.()) {
+        event.preventDefault();
+        this.eventBus.emit('export:movement-preview-stop', { silent: false });
         return;
       }
 

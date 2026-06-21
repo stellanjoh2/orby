@@ -217,8 +217,51 @@ export class EnvironmentController {
     const normalized = this._normalizeRotationDegrees(value);
     if (this.rotation === normalized) return;
     this.rotation = normalized;
+    this._clearLiveRotation();
     this._rotatedSourceCache = null;
     this._applyEnvironment();
+  }
+
+  /**
+   * Smooth HDRI spin during live export preview — rotates baked PMREM via scene rotation
+   * instead of rebaking the environment every frame.
+   */
+  setRotationLive(value) {
+    const normalized = this._normalizeRotationDegrees(value);
+    if (this.rotation === normalized) return;
+    this.rotation = normalized;
+
+    const canLiveRotate =
+      'environmentRotation' in this.scene
+      && this.environmentRenderTarget
+      && this.currentEnvironmentTexture
+      && !this.currentLowResTexture;
+
+    if (!canLiveRotate) {
+      this._clearLiveRotation();
+      this._rotatedSourceCache = null;
+      this._applyEnvironment();
+      return;
+    }
+
+    if (!this._liveRotationEuler) {
+      this._liveRotationEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+    }
+    const radians = THREE.MathUtils.degToRad(normalized);
+    this._liveRotationEuler.set(0, radians, 0);
+    this.scene.environmentRotation = this._liveRotationEuler;
+    if ('backgroundRotation' in this.scene) {
+      this.scene.backgroundRotation = this._liveRotationEuler;
+    }
+  }
+
+  _clearLiveRotation() {
+    if ('environmentRotation' in this.scene) {
+      this.scene.environmentRotation = null;
+    }
+    if ('backgroundRotation' in this.scene) {
+      this.scene.backgroundRotation = null;
+    }
   }
 
   /** @param {number} degrees @returns {number} 0–360, snapped near 0/360 to avoid cache flicker */

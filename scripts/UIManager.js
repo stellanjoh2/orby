@@ -57,6 +57,8 @@ import { GlobalControls } from './ui/GlobalControls.js';
 import { openInfoSectionTarget } from './ui/infoSections.js';
 import { ensureInfoPanelProseLoaded } from './ui/loadInfoPanelProse.js';
 import { AnimationControls } from './ui/AnimationControls.js';
+import { ExportPreviewControls } from './ui/ExportPreviewControls.js';
+import { ExportSectionControls } from './ui/ExportSectionControls.js';
 import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
 import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted, ensureBaseSurfaceControlsMounted, ensureBaseGlassSurfaceControlsMounted, ensureBackdropSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
@@ -107,6 +109,8 @@ export class UIManager {
     this._loadSpinnerElapsedIntervalId = null;
     /** Status prefix beside elapsed seconds on #viewportLoadSpinnerElapsed (default `Rendering`). */
     this._loadSpinnerStatusPrefix = 'Rendering';
+    this._offlineExportElapsedStart = 0;
+    this._offlineExportElapsedIntervalId = null;
     /** @type {Array<{ text: string, durationMs: number, toastOptions: object }>} */
     this._toastQueue = [];
     this._toastQueueActive = false;
@@ -138,7 +142,9 @@ export class UIManager {
   initShell() {
     this.cacheDom();
     this.animationControls = new AnimationControls(this.eventBus, this);
-    this.bindOfflineExportOverlayHome();
+    this.exportPreviewControls = new ExportPreviewControls(this.eventBus, this);
+    this.exportSectionControls = new ExportSectionControls(this);
+    this.bindOfflineExportOverlayActions();
     this.uiSounds = new UISounds();
     if (this.dom.uiSoundsEnabled) {
       this.dom.uiSoundsEnabled.checked = this.uiSounds.enabled;
@@ -322,11 +328,18 @@ export class UIManager {
     ensureBackdropSurfaceControlsMounted();
     this.dom.canvas = q('#webgl');
     this.dom.viewport = q('.viewport');
+    this.dom.exportPreviewBanner = q('#viewportExportPreviewBanner');
+    this.dom.exportPreviewExit = q('#viewportExportPreviewExit');
     this.dom.offlineExportOverlay = q('#viewportOfflineExportOverlay');
-    this.dom.offlineExportHome = q('#viewportOfflineExportHome');
+    this.dom.offlineExportCancel = q('#viewportOfflineExportCancel');
+    this.dom.offlineExportGoBack = q('#viewportOfflineExportGoBack');
+    this.dom.offlineExportFooter = q('#viewportOfflineExportFooter');
     this.dom.offlineExportSummary = q('#viewportOfflineExportSummary');
     this.dom.offlineExportFrame = q('#viewportOfflineExportFrame');
     this.dom.offlineExportElapsed = q('#viewportOfflineExportElapsed');
+    this.dom.offlineExportElapsedValue = q('#viewportOfflineExportElapsedValue');
+    this.dom.offlineExportFilename = q('#viewportOfflineExportFilename');
+    this.dom.offlineExportFilenameValue = q('#viewportOfflineExportFilenameValue');
     this.dom.fullscreenToggle = q('#fullscreenToggle');
     this.dom.loadSpinner = q('#viewportLoadSpinner');
     this.dom.loadSpinnerElapsed = q('#viewportLoadSpinnerElapsed');
@@ -376,6 +389,10 @@ export class UIManager {
     this.dom.animationShowJointNamesRow = q('#animationShowJointNamesRow');
     this.dom.animationHideMeshRow = q('#animationHideMeshRow');
     this.dom.animationTime = q('#animationTime');
+    this.dom.exportPreviewPlayPause = q('#exportPreviewPlayPause');
+    this.dom.exportPreviewReset = q('#exportPreviewReset');
+    this.dom.exportPreviewScrub = q('#exportPreviewScrub');
+    this.dom.exportPreviewTime = q('#exportPreviewTime');
     this.dom.animationTimeReferenceSection = q('#animationTimeReferenceSection');
     this.dom.animationFrameNumbers = q('#animationFrameNumbers');
     this.dom.clipPlanesFoldout = q('#clipPlanesFoldout');
@@ -656,6 +673,10 @@ export class UIManager {
       colorCheckerHeight: q('#colorCheckerHeight'),
       colorCheckerScale: q('#colorCheckerScale'),
       colorCheckerRawToggle: q('#colorCheckerRawToggle'),
+      exportImageSectionOpen: q('#exportImageSectionOpen'),
+      exportSvgSectionOpen: q('#exportSvgSectionOpen'),
+      exportGlbSectionOpen: q('#exportGlbSectionOpen'),
+      exportVideoSectionOpen: q('#exportVideoSectionOpen'),
       exportSvgColorDetail: q('#exportSvgColorDetail'),
       exportImageTransparentSettings: q('#exportImageTransparentSettings'),
       exportPngTransparentSettings: q('#exportPngTransparentSettings'),
@@ -694,7 +715,6 @@ export class UIManager {
       exportSvgGlb: q('#exportSvgGlbButton'),
       exportVideo: q('#exportVideoButton'),
       exportPngFolderChoose: q('#exportPngFolderChoose'),
-      exportVideoPreview: q('#exportVideoPreviewButton'),
       exportVideoCameraSave: q('#exportVideoCameraSaveButton'),
       exportVideoCameraRestore: q('#exportVideoCameraRestoreButton'),
       copySceneButtons: document.querySelectorAll('.copy-scene-settings'),
@@ -718,6 +738,12 @@ export class UIManager {
       format: 'png',
       transparent: true,
       size: 2,
+      sections: {
+        image: false,
+        svg: false,
+        glb: false,
+        video: false,
+      },
       video: {
         turntable: true,
         orbit: false,
@@ -787,6 +813,8 @@ export class UIManager {
     this.viewPresetsControls.bind();
     this.isometricControls.bind();
     this.animationControls.bind();
+    this.exportPreviewControls.bind();
+    this.exportSectionControls.bind();
     this.resetControls.bind();
     
     // Setup slider utilities
@@ -1210,57 +1238,31 @@ export class UIManager {
     });
   }
 
-  /** Toggle export movement preview button label and mute export controls while previewing. */
-  setExportVideoPreviewActive(active) {
-    const btn = this.buttons.exportVideoPreview;
-    if (btn) {
-      btn.classList.toggle('is-preview-active', !!active);
-      const label = btn.querySelector('.export-video-preview__label');
-      if (label) {
-        label.textContent = active ? 'Stop Preview' : 'Preview Movement';
-      } else {
-        btn.textContent = active ? 'Stop Preview' : 'Preview Movement';
-      }
-    }
-    const movementSelectors = [
-      '[data-video-movement]',
-      '[data-video-duration]',
-      '[data-video-spins]',
-      '[data-video-subtle-spins]',
-      '[data-video-spin-direction]',
-      '[data-video-hdri-rotation]',
-    ];
-    document.querySelectorAll(movementSelectors.join(',')).forEach((el) => {
-      if ('disabled' in el) el.disabled = !!active;
-      el.classList.toggle('is-disabled', !!active);
-    });
-    this.setControlDisabled('exportZoomDistance', !!active);
-    this.setControlDisabled('exportTiltAngle', !!active);
-    this.setControlDisabled('exportFovOffset', !!active);
-    this.setControlDisabled('exportPitchOffset', !!active);
-    this.setControlDisabled('exportMeshAnimationSelect', !!active);
-    this.setControlDisabled('exportMeshAnimationsEmbed', !!active);
-    if (this.buttons.exportVideo) {
-      this.buttons.exportVideo.disabled = !!active;
-      this.buttons.exportVideo.classList.toggle('is-disabled', !!active);
-    }
-    this.setExportVideoCameraBookmarkAvailable(this._exportVideoCameraBookmarkSaved, {
-      previewActive: !!active,
-    });
+  /** Preview armed state — export settings stay editable; re-arm handles live updates. */
+  setExportVideoPreviewActive(_active) {
+    // Intentionally no-op: preview no longer locks export movement controls.
   }
 
-  /** Enable restore once a session camera bookmark exists; optionally mute save/restore during preview. */
-  setExportVideoCameraBookmarkAvailable(hasBookmark, { previewActive = false } = {}) {
+  setExportPreviewBannerVisible(visible) {
+    const banner = this.dom.exportPreviewBanner;
+    if (!banner) return;
+    const on = !!visible;
+    banner.hidden = !on;
+    banner.setAttribute('aria-hidden', on ? 'false' : 'true');
+  }
+
+  /** Enable restore once a session camera bookmark exists. */
+  setExportVideoCameraBookmarkAvailable(hasBookmark) {
     this._exportVideoCameraBookmarkSaved = !!hasBookmark;
     const save = this.buttons.exportVideoCameraSave;
     const restore = this.buttons.exportVideoCameraRestore;
-    if (save) {
-      save.disabled = previewActive;
-      save.classList.toggle('is-disabled', previewActive);
-    }
     if (restore) {
-      restore.disabled = previewActive || !hasBookmark;
-      restore.classList.toggle('is-disabled', previewActive || !hasBookmark);
+      restore.disabled = !hasBookmark;
+      restore.classList.toggle('is-disabled', !hasBookmark);
+    }
+    if (save) {
+      save.disabled = false;
+      save.classList.remove('is-disabled');
     }
   }
 
@@ -2180,62 +2182,109 @@ export class UIManager {
     el.setAttribute('aria-hidden', on ? 'false' : 'true');
   }
 
-  bindOfflineExportOverlayHome() {
-    if (this._offlineExportHomeBound) return;
-    this._offlineExportHomeBound = true;
-    this.dom.offlineExportHome?.addEventListener('click', () => {
-      this._onOfflineExportHomeClick();
+  bindOfflineExportOverlayActions() {
+    if (this._offlineExportActionsBound) return;
+    this._offlineExportActionsBound = true;
+    this.dom.offlineExportCancel?.addEventListener('click', () => {
+      this._onOfflineExportCancelClick();
+    });
+    this.dom.offlineExportGoBack?.addEventListener('click', () => {
+      this._onOfflineExportGoBackClick();
     });
   }
 
-  _onOfflineExportHomeClick() {
+  _onOfflineExportCancelClick() {
+    if (this._offlineExportPreviewActive || !this._offlineExportCancellable) return;
+    if (this._offlineExportCancelPending) return;
+    this._offlineExportCancelPending = true;
+    this.setOfflineExportOverlayCancelled();
+    this._offlineExportOnCancel?.();
+  }
+
+  _onOfflineExportGoBackClick() {
+    this.hideOfflineExportOverlay();
     if (this._offlineExportPreviewActive) {
-      this.showMessageAlert(
-        'Close the export overlay preview?',
-        'Preview',
-        {
-          confirm: true,
-          cancelLabel: 'Stay',
-          okLabel: 'Close',
-          onConfirm: () => this.hideOfflineExportOverlay(),
-        },
-      );
+      this.showToast?.('Export overlay preview closed', 2200, { notification: false });
+    }
+  }
+
+  _resetOfflineExportFooter({ preview = false } = {}) {
+    this._offlineExportCancelPending = false;
+    const cancelBtn = this.dom.offlineExportCancel;
+    const goBackBtn = this.dom.offlineExportGoBack;
+    const footer = this.dom.offlineExportFooter;
+    const progress = this.dom.offlineExportOverlay?.querySelector('.viewport-offline-export__progress');
+    progress?.classList.remove('is-cancelled');
+    this.dom.offlineExportFrame?.classList.remove('is-cancelled');
+    this._offlineExportFrameProgress = { frameIndex: 0, totalFrames: 0 };
+
+    footer?.classList.remove('is-cancelled');
+    footer?.classList.toggle('is-preview', preview);
+
+    if (cancelBtn) {
+      cancelBtn.hidden = preview;
+      cancelBtn.disabled = false;
+      cancelBtn.classList.remove('is-disabled');
+      cancelBtn.textContent = 'Cancel render';
+      cancelBtn.setAttribute('aria-hidden', preview ? 'true' : 'false');
+    }
+    if (goBackBtn) {
+      goBackBtn.textContent = 'Go back';
+      goBackBtn.hidden = true;
+      goBackBtn.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  setOfflineExportOverlayCancelled() {
+    const cancelBtn = this.dom.offlineExportCancel;
+    const goBackBtn = this.dom.offlineExportGoBack;
+    const footer = this.dom.offlineExportFooter;
+    const progress = this.dom.offlineExportOverlay?.querySelector('.viewport-offline-export__progress');
+    progress?.classList.add('is-cancelled');
+    footer?.classList.add('is-cancelled');
+
+    if (cancelBtn) {
+      cancelBtn.textContent = 'Render cancelled';
+      cancelBtn.disabled = true;
+      cancelBtn.classList.add('is-disabled');
+    }
+    if (goBackBtn) {
+      goBackBtn.hidden = false;
+      goBackBtn.setAttribute('aria-hidden', 'false');
+    }
+    this._syncOfflineExportFrameDisplay();
+  }
+
+  _syncOfflineExportFrameDisplay() {
+    const frameEl = this.dom.offlineExportFrame;
+    if (!frameEl) return;
+    const { frameIndex = 0, totalFrames = 0 } = this._offlineExportFrameProgress || {};
+    const total = Math.max(0, totalFrames);
+    const current = Math.max(0, Math.min(frameIndex, total || frameIndex));
+    const cancelled = !!this._offlineExportCancelPending;
+
+    if (total <= 0) {
+      frameEl.textContent = cancelled ? 'Preparing… (Cancelled)' : 'Preparing…';
+      frameEl.classList.toggle('is-cancelled', cancelled);
       return;
     }
-    if (!this._offlineExportCancellable) return;
-    this.showMessageAlert(
-      'This will cancel the PNG sequence render in progress. Rendering stops after the current frame finishes — partial frames are discarded and no ZIP is downloaded.',
-      'Cancel render?',
-      {
-        confirm: true,
-        cancelLabel: 'Keep rendering',
-        okLabel: 'Cancel render',
-        modalTone: 'caution',
-        onConfirm: () => {
-          this._offlineExportOnCancel?.();
-        },
-      },
-    );
+
+    frameEl.textContent = cancelled
+      ? `Frame ${current} / ${total} (Cancelled)`
+      : `Frame ${current} / ${total}`;
+    frameEl.classList.toggle('is-cancelled', cancelled);
   }
 
   /**
    * Full-viewport black overlay with export progress + look summary during offline PNG capture.
    * @param {Array<{ title: string, rows: Array<{ label: string, value: string }> }>} sections
-   * @param {{ cancellable?: boolean, onCancelExport?: () => void }} [options]
+   * @param {{ cancellable?: boolean, onCancelExport?: () => void, assetFilename?: string }} [options]
    */
   showOfflineExportOverlay(sections, options = {}) {
     this._offlineExportCancellable = !!options.cancellable;
     this._offlineExportOnCancel = options.onCancelExport ?? null;
-
-    if (this.dom.offlineExportHome) {
-      this.dom.offlineExportHome.textContent = this._offlineExportPreviewActive
-        ? 'Home / Close preview'
-        : 'Home / Cancel render';
-      this.dom.offlineExportHome.setAttribute(
-        'aria-label',
-        this._offlineExportCancellable ? 'Cancel render' : 'Close export overlay',
-      );
-    }
+    this._syncOfflineExportFilename(options.assetFilename);
+    this._resetOfflineExportFooter({ preview: this._offlineExportPreviewActive });
 
     this.beginShelfOverlaySuppression();
     this.dom.viewport?.classList.add('is-offline-export-capture');
@@ -2245,33 +2294,67 @@ export class UIManager {
       overlay.setAttribute('aria-hidden', 'false');
     }
     this._offlineExportElapsedStart = performance.now();
+    this._offlineExportFrameProgress = { frameIndex: 0, totalFrames: 0 };
     this._renderOfflineExportSummary(sections);
     this.updateOfflineExportOverlayProgress({ frameIndex: 0, totalFrames: 0 });
+    this._startOfflineExportElapsedTick();
+  }
+
+  _syncOfflineExportFilename(filename) {
+    const wrap = this.dom.offlineExportFilename;
+    const valueEl = this.dom.offlineExportFilenameValue;
+    if (!wrap || !valueEl) return;
+    const text = typeof filename === 'string' ? filename.trim() : '';
+    if (text) {
+      valueEl.textContent = text;
+      wrap.hidden = false;
+      wrap.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    valueEl.textContent = '—';
+    wrap.hidden = true;
+    wrap.setAttribute('aria-hidden', 'true');
+  }
+
+  setOfflineExportElapsedFromStart() {
+    this._syncOfflineExportElapsed();
+  }
+
+  _syncOfflineExportElapsed() {
+    const valueEl = this.dom.offlineExportElapsedValue;
+    if (!valueEl || !this._offlineExportElapsedStart) return;
+    const wholeSec = Math.max(
+      0,
+      Math.floor((performance.now() - this._offlineExportElapsedStart) / 1000),
+    );
+    valueEl.textContent = `${wholeSec}s`;
+  }
+
+  _startOfflineExportElapsedTick() {
+    this._stopOfflineExportElapsedTick();
+    this._syncOfflineExportElapsed();
+    this._offlineExportElapsedIntervalId = setInterval(() => {
+      this._syncOfflineExportElapsed();
+    }, 1000);
+  }
+
+  _stopOfflineExportElapsedTick() {
+    if (this._offlineExportElapsedIntervalId == null) return;
+    clearInterval(this._offlineExportElapsedIntervalId);
+    this._offlineExportElapsedIntervalId = null;
   }
 
   /**
    * @param {{ frameIndex: number, totalFrames: number }} progress
    */
   updateOfflineExportOverlayProgress({ frameIndex = 0, totalFrames = 0 } = {}) {
-    const frameEl = this.dom.offlineExportFrame;
-    const elapsedEl = this.dom.offlineExportElapsed;
-    if (frameEl) {
-      const total = Math.max(0, totalFrames);
-      const current = Math.max(0, Math.min(frameIndex, total || frameIndex));
-      frameEl.textContent = total > 0
-        ? `Frame ${current} / ${total}`
-        : 'Preparing…';
-    }
-    if (elapsedEl && this._offlineExportElapsedStart) {
-      const wholeSec = Math.max(
-        0,
-        Math.floor((performance.now() - this._offlineExportElapsedStart) / 1000),
-      );
-      elapsedEl.textContent = `${wholeSec}s`;
-    }
+    this._offlineExportFrameProgress = { frameIndex, totalFrames };
+    this._syncOfflineExportFrameDisplay();
+    this._syncOfflineExportElapsed();
   }
 
   hideOfflineExportOverlay() {
+    this._stopOfflineExportElapsedTick();
     this.endShelfOverlaySuppression();
     this.dom.viewport?.classList.remove('is-offline-export-capture');
     const overlay = this.dom.offlineExportOverlay;
@@ -2283,9 +2366,11 @@ export class UIManager {
       this.dom.offlineExportSummary.replaceChildren();
     }
     this._offlineExportElapsedStart = 0;
+    this._syncOfflineExportFilename('');
     this._offlineExportPreviewActive = false;
     this._offlineExportCancellable = false;
     this._offlineExportOnCancel = null;
+    this._resetOfflineExportFooter();
     document.body.classList.remove('export-overlay-debug');
   }
 
@@ -2479,7 +2564,7 @@ export class UIManager {
     }
     if (label) {
       if (!supported) {
-        label.textContent = 'Needs Chrome or Edge — otherwise downloads as ZIP';
+        label.textContent = 'Needs Chrome or Edge — Safari and Firefox use ZIP';
       } else if (this.pngExportDirectoryHandle?.name) {
         label.textContent = `${this.pngExportDirectoryHandle.name} — frames write as rendered`;
       } else {
@@ -2522,7 +2607,7 @@ export class UIManager {
 
   async pickPngExportDirectory() {
     if (!UIManager.supportsPngFolderExport()) {
-      this.showToast?.('Folder export needs Chrome or Edge');
+      this.showToast?.('Folder export needs Chrome or Edge — Safari and Firefox use ZIP');
       return null;
     }
     try {
@@ -2554,6 +2639,18 @@ export class UIManager {
 
   updateAnimationTime(current, duration) {
     this.animationControls?.updateAnimationTime(current, duration);
+  }
+
+  setExportPreviewPlaying(playing) {
+    this.exportPreviewControls?.setPlaying(playing);
+  }
+
+  updateExportPreviewTimeline(current, duration, options) {
+    this.exportPreviewControls?.updateTimeline(current, duration, options);
+  }
+
+  syncExportPreviewAvailability(hasModel) {
+    this.exportPreviewControls?.syncAvailability(hasModel);
   }
 
   syncAnimationDisplayFps(fps) {

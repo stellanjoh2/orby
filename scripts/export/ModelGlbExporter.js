@@ -16,6 +16,30 @@ const sanitizeBaseName = (name) => {
   return cleaned || 'model';
 };
 
+const findFontExtrudeSourceText = (modelRoot) => {
+  if (!modelRoot) return '';
+  const direct = modelRoot.userData?.orbyFontSourceText;
+  if (typeof direct === 'string' && direct.trim()) return direct.trim();
+
+  let found = '';
+  modelRoot.traverse((node) => {
+    if (found) return;
+    const raw = node.userData?.orbyFontSourceText;
+    if (typeof raw === 'string' && raw.trim()) found = raw.trim();
+  });
+  return found;
+};
+
+const buildExportBaseName = (sourceName, modelRoot) => {
+  const fontText = findFontExtrudeSourceText(modelRoot);
+  if (!fontText) return sanitizeBaseName(sourceName);
+
+  const fontPart = sanitizeBaseName(sourceName || 'Text');
+  const textPart = sanitizeBaseName(fontText);
+  if (!textPart || textPart === fontPart) return fontPart;
+  return `${fontPart}-${textPart}`;
+};
+
 const resolveSvgNormalAngleDeg = (node, fallback = 45) => {
   let current = node;
   while (current) {
@@ -265,7 +289,7 @@ export class ModelGlbExporter {
       ? cloneSvgExportNode(modelRoot)
       : cloneShaderLabExportNode(modelRoot, exportKind, getOriginalMaterial);
 
-    const baseName = sanitizeBaseName(sourceName);
+    const baseName = buildExportBaseName(sourceName, modelRoot);
     const fileName = exportKind.mode === 'svg'
       ? `${baseName}.glb`
       : `${baseName}-${exportKind.preset}.glb`;

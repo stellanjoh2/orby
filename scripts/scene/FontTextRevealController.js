@@ -938,10 +938,19 @@ export class FontTextRevealController {
    * @param {THREE.Object3D | null | undefined} [model]
    */
   applyExportFrame(frameIndex, fps, model) {
+    const elapsed = Math.max(0, frameIndex) / Math.max(1, fps);
+    this.applyExportTime(elapsed, model);
+  }
+
+  /**
+   * @param {number} exportTimeSec
+   * @param {THREE.Object3D | null | undefined} [model]
+   */
+  applyExportTime(exportTimeSec, model) {
     this.ensureBoundToModel(model ?? this._boundModel);
     if (!this.isEnabled()) return;
     this._exportDriveActive = true;
-    const elapsed = Math.max(0, frameIndex) / Math.max(1, fps);
+    const elapsed = Math.max(0, exportTimeSec);
     this._elapsed = elapsed;
     this.applyAtTime(elapsed);
     this._requestRender();

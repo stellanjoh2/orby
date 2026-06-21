@@ -131,6 +131,10 @@ export class CameraController {
     /** Session-only export framing bookmark (position, target, tilt). */
     this._exportFramingBookmark = null;
 
+    /** Export movement preview — orbit locked without timed camera drive (e.g. turntable-only). */
+    this._previewViewportLockActive = false;
+    this._prePreviewViewportControls = null;
+
     this._suppressPoseEvents = false;
 
     this._bindAltInteractions();
@@ -701,12 +705,13 @@ export class CameraController {
   }
 
   /** Remember current orbit framing for this session (video export panel). */
-  saveExportFramingBookmark() {
+  saveExportFramingBookmark({ rotationY = null } = {}) {
     if (!this.controls) return false;
     this._exportFramingBookmark = {
       position: this.camera.position.clone(),
       target: this.controls.target.clone(),
       tilt: this.currentTilt,
+      rotationY: Number.isFinite(rotationY) ? rotationY : null,
     };
     return true;
   }
@@ -715,34 +720,58 @@ export class CameraController {
     return !!this._exportFramingBookmark;
   }
 
-  /** Restore session export framing bookmark; no-op when preview/export drive is active. */
+  getExportFramingBookmark() {
+    return this._exportFramingBookmark;
+  }
+
+  /** Restore session export framing bookmark. Re-snapshots export drives when active. */
   restoreExportFramingBookmark() {
     const sn = this._exportFramingBookmark;
-    if (!sn || !this.controls || this._exportCameraDriveActive) return false;
+    if (!sn || !this.controls) return false;
+
+    const wasCameraDrive = this._exportCameraDriveActive;
+    const wasFovDrive = this._exportFovDriveActive;
+    if (wasCameraDrive) {
+      this.endExportCameraDrive({ revertToSnapshot: false });
+    }
+    if (wasFovDrive) {
+      this.endExportFovDrive({ revertToStart: false });
+    }
+
     this._cancelFocusAnimation();
     this._suppressPoseEvents = true;
     this.camera.position.copy(sn.position);
     this.controls.target.copy(sn.target);
     this.currentTilt = sn.tilt;
+    if (this.controls.sphericalDelta) {
+      this.controls.sphericalDelta.set(0, 0, 0);
+    }
     this.controls.update();
     this._applyTilt();
     this._suppressPoseEvents = false;
     this._emitPoseChanged({ persist: true });
+
+    if (wasCameraDrive) {
+      this.beginExportCameraDrive();
+    }
+    if (wasFovDrive) {
+      this.beginExportFovDrive();
+    }
     return true;
   }
 
-  endExportCameraDrive() {
+  endExportCameraDrive({ revertToSnapshot = true } = {}) {
     if (!this._exportCameraDriveActive) return;
     const snapshot = this._exportCameraSnapshot;
     const target = this.controls?.target;
-    if (snapshot && target) {
+    if (revertToSnapshot && snapshot && target) {
       this._orbitSpherical.copy(snapshot);
       this._orbitOffset.setFromSpherical(this._orbitSpherical);
       this.camera.position.copy(target).add(this._orbitOffset);
     }
     this._exportCameraDriveActive = false;
     this._exportCameraSnapshot = null;
-    if (Number.isFinite(this._exportCameraStartTilt)) {
+    if (revertToSnapshot && Number.isFinite(this._exportCameraStartTilt)) {
       this.currentTilt = this._exportCameraStartTilt;
     }
     this._exportCameraStartTilt = null;
@@ -751,7 +780,11 @@ export class CameraController {
       this.controls.enableRotate = this._preExportCameraControls.rotate;
       this.controls.enableZoom = this._preExportCameraControls.zoom;
       this.controls.enableDamping = this._preExportCameraControls.damping;
-    } else if (this.controls && this.autoOrbitMode === 'off') {
+    } else if (
+      !this._previewViewportLockActive
+      && this.controls
+      && this.autoOrbitMode === 'off'
+    ) {
       this.controls.enablePan = true;
       this.controls.enableRotate = true;
       this.controls.enableZoom = true;
@@ -762,6 +795,47 @@ export class CameraController {
     if (this.autoOrbitMode === 'off') {
       this._applyTilt();
     }
+  }
+
+  /** Lock orbit/pan/zoom while export preview is armed (when camera drive is not active). */
+  beginPreviewViewportLock() {
+    if (!this.controls || this._exportCameraDriveActive || this._previewViewportLockActive) {
+      return;
+    }
+    this._prePreviewViewportControls = {
+      pan: this.controls.enablePan,
+      rotate: this.controls.enableRotate,
+      zoom: this.controls.enableZoom,
+      damping: this.controls.enableDamping,
+    };
+    this.controls.enablePan = false;
+    this.controls.enableRotate = false;
+    this.controls.enableZoom = false;
+    this.controls.enableDamping = false;
+    this._previewViewportLockActive = true;
+  }
+
+  endPreviewViewportLock() {
+    if (!this._previewViewportLockActive || !this.controls) return;
+    const saved = this._prePreviewViewportControls;
+    if (saved) {
+      this.controls.enablePan = saved.pan;
+      this.controls.enableRotate = saved.rotate;
+      this.controls.enableZoom = saved.zoom;
+      this.controls.enableDamping = saved.damping;
+    } else if (this.autoOrbitMode === 'off') {
+      this.controls.enablePan = true;
+      this.controls.enableRotate = true;
+      this.controls.enableZoom = true;
+      this.controls.enableDamping = true;
+    }
+    this._prePreviewViewportControls = null;
+    this._previewViewportLockActive = false;
+    this.controls.update?.();
+  }
+
+  isPreviewViewportLocked() {
+    return !!this._previewViewportLockActive || !!this._exportCameraDriveActive;
   }
 
   /** Begin timed FOV animation from current lens FOV (independent of orbit/dolly drive). */
@@ -784,9 +858,9 @@ export class CameraController {
     this.camera.updateProjectionMatrix();
   }
 
-  endExportFovDrive() {
+  endExportFovDrive({ revertToStart = true } = {}) {
     if (!this._exportFovDriveActive) return;
-    if (Number.isFinite(this._exportStartFov) && this.camera) {
+    if (revertToStart && Number.isFinite(this._exportStartFov) && this.camera) {
       this.camera.fov = this._exportStartFov;
       this.camera.updateProjectionMatrix();
     }

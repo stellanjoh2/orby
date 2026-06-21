@@ -40,9 +40,6 @@ export class VideoExporter {
     setRotationY,
     setLightsRotation,
     setHdriRotation,
-    beginExportOrbitDrive = () => {},
-    applyExportOrbitDriveFrame = () => {},
-    endExportOrbitDrive = () => {},
     beginExportCameraDrive = () => {},
     applyExportCameraDriveFrame = () => {},
     endExportCameraDrive = () => {},
@@ -65,6 +62,7 @@ export class VideoExporter {
     getHdriBackgroundEnabled,
     getAnimationClipCount = () => 0,
     getAnimationClipLabel = () => null,
+    getFontTextRevealExportLabel = () => null,
     handleResize,
   } = {}) {
     this.renderer = renderer;
@@ -85,9 +83,6 @@ export class VideoExporter {
     this.setRotationY = setRotationY;
     this.setLightsRotation = setLightsRotation;
     this.setHdriRotation = setHdriRotation;
-    this.beginExportOrbitDrive = beginExportOrbitDrive;
-    this.applyExportOrbitDriveFrame = applyExportOrbitDriveFrame;
-    this.endExportOrbitDrive = endExportOrbitDrive;
     this.beginExportCameraDrive = beginExportCameraDrive;
     this.applyExportCameraDriveFrame = applyExportCameraDriveFrame;
     this.endExportCameraDrive = endExportCameraDrive;
@@ -108,6 +103,7 @@ export class VideoExporter {
     this.getHdriBackgroundEnabled = getHdriBackgroundEnabled;
     this.getAnimationClipCount = getAnimationClipCount;
     this.getAnimationClipLabel = getAnimationClipLabel;
+    this.getFontTextRevealExportLabel = getFontTextRevealExportLabel;
     this.handleResize = handleResize;
     this._exportCancelRequested = false;
   }
@@ -241,6 +237,91 @@ export class VideoExporter {
       fps,
       meshAnimation,
     });
+  }
+
+  _beginExportSession({ movements, meshAnimation }) {
+    if (needsExportCameraDrive(movements)) {
+      this.beginExportCameraDrive?.();
+    }
+    if (needsExportFovDrive(movements)) {
+      this.beginExportFovDrive?.();
+    }
+    this.beginExportAnimationDrive?.(meshAnimation);
+    this.beginFontTextRevealExportDrive?.();
+  }
+
+  /**
+   * End export drives, restore session start pose, and repair viewport/size.
+   * @param {object} session
+   * @param {object} [transparentRestore] — PNG transparent sequence only
+   */
+  _finishExportSession(session, transparentRestore = null) {
+    const {
+      movements,
+      spinSettings,
+      hdriRotationSettings,
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate,
+      durationSec,
+      fps,
+      meshAnimation,
+      sizeSnapshot,
+    } = session;
+
+    this._resetExportSceneToFirstFrame({
+      movements,
+      spinSettings,
+      hdriRotationSettings,
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate,
+      durationSec,
+      fps,
+      meshAnimation,
+    });
+    if (needsExportCameraDrive(movements)) {
+      this.endExportCameraDrive?.();
+    }
+    if (needsExportFovDrive(movements)) {
+      this.endExportFovDrive?.();
+    }
+    this.endExportAnimationDrive?.();
+    this.endFontTextRevealExportDrive?.();
+
+    this.setRotationY(startRotationY);
+    this.stateStore.set('rotationY', startRotationY);
+    if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
+      this.setLightsRotation(startLightsRotation);
+      this.stateStore.set('lightsRotation', startLightsRotation);
+    }
+    if (typeof this.setHdriRotation === 'function') {
+      this.setHdriRotation(startHdriRotation);
+      this.stateStore.set('hdriRotation', startHdriRotation);
+    }
+
+    if (transparentRestore) {
+      const {
+        originalBackground,
+        originalClearColor,
+        originalClearAlpha,
+        transparentSetupSnapshot,
+        wasBackgroundEnabled,
+      } = transparentRestore;
+      this.scene.background = originalBackground;
+      this.renderer.setClearColor(originalClearColor, originalClearAlpha);
+      this.renderer.setClearAlpha(originalClearAlpha);
+      this._restoreTransparentFrameSetup(transparentSetupSnapshot);
+      if (wasBackgroundEnabled) {
+        this.backgroundController?.setHdriBackgroundEnabled(true);
+      }
+    }
+
+    this._restoreVideoExportSize(sizeSnapshot);
+    this._repairViewportAfterExport();
+    this.handleResize?.();
   }
 
   async _downloadSequenceAsZip({
@@ -963,6 +1044,15 @@ export class VideoExporter {
     }
     const isOfflinePngSequence = format === 'png';
     if (isOfflinePngSequence) {
+      const sequenceFolderName = this._sequenceFolderName(
+        baseName,
+        durationSec,
+        fps,
+        spinSettings,
+        resolution,
+        modeLabel,
+      );
+      const state = this.stateStore?.getState?.() ?? {};
       const summary = buildOfflineExportOverlaySummary({
         exportJob: {
           ...settings,
@@ -977,16 +1067,47 @@ export class VideoExporter {
         animationClipLabel: meshAnimation.include
           ? this.getAnimationClipLabel?.(meshAnimation.clipIndex)
           : null,
+        renderContext: {
+          sequenceFolderName,
+          zipFileName: `${sequenceFolderName}.zip`,
+          outputDirectoryName: settings?.pngOutputDirectoryHandle?.name ?? null,
+          useFolderExport: !!settings?.pngOutputDirectoryHandle,
+          creativeLookEnabled: !!state.creativeLook?.enabled,
+          creativeLookPreset: state.creativeLook?.preset ?? null,
+          lightsAutoRotate: !!state.lightsAutoRotate,
+          fisheyeEnabled: !!state.fisheye?.enabled,
+          lensDistortionActive: this.imageExporter?.isLensDistortionActive?.() === true,
+          postFxState: state,
+          fontTextRevealLabel: this.getFontTextRevealExportLabel?.() ?? null,
+          exportWidth: outputSize.width,
+          exportHeight: outputSize.height,
+          totalFrames,
+        },
       });
       this.ui?.showOfflineExportOverlay?.(summary, {
         cancellable: true,
         onCancelExport: () => this.requestCancelExport(),
+        assetFilename: baseName,
       });
       this.ui?.updateOfflineExportOverlayProgress?.({ frameIndex: 0, totalFrames });
       await this._yieldUntilPaintCommitted();
     }
     const sizeSnapshot = this._applyVideoExportSize(outputSize.width, outputSize.height);
+    const exportSession = {
+      movements,
+      spinSettings,
+      hdriRotationSettings,
+      startRotationY,
+      startLightsRotation,
+      startHdriRotation,
+      lightsAutoRotate,
+      durationSec,
+      fps,
+      meshAnimation,
+      sizeSnapshot,
+    };
     let spinnerActive = false;
+    let pngSequenceCancelled = false;
     if (!isOfflinePngSequence && typeof this.ui?.beginLoadSpinner === 'function') {
       this.ui.beginLoadSpinner();
       spinnerActive = true;
@@ -994,14 +1115,7 @@ export class VideoExporter {
     }
 
     try {
-      if (needsExportCameraDrive(movements)) {
-        this.beginExportCameraDrive?.();
-      }
-      if (needsExportFovDrive(movements)) {
-        this.beginExportFovDrive?.();
-      }
-      this.beginExportAnimationDrive?.(meshAnimation);
-      this.beginFontTextRevealExportDrive?.();
+      this._beginExportSession({ movements, meshAnimation });
 
       if (format === 'mp4') {
         const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
@@ -1036,39 +1150,7 @@ export class VideoExporter {
           console.error('MP4 export failed', error);
           this.ui?.showToast?.('MP4 export failed');
         } finally {
-          this._resetExportSceneToFirstFrame({
-            movements,
-            spinSettings,
-            hdriRotationSettings,
-            startRotationY,
-            startLightsRotation,
-            startHdriRotation,
-            lightsAutoRotate,
-            durationSec,
-            fps,
-            meshAnimation,
-          });
-          if (needsExportCameraDrive(movements)) {
-            this.endExportCameraDrive?.();
-          }
-          if (needsExportFovDrive(movements)) {
-            this.endExportFovDrive?.();
-          }
-          this.endExportAnimationDrive?.();
-          this.endFontTextRevealExportDrive?.();
-          this.setRotationY(startRotationY);
-          this.stateStore.set('rotationY', startRotationY);
-          if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
-            this.setLightsRotation(startLightsRotation);
-            this.stateStore.set('lightsRotation', startLightsRotation);
-          }
-          if (typeof this.setHdriRotation === 'function') {
-            this.setHdriRotation(startHdriRotation);
-            this.stateStore.set('hdriRotation', startHdriRotation);
-          }
-          this._restoreVideoExportSize(sizeSnapshot);
-          this._repairViewportAfterExport();
-          this.handleResize?.();
+          this._finishExportSession(exportSession);
         }
         return;
       }
@@ -1141,9 +1223,13 @@ export class VideoExporter {
             frameIndex: i + 1,
             totalFrames,
           });
+          this.ui?.setOfflineExportElapsedFromStart?.();
+          await this._yieldUntilPaintCommitted();
         }
 
         if (exportCancelled) {
+          pngSequenceCancelled = true;
+          this.ui?.setOfflineExportOverlayCancelled?.();
           this.ui?.showToast?.('PNG export cancelled', 3200, { notification: false });
         } else if (useFolderExport && framesWritten > 0) {
           this.ui?.uiSounds?.playRenderFinished();
@@ -1181,49 +1267,18 @@ export class VideoExporter {
         console.error('Video export failed', error);
         this.ui?.showToast?.('Video export failed');
       } finally {
-        this._resetExportSceneToFirstFrame({
-          movements,
-          spinSettings,
-          hdriRotationSettings,
-          startRotationY,
-          startLightsRotation,
-          startHdriRotation,
-          lightsAutoRotate,
-          durationSec,
-          fps,
-          meshAnimation,
+        this._finishExportSession(exportSession, {
+          originalBackground,
+          originalClearColor,
+          originalClearAlpha,
+          transparentSetupSnapshot,
+          wasBackgroundEnabled,
         });
-        if (needsExportCameraDrive(movements)) {
-          this.endExportCameraDrive?.();
-        }
-        if (needsExportFovDrive(movements)) {
-          this.endExportFovDrive?.();
-        }
-        this.endExportAnimationDrive?.();
-        this.endFontTextRevealExportDrive?.();
-        this.setRotationY(startRotationY);
-        this.stateStore.set('rotationY', startRotationY);
-        if (lightsAutoRotate && typeof this.setLightsRotation === 'function') {
-          this.setLightsRotation(startLightsRotation);
-          this.stateStore.set('lightsRotation', startLightsRotation);
-        }
-        if (typeof this.setHdriRotation === 'function') {
-          this.setHdriRotation(startHdriRotation);
-          this.stateStore.set('hdriRotation', startHdriRotation);
-        }
-        this.scene.background = originalBackground;
-        this.renderer.setClearColor(originalClearColor, originalClearAlpha);
-        this.renderer.setClearAlpha(originalClearAlpha);
-        this._restoreTransparentFrameSetup(transparentSetupSnapshot);
-        if (wasBackgroundEnabled) {
-          this.backgroundController?.setHdriBackgroundEnabled(true);
-        }
-        this._restoreVideoExportSize(sizeSnapshot);
-        this._repairViewportAfterExport();
-        this.handleResize?.();
       }
     } finally {
-      this.ui?.hideOfflineExportOverlay?.();
+      if (!pngSequenceCancelled) {
+        this.ui?.hideOfflineExportOverlay?.();
+      }
       if (spinnerActive && typeof this.ui?.endLoadSpinner === 'function') {
         this.ui.endLoadSpinner();
       }

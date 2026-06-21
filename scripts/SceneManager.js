@@ -115,7 +115,7 @@ import { ImageExporter } from './render/ImageExporter.js';
 import { normalizeGlyphFillHex } from './import/FontExtrudeImporter.js';
 import { VideoExporter } from './render/VideoExporter.js';
 import { ExportMovementPreview } from './render/ExportMovementPreview.js';
-import { FontTextRevealController } from './scene/FontTextRevealController.js';
+import { FontTextRevealController, isFontExtrudeRevealModel } from './scene/FontTextRevealController.js';
 import { HistogramController } from './render/HistogramController.js';
 import { ModelGlbExporter } from './export/ModelGlbExporter.js';
 import {
@@ -1221,20 +1221,11 @@ export class SceneManager {
       setRotationY: (value) => this.setRotationY(value),
       setLightsRotation: (value, opts) => this.setLightsRotation(value, opts),
       setHdriRotation: (value, opts) => this.setHdriRotation(value, opts),
-      beginExportOrbitDrive: () => this.cameraController?.beginExportOrbitDrive?.(),
-      applyExportOrbitDriveFrame: (t, spins) =>
-        this.cameraController?.applyExportOrbitDriveFrame?.(t, spins),
-      endExportOrbitDrive: () => {
-        this.cameraController?.endExportOrbitDrive?.();
-        if (this.cameraAutoOrbit !== 'off') {
-          this.setCameraAutoOrbit(this.cameraAutoOrbit);
-        }
-      },
       beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
       applyExportCameraDriveFrame: (t, options) =>
         this.cameraController?.applyExportCameraDriveFrame?.(t, options),
-      endExportCameraDrive: () => {
-        this.cameraController?.endExportCameraDrive?.();
+      endExportCameraDrive: (options) => {
+        this.cameraController?.endExportCameraDrive?.(options);
         if (this.cameraAutoOrbit !== 'off') {
           this.setCameraAutoOrbit(this.cameraAutoOrbit);
         }
@@ -1242,7 +1233,7 @@ export class SceneManager {
       beginExportFovDrive: () => this.cameraController?.beginExportFovDrive?.(),
       applyExportFovDriveFrame: (t, fovOffset) =>
         this.cameraController?.applyExportFovDriveFrame?.(t, fovOffset),
-      endExportFovDrive: () => this.cameraController?.endExportFovDrive?.(),
+      endExportFovDrive: (options) => this.cameraController?.endExportFovDrive?.(options),
       beginExportAnimationDrive: (opts) => this.animationController?.beginExportDrive?.(opts),
       applyExportAnimationDriveFrame: (frameIndex, fps) =>
         this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
@@ -1270,6 +1261,19 @@ export class SceneManager {
         const clip = this.animationController?.animations?.[index];
         return clip?.name || (clip ? `Clip ${index + 1}` : null);
       },
+      getFontTextRevealExportLabel: () => {
+        const model = this.currentModel;
+        const controller = this.fontTextRevealController;
+        if (!isFontExtrudeRevealModel(model) || !controller?.isEnabled?.()) return null;
+        const type = controller.getRevealType?.();
+        const unit = controller.getRevealUnit?.();
+        const duration = controller.getDurationSec?.();
+        const parts = ['On'];
+        if (type) parts.push(type);
+        if (unit) parts.push(unit);
+        if (Number.isFinite(duration) && duration > 0) parts.push(`${duration}s`);
+        return parts.join(' · ');
+      },
       handleResize: () => this.handleResize(),
     });
 
@@ -1285,30 +1289,51 @@ export class SceneManager {
       beginExportCameraDrive: () => this.cameraController?.beginExportCameraDrive?.(),
       applyExportCameraDriveFrame: (t, options) =>
         this.cameraController?.applyExportCameraDriveFrame?.(t, options),
-      endExportCameraDrive: () => {
-        this.cameraController?.endExportCameraDrive?.();
+      endExportCameraDrive: (options) => {
+        this.cameraController?.endExportCameraDrive?.(options);
         if (this.cameraAutoOrbit !== 'off') {
           this.setCameraAutoOrbit(this.cameraAutoOrbit);
         }
       },
+      beginPreviewViewportLock: () => this.cameraController?.beginPreviewViewportLock?.(),
+      endPreviewViewportLock: () => this.cameraController?.endPreviewViewportLock?.(),
       beginExportFovDrive: () => this.cameraController?.beginExportFovDrive?.(),
       applyExportFovDriveFrame: (t, fovOffset) =>
         this.cameraController?.applyExportFovDriveFrame?.(t, fovOffset),
-      endExportFovDrive: () => this.cameraController?.endExportFovDrive?.(),
+      endExportFovDrive: (options) => this.cameraController?.endExportFovDrive?.(options),
       beginExportAnimationDrive: (opts) => this.animationController?.beginExportDrive?.(opts),
-      applyExportAnimationDriveFrame: (frameIndex, fps) =>
-        this.animationController?.applyExportDriveFrame?.(frameIndex, fps),
+      applyExportAnimationDriveTime: (exportTimeSec) =>
+        this.animationController?.applyExportDriveTime?.(exportTimeSec),
       endExportAnimationDrive: () => this.animationController?.endExportDrive?.(),
       beginFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.beginExportDrive?.(this.currentModel),
-      applyFontTextRevealExportFrame: (frameIndex, fps) =>
-        this.fontTextRevealController?.applyExportFrame?.(frameIndex, fps, this.currentModel),
+      applyFontTextRevealExportTime: (exportTimeSec) =>
+        this.fontTextRevealController?.applyExportTime?.(exportTimeSec, this.currentModel),
       endFontTextRevealExportDrive: () =>
         this.fontTextRevealController?.endExportDrive?.(),
       onActiveChange: (active) => {
         this.ui?.setExportVideoPreviewActive?.(active);
+        this.ui?.setExportPreviewBannerVisible?.(active);
+        if (!active) {
+          this.ui?.setExportPreviewPlaying?.(false);
+          this.ui?.updateExportPreviewTimeline?.(0, this._exportPreviewDurationSec(), {
+            fromPlayback: true,
+          });
+        }
+      },
+      onProgressChange: ({ currentSec, durationSec, playing }) => {
+        this.ui?.setExportPreviewPlaying?.(playing);
+        this.ui?.updateExportPreviewTimeline?.(currentSec, durationSec, {
+          fromPlayback: true,
+        });
       },
     });
+  }
+
+  _exportPreviewDurationSec() {
+    const allowed = [5, 10, 15];
+    const duration = this.ui?.exportSettings?.video?.durationSec;
+    return allowed.includes(duration) ? duration : 5;
   }
 
   /**
@@ -2308,13 +2333,17 @@ export class SceneManager {
     }
   }
 
-  setHdriRotation(value, { updateState = true, updateUi = false } = {}) {
+  setHdriRotation(value, { updateState = true, updateUi = false, live = false } = {}) {
     const normalized = ((value % 360) + 360) % 360;
     this.hdriRotation = normalized;
     if (updateState) {
       this.stateStore.set('hdriRotation', this.hdriRotation);
     }
-    this.environmentController?.setRotation(this.hdriRotation);
+    if (live) {
+      this.environmentController?.setRotationLive?.(this.hdriRotation);
+    } else {
+      this.environmentController?.setRotation(this.hdriRotation);
+    }
     if (updateUi && this.ui?.inputs?.hdriRotation) {
       this.ui.inputs.hdriRotation.value = this.hdriRotation;
       this.ui.updateValueLabel('hdriRotation', this.hdriRotation, 'angle');
@@ -5233,27 +5262,55 @@ export class SceneManager {
     }
   }
 
-  toggleExportVideoPreview(settings = {}) {
-    if (this.exportMovementPreview?.isActive?.()) {
-      this.exportMovementPreview.stop();
-      return;
+  scrubExportVideoPreview(t, settings = {}) {
+    this.exportMovementPreview?.scrub(t, this._videoExportSettingsFromUi(settings));
+  }
+
+  resetExportVideoPreview(settings = {}) {
+    this.exportMovementPreview?.resetToStart(this._videoExportSettingsFromUi(settings));
+  }
+
+  toggleExportVideoPreviewPlay(settings = {}) {
+    this.exportMovementPreview?.togglePlay(this._videoExportSettingsFromUi(settings));
+  }
+
+  syncExportVideoPreviewSettings(settings = {}) {
+    const resolved = this._videoExportSettingsFromUi(settings);
+    if (
+      !ExportMovementPreview.canPreview(resolved)
+      && this.exportMovementPreview?.isActive?.()
+    ) {
+      this.exportMovementPreview.stop({ silent: true });
+    } else {
+      this.exportMovementPreview?.rearm(resolved);
     }
-    this.exportMovementPreview?.start(this._videoExportSettingsFromUi(settings));
+    this.ui?.syncExportPreviewAvailability?.(!!this.currentModel);
   }
 
   saveExportVideoCameraBookmark() {
-    if (!this.cameraController?.saveExportFramingBookmark?.()) return;
-    this.ui?.setExportVideoCameraBookmarkAvailable?.(true, {
-      previewActive: !!this.exportMovementPreview?.isActive?.(),
-    });
+    const rotationY = this.stateStore.getState().rotationY;
+    if (!this.cameraController?.saveExportFramingBookmark?.({ rotationY })) return;
+    this.ui?.setExportVideoCameraBookmarkAvailable?.(true);
     this.ui?.showToast?.('Camera framing saved for this session');
   }
 
   restoreExportVideoCameraBookmark() {
+    const bookmark = this.cameraController?.getExportFramingBookmark?.();
     if (!this.cameraController?.restoreExportFramingBookmark?.()) {
       this.ui?.showToast?.('No saved camera framing');
       return;
     }
+
+    const preview = this.exportMovementPreview;
+    const previewActive = preview?.isActive?.();
+    const previewProgress = previewActive ? preview.getProgress() : 0;
+    preview?.pausePlayback?.();
+
+    if (Number.isFinite(bookmark?.rotationY)) {
+      this.setRotationY(bookmark.rotationY);
+      this.stateStore.set('rotationY', bookmark.rotationY);
+    }
+
     const tilt = this.cameraController.currentTilt ?? 0;
     const pose = this.cameraController.getPose();
     this.stateStore.batch(() => {
@@ -5263,6 +5320,11 @@ export class SceneManager {
     });
     this.ui?.renderControls?.syncCameraWorldPose?.(pose);
     this.ui?.syncControls?.(this.stateStore.getState());
+
+    if (previewActive) {
+      preview.scrub(previewProgress, this._videoExportSettingsFromUi());
+    }
+
     this.ui?.showToast?.('Camera framing restored');
   }
 

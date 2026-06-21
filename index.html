@@ -264,41 +264,97 @@
         <section class="viewport">
           <canvas id="webgl" tabindex="0"></canvas>
           <div
+            id="viewportExportPreviewBanner"
+            class="viewport-export-preview-banner"
+            hidden
+            aria-hidden="true"
+            role="status"
+          >
+            <span class="viewport-export-preview-banner__spinner" aria-hidden="true">
+              <img src="./assets/images/favicon.svg" alt="" width="40" height="40" draggable="false" />
+            </span>
+            <span class="viewport-export-preview-banner__copy">
+              <span class="viewport-export-preview-banner__title">Preview mode</span>
+              <span class="viewport-export-preview-banner__hint">Orbit locked — exit to adjust camera</span>
+            </span>
+            <button
+              type="button"
+              id="viewportExportPreviewExit"
+              class="accent-action-btn viewport-export-preview-banner__exit"
+              aria-label="Exit preview and restore camera orbit"
+            >
+              <i class="fa-solid fa-stop" aria-hidden="true"></i>
+              <span>Exit preview</span>
+            </button>
+          </div>
+          <div
             id="viewportOfflineExportOverlay"
             class="viewport-offline-export"
             hidden
             aria-hidden="true"
             role="status"
           >
-            <button
-              type="button"
-              id="viewportOfflineExportHome"
-              class="viewport-offline-export__home"
-              aria-label="Cancel render"
-            >
-              Home / Cancel render
-            </button>
             <div class="viewport-offline-export__center">
-              <p class="viewport-offline-export__title">Rendering PNG sequence</p>
-              <p class="viewport-offline-export__progress">
-                <span class="viewport-offline-export__progress-leading">
-                  <img
-                    class="viewport-offline-export__spinner"
-                    src="./assets/images/favicon.svg"
-                    alt=""
-                    width="48"
-                    height="48"
-                    draggable="false"
-                  />
-                  <span id="viewportOfflineExportFrame" class="viewport-offline-export__stat">Frame 0 / 0</span>
-                </span>
-                <span class="viewport-offline-export__progress-sep" aria-hidden="true">·</span>
-                <span id="viewportOfflineExportElapsed" class="viewport-offline-export__stat">0s</span>
-              </p>
-              <div class="viewport-offline-export__table-wrap">
-                <table class="viewport-offline-export__table">
-                  <tbody id="viewportOfflineExportSummary"></tbody>
-                </table>
+              <div class="viewport-offline-export__section">
+                <p class="viewport-offline-export__title">Rendering PNG sequence</p>
+                <p class="viewport-offline-export__progress">
+                  <span class="viewport-offline-export__progress-leading">
+                    <img
+                      class="viewport-offline-export__spinner"
+                      src="./assets/images/favicon.svg"
+                      alt=""
+                      width="48"
+                      height="48"
+                      draggable="false"
+                    />
+                    <span id="viewportOfflineExportFrame" class="viewport-offline-export__stat">Frame 0 / 0</span>
+                  </span>
+                </p>
+              </div>
+              <div class="viewport-offline-export__section">
+                <div class="viewport-offline-export__table-wrap">
+                  <div id="viewportOfflineExportFilename" class="viewport-offline-export__filename" hidden>
+                    <span class="viewport-offline-export__filename-label">Filename</span>
+                    <span id="viewportOfflineExportFilenameValue" class="viewport-offline-export__filename-value">—</span>
+                  </div>
+                  <table class="viewport-offline-export__table">
+                    <tbody id="viewportOfflineExportSummary"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="viewport-offline-export__section">
+                <p id="viewportOfflineExportElapsed" class="viewport-offline-export__elapsed">
+                  <span class="viewport-offline-export__elapsed-label">Elapsed</span>
+                  <span id="viewportOfflineExportElapsedValue" class="viewport-offline-export__elapsed-value">0s</span>
+                </p>
+                <p class="viewport-offline-export__helper">
+                  Long sequences — especially many frames at 4K — can take several minutes. If your browser
+                  says the page is unresponsive, choose <strong>Wait</strong>. Rendering continues in the
+                  background and should finish soon.
+                </p>
+                <p class="viewport-offline-export__helper">
+                  If creating a .ZIP truly fails, switch to <strong>Chrome or Edge</strong>, choose an
+                  <strong>Output folder</strong>, and export again. <strong>Safari and Firefox</strong> do not
+                  support folder export — frames download as a ZIP instead.
+                </p>
+              </div>
+              <div id="viewportOfflineExportFooter" class="viewport-offline-export__footer">
+                <button
+                  type="button"
+                  id="viewportOfflineExportCancel"
+                  class="orby-pill-btn orby-pill-btn--normal orby-pill-btn--danger viewport-offline-export__cancel"
+                >
+                  Cancel render
+                </button>
+                <button
+                  type="button"
+                  id="viewportOfflineExportGoBack"
+                  class="orby-pill-btn orby-pill-btn--normal orby-pill-btn--accent viewport-offline-export__go-back"
+                  hidden
+                  aria-hidden="true"
+                >
+                  Go back
+                </button>
               </div>
             </div>
           </div>
@@ -4791,8 +4847,20 @@
 
             <h2 class="panel-header-title" data-header="export">Export</h2>
             <section class="panel" data-panel="export">
-              <div class="panel-block">
-                <div class="block-title">Image</div>
+              <div class="panel-block" data-export-section="image">
+                <div class="block-title has-toggle">
+                  <span>Image</span>
+                  <label class="effect-toggle" data-tooltip="Show Image export options">
+                    <input type="checkbox" id="exportImageSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show Image export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="image"
+                  aria-hidden="true"
+                >
                 <p class="export-format-sub">
                   Raster snapshot of the current view—lighting, materials, and post effects included. Choose PNG, JPEG, or WebP; toggle transparency when the format supports it. Size is relative to the viewer—1× matches your current screen resolution, 2× exports at double that (larger file, more detail).
                 </p>
@@ -4824,10 +4892,23 @@
                     <span class="export-image-btn-label">Export .PNG</span>
                   </button>
                 </div>
+                </div>
               </div>
 
-              <div class="panel-block">
-                <div class="block-title">SVG</div>
+              <div class="panel-block" data-export-section="svg">
+                <div class="block-title has-toggle">
+                  <span>SVG</span>
+                  <label class="effect-toggle" data-tooltip="Show SVG export options">
+                    <input type="checkbox" id="exportSvgSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show SVG export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="svg"
+                  aria-hidden="true"
+                >
                 <p class="export-format-sub">
                   Vector output derived from the current framing—great for logos, precision edges, and scaling without pixels. Silhouette traces a single outline; Color builds flat filled regions from the render.
                 </p>
@@ -4849,10 +4930,23 @@
                     Export .SVG (Color)
                   </button>
                 </div>
+                </div>
               </div>
 
-              <div class="panel-block">
-                <div class="block-title">GLB</div>
+              <div class="panel-block" data-export-section="glb">
+                <div class="block-title has-toggle">
+                  <span>GLB</span>
+                  <label class="effect-toggle" data-tooltip="Show GLB export options">
+                    <input type="checkbox" id="exportGlbSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show GLB export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--md"
+                  data-export-foldout="glb"
+                  aria-hidden="true"
+                >
                 <p class="export-format-sub">
                   Export a .GLB for other 3D tools and AR — from an imported SVG extrusion, or from Shader Lab <strong>Voxel HD</strong>, <strong>PS2 Crush</strong>, <strong>PSX</strong>, or <strong>VGA/DOS 3D</strong> (with the look applied). Tip: dial in extrusion or Shader Lab before exporting.
                 </p>
@@ -4862,9 +4956,22 @@
                     Export .GLB
                   </button>
                 </div>
+                </div>
               </div>
-              <div class="panel-block">
-                <div class="block-title">Video</div>
+              <div class="panel-block" data-export-section="video">
+                <div class="block-title has-toggle">
+                  <span>Video</span>
+                  <label class="effect-toggle" data-tooltip="Show Video export options">
+                    <input type="checkbox" id="exportVideoSectionOpen" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Show Video export options</span>
+                  </label>
+                </div>
+                <div
+                  class="effect-foldout effect-foldout--collapsed effect-foldout--xl"
+                  data-export-foldout="video"
+                  aria-hidden="true"
+                >
                 <p class="export-format-sub">
                   Combine object turntable, camera orbit/dolly/tilt, and optional HDRI rotation. Full and subtle spins apply only when Turntable or Orbit is enabled — they rotate the mesh or camera, not the environment.
                 </p>
@@ -4968,16 +5075,49 @@
                       <span class="value" data-output="exportPitchOffset">0°</span>
                     </label>
                   </div>
+                  <div class="export-option-group export-preview-animation">
+                    <label class="export-label">Preview animation</label>
+                    <div class="animation-timeline">
+                      <div class="animation-controls">
+                        <div class="animation-transport-btns">
+                          <button
+                            id="exportPreviewPlayPause"
+                            type="button"
+                            class="animation-play-btn"
+                            disabled
+                            aria-label="Play export preview"
+                            data-tooltip="Play export movement preview in the viewport"
+                          >
+                            <i class="fa-solid fa-play" aria-hidden="true"></i>
+                            <span class="sr-only">Play</span>
+                          </button>
+                          <button
+                            id="exportPreviewReset"
+                            type="button"
+                            class="animation-play-btn"
+                            disabled
+                            aria-label="Stop preview and return to start"
+                            data-tooltip="End preview, return to frame 0, and restore camera orbit"
+                          >
+                            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                            <span class="sr-only">Stop preview</span>
+                          </button>
+                        </div>
+                        <input
+                          type="range"
+                          id="exportPreviewScrub"
+                          min="0"
+                          max="1"
+                          step="0.001"
+                          value="0"
+                          disabled
+                          aria-label="Export preview timeline"
+                        />
+                        <span id="exportPreviewTime">0:00</span>
+                      </div>
+                    </div>
+                  </div>
                   <div class="export-video-preview-actions scene-controls">
-                    <button
-                      type="button"
-                      id="exportVideoPreviewButton"
-                      class="accent-action-btn export-video-preview-btn"
-                      data-tooltip="Preview the selected movements in the viewport without rendering frames"
-                    >
-                      <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                      <span class="export-video-preview__label">Preview Movement</span>
-                    </button>
                     <button
                       type="button"
                       id="exportVideoCameraSaveButton"
@@ -4985,7 +5125,7 @@
                       data-tooltip="Remember this camera framing for this session (position, target, and tilt)"
                     >
                       <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-                      <span>Save Camera</span>
+                      <span>Save Camera Position</span>
                     </button>
                     <button
                       type="button"
@@ -4995,7 +5135,7 @@
                       data-tooltip="Restore the camera framing you saved this session"
                     >
                       <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-                      <span>Restore Camera</span>
+                      <span>Restore Camera Position</span>
                     </button>
                   </div>
                   <div id="exportMeshAnimationsSettings" class="export-option-group" hidden>
@@ -5033,7 +5173,7 @@
                     <div class="export-option-group">
                       <label class="export-label">Output folder</label>
                       <div class="export-path-row">
-                        <button type="button" id="exportPngFolderChoose" class="export-option-btn export-path-choose" data-tooltip="Choose a folder — frames write directly to disk (Chrome / Edge)">Choose…</button>
+                        <button type="button" id="exportPngFolderChoose" class="export-option-btn export-path-choose" data-tooltip="Choose a folder — frames write directly to disk (Chrome / Edge; Safari and Firefox use ZIP)">Choose…</button>
                         <span id="exportPngFolderLabel" class="export-path-label">No folder — downloads as ZIP</span>
                       </div>
                     </div>
@@ -5076,6 +5216,7 @@
                     <i class="fa-solid fa-film"></i>
                     Export Video
                   </button>
+                </div>
                 </div>
               </div>
               <div class="info-version-tag">v0.5.807 · 2026-06-20 23:28:09 UTC</div>

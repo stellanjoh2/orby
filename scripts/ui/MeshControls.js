@@ -896,6 +896,12 @@ export class MeshControls {
       });
     };
 
+    const notifyExportPreviewSettingsChanged = () => {
+      this.eventBus.emit('export:video-preview-settings-changed', {
+        ...(this.ui.exportSettings.video || {}),
+      });
+    };
+
     const syncExportMovementSlidersUi = () => {
       const video = this.ui.exportSettings.video;
       const zoomActive = !!(video?.zoomIn || video?.zoomOut);
@@ -953,6 +959,7 @@ export class MeshControls {
           if (video.tiltRight) video.tiltLeft = false;
         }
         syncExportMovementButtons();
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -962,6 +969,7 @@ export class MeshControls {
         if (!Number.isFinite(value)) return;
         this.ui.exportSettings.video.zoomDistance = value;
         this.helpers.updateValueLabel('exportZoomDistance', value, 'distance');
+        notifyExportPreviewSettingsChanged();
       });
       this.helpers.updateValueLabel(
         'exportZoomDistance',
@@ -976,6 +984,7 @@ export class MeshControls {
         if (!Number.isFinite(value)) return;
         this.ui.exportSettings.video.tiltAngle = value;
         this.helpers.updateValueLabel('exportTiltAngle', value, 'angle');
+        notifyExportPreviewSettingsChanged();
       });
       this.helpers.updateValueLabel(
         'exportTiltAngle',
@@ -990,6 +999,7 @@ export class MeshControls {
         if (!Number.isFinite(value)) return;
         this.ui.exportSettings.video.fovOffset = value;
         this.helpers.updateValueLabel('exportFovOffset', value, 'signedAngle');
+        notifyExportPreviewSettingsChanged();
       });
       this.helpers.updateValueLabel(
         'exportFovOffset',
@@ -1004,6 +1014,7 @@ export class MeshControls {
         if (!Number.isFinite(value)) return;
         this.ui.exportSettings.video.pitchOffset = value;
         this.helpers.updateValueLabel('exportPitchOffset', value, 'signedAngle');
+        notifyExportPreviewSettingsChanged();
       });
       this.helpers.updateValueLabel(
         'exportPitchOffset',
@@ -1016,6 +1027,7 @@ export class MeshControls {
       this.ui.inputs.exportMeshAnimationsEmbed.addEventListener('change', (event) => {
         this.ui.exportSettings.video.meshAnimationsInclude = !!event.target.checked;
         this.ui.syncExportMeshAnimationsUi();
+        notifyExportPreviewSettingsChanged();
       });
     }
 
@@ -1024,6 +1036,7 @@ export class MeshControls {
         const index = parseInt(event.target.value, 10);
         if (!Number.isFinite(index)) return;
         this.ui.exportSettings.video.meshAnimationClipIndex = index;
+        notifyExportPreviewSettingsChanged();
       });
     }
 
@@ -1051,6 +1064,7 @@ export class MeshControls {
         document.querySelectorAll('[data-video-duration]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
         });
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -1062,6 +1076,7 @@ export class MeshControls {
         document.querySelectorAll('[data-video-fps]').forEach((btn) => {
           btn.classList.toggle('active', btn === button);
         });
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -1105,6 +1120,7 @@ export class MeshControls {
         if (spins !== 0 && spins !== 1 && spins !== 2) return;
         this.ui.exportSettings.video.spins = spins;
         syncExportSpinUi();
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -1118,6 +1134,7 @@ export class MeshControls {
         const current = normalizeExportSubtleSpinDegrees(video.subtleSpinDegrees);
         video.subtleSpinDegrees = current === normalized ? 0 : normalized;
         syncExportSpinUi();
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -1127,6 +1144,7 @@ export class MeshControls {
         if (direction !== 'forward' && direction !== 'reverse') return;
         this.ui.exportSettings.video.spinDirection = direction;
         syncExportSpinUi();
+        notifyExportPreviewSettingsChanged();
       });
     });
 
@@ -1139,6 +1157,7 @@ export class MeshControls {
         const current = normalizeExportHdriRotationDegrees(video.hdriRotationDegrees);
         video.hdriRotationDegrees = current === normalized ? 0 : normalized;
         syncExportSpinUi();
+        notifyExportPreviewSettingsChanged();
       });
     });
 

@@ -107,7 +107,7 @@ import {
   DEFAULT_SHADOW_OPACITY,
 } from './ShadowTint.js';
 import {
-  WIREFRAME_OFFSET,
+  resolveWireframeSurfaceOffset,
   WIREFRAME_POLYGON_OFFSET_FACTOR,
   WIREFRAME_POLYGON_OFFSET_UNITS,
   WIREFRAME_OPACITY_VISIBLE,
@@ -4268,22 +4268,38 @@ export class MaterialController {
     this._syncWireframeLineMaterialResolution(width, height, pixelRatio);
   }
 
-  _resolveWireframeSurfaceOffset() {
-    return WIREFRAME_OFFSET;
+  _resolveWireframeSurfaceOffsetForGeometry(sourceGeometry) {
+    if (!sourceGeometry.boundingBox) {
+      sourceGeometry.computeBoundingBox();
+    }
+    const size = new THREE.Vector3();
+    sourceGeometry.boundingBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    return resolveWireframeSurfaceOffset(maxDim);
   }
 
-  _buildOffsetWireframeSourceGeometry(sourceGeometry) {
+  /**
+   * @param {THREE.BufferGeometry} sourceGeometry
+   * @param {{ applySurfaceOffset?: boolean }} [options]
+   */
+  _buildOffsetWireframeSourceGeometry(sourceGeometry, options = {}) {
+    const { applySurfaceOffset = true } = options;
     const geometry = sourceGeometry.clone();
     const merged = mergeVertices(geometry, 1e-4);
     const working = merged !== geometry ? merged : geometry;
     if (merged !== geometry) {
       geometry.dispose();
     }
+
+    if (!applySurfaceOffset) {
+      return working;
+    }
+
     working.deleteAttribute('normal');
     working.computeVertexNormals();
 
     const positions = working.attributes.position;
-    const offset = this._resolveWireframeSurfaceOffset();
+    const offset = this._resolveWireframeSurfaceOffsetForGeometry(working);
     for (let i = 0; i < positions.count; i++) {
       const normal = new THREE.Vector3();
       normal.fromBufferAttribute(working.attributes.normal, i);
@@ -4297,10 +4313,11 @@ export class MaterialController {
   }
 
   _buildWireframeLineGeometry(sourceGeometry) {
-    const wireframe = new THREE.WireframeGeometry(sourceGeometry);
+    // EdgesGeometry hides coplanar cap triangulation (font/SVG extrude) while keeping creases.
+    const edges = new THREE.EdgesGeometry(sourceGeometry, 1);
     const lineGeometry = new LineSegmentsGeometry();
-    lineGeometry.setPositions(wireframe.attributes.position.array);
-    wireframe.dispose();
+    lineGeometry.setPositions(edges.attributes.position.array);
+    edges.dispose();
     return lineGeometry;
   }
 
@@ -4417,7 +4434,10 @@ export class MaterialController {
         // InstancedMesh uses instance matrices; a plain wire clone would not match instances.
         if (child.isInstancedMesh) return;
 
-        let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry);
+        const pushAlongNormals = !onlyVisibleFaces;
+        let offsetGeometry = this._buildOffsetWireframeSourceGeometry(child.geometry, {
+          applySurfaceOffset: pushAlongNormals,
+        });
         const sourceGeometry = offsetGeometry;
 
         let wireMesh;
@@ -4467,7 +4487,7 @@ export class MaterialController {
 
     // Keep wire mesh locals in sync with each source mesh (same parent in the scene graph).
     for (const wireMesh of this.wireframeOverlayMeshes) {
-      if (!wireMesh.isMesh || !wireMesh.userData.originalMesh) continue;
+      if (!wireMesh?.userData?.originalMesh) continue;
       const original = wireMesh.userData.originalMesh;
       wireMesh.position.copy(original.position);
       wireMesh.rotation.copy(original.rotation);
@@ -4478,6 +4498,7 @@ export class MaterialController {
       if (shouldDisableAutoUpdate) {
         wireMesh.matrixAutoUpdate = false;
       }
+      wireMesh.updateMatrixWorld(true);
     }
   }
 

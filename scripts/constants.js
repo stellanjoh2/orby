@@ -63,6 +63,18 @@ export function normalizeAnimationDisplayFps(fps) {
 
 /** Push wireframe overlay along normals (studio units: 1 unit = 1 m). */
 export const WIREFRAME_OFFSET = 0.1;
+
+/**
+ * Surface push for wireframe source geometry. Caps at {@link WIREFRAME_OFFSET}; scales down for
+ * small meshes (font/SVG extrude ~0.36 units) so lines stay on the surface instead of ballooning.
+ * @param {number} maxDimension
+ */
+export function resolveWireframeSurfaceOffset(maxDimension) {
+  const maxDim = Number(maxDimension);
+  if (!Number.isFinite(maxDim) || maxDim <= 0) return WIREFRAME_OFFSET;
+  const adaptive = maxDim * 0.0015;
+  return Math.min(WIREFRAME_OFFSET, Math.max(1e-6, adaptive));
+}
 /** Negative values pull wireframe toward the camera in the depth buffer (matches UV/normal overlays). */
 export const WIREFRAME_POLYGON_OFFSET_FACTOR = -4;
 export const WIREFRAME_POLYGON_OFFSET_UNITS = -4;

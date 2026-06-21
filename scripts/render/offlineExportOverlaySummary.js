@@ -1,3 +1,4 @@
+import { formatCreativeLookPresetLabel } from './CreativeLookMaterials.js';
 import {
   exportSpinToastLabel,
   exportHdriRotationToastLabel,
@@ -57,7 +58,7 @@ function addRow(rows, label, value) {
 }
 
 /** @param {ReturnType<typeof normalizeExportVideoMovements>} movements */
-function describeMovements(movements, spinSettings, hdriRotationSettings) {
+function describeCameraMovement(movements) {
   const parts = [];
   if (movements.turntable) parts.push('Mesh turntable');
   if (movements.orbit) parts.push('Camera orbit');
@@ -73,27 +74,65 @@ function describeMovements(movements, spinSettings, hdriRotationSettings) {
     const sign = movements.pitchOffset > 0 ? '+' : '';
     parts.push(`Pitch ${sign}${movements.pitchOffset}°`);
   }
-  if (spinSettings?.rotationDegrees) {
-    parts.push(exportSpinToastLabel(spinSettings));
-  }
-  const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
-  if (hdriLabel) parts.push(hdriLabel);
   return parts.length ? parts.join(' · ') : 'Static';
 }
 
-function displayAssetName(assetName) {
-  if (!assetName || typeof assetName !== 'string') return '';
-  const trimmed = assetName.trim();
-  if (!trimmed) return '';
-  return trimmed.replace(/\.[a-z0-9]+$/i, '') || trimmed;
+/** @param {Record<string, unknown>} [state] */
+function describePostFx(state = {}) {
+  const parts = [];
+  if (state.bloom?.enabled) parts.push('Bloom');
+  if (state.grain?.enabled) parts.push('Film grain');
+  if (state.dof?.enabled) parts.push('Depth of field');
+  if (state.aberration?.enabled) parts.push('Chromatic aberration');
+  if (state.ambientOcclusion?.enabled) parts.push('Ambient occlusion');
+  if (state.lensDirt?.enabled) parts.push('Lens dirt');
+  if (state.lensFlare?.enabled) parts.push('Lens flare');
+  if (state.camera?.vignetteEnabled) parts.push('Vignette');
+  if (state.creativeLook?.viewportBloom) parts.push('Look bloom');
+  if (state.autoExposure) parts.push('Auto exposure');
+  return parts.length ? parts.join(' · ') : 'Standard';
+}
+
+/**
+ * @param {Record<string, unknown>} [state]
+ * @param {{ fisheyeEnabled?: boolean, lensDistortionActive?: boolean }} [lens]
+ */
+function describeLens(state = {}, lens = {}) {
+  if (lens.fisheyeEnabled || state.fisheye?.enabled) return 'Fisheye';
+  if (lens.lensDistortionActive) return 'Lens distortion';
+  return 'Standard';
+}
+
+/** @param {boolean | undefined} enabled @param {unknown} preset */
+function describeLook(enabled, preset) {
+  if (!enabled) return 'Off';
+  return formatCreativeLookPresetLabel(preset);
+}
+
+/**
+ * @param {number} width
+ * @param {number} height
+ * @param {number} totalFrames
+ */
+function estimatePngSequenceSizeLabel(width, height, totalFrames) {
+  const w = Math.max(1, Number(width) || 1920);
+  const h = Math.max(1, Number(height) || 1080);
+  const frames = Math.max(1, Number(totalFrames) || 1);
+  const megapixels = (w * h) / 1_000_000;
+  const mbPerFrame = Math.max(0.35, megapixels * 0.85);
+  const totalMb = mbPerFrame * frames;
+  if (totalMb >= 1024) {
+    return `~${(totalMb / 1024).toFixed(1)} GB est. (${frames} PNG frames)`;
+  }
+  return `~${Math.round(totalMb)} MB est. (${frames} PNG frames)`;
 }
 
 /**
  * @param {Record<string, unknown>} exportJob
- * @param {string} [assetName]
- * @param {string | null} [animationClipLabel]
+ * @param {string | null | undefined} animationClipLabel
+ * @param {Record<string, unknown>} [renderContext]
  */
-function buildExportRows(exportJob, assetName, animationClipLabel) {
+function buildExportRows(exportJob, animationClipLabel, renderContext = {}) {
   const movements = normalizeExportVideoMovements(exportJob);
   const spinSettings = normalizeExportSpinSettings(exportJob);
   const hdriRotationSettings = normalizeExportHdriRotationSettings(exportJob);
@@ -108,15 +147,48 @@ function buildExportRows(exportJob, assetName, animationClipLabel) {
   const durationSec = exportJob.durationSec ?? 5;
   const fps = exportJob.fps ?? 24;
   const totalFrames = Math.max(2, Math.round(Number(durationSec) * Number(fps)));
+  const sequenceFolderName =
+    typeof renderContext.sequenceFolderName === 'string'
+      ? renderContext.sequenceFolderName.trim()
+      : '';
+  const outputDirectoryName =
+    typeof renderContext.outputDirectoryName === 'string'
+      ? renderContext.outputDirectoryName.trim()
+      : '';
+  const useFolderExport = renderContext.useFolderExport === true && !!outputDirectoryName;
+  const zipFileName =
+    typeof renderContext.zipFileName === 'string' ? renderContext.zipFileName.trim() : '';
+  const exportWidth =
+    Number(renderContext.exportWidth)
+    || Number(RESOLUTION_PIXELS[resolution]?.split(' × ')[0])
+    || 1920;
+  const exportHeight =
+    Number(renderContext.exportHeight)
+    || Number(RESOLUTION_PIXELS[resolution]?.split(' × ')[1])
+    || 1080;
+  const postFxState =
+    renderContext.postFxState && typeof renderContext.postFxState === 'object'
+      ? renderContext.postFxState
+      : {};
 
   const rows = [];
-  const asset = displayAssetName(assetName);
-  if (asset) addRow(rows, 'Asset', asset);
-  const folderName = exportJob.pngOutputDirectoryHandle?.name;
   addRow(
     rows,
     'Output',
-    folderName ? `PNG sequence → ${folderName}` : 'PNG sequence (ZIP)',
+    useFolderExport
+      ? `Folder → ${outputDirectoryName}`
+      : 'ZIP download',
+  );
+  if (sequenceFolderName) {
+    addRow(rows, 'Sequence folder', sequenceFolderName);
+  }
+  if (!useFolderExport && zipFileName) {
+    addRow(rows, 'ZIP file', zipFileName);
+  }
+  addRow(
+    rows,
+    'Est. size',
+    estimatePngSequenceSizeLabel(exportWidth, exportHeight, totalFrames),
   );
   addRow(
     rows,
@@ -127,9 +199,42 @@ function buildExportRows(exportJob, assetName, animationClipLabel) {
   addRow(rows, 'Frame rate', `${fps} fps`);
   addRow(rows, 'Frame count', totalFrames);
   addRow(rows, 'Transparent', exportJob.movTransparent);
-  addRow(rows, 'Movement', describeMovements(movements, spinSettings, hdriRotationSettings));
-  if (meshAnimation.include && animationClipLabel) {
-    addRow(rows, 'GLB animation', animationClipLabel);
+  addRow(
+    rows,
+    'Look',
+    describeLook(renderContext.creativeLookEnabled, renderContext.creativeLookPreset),
+  );
+  addRow(
+    rows,
+    'Lens',
+    describeLens(postFxState, {
+      fisheyeEnabled: renderContext.fisheyeEnabled,
+      lensDistortionActive: renderContext.lensDistortionActive,
+    }),
+  );
+  addRow(rows, 'Post FX', describePostFx(postFxState));
+  addRow(
+    rows,
+    'Lights',
+    renderContext.lightsAutoRotate ? 'Auto-rotate' : 'Static',
+  );
+  addRow(rows, 'Movement', describeCameraMovement(movements));
+  if (spinSettings?.rotationDegrees) {
+    addRow(rows, 'Spins', exportSpinToastLabel(spinSettings));
+  }
+  const hdriLabel = exportHdriRotationToastLabel(hdriRotationSettings);
+  if (hdriLabel) {
+    addRow(rows, 'HDRI rotation', hdriLabel);
+  }
+  if (meshAnimation.include) {
+    addRow(rows, 'GLB animation', animationClipLabel || `Clip ${meshAnimation.clipIndex + 1}`);
+  }
+  const fontTextRevealLabel =
+    typeof renderContext.fontTextRevealLabel === 'string'
+      ? renderContext.fontTextRevealLabel.trim()
+      : '';
+  if (fontTextRevealLabel) {
+    addRow(rows, 'Text reveal', fontTextRevealLabel);
   }
   return rows;
 }
@@ -139,6 +244,7 @@ function buildExportRows(exportJob, assetName, animationClipLabel) {
  *   exportJob?: Record<string, unknown>,
  *   assetName?: string,
  *   animationClipLabel?: string | null,
+ *   renderContext?: Record<string, unknown>,
  * }} params
  * @returns {{ title: string, rows: Array<{ label: string, value: string }> }[]}
  */
@@ -146,8 +252,10 @@ export function buildOfflineExportOverlaySummary({
   exportJob = {},
   assetName = '',
   animationClipLabel = null,
+  renderContext = {},
 } = {}) {
-  const rows = buildExportRows(exportJob, assetName, animationClipLabel);
+  void assetName;
+  const rows = buildExportRows(exportJob, animationClipLabel, renderContext);
   if (!rows.length) return [];
-  return [{ title: 'Export', rows }];
+  return [{ title: 'Render settings', rows }];
 }

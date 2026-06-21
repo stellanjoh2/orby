@@ -137,22 +137,31 @@ export class AnimationController {
    * @param {number} fps
    */
   applyExportDriveFrame(frameIndex, fps) {
+    const exportTimeSec = Math.max(0, frameIndex) / Math.max(1, fps);
+    this.applyExportDriveTime(exportTimeSec);
+  }
+
+  /**
+   * Set GLB pose at continuous export timeline seconds (smooth viewport preview).
+   * @param {number} exportTimeSec
+   */
+  applyExportDriveTime(exportTimeSec) {
     if (!this._exportDriveActive || !this.mixer || !this._exportAction) return;
     const clip = this.animations[this._exportClipIndex];
     if (!clip || !(clip.duration > 0)) return;
 
-    const exportTimeSec = Math.max(0, frameIndex) / Math.max(1, fps);
     const duration = clip.duration;
     const loop = this._exportAction.loop;
+    const timeSec = Math.max(0, exportTimeSec);
     let time;
     if (loop === THREE.LoopOnce) {
-      time = Math.min(exportTimeSec, duration);
+      time = Math.min(timeSec, duration);
     } else if (loop === THREE.LoopPingPong) {
       const cycle = duration * 2;
-      const m = exportTimeSec % cycle;
+      const m = timeSec % cycle;
       time = m <= duration ? m : cycle - m;
     } else {
-      time = exportTimeSec % duration;
+      time = timeSec % duration;
     }
 
     this._exportAction.time = time;

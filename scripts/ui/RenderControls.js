@@ -972,11 +972,6 @@ export class RenderControls {
     this.ui.buttons.exportVideo?.addEventListener('click', () => {
       this.eventBus.emit('export:video', { ...(this.ui.exportSettings.video || {}) });
     });
-    this.ui.buttons.exportVideoPreview?.addEventListener('click', () => {
-      this.eventBus.emit('export:video-preview-toggle', {
-        ...(this.ui.exportSettings.video || {}),
-      });
-    });
     this.ui.buttons.exportVideoCameraSave?.addEventListener('click', () => {
       this.eventBus.emit('export:video-camera-bookmark-save');
     });

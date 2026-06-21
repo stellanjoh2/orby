@@ -621,12 +621,22 @@ export class EventManager {
     });
 
     eventBus.on('export:video', (payload) => s.exportVideo(payload));
-    eventBus.on('export:video-preview-toggle', (payload) =>
-      s.toggleExportVideoPreview(payload),
+    eventBus.on('export:video-preview-scrub', (payload) => {
+      const { t, ...settings } = payload || {};
+      s.scrubExportVideoPreview(t, settings);
+    });
+    eventBus.on('export:video-preview-play-toggle', (payload) =>
+      s.toggleExportVideoPreviewPlay(payload),
     );
-    eventBus.on('export:movement-preview-stop', () => {
+    eventBus.on('export:video-preview-reset', (payload) =>
+      s.resetExportVideoPreview(payload),
+    );
+    eventBus.on('export:video-preview-settings-changed', (payload) =>
+      s.syncExportVideoPreviewSettings(payload),
+    );
+    eventBus.on('export:movement-preview-stop', (payload = {}) => {
       if (s.exportMovementPreview?.isActive?.()) {
-        s.exportMovementPreview.stop({ silent: true });
+        s.exportMovementPreview.stop({ silent: payload?.silent ?? true });
       }
     });
     eventBus.on('export:video-camera-bookmark-save', () =>

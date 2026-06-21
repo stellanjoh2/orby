@@ -293,6 +293,12 @@ export class ModelLifecycleManager {
     }
     if (isFontExtrudeRevealModel(s.currentModel)) {
       s.fontTextRevealController?.bindModel?.(s.currentModel);
+      if (
+        s.currentShading === 'wireframe'
+        || s.stateStore.getState()?.wireframe?.alwaysOn
+      ) {
+        s.updateWireframeOverlay?.();
+      }
     }
 
     requestAnimationFrame(() => {
@@ -355,6 +361,12 @@ export class ModelLifecycleManager {
     if (!object || s.currentModel !== object) return;
     if (object.userData?.orbyFontGenerated || isFontExtrudeRevealModel(object)) {
       s.fontTextRevealController?.bindModel?.(object);
+      if (
+        s.currentShading === 'wireframe'
+        || s.stateStore.getState()?.wireframe?.alwaysOn
+      ) {
+        s.updateWireframeOverlay?.();
+      }
       const revealDuration = Number(
         s.stateStore.getState()?.fontExtrude?.revealDurationSec ?? 0,
       );
