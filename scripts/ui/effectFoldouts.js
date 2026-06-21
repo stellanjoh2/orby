@@ -4,6 +4,7 @@ import {
   isVignetteUiEnabled,
 } from '../constants.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
+import { getBackgroundMode } from '../render/backgroundMode.js';
 
 /**
  * Progressive disclosure for Camera & FX — child controls fold out when a
@@ -54,7 +55,9 @@ export function applyStudioFoldouts(state, setOpen) {
   setOpen('base', podiumOn);
   setOpen('base-glass', glassOn);
   setOpen('backdrop', backdropOn);
-  setOpen('background-gradient', !!state.backgroundGradient?.enabled && isBackgroundFallbackActive(state));
+  setOpen('background-solid', getBackgroundMode(state) === 'solid' && isBackgroundFallbackActive(state));
+  setOpen('background-gradient', getBackgroundMode(state) === 'gradient' && isBackgroundFallbackActive(state));
+  setOpen('background-image', getBackgroundMode(state) === 'image' && isBackgroundFallbackActive(state));
   setOpen('lights-rig', lightsOn);
   setOpen('lights-shadows', lightsOn && !!state.lightsCastShadows);
   setOpen('key-light', lightsOn && state.lights?.key?.enabled === true);

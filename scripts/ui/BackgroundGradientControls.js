@@ -8,6 +8,10 @@ import {
   sampleGradientColorAt,
 } from '../render/backgroundGradient/backgroundGradientCanvas.js';
 import { isBackgroundFallbackActive } from '../render/backgroundFallback.js';
+import {
+  applyBackgroundMode,
+  getBackgroundMode,
+} from '../render/backgroundMode.js';
 import { ORBY_LIME } from '../constants.js';
 const MIN_STOP_GAP = 1;
 
@@ -50,7 +54,14 @@ export class BackgroundGradientControls {
     this._mounted = true;
 
     this.ui.inputs.backgroundGradientEnabled?.addEventListener('change', (event) => {
-      this._commit({ enabled: event.target.checked });
+      const checked = event.target.checked;
+      if (checked) {
+        applyBackgroundMode(this.stateStore, this.eventBus, 'gradient');
+        return;
+      }
+      if (getBackgroundMode(this.stateStore.getState()) === 'gradient') {
+        applyBackgroundMode(this.stateStore, this.eventBus, 'solid');
+      }
     });
 
     this.ui.inputs.backgroundGradientStopColor?.addEventListener('input', (event) => {
@@ -98,7 +109,8 @@ export class BackgroundGradientControls {
     const gradient = normalizeBackgroundGradient(
       state.backgroundGradient ?? DEFAULT_BACKGROUND_GRADIENT,
     );
-    const gradientOn = !!gradient.enabled;
+    const mode = getBackgroundMode(state);
+    const gradientOn = mode === 'gradient';
     const fallbackActive = isBackgroundFallbackActive(state);
 
     if (this.ui.inputs.backgroundGradientEnabled) {
@@ -136,16 +148,18 @@ export class BackgroundGradientControls {
     }
 
     const detailDisabled = !gradientOn || !fallbackActive;
-    this.ui.setControlDisabled('backgroundColor', gradientOn);
     this.ui.setControlDisabled('backgroundGradientEnabled', !fallbackActive);
     this.ui.setControlDisabled(
       [
         'backgroundGradientStopColor',
-        'backgroundGradientAngle',
         'backgroundGradientCenterX',
         'backgroundGradientCenterY',
       ],
       detailDisabled,
+    );
+    this.ui.setControlDisabled(
+      'backgroundGradientAngle',
+      detailDisabled || !isLinear,
     );
     this._setGradientDetailDisabled(detailDisabled);
     this._drawPreview(gradient);
@@ -238,7 +252,8 @@ export class BackgroundGradientControls {
 
   _handlePreviewPointerDown(event) {
     const gradient = this._previewGradientFromStore();
-    if (!gradient.enabled || !isBackgroundFallbackActive(this.stateStore.getState())) return;
+    if (getBackgroundMode(this.stateStore.getState()) !== 'gradient') return;
+    if (!isBackgroundFallbackActive(this.stateStore.getState())) return;
 
     const hitIndex = this._hitStopIndex(event, gradient);
     if (hitIndex >= 0) {

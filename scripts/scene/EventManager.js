@@ -511,9 +511,19 @@ export class EventManager {
 
     // Scene/Background events
     eventBus.on('scene:background', (color) => s.backgroundController?.setColor(color));
+    eventBus.on('scene:background-solid-enabled', (enabled) => {
+      s.backgroundController?.setSolidEnabled(enabled);
+    });
     eventBus.on('scene:background-gradient', (config) => {
       s.backgroundGradientController?.setConfig(config);
     });
+    eventBus.on('scene:background-image', (config) => {
+      s.backgroundImageController?.setConfig(config);
+      if (!config?.asset?.dataBase64) {
+        s.backgroundImageController?.setImage(null);
+      }
+    });
+    eventBus.on('studio:background-image-upload', (file) => s.loadCustomBackgroundImage(file));
     eventBus.on('scene:exposure', (value) => {
       s.autoExposureController?.setManualExposure(value);
       // Update UI display

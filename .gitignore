@@ -15,6 +15,7 @@ TEMP/
 
 # Cursor agent scratch (video frame extracts, local scripts)
 .cursor/video-frames-*/
+.cursor/slider-debug/
 .tmp/
 
 # Fab / Megascans / Quixel library meshes — never commit (license forbids redistribution)

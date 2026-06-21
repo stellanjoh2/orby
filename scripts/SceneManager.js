@@ -7,7 +7,7 @@ import {
   HDRI_CUSTOM_ID,
   getCustomHdriUploadType,
 } from './config/hdri.js';
-import { arrayBufferToBase64 } from './utils/binaryAsset.js';
+import { arrayBufferToBase64, fileFromEmbeddedAsset } from './utils/binaryAsset.js';
 import { withViewportLoadSpinner } from './utils/viewportLoadSpinner.js';
 import {
   WIREFRAME_OFFSET,
@@ -102,6 +102,11 @@ import { TransformController } from './render/TransformController.js';
 import { LensDirtController } from './render/LensDirtController.js';
 import { BackgroundController } from './render/BackgroundController.js';
 import { BackgroundGradientController } from './render/backgroundGradient/BackgroundGradientController.js';
+import { BackgroundImageController } from './render/backgroundImage/BackgroundImageController.js';
+import { loadBackgroundImageElement } from './render/backgroundImage/backgroundImageCanvas.js';
+import { normalizeBackgroundImage } from './render/backgroundImage/backgroundImageDefaults.js';
+import { applyBackgroundMode, getBackgroundMode } from './render/backgroundMode.js';
+import { encodeBackgroundImageAsset } from './render/backgroundImage/backgroundImageAsset.js';
 import {
   GoboProjectionController,
   GOBO_UI_DEFAULT,
@@ -507,8 +512,16 @@ export class SceneManager {
       scene: this.scene,
       backgroundController: this.backgroundController,
     });
+    this.backgroundImageController = new BackgroundImageController({
+      renderer: this.renderer,
+      scene: this.scene,
+      backgroundController: this.backgroundController,
+    });
     this.backgroundController.setGradientController(this.backgroundGradientController);
+    this.backgroundController.setImageController(this.backgroundImageController);
     this.backgroundGradientController.setConfig(initialState.backgroundGradient ?? {});
+    this.backgroundImageController.setConfig(initialState.backgroundImage ?? {});
+    this.backgroundController.setSolidEnabled(getBackgroundMode(initialState) === 'solid');
 
     this.transformController = new TransformController({
       modelRoot: this.modelRoot,
@@ -893,6 +906,8 @@ export class SceneManager {
     this.backgroundController = null;
     this.backgroundGradientController?.dispose?.();
     this.backgroundGradientController = null;
+    this.backgroundImageController?.dispose?.();
+    this.backgroundImageController = null;
     this.materialController?.clear?.();
 
     if (this.composer?.renderTarget1) {
@@ -1067,7 +1082,11 @@ export class SceneManager {
       blurriness: this.hdriBlurriness,
       rotation: this.hdriRotation,
       fallbackColor: this.backgroundController?.getColor() ?? APP_BACKGROUND,
-      onReleaseSceneBackground: () => this.backgroundController?.refreshAppearance?.(),
+      onReleaseSceneBackground: () => {
+        if (this.backgroundController?.usesFallbackBackdrop?.()) {
+          this.backgroundController?.refreshAppearance?.();
+        }
+      },
       shouldDrawHdriBackdrop: () => this.hdriBackgroundEnabled,
       onEnvironmentMapUpdated: (texture, intensity) => {
         this.updateMaterialsEnvironment(texture, intensity);
@@ -1129,7 +1148,7 @@ export class SceneManager {
       },
       getWireframeOverlayMeshes: () =>
         this.materialController?.wireframeOverlayMeshes ?? [],
-      getRenderState: () => this.stateStore.getState(),
+      getRenderState: () => this.stateStore.peekState(),
       syncPostProcessingForLogicalSize: (w, h) =>
         this.syncPostProcessingForLogicalSize(w, h),
       beforeComposerRender: () => {
@@ -1175,7 +1194,7 @@ export class SceneManager {
       syncPerspectiveProjection: (opts) => this.syncPerspectiveCameraFovAndLens(opts),
       renderComposerPassForExport: (opts) =>
         this.composerLifecycle.renderComposerPassForExport(opts),
-      getRenderState: () => this.stateStore.getState(),
+      getRenderState: () => this.stateStore.peekState(),
     });
 
     const szComposer = new THREE.Vector2();
@@ -1855,6 +1874,76 @@ export class SceneManager {
       this.clearCustomHdri();
       this.ui?.showToast?.('Failed to load custom HDRI');
     }
+  }
+
+  async loadCustomBackgroundImage(file, { persist = true, suppressSuccessToast = false } = {}) {
+    if (!file) return false;
+    try {
+      const image = await loadBackgroundImageElement(file);
+      let asset = null;
+
+      if (persist) {
+        asset = await encodeBackgroundImageAsset(image, file.name);
+      }
+
+      const current = normalizeBackgroundImage(this.stateStore.getState().backgroundImage);
+      const next = normalizeBackgroundImage({
+        ...current,
+        enabled: true,
+        ...(asset ? { asset } : {}),
+      });
+
+      if (persist && asset) {
+        applyBackgroundMode(this.stateStore, this.eventBus, 'image');
+        this.stateStore.set('backgroundImage', next);
+        this.eventBus.emit('scene:background-image', next);
+      }
+
+      this.backgroundImageController?.setImage(image, { skipRefresh: true });
+      this.backgroundImageController?.setConfig(
+        persist && asset ? next : { ...next, enabled: true },
+        { skipRefresh: true },
+      );
+      this.backgroundController?.refreshAppearance?.();
+
+      if (!suppressSuccessToast) {
+        this.ui?.showToast?.(`Background image loaded — ${file.name}`, 3200, {
+          notification: false,
+        });
+      }
+      return true;
+    } catch (error) {
+      console.warn('Failed to load background image', error);
+      this.ui?.showToast?.('Failed to load background image');
+      return false;
+    }
+  }
+
+  async restoreBackgroundImageFromState(config) {
+    const normalized = normalizeBackgroundImage(config);
+    const current = this.backgroundImageController?.getConfig?.();
+    const sameAsset =
+      normalized.asset?.dataBase64 &&
+      current?.asset?.dataBase64 === normalized.asset.dataBase64 &&
+      this.backgroundImageController?.hasImage?.();
+    if (sameAsset) {
+      this.backgroundImageController?.setConfig(normalized);
+      this.backgroundController?.refreshAppearance?.();
+      return;
+    }
+    this.backgroundImageController?.setConfig(normalized);
+    if (!normalized.asset?.dataBase64) {
+      this.backgroundImageController?.setImage(null);
+      this.backgroundController?.refreshAppearance?.();
+      return;
+    }
+    const file = fileFromEmbeddedAsset(normalized.asset, 'background.jpg');
+    if (!file) return;
+    await this.loadCustomBackgroundImage(file, {
+      persist: false,
+      suppressSuccessToast: true,
+    });
+    this.backgroundImageController?.setConfig(normalized);
   }
 
   async setHdriPreset(preset, options = {}) {
@@ -5089,6 +5178,10 @@ export class SceneManager {
     this.syncPostProcessingForLogicalSize(finalWidth, finalHeight);
     const gl = this.renderer.getContext();
     if (gl && gl.drawingBufferWidth > 0 && gl.drawingBufferHeight > 0) {
+      this.backgroundImageController?.handleResize?.(
+        gl.drawingBufferWidth,
+        gl.drawingBufferHeight,
+      );
       this.backgroundGradientController?.handleResize?.(
         gl.drawingBufferWidth,
         gl.drawingBufferHeight,
@@ -5096,6 +5189,7 @@ export class SceneManager {
     } else {
       const dbSize = new THREE.Vector2();
       this.renderer.getDrawingBufferSize(dbSize);
+      this.backgroundImageController?.handleResize?.(dbSize.x, dbSize.y);
       this.backgroundGradientController?.handleResize?.(dbSize.x, dbSize.y);
     }
   }

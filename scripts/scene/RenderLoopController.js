@@ -14,7 +14,7 @@ function toggleScaleAnimActive(ctx) {
  * @param {import('../SceneManager.js').SceneManager} scene
  */
 function buildFrameContext(scene) {
-  const state = scene.stateStore.getState();
+  const state = scene.stateStore.peekState();
   return {
     panelsShelfScrolling: !!scene.panelsShelfScrolling,
     histogramEnabled:
@@ -128,15 +128,15 @@ export class RenderLoopController {
       },
       {
         id: 'dof-autofocus',
-        when: (_ctx, s) => dofNeedsLiveUpdate(s.stateStore.getState().dof),
+        when: (_ctx, s) => dofNeedsLiveUpdate(s.stateStore.peekState().dof),
         run: (delta, s) => {
           s.dofAutofocus?.tick(delta);
-          s.updateDof(s.stateStore.getState().dof);
+          s.updateDof(s.stateStore.peekState().dof);
         },
       },
       {
         id: 'dof-focus-plane',
-        when: (_ctx, s) => !!s.stateStore.getState().dof?.showFocusPlane,
+        when: (_ctx, s) => !!s.stateStore.peekState().dof?.showFocusPlane,
         run: (_delta, s) => {
           s.updateDofFocusPlaneTransform();
         },

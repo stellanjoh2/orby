@@ -80,7 +80,7 @@ const RESET_DIRTY_PATHS = {
     'backdropRotation', 'backdropY', 'backdropMetalness', 'backdropRoughness',
     'backdropSurfacePreset', 'backdropSurfaceScale', 'backdropSurfaceStrength',
   ],
-  background: ['background', 'backgroundGradient'],
+  background: ['background', 'backgroundSolidEnabled', 'backgroundGradient', 'backgroundImage'],
   grid: ['groundWireColor', 'groundWireOpacity', 'gridLineWidth', 'gridY', 'gridScale'],
   dof: ['dof'],
   bloom: ['bloom'],
@@ -612,7 +612,9 @@ export class ResetControls {
       this.stateStore.set('backdropSurfaceStrength', defaults.backdropSurfaceStrength ?? 1);
       this.stateStore.set('groundWireColor', defaults.groundWireColor);
       this.stateStore.set('background', defaults.background);
+      this.stateStore.set('backgroundSolidEnabled', defaults.backgroundSolidEnabled);
       this.stateStore.set('backgroundGradient', defaults.backgroundGradient);
+      this.stateStore.set('backgroundImage', defaults.backgroundImage);
       this.stateStore.set('lights', defaults.lights);
       this.stateStore.set('lightsEnabled', defaults.lightsEnabled);
       this.stateStore.set('lightsMaster', defaults.lightsMaster);
@@ -689,7 +691,10 @@ export class ResetControls {
       });
       this.eventBus.emit('studio:ground-wire-color', defaults.groundWireColor);
       this.eventBus.emit('scene:background', defaults.background);
+      this.eventBus.emit('scene:background-solid-enabled', defaults.backgroundSolidEnabled);
       this.eventBus.emit('scene:background-gradient', defaults.backgroundGradient);
+      this.eventBus.emit('scene:background-image', defaults.backgroundImage);
+      window.orby?.scene?.backgroundImageController?.setImage?.(null);
 
       Object.keys(defaults.lights).forEach((lightId) => {
         const light = defaults.lights[lightId];
@@ -1180,9 +1185,14 @@ export class ResetControls {
             
           case 'background':
             this.stateStore.set('background', defaults.background);
+            this.stateStore.set('backgroundSolidEnabled', defaults.backgroundSolidEnabled);
             this.stateStore.set('backgroundGradient', defaults.backgroundGradient);
+            this.stateStore.set('backgroundImage', defaults.backgroundImage);
             this.eventBus.emit('scene:background', defaults.background);
+            this.eventBus.emit('scene:background-solid-enabled', defaults.backgroundSolidEnabled);
             this.eventBus.emit('scene:background-gradient', defaults.backgroundGradient);
+            this.eventBus.emit('scene:background-image', defaults.backgroundImage);
+            window.orby?.scene?.backgroundImageController?.setImage?.(null);
             this.ui.syncUIFromState();
             break;
             

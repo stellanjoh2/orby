@@ -446,6 +446,8 @@ export class StateStore {
       renderQuality: 'medium',
       toneMapping: 'aces-filmic',
       background: APP_BACKGROUND,
+      /** Flat color backdrop when Render Backdrop is off (mutually exclusive with gradient / image). */
+      backgroundSolidEnabled: true,
       backgroundGradient: {
         enabled: false,
         type: 'linear',
@@ -456,6 +458,11 @@ export class StateStore {
           { color: APP_BACKGROUND, position: 0 },
           { color: ORBY_LIME, position: 100 },
         ],
+      },
+      backgroundImage: {
+        enabled: false,
+        fit: 'cover',
+        asset: null,
       },
       lookFilterPreset: 'none',
       lookFilterPresetsOpen: false,
@@ -491,6 +498,14 @@ export class StateStore {
 
   getState() {
     return deepClone(this.state);
+  }
+
+  /**
+   * Live state for hot paths (render loop). Read-only — do not mutate.
+   * Avoids cloning embedded assets every frame.
+   */
+  peekState() {
+    return this.state;
   }
 
   getDefaults() {

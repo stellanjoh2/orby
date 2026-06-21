@@ -1,9 +1,4 @@
-.bg-gradient-foldout {
-  margin-top: 0.35rem;
-}
-
 .bg-gradient-preview-wrap {
-  margin: 0.35rem 0 0.5rem;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent);
@@ -17,17 +12,22 @@
   touch-action: none;
 }
 
-.bg-gradient-stop-color-line {
-  margin-bottom: 0.5rem;
+.panel-block[data-block='background'] #backgroundGradientCenterRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shelf-section-gap);
 }
 
-.bg-gradient-type-toggle {
-  margin-bottom: 0.5rem;
+#backgroundGradientAngleRow[hidden],
+#backgroundGradientCenterRow[hidden] {
+  display: none !important;
 }
 
-.panel-block.is-muted .bg-gradient-preview-wrap,
-.panel-block.is-muted .bg-gradient-stop-color-line,
-.panel-block.is-muted .bg-gradient-type-toggle {
+.panel-block[data-block='background'] #backgroundGradientCenterRow .slider-line {
+  margin-bottom: 0;
+}
+
+.panel-block.is-muted .bg-gradient-preview-wrap {
   opacity: 0.45;
   pointer-events: none;
 }

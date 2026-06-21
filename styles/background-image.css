@@ -1,0 +1,16 @@
+.panel-block[data-block='background'] .bg-image-select-btn {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#backgroundImageFitPanel[hidden] {
+  display: none !important;
+}
+
+.panel-block.is-muted .bg-image-controls {
+  opacity: 0.45;
+  pointer-events: none;
+}

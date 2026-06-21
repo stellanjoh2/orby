@@ -141,6 +141,7 @@
     <link rel="stylesheet" href="./styles/fontawesome/orby-icons.css" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./styles/background-gradient.css" />
+    <link rel="stylesheet" href="./styles/background-image.css" />
     <link rel="stylesheet" href="./styles/map-inspect.css" />
     <link rel="stylesheet" href="./styles/marketing/09-scroll-cue-responsive.css" />
     <script>
@@ -2158,7 +2159,7 @@
                 hidden
               >
                 <div class="block-title has-reset">
-                  <span data-tooltip="Solid color or gradient behind the scene when Render Backdrop is off — HDRI still lights the model">Background</span>
+                  <span data-tooltip="Solid color, image, or gradient behind the scene when Render Backdrop is off — HDRI still lights the model">Background</span>
                   <button
                     type="button"
                     class="block-reset-btn"
@@ -2170,17 +2171,32 @@
                     <span class="sr-only">Reset</span>
                   </button>
                 </div>
-                <label class="color-line">
-                  <span>Color</span>
-                  <input
-                    type="color"
-                    id="backgroundColor"
-                    class="color-chip"
-                    value="#000000"
-                  />
-                </label>
                 <div class="slider-line">
-                  <span data-tooltip="Multi-stop linear or radial gradient — overrides the flat color when on">Gradient</span>
+                  <span data-tooltip="Flat color behind the scene when Render Backdrop is off">Solid color</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="backgroundSolidEnabled" checked />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable solid color background</span>
+                  </label>
+                </div>
+                <div
+                  id="backgroundSolidFoldout"
+                  class="effect-foldout effect-foldout--collapsed"
+                  data-effect-foldout="background-solid"
+                  aria-hidden="true"
+                >
+                  <label class="color-line">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      id="backgroundColor"
+                      class="color-chip"
+                      value="#000000"
+                    />
+                  </label>
+                </div>
+                <div class="slider-line">
+                  <span data-tooltip="Multi-stop linear or radial gradient">Gradient</span>
                   <label class="effect-toggle">
                     <input type="checkbox" id="backgroundGradientEnabled" />
                     <span class="effect-indicator" aria-hidden="true"></span>
@@ -2193,6 +2209,7 @@
                   data-effect-foldout="background-gradient"
                   aria-hidden="true"
                 >
+                  <div class="export-option-group bg-gradient-controls">
                   <div class="bg-gradient-preview-wrap">
                     <canvas
                       id="backgroundGradientPreview"
@@ -2201,7 +2218,7 @@
                       role="img"
                     ></canvas>
                   </div>
-                  <label class="color-line bg-gradient-stop-color-line">
+                  <label class="color-line">
                     <span>Stop color</span>
                     <input
                       type="color"
@@ -2210,7 +2227,7 @@
                       value="#000000"
                     />
                   </label>
-                  <div class="bg-gradient-type-toggle export-button-group">
+                  <div class="export-button-group">
                     <button type="button" data-bg-gradient-type="linear" class="export-option-btn active">Linear</button>
                     <button type="button" data-bg-gradient-type="radial" class="export-option-btn">Radial</button>
                   </div>
@@ -2230,6 +2247,49 @@
                       <input id="backgroundGradientCenterY" type="range" min="0" max="100" step="1" value="50" />
                       <span class="value" data-output="backgroundGradientCenterY">50%</span>
                     </label>
+                  </div>
+                  </div>
+                </div>
+                <div class="slider-line">
+                  <span data-tooltip="Custom image behind the scene">Image</span>
+                  <label class="effect-toggle">
+                    <input type="checkbox" id="backgroundImageEnabled" />
+                    <span class="effect-indicator" aria-hidden="true"></span>
+                    <span class="sr-only">Enable image background</span>
+                  </label>
+                </div>
+                <div
+                  id="backgroundImageFoldout"
+                  class="effect-foldout effect-foldout--collapsed"
+                  data-effect-foldout="background-image"
+                  aria-hidden="true"
+                >
+                  <input
+                    type="file"
+                    id="backgroundImageFileInput"
+                    class="sr-only"
+                    accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,image/*"
+                    tabindex="-1"
+                    aria-hidden="true"
+                  />
+                  <div class="export-option-group bg-image-controls">
+                    <button
+                      type="button"
+                      id="backgroundImageSelectBtn"
+                      class="export-option-btn bg-image-select-btn"
+                      data-tooltip="Upload a PNG, JPG, or WebP"
+                    >
+                      Select background image
+                    </button>
+                    <div
+                      id="backgroundImageFitPanel"
+                      class="export-button-group export-button-group--triple"
+                      hidden
+                    >
+                      <button type="button" data-bg-image-fit="cover" class="export-option-btn active">Cover</button>
+                      <button type="button" data-bg-image-fit="contain" class="export-option-btn">Contain</button>
+                      <button type="button" data-bg-image-fit="fill" class="export-option-btn">Fill</button>
+                    </div>
                   </div>
                 </div>
               </div>

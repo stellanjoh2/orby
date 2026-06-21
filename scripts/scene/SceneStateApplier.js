@@ -13,6 +13,7 @@ import {
   effectiveVignetteIntensity,
   cameraShadowsUiToShader,
 } from '../constants.js';
+import { getBackgroundMode } from '../render/backgroundMode.js';
 
 /**
  * Ordered registry that replays a full StateStore snapshot onto SceneManager.
@@ -308,7 +309,9 @@ function createStateApplySteps() {
       id: 'background-tone-hdri-strength',
       apply: (s, state) => {
         s.backgroundController?.setColor(state.background);
+        s.backgroundController?.setSolidEnabled(getBackgroundMode(state) === 'solid');
         s.backgroundGradientController?.setConfig(state.backgroundGradient ?? {});
+        s.backgroundImageController?.setConfig(state.backgroundImage ?? {});
         s.setToneMapping(state.toneMapping ?? 'aces-filmic');
         s.setHdriStrength(state.hdriStrength ?? 2);
       },

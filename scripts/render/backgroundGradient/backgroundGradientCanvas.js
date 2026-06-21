@@ -26,9 +26,10 @@ function linearGradientEndpoints(cssAngleDeg, width, height) {
  * @param {import('./backgroundGradientDefaults.js').BackgroundGradientConfig} config
  * @param {CanvasGradient} gradient
  */
-function fillCanvasGradient(ctx, width, height, config, gradient) {
+function fillCanvasGradient(ctx, width, height, config, gradient, { invertStops = false } = {}) {
   for (const stop of sortedBackgroundGradientStops(config.stops)) {
-    gradient.addColorStop(stop.position / 100, stop.color);
+    const t = stop.position / 100;
+    gradient.addColorStop(invertStops ? 1 - t : t, stop.color);
   }
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
@@ -51,12 +52,13 @@ export function drawBackgroundGradient(ctx, width, height, config) {
     const cy = (normalized.centerY / 100) * height;
     const radius = Math.max(width, height) * 0.75;
     gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    // Stop strip is 0% left → 100% right; radial maps 100% to center, 0% to edge.
+    fillCanvasGradient(ctx, width, height, normalized, gradient, { invertStops: true });
   } else {
     const { x0, y0, x1, y1 } = linearGradientEndpoints(normalized.angle, width, height);
     gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+    fillCanvasGradient(ctx, width, height, normalized, gradient);
   }
-
-  fillCanvasGradient(ctx, width, height, normalized, gradient);
 }
 
 /**

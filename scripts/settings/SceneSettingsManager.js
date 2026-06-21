@@ -144,6 +144,10 @@ export class SceneSettingsManager {
         await this.uiHelper.loadCustomHdriFile(file);
       }
     }
+    if (payload.backgroundImage?.asset?.dataBase64) {
+      this.stateStore.set('backgroundImage', payload.backgroundImage);
+      await window.orby?.scene?.restoreBackgroundImageFromState?.(payload.backgroundImage);
+    }
   }
 
   async saveOrbyToFile() {
@@ -1351,9 +1355,17 @@ export class SceneSettingsManager {
         this.stateStore.set('background', payload.background);
         this.eventBus.emit('scene:background', payload.background);
       }
+      if (payload.backgroundSolidEnabled !== undefined) {
+        this.stateStore.set('backgroundSolidEnabled', !!payload.backgroundSolidEnabled);
+        this.eventBus.emit('scene:background-solid-enabled', !!payload.backgroundSolidEnabled);
+      }
       if (payload.backgroundGradient !== undefined) {
         this.stateStore.set('backgroundGradient', payload.backgroundGradient);
         this.eventBus.emit('scene:background-gradient', payload.backgroundGradient);
+      }
+      if (payload.backgroundImage !== undefined) {
+        this.stateStore.set('backgroundImage', payload.backgroundImage);
+        this.eventBus.emit('scene:background-image', payload.backgroundImage);
       }
 
       // Apply vignette LAST - after all other settings to ensure it's not overridden

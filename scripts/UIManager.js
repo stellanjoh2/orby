@@ -63,6 +63,8 @@ import { FontExtrudeUI } from './ui/FontExtrudeUI.js';
 import { ensureSvgExtrudeCoreControlsMounted, ensureSvgExtrudeSurfaceControlsMounted, ensureBaseSurfaceControlsMounted, ensureBaseGlassSurfaceControlsMounted, ensureBackdropSurfaceControlsMounted } from './ui/svgExtrudeControlsShared.js';
 import { ResetControls } from './ui/ResetControls.js';
 import { BackgroundGradientControls } from './ui/BackgroundGradientControls.js';
+import { BackgroundImageControls } from './ui/BackgroundImageControls.js';
+import { BackgroundSolidControls } from './ui/BackgroundSolidControls.js';
 import { StartMenuController } from './ui/StartMenuController.js';
 import {
   buildOfflineExportOverlaySummary,
@@ -207,6 +209,16 @@ export class UIManager {
       this,
       this.helpers,
     );
+    this.backgroundSolidControls = new BackgroundSolidControls(
+      this.eventBus,
+      this.stateStore,
+      this,
+    );
+    this.backgroundImageControls = new BackgroundImageControls(
+      this.eventBus,
+      this.stateStore,
+      this,
+    );
     this.lensControls = new LensControls(this.eventBus, this.stateStore, this, this.helpers);
     this.viewPresetsControls = new ViewPresetsControls(this.eventBus, this.stateStore, this);
     this.isometricControls = new IsometricControls(
@@ -249,6 +261,8 @@ export class UIManager {
         updateHdriReceiveShadowsAoDisabled: () => this.updateHdriReceiveShadowsAoDisabled?.(),
         syncLensFlareKeyLightConnectButton: () => this.syncLensFlareKeyLightConnectButton?.(),
         loadCustomHdriFile: (file) => window.orby?.scene?.loadCustomHdri?.(file),
+        loadCustomBackgroundImageFile: (file) =>
+          window.orby?.scene?.loadCustomBackgroundImage?.(file),
         restoreFontExtrudeSettings: (fontExtrude) =>
           this.fontExtrudeUI?.restoreFromSettings?.(fontExtrude),
       },
@@ -621,11 +635,15 @@ export class UIManager {
       fresnelRadius: q('#fresnelRadius'),
       fresnelStrength: q('#fresnelStrength'),
       backgroundColor: q('#backgroundColor'),
+      backgroundSolidEnabled: q('#backgroundSolidEnabled'),
       backgroundGradientEnabled: q('#backgroundGradientEnabled'),
       backgroundGradientStopColor: q('#backgroundGradientStopColor'),
       backgroundGradientAngle: q('#backgroundGradientAngle'),
       backgroundGradientCenterX: q('#backgroundGradientCenterX'),
       backgroundGradientCenterY: q('#backgroundGradientCenterY'),
+      backgroundImageEnabled: q('#backgroundImageEnabled'),
+      backgroundImageFileInput: q('#backgroundImageFileInput'),
+      backgroundImageSelectBtn: q('#backgroundImageSelectBtn'),
       cameraFov: q('#cameraFov'),
       lensSensor: q('#lensSensor'),
       isometricEnabled: q('#isometricEnabled'),
@@ -809,6 +827,8 @@ export class UIManager {
     this.goboControls.bind();
     this.renderControls.bind();
     this.backgroundGradientControls.bind();
+    this.backgroundSolidControls.bind();
+    this.backgroundImageControls.bind();
     this.lensControls.bind();
     this.viewPresetsControls.bind();
     this.isometricControls.bind();
@@ -3445,6 +3465,8 @@ export class UIManager {
     this.goboControls.sync(state);
     this.renderControls.sync(state);
     this.backgroundGradientControls.sync(state);
+    this.backgroundSolidControls.sync(state);
+    this.backgroundImageControls.sync(state);
     this.lensControls.sync(state);
     this.viewPresetsControls.sync(state);
     this.isometricControls.sync(state);

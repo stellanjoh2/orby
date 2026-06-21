@@ -23,6 +23,8 @@ export class BackgroundController {
     this.hdriEnabled = false;
     /** Shader Lab — solid color / gradient replaces the HDRI backdrop image. */
     this.creativeLookBackdropActive = false;
+    /** Flat color mode on (see backgroundSolidEnabled in state). */
+    this.solidEnabled = true;
     
     // Create background sphere for DOF depth handling
     this.backgroundSphere = this._createBackgroundSphere(this.color);
@@ -35,6 +37,8 @@ export class BackgroundController {
 
     /** @type {import('./backgroundGradient/BackgroundGradientController.js').BackgroundGradientController | null} */
     this.gradientController = null;
+    /** @type {import('./backgroundImage/BackgroundImageController.js').BackgroundImageController | null} */
+    this.imageController = null;
 
     // Initialize clear color
     this._applyClearColor();
@@ -45,6 +49,14 @@ export class BackgroundController {
    */
   setGradientController(controller) {
     this.gradientController = controller;
+    this.refreshAppearance();
+  }
+
+  /**
+   * @param {import('./backgroundImage/BackgroundImageController.js').BackgroundImageController | null} controller
+   */
+  setImageController(controller) {
+    this.imageController = controller;
     this.refreshAppearance();
   }
   
@@ -125,6 +137,12 @@ export class BackgroundController {
     this.refreshAppearance();
   }
 
+  /** @param {boolean} enabled */
+  setSolidEnabled(enabled) {
+    this.solidEnabled = !!enabled;
+    this.refreshAppearance();
+  }
+
   usesFallbackBackdrop() {
     // Respect Render Backdrop even during Shader Lab (creative look defaults it off on entry).
     return !(this.hdriBackgroundEnabled && this.hdriEnabled);
@@ -170,7 +188,19 @@ export class BackgroundController {
       return;
     }
     
+    if (this.imageController?.applyIfActive?.()) {
+      return;
+    }
+
     if (this.gradientController?.applyIfActive?.()) {
+      return;
+    }
+
+    if (!this.solidEnabled) {
+      this.scene.background = null;
+      if (this.backgroundSphere) {
+        this.backgroundSphere.visible = false;
+      }
       return;
     }
 
