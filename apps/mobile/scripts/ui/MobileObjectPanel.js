@@ -19,6 +19,7 @@ export class MobileObjectPanel {
     host.append(this._mkBaseScaleSlider());
     host.append(this._mkBaseGlassToggle());
     host.append(this._mkAutoRotateToggle());
+    host.append(this._mkAmbientOcclusionToggle());
     this.sync();
   }
 
@@ -69,6 +70,11 @@ export class MobileObjectPanel {
     const autoRotateInput = root.querySelector('[data-object-auto-rotate]');
     if (autoRotateInput instanceof HTMLInputElement && document.activeElement !== autoRotateInput) {
       autoRotateInput.checked = !!scene?.getAutoRotate?.();
+    }
+
+    const aoInput = root.querySelector('[data-object-ambient-occlusion]');
+    if (aoInput instanceof HTMLInputElement && document.activeElement !== aoInput) {
+      aoInput.checked = !!scene?.getAmbientOcclusion?.()?.enabled;
     }
   }
 
@@ -155,6 +161,26 @@ export class MobileObjectPanel {
     input?.addEventListener('change', () => {
       if (!(input instanceof HTMLInputElement)) return;
       scene.setAutoRotate(input.checked);
+    });
+    return row;
+  }
+
+  _mkAmbientOcclusionToggle() {
+    const { scene } = this.ctx;
+    const row = document.createElement('div');
+    row.className = 'orby-mobile-fx-toggle';
+    row.innerHTML = `
+      <span class="orby-mobile-fx-toggle__label">Ambient occlusion</span>
+      <label class="effect-toggle">
+        <input type="checkbox" data-object-ambient-occlusion />
+        <span class="effect-indicator" aria-hidden="true"></span>
+        <span class="orby-mobile-sr-only">Ambient occlusion</span>
+      </label>
+    `;
+    const input = row.querySelector('[data-object-ambient-occlusion]');
+    input?.addEventListener('change', () => {
+      if (!(input instanceof HTMLInputElement)) return;
+      scene.setAmbientOcclusionEnabled(input.checked);
     });
     return row;
   }

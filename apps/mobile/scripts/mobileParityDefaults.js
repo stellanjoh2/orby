@@ -52,6 +52,15 @@ export const MOBILE_GRAIN_INTENSITY_SCALE_MAX = 2.5;
 /** Desktop `#bloomStrength` slider max — mobile was capped at 1. */
 export const MOBILE_BLOOM_STRENGTH_MAX = 2;
 
+/** Mobile object-menu AO defaults — matches studio session reference (N8AO, medium quality). */
+export const MOBILE_AMBIENT_OCCLUSION_DEFAULTS = {
+  enabled: true,
+  intensity: 5.25,
+  radius: 0.6,
+  quality: 'medium',
+  color: '#080808',
+};
+
 /**
  * @param {number} intensity Stored grain intensity (0..{@link MOBILE_GRAIN_INTENSITY_MAX}).
  * @param {number} [pixelWidth] Composer output width in physical pixels.

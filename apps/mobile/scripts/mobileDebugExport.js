@@ -1,4 +1,4 @@
-import { MOBILE_BLOOM_RESOLUTION_SCALE } from './mobileParityDefaults.js';
+import { MOBILE_BLOOM_RESOLUTION_SCALE, MOBILE_AMBIENT_OCCLUSION_DEFAULTS } from './mobileParityDefaults.js';
 import { MOBILE_FX_DEFAULTS } from './mobileFxDefaults.js';
 import { mobileAssetUrl } from './mobileCatalog.js';
 
@@ -73,6 +73,7 @@ export function buildMobileDebugSettings(scene, selection) {
     grain: state.grain ?? MOBILE_FX_DEFAULTS.grain,
     aberration: state.aberration ?? MOBILE_FX_DEFAULTS.aberration,
     toneCurve: state.toneCurve ?? MOBILE_FX_DEFAULTS.toneCurve,
+    ambientOcclusion: scene.getAmbientOcclusion?.() ?? MOBILE_AMBIENT_OCCLUSION_DEFAULTS,
 
     /** Full mobile post state (includes lens rows). */
     mobilePostState: state,

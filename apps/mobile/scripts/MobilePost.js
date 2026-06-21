@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { N8AOPass } from 'n8ao';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { MeshglEffectComposer } from '../../../scripts/render/MeshglEffectComposer.js';
 import { MeshglRenderPass } from '../../../scripts/render/MeshglRenderPass.js';
@@ -12,15 +13,20 @@ import {
   AberrationShader,
 } from '../../../scripts/render/chromaticAberration.js';
 import {
+  AMBIENT_OCCLUSION_INTENSITY_MAX,
+  AMBIENT_OCCLUSION_INTENSITY_MIN,
   ANAMORPHIC_BLOOM_QUALITY_DEFAULT,
   CAMERA_TEMPERATURE_MIN_K,
   CAMERA_TEMPERATURE_MAX_K,
   CAMERA_TEMPERATURE_NEUTRAL_K,
   cameraShadowsUiToShader,
   effectiveVignetteIntensity,
+  resolveAmbientOcclusionQualityTier,
   resolveAnamorphicBloomQualityTier,
+  sanitizeAmbientOcclusion,
 } from '../../../scripts/constants.js';
 import {
+  MOBILE_AMBIENT_OCCLUSION_DEFAULTS,
   MOBILE_BLOOM_RESOLUTION_SCALE,
   mobileEffectiveGrainIntensity,
 } from './mobileParityDefaults.js';
@@ -54,6 +60,13 @@ export class MobilePost {
     this.renderPass = new MeshglRenderPass(scene, camera);
     this.renderPass.clearAlpha = 1;
     this.composer.addPass(this.renderPass);
+
+    this.n8aoPass = new N8AOPass(scene, camera, rw, rh);
+    this.n8aoPass.enabled = false;
+    this._n8aoAppliedMode = 'Medium';
+    this.n8aoPass.setQualityMode(this._n8aoAppliedMode);
+    this.n8aoPass.configuration.gammaCorrection = false;
+    this.composer.addPass(this.n8aoPass);
 
     this.creativeLooks = new MobileCreativeLookPost(renderer);
     this.creativeLooks.mount(this.composer);
@@ -105,6 +118,7 @@ export class MobilePost {
 
     this._fxState = this._cloneFxState(MOBILE_FX_DEFAULTS);
     this._lookFilterPreset = 'none';
+    this._ambientOcclusion = { ...MOBILE_AMBIENT_OCCLUSION_DEFAULTS };
     /** @type {(() => object) | null} */
     this._creativeLookSettingsGetter = null;
     this.reset();
@@ -136,7 +150,9 @@ export class MobilePost {
       mergeLookFilterState('none', MOBILE_FX_DEFAULTS, MOBILE_FX_DEFAULTS),
     );
     this._lookFilterPreset = 'none';
+    this._ambientOcclusion = { ...MOBILE_AMBIENT_OCCLUSION_DEFAULTS };
     this._applyFxState(this._fxState);
+    this._updateAmbientOcclusion(this._ambientOcclusion);
   }
 
   /** @param {number} dt */
@@ -285,6 +301,70 @@ export class MobilePost {
   /** @param {string} path */
   getFxValue(path) {
     return getNestedValue(this._fxState, path);
+  }
+
+  getAmbientOcclusion() {
+    return { ...this._ambientOcclusion };
+  }
+
+  /** @param {boolean} enabled */
+  setAmbientOcclusionEnabled(enabled) {
+    const next = !!enabled;
+    if (next === !!this._ambientOcclusion.enabled) return;
+    this._ambientOcclusion = { ...this._ambientOcclusion, enabled: next };
+    this._updateAmbientOcclusion(this._ambientOcclusion);
+  }
+
+  /** @param {object | undefined} settings */
+  _updateAmbientOcclusion(settings) {
+    const merged = {
+      ...MOBILE_AMBIENT_OCCLUSION_DEFAULTS,
+      ...(settings && typeof settings === 'object' ? settings : {}),
+    };
+    const ao = sanitizeAmbientOcclusion(merged) ?? merged;
+    this._ambientOcclusion = { ...this._ambientOcclusion, ...ao };
+
+    if (!this.n8aoPass || !this.renderPass) return;
+    const active = !!ao.enabled;
+    this.renderPass.enabled = !active;
+    this.n8aoPass.enabled = active;
+    if (!active) {
+      this._syncRenderToScreen();
+      return;
+    }
+
+    this.n8aoPass.configuration.gammaCorrection = false;
+
+    const intensity =
+      typeof ao.intensity === 'number' && !Number.isNaN(ao.intensity)
+        ? ao.intensity
+        : MOBILE_AMBIENT_OCCLUSION_DEFAULTS.intensity;
+    const radius =
+      typeof ao.radius === 'number' && !Number.isNaN(ao.radius)
+        ? ao.radius
+        : MOBILE_AMBIENT_OCCLUSION_DEFAULTS.radius;
+    const aoQ = resolveAmbientOcclusionQualityTier(ao.quality);
+    if (this._n8aoAppliedMode !== aoQ.n8aoMode) {
+      this.n8aoPass.setQualityMode(aoQ.n8aoMode);
+      this._n8aoAppliedMode = aoQ.n8aoMode;
+    }
+
+    this.n8aoPass.configuration.intensity = THREE.MathUtils.clamp(
+      intensity,
+      AMBIENT_OCCLUSION_INTENSITY_MIN,
+      AMBIENT_OCCLUSION_INTENSITY_MAX,
+    );
+    this.n8aoPass.configuration.aoRadius = THREE.MathUtils.clamp(radius, 0.1, 25);
+    const hex =
+      typeof ao.color === 'string' && ao.color.trim().length > 0
+        ? ao.color.trim()
+        : MOBILE_AMBIENT_OCCLUSION_DEFAULTS.color;
+    this.n8aoPass.configuration.color = new THREE.Color(hex);
+    if (this.n8aoPass.configuration.halfRes !== aoQ.halfRes) {
+      this.n8aoPass.configuration.halfRes = aoQ.halfRes;
+    }
+
+    this._syncRenderToScreen();
   }
 
   /** @param {object} state merged look-filter state */

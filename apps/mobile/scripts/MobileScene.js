@@ -27,6 +27,7 @@ import { validateOrbyMobileModelFile, isOrbyMobileModelWithinLimit, orbyMobileMo
 import { findCreativeLook } from './mobileCatalog.js';
 import { MESH_AUTO_ROTATE_SPEED_NORMAL } from '../../../scripts/config/meshAutoRotate.js';
 import { captureAndApplyCenterPivot } from '../../../scripts/scene/centerModelPivot.js';
+import { AnimationController } from '../../../scripts/render/AnimationController.js';
 
 const ORBY_BLACK = '#080808';
 /** Match desktop shelf slider: 0–3, default `hdriStrength` 2 (StateStore). */
@@ -102,6 +103,10 @@ export class MobileScene {
     }
     configureMobileGltfLoader(this.gltfLoader);
 
+    this.animationController = new AnimationController({
+      getFileName: () => this._currentFileName ?? 'model.glb',
+    });
+
     /** @type {number} */
     this._hdriStrength = MOBILE_HDRI_STRENGTH_DEFAULT;
     /** @type {number} */
@@ -153,6 +158,14 @@ export class MobileScene {
     };
     this.creativeLooks.onEnvironmentResync = () => {
       this._syncModelEnvironment();
+    };
+    const prevAfterCreativeLookRebuild =
+      this.creativeLooks.materialController.afterCreativeLookMaterialRebuild;
+    this.creativeLooks.materialController.afterCreativeLookMaterialRebuild = () => {
+      if (typeof prevAfterCreativeLookRebuild === 'function') {
+        prevAfterCreativeLookRebuild();
+      }
+      this.animationController?.resyncPose?.();
     };
     this.creativeLooks.prepareCreativeLookPost = (presetId) =>
       this.post.creativeLooks.prepareForPreset(presetId);
@@ -261,6 +274,7 @@ export class MobileScene {
       if (this._autoRotateEnabled && this.currentModel) {
         this.modelRoot.rotation.y += dt * MESH_AUTO_ROTATE_SPEED_NORMAL;
       }
+      this.animationController.update(dt);
       this.creativeLooks.tick(dt);
       this.post.tick(dt);
       const animTime = this.creativeLooks.materialController.getCreativeLookAnimationTime?.() ?? 0;
@@ -413,8 +427,8 @@ export class MobileScene {
     this._syncModelEnvironment();
   }
 
-  /** @param {THREE.Object3D} object */
-  _setModel(object) {
+  /** @param {THREE.Object3D} object @param {THREE.AnimationClip[]} [animations] */
+  _setModel(object, animations = []) {
     this._clearModel();
     normalizeImportScale(object);
     prepareMobileImportModel(object);
@@ -423,6 +437,7 @@ export class MobileScene {
     this.modelRoot.add(object);
     captureAndApplyCenterPivot(this.modelRoot, object);
     this.creativeLooks.setModel(object);
+    this.animationController.setModel(object, animations);
     if (this._creativeLookPreset && this._creativeLookPreset !== 'none') {
       this.creativeLooks.setCreativeLook(this._creativeLookPreset);
     }
@@ -464,7 +479,7 @@ export class MobileScene {
     try {
       const gltf = await this._parseGlb(buffer);
       this._currentFileName = name;
-      this._setModel(gltf.scene);
+      this._setModel(gltf.scene, gltf.animations ?? []);
       this.onModelLoaded?.();
     } catch (err) {
       console.error('[Orby Mobile] Model load failed', err);
@@ -503,6 +518,7 @@ export class MobileScene {
   }
 
   _clearModel() {
+    this.animationController.dispose();
     if (!this.currentModel) return;
     this.creativeLooks.clearModel();
     this.modelRoot.remove(this.currentModel);
@@ -636,6 +652,16 @@ export class MobileScene {
 
   getAutoRotate() {
     return this._autoRotateEnabled;
+  }
+
+  getAmbientOcclusion() {
+    return this.post.getAmbientOcclusion();
+  }
+
+  /** @param {boolean} enabled */
+  setAmbientOcclusionEnabled(enabled) {
+    this.post.setAmbientOcclusionEnabled(enabled);
+    this.onBaseStateChanged?.();
   }
 
   getBaseScale() {
