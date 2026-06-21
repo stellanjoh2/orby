@@ -74,6 +74,7 @@ export function buildMobileDebugSettings(scene, selection) {
     aberration: state.aberration ?? MOBILE_FX_DEFAULTS.aberration,
     toneCurve: state.toneCurve ?? MOBILE_FX_DEFAULTS.toneCurve,
     ambientOcclusion: scene.getAmbientOcclusion?.() ?? MOBILE_AMBIENT_OCCLUSION_DEFAULTS,
+    baseColor: scene.getBaseColor?.() ?? null,
 
     /** Full mobile post state (includes lens rows). */
     mobilePostState: state,

@@ -8,3 +8,6 @@ export const MOBILE_BASE_SCALE = {
   format: (v) => v.toFixed(2),
   defaultValue: 0,
 };
+
+/** Default beach HDRI mood podium color (`HDRI_MOODS.beach.baseColor`). */
+export const MOBILE_BASE_COLOR_DEFAULT = '#d4c5a9';

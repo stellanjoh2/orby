@@ -93,12 +93,12 @@ export class MobileShell {
     });
     panelCtx.syncPresetSheetState = () => this.sheetController.syncPresetSheetState();
 
-    this.objectPanel = new MobileObjectPanel(panelCtx);
-    this.stylePanel = new MobileStylePanel(panelCtx);
-    this.fxPanel = new MobileFxPanel(panelCtx);
     this.colorPicker = new MobileColorPicker(panelCtx, {
       onBeforeOpen: () => chrome?.setObjectMenuOpen(false),
     });
+    this.objectPanel = new MobileObjectPanel(panelCtx, { colorPicker: this.colorPicker });
+    this.stylePanel = new MobileStylePanel(panelCtx);
+    this.fxPanel = new MobileFxPanel(panelCtx);
     this.hdriControls = new MobileHdriControls(panelCtx, { colorPicker: this.colorPicker });
     this.modelLoader = new MobileModelLoader({
       root: this.root,

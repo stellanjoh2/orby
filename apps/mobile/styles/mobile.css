@@ -1751,6 +1751,23 @@ button {
   background-color: color-mix(in srgb, var(--brand-text) 72%, var(--text-dim));
 }
 
+.orby-mobile-color-line.is-muted {
+  opacity: 0.5625;
+}
+
+.orby-mobile-color-line.is-muted span {
+  color: var(--text-dim);
+}
+
+.orby-mobile-color-line.is-muted .orby-mobile-color-swatch:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.orby-mobile-object-panel__controls .orby-mobile-color-line {
+  margin-bottom: var(--orby-mobile-slider-row-gap);
+}
+
 /* iOS-style switches — same pattern as desktop .effect-toggle (styles.css) */
 .orby-mobile-app .effect-toggle {
   --toggle-track-width: var(--orby-mobile-toggle-w);
@@ -1860,7 +1877,8 @@ button {
   justify-content: flex-end;
   gap: 1rem;
   padding: max(1rem, env(safe-area-inset-bottom, 0px)) 1rem 1.5rem;
-  pointer-events: none;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .orby-mobile-color-picker[hidden] {

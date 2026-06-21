@@ -1,13 +1,24 @@
 import { MOBILE_MATERIAL_SLIDERS } from '../mobileMaterialControls.js';
-import { MOBILE_BASE_SCALE } from '../mobileObjectBaseControls.js';
+import { MOBILE_BASE_COLOR_DEFAULT, MOBILE_BASE_SCALE } from '../mobileObjectBaseControls.js';
 import { updateMobileSliderFill } from '../mobileSliderHelpers.js';
 
 /** @import { MobileUiContext } from '../mobileUiContext.js' */
+/** @import { MobileColorPicker } from './MobileColorPicker.js' */
+
+/**
+ * @typedef {{
+ *   colorPicker: MobileColorPicker,
+ * }} MobileObjectPanelDeps
+ */
 
 export class MobileObjectPanel {
-  /** @param {MobileUiContext} ctx */
-  constructor(ctx) {
+  /**
+   * @param {MobileUiContext} ctx
+   * @param {MobileObjectPanelDeps} deps
+   */
+  constructor(ctx, deps) {
     this.ctx = ctx;
+    this.colorPicker = deps.colorPicker;
   }
 
   render() {
@@ -17,6 +28,7 @@ export class MobileObjectPanel {
     host.replaceChildren();
     host.append(...MOBILE_MATERIAL_SLIDERS.map((def) => this._mkMaterialSlider(def)));
     host.append(this._mkBaseScaleSlider());
+    host.append(this._mkBaseColorRow());
     host.append(this._mkBaseGlassToggle());
     host.append(this._mkAutoRotateToggle());
     host.append(this._mkAmbientOcclusionToggle());
@@ -52,6 +64,20 @@ export class MobileObjectPanel {
       if (output instanceof HTMLElement) {
         output.textContent = MOBILE_BASE_SCALE.format(baseScale);
       }
+    }
+
+    const baseColorRow = root.querySelector('[data-object-base-color-row]');
+    if (baseColorRow instanceof HTMLElement) {
+      baseColorRow.classList.toggle('is-muted', !baseOn);
+    }
+
+    const baseColorSwatch = root.querySelector('[data-object-base-color-open]');
+    if (baseColorSwatch instanceof HTMLButtonElement) {
+      baseColorSwatch.disabled = !baseOn;
+      this.colorPicker.syncSwatch(
+        baseColorSwatch,
+        scene?.getBaseColor?.() ?? MOBILE_BASE_COLOR_DEFAULT,
+      );
     }
 
     const baseGlassRow = root.querySelector('[data-object-base-glass-row]');
@@ -121,6 +147,27 @@ export class MobileObjectPanel {
       scene.setBaseScale(value);
     });
     if (input instanceof HTMLInputElement) updateMobileSliderFill(input);
+    return row;
+  }
+
+  _mkBaseColorRow() {
+    const row = document.createElement('label');
+    row.className = 'orby-mobile-color-line';
+    row.dataset.objectBaseColorRow = '';
+    row.innerHTML = `
+      <span>Base color</span>
+      <button
+        type="button"
+        class="orby-mobile-color-swatch"
+        data-object-base-color-open
+        aria-label="Base color"
+      ></button>
+    `;
+    const swatch = row.querySelector('[data-object-base-color-open]');
+    swatch?.addEventListener('click', () => {
+      if (!(swatch instanceof HTMLButtonElement) || swatch.disabled) return;
+      this.colorPicker.open('base');
+    });
     return row;
   }
 

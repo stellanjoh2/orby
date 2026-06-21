@@ -8,7 +8,7 @@ import {
   DEFAULT_CAMERA_TARGET,
 } from '../../../scripts/camera/cameraDefaults.js';
 import { MOBILE_HDRI_PRESETS } from './mobileHdriConfig.js';
-import { MOBILE_BASE_SCALE } from './mobileObjectBaseControls.js';
+import { MOBILE_BASE_COLOR_DEFAULT, MOBILE_BASE_SCALE } from './mobileObjectBaseControls.js';
 import { HDRI_MOODS, HDRI_STRENGTH_UNIT } from '../../../scripts/config/hdri.js';
 import { EnvironmentController } from '../../../scripts/render/EnvironmentController.js';
 import { BackgroundController } from '../../../scripts/render/BackgroundController.js';
@@ -131,11 +131,12 @@ export class MobileScene {
     this._groundSolid = false;
     this._groundY = 0;
     this._baseScale = MOBILE_BASE_SCALE.defaultValue;
+    this._baseColor = MOBILE_BASE_COLOR_DEFAULT;
     this._baseGlassSurface = false;
     this.groundController = new GroundController(this.scene, {
       solidEnabled: false,
       wireEnabled: false,
-      solidColor: '#808080',
+      solidColor: MOBILE_BASE_COLOR_DEFAULT,
       groundY: 0,
       baseScale: MOBILE_BASE_SCALE.minActive,
       renderer: this.renderer,
@@ -299,7 +300,11 @@ export class MobileScene {
     this._hdriPresetId = presetId;
     try {
       const mood = await this.environmentController.setPreset(presetId);
-      this.post.applyHdriMood(mood ?? HDRI_MOODS[presetId]);
+      const resolvedMood = mood ?? HDRI_MOODS[presetId];
+      this.post.applyHdriMood(resolvedMood);
+      if (resolvedMood?.baseColor) {
+        this.setBaseColor(resolvedMood.baseColor);
+      }
       this.onFxStateChanged?.();
     } catch (err) {
       console.error('[Orby Mobile] HDRI load failed', presetId, err);
@@ -666,6 +671,18 @@ export class MobileScene {
 
   getBaseScale() {
     return this._baseScale;
+  }
+
+  getBaseColor() {
+    return this._baseColor;
+  }
+
+  /** @param {string} color */
+  setBaseColor(color) {
+    if (!color) return;
+    this._baseColor = color;
+    this.groundController?.setSolidColor(color);
+    this.onBaseStateChanged?.();
   }
 
   getBaseGlassSurface() {

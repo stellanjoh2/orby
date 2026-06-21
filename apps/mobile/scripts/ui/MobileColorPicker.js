@@ -1,5 +1,6 @@
 import { normalizeBackgroundGradient } from '../../../../scripts/render/backgroundGradient/backgroundGradientDefaults.js';
 import { ORBY_BLACK } from '../../../../scripts/constants.js';
+import { MOBILE_BASE_COLOR_DEFAULT } from '../mobileObjectBaseControls.js';
 import { MobileHsvColorPicker } from '../MobileHsvColorPicker.js';
 import { mobileHaptic } from '../mobileHaptics.js';
 
@@ -58,6 +59,14 @@ export class MobileColorPicker {
     this._done?.addEventListener('click', () => {
       this.close();
     });
+
+    this._layer?.addEventListener('pointerdown', (event) => {
+      if (this._target == null) return;
+      const target = event.target;
+      if (this._host?.contains(/** @type {Node} */ (target))) return;
+      if (this._done?.contains(/** @type {Node} */ (target))) return;
+      this.close();
+    });
   }
 
   /** @param {ColorPickerTarget} target */
@@ -68,6 +77,8 @@ export class MobileColorPicker {
     let color = ORBY_BLACK;
     if (target === 'solid') {
       color = scene.getBackgroundColor();
+    } else if (target === 'base') {
+      color = scene.getBaseColor?.() ?? MOBILE_BASE_COLOR_DEFAULT;
     } else {
       const stops = normalizeBackgroundGradient(scene.getBackgroundGradient()).stops;
       color = stops[target]?.color ?? ORBY_BLACK;
@@ -112,6 +123,12 @@ export class MobileColorPicker {
     if (this._target === 'solid') {
       scene.setBackgroundColor(color);
       this.syncSwatch(this._solidSwatch, color);
+      return;
+    }
+
+    if (this._target === 'base') {
+      scene.setBaseColor?.(color);
+      this.syncSwatch(this.ctx.root.querySelector('[data-object-base-color-open]'), color);
       return;
     }
 
