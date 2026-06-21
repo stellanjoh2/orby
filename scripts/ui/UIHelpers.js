@@ -237,25 +237,158 @@ export class UIHelpers {
   /**
    * While a range slider or color chip is held, state writes still apply but
    * StateStore.notify (full UI sync) waits until pointer release.
+   * Tracks range drags so snap-to-center is skipped while scrubbing, and
+   * restores the thumb if post-release sync overwrites the dropped value.
    */
   setupDeferredControlNotify() {
+    if (this._deferredControlNotifyBound) return;
+    this._deferredControlNotifyBound = true;
+
     const isDeferredControl = (el) =>
       el instanceof HTMLInputElement
       && (el.type === 'range' || el.type === 'color')
       && !el.disabled;
 
+    /** @type {Map<number, { slider: HTMLInputElement, startX: number, startY: number, dragged: boolean }>} */
+    this._rangePointerDrags = new Map();
+    /** @type {Set<HTMLInputElement>} */
+    this._draggingRangeSliders = new Set();
+    /** @type {Set<HTMLInputElement>} sliders protected from sync during scrub + post-release mesh */
+    this._scrubProtectedSliders = new Set();
+
+    /** @type {Set<number>} pointerIds that opened a deferred-notify scope */
+    this._deferNotifyPointerIds = new Set();
+    this._programmaticRangeUpdate = false;
+
+    document.addEventListener(
+      'input',
+      (event) => {
+        if (this._programmaticRangeUpdate) {
+          event.stopImmediatePropagation();
+        }
+      },
+      true,
+    );
+
     const onPointerDown = (event) => {
+      if (
+        event.target instanceof HTMLInputElement
+        && event.target.type === 'range'
+        && !event.target.disabled
+      ) {
+        this._scrubProtectedSliders.add(event.target);
+        this._rangePointerDrags.set(event.pointerId, {
+          slider: event.target,
+          startX: event.clientX,
+          startY: event.clientY,
+          dragged: false,
+        });
+      }
       if (!isDeferredControl(event.target)) return;
+      this._deferNotifyPointerIds.add(event.pointerId);
       this.stateStore.beginDeferredNotify();
     };
 
-    const onPointerEnd = () => {
-      this.stateStore.endDeferredNotify();
+    const onPointerMove = (event) => {
+      const drag = this._rangePointerDrags.get(event.pointerId);
+      if (!drag || drag.dragged) return;
+      if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 4) {
+        drag.dragged = true;
+        this._draggingRangeSliders.add(drag.slider);
+      }
+    };
+
+    const onPointerEnd = (event) => {
+      const drag = this._rangePointerDrags.get(event.pointerId);
+      const scrubbingRange = drag?.slider instanceof HTMLInputElement ? drag.slider : null;
+
+      if (drag) {
+        this._rangePointerDrags.delete(event.pointerId);
+        this._draggingRangeSliders.delete(drag.slider);
+      }
+
+      if (this._deferNotifyPointerIds.delete(event.pointerId)) {
+        this.stateStore.endDeferredNotify();
+      }
+
+      if (scrubbingRange) {
+        const slider = scrubbingRange;
+        requestAnimationFrame(() => {
+          this.eventBus?.emit('ui:range-scrub-end', slider);
+          requestAnimationFrame(() => {
+            this.releaseScrubProtection(slider);
+          });
+        });
+      }
     };
 
     document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('pointermove', onPointerMove, true);
     document.addEventListener('pointerup', onPointerEnd, true);
     document.addEventListener('pointercancel', onPointerEnd, true);
+  }
+
+  protectScrubSlider(slider) {
+    if (slider instanceof HTMLInputElement && slider.type === 'range') {
+      this._scrubProtectedSliders.add(slider);
+    }
+  }
+
+  releaseScrubProtection(slider) {
+    this._scrubProtectedSliders?.delete(slider);
+  }
+
+  /** Set a range value without re-entering slider input handlers. */
+  setRangeValueProgrammatically(slider, value) {
+    if (!(slider instanceof HTMLInputElement) || slider.type !== 'range') return;
+    const next = String(value);
+    if (slider.value === next) return;
+    this._programmaticRangeUpdate = true;
+    try {
+      slider.value = next;
+    } finally {
+      this._programmaticRangeUpdate = false;
+    }
+  }
+
+  /** True while the user is dragging a range input (movement > 4px). */
+  isRangeSliderDragging(slider) {
+    return this._draggingRangeSliders?.has(slider) ?? false;
+  }
+
+  /**
+   * Whether a full UI sync should skip writing onto this range input.
+   * Protects active scrubs (including post-release mesh rebuild) from stale state.
+   */
+  shouldSkipRangeSyncWrite(slider) {
+    if (!(slider instanceof HTMLInputElement) || slider.type !== 'range') return false;
+    if (this._scrubProtectedSliders?.has(slider)) return true;
+    if (this.isRangeSliderDragging(slider)) return true;
+    if (document.activeElement === slider) return true;
+    return false;
+  }
+
+  /**
+   * Apply state to a range input unless the slider is under user control.
+   * @returns {boolean} true when the slider `.value` was updated
+   */
+  syncRangeFromState(slider, value) {
+    if (!(slider instanceof HTMLInputElement) || slider.type !== 'range') return false;
+    if (this.shouldSkipRangeSyncWrite(slider)) return false;
+    const next = String(value);
+    if (slider.value === next) return false;
+    this.setRangeValueProgrammatically(slider, next);
+    return true;
+  }
+
+  /**
+   * Clamp to min/max/step and write the canonical string back to the range input.
+   * @returns {number}
+   */
+  canonicalizeRangeInputValue(slider, value = parseFloat(slider.value)) {
+    const canonical = this.snapToSliderRange(value, slider);
+    this.setRangeValueProgrammatically(slider, canonical);
+    return canonical;
   }
 
   setupSliderFillUpdates() {
@@ -297,20 +430,25 @@ export class UIHelpers {
 
     const onEnd = (event) => {
       if (!pending || event.pointerId !== pending.pointerId) return;
-      const { slider, startX, startY } = pending;
+      const { slider, startX, startY, startValue } = pending;
       clearPending();
 
       if (Math.hypot(event.clientX - startX, event.clientY - startY) > 4) return;
+
+      const current = parseFloat(slider.value);
+      const start = parseFloat(startValue);
+      if (Number.isFinite(start) && Number.isFinite(current) && Math.abs(current - start) > 1e-6) {
+        return;
+      }
 
       const inputKey = resolveSliderInputKey(slider, this.ui?.inputs ?? {});
       const defaults = this.stateStore?.getDefaults?.();
       const defaultValue = resolveSliderDefaultValue(slider, inputKey, defaults);
       if (!Number.isFinite(defaultValue)) return;
 
-      const current = parseFloat(slider.value);
       if (Number.isFinite(current) && Math.abs(current - defaultValue) < 1e-6) return;
 
-      slider.value = String(defaultValue);
+      this.setRangeValueProgrammatically(slider, defaultValue);
       slider.dispatchEvent(new Event('input', { bubbles: true }));
     };
 
@@ -329,6 +467,7 @@ export class UIHelpers {
           pointerId: event.pointerId,
           startX: event.clientX,
           startY: event.clientY,
+          startValue: slider.value,
           onEnd,
         };
         window.addEventListener('pointerup', onEnd, true);
@@ -424,6 +563,11 @@ export class UIHelpers {
 
     // Snap is for real pointer drags (trusted `input`). Keyboard code dispatches synthetic events (isTrusted === false).
     if (inputEvent != null && inputEvent.isTrusted === false) {
+      return Number.isFinite(currentValue) ? currentValue : centerValue;
+    }
+
+    // Skip magnetic snap while scrubbing — only track clicks / keyboard apply snap.
+    if (this.isRangeSliderDragging(slider)) {
       return Number.isFinite(currentValue) ? currentValue : centerValue;
     }
 

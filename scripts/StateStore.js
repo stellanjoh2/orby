@@ -531,6 +531,11 @@ export class StateStore {
     this._notifyIfIdle();
   }
 
+  /** True while a range slider or color chip is held (notify coalesced). */
+  isNotifyDeferred() {
+    return this._deferNotifyDepth > 0;
+  }
+
   /**
    * @param {string} path - Dot path, same as `set`
    * @param {unknown} value

@@ -3737,6 +3737,7 @@ export class SceneManager {
       },
     );
     if (!ok || !updateState) return;
+
     this.stateStore.set('svgExtrude.depth', this.svgExtrudeImporter.getDepth());
     this.stateStore.set(
       'svgExtrude.colorDepths',

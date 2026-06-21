@@ -392,8 +392,12 @@ export class RenderControls {
       emitGrain();
     });
     this.ui.inputs.grainIntensity.addEventListener('input', (event) => {
-      const value = parseFloat(event.target.value) * 0.15;
-      this.helpers.updateValueLabel('grainIntensity', value / 0.15, 'decimal');
+      const uiValue = parseFloat(
+        this.helpers.canonicalizeRangeInputValue(event.target).toFixed(2),
+      );
+      event.target.value = String(uiValue);
+      const value = uiValue * 0.15;
+      this.helpers.updateValueLabel('grainIntensity', uiValue, 'decimal');
       commitLookFilterTouchWith(() => {
         this.stateStore.set('grain.intensity', value);
       });
@@ -1241,8 +1245,9 @@ export class RenderControls {
     this.ui.setClipPlanesFoldoutOpen(!!clip.manual);
 
     // Grain
-    this.ui.inputs.grainIntensity.value = (state.grain.intensity / 0.15).toFixed(2);
-    this.helpers.updateValueLabel('grainIntensity', state.grain.intensity / 0.15, 'decimal');
+    const grainUi = parseFloat((state.grain.intensity / 0.15).toFixed(2));
+    this.helpers.syncRangeFromState(this.ui.inputs.grainIntensity, grainUi);
+    this.helpers.updateValueLabel('grainIntensity', grainUi, 'decimal');
     this.ui.inputs.toggleGrain.checked = !!state.grain.enabled;
     this.ui.setEffectControlsDisabled(['grainIntensity'], !state.grain.enabled);
     

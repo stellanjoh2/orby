@@ -72,7 +72,13 @@ export class MeshControls {
       brightness: false,
       emissive: false,
     };
-    this.svgExtrudeTimers = { depth: null, normal: null, bevel: null, colorDebounce: new Map() };
+    this.svgExtrudeTimers = {
+      depth: null,
+      normal: null,
+      bevel: null,
+      colorDebounce: new Map(),
+      meshPending: {},
+    };
     this.stlSmoothingDebounceTimer = null;
   }
 

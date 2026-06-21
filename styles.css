@@ -4667,9 +4667,21 @@ a.about-highlight:focus-visible {
 /* Separator that wraps content below the rule (e.g. font Surface / Bevel blocks) */
 .font-extrude-surface-group,
 .extrude-bevel-group {
-  margin: var(--shelf-section-gap) 0 0;
-  padding: var(--shelf-section-gap) 0 0;
+  margin: 0;
+  padding-top: var(--shelf-section-gap);
   border-top: 1px solid var(--stroke);
+}
+
+.extrude-bevel-group > :last-child,
+.font-extrude-surface-group > :last-child {
+  margin-bottom: 0;
+}
+
+/* Row before an in-block rule group — gap lives on the group padding-top only */
+:is(.slider-line, .select-line, .color-line):has(+ .extrude-bevel-group),
+:is(.slider-line, .select-line, .color-line):has(+ .font-extrude-surface-group),
+.font-extrude-post-gen > :is(.slider-line, .select-line):has(+ .font-extrude-surface-group) {
+  margin-bottom: 0;
 }
 
 /* Mount after a standalone divider — gap comes from the divider only */
@@ -6102,6 +6114,34 @@ input[type='range']:disabled::-moz-range-thumb {
 
 #svgExtrudeColorDepths {
   margin-top: 0;
+}
+
+/*
+ * SVG Extrude — flat control stack: no in-block rules between geometry rows;
+ * mount wrappers participate in subsection rhythm via display: contents.
+ */
+[data-subsection='svg-extrude'] #svgExtrudeCoreControlsMount,
+[data-subsection='svg-extrude'] #svgExtrudeSurfaceControlsMount,
+[data-subsection='svg-extrude'] .extrude-bevel-group {
+  display: contents;
+}
+
+[data-subsection='svg-extrude'] :is(.slider-line, .select-line):has(+ .extrude-bevel-group) {
+  margin-bottom: var(--shelf-section-gap);
+}
+
+[data-subsection='svg-extrude'] .extrude-bevel-group > :last-child {
+  margin-bottom: var(--shelf-section-gap);
+}
+
+/* Collapsed color foldout — keep row gap to Surface (global rule zeroes margin when + foldout) */
+[data-subsection='svg-extrude']
+  > .slider-line:has(+ .effect-foldout--collapsed[data-effect-foldout='svg-color-override']) {
+  margin-bottom: var(--shelf-section-gap);
+}
+
+[data-subsection='svg-extrude'] > :is(.slider-line, .select-line, .color-line):last-child {
+  margin-bottom: 0;
 }
 
 #svgExtrudeColorDepths .slider-line {
@@ -8615,8 +8655,18 @@ body.ui-hidden .shelf {
   line-height: 1.3;
 }
 
-.font-extrude-post-gen {
+.font-extrude-post-gen:not([hidden]) {
   margin-top: 0;
+  padding-top: var(--shelf-section-gap);
+  border-top: 1px solid var(--stroke);
+}
+
+.font-extrude-post-gen[hidden] {
+  display: none !important;
+}
+
+.font-extrude-generate:has(+ .font-extrude-post-gen:not([hidden])) {
+  margin-bottom: var(--shelf-section-gap);
 }
 
 .font-extrude-animation {
@@ -8694,6 +8744,7 @@ body.ui-hidden .shelf {
 .font-extrude-generate {
   width: 100%;
   margin-top: var(--shelf-section-gap);
+  margin-bottom: 0;
 }
 
 .font-extrude-generate.is-loading {

@@ -3663,7 +3663,12 @@ export class UIManager {
 
     // Fresnel foldout — open state handled in applyMeshFoldouts
 
-    const svgExtrudeOn = !!currentState.svgExtrude?.enabled;
+    const scene = window.orby?.scene;
+    const isFontExtrudeMesh = !!(
+      scene?.currentModel?.userData?.orbyFontGenerated ||
+      scene?.materialController?._isFontExtrudeModel?.(scene.currentModel)
+    );
+    const svgExtrudeOn = !!currentState.svgExtrude?.enabled && !isFontExtrudeMesh;
     if (this.dom.svgExtrudePanelBlock) {
       this.dom.svgExtrudePanelBlock.hidden = !svgExtrudeOn;
     }

@@ -570,6 +570,103 @@ function syncSurfaceStrengthControl(ctx, svg, canEdit) {
   ui.setControlDisabled(inputs.surfaceStrength, !canEdit || !isNormalMap);
 }
 
+function readClampedExtrudeDepth(input) {
+  const value = parseFloat(input?.value);
+  return Number.isFinite(value)
+    ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
+    : DEFAULT_EXTRUDE_DEPTH;
+}
+
+function readClampedExtrudeNormalAngle(input) {
+  const value = parseFloat(input?.value);
+  return Number.isFinite(value)
+    ? Math.max(MIN_EXTRUDE_NORMAL_ANGLE_DEG, Math.min(MAX_EXTRUDE_NORMAL_ANGLE_DEG, value))
+    : DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+}
+
+function writeRangeValue(input, value) {
+  if (!(input instanceof HTMLInputElement)) return;
+  const next = String(value);
+  if (input.value !== next) input.value = next;
+}
+
+/** @type {Set<Object>} */
+const extrudeMeshFlushContexts = new Set();
+let extrudeScrubEndListenerBound = false;
+
+function bindExtrudeScrubEndListener(eventBus) {
+  if (extrudeScrubEndListenerBound) return;
+  extrudeScrubEndListenerBound = true;
+  eventBus.on('ui:range-scrub-end', (slider) => {
+    for (const ctx of extrudeMeshFlushContexts) {
+      flushPendingExtrudeMesh(ctx, slider);
+    }
+  });
+}
+
+/**
+ * Defer heavy mesh rebuilds while the user is scrubbing; flush on release.
+ * @param {Object} ctx
+ * @param {'depth' | 'normal' | 'bevel'} kind
+ * @param {() => void} flushNow
+ */
+function scheduleExtrudeMeshFlush(ctx, kind, flushNow) {
+  const { timers, stateStore } = ctx;
+  timers.meshPending ??= {};
+  timers.meshPending[kind] = flushNow;
+
+  if (stateStore.isNotifyDeferred?.()) return;
+
+  if (timers[kind]) clearTimeout(timers[kind]);
+  timers[kind] = setTimeout(() => {
+    timers[kind] = null;
+    if (stateStore.isNotifyDeferred?.()) return;
+    timers.meshPending[kind] = null;
+    flushNow();
+  }, 45);
+}
+
+/** @param {Object} ctx @param {HTMLInputElement | null | undefined} slider */
+export function flushPendingExtrudeMesh(ctx, slider) {
+  if (!ctx?.inputs || !ctx?.timers) return;
+  const { inputs, timers } = ctx;
+  if (!(slider instanceof HTMLInputElement)) return;
+
+  const kinds = [];
+  if (slider === inputs.depth) kinds.push('depth');
+  if (slider === inputs.normalAngle) kinds.push('normal');
+  if (slider === inputs.bevelAmount) kinds.push('bevel');
+
+  for (const kind of kinds) {
+    if (timers[kind]) {
+      clearTimeout(timers[kind]);
+      timers[kind] = null;
+    }
+    const pending = timers.meshPending?.[kind];
+    if (typeof pending === 'function') {
+      timers.meshPending[kind] = null;
+      pending();
+    }
+  }
+
+  if (inputs.colorDepths?.contains(slider)) {
+    const color = slider.dataset.color;
+    const kind = slider.dataset.kind || 'depth';
+    if (!color) return;
+    const timerKey = `${kind}:${color}`;
+    const existingTimer = timers.colorDebounce.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      timers.colorDebounce.delete(timerKey);
+    }
+    const pending = timers.meshPending?.[timerKey];
+    if (typeof pending === 'function') {
+      timers.meshPending[timerKey] = null;
+      pending();
+    }
+  }
+}
+
 /**
  * @param {Object} ctx
  * @param {Record<string, HTMLElement | null>} ctx.inputs
@@ -577,16 +674,17 @@ function syncSurfaceStrengthControl(ctx, svg, canEdit) {
  * @param {import('../EventBus.js').EventBus} ctx.eventBus
  * @param {import('../UIManager.js').UIManager} ctx.ui
  * @param {import('./UIHelpers.js').UIHelpers} ctx.helpers
- * @param {{ depth: ReturnType<typeof setTimeout> | null, normal: ReturnType<typeof setTimeout> | null, colorDebounce: Map<string, ReturnType<typeof setTimeout>> }} ctx.timers
+ * @param {{ depth: ReturnType<typeof setTimeout> | null, normal: ReturnType<typeof setTimeout> | null, colorDebounce: Map<string, ReturnType<typeof setTimeout>>, meshPending?: Record<string, (() => void) | null>, _scrubEndBound?: boolean }} ctx.timers
  */
 export function bindSvgExtrudeControls(ctx) {
   const { inputs, stateStore, eventBus, ui, helpers, timers } = ctx;
 
+  extrudeMeshFlushContexts.add(ctx);
+  bindExtrudeScrubEndListener(eventBus);
+
   inputs.depth?.addEventListener('input', (event) => {
-    const value = parseFloat(event.target.value);
-    const clampedValue = Number.isFinite(value)
-      ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
-      : DEFAULT_EXTRUDE_DEPTH;
+    const clampedValue = readClampedExtrudeDepth(event.target);
+    writeRangeValue(event.target, clampedValue);
     helpers.updateValueLabel(inputs.depthOutputKey, clampedValue, 'decimal');
     stateStore.set('svgExtrude.depth', clampedValue);
     const prevBevel = stateStore.getState().svgExtrude?.bevelAmount ?? 0;
@@ -597,27 +695,28 @@ export function bindSvgExtrudeControls(ctx) {
       svg.bevelAmount = clampedBevel;
     }
     syncExtrudeBevelControlInputs(ctx, svg, true);
-    if (timers.depth) clearTimeout(timers.depth);
-    timers.depth = setTimeout(() => {
-      eventBus.emit('mesh:svg-extrude-depth', clampedValue);
-      if (inputs.bevelAmount && clampedBevel !== prevBevel) {
-        eventBus.emit('mesh:svg-extrude-bevel', { amount: clampedBevel });
+    if (clampedBevel !== prevBevel) {
+      timers._depthFlushBevel = clampedBevel;
+    }
+    scheduleExtrudeMeshFlush(ctx, 'depth', () => {
+      const latest = readClampedExtrudeDepth(inputs.depth);
+      eventBus.emit('mesh:svg-extrude-depth', latest);
+      if (inputs.bevelAmount && timers._depthFlushBevel != null) {
+        eventBus.emit('mesh:svg-extrude-bevel', { amount: timers._depthFlushBevel });
+        timers._depthFlushBevel = null;
       }
-    }, 45);
+    });
   });
   if (inputs.depth) helpers.enableSliderKeyboardStepping(inputs.depth);
 
   inputs.normalAngle?.addEventListener('input', (event) => {
-    const value = parseFloat(event.target.value);
-    const clampedValue = Number.isFinite(value)
-      ? Math.max(MIN_EXTRUDE_NORMAL_ANGLE_DEG, Math.min(MAX_EXTRUDE_NORMAL_ANGLE_DEG, value))
-      : DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+    const clampedValue = readClampedExtrudeNormalAngle(event.target);
+    writeRangeValue(event.target, clampedValue);
     helpers.updateValueLabel(inputs.normalAngleOutputKey, clampedValue, 'angle');
     stateStore.set('svgExtrude.normalAngle', clampedValue);
-    if (timers.normal) clearTimeout(timers.normal);
-    timers.normal = setTimeout(() => {
-      eventBus.emit('mesh:svg-extrude-normal-angle', clampedValue);
-    }, 45);
+    scheduleExtrudeMeshFlush(ctx, 'normal', () => {
+      eventBus.emit('mesh:svg-extrude-normal-angle', readClampedExtrudeNormalAngle(inputs.normalAngle));
+    });
   });
   if (inputs.normalAngle) helpers.enableSliderKeyboardStepping(inputs.normalAngle);
 
@@ -688,6 +787,7 @@ export function bindSvgExtrudeControls(ctx) {
         : Number.isFinite(value)
           ? Math.max(MIN_EXTRUDE_DEPTH, Math.min(MAX_EXTRUDE_DEPTH, value))
           : DEFAULT_EXTRUDE_DEPTH;
+    writeRangeValue(input, clampedValue);
     const sliderLine = input.closest('.slider-line');
     const numberInput = sliderLine?.querySelector('input[type="number"]');
     if (numberInput) numberInput.value = clampedValue.toFixed(2);
@@ -705,15 +805,33 @@ export function bindSvgExtrudeControls(ctx) {
       stateStore.set('svgExtrude.colorDepths', currentDepths);
     }
     const timerKey = `${kind}:${color}`;
+    timers.meshPending ??= {};
+    timers.meshPending[timerKey] = () => {
+      const rangeInput = sliderLine?.querySelector('input[type="range"]');
+      const liveValue = parseFloat(rangeInput?.value ?? String(clampedValue));
+      const latest =
+        kind === 'offset'
+          ? Number.isFinite(liveValue)
+            ? Math.max(-1.0, Math.min(1.0, liveValue))
+            : 0
+          : readClampedExtrudeDepth(rangeInput ?? input);
+      if (kind === 'offset') {
+        eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: latest });
+      } else {
+        eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: latest });
+      }
+    };
+    if (stateStore.isNotifyDeferred?.()) return;
     const existingTimer = timers.colorDebounce.get(timerKey);
     if (existingTimer) clearTimeout(existingTimer);
     const timer = setTimeout(() => {
-      if (kind === 'offset') {
-        eventBus.emit('mesh:svg-extrude-color-offset', { color, offset: clampedValue });
-      } else {
-        eventBus.emit('mesh:svg-extrude-color-depth', { color, depth: clampedValue });
-      }
       timers.colorDebounce.delete(timerKey);
+      if (stateStore.isNotifyDeferred?.()) return;
+      const pending = timers.meshPending?.[timerKey];
+      if (typeof pending === 'function') {
+        timers.meshPending[timerKey] = null;
+        pending();
+      }
     }, 50);
     timers.colorDebounce.set(timerKey, timer);
   };
@@ -767,8 +885,9 @@ function syncExtrudeBevelControlInputs(ctx, svg, canEdit) {
   if (inputs.bevelAmount) {
     inputs.bevelAmount.max = String(maxBevel);
     inputs.bevelAmount.step = String(Math.max(0.001, maxBevel / 50));
-    if (document.activeElement !== inputs.bevelAmount) {
-      inputs.bevelAmount.value = amount;
+    if (helpers.syncRangeFromState(inputs.bevelAmount, amount)) {
+      helpers.updateValueLabel(inputs.bevelAmountOutputKey, amount, 'decimal');
+    } else if (!helpers.shouldSkipRangeSyncWrite(inputs.bevelAmount)) {
       helpers.updateValueLabel(inputs.bevelAmountOutputKey, amount, 'decimal');
     }
     ui.setControlDisabled(inputs.bevelAmount, !canEdit);
@@ -789,13 +908,19 @@ export function bindExtrudeBevelControls(ctx) {
     const clampedValue = Number.isFinite(value)
       ? Math.max(0, Math.min(maxBevel, value))
       : 0;
+    writeRangeValue(event.target, clampedValue);
     helpers.updateValueLabel(inputs.bevelAmountOutputKey, clampedValue, 'decimal');
     stateStore.set('svgExtrude.bevelAmount', clampedValue);
     syncExtrudeBevelControlInputs(ctx, stateStore.getState().svgExtrude || {}, true);
-    if (timers.bevel) clearTimeout(timers.bevel);
-    timers.bevel = setTimeout(() => {
-      eventBus.emit('mesh:svg-extrude-bevel', { amount: clampedValue });
-    }, 45);
+    scheduleExtrudeMeshFlush(ctx, 'bevel', () => {
+      const latestDepth = Number(stateStore.getState().svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
+      const latestMax = maxExtrudeBevelAmount(latestDepth);
+      const latestValue = parseFloat(inputs.bevelAmount?.value);
+      const latest = Number.isFinite(latestValue)
+        ? Math.max(0, Math.min(latestMax, latestValue))
+        : 0;
+      eventBus.emit('mesh:svg-extrude-bevel', { amount: latest });
+    });
   });
   if (inputs.bevelAmount) helpers.enableSliderKeyboardStepping(inputs.bevelAmount);
 }
@@ -818,8 +943,9 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
 
   if (inputs.depth) {
     const depth = svg.depth ?? DEFAULT_EXTRUDE_DEPTH;
-    if (document.activeElement !== inputs.depth) {
-      inputs.depth.value = depth;
+    if (helpers.syncRangeFromState(inputs.depth, depth)) {
+      helpers.updateValueLabel(inputs.depthOutputKey, depth, 'decimal');
+    } else if (!helpers.shouldSkipRangeSyncWrite(inputs.depth)) {
       helpers.updateValueLabel(inputs.depthOutputKey, depth, 'decimal');
     }
     ui.setControlDisabled(inputs.depth, !canEdit);
@@ -829,8 +955,9 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
   }
   if (inputs.normalAngle) {
     const normalAngle = svg.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
-    if (document.activeElement !== inputs.normalAngle) {
-      inputs.normalAngle.value = normalAngle;
+    if (helpers.syncRangeFromState(inputs.normalAngle, normalAngle)) {
+      helpers.updateValueLabel(inputs.normalAngleOutputKey, normalAngle, 'angle');
+    } else if (!helpers.shouldSkipRangeSyncWrite(inputs.normalAngle)) {
       helpers.updateValueLabel(inputs.normalAngleOutputKey, normalAngle, 'angle');
     }
     ui.setControlDisabled(inputs.normalAngle, !canEdit);
