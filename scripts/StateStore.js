@@ -81,8 +81,8 @@ export class StateStore {
         lineHeight: 1,
         /** @type {'low' | 'medium' | 'high' | 'ultra'} — cap/side curve sampling for 3D extrude. */
         detail: 'high',
-        /** @type {'smooth' | 'simple'} — smooth = TextGeometry rounded outset; simple = inset chamfer (hard caps/sides). */
-        bevelType: 'smooth',
+        /** @type {'convex' | 'straight'} — convex = rounded outset; straight = flat chamfer. */
+        bevelType: 'convex',
         /** 0.15–3 — preview-only zoom (1× fills the box; higher may crop). */
         previewScale: 0.65,
         /** Letter fill for 2D preview and 3D extrude. */
@@ -285,8 +285,10 @@ export class StateStore {
       lightsShadowColor: '#080808',
       /** How strongly the shadow tint is applied (0 = none, 1 = full). */
       lightsShadowOpacity: 0.25,
-      /** Directional-light shadow bias; lower (more negative) tightens contact. */
-      lightsShadowContactOffset: -0.0001,
+      /** Directional-light shadow bias; lower (more negative) tightens cast-shadow contact. */
+      lightsShadowContactOffset: -0.0005,
+      /** Shadow-map normal offset — cast shadows only (not direct side shading). */
+      lightsShadowNormalBias: 0.01,
       /** Cast shadows from both sides (useful for thin single-surface meshes). */
       lightsShadowTwoSided: false,
       /** Key-light gobo projection — patterned shadow/light mask from the directional key. */

@@ -52,6 +52,7 @@ const NOT_FOUND_PRESET = {
     availableColors: ['#c6d400'],
     depth: 0.2,
     normalAngle: 30,
+    hardEdgeAngle: 45,
     colorDepths: {},
     colorOffsets: {},
     flipDirection: false,
@@ -169,7 +170,8 @@ const NOT_FOUND_PRESET = {
   lightsShadowSoftness: DEFAULT_LIGHTS_SHADOW_SOFTNESS,
   lightsShadowColor: '#080808',
   lightsShadowOpacity: 0.25,
-  lightsShadowContactOffset: -0.0001,
+  lightsShadowContactOffset: -0.0005,
+  lightsShadowNormalBias: 0.01,
   lightsShadowTwoSided: false,
   gobo: {
     enabled: false,

@@ -305,7 +305,10 @@ export class SceneManager {
       initialState.lightsShadowContactOffset,
     )
       ? initialState.lightsShadowContactOffset
-      : -0.0001;
+      : -0.0005;
+    this.lightsShadowNormalBias = Number.isFinite(initialState.lightsShadowNormalBias)
+      ? initialState.lightsShadowNormalBias
+      : 0.01;
     this.lightsShadowTwoSided = !!initialState.lightsShadowTwoSided;
     this.lightsCastShadows = !!initialState.lightsCastShadows;
     this.lightsShadowColor = initialState.lightsShadowColor ?? '#080808';
@@ -1015,6 +1018,7 @@ export class SceneManager {
       shadowQuality: this.lightsShadowQuality,
       shadowSoftness: this.lightsShadowSoftness,
       shadowContactOffset: this.lightsShadowContactOffset,
+      shadowNormalBias: this.lightsShadowNormalBias,
     });
     this.lights = this.lightsController.getLights();
   }
@@ -3278,8 +3282,14 @@ export class SceneManager {
 
   setLightsShadowContactOffset(value) {
     const raw = Number(value);
-    this.lightsShadowContactOffset = Number.isFinite(raw) ? raw : -0.0001;
+    this.lightsShadowContactOffset = Number.isFinite(raw) ? raw : -0.0005;
     this.lightsController?.setShadowContactOffset(this.lightsShadowContactOffset);
+  }
+
+  setLightsShadowNormalBias(value) {
+    const raw = Number(value);
+    this.lightsShadowNormalBias = Number.isFinite(raw) ? raw : 0.01;
+    this.lightsController?.setShadowNormalBias(this.lightsShadowNormalBias);
   }
 
   setLightsShadowColor(color) {
@@ -3440,6 +3450,7 @@ export class SceneManager {
     const quality = settings.quality ?? this.lightsShadowQuality;
     const softness = settings.softness ?? this.lightsShadowSoftness;
     const contactOffset = settings.contactOffset ?? this.lightsShadowContactOffset;
+    const normalBias = settings.normalBias ?? this.lightsShadowNormalBias;
     const shadowColor = settings.color ?? this.lightsShadowColor;
     const shadowOpacity = settings.opacity ?? this.lightsShadowOpacity;
     const twoSided = settings.twoSided ?? this.lightsShadowTwoSided;
@@ -3447,6 +3458,7 @@ export class SceneManager {
     this.setLightsCastShadows(cast);
     this.setLightsShadowQuality(quality);
     this.setLightsShadowContactOffset(contactOffset);
+    this.setLightsShadowNormalBias(normalBias);
     this.setLightsShadowTwoSided(twoSided);
     this.setLightsShadowSoftness(softness);
     this.setLightsShadowColor(shadowColor);
@@ -3854,6 +3866,17 @@ export class SceneManager {
       {
         logLabel: 'update SVG normal angle',
         toastOnError: 'Could not update SVG angle',
+      },
+    );
+  }
+
+  setSvgExtrudeHardEdgeAngle(hardEdgeAngle) {
+    runSvgExtrudeImporterMutation(
+      this,
+      () => this.svgExtrudeImporter.setHardEdgeAngleDeg(hardEdgeAngle),
+      {
+        logLabel: 'update extrude hard edge angle',
+        toastOnError: 'Could not update hard edge angle',
       },
     );
   }

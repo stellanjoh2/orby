@@ -75,6 +75,7 @@ export class SceneSettingsManager {
         : [],
       depth: svg.depth,
       normalAngle: svg.normalAngle,
+      hardEdgeAngle: svg.hardEdgeAngle,
       colorDepths: svg.colorDepths,
       colorOffsets: svg.colorOffsets,
       flipDirection: svg.flipDirection,
@@ -425,6 +426,10 @@ export class SceneSettingsManager {
       if (payload.svgExtrude?.normalAngle !== undefined) {
         this.stateStore.set('svgExtrude.normalAngle', payload.svgExtrude.normalAngle);
         this.eventBus.emit('mesh:svg-extrude-normal-angle', payload.svgExtrude.normalAngle);
+      }
+      if (payload.svgExtrude?.hardEdgeAngle !== undefined) {
+        this.stateStore.set('svgExtrude.hardEdgeAngle', payload.svgExtrude.hardEdgeAngle);
+        this.eventBus.emit('mesh:svg-extrude-hard-edge-angle', payload.svgExtrude.hardEdgeAngle);
       }
       if (payload.svgExtrude?.bevelAmount !== undefined) {
         const depth = Number(this.stateStore.getState().svgExtrude?.depth ?? DEFAULT_EXTRUDE_DEPTH);
@@ -1018,6 +1023,9 @@ export class SceneSettingsManager {
           payload.lightsShadowContactOffset,
         );
       }
+      if (payload.lightsShadowNormalBias !== undefined) {
+        this.stateStore.set('lightsShadowNormalBias', payload.lightsShadowNormalBias);
+      }
       if (payload.lightsShadowTwoSided !== undefined) {
         this.stateStore.set('lightsShadowTwoSided', payload.lightsShadowTwoSided);
       }
@@ -1028,6 +1036,7 @@ export class SceneSettingsManager {
         || payload.lightsShadowColor !== undefined
         || payload.lightsShadowOpacity !== undefined
         || payload.lightsShadowContactOffset !== undefined
+        || payload.lightsShadowNormalBias !== undefined
         || payload.lightsShadowTwoSided !== undefined
       ) {
         this.eventBus.emit('lights:shadow-settings', {
@@ -1037,6 +1046,7 @@ export class SceneSettingsManager {
           color: payload.lightsShadowColor,
           opacity: payload.lightsShadowOpacity ?? 0.25,
           contactOffset: payload.lightsShadowContactOffset,
+          normalBias: payload.lightsShadowNormalBias,
           twoSided: payload.lightsShadowTwoSided,
         });
       }

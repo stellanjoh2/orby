@@ -125,6 +125,7 @@ export class EventManager {
     eventBus.on('mesh:map-inspect-clear', () => s.clearMapInspectPreview());
     eventBus.on('mesh:svg-extrude-depth', (depth) => s.setSvgExtrudeDepth(depth));
     eventBus.on('mesh:svg-extrude-normal-angle', (angle) => s.setSvgExtrudeNormalAngle(angle));
+    eventBus.on('mesh:svg-extrude-hard-edge-angle', (angle) => s.setSvgExtrudeHardEdgeAngle(angle));
     eventBus.on('mesh:svg-extrude-bevel', (payload) => s.setSvgExtrudeBevel(payload ?? {}));
     eventBus.on('mesh:font-extrude-bevel-type', (payload) =>
       s.setFontExtrudeBevelType(payload?.type ?? payload),
@@ -486,6 +487,9 @@ export class EventManager {
     eventBus.on('lights:shadow-opacity', (value) => s.setLightsShadowOpacity(value));
     eventBus.on('lights:shadow-contact-offset', (value) =>
       s.setLightsShadowContactOffset(value),
+    );
+    eventBus.on('lights:shadow-normal-bias', (value) =>
+      s.setLightsShadowNormalBias(value),
     );
     eventBus.on('lights:shadow-two-sided', (enabled) =>
       s.setLightsShadowTwoSided(enabled),

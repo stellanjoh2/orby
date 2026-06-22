@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 import { applyExtrudeBoxUvs } from './extrudeBoxUvs.js';
+import { hardenExtrudeSideFaceNormals } from './extrudeNormalHardening.js';
 import { fixExtrudedSvgCapFaceOrientations } from './svgExtrudeCapNormals.js';
 
 export const DEFAULT_EXTRUDE_DEPTH = 0.2;
 export const MIN_EXTRUDE_DEPTH = 0.01;
 export const MAX_EXTRUDE_DEPTH = 2.0;
 export const DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG = 30;
+/** Default floor for toCreasedNormals — keeps 90° cap/side/back edges split for shading terminators. */
+export const DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG = 45;
+export const MIN_EXTRUDE_HARD_EDGE_ANGLE_DEG = 0;
+export const MAX_EXTRUDE_HARD_EDGE_ANGLE_DEG = 90;
 export const MIN_EXTRUDE_NORMAL_ANGLE_DEG = 0;
 export const MAX_EXTRUDE_NORMAL_ANGLE_DEG = 180;
 export const MIN_EXTRUDE_COLOR_OFFSET = -1.0;
@@ -32,6 +37,35 @@ export function clampExtrudeNormalAngleDeg(value) {
     MIN_EXTRUDE_NORMAL_ANGLE_DEG,
     Math.min(MAX_EXTRUDE_NORMAL_ANGLE_DEG, numeric),
   );
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function clampExtrudeHardEdgeAngleDeg(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+  return Math.max(
+    MIN_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+    Math.min(MAX_EXTRUDE_HARD_EDGE_ANGLE_DEG, numeric),
+  );
+}
+
+/**
+ * Crease angle (radians) for {@link toCreasedNormals} — enforces a hard-edge floor so cap/side
+ * transitions stay split even when the smoothing slider is lower.
+ *
+ * @param {unknown} normalAngleDeg
+ * @param {unknown} [hardEdgeAngleDeg]
+ * @returns {number}
+ */
+export function resolveExtrudeCreaseAngleRad(normalAngleDeg, hardEdgeAngleDeg) {
+  const deg = Math.max(
+    clampExtrudeNormalAngleDeg(normalAngleDeg),
+    clampExtrudeHardEdgeAngleDeg(hardEdgeAngleDeg),
+  );
+  return THREE.MathUtils.degToRad(deg);
 }
 
 /**
@@ -121,6 +155,7 @@ export function finalizeExtrudeGroupGeometry(group, creaseAngleRad) {
       if (geom !== child.geometry) {
         child.geometry.dispose();
       }
+      geom = hardenExtrudeSideFaceNormals(geom);
     }
     child.geometry = applyExtrudeBoxUvs(geom);
   });

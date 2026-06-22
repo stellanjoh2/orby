@@ -1,11 +1,13 @@
 import {
   clampExtrudeBevelAmount,
   maxExtrudeBevelAmount,
+  normalizeFontBevelType,
 } from '../import/extrudeBevel.js';
 import { normalizeExtrudeDetail } from '../import/extrudeDetail.js';
 import {
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
   DEFAULT_SVG_EXTRUDE_OVERRIDE_COLOR,
   MAX_EXTRUDE_DEPTH,
@@ -13,6 +15,11 @@ import {
   MIN_EXTRUDE_NORMAL_ANGLE_DEG,
   MAX_EXTRUDE_NORMAL_ANGLE_DEG,
 } from '../import/extrudeDefaults.js';
+import {
+  clampExtrudeHardEdgeAngleDeg,
+  MAX_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+  MIN_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+} from '../import/extrudeImporterShared.js';
 import {
   FONT_REVEAL_TYPE_OPTIONS,
   FONT_REVEAL_UNIT_OPTIONS,
@@ -201,6 +208,42 @@ export function buildExtrudeAngleSliderHtml(options = {}) {
  *   outputKey?: string,
  *   label?: string,
  *   tooltip?: string,
+ *   ariaLabel?: string,
+ *   value?: number,
+ * }} [options]
+ */
+export function buildExtrudeHardEdgeAngleSliderHtml(options = {}) {
+  const id = options.id ?? 'svgExtrudeHardEdgeAngle';
+  const outputKey = options.outputKey ?? 'svgExtrudeHardEdgeAngle';
+  const label = options.label ?? 'Hard Edge Angle';
+  const tooltip =
+    options.tooltip ??
+    'Minimum crease for cap/side edge splits — fixes bright shading leaks on side faces (direct light, not cast shadows). Higher = sharper terminators.';
+  const ariaLabel = options.ariaLabel ? ` aria-label="${options.ariaLabel}"` : '';
+  const value =
+    Number(options.value ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG) ||
+    DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+  return `
+            <label class="slider-line">
+              <span data-tooltip="${tooltip}">${label}</span>
+              <input
+                id="${id}"
+                type="range"
+                min="${MIN_EXTRUDE_HARD_EDGE_ANGLE_DEG}"
+                max="${MAX_EXTRUDE_HARD_EDGE_ANGLE_DEG}"
+                step="1"
+                value="${value}"${ariaLabel}
+              />
+              <span class="value" data-output="${outputKey}">${value}°</span>
+            </label>`;
+}
+
+/**
+ * @param {{
+ *   id?: string,
+ *   outputKey?: string,
+ *   label?: string,
+ *   tooltip?: string,
  *   depth?: number,
  *   value?: number,
  * }} [options]
@@ -232,13 +275,13 @@ export function buildExtrudeBevelSliderHtml(options = {}) {
 }
 
 /**
- * Font extrude bevel profile — smooth (TextGeometry) vs simple (SVG chamfer).
+ * Font extrude bevel profile — convex (TextGeometry) vs straight (flat chamfer).
  *
  * @param {{
  *   id?: string,
  *   label?: string,
  *   tooltip?: string,
- *   value?: 'smooth' | 'simple' | string,
+ *   value?: 'convex' | 'straight' | string,
  * }} [options]
  */
 export function buildFontBevelTypeSelectHtml(options = {}) {
@@ -246,14 +289,14 @@ export function buildFontBevelTypeSelectHtml(options = {}) {
   const label = options.label ?? 'Bevel Type';
   const tooltip =
     options.tooltip ??
-    'Smooth = rounded TextGeometry-style bevel. Simple = straight inward chamfer like SVG extrude.';
-  const value = options.value === 'smooth' ? 'smooth' : 'simple';
+    'Convex = rounded outward bevel. Straight = flat chamfer cut.';
+  const value = normalizeFontBevelType(options.value);
   return `
             <label class="select-line font-extrude-bevel-type-line">
               ${buildControlLabelWithDevBadge(label, tooltip)}
               <select id="${id}" aria-label="Bevel type">
-                <option value="smooth"${value === 'smooth' ? ' selected' : ''}>Smooth</option>
-                <option value="simple"${value === 'simple' ? ' selected' : ''}>Simple</option>
+                <option value="convex"${value === 'convex' ? ' selected' : ''}>Convex</option>
+                <option value="straight"${value === 'straight' ? ' selected' : ''}>Straight</option>
               </select>
             </label>`;
 }
@@ -264,7 +307,7 @@ export function buildFontBevelTypeSelectHtml(options = {}) {
  * @param {{
  *   depth?: number,
  *   bevel?: { id?: string, outputKey?: string, label?: string, tooltip?: string, value?: number } | false,
- *   bevelType?: { id?: string, label?: string, tooltip?: string, value?: 'smooth' | 'simple' | string } | false,
+ *   bevelType?: { id?: string, label?: string, tooltip?: string, value?: 'convex' | 'straight' | string } | false,
  * }} [options]
  */
 export function buildExtrudeBevelGroupHtml(options = {}) {
@@ -316,8 +359,9 @@ export function buildExtrudeDetailSelectHtml(options = {}) {
  * @param {{
  *   depth?: { id?: string, outputKey?: string, label?: string, tooltip?: string, value?: number } | false,
  *   bevel?: { id?: string, outputKey?: string, label?: string, tooltip?: string, depth?: number, value?: number } | false,
- *   bevelType?: { id?: string, label?: string, tooltip?: string, value?: 'smooth' | 'simple' | string } | false,
+ *   bevelType?: { id?: string, label?: string, tooltip?: string, value?: 'convex' | 'straight' | string } | false,
  *   angle?: { id?: string, outputKey?: string, label?: string, tooltip?: string, ariaLabel?: string, value?: number } | false,
+ *   hardEdgeAngle?: { id?: string, outputKey?: string, label?: string, tooltip?: string, ariaLabel?: string, value?: number } | false,
  *   detail?: { id?: string, label?: string, tooltip?: string, value?: 'low' | 'medium' | 'high' | 'ultra' | string } | false,
  * }} [sections]
  */
@@ -334,6 +378,9 @@ export function buildExtrudeCoreControlsHtml(sections = {}) {
   }
   if (sections.angle !== false) {
     parts.push(buildExtrudeAngleSliderHtml(sections.angle ?? {}));
+  }
+  if (sections.hardEdgeAngle !== false) {
+    parts.push(buildExtrudeHardEdgeAngleSliderHtml(sections.hardEdgeAngle ?? {}));
   }
   if (sections.bevel !== false || sections.bevelType) {
     parts.push(buildExtrudeBevelGroupHtml({
@@ -352,6 +399,7 @@ export function ensureSvgExtrudeCoreControlsMounted() {
   if (
     mount.dataset.mounted === '1' &&
     mount.querySelector('#svgExtrudeDepth') &&
+    mount.querySelector('#svgExtrudeHardEdgeAngle') &&
     mount.querySelector('#svgExtrudeDetail option[value="ultra"]') &&
     mount.querySelector('.extrude-bevel-group')
   ) {
@@ -630,6 +678,13 @@ function readClampedExtrudeNormalAngle(input) {
     : DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
 }
 
+function readClampedExtrudeHardEdgeAngle(input) {
+  const value = parseFloat(input?.value);
+  return Number.isFinite(value)
+    ? clampExtrudeHardEdgeAngleDeg(value)
+    : DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+}
+
 function writeRangeValue(input, value) {
   if (!(input instanceof HTMLInputElement)) return;
   const next = String(value);
@@ -681,6 +736,7 @@ export function flushPendingExtrudeMesh(ctx, slider) {
   const kinds = [];
   if (slider === inputs.depth) kinds.push('depth');
   if (slider === inputs.normalAngle) kinds.push('normal');
+  if (slider === inputs.hardEdgeAngle) kinds.push('hardEdge');
   if (slider === inputs.bevelAmount) kinds.push('bevel');
 
   for (const kind of kinds) {
@@ -765,6 +821,20 @@ export function bindSvgExtrudeControls(ctx) {
     });
   });
   if (inputs.normalAngle) helpers.enableSliderKeyboardStepping(inputs.normalAngle);
+
+  inputs.hardEdgeAngle?.addEventListener('input', (event) => {
+    const clampedValue = readClampedExtrudeHardEdgeAngle(event.target);
+    writeRangeValue(event.target, clampedValue);
+    helpers.updateValueLabel(inputs.hardEdgeAngleOutputKey, clampedValue, 'angle');
+    stateStore.set('svgExtrude.hardEdgeAngle', clampedValue);
+    scheduleExtrudeMeshFlush(ctx, 'hardEdge', () => {
+      eventBus.emit(
+        'mesh:svg-extrude-hard-edge-angle',
+        readClampedExtrudeHardEdgeAngle(inputs.hardEdgeAngle),
+      );
+    });
+  });
+  if (inputs.hardEdgeAngle) helpers.enableSliderKeyboardStepping(inputs.hardEdgeAngle);
 
   inputs.detail?.addEventListener('change', (event) => {
     ui.uiSounds?.playSelect?.();
@@ -973,6 +1043,15 @@ export function syncSvgExtrudeControls(ctx, state, options = {}) {
     }
     ui.setControlDisabled(inputs.normalAngle, !canEdit);
   }
+  if (inputs.hardEdgeAngle) {
+    const hardEdgeAngle = svg.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
+    if (helpers.syncRangeFromState(inputs.hardEdgeAngle, hardEdgeAngle)) {
+      helpers.updateValueLabel(inputs.hardEdgeAngleOutputKey, hardEdgeAngle, 'angle');
+    } else if (!helpers.shouldSkipRangeSyncWrite(inputs.hardEdgeAngle)) {
+      helpers.updateValueLabel(inputs.hardEdgeAngleOutputKey, hardEdgeAngle, 'angle');
+    }
+    ui.setControlDisabled(inputs.hardEdgeAngle, !canEdit);
+  }
   if (inputs.detail) {
     const detail = normalizeExtrudeDetail(svg.detail ?? 'high');
     if (document.activeElement !== inputs.detail) {
@@ -1115,8 +1194,14 @@ export const FONT_EXTRUDE_SHAPE_CONTROLS_HTML = `
             outputKey: 'fontExtrudeMeshAngle',
             label: 'Smoothing Angle',
             tooltip:
-              'Controls surface smoothing on letter edges (0 = faceted, higher = smoother)',
+              'Bevel/curve smoothness (0 = faceted). Does not control side-face shading terminators — use Hard Edge Angle.',
             ariaLabel: 'Smoothing angle',
+          })}
+          ${buildExtrudeHardEdgeAngleSliderHtml({
+            id: 'fontExtrudeHardEdgeAngle',
+            outputKey: 'fontExtrudeHardEdgeAngle',
+            label: 'Hard Edge Angle',
+            ariaLabel: 'Hard edge angle',
           })}
           ${buildExtrudeBevelGroupHtml({
             bevelType: { id: 'fontExtrudeBevelType' },

@@ -15,9 +15,12 @@ import {
   clampExtrudeDepth,
   clampExtrudeNormalAngleDeg,
   DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  clampExtrudeHardEdgeAngleDeg,
   finalizeExtrudeGroupGeometry,
   preserveExtrudeGroupOnRebuild,
+  resolveExtrudeCreaseAngleRad,
 } from './extrudeImporterShared.js';
 import {
   FONT_EXTRUDE_TARGET_CAP_HEIGHT,
@@ -29,11 +32,11 @@ import { softenFontExtrudeShapeForBevel } from './extrudeBevelCorner.js';
 import { geometryHasNaNPositions } from './extrudeShapeSanitize.js';
 import {
   applyFontExtrudeSimpleBevelNormals,
+  applyFontExtrudeSmoothBevelNormals,
   withFontCdtCapTriangulation,
 } from './fontExtrudeCapTriangulation.js';
 import { fontExtrudeHoleCapLooksFilled } from './fontExtrudeValidate.js';
 import { flipFontShapeHoles, opentypePathHasArea, opentypePathToShapes } from './opentypePathToShape.js';
-import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 const DEFAULT_GLYPH_FILL = '#808080';
 
@@ -56,6 +59,7 @@ export class FontExtrudeImporter {
     this._glyphEntries = [];
     this.currentDepth = DEFAULT_EXTRUDE_DEPTH;
     this.currentNormalAngleDeg = DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG;
+    this.currentHardEdgeAngleDeg = DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG;
     this.currentColorDepths = {};
     this.currentColorOffsets = {};
     this.currentFillColor = DEFAULT_GLYPH_FILL;
@@ -92,6 +96,9 @@ export class FontExtrudeImporter {
     this.currentDepth = clampExtrudeDepth(options.depth ?? this.currentDepth);
     this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(
       options.normalAngleDeg ?? this.currentNormalAngleDeg,
+    );
+    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(
+      options.hardEdgeAngleDeg ?? this.currentHardEdgeAngleDeg,
     );
     this.currentColorDepths = { ...(options.colorDepths || this.currentColorDepths || {}) };
     this.currentColorOffsets = { ...(options.colorOffsets || this.currentColorOffsets || {}) };
@@ -140,6 +147,12 @@ export class FontExtrudeImporter {
   setNormalAngleDeg(nextNormalAngleDeg) {
     if (!this._glyphEntries.length) throw new Error('No font layout available');
     this.currentNormalAngleDeg = clampExtrudeNormalAngleDeg(nextNormalAngleDeg);
+    return this._rebuildPreserveGroup();
+  }
+
+  setHardEdgeAngleDeg(nextHardEdgeAngleDeg) {
+    if (!this._glyphEntries.length) throw new Error('No font layout available');
+    this.currentHardEdgeAngleDeg = clampExtrudeHardEdgeAngleDeg(nextHardEdgeAngleDeg);
     return this._rebuildPreserveGroup();
   }
 
@@ -207,6 +220,10 @@ export class FontExtrudeImporter {
     return this.currentNormalAngleDeg;
   }
 
+  getHardEdgeAngleDeg() {
+    return this.currentHardEdgeAngleDeg;
+  }
+
   getColorDepths() {
     return { ...this.currentColorDepths };
   }
@@ -254,8 +271,9 @@ export class FontExtrudeImporter {
     group.userData.orbySvgNormalAngleDeg = normalAngleDeg;
     group.userData.orbySvgFlipDirection = this.currentFlipDirection;
 
-    const creaseAngleRad = THREE.MathUtils.degToRad(
+    const creaseAngleRad = resolveExtrudeCreaseAngleRad(
       resolveFontExtrudeCreaseAngleDeg(this.currentBevelType, normalAngleDeg),
+      this.currentHardEdgeAngleDeg,
     );
     const fillHex = this.currentFillColor.toLowerCase();
     const effectiveDepth = Number.isFinite(this.currentColorDepths?.[fillHex])
@@ -264,7 +282,7 @@ export class FontExtrudeImporter {
     const effectiveOffset = clampExtrudeColorOffset(this.currentColorOffsets?.[fillHex]);
 
     const baseColor = new THREE.Color(this.currentFillColor);
-    const simpleBevel = this.currentBevelType === 'simple';
+    const straightBevel = this.currentBevelType === 'straight';
     const material = new THREE.MeshStandardMaterial({
       color: baseColor,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
@@ -330,15 +348,7 @@ export class FontExtrudeImporter {
           continue;
         }
 
-        // Smooth: crease in mesh space. Simple: full normal pipeline after normalize.
-        let meshGeometry = geometry;
-        if (!simpleBevel) {
-          meshGeometry = toCreasedNormals(geometry, creaseAngleRad);
-          if (meshGeometry !== geometry) {
-            geometry.dispose();
-          }
-        }
-        const mesh = new THREE.Mesh(meshGeometry, material.clone());
+        const mesh = new THREE.Mesh(geometry, material.clone());
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.orbySvgExtrude = true;
@@ -375,12 +385,12 @@ export class FontExtrudeImporter {
     this._normalizeFontGeometrySpace(group, this._layoutFontSize);
     applyExtrudeDirectionOffset(group, this.currentFlipDirection, this.currentDepth);
     finalizeExtrudeGroupGeometry(group, creaseAngleRad);
-    if (simpleBevel) {
-      group.traverse((child) => {
-        if (!child.isMesh || !child.geometry) return;
-        child.geometry = applyFontExtrudeSimpleBevelNormals(child.geometry, creaseAngleRad);
-      });
-    }
+    group.traverse((child) => {
+      if (!child.isMesh || !child.geometry) return;
+      child.geometry = straightBevel
+        ? applyFontExtrudeSimpleBevelNormals(child.geometry, creaseAngleRad)
+        : applyFontExtrudeSmoothBevelNormals(child.geometry, creaseAngleRad);
+    });
     this._centerGlyphGroupPivots(group);
 
     return group;

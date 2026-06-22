@@ -7,6 +7,7 @@ import cdt2d from '../vendor/cdt2d.module.js';
 import * as THREE from 'three';
 import { ShapeUtils } from 'three';
 import { toCreasedNormals } from 'https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { hardenExtrudeSideFaceNormals } from './extrudeNormalHardening.js';
 import { originalTriangulateShape } from './extrudeCapTriangulation.js';
 
 function removeDupEndPts(points) {
@@ -233,6 +234,8 @@ export function subdivideFontExtrudeCapFaces(geometry, options = {}) {
 
 const FONT_EXTRUDE_SIDE_Z_MAX = 0.12;
 const FONT_EXTRUDE_CAP_Z_MIN = 0.92;
+/** Front cap plane — bevel rings sit inset by bevelSize, well above this. */
+const FONT_EXTRUDE_FRONT_Z_EPS = 0.001;
 
 /**
  * @param {import('three').BufferAttribute} pos
@@ -284,7 +287,7 @@ function forEachExtrudeTriangle(geometry, callback) {
 }
 
 /**
- * Simple chamfer — harden every bevel shoulder face (flat chamfer shading).
+ * Straight chamfer — harden every bevel shoulder face (flat chamfer shading).
  *
  * @param {import('three').BufferGeometry} geometry
  * @param {number} creaseAngleRad
@@ -331,7 +334,66 @@ export function hardenFontExtrudeSimpleBevelFaceNormals(geometry, creaseAngleRad
 }
 
 /**
- * Simple bevel normal pipeline on final studio-space geometry (post normalize + UVs).
+ * Convex bevel normal pipeline on final studio-space geometry (post normalize + UVs).
+ * Splits 90° cap/side/back edges while keeping bevel rings smooth (~30–40° threshold),
+ * then hardens only the flat front cap (max-Z plane).
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @param {number} creaseAngleRad
+ * @returns {import('three').BufferGeometry}
+ */
+export function applyFontExtrudeSmoothBevelNormals(geometry, creaseAngleRad) {
+  if (!geometry) return geometry;
+
+  let geom = toCreasedNormals(geometry, creaseAngleRad);
+  if (geom !== geometry) {
+    geometry.dispose();
+  }
+
+  hardenExtrudeSideFaceNormals(geom);
+  hardenFontExtrudeSimpleBevelFaceNormals(geom, creaseAngleRad);
+  flattenFontExtrudeSmoothBevelFrontNormals(geom);
+  return geom;
+}
+
+/**
+ * Hard +Z normals on the flat front cap only (convex bevel).
+ * Uses max-Z plane test so inset bevel rings are left to toCreasedNormals.
+ *
+ * @param {import('three').BufferGeometry} geometry
+ * @returns {import('three').BufferGeometry}
+ */
+export function flattenFontExtrudeSmoothBevelFrontNormals(geometry) {
+  if (!geometry?.attributes?.position || !geometry.attributes.normal) {
+    return geometry;
+  }
+
+  geometry.computeBoundingBox();
+  const zFront = geometry.boundingBox?.max?.z;
+  if (!Number.isFinite(zFront)) return geometry;
+
+  const eps = FONT_EXTRUDE_FRONT_Z_EPS;
+  const pos = geometry.attributes.position;
+  const norm = geometry.attributes.normal;
+
+  const onFrontPlane = (index) => Math.abs(pos.getZ(index) - zFront) < eps;
+
+  forEachExtrudeTriangle(geometry, (ia, ib, ic) => {
+    if (!onFrontPlane(ia) || !onFrontPlane(ib) || !onFrontPlane(ic)) {
+      return;
+    }
+
+    norm.setXYZ(ia, 0, 0, 1);
+    norm.setXYZ(ib, 0, 0, 1);
+    norm.setXYZ(ic, 0, 0, 1);
+  });
+
+  norm.needsUpdate = true;
+  return geometry;
+}
+
+/**
+ * Straight bevel normal pipeline on final studio-space geometry (post normalize + UVs).
  *
  * @param {import('three').BufferGeometry} geometry
  * @param {number} creaseAngleRad
@@ -345,13 +407,14 @@ export function applyFontExtrudeSimpleBevelNormals(geometry, creaseAngleRad) {
     geometry.dispose();
   }
 
+  hardenExtrudeSideFaceNormals(geom);
   hardenFontExtrudeSimpleBevelFaceNormals(geom, creaseAngleRad);
   flattenFontExtrudeSimpleBevelFrontNormals(geom);
   return geom;
 }
 
 /**
- * Hard normals on the flat front cap only (simple bevel).
+ * Hard normals on the flat front cap only (straight bevel).
  * Must run after {@link FontExtrudeImporter#_normalizeFontGeometrySpace} and
  * {@link finalizeExtrudeGroupGeometry}. Side curves use toCreasedNormals; chamfer faces hardened separately.
  *

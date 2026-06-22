@@ -590,6 +590,12 @@ export class StudioControls {
       this.stateStore.set('lightsShadowContactOffset', value);
       this.eventBus.emit('lights:shadow-contact-offset', value);
     });
+    this.ui.inputs.lightsShadowNormalBias?.addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      this.helpers.updateValueLabel('lightsShadowNormalBias', value, 'decimal', 3);
+      this.stateStore.set('lightsShadowNormalBias', value);
+      this.eventBus.emit('lights:shadow-normal-bias', value);
+    });
     this.ui.inputs.lightsShadowTwoSided?.addEventListener('change', (event) => {
       const enabled = event.target.checked;
       this.stateStore.set('lightsShadowTwoSided', enabled);
@@ -600,6 +606,9 @@ export class StudioControls {
     }
     if (this.ui.inputs.lightsShadowContactOffset) {
       this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsShadowContactOffset);
+    }
+    if (this.ui.inputs.lightsShadowNormalBias) {
+      this.helpers.enableSliderKeyboardStepping(this.ui.inputs.lightsShadowNormalBias);
     }
     this.ui.inputs.lightsRotation?.addEventListener('input', (event) => {
       const value = parseFloat(event.target.value) || 0;
@@ -1018,9 +1027,16 @@ export class StudioControls {
     if (this.ui.inputs.lightsShadowContactOffset) {
       const contact = Number.isFinite(state.lightsShadowContactOffset)
         ? state.lightsShadowContactOffset
-        : -0.0001;
+        : -0.0005;
       this.ui.inputs.lightsShadowContactOffset.value = contact;
       this.helpers.updateValueLabel('lightsShadowContactOffset', contact, 'decimal', 4);
+    }
+    if (this.ui.inputs.lightsShadowNormalBias) {
+      const normalBias = Number.isFinite(state.lightsShadowNormalBias)
+        ? state.lightsShadowNormalBias
+        : 0.01;
+      this.ui.inputs.lightsShadowNormalBias.value = normalBias;
+      this.helpers.updateValueLabel('lightsShadowNormalBias', normalBias, 'decimal', 3);
     }
     if (this.ui.inputs.lightsShadowTwoSided) {
       this.ui.inputs.lightsShadowTwoSided.checked = !!state.lightsShadowTwoSided;
@@ -1103,6 +1119,7 @@ export class StudioControls {
     this.ui.setControlDisabled('lightsShadowColor', mute);
     this.ui.setControlDisabled('lightsShadowOpacity', mute);
     this.ui.setControlDisabled('lightsShadowContactOffset', mute);
+    this.ui.setControlDisabled('lightsShadowNormalBias', mute);
     this.ui.setControlDisabled('lightsShadowTwoSided', mute);
     const keyOnly = isKeyLightOnlyShadowCastingRenderQuality(
       this.stateStore.getState().renderQuality,

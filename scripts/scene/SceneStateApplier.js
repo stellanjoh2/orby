@@ -175,7 +175,8 @@ function createStateApplySteps() {
         s.setLightsShadowSoftness(state.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS);
         s.setLightsShadowColor(state.lightsShadowColor ?? '#080808');
         s.setLightsShadowOpacity(state.lightsShadowOpacity ?? 0.25);
-        s.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0001);
+        s.setLightsShadowContactOffset(state.lightsShadowContactOffset ?? -0.0005);
+        s.setLightsShadowNormalBias(state.lightsShadowNormalBias ?? 0.01);
         s.setLightsShadowTwoSided(state.lightsShadowTwoSided ?? false);
         if (state.lights) {
           Object.entries(state.lights).forEach(([lightId, config]) => {
@@ -256,6 +257,9 @@ function createStateApplySteps() {
         }
         if (state.svgExtrude?.normalAngle !== undefined) {
           s.setSvgExtrudeNormalAngle(state.svgExtrude.normalAngle);
+        }
+        if (state.svgExtrude?.hardEdgeAngle !== undefined) {
+          s.setSvgExtrudeHardEdgeAngle(state.svgExtrude.hardEdgeAngle);
         }
         if (state.svgExtrude?.bevelAmount !== undefined) {
           s.setSvgExtrudeBevel(

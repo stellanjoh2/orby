@@ -1,10 +1,15 @@
 import { DEFAULT_EXTRUDE_BEVEL_AMOUNT } from './extrudeBevel.js';
 import {
   DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from './extrudeImporterShared.js';
 
-export { DEFAULT_EXTRUDE_DEPTH, DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG } from './extrudeImporterShared.js';
+export {
+  DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
+  DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+} from './extrudeImporterShared.js';
 export { DEFAULT_EXTRUDE_BEVEL_AMOUNT } from './extrudeBevel.js';
 export {
   MIN_EXTRUDE_DEPTH,
@@ -23,6 +28,8 @@ export const DEFAULT_SVG_EXTRUDE_STATE = {
   enabled: false,
   depth: DEFAULT_EXTRUDE_DEPTH,
   normalAngle: DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+  /** Minimum crease angle for cap/side edge splits — higher = sharper shading terminators. */
+  hardEdgeAngle: DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   availableColors: [],
   colorDepths: {},
   colorOffsets: {},
@@ -49,6 +56,7 @@ export function resolveSvgExtrudeDefaults(source = {}) {
     ...DEFAULT_SVG_EXTRUDE_STATE,
     depth: svg.depth ?? DEFAULT_EXTRUDE_DEPTH,
     normalAngle: svg.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+    hardEdgeAngle: svg.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
     availableColors: Array.isArray(svg.availableColors) ? [...svg.availableColors] : [],
     colorDepths: { ...(svg.colorDepths || {}) },
     colorOffsets: { ...(svg.colorOffsets || {}) },
@@ -79,6 +87,7 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
   stateStore.batch(() => {
     stateStore.set('svgExtrude.depth', svg.depth);
     stateStore.set('svgExtrude.normalAngle', svg.normalAngle);
+    stateStore.set('svgExtrude.hardEdgeAngle', svg.hardEdgeAngle);
     stateStore.set('svgExtrude.bevelAmount', svg.bevelAmount);
     stateStore.set('svgExtrude.detail', svg.detail);
     stateStore.set('svgExtrude.colorDepths', svg.colorDepths);
@@ -93,6 +102,7 @@ export function resetSvgExtrudeState(stateStore, eventBus, storeDefaults = {}) {
 
   eventBus.emit('mesh:svg-extrude-depth', svg.depth);
   eventBus.emit('mesh:svg-extrude-normal-angle', svg.normalAngle);
+  eventBus.emit('mesh:svg-extrude-hard-edge-angle', svg.hardEdgeAngle);
   eventBus.emit('mesh:svg-extrude-bevel', { amount: svg.bevelAmount });
   eventBus.emit('mesh:svg-extrude-detail', svg.detail);
   eventBus.emit('mesh:svg-extrude-color-depths', svg.colorDepths);

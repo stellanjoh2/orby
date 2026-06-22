@@ -34,15 +34,15 @@ export function clampExtrudeBevelAmount(value, depth) {
   return Math.max(EXTRUDE_BEVEL_AMOUNT_MIN, Math.min(max, numeric));
 }
 
-/** Smooth profile steps — rounded bevel layers along the slope. */
+/** Convex profile steps — rounded bevel layers along the slope. */
 export const FONT_EXTRUDE_BEVEL_SEGMENTS = 12;
-/** Simple = same outset extrude as Smooth, one segment → flat chamfer (not rounded). */
+/** Straight = same outset extrude as Convex, one segment → flat chamfer (not rounded). */
 export const FONT_SIMPLE_EXTRUDE_BEVEL_SEGMENTS = 1;
 
-/** @typedef {'smooth' | 'simple'} FontExtrudeBevelType */
+/** @typedef {'convex' | 'straight'} FontExtrudeBevelType */
 
 /** Rounded TextGeometry-style bevel (default). */
-export const DEFAULT_FONT_BEVEL_TYPE = 'smooth';
+export const DEFAULT_FONT_BEVEL_TYPE = 'convex';
 
 /** bevelSize / bevelThickness ratio in the Three.js text demo (1.5 / 2). */
 const FONT_BEVEL_SIZE_RATIO = 0.75;
@@ -52,7 +52,9 @@ const FONT_BEVEL_SIZE_RATIO = 0.75;
  * @returns {FontExtrudeBevelType}
  */
 export function normalizeFontBevelType(value) {
-  return value === 'simple' ? 'simple' : 'smooth';
+  if (value === 'straight' || value === 'simple') return 'straight';
+  // 'convex', legacy 'smooth', and unknown → convex
+  return 'convex';
 }
 
 /**
@@ -60,19 +62,19 @@ export function normalizeFontBevelType(value) {
  * @param {{ amount?: unknown, depth?: unknown, xyNormalizeScale?: number, bevelSegments?: number }} params
  */
 export function resolveFontExtrudeBevelSettingsForType(type, params = {}) {
-  // Simple and Smooth share the same TextGeometry-style outset extrude; Simple uses one
+  // Straight and Convex share the same TextGeometry-style outset extrude; Straight uses one
   // bevel segment (flat chamfer). Shading differs — see applyFontExtrudeSimpleBevelNormals.
   return resolveFontExtrudeBevelSettings({
     ...params,
     bevelSegments:
-      normalizeFontBevelType(type) === 'simple'
+      normalizeFontBevelType(type) === 'straight'
         ? FONT_SIMPLE_EXTRUDE_BEVEL_SEGMENTS
         : FONT_EXTRUDE_BEVEL_SEGMENTS,
   });
 }
 
 /**
- * Crease angle for side/bevel smoothing (degrees). Simple bevel uses the same slider for
+ * Crease angle for side/bevel smoothing (degrees). Straight bevel uses the same slider for
  * toCreasedNormals and for bevel shoulder hardening — lower angles stay sharper on tight
  * corners; higher angles soften chamfer transitions on expressive display faces.
  *

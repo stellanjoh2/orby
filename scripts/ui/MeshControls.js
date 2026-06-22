@@ -92,6 +92,8 @@ export class MeshControls {
         detail: this.ui.inputs.svgExtrudeDetail,
         normalAngle: this.ui.inputs.svgExtrudeNormalAngle,
         normalAngleOutputKey: 'svgExtrudeNormalAngle',
+        hardEdgeAngle: this.ui.inputs.svgExtrudeHardEdgeAngle,
+        hardEdgeAngleOutputKey: 'svgExtrudeHardEdgeAngle',
         surfacePreset: this.ui.inputs.svgExtrudeSurfacePreset,
         surfaceScale: this.ui.inputs.svgExtrudeSurfaceScale,
         surfaceScaleOutputKey: 'svgExtrudeSurfaceScale',

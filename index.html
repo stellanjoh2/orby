@@ -3073,19 +3073,31 @@
                     <span class="value" data-output="lightsShadowOpacity">0.25</span>
                   </label>
                   <label class="slider-line">
-                    <span data-tooltip="Negative pulls shadows onto the surface (tighter contact). Positive adds a gap. Scales with model size automatically.">Offset</span>
+                    <span data-tooltip="Cast-shadow contact only — does not fix bright leaks on side faces (use Hard Edge Angle under 3D Shape). Negative pulls shadows onto surfaces.">Cast Shadow Offset</span>
                     <input
                       id="lightsShadowContactOffset"
                       type="range"
                       min="-0.002"
                       max="0.0005"
                       step="0.00001"
-                      value="-0.0001"
+                      value="-0.0005"
                     />
-                    <span class="value" data-output="lightsShadowContactOffset">-0.0001</span>
+                    <span class="value" data-output="lightsShadowContactOffset">-0.0005</span>
+                  </label>
+                  <label class="slider-line">
+                    <span data-tooltip="Offsets shadow-map comparison along surface normals — reduces cast-shadow acne and terminator gaps on receiving surfaces.">Normal Bias</span>
+                    <input
+                      id="lightsShadowNormalBias"
+                      type="range"
+                      min="0"
+                      max="0.08"
+                      step="0.001"
+                      value="0.010"
+                    />
+                    <span class="value" data-output="lightsShadowNormalBias">0.010</span>
                   </label>
                   <div class="slider-line">
-                    <span data-tooltip="For thin single-surface meshes (foliage/cards), cast shadows from both sides to reduce holes.">Two-Sided Cast</span>
+                    <span data-tooltip="Lets both faces of a mesh receive cast shadows. Good for thin cards and foliage, and for extruded typography (inner strokes, back faces).">Two-Sided Cast</span>
                     <label class="effect-toggle">
                       <input type="checkbox" id="lightsShadowTwoSided" />
                       <span class="effect-indicator" aria-hidden="true"></span>

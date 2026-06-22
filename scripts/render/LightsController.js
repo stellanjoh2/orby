@@ -9,6 +9,10 @@ import {
   DEFAULT_LIGHTS_SHADOW_SOFTNESS,
 } from '../config/shadowQuality.js';
 const MIN_SHADOW_BOUNDS_RADIUS = 0.5;
+/** Shifts shadow comparison along surface normals — fixes terminator offset on hard edges. */
+const DEFAULT_SHADOW_NORMAL_BIAS = 0.01;
+/** Default shadow bias — negative pulls shadow onto the surface at contact. */
+const DEFAULT_SHADOW_CONTACT_OFFSET = -0.0005;
 const SHADOW_FAR_MULTIPLIER_BY_QUALITY = {
   low: 10,
   medium: 8,
@@ -40,6 +44,7 @@ export class LightsController {
     this.shadowContactOffset = this._normalizeShadowContactOffset(
       options.shadowContactOffset,
     );
+    this.shadowNormalBias = this._normalizeShadowNormalBias(options.shadowNormalBias);
 
     this.lights = {
       key: new THREE.DirectionalLight('#ffffff', 4),
@@ -75,7 +80,7 @@ export class LightsController {
           SHADOW_MAP_SIZE_BY_QUALITY[this.shadowQuality],
         );
         light.shadow.bias = this.shadowContactOffset;
-        light.shadow.normalBias = 0.015;
+        light.shadow.normalBias = this.shadowNormalBias;
         light.shadow.intensity = 1;
       } else {
         light.castShadow = false;
@@ -95,8 +100,14 @@ export class LightsController {
 
   _normalizeShadowContactOffset(offset) {
     const raw = Number(offset);
-    if (!Number.isFinite(raw)) return -0.0001;
+    if (!Number.isFinite(raw)) return DEFAULT_SHADOW_CONTACT_OFFSET;
     return Math.min(0.0005, Math.max(-0.001, raw));
+  }
+
+  _normalizeShadowNormalBias(value) {
+    const raw = Number(value);
+    if (!Number.isFinite(raw)) return DEFAULT_SHADOW_NORMAL_BIAS;
+    return Math.min(0.08, Math.max(0, raw));
   }
 
   _normalizeShadowSoftness(value) {
@@ -430,6 +441,18 @@ export class LightsController {
       const light = this.lights[lightId];
       if (light?.isDirectionalLight && light.shadow) {
         light.shadow.bias = this.shadowContactOffset;
+      }
+    });
+  }
+
+  setShadowNormalBias(value) {
+    const normalized = this._normalizeShadowNormalBias(value);
+    if (normalized === this.shadowNormalBias) return;
+    this.shadowNormalBias = normalized;
+    ['key', 'fill', 'rim'].forEach((lightId) => {
+      const light = this.lights[lightId];
+      if (light?.isDirectionalLight && light.shadow) {
+        light.shadow.normalBias = this.shadowNormalBias;
       }
     });
   }

@@ -56,11 +56,11 @@ const RESET_DIRTY_PATHS = {
   lights: [
     'lights', 'lightsMaster', 'lightsRotation', 'lightsHeight',
     'lightsShadowQuality', 'lightsShadowSoftness', 'lightsShadowColor', 'lightsShadowOpacity',
-    'lightsShadowContactOffset', 'lightsShadowTwoSided',
+    'lightsShadowContactOffset', 'lightsShadowNormalBias', 'lightsShadowTwoSided',
   ],
   'lights-shadows': [
     'lightsCastShadows', 'lightsShadowQuality', 'lightsShadowSoftness',
-    'lightsShadowColor', 'lightsShadowOpacity', 'lightsShadowContactOffset', 'lightsShadowTwoSided',
+    'lightsShadowColor', 'lightsShadowOpacity', 'lightsShadowContactOffset', 'lightsShadowNormalBias', 'lightsShadowTwoSided',
   ],
   keyLight: ['lights.key', 'gobo'],
   fillLight: ['lights.fill'],
@@ -118,7 +118,7 @@ const RESET_DIRTY_PATHS = {
     'rotationX', 'rotationY', 'rotationZ',
   ],
   'svg-extrude': [
-    'svgExtrude.depth', 'svgExtrude.normalAngle',
+    'svgExtrude.depth', 'svgExtrude.normalAngle', 'svgExtrude.hardEdgeAngle',
     'svgExtrude.bevelAmount', 'svgExtrude.detail',
     'svgExtrude.colorDepths', 'svgExtrude.colorOffsets',
     'svgExtrude.flipDirection', 'svgExtrude.colorOverride',
@@ -635,7 +635,11 @@ export class ResetControls {
       this.stateStore.set('lightsShadowOpacity', defaults.lightsShadowOpacity ?? 0.25);
       this.stateStore.set(
         'lightsShadowContactOffset',
-        defaults.lightsShadowContactOffset ?? -0.0001,
+        defaults.lightsShadowContactOffset ?? -0.0005,
+      );
+      this.stateStore.set(
+        'lightsShadowNormalBias',
+        defaults.lightsShadowNormalBias ?? 0.01,
       );
       this.stateStore.set(
         'lightsShadowTwoSided',
@@ -713,7 +717,8 @@ export class ResetControls {
         softness: defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS,
         color: defaults.lightsShadowColor ?? '#080808',
         opacity: defaults.lightsShadowOpacity ?? 0.25,
-        contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
+        contactOffset: defaults.lightsShadowContactOffset ?? -0.0005,
+        normalBias: defaults.lightsShadowNormalBias ?? 0.01,
         twoSided: defaults.lightsShadowTwoSided ?? false,
       });
       this.eventBus.emit('lights:show-indicators', defaults.showLightIndicators ?? false);
@@ -1014,7 +1019,7 @@ export class ResetControls {
               );
               this.stateStore.set(
                 'lightsShadowContactOffset',
-                defaults.lightsShadowContactOffset ?? -0.0001,
+                defaults.lightsShadowContactOffset ?? -0.0005,
               );
               this.stateStore.set(
                 'lightsShadowTwoSided',
@@ -1040,7 +1045,7 @@ export class ResetControls {
               softness: defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS,
               color: defaults.lightsShadowColor ?? '#080808',
               opacity: defaults.lightsShadowOpacity ?? 0.25,
-              contactOffset: defaults.lightsShadowContactOffset ?? -0.0001,
+              contactOffset: defaults.lightsShadowContactOffset ?? -0.0005,
               twoSided: defaults.lightsShadowTwoSided ?? false,
             });
             this.ui.syncUIFromState();
@@ -1052,7 +1057,8 @@ export class ResetControls {
               const shadowSoftness = defaults.lightsShadowSoftness ?? DEFAULT_LIGHTS_SHADOW_SOFTNESS;
               const shadowColor = defaults.lightsShadowColor ?? '#080808';
               const shadowOpacity = defaults.lightsShadowOpacity ?? 0.25;
-              const shadowContactOffset = defaults.lightsShadowContactOffset ?? -0.0001;
+              const shadowContactOffset = defaults.lightsShadowContactOffset ?? -0.0005;
+              const shadowNormalBias = defaults.lightsShadowNormalBias ?? 0.01;
               const shadowTwoSided = defaults.lightsShadowTwoSided ?? false;
               this.stateStore.batch(() => {
                 this.stateStore.set('lightsCastShadows', castShadows);
@@ -1061,6 +1067,7 @@ export class ResetControls {
                 this.stateStore.set('lightsShadowColor', shadowColor);
                 this.stateStore.set('lightsShadowOpacity', shadowOpacity);
                 this.stateStore.set('lightsShadowContactOffset', shadowContactOffset);
+                this.stateStore.set('lightsShadowNormalBias', shadowNormalBias);
                 this.stateStore.set('lightsShadowTwoSided', shadowTwoSided);
               });
               this.eventBus.emit('lights:shadow-settings', {
@@ -1070,6 +1077,7 @@ export class ResetControls {
                 color: shadowColor,
                 opacity: shadowOpacity,
                 contactOffset: shadowContactOffset,
+                normalBias: shadowNormalBias,
                 twoSided: shadowTwoSided,
               });
               this.ui.syncUIFromState();

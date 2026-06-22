@@ -467,6 +467,7 @@ export class ModelLifecycleManager {
       const asset = await s.modelLoader.loadFile(file, {
         svgExtrudeDepth: svgExtrudeState.depth,
         svgExtrudeNormalAngle: svgExtrudeState.normalAngle,
+        svgExtrudeHardEdgeAngle: svgExtrudeState.hardEdgeAngle,
         svgExtrudeColorDepths: svgExtrudeState.colorDepths || {},
         svgExtrudeColorOffsets: svgExtrudeState.colorOffsets || {},
         svgExtrudeFlipDirection: !!svgExtrudeState.flipDirection,

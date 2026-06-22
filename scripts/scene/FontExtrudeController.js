@@ -11,6 +11,7 @@ import { resolveDefaultFontPostscript } from './fontExtrudeDefaultFont.js';
 import {
   DEFAULT_EXTRUDE_BEVEL_AMOUNT,
   DEFAULT_EXTRUDE_DEPTH,
+  DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
   DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
 } from '../import/extrudeDefaults.js';
 import { DEFAULT_FONT_BEVEL_TYPE } from '../import/extrudeBevel.js';
@@ -329,6 +330,7 @@ export class FontExtrudeController {
       sourceName: this.fontLabel || 'Text',
       depth: options.depth ?? svgState.depth ?? DEFAULT_EXTRUDE_DEPTH,
       normalAngleDeg: options.normalAngleDeg ?? svgState.normalAngle ?? DEFAULT_EXTRUDE_NORMAL_ANGLE_DEG,
+      hardEdgeAngleDeg: options.hardEdgeAngleDeg ?? svgState.hardEdgeAngle ?? DEFAULT_EXTRUDE_HARD_EDGE_ANGLE_DEG,
       colorDepths: options.colorDepths ?? svgState.colorDepths ?? {},
       colorOffsets: options.colorOffsets ?? svgState.colorOffsets ?? {},
       flipDirection: FONT_EXTRUDE_FLIP_DIRECTION,
@@ -392,6 +394,7 @@ export class FontExtrudeController {
         enabled: true,
         depth: this.fontExtrudeImporter.getDepth(),
         normalAngle: this.fontExtrudeImporter.getNormalAngleDeg(),
+        hardEdgeAngle: this.fontExtrudeImporter.getHardEdgeAngleDeg(),
         colorDepths: this.fontExtrudeImporter.getColorDepths(),
         colorOffsets: this.fontExtrudeImporter.getColorOffsets(),
         colors: this.fontExtrudeImporter.getAvailableColors(),
